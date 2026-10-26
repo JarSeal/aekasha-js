@@ -17,9 +17,9 @@
  * - data-aek-density="compact" on any element: smaller type and space scales for its subtree.
  *
  * The kit root's font is --aek-font-sans: the system UI stack, or IBM Plex Sans where the app opts
- * into the fonts (`import 'aekasha/ui/fonts'`, ui/fonts/fonts.css, p801 D8). No color-scheme yet:
- * the kit's and the debugger's styles keep their own colours until p803 / p806 restyle them
- * (p801 D1).
+ * into the fonts (`import 'aekasha/ui/fonts'`, ui/fonts/fonts.css, p801 D8). Each theme block sets
+ * color-scheme too (p803 D5), so native scrollbars and controls follow the kit's theme; the
+ * debugger's roots force the dark theme until p806 (p803 D6).
  */
 
 @layer aek.tokens, aek.base, aek.components, aek.utilities;
@@ -48,8 +48,8 @@
     font-family: var(--aek-font-sans);
 
     /*
-     * The UI's font size, and the old 62.5 % root's rem (@internal: the existing styles' unit
-     * until p803 / p806 restyle them). Fixed here for a browser without @property, where an
+     * The UI's font size, and the old 62.5 % root's rem (@internal: the debugger's styles' unit
+     * until p806 restyles them; p803 took it out of the kit). Fixed here for a browser without @property, where an
      * unregistered em would resolve again in every descendant and compound; computed below.
      */
     --aek-base: calc(14px * var(--aek-ui-scale, 1));
@@ -72,6 +72,10 @@
     --aek-font-weight-medium: 500;
     --aek-font-weight-semibold: 600;
     --aek-font-weight-bold: 700;
+    /* Icon sizes (getSvgIcon's size; without one an icon is 1em: it follows its text) */
+    --aek-icon-size-sm: calc(var(--aek-base) * 12 / 14);
+    --aek-icon-size-md: calc(var(--aek-base) * 16 / 14);
+    --aek-icon-size-lg: calc(var(--aek-base) * 20 / 14);
     --aek-line-height-tight: 1.2;
     --aek-line-height-base: 1.45;
     --aek-line-height-relaxed: 1.65;
@@ -98,15 +102,24 @@
     --aek-motion-slow: calc(320ms * var(--aek-motion, 1));
     --aek-ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --aek-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+    /* Delays: not motion, so reduced motion keeps them (a tooltip shown on hover) */
+    --aek-tooltip-delay: 500ms;
 
     /* The focus ring's colour is the theme's accent (in the theme blocks below) */
     --aek-focus-ring-width: 2px;
     --aek-focus-ring-offset: 2px;
 
-    /* Z-layers: the windows' two stacks (each window 2 above the last, its backdrop 1 below) */
+    /*
+     * Z-layers: the windows' stacks (each window 2 above the last, its backdrop 1 below). A
+     * loading overlay over the HUD's bounds (a scene loader's) covers the app's windows. An app's
+     * modal dialogs stack above them both but below the debugger (10000 and up), whose roots an
+     * app's modal leaves live; a debug modal above the debug windows (p803 D7)
+     */
     --aek-z-window: 100;
+    --aek-z-loading: 1000;
+    --aek-z-dialog: 5000;
     --aek-z-debug-window: 20000;
-    --aek-z-dialog: 30000;
+    --aek-z-debug-dialog: 30000;
     --aek-z-toast: 31000;
     --aek-z-tooltip: 32000;
   }
@@ -124,7 +137,8 @@
     }
   }
 
-  /* The compact density (the debugger's): the type and space scales only */
+  /* The compact density (the debugger's): the type scale (the icon sizes in it) and the space scale
+     only */
   :where([data-aek-density='compact']) {
     --aek-font-size-xs: calc(var(--aek-base) * 10 / 14);
     --aek-font-size-sm: calc(var(--aek-base) * 11 / 14);
@@ -132,6 +146,9 @@
     --aek-font-size-lg: calc(var(--aek-base) * 13 / 14);
     --aek-font-size-xl: calc(var(--aek-base) * 16 / 14);
     --aek-font-size-2xl: calc(var(--aek-base) * 20 / 14);
+    --aek-icon-size-sm: calc(var(--aek-base) * 11 / 14);
+    --aek-icon-size-md: calc(var(--aek-base) * 13 / 14);
+    --aek-icon-size-lg: calc(var(--aek-base) * 16 / 14);
 
     --aek-space-1: calc(var(--aek-base) * 2 / 14);
     --aek-space-2: calc(var(--aek-base) * 3 / 14);
@@ -184,6 +201,7 @@
     --aek-shadow-sm: 0 1px 3px rgb(0 0 0 / 40%);
     --aek-shadow-lg: 0 12px 32px rgb(0 0 0 / 45%);
     --aek-focus-ring-color: var(--aek-accent);
+    color-scheme: dark;
   }
 
   @media (prefers-color-scheme: light) {
@@ -214,6 +232,7 @@
       --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
       --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
       --aek-focus-ring-color: var(--aek-accent);
+      color-scheme: light;
     }
   }
 
@@ -244,6 +263,7 @@
     --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
     --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
     --aek-focus-ring-color: var(--aek-accent);
+    color-scheme: light;
   }
 }
 

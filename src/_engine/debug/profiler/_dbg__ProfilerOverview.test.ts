@@ -15,7 +15,7 @@ vi.hoisted(() => {
   });
 });
 
-import type { TCMP } from '../../ui/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import { initEnvironment } from '../../kernel/config/Config';
 import { DEFAULT_PROFILER_SETTINGS, registerStatsSource, type ProfilerSettings } from '../Profiler';
 import {
@@ -35,7 +35,7 @@ const createSettings = (): ProfilerSettings => ({
 
 /** The Overview's text, as one render shows it. */
 const renderOverview = (settings: ProfilerSettings) => {
-  const [table] = createProfilerOverviewTabDef(settings).content() as TCMP[];
+  const [table] = createProfilerOverviewTabDef(settings).content() as CMPHandle[];
   const text = table.elem.textContent ?? '';
   table.remove();
   return text;

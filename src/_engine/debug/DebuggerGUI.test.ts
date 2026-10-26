@@ -21,7 +21,7 @@ const ls = vi.hoisted(() => {
 
 // The toaster builds DOM: whether the debug toaster exists, and what it was handed
 const toaster = vi.hoisted(() => ({ exists: false }));
-vi.mock(import('../ui/Toaster'), async (importOriginal) => ({
+vi.mock(import('../ui/overlays/Toaster'), async (importOriginal) => ({
   ...(await importOriginal()),
   hasToaster: () => toaster.exists,
   addToast: vi.fn(() => ({}) as never),
@@ -36,7 +36,7 @@ const drawer = vi.hoisted(() => ({
 vi.mock(import('./_dbg__DebuggerGUI'), () => drawer as never);
 
 import { initEnvironment } from '../kernel/config/Config';
-import { addToast } from '../ui/Toaster';
+import { addToast } from '../ui/overlays/Toaster';
 import {
   addDebugToastWhenReady,
   createDebuggerTab,

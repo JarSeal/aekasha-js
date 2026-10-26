@@ -1,4 +1,4 @@
-import { CMP } from '../../ui/CMP';
+import { CMP } from '../../ui/core/CMP';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import {
   _getStatsSources,

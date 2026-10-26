@@ -1,0 +1,46 @@
+// The spinner's default styles (Spinner.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). The ring turns on kit.scss' aekSpin, as
+// the button's loading mark does, and pulses on aekPulse under reduced motion (p800 D7).
+@layer aek.components {
+  :where(.aekSpinner) {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-block;
+    flex-shrink: 0;
+    width: var(--aek-spinner-size, 1em);
+    height: var(--aek-spinner-size, 1em);
+    color: var(--aek-spinner-color, currentColor);
+    vertical-align: -0.125em;
+  }
+
+  :where(.aekSpinner[data-size='sm']) {
+    --aek-spinner-size: var(--aek-icon-size-sm);
+  }
+
+  :where(.aekSpinner[data-size='md']) {
+    --aek-spinner-size: var(--aek-icon-size-md);
+  }
+
+  :where(.aekSpinner[data-size='lg']) {
+    --aek-spinner-size: var(--aek-icon-size-lg);
+  }
+
+  // The ring's width grows with a large spinner (an eighth), never under 2 px
+  :where(.aekSpinner)::before {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: max(2px, calc(var(--aek-spinner-size, 1em) / 8)) solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    content: '';
+    animation: aekSpin calc(800ms * var(--aek-motion, 1)) linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.aekSpinner)::before {
+      border-right-color: currentColor;
+      animation: aekPulse 1.6s ease-in-out infinite;
+    }
+  }
+}

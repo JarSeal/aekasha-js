@@ -1,0 +1,30 @@
+// The divider's default styles (Divider.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). The line is a border, so normalize.scss'
+// unlayered `hr { height: 0 }` agrees with it; the browser's own hr styles are beaten by any layer.
+@layer aek.components {
+  // Across: the whole width, also in a flex column that doesn't stretch its items (an empty hr
+  // would shrink to nothing there)
+  :where(.aekDivider) {
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-self: stretch;
+    width: auto;
+    height: 0;
+    margin: var(--aek-divider-spacing, var(--aek-space-3)) 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-block-start: 1px solid var(--aek-divider-color, var(--aek-border));
+    color: inherit;
+  }
+
+  // Down a row: as tall as the row's items (a flex row stretches it), at least a line of text
+  :where(.aekDivider[data-orientation='vertical']) {
+    width: 0;
+    height: auto;
+    min-height: 1em;
+    margin: 0 var(--aek-divider-spacing, var(--aek-space-3));
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--aek-divider-color, var(--aek-border));
+  }
+}

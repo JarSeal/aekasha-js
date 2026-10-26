@@ -110,7 +110,7 @@ describe('checkLayout', () => {
       'src/_engine/utils/U.ts': "import { Vector3 } from 'three';",
       'src/_engine/kernel/ecs/E.ts': 'export type E = 1;\nexport const e = 1;',
       'src/_engine/schemas/S.ts': "import type { E } from '../kernel/ecs/E';",
-      'src/_engine/ui/W.ts': "import { e } from '../kernel/ecs/E';",
+      'src/_engine/ui/core/W.ts': "import { e } from '../../kernel/ecs/E';",
     };
     const result = checkLayout({
       files: Object.keys(tree),
@@ -118,7 +118,7 @@ describe('checkLayout', () => {
       aliases: {},
     });
     expect(getLayoutErrors(result)).toEqual([
-      'ui → kernel: src/_engine/ui/W.ts:1 imports src/_engine/kernel/ecs/E.ts (runtime)',
+      'ui → kernel: src/_engine/ui/core/W.ts:1 imports src/_engine/kernel/ecs/E.ts (runtime)',
       "utils is pure: src/_engine/utils/U.ts:1 imports 'three'",
     ]);
     expect(result.violations.get('schemas → kernel')).toHaveLength(1);
@@ -148,6 +148,13 @@ describe('the rules', () => {
     expect(findLayoutRule(rules, 'src/_engine/index.ts')?.note).toMatch(/entry/);
     expect(findLayoutRule(rules, 'src/app/scenes/a/deep/x.ts')?.from).toBe('src/app/scenes/a/');
     expect(findLayoutRule(rules, 'src/app/scenes/loose.ts')).toBeUndefined();
+  });
+
+  it("keeps the UI kit's modules in its groups (p803 D2)", () => {
+    const rules = getLayoutRules([]);
+    expect(findLayoutRule(rules, 'src/_engine/ui/index.ts')?.note).toMatch(/entry/);
+    expect(findLayoutRule(rules, 'src/_engine/ui/core/CMP.ts')?.from).toBe('src/_engine/ui/core/');
+    expect(findLayoutRule(rules, 'src/_engine/ui/Loose.ts')).toBeUndefined();
   });
 
   it('zones a file by its path', () => {

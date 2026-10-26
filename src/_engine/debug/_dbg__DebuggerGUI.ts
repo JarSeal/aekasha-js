@@ -1,28 +1,28 @@
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
+import type { CMPHandle } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
 import styles from './DebuggerGUI.module.scss';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
-import { getWindowSize } from '../ui/Window';
-import { getHUDRootCMP } from '../ui/HUD';
+import { getWindowSize } from '../ui/core/Window';
+import { getHUDRootCMP } from '../ui/core/HUD';
+import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
 import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
 import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
 import { createDebuggerSceneLoader } from '../kernel/scene/debug/_dbg__DebuggerSceneLoader';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
-import './DebugToaster.scss';
 // The kit's fonts (p801 D8): the full page has them already (InitEngine), a debug embed gets them here
 import '../ui/fonts/fonts.css';
 
 export { _debuggerListCMP } from './_dbg__DebuggerList';
 
-let drawerCMP: TCMP | null = null;
-let currentSceneTitleCMP: TCMP | null = null;
-let currentSceneTitleTextCMP: TCMP | null = null;
+let drawerCMP: CMPHandle | null = null;
+let currentSceneTitleCMP: CMPHandle | null = null;
+let currentSceneTitleTextCMP: CMPHandle | null = null;
 let currentSceneTitleText: string = '';
-let tabsContainerWrapper: null | TCMP = null;
+let tabsContainerWrapper: null | CMPHandle = null;
 let debugSceneLoaderCreated = false;
 let debuggerDisabled = false;
 /** An editor view is active (see _setDrawerSuspendedByView). */
@@ -93,7 +93,7 @@ const initDrawerState = () => {
   return drawerState;
 };
 
-type TabEntry = { def: AnyDebuggerTabDef; button: TCMP | null };
+type TabEntry = { def: AnyDebuggerTabDef; button: CMPHandle | null };
 
 // Keyed by tab id. A Map keeps insertion order, so a re-registered (replaced) tab keeps its
 // registration position for the ordering tie-break.
@@ -179,6 +179,9 @@ export const _createDebugGui = (opts?: DebugGUIOpts) => {
       drawerState.isOpen ? styles.debuggerGUI_open : styles.debuggerGUI_closed,
       debuggerDisabled ? styles.debuggerDisabled : '',
     ],
+    // The debugger is dark until p806 gives it a theme setting (p803 D6); an app's modal dialog
+    // leaves it live (p803 D7)
+    attr: { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' },
     settings: { replaceRootDom: false },
   });
 

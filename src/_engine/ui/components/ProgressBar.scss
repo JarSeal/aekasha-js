@@ -1,0 +1,127 @@
+// The progress bar's default styles (ProgressBar.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). The fill is a scaleX of its
+// track (or of each segment), so a value set every frame changes no layout. Indeterminate, a bar
+// slides along the track; under reduced motion (and in a segmented bar) it's a still striped bar
+// (p800 D7).
+@layer aek.components {
+  :where(.aekProgress) {
+    --aek-progress-fill-color: var(--aek-progress-color, var(--aek-accent));
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  // Only the hidden label in the header: no gap above the track
+  :where(.aekProgress[data-label-hidden]) {
+    gap: 0;
+  }
+
+  :where(.aekProgress__header) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--aek-space-3);
+  }
+
+  :where(.aekProgress__label) {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekProgress__value) {
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  // The track's edge is the control border (3:1 on the surfaces): the empty part stays visible
+  :where(.aekProgress__track) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--aek-space-1);
+    height: var(--aek-progress-height, var(--aek-space-3));
+    overflow: hidden;
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-progress-radius, var(--aek-radius-full));
+    background-color: var(--aek-progress-track-color, var(--aek-surface-hover));
+  }
+
+  // Segments: the parts are the track's own, joined by gaps of the surface behind
+  :where(.aekProgress__track[data-segments]) {
+    border: 0;
+    background-color: transparent;
+  }
+
+  :where(.aekProgress__segment) {
+    position: relative;
+    box-sizing: border-box;
+    flex: 1 1 0;
+    overflow: hidden;
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-progress-track-color, var(--aek-surface-hover));
+  }
+
+  :where(.aekProgress__fill) {
+    position: absolute;
+    inset: 0;
+    background-color: var(--aek-progress-fill-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  // Indeterminate: a 40 % bar sliding across (its translate is of its own width)
+  :where(.aekProgress[data-indeterminate] .aekProgress__track:not([data-segments]))
+    :where(.aekProgress__fill) {
+    width: 40%;
+    border-radius: inherit;
+    transform: none;
+    transition: none;
+    animation: aekProgressSlide calc(1.4s * var(--aek-motion, 1)) var(--aek-ease-standard) infinite;
+  }
+
+  // Still stripes: under reduced motion, and in a segmented bar (the sliding bar would cross the
+  // gaps)
+  :where(.aekProgress[data-indeterminate] .aekProgress__track[data-segments])
+    :where(.aekProgress__fill) {
+    transform: none;
+    transition: none;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--aek-progress-fill-color) 0 4px,
+      transparent 4px 8px
+    );
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.aekProgress[data-indeterminate] .aekProgress__track:not([data-segments]))
+      :where(.aekProgress__fill) {
+      width: 100%;
+      animation: none;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--aek-progress-fill-color) 0 4px,
+        transparent 4px 8px
+      );
+    }
+  }
+}
+
+@keyframes aekProgressSlide {
+  from {
+    translate: -100%;
+  }
+
+  to {
+    translate: 250%;
+  }
+}

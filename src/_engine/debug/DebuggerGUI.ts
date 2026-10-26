@@ -1,12 +1,12 @@
-import type { TCMP } from '../ui/CMPTypes';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import type { FolderApi, Pane } from 'tweakpane';
 import type { BindingApi } from '@tweakpane/core';
-import type { SvgIconKey } from '../ui/icons/SvgIcon';
+import type { SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
 import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../kernel/config/DebugModules';
 import { lerror } from '../utils/Logger';
-import { addToast, hasToaster, type ToastProps } from '../ui/Toaster';
+import { addToast, hasToaster, type ToastProps } from '../ui/overlays/Toaster';
 
 /**
  * The debugger scene loader's id: `loadScene`, the Debug tools tab and the on-screen tools use it.
@@ -227,7 +227,7 @@ export type DebuggerPaneSection<S extends object = object> = {
  * pane.
  * @template S the tab's state
  */
-export type DebuggerTabSection<S extends object = object> = TCMP | DebuggerPaneSection<S>;
+export type DebuggerTabSection<S extends object = object> = CMPHandle | DebuggerPaneSection<S>;
 
 /**
  * A debugger tab, for {@link createDebuggerTab} (and `createProfilerTab`, without `sceneId`). The
@@ -264,7 +264,7 @@ export type DebuggerTabDef<S extends object = object> = {
    * `${lsKey}UI` when `lsKey` is set, otherwise none (nothing is persisted). */
   uiLsKey?: string;
   /** Extra heading row buttons, after the clear-LS button (eg. a clear list LS button). */
-  headerButtons?: () => TCMP[];
+  headerButtons?: () => CMPHandle[];
   /** Whether the heading has the clear tab LS button. Default: true when `lsKey` is set. Set to
    * true without `lsKey` for a permanently disabled button (consistency with other tabs). */
   clearLSButton?: boolean;

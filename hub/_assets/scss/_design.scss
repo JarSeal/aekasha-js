@@ -98,6 +98,14 @@
   white-space: nowrap;
 }
 
+// An icon size's square (the design document's type section)
+.hubIconSizeSample {
+  display: inline-block;
+  border-radius: 2px;
+  background: currentColor;
+  vertical-align: middle;
+}
+
 .hubSpaceBar {
   display: block;
   height: 0.375rem;

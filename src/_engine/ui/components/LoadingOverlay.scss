@@ -1,0 +1,61 @@
+// The loading overlay's default styles (LoadingOverlay.ts), on the design tokens and layered
+// (p803 D5): an app's unlayered rule wins, and every selector is in :where(). Over the HUD's bounds
+// it's fixed (a mount's container is the fixed elements' box: its `contain: layout`), at
+// --aek-z-loading: above the app's windows, below its dialogs and the debugger. The JS sets the
+// fade's duration on the element (times the motion factor) and the state it fades to.
+@layer aek.components {
+  :where(.aekLoadingOverlay) {
+    --aek-spinner-size: var(--aek-loading-overlay-spinner-size, calc(var(--aek-space-7) * 1.5));
+
+    position: fixed;
+    inset: 0;
+    z-index: var(--aek-loading-overlay-z, var(--aek-z-loading));
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--aek-space-6);
+    background-color: var(--aek-loading-overlay-bg, var(--aek-bg));
+    color: var(--aek-text);
+    opacity: 0;
+    transition-property: opacity;
+    transition-timing-function: var(--aek-ease-standard);
+  }
+
+  :where(.aekLoadingOverlay[data-cover='parent']) {
+    position: absolute;
+    z-index: var(--aek-loading-overlay-z, 1);
+  }
+
+  :where(.aekLoadingOverlay[data-state='showing'], .aekLoadingOverlay[data-state='shown']) {
+    opacity: 1;
+  }
+
+  // Hidden: out of the way of the pointer and of assistive tech; fading out, the pointer passes
+  :where(.aekLoadingOverlay[data-state='hidden']) {
+    visibility: hidden;
+  }
+
+  :where(.aekLoadingOverlay[data-state='hidden'], .aekLoadingOverlay[data-state='hiding']) {
+    pointer-events: none;
+  }
+
+  :where(.aekLoadingOverlay__content) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--aek-space-4);
+    width: min(100%, calc(var(--aek-space-7) * 10));
+    text-align: center;
+  }
+
+  :where(.aekLoadingOverlay__progress) {
+    align-self: stretch;
+  }
+
+  :where(.aekLoadingOverlay__text) {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-base);
+  }
+}

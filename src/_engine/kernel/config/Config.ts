@@ -1,4 +1,4 @@
-import type { TCMP } from '../../ui/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type {
   PhysicsBackgroundBehavior,
   PhysicsEngine,
@@ -6,7 +6,7 @@ import type {
   PhysicsWorkerTarget,
 } from '../../features/physics/types/PhysicsConfigTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
-import type { DraggableWindow } from '../../ui/DraggableWindowTypes';
+import type { DraggableWindow } from '../../ui/overlays/windows/DraggableWindowTypes';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugKeyBindingConfig } from '../../debug/DefaultDebugKeyBindings';
@@ -276,7 +276,7 @@ export type AppConfig = {
    */
   draggableWindows?: {
     [kind: string]: Partial<DraggableWindow> & {
-      contentFn?: (data?: { [key: string]: unknown }) => TCMP;
+      contentFn?: (data?: { [key: string]: unknown }) => CMPHandle;
     };
   };
 };

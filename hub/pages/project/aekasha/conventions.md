@@ -48,8 +48,9 @@ deliberate:
 | `yarn verify:scenes`                         | Every scene in four configurations: errors, the determinism hash, a snapshot, the system order and the characters' paths against their baselines.                                    |
 | `yarn sbp`                                   | Each build's first download and lazy chunks against the budgets in `sbp.config.ts`.                                                                                                  |
 | `yarn verify:embed`                          | Each embed profile mounted into a plain page: its size, unmount, and no host style changed.                                                                                          |
+| `yarn verify:ui`                             | The component library's demos in both themes and densities: axe-core (a violation not on the allow list fails), the keyboard scripts and the screenshots against the last good ones. |
 
-`--update` (`yarn verify:baselines --update`, `yarn verify:scenes --update`) records the current
+`--update` (`yarn verify:baselines --update`, `yarn verify:scenes --update`, `yarn verify:ui --update`) records the current
 state. Commit it with the change that moved it, and say why in the PR. A refactoring records the
 scene baselines on `main` before its branch's first run, so the run compares against the code
 before it.

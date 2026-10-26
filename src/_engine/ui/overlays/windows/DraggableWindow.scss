@@ -1,0 +1,344 @@
+// The draggable windows' and dialogs' styles (DraggableWindow.ts), on the design tokens and layered
+// (p803 D5): an app's unlayered rule wins, and every selector is in :where(). Global classes, its
+// parts `aekWindow__*`; states are attributes (data-state, data-draggable, data-resizable,
+// data-resizing). Its custom properties are read with a fallback, never declared here, so an app
+// sets them on the window, the HUD root or any ancestor:
+// --aek-window-header-height, --aek-window-radius, --aek-window-bg, --aek-window-header-bg,
+// --aek-window-border-color, --aek-window-shadow.
+
+$headerHeight: var(--aek-window-header-height, var(--aek-space-7));
+$borderWidth: 1px;
+// Room for the resize handles, which sit over the window's padding
+$handleRoom: var(--aek-space-3);
+$collapseTime: var(--aek-motion-base);
+
+@mixin nakedButton {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+// A ring drawn inside the element: the window's overflow clips an outside one at its edges
+@mixin insetRing {
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width) - 1px);
+  }
+}
+
+@layer aek.components {
+  :where(.aekWindow) {
+    position: fixed;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: $borderWidth solid var(--aek-window-border-color, var(--aek-border-strong));
+    border-radius: var(--aek-window-radius, var(--aek-radius-lg));
+    background: var(--aek-window-bg, var(--aek-surface-raised));
+    box-shadow: var(--aek-window-shadow, var(--aek-shadow-lg));
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+    transition:
+      height $collapseTime var(--aek-ease-standard),
+      min-height $collapseTime var(--aek-ease-standard),
+      max-height $collapseTime var(--aek-ease-standard);
+  }
+
+  :where(.aekWindow[data-resizing]) {
+    transition: none;
+  }
+
+  :where(.aekWindow[data-resizable='both'], .aekWindow[data-resizable='vertical']) {
+    padding-bottom: $handleRoom;
+  }
+
+  :where(.aekWindow[data-resizable='both'], .aekWindow[data-resizable='horizontal'])
+    :where(.aekWindow__content) {
+    margin-right: $handleRoom;
+  }
+
+  :where(.aekWindow[data-state='collapsed']) {
+    height: calc($headerHeight + 2 * $borderWidth) !important;
+    min-height: calc($headerHeight + 2 * $borderWidth) !important;
+    max-height: calc($headerHeight + 2 * $borderWidth) !important;
+    padding-bottom: 0;
+  }
+
+  // The header: the title, the collapse and close buttons. Focusable (a drag's keyboard path), so
+  // its ring is drawn inside it.
+  :where(.aekWindow__header) {
+    box-sizing: border-box;
+    display: flex;
+    flex: none;
+    align-items: center;
+    height: $headerHeight;
+    border-bottom: $borderWidth solid var(--aek-border);
+    background: var(--aek-window-header-bg, var(--aek-surface));
+    user-select: none;
+    touch-action: none;
+
+    @include insetRing;
+  }
+
+  :where(.aekWindow[data-state='collapsed'] .aekWindow__header) {
+    border-bottom-width: 0;
+  }
+
+  :where(.aekWindow[data-draggable] .aekWindow__header) {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  // One line, cut with an ellipsis (its tooltip shows the whole title then)
+  :where(.aekWindow__title) {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0 var(--aek-space-4);
+    overflow: hidden;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-base);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  // The title's icon (getSvgIcon: 1em, following the title)
+  :where(.aekWindow__title .aekIcon) {
+    margin-right: var(--aek-space-2);
+  }
+
+  :where(.aekWindow__button) {
+    @include nakedButton;
+    position: relative;
+    flex: none;
+    align-self: stretch;
+    width: $headerHeight;
+    color: var(--aek-text-muted);
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+
+    &:hover {
+      background-color: var(--aek-surface-hover);
+      color: var(--aek-text);
+    }
+
+    @include insetRing;
+  }
+
+  :where(.aekWindow__button + .aekWindow__button) {
+    border-left: $borderWidth solid var(--aek-border);
+  }
+
+  // The collapse button's chevron: up while expanded, down while collapsed
+  :where(.aekWindow__collapse)::before {
+    position: absolute;
+    inset: 0;
+    width: calc($headerHeight * 0.22);
+    height: calc($headerHeight * 0.22);
+    margin: auto;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    content: '';
+    transform: translateY(25%) rotate(-135deg);
+    transition: transform $collapseTime var(--aek-ease-standard);
+  }
+
+  :where(.aekWindow[data-state='collapsed'] .aekWindow__collapse)::before {
+    transform: translateY(-25%) rotate(45deg);
+  }
+
+  // The close button's cross
+  :where(.aekWindow__close)::before,
+  :where(.aekWindow__close)::after {
+    position: absolute;
+    inset: 0;
+    width: calc($headerHeight * 0.45);
+    height: 2px;
+    margin: auto;
+    border-radius: 1px;
+    background: currentColor;
+    content: '';
+  }
+
+  :where(.aekWindow__close)::before {
+    transform: rotate(-45deg);
+  }
+
+  :where(.aekWindow__close)::after {
+    transform: rotate(45deg);
+  }
+
+  // Focusable only when it holds nothing focusable (so its scroll has a keyboard path): its ring
+  // is drawn inside it. Hidden once a collapse has finished, so Tab skips a collapsed window's
+  // content; shown at once on an expand.
+  :where(.aekWindow__content) {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-color: var(--aek-border-strong) transparent;
+    scrollbar-width: thin;
+
+    @include insetRing;
+  }
+
+  :where(.aekWindow[data-state='collapsed'] .aekWindow__content) {
+    visibility: hidden;
+    transition: visibility 0s linear $collapseTime;
+  }
+
+  :where(.aekWindow__resizeV, .aekWindow__resizeH, .aekWindow__resizeHV) {
+    position: absolute;
+    user-select: none;
+    touch-action: none;
+  }
+
+  :where(.aekWindow__resizeV) {
+    bottom: var(--aek-space-1);
+    left: 50%;
+    width: var(--aek-space-7);
+    max-width: 50%;
+    height: var(--aek-space-2);
+    border-radius: var(--aek-radius-full);
+    background: var(--aek-border);
+    cursor: ns-resize;
+    transform: translateX(-50%);
+  }
+
+  :where(.aekWindow__resizeH) {
+    top: calc(50% + $headerHeight / 2);
+    right: var(--aek-space-1);
+    width: var(--aek-space-2);
+    height: var(--aek-space-7);
+    max-height: calc(50% - $headerHeight / 2);
+    border-radius: var(--aek-radius-full);
+    background: var(--aek-border);
+    cursor: ew-resize;
+    transform: translateY(-50%);
+  }
+
+  // The corner: an L of two bars. The handles are `border` (p801 §4.3): `border-strong` read as a
+  // scrollbar's thumb
+  :where(.aekWindow__resizeHV) {
+    right: var(--aek-space-1);
+    bottom: var(--aek-space-1);
+    width: var(--aek-space-4);
+    height: var(--aek-space-4);
+    cursor: nwse-resize;
+
+    &::before,
+    &::after {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      border-radius: var(--aek-radius-full);
+      background: var(--aek-border);
+      content: '';
+    }
+
+    &::before {
+      width: 100%;
+      height: var(--aek-space-2);
+    }
+
+    &::after {
+      width: var(--aek-space-2);
+      height: 100%;
+    }
+  }
+
+  :where(.aekWindow[data-state='collapsed'])
+    :where(.aekWindow__resizeV, .aekWindow__resizeH, .aekWindow__resizeHV) {
+    display: none;
+  }
+
+  // 100 % of its containing block: the viewport, or a mounted engine's container (not the page)
+  :where(.aekWindowBackdrop) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--aek-backdrop);
+  }
+
+  // The debugger's content helpers in its windows (until p806 restyles the debugger)
+  :where(.winPaddedContent) {
+    padding: var(--aek-space-3) var(--aek-space-4);
+  }
+
+  :where(.winNotRightPaddedContent) {
+    padding: var(--aek-space-3) 0 var(--aek-space-3) var(--aek-space-4);
+  }
+
+  :where(.winFlexContent) {
+    display: flex;
+    gap: var(--aek-space-3);
+    justify-content: space-between;
+  }
+
+  :where(.winSmallLabel) {
+    display: inline-block;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-relaxed);
+  }
+
+  :where(.winSmallIconButton) {
+    @include nakedButton;
+    position: relative;
+    box-sizing: border-box;
+    width: calc(var(--aek-space-6) + var(--aek-space-1));
+    height: calc(var(--aek-space-6) + var(--aek-space-1));
+    margin-bottom: var(--aek-space-2);
+    margin-left: var(--aek-space-2);
+    padding: var(--aek-space-2);
+    overflow: hidden;
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface-hover);
+    vertical-align: top;
+    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
+
+    &:hover {
+      background-color: var(--aek-border-strong);
+    }
+
+    svg path {
+      fill: var(--aek-text);
+    }
+
+    &:disabled svg path {
+      fill: var(--aek-text-disabled);
+    }
+  }
+
+  :where(.winSmallIconButton.dangerColor) svg path {
+    fill: var(--aek-danger);
+  }
+
+  // The current window's mark
+  :where(.winSmallIconButton.current)::before {
+    display: block;
+    position: absolute;
+    top: calc(-1 * var(--aek-space-3));
+    left: calc(-1 * var(--aek-space-3));
+    width: var(--aek-space-4);
+    height: var(--aek-space-4);
+    background-color: var(--aek-accent);
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  :where(.winSmallIconButton.current:disabled)::before {
+    background-color: var(--aek-text-disabled);
+  }
+}

@@ -119,7 +119,7 @@ vi.mock(import('../render/CanvasSize'), () => ({
   setCanvasSizeSource: fns.setCanvasSizeSource,
   createElementSizeSource: fns.createElementSizeSource,
 }));
-vi.mock(import('../../ui/Window'), () => ({
+vi.mock(import('../../ui/core/Window'), () => ({
   setWindowBoundsElement: fns.setWindowBoundsElement,
 }));
 vi.mock(import('../assets/AssetUrl'), () => ({ setAssetBaseUrl: fns.setAssetBaseUrl }));

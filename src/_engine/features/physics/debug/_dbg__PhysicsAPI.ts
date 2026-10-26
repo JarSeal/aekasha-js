@@ -14,8 +14,8 @@ import {
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { llog, lwarn } from '../../../utils/Logger';
-import { CMP } from '../../../ui/CMP';
-import { getSvgIcon } from '../../../ui/icons/SvgIcon';
+import { CMP } from '../../../ui/core/CMP';
+import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
 import {
   closeDraggableWindow,
   getDraggableWindowsOfKind,
@@ -23,7 +23,7 @@ import {
   registerDraggableWindowKind,
   toggleDraggableWindow,
   updateDraggableWindow,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { createClearTabLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
 import { getPhysicsBodyCapacity } from '../PhysicsBodies';
 import { getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from '../PhysicsState';

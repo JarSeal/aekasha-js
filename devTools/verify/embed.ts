@@ -19,12 +19,16 @@
  *   `hub/pages/examples/embed/`) mounts into its hero at the target's size, turns, and its pause
  *   button pauses and resumes it, without an error.
  * - The uiKit profile only (p801 D9), `INLINE` in the 640 × 360 target on a host with a 16 px
- *   root and again with `html { font-size: 62.5% }`: the window, the dialog, its backdrop, the
- *   toast and the open drop-down list inside the container; the window at its px position from
+ *   root and again with `html { font-size: 62.5% }`: the window, the dialog (opened from the
+ *   window's button) with its backdrop, the toast, the drop-down list (opened from its trigger)
+ *   and the window's tooltip (p803 D11) inside the container; the window at its px position from
  *   the container's corner, the dialog centred in it, the backdrop covering it and not the page;
- *   the window's, the toast's and the list's font sizes the same at both roots, their font IBM
- *   Plex Sans (the scene opts in, p801 D8) and its face loaded; with the dialog closed, a drag of the window's title moving it by the pointer's distance, and the window
- *   inside the container after the target shrinks.
+ *   the window's, the toast's, the list's and the tooltip's font sizes the same at both roots, their font IBM
+ *   Plex Sans (the scene opts in, p801 D8) and its face loaded; the list's last option shown
+ *   where the list overflows the dialog (the top layer); Escape on the host page leaving
+ *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, a drag of
+ *   the window's title moving it by the pointer's distance, and the window inside the container
+ *   after the target shrinks.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
@@ -71,24 +75,32 @@ const UI_KIT_PROFILE = 'uiKit';
 const UI_KIT = {
   container: '.aekMount',
   window: '#uiKitEmbedWindow',
-  windowTitle: '#uiKitEmbedWindow header h3',
+  windowTitle: '#uiKitEmbedWindow .aekWindow__title',
   dialog: '#uiKitEmbedDialog',
-  // A dialog has no collapse button: its header's one button closes it
-  dialogClose: '#uiKitEmbedDialog header button',
+  // Escape is pressed with the focus on its drop-down's trigger: on its close button, the button's
+  // tooltip would show and take the first Escape (the innermost overlay, p803 D7)
+  dialogFocus: '#uiKitEmbedDialog .aekDropDownTrigger',
   backdrop: '.uiKitEmbedBackdrop',
-  toast: '#uiKitEmbedToasts .toast',
+  // The host page's own button (embedHost.html), outside the HUD root
+  hostButton: 'body > p > button',
+  toast: '#uiKitEmbedToasts .aekToast',
   list: '.uiKitEmbedList',
+  tooltip: '.uiKitEmbedTooltip',
   listItem: '.uiKitEmbedList li',
 } as const;
+/** The window's button that opens the dialog, and the dialog's drop-down trigger the list opens
+ * from: the scene opens neither at load (p803 Phase 8: a page's focus would jump into the embed) */
+const UI_KIT_OPEN_DIALOG = '#uiKitEmbedWindow .uiKitEmbedOpenDialog';
+const UI_KIT_LIST_TRIGGER = '#uiKitEmbedDialog .aekDropDownTrigger';
 /** The elements that must stay inside the container */
-const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list'] as const;
+const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list', 'tooltip'] as const;
 /** The elements whose font size must not follow the host's root */
-const UI_KIT_FONTS = ['window', 'toast', 'listItem'] as const;
+const UI_KIT_FONTS = ['window', 'toast', 'listItem', 'tooltip'] as const;
 /** The kit's font, which the profile's scene opts into (`aekasha/ui/fonts`, p801 D8) */
 const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
-/** The drag, which keeps the 220 × 150 window inside the 640 × 360 container */
+/** The drag, which keeps the 220 × 190 window inside the 640 × 360 container */
 const UI_KIT_DRAG = { x: 120, y: 60 };
 /** The shrunk target, which the dragged window no longer fits at its place */
 const UI_KIT_SHRUNK = { width: 320, height: 200 };
@@ -283,8 +295,15 @@ const checkUiKitAtRoot = async (
     `the UI kit, INLINE, ${label}`,
     async ({ problems, styles }) => {
       const before = await styles();
+      // The `<style>` elements in the host's head before the mount: the kit writes none (p803 D5:
+      // the toaster's settings are custom properties on its element, its styles a stylesheet)
+      const headStyles = () => page.evaluate(() => document.head.querySelectorAll('style').length);
+      const headStylesBefore = await headStyles();
       const mounted = await page.evaluate(() => window.__embedTest.mount({ target: '#inline' }));
       if (mounted.isFallback) problems.push('mounted as the fallback');
+      // The dialog from the window's button, and its drop-down's list from its trigger
+      await page.click(UI_KIT_OPEN_DIALOG, { timeout: 10_000 });
+      await page.click(UI_KIT_LIST_TRIGGER, { timeout: 10_000 });
       // Every piece open, and the toast done sliding in (its box the same on two polls)
       let lastToast = '';
       await waitFor(async () => {
@@ -301,6 +320,10 @@ const checkUiKitAtRoot = async (
         return;
       }
       for (const name of UI_KIT_INSIDE) pushIf(problems, checkInside(name, r[name], container));
+      const headStylesAfter = await headStyles();
+      if (headStylesAfter !== headStylesBefore) {
+        problems.push(`the host's head has ${headStylesAfter - headStylesBefore} more <style>`);
+      }
       pushIf(
         problems,
         checkPosition('window', r.window, {
@@ -317,6 +340,16 @@ const checkUiKitAtRoot = async (
           })
         );
       }
+      // The list overflows the dialog (in the top layer, p803 D7): its last option isn't clipped
+      const isLastOptionShown = await page.evaluate((selector) => {
+        const items = document.querySelectorAll(selector);
+        const last = items[items.length - 1];
+        if (!last) return false;
+        const box = last.getBoundingClientRect();
+        return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === last;
+      }, UI_KIT.listItem);
+      if (!isLastOptionShown)
+        problems.push('the list’s last option is hidden (clipped or covered)');
       // The container's box, not the page's
       pushIf(problems, checkPosition('backdrop', r.backdrop, container));
       pushIf(problems, checkBox('backdrop', r.backdrop, container));
@@ -341,14 +374,22 @@ const checkUiKitAtRoot = async (
       if (!(await loadedPlex()).length) problems.push(`${UI_KIT_FONT_FAMILY} never loaded`);
       expectNoStyleChange(problems, 'while mounted', before, await styles());
 
-      // The dialog closed by its button, so the window is no longer under its backdrop
-      await page.click(UI_KIT.dialogClose);
+      // Escape on the host page is the page's (p803 D7: the overlay stack listens on the HUD
+      // root only), so the closeOnEscape dialog stays open
+      await page.focus(UI_KIT.hostButton);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100); // A close would be at once: nothing to poll for
+      if (!(await read()).dialog) problems.push('Escape on the host page closed the dialog');
+
+      // Escape inside the dialog closes it, so the window is no longer under its backdrop
+      await page.focus(UI_KIT.dialogFocus);
+      await page.keyboard.press('Escape');
       await waitFor(async () => {
         const closed = await read();
         return !closed.dialog && !closed.backdrop;
       });
       r = await read();
-      if (r.dialog || r.backdrop) problems.push('the dialog’s close button didn’t close it');
+      if (r.dialog || r.backdrop) problems.push('Escape inside the dialog didn’t close it');
 
       // A drag by the title moves the window by the pointer's distance (no jump by the
       // container's offset: Phase 2's fix of a drag's start)
@@ -367,8 +408,8 @@ const checkUiKitAtRoot = async (
         problems.push('no window title to drag');
       }
 
-      // The windows clamp on the container's resize (the main loop's resizers, from its
-      // ResizeObserver), and the toast follows the container's right edge
+      // The windows clamp on the container's resize (the kit's ResizeObserver on its bounds,
+      // onBoundsResize), and the toast follows the container's right edge
       await page.evaluate(
         (size) => window.__embedTest.resizeTarget('#inline', size.width, size.height),
         { width: `${UI_KIT_SHRUNK.width}px`, height: `${UI_KIT_SHRUNK.height}px` }

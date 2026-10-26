@@ -2,7 +2,9 @@
 
 Every colour is a role, never a value: a style reads `var(--aek-text)`, not `#e6ebf2`. Each role
 has a value in both themes. Dark is the default, light follows `prefers-color-scheme`, and
-`data-aek-theme="dark"` or `"light"` on any element forces its subtree.
+`data-aek-theme="dark"` or `"light"` on any element forces its subtree. Each theme sets
+`color-scheme` with its values, so the browser's scrollbars and form controls match. The debugger
+stays dark whatever the system's theme until it gets a theme setting of its own (p806).
 
 - **Surfaces** are what things sit on: `bg` the page or the game's canvas edge, `surface` a panel
   or a window's body, `surface-raised` what floats over it (a menu, a popover), `surface-hover` a

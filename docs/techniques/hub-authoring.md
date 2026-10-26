@@ -220,15 +220,15 @@ The build checks the coverage both ways (when it runs in the repo, where CLAUDE.
 
 The **Project** button opens `hub/pages/project/`: the pages for working on Ækasha and on the app, which the public Hub doesn't build.
 
-| Page                           | What it holds                                                                                                                                          |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `project/`                     | The philosophy: the brand and the core principles, how Ækasha is developed, what the section holds.                                                    |
-| `project/aekasha/`             | Developing Ækasha: the code conventions that are only the repo's (the hooks, the ratchets, the baselines) and the plan and issue workflow.             |
-| `project/aekasha/design/`      | Ækasha's design document: written rules with their do / don't pairs, and token tables generated from the UI kit ([Design document](#design-document)). |
-| `project/aekasha/components/`  | The component library: the UI kit's pieces live, every state, and the files that use each ([Component library](#component-library)).                   |
-| `project/aekasha/code-blocks/` | Every code block feature rendered ([Code blocks](#code-blocks)).                                                                                       |
-| `project/app/`                 | The app's conventions: what goes in `src/app/`, the scene folder rule, its version.                                                                    |
-| `project/app/design/`          | The app's design document: Ækasha's headings, each with a "To decide" note. A fork replaces the notes with its own decisions, in place.                |
+| Page                           | What it holds                                                                                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project/`                     | The philosophy: the brand and the core principles, how Ækasha is developed, what the section holds.                                                              |
+| `project/aekasha/`             | Developing Ækasha: the code conventions that are only the repo's (the hooks, the ratchets, the baselines) and the plan and issue workflow.                       |
+| `project/aekasha/design/`      | Ækasha's design document: written rules with their do / don't pairs, and token tables generated from the UI kit ([Design document](#design-document)).           |
+| `project/aekasha/components/`  | The component library's dev page: the public one's demos, the files that use each piece and the notes for later plans ([Component library](#component-library)). |
+| `project/aekasha/code-blocks/` | Every code block feature rendered ([Code blocks](#code-blocks)).                                                                                                 |
+| `project/app/`                 | The app's conventions: what goes in `src/app/`, the scene folder rule, its version.                                                                              |
+| `project/app/design/`          | The app's design document: Ækasha's headings, each with a "To decide" note. A fork replaces the notes with its own decisions, in place.                          |
 
 - **The prose is rewritten, not copied.** It comes from the root `CLAUDE.md`, `docs/plans/CLAUDE.md` and the coding standards page, which stay the source. Each page says which file it explains, and `aek:covers` ties the sections it can, so a change to one of those files is a reason to read its page.
 - In dev, the homepage hero lists the section's main pages under "Project", the app's design document first.
@@ -256,7 +256,7 @@ Nested.
 ::::
 ```
 
-The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
+The other directives are `code-group` ([Code groups](#code-groups)), `scene` ([Scene panels](#scene-panels)), `cards` ([Cards](#cards)), `claude-md` ([CLAUDE.md sections](#claudemd-sections)), `demo` ([Component library](#component-library)) and `dev-only` ([Local-only content](#local-only-content)). A new one is a `HubDirective` (`{ open, close }`) exported by its module and added to `HUB_DIRECTIVES` in `devTools/hub/build.ts`, without touching the parser.
 
 ## Code blocks
 
@@ -534,9 +534,12 @@ The app's design document (`/hub/project/app/design/`) has the same headings, ea
 
 ### Component library
 
-`/hub/project/aekasha/components/` (a dev page) shows the UI kit's pieces working, without the engine: a window, a dialog, a drop-down, toasts and icons, each with buttons that open its states. The page's script is `hub/_assets/ts/_components.ts`. The dev Hub loads it on that page only, and `yarn hub:build` never builds it.
+The UI kit's pieces working, without the engine, on two pages with the same demos:
 
-Each piece has three elements in the page's `index.html`, inside the `data-hub-components` element:
+- **`/hub/features/ui-kit/library/`** (public): every piece in every state, for an app's developer. `yarn verify:ui` checks this page, as the public Hub builds it.
+- **`/hub/project/aekasha/components/`** (a dev page): the same boxes with what developing the kit needs: which files use each piece, notes for the plans that change it, and what the kit adds to a build.
+
+The script is `hub/_assets/ts/_components.ts`. `hub.ts` loads it on any page with a demo box, in both modes. Each piece has its text slot and its box in both pages' `index.html`, inside the `data-hub-components` element, and the dev page adds its "Used by" slot:
 
 ```html
 <div id="dialog-text"></div>
@@ -544,16 +547,19 @@ Each piece has three elements in the page's `index.html`, inside the `data-hub-c
 <div id="generated-components-dialog"></div>
 ```
 
-- **`dialog-text.md`**: what the piece is, its states, what the page can't show (what needs the engine's boot), and notes for the plan that restyles it.
+- **`dialog-text.md`**, one per page: the public one says what the piece is, what its states show and what the page can't show (what needs the engine's boot); the dev one links it and holds the notes for later plans.
 - **The demo box**: `_components.ts`' `DEMOS` maps `dialog` to the function that fills it with the buttons.
-- **"Used by"**: the generator (`devTools/hub/generated/components.ts`) lists the files outside the kit that call the piece's functions, grouped by where they are, each linked. List a new piece's functions in `COMPONENT_USES`.
+- **"Used by"** (dev page): the generator (`devTools/hub/generated/components.ts`) lists the files outside the kit that call the piece's functions, grouped by where they are, each linked. List a new piece's functions in `COMPONENT_USES`.
+- **Its checks**: the states its buttons don't open and its keyboard scripts, in `hub/_assets/ts/_componentChecks.ts` (`devTools/verify/CLAUDE.md`).
 
-To add a component, add the three elements, its `.md`, a demo in `DEMOS` and its entry in `COMPONENT_USES`.
+To add a component, add the elements to both pages, its two `.md` files, a demo in `DEMOS`, its entry in `COMPONENT_USES` and its checks.
 
-The settings at the top switch the theme and density of the kit's pieces. Until p803 maps the kit's styles to the design tokens, both look the same. The page's "In a build" section gives the kit's size with `{{sbp:…}}` numbers.
+Any other page shows a piece's live demo with `::: demo <key>` (no content), the box of that key: the UI kit section's pages do, next to each component's text. The key must be a box of the public library page, so the build fails on one `yarn verify:ui` doesn't check.
 
-::: warning The kit isn't fully standalone yet
-The page's script makes the kit's HUD root and loads its global styles through two engine paths (the boot makes them in an app), and the Hub's script build replaces the engine's main loop and storage modules with its own (`hub/_assets/ts/_kit/`). When the kit starts using another engine function, the Hub's script build fails until the stand-in exports it. `devTools/hub/CLAUDE.md` (Scripts) has the detail.
+The settings at the top switch the theme and density of everything the demos open or draw. The dev page's "In a build" section gives the kit's size with `{{sbp:…}}` numbers.
+
+::: note The storage stand-in
+The page makes the HUD root with `createHudRoot`, as any page without the engine does. The Hub's script build replaces one engine module with its own (`hub/_assets/ts/_kit/`): the storage, kept in memory, since the dev Hub shares the app's `localStorage`. When the kit starts using another storage function, the script build fails until the stand-in exports it. `devTools/hub/CLAUDE.md` (Scripts) has the detail.
 :::
 
 ## Refreshing in dev

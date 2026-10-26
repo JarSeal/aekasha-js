@@ -22,16 +22,16 @@
       "gzip": 1046
     },
     "assets/banner.css": {
-      "bytes": 5758,
-      "gzip": 1547
+      "bytes": 7089,
+      "gzip": 1924
     },
     "assets/banner.embed.js": {
-      "bytes": 1041146,
-      "gzip": 292051
+      "bytes": 1041345,
+      "gzip": 292075
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 342
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -75,7 +75,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
@@ -83,11 +83,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
-      "gzip": 6659
+      "gzip": 6656
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24364
+      "gzip": 24363
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -111,7 +111,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 182
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -119,14 +119,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 212
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 1060377,
-    "gzip": 297465
+    "minified": 1060567,
+    "gzip": 297546
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -142,7 +142,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2379,
-      "gzip": 1073
+      "gzip": 1070
     },
     "_engine/kernel/ecs": {
       "modules": 7,
@@ -151,8 +151,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7182,
-      "gzip": 3108
+      "minified": 7184,
+      "gzip": 3109
     },
     "_engine/kernel/input": {
       "modules": 1,
@@ -186,8 +186,8 @@
     },
     "_engine/ui": {
       "modules": 3,
-      "minified": 11188,
-      "gzip": 4037
+      "minified": 11376,
+      "gzip": 4120
     },
     "_engine/utils": {
       "modules": 7,

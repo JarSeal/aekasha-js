@@ -5,7 +5,7 @@ import { Pane, type ButtonApi } from 'tweakpane';
 import type { ECSWorld } from '../../ecs/ECS';
 import { getECSWorld, getEntityIdByAppId, getStableAppId } from '../../ecs/ECS';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import {
   createDebuggerTab,
   debuggerListCMP,
@@ -20,7 +20,7 @@ import {
   toggleDraggableWindow,
   updateDraggableWindow,
   updateDraggableWindowsOfKind,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { getCurrentSceneId } from '../../scene/Scene';
 import { isCurrentlyLoading } from '../../scene/SceneLoader';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';

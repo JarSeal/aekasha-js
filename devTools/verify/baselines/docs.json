@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2418,
-      "total": 2418
+      "documented": 2541,
+      "total": 2541
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2338,
-        "total": 2338
+        "documented": 2461,
+        "total": 2461
       },
       "members": {
         "documented": 890,
@@ -593,10 +593,10 @@
         "members": []
       }
     },
-    "engine/ui": {
+    "engine/ui/components": {
       "exports": {
-        "documented": 91,
-        "total": 91
+        "documented": 50,
+        "total": 50
       },
       "members": {
         "documented": 0,
@@ -607,10 +607,66 @@
         "members": []
       }
     },
-    "engine/ui/icons": {
+    "engine/ui/core": {
       "exports": {
-        "documented": 6,
-        "total": 6
+        "documented": 39,
+        "total": 39
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/core/icons": {
+      "exports": {
+        "documented": 7,
+        "total": 7
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/forms": {
+      "exports": {
+        "documented": 5,
+        "total": 5
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/overlays": {
+      "exports": {
+        "documented": 43,
+        "total": 43
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/overlays/windows": {
+      "exports": {
+        "documented": 72,
+        "total": 72
       },
       "members": {
         "documented": 0,
@@ -625,6 +681,20 @@
       "exports": {
         "documented": 15,
         "total": 15
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/testing": {
+      "exports": {
+        "documented": 4,
+        "total": 4
       },
       "members": {
         "documented": 0,

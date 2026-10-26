@@ -59,11 +59,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
-      "bytes": 3403,
-      "gzip": 1631
+      "bytes": 3405,
+      "gzip": 1632
     },
     "assets/ibm-plex-mono-latin-400-italic.woff2": {
       "bytes": 16448,
@@ -94,7 +94,7 @@
       "gzip": 6651
     },
     "assets/KTX2Loader.js": {
-      "bytes": 59893,
+      "bytes": 59895,
       "gzip": 24363
     },
     "assets/LodChainGLTF.js": {
@@ -119,38 +119,38 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 181
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
       "gzip": 179
     },
     "assets/uiKit.css": {
-      "bytes": 5758,
-      "gzip": 1547
+      "bytes": 7089,
+      "gzip": 1924
     },
     "assets/uiKit.embed.js": {
-      "bytes": 1038238,
-      "gzip": 290881
+      "bytes": 1038854,
+      "gzip": 291081
     },
     "assets/uiKitEmbed.css": {
-      "bytes": 11649,
-      "gzip": 2304
+      "bytes": 23818,
+      "gzip": 4253
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 30887,
-      "gzip": 11201
+      "bytes": 50786,
+      "gzip": 18357
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 212
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
-    "minified": 1057364,
-    "gzip": 296335
+    "minified": 1057926,
+    "gzip": 296568
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -166,7 +166,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2384,
-      "gzip": 1077
+      "gzip": 1073
     },
     "_engine/kernel/ecs": {
       "modules": 7,
@@ -175,8 +175,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7282,
-      "gzip": 3141
+      "minified": 7284,
+      "gzip": 3143
     },
     "_engine/kernel/input": {
       "modules": 1,
@@ -210,8 +210,8 @@
     },
     "_engine/ui": {
       "modules": 4,
-      "minified": 11630,
-      "gzip": 4216
+      "minified": 12190,
+      "gzip": 4451
     },
     "_engine/utils": {
       "modules": 7,

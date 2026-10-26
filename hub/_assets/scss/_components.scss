@@ -85,21 +85,22 @@
   }
 }
 
-// The kit sizes no icon (`.uiIcon svg` fills its box's width): its user does, as here
+// An icon demo's cell: an icon is 1em or its size token's (p803 D5), centred in the cell
 .hubDemoIcon {
   display: inline-flex;
-  width: 1.5rem;
+  min-width: 1.5rem;
   justify-content: center;
 }
 
-.hubDemoIconButton .uiIcon {
-  width: 1em;
+.hubDemoIconButton {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
 }
 
 // A demo window's content: the page's, as an app's content is the app's (the HUD root is outside
-// the article, so these don't inherit its prose styles). Its colours are the window's (inherited):
-// the window is still the debugger's dark in both themes (variables.scss, until p803), so the page's
-// text and button colours would be dark on dark in the light theme.
+// the article, so these don't inherit its prose styles). Its colours are the window's (inherited),
+// which follow the kit's theme on the HUD root (p803 Phase 5).
 .hubDemoPanel {
   display: grid;
   gap: 0.75rem;
@@ -128,8 +129,108 @@
   }
 }
 
+.hubDemoTooltipCompass {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas:
+    '. top .'
+    'left . right'
+    '. bottom .'
+    'longtext longtext longtext';
+  gap: 0.5rem;
+  place-items: center;
+  padding: 1.5rem 0 0;
+
+  @each $area in top, left, right, bottom, longtext {
+    > [data-area='#{$area}'] {
+      grid-area: $area;
+      // A panel button sits at its row's start (.hubDemoPanel)
+      justify-self: center;
+    }
+  }
+
+  // Room for the bottom button's tooltip
+  > [data-area='longtext'] {
+    margin-top: 1.75rem;
+  }
+}
+
+.hubDemoPopover {
+  padding: 0;
+}
+
 .hubDemoDropDowns > p {
   margin-top: 0.25rem;
   font-size: 0.8125rem;
   opacity: 0.75;
+}
+
+// A kit root in a demo box (`addKitRoot`): a piece drawn in the page, its theme and density from the
+// page's switches. Its rows are at the kit's text size (not the root itself: --aek-base is computed
+// from the root's own font size, so reading it there would be a cycle)
+.hubDemoKitRoot {
+  display: grid;
+  gap: 1rem;
+
+  .hubComponentDemoGroup {
+    font-size: var(--aek-font-size-md);
+  }
+}
+
+// A line of text in a kit root: one with a piece in it (a key hint, a link), or a status line. In a
+// row it isn't the row's label (`.hubComponentDemoGroup > p`): the kit root's text
+.hubDemoLine,
+.hubComponentDemoGroup > .hubDemoLine {
+  width: auto;
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: var(--aek-line-height-base);
+}
+
+// A progress bar in a row: the row is a wrapping flex box, so the bar gets a width of its own
+.hubDemoProgress {
+  width: min(100%, 20rem);
+}
+
+// A skeleton's text lines in a row take a width of their own (empty, they'd shrink to nothing)
+.hubDemoSkeleton {
+  width: min(100%, 16rem);
+}
+
+.hubDemoSkeletonCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(100%, 20rem);
+  padding: 0.75rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+}
+
+.hubDemoDividerColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+// The row stretches its vertical divider to the buttons' height
+.hubComponentDemoGroup.hubDemoDividerRow {
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+// The panel a loading overlay covers (`cover: 'parent'`): positioned, with a size of its own
+.hubDemoOverlayPanel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(100%, 24rem);
+  min-height: 9rem;
+  padding: 1rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  overflow: hidden;
 }

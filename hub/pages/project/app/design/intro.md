@@ -12,4 +12,4 @@ goes into the public Hub.
 tokens. Change a token on the kit root (the HUD root, or the container the app's UI goes in) and
 every component follows. Restyle one component only where the tokens can't express the change,
 and give the app's own tokens a prefix of its own (`--game-*`), never `--aek-*`.
-[Styling](hub:features/ui-kit#styling) on the UI kit page shows how.
+[Styling the UI kit](hub:features/ui-kit/styling) shows how.

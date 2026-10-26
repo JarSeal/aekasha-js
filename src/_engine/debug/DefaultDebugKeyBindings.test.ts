@@ -4,7 +4,7 @@ import { initEnvironment, type AppConfig } from '../kernel/config/Config';
 import { createActionMap, getActionMap, getActionMaps } from '../kernel/input/Actions';
 import { createKeyBinding, deleteKeyBinding } from '../kernel/input/KeyboardInput';
 import { toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
-import { toggleActiveViewDrawer } from '../kernel/render/Views';
+import { toggleActiveViewDrawer, toggleViewPlay } from '../kernel/render/Views';
 import { toggleEnvBall } from './DebugTools';
 import {
   APP_DEBUG_KEYS_ACTION_MAP_ID,
@@ -68,7 +68,7 @@ vi.mock(import('./DebugTools'), () => ({
 }));
 vi.mock(import('./Profiler'), () => ({ toggleProfilerWindow: vi.fn() }));
 vi.mock(import('./UndoRedo'), () => ({ undoLastAction: vi.fn(), redoLastAction: vi.fn() }));
-vi.mock(import('../ui/icons/SvgIcon'), () => ({ getSvgIcon: () => '' }));
+vi.mock(import('../ui/core/icons/SvgIcon'), () => ({ getSvgIcon: () => '' }));
 
 const held = new Set<string>();
 
@@ -109,8 +109,16 @@ describe('the debug keys', () => {
   it('are a DEBUG action map: a KEY_DOWN key runs at its press, a KEY_UP key at its release', () => {
     registerDefaultDebugKeyBindings();
     expect(getActionMap(DEBUG_KEYS_ACTION_MAP_ID)?.context).toBe('DEBUG');
+    down('Shift');
+    down('F7');
+    down('F7', { repeat: true });
+    up('F7');
+    up('Shift');
+    expect(toggleMainPlay).toHaveBeenCalledTimes(1);
+    // Shift+F7 is the main loop's (F6 is the UI kit's window cycle key, p803 D8), F7 alone the pause
+    expect(toggleViewPlay).not.toHaveBeenCalled();
     down('F6');
-    down('F6', { repeat: true });
+    up('F6');
     expect(toggleMainPlay).toHaveBeenCalledTimes(1);
     down('h');
     expect(toggleActiveViewDrawer).not.toHaveBeenCalled();
@@ -205,17 +213,24 @@ describe('the debug keys', () => {
 describe('the production test mode keys', () => {
   it('give way to an app key binding or action map of the same key', () => {
     registerDefaultProdTestKeyBindings();
-    down('F6');
-    up('F6');
+    down('Shift');
+    down('F7');
+    up('F7');
     expect(toggleMainPlay).toHaveBeenCalledTimes(1);
 
     const appFn = vi.fn();
-    createKeyBinding({ id: 'app-f6', type: 'KEY_DOWN', chord: { key: 'F6' }, fn: appFn });
-    down('F6');
-    up('F6');
+    createKeyBinding({
+      id: 'app-shift-f7',
+      type: 'KEY_DOWN',
+      chord: { key: 'F7', shift: true },
+      fn: appFn,
+    });
+    down('F7');
+    up('F7');
+    up('Shift');
     expect(appFn).toHaveBeenCalledTimes(1);
     expect(toggleMainPlay).toHaveBeenCalledTimes(1);
-    deleteKeyBinding('app-f6');
+    deleteKeyBinding('app-shift-f7');
 
     createActionMap({
       id: 'game',

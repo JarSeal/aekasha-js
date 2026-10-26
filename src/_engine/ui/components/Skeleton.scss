@@ -1,0 +1,80 @@
+// The skeleton's default styles (Skeleton.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). A shimmer (a lighter band moving across)
+// shows the content is on its way; under reduced motion there's no band (p800 D7), and an app's
+// --aek-motion: 0 stops it.
+@layer aek.components {
+  :where(.aekSkeleton) {
+    --aek-skeleton-fill: var(--aek-skeleton-color, var(--aek-surface-hover));
+    --aek-skeleton-band: var(
+      --aek-skeleton-shine,
+      color-mix(in srgb, var(--aek-skeleton-fill) 88%, var(--aek-text))
+    );
+
+    box-sizing: border-box;
+    display: block;
+  }
+
+  // The shapes that are one box carry the shimmer themselves, text lines each carry their own
+  :where(.aekSkeleton[data-shape='block'], .aekSkeleton[data-shape='circle'], .aekSkeleton__line) {
+    background: linear-gradient(
+        90deg,
+        transparent 30%,
+        var(--aek-skeleton-band) 50%,
+        transparent 70%
+      )
+      var(--aek-skeleton-fill);
+    background-size: 250% 100%;
+    animation: aekSkeletonShine calc(1.6s * var(--aek-motion, 1)) linear infinite;
+  }
+
+  :where(.aekSkeleton[data-shape='lines']) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+  }
+
+  // A line is as tall as a capital, and the last one shorter (a paragraph's end)
+  :where(.aekSkeleton__line) {
+    display: block;
+    height: 0.75em;
+    border-radius: var(--aek-skeleton-radius, var(--aek-radius-sm));
+  }
+
+  :where(.aekSkeleton__line:last-child:not(:first-child)) {
+    width: 60%;
+  }
+
+  :where(.aekSkeleton[data-shape='block']) {
+    width: 100%;
+    height: calc(var(--aek-space-7) * 3);
+    border-radius: var(--aek-skeleton-radius, var(--aek-radius-md));
+  }
+
+  :where(.aekSkeleton[data-shape='circle']) {
+    width: auto;
+    height: 2.5em;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(
+        .aekSkeleton[data-shape='block'],
+        .aekSkeleton[data-shape='circle'],
+        .aekSkeleton__line
+      ) {
+      background-image: none;
+      animation: none;
+    }
+  }
+}
+
+@keyframes aekSkeletonShine {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}

@@ -36,7 +36,7 @@ export const DESIGN_SECTION_PATH = 'project/aekasha/design/';
 const STYLES_DIR = path.join(SRC_DIR, '_engine', 'ui', 'styles');
 const TOKENS_FILE = path.join(STYLES_DIR, 'tokens.css');
 const FONTS_FILE = path.join(SRC_DIR, '_engine', 'ui', 'fonts', 'fonts.css');
-const ICONS_DIR = path.join(SRC_DIR, '_engine', 'ui', 'icons');
+const ICONS_DIR = path.join(SRC_DIR, '_engine', 'ui', 'core', 'icons');
 const BUILT_IN_ICONS_FILE = path.join(ICONS_DIR, 'BuiltInIcons.ts');
 
 /** The page's generated slots, by the table group they show */
@@ -123,13 +123,15 @@ const readIcons = (diag: HubDiagnostics): BuiltInIcon[] => {
 };
 
 // The groups: each token's table, by its name (`--aek-` left out)
-const TYPE_PREFIXES = ['font-', 'line-height-', 'numeric-'];
+const TYPE_PREFIXES = ['font-', 'line-height-', 'numeric-', 'icon-size-'];
+/** A delay (`--aek-tooltip-delay`): in the motion section, but not scaled by `--aek-motion` */
+const isDelay = (role: string) => role.endsWith('-delay');
 const isFocusSize = (role: string) => role === 'focus-ring-width' || role === 'focus-ring-offset';
 const ROOT_GROUPS: [string, (role: string) => boolean][] = [
   ['type', (role) => TYPE_PREFIXES.some((prefix) => role.startsWith(prefix))],
   ['space', (role) => role.startsWith('space-') || role === 'base' || role === 'rem'],
   ['elevation', (role) => role.startsWith('radius-') || role.startsWith('z-')],
-  ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-')],
+  ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-') || isDelay(role)],
   ['focus', isFocusSize],
 ];
 
@@ -304,6 +306,7 @@ const renderType = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdow
   );
   const sizes = rootTokens(tokens, (role) => role.startsWith('font-size-'));
   const others = rootTokens(tokens, (role) => /^(font-weight|line-height|numeric)-/.test(role));
+  const iconSizes = rootTokens(tokens, (role) => role.startsWith('icon-size-'));
   const sample = (style: string, text = 'Ækasha 0O 1lI 2468') =>
     `<span class="hubTypeSample" style="${escapeHtml(style)}">${text}</span>`;
   return [
@@ -331,6 +334,21 @@ const renderType = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdow
           px(size),
           px(toBasePx(tokens.compact.get(name))),
           size === null ? '—' : sample(`font-size: ${size}px`, 'The quick brown fox, 1234.5'),
+        ];
+      }),
+    }),
+    heading(md, env, 'Icon sizes'),
+    renderTable({
+      head: ['Token', 'Default', 'Compact', 'Sample'],
+      rows: iconSizes.map((name) => {
+        const size = toBasePx(tokens.root.get(name));
+        return [
+          code(name),
+          px(size),
+          px(toBasePx(tokens.compact.get(name))),
+          size === null
+            ? '—'
+            : `<span class="hubIconSizeSample" style="width: ${size}px; height: ${size}px"></span>`,
         ];
       }),
     }),
@@ -428,6 +446,7 @@ const renderMotion = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkd
   if (!tokens) return UNREAD;
   const durations = rootTokens(tokens, (role) => role.startsWith('motion-'));
   const easings = rootTokens(tokens, (role) => role.startsWith('ease-'));
+  const delays = rootTokens(tokens, isDelay);
   // Hover or focus the row to play it: the token's own duration, so reduced motion stops it too
   const demo = (style: string) =>
     `<span class="hubMotionDemo" style="${escapeHtml(style)}" tabindex="0" role="img" aria-label="A dot that moves on hover or focus"><span></span></span>`;
@@ -452,6 +471,13 @@ const renderMotion = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkd
         code(tokens.root.get(name) ?? ''),
         demo(`--hub-motion-duration: var(--aek-motion-slow); --hub-motion-ease: var(${name})`),
       ]),
+    }),
+    heading(md, env, 'Delays'),
+    '<p>Waits before a piece shows, not motion: reduced motion keeps them.</p>\n',
+    renderTable({
+      className: 'hubMotionTable',
+      head: ['Token', 'Value'],
+      rows: delays.map((name) => [code(name), code(tokens.root.get(name) ?? '')]),
     }),
   ].join('');
 };
@@ -483,7 +509,7 @@ const renderIcons = (icons: BuiltInIcon[], md: MarkdownIt, env: HubMarkdownEnv) 
     ({ name, file, svg }) =>
       `<li>${svg}<code>${escapeHtml(name)}</code><span class="hubIconFile">${escapeHtml(file)}</span></li>`
   );
-  return `${renderMarkdownText(md, `### Built-in icons\n\n${icons.length} icons, by the name \`getSvgIcon\` takes, each with its file in \`src/_engine/ui/icons/svg/\`.\n`, BUILT_IN_ICONS_FILE, env)}<ul class="hubIconGrid">${items.join('')}</ul>\n`;
+  return `${renderMarkdownText(md, `### Built-in icons\n\n${icons.length} icons, by the name \`getSvgIcon\` takes, each with its file in \`src/_engine/ui/core/icons/svg/\`.\n`, BUILT_IN_ICONS_FILE, env)}<ul class="hubIconGrid">${items.join('')}</ul>\n`;
 };
 
 /** The design document's section: its tables from `tokens.css`, `fonts.css` and the icons */

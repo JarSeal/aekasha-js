@@ -2788,16 +2788,107 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
-    "src/_engine/ui/CMP.ts": {
+    "src/_engine/ui/components/Badge.ts": {
+      "Badge": "TypeAlias",
+      "BadgeProps": "TypeAlias",
+      "BadgeTone": "TypeAlias",
+      "createBadge": "Function"
+    },
+    "src/_engine/ui/components/Button.ts": {
+      "Button": "TypeAlias",
+      "ButtonProps": "TypeAlias",
+      "createButton": "Function"
+    },
+    "src/_engine/ui/components/ButtonGroup.ts": {
+      "ButtonGroup": "TypeAlias",
+      "ButtonGroupProps": "TypeAlias",
+      "createButtonGroup": "Function"
+    },
+    "src/_engine/ui/components/Divider.ts": {
+      "createDivider": "Function",
+      "Divider": "TypeAlias",
+      "DividerProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/EmptyState.ts": {
+      "createEmptyState": "Function",
+      "EmptyState": "TypeAlias",
+      "EmptyStateProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/InputGlyph.ts": {
+      "createInputGlyph": "Function",
+      "InputGlyph": "TypeAlias",
+      "InputGlyphInput": "TypeAlias",
+      "InputGlyphProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Kbd.ts": {
+      "createKbd": "Function",
+      "Kbd": "TypeAlias",
+      "KbdProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/KeyNames.ts": {
+      "getAriaKeyShortcuts": "Function",
+      "getKeyName": "Function",
+      "getKeyPlatform": "Function",
+      "KeyName": "TypeAlias",
+      "KeyPlatform": "TypeAlias",
+      "splitKeyChord": "Function"
+    },
+    "src/_engine/ui/components/Link.ts": {
+      "createLink": "Function",
+      "Link": "TypeAlias",
+      "LinkProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/LoadingOverlay.ts": {
+      "createLoadingOverlay": "Function",
+      "LoadingOverlay": "TypeAlias",
+      "LoadingOverlayProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/ProgressBar.ts": {
+      "createProgressBar": "Function",
+      "ProgressBar": "TypeAlias",
+      "ProgressBarProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Skeleton.ts": {
+      "createSkeleton": "Function",
+      "Skeleton": "TypeAlias",
+      "SkeletonProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Spinner.ts": {
+      "createSpinner": "Function",
+      "Spinner": "TypeAlias",
+      "SpinnerProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/SplitButton.ts": {
+      "createSplitButton": "Function",
+      "SplitButton": "TypeAlias",
+      "SplitButtonProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Tag.ts": {
+      "createTag": "Function",
+      "Tag": "TypeAlias",
+      "TagProps": "TypeAlias"
+    },
+    "src/_engine/ui/core/CMP.ts": {
       "classes": "Function",
       "CMP": "Function"
     },
-    "src/_engine/ui/CMPAnim.ts": {
+    "src/_engine/ui/core/CMPAnim.ts": {
       "removeAnims": "Function",
       "runAnims": "Function",
       "updateCmpAnim": "Function"
     },
-    "src/_engine/ui/CMPTypes.ts": {
+    "src/_engine/ui/core/CMPTypes.ts": {
+      "CMPAnimChain": "TypeAlias",
+      "CMPAnimState": "TypeAlias",
+      "CMPAttr": "TypeAlias",
+      "CMPClassAction": "TypeAlias",
+      "CMPHandle": "TypeAlias",
+      "CMPListener": "TypeAlias",
+      "CMPListenerCache": "TypeAlias",
+      "CMPListenerCreator": "TypeAlias",
+      "CMPProps": "TypeAlias",
+      "CMPSettings": "TypeAlias",
+      "CMPStyle": "TypeAlias",
       "TAnimChain": "TypeAlias",
       "TAnimState": "TypeAlias",
       "TAttr": "TypeAlias",
@@ -2810,83 +2901,17 @@
       "TSettings": "TypeAlias",
       "TStyle": "TypeAlias"
     },
-    "src/_engine/ui/DialogWindow.ts": {
-      "DialogProps": "TypeAlias",
-      "openDialog": "Function"
-    },
-    "src/_engine/ui/DraggableWindow.ts": {
-      "bringDraggableWindowToFront": "Function",
-      "closeDraggableWindow": "Function",
-      "fitAllDraggableWindowsToScreen": "Function",
-      "fitDraggableWindowToScreen": "Function",
-      "getDraggableWindow": "Function",
-      "getDraggableWindowsOfKind": "Function",
-      "getKindWindowId": "Function",
-      "isDraggableWindowOnTop": "Function",
-      "openDraggableWindow": "Function",
-      "registerDraggableWindow": "Function",
-      "registerDraggableWindowKind": "Function",
-      "removeDraggableWindow": "Function",
-      "toggleDraggableWindow": "Function",
-      "updateDraggableWindow": "Function",
-      "updateDraggableWindowsOfKind": "Function"
-    },
-    "src/_engine/ui/DraggableWindowDrag.ts": {
-      "addDragHandle": "Function",
-      "cancelDragSession": "Function",
-      "DragCommit": "TypeAlias"
-    },
-    "src/_engine/ui/DraggableWindowGeometry.ts": {
-      "clampToGrabbable": "Function",
-      "fitWindow": "Function",
-      "getGeometryStyle": "Function",
-      "getGrabArea": "Function",
-      "isCssCentred": "Function",
-      "isFittable": "Function",
-      "keepOnScreen": "Function",
-      "placeWindow": "Function",
-      "writePosition": "Function"
-    },
-    "src/_engine/ui/DraggableWindowStore.ts": {
-      "createRuntime": "Function",
-      "hydrateFromLS": "Function",
-      "kindGeometry": "Variable",
-      "recordKindGeometry": "Function",
-      "resolveWindowConfig": "Function",
-      "writeWindowStatesToLS": "Function"
-    },
-    "src/_engine/ui/DraggableWindowTypes.ts": {
-      "DraggableWindow": "TypeAlias",
-      "DraggableWindowConfig": "TypeAlias",
-      "DraggableWindowContent": "TypeAlias",
-      "DraggableWindowData": "TypeAlias",
-      "DraggableWindowKindOpts": "TypeAlias",
-      "DraggableWindowRuntime": "TypeAlias",
-      "DraggableWindowUnit": "TypeAlias",
-      "DraggableWindowUnits": "TypeAlias",
-      "DragMode": "TypeAlias",
-      "DragSession": "TypeAlias",
-      "GrabArea": "TypeAlias",
-      "KindGeometry": "TypeAlias",
-      "OpenDraggableWindowProps": "TypeAlias",
-      "SceneTargetResolver": "TypeAlias",
-      "StoredWindow": "TypeAlias",
-      "WindowEntry": "TypeAlias"
-    },
-    "src/_engine/ui/DropDown.ts": {
-      "createDropDown": "Function",
-      "DropDownOption": "TypeAlias",
-      "DropDownProps": "TypeAlias",
-      "TDropDown": "TypeAlias"
-    },
-    "src/_engine/ui/HUD.ts": {
-      "createHudContainer": "Function",
+    "src/_engine/ui/core/HUD.ts": {
+      "createHudRoot": "Function",
       "getHUDRootCMP": "Function",
       "GUI_CONTAINER_ID": "Variable",
+      "hasHudRoot": "Function",
       "HUD_ROOT_ID": "Variable",
-      "KEEP_IN_VIEWS_CLASS": "Variable"
+      "HudRootProps": "TypeAlias",
+      "KEEP_IN_VIEWS_CLASS": "Variable",
+      "KIT_ROOT_CLASS": "Variable"
     },
-    "src/_engine/ui/icons/BuiltInIcons.ts": {
+    "src/_engine/ui/core/icons/BuiltInIcons.ts": {
       "aekashaIcon": "Variable",
       "alertIcon": "Reference",
       "arrowClockwiseIcon": "Reference",
@@ -2937,15 +2962,173 @@
       "xBoldIcon": "Reference",
       "xIcon": "Reference"
     },
-    "src/_engine/ui/icons/SvgIcon.ts": {
+    "src/_engine/ui/core/icons/SvgIcon.ts": {
       "BuiltInIconName": "TypeAlias",
       "getSvgIcon": "Function",
       "registerBuiltInIcons": "Function",
       "registerIcon": "Function",
-      "SvgIconKey": "TypeAlias"
+      "SvgIconKey": "TypeAlias",
+      "SvgIconSize": "TypeAlias"
     },
-    "src/_engine/ui/Motion.ts": {
+    "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
+    },
+    "src/_engine/ui/core/Window.ts": {
+      "getWindowSize": "Function",
+      "onBoundsResize": "Function",
+      "setWindowBoundsElement": "Function"
+    },
+    "src/_engine/ui/forms/DropDown.ts": {
+      "createDropDown": "Function",
+      "DropDown": "TypeAlias",
+      "DropDownOption": "TypeAlias",
+      "DropDownProps": "TypeAlias",
+      "TDropDown": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/Anchor.ts": {
+      "AnchorAlign": "TypeAlias",
+      "AnchorBox": "TypeAlias",
+      "AnchorPlacement": "TypeAlias",
+      "AnchorPlacementInput": "TypeAlias",
+      "AnchorSide": "TypeAlias",
+      "computeAnchorPlacement": "Function",
+      "hasTopLayer": "Function",
+      "showAnchored": "Function",
+      "ShowAnchoredProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/FocusTrap.ts": {
+      "getFirstFocusable": "Function",
+      "getFocusableElements": "Function",
+      "trapFocus": "Function"
+    },
+    "src/_engine/ui/overlays/Menu.ts": {
+      "createMenu": "Function",
+      "Menu": "TypeAlias",
+      "MenuActionItem": "TypeAlias",
+      "MenuCheckboxItem": "TypeAlias",
+      "MenuGroup": "TypeAlias",
+      "MenuItem": "TypeAlias",
+      "MenuProps": "TypeAlias",
+      "MenuRadioGroup": "TypeAlias",
+      "MenuSeparator": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/OverlayStack.ts": {
+      "DEBUGGER_ROOT_ATTR": "Variable",
+      "OverlayProps": "TypeAlias",
+      "pushOverlay": "Function",
+      "swallowNextKeyUp": "Function"
+    },
+    "src/_engine/ui/overlays/Popover.ts": {
+      "createPopover": "Function",
+      "Popover": "TypeAlias",
+      "PopoverProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/Toaster.ts": {
+      "addToast": "Function",
+      "AddToastResponse": "TypeAlias",
+      "createToaster": "Function",
+      "DEFAULT_TOASTER_SETTINGS": "Variable",
+      "hasToaster": "Function",
+      "removeToast": "Function",
+      "removeToaster": "Function",
+      "ToastDirection": "TypeAlias",
+      "ToasterProps": "TypeAlias",
+      "ToasterSettings": "TypeAlias",
+      "ToastProps": "TypeAlias",
+      "ToastType": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/Tooltip.ts": {
+      "createTooltip": "Function",
+      "Tooltip": "TypeAlias",
+      "TooltipProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/windows/DialogWindow.ts": {
+      "DialogProps": "TypeAlias",
+      "openDialog": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindow.ts": {
+      "bringDraggableWindowToFront": "Function",
+      "closeDraggableWindow": "Function",
+      "fitAllDraggableWindowsToScreen": "Function",
+      "fitDraggableWindowToScreen": "Function",
+      "getDraggableWindow": "Function",
+      "getDraggableWindowsOfKind": "Function",
+      "getKindWindowId": "Function",
+      "isDraggableWindowOnTop": "Function",
+      "onDraggableWindowUnmount": "Function",
+      "openDraggableWindow": "Function",
+      "registerDraggableWindow": "Function",
+      "registerDraggableWindowKind": "Function",
+      "removeDraggableWindow": "Function",
+      "setDraggableWindowModal": "Function",
+      "toggleDraggableWindow": "Function",
+      "updateDraggableWindow": "Function",
+      "updateDraggableWindowsOfKind": "Function",
+      "Z_INDEX_BASES": "Variable"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowDom.ts": {
+      "buildHeader": "Function",
+      "getPartId": "Function",
+      "getThemeAttr": "Function",
+      "getWindowAttr": "Function",
+      "HeaderActions": "TypeAlias",
+      "renderTitle": "Function",
+      "syncContentTabStop": "Function",
+      "WINDOW_CLASS": "Variable",
+      "writeCollapsedState": "Function",
+      "writeWindowName": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowDrag.ts": {
+      "addDragHandle": "Function",
+      "cancelDragSession": "Function",
+      "DragCommit": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowGeometry.ts": {
+      "clampToGrabbable": "Function",
+      "fitWindow": "Function",
+      "getGeometryStyle": "Function",
+      "getGrabArea": "Function",
+      "isCssCentred": "Function",
+      "isFittable": "Function",
+      "keepOnScreen": "Function",
+      "placeWindow": "Function",
+      "RESIZING_ATTR": "Variable",
+      "STATE_ATTR": "Variable",
+      "writePosition": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowKeys.ts": {
+      "addHeaderKeys": "Function",
+      "addWindowCycleListener": "Function",
+      "parseKeyChord": "Function",
+      "setWindowCycleKeys": "Function",
+      "WindowCycle": "TypeAlias",
+      "WindowCycleKeys": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowStore.ts": {
+      "createRuntime": "Function",
+      "hydrateFromLS": "Function",
+      "kindGeometry": "Variable",
+      "recordKindGeometry": "Function",
+      "resolveWindowConfig": "Function",
+      "writeWindowStatesToLS": "Function"
+    },
+    "src/_engine/ui/overlays/windows/DraggableWindowTypes.ts": {
+      "DraggableWindow": "TypeAlias",
+      "DraggableWindowConfig": "TypeAlias",
+      "DraggableWindowContent": "TypeAlias",
+      "DraggableWindowData": "TypeAlias",
+      "DraggableWindowKindOpts": "TypeAlias",
+      "DraggableWindowRuntime": "TypeAlias",
+      "DraggableWindowUnit": "TypeAlias",
+      "DraggableWindowUnits": "TypeAlias",
+      "DragMode": "TypeAlias",
+      "DragSession": "TypeAlias",
+      "GrabArea": "TypeAlias",
+      "KindGeometry": "TypeAlias",
+      "OpenDraggableWindowProps": "TypeAlias",
+      "SceneTargetResolver": "TypeAlias",
+      "StoredWindow": "TypeAlias",
+      "WindowEntry": "TypeAlias"
     },
     "src/_engine/ui/styles/TokenSheet.ts": {
       "CONTRAST_CHECKED": "Variable",
@@ -2964,23 +3147,11 @@
       "TokenRule": "TypeAlias",
       "TokenSheet": "TypeAlias"
     },
-    "src/_engine/ui/Toaster.ts": {
-      "addToast": "Function",
-      "AddToastResponse": "TypeAlias",
-      "createToaster": "Function",
-      "DEFAULT_TOASTER_SETTINGS": "Variable",
-      "hasToaster": "Function",
-      "removeToast": "Function",
-      "removeToaster": "Function",
-      "ToastDirection": "TypeAlias",
-      "ToasterProps": "TypeAlias",
-      "ToasterSettings": "TypeAlias",
-      "ToastProps": "TypeAlias",
-      "ToastType": "TypeAlias"
-    },
-    "src/_engine/ui/Window.ts": {
-      "getWindowSize": "Function",
-      "setWindowBoundsElement": "Function"
+    "src/_engine/ui/testing/KitDom.ts": {
+      "countListeners": "Function",
+      "dispatchKey": "Function",
+      "KitKeyInit": "TypeAlias",
+      "stubKitDomAsync": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",
@@ -4010,10 +4181,30 @@
     ],
     "aekasha/ui": [
       "AddToastResponse",
+      "Badge",
+      "BadgeProps",
+      "BadgeTone",
       "BuiltInIconName",
+      "Button",
+      "ButtonGroup",
+      "ButtonGroupProps",
+      "ButtonProps",
       "CMP",
+      "CMPAnimChain",
+      "CMPAnimState",
+      "CMPAttr",
+      "CMPClassAction",
+      "CMPHandle",
+      "CMPListener",
+      "CMPListenerCache",
+      "CMPListenerCreator",
+      "CMPProps",
+      "CMPSettings",
+      "CMPStyle",
       "DEFAULT_TOASTER_SETTINGS",
       "DialogProps",
+      "Divider",
+      "DividerProps",
       "DraggableWindow",
       "DraggableWindowConfig",
       "DraggableWindowContent",
@@ -4021,12 +4212,45 @@
       "DraggableWindowKindOpts",
       "DraggableWindowUnit",
       "DraggableWindowUnits",
+      "DropDown",
       "DropDownOption",
       "DropDownProps",
+      "EmptyState",
+      "EmptyStateProps",
+      "HudRootProps",
+      "InputGlyph",
+      "InputGlyphInput",
+      "InputGlyphProps",
       "KEEP_IN_VIEWS_CLASS",
+      "KIT_ROOT_CLASS",
+      "Kbd",
+      "KbdProps",
+      "Link",
+      "LinkProps",
+      "LoadingOverlay",
+      "LoadingOverlayProps",
+      "Menu",
+      "MenuActionItem",
+      "MenuCheckboxItem",
+      "MenuGroup",
+      "MenuItem",
+      "MenuProps",
+      "MenuRadioGroup",
+      "MenuSeparator",
       "OpenDraggableWindowProps",
+      "Popover",
+      "PopoverProps",
+      "ProgressBar",
+      "ProgressBarProps",
       "SceneTargetResolver",
+      "Skeleton",
+      "SkeletonProps",
+      "Spinner",
+      "SpinnerProps",
+      "SplitButton",
+      "SplitButtonProps",
       "SvgIconKey",
+      "SvgIconSize",
       "TAnimChain",
       "TAnimState",
       "TAttr",
@@ -4039,11 +4263,16 @@
       "TProps",
       "TSettings",
       "TStyle",
+      "Tag",
+      "TagProps",
       "ToastDirection",
       "ToastProps",
       "ToastType",
       "ToasterProps",
       "ToasterSettings",
+      "Tooltip",
+      "TooltipProps",
+      "WindowCycleKeys",
       "addToast",
       "aekashaIcon",
       "alertIcon",
@@ -4058,8 +4287,26 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createBadge",
+      "createButton",
+      "createButtonGroup",
+      "createDivider",
       "createDropDown",
+      "createEmptyState",
+      "createHudRoot",
+      "createInputGlyph",
+      "createKbd",
+      "createLink",
+      "createLoadingOverlay",
+      "createMenu",
+      "createPopover",
+      "createProgressBar",
+      "createSkeleton",
+      "createSpinner",
+      "createSplitButton",
+      "createTag",
       "createToaster",
+      "createTooltip",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",
@@ -4074,8 +4321,10 @@
       "getDraggableWindowsOfKind",
       "getHUDRootCMP",
       "getKindWindowId",
+      "getMotionFactor",
       "getSvgIcon",
       "gpuCardIcon",
+      "hasHudRoot",
       "hasToaster",
       "heartArrowIcon",
       "infinityIcon",
@@ -4107,6 +4356,7 @@
       "rocketIcon",
       "rocketTakeoffIcon",
       "runtimeIcon",
+      "setWindowCycleKeys",
       "spatialGridIcon",
       "speedometerIcon",
       "stopIcon",

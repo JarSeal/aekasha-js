@@ -6,7 +6,7 @@ import {
   updateDebuggerTab,
   type DebuggerListItem,
 } from '../../../debug/DebuggerGUI';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import {
   closeDraggableWindow,
@@ -15,8 +15,8 @@ import {
   registerDraggableWindowKind,
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
-} from '../../../ui/DraggableWindow';
-import { getSvgIcon } from '../../../ui/icons/SvgIcon';
+} from '../../../ui/overlays/windows/DraggableWindow';
+import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
 import { Pane } from 'tweakpane';
 import { llog, lwarn } from '../../../utils/Logger';
 import { deleteCharacter, getCharacterById, getCharacters } from '../Character';

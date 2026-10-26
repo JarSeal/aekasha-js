@@ -14,7 +14,7 @@
  */
 import type * as THREE from 'three/webgpu';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import type { SvgIconKey } from '../../ui/icons/SvgIcon';
+import type { SvgIconKey } from '../../ui/core/icons/SvgIcon';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { setSceneDebugCameraInputEnabled } from '../camera/Camera';
 import { setAppInputsSuspended } from '../input/InputState';

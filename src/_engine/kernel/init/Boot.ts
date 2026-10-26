@@ -12,7 +12,7 @@ import {
 } from '../config/Config';
 import { createAssetsDebugGUI, initAssets } from '../assets/AssetsAPI';
 import { setAppData } from '../scene/AppData';
-import { createHudContainer, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
+import { createHudRoot, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
 import {
   registerDefaultDebugKeyBindings,
   registerDefaultProdTestKeyBindings,
@@ -20,15 +20,16 @@ import {
 import { addWindowListeners, initMainLoop, registerMainLoopDebugGUI } from '../loop/MainLoop';
 import { createRootScene, getRootScene, registerScenesFromGeneratedData } from '../scene/Scene';
 import { isCurrentlyLoading } from '../scene/SceneLoader';
-// The components' styles only: the page's (page.scss) are InitEngine's, which a mounted engine
-// (mountAekasha) doesn't import (p611 D6)
+// The editor views' HUD rule (the kit's own styles come with HUD.ts, p803 D4): the page's
+// (page.scss) are InitEngine's, which a mounted engine (mountAekasha) doesn't import (p611 D6)
 import '../../ui/styles/index.scss';
 import { llog, lwarn } from '../../utils/Logger';
 import { createRendererDebugGUI } from '../render/Renderer';
 import { runBootAfterStartHooks } from './BootHooks';
-import { createToaster } from '../../ui/Toaster';
+import { createToaster } from '../../ui/overlays/Toaster';
+import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
 import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
-import { getSvgIcon, registerBuiltInIcons } from '../../ui/icons/SvgIcon';
+import { getSvgIcon, registerBuiltInIcons } from '../../ui/core/icons/SvgIcon';
 import { restoreSavedView } from '../render/Views';
 
 // The kernel's systems and hooks, installed by the boot (here, where their modules were
@@ -136,8 +137,8 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // Init ECS
   const ecsWorld = initECSWorld();
 
-  // HUD container
-  createHudContainer(hudSlot);
+  // The HUD root
+  createHudRoot({ slot: hudSlot });
 
   // Resolve the assets config (the assets worker is only started by its first request)
   initAssets();
@@ -262,7 +263,7 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
           alert: getSvgIcon('alert'),
         },
       },
-    })
+    }).updateAttr({ [DEBUGGER_ROOT_ATTR]: '' }) // An app's modal dialog leaves it live (p803 D7)
   );
   // Toasts from the boot, eg. an unknown ?startScene
   flushQueuedDebugToasts();

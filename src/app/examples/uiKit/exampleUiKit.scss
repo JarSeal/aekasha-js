@@ -1,84 +1,77 @@
-// The UI kit example's HUD and window contents (exampleUiKit.ts). Plain px, written before the
-// kit's design tokens (ui/styles/tokens.css, p801): its sizes don't follow the UI scale.
+// The UI kit example's HUD panel and window contents (exampleUiKit.ts), on the kit's design
+// tokens (ui/styles/tokens.css): they follow the theme, the density and the UI scale. The
+// buttons, the drop-downs and the progress bars are the kit's; these rules only lay them out.
 
 .exampleUiKitHud {
   position: fixed;
   top: 72px;
-  left: 16px;
+  left: var(--aek-space-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 168px;
-  padding: 12px;
-  border-radius: 8px;
-  background: rgba(16, 20, 28, 0.82);
-  color: #e8eaee;
-  font: 14px/1.4 sans-serif;
+  gap: var(--aek-space-2);
+  width: 14em;
+  padding: var(--aek-space-4);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-lg);
+  background: var(--aek-surface);
+  box-shadow: var(--aek-shadow-sm);
 
   h2 {
-    margin: 0 0 4px;
-    font-size: 15px;
+    margin: 0 0 var(--aek-space-1);
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  // The kit's buttons and the split button take the panel's width (a rule on their class: an
+  // app's unlayered rule beats the kit's layered styles)
+  > .aekButton,
+  > .aekSplitButton {
+    width: 100%;
+  }
+
+  > .aekButton,
+  > .aekSplitButton > .aekButton:first-child {
+    justify-content: flex-start;
+  }
+
+  > .aekSplitButton > .aekButton:first-child {
+    flex: 1;
+  }
+
+  // A key hint goes to the button's far end
+  .aekButton__kbd {
+    margin-left: auto;
   }
 }
 
-.exampleUiKitHud,
-.exampleUiKitPanel,
-.exampleUiKitMenu {
-  button {
-    padding: 6px 10px;
-    border: 1px solid #4a5263;
-    border-radius: 5px;
-    background: #2a303c;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-visible {
-      border-color: #8fa1c4;
-      background: #343b4a;
-    }
+.exampleUiKitShapeButton {
+  // The shape's colour, from the --swatch custom property the scene writes on the button
+  &::before {
+    content: '';
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: var(--aek-radius-sm);
+    background: var(--swatch);
   }
-}
-
-.exampleUiKitShapeButton::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 2px;
-  background: var(--swatch);
 }
 
 .exampleUiKitRow {
   display: flex;
-  gap: 6px;
+  gap: var(--aek-space-2);
 
-  button {
+  > .aekButton {
     flex: 1;
-    text-align: center;
   }
-}
-
-.exampleUiKitHint {
-  margin-top: 4px;
-  opacity: 0.7;
-  font-size: 12px;
-  white-space: pre-line;
 }
 
 .exampleUiKitPanel,
 .exampleUiKitMenu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  font: 14px/1.4 sans-serif;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4);
 }
 
-.exampleUiKitMenu button {
-  padding: 10px;
-  text-align: center;
+.exampleUiKitPanel > .aekButton {
+  align-self: flex-start;
 }

@@ -3,9 +3,10 @@ import { TimestampQuery, type Renderer } from 'three/webgpu';
 import { getRenderer } from '../kernel/render/Renderer';
 import { createDebuggerTab, updateDebuggerTab } from './DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from './GPUMemory';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
+import { CMP } from '../ui/core/CMP';
+import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { defaultStatsOptions, type StatsOptions } from './Stats';
 import { setBootOverride } from '../features/physics/debug/_dbg__PhysicsBootOverrides';
 import { getConfig } from '../kernel/config/Config';
@@ -48,7 +49,7 @@ type StatsInternals = {
 const PANEL_ORDER = ['TFPS', 'FPS', 'CPU', 'PHY', 'GPU', 'CPT'];
 
 let stats: Stats | null = null;
-let statsCmp: TCMP | null = null;
+let statsCmp: CMPHandle | null = null;
 let physicsPanel: StatsPanel | null = null;
 let tFpsPanel: StatsPanel | null = null;
 const LS_KEY = 'AEK_debugStats';
@@ -120,6 +121,8 @@ export const _initStats = (config?: StatsOptions) => {
     statsCmp = CMP({
       id: '_statsContainer',
       class: ['statsContainer', KEEP_IN_VIEWS_CLASS, ...(!cfg.horizontal ? ['vertical'] : [])],
+      // An app's modal dialog leaves it live (p803 D7)
+      attr: { [DEBUGGER_ROOT_ATTR]: '' },
     });
     statsCmp.elem.appendChild(stats.dom);
     // stats-gl only listens to clicks in its minimal mode, which is forced off above

@@ -7,7 +7,7 @@ import {
 import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
 import { llog, lwarn } from '../../../utils/Logger';
-import { addToast } from '../../../ui/Toaster';
+import { addToast } from '../../../ui/overlays/Toaster';
 import {
   confirmClearScope,
   createClearListLSButton,

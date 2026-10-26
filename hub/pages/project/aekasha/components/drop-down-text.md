@@ -1,16 +1,7 @@
 ## Drop-down
 
-`createDropDown` returns `{ cmp, open, close, toggle, isOpen, refresh }`; its `cmp` goes where the
-drop-down goes, under a CMP that's in the page (here, a window). The keyboard, the focus and the
-ARIA roles are its own: the arrows and Home / End move, Enter or Space picks, Escape, Tab or a
-click outside closes it without a change, and none of its keys reaches a key binding.
+[What it is and its states](hub:features/ui-kit/library#drop-down), on the public page.
 
-- **States** (in one window): a value, no value (the placeholder), an icon, opening upward,
-  disabled, and a value changed elsewhere, which the trigger shows after `refresh()`. The trigger
-  re-reads `value` after `onChange` returns, so a pick shows at once; each pick here also adds a
-  toast.
-
-::: note For p803
-The list's height is at most `40vh` (the browser window's, also in an embed), and a window clips a
-list that overflows it.
+::: note For a later plan
+p804 makes it the select field, on its binding model (p800 §4.3).
 :::

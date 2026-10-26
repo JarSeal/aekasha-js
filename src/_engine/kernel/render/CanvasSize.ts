@@ -1,7 +1,7 @@
 // The canvas's size source (p611 D6): what sizes the renderer and the cameras' aspect. The window
 // by default (the full-page boot, `InitEngine`); an element's box when the engine is mounted into
 // a page it doesn't own (`mountAekasha`). The HUD's own bounds (the draggable windows', the
-// drawer's) are `ui/Window.ts`' `getWindowSize`, which the mount points at the same container.
+// drawer's) are `ui/core/Window.ts`' `getWindowSize`, which the mount points at the same container.
 
 /** The canvas's size in CSS pixels, and its aspect ratio. */
 export type CanvasSize = {

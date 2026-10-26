@@ -1,0 +1,253 @@
+// The button's default styles (Button.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). The colours are p801's roles: secondary a
+// control (`surface`, `border-control`), primary the accent, danger the danger colour on a surface,
+// ghost and link without a box; pressed the `accent-soft`.
+
+// The size is on the parts, not the button: normalize.scss's `button { font-size: 100%;
+// line-height: 1.15 }` (unlayered, on the full page) beats a layered rule on the button itself. Each
+// size sets --aek-button-font-size, which the parts and the spinner read.
+@layer aek.components {
+  :where(.aekButton) {
+    --aek-button-font-size: var(--aek-font-size-md);
+    --aek-button-height: var(--aek-space-7);
+
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    // WCAG 2.5.8's target size, in every density
+    min-height: max(24px, var(--aek-button-height));
+    margin: 0;
+    padding: 0 var(--aek-space-4);
+    border: 1px solid transparent;
+    border-radius: var(--aek-button-radius, var(--aek-radius-md));
+    background-color: transparent;
+    color: var(--aek-text);
+    font-family: inherit;
+    font-weight: var(--aek-font-weight-medium);
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    appearance: none;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      border-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekButton > *) {
+    font-size: var(--aek-button-font-size);
+    line-height: var(--aek-line-height-tight);
+    transition: opacity var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekButton[data-size='sm']) {
+    --aek-button-font-size: var(--aek-font-size-sm);
+    --aek-button-height: var(--aek-space-6);
+
+    gap: var(--aek-space-1);
+    padding: 0 var(--aek-space-3);
+  }
+
+  :where(.aekButton[data-size='lg']) {
+    --aek-button-font-size: var(--aek-font-size-lg);
+    --aek-button-height: calc(var(--aek-space-7) + var(--aek-space-3));
+
+    padding: 0 var(--aek-space-5);
+  }
+
+  :where(.aekButton[data-icon-only]) {
+    min-width: max(24px, var(--aek-button-height));
+    padding: 0;
+  }
+
+  :where(.aekButton__icon) {
+    display: inline-flex;
+  }
+
+  :where(.aekButton__icon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekButton__kbd) {
+    margin-inline-start: var(--aek-space-1);
+  }
+
+  // The variants
+  :where(.aekButton[data-variant='secondary']) {
+    border-color: var(--aek-border-control);
+    background-color: var(--aek-surface);
+  }
+
+  :where(.aekButton[data-variant='primary']) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent);
+    color: var(--aek-on-accent);
+  }
+
+  :where(.aekButton[data-variant='danger']) {
+    border-color: var(--aek-danger);
+    background-color: var(--aek-surface);
+    color: var(--aek-danger);
+  }
+
+  :where(.aekButton[data-variant='link']) {
+    min-height: 24px;
+    padding: 0;
+    color: var(--aek-accent);
+  }
+
+  :where(.aekButton[data-variant='link'] .aekButton__label) {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  :where(.aekButton[data-variant='secondary'], .aekButton[data-variant='ghost']):where(
+      :hover:not(:disabled)
+    ) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekButton[data-variant='primary']:hover:not(:disabled)) {
+    border-color: var(--aek-accent-hover);
+    background-color: var(--aek-accent-hover);
+  }
+
+  :where(.aekButton[data-variant='danger']:hover:not(:disabled)) {
+    background-color: var(--aek-danger-soft);
+  }
+
+  :where(.aekButton[data-variant='link']:hover:not(:disabled)) {
+    color: var(--aek-accent-hover);
+  }
+
+  // A toggle that's on
+  :where(.aekButton[aria-pressed='true']) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+    color: var(--aek-text);
+  }
+
+  :where(.aekButton:disabled) {
+    border-color: var(--aek-border);
+    background-color: var(--aek-surface);
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekButton[data-variant='ghost']:disabled, .aekButton[data-variant='link']:disabled) {
+    border-color: transparent;
+    background-color: transparent;
+  }
+
+  // Loading: the parts fade out where they are (the width is kept) and a spinner turns in their
+  // place, or pulses under reduced motion (p800 D7)
+  :where(.aekButton[aria-busy='true']) {
+    cursor: progress;
+  }
+
+  :where(.aekButton[aria-busy='true'] > *) {
+    opacity: 0;
+  }
+
+  :where(.aekButton[aria-busy='true'])::after {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    width: var(--aek-button-font-size);
+    height: var(--aek-button-font-size);
+    margin: auto;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    content: '';
+    animation: aekSpin calc(800ms * var(--aek-motion, 1)) linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.aekButton[aria-busy='true'])::after {
+      border-right-color: currentColor;
+      animation: aekPulse 1.6s ease-in-out infinite;
+    }
+  }
+
+  // Hold to confirm: a fill across the button for --aek-button-hold-time (set from
+  // holdToConfirmMs), back at once on an early release; in steps under reduced motion (it's
+  // information, so it never just jumps to full)
+  :where(.aekButton__hold) {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--aek-button-hold-color, currentColor);
+    opacity: 0.2;
+    transform: scaleX(0);
+    transform-origin: left;
+    pointer-events: none;
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekButton[data-holding] .aekButton__hold) {
+    transform: scaleX(1);
+    transition: transform var(--aek-button-hold-time, 800ms) linear;
+  }
+
+  :where(.aekButton[data-holding][data-hold-steps] .aekButton__hold) {
+    transition-timing-function: steps(4, end);
+  }
+
+  :where(.aekButton[data-holding='confirmed'] .aekButton__hold) {
+    opacity: 0.35;
+  }
+}
+
+// A button group (ButtonGroup.ts): its buttons joined, the inner corners square and the borders
+// overlapping by their width. Here, after the button's own rules, so the order between the two
+// stylesheets can't decide it. A hovered, pressed or focused button is on top (its border, its ring).
+@layer aek.components {
+  :where(.aekButtonGroup) {
+    display: inline-flex;
+    align-items: stretch;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical']) {
+    flex-direction: column;
+  }
+
+  :where(.aekButtonGroup > .aekButton):where(:hover, :focus-visible, [aria-pressed='true']) {
+    z-index: 1;
+  }
+
+  :where(.aekButtonGroup:not([data-orientation='vertical']) > .aekButton:not(:first-child)) {
+    margin-inline-start: -1px;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  :where(.aekButtonGroup:not([data-orientation='vertical']) > .aekButton:not(:last-child)) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical'] > .aekButton:not(:first-child)) {
+    margin-block-start: -1px;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+
+  :where(.aekButtonGroup[data-orientation='vertical'] > .aekButton:not(:last-child)) {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  // A split button's menu button: a line between the two, also where both are one colour (primary)
+  :where(.aekSplitButton > .aekButton + .aekButton:not(:disabled)) {
+    border-inline-start-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+}

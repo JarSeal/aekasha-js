@@ -14,7 +14,7 @@ vi.mock(import('../utils/Logger'), async (importOriginal) => ({
   lerror: vi.fn(),
 }));
 
-import { CMP } from '../ui/CMP';
+import { CMP } from '../ui/core/CMP';
 import { lerror } from '../utils/Logger';
 import type { AnyDebuggerTabDef } from './DebuggerGUI';
 import { createTabHost } from './_dbg__TabHost';

@@ -1,0 +1,44 @@
+// The key hint's default styles (Kbd.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Sized in em, as an icon, so a hint follows
+// the text it's in (a button's, a paragraph's). The browser's monospace `kbd` font is undone.
+@layer aek.components {
+  :where(.aekKbd) {
+    display: inline-block;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+
+  :where(.aekKbd__keys) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2em;
+  }
+
+  :where(.aekKbd__key) {
+    box-sizing: border-box;
+    display: inline-block;
+    min-width: 1.7em;
+    padding: 0.2em 0.4em;
+    border: 1px solid var(--aek-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface-raised);
+    color: var(--aek-text);
+    font-family: inherit;
+    font-size: 0.85em;
+    font-weight: var(--aek-font-weight-medium);
+    text-align: center;
+  }
+
+  :where(.aekKbd__join, .aekKbd__or) {
+    color: var(--aek-text-muted);
+    font-size: 0.85em;
+  }
+
+  :where(.aekKbd__or) {
+    margin: 0 0.2em;
+  }
+}

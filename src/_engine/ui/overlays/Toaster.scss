@@ -1,0 +1,188 @@
+// The toaster's styles (Toaster.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Nothing is written to the page's head:
+// a toaster's settings are custom properties on its element (--aek-toast-min-width, -max-width,
+// -min-height, -max-height), and a toast's animation time is --aek-toast-time on it (Toaster.ts
+// scales it by --aek-motion, or keeps it for the fade in place under reduced motion).
+
+@use 'sass:list';
+@use 'sass:string';
+
+// Each kind's status colour and glyph (p800 D6: never the colour alone). The glyphs are CSS
+// escapes in the output (a check mark, a multiplication sign): a non-ASCII character would make
+// Sass write @charset
+$types: (
+  'info': ('info', '"i"'),
+  'success': ('success', '"\\2713"'),
+  'warning': ('warning', '"!"'),
+  'alert': ('danger', '"\\00d7"'),
+);
+
+@layer aek.components {
+  :where(.aekToaster) {
+    z-index: var(--aek-z-toast);
+    transition: none;
+  }
+
+  :where(.aekToaster[data-updating]) {
+    padding: 0;
+    transition: padding var(--aek-toast-time, 0ms) var(--aek-ease-standard);
+  }
+
+  // Measured off-screen while it enters, then placed by Toaster.ts (its anchor inline)
+  :where(.aekToast) {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--aek-space-3);
+    min-width: var(--aek-toast-min-width, 200px);
+    max-width: var(--aek-toast-max-width, 200px);
+    min-height: var(--aek-toast-min-height, 0);
+    max-height: var(--aek-toast-max-height, 100px);
+    margin-bottom: var(--aek-space-2);
+    padding: var(--aek-space-3);
+    border: 1px solid var(--aek-border-strong);
+    border-left: 3px solid var(--aek-toast-status, var(--aek-info));
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-sm);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+    opacity: 0;
+  }
+
+  @each $type, $parts in $types {
+    :where(.aekToast[data-type='#{$type}']) {
+      --aek-toast-status: var(--aek-#{list.nth($parts, 1)});
+      --aek-toast-status-soft: var(--aek-#{list.nth($parts, 1)}-soft);
+    }
+
+    :where(.aekToast[data-type='#{$type}'] .aekToast__icon[data-glyph])::before {
+      content: string.unquote(list.nth($parts, 2));
+    }
+  }
+
+  :where(.aekToast[data-phase='appearing'], .aekToast[data-phase='showing']) {
+    opacity: 1;
+    transform: none !important;
+  }
+
+  :where(.aekToast:not([data-phase='entering'])) {
+    transition:
+      transform var(--aek-toast-time, 0ms) var(--aek-ease-standard),
+      opacity var(--aek-toast-time, 0ms) var(--aek-ease-standard);
+  }
+
+  :where(.aekToast[data-phase='removing']) {
+    opacity: 0;
+  }
+
+  // The kind's icon in its status colour: a given icon (HTML), or the kind's glyph in a soft
+  // circle
+  :where(.aekToast__icon) {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    color: var(--aek-toast-status);
+  }
+
+  :where(.aekToast__icon[data-glyph]) {
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-toast-status-soft);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+  }
+
+  :where(.aekToast__icon svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    fill: currentColor;
+  }
+
+  :where(.aekToast__icon svg path) {
+    fill: currentColor;
+  }
+
+  // The text: a long one scrolls here, the close button keeps its column
+  // A tab stop when it scrolls (Toaster.ts), its ring inside it
+  :where(.aekToast__content) {
+    flex: 1;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-wrap: break-word;
+    scrollbar-color: var(--aek-border-strong) transparent;
+    scrollbar-width: thin;
+
+    &:focus-visible {
+      outline-offset: calc(-1 * var(--aek-focus-ring-width));
+    }
+  }
+
+  :where(.aekToast__title) {
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekToast__title + .aekToast__message) {
+    margin-top: var(--aek-space-1);
+  }
+
+  :where(.aekToast__close) {
+    position: relative;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin: calc(-1 * var(--aek-space-1)) calc(-1 * var(--aek-space-1)) 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-sm);
+    background: transparent;
+    color: var(--aek-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+
+    &:hover {
+      background-color: var(--aek-surface-hover);
+      color: var(--aek-text);
+    }
+  }
+
+  :where(.aekToast__close svg) {
+    display: block;
+    width: 1em;
+    margin: auto;
+    fill: currentColor;
+  }
+
+  // The default cross (no closeBtnIcon)
+  :where(.aekToast__close:not([data-icon]))::before,
+  :where(.aekToast__close:not([data-icon]))::after {
+    position: absolute;
+    inset: 0;
+    width: 12px;
+    height: 2px;
+    margin: auto;
+    border-radius: 1px;
+    background: currentColor;
+    content: '';
+  }
+
+  :where(.aekToast__close:not([data-icon]))::before {
+    transform: rotate(-45deg);
+  }
+
+  :where(.aekToast__close:not([data-icon]))::after {
+    transform: rotate(45deg);
+  }
+}

@@ -33,10 +33,10 @@
 import * as THREE from 'three/webgpu';
 import { texture, uniform, uv } from 'three/tsl';
 import { registerGPUMemorySource } from '../../debug/GPUMemory';
-import type { TCMP } from '../../ui/CMPTypes';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import { llog, lwarn } from '../../utils/Logger';
 import type { FeatureContext } from '../../kernel/init/Features';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../ui/core/HUD';
 import styles from './Viewports.module.scss';
 
 /** A rectangle relative to the canvas's top-left corner (y down): a viewport's `rect` placement
@@ -132,7 +132,7 @@ type ViewportState = {
   enabled: boolean;
   interactive: boolean;
   slotElem: HTMLElement;
-  slotCmp: TCMP;
+  slotCmp: CMPHandle;
   /** Nothing of it is on the canvas (empty, hidden or fully cropped slot). */
   isEmpty: boolean;
   /** Full rect in device px (x0, y0 = top-left, relative to the canvas). */
@@ -169,8 +169,8 @@ let enabledCount = 0;
 let isInstalled = false;
 const toolsLoggedOff = new Set<string>();
 
-let layerCmp: TCMP | null = null;
-const stackCmps: Partial<Record<ViewportAnchor, TCMP>> = {};
+let layerCmp: CMPHandle | null = null;
+const stackCmps: Partial<Record<ViewportAnchor, CMPHandle>> = {};
 let isLayoutDirty = true;
 let runningTransitionCount = 0;
 let lastTransitionEventTime = 0;

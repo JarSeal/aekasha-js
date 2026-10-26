@@ -1,9 +1,9 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
-import { getSvgIcon } from '../ui/icons/SvgIcon';
+import { CMP } from '../ui/core/CMP';
+import type { CMPHandle } from '../ui/core/CMPTypes';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 
-type MountedList = { cmp: TCMP; refresh: () => void };
+type MountedList = { cmp: CMPHandle; refresh: () => void };
 
 /** Lists that exist (created and not yet removed), for the tab refresh. */
 const mountedLists = new Set<MountedList>();
@@ -26,7 +26,7 @@ const toIdSet = (selected: string | string[] | null | undefined) =>
  * title, plus optional per-row icon toggles (siblings of the row button, so a toggle click
  * never triggers the row click).
  */
-export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
+export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
   const id = def.id ?? `auto${++autoIdCounter}`;
   const toggles = def.perItemConfig?.toggles || [];
   // A static array is copied, its toggle values are flipped locally
@@ -39,7 +39,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
   let lastDataSignature = '';
   let lastSelectedSignature = '';
   let itemCount = 0;
-  let rows = new Map<string, TCMP>();
+  let rows = new Map<string, CMPHandle>();
 
   const wrapper = CMP({
     id: `debuggerList-${id}`,
@@ -79,7 +79,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
     li.add({
       html: `<button class="listItemWithId"${item.tooltip ? ` title="${esc(item.tooltip)}"` : ''}>
         ${item.subTitle ? `<span class="itemId">${esc(item.subTitle)}</span>` : ''}
-        ${item.icon ? getSvgIcon(item.icon, 'small') : ''}
+        ${item.icon ? getSvgIcon(item.icon, 'sm') : ''}
         ${item.badge ? `<span>${esc(item.badge)}</span>` : ''}
         ${item.description ? `<span>${titleHtml}<span style="opacity:0.7">${esc(item.description)}</span></span>` : titleHtml}
         ${item.suffix ? `<span>${esc(item.suffix)}</span>` : ''}
@@ -99,7 +99,7 @@ export const _debuggerListCMP = (def: DebuggerListDef): TCMP => {
       }
       const icon = value ? toggle.icon : toggle.iconOff || toggle.icon;
       group.add({
-        html: `<button class="debuggerListToggle${value ? ' isOn' : ''}" data-toggle="${i}" aria-pressed="${value}" title="${esc(toggle.title)}">${getSvgIcon(icon, 'small')}</button>`,
+        html: `<button class="debuggerListToggle${value ? ' isOn' : ''}" data-toggle="${i}" aria-pressed="${value}" title="${esc(toggle.title)}">${getSvgIcon(icon, 'sm')}</button>`,
         onClick: (_, cmp) => {
           const hadFocus = document.activeElement === cmp.elem;
           toggle.fn(item.itemId, !value);

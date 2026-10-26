@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-7)
 Category: UI, Refactoring
 Epic: p800_debugger-ui-overhaul.md
-Blocks: p803_ui-kit-structure-and-core.md, p806_debugger-migration.md
+Blocks: \_DONE_p803_ui-kit-structure-and-core.md, p806_debugger-migration.md
 Related: \_DONE_p802_hub-project-section.md (its Phase 1, the dev-only pages, merged on its own before this plan, for Phase 0's font specimen page: D11), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (D6: an embed leaves the host page alone; the embed profiles), \_DONE_p617_review-input-ui-hud.md (the kit as it is; D8: the embed issue), `docs/issues/ui-kit-in-an-embed.md` (closed here: D4, D9)
 
 # Design Foundation

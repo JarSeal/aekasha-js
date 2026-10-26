@@ -12,6 +12,7 @@ import { createApiSection, type ApiBuildStats, type ApiModelSource } from './api
 import { cardsDirective } from './cards';
 import { createHubEmbedState, embedDirective } from './embed';
 import { checkClaudeMdCoverage, claudeMdDirective } from './claudeMd';
+import { demoDirective } from './demo';
 import { codeGroupDirective, hubCodePlugin, loadHubHighlighter } from './code';
 import { applyErrorPages } from './errorPages';
 import { buildSearchIndex, checkSearchIndexSize } from './search';
@@ -157,6 +158,7 @@ const HUB_DIRECTIVES: HubDirectives = {
   embed: embedDirective,
   cards: cardsDirective,
   'claude-md': claudeMdDirective,
+  demo: demoDirective,
 };
 
 /** Reads on the first call only: a build reads the SBP report and the scenes if a page shows them */

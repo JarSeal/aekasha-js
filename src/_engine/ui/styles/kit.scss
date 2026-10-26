@@ -1,0 +1,95 @@
+// The UI kit's global styles (p803 D4): the design tokens with the focus ring, the controls'
+// reset and the icons. The HUD root's module and every kit module with styles import it, so a page
+// that uses the kit gets it without the boot, and Vite emits it once. Nothing on html, body or other
+// elements a host page owns: everything is under a kit root (.aekUi).
+@use './tokens';
+
+// p803 D5: the kit root's text colour, so a control's `inherit` never gives the host page's. Set on
+// each forced theme too: a computed colour inherits as it is, so a forced subtree would keep its
+// ancestor's. Controls take the kit's font and colour, not the browser's defaults.
+@layer aek.base {
+  :where(.aekUi, .aekUi [data-aek-theme]) {
+    color: var(--aek-text);
+  }
+
+  :where(.aekUi) :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+// Visually hidden, still read by assistive tech (a toaster's live regions, p803 D9)
+@layer aek.utilities {
+  :where(.aekVisuallyHidden) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+// The icons (getSvgIcon, p803 D5): 1em square, following their text, or a size from the type
+// scale. The SVG keeps its aspect (the built-ins are square).
+@layer aek.base {
+  :where(.aekIcon) {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    vertical-align: -0.125em;
+  }
+
+  :where(.aekIcon[data-size='sm']) {
+    width: var(--aek-icon-size-sm);
+  }
+
+  :where(.aekIcon[data-size='md']) {
+    width: var(--aek-icon-size-md);
+  }
+
+  :where(.aekIcon[data-size='lg']) {
+    width: var(--aek-icon-size-lg);
+  }
+
+  :where(.aekIcon svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  // In the debugger's roots (data-aek-debugger, p803 D7) the icon is the old inline box its own
+  // .uiIcon styles size (an SVG's intrinsic size where they set none) until p806 restyles them
+  :where([data-aek-debugger] .aekIcon, [data-aek-debugger].aekIcon) {
+    display: inline;
+    flex-shrink: 1;
+    width: auto;
+    vertical-align: baseline;
+  }
+}
+
+// A spinner's turn and, under reduced motion, its slow pulse (p803 D10: the button's loading mark;
+// Phase 7's spinner turns with them too)
+@keyframes aekSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aekPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+// The debugger's icon class (getSvgIcon writes it too), unlayered as its styles are: they size
+// .uiIcon themselves until p806 restyles them
+.uiIcon {
+  svg {
+    display: inline-block;
+    width: 100%;
+    height: auto;
+  }
+}

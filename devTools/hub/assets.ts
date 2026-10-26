@@ -9,7 +9,6 @@ import type { HubDiagnostics } from './diagnostics';
 import { hashContent } from './hash';
 import { hubKitStandInsPlugin } from './kitStandIns';
 import {
-  HUB_COMPONENTS_FILE,
   HUB_DEV_CLIENT_FILE,
   HUB_DIR,
   HUB_SCSS_ENTRY,
@@ -146,11 +145,11 @@ type RollupErrorLike = Error & { loc?: { file?: string; line?: number }; id?: st
 export const HUB_DEV_CLIENT_OUT_PATH = `${ASSETS_URL_DIR}hub-dev.js`;
 
 /**
- * The modules only a `dev` build may bundle: the dev client, and the component library
- * (`_components.ts`, p802 D9), which `hub.ts` imports behind `__HUB_DEV__`. A `public` build with
- * one of them is an error (`buildScripts`).
+ * The modules only a `dev` build may bundle: the dev client. A `public` build with one of them is
+ * an error (`buildScripts`). The component library (`_components.ts`) left it in p803 Phase 8: the
+ * public Hub's UI kit pages run its demos.
  */
-const DEV_ONLY_SCRIPT_MODULES = [HUB_DEV_CLIENT_FILE, HUB_COMPONENTS_FILE];
+const DEV_ONLY_SCRIPT_MODULES = [HUB_DEV_CLIENT_FILE];
 
 /** The scripts, and the files outside `hub/` they were built from */
 export type HubBuiltScripts = {

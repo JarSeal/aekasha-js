@@ -35,12 +35,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { firefox } from 'playwright-core';
 import { isWSL, launchChromium } from './browser';
+import { startVerifyServerAsync } from './devServer';
 import { ROOT } from '../paths';
 import { readGit } from '../git';
 import { SCENE_VERIFY_CONFIG, type VerifyBrowser } from './scenes.config';
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 import { sha256, writeFileAtomic } from '../files';
-import type { Logger } from 'vite';
 import {
   type Backend,
   type BaselineContext,
@@ -106,48 +106,6 @@ const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: 
   } catch (err) {
     return fail((err as Error).message);
   }
-};
-
-/** Vite's own lines that explain a page reloading mid-run (p619 V3): its dep optimizer's (a
- * new dependency found at runtime, a re-optimize) and its page reloads */
-const VITE_RELOAD_LINE = /dependenc|optimiz|page reload/i;
-
-/** Vite's logger at `warn`, but its lines about optimizing and reloading go to the progress log
- * too (`logLevel: 'warn'` hid them, so a reload mid-run had no trace) */
-const createRunnerLogger = (createLogger: typeof import('vite').createLogger): Logger => {
-  const logger = createLogger('warn');
-  logger.info = (msg) => {
-    if (VITE_RELOAD_LINE.test(msg.replace(/\x1b\[[0-9;]*m/g, '')))
-      out(`${DIM}[vite]${RESET} ${msg}`);
-  };
-  return logger;
-};
-
-/** The runner's own dep cache (p619 V3): `node_modules/.vite` is every `yarn dev*`'s, and
- * `dev:https` (another plugin, another config hash) re-optimizes under it */
-const VERIFY_CACHE_DIR = path.join(ROOT, 'node_modules/.vite-verify');
-
-const startOwnServer = async () => {
-  // Only a development or test build installs the test bridge: in another, every page would
-  // wait 120 s for it (p619 §1.4 V2)
-  const env = process.env.VITE_APP_ENV;
-  if (env && env !== 'development' && env !== 'test') {
-    fail(`VITE_APP_ENV=${env}: the runner's server needs development or test (unset it)`);
-  }
-  process.env.VITE_APP_ENV ??= 'development';
-  delete process.env.AEK_DEV_HTTPS;
-  const { createServer, createLogger } = await import('vite');
-  const server = await createServer({
-    configFile: path.join(ROOT, 'vite.config.ts'),
-    cacheDir: VERIFY_CACHE_DIR,
-    // This machine only: the app's dev server is on the LAN (`--host`), the runner's needn't be
-    server: { port: 8092, host: 'localhost' },
-    customLogger: createRunnerLogger(createLogger),
-  });
-  await server.listen();
-  const address = server.httpServer?.address();
-  if (!address || typeof address === 'string') throw new Error('The server has no port');
-  return { server, url: `http://localhost:${address.port}` };
 };
 
 // --- Report ---
@@ -225,7 +183,9 @@ const main = async () => {
   const baselines = new Map<Backend, BaselineFile>();
   const onProblem = (problem: string) => out(`${YELLOW}${problem}${RESET}`);
   if (isFirefox) checkChromiumBaselines({ baselines, isRecording: false, onProblem });
-  const own = args.url ? null : await startOwnServer();
+  const own = args.url
+    ? null
+    : await startVerifyServerAsync().catch((err: Error) => fail(err.message));
   const baseUrl = own ? own.url : args.url!;
   const browser = await launchBrowser(args.browser, useWebGL, args.headed);
   const commit = getCommit();

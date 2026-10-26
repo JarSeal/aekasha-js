@@ -24,14 +24,14 @@ import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
 import { createClearListLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
 import { ComponentType } from '../ECSCoreComponents';
 import { resetECSStressTest, spawnECSStressTestBatch } from './_dbg__ECSStressTest';
-import { CMP } from '../../../ui/CMP';
+import { CMP } from '../../../ui/core/CMP';
 import {
   closeDraggableWindow,
   getDraggableWindowsOfKind,
   getKindWindowId,
   registerDraggableWindowKind,
   toggleDraggableWindow,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { isCurrentlyLoading } from '../../scene/SceneLoader';
 
 /** The edit windows' kind: one window per world, keyed by its id */

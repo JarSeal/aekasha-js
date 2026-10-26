@@ -14,9 +14,9 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
   }
 }
 
-// The toasters have no z-index of their own, so the selector would cover the debug toaster's
-// toasts (bottom left): above the selector, below the right drawer
-:global(body.aekView_materialEditor .toaster) {
+// The toasters are at --aek-z-toast (above the drawer): in this view the debug toaster's toasts
+// (bottom left) go above the selector and below the right drawer
+:global(body.aekView_materialEditor .aekToaster) {
   z-index: 10150;
 }
 

@@ -11,16 +11,16 @@ import {
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { lerror, llog } from '../../../utils/Logger';
 import { textureMapKeys } from '../../../utils/Constants';
-import { CMP } from '../../../ui/CMP';
-import type { TCMP } from '../../../ui/CMPTypes';
-import { getSvgIcon } from '../../../ui/icons/SvgIcon';
+import { CMP } from '../../../ui/core/CMP';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
+import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
 import {
   getDraggableWindowsOfKind,
   getKindWindowId,
   registerDraggableWindowKind,
   toggleDraggableWindow,
   updateDraggableWindow,
-} from '../../../ui/DraggableWindow';
+} from '../../../ui/overlays/windows/DraggableWindow';
 import { createClearTabLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
 import { getGeometryRegistry } from '../Geometry';
 import { getTextureRegistry } from '../Texture';
@@ -467,7 +467,7 @@ const measureFileSize = async (urls: string[]) => {
 const createFileSizeCmp = (bakedSize: number | undefined, urls: string[]) => {
   if (bakedSize !== undefined) return CMP({ tag: 'span', text: formatBytes(bakedSize) });
   if (!urls.length) return CMP({ tag: 'span', text: '—' });
-  const cmp: TCMP = CMP({
+  const cmp: CMPHandle = CMP({
     tag: 'span',
     // Wrapped, so updating the text replaces the button instead of relabeling it
     html: `<span><button class="debuggerSmallButton" title="HEAD request for the content-length">Measure</button></span>`,
@@ -894,7 +894,7 @@ const createLodChainCmp = (id: string) => {
     ),
     chain ? button('release', 'Release chain', 'releaseLodChain(): the levels are disposed') : '',
   ].join(' ');
-  const cmp: TCMP = CMP({
+  const cmp: CMPHandle = CMP({
     html: () =>
       `<div>${isLodChainPending(id) ? '<div>Generating…</div>' : chain ? describeLodChain(chain) : field('Chain', 'none')}<div style="margin-top: calc(0.6 * var(--aek-rem))">${buttons}</div></div>`,
     onClick: async (e) => {
@@ -944,7 +944,7 @@ const createGeometryContent = (id: string) => {
         : []
   );
   const loadedFile = pipeline?.loadedUrl ?? (typeof sourceFile === 'string' ? sourceFile : '');
-  const uniqueEdgesCmp: TCMP = geometry.index
+  const uniqueEdgesCmp: CMPHandle = geometry.index
     ? CMP({
         tag: 'span',
         html:

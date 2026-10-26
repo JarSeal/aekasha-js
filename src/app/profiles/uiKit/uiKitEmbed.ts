@@ -2,13 +2,16 @@ import { createMeshEntity, registerOnSceneExit } from 'aekasha';
 import {
   addToast,
   CMP,
+  createButton,
   createDropDown,
   createToaster,
+  createTooltip,
   getHUDRootCMP,
   openDialog,
   openDraggableWindow,
   removeToaster,
 } from 'aekasha/ui';
+import type { Tooltip } from 'aekasha/ui';
 // The kit's fonts (p801 D8), with the kit in this scene's lazy chunk: `yarn verify:embed` checks
 // the window's and the toast's font is IBM Plex Sans
 import 'aekasha/ui/fonts';
@@ -21,6 +24,8 @@ const DIALOG_ID = 'uiKitEmbedDialog';
 const TOASTER_ID = 'uiKitEmbedToasts';
 const BACKDROP_CLASS = 'uiKitEmbedBackdrop';
 const LIST_CLASS = 'uiKitEmbedList';
+const TOOLTIP_CLASS = 'uiKitEmbedTooltip';
+const OPEN_DIALOG_CLASS = 'uiKitEmbedOpenDialog';
 
 const SHADES = [
   { value: 'dawn', label: 'Dawn' },
@@ -37,10 +42,13 @@ const PANEL_STYLE = {
 };
 
 /**
- * The uiKit embed's scene (p801 D9): a box made in code, and one of each of the UI kit's pieces
- * open over it: a window, a toast, and a dialog with its drop-down's list open. Mounted into a
- * page it doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's
- * root, and stay inside the mount's container; `yarn verify:embed` checks both.
+ * The uiKit embed's scene (p801 D9): a box made in code, and the UI kit's pieces over it: a
+ * window with a button and its tooltip shown, a toast, and a dialog with a drop-down, which the
+ * window's second button opens (p803 Phase 8: opened at load, the dialog took the focus of a
+ * page the embed mounts into as it scrolled in, the Hub's UI kit page). Mounted into a page it
+ * doesn't own (`uiKit.embed.ts`), they size from the browser's font size, not the host's root,
+ * and stay inside the mount's container; `yarn verify:embed` checks both, after clicking the
+ * button and the drop-down's trigger.
  */
 export const scene = async () => {
   createMeshEntity({
@@ -49,16 +57,44 @@ export const scene = async () => {
     rotation: { x: 0.5, y: 0.7, z: 0 },
   });
 
-  // A window at a px position: from the container's top left corner in an embed
+  // A window at a px position: from the container's top left corner in an embed, with a button
+  // whose tooltip shows (before the dialog opens, which stays above it on the overlay stack)
+  const hint: { tooltip: Tooltip | null } = { tooltip: null };
   openDraggableWindow({
     id: WINDOW_ID,
     title: 'Window',
-    content: () =>
-      CMP({ style: PANEL_STYLE, text: 'Drag me by the header: I stay inside the container.' }),
+    content: () => {
+      const panel = CMP({ style: PANEL_STYLE, onRemoveCmp: () => hint.tooltip?.cmp.remove() });
+      panel.add({ text: 'Drag me by the header: I stay inside the container.' });
+      // The kit's button (p803 D10): with the window, the dialog and the toast, what the SBP
+      // report's "what does a HUD cost" is of (p800 D10)
+      const button = createButton({ label: 'Hint', size: 'sm' });
+      panel.add(button.cmp);
+      hint.tooltip = createTooltip({
+        anchor: button.cmp.elem,
+        text: 'A tooltip',
+        // Beside the button: above it, it would cover the window's text
+        side: 'right',
+        class: TOOLTIP_CLASS,
+      });
+      panel.add(
+        createButton({
+          label: 'Open the dialog',
+          size: 'sm',
+          variant: 'primary',
+          class: OPEN_DIALOG_CLASS,
+          onClick: () => openShadeDialog(),
+        }).cmp
+      );
+      return panel;
+    },
     position: { x: 16, y: 16 },
-    size: { w: 220, h: 140 },
+    size: { w: 220, h: 190 },
+    // The focus would show the tooltip, and the dialog's taking it (a blur) hide it again
+    focusFirstElement: false,
     closeOnSceneChange: true,
   });
+  hint.tooltip?.show();
 
   getHUDRootCMP().add(
     createToaster({
@@ -75,8 +111,12 @@ export const scene = async () => {
   // Until it's closed: the check measures it
   addToast({ message: 'A toast', toasterId: TOASTER_ID, showingTime: 0 });
 
-  // The drop-down is in the dialog: opening a window focuses its first element, which would
-  // close a list open elsewhere (its focusout)
+  registerOnSceneExit(SCENE_ID, () => removeToaster(TOASTER_ID));
+};
+
+/** The dialog with its drop-down, from the window's button: it takes the focus as it opens */
+const openShadeDialog = () => {
+  // Its list opens from the trigger (`yarn verify:embed` clicks it), in the top layer
   const dropDown = createDropDown({
     options: SHADES,
     value: () => SHADES[0].value,
@@ -93,13 +133,13 @@ export const scene = async () => {
       panel.add(dropDown.cmp);
       return panel;
     },
-    // Tall enough for the open list: a window clips what overflows it
-    size: { w: 300, h: 230 },
+    // Shorter than the open list reaches: the list is in the top layer, which no window clips
+    // (p803 D7), and `yarn verify:embed` checks its last option shows
+    size: { w: 300, h: 180 },
     minSize: { w: 240, h: 160 },
     backDropClass: BACKDROP_CLASS,
+    // `yarn verify:embed` checks Escape: the host page's leaves it open, its own closes it
+    closeOnEscape: true,
     removeOnSceneChange: true,
   });
-  dropDown.open();
-
-  registerOnSceneExit(SCENE_ID, () => removeToaster(TOASTER_ID));
 };

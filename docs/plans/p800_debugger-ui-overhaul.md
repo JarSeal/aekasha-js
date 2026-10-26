@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 and p802 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802 and p803 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -123,7 +123,7 @@ gamepad, a small screen, an embed, and does it make someone want to come back to
   only by `InitEngine`): the debugger's styles have the most (`DebuggerGUI.module.scss` 82,
   `DraggableWindow.module.scss` 67, `Profiler.module.scss` 59, `CharacterStateWindow` 53, …).
   An embed doesn't load `page.scss`, so they follow the host's root size, and the windows measure
-  the browser window (`ui/Window.ts`' `getWindowSize`, the `100vw` / `100vh` max size):
+  the browser window (`ui/core/Window.ts`' `getWindowSize`, the `100vw` / `100vh` max size):
   `docs/issues/ui-kit-in-an-embed.md`.
 - Accessibility: the drop-down is the one complete piece (listbox, `aria-activedescendant`, full
   keys). Windows focus their first focusable element but have no `role="dialog"`, `aria-modal`,
@@ -246,7 +246,7 @@ updates this section.
   (524 in the kit and the debugger) become `calc(N * var(--aek-rem))`, an `@internal` unit that is
   10 px at the defaults, until p803 and p806 restyle them onto `em` tokens (p801 D4).
 - `--aek-ui-scale` is the game's "UI scale" setting (p808's settings menu sets it).
-- `getWindowSize` (`ui/Window.ts`) measures the HUD root's container (the page in the full-page
+- `getWindowSize` (`ui/core/Window.ts`) measures the HUD root's container (the page in the full-page
   boot, the mount's container in an embed); the windows' default max size is `100%` of it, not
   `100vw` / `100vh`, and the dialog backdrop with them. `_dbg__DebuggerGUI.ts`' caller follows.
 - p801's check: a `uiKit` SBP embed profile opens a window, a dialog and a toast, and
@@ -383,8 +383,9 @@ Every component, from its first version:
   minors (new components, new tokens) and patches, each merged to `main`.
 - p806 removes Tweakpane, so the tab types' Tweakpane parts break (p618 P7, p622): it ships with
   engine 6.0.0 on the `engine-6` integration branch it shares with p622 (§6).
-- The kit's `T`-prefixed type renames (`TCMP` → `Cmp`, `TProps` → `CmpProps` and the rest, listed
-  in p622) get their new names with deprecated aliases in a p803 minor; p622 removes the aliases.
+- The kit's `T`-prefixed type renames (`TCMP` → `CMPHandle`, `TProps` → `CMPProps` and the rest,
+  `TDropDown` → `DropDown`: p803 D3's table, which replaced this list's `Cmp` / `CmpProps`, and
+  p622) get their new names with deprecated aliases in a p803 minor; p622 removes the aliases.
 - A restyle isn't a break, but it changes how an app's UI looks: each restyle's changelog entry
   says what changed and how to keep the old look (the tokens to set).
 
@@ -589,14 +590,23 @@ plan as written.
 
 ### p803 — UI kit structure and core components
 
-Written: `p803_ui-kit-structure-and-core.md` (draft, 2026-10-25; its decisions proposed for
-review). What it changes here once confirmed: the type names are `CMPHandle`, `CMPProps`, … (its
-D3, not D12's `Cmp`); modal dialogs keep the window code with a focus trap and `inert` inside the
-HUD root, not `<dialog>.showModal()` (its D7: the top layer and a document-wide `inert` break an
-embed); non-modal overlays go in the top layer (the Popover API); one `aekasha/ui` entry (its
-D12); a new `yarn verify:ui` (its D11); the percentage pie, the debugger list and the tab buttons
-move to p805 with the context menu, which opens p803's menu (its D1). What follows is the sketch
-as written.
+Done: `_DONE_p803_ui-kit-structure-and-core.md` (2026-10-26, engine 5.12.0, app 1.16.0). What the
+later plans build on, each written there: the kit's folders (`core/`, `components/`, `overlays/`,
+`forms/`, `styles/`, a layout rule each; `ui/data/` and `ui/game/` get theirs with p805 and p808)
+and its coding style (`src/_engine/ui/CLAUDE.md`'s "Writing a component"); the type names
+`CMPHandle`, `CMPProps`, … (its D3, not D12's `Cmp`), the `T` aliases removed by p622; one
+`aekasha/ui` entry (its D12); `createHudRoot`, so the kit runs without the boot (the Hub's
+component library does); the styles in `@layer aek.components` with `:where()` and global
+`aek`-prefixed classes, states as attributes (its D5); the overlay layer (its D7: the stack's
+Escape and focus return, modal dialogs with the window code, a focus trap and `inert` inside the
+HUD root, not `<dialog>.showModal()`, and non-modal overlays on the top layer with the Popover
+API, anchored) with the tooltip, popover and menu on it; §4.2's components; `yarn verify:ui`
+(axe-core, keyboard scripts, screenshots of the public component library page, `hub/CLAUDE.md`
+says how a new piece joins it); the Hub's UI kit section, where a new component gets its section
+and `::: demo`. The percentage pie, the debugger list and the tab buttons moved to p805 with the
+context menu, which opens p803's menu (its D1). Its open review items are
+`docs/issues/ui-kit-review-items.md` and, for p804, the button's key hint below. What follows is
+the sketch as written.
 
 - The layout: `ui/core/` (CMP, HUD root, icons), `ui/components/` (§4.2), `ui/overlays/` (windows,
   dialogs, popover, tooltip, toaster, context menu), `ui/forms/` (p804), `ui/data/` (p805),
@@ -616,6 +626,10 @@ as written.
 - The scheduler (D9), the fields, the value editors and the containers (§4.3).
 - A declarative form description (the debugger's `pane` sections' shape, without Tweakpane), so
   an app and p806 describe a form as data.
+- From p803 (Phase 7's open item): `createButton`'s `kbd` hint imports `Kbd.ts` and
+  `KeyNames.ts` statically, about 0.7 kB gzip of the button's 1.8 kB, which a button without `kbd`
+  doesn't use. A `kbd` that takes a `createKbd` handle the app makes, or the hint loaded on first
+  use, keeps a plain button small; `getAriaKeyShortcuts` would stay a small import.
 
 ### p805 — Data display
 

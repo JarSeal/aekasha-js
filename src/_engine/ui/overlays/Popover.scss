@@ -1,0 +1,22 @@
+// The popover's default styles (Popover.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Placed by Anchor.ts' showAnchored (fixed,
+// its left / top inline, the space left in --aek-anchor-max-width / -height); `inset`, `margin`,
+// `border` and `padding` undo the browser's popover styles.
+@layer aek.components {
+  :where(.aekPopover) {
+    inset: auto;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: var(--aek-anchor-max-width, 100%);
+    height: auto;
+    max-height: var(--aek-anchor-max-height, 100%);
+    margin: 0;
+    padding: var(--aek-space-3);
+    overflow: auto;
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    color: var(--aek-text);
+  }
+}

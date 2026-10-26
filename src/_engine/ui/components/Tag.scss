@@ -1,0 +1,132 @@
+// The tag's default styles (Tag.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). Its tone (--aek-tone, --aek-tone-soft)
+// comes from Badge.scss. A selectable tag's button fills the chip (the whole chip is its target), a
+// selected one is the accent's with a check mark (not the colour alone), and the remove button is a
+// 24 px target (WCAG 2.5.8) with its cross drawn in CSS.
+@layer aek.components {
+  :where(.aekTag) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    max-width: 100%;
+    min-height: 24px;
+    padding: 0 var(--aek-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--aek-tag-radius, var(--aek-radius-full));
+    background-color: var(--aek-tone-soft);
+    color: var(--aek-tone-text);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-medium);
+    line-height: var(--aek-line-height-tight);
+    vertical-align: middle;
+  }
+
+  :where(.aekTag__icon) {
+    display: inline-flex;
+  }
+
+  :where(.aekTag__icon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekTag__label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // A selectable tag: its button is the chip's whole width and height
+  :where(.aekTag[data-selectable]) {
+    padding: 0;
+  }
+
+  :where(.aekTag[data-selectable] .aekTag__icon) {
+    margin-inline-start: var(--aek-space-3);
+  }
+
+  :where(button.aekTag__label) {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    gap: var(--aek-space-2);
+    margin: 0;
+    padding: 0 var(--aek-space-3);
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  :where(.aekTag[data-selectable]:not([data-selected]) button.aekTag__label:hover:not(:disabled)) {
+    background-color: color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  :where(.aekTag[data-selected]) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+    color: var(--aek-text);
+  }
+
+  :where(.aekTag[data-selected] button.aekTag__label)::before {
+    box-sizing: border-box;
+    width: 0.32em;
+    height: 0.6em;
+    margin: -0.15em 0.05em 0;
+    border: solid var(--aek-accent);
+    border-width: 0 0.13em 0.13em 0;
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  :where(.aekTag[data-removable]) {
+    padding-inline-end: 0;
+  }
+
+  :where(.aekTag__remove) {
+    position: relative;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin: -1px 0;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  :where(.aekTag__remove)::before,
+  :where(.aekTag__remove)::after {
+    position: absolute;
+    inset: 0;
+    width: 0.75em;
+    height: 1.5px;
+    margin: auto;
+    background-color: currentColor;
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  :where(.aekTag__remove)::after {
+    transform: rotate(-45deg);
+  }
+
+  :where(.aekTag__remove:hover:not(:disabled)) {
+    background-color: color-mix(in srgb, currentColor 15%, transparent);
+  }
+
+  :where(.aekTag__remove:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekTag :disabled) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+}

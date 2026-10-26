@@ -1,7 +1,7 @@
 import { Pane, type FolderApi } from 'tweakpane';
 import type { BindingApi } from '@tweakpane/core';
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { lwarn } from '../utils/Logger';
 import type {
@@ -16,7 +16,7 @@ type AnyState = Record<string, unknown>;
 
 /** A built pane section of a mounted tab. */
 export type BuiltDebuggerPane = {
-  cmp: TCMP;
+  cmp: CMPHandle;
   /** Re-evaluates hidden/disabled and refreshes the bound values, without firing onChange. */
   refresh: () => void;
 };

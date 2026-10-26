@@ -1,8 +1,8 @@
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
-import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
-import { openDialog } from '../ui/DialogWindow';
-import { closeDraggableWindow } from '../ui/DraggableWindow';
+import type { CMPHandle } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
+import { openDialog } from '../ui/overlays/windows/DialogWindow';
+import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { lsGetItem, lsSubscribe } from '../utils/LocalAndSessionStorage';
 
 const CONFIRM_CLEAR_SCOPE_DIALOG_ID = 'clearLSScopeConfirmDialog';
@@ -28,9 +28,9 @@ type ClearLSButtonOpts = {
  * preset the icon and the title; another icon fits a button that clears a part of a key. */
 export const createClearLSButton = (
   opts: ClearLSButtonOpts & { icon: SvgIconKey; title: string }
-): TCMP => {
+): CMPHandle => {
   let lastHasData = opts.hasData();
-  const btn: TCMP = CMP({
+  const btn: CMPHandle = CMP({
     class: 'debuggerClearLSButton',
     html: () => {
       lastHasData = opts.hasData();
@@ -51,10 +51,10 @@ export const createClearLSButton = (
   return btn;
 };
 
-export const createClearTabLSButton = (opts: ClearLSButtonOpts): TCMP =>
+export const createClearTabLSButton = (opts: ClearLSButtonOpts): CMPHandle =>
   createClearLSButton({ ...opts, icon: 'eraser', title: 'Clear local storage data for this tab' });
 
-export const createClearListLSButton = (opts: ClearLSButtonOpts): TCMP =>
+export const createClearListLSButton = (opts: ClearLSButtonOpts): CMPHandle =>
   createClearLSButton({
     ...opts,
     icon: 'databaseX',

@@ -58,8 +58,16 @@ describe('tokens.css', () => {
     );
   });
 
+  it("sets each theme block's color-scheme to its theme (p803 D5)", () => {
+    expect(themes.dark.decls.get('color-scheme')).toBe('dark');
+    expect(themes.lightSystem.decls.get('color-scheme')).toBe('light');
+    expect(themes.lightForced.decls.get('color-scheme')).toBe('light');
+  });
+
   it('has a contrast rule or a reason for every theme token', () => {
-    const roles = [...themes.dark.decls.keys()].map((name) => name.replace(/^--aek-/, ''));
+    const roles = [...themes.dark.decls.keys()]
+      .filter((name) => name.startsWith('--aek-'))
+      .map((name) => name.replace(/^--aek-/, ''));
     const unlisted = roles.filter(
       (role) => !CONTRAST_CHECKED.has(role) && !(role in CONTRAST_UNCHECKED)
     );
@@ -90,9 +98,11 @@ describe('tokens.css', () => {
     expect(kitRoot.decls.get('font-family')).toBe('var(--aek-font-sans)');
   });
 
-  it('the compact density sets the type and space scales only, all of them', () => {
+  it('the compact density sets the type (its icon sizes too) and space scales only, all of them', () => {
     const scale = (rule: TokenRule) =>
-      [...rule.decls.keys()].filter((name) => /^--aek-(font-size|space)-/.test(name)).sort();
+      [...rule.decls.keys()]
+        .filter((name) => /^--aek-(font-size|icon-size|space)-/.test(name))
+        .sort();
     expect([...compact.decls.keys()].sort()).toEqual(scale(kitRoot));
   });
 });

@@ -1,9 +1,9 @@
-import { CMP } from '../ui/CMP';
-import type { TCMP } from '../ui/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import { getConfig } from '../kernel/config/Config';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
-import { openDialog } from '../ui/DialogWindow';
-import { closeDraggableWindow } from '../ui/DraggableWindow';
+import { openDialog } from '../ui/overlays/windows/DialogWindow';
+import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { getActionMap, getActionMaps } from '../kernel/input/Actions';
 import type { ActionBinding, ActionKeys, ActionMap, ActionType } from '../kernel/input/ActionTypes';
 import type { EnabledInDebugCam } from '../kernel/input/InputSharedTypes';
@@ -537,11 +537,11 @@ const getSectionsHtml = (sections: ShortcutSection[]) =>
     )
     .join('');
 
-const createDialogContent = (initialTab: DebugKeyShortcutsTab): TCMP => {
+const createDialogContent = (initialTab: DebugKeyShortcutsTab): CMPHandle => {
   const root = CMP({ class: styles.dialogContent });
   const tabBar = root.add({ class: styles.tabBar, attr: { role: 'tablist' } });
   const panel = root.add({ class: styles.panel, attr: { role: 'tabpanel' } });
-  const tabButtons = new Map<DebugKeyShortcutsTab, TCMP>();
+  const tabButtons = new Map<DebugKeyShortcutsTab, CMPHandle>();
 
   const showTab = (tab: DebugKeyShortcutsTab) => {
     for (const [id, button] of tabButtons) {

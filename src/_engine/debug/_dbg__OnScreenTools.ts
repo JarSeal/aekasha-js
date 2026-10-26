@@ -8,16 +8,17 @@ import {
   toggleDebugCamera,
 } from '../kernel/camera/Camera';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
 import { isAnyLightHelperVisible, toggleAllLightHelpers } from '../kernel/light/Light';
 import { getReadOnlyLoopState, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
-import { getSvgIcon, type SvgIconKey } from '../ui/icons/SvgIcon';
-import { createDropDown, type DropDownProps, type TDropDown } from '../ui/DropDown';
-import type { TCMP } from '../ui/CMPTypes';
-import { CMP } from '../ui/CMP';
+import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
+import { createDropDown, type DropDownProps, type DropDown } from '../ui/forms/DropDown';
+import type { CMPHandle } from '../ui/core/CMPTypes';
+import { CMP } from '../ui/core/CMP';
+import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
 import type { SceneAsset } from '../schemas/SceneSchema';
@@ -42,13 +43,13 @@ import {
 } from '../kernel/render/Views';
 
 /** The fixed, centred row at the top: the play tools. */
-let topRowCMP: TCMP | null = null;
+let topRowCMP: CMPHandle | null = null;
 /** The fixed row in the top left corner: the About and undo / redo tools, then the view tools. */
-let topLeftRowCMP: TCMP | null = null;
-let viewToolsCMP: TCMP | null = null;
-let playToolsCMP: TCMP | null = null;
-let switchToolsCMP: TCMP | null = null;
-let undoRedoToolsCMP: TCMP | null = null;
+let topLeftRowCMP: CMPHandle | null = null;
+let viewToolsCMP: CMPHandle | null = null;
+let playToolsCMP: CMPHandle | null = null;
+let switchToolsCMP: CMPHandle | null = null;
+let undoRedoToolsCMP: CMPHandle | null = null;
 
 // This file (a lazily-loaded _dbg__ module) also loads in IS_PROD_TEST_MODE (see
 // debug/OnScreenTools.ts's registerOnScreenTools), but the physics wireframe system is
@@ -114,7 +115,7 @@ const loadSceneFromTools = (sceneId: string) => {
 // DROPDOWNS (the camera and scene selectors, the o and p shortcuts)
 
 /** The dropdowns of the current switch tools group (rebuilt with it). */
-const dropDowns = new Map<OnScreenDropDownKey, TDropDown>();
+const dropDowns = new Map<OnScreenDropDownKey, DropDown>();
 
 /**
  * Opens an on-screen dropdown's list on its current option (the o and p shortcuts), or closes it
@@ -147,11 +148,16 @@ const createOnScreenDropDown = (
   return dropDown.cmp;
 };
 
+/** On each of the tools' roots: the debugger is dark until p806 gives it a theme setting (p803
+ * D6), and an app's modal dialog leaves it live (p803 D7). CMP copies it. */
+const DEBUGGER_THEME_ATTR = { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' };
+
 /** The top row (created on first use). Kept in editor views, like its groups. */
 const getTopRow = () => {
   if (!topRowCMP) {
     topRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopRow, 'onScreenTopRow', KEEP_IN_VIEWS_CLASS],
+      attr: DEBUGGER_THEME_ATTR,
     });
   }
   return topRowCMP;
@@ -162,6 +168,7 @@ const getTopLeftRow = () => {
   if (!topLeftRowCMP) {
     topLeftRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopLeftRow, 'onScreenTopLeftRow', KEEP_IN_VIEWS_CLASS],
+      attr: DEBUGGER_THEME_ATTR,
     });
   }
   return topLeftRowCMP;
@@ -267,7 +274,7 @@ const playTools = () => {
     ],
     html: () => `<button>${getSvgIcon('infinity')}</button>`,
     attr: {
-      title: `Play main loop (F6, currently ${loopState.masterPlay ? 'playing' : 'not playing'})`,
+      title: `Play main loop (Shift+F7, currently ${loopState.masterPlay ? 'playing' : 'not playing'})`,
     },
     onClick: (e) => {
       e.stopPropagation();
@@ -302,7 +309,7 @@ const playTools = () => {
         ...buttonBaseClasses,
         ...(isProfilerWindowOpen() ? [styles.active, 'onScreenToolActive'] : []),
       ],
-      html: () => `<button>${getSvgIcon('speedometer', 'small')}</button>`,
+      html: () => `<button>${getSvgIcon('speedometer', 'sm')}</button>`,
       attr: { title: 'Profiler (F8, open / close)' },
       onClick: (e) => {
         e.stopPropagation();
@@ -328,7 +335,10 @@ const switchTools = () => {
   // dropdown shortcuts do nothing there)
   if (!isRuntimeViewActive()) return;
 
-  switchToolsCMP = CMP({ class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'] });
+  switchToolsCMP = CMP({
+    class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'],
+    attr: DEBUGGER_THEME_ATTR,
+  });
 
   const isDebugActive = isDebugCameraActive();
 
@@ -338,7 +348,7 @@ const switchTools = () => {
 
   const useDebugCamBtn = CMP({
     class: useDebugCamBtnClasses,
-    html: () => `<button>${getSvgIcon('aspectRatio', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('aspectRatio', 'sm')}</button>`,
     attr: { title: 'Toggle between debug camera and app camera' },
     onClick: (e) => {
       e.stopPropagation();
@@ -348,7 +358,7 @@ const switchTools = () => {
 
   // Camera dropdown (the o shortcut)
   const selectCamDropDown = createOnScreenDropDown('CAMERA', {
-    icon: getSvgIcon('camera', 'small'),
+    icon: getSvgIcon('camera', 'sm'),
     title: 'Change camera (O)',
     placeholder: 'No App Camera',
     // The app camera is not the one rendering while the debug camera is active
@@ -367,7 +377,7 @@ const switchTools = () => {
 
   // Scene dropdown (the p shortcut)
   const selectSceneDropDown = createOnScreenDropDown('SCENE', {
-    icon: getSvgIcon('easel', 'small'),
+    icon: getSvgIcon('easel', 'sm'),
     title: 'Change scene (P)',
     placeholder: 'No scene',
     options: getSceneOptions,
@@ -382,7 +392,7 @@ const switchTools = () => {
   }
   const toggleLightHelpersBtn = CMP({
     class: toggleLightHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('lamp', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('lamp', 'sm')}</button>`,
     attr: { title: 'Hide / show all light helpers' },
     onClick: (e) => {
       e.stopPropagation();
@@ -398,7 +408,7 @@ const switchTools = () => {
   }
   const toggleCameraHelpersBtn = CMP({
     class: toggleCameraHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('cameraReels', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('cameraReels', 'sm')}</button>`,
     attr: { title: 'Hide / show all camera helpers' },
     onClick: (e) => {
       e.stopPropagation();
@@ -419,7 +429,7 @@ const switchTools = () => {
         ? [styles.active, 'onScreenToolActive']
         : []),
     ],
-    html: () => `<button>${getSvgIcon('rocket', 'small')}</button>`,
+    html: () => `<button>${getSvgIcon('rocket', 'sm')}</button>`,
     attr: { title: 'Hide / show all physics wireframes' },
     onClick: (e) => {
       e.stopPropagation();
@@ -466,7 +476,7 @@ const undoRedoTools = () => {
 
   const undoBtn = CMP({
     class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canUndo() ? ' disabled' : ''}>${getSvgIcon('undo', 'small')}</button>`,
+    html: () => `<button${!canUndo() ? ' disabled' : ''}>${getSvgIcon('undo', 'sm')}</button>`,
     attr: { title: 'Undo (Ctrl+Z / ⌘Z)' },
     onClick: (e) => {
       e.stopPropagation();
@@ -477,7 +487,7 @@ const undoRedoTools = () => {
 
   const redoBtn = CMP({
     class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canRedo() ? ' disabled' : ''}>${getSvgIcon('redo', 'small')}</button>`,
+    html: () => `<button${!canRedo() ? ' disabled' : ''}>${getSvgIcon('redo', 'sm')}</button>`,
     attr: { title: 'Redo (Ctrl+Shift+Z / ⇧⌘Z)' },
     onClick: (e) => {
       e.stopPropagation();

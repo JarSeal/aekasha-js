@@ -55,15 +55,18 @@ const profiles: SbpProfile[] = [
         '_engine/kernel/ecs': 9 * KIB,
         '_engine/kernel/input': 9 * KIB,
         '_engine/kernel/scene': 6 * KIB,
-        // p613 D5: the draggable windows load only where they're used
-        '_engine/ui': 5 * KIB,
+        // p613 D5: the draggable windows load only where they're used. p803 Phase 8: 5 → 7 KiB
+        // (`suggestBudget` of 5.4 kB): the app's scene loader is the kit's loading overlay
+        // (`src/index.ts`), with its spinner, its progress bar and their styles; every scene's
+        // first load shows it, so it can't load later
+        '_engine/ui': 7 * KIB,
         app: 14 * KIB,
         toolkit: 7 * KIB,
       },
       modules: {
         // The built-in icons register only in the debug env (p611 D10)
-        '_engine/ui/icons/BuiltInIcons.ts': 0,
-        '_engine/ui/icons/svg/': 0,
+        '_engine/ui/core/icons/BuiltInIcons.ts': 0,
+        '_engine/ui/core/icons/svg/': 0,
       },
     },
   },
@@ -101,15 +104,17 @@ const profiles: SbpProfile[] = [
   },
   // #endregion banner-profile
   {
-    // The UI kit in an embed (p801 D9): one code-made scene that opens a window, a toast and a
-    // dialog with a drop-down, no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks
-    // the kit's sizes and bounds in it
+    // The UI kit in an embed (p801 D9): one code-made scene that opens a window with a button and
+    // its tooltip, a toast and a dialog with a drop-down, no feature, built into dist-embed/uiKit/;
+    // `yarn verify:embed` checks the kit's sizes and bounds in it
     id: 'uiKit',
     entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
     // Not `uiKit`: a scene file named like the entry would emit a second `assets/uiKit.css` (its
     // chunk's styles), which no file key tells apart from the entry's
     scenes: ['uiKitEmbed'],
-    // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy
+    // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy;
+    // p803 Phase 7 checked each against `suggestBudget` (initial 286.3 KiB): only the scene's two
+    // chunks changed
     budgets: {
       initial: 298 * KIB,
       chunks: {
@@ -117,10 +122,14 @@ const profiles: SbpProfile[] = [
         'uiKit.embed.js': 2 * KIB,
         'assets/uiKit.embed.js': 296 * KIB,
         'assets/uiKit.css': 3 * KIB,
-        // The scene's chunk: the kit's window, dialog, drop-down and toaster (10.2 KiB of it) and
-        // their styles, loaded with the scene
-        'assets/uiKitEmbed.js': 12 * KIB,
-        'assets/uiKitEmbed.css': 3 * KIB,
+        // The scene's chunk: the kit's window, dialog, drop-down, toaster, tooltip and button and
+        // their styles, loaded with the scene: what a HUD of those costs an app (p800 D10). Set by
+        // p803 Phase 7 from `suggestBudget` (17.9 KiB: the overlay layer, the windows' keys and
+        // ARIA, the searchable drop-down and the toaster's live regions from Phases 4-5; the
+        // button's 1.8 KiB with its Kbd and key names from Phase 7)
+        'assets/uiKitEmbed.js': 19 * KIB,
+        // The same pieces' styles, from `suggestBudget` (4.2 KiB: the button's 1.0 of it)
+        'assets/uiKitEmbed.css': 6 * KIB,
       },
       groups: {
         three: 261 * KIB,

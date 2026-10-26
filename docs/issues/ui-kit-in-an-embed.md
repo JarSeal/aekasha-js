@@ -18,7 +18,7 @@ which loads `ui/styles/page.scss`: normalize and the `html` and `body` rules, am
   modules' styles that build on them. On a host page at the browsers' default 16 px root, every
   one renders 1.6 × larger; on a host with its own root size, at that.
 - **Bounds.** The draggable windows measure the browser window, not the mount's container:
-  `ui/Window.ts`' `getWindowSize` (`window.innerWidth` / `innerHeight`) is what
+  `ui/core/Window.ts`' `getWindowSize` (`window.innerWidth` / `innerHeight`) is what
   `DraggableWindowGeometry.ts`' `keepOnScreen`, `isFittable`, `fitWindow` and the cascade use, and
   a window's default max size is `100vw` × `100vh`. A mount's container has `contain: layout`,
   so the HUD's fixed elements are placed relative to the container: a window can be clamped to,
@@ -52,7 +52,7 @@ p801 (the design foundation, D4) changed both, and its Phase 3 checks them in a 
   styles became `calc(N * var(--aek-rem))` (p801 Phase 2), and `page.scss` lost its 62.5 % root:
   the full page looks the same, and an embed sizes like it at any host root. They follow the
   browser's font size and `--aek-ui-scale` too.
-- **Bounds.** `mountAekasha` makes its container the HUD's bounds (`ui/Window.ts`'
+- **Bounds.** `mountAekasha` makes its container the HUD's bounds (`ui/core/Window.ts`'
   `setWindowBoundsElement`): `getWindowSize` measures it, with its viewport position, so the
   clamps, the fits, the cascade and a drag's start work in the container's box (a drag used to
   jump by the container's offset, a bug this issue didn't name). The windows' default max size
@@ -73,4 +73,6 @@ host's root, the backdrop at `100vw` × `100vh`, no bounds element). Chromium on
 Left for p803 (the kit's restyle), seen in the same embed: a drop-down list's `max-height: 40vh`
 is the browser window's; a `closeOnEscape` dialog takes Escape from the whole host page while
 it's open; the toast's text colour, the kit's font and the buttons' font come from the host page
-(no normalize in an embed); a window clips a drop-down list that overflows it.
+(no normalize in an embed); a window clips a drop-down list that overflows it. All fixed in p803
+(engine 5.12.0): the list on the top layer, anchored to its trigger; Escape only from inside the
+HUD root; the controls' reset and the kit root's own colour.

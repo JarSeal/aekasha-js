@@ -1,46 +1,25 @@
 import { createSceneLoader } from '../SceneLoader';
 import { DEBUGGER_SCENE_LOADER_ID } from '../../../debug/DebuggerGUI';
-import { CMP } from '../../../ui/CMP';
-import { getMotionFactor } from '../../../ui/Motion';
-import type { TCMP } from '../../../ui/CMPTypes';
-import styles from './DebuggerSceneLoader.module.scss';
+import { createLoadingOverlay, type LoadingOverlay } from '../../../ui/components/LoadingOverlay';
 
-const START_ANIM_LENGTH_IN_MS = 150;
-const END_ANIM_LENGTH_IN_MS = 250;
-
-/** A fade's length at the loader's motion factor (0 under reduced motion), read when it starts */
-const getFadeMs = (container: TCMP | undefined, ms: number) =>
-  container ? ms * getMotionFactor(container.elem) : ms;
-
-export const createDebuggerSceneLoader = () =>
-  createSceneLoader(
+/** The debugger's scene loader (the Debug tools' start scene): the UI kit's loading overlay over
+ * the HUD's bounds, a new one per load (the load removes its container at its end), faded in at the
+ * load's start and out at its end (p803 Phase 7) */
+export const createDebuggerSceneLoader = () => {
+  let overlay: LoadingOverlay | null = null;
+  return createSceneLoader(
     {
       id: DEBUGGER_SCENE_LOADER_ID,
       loaderContainerFn: () => {
-        const baseCmp = CMP({
+        overlay = createLoadingOverlay({
           id: `${DEBUGGER_SCENE_LOADER_ID}-cmp`,
-          class: styles.debuggerSceneLoader,
+          text: 'Loading the scene',
         });
-        baseCmp.add({ class: styles.debuggerSceneLoader__spinner });
-        return baseCmp;
+        return overlay.cmp;
       },
-      loadStartFn: (loader) =>
-        new Promise((resolve) => {
-          const fadeMs = getFadeMs(loader.loaderContainer, START_ANIM_LENGTH_IN_MS);
-          loader.loaderContainer?.updateStyle({ transitionDuration: `${fadeMs}ms` });
-          setTimeout(() => {
-            loader.loaderContainer?.updateStyle({ opacity: 1 });
-            setTimeout(() => resolve(true), fadeMs);
-          }, 0);
-        }),
-      loadEndFn: (loader) =>
-        new Promise((resolve) => {
-          const fadeMs = getFadeMs(loader.loaderContainer, END_ANIM_LENGTH_IN_MS);
-          setTimeout(() => {
-            loader.loaderContainer?.updateStyle({ opacity: 0, transitionDuration: `${fadeMs}ms` });
-            setTimeout(() => resolve(true), fadeMs + 20);
-          }, 20);
-        }),
+      loadStartFn: () => overlay?.showAsync() ?? Promise.resolve(true),
+      loadEndFn: () => overlay?.hideAsync() ?? Promise.resolve(true),
     },
     false
   );
+};

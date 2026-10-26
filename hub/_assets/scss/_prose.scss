@@ -1,43 +1,49 @@
+@use 'base';
+
 // Page content: headings, code, tables, callouts
 // `:where()`: element rules stay at the specificity of one class, so a component inside
-// the content (the homepage's hero, cards) styles its own elements with one class
+// the content (the homepage's hero, cards) styles its own elements with one class. They skip the
+// UI kit's pieces in the page (the component library's demos, p803): unlayered, they'd beat the
+// kit's layered styles (a divider's margin, an empty state's paragraphs)
+$not-kit: ':not(:where(#{base.$kit-pieces}))';
+
 .hubContent {
-  :where(h1, h2, h3, h4) {
+  :where(h1, h2, h3, h4)#{$not-kit} {
     margin: 2.5rem 0 1rem;
     font-weight: 650;
     letter-spacing: -0.02em;
     line-height: 1.25;
   }
 
-  :where(h1) {
+  :where(h1)#{$not-kit} {
     margin-top: 0;
     font-size: clamp(2.25rem, 4vw, 2.75rem);
     font-weight: 700;
     letter-spacing: -0.03em;
   }
 
-  :where(h2) {
+  :where(h2)#{$not-kit} {
     font-size: 1.625rem;
   }
 
-  :where(h3) {
+  :where(h3)#{$not-kit} {
     margin-top: 2rem;
     font-size: 1.25rem;
   }
 
-  :where(h4) {
+  :where(h4)#{$not-kit} {
     font-size: 1.0625rem;
   }
 
-  :where(p, ul, ol) {
+  :where(p, ul, ol)#{$not-kit} {
     margin: 0 0 1.1rem;
   }
 
-  :where(li + li) {
+  :where(li + li)#{$not-kit} {
     margin-top: 0.3rem;
   }
 
-  :where(code) {
+  :where(code)#{$not-kit} {
     padding: 0.1em 0.35em;
     background: var(--hub-code-bg);
     border: 1px solid var(--hub-border);
@@ -46,7 +52,7 @@
     font-size: 0.875em;
   }
 
-  :where(pre) {
+  :where(pre)#{$not-kit} {
     overflow-x: auto;
     padding: 1rem 1.25rem;
     background: var(--hub-code-bg);
@@ -63,13 +69,13 @@
     }
   }
 
-  :where(img) {
+  :where(img)#{$not-kit} {
     max-width: 100%;
     height: auto;
     border-radius: var(--hub-radius);
   }
 
-  :where(hr) {
+  :where(hr)#{$not-kit} {
     margin: 2.5rem 0;
     border: 0;
     border-top: 1px solid var(--hub-border);

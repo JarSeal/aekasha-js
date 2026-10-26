@@ -1,9 +1,17 @@
 The UI kit is the DOM UI the engine's own debug tools are built from, and it's yours for the
-app's HUD: small components over the canvas, draggable windows that remember their layout,
-modal dialogs, drop-downs, toasts and icons. It's plain DOM with no framework, and a build
-carries only the parts the app imports. Everything is on `aekasha/ui`.
+app's HUD: buttons, links, badges, key hints and progress bars for its panels, draggable windows
+that remember their layout, modal dialogs, menus, tooltips, drop-downs and toasts. It's plain DOM
+with no framework, every piece works with the keyboard and assistive tech, and a build carries
+only the parts the app imports. Everything is on `aekasha/ui`.
 
-::: scene exampleUiKit
-A HUD panel with a window per shape, a settings window, toasts, and a pause menu on Escape. The
-[UI kit example](hub:examples/ui-kit) walks through it.
+::: embed uiKit
+The UI kit live, mounted into this page: a window with a button and its tooltip, a toast, and a
+dialog with a drop-down from the window's "Open the dialog". Drag the window, press Escape in the
+dialog, or Tab through it. The [UI kit example](hub:examples/ui-kit) builds a whole HUD.
 :::
+
+This page is the kit's base: [components](#components), [the HUD root](#the-hud-root), the
+[drop-down](#drop-downs) and [styling](#styling). The pieces have pages of their own,
+[core components](hub:features/ui-kit/core) and
+[windows and overlays](hub:features/ui-kit/overlays), each with live demos, and the
+[component library](hub:features/ui-kit/library) shows every piece in every state.

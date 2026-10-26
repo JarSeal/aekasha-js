@@ -1,0 +1,215 @@
+// The drop-down's default styles (DropDown.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(), so any class (the className /
+// triggerClass / … props, or an app's own selector) overrides them. The colours are p801 §4.2-§4.3's
+// roles: the trigger a control on `surface` with `border-control`, the list `surface-raised` with
+// `shadow-sm`, the highlighted option `surface-hover`, the current one's dot the `accent`.
+
+// The font size is set here, not on the trigger: normalize.scss's `button { font-size: 100% }`
+// (unlayered, on the full page) beats a layered rule, and 100% inherits this one
+@layer aek.components {
+  :where(.aekDropDown) {
+    position: relative;
+    display: inline-flex;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekDropDownTrigger) {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-3);
+    min-width: calc(var(--aek-space-7) * 4);
+    // WCAG 2.5.8's target size, in every density
+    min-height: 24px;
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface);
+    color: var(--aek-text);
+    line-height: var(--aek-line-height-base);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekDropDownTrigger:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekDropDownTrigger:disabled) {
+    border-color: var(--aek-border);
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekDropDownTrigger svg) {
+    display: block;
+    flex-shrink: 0;
+    width: 1.25em;
+  }
+
+  // A getSvgIcon icon: its SVG has the trigger's size, whatever the icon's own
+  :where(.aekDropDownTrigger .aekIcon) {
+    width: auto;
+  }
+
+  :where(.aekDropDownTrigger svg path) {
+    fill: currentColor;
+  }
+
+  :where(.aekDropDownLabel) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // A triangle pointing to the side the list opens on
+  :where(.aekDropDownCaret) {
+    flex-shrink: 0;
+    width: 0;
+    height: 0;
+    border-right: 0.35em solid transparent;
+    border-left: 0.35em solid transparent;
+    border-top: 0.4em solid var(--aek-text-muted);
+  }
+
+  :where(.aekDropDown_top .aekDropDownCaret) {
+    border-top: 0;
+    border-bottom: 0.4em solid var(--aek-text-muted);
+  }
+
+  // The list, or with `searchable` the popup around the field and the list. Placed by Anchor.ts'
+  // showAnchored (fixed, its left / top and min width inline, its max size in
+  // --aek-anchor-max-width / -height), in the top layer as a manual popover: `inset`, `margin`
+  // and the size undo the browser's popover styles. Its font size is its own, so the fallback
+  // (no Popover API: moved to the HUD root, its theme and density carried) looks the same.
+  :where(.aekDropDownList, .aekDropDownPopup) {
+    inset: auto;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: var(--aek-anchor-max-width);
+    height: auto;
+    max-height: var(--aek-anchor-max-height);
+    margin: 0;
+    padding: var(--aek-space-1);
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-sm);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekDropDownList) {
+    overflow-x: hidden;
+    overflow-y: auto;
+    list-style: none;
+    scrollbar-color: var(--aek-border-strong) transparent;
+    scrollbar-width: thin;
+  }
+
+  // In the popup the list is a plain part: the popup has the frame
+  :where(.aekDropDownPopup) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+  }
+
+  :where(.aekDropDownPopup .aekDropDownList) {
+    flex: 1;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  // At least 24 px tall in every density, as the trigger and the options (WCAG 2.5.8)
+  :where(.aekDropDownSearch) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 24px;
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface);
+    color: var(--aek-text);
+
+    &::placeholder {
+      color: var(--aek-text-muted);
+      opacity: 1;
+    }
+
+    // Inside the popup's edge
+    &:focus-visible {
+      outline-offset: calc(-1 * var(--aek-focus-ring-width));
+    }
+  }
+
+  :where(.aekDropDownEmpty) {
+    padding: var(--aek-space-2) var(--aek-space-3);
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekDropDownEmpty:empty) {
+    display: none;
+  }
+
+  // The list (or the field) holds the focus (aria-activedescendant), so its active option shows
+  // the ring in its place (p803 D7): inset, since the list's overflow clips around the options
+  :where(.aekDropDownList:focus-visible) {
+    outline: none;
+  }
+
+  :where(.aekDropDownList:focus-visible, .aekDropDownSearch:focus-visible + .aekDropDownList)
+    :where(.aekDropDownItem[data-active]) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  // At least 24 px tall in every density: WCAG 2.5.8's target size
+  :where(.aekDropDownItem) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    padding: var(--aek-space-2) var(--aek-space-3) var(--aek-space-2) var(--aek-space-5);
+    border-radius: var(--aek-radius-sm);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  :where(.aekDropDownItem.isHighlighted) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  // The current option: a dot in front, like a checked option, in the accent (p800 D6: the
+  // selection is the accent's)
+  :where(.aekDropDownItem.isCurrent)::before {
+    position: absolute;
+    top: 50%;
+    left: var(--aek-space-3);
+    width: var(--aek-space-2);
+    height: var(--aek-space-2);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-accent);
+    content: '';
+    transform: translate(-50%, -50%);
+  }
+
+  // The filter's match in an option
+  :where(.aekDropDownMatch) {
+    border-radius: 2px;
+    background-color: var(--aek-accent-soft);
+    color: inherit;
+    font-weight: var(--aek-font-weight-semibold);
+  }
+}

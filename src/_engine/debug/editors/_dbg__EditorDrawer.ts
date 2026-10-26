@@ -11,10 +11,11 @@
  * (`setActive`). While active and open, it sets the `debugDrawerOpen` body class, so the top
  * on-screen row, the viewport stack and the editor's own UI shift with it.
  */
-import { CMP } from '../../ui/CMP';
-import type { TCMP } from '../../ui/CMPTypes';
+import { CMP } from '../../ui/core/CMP';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
-import { getSvgIcon } from '../../ui/icons/SvgIcon';
+import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
+import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
 import { createTabHost } from '../_dbg__TabHost';
 import debuggerStyles from '../DebuggerGUI.module.scss';
 import styles from './EditorDrawer.module.scss';
@@ -51,7 +52,7 @@ export type EditorDrawerOpts = {
 };
 
 export type EditorDrawer = {
-  cmp: TCMP;
+  cmp: CMPHandle;
   /** Opens or closes the drawer (no argument toggles it). */
   toggle: (open?: boolean) => void;
   isOpen: () => boolean;
@@ -81,6 +82,9 @@ const createDrawerElements = (
       styles.editorDrawer,
       isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
     ],
+    // The debugger is dark until p806 gives it a theme setting (p803 D6); an app's modal dialog
+    // leaves it live (p803 D7)
+    attr: { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' },
   });
 
   // The global classes let other debug SCSS find it (eg. aekOnScreenToolsDisabled)
@@ -118,8 +122,8 @@ const createDrawerElements = (
 
 /** Replaces the menu's buttons with one per tab (`menuButtons` by tab id). */
 const buildTabMenu = (
-  menu: TCMP,
-  menuButtons: Map<string, TCMP>,
+  menu: CMPHandle,
+  menuButtons: Map<string, CMPHandle>,
   tabs: AnyDebuggerTabDef[],
   onSelect: (def: AnyDebuggerTabDef) => void
 ) => {
@@ -154,7 +158,7 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
 
   let isActive = false;
   let tabs: AnyDebuggerTabDef[] = [];
-  const menuButtons = new Map<string, TCMP>();
+  const menuButtons = new Map<string, CMPHandle>();
 
   const { root, titleText, menu, tabsContainer } = createDrawerElements(
     opts,
