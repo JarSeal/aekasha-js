@@ -55,7 +55,7 @@ const states = new WeakMap<BindingScheduler, SchedulerState>();
 /**
  * Creates a refresh scheduler for one host (p804 D4): a debugger tab, a window, an app's panel.
  * Fields made with it as their `scheduler` are read by its `refresh()`, and the live ones
- * (monitors, a field with `live: true`) by its tick: one `requestAnimationFrame` loop that runs
+ * (monitors, a field with an `interval`) by its tick: one `requestAnimationFrame` loop that runs
  * only while the host shows (`setVisible`), the page isn't hidden and a live field exists, each
  * field read at its own `interval` against the frame's time (no timer per field). A field that
  * doesn't show (hidden, in a collapsed folder) isn't read, and is read once when it shows again.
@@ -197,6 +197,18 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
  */
 export const addScheduledBinding = (scheduler: BindingScheduler, binding: ScheduledBinding) =>
   states.get(scheduler)?.add(binding) ?? (() => {});
+
+/** The page's scheduler, made on first use */
+let pageScheduler: BindingScheduler | null = null;
+
+/**
+ * The scheduler a live field (a monitor, an edit field with an `interval`) joins when it's given
+ * none and isn't in a property grid or form: one tick for every such field on the page, made on
+ * the first one's creation and never disposed (with no live field it has no loop and no
+ * listener). Its `refresh()` is nobody's: such a field's own `refresh()` reads it.
+ * @internal
+ */
+export const getPageScheduler = () => (pageScheduler ??= createBindingScheduler());
 
 /**
  * Reads, once, each field of the scheduler that was hidden at a read and shows now: what a folder

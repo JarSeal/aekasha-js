@@ -3,6 +3,7 @@
 import { getPrimitiveValueKind } from './binding/Binding';
 import { createDropDown, type DropDownOption } from './DropDown';
 import { createField, type Field, type FieldProps } from './Field';
+import { buildMonitor } from './Monitor';
 import type { RadioValue } from './RadioGroup';
 import './SelectField.scss';
 import '../styles/kit.scss';
@@ -74,6 +75,22 @@ const normalizeOptions = <T extends SelectValue>(options: SelectOptions<T>) => {
   }));
 };
 
+/** `readonly`: a monitor of the option's text, a getter's list read at each draw */
+const buildSelectMonitor = <T extends SelectValue>(props: SelectFieldProps<T>) => {
+  const { options } = props;
+  const isGetter = typeof options === 'function';
+  const fixed = isGetter ? null : normalizeOptions(options);
+  return buildMonitor(props, {
+    valueKind: getPrimitiveValueKind<T>(),
+    getText: (value) => {
+      const entries = fixed ?? normalizeOptions((options as () => SelectOptions<T>)());
+      return entries.find((entry) => entry.value === value)?.label ?? props.placeholder ?? '';
+    },
+    // A getter's labels may change while the value doesn't
+    redrawOnRefresh: isGetter,
+  }).shell.field;
+};
+
 /**
  * Creates a select field (p804 D7): the drop-down on a binding (`{ target, key }`, `{ get, set }`
  * or `{ value }`), one value of a list, written on each pick (one `onChange` with `last: true`).
@@ -94,6 +111,8 @@ const normalizeOptions = <T extends SelectValue>(options: SelectOptions<T>) => {
  *   `aria-haspopup="listbox"` and `aria-expanded` the drop-down's; the list is named by the label;
  *   the hint or the error describes the trigger, which an error marks `aria-invalid`.
  * - Motion: a change from outside flashes the trigger once.
+ * - `readonly`: a monitor (`createMonitor`) of the option's text (`placeholder` when none has the
+ *   value), a getter's list read again on each refresh.
  * @template T the value's type
  * @example
  * ```ts
@@ -110,6 +129,7 @@ const normalizeOptions = <T extends SelectValue>(options: SelectOptions<T>) => {
 export const createSelectField = <T extends SelectValue>(
   props: SelectFieldProps<T>
 ): SelectField<T> => {
+  if (props.readonly) return buildSelectMonitor(props);
   const fixed = typeof props.options === 'function' ? null : normalizeOptions(props.options);
   /** The options now: a getter's read when the drop-down asks (on open and refresh) */
   let entries = fixed ?? [];

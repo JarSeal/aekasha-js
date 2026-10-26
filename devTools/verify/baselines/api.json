@@ -2989,7 +2989,8 @@
       "BindingValueKind": "TypeAlias",
       "createBinding": "Function",
       "createObjectValueKind": "Function",
-      "getPrimitiveValueKind": "Function"
+      "getPrimitiveValueKind": "Function",
+      "ReadonlyBindingSource": "TypeAlias"
     },
     "src/_engine/ui/forms/binding/BindingScheduler.ts": {
       "addScheduledBinding": "Function",
@@ -2997,6 +2998,7 @@
       "BindingSchedulerProps": "TypeAlias",
       "createBindingScheduler": "Function",
       "createFlash": "Function",
+      "getPageScheduler": "Function",
       "revealScheduledBindings": "Function",
       "ScheduledBinding": "TypeAlias"
     },
@@ -3030,16 +3032,27 @@
       "TDropDown": "TypeAlias"
     },
     "src/_engine/ui/forms/Field.ts": {
+      "AnyFieldProps": "TypeAlias",
       "createField": "Function",
       "Field": "TypeAlias",
       "FieldChange": "TypeAlias",
       "FieldDyn": "TypeAlias",
+      "FieldOptions": "TypeAlias",
       "FieldProps": "TypeAlias",
       "FieldShell": "TypeAlias",
       "FieldSpec": "TypeAlias"
     },
+    "src/_engine/ui/forms/Monitor.ts": {
+      "buildMonitor": "Function",
+      "createMonitor": "Function",
+      "Monitor": "TypeAlias",
+      "MonitorBuild": "TypeAlias",
+      "MonitorProps": "TypeAlias",
+      "MonitorSpec": "TypeAlias"
+    },
     "src/_engine/ui/forms/NumberField.ts": {
       "buildNumberField": "Function",
+      "buildNumberMonitor": "Function",
       "createNumberField": "Function",
       "NumberField": "TypeAlias",
       "NumberFieldBuild": "TypeAlias",
@@ -4347,6 +4360,7 @@
       "Field",
       "FieldChange",
       "FieldDyn",
+      "FieldOptions",
       "FieldProps",
       "HudRootProps",
       "InputGlyph",
@@ -4368,6 +4382,8 @@
       "MenuProps",
       "MenuRadioGroup",
       "MenuSeparator",
+      "Monitor",
+      "MonitorProps",
       "NumberField",
       "NumberFieldProps",
       "NumberRules",
@@ -4383,6 +4399,7 @@
       "RangeSlider",
       "RangeSliderProps",
       "RangeValue",
+      "ReadonlyBindingSource",
       "SceneTargetResolver",
       "SegmentOption",
       "SegmentedControl",
@@ -4457,6 +4474,7 @@
       "createLink",
       "createLoadingOverlay",
       "createMenu",
+      "createMonitor",
       "createNumberField",
       "createPopover",
       "createProgressBar",

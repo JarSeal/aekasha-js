@@ -145,6 +145,8 @@ const SEARCH_CLEAR = `.aekField:has(${TEXT('Search')}) .aekTextField__clear`;
 const TOGGLE = (name: string) => `#hubDemoToggle${name}`;
 const TOGGLE_STATUS = '#hubDemoToggleStatus';
 const LAYERS_ON = '[data-hub-demo="checkbox"] .hubDemoNestedToggles input:checked';
+/** A monitor by its name (`MONITOR_ID`): the line's element, or the multiline text area */
+const MONITOR = (name: string) => `#hubDemoMonitor${name}`;
 const BADGE_INBOX = '#hubDemoBadgeInbox';
 const TAG = (name: string) => `#hubDemoTag${name}`;
 const TAG_STATUS = '#hubDemoTagStatus';
@@ -718,6 +720,27 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Space' },
           { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'Off' },
           { expectText: TOGGLE_STATUS, text: 'V-sync: off' },
+        ],
+      },
+    ],
+  },
+  monitor: {
+    keyboard: [
+      {
+        name: 'a step shows on the tick; Tab passes the lines and stops at the multiline block',
+        steps: [
+          { focusInBox: MONITOR('Step') },
+          { press: 'Enter' },
+          { expectText: `${MONITOR('Bodies')} .aekMonitor__value`, text: '132' },
+          { expectText: `${MONITOR('Paused')} .aekMonitor__value`, text: 'On' },
+          { expectText: `${MONITOR('Position')} .aekMonitor__value`, text: '1.25, 0.50, -3.50' },
+          { press: 'Tab' },
+          { expectFocus: MONITOR('Log') },
+          {
+            expectValue: MONITOR('Log'),
+            value:
+              'Loaded scene “Harbour”\nSpawned 128 bodies\nPhysics on the worker thread\nStep 1: 132 bodies',
+          },
         ],
       },
     ],

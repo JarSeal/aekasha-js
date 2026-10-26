@@ -841,7 +841,8 @@ API is tried before the rest depend on it.
 - **Open for Phase 4** (raised in section 1, not decided): D4 says a field with no scheduler is
   read only by its own `refresh()`, so a monitor made alone (outside a grid or a form) would never
   tick. Phase 4's monitor section decides: as D4 says, or a live field without a scheduler makes
-  one of its own.
+  one of its own. **Decided in Phase 4 section 1:** neither: a live field with a bound value and
+  no scheduler joins one the page shares (`getPageScheduler`).
 
 1. Section 1, `forms/binding/`: `Binding.ts` (the three forms, in-place writes, the events and
    `prev`), `BindingScheduler.ts` (refresh, the tick, visibility, intervals, the flash),
@@ -1166,6 +1167,60 @@ D9 and D10, and D7's monitor.
 
 1. Section 1, the monitor (text, multiline, intervals on the tick) and `readonly: true` on every
    field so far.
+   - **Done 2026-10-26.** `Monitor.test.ts` (17); the `monitor` box on both library pages (a small
+     simulation's values on one scheduler that a kit button steps, a vector, a multiline log,
+     every field so far with `readonly: true`, a hint and a disabled one), one keyboard script,
+     `COMPONENT_USES`; the dev page's `monitorStress` box (below); on `aekasha/ui`:
+     `createMonitor`, `Monitor`, `MonitorProps`, `FieldOptions`, `ReadonlyBindingSource`.
+   - **A lone live field shares the page's tick** (Phase 2's open item): a field with an
+     `interval` (a monitor always has one) and a bound value (not `{ value }`), given no
+     `scheduler`, joins `getPageScheduler()` (`@internal`): made on first use, never disposed,
+     one rAF loop for every such field (none: no loop, no listener). Not one scheduler per field:
+     200 lone monitors would be 200 loops. Section 3's grid gives its fields its own scheduler
+     (a field `add`ed after its creation moves to it then).
+   - **`readonly: true`** (`FieldProps`, D5) makes any field a monitor through `buildMonitor`
+     (`@internal`, `forms/Monitor.ts`) with the field's own text: the number field and the slider
+     their formatter and `unit` (`buildNumberMonitor`), the range "{start} to {end}", the
+     checkbox 'On' / 'Off' / 'Mixed' (its `setIndeterminate` still works), the switch its
+     `onText` / `offText`, the radio, segmented and select the option's label (the select's
+     `placeholder` when none; a getter's list redrawn on each refresh), the text field its text
+     (`multiline`, `rows`). A field's edit props do nothing then. The default `interval` is 200,
+     Tweakpane's. `createMonitor` infers its text from the value: `format`, a number's decimals
+     (`precision`), a boolean's `onText` / `offText`, a vector-like object's axes (`{ x, y }` to
+     `{ x, y, z, w }`, compared axis by axis, so one changed in place is read), a string.
+   - **`{ get }` alone** (not in D3): a monitor of a getter needs no `set` (the `@example` check
+     found `createMonitor({ get })` failing to type-check). `ReadonlyBindingSource<T>` (public) is
+     taken by `createMonitor` and, with `readonly: true`, by any field (`FieldProps` is now
+     `(BindingSource | ReadonlyBindingSource & { readonly: true }) & FieldOptions`, the latter
+     public); a `setValue` on one draws until the next read. The shell takes `AnyFieldProps`
+     (`@internal`).
+   - **The line names nothing** (D7 had `aria-labelledby` on the `<span>`): a name on a generic
+     `<span>` is ARIA 1.2's prohibited attribute (axe's `aria-prohibited-attr`), and a role to
+     carry it would be wrong (`status` is a live region, `textbox` a control). The label is a
+     `<span>` (`FieldSpec.isTextOnly`) and the value follows it in the reading order. **The
+     multiline block is a `<textarea readonly rows>`** (Tweakpane's own), not a `<pre>`: the
+     `<label for>` names it, and as a tab stop its scroll is reachable (axe's
+     `scrollable-region-focusable` would fail a scrolling `<pre>`). A monitor has no reset
+     button (`isMonitor`) and never flashes. A long line wraps (nothing cut off), so a row may
+     grow. Disabled, the line and its label are muted, not the disabled colour: neither is a
+     control, so WCAG 1.4.3's exception doesn't cover them.
+   - **The 200-monitor pass** (D14; the dev page's `monitorStress` box: 200 monitors at
+     `interval: 0` in one scheduler, the number stress box's harness shared as
+     `createStressDemo`): a Playwright script (the scratchpad's, not committed) profiled both
+     boxes in headless Chromium on the dev server, 5 s per scenario. Monitors changing every
+     frame, first build: script 21 ms/s (the number fields 41), layout 134, **style recalc 84**
+     (the number fields 15), allocation 385 KiB/s (the number fields 742), of which 240 KiB/s is
+     the new text itself (`getText`) and the rest the demo's own writes; steady: script 11 ms/s,
+     allocation 4.5 KiB/s (the rAF loops'). **Fixed:** the line's text is one `Text` node whose
+     `data` is written (`textContent` replaced the node each time): style 84 → 5 ms/s, script
+     21 → 15, the frame's tasks 394 → 362 ms/s. **Left:** layout, 160-180 ms/s while all 200
+     change every frame (two runs agreed): the text's own layout. `contain: layout` on the line,
+     and `contain: inline-size layout` on its value, changed nothing (injected, not kept); size
+     containment can't apply to a line that wraps. Of the census's 85 monitors 14 are at `interval: 0`, the
+     rest at 250 or 500 ms or the default 200 (6 through a spread), so a real tab writes a small
+     share of this. Every frame stayed at
+     16.7 ms. The perf-auditor agent didn't read it this time (the profile is the measure; its
+     second pass, Phase 6 section 3, can take this box).
 2. Section 2, the folder and the fieldset.
 3. Section 3, the property grid: the label column and its separator, the scheduler it owns or
    shares, `refresh()`, `add()`.

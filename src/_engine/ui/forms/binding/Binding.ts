@@ -40,6 +40,20 @@ export type BindingSource<T> =
     };
 
 /**
+ * A source that is only read (p804 D3's `{ get, set }` without the `set`): a monitor's, or a field
+ * with `readonly: true`. A `setValue` draws its value until the next read.
+ * @template T the value's type
+ */
+export type ReadonlyBindingSource<T> = {
+  /** Reads the value: on creation, on every refresh, and on the tick. */
+  get: () => T;
+  set?: never;
+  target?: never;
+  key?: never;
+  value?: never;
+};
+
+/**
  * What a field's `onChange` gets with the value (p804 D3). It fires on every write: each step of
  * a drag or a held key with `last: false`, then once with `last: true` on the release, Enter, a
  * blur or the key's keyup; a click (a checkbox, a pick) writes once with `last: true`. A refresh
@@ -106,7 +120,7 @@ export const createObjectValueKind = <T extends object>(
 });
 
 /** What {@link createBinding} binds. */
-type BindingProps<T> = BindingSource<T> & {
+type BindingProps<T> = (BindingSource<T> | ReadonlyBindingSource<T>) & {
   kind: BindingValueKind<T>;
   /** Every write's event (D3) */
   onChange?: (value: T, change: BindingChange<T>) => void;
@@ -170,7 +184,7 @@ export const createBinding = <T>(props: BindingProps<T>): Binding<T> => {
       else target[key] = kind.copy(value);
     } else if (setter) {
       setter(kind.copy(value));
-    } else {
+    } else if (!getter) {
       held = kind.copy(value, held);
     }
   };

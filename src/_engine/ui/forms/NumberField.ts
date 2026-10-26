@@ -1,6 +1,7 @@
 import { getPrimitiveValueKind } from './binding/Binding';
-import type { NumberRules } from './binding/ValueText';
+import { createValueFormatter, type NumberRules } from './binding/ValueText';
 import { createField, type Field, type FieldProps, type FieldShell } from './Field';
+import { buildMonitor } from './Monitor';
 import { createNumberInput, type NumberInput } from './NumberInput';
 import { getStepModifier, type NumberSteps } from './NumberSteps';
 import './NumberField.scss';
@@ -98,6 +99,8 @@ const getPointerScale = (step: number | undefined, value: number) => {
  *   default.
  * - Motion: a change from outside (a refresh that reads a new value) flashes the box once, a
  *   static tint under reduced motion.
+ * - `readonly`: a monitor (`createMonitor`) of the value's text (`format`, `precision` or the
+ *   step's decimals) and `unit`, read every `interval` ms (default 200).
  * @example
  * ```ts
  * const scheduler = createBindingScheduler();
@@ -117,7 +120,19 @@ const getPointerScale = (step: number | undefined, value: number) => {
  * ```
  */
 export const createNumberField = (props: NumberFieldProps): NumberField =>
-  buildNumberField(props, { kind: 'number', scrub: true }).shell.field;
+  props.readonly
+    ? buildNumberMonitor(props)
+    : buildNumberField(props, { kind: 'number', scrub: true }).shell.field;
+
+/**
+ * A number field's or a slider's `readonly`: a monitor of its text and unit.
+ * @internal
+ */
+export const buildNumberMonitor = (props: NumberFieldProps): NumberField =>
+  buildMonitor(props, {
+    valueKind: getPrimitiveValueKind<number>(),
+    getText: createValueFormatter(props).getText,
+  }).shell.field;
 
 /**
  * Builds a field on the number field's spin button (its typed text, keys, clipboard and, with

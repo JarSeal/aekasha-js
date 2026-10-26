@@ -1,5 +1,6 @@
 import { getPrimitiveValueKind } from './binding/Binding';
 import { createField, type Field, type FieldProps, type FieldShell } from './Field';
+import { buildMonitor } from './Monitor';
 import './Checkbox.scss';
 import '../styles/kit.scss';
 
@@ -73,6 +74,22 @@ const createToggleField = (
   return { shell, input };
 };
 
+/** `readonly`: a monitor of the state's text, 'Mixed' while it's indeterminate */
+const createCheckboxMonitor = (props: CheckboxProps): Checkbox => {
+  let isMixed = Boolean(props.indeterminate);
+  const build = buildMonitor(props, {
+    valueKind: getPrimitiveValueKind<boolean>(),
+    getText: (on) => (isMixed ? 'Mixed' : on ? 'On' : 'Off'),
+  });
+  return Object.assign(build.shell.field, {
+    setIndeterminate: (on: boolean) => {
+      isMixed = on;
+      build.redraw();
+    },
+    isIndeterminate: () => isMixed,
+  });
+};
+
 /**
  * Creates a checkbox (p804 D7): a native `<input type="checkbox">` (drawn with `appearance:
  * none`) beside its label, its value a boolean from its binding (`{ target, key }`,
@@ -86,6 +103,7 @@ const createToggleField = (
  * - Custom properties: `--aek-checkbox-size` (the box, default 16 px at the defaults), the
  *   fields' `--aek-field-control-bg`, `--aek-field-control-border-color`.
  * - A 24 px target in both densities (WCAG 2.5.8), the box drawn inside it.
+ * - `readonly`: a monitor (`createMonitor`) of 'On', 'Off' or, mixed, 'Mixed'.
  * @example
  * ```ts
  * const shadows = createCheckbox({
@@ -98,6 +116,7 @@ const createToggleField = (
  * ```
  */
 export const createCheckbox = (props: CheckboxProps): Checkbox => {
+  if (props.readonly) return createCheckboxMonitor(props);
   const { shell, input } = createToggleField(props, 'checkbox');
   input.indeterminate = Boolean(props.indeterminate);
   // The same object as onChange's `field`
@@ -124,6 +143,7 @@ export const createCheckbox = (props: CheckboxProps): Checkbox => {
  * - ARIA: `role="switch"`, its state the checkbox's (on / off); the state text is
  *   `aria-hidden`. A 24 px target in both densities.
  * - Motion: the thumb slides over `--aek-motion-fast` (at once under reduced motion).
+ * - `readonly`: a monitor (`createMonitor`) of `onText` / `offText` (default 'On' / 'Off').
  * @example
  * ```ts
  * const vsync = createSwitch({
@@ -137,4 +157,9 @@ export const createCheckbox = (props: CheckboxProps): Checkbox => {
  * ```
  */
 export const createSwitch = (props: SwitchProps): Switch =>
-  createToggleField(props, 'switch', { on: props.onText, off: props.offText }).shell.field;
+  props.readonly
+    ? buildMonitor(props, {
+        valueKind: getPrimitiveValueKind<boolean>(),
+        getText: (on) => (on ? props.onText ?? 'On' : props.offText ?? 'Off'),
+      }).shell.field
+    : createToggleField(props, 'switch', { on: props.onText, off: props.offText }).shell.field;

@@ -5,7 +5,7 @@
 import { getPrimitiveValueKind, type Binding } from './binding/Binding';
 import { createValueFormatter } from './binding/ValueText';
 import { createField, type Field } from './Field';
-import { buildNumberField, type NumberFieldProps } from './NumberField';
+import { buildNumberField, buildNumberMonitor, type NumberFieldProps } from './NumberField';
 import { createNumberSteps, type NumberSteps } from './NumberSteps';
 import { createSliderTrack, createTrackDrag, type SliderTick } from './SliderTrack';
 import '../styles/kit.scss';
@@ -246,6 +246,8 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
  *   it. The thumb's target is 24 px in both densities.
  * - Motion: the bubble fades and rises in over `--aek-motion-fast` (at once under reduced motion,
  *   with no slide); a change from outside flashes the box (or the thumb) once.
+ * - `readonly`: a monitor (`createMonitor`) of the value's text and `unit`, as the number field's;
+ *   no track.
  * @example
  * ```ts
  * const volume = createSlider({
@@ -266,6 +268,7 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
  * ```
  */
 export const createSlider = (props: SliderProps): Slider => {
+  if (props.readonly) return buildNumberMonitor(props);
   const track = createSingleTrack(props);
   return props.showInput === false
     ? createThumbSlider(props, track)

@@ -5,6 +5,7 @@
 import { createObjectValueKind } from './binding/Binding';
 import { createValueFormatter, type NumberRules } from './binding/ValueText';
 import { createField, type Field, type FieldProps } from './Field';
+import { buildMonitor } from './Monitor';
 import { createNumberInput, type NumberInput, type NumberTarget } from './NumberInput';
 import { createNumberSteps, getStepModifier } from './NumberSteps';
 import {
@@ -59,6 +60,8 @@ export type RangeSlider = Field<RangeValue>;
 /** What a key or a drag moves: a thumb, or the span (both) */
 type Part = 'low' | 'high' | 'both';
 
+const RANGE_KIND = createObjectValueKind<RangeValue>(['min', 'max']);
+
 const setAttr = (elem: Element, name: string, value: string) => {
   if (elem.getAttribute(name) !== value) elem.setAttribute(name, value);
 };
@@ -105,6 +108,7 @@ const setAttr = (elem: Element, name: string, value: string) => {
  *   histogram and the bubbles are `aria-hidden`. Each stop is a 24 px target in both densities.
  * - Motion: a bubble fades and rises in over `--aek-motion-fast` (at once under reduced motion,
  *   with no rise); a change from outside flashes the span once.
+ * - `readonly`: a monitor (`createMonitor`) of "{start} to {end}" and `unit`; no track.
  * @example
  * ```ts
  * const price = createRangeSlider({
@@ -125,9 +129,15 @@ const setAttr = (elem: Element, name: string, value: string) => {
  * ```
  */
 export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
+  const formatter = createValueFormatter(props);
+  if (props.readonly) {
+    return buildMonitor(props, {
+      valueKind: RANGE_KIND,
+      getText: (value) => `${formatter.getText(value.min)} to ${formatter.getText(value.max)}`,
+    }).shell.field;
+  }
   const { min, max, label } = props;
   const gap = Math.max(0, props.minGap ?? 0);
-  const formatter = createValueFormatter(props);
   const steps = createNumberSteps(props, { horizontal: true });
   const parts = createSliderTrack(props);
   const low = parts.createThumb();
@@ -233,7 +243,7 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
 
   const shell = createField<RangeValue>(props, {
     kind: 'range',
-    valueKind: createObjectValueKind<RangeValue>(['min', 'max']),
+    valueKind: RANGE_KIND,
     control,
     labelFor: spins ? spins.low.input : low.thumb,
     isGroup: true,

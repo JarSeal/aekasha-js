@@ -5,6 +5,7 @@
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
 import { getPrimitiveValueKind } from './binding/Binding';
 import { createField, type Field, type FieldProps } from './Field';
+import { buildMonitor } from './Monitor';
 import './RadioGroup.scss';
 import '../styles/kit.scss';
 
@@ -79,6 +80,15 @@ const span = (className: string, text?: string) => {
   if (text !== undefined) elem.textContent = text;
   return elem;
 };
+
+/** `readonly`: a monitor of the picked option's label (none: empty) */
+const buildChoiceMonitor = <T extends RadioValue>(
+  props: FieldProps<T> & { options: readonly RadioOption<T>[] }
+) =>
+  buildMonitor(props, {
+    valueKind: getPrimitiveValueKind<T>(),
+    getText: (value) => props.options.find((option) => option.value === value)?.label ?? '',
+  }).shell.field;
 
 /** The radios in their group, the field around them, and the change that writes */
 const createChoiceField = <T extends RadioValue>(
@@ -159,6 +169,7 @@ const createChoiceField = <T extends RadioValue>(
  * - ARIA: native radios, each named by its label; the hint or the error describes the group, which
  *   an error marks `aria-invalid`. Each radio is a 24 px target in both densities.
  * - Motion: a change from outside flashes a ring around the group once.
+ * - `readonly`: a monitor (`createMonitor`) of the picked option's label.
  * @template T the value's type
  * @example
  * ```ts
@@ -179,6 +190,7 @@ const createChoiceField = <T extends RadioValue>(
 export const createRadioGroup = <T extends RadioValue>(
   props: RadioGroupProps<T>
 ): RadioGroup<T> => {
+  if (props.readonly) return buildChoiceMonitor(props);
   const group = document.createElement('div');
   group.className = 'aekRadioGroup';
   group.setAttribute('data-orientation', props.orientation ?? 'vertical');
@@ -211,6 +223,7 @@ export const createRadioGroup = <T extends RadioValue>(
  *   in both densities.
  * - Motion: the picked segment's colour changes over `--aek-motion-fast` (at once under reduced
  *   motion); a change from outside flashes a ring around the row once.
+ * - `readonly`: a monitor (`createMonitor`) of the picked segment's label.
  * @template T the value's type
  * @example
  * ```ts
@@ -231,6 +244,7 @@ export const createRadioGroup = <T extends RadioValue>(
 export const createSegmentedControl = <T extends RadioValue>(
   props: SegmentedControlProps<T>
 ): SegmentedControl<T> => {
+  if (props.readonly) return buildChoiceMonitor(props);
   const group = document.createElement('div');
   group.className = 'aekSegmented';
   if (props.fill) group.setAttribute('data-fill', '');

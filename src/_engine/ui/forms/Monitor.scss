@@ -1,0 +1,56 @@
+// The monitor's default styles (Monitor.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). A line of text sits where a typed
+// field's text would (the same height and inset, no border to click), in tabular figures; the
+// multiline block is a read-only text area in the mono font, quieter than a control (`border`, not
+// `border-control`). Its custom properties: `--aek-monitor-bg`, `--aek-monitor-color` and
+// `--aek-monitor-font`.
+@layer aek.components {
+  :where(.aekMonitor) {
+    // The page's unlayered box-sizing reset would beat a layered one: set here, heights as such
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+    gap: var(--aek-space-1);
+    min-width: 0;
+    // A typed field's box: 24 px at least (its border kept, transparent), the same inset
+    min-height: 24px;
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background-color: var(--aek-monitor-bg, transparent);
+    color: var(--aek-monitor-color, var(--aek-text));
+    font-variant-numeric: tabular-nums;
+    line-height: var(--aek-line-height-tight);
+  }
+
+  // A long value wraps: nothing is cut off where it can't be read
+  :where(.aekMonitor__value) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  :where(.aekMonitor__unit) {
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekMonitor__text) {
+    display: block;
+    width: 100%;
+    resize: vertical;
+    border-color: var(--aek-border);
+    background-color: var(--aek-monitor-bg, var(--aek-surface));
+    font-family: var(--aek-monitor-font, var(--aek-font-mono));
+    font-size: inherit;
+    line-height: var(--aek-line-height-base);
+  }
+
+  // Disabled, a line of text and its label are muted, not the disabled colour: neither is a
+  // control, so WCAG 1.4.3's exception for an inactive one doesn't cover them (after Field.scss)
+  :where(.aekField[data-kind='monitor'][data-disabled]) :where(.aekMonitor, .aekField__label) {
+    color: var(--aek-text-muted);
+  }
+}

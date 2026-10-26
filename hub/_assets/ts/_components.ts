@@ -33,6 +33,7 @@ import {
   createLink,
   createLoadingOverlay,
   createMenu,
+  createMonitor,
   createNumberField,
   createPopover,
   createProgressBar,
@@ -62,12 +63,15 @@ import {
   toggleDraggableWindow,
 } from 'aekasha/ui';
 import type {
+  BindingScheduler,
   BuiltInIconName,
   Button,
   ButtonProps,
   DialogProps,
   DropDownProps,
+  Field,
   InputGlyphInput,
+  MonitorProps,
   NumberFieldProps,
   RadioGroupProps,
   RangeSliderProps,
@@ -504,74 +508,86 @@ const STRESS_COUNT = 200;
 /** The frames the readout averages: about 2 s at 60 Hz */
 const STRESS_FRAMES = 120;
 
-/** 200 number fields with `interval: 0` in one scheduler, bound to values that change every
- * frame or stay: the tick's cost, read from the frame times in the readout or a profile */
-const initNumberFieldStressDemo: Demo = (box) => {
-  const controls = addGroup(box, 'Run');
-  const root = addKitRoot(box);
-  const readout = document.createElement('p');
-  readout.id = `${ID_PREFIX}StressReadout`;
-  readout.className = 'hubDemoLine';
-  readout.textContent = 'Stopped';
-  root.append(readout);
-  const values = Array.from({ length: STRESS_COUNT }, (_, i) => ({ value: i / 100 }));
-  const scheduler = createBindingScheduler({ visible: false });
-  const grid = document.createElement('div');
-  grid.className = 'hubDemoStressGrid';
-  for (let i = 0; i < STRESS_COUNT; i++) {
-    const field = createNumberField({
-      label: `Value ${i + 1}`,
-      target: values[i],
-      key: 'value',
-      step: 0.01,
-      interval: 0,
-      scheduler,
-    });
-    grid.append(field.cmp.elem);
-  }
-  root.append(grid);
+/** A field the stress boxes make: the `index`th, bound to `target.value`, with `interval: 0` */
+type StressField = (
+  index: number,
+  target: { value: number },
+  scheduler: BindingScheduler
+) => Field<number>;
 
-  let isChanging = false;
-  let frame: number | null = null;
-  const deltas = new Float64Array(STRESS_FRAMES);
-  let count = 0;
-  let last = 0;
-  let lastReadout = 0;
-  const loop = (now: number) => {
-    frame = requestAnimationFrame(loop);
-    if (isChanging) {
-      for (let i = 0; i < STRESS_COUNT; i++) {
-        values[i].value = Math.round(Math.sin(now / 500 + i) * 10000) / 100;
-      }
-    }
-    if (last) deltas[count++ % STRESS_FRAMES] = now - last;
-    last = now;
-    if (now - lastReadout < 500 || count < STRESS_FRAMES) return;
-    lastReadout = now;
-    let sum = 0;
-    let worst = 0;
-    for (let i = 0; i < STRESS_FRAMES; i++) {
-      sum += deltas[i];
-      worst = Math.max(worst, deltas[i]);
-    }
-    readout.textContent = `${isChanging ? 'Changing' : 'Steady'}: frames ${(sum / STRESS_FRAMES).toFixed(1)} ms on average, ${worst.toFixed(1)} ms at worst (last ${STRESS_FRAMES})`;
-  };
-  const run = (changing: boolean) => {
-    isChanging = changing;
-    count = 0;
-    last = 0;
-    scheduler.setVisible(true);
-    if (frame === null) frame = requestAnimationFrame(loop);
-  };
-  addButton(controls, 'Values change every frame', () => run(true));
-  addButton(controls, 'Values stay', () => run(false));
-  addButton(controls, 'Stop', () => {
-    scheduler.setVisible(false);
-    if (frame !== null) cancelAnimationFrame(frame);
-    frame = null;
+/** 200 fields of one kind with `interval: 0` in one scheduler, bound to values that change every
+ * frame or stay: the tick's cost, read from the frame times in the readout or a profile */
+const createStressDemo =
+  (name: string, makeField: StressField): Demo =>
+  (box) => {
+    const controls = addGroup(box, 'Run');
+    const root = addKitRoot(box);
+    const readout = document.createElement('p');
+    readout.id = `${ID_PREFIX}${name}Readout`;
+    readout.className = 'hubDemoLine';
     readout.textContent = 'Stopped';
-  });
-};
+    root.append(readout);
+    const values = Array.from({ length: STRESS_COUNT }, (_, i) => ({ value: i / 100 }));
+    const scheduler = createBindingScheduler({ visible: false });
+    const grid = document.createElement('div');
+    grid.className = 'hubDemoStressGrid';
+    for (let i = 0; i < STRESS_COUNT; i++) {
+      grid.append(makeField(i, values[i], scheduler).cmp.elem);
+    }
+    root.append(grid);
+
+    let isChanging = false;
+    let frame: number | null = null;
+    const deltas = new Float64Array(STRESS_FRAMES);
+    let count = 0;
+    let last = 0;
+    let lastReadout = 0;
+    const loop = (now: number) => {
+      frame = requestAnimationFrame(loop);
+      if (isChanging) {
+        for (let i = 0; i < STRESS_COUNT; i++) {
+          values[i].value = Math.round(Math.sin(now / 500 + i) * 10000) / 100;
+        }
+      }
+      if (last) deltas[count++ % STRESS_FRAMES] = now - last;
+      last = now;
+      if (now - lastReadout < 500 || count < STRESS_FRAMES) return;
+      lastReadout = now;
+      let sum = 0;
+      let worst = 0;
+      for (let i = 0; i < STRESS_FRAMES; i++) {
+        sum += deltas[i];
+        worst = Math.max(worst, deltas[i]);
+      }
+      readout.textContent = `${isChanging ? 'Changing' : 'Steady'}: frames ${(sum / STRESS_FRAMES).toFixed(1)} ms on average, ${worst.toFixed(1)} ms at worst (last ${STRESS_FRAMES})`;
+    };
+    const run = (changing: boolean) => {
+      isChanging = changing;
+      count = 0;
+      last = 0;
+      scheduler.setVisible(true);
+      if (frame === null) frame = requestAnimationFrame(loop);
+    };
+    addButton(controls, 'Values change every frame', () => run(true));
+    addButton(controls, 'Values stay', () => run(false));
+    addButton(controls, 'Stop', () => {
+      scheduler.setVisible(false);
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      readout.textContent = 'Stopped';
+    });
+  };
+
+const initNumberFieldStressDemo = createStressDemo('Stress', (i, target, scheduler) =>
+  createNumberField({
+    label: `Value ${i + 1}`,
+    target,
+    key: 'value',
+    step: 0.01,
+    interval: 0,
+    scheduler,
+  })
+);
 
 // --- Slider ---
 
@@ -1118,6 +1134,120 @@ const initCheckboxDemo: Demo = (box) => {
   );
   root.append(status);
 };
+
+// --- Monitor ---
+
+const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
+
+/** In the page: monitors of a small simulation's values on one scheduler, which a kit button
+ * steps (the tick draws them, no flash); `readonly: true` on each field; a multiline block, a
+ * hint and a disabled one */
+const initMonitorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const sim = {
+    frameMs: 16.4,
+    bodies: 128,
+    paused: false,
+    state: 'Running',
+    position: { x: 1.25, y: 0, z: -3.5 },
+    log: 'Loaded scene “Harbour”\nSpawned 128 bodies\nPhysics on the worker thread',
+  };
+  let steps = 0;
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const monitor = (name: string, props: Partial<MonitorProps<unknown>>) =>
+    createMonitor({
+      id: MONITOR_ID(name),
+      label: name,
+      scheduler,
+      ...props,
+    } as MonitorProps<unknown>).cmp.elem;
+
+  const step = createButton({
+    id: MONITOR_ID('Step'),
+    label: 'Step the simulation',
+    onClick: () => {
+      steps++;
+      sim.frameMs = 16.4 + (steps % 3) * 0.8;
+      sim.bodies = 128 + steps * 4;
+      sim.paused = steps % 2 === 1;
+      sim.state = sim.paused ? 'Paused' : 'Running';
+      sim.position.y = steps * 0.5;
+      sim.log += `\nStep ${steps}: ${sim.bodies} bodies`;
+    },
+  });
+  row(
+    'Read on the tick: a kit button changes the values',
+    monitor('Frame time', { target: sim, key: 'frameMs', precision: 1, unit: 'ms', interval: 0 }),
+    monitor('Bodies', { target: sim, key: 'bodies', precision: 0 }),
+    monitor('Paused', { target: sim, key: 'paused' }),
+    monitor('State', { target: sim, key: 'state' }),
+    monitor('Position', { target: sim, key: 'position', precision: 2 }),
+    step.cmp.elem
+  );
+  row(
+    'Multiline: a block of lines, a tab stop',
+    monitor('Log', { target: sim, key: 'log', multiline: true, rows: 4 })
+  );
+
+  const options = [
+    { value: 'easy', label: 'Easy' },
+    { value: 'hard', label: 'Hard' },
+  ];
+  row(
+    'readonly: true on each field',
+    createNumberField({ label: 'Speed', value: 1.5, step: 0.1, unit: 'm/s', readonly: true }).cmp
+      .elem,
+    createSlider({
+      label: 'Volume',
+      value: 0.8,
+      min: 0,
+      max: 1,
+      format: (value) => `${Math.round(value * 100)} %`,
+      readonly: true,
+    }).cmp.elem,
+    createRangeSlider({
+      label: 'Price',
+      value: { min: 40, max: 120 },
+      min: 0,
+      max: 200,
+      step: 10,
+      unit: '€',
+      readonly: true,
+    }).cmp.elem,
+    createCheckbox({ label: 'Shadows', value: true, readonly: true }).cmp.elem,
+    createSwitch({ label: 'V-sync', value: false, readonly: true }).cmp.elem,
+    createSegmentedControl({ label: 'Difficulty', value: 'hard', options, readonly: true }).cmp
+      .elem,
+    createSelectField({
+      label: 'Shadow map',
+      value: 1024,
+      options: { '512': 512, '1024': 1024, '2048': 2048 },
+      readonly: true,
+    }).cmp.elem,
+    createTextField({ label: 'Name', value: 'Ada', readonly: true }).cmp.elem
+  );
+  row(
+    'A hint, and disabled',
+    monitor('Draw calls', { value: 42, precision: 0, hint: 'Counted after the last frame' }),
+    monitor('Disabled', { value: 'Off', disabled: true })
+  );
+};
+
+const initMonitorStressDemo = createStressDemo('MonitorStress', (i, target, scheduler) =>
+  createMonitor({
+    label: `Value ${i + 1}`,
+    target,
+    key: 'value',
+    precision: 2,
+    interval: 0,
+    scheduler,
+  })
+);
 
 // --- Tooltip ---
 
@@ -1941,6 +2071,8 @@ const DEMOS: Record<string, Demo> = {
   selectField: initSelectFieldDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
+  monitor: initMonitorDemo,
+  monitorStress: initMonitorStressDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

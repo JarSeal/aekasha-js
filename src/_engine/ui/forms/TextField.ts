@@ -1,6 +1,7 @@
 import { createButton } from '../components/Button';
 import { getPrimitiveValueKind } from './binding/Binding';
 import { createField, type Field, type FieldProps } from './Field';
+import { buildMonitor } from './Monitor';
 import { createTypedText } from './TypedText';
 import './TextField.scss';
 import '../styles/kit.scss';
@@ -59,6 +60,8 @@ const SEARCH_ICON =
  *   `--aek-field-radius`, `--aek-field-flash-color`.
  * - ARIA: the input is labelled by the `<label>`; an error sets `aria-invalid` and is its
  *   description, as the hint is.
+ * - `readonly`: a monitor (`createMonitor`) of the text, with `multiline` a read-only text area
+ *   `rows` high.
  * @example
  * ```ts
  * const name = createTextField({
@@ -83,6 +86,12 @@ const SEARCH_ICON =
  * ```
  */
 export const createTextField = (props: TextFieldProps): TextField => {
+  if (props.readonly) {
+    return buildMonitor(props, {
+      valueKind: getPrimitiveValueKind<string>(),
+      getText: (text) => text,
+    }).shell.field;
+  }
   const isSearch = props.type === 'search';
   const multiline = Boolean(props.multiline);
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
