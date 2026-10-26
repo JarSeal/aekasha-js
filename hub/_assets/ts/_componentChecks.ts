@@ -114,6 +114,10 @@ const MENU_STATUS = '#hubDemoMenuStatus';
 const NUMBER = (name: string) => `#hubDemoNumber${name}`;
 const NUMBER_RESET = (name: string) => `.aekField:has(${NUMBER(name)}) .aekField__reset`;
 const NUMBER_STATUS = '#hubDemoNumberStatus';
+/** A slider's control by its name (`_components.ts`' `SLIDER_ID`: the spin button, or the thumb
+ * without the input), and the box's status line */
+const SLIDER = (name: string) => `#hubDemoSlider${name}`;
+const SLIDER_STATUS = '#hubDemoSliderStatus';
 /** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
 const TEXT = (name: string) => `#hubDemoText${name}`;
 const TEXT_STATUS = '#hubDemoTextStatus';
@@ -411,6 +415,46 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '90' },
           { expectAttr: NUMBER_RESET('Heading'), name: 'hidden', value: '' },
           { expectFocus: NUMBER('Heading') },
+        ],
+      },
+    ],
+  },
+  slider: {
+    keyboard: [
+      {
+        name: 'the spin button steps the slider; the track is no tab stop',
+        steps: [
+          { focusInBox: SLIDER('Fov') },
+          { expectAttr: SLIDER('Fov'), name: 'role', value: 'spinbutton' },
+          { press: 'ArrowUp' },
+          { expectAttr: SLIDER('Fov'), name: 'aria-valuetext', value: '76 °' },
+          { expectText: SLIDER_STATUS, text: 'Field of view: 76 (last, user)' },
+          { press: 'Shift+ArrowDown' },
+          { expectAttr: SLIDER('Fov'), name: 'aria-valuenow', value: '66' },
+          // Past the track to the label row's reset button (shown: the value isn't the default)
+          { press: 'Shift+Tab' },
+          { expectFocus: `.aekField:has(${SLIDER('Fov')}) .aekField__reset` },
+          { press: 'Shift+Tab' },
+          { expectFocus: SLIDER('Volume') },
+        ],
+      },
+      {
+        name: 'without the input the thumb is the slider: the four arrows, Home and End',
+        steps: [
+          { focusInBox: SLIDER('Quality') },
+          { expectAttr: SLIDER('Quality'), name: 'role', value: 'slider' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'High' },
+          { press: 'ArrowRight' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Ultra' },
+          { expectText: SLIDER_STATUS, text: 'Quality: Ultra (last, user)' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowLeft' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuenow', value: '1' },
+          { press: 'End' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Max' },
+          { press: 'Home' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Low' },
+          { expectFocus: SLIDER('Quality') },
         ],
       },
     ],

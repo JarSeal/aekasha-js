@@ -204,6 +204,11 @@
   }
 }
 
+// A slider's track takes room beside its spin button
+.hubComponentDemoGroup.hubDemoSliders > .aekField {
+  width: min(100%, 22rem);
+}
+
 // The stress box's 200 fields (the dev page's), in columns
 .hubDemoStressGrid {
   display: grid;

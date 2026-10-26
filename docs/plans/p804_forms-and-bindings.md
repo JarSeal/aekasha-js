@@ -1009,6 +1009,41 @@ API is tried before the rest depend on it.
 D7's slider, range slider, radio group, segmented control and select.
 
 1. Section 1, the slider (the pointer-only track, `showInput: false`, ticks, the bubble).
+   - **Done 2026-10-26.** `Slider.test.ts` (20); the `slider` box on both library pages (a
+     volume as a percent, a field of view with a unit and labelled ticks, a quality without the
+     input whose `format` names each step, a disabled one), two keyboard scripts,
+     `COMPONENT_USES`; on `aekasha/ui`: `createSlider`, `Slider`, `SliderProps`, `SliderTick`.
+   - **`forms/NumberSteps.ts`** (`@internal`, not in D2's table): `createNumberSteps(rules,
+     { horizontal? })` (`constrain` with Alt's tenth of the grid, `getKeyTarget`: the arrows,
+     PageUp / PageDown, Home / End; `horizontal` adds ArrowLeft / ArrowRight, the APG slider's)
+     and `getStepModifier`, which the number field moved onto (its tests as they were); the
+     range slider's thumbs, the vector's axes, the angle dial and the pad take them next.
+   - **The slider with the input is the number field's spin button** (`buildNumberField(props,
+     parts)`, `@internal` in `NumberField.ts`, which `createNumberField` is with `scrub: true`):
+     the track goes before the box in a `.aekSlider__row`, its draw, disabling and removal hook
+     in, and a press on the track calls `interrupt` (typed text put back, a key's gesture
+     ended). **No scrub on a slider's label**: the track is its drag. `SliderProps` is
+     `NumberFieldProps` with `min` and `max` required, so `expressionUnits`, `live`, `format`,
+     `unit` and the rest pass through.
+   - **Without the input** the shell needed a third way to name a part: `FieldSpec.isLabelledBy`
+     (a `<span>` label the thumb is `aria-labelledby`; a click on it focuses the thumb, since a
+     `<label for>` labels only a labelable element). A disabled thumb has `aria-disabled` and no
+     `tabindex`.
+   - **The pointer:** the press `preventDefault`s (no text selection; the focus stays, so a
+     phone's keyboard doesn't open; without the input it focuses the thumb), captures the
+     pointer and steps to the value under it; **a press on the thumb keeps its grab offset**
+     (not in D7: the thumb doesn't jump to the pointer's x); Alt drags on a tenth of the grid
+     (Shift means nothing to an absolute position). The release, a `pointercancel` or a lost
+     capture commits; disabling commits a drag; removal releases the capture and doesn't commit
+     (as the number field's scrub).
+   - **Ticks** are marks only (`step` makes the grid): a count is spread from `min` to `max` with
+     both ends (at least 2), values outside the range are left out, and labels make the track
+     taller (`data-tick-labels`). All `aria-hidden`: the value text says where the value is, so a
+     label that names a value (a quality's "High") goes in `format` too, as the demo does.
+   - **The bubble** is the shown text with the unit, written only when it changes; it fades and
+     rises in over `--aek-motion-fast` while `data-dragging` (no rise under reduced motion). The
+     thumb's `left` and the fill's `width` are a percent rounded to a thousandth (`0.55 * 100` is
+     `55.00000000000001`), written only when it changes.
 2. Section 2, the range slider (two thumbs, `minGap`, the span's stop, the histogram).
 3. Section 3, the radio group and the segmented control.
 4. Section 4, the select field on the drop-down (Tweakpane's two `options` forms).

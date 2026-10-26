@@ -1,7 +1,8 @@
 import { getPrimitiveValueKind } from './binding/Binding';
 import { evaluateValueExpression } from './binding/ValueExpression';
-import { constrainNumber, createValueFormatter, type NumberRules } from './binding/ValueText';
-import { createField, type Field, type FieldProps } from './Field';
+import { createValueFormatter, type NumberRules } from './binding/ValueText';
+import { createField, type Field, type FieldProps, type FieldShell } from './Field';
+import { createNumberSteps, getStepModifier, type NumberSteps } from './NumberSteps';
 import { createTypedText } from './TypedText';
 import './NumberField.scss';
 import '../styles/kit.scss';
@@ -26,15 +27,42 @@ export type NumberFieldProps = FieldProps<number> &
 /** A number field {@link createNumberField} made: the field's handle. */
 export type NumberField = Field<number>;
 
-/** A key's step, as a count of `step`s */
-const STEP_KEYS: Record<string, number> = { ArrowUp: 1, ArrowDown: -1, PageUp: 10, PageDown: -10 };
+/**
+ * What a field built on the number field's spin button adds to it (the slider's track).
+ * @internal
+ */
+export type NumberFieldParts = {
+  /** `data-kind` on the field's element */
+  kind: string;
+  /** The control around the spin button's box (a slider's track and the box); default the box,
+   * which an outside change flashes either way */
+  wrapBox?: (box: HTMLElement) => HTMLElement;
+  /** Draws a value into the field's own parts too, with its shown text */
+  draw?: (value: number, text: string) => void;
+  /** Sets the own parts' disabled state too */
+  applyDisabled?: (disabled: boolean) => void;
+  /** Runs when the field is removed: the own parts' listeners */
+  onRemove?: () => void;
+  /** A horizontal drag on the label changes the value (the number field's; a slider's track is
+   * its drag) */
+  scrub?: boolean;
+};
+
+/**
+ * A field built on the number field's spin button: what `buildNumberField` gives back.
+ * @internal
+ */
+export type NumberFieldBuild = {
+  shell: FieldShell<number>;
+  steps: NumberSteps;
+  formatter: ReturnType<typeof createValueFormatter>;
+  /** Puts typed text back and ends a key's gesture: a pointer took over (a slider's track) */
+  interrupt: () => void;
+};
+
 /** A drag's distance before a press on the label scrubs, so a click still focuses the input */
 const SCRUB_THRESHOLD_PX = 3;
 const NUMBER_TEXT_REGEX = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i;
-
-/** Shift is ×10, Alt ×0.1 (p804 D6) */
-const getModifier = (e: { shiftKey: boolean; altKey: boolean }) =>
-  e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
 
 /** A scrub's change per pixel: Tweakpane's, a tenth of the step's (or the value's) decade */
 const getPointerScale = (step: number | undefined, value: number) => {
@@ -90,9 +118,22 @@ const getPointerScale = (step: number | undefined, value: number) => {
  * settingsPanel.add(speed.cmp);
  * ```
  */
-export const createNumberField = (props: NumberFieldProps): NumberField => {
+export const createNumberField = (props: NumberFieldProps): NumberField =>
+  buildNumberField(props, { kind: 'number', scrub: true }).shell.field;
+
+/**
+ * Builds a field on the number field's spin button (its typed text, keys, clipboard and, with
+ * `scrub`, the label's drag), with `parts` around it: the number field, and the slider with its
+ * track.
+ * @internal
+ */
+export const buildNumberField = (
+  props: NumberFieldProps,
+  parts: NumberFieldParts
+): NumberFieldBuild => {
   const { onInput, expressionUnits } = props;
   const formatter = createValueFormatter(props);
+  const steps = createNumberSteps(props);
   /** The text last drawn (its aria-valuetext written): a draw that makes the same skips it */
   let shownText: string | null = null;
   /** The key whose keyup ends the key gesture */
@@ -142,10 +183,11 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   };
 
   const shell = createField<number>(props, {
-    kind: 'number',
+    kind: parts.kind,
     valueKind: getPrimitiveValueKind<number>(),
-    control: box,
+    control: parts.wrapBox?.(box) ?? box,
     labelFor: input,
+    flashElem: box,
     draw: (value) => {
       // A draw is a change: the number is new, its text may not be (rounded to the same)
       input.setAttribute('aria-valuenow', String(value));
@@ -156,24 +198,22 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       }
       // Typed text stays until it's written or put back
       if (!isTyping() && input.value !== text) input.value = text;
+      parts.draw?.(value, text);
     },
     applyDisabled: (on) => {
       if (on) input.setAttribute('disabled', '');
       else input.removeAttribute('disabled');
       if (on) endInteractions();
+      parts.applyDisabled?.(on);
     },
     onRemove: () => {
       typed.dispose();
       for (const [elem, type, fn] of listeners) elem.removeEventListener(type, fn as EventListener);
+      parts.onRemove?.();
     },
   });
-  const { binding, field, labelElem } = shell;
-
-  /** A key's or a scrub's value: Alt's finer steps leave the grid for a tenth of the step */
-  /** Alt's rules: a tenth of the step's grid (made once, not per pointer move) */
-  const fineRules = props.step !== undefined ? { ...props, step: props.step / 10 } : props;
-  const constrain = (value: number, modifier = 1) =>
-    constrainNumber(value, modifier < 1 ? fineRules : props);
+  const { binding, labelElem } = shell;
+  const { constrain } = steps;
 
   /** A key's or a scrub's step: a write redraws through the shell, an equal value (at an end)
    * doesn't, and typed text it ended still shows */
@@ -213,29 +253,19 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || input.hasAttribute('disabled')) return;
-    let target: number | null = null;
-    const steps = STEP_KEYS[e.key];
-    if (steps !== undefined) {
-      const modifier = getModifier(e);
-      // From the typed text when it's a number, else from the value
-      const typedValue = typed.isDirty()
-        ? evaluateValueExpression(input.value, expressionUnits).value
-        : undefined;
-      const from = typedValue ?? binding.peek();
-      target = constrain(from + steps * (props.step ?? 1) * modifier, modifier);
-    } else if (e.key === 'Home' && props.min !== undefined) {
-      target = props.min;
-    } else if (e.key === 'End' && props.max !== undefined) {
-      target = props.max;
-    } else if (e.key === 'Enter') {
+    // A step from the typed text when it's a number, else from the value
+    const target = steps.getKeyTarget(
+      e,
+      () =>
+        (typed.isDirty()
+          ? evaluateValueExpression(input.value, expressionUnits).value
+          : undefined) ?? binding.peek()
+    );
+    if (target === null) {
       // Not stopped: in a form, Enter submits after the value is written
-      typed.commit();
-      return;
-    } else if (e.key === 'Escape') {
+      if (e.key === 'Enter') typed.commit();
       // Outside a HUD root (the overlay stack takes it first under one)
-      typed.onEscape(e);
-      return;
-    } else {
+      else if (e.key === 'Escape') typed.onEscape(e);
       return;
     }
     e.preventDefault();
@@ -273,7 +303,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   // The label's scrub: pointer capture, no pointer lock (it prompts, and loses the cursor in an
   // embed); the keyboard path is the keys
   const onLabelPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0 || shell.isDisabled() || props.labelHidden) return;
+    if (e.button !== 0 || shell.isDisabled() || props.labelHidden || !parts.scrub) return;
     labelElem.setPointerCapture?.(e.pointerId);
     const raw = binding.peek();
     const scale = getPointerScale(props.step, raw);
@@ -289,7 +319,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
       shell.cmp.elem.setAttribute('data-scrubbing', '');
       typed.revert();
     }
-    const modifier = getModifier(e);
+    const modifier = getStepModifier(e);
     scrub.raw += (e.clientX - scrub.lastX) * scrub.scale * modifier;
     scrub.lastX = e.clientX;
     stepTo(constrain(scrub.raw, modifier));
@@ -325,5 +355,9 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   ];
   for (const [elem, type, fn] of listeners) elem.addEventListener(type, fn as EventListener);
 
-  return field;
+  const interrupt = () => {
+    if (stepKey !== null) endGesture();
+    typed.revert();
+  };
+  return { shell, steps, formatter, interrupt };
 };

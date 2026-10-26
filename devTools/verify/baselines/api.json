@@ -3039,9 +3039,23 @@
       "FieldSpec": "TypeAlias"
     },
     "src/_engine/ui/forms/NumberField.ts": {
+      "buildNumberField": "Function",
       "createNumberField": "Function",
       "NumberField": "TypeAlias",
+      "NumberFieldBuild": "TypeAlias",
+      "NumberFieldParts": "TypeAlias",
       "NumberFieldProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/NumberSteps.ts": {
+      "createNumberSteps": "Function",
+      "getStepModifier": "Function",
+      "NumberSteps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/Slider.ts": {
+      "createSlider": "Function",
+      "Slider": "TypeAlias",
+      "SliderProps": "TypeAlias",
+      "SliderTick": "TypeAlias"
     },
     "src/_engine/ui/forms/TextField.ts": {
       "createTextField": "Function",
@@ -4327,6 +4341,9 @@
       "SceneTargetResolver",
       "Skeleton",
       "SkeletonProps",
+      "Slider",
+      "SliderProps",
+      "SliderTick",
       "Spinner",
       "SpinnerProps",
       "SplitButton",
@@ -4391,6 +4408,7 @@
       "createPopover",
       "createProgressBar",
       "createSkeleton",
+      "createSlider",
       "createSpinner",
       "createSplitButton",
       "createSwitch",

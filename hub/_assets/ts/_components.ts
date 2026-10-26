@@ -37,6 +37,7 @@ import {
   createPopover,
   createProgressBar,
   createSkeleton,
+  createSlider,
   createSpinner,
   createSplitButton,
   createSwitch,
@@ -64,6 +65,7 @@ import type {
   DropDownProps,
   InputGlyphInput,
   NumberFieldProps,
+  SliderProps,
   TextFieldProps,
   OpenDraggableWindowProps,
   ProgressBarProps,
@@ -561,6 +563,80 @@ const initNumberFieldStressDemo: Demo = (box) => {
     frame = null;
     readout.textContent = 'Stopped';
   });
+};
+
+// --- Slider ---
+
+const SLIDER_ID = (name: string) => `${ID_PREFIX}Slider${name}`;
+const QUALITY_NAMES = ['Low', 'Medium', 'High', 'Ultra', 'Max'];
+
+/** In the page: sliders with the spin button (a format, labelled ticks), one without it (the
+ * thumb is the slider) and a disabled one, bound to one object; each write in the status line */
+const initSliderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = SLIDER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = { volume: 0.8, fov: 75, quality: 2, gamma: 2.2 };
+  const make = (name: string, key: keyof typeof settings, props: Partial<SliderProps>) =>
+    createSlider({
+      id: SLIDER_ID(name),
+      label: name,
+      target: settings,
+      key,
+      onChange: (value, { last, source }) => {
+        const text = key === 'quality' ? QUALITY_NAMES[value] : value;
+        status.textContent = `${name}: ${text} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as SliderProps);
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoSliders');
+    group.append(...elems);
+  };
+
+  row(
+    'A step and a format, typed with %',
+    make('Volume', 'volume', {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      format: (value) => `${Math.round(value * 100)} %`,
+      expressionUnits: { '%': 0.01 },
+    }).cmp.elem
+  );
+  row(
+    'A unit and labelled ticks',
+    make('Field of view', 'fov', {
+      id: SLIDER_ID('Fov'),
+      min: 30,
+      max: 120,
+      step: 1,
+      unit: '°',
+      ticks: [
+        { value: 30, label: '30°' },
+        { value: 60, label: '60°' },
+        { value: 90, label: '90°' },
+        { value: 120, label: '120°' },
+      ],
+    }).cmp.elem
+  );
+  row(
+    'Without the input: the thumb is the slider, five ticks',
+    make('Quality', 'quality', {
+      min: 0,
+      max: 4,
+      step: 1,
+      showInput: false,
+      ticks: 5,
+      format: (value) => QUALITY_NAMES[value] ?? String(value),
+      hint: 'Drag, or use the arrow keys',
+    }).cmp.elem
+  );
+  row('Disabled', make('Gamma', 'gamma', { min: 1, max: 3, step: 0.1, disabled: true }).cmp.elem);
+  root.append(status);
 };
 
 // --- Text field ---
@@ -1574,6 +1650,7 @@ const DEMOS: Record<string, Demo> = {
   dropDown: initDropDownDemo,
   numberField: initNumberFieldDemo,
   numberFieldStress: initNumberFieldStressDemo,
+  slider: initSliderDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
   tooltip: initTooltipDemo,

@@ -121,6 +121,9 @@ export type FieldSpec<T> = {
   labelFor?: HTMLElement;
   /** A group of parts (a vector's axes): the label is a `<span>` naming the control */
   isGroup?: boolean;
+  /** The focusable part isn't labelable (a `role="slider"` thumb): the label is a `<span>` it's
+   * `aria-labelledby`, and a click on it focuses the part */
+  isLabelledBy?: boolean;
   /** The element an outside change flashes (default `control`) */
   flashElem?: HTMLElement;
   /** Draws the value into the control: after every write and every read that changed it */
@@ -187,6 +190,7 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
       removeEntry = null;
       flash.dispose();
       labelTooltip.cmp.remove();
+      labelElem.removeEventListener('click', onLabelClick);
       spec.onRemove?.();
     },
   });
@@ -197,7 +201,7 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
 
   // The label row: the label and the reset button
   const head = cmp.add({ class: 'aekField__head' });
-  const labelElem = document.createElement(spec.isGroup ? 'span' : 'label');
+  const labelElem = document.createElement(spec.isGroup || spec.isLabelledBy ? 'span' : 'label');
   labelElem.className = classes(
     'aekField__label',
     props.labelHidden ? 'aekVisuallyHidden' : null
@@ -205,12 +209,21 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
   labelElem.id = labelId;
   labelElem.textContent = props.label;
   head.elem.append(labelElem);
+  // A `<label for>` focuses its control on a click; a span naming a part does it here
+  const onLabelClick = () => {
+    if (!isDisabled) labelFor.focus();
+  };
   if (spec.isGroup) {
     spec.control.setAttribute('role', 'group');
     spec.control.setAttribute('aria-labelledby', labelId);
   } else {
     labelFor.id = controlId;
-    labelElem.setAttribute('for', controlId);
+    if (spec.isLabelledBy) {
+      labelFor.setAttribute('aria-labelledby', labelId);
+      labelElem.addEventListener('click', onLabelClick);
+    } else {
+      labelElem.setAttribute('for', controlId);
+    }
   }
   // A cut label's whole text (a long name in a narrow column)
   const labelTooltip = createTooltip({
