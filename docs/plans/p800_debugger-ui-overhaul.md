@@ -397,7 +397,9 @@ Every component, from its first version:
   sliders), Coloris (no dependencies, accessible, a popup with inputs), `iro.js` (wheel and box
   layouts). Criteria: gzip size, keyboard and screen reader use, alpha, HSV / HSL / RGB / hex, how
   far its look can follow our tokens (a shadow root needs `::part`), maintenance (last release,
-  open issues), licence.
+  open issues), licence. **Picked (p804 Phase 0, 2026-10-26): `vanilla-colorful`'s HSVA picker**,
+  about 3 KiB gzip, defined under the kit's own tag from its base class (p804 D8, its study in
+  p804's Phase 0 step 4).
 - Ours around it: the swatch and text input (hex, `rgb()`, `hsl()`, three.js float triples), an
   intensity field for HDR colours (light colours and emissive), linear / sRGB awareness for
   `THREE.Color` (the picker shows sRGB, the binding stores what the target expects), recent and

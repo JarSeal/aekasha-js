@@ -306,6 +306,25 @@ Native elements first (p800 D8), the APG pattern where none fits:
     use, alpha, HSV / HSL / RGB / hex, how far its look follows our tokens through a shadow root,
     maintenance, licence), wrapped in `ColorPicker.ts` so a swap touches one module, and loaded
     with `import()` on the first open (D12).
+  - **Picked: `vanilla-colorful` 0.7.2** (MIT), its HSVA model (Phase 0 step 4 has the study):
+    the plane, the hue and the alpha as three `role="slider"` parts (named "Color", "Hue",
+    "Alpha", with `aria-valuetext`; arrows, PageUp / PageDown, Home / End), no chrome of its own,
+    so the popover around it, the swatch and the text inputs are ours and on the tokens. About
+    3 KiB gzip with our wrapper's import.
+  - **No tag of its own on the page:** `ColorPicker.ts` imports the base class
+    (`vanilla-colorful/lib/entrypoints/hsva`'s `HsvaBase`, which registers nothing) and defines
+    `aek-color-picker` from it on the first open (`customElements.get` first), so a host page
+    using vanilla-colorful's own `hsva-color-picker` never collides with an embed.
+  - **The ring:** its shadow sets `outline: 0` and marks focus only by scaling the pointer;
+    `aek-color-picker::part(saturation | hue | alpha):focus-visible` draws the kit's ring from
+    outside (an outer `::part` rule beats the shadow's own; checked in Chrome). Sizes and radii
+    through `::part` too.
+  - **Its limits, and ours around them:** it rounds HSVA to whole degrees and percent (the
+    pointer's precision; the text input sets exact values); its slider names are English in its
+    template (its shadow root is open, so the wrapper can relabel them if the kit gets
+    translations); D6's Shift / Alt step modifiers aren't its keys (the text input has them). Its
+    last release is 2022-11, the repository is active (pushed 2026-10, 6 open issues): small,
+    finished, and swappable behind the wrapper.
 - **Vector** (`createVectorField`): `{ x, y }`, `{ x, y, z }`, `{ x, y, z, w }` or a number
   array (2-4), axes in a row, each a number part (D6) with its axis letter visible (colour on the
   letter is a hint, never alone). `min` / `max` / `step` shared, or per axis
@@ -627,12 +646,38 @@ each section for review.
      write was logged for the list.
    - Aside: the Renderer tab's "Custom" tone mapping (`THREE.CustomToneMapping`) logs
      `THREE.ToneMappingNode: Unsupported Tone Mapping configuration. 5` on WebGPU: the tab offers
-     an option three's node renderer doesn't take (outside this plan).
+     an option three's node renderer doesn't take (outside this plan:
+     `docs/issues/renderer-custom-tone-mapping.md`).
 4. **The colour picker study** (p800 D13): `vanilla-colorful`, Coloris, `iro.js`, and any newer
    candidate found then, on p800 D13's criteria, each in a probe page (scratchpad) in both themes:
    gzip size, keyboard and screen reader use (axe-core and by hand with VoiceOver), alpha, the
    models, how far tokens restyle it, last release and open issues, licence. The pick and why go
    into D8.
+
+   - **Run on 2026-10-26** (Chrome; each candidate inline in a popover-like frame on the tokens,
+     in a page of its own per theme over HTTP, with a stylesheet mapping its look onto the tokens;
+     esbuild bundles, minified; axe-core with WCAG 2.2 A / AA and `best-practice`; a Tab walk from
+     a button before to one after, pressing ArrowRight and ArrowUp at each stop). Added from a
+     search: Alwan, Pickr, vanilla-picker, `hdr-color-input` (`<color-input>`), and the native
+     `<input type="color">` as the floor.
+
+     | Candidate                     | gzip (JS + CSS) | axe (both themes)                                               | Keyboard                                                   | Tokens                             | Release, repo           | Licence |
+     | ----------------------------- | --------------- | --------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------- | ----------------------- | ------- |
+     | `vanilla-colorful` 0.7.2 HSVA | 3.0 KiB         | none                                                            | 3 sliders, named, value text                               | `::part`, no chrome; ring from out | 2022-11; pushed 2026-10 | MIT     |
+     | the same with `<hex-input>`   | 4.1 KiB         | `label` (its input)                                             | + an unnamed input                                         | as above                           | as above                | MIT     |
+     | Coloris 0.25.0 (`@melloware`) | 7.6 KiB         | `aria-prohibited-attr`                                          | all reachable, but Tab cycles inside the picker (a trap)   | classes only; a marker outside     | 2025-06; pushed 2025-09 | MIT     |
+     | Alwan 2.3.1                   | 7.9 KiB         | `aria-prohibited-attr`, `aria-valid-attr` (critical)            | all reachable; no focus outline                            | its custom properties: good        | 2026-02; 51 stars       | MIT     |
+     | vanilla-picker 2.12.3         | 6.9 KiB         | none                                                            | the plane and sliders not reachable (2 stops: text, Ok)    | classes; stays light in dark       | 2024-03                 | ISC     |
+     | Pickr 1.10.2                  | 10.2 KiB        | `aria-roles`, `aria-required-attr` (critical), contrast, size   | reachable; the plane a `listbox`; ignored the start colour | classes, `--pcr-color`             | 2026-09; 34 open        | MIT     |
+     | iro.js 5.5.2                  | 10.4 KiB        | none (nothing focusable)                                        | none (0 stops)                                             | JS options only (SVG)              | 2021-07                 | MPL-2.0 |
+     | `hdr-color-input` 0.4.4       | 77.7 KiB        | `label` ×8, `aria-required-attr` (critical), `label-title-only` | reachable; unnamed sliders and number inputs               | `::part`; wide gamut, OKLCH        | 2026-08; 23 open        | MIT     |
+     | `<input type="color">`        | 0.4 KiB         | none                                                            | one stop; the OS's own panel                               | none (the OS draws it)             | -                       | -       |
+
+   - **The pick: `vanilla-colorful`, its HSVA picker** (D8 says why and how it's wrapped): the
+     smallest, the only one with no axe violation that's fully keyboard-reachable, and the only
+     one with no chrome to fight (the rest of the field is ours anyway). Not done here:
+     VoiceOver by hand; it's a check for Phase 5 section 2, on the wrapped picker.
+
 5. Checks that decide details: linkedom 0.18.13's `<input>` (`value`, `selectionStart`, `select`
    and `input` events, `setPointerCapture`; a gap becomes a `KitDom` shim or a check moved to
    `verify:ui`); `KeyNames.ts`' share of the button's `kbd` cost (D13); whether `@layer aek.page`
