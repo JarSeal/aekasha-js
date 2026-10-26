@@ -142,7 +142,7 @@ describe('the property grid’s items (p804 D10)', () => {
     );
   });
 
-  it('an angle dial, a 2D pad and a gradient say their kinds, their props passed through', () => {
+  it('an angle dial, a 2D pad, a gradient and a curve say their kinds, their props passed through', () => {
     const state = {
       azimuth: 90,
       wind: { x: 0.5, y: -0.5 },
@@ -152,6 +152,10 @@ describe('the property grid’s items (p804 D10)', () => {
           { t: 1, color: '#ffffff' },
         ],
       },
+      falloff: [
+        { x: 0, y: 1 },
+        { x: 10, y: 0 },
+      ],
     };
     const { rows } = makeGrid([
       {
@@ -166,8 +170,22 @@ describe('the property grid’s items (p804 D10)', () => {
       },
       { target: state, key: 'wind', label: 'Wind', kind: 'pad2d', invertY: true },
       { target: state, key: 'ramp', label: 'Ramp', kind: 'gradient', maxStops: 2 },
+      {
+        target: state,
+        key: 'falloff',
+        label: 'Falloff',
+        kind: 'curve',
+        axes: { x: { min: 0, max: 10 } },
+        maxKeys: 2,
+        presets: false,
+      },
     ]);
-    expect(rows.map(kindOf)).toEqual(['angle', 'pad2d', 'gradient']);
+    expect(rows.map(kindOf)).toEqual(['angle', 'pad2d', 'gradient', 'curve']);
+    expect(rows[3].querySelector('.aekCurveEditor__add')!.hasAttribute('disabled')).toBe(true);
+    expect(rows[3].querySelector('.aekCurveEditor__presets')).toBe(null);
+    expect(rows[3].querySelectorAll<HTMLElement>('.aekCurveEditor__point')[1].style.left).toBe(
+      '100%'
+    );
     expect(rows[2].querySelector('.aekGradientEditor__add')!.hasAttribute('disabled')).toBe(true);
     expect(rows[0].querySelector('.aekAngleDial')!.getAttribute('data-convention')).toBe('compass');
     expect(rows[0].querySelector('input')!.value).toBe('90');

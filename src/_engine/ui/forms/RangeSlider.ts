@@ -201,16 +201,29 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
     return text;
   };
 
+  /** Each end last drawn and its text: a write that moves one end redraws that one */
+  let shownMin = NaN;
+  let shownMax = NaN;
+  let lowText = '';
+  let highText = '';
+
   const draw = (value: RangeValue) => {
-    const lowText = drawThumb(low, value.min);
-    const highText = drawThumb(high, value.max);
+    const isNew = value.min !== shownMin || value.max !== shownMax;
+    if (value.min !== shownMin) {
+      shownMin = value.min;
+      lowText = drawThumb(low, value.min);
+    }
+    if (value.max !== shownMax) {
+      shownMax = value.max;
+      highText = drawThumb(high, value.max);
+    }
     // Each end's own limits: the other's value, the gap kept
     if (spins) {
       spins.low.draw(value.min);
       spins.high.draw(value.max);
       setAttr(spins.low.input, 'aria-valuemax', String(value.max - gap));
       setAttr(spins.high.input, 'aria-valuemin', String(value.min + gap));
-    } else {
+    } else if (isNew) {
       setAttr(low.thumb, 'aria-valuemax', String(value.max - gap));
       setAttr(high.thumb, 'aria-valuemin', String(value.min + gap));
       setAttr(span, 'aria-valuenow', String(value.min));
@@ -284,19 +297,22 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
     elem.id = `${baseId}-${part}`;
   }
 
+  /** The range a write is made in: kept, as the binding copies what it's given */
+  const next: RangeValue = { min, max };
+
   /** A thumb moved to `value`, kept on its side of the other with the gap */
-  const moveThumb = (part: 'low' | 'high', value: number, from: RangeValue): RangeValue =>
-    part === 'low'
-      ? { min: Math.max(min, Math.min(value, from.max - gap)), max: from.max }
-      : { min: from.min, max: Math.min(max, Math.max(value, from.min + gap)) };
+  const moveThumb = (part: 'low' | 'high', value: number, from: RangeValue): RangeValue => {
+    next.min = part === 'low' ? Math.max(min, Math.min(value, from.max - gap)) : from.min;
+    next.max = part === 'low' ? from.max : Math.min(max, Math.max(value, from.min + gap));
+    return next;
+  };
 
   /** Both moved by `delta`, kept in the track (its width kept), each on the grid */
   const shiftRange = (from: RangeValue, delta: number, modifier: number): RangeValue => {
     const d = Math.min(Math.max(delta, min - from.min), max - from.max);
-    return {
-      min: steps.constrain(from.min + d, modifier),
-      max: steps.constrain(from.max + d, modifier),
-    };
+    next.min = steps.constrain(from.min + d, modifier);
+    next.max = steps.constrain(from.max + d, modifier);
+    return next;
   };
 
   // A spin button writes its end of the range, kept on its side of the other
@@ -411,6 +427,7 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
       const from = binding.peek();
       start = { min: from.min, max: from.max };
       startX = e.clientX;
+      parts.measure();
       offset = 0;
       dragPart = getPressedPart(e, from);
       focusPart(dragPart === 'either' ? 'low' : dragPart);
@@ -428,6 +445,7 @@ export const createRangeSlider = (props: RangeSliderProps): RangeSlider => {
       dragTo(e);
     },
     onEnd: () => {
+      parts.measure(false);
       markDragging(null);
       binding.commit();
     },

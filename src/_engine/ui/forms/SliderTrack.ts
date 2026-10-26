@@ -91,6 +91,8 @@ export const createSliderTrack = (props: SliderTrackProps) => {
 
   const track = span('aekSlider');
   const rail = span('aekSlider__rail');
+  /** The rail's box, kept for a drag (`measure`) */
+  let railRect: DOMRect | null = null;
   const fill = span('aekSlider__fill');
   rail.append(fill);
 
@@ -130,17 +132,22 @@ export const createSliderTrack = (props: SliderTrackProps) => {
     fill,
     /** A value's place on the rail, a percent to a thousandth (clamped to the range) */
     toPercent,
+    /** Reads the rail's box for a drag (at its press), so its moves don't each read the layout
+     * the last move's writes dirtied; `null` reads it on each call again */
+    measure: (on = true) => {
+      railRect = on ? rail.getBoundingClientRect() : null;
+    },
     /** The value under the pointer's x, less a grab's offset: clamped to the range, not
      * constrained */
     getValueAt: (clientX: number, offset = 0) => {
-      const rect = rail.getBoundingClientRect();
+      const rect = railRect ?? rail.getBoundingClientRect();
       const fraction =
         rect.width > 0 ? Math.min(1, Math.max(0, (clientX - offset - rect.left) / rect.width)) : 0;
       return min + fraction * range;
     },
     /** What a pointer's move of `dx` px is in value */
     getValueDelta: (dx: number) => {
-      const width = rail.getBoundingClientRect().width;
+      const width = (railRect ?? rail.getBoundingClientRect()).width;
       return width > 0 ? (dx / width) * range : 0;
     },
     /** How far from a thumb's centre the pointer is: a press there drags it without a jump */
@@ -158,6 +165,9 @@ export const createSliderTrack = (props: SliderTrackProps) => {
       const thumb = span('aekSlider__thumb');
       const bubble = span('aekSlider__bubble');
       bubble.setAttribute('aria-hidden', 'true');
+      // One text node whose data is written: a replaced node is a style recalc per move
+      const bubbleText = document.createTextNode('');
+      bubble.append(bubbleText);
       thumb.append(bubble);
       rail.append(thumb);
       let shownPercent = -1;
@@ -173,7 +183,7 @@ export const createSliderTrack = (props: SliderTrackProps) => {
         setText: (text) => {
           if (text === shownText) return;
           shownText = text;
-          bubble.textContent = props.unit ? `${text} ${props.unit}` : text;
+          bubbleText.data = props.unit ? `${text} ${props.unit}` : text;
         },
       };
     },

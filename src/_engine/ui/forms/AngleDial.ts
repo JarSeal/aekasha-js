@@ -225,11 +225,13 @@ export const createAngleDial = (props: AngleDialProps): AngleDial => {
     });
   }
 
+  /** The dial's centre, read once at the press (a move reads no layout) */
+  let centreX = 0;
+  let centreY = 0;
   /** The pointer's angle round the dial's centre, in degrees; null at the centre */
   const getPointerAngle = (e: PointerEvent) => {
-    const rect = dial.getBoundingClientRect();
-    const dx = e.clientX - (rect.left + rect.width / 2);
-    const dy = e.clientY - (rect.top + rect.height / 2);
+    const dx = e.clientX - centreX;
+    const dy = e.clientY - centreY;
     if (dx === 0 && dy === 0) return null;
     const radians = convention === 'compass' ? Math.atan2(dx, -dy) : Math.atan2(-dy, dx);
     return radians * RAD_TO_DEG;
@@ -259,6 +261,9 @@ export const createAngleDial = (props: AngleDialProps): AngleDial => {
         // The press focuses the slider, as a click on a native one does
         dial.focus({ preventScroll: true });
       }
+      const rect = dial.getBoundingClientRect();
+      centreX = rect.left + rect.width / 2;
+      centreY = rect.top + rect.height / 2;
       raw = target.peek();
       lastAngle = null;
       follow(getPointerAngle(e));

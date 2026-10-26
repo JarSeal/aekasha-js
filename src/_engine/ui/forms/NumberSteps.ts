@@ -2,7 +2,7 @@
 // constraint a stepped value goes through, and the key gesture of a stop that isn't a text input.
 // The number field's spin button, the slider's and the range slider's thumbs, the angle dial and
 // the 2D pad share them.
-import { constrainNumber, type NumberRules } from './binding/ValueText';
+import { constrainNumber, getFixedRoundingDecimals, type NumberRules } from './binding/ValueText';
 
 /** A key's step, as a count of `step`s */
 const STEP_KEYS: Readonly<Record<string, number>> = {
@@ -107,10 +107,14 @@ export const createNumberSteps = (
   options: { horizontal?: boolean } = {}
 ): NumberSteps => {
   const keys = options.horizontal ? SLIDER_STEP_KEYS : STEP_KEYS;
-  // Alt's rules: made once, not per key or pointer move
+  // Alt's rules and both rules' decimals: made once, not per key or pointer move
   const fineRules = rules.step !== undefined ? { ...rules, step: rules.step / 10 } : rules;
+  const decimals = getFixedRoundingDecimals(rules);
+  const fineDecimals = getFixedRoundingDecimals(fineRules);
   const constrain = (value: number, modifier = 1) =>
-    constrainNumber(value, modifier < 1 ? fineRules : rules);
+    modifier < 1
+      ? constrainNumber(value, fineRules, fineDecimals)
+      : constrainNumber(value, rules, decimals);
   return {
     constrain,
     getKeyTarget: (e, from) => {

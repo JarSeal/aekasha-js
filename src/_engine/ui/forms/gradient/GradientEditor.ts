@@ -238,13 +238,21 @@ export const createGradientEditor = <T extends GradientValue>(
   row.append(positionPart, color.row, addButton.cmp.elem, removeButton.cmp.elem);
   root.append(track, row);
 
-  /** The handles, one per stop, with their listeners' removers */
-  const handles: { elem: HTMLElement; text: string | null; dispose: () => void }[] = [];
+  /** The handles, one per stop, with what each last drew and its listeners' removers */
+  const handles: {
+    elem: HTMLElement;
+    t: number;
+    color: string | null;
+    selected: boolean;
+    dispose: () => void;
+  }[] = [];
 
+  /** A stop's handle: made and removed at the end of the list, so its index is fixed */
   const createHandle = () => {
     const elem = document.createElement('span');
     elem.className = 'aekGradientEditor__stop';
     elem.setAttribute('role', 'slider');
+    elem.setAttribute('aria-label', `Stop ${handles.length + 1}`);
     elem.setAttribute('aria-valuemin', '0');
     elem.setAttribute('aria-valuemax', '100');
     if (isDisabled) elem.setAttribute('aria-disabled', 'true');
@@ -276,7 +284,9 @@ export const createGradientEditor = <T extends GradientValue>(
     lane.append(elem);
     handles.push({
       elem,
-      text: null,
+      t: NaN,
+      color: null,
+      selected: false,
       dispose: () => {
         keys.dispose();
         elem.removeEventListener('keydown', onKeyDown);
@@ -286,11 +296,20 @@ export const createGradientEditor = <T extends GradientValue>(
     });
   };
 
-  /** The buttons at the stops' limits, or disabled with the field */
+  let shownNoAdd: boolean | null = null;
+  let shownNoRemove: boolean | null = null;
+  /** The buttons at the stops' limits, or disabled with the field (written on a change) */
   const setButtonsDisabled = () => {
-    addButton.setDisabled(isDisabled || handles.length >= maxStops);
-    removeButton.setDisabled(isDisabled || handles.length <= minStops);
+    const noAdd = isDisabled || handles.length >= maxStops;
+    const noRemove = isDisabled || handles.length <= minStops;
+    if (noAdd !== shownNoAdd) addButton.setDisabled((shownNoAdd = noAdd));
+    if (noRemove !== shownNoRemove) removeButton.setDisabled((shownNoRemove = noRemove));
   };
+
+  /** The row's stop as last drawn: a write that moved another stop leaves the row alone */
+  let rowIndex = -1;
+  let rowT = NaN;
+  let rowColor: string | null = null;
 
   /** The handles, the selection and the row drawn at a value */
   const draw = (value: T) => {
@@ -301,16 +320,25 @@ export const createGradientEditor = <T extends GradientValue>(
     for (let i = 0; i < stops.length; i++) {
       const handle = handles[i];
       const stop = stops[i];
-      const percent = toPercent(stop.t);
-      const text = describeStop(stop, position.formatter.getText(percent));
-      handle.elem.toggleAttribute('data-selected', i === selected);
+      const isSelected = i === selected;
+      if (isSelected !== handle.selected) {
+        handle.selected = isSelected;
+        handle.elem.toggleAttribute('data-selected', isSelected);
+      }
       // Each written only on a change: a draw runs on every write of a drag
-      if (text === handle.text) continue;
-      handle.text = text;
-      handle.elem.style.left = `${percent}%`;
-      handle.elem.style.setProperty('--aek-color-field-value', stop.color);
-      handle.elem.setAttribute('aria-label', `Stop ${i + 1}`);
-      handle.elem.setAttribute('aria-valuenow', String(percent));
+      const moved = stop.t !== handle.t;
+      const recoloured = stop.color !== handle.color;
+      if (!moved && !recoloured) continue;
+      const percent = toPercent(stop.t);
+      if (moved) {
+        handle.t = stop.t;
+        handle.elem.style.left = `${percent}%`;
+        handle.elem.setAttribute('aria-valuenow', String(percent));
+      }
+      if (recoloured) {
+        handle.color = stop.color;
+        handle.elem.style.setProperty('--aek-color-field-value', stop.color);
+      }
       handle.elem.setAttribute(
         'aria-valuetext',
         `${position.formatter.getText(percent)} %, ${stop.color}`
@@ -323,8 +351,11 @@ export const createGradientEditor = <T extends GradientValue>(
     }
     const current = stops[selected];
     if (current) {
-      position.draw(toPercent(current.t));
-      color.draw(current.color);
+      if (selected !== rowIndex || current.t !== rowT) position.draw(toPercent(current.t));
+      if (selected !== rowIndex || current.color !== rowColor) color.draw(current.color);
+      rowIndex = selected;
+      rowT = current.t;
+      rowColor = current.color;
     }
     setButtonsDisabled();
   };
@@ -366,9 +397,13 @@ export const createGradientEditor = <T extends GradientValue>(
   });
   const { binding } = shell;
 
+  /** The value a write is made in: kept, as the binding copies what it's given */
+  let written: T | undefined;
+  const editable = () => (written = valueKind.copy(binding.peek(), written));
+
   /** The value with stop `index` moved to `t` and coloured `stopColor` (each when given) */
   function withStop(index: number, t: number | null, stopColor: string | null) {
-    const next = valueKind.copy(binding.peek());
+    const next = editable();
     const stop = next.stops[index];
     if (stop) {
       if (t !== null) stop.t = t;
@@ -391,7 +426,7 @@ export const createGradientEditor = <T extends GradientValue>(
     const { stops } = binding.peek();
     if (shell.isDisabled() || stops.length <= minStops || !stops[index]) return;
     const hadFocus = handles[index]?.elem === document.activeElement;
-    const next = valueKind.copy(binding.peek());
+    const next = editable();
     next.stops.splice(index, 1);
     selected = Math.min(index, next.stops.length - 1);
     binding.change(next);
@@ -405,7 +440,7 @@ export const createGradientEditor = <T extends GradientValue>(
     if (shell.isDisabled() || stops.length >= maxStops || !stops[index]) return;
     const hadFocus = handles.some((handle) => handle.elem === document.activeElement);
     const t = steps.constrain(getInsertT(stops, index));
-    const next = valueKind.copy(binding.peek());
+    const next = editable();
     next.stops.splice(index + 1, 0, { t, color: getColorAt(t) });
     selected = index + 1;
     binding.change(next);
@@ -438,9 +473,11 @@ export const createGradientEditor = <T extends GradientValue>(
   // Its first draw came before the parts were attached
   draw(binding.peek());
 
+  /** The bar's box, read once at the press (a move reads no layout) */
+  let barRect: DOMRect | null = null;
   /** The place under the pointer on the bar, less the grab's offset, constrained */
   const getTAt = (e: PointerEvent) => {
-    const rect = bar.getBoundingClientRect();
+    const rect = barRect ?? bar.getBoundingClientRect();
     const fraction = rect.width > 0 ? (e.clientX - grabOffset - rect.left) / rect.width : 0;
     return steps.constrain(clamp01(fraction), e.altKey ? 0.1 : 1);
   };
@@ -448,6 +485,7 @@ export const createGradientEditor = <T extends GradientValue>(
   drag = createPointerDrag(track, {
     canPress: () => !shell.isDisabled(),
     onPress: (e) => {
+      barRect = bar.getBoundingClientRect();
       grabOffset = 0;
       dragIndex = handles.findIndex((handle) => handle.elem.contains(e.target as Node));
       if (dragIndex >= 0) {
@@ -461,7 +499,7 @@ export const createGradientEditor = <T extends GradientValue>(
       const { stops } = binding.peek();
       if (stops.length >= maxStops) return;
       const t = getTAt(e);
-      const next = valueKind.copy(binding.peek());
+      const next = editable();
       next.stops.push({ t, color: getColorAt(t) });
       dragIndex = next.stops.length - 1;
       selected = dragIndex;
@@ -473,6 +511,7 @@ export const createGradientEditor = <T extends GradientValue>(
       binding.step(withStop(dragIndex, getTAt(e), null));
     },
     onEnd: () => {
+      barRect = null;
       if (dragIndex < 0) return;
       dragIndex = -1;
       binding.commit();

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1523,10 +1523,24 @@ D8's colour, vector, rotation and quaternion.
      or quaternion's box keeps 4em and a part its content's width (`min-width: auto`), so the row
      wraps a part that doesn't fit (the angle in the default density; all four fit compact).
 
-### Phase 6: value editors II
+### Phase 6: value editors II — done
 
 D8's angle dial, 2D pad, gradient editor and curve editor (D1: if the plan runs long, the last
-two leave it here).
+two leave it here). All four stayed in the plan.
+
+- **Verified 2026-10-27** (after section 3): `yarn test` (215 files, 1824 tests), ESLint, `tsc`
+  and `tsc -p hub`, `yarn hub:build` (API 100 % documented), `yarn verify:ui` (every box and
+  script, after the menu fix below; the `curveEditor` shots looked at, then recorded),
+  `yarn verify:embed` (both profiles), `yarn sbp --profile all` (all 21 budgets within),
+  `yarn verify:scenes` (104 passed; `exampleSkyBox`'s `workerSab` snapshot differed by 0.01 % of
+  its pixels on the first run, a few pixels on the reflective sphere's edge, and passed on its
+  rerun: nothing in this phase renders), `yarn verify:baselines` (`--update`: the curve's names;
+  `bundle.json`'s one real change is `exampleUiKit.css`, 9 bytes, the menu rule's class; docs
+  100 %, no debug code).
+- **For Phase 7:** the forms page's sections for the angle dial, the 2D pad and the gradient and
+  curve editors (their library texts are the start); the binding guide's inference table gets
+  `kind: 'angle'`, `'pad2d'`, `'gradient'` and `'curve'` (none inferred). The picker's budget
+  line still waits for section 3 (Phase 5's note).
 
 1. Section 1, the angle dial and the 2D pad.
    - **Done 2026-10-26.** `AngleDial.test.ts` (12) and `Pad2D.test.ts` (10), and the kinds in
@@ -1597,6 +1611,103 @@ two leave it here).
    - **The grid:** `kind: 'gradient'` (not inferred), `minStops` / `maxStops` passed through.
 3. Section 3, the curve editor, `evaluateCurve` and its presets; the perf-auditor's second pass
    (the slider's drag, the pad, the editors' drags).
+   - **Done 2026-10-27.** `Curve.test.ts` (7: the easings against a bisection reference to 6
+     digits, the keys' segments, steps and order, every preset exact) and `CurveEditor.test.ts`
+     (15), and the kind in `PropertyGridItems.test.ts`; the `curveEditor` box on both library pages
+     (CSS's `ease` with the presets and a button setting it from outside, a falloff over 20 m as
+     keys, a disabled easing, and a line of `evaluateCurve` at the middle), three keyboard scripts,
+     `COMPONENT_USES`; on `aekasha/ui`: `createCurveEditor`, `CurveEditor`, `CurveEditorProps`,
+     `evaluateCurve`, `getCurvePreset`, `CurveBezier`, `CurveKey`, `CurvePresetName`,
+     `CurveValue`.
+   - **No `mode` prop** (D8 had `mode: 'bezier' | 'keys'`): the value's shape at creation is the
+     mode, as the colour's form is its type. Four numbers are an easing, an array of
+     `{ x, y, inTangent?, outTangent? }` keys; `isBezierCurve` tells them apart (an empty array is
+     keys), so `evaluateCurve` takes either.
+   - **The keys' segments are cubic Hermite** (Unity's and three's keyframe model): a tangent is a
+     slope (dy / dx), and **a missing tangent is its segment's straight slope**, so keys without
+     tangents are a polyline, and one side's tangent alone bends only that end. Flat before the
+     first key and after the last; two keys at one x a step (the later one's value at it, as the
+     gradient's tie). **Keys keep their array order**, as the gradient's stops (a dragged key keeps
+     its index, handle and focus); `evaluateCurve` reads them in any order with a scan per call
+     (fine at 32 keys; p426 may want sorted keys and a binary search, its call).
+   - **The easing** is CSS's `cubic-bezier()` solved as the browsers do (Newton's steps on x(t),
+     then bisection), x clamped to 0-1 and x1 / x2 too; its y's may overshoot. Its x range is
+     always 0-1; `axes.y` sets where its handles may go (default 0-1: an overshoot needs
+     `{ y: { min: -0.5, max: 1.5 } }`; a value outside shows its handle at the edge).
+   - **The presets** (`getCurvePreset(name, mode)`, a new value each call): `linear`, `easeIn`,
+     `easeOut`, `easeInOut`, `smoothstep`. As an easing CSS's keywords and
+     `cubic-bezier(1/3, 0, 2/3, 1)`, which is smoothstep exactly (its control points even along x,
+     so x is t). As keys each is exact too: the quadratic easings (`x²` is two keys with tangents
+     0 and 2; in-out is three keys) and smoothstep two flat keys. CSS's `ease` keyword isn't one:
+     keys can't make it exactly. The editor's "Presets" is a menu button (`createMenu`: a preset is
+     an action, not a value), a keys preset scaled into the axes' ranges, a preset with a key count
+     outside `minKeys` / `maxKeys` disabled; `presets: false` or a list of names.
+   - **The hidden table** (D8: "the points' values are listed in a visually hidden table") is the
+     gradient's row instead: the selected point's X and Y spin buttons and, for a key, its In and
+     Out tangents (a missing one shown as it acts; a write sets it). Every point is a
+     `role="slider"` (its value the y, `aria-valuetext` "X 0.25, Y 0.50"), so Tab through the
+     points reads the whole curve, and the row is every keyboard's way to exact numbers and to the
+     tangents (whose handles are pointer only, `aria-hidden`). The arrows: Left / Right x, Up / Down
+     y. "Add key" / "Remove key" buttons, as the gradient's.
+   - **Adding a key** (Insert or `+` after the focused one, halfway along x to the next; a press on
+     the plot, under the pointer) gives it the curve's numeric slope as its tangents only when the
+     segment it splits has a tangent, else none: a straight segment stays straight.
+   - **A tangent handle** sits 0.15 of the plot from its key along the slope in the plot's shares,
+     so it's on the drawn tangent whatever the plot's aspect; it's shown only towards a
+     neighbouring key (the first key's in and the last's out act on nothing). Dragged past its
+     key's x it stays 0.001 of the plot on its own side (a steep slope, not a flip).
+   - **`CurvePlot.ts`** (`@internal`, no DOM): the geometry out of `CurveEditor.ts` (which stayed
+     at 800 lines with a header saying why its one closure is long): the keys' value kind, their x
+     order (sorted in place, no allocation) with the neighbours and the acting tangents, the paths
+     (a Hermite segment drawn as the cubic Bézier it is: its control points a third along the
+     tangents) and the tangent handles' places.
+   - **Found by the screenshots:** the falloff's row wrapped between "In" and "Out"; the row's parts
+     are pairs now (X with Y, In with Out), and the row wraps between pairs.
+   - **Found by `verify:ui`, not by this section's code:** the menu box's open menu got wider: its
+     key hints took the item's font size. `.aekMenu__kbd` and `Kbd.scss`' `.aekKbd` (`font-size:
+     inherit`) are one element, both zero specificity in one layer, so the stylesheets' load order
+     decided, and the curve editor's import of `Menu.ts` moved `Menu.scss` before `Kbd.scss` in the
+     Hub's bundle. The menu's rule takes one class now (`.aekMenu :where(.aekMenu__kbd)`), and the
+     kit's `CLAUDE.md` (Writing a component, Styles) names the trap. The button's `aekButton__kbd`
+     sets only a margin, which `.aekKbd` doesn't.
+   - **The perf-auditor's second pass** read the slider's, the range slider's, the pad's, the
+     dial's and the gradient editor's drags, the vector's and the colour's draws, the binding's step
+     and the shell's draw. **Fixed:** a text node replaced per move (the slider's bubble, the pad's
+     value text: one `Text` node's `data` now, the monitor's fix); a `getBoundingClientRect` per
+     move (the slider track's `measure()` at the press, the range's, the pad's, the dial's centre,
+     the gradient's bar: the last move's writes made each a forced layout when two moves came in a
+     frame); `NumberInput.draw` formatted and wrote `aria-valuenow` for a value it had drawn (every
+     axis of a vector, the pad, the range's idle end and the gradient's row on every write: it
+     returns early now, still putting back the input's text); `constrainNumber`'s rounding
+     decimals (three `toFixed`s per call) are worked out once per part's steps
+     (`getFixedRoundingDecimals`); the shell spread a second event object per write (it gives the
+     binding's its `field`); the gradient's draw formatted every stop and wrote five attributes
+     for the moved one (it compares each stop's `t` and colour, writes the name once, the row only
+     when the selected stop changed, the buttons on a flip) and `getGradientCss` copied and sorted
+     the stops (not when they're in place order); a new value object per move (the pad's, the
+     range's, the gradient's: one kept scratch each, as the curve editor); the colour codec's hex
+     read (a regex, slices, `parseInt`s: char codes now) and the picker's `hsvaToRgba` (into a
+     kept colour). **Left:** the swatches' marks loop on a colour change (16 reads; a single
+     marked element would drop a palette swatch's mark when the recent list has the same
+     colour); a closure per key repeat (`listenStepKeys`' `getStep`; about 30 Hz); the pad's value
+     text built per write (strings only, now that its node is kept); the slider's fill and thumb
+     two style writes (one custom property would do; layout is the text's, Phase 2's note); the
+     vector's key repeat copy.
+   - **The measure** (a Playwright script in the scratchpad, not committed, as the first pass):
+     each drag's 600 pointer moves on the public Hub's library page in headless Chrome, `HEAD`'s
+     build against this section's, less the same moves without a press (the page's own cost: the
+     hover, the CDP input). Two runs each,
+     which agreed, per move, script time and JS allocation (sampled, collected objects included):
+     the slider 37 / 30 → 24 / 20 µs and 4.78 → 4.61 KB, the range slider 24-32 → 23-25 µs and
+     4.85 → 4.62-4.69 KB, the pad 99 / 86 → 88 / 90 µs and 6.2 → 5.7-5.8 KB, the dial 24 → 10 µs and
+     4.76 → 4.53-4.59 KB, the gradient editor 88 / 92 → 59 / 60 µs and 6.1 → 5.4-5.5 KB; the curve
+     editor (new) 86-133 µs and 6.9 KB. Style and layout didn't move beyond the runs' noise (the
+     slider about 0.1 ms each per move, the pad 0.4 and 0.3, the most: its two spin buttons' text
+     and the SVG line; not chased further). **The floor of about 4.5 KB per move** in every drag is
+     D3's event and its value copies and the demo's own `onChange` (the box's status line, its
+     text rebuilt and written on every step), not the field's draw: the dial's draw writes one
+     transform. Not done: the 200-monitor box again (the monitor's path didn't change here; the
+     shell's event fix only reaches an edit field's `onChange`).
 
 ### Phase 7: the Hub, the example, `CLAUDE.md`, readme
 

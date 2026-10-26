@@ -73,7 +73,10 @@
     height: auto;
   }
 
-  :where(.aekMenu__kbd) {
+  // The key hint is a kit piece with its own rules (Kbd.scss' `font-size: inherit`): one class of
+  // specificity, so this wins whichever stylesheet loads first (zero against zero is load order,
+  // which an import elsewhere changes)
+  .aekMenu :where(.aekMenu__kbd) {
     margin-inline-start: var(--aek-space-5);
     color: var(--aek-text-muted);
     font-size: var(--aek-font-size-sm);

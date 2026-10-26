@@ -116,19 +116,38 @@ export const formatColorHex = (color: Rgba, withAlpha = false) =>
     withAlpha ? getByteHex(toByte(color.a)) : ''
   }`;
 
-/** Reads hex digits (3, 4, 6 or 8, no `#`) into `into`; false when they aren't */
-const readHexDigits = (digits: string, into: Rgba) => {
-  const { length } = digits;
-  if (!/^[\da-f]+$/i.test(digits) || ![3, 4, 6, 8].includes(length)) return false;
+/** A hex digit's value, or -1 */
+const readHexDigit = (code: number) => {
+  if (code >= 48 && code <= 57) return code - 48;
+  const lower = code | 32;
+  return lower >= 97 && lower <= 102 ? lower - 87 : -1;
+};
+
+/** Reads the hex digits from `start` to the end (3, 4, 6 or 8) into `into` by their char codes
+ * (a draw reads the bound text on every write: no string is made); false when they aren't, with
+ * `into` left as it was */
+const readHexDigits = (text: string, start: number, into: Rgba) => {
+  const length = text.length - start;
+  if (length !== 3 && length !== 4 && length !== 6 && length !== 8) return false;
   const short = length <= 4;
-  const channel = (index: number) =>
-    short
-      ? parseInt(digits[index] + digits[index], 16) / 255
-      : parseInt(digits.slice(index * 2, index * 2 + 2), 16) / 255;
-  into.r = channel(0);
-  into.g = channel(1);
-  into.b = channel(2);
-  into.a = length === 4 || length === 8 ? channel(3) : 1;
+  const count = short ? length : length / 2;
+  for (let i = 0; i < count; i++) {
+    const high = readHexDigit(text.charCodeAt(start + (short ? i : i * 2)));
+    const low = short ? high : readHexDigit(text.charCodeAt(start + i * 2 + 1));
+    if (high < 0 || low < 0) return false;
+  }
+  for (let i = 0; i < 4; i++) {
+    let channel = 1;
+    if (i < count) {
+      const high = readHexDigit(text.charCodeAt(start + (short ? i : i * 2)));
+      const low = short ? high : readHexDigit(text.charCodeAt(start + i * 2 + 1));
+      channel = (high * 16 + low) / 255;
+    }
+    if (i === 0) into.r = channel;
+    else if (i === 1) into.g = channel;
+    else if (i === 2) into.b = channel;
+    else into.a = channel;
+  }
   return true;
 };
 
@@ -217,7 +236,8 @@ export const parseColorText = (text: string): ParseResult => {
         /^(?:[\da-f]{6}|[\da-f]{8})$/.test(source)
         ? source
         : null;
-  if (hex !== null) return readHexDigits(hex, into) ? { value: into } : { error: COLOR_TEXT_ERROR };
+  if (hex !== null)
+    return readHexDigits(hex, 0, into) ? { value: into } : { error: COLOR_TEXT_ERROR };
   const call = FUNCTION_REGEX.exec(source);
   if (call) {
     const value = readFunction(call[1], call[2]);
@@ -266,18 +286,25 @@ export const rgbaToHsva = (color: Rgba, previous?: Hsva): Hsva => {
   return { h, s, v: max * 100, a: clamp01(color.a) };
 };
 
+/** One sRGB channel of an HSV colour (`h` in sixths of a turn, `s` and `v` 0-1) */
+const getHsvChannel = (n: number, h: number, s: number, v: number) => {
+  const k = (n + h) % 6;
+  return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+};
+
 /**
- * An HSVA colour in sRGB.
+ * An HSVA colour in sRGB, into `out` when given (the picker's moves).
  * @internal
  */
-export const hsvaToRgba = (color: Hsva): Rgba => {
+export const hsvaToRgba = (color: Hsva, out: Rgba = { r: 0, g: 0, b: 0, a: 1 }): Rgba => {
   const saturation = color.s / 100;
   const value = color.v / 100;
-  const channel = (n: number) => {
-    const k = (n + color.h / 60) % 6;
-    return value - value * saturation * Math.max(0, Math.min(k, 4 - k, 1));
-  };
-  return { r: channel(5), g: channel(3), b: channel(1), a: color.a };
+  const h = color.h / 60;
+  out.r = getHsvChannel(5, h, saturation, value);
+  out.g = getHsvChannel(3, h, saturation, value);
+  out.b = getHsvChannel(1, h, saturation, value);
+  out.a = color.a;
+  return out;
 };
 
 /**
@@ -324,8 +351,7 @@ export const createColorCodec = (
       into.b = (value & 255) / 255;
       into.a = 1;
     } else if (typeof value === 'string') {
-      const digits = value.startsWith('#') ? value.slice(1) : value;
-      if (!readHexDigits(digits, into)) {
+      if (!readHexDigits(value, value.charCodeAt(0) === 35 ? 1 : 0, into)) {
         // Any other colour text (an `rgb()` string): read, and written back as hex
         const parsed = parseColorText(value).value ?? { r: 0, g: 0, b: 0, a: 1 };
         Object.assign(into, parsed);
@@ -343,8 +369,10 @@ export const createColorCodec = (
     if (form === 'number')
       return (toByte(color.r) << 16) | (toByte(color.g) << 8) | toByte(color.b);
     if (form === 'hex') return formatColorHex(color, hasAlpha);
-    const value = { r: fromSrgb(color.r), g: fromSrgb(color.g), b: fromSrgb(color.b) };
-    return hasAlpha ? { ...value, a: color.a } : value;
+    const r = fromSrgb(color.r);
+    const g = fromSrgb(color.g);
+    const b = fromSrgb(color.b);
+    return hasAlpha ? { r, g, b, a: color.a } : { r, g, b };
   };
 
   const withAlpha = (value: ColorFieldValue, alpha: number): ColorFieldValue => {

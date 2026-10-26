@@ -1,0 +1,198 @@
+// The curve editor's styles (CurveEditor.ts), on the design tokens and layered (p803 D5): the plot
+// a control's box (padded by half a point, so a point at an edge stays inside it, and clipping a
+// curve that overshoots its range) with the area holding a quarter grid, the SVG's curve and arms,
+// the selected key's tangent handles and the points (the slider thumb's look, the selected one
+// ringed in the accent). The row under it holds the selected point's numbers and the buttons.
+@layer aek.components {
+  :where(.aekCurveEditor) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekCurveEditor__plot) {
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    padding: 16px;
+    overflow: hidden;
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    cursor: crosshair;
+    // The drag is the editor's, not the page's scroll or a text selection
+    touch-action: none;
+    user-select: none;
+    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekCurveEditor[data-mode='bezier'] .aekCurveEditor__plot) {
+    cursor: default;
+  }
+
+  :where(.aekCurveEditor__plot[data-flash]) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  :where(.aekField[data-invalid] .aekCurveEditor__plot) {
+    border-color: var(--aek-danger);
+  }
+
+  :where(.aekField[data-disabled] .aekCurveEditor__plot) {
+    border-color: var(--aek-border);
+    cursor: default;
+  }
+
+  // The plot's coordinates: 0-100 % both ways, a quarter grid behind the curve
+  :where(.aekCurveEditor__area) {
+    position: relative;
+    display: block;
+    height: max(48px, var(--aek-curve-editor-height, calc(var(--aek-space-7) * 5)));
+    outline: 1px solid var(--aek-curve-editor-grid-color, var(--aek-border));
+    background-image: linear-gradient(
+        to right,
+        var(--aek-curve-editor-grid-color, var(--aek-border)) 1px,
+        transparent 1px
+      ),
+      linear-gradient(var(--aek-curve-editor-grid-color, var(--aek-border)) 1px, transparent 1px);
+    background-position: -1px -1px;
+    background-size: 25% 25%;
+  }
+
+  :where(.aekCurveEditor__svg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    fill: none;
+  }
+
+  :where(.aekCurveEditor__curve) {
+    stroke: var(--aek-curve-editor-curve-color, var(--aek-accent));
+    stroke-width: 2px;
+  }
+
+  :where(.aekCurveEditor__arms) {
+    stroke: var(--aek-text-muted);
+    stroke-width: 1px;
+  }
+
+  :where(.aekField[data-disabled] .aekCurveEditor__curve) {
+    stroke: var(--aek-text-disabled);
+  }
+
+  // A point and a tangent handle: 24 px targets, the point 16 px inside, the handle 10 px
+  :where(.aekCurveEditor__point, .aekCurveEditor__tangent) {
+    position: absolute;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border-radius: var(--aek-radius-full);
+    cursor: grab;
+  }
+
+  :where(.aekCurveEditor__plot[data-dragging])
+    :where(.aekCurveEditor__point, .aekCurveEditor__tangent) {
+    cursor: grabbing;
+  }
+
+  :where(.aekCurveEditor__point)::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    box-sizing: border-box;
+    border: 2px solid var(--aek-surface);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-curve-editor-curve-color, var(--aek-accent));
+    box-shadow: var(--aek-shadow-sm);
+    transition: inset var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekCurveEditor__point:hover, .aekCurveEditor__point[data-selected])::before {
+    inset: 3px;
+  }
+
+  :where(.aekCurveEditor__point[data-selected])::before {
+    box-shadow: 0 0 0 2px var(--aek-accent);
+  }
+
+  :where(.aekCurveEditor__tangent)::before {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    box-sizing: border-box;
+    border: 2px solid var(--aek-text-muted);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-surface);
+  }
+
+  :where(.aekField[data-disabled]) :where(.aekCurveEditor__point, .aekCurveEditor__tangent) {
+    cursor: default;
+  }
+
+  :where(.aekField[data-disabled] .aekCurveEditor__point)::before {
+    inset: 4px;
+    background-color: var(--aek-text-disabled);
+    box-shadow: none;
+  }
+
+  :where(.aekCurveEditor__row) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  // X with Y, In with Out: the row wraps between pairs
+  :where(.aekCurveEditor__pair) {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekCurveEditor__part) {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekCurveEditor__partLabel) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekField[data-disabled] .aekCurveEditor__partLabel) {
+    color: var(--aek-text-disabled);
+  }
+
+  // A part's number box: narrower than a field's own (one class, so it beats Field.scss' zero
+  // specificity whichever loads first; an app's unlayered rule still wins)
+  .aekCurveEditor__part :where(.aekField__box) {
+    flex: 0 0 auto;
+    width: 4.5em;
+    min-width: 0;
+  }
+
+  // At the 24 px target size (WCAG 2.5.8) in every density
+  :where(.aekCurveEditor__add, .aekCurveEditor__remove) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  // Last, over the handles' own `display`
+  :where(.aekCurveEditor__tangent[hidden]) {
+    display: none;
+  }
+}

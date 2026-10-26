@@ -113,6 +113,8 @@ export const createColorParts = <T extends ColorFieldValue>(props: ColorPartsPro
   const shown: Rgba = { r: 0, g: 0, b: 0, a: 1 };
   /** A read for anything else (a part's peek, the text's redraw) */
   const scratch: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+  /** A picker move's colour: kept, as the codec writes a new value from it */
+  const pickerColor: Rgba = { r: 0, g: 0, b: 0, a: 1 };
   const getText = (value: T, into = shown) =>
     formatColorHex(codec.read(value, into), codec.hasAlpha);
 
@@ -228,7 +230,7 @@ export const createColorParts = <T extends ColorFieldValue>(props: ColorPartsPro
   /** A move of the picker: a step of its gesture (D3), the alpha the value's where it has none */
   const onPickerStep = (hsva: Hsva) => {
     if (!target || host?.isDisabled()) return;
-    const color = hsvaToRgba(hsva);
+    const color = hsvaToRgba(hsva, pickerColor);
     if (!codec.hasAlpha) color.a = codec.read(target.peek(), scratch).a;
     typed?.end();
     isPickerWriting = true;

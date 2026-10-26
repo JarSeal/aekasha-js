@@ -57,6 +57,10 @@ export const COMPONENT_USES = [
     calls: ['createGradientEditor', 'evaluateGradient'],
   },
   {
+    slot: 'generated-components-curve-editor',
+    calls: ['createCurveEditor', 'evaluateCurve', 'getCurvePreset'],
+  },
+  {
     slot: 'generated-components-color-field',
     calls: ['createColorField', 'setRecentColors', 'getRecentColors', 'onRecentColorsChange'],
   },

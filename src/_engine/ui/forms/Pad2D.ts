@@ -178,6 +178,9 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
   pad.append(axisX, axisY, svg, point);
   // The pad's description: its value as text (the parts are the editor)
   const valueText = span('aekVisuallyHidden aekPad2D__text');
+  // One text node whose data is written: a replaced node is a style recalc per move
+  const valueTextNode = document.createTextNode('');
+  valueText.append(valueTextNode);
   // The parts on a line of their own under the pad
   const lineBreak = span('aekPad2D__break');
   lineBreak.setAttribute('aria-hidden', 'true');
@@ -189,8 +192,10 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
   /** The pad's keys (set below: disabling can run while the shell is made) */
   let keys: ReturnType<typeof listenStepKeys> | null = null;
 
+  /** The value a write is made in: kept, as the binding copies what it's given */
+  let scratch: T | undefined;
   const copyWith = (from: T, x: number, y: number) => {
-    const next = valueKind.copy(from);
+    const next = (scratch = valueKind.copy(from, scratch));
     next.x = x;
     next.y = y;
     return next;
@@ -222,7 +227,7 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
       const text = getText(value, true);
       if (text !== shownText) {
         shownText = text;
-        valueText.textContent = text;
+        valueTextNode.data = text;
       }
     },
     applyDisabled: (on) => {
@@ -269,18 +274,24 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
   /** Where the pointer is from the point's centre at a press on it: a drag without a jump */
   let offsetX = 0;
   let offsetY = 0;
+  /** The pad's box, read once at the press (a move reads no layout) */
+  let padRect: DOMRect | null = null;
+  const [xRange, yRange] = ranges;
   const getValueAt = (e: PointerEvent) => {
-    const rect = pad.getBoundingClientRect();
+    const rect = padRect ?? pad.getBoundingClientRect();
     const fx = rect.width > 0 ? (e.clientX - offsetX - rect.left) / rect.width : 0;
     const fy = rect.height > 0 ? (e.clientY - offsetY - rect.top) / rect.height : 0;
     const across = Math.min(1, Math.max(0, fx));
     const down = Math.min(1, Math.max(0, fy));
-    const [x, y] = ranges;
     const modifier = e.altKey ? 0.1 : 1;
     return copyWith(
       binding.peek(),
-      constrain(0, x.min + across * x.size, modifier),
-      constrain(1, invertY ? y.min + down * y.size : y.max - down * y.size, modifier)
+      constrain(0, xRange.min + across * xRange.size, modifier),
+      constrain(
+        1,
+        invertY ? yRange.min + down * yRange.size : yRange.max - down * yRange.size,
+        modifier
+      )
     );
   };
 
@@ -292,6 +303,7 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
       keys?.end();
       // The press focuses the pad, as a click on a focusable element does
       pad.focus({ preventScroll: true });
+      padRect = pad.getBoundingClientRect();
       offsetX = 0;
       offsetY = 0;
       if (point.contains(e.target as Node)) {
@@ -302,7 +314,10 @@ export const createPad2D = <T extends Pad2DValue>(props: Pad2DProps<T>): Pad2D<T
       binding.step(getValueAt(e));
     },
     onMove: (e) => binding.step(getValueAt(e)),
-    onEnd: () => binding.commit(),
+    onEnd: () => {
+      padRect = null;
+      binding.commit();
+    },
   });
 
   return shell.field;

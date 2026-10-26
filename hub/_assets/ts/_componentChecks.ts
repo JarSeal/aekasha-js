@@ -186,6 +186,14 @@ const GRADIENT_POSITION = (name: string) =>
   `#hubDemoGradient${name} input[aria-label="Stop position"]`;
 const GRADIENT_SWATCH = (name: string) => `#hubDemoGradient${name} .aekColorField__swatch`;
 const GRADIENT_STATUS = '#hubDemoGradientStatus';
+/** A curve editor's point by the editor's name (`CURVE_ID`, the group's id) and its place in the
+ * array (1-based), its row's parts, and the box's status line */
+const CURVE_POINT = (name: string, n: number) =>
+  `#hubDemoCurve${name} .aekCurveEditor__point:nth-child(${n})`;
+const CURVE_POINTS = (name: string) => `#hubDemoCurve${name} .aekCurveEditor__point`;
+const CURVE_X = (name: string) => `#hubDemoCurve${name} input[aria-label$=" X"]`;
+const CURVE_PRESETS = (name: string) => `#hubDemoCurve${name} .aekCurveEditor__presets`;
+const CURVE_STATUS = '#hubDemoCurveStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -1054,6 +1062,59 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Escape' },
           { expectAttr: GRADIENT_SWATCH('Fade'), name: 'aria-expanded', value: 'false' },
           { expectFocus: GRADIENT_SWATCH('Fade') },
+        ],
+      },
+    ],
+  },
+  curveEditor: {
+    keyboard: [
+      {
+        name: 'a key’s arrows move it; Insert adds one after it, focused; Delete removes it',
+        steps: [
+          { focusInBox: CURVE_POINT('Falloff', 2) },
+          { press: 'ArrowUp' },
+          { expectAttr: CURVE_POINT('Falloff', 2), name: 'aria-valuenow', value: '0.61' },
+          {
+            expectText: CURVE_STATUS,
+            text: 'Falloff: (0, 1), (8, 0.61), (20, 0) (last)',
+          },
+          { press: 'Insert' },
+          { expectCount: CURVE_POINTS('Falloff'), count: 4 },
+          { expectFocus: CURVE_POINT('Falloff', 3) },
+          { press: 'Delete' },
+          { expectCount: CURVE_POINTS('Falloff'), count: 3 },
+          { expectFocus: CURVE_POINT('Falloff', 3) },
+        ],
+      },
+      {
+        name: 'Tab goes from the handles to the selected one’s X: a typed place',
+        steps: [
+          { focusInBox: CURVE_POINT('Easing', 2) },
+          { press: 'Tab' },
+          { expectFocus: CURVE_X('Easing') },
+          { press: 'ControlOrMeta+A' },
+          { press: '0' },
+          { press: '.' },
+          { press: '9' },
+          { press: 'Enter' },
+          {
+            expectAttr: CURVE_POINT('Easing', 2),
+            name: 'aria-valuetext',
+            value: 'X 0.90, Y 1.00',
+          },
+          { expectText: CURVE_STATUS, text: 'Easing: 0.25, 0.1, 0.9, 1 (last)' },
+        ],
+      },
+      {
+        name: 'the presets menu: End and Enter pick smoothstep, the focus back on its button',
+        steps: [
+          { focusInBox: CURVE_PRESETS('Easing') },
+          { press: 'Enter' },
+          { expectAttr: CURVE_PRESETS('Easing'), name: 'aria-expanded', value: 'true' },
+          { press: 'End' },
+          { press: 'Enter' },
+          { expectText: CURVE_STATUS, text: 'Easing: 0.333, 0, 0.667, 1 (last)' },
+          { expectFocus: CURVE_PRESETS('Easing') },
         ],
       },
     ],

@@ -65,6 +65,15 @@ const getRoundingDecimals = (rules: NumberRules, value: number) => {
 };
 
 /**
+ * The decimals `constrainNumber` rounds to under `rules` when they don't depend on the value (a
+ * `step` or a `precision` sets them), else undefined: worked out once by a part's steps, not per
+ * key or pointer move.
+ * @internal
+ */
+export const getFixedRoundingDecimals = (rules: NumberRules) =>
+  hasStep(rules) || rules.precision !== undefined ? getRoundingDecimals(rules, 0) : undefined;
+
+/**
  * Rounds to `decimals`, halves away from zero: `1.0999999999999999` to 1 decimal is `1.1`, the
  * same number as the literal (an integer over a power of ten is the nearest float to the decimal).
  * @internal
@@ -80,10 +89,11 @@ export const roundToDecimals = (value: number, decimals: number) => {
 /**
  * A typed, stepped or dragged number made a value (p804 D6): snapped to the step's grid (from
  * `min`, else 0), wrapped (`wrap`) or clamped to the range, then rounded so no float noise is
- * written (`1 + 0.1` is `1.1`).
+ * written (`1 + 0.1` is `1.1`). `decimals` is `getFixedRoundingDecimals`' answer when the caller
+ * kept it.
  * @internal
  */
-export const constrainNumber = (value: number, rules: NumberRules) => {
+export const constrainNumber = (value: number, rules: NumberRules, decimals?: number) => {
   const { min, max } = rules;
   let next = value;
   if (hasStep(rules)) {
@@ -97,7 +107,7 @@ export const constrainNumber = (value: number, rules: NumberRules) => {
     if (min !== undefined && next < min) next = min;
     if (max !== undefined && next > max) next = max;
   }
-  return roundToDecimals(next, getRoundingDecimals(rules, next));
+  return roundToDecimals(next, decimals ?? getRoundingDecimals(rules, next));
 };
 
 /**

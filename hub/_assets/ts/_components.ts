@@ -33,6 +33,7 @@ import {
   createFieldset,
   createFolder,
   createForm,
+  createCurveEditor,
   createGradientEditor,
   createHudRoot,
   createInputGlyph,
@@ -75,6 +76,7 @@ import {
   setRecentColors,
   toggleDraggableWindow,
   evaluateGradient,
+  evaluateCurve,
 } from 'aekasha/ui';
 import type {
   BindingScheduler,
@@ -1711,6 +1713,101 @@ const initGradientEditorDemo: Demo = (box) => {
   root.append(status, sample);
 };
 
+// --- Curve editor ---
+
+const CURVE_ID = (name: string) => `${ID_PREFIX}Curve${name}`;
+
+/** In the page: an easing with the presets and a falloff as keys, each write in the box's status
+ * line, and the easing's value at the middle through `evaluateCurve`; a kit button sets the
+ * easing from outside */
+const initCurveEditorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = CURVE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const sample = document.createElement('p');
+  sample.id = CURVE_ID('Sample');
+  sample.className = 'hubDemoLine';
+  const showSample = () => {
+    sample.textContent = `evaluateCurve(easing, 0.5): ${evaluateCurve(curves.easing, 0.5).toFixed(3)}`;
+  };
+  const round = (n: number) => Number(n.toFixed(3));
+  const report =
+    (label: string) =>
+    (
+      value: number[] | { x: number; y: number; inTangent?: number; outTangent?: number }[],
+      change: { last: boolean }
+    ) => {
+      const text = value
+        .map((part) =>
+          typeof part === 'number' ? `${round(part)}` : `(${round(part.x)}, ${round(part.y)})`
+        )
+        .join(', ');
+      status.textContent = `${label}: ${text} (${change.last ? 'last' : 'step'})`;
+      showSample();
+    };
+  // CSS's `ease`, and a light's falloff over 20 m
+  const curves = {
+    easing: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
+    falloff: [
+      { x: 0, y: 1, outTangent: 0 },
+      { x: 8, y: 0.6 },
+      { x: 20, y: 0 },
+    ],
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const reset = createButton({
+    id: CURVE_ID('Reset'),
+    label: 'Set it from outside',
+    size: 'sm',
+    onClick: () => {
+      curves.easing.splice(0, 4, 0.42, 0, 0.58, 1);
+      scheduler.refresh();
+      showSample();
+    },
+  });
+  row(
+    'An easing, CSS’s cubic-bezier, with the presets',
+    createCurveEditor({
+      id: CURVE_ID('Easing'),
+      label: 'Easing',
+      target: curves,
+      key: 'easing',
+      scheduler,
+      onChange: report('Easing'),
+    }).cmp.elem,
+    reset.cmp.elem
+  );
+  row(
+    'Keys: a falloff over 20 m',
+    createCurveEditor({
+      id: CURVE_ID('Falloff'),
+      label: 'Falloff',
+      target: curves,
+      key: 'falloff',
+      axes: { x: { min: 0, max: 20, step: 0.1 } },
+      hint: 'A press on the plot adds a key; Delete removes the focused one',
+      onChange: report('Falloff'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createCurveEditor({
+      label: 'Locked',
+      value: [0, 0, 0.58, 1],
+      disabled: true,
+    }).cmp.elem
+  );
+  showSample();
+  root.append(status, sample);
+};
+
 // --- Monitor ---
 
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
@@ -3241,6 +3338,7 @@ const DEMOS: Record<string, Demo> = {
   angleDial: initAngleDialDemo,
   pad2d: initPad2DDemo,
   gradientEditor: initGradientEditorDemo,
+  curveEditor: initCurveEditorDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,

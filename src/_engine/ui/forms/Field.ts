@@ -480,7 +480,11 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     kind: valueKind,
     onChange: (value, change) => {
       draw();
-      props.onChange?.(value, { ...change, field });
+      if (!props.onChange) return;
+      // The binding's event object, made for this call, given its field: one object per write
+      const event = change as FieldChange<T>;
+      event.field = field;
+      props.onChange(value, event);
     },
   });
   const defaultValue = valueKind.copy(props.default ?? binding.peek());

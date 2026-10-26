@@ -138,6 +138,16 @@ export const getGradientCss = (gradient: { readonly stops: readonly Readonly<Gra
   const { stops } = gradient;
   if (stops.length === 0) return 'none';
   if (stops.length === 1) return `linear-gradient(${stops[0].color}, ${stops[0].color})`;
+  // In place order already (a drag's usual case): no copy, no sort
+  let isInOrder = true;
+  for (let i = 1; i < stops.length && isInOrder; i++) {
+    isInOrder = clamp01(stops[i - 1].t) <= clamp01(stops[i].t);
+  }
+  if (isInOrder) {
+    let css = 'linear-gradient(to right';
+    for (const stop of stops) css += `, ${stop.color} ${Math.round(clamp01(stop.t) * 1e5) / 1e3}%`;
+    return `${css})`;
+  }
   const sorted = stops
     .map((stop, index) => ({ stop, index }))
     .sort((a, b) => clamp01(a.stop.t) - clamp01(b.stop.t) || a.index - b.index);

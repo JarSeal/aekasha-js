@@ -69,6 +69,7 @@ const createSingleTrack = (props: SliderProps) => {
         canPress: () => !drag.isDisabled(),
         onPress: (e) => {
           drag.onPress();
+          parts.measure();
           offset = thumb.thumb.contains(e.target as Node)
             ? parts.getGrabOffset(thumb.thumb, e.clientX)
             : 0;
@@ -77,6 +78,7 @@ const createSingleTrack = (props: SliderProps) => {
         },
         onMove: (e) => binding.step(getValue(e)),
         onEnd: () => {
+          parts.measure(false);
           thumb.thumb.removeAttribute('data-dragging');
           binding.commit();
         },

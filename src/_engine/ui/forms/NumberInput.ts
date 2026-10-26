@@ -53,6 +53,8 @@ export const createNumberInput = (props: NumberInputProps) => {
   const steps = createNumberSteps(props);
   /** The text last drawn (its aria-valuetext written): a draw that makes the same skips it */
   let shownText: string | null = null;
+  /** The value last drawn: a draw of the same skips the formatting and the attributes */
+  let shownValue = NaN;
   /** The key whose keyup ends the key's gesture */
   let stepKey: string | null = null;
   let target: NumberTarget | null = null;
@@ -184,16 +186,19 @@ export const createNumberInput = (props: NumberInputProps) => {
     /** Draws a value: `aria-valuenow`, `-valuetext` when the text changed, and the text unless
      * there's typed text; returns the text */
     draw: (value: number) => {
-      // A draw is a change: the number is new, its text may not be (rounded to the same)
-      input.setAttribute('aria-valuenow', String(value));
-      const text = formatter.getText(value);
-      if (text !== shownText) {
-        shownText = text;
-        input.setAttribute('aria-valuetext', formatter.getSpokenText(text));
+      // A part another part's write redraws keeps its value: nothing to format or write
+      if (value !== shownValue || shownText === null) {
+        shownValue = value;
+        input.setAttribute('aria-valuenow', String(value));
+        const text = formatter.getText(value);
+        if (text !== shownText) {
+          shownText = text;
+          input.setAttribute('aria-valuetext', formatter.getSpokenText(text));
+        }
       }
-      // Typed text stays until it's written or put back
-      if (!typed?.isDirty() && input.value !== text) input.value = text;
-      return text;
+      // Typed text stays until it's written or put back (a revert redraws the same value)
+      if (!typed?.isDirty() && input.value !== shownText) input.value = shownText;
+      return shownText;
     },
     /** Binds the keys, typed text and clipboard to `to`; its own errors go to `setError` */
     attach: (to: NumberTarget, setError: (text: string | null) => void) => {
