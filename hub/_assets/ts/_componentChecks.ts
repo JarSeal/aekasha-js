@@ -162,6 +162,12 @@ const VECTOR_AXIS = (name: string, axis: string) =>
   `#hubDemoVector${name} .aekVectorField__axis[data-axis="${axis}"] input`;
 const VECTOR_LINK = (name: string) => `#hubDemoVector${name} .aekVectorField__link`;
 const VECTOR_STATUS = '#hubDemoVectorStatus';
+/** A rotation or quaternion field's part by the field's name (`_components.ts`' `ROTATION_ID`,
+ * the group's id) and its place (`data-axis`), and the box's status line */
+const ROTATION_PART = (name: string, axis: string) =>
+  `#hubDemoRotation${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const ROTATION_ORDER = '#hubDemoRotationRotation .aekDropDownTrigger';
+const ROTATION_STATUS = '#hubDemoRotationStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -862,6 +868,54 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Enter' },
           { expectText: VECTOR_STATUS, text: 'Size: 1920, 1 (last)' },
           { expectValue: VECTOR_AXIS('Size', 'y'), value: '1' },
+        ],
+      },
+    ],
+  },
+  rotationField: {
+    keyboard: [
+      {
+        name: 'an Euler angle steps by π / 8, shown as 22.5°; Tab reaches the order, a pick keeps the angles',
+        steps: [
+          { focusInBox: ROTATION_PART('Rotation', 'y') },
+          { press: 'ArrowUp' },
+          { expectValue: ROTATION_PART('Rotation', 'y'), value: '67.5' },
+          { expectText: ROTATION_STATUS, text: 'Rotation: 0.000, 1.178, 0.000, XYZ (last)' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { expectFocus: ROTATION_ORDER },
+          { press: 'Enter' },
+          { press: 'ArrowDown' },
+          { press: 'Enter' },
+          { expectFocus: ROTATION_ORDER },
+          { expectText: ROTATION_STATUS, text: 'Rotation: 0.000, 1.178, 0.000, YXZ (last)' },
+          { expectValue: ROTATION_PART('Rotation', 'y'), value: '67.5' },
+        ],
+      },
+      {
+        name: 'a quaternion: a typed Euler angle, the raw components following',
+        steps: [
+          { focusInBox: ROTATION_PART('Facing', 'y') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectText: ROTATION_STATUS, text: 'Facing: 0.000, 0.707, 0.000, 0.707 (last)' },
+          {
+            expectText: '#hubDemoRotationFacing .aekQuaternionField__raw',
+            text: 'x 0.000, y 0.707, z 0.000, w 0.707',
+          },
+        ],
+      },
+      {
+        name: 'axis-angle: the angle in degrees about the axis shown',
+        steps: [
+          { focusInBox: ROTATION_PART('Spin', 'angle') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectText: ROTATION_STATUS, text: 'Spin: 0.707, 0.000, 0.000, 0.707 (last)' },
         ],
       },
     ],

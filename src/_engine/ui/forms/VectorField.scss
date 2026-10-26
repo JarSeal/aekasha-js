@@ -1,4 +1,5 @@
-// The vector field's own styles (VectorField.ts), on the design tokens and layered (p803 D5): the
+// The vector field's own styles (VectorField.ts), which the rotation and quaternion fields share
+// (their parts are its: `buildPartsField`), on the design tokens and layered (p803 D5): the
 // axes in a row of equal columns (the link toggle after them), each its letter before a number's
 // box, narrowed to share the row; the letters coloured as a hint (`--aek-vector-x-color` to
 // `-w-color`: the letter says the axis); a change from outside flashes every box. The boxes, the
@@ -59,6 +60,36 @@
   .aekVectorField[data-flash] :where(.aekField__box) {
     background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
     transition-duration: 0s;
+  }
+
+  // A rotation's and a quaternion's boxes keep a width for their degrees (two classes: over the
+  // vector's own minimum above); the row wraps a part that doesn't fit (an angle, the order
+  // select, the raw line)
+  :where(.aekRotationField, .aekQuaternionField) {
+    flex-wrap: wrap;
+  }
+
+  .aekRotationField .aekVectorField__axis :where(.aekField__box),
+  .aekQuaternionField .aekVectorField__axis :where(.aekField__box) {
+    min-width: 4em;
+  }
+
+  // A part no narrower than its letter and box, so the row wraps rather than overlap them
+  .aekRotationField :where(.aekVectorField__axis),
+  .aekQuaternionField :where(.aekVectorField__axis) {
+    min-width: auto;
+  }
+
+  :where(.aekRotationField .aekRotationField__order) {
+    flex: 0 0 auto;
+  }
+
+  // The raw components, a line of their own under the parts
+  :where(.aekQuaternionField__raw) {
+    flex-basis: 100%;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: tabular-nums;
   }
 
   // At the 24 px target size (WCAG 2.5.8) in every density

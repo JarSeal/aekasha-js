@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1366,9 +1366,22 @@ D9 and D10, and D7's monitor.
    - **Not done:** a form-level error (a failed save not tied to a field): a toast, or a field's
      `setError` and `validate()`, until p355 or p808 needs one.
 
-### Phase 5: value editors I
+### Phase 5: value editors I — done
 
 D8's colour, vector, rotation and quaternion.
+
+- **Verified 2026-10-26** (after section 4): `yarn test` (209 files, 1760 tests), ESLint, `tsc` and
+  `tsc -p hub`, `yarn hub:build` (API 100 % documented), `yarn verify:ui` (every box and script,
+  215 s), `yarn verify:embed` (both profiles), `yarn sbp --profile all` (all 21 budgets within;
+  still no field in an app or embed build: the app's `_engine/ui` 5.5 kB initial, 21.0 kB lazy;
+  the `uiKit` profile's 4.5 kB and 18.2 kB), `yarn verify:scenes` (104 passed),
+  `yarn verify:baselines` (each section's `--update`: the new names; docs 100 %, no debug code).
+- **New dependency:** `vanilla-colorful` 0.7.2 (section 2), its picker a lazy chunk of 2.7 kB gzip.
+- **For Phase 6:** the angle dial takes `RotationField.ts`' `getAnglePart` and `ANGLE_UNITS`; the
+  2D pad's "vector field shown next to it" is `createVectorField` (or `buildPartsField`); KitDom
+  and `verify:ui` follow open shadow roots now. The picker's budget line waits for Phase 7
+  section 3 (section 2's note), and the perf-auditor's second pass (Phase 6 section 3) can take
+  the vector's and the colour field's draws with the others.
 
 1. Section 1, `ColorValue.ts` (the forms, the spaces, parse and format) and the colour field
    without the picker (swatch, text, alpha, intensity, recent, palette, the EyeDropper).
@@ -1477,6 +1490,38 @@ D8's colour, vector, rotation and quaternion.
    - **Not done:** a scrub on an axis' letter (D6 has it on a number's label; the keys and typing
      are an axis' paths). Phase 6's perf-auditor pass can take the vector with the others.
 4. Section 4, `RotationMath.ts`, the rotation and quaternion fields; the parity box completed.
+   - **Done 2026-10-26.** `RotationMath.test.ts` (4: every order against three's `setFromEuler`,
+     `setFromQuaternion` and `setFromAxisAngle`) and `RotationField.test.ts` (12, both fields);
+     the `rotationField` box on both library pages (both fields, as the checkbox box shows the
+     switch: an Euler with `step: Math.PI / 8` and its order, a quaternion as Euler angles with
+     its raw line and a button turning it from outside, one as axis-angle, a disabled rotation),
+     three keyboard scripts, `COMPONENT_USES`; the parity box's rotation row, so **every census
+     row has its field**; on `aekasha/ui`: `createRotationField`, `RotationField`,
+     `RotationFieldProps`, `EulerValue`, `createQuaternionField`, `QuaternionField`,
+     `QuaternionFieldProps`, `QuaternionValue`, `EulerOrder`.
+   - **`buildPartsField`** (`@internal`, in `VectorField.ts`): the vector field's row of parts
+     pulled out, with `readPart` / `writePart` / `writeAll` per field; the vector (its link in its
+     `writePart`), the rotation and the quaternion are it, and share `VectorField.scss`.
+   - **The rotation field:** the value's keys are `x`, `y`, `z` and its `order` when it has one,
+     so a `THREE.Euler` is written in place with its order. Each angle part (`getAnglePart`,
+     which the angle dial takes next) is degrees on `[-180, 180)` with `wrap` (so a typed 180°
+     writes -180°, the same angle; not special-cased), the radian `step` shown in degrees
+     (rounded to 10 decimals: `Math.PI / 8` is 22.5°, not 22.499999999999996), unit `°`, and
+     `ANGLE_UNITS` (`deg`, `°`, `rad`, `turn`). `showOrder` is a drop-down part named "Order"
+     and its value; a pick keeps the angles (three reads them in the new order).
+   - **The quaternion field:** the "user's own Euler" rule (D8: "while a part has focus") is
+     kept by value, not focus: the parts' numbers stay while the bound quaternion is the one
+     they made (or were derived from), and are derived again (from the unit quaternion, three's
+     conventions) only when it differs. So typed angles past 90° on the middle axis, or an
+     axis-angle's axis as typed, stay through refreshes, focused or not; a change from outside
+     shows derived. A write composes the numbers into a unit quaternion (normalised on write). The
+     axis-angle axis is -1 to 1 by 0.01, its no-rotation axis kept (else +X).
+   - **`showRaw`** is a line of text under the parts (`x 0.000, y 0.383, …`, `.aekQuaternionField__raw`),
+     not a monitor field of its own: it's read with the group.
+   - **Found by the shots:** the axis-angle row's four parts squeezed the angle's box to nothing,
+     and a fix on the parts' width overlapped the Euler's parts with the order select. A rotation's
+     or quaternion's box keeps 4em and a part its content's width (`min-width: auto`), so the row
+     wraps a part that doesn't fit (the angle in the default density; all four fit compact).
 
 ### Phase 6: value editors II
 

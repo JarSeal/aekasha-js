@@ -26,6 +26,9 @@ import {
 } from './SelectField';
 import { createSlider } from './Slider';
 import type { SliderTick } from './SliderTrack';
+import { createQuaternionField } from './rotation/QuaternionField';
+import { createRotationField } from './rotation/RotationField';
+import type { EulerOrder } from './rotation/RotationMath';
 import { createTextField } from './TextField';
 import { createVectorField, type VectorAxisName, type VectorAxisProps } from './VectorField';
 
@@ -45,6 +48,8 @@ export type PropertyGridFieldKind =
   | 'search'
   | 'color'
   | 'vector'
+  | 'rotation'
+  | 'quaternion'
   | 'monitor';
 
 /**
@@ -53,8 +58,9 @@ export type PropertyGridFieldKind =
  * Without `kind` the field is inferred from the value at creation: `options` make a select, a
  * number a number field (a slider with both `min` and `max`), a boolean a checkbox, a hex colour
  * string (`'#rgb'` to `'#rrggbbaa'`) or an `{ r, g, b, a? }` object a colour field, an
- * `{ x, y, z?, w? }` object or an array of 2 to 4 numbers a vector field, another string a text
- * field (a 24-bit colour number says `kind: 'color'`, Tweakpane's `view: 'color'`).
+ * `{ x, y, z?, w? }` object or an array of 2 to 4 numbers a vector field, an Euler's shape (with a
+ * string `order`) a rotation field in degrees, another string a text field (a 24-bit colour
+ * number says `kind: 'color'`, Tweakpane's `view: 'color'`; a quaternion `kind: 'quaternion'`).
  * `readonly: true` makes it a monitor in that field's text.
  */
 export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSource<unknown>) &
@@ -121,6 +127,14 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     linked?: boolean;
     /** A vector's link toggled. */
     onLinkedChange?(linked: boolean): void;
+    /** A rotation's order select. */
+    showOrder?: boolean;
+    /** How a quaternion is edited: Euler angles (default) or an axis and an angle. */
+    edit?: 'euler' | 'axisAngle';
+    /** A quaternion's Euler order. */
+    order?: EulerOrder;
+    /** A quaternion's raw components as text. */
+    showRaw?: boolean;
     /** A colour field edits the alpha too. */
     alpha?: boolean;
     /** A colour object's space: `'srgb'` (default) or `'linear'` (a `THREE.Color`'s). */
@@ -238,8 +252,8 @@ const readItemValue = (item: PropertyGridFieldItem): unknown => {
  * The field an item makes (D10's inference): its `kind`, else `options` a select, a number a
  * number field or (with `min` and `max`) a slider, a boolean a checkbox, a hex colour string or a
  * colour object a colour field, a vector-like object (not an Euler: it has an `order`) or 2 to 4
- * numbers a vector field, another string a text field. Any other value has no field yet (a
- * rotation's: p804 Phase 5): `null`.
+ * numbers a vector field, an Euler a rotation field, another string a text field. Any other value
+ * has no field: `null`.
  * @internal
  */
 export const inferFieldKind = (
@@ -256,6 +270,10 @@ export const inferFieldKind = (
   if (isColorString(value) || isColorObject(value)) return 'color';
   if (typeof value === 'string') return 'text';
   if (isVectorValue(value)) return 'vector';
+  // A `THREE.Euler`'s shape: shown in degrees (Tweakpane showed its radians as a point)
+  if (getVectorKeys(value) !== null && typeof (value as { order?: unknown }).order === 'string') {
+    return 'rotation';
+  }
   return null;
 };
 
@@ -289,9 +307,9 @@ const createItemField = (
     (create as (p: object) => unknown)({ ...props, ...extra }) as Field<unknown>;
   let kind = inferFieldKind(item, readItemValue(item));
   if (kind === null) {
-    // A rotation: shown as a monitor until its field exists
+    // No field edits it (an object of another shape): its text, read-only
     if (!item.readonly) {
-      lwarn(`Property grid item "${item.label}": no field edits this value yet; it's read-only.`);
+      lwarn(`Property grid item "${item.label}": no field edits this value; it's read-only.`);
     }
     kind = 'monitor';
   }
@@ -332,6 +350,12 @@ const createItemField = (
       break;
     case 'vector':
       field = make(createVectorField);
+      break;
+    case 'rotation':
+      field = make(createRotationField);
+      break;
+    case 'quaternion':
+      field = make(createQuaternionField);
       break;
     case 'monitor':
       field = make(createMonitor);
@@ -464,9 +488,10 @@ const buildItems = (
  *   is inferred from the value at creation: `options` make a select, a number a number field (a
  *   slider with both `min` and `max`), a boolean a checkbox, a hex colour string or an
  *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), an
- *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, another string a text field;
- *   `readonly: true` makes it a monitor in that field's text. A value no field edits yet (a
- *   rotation's) is shown as a monitor, with a warning unless it's `readonly`.
+ *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, an Euler (a string `order`) a
+ *   rotation field in degrees, another string a text field (a quaternion says
+ *   `kind: 'quaternion'`); `readonly: true` makes it a monitor in that field's text. A value no
+ *   field edits is shown as a monitor, with a warning unless it's `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.
  * - A folder item's id is its title path (`'Parent/Child'`, after `path`) or its `id`; its open

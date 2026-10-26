@@ -3167,6 +3167,32 @@
       "RangeSliderProps": "TypeAlias",
       "RangeValue": "TypeAlias"
     },
+    "src/_engine/ui/forms/rotation/QuaternionField.ts": {
+      "createQuaternionField": "Function",
+      "QuaternionField": "TypeAlias",
+      "QuaternionFieldProps": "TypeAlias",
+      "QuaternionValue": "TypeAlias"
+    },
+    "src/_engine/ui/forms/rotation/RotationField.ts": {
+      "ANGLE_UNITS": "Variable",
+      "createRotationField": "Function",
+      "EulerValue": "TypeAlias",
+      "getAnglePart": "Function",
+      "RotationField": "TypeAlias",
+      "RotationFieldProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/rotation/RotationMath.ts": {
+      "axisAngleToQuaternion": "Function",
+      "DEG_TO_RAD": "Variable",
+      "EULER_ORDERS": "Variable",
+      "EulerOrder": "TypeAlias",
+      "eulerToQuaternion": "Function",
+      "normalizeQuaternion": "Function",
+      "Quat": "TypeAlias",
+      "quaternionToAxisAngle": "Function",
+      "quaternionToEuler": "Function",
+      "RAD_TO_DEG": "Variable"
+    },
     "src/_engine/ui/forms/SelectField.ts": {
       "createSelectField": "Function",
       "normalizeOptions": "Function",
@@ -3199,7 +3225,10 @@
       "TypedTextProps": "TypeAlias"
     },
     "src/_engine/ui/forms/VectorField.ts": {
+      "buildPartsField": "Function",
       "createVectorField": "Function",
+      "NumberPart": "TypeAlias",
+      "PartsFieldSpec": "TypeAlias",
       "VectorAxisName": "TypeAlias",
       "VectorAxisProps": "TypeAlias",
       "VectorField": "TypeAlias",
@@ -4450,6 +4479,8 @@
       "DropDownProps",
       "EmptyState",
       "EmptyStateProps",
+      "EulerOrder",
+      "EulerValue",
       "Field",
       "FieldChange",
       "FieldDyn",
@@ -4502,6 +4533,9 @@
       "PropertyGridItemsOptions",
       "PropertyGridProps",
       "PropertyGridSeparatorItem",
+      "QuaternionField",
+      "QuaternionFieldProps",
+      "QuaternionValue",
       "RadioGroup",
       "RadioGroupProps",
       "RadioOption",
@@ -4510,6 +4544,8 @@
       "RangeSliderProps",
       "RangeValue",
       "ReadonlyBindingSource",
+      "RotationField",
+      "RotationFieldProps",
       "SceneTargetResolver",
       "SegmentOption",
       "SegmentedControl",
@@ -4599,8 +4635,10 @@
       "createPopover",
       "createProgressBar",
       "createPropertyGrid",
+      "createQuaternionField",
       "createRadioGroup",
       "createRangeSlider",
+      "createRotationField",
       "createSegmentedControl",
       "createSelectField",
       "createSkeleton",

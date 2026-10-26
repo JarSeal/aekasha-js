@@ -137,6 +137,15 @@ export type {
   VectorFieldProps,
   VectorValue,
 } from './forms/VectorField';
+export { createRotationField } from './forms/rotation/RotationField';
+export type { EulerValue, RotationField, RotationFieldProps } from './forms/rotation/RotationField';
+export { createQuaternionField } from './forms/rotation/QuaternionField';
+export type {
+  QuaternionField,
+  QuaternionFieldProps,
+  QuaternionValue,
+} from './forms/rotation/QuaternionField';
+export type { EulerOrder } from './forms/rotation/RotationMath';
 export { createColorField } from './forms/color/ColorField';
 export type { ColorField, ColorFieldProps, ColorIntensityProps } from './forms/color/ColorField';
 export type { ColorFieldValue } from './forms/color/ColorValue';

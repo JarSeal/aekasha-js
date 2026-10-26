@@ -1,6 +1,7 @@
 // The vector field (p804 D8): 2 to 4 number parts in a row, one per axis of an `{ x, y, z?, w? }`
 // object or a number array, each a spin button (NumberInput.ts) writing its axis through the
-// field's binding, with a link toggle that scales the others with it.
+// field's binding, with a link toggle that scales the others with it. Its row of parts is
+// `buildPartsField`, which the rotation and quaternion fields (rotation/) build on too.
 import { createButton } from '../components/Button';
 import { lwarn } from '../../utils/Logger';
 import { createObjectValueKind, type BindingValueKind } from './binding/Binding';
@@ -179,38 +180,6 @@ export const createVectorField = <T extends VectorValue>(
   }
 
   let isLinked = Boolean(props.linked);
-  /** The binding, once the shell exists (the axes' targets and clipboard read it) */
-  let read: () => Record<string, number> = () => ({});
-
-  const row = document.createElement('span');
-  row.className = 'aekVectorField';
-  const spins: NumberInput[] = keys.map((_, index) => {
-    const { label, ...rules } = getRules(index);
-    const spin = createNumberInput({
-      ...rules,
-      format: props.format,
-      unit: props.unit,
-      expressionUnits: props.expressionUnits,
-      live: props.live,
-      onInput: props.onInput,
-      ariaLabel: label,
-      clipboard: {
-        getText: () => keys.map((key) => String(read()[key])).join(', '),
-        paste: (text, endTyping) => pasteAll(text, endTyping),
-      },
-    });
-    const axis = document.createElement('span');
-    axis.className = 'aekVectorField__axis';
-    axis.setAttribute('data-axis', AXIS_NAMES[index]);
-    const letter = document.createElement('span');
-    letter.className = 'aekVectorField__letter';
-    // The input's name holds it
-    letter.setAttribute('aria-hidden', 'true');
-    letter.textContent = label;
-    axis.append(letter, spin.box);
-    row.append(axis);
-    return spin;
-  });
   const link = props.linkable
     ? createButton({
         label: 'Link axes',
@@ -226,71 +195,46 @@ export const createVectorField = <T extends VectorValue>(
         },
       })
     : null;
-  if (link) row.append(link.cmp.elem);
+  const axes = (value: T) => value as unknown as Record<string, number>;
+  const copy = (value: T) => valueKind.copy(value) as unknown as Record<string, number>;
 
-  const shell = createField<T>(props, {
+  const { shell } = buildPartsField<T>(props, {
     kind: 'vector',
     valueKind,
-    control: row,
-    isGroup: true,
-    labelFor: spins[0].input,
-    messageFor: spins.map((spin) => spin.input),
-    flashElem: row,
-    draw: (value) => {
-      const axes = value as unknown as Record<string, number>;
-      // An axis a wrong value lacks (warned at creation) shows as NaN
-      for (let i = 0; i < spins.length; i++) spins[i].draw(Number(axes[keys[i]]));
-    },
-    applyDisabled: (on) => {
-      for (const spin of spins) spin.applyDisabled(on);
-      link?.setDisabled(on);
-    },
-    onRemove: () => {
-      for (const spin of spins) spin.dispose();
-      link?.cmp.remove();
-    },
-  });
-  const { binding } = shell;
-  read = () => binding.peek() as unknown as Record<string, number>;
-
-  /** The value with one axis set: linked, the others scaled with it (by its factor, or by its
-   * change when it was 0), each kept to its own rules */
-  const withAxis = (index: number, value: number): T => {
-    const from = read();
-    const next = valueKind.copy(binding.peek()) as unknown as Record<string, number>;
-    const before = from[keys[index]];
-    next[keys[index]] = value;
-    if (isLinked && value !== before) {
-      for (let i = 0; i < keys.length; i++) {
-        if (i === index) continue;
-        const other = from[keys[i]];
-        const scaled = before !== 0 ? other * (value / before) : other + (value - before);
-        next[keys[i]] = spins[i].steps.constrain(scaled);
+    parts: keys.map((_, index) => ({
+      ...getRules(index),
+      axis: AXIS_NAMES[index],
+      format: props.format,
+      unit: props.unit,
+      expressionUnits: props.expressionUnits,
+    })),
+    // An axis a wrong value lacks (warned at creation) shows as NaN
+    readPart: (value, index) => Number(axes(value)[keys[index]]),
+    // Linked, the others scaled with it: by its factor, or by its change when it was 0
+    writePart: (from, index, value, constrain) => {
+      const next = copy(from);
+      const before = axes(from)[keys[index]];
+      next[keys[index]] = value;
+      if (isLinked && value !== before) {
+        for (let i = 0; i < keys.length; i++) {
+          if (i === index) continue;
+          const other = axes(from)[keys[i]];
+          next[keys[i]] = constrain(
+            i,
+            before !== 0 ? other * (value / before) : other + (value - before)
+          );
+        }
       }
-    }
-    return next as unknown as T;
-  };
-
-  /** A pasted text that's every axis' number: one write; false for anything else */
-  function pasteAll(text: string, endTyping: () => void) {
-    const numbers = parseNumberList(text);
-    if (!numbers || numbers.length !== keys.length) return false;
-    endTyping();
-    const next = valueKind.copy(binding.peek()) as unknown as Record<string, number>;
-    for (let i = 0; i < keys.length; i++) next[keys[i]] = spins[i].steps.constrain(numbers[i]);
-    binding.change(next as unknown as T);
-    return true;
-  }
-
-  spins.forEach((spin, index) => {
-    const target: NumberTarget = {
-      peek: () => read()[keys[index]],
-      step: (value) => binding.step(withAxis(index, value)),
-      commit: () => binding.commit(),
-      change: (value) => binding.change(withAxis(index, value)),
-      isInGesture: () => binding.isInGesture(),
-    };
-    spin.attach(target, shell.setOwnError);
+      return next as unknown as T;
+    },
+    writeAll: (from, values) => {
+      const next = copy(from);
+      for (let i = 0; i < keys.length; i++) next[keys[i]] = values[i];
+      return next as unknown as T;
+    },
+    extras: link ? [link.cmp.elem] : [],
+    applyDisabled: (on) => link?.setDisabled(on),
+    onRemove: () => link?.cmp.remove(),
   });
 
   return Object.assign(shell.field, {
@@ -300,4 +244,145 @@ export const createVectorField = <T extends VectorValue>(
       link?.setPressed(on);
     },
   });
+};
+
+/**
+ * A part of a field of number parts: its place (`data-axis`), its name (shown before it, and its
+ * spin button's) and its spin button's rules and text.
+ * @internal
+ */
+export type NumberPart = NumberRules & {
+  axis: string;
+  label: string;
+  format?: (value: number) => string;
+  unit?: string;
+  expressionUnits?: Readonly<Record<string, number>>;
+};
+
+/**
+ * How a field of number parts reads and writes its value: a vector's axes, a rotation's degrees,
+ * a quaternion's Euler or axis-angle.
+ * @internal
+ */
+export type PartsFieldSpec<T> = {
+  /** `data-kind` on the field's element */
+  kind: string;
+  valueKind: BindingValueKind<T>;
+  parts: readonly NumberPart[];
+  /** A class for the row besides `aekVectorField` */
+  className?: string;
+  /** Part `index`'s number in `value`: what it shows */
+  readPart: (value: T, index: number) => number;
+  /** `from` with part `index` set; `constrain` keeps a part's number to its own rules */
+  writePart: (
+    from: T,
+    index: number,
+    value: number,
+    constrain: (index: number, value: number) => number
+  ) => T;
+  /** `from` with every part set (a pasted list, each kept to its rules) */
+  writeAll: (from: T, values: readonly number[]) => T;
+  /** Elements after the parts in the row (a link toggle, an order select, a raw line) */
+  extras?: readonly HTMLElement[];
+  /** Draws the extras */
+  draw?: (value: T) => void;
+  applyDisabled?: (disabled: boolean) => void;
+  onRemove?: () => void;
+};
+
+/**
+ * Builds a field of number parts in a row (`.aekVectorField`, the shell's group named by the
+ * label): a spin button per part with its name before it, each writing the whole value through
+ * the field's binding (`writePart`), the clipboard the whole value (`1, 2.5, -3`; a pasted list
+ * of as many numbers sets every part), an outside change flashing every box. The vector field,
+ * and the rotation and quaternion fields with their degrees.
+ * @internal
+ */
+export const buildPartsField = <T>(
+  props: FieldProps<T> & { live?: boolean; onInput?: (text: string) => void },
+  spec: PartsFieldSpec<T>
+) => {
+  const { parts } = spec;
+  /** The binding's value, once the shell exists (the targets and the clipboard read it) */
+  let peek: () => T | null = () => null;
+  const readAll = () => {
+    const value = peek();
+    return value === null ? [] : parts.map((_, index) => spec.readPart(value, index));
+  };
+
+  const row = document.createElement('span');
+  row.className = spec.className ? `aekVectorField ${spec.className}` : 'aekVectorField';
+  const spins: NumberInput[] = parts.map((part) => {
+    const { axis: name, label, ...rules } = part;
+    const spin = createNumberInput({
+      ...rules,
+      live: props.live,
+      onInput: props.onInput,
+      ariaLabel: label,
+      clipboard: {
+        getText: () => readAll().map(String).join(', '),
+        paste: (text, endTyping) => pasteAll(text, endTyping),
+      },
+    });
+    const axis = document.createElement('span');
+    axis.className = 'aekVectorField__axis';
+    axis.setAttribute('data-axis', name);
+    const letter = document.createElement('span');
+    letter.className = 'aekVectorField__letter';
+    // The input's name holds it
+    letter.setAttribute('aria-hidden', 'true');
+    letter.textContent = label;
+    axis.append(letter, spin.box);
+    row.append(axis);
+    return spin;
+  });
+  row.append(...(spec.extras ?? []));
+  const constrain = (index: number, value: number) => spins[index].steps.constrain(value);
+
+  const shell = createField<T>(props, {
+    kind: spec.kind,
+    valueKind: spec.valueKind,
+    control: row,
+    isGroup: true,
+    labelFor: spins[0].input,
+    messageFor: spins.map((spin) => spin.input),
+    flashElem: row,
+    draw: (value) => {
+      for (let i = 0; i < spins.length; i++) spins[i].draw(spec.readPart(value, i));
+      spec.draw?.(value);
+    },
+    applyDisabled: (on) => {
+      for (const spin of spins) spin.applyDisabled(on);
+      spec.applyDisabled?.(on);
+    },
+    onRemove: () => {
+      for (const spin of spins) spin.dispose();
+      spec.onRemove?.();
+    },
+  });
+  const { binding } = shell;
+  peek = binding.peek;
+
+  /** A pasted text that's every part's number: one write; false for anything else */
+  function pasteAll(text: string, endTyping: () => void) {
+    const numbers = parseNumberList(text);
+    if (!numbers || numbers.length !== parts.length) return false;
+    endTyping();
+    const values = numbers.map((value, index) => constrain(index, value));
+    binding.change(spec.writeAll(binding.peek(), values));
+    return true;
+  }
+
+  spins.forEach((spin, index) => {
+    const target: NumberTarget = {
+      peek: () => spec.readPart(binding.peek(), index),
+      step: (value) => binding.step(spec.writePart(binding.peek(), index, value, constrain)),
+      commit: () => binding.commit(),
+      change: (value) => binding.change(spec.writePart(binding.peek(), index, value, constrain)),
+      isInGesture: () => binding.isInGesture(),
+    };
+    spin.attach(target, shell.setOwnError);
+  });
+
+  return { shell, spins };
 };

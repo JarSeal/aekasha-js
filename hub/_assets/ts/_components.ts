@@ -42,9 +42,11 @@ import {
   createNumberField,
   createPopover,
   createProgressBar,
+  createQuaternionField,
   createPropertyGrid,
   createRadioGroup,
   createRangeSlider,
+  createRotationField,
   createSegmentedControl,
   createSelectField,
   createSkeleton,
@@ -1349,6 +1351,93 @@ const initVectorFieldDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Rotation and quaternion fields ---
+
+const ROTATION_ID = (name: string) => `${ID_PREFIX}Rotation${name}`;
+
+/** In the page: an Euler and quaternions in degrees, each write in the box's status line (the
+ * radians and components to 3 decimals); a kit button turns the facing from outside (the flash) */
+const initRotationFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = ROTATION_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    const parts = Object.values(value as Record<string, number | string>).map((part) =>
+      typeof part === 'number' ? part.toFixed(3) : part
+    );
+    status.textContent = `${label}: ${parts.join(', ')} (${change.last ? 'last' : 'step'})`;
+  };
+  // A mesh's shape: a THREE.Euler's and a THREE.Quaternion's, written in place
+  const body = {
+    rotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
+    facing: { x: 0, y: 0, z: 0, w: 1 },
+    spin: { x: 0, y: 0, z: 0, w: 1 },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  row(
+    'An Euler in degrees, its step π / 8 (Tweakpane’s), with its order',
+    createRotationField({
+      id: ROTATION_ID('Rotation'),
+      label: 'Rotation',
+      target: body,
+      key: 'rotation',
+      step: Math.PI / 8,
+      showOrder: true,
+      onChange: report('Rotation'),
+    }).cmp.elem
+  );
+  const turn = createButton({
+    id: ROTATION_ID('Turn'),
+    label: 'Turn it from outside',
+    size: 'sm',
+    onClick: () => {
+      // Half a turn about Y
+      body.facing = { x: 0, y: 1, z: 0, w: 0 };
+      scheduler.refresh();
+    },
+  });
+  row(
+    'A quaternion as Euler angles, its raw components under them',
+    createQuaternionField({
+      id: ROTATION_ID('Facing'),
+      label: 'Facing',
+      target: body,
+      key: 'facing',
+      showRaw: true,
+      scheduler,
+      onChange: report('Facing'),
+    }).cmp.elem,
+    turn.cmp.elem
+  );
+  row(
+    'A quaternion as an axis and an angle',
+    createQuaternionField({
+      id: ROTATION_ID('Spin'),
+      label: 'Spin',
+      target: body,
+      key: 'spin',
+      edit: 'axisAngle',
+      onChange: report('Spin'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createRotationField({
+      label: 'Locked',
+      value: { x: 0, y: Math.PI / 2, z: 0 },
+      disabled: true,
+    }).cmp.elem
+  );
+  root.append(status);
+};
+
 // --- Monitor ---
 
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
@@ -1732,6 +1821,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
     helperColor: '#ff00ff',
     gridCenterColor: { r: 0.27, g: 0.27, b: 0.27 },
     cameraPosition: { x: 0, y: 5, z: 10 },
+    bodyRotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
   };
   const note = {
     text: 'The env bake already lights PBR materials, and this adds to it. For Lambert/Phong materials (no environment) and stylized looks.',
@@ -1823,6 +1913,12 @@ const initPropertyGridParityDemo: Demo = (box) => {
           target: state,
           key: 'cameraPosition',
           label: 'Position',
+        }),
+        field('_dbg__Character.ts:213', {
+          target: state,
+          key: 'bodyRotation',
+          label: 'Rotation',
+          step: Math.PI / 8,
         }),
         field('the view: list blade (_dbg__LightGUI.ts)', {
           kind: 'select',
@@ -2868,6 +2964,7 @@ const DEMOS: Record<string, Demo> = {
   checkbox: initCheckboxDemo,
   colorField: initColorFieldDemo,
   vectorField: initVectorFieldDemo,
+  rotationField: initRotationFieldDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,

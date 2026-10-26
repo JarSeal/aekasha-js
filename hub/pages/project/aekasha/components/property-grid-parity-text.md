@@ -11,8 +11,10 @@ from a page that shows every feature it ports. The status line says each field's
   `view: 'color'`; `_dbg__BaseFolder.ts:26`'s inferred `'#rrggbb'`; `_dbg__RayTester.ts:492`'s
   string with `view: 'color'`; `_dbg__DebugTools.ts:682`'s float object, its
   `color: { type: 'float' }` dropped: an object is floats here); the vector
-  (`_dbg__DebugTools.ts:549`, inferred from its `{ x, y, z }`); the `view: 'list'` blade as an
-  unbound select.
+  (`_dbg__DebugTools.ts:549`, inferred from its `{ x, y, z }`); the rotation
+  (`_dbg__Character.ts:213`, an Euler with `step: Math.PI / 8`, inferred from its `order` and
+  shown in degrees where Tweakpane showed radians); the `view: 'list'` blade as an unbound
+  select.
 - **Monitors:** plain, with an `interval`, with a `format`, multiline with `rows` and with and
   without an `interval`.
 - **Functions:** a `disabled` and a `hidden` function on a checkbox, re-read by the button's
@@ -20,5 +22,4 @@ from a page that shows every feature it ports. The status line says each field's
 - **Structure** (shut): a nested folder, a separator, a button, a labelled button and a `custom`
   item (the day-night speed buttons as kit buttons).
 
-Not yet (Phase 5): the rotation (`_dbg__Character.ts:213`). Until then an Euler shows as a
-monitor, with a warning.
+Every census row has its field now (p804 Phase 5).

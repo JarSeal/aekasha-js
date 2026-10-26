@@ -142,17 +142,33 @@ describe('the property grid’s items (p804 D10)', () => {
     );
   });
 
-  it('shows a value no field edits yet (an Euler) as a monitor, warning unless it’s read-only', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const state = { rotation: { x: 1, y: 2, z: 3, order: 'XYZ' } };
+  it('infers a rotation from an Euler’s shape; a quaternion says its kind', () => {
+    const state = {
+      rotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
+      quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    };
     const { rows } = makeGrid([
-      { target: state, key: 'rotation', label: 'Rotation', precision: 0 },
-      { target: state, key: 'rotation', label: 'Read', readonly: true, precision: 0 },
+      { target: state, key: 'rotation', label: 'Rotation', step: Math.PI / 8 },
+      { target: state, key: 'quaternion', label: 'Facing', kind: 'quaternion', showRaw: true },
+      { target: state, key: 'rotation', label: 'Read', readonly: true },
+    ]);
+    expect(rows.map(kindOf)).toEqual(['rotation', 'quaternion', 'monitor']);
+    expect(rows[0].querySelectorAll('input')[1].value).toBe('45.0');
+    expect(rows[1].querySelector('.aekQuaternionField__raw')).not.toBe(null);
+    expect(rows[2].textContent).toContain('0°, 45°, 0°');
+  });
+
+  it('shows a value no field edits as a monitor, warning unless it’s read-only', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const state = { stats: { bodies: 3, sleeping: 1 } };
+    const { rows } = makeGrid([
+      { target: state, key: 'stats', label: 'Stats', format: (v) => JSON.stringify(v) },
+      { target: state, key: 'stats', label: 'Read', readonly: true, format: () => 'ok' },
     ]);
     expect(rows.map(kindOf)).toEqual(['monitor', 'monitor']);
-    expect(rows[0].textContent).toContain('1, 2, 3');
+    expect(rows[0].textContent).toContain('"bodies":3');
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0][0])).toContain('"Rotation"');
+    expect(String(warn.mock.calls[0][0])).toContain('"Stats"');
   });
 
   it('a field item’s onChange is the field’s; onCreate gets its handle', () => {
