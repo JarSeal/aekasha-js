@@ -209,6 +209,11 @@
   width: min(100%, 22rem);
 }
 
+// A range slider with a spin button at each end takes more
+.hubComponentDemoGroup.hubDemoSliders > .aekField.hubDemoRangeInputs {
+  width: min(100%, 30rem);
+}
+
 // The stress box's 200 fields (the dev page's), in columns
 .hubDemoStressGrid {
   display: grid;

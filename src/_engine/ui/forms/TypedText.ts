@@ -11,7 +11,8 @@ import type { Binding } from './binding/Binding';
  */
 export type TypedTextProps<T> = {
   input: HTMLInputElement | HTMLTextAreaElement;
-  binding: Binding<T>;
+  /** The field's binding, or a part of one (a range's end) */
+  binding: Pick<Binding<T>, 'peek' | 'step' | 'change' | 'isInGesture'>;
   /** The typed text as a value, or the error to show (the value is kept) */
   parse: (text: string) => { value: T; error?: undefined } | { value?: undefined; error: string };
   /** Writes a value's text into the input */

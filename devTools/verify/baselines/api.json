@@ -3046,16 +3046,35 @@
       "NumberFieldParts": "TypeAlias",
       "NumberFieldProps": "TypeAlias"
     },
+    "src/_engine/ui/forms/NumberInput.ts": {
+      "createNumberInput": "Function",
+      "NumberInput": "TypeAlias",
+      "NumberInputProps": "TypeAlias",
+      "NumberTarget": "TypeAlias"
+    },
     "src/_engine/ui/forms/NumberSteps.ts": {
       "createNumberSteps": "Function",
       "getStepModifier": "Function",
       "NumberSteps": "TypeAlias"
     },
+    "src/_engine/ui/forms/RangeSlider.ts": {
+      "createRangeSlider": "Function",
+      "RangeSlider": "TypeAlias",
+      "RangeSliderProps": "TypeAlias",
+      "RangeValue": "TypeAlias"
+    },
     "src/_engine/ui/forms/Slider.ts": {
       "createSlider": "Function",
       "Slider": "TypeAlias",
-      "SliderProps": "TypeAlias",
-      "SliderTick": "TypeAlias"
+      "SliderProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/SliderTrack.ts": {
+      "createSliderTrack": "Function",
+      "createTrackDrag": "Function",
+      "SliderThumb": "TypeAlias",
+      "SliderTick": "TypeAlias",
+      "SliderTrackProps": "TypeAlias",
+      "TrackDragHandlers": "TypeAlias"
     },
     "src/_engine/ui/forms/TextField.ts": {
       "createTextField": "Function",
@@ -4338,6 +4357,9 @@
       "PopoverProps",
       "ProgressBar",
       "ProgressBarProps",
+      "RangeSlider",
+      "RangeSliderProps",
+      "RangeValue",
       "SceneTargetResolver",
       "Skeleton",
       "SkeletonProps",
@@ -4407,6 +4429,7 @@
       "createNumberField",
       "createPopover",
       "createProgressBar",
+      "createRangeSlider",
       "createSkeleton",
       "createSlider",
       "createSpinner",

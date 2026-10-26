@@ -124,6 +124,9 @@ export type FieldSpec<T> = {
   /** The focusable part isn't labelable (a `role="slider"` thumb): the label is a `<span>` it's
    * `aria-labelledby`, and a click on it focuses the part */
   isLabelledBy?: boolean;
+  /** The parts the message line describes and an error marks `aria-invalid` (default
+   * `labelFor`): every stop of a group of them (a range's thumbs, or its two spin buttons) */
+  messageFor?: readonly HTMLElement[];
   /** The element an outside change flashes (default `control`) */
   flashElem?: HTMLElement;
   /** Draws the value into the control: after every write and every read that changed it */
@@ -174,6 +177,7 @@ const setAttrIf = (elem: Element, name: string, on: boolean, value = '') => {
 export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldShell<T> => {
   const { valueKind } = spec;
   const labelFor = spec.labelFor ?? spec.control;
+  const messageFor = spec.messageFor ?? [labelFor];
   let hiddenProp = props.hidden;
   let disabledProp = props.disabled;
   let isHidden = false;
@@ -268,8 +272,10 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
     setAttrIf(message, 'hidden', !text);
     setAttrIf(message, 'data-type', Boolean(text), error ? 'error' : 'hint');
     setAttrIf(root, 'data-invalid', Boolean(error));
-    setAttrIf(labelFor, 'aria-invalid', Boolean(error), 'true');
-    setAttrIf(labelFor, 'aria-describedby', Boolean(text), messageId);
+    for (const part of messageFor) {
+      setAttrIf(part, 'aria-invalid', Boolean(error), 'true');
+      setAttrIf(part, 'aria-describedby', Boolean(text), messageId);
+    }
   };
 
   // Its onChange runs only after the creation, when `draw` and `field` exist

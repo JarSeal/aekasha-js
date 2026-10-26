@@ -78,7 +78,10 @@ export { createTextField } from './forms/TextField';
 export type { TextField, TextFieldProps } from './forms/TextField';
 export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export { createSlider } from './forms/Slider';
-export type { Slider, SliderProps, SliderTick } from './forms/Slider';
+export type { Slider, SliderProps } from './forms/Slider';
+export { createRangeSlider } from './forms/RangeSlider';
+export type { RangeSlider, RangeSliderProps, RangeValue } from './forms/RangeSlider';
+export type { SliderTick } from './forms/SliderTrack';
 export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
 export {
   createHudRoot,

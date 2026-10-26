@@ -1,16 +1,14 @@
 // The slider (p804 D7): a number field with a track. The track is a pointer convenience
 // (`aria-hidden`), the spin button the one keyboard and screen reader control; with
-// `showInput: false` the thumb is the APG slider itself (a compact control).
+// `showInput: false` the thumb is the APG slider itself (a compact control). The track is
+// SliderTrack.ts', which the range slider shares.
 import { getPrimitiveValueKind, type Binding } from './binding/Binding';
 import { createValueFormatter } from './binding/ValueText';
 import { createField, type Field } from './Field';
 import { buildNumberField, type NumberFieldProps } from './NumberField';
 import { createNumberSteps, type NumberSteps } from './NumberSteps';
-import './Slider.scss';
+import { createSliderTrack, createTrackDrag, type SliderTick } from './SliderTrack';
 import '../styles/kit.scss';
-
-/** A slider's tick: its value, or its value with a label shown under it. */
-export type SliderTick = number | { value: number; label?: string };
 
 /** What {@link createSlider} makes a slider from. */
 export type SliderProps = NumberFieldProps & {
@@ -30,189 +28,86 @@ export type SliderProps = NumberFieldProps & {
 /** A slider {@link createSlider} made: the field's handle. */
 export type Slider = Field<number>;
 
-/** The track's parts and what moves them */
-type Track = {
-  track: HTMLElement;
-  thumb: HTMLElement;
-  /** Puts the thumb and the fill at a value, and its shown text (the unit added) in the bubble */
-  draw: (value: number, text: string) => void;
-  /** Adds the pointer listeners, once the binding exists; returns their remover */
-  attach: (props: TrackAttach) => () => void;
-  /** Ends a drag (`last: true`): disabling */
-  endDrag: () => void;
-};
-
-type TrackAttach = {
+/** What the track's drag writes through, once the field exists */
+type SingleTrackDrag = {
   binding: Binding<number>;
   steps: NumberSteps;
   isDisabled: () => boolean;
-  /** A press on the track: typed text and a key's gesture end (the spin button's) */
+  /** A press on the track: the spin button's typed text and key's gesture end, or the thumb
+   * takes the focus */
   onPress: () => void;
 };
 
-/** The ticks as values in the range, with their labels */
-const getTicks = (ticks: SliderProps['ticks'], min: number, max: number) => {
-  if (ticks === undefined) return [];
-  if (typeof ticks === 'number') {
-    const count = Math.max(2, Math.floor(ticks));
-    return Array.from({ length: count }, (_, i) => ({
-      value: min + ((max - min) * i) / (count - 1),
-      label: undefined as string | undefined,
-    }));
-  }
-  return ticks
-    .map((tick) => (typeof tick === 'number' ? { value: tick, label: undefined } : tick))
-    .filter((tick) => tick.value >= min && tick.value <= max);
-};
-
-const span = (className: string) => {
-  const elem = document.createElement('span');
-  elem.className = className;
-  return elem;
-};
-
-/** Builds the track: the rail with its fill and ticks, the thumb and its bubble */
-const createTrack = (props: SliderProps): Track => {
-  const { min, max } = props;
-  const range = max - min;
-  const toFraction = (value: number) =>
-    range > 0 ? Math.min(1, Math.max(0, (value - min) / range)) : 0;
-  // To a thousandth of a percent: no float noise in the style (0.55 * 100 is 55.00000000000001)
-  const toPercent = (value: number) => `${Math.round(toFraction(value) * 1e5) / 1e3}%`;
-
-  const track = span('aekSlider');
-  const rail = span('aekSlider__rail');
-  const fill = span('aekSlider__fill');
-  rail.append(fill);
-  const ticks = getTicks(props.ticks, min, max);
-  if (ticks.length) {
-    const marks = span('aekSlider__ticks');
-    // The value says where it is; the marks are for the eye
-    marks.setAttribute('aria-hidden', 'true');
-    for (const tick of ticks) {
-      const mark = span('aekSlider__tick');
-      mark.style.left = toPercent(tick.value);
-      if (tick.label !== undefined) {
-        const label = span('aekSlider__tickLabel');
-        label.textContent = tick.label;
-        mark.append(label);
-        track.setAttribute('data-tick-labels', '');
-      }
-      marks.append(mark);
-    }
-    rail.append(marks);
-  }
-  const thumb = span('aekSlider__thumb');
-  const bubble = span('aekSlider__bubble');
-  bubble.setAttribute('aria-hidden', 'true');
-  thumb.append(bubble);
-  rail.append(thumb);
-  track.append(rail);
-
-  let shownPercent = '';
-  let shownText = '';
-  let drag: { offset: number; pointerId: number } | null = null;
-  let attached: TrackAttach | null = null;
-
-  /** The value under the pointer, the grab's offset taken off */
-  const getValueAt = (clientX: number, altKey: boolean) => {
-    const rect = rail.getBoundingClientRect();
-    const fraction =
-      rect.width > 0
-        ? Math.min(1, Math.max(0, (clientX - drag!.offset - rect.left) / rect.width))
-        : 0;
-    // Alt: a tenth of the step's grid, as the keys
-    return attached!.steps.constrain(min + fraction * range, altKey ? 0.1 : 1);
-  };
-
-  const endDrag = () => {
-    if (!drag) return;
-    drag = null;
-    track.removeAttribute('data-dragging');
-    attached?.binding.commit();
-  };
-
-  // A press on the track is a drag without a move (D3): the press writes, the release commits.
-  // A press on the thumb keeps where it was grabbed, so it doesn't jump to the pointer.
-  const onPointerDown = (e: PointerEvent) => {
-    if (!attached || e.button !== 0 || attached.isDisabled() || drag) return;
-    // No text selection, and the focus stays (a phone's keyboard stays down)
-    e.preventDefault();
-    attached.onPress();
-    let offset = 0;
-    if (thumb.contains(e.target as Node)) {
-      const rect = thumb.getBoundingClientRect();
-      offset = e.clientX - (rect.left + rect.width / 2);
-    }
-    drag = { offset, pointerId: e.pointerId };
-    track.setPointerCapture?.(e.pointerId);
-    track.setAttribute('data-dragging', '');
-    attached.binding.step(getValueAt(e.clientX, e.altKey));
-  };
-
-  const onPointerMove = (e: PointerEvent) => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    attached!.binding.step(getValueAt(e.clientX, e.altKey));
-  };
-
-  const listeners: [string, (e: never) => void][] = [
-    ['pointerdown', onPointerDown],
-    ['pointermove', onPointerMove],
-    ['pointerup', endDrag],
-    ['pointercancel', endDrag],
-    ['lostpointercapture', endDrag],
-  ];
-
+/** The slider's track with its one thumb: drawn at a value, and its drag */
+const createSingleTrack = (props: SliderProps) => {
+  const parts = createSliderTrack(props);
+  const thumb = parts.createThumb();
+  let fillPercent = -1;
   return {
-    track,
-    thumb,
-    draw: (value, text) => {
-      const percent = toPercent(value);
-      if (percent !== shownPercent) {
-        shownPercent = percent;
-        thumb.style.left = percent;
-        fill.style.width = percent;
+    track: parts.track,
+    thumb: thumb.thumb,
+    /** The thumb and the fill at the value, the bubble's text */
+    draw: (value: number, text: string) => {
+      thumb.place(value);
+      const percent = parts.toPercent(value);
+      if (percent !== fillPercent) {
+        fillPercent = percent;
+        parts.fill.style.width = `${percent}%`;
       }
-      if (text !== shownText) {
-        shownText = text;
-        bubble.textContent = props.unit ? `${text} ${props.unit}` : text;
-      }
+      thumb.setText(text);
     },
-    attach: (props) => {
-      attached = props;
-      for (const [type, fn] of listeners) track.addEventListener(type, fn as EventListener);
-      return () => {
-        if (drag && track.hasPointerCapture?.(drag.pointerId)) {
-          track.releasePointerCapture(drag.pointerId);
-        }
-        drag = null;
-        for (const [type, fn] of listeners) track.removeEventListener(type, fn as EventListener);
-      };
+    /** The drag: a press on the track is a drag without a move (D3: the press writes, the
+     * release commits); a press on the thumb keeps where it was grabbed, so it doesn't jump */
+    listen: (drag: SingleTrackDrag) => {
+      const { binding, steps } = drag;
+      let offset = 0;
+      // Alt: a tenth of the step's grid, as the keys
+      const getValue = (e: PointerEvent) =>
+        steps.constrain(parts.getValueAt(e.clientX, offset), e.altKey ? 0.1 : 1);
+      return createTrackDrag(parts.track, {
+        canPress: () => !drag.isDisabled(),
+        onPress: (e) => {
+          drag.onPress();
+          offset = thumb.thumb.contains(e.target as Node)
+            ? parts.getGrabOffset(thumb.thumb, e.clientX)
+            : 0;
+          thumb.thumb.setAttribute('data-dragging', '');
+          binding.step(getValue(e));
+        },
+        onMove: (e) => binding.step(getValue(e)),
+        onEnd: () => {
+          thumb.thumb.removeAttribute('data-dragging');
+          binding.commit();
+        },
+      });
     },
-    endDrag,
   };
 };
+
+type SingleTrack = ReturnType<typeof createSingleTrack>;
+type TrackDrag = ReturnType<typeof createTrackDrag>;
 
 /** The slider with the spin button: the number field with the track before its box */
-const createInputSlider = (props: SliderProps, track: Track): Slider => {
+const createInputSlider = (props: SliderProps, track: SingleTrack): Slider => {
   // The spin button is the control: the track is for the pointer only
   track.track.setAttribute('aria-hidden', 'true');
-  let detach = () => {};
+  let drag: TrackDrag | null = null;
   const build = buildNumberField(props, {
     kind: 'slider',
     wrapBox: (box) => {
-      const row = span('aekSlider__row');
+      const row = document.createElement('span');
+      row.className = 'aekSlider__row';
       row.append(track.track, box);
       return row;
     },
     draw: track.draw,
     applyDisabled: (on) => {
-      if (on) track.endDrag();
+      if (on) drag?.end();
     },
-    onRemove: () => detach(),
+    onRemove: () => drag?.dispose(),
   });
   const { shell } = build;
-  detach = track.attach({
+  drag = track.listen({
     binding: shell.binding,
     steps: build.steps,
     isDisabled: shell.isDisabled,
@@ -222,7 +117,7 @@ const createInputSlider = (props: SliderProps, track: Track): Slider => {
 };
 
 /** The slider without the spin button: the thumb is the APG slider */
-const createThumbSlider = (props: SliderProps, track: Track): Slider => {
+const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
   const { thumb } = track;
   const formatter = createValueFormatter(props);
   const steps = createNumberSteps(props, { horizontal: true });
@@ -230,7 +125,7 @@ const createThumbSlider = (props: SliderProps, track: Track): Slider => {
   let shownText: string | null = null;
   /** The key whose keyup ends the key's gesture */
   let stepKey: string | null = null;
-  let detach = () => {};
+  let drag: TrackDrag | null = null;
 
   thumb.setAttribute('role', 'slider');
   thumb.setAttribute('tabindex', '0');
@@ -265,14 +160,14 @@ const createThumbSlider = (props: SliderProps, track: Track): Slider => {
         thumb.setAttribute('aria-disabled', 'true');
         thumb.removeAttribute('tabindex');
         endKeyGesture();
-        track.endDrag();
+        drag?.end();
       } else {
         thumb.removeAttribute('aria-disabled');
         thumb.setAttribute('tabindex', '0');
       }
     },
     onRemove: () => {
-      detach();
+      drag?.dispose();
       for (const [type, fn] of listeners) thumb.removeEventListener(type, fn as EventListener);
     },
   });
@@ -303,7 +198,7 @@ const createThumbSlider = (props: SliderProps, track: Track): Slider => {
   ];
   for (const [type, fn] of listeners) thumb.addEventListener(type, fn as EventListener);
 
-  detach = track.attach({
+  drag = track.listen({
     binding,
     steps,
     isDisabled: shell.isDisabled,
@@ -338,7 +233,7 @@ const createThumbSlider = (props: SliderProps, track: Track): Slider => {
  *   holding `.aekSlider__row` (the track and the number field's `.aekField__box`, `data-flash`),
  *   or without the input the track alone; `.aekSlider` (`data-dragging`, `data-tick-labels`) with
  *   `.aekSlider__rail` holding `.aekSlider__fill`, `.aekSlider__ticks` (`.aekSlider__tick`,
- *   `.aekSlider__tickLabel`) and `.aekSlider__thumb` (`data-flash` without the input) with its
+ *   `.aekSlider__tickLabel`) and `.aekSlider__thumb` (`data-dragging`, `data-flash` without the input) with its
  *   `.aekSlider__bubble`.
  * - Custom properties: `--aek-slider-rail-color`, `--aek-slider-fill-color`,
  *   `--aek-slider-thumb-color`, `--aek-slider-input-width` (the spin button's box, default 5em),
@@ -371,7 +266,7 @@ const createThumbSlider = (props: SliderProps, track: Track): Slider => {
  * ```
  */
 export const createSlider = (props: SliderProps): Slider => {
-  const track = createTrack(props);
+  const track = createSingleTrack(props);
   return props.showInput === false
     ? createThumbSlider(props, track)
     : createInputSlider(props, track);

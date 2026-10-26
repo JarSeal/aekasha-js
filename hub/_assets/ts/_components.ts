@@ -36,6 +36,7 @@ import {
   createNumberField,
   createPopover,
   createProgressBar,
+  createRangeSlider,
   createSkeleton,
   createSlider,
   createSpinner,
@@ -65,6 +66,7 @@ import type {
   DropDownProps,
   InputGlyphInput,
   NumberFieldProps,
+  RangeSliderProps,
   SliderProps,
   TextFieldProps,
   OpenDraggableWindowProps,
@@ -636,6 +638,86 @@ const initSliderDemo: Demo = (box) => {
     }).cmp.elem
   );
   row('Disabled', make('Gamma', 'gamma', { min: 1, max: 3, step: 0.1, disabled: true }).cmp.elem);
+  root.append(status);
+};
+
+// --- Range slider ---
+
+const RANGE_ID = (name: string) => `${ID_PREFIX}Range${name}`;
+/** How many items each 20 € of the price range holds: the price slider's histogram */
+const PRICE_COUNTS = [
+  3, 6, 11, 17, 24, 28, 25, 19, 14, 12, 15, 18, 13, 8, 5, 4, 6, 7, 4, 2, 1, 2, 1, 1, 0,
+];
+
+/** In the page: a price range with a histogram and a gap, a span of years with labelled ticks,
+ * an altitude band with its spin buttons, and a disabled one, bound to one object; each write in
+ * the status line */
+const initRangeSliderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = RANGE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const filters = {
+    price: { min: 100, max: 350 },
+    years: { min: 2000, max: 2020 },
+    altitude: { min: 1500, max: 6000 },
+    depth: { min: 2, max: 6 },
+  };
+  const make = (name: string, key: keyof typeof filters, props: Partial<RangeSliderProps>) =>
+    createRangeSlider({
+      id: RANGE_ID(name),
+      label: name,
+      target: filters,
+      key,
+      onChange: (value, { last, source }) => {
+        status.textContent = `${name}: ${value.min}–${value.max} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as RangeSliderProps);
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoSliders');
+    group.append(...elems);
+  };
+
+  row(
+    'A histogram, and a gap of 50 € the thumbs keep',
+    make('Price', 'price', {
+      min: 0,
+      max: 500,
+      step: 10,
+      minGap: 50,
+      unit: '€',
+      histogram: PRICE_COUNTS,
+      hint: 'Drag the bar between the thumbs to move both',
+    }).cmp.elem
+  );
+  row(
+    'Labelled ticks; the thumbs may meet',
+    make('Years', 'years', {
+      min: 1990,
+      max: 2030,
+      step: 1,
+      ticks: [1990, 2000, 2010, 2020, 2030].map((year) => ({ value: year, label: String(year) })),
+    }).cmp.elem
+  );
+  const altitude = make('Altitude', 'altitude', {
+    min: 0,
+    max: 9000,
+    step: 100,
+    minGap: 500,
+    unit: 'm',
+    showInputs: true,
+    expressionUnits: { km: 1000 },
+    hint: 'Type an exact value (2.5km works), or drag',
+  }).cmp.elem;
+  altitude.classList.add('hubDemoRangeInputs');
+  row('With spin buttons: exact values typed, the track for the pointer', altitude);
+  row(
+    'Disabled',
+    make('Depth', 'depth', { min: 0, max: 10, step: 1, unit: 'm', disabled: true }).cmp.elem
+  );
   root.append(status);
 };
 
@@ -1651,6 +1733,7 @@ const DEMOS: Record<string, Demo> = {
   numberField: initNumberFieldDemo,
   numberFieldStress: initNumberFieldStressDemo,
   slider: initSliderDemo,
+  rangeSlider: initRangeSliderDemo,
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
   tooltip: initTooltipDemo,

@@ -1045,6 +1045,53 @@ D7's slider, range slider, radio group, segmented control and select.
      thumb's `left` and the fill's `width` are a percent rounded to a thousandth (`0.55 * 100` is
      `55.00000000000001`), written only when it changes.
 2. Section 2, the range slider (two thumbs, `minGap`, the span's stop, the histogram).
+   - **Done 2026-10-26.** `RangeSlider.test.ts` (17); the `rangeSlider` box on both library
+     pages (a price range with a histogram and a 50 € gap, years with labelled ticks whose thumbs
+     may meet, a disabled one), two keyboard scripts, `COMPONENT_USES`; on `aekasha/ui`:
+     `createRangeSlider`, `RangeSlider`, `RangeSliderProps`, `RangeValue` (and `SliderTick`, now
+     from `SliderTrack.ts`).
+   - **Not one module** (D2 had both sliders in `Slider.ts`): the track moved out to
+     `forms/SliderTrack.ts` (`@internal`: the rail, fill, ticks, histogram, thumbs with their
+     bubbles, the value under the pointer, and `createTrackDrag`, the capture and its end), so
+     `Slider.ts` and `RangeSlider.ts` each stay small and a slider brings no range code. The
+     slider moved onto it unchanged (its tests and shots as they were); a bubble now shows on its
+     thumb's `data-dragging`, so only the moving thumbs' bubbles show.
+   - **The span is the track's fill**, moved after the thumbs in the DOM (the tab order: minimum,
+     maximum, range) and under them by `z-index`: a 24 px tall target with its bar in its
+     `::before`. It's `role="slider"` (an `aria-roledescription` needs a role that takes it): named
+     by the label, its value the range's start, its `aria-valuemax` the track's end less the
+     width, its text "{start} to {end}". End on it takes the range's end to the track's.
+   - **The press decides what moves:** a thumb (its grab offset), the span (both, by the pointer's
+     delta, the width kept), else the nearer thumb, which it focuses. **Two thumbs at one value**
+     wait for the first move's side (not in D7: otherwise the top thumb at an end could never
+     leave it, and the other was unreachable).
+   - **The group is `aria-disabled` too** while disabled: axe (and WCAG 1.4.3's exception) treats
+     a label's text as an inactive control's only when every control naming it with
+     `aria-labelledby` is disabled; the stops alone weren't enough (`verify:ui` failed on the
+     disabled label's contrast).
+   - **Found by the shots:** the track's tick labels went in its bottom padding with
+     `box-sizing: content-box`, which the Hub's unlayered `* { box-sizing: border-box }` beat (an
+     app's reset would too); each variant now sets its full height (every part is placed
+     absolutely). And a histogram's rail override came before the rail's own rule at the same
+     zero specificity, so the bars covered the rail until it moved after it.
+   - Not done: copy and paste on the thumbs (D6's, for number parts with text): neither slider's
+     thumb has it; the text fields and the spin button do.
+   - **`showInputs`** (the user's addition after the review, not in D7: a typed exact value, for
+     precision and for a keyboard or screen reader user who'd rather type): a spin button at each
+     end of the track ("Minimum {label}" / "Maximum {label}", with `expressionUnits`), each kept
+     on its side of the other with the gap. As the slider's spin button, they're then the
+     controls: the track is `aria-hidden`, the thumbs and the span no stops, and a press on the
+     track leaves the focus and puts typed text back. The box's altitude row shows it (typed in
+     metres or `km`), with a third keyboard script; `RangeSlider.test.ts` grew to 23.
+   - **`forms/NumberInput.ts`** (`@internal`, for it): the number field's spin button moved out of
+     `buildNumberField` (the box, typed text, keys, clipboard), writing through a `NumberTarget`
+     (`peek`, `step`, `commit`, `change`, `isInGesture`: a binding, or one end of a range's, which
+     `TypedText.ts` now takes too). The number field (and so the slider) is the shell, one of
+     these and the label's scrub; its 26 tests as they were. Phase 5's vector, rotation and
+     quaternion axes are the next `NumberTarget`s (an axis of an object binding).
+   - **`FieldSpec.messageFor`**: the parts the message line describes and an error marks
+     `aria-invalid` (default `labelFor`): the range's two spin buttons, or its three stops, where
+     only the first was before.
 3. Section 3, the radio group and the segmented control.
 4. Section 4, the select field on the drop-down (Tweakpane's two `options` forms).
 

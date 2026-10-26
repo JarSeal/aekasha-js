@@ -118,6 +118,10 @@ const NUMBER_STATUS = '#hubDemoNumberStatus';
  * without the input), and the box's status line */
 const SLIDER = (name: string) => `#hubDemoSlider${name}`;
 const SLIDER_STATUS = '#hubDemoSliderStatus';
+/** A range slider's stop by its name (`_components.ts`' `RANGE_ID`) and part (`min`, `max`,
+ * `range`: the span), and the box's status line */
+const RANGE = (name: string, part: 'min' | 'max' | 'range') => `#hubDemoRange${name}-${part}`;
+const RANGE_STATUS = '#hubDemoRangeStatus';
 /** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
 const TEXT = (name: string) => `#hubDemoText${name}`;
 const TEXT_STATUS = '#hubDemoTextStatus';
@@ -455,6 +459,70 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Home' },
           { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Low' },
           { expectFocus: SLIDER('Quality') },
+        ],
+      },
+    ],
+  },
+  rangeSlider: {
+    keyboard: [
+      {
+        name: 'each thumb steps, stopping at the other less the gap; Tab goes thumb to thumb',
+        steps: [
+          { focusInBox: RANGE('Price', 'min') },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuetext', value: '100 €' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuenow', value: '110' },
+          { expectText: RANGE_STATUS, text: 'Price: 110–350 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuenow', value: '300' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuemin', value: '350' },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Price', 'max') },
+          { press: 'Home' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuenow', value: '350' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuenow', value: '360' },
+        ],
+      },
+      {
+        name: 'the span is the third stop: the arrows move both, Home and End to the ends',
+        steps: [
+          { focusInBox: RANGE('Years', 'max') },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Years', 'range') },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2000 to 2020' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2001 to 2021' },
+          { expectText: RANGE_STATUS, text: 'Years: 2001–2021 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2010 to 2030' },
+          { press: 'Home' },
+          { expectAttr: RANGE('Years', 'min'), name: 'aria-valuenow', value: '1990' },
+          { expectAttr: RANGE('Years', 'max'), name: 'aria-valuenow', value: '2010' },
+        ],
+      },
+      {
+        name: 'with spin buttons: a typed value on Enter, the keys, each end kept by the gap',
+        steps: [
+          { focusInBox: RANGE('Altitude', 'min') },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'role', value: 'spinbutton' },
+          { press: 'ControlOrMeta+A' },
+          { press: '2' },
+          { press: '.' },
+          { press: '5' },
+          { press: 'k' },
+          { press: 'm' },
+          { press: 'Enter' },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'aria-valuenow', value: '2500' },
+          { expectValue: RANGE('Altitude', 'min'), value: '2500' },
+          { expectText: RANGE_STATUS, text: 'Altitude: 2500–6000 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'aria-valuetext', value: '5500 m' },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Altitude', 'max') },
+          { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuemin', value: '6000' },
+          { press: 'Shift+ArrowUp' },
+          { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuenow', value: '7000' },
         ],
       },
     ],
