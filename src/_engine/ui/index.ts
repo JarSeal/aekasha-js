@@ -129,6 +129,14 @@ export type {
   SelectOptions,
   SelectValue,
 } from './forms/SelectField';
+export { createVectorField } from './forms/VectorField';
+export type {
+  VectorAxisName,
+  VectorAxisProps,
+  VectorField,
+  VectorFieldProps,
+  VectorValue,
+} from './forms/VectorField';
 export { createColorField } from './forms/color/ColorField';
 export type { ColorField, ColorFieldProps, ColorIntensityProps } from './forms/color/ColorField';
 export type { ColorFieldValue } from './forms/color/ColorValue';

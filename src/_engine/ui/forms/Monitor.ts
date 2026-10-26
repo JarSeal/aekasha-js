@@ -154,16 +154,28 @@ export const buildMonitor = <T>(
   return { shell, redraw };
 };
 
-/** The axes a vector-like value has (`{ x, y }` to `{ x, y, z, w }`), or null */
-const getVectorKeys = (value: unknown) => {
-  if (typeof value !== 'object' || value === null) return null;
+/**
+ * The axes a vector-like object has, in order from `x` (`{ x, y }` to `{ x, y, z, w }`: numbers),
+ * or null (fewer than two, or not an object).
+ * @internal
+ */
+export const getVectorKeys = (value: unknown) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const source = value as Record<string, unknown>;
-  const keys = VECTOR_KEYS.filter((key) => typeof source[key] === 'number');
-  return keys.length >= 2 && keys[0] === 'x' && keys[1] === 'y' ? keys : null;
+  const keys: (typeof VECTOR_KEYS)[number][] = [];
+  for (const key of VECTOR_KEYS) {
+    if (typeof source[key] !== 'number') break;
+    keys.push(key);
+  }
+  return keys.length >= 2 ? keys : null;
 };
 
-/** The value at creation: a `{ value }`'s, a getter's or the target's */
-const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
+/**
+ * A field's value at creation: a `{ value }`'s, a getter's or the target's (what a field infers
+ * its shape from).
+ * @internal
+ */
+export const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
   if (props.get) return props.get();
   if (props.target) return (props.target as Record<string, unknown>)[props.key] as T;
   return props.value as T;

@@ -1,0 +1,70 @@
+// The vector field's own styles (VectorField.ts), on the design tokens and layered (p803 D5): the
+// axes in a row of equal columns (the link toggle after them), each its letter before a number's
+// box, narrowed to share the row; the letters coloured as a hint (`--aek-vector-x-color` to
+// `-w-color`: the letter says the axis); a change from outside flashes every box. The boxes, the
+// error and the flash's colour are the fields' (`.aekField__box`, Field.scss).
+@layer aek.components {
+  :where(.aekVectorField) {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekVectorField__axis) {
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    gap: var(--aek-space-1);
+    min-width: 0;
+  }
+
+  :where(.aekVectorField__letter) {
+    flex-shrink: 0;
+    min-width: 1ch;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-weight: var(--aek-font-weight-semibold);
+    text-align: center;
+  }
+
+  :where(.aekVectorField__axis[data-axis='x'] .aekVectorField__letter) {
+    color: var(--aek-vector-x-color, var(--aek-danger));
+  }
+
+  :where(.aekVectorField__axis[data-axis='y'] .aekVectorField__letter) {
+    color: var(--aek-vector-y-color, var(--aek-success));
+  }
+
+  :where(.aekVectorField__axis[data-axis='z'] .aekVectorField__letter) {
+    color: var(--aek-vector-z-color, var(--aek-info));
+  }
+
+  :where(.aekVectorField__axis[data-axis='w'] .aekVectorField__letter) {
+    color: var(--aek-vector-w-color, var(--aek-text-muted));
+  }
+
+  :where(.aekField[data-disabled] .aekVectorField__letter) {
+    color: var(--aek-text-disabled);
+  }
+
+  // A box shares the row: no field's minimum width (one class, so it beats Field.scss' zero
+  // specificity whichever loads first; an app's unlayered rule still wins)
+  .aekVectorField__axis :where(.aekField__box) {
+    min-width: 0;
+  }
+
+  // An outside change flashes every axis' box, as Field.scss' `data-flash` does one
+  .aekVectorField[data-flash] :where(.aekField__box) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  // At the 24 px target size (WCAG 2.5.8) in every density
+  :where(.aekVectorField__link) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+}

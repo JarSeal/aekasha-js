@@ -13,7 +13,7 @@ import { createColorField, type ColorIntensityProps } from './color/ColorField';
 import { isColorObject, isColorString } from './color/ColorValue';
 import type { Field, FieldChange, FieldDyn, FieldOptions, FormChild } from './Field';
 import { createFolder } from './Folder';
-import { createMonitor } from './Monitor';
+import { createMonitor, getVectorKeys } from './Monitor';
 import { createNumberField } from './NumberField';
 import type { PropertyGrid } from './PropertyGrid';
 import { createRadioGroup, createSegmentedControl, type SegmentOption } from './RadioGroup';
@@ -27,6 +27,7 @@ import {
 import { createSlider } from './Slider';
 import type { SliderTick } from './SliderTrack';
 import { createTextField } from './TextField';
+import { createVectorField, type VectorAxisName, type VectorAxisProps } from './VectorField';
 
 /**
  * The field a property grid item makes (`kind`); without one it's inferred from the bound value.
@@ -43,6 +44,7 @@ export type PropertyGridFieldKind =
   | 'text'
   | 'search'
   | 'color'
+  | 'vector'
   | 'monitor';
 
 /**
@@ -50,8 +52,9 @@ export type PropertyGridFieldKind =
  * read-only one, or `{ value }`) with the field's props, in Tweakpane's names where it has them.
  * Without `kind` the field is inferred from the value at creation: `options` make a select, a
  * number a number field (a slider with both `min` and `max`), a boolean a checkbox, a hex colour
- * string (`'#rgb'` to `'#rrggbbaa'`) or an `{ r, g, b, a? }` object a colour field, another
- * string a text field (a 24-bit colour number says `kind: 'color'`, Tweakpane's `view: 'color'`).
+ * string (`'#rgb'` to `'#rrggbbaa'`) or an `{ r, g, b, a? }` object a colour field, an
+ * `{ x, y, z?, w? }` object or an array of 2 to 4 numbers a vector field, another string a text
+ * field (a 24-bit colour number says `kind: 'color'`, Tweakpane's `view: 'color'`).
  * `readonly: true` makes it a monitor in that field's text.
  */
 export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSource<unknown>) &
@@ -110,6 +113,14 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     maxLength?: number;
     /** A search field's debounced text. */
     onSearch?(text: string): void;
+    /** A vector's axes' own rules and names. */
+    axes?: Partial<Record<VectorAxisName, VectorAxisProps>>;
+    /** A vector's link toggle. */
+    linkable?: boolean;
+    /** Whether a vector's axes start linked. */
+    linked?: boolean;
+    /** A vector's link toggled. */
+    onLinkedChange?(linked: boolean): void;
     /** A colour field edits the alpha too. */
     alpha?: boolean;
     /** A colour object's space: `'srgb'` (default) or `'linear'` (a `THREE.Color`'s). */
@@ -226,8 +237,9 @@ const readItemValue = (item: PropertyGridFieldItem): unknown => {
 /**
  * The field an item makes (D10's inference): its `kind`, else `options` a select, a number a
  * number field or (with `min` and `max`) a slider, a boolean a checkbox, a hex colour string or a
- * colour object a colour field, another string a text field. Any other value has no field yet (a
- * vector's, a rotation's: p804 Phase 5): `null`.
+ * colour object a colour field, a vector-like object (not an Euler: it has an `order`) or 2 to 4
+ * numbers a vector field, another string a text field. Any other value has no field yet (a
+ * rotation's: p804 Phase 5): `null`.
  * @internal
  */
 export const inferFieldKind = (
@@ -243,7 +255,17 @@ export const inferFieldKind = (
   // Tweakpane's: a hex string and an { r, g, b } object are colours (their channels 0-1, D8)
   if (isColorString(value) || isColorObject(value)) return 'color';
   if (typeof value === 'string') return 'text';
+  if (isVectorValue(value)) return 'vector';
   return null;
+};
+
+/** An `{ x, y, z?, w? }` object (not a `THREE.Euler`'s shape: a rotation, p804 D10), or an array
+ * of 2 to 4 numbers */
+const isVectorValue = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value.length >= 2 && value.length <= 4 && value.every((n) => typeof n === 'number');
+  }
+  return getVectorKeys(value) !== null && typeof (value as { order?: unknown }).order !== 'string';
 };
 
 /** A radio's options: an array of `{ value, label }` (the select's forms normalised) */
@@ -267,7 +289,7 @@ const createItemField = (
     (create as (p: object) => unknown)({ ...props, ...extra }) as Field<unknown>;
   let kind = inferFieldKind(item, readItemValue(item));
   if (kind === null) {
-    // A vector, a rotation: shown as a monitor until their fields exist
+    // A rotation: shown as a monitor until its field exists
     if (!item.readonly) {
       lwarn(`Property grid item "${item.label}": no field edits this value yet; it's read-only.`);
     }
@@ -307,6 +329,9 @@ const createItemField = (
       break;
     case 'color':
       field = make(createColorField);
+      break;
+    case 'vector':
+      field = make(createVectorField);
       break;
     case 'monitor':
       field = make(createMonitor);
@@ -438,10 +463,10 @@ const buildItems = (
  * - A field item binds `{ target, key }`, `{ get, set }` or `{ value }`; without `kind` its field
  *   is inferred from the value at creation: `options` make a select, a number a number field (a
  *   slider with both `min` and `max`), a boolean a checkbox, a hex colour string or an
- *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), another
- *   string a text field; `readonly: true` makes it a monitor in that field's text. A value no
- *   field edits yet (a vector's, a rotation's) is shown as a monitor, with a warning unless it's
- *   `readonly`.
+ *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), an
+ *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, another string a text field;
+ *   `readonly: true` makes it a monitor in that field's text. A value no field edits yet (a
+ *   rotation's) is shown as a monitor, with a warning unless it's `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.
  * - A folder item's id is its title path (`'Parent/Child'`, after `path`) or its `id`; its open

@@ -1449,6 +1449,33 @@ D8's colour, vector, rotation and quaternion.
    - **Not done:** VoiceOver by hand (Phase 0 step 4 left it for this section; it needs a person
      at the Mac); axe passes on both panel states in all four settings.
 3. Section 3, the vector field (axes, the link lock, per-axis props).
+   - **Done 2026-10-26.** `VectorField.test.ts` (13) and the vector inference in
+     `PropertyGridItems.test.ts`; the `vectorField` box on both library pages (a position with a
+     kit button moving it from outside, a linked scale, a size as an array with named axes and a
+     unit, four axes, an error and disabled), three keyboard scripts, `COMPONENT_USES`; the parity
+     box's vector row (`_dbg__DebugTools.ts:549`); on `aekasha/ui`: `createVectorField`,
+     `VectorField`, `VectorFieldProps`, `VectorAxisProps`, `VectorAxisName`, `VectorValue`.
+   - **Each axis is a `NumberInput` on a `NumberTarget` over its key** (Phase 3's plan held): a
+     write copies the value with the axis set, so D3's order and the gesture's first `prev` are
+     the binding's. `createObjectValueKind(keys, create?)` makes an array's copies arrays, so an
+     array is written in place as an object is.
+   - **`axes`** (D8) carries an axis' own rules and its `label` too (the letter shown and the
+     spin button's name: `W` and `H` for a size); an array's axes are named `x` to `w` by place.
+   - **The link** is `linkable` (the toggle shown), `linked` (its start) and `onLinkedChange`
+     (the owner saves it), with `isLinked` / `setLinked` on the handle. The other axes are
+     scaled by the changed axis' factor, or moved by its change when it was 0 (D8), each kept to
+     its own rules.
+   - **The clipboard is the whole vector** (D6): `NumberInput` got a `clipboard` hook (the field's
+     text for a copy, a whole-value paste before the part's own number paste). A pasted single
+     number still sets the axis.
+   - **The letters' colours** are the danger, success and info colours and the muted text
+     (`--aek-vector-x-color` to `-w-color`): no axis tokens exist, and the status colours already
+     pass 4.5 as text on every surface. The letter says the axis; the colour is a hint (D8).
+   - **The inference** (D10): an `{ x, y, … }` object (consecutive axes from `x`:
+     `getVectorKeys`, now shared from `Monitor.ts`, as `readFirstValue`) without a string `order`
+     (an Euler stays a monitor with a warning until section 4), or an array of 2 to 4 numbers.
+   - **Not done:** a scrub on an axis' letter (D6 has it on a number's label; the keys and typing
+     are an axis' paths). Phase 6's perf-auditor pass can take the vector with the others.
 4. Section 4, `RotationMath.ts`, the rotation and quaternion fields; the parity box completed.
 
 ### Phase 6: value editors II

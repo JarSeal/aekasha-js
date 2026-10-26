@@ -156,6 +156,12 @@ const COLOR_PANEL_SWATCH = (n: number) =>
 /** The picker's parts, focused in its shadow root (`expectFocus` reads the element focused there) */
 const PICKER_PART = (part: string) => `[part="${part}"]`;
 const COLOR_STATUS = '#hubDemoColorStatus';
+/** A vector field's axis by the field's name (`_components.ts`' `VECTOR_ID`, the group's id) and
+ * the axis' place (`data-axis`), its link toggle, and the box's status line */
+const VECTOR_AXIS = (name: string, axis: string) =>
+  `#hubDemoVector${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const VECTOR_LINK = (name: string) => `#hubDemoVector${name} .aekVectorField__link`;
+const VECTOR_STATUS = '#hubDemoVectorStatus';
 /** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
 const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
@@ -808,6 +814,54 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectValue: COLOR('Tint'), value: '#3fd8f282' },
           { press: 'Shift+ArrowDown' },
           { expectValue: COLOR('Tint'), value: '#3fd8f269' },
+        ],
+      },
+    ],
+  },
+  vectorField: {
+    keyboard: [
+      {
+        name: 'the arrows step an axis; Tab goes axis by axis',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Position', 'x') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Position: 1.1, 2, 3 (last)' },
+          { press: 'Tab' },
+          { expectFocus: VECTOR_AXIS('Position', 'y') },
+          { press: 'Shift+ArrowDown' },
+          { expectText: VECTOR_STATUS, text: 'Position: 1.1, 1, 3 (last)' },
+          { expectValue: VECTOR_AXIS('Position', 'y'), value: '1.0' },
+        ],
+      },
+      {
+        name: 'linked: an axis scales the others; the toggle after the axes unlinks them',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Scale', 'x') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Scale: 1.1, 1.1, 1.1 (last)' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { expectFocus: VECTOR_LINK('Scale') },
+          { expectAttr: VECTOR_LINK('Scale'), name: 'aria-pressed', value: 'true' },
+          { press: 'Space' },
+          { expectAttr: VECTOR_LINK('Scale'), name: 'aria-pressed', value: 'false' },
+          { press: 'Shift+Tab' },
+          { expectFocus: VECTOR_AXIS('Scale', 'z') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Scale: 1.1, 1.1, 1.2 (last)' },
+        ],
+      },
+      {
+        name: 'a typed value is written on Enter, kept to its axis’ own rules',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Size', 'y') },
+          { press: 'ControlOrMeta+A' },
+          { press: '-' },
+          { press: '5' },
+          { press: 'Enter' },
+          { expectText: VECTOR_STATUS, text: 'Size: 1920, 1 (last)' },
+          { expectValue: VECTOR_AXIS('Size', 'y'), value: '1' },
         ],
       },
     ],

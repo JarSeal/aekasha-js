@@ -18,8 +18,8 @@ import {
 } from '../binding/Binding';
 import { createFlash } from '../binding/BindingScheduler';
 import type { NumberRules } from '../binding/ValueText';
-import { createField, type AnyFieldProps, type Field, type FieldProps } from '../Field';
-import { buildMonitor } from '../Monitor';
+import { createField, type Field, type FieldProps } from '../Field';
+import { buildMonitor, readFirstValue } from '../Monitor';
 import { createNumberInput, type NumberInput, type NumberTarget } from '../NumberInput';
 import { createTypedText } from '../TypedText';
 import {
@@ -100,13 +100,6 @@ const EYE_DROPPER_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5a1.8 1.8 0 0 1 3 3l-1.5 1.5-3-3z"/><path d="M9 4l3 3-6.5 6.5H2.5v-3z"/></svg>';
 
 const NO_SWATCHES_TEXT = 'Type a colour: #rrggbb, rgb(), hsl() or three numbers 0-1.';
-
-/** The value at creation: a `{ value }`'s, a getter's or the target's */
-const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
-  if (props.get) return props.get();
-  if (props.target) return (props.target as Record<string, unknown>)[props.key] as T;
-  return props.value as T;
-};
 
 /** A number part after the colour (the alpha, the intensity): its visible name and its box */
 const addPart = (row: HTMLElement, name: string, spin: NumberInput) => {

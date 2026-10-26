@@ -30,6 +30,13 @@ export type NumberInputProps = NumberRules & {
   onInput?: (text: string) => void;
   /** Its accessible name when no `<label for>` gives one (a range's "Minimum {label}") */
   ariaLabel?: string;
+  /** The field's whole value on the clipboard (a vector's axes, D6), in place of this part's
+   * number: `getText` a copy's text; `paste` writes a pasted text that is the whole value (after
+   * `endTyping`, which puts this part's typed text aside) and says whether it was */
+  clipboard?: {
+    getText: () => string;
+    paste: (text: string, endTyping: () => void) => boolean;
+  };
 };
 
 const NUMBER_TEXT_REGEX = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i;
@@ -135,12 +142,17 @@ export const createNumberInput = (props: NumberInputProps) => {
   const onCopy = (e: ClipboardEvent) => {
     if (!target || input.selectionStart !== input.selectionEnd || !e.clipboardData) return;
     e.preventDefault();
-    e.clipboardData.setData('text/plain', String(target.peek()));
+    e.clipboardData.setData('text/plain', props.clipboard?.getText() ?? String(target.peek()));
   };
 
-  /** A pasted number is the value (D6); any other text pastes into the input */
+  /** A pasted number is the value (D6), or the field's whole value; any other text pastes into
+   * the input */
   const onPaste = (e: ClipboardEvent) => {
     const text = e.clipboardData?.getData('text/plain').trim() ?? '';
+    if (target && props.clipboard?.paste(text, () => typed?.end())) {
+      e.preventDefault();
+      return;
+    }
     if (!target || !NUMBER_TEXT_REGEX.test(text)) return;
     e.preventDefault();
     typed?.end();

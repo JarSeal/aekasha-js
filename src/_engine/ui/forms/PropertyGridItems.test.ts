@@ -119,17 +119,40 @@ describe('the property grid’s items (p804 D10)', () => {
     expect(rows[5].textContent).toContain('Off');
   });
 
-  it('shows a value no field edits yet (a vector) as a monitor, warning unless it’s read-only', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const state = { position: { x: 1, y: 2, z: 3 } };
+  it('infers a vector from an { x, y } object or 2 to 4 numbers, not from an Euler', () => {
+    const state = {
+      position: { x: 1, y: 2, z: 3 },
+      size: [4, 5],
+      quat: { x: 0, y: 0, z: 0, w: 1 },
+      many: [1, 2, 3, 4, 5],
+    };
     const { rows } = makeGrid([
-      { target: state, key: 'position', label: 'Position', precision: 0 },
+      { target: state, key: 'position', label: 'Position' },
+      { target: state, key: 'size', label: 'Size' },
+      { target: state, key: 'quat', label: 'Raw quaternion' },
       { target: state, key: 'position', label: 'Read', readonly: true, precision: 0 },
+      { target: state, key: 'position', label: 'Linked', linkable: true, linked: true },
+    ]);
+    expect(rows.map(kindOf)).toEqual(['vector', 'vector', 'vector', 'monitor', 'vector']);
+    expect(rows[1].querySelectorAll('input')).toHaveLength(2);
+    expect(rows[2].querySelectorAll('input')).toHaveLength(4);
+    expect(rows[3].textContent).toContain('1, 2, 3');
+    expect(rows[4].querySelector('.aekVectorField__link')!.getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+  });
+
+  it('shows a value no field edits yet (an Euler) as a monitor, warning unless it’s read-only', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const state = { rotation: { x: 1, y: 2, z: 3, order: 'XYZ' } };
+    const { rows } = makeGrid([
+      { target: state, key: 'rotation', label: 'Rotation', precision: 0 },
+      { target: state, key: 'rotation', label: 'Read', readonly: true, precision: 0 },
     ]);
     expect(rows.map(kindOf)).toEqual(['monitor', 'monitor']);
     expect(rows[0].textContent).toContain('1, 2, 3');
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0][0])).toContain('"Position"');
+    expect(String(warn.mock.calls[0][0])).toContain('"Rotation"');
   });
 
   it('a field item’s onChange is the field’s; onCreate gets its handle', () => {

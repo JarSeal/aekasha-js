@@ -98,12 +98,14 @@ export const getPrimitiveValueKind = <T>() => PRIMITIVE_KIND as BindingValueKind
 
 /**
  * The value kind of an object read and written by its `keys` (`['x', 'y', 'z']`): compared and
- * copied component by component, a copy a plain object (a `THREE.Euler`'s accessors read and
- * write the same way). No allocation when copying into a value.
+ * copied component by component, a copy a plain object, or what `create` makes (an array, for a
+ * number array's indices) (a `THREE.Euler`'s accessors read and write the same way). No
+ * allocation when copying into a value.
  * @internal
  */
 export const createObjectValueKind = <T extends object>(
-  keys: readonly string[]
+  keys: readonly string[],
+  create: () => object = () => ({})
 ): BindingValueKind<T> => ({
   equals: (a, b) => {
     const x = a as Record<string, unknown>;
@@ -113,7 +115,7 @@ export const createObjectValueKind = <T extends object>(
   },
   copy: (from, into) => {
     const source = from as Record<string, unknown>;
-    const out = (into ?? {}) as Record<string, unknown>;
+    const out = (into ?? create()) as Record<string, unknown>;
     for (let i = 0; i < keys.length; i++) out[keys[i]] = source[keys[i]];
     return out as T;
   },

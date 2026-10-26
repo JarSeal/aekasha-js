@@ -3106,10 +3106,12 @@
     "src/_engine/ui/forms/Monitor.ts": {
       "buildMonitor": "Function",
       "createMonitor": "Function",
+      "getVectorKeys": "Function",
       "Monitor": "TypeAlias",
       "MonitorBuild": "TypeAlias",
       "MonitorProps": "TypeAlias",
-      "MonitorSpec": "TypeAlias"
+      "MonitorSpec": "TypeAlias",
+      "readFirstValue": "Function"
     },
     "src/_engine/ui/forms/NumberField.ts": {
       "buildNumberField": "Function",
@@ -3195,6 +3197,14 @@
     "src/_engine/ui/forms/TypedText.ts": {
       "createTypedText": "Function",
       "TypedTextProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/VectorField.ts": {
+      "createVectorField": "Function",
+      "VectorAxisName": "TypeAlias",
+      "VectorAxisProps": "TypeAlias",
+      "VectorField": "TypeAlias",
+      "VectorFieldProps": "TypeAlias",
+      "VectorValue": "TypeAlias"
     },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
@@ -4545,6 +4555,11 @@
       "ToasterSettings",
       "Tooltip",
       "TooltipProps",
+      "VectorAxisName",
+      "VectorAxisProps",
+      "VectorField",
+      "VectorFieldProps",
+      "VectorValue",
       "WindowCycleKeys",
       "addPropertyGridItems",
       "addToast",
@@ -4597,6 +4612,7 @@
       "createTextField",
       "createToaster",
       "createTooltip",
+      "createVectorField",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",

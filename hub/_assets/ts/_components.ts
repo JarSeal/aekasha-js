@@ -56,6 +56,7 @@ import {
   createTextField,
   createToaster,
   createTooltip,
+  createVectorField,
   fitAllDraggableWindowsToScreen,
   getDraggableWindowsOfKind,
   getHUDRootCMP,
@@ -1245,6 +1246,109 @@ const initColorFieldDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Vector field ---
+
+const VECTOR_ID = (name: string) => `${ID_PREFIX}Vector${name}`;
+
+/** In the page: vector fields bound to one object, each write in the box's status line; a kit
+ * button moves the position from outside and refreshes (the flash) */
+const initVectorFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = VECTOR_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    const axes = Array.isArray(value) ? value : Object.values(value as Record<string, number>);
+    status.textContent = `${label}: ${axes.join(', ')} (${change.last ? 'last' : 'step'})`;
+  };
+  // A mesh's shape: its position and scale, objects written in place
+  const mesh = {
+    position: { x: 1, y: 2, z: 3 },
+    scale: { x: 1, y: 1, z: 1 },
+    size: [1920, 1080],
+    quaternion: { x: 0, y: 0, z: 0, w: 1 },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const move = createButton({
+    id: VECTOR_ID('Move'),
+    label: 'Move it from outside',
+    size: 'sm',
+    onClick: () => {
+      mesh.position.x = -4;
+      mesh.position.z = 0.5;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'An { x, y, z } object, step 0.1',
+    createVectorField({
+      id: VECTOR_ID('Position'),
+      label: 'Position',
+      target: mesh,
+      key: 'position',
+      step: 0.1,
+      scheduler,
+      onChange: report('Position'),
+    }).cmp.elem,
+    move.cmp.elem
+  );
+  row(
+    'Linked: one axis scales the others',
+    createVectorField({
+      id: VECTOR_ID('Scale'),
+      label: 'Scale',
+      target: mesh,
+      key: 'scale',
+      min: 0.1,
+      step: 0.1,
+      linkable: true,
+      linked: true,
+      hint: 'The link toggle after the axes',
+      onChange: report('Scale'),
+    }).cmp.elem
+  );
+  row(
+    'An array, each axis named, with its own rules',
+    createVectorField({
+      id: VECTOR_ID('Size'),
+      label: 'Size',
+      target: mesh,
+      key: 'size',
+      step: 1,
+      unit: 'px',
+      axes: { x: { label: 'W', min: 1 }, y: { label: 'H', min: 1 } },
+      onChange: report('Size'),
+    }).cmp.elem
+  );
+  row(
+    'Four axes',
+    createVectorField({
+      id: VECTOR_ID('Raw'),
+      label: 'Raw quaternion',
+      target: mesh,
+      key: 'quaternion',
+      min: -1,
+      max: 1,
+      step: 0.01,
+      onChange: report('Raw quaternion'),
+    }).cmp.elem
+  );
+  const invalid = createVectorField({ id: VECTOR_ID('Invalid'), label: 'Spawn', value: [0, -50] });
+  invalid.setError('Below the level');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createVectorField({ label: 'Locked', value: { x: 1, y: 1 }, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
 // --- Monitor ---
 
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
@@ -1627,6 +1731,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
     skyColor: '#87ceeb',
     helperColor: '#ff00ff',
     gridCenterColor: { r: 0.27, g: 0.27, b: 0.27 },
+    cameraPosition: { x: 0, y: 5, z: 10 },
   };
   const note = {
     text: 'The env bake already lights PBR materials, and this adds to it. For Lambert/Phong materials (no environment) and stylized looks.',
@@ -1713,6 +1818,11 @@ const initPropertyGridParityDemo: Demo = (box) => {
           target: state,
           key: 'gridCenterColor',
           label: "Grid's center line color",
+        }),
+        field('_dbg__DebugTools.ts:549', {
+          target: state,
+          key: 'cameraPosition',
+          label: 'Position',
         }),
         field('the view: list blade (_dbg__LightGUI.ts)', {
           kind: 'select',
@@ -2757,6 +2867,7 @@ const DEMOS: Record<string, Demo> = {
   textField: initTextFieldDemo,
   checkbox: initCheckboxDemo,
   colorField: initColorFieldDemo,
+  vectorField: initVectorFieldDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,
