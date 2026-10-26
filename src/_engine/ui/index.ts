@@ -70,7 +70,18 @@ export type { BindingScheduler, BindingSchedulerProps } from './forms/binding/Bi
 export type { BindingChange, BindingSource, ReadonlyBindingSource } from './forms/binding/Binding';
 export type { NumberRules } from './forms/binding/ValueText';
 export { createDropDown } from './forms/DropDown';
-export type { Field, FieldChange, FieldDyn, FieldOptions, FieldProps } from './forms/Field';
+export type {
+  Field,
+  FieldChange,
+  FieldDyn,
+  FieldOptions,
+  FieldProps,
+  FormChild,
+} from './forms/Field';
+export { createFieldset } from './forms/Fieldset';
+export type { Fieldset, FieldsetProps } from './forms/Fieldset';
+export { createFolder } from './forms/Folder';
+export type { Folder, FolderProps } from './forms/Folder';
 export { createCheckbox, createSwitch } from './forms/Checkbox';
 export type { Checkbox, CheckboxProps, Switch, SwitchProps } from './forms/Checkbox';
 export { createMonitor } from './forms/Monitor';

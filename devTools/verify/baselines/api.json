@@ -3032,6 +3032,7 @@
       "TDropDown": "TypeAlias"
     },
     "src/_engine/ui/forms/Field.ts": {
+      "addFormChildren": "Function",
       "AnyFieldProps": "TypeAlias",
       "createField": "Function",
       "Field": "TypeAlias",
@@ -3040,7 +3041,19 @@
       "FieldOptions": "TypeAlias",
       "FieldProps": "TypeAlias",
       "FieldShell": "TypeAlias",
-      "FieldSpec": "TypeAlias"
+      "FieldSpec": "TypeAlias",
+      "FormChild": "TypeAlias",
+      "readFieldsetDisabled": "Function"
+    },
+    "src/_engine/ui/forms/Fieldset.ts": {
+      "createFieldset": "Function",
+      "Fieldset": "TypeAlias",
+      "FieldsetProps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/Folder.ts": {
+      "createFolder": "Function",
+      "Folder": "TypeAlias",
+      "FolderProps": "TypeAlias"
     },
     "src/_engine/ui/forms/Monitor.ts": {
       "buildMonitor": "Function",
@@ -4362,6 +4375,11 @@
       "FieldDyn",
       "FieldOptions",
       "FieldProps",
+      "Fieldset",
+      "FieldsetProps",
+      "Folder",
+      "FolderProps",
+      "FormChild",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4468,6 +4486,8 @@
       "createDivider",
       "createDropDown",
       "createEmptyState",
+      "createFieldset",
+      "createFolder",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",

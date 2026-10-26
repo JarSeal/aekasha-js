@@ -1222,6 +1222,39 @@ D9 and D10, and D7's monitor.
      16.7 ms. The perf-auditor agent didn't read it this time (the profile is the measure; its
      second pass, Phase 6 section 3, can take this box).
 2. Section 2, the folder and the fieldset.
+   - **Done 2026-10-26.** `Folder.test.ts` (9) and `Fieldset.test.ts` (4); the `folder` box (a
+     light's folder with a nested shut one, hidden by a `hidden` function while the light casts no
+     shadows, and a kit button that changes the values and refreshes) and the `fieldset` box (two
+     sections of a form; "Disable the notifications" a state) on both library pages, two keyboard
+     scripts each, `COMPONENT_USES`; on `aekasha/ui`: `createFolder`, `Folder`, `FolderProps`,
+     `createFieldset`, `Fieldset`, `FieldsetProps`, `FormChild`.
+   - **The folder:** as D9, with `.aekFolder__region` (`role="group"` named by the button) holding
+     a `__clip` (the grid row's item, `grid-template-rows` 0fr ↔ 1fr: a padded item can't shrink to
+     nothing) holding `__content`. A shut hides the region when its animation ends (a timer of
+     200 ms × `getMotionFactor`, at once under reduced motion); the clip's `overflow: hidden` only
+     while it moves, so the fields' rings show when open. An open calls
+     `revealScheduledBindings(scheduler)`. Shut from code with the focus inside, the button takes
+     it (not in D9). `onExpandedChange` hears `setExpanded` too (Tweakpane's `fold` does). A
+     `hidden` function joins the scheduler as an entry with `readState` only. `expanded` defaults
+     to true, Tweakpane's and the builder's. Its handle adds `content`, `add`, `toggle`,
+     `setTitle`, `setHidden`, `refresh`.
+   - **The fieldset disables its fields** (not in D9; D14 had a disabled fieldset as a browser
+     check): the browser's `disabled` reaches only native controls, not a slider's
+     `role="slider"` thumb or a range's span (still tab stops), nor a field's label or
+     `data-disabled`. A field's disabled state is now its own or `closest('fieldset[disabled]')`,
+     read on each refresh and pushed by the fieldset's `setDisabled` and `add`
+     (`readFieldsetDisabled`, `@internal`, over every `.aekField` under it, nested fieldsets
+     included); a field's own `disabled` stays when the fieldset is enabled again. Section 5's form
+     can disable a section, or itself, the same way.
+   - **`FormChild`** (public): what a folder, a fieldset and the grid hold, a kit piece's handle
+     (`{ cmp }`) or a CMP; `children` at creation and `add(...)` after.
+   - **Found by the shots:** the folder's `[hidden]` rule came before the region's `display: grid`
+     at the same zero specificity, so a shut folder's fields showed (axe and the keyboard scripts
+     passed). The rule is last in `Folder.scss` now, and the kit's `CLAUDE.md` says why.
+   - **Not done:** Phase 2 section 4's idea of the folder marking its fields when it shuts, so the
+     tick's `isShown` needn't walk the DOM (`closest('[hidden]')`, about 3 ms/s for 200 fields at
+     `interval: 0`). Left for the grid (section 3), which knows its folders and fields; the walk
+     stays correct meanwhile.
 3. Section 3, the property grid: the label column and its separator, the scheduler it owns or
    shares, `refresh()`, `add()`.
 4. Section 4, the declarative items (`items`, kind inference, D10's names, folder ids and

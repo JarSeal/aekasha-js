@@ -185,6 +185,33 @@ export type FieldShell<T> = {
   setOwnError: (text: string | null) => void;
 };
 
+/**
+ * What a folder, a fieldset or a property grid holds: a field's (or any kit piece's) handle, or a
+ * CMP.
+ */
+export type FormChild = CMPHandle | { cmp: CMPHandle };
+
+/**
+ * Adds children to a container's content CMP, in order.
+ * @internal
+ */
+export const addFormChildren = (content: CMPHandle, children: readonly FormChild[]) => {
+  for (const child of children) content.add('isCmp' in child ? child : child.cmp);
+};
+
+/** Each field's element and its re-read of a disabled `<fieldset>` around it */
+const fieldsetReads = new WeakMap<Element, () => void>();
+
+/**
+ * Re-reads, for each field under `root`, whether a disabled `<fieldset>` is around it: what a
+ * fieldset calls when it's disabled or enabled and when it adds children. The browser disables a
+ * fieldset's native controls, not a field's own stops (a slider's thumb), its label or its state.
+ * @internal
+ */
+export const readFieldsetDisabled = (root: Element) => {
+  for (const elem of root.querySelectorAll('.aekField')) fieldsetReads.get(elem)?.();
+};
+
 const RESET_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5a4.5 4.5 0 1 0 1.3-3.7"/><path d="M3.5 2.5v3h3"/></svg>';
 
@@ -210,7 +237,9 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   let hiddenProp = props.hidden;
   let disabledProp = props.disabled;
   let isHidden = false;
+  /** Drawn disabled: its own `disabled`, or in a disabled fieldset */
   let isDisabled = false;
+  let isOwnDisabled = false;
   let appError: string | null = null;
   let ownError: string | null = null;
   let removeEntry: (() => void) | null = null;
@@ -221,6 +250,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     onRemoveCmp: () => {
       removeEntry?.();
       removeEntry = null;
+      fieldsetReads.delete(root);
       flash.dispose();
       labelTooltip.cmp.remove();
       labelElem.removeEventListener('click', onLabelClick);
@@ -339,7 +369,12 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     setAttrIf(resetButton.cmp.elem, 'hidden', isDefault);
   };
 
-  const applyDisabled = (on: boolean) => {
+  /** The browser's `:disabled` of a fieldset: its `disabled` attribute */
+  const isInDisabledFieldset = () => Boolean(root.parentElement?.closest('fieldset[disabled]'));
+
+  const applyDisabled = (own: boolean) => {
+    isOwnDisabled = own;
+    const on = own || isInDisabledFieldset();
     if (on === isDisabled) return;
     isDisabled = on;
     setAttrIf(root, 'data-disabled', on);
@@ -398,6 +433,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     focus: () => labelFor.focus(),
   };
 
+  fieldsetReads.set(root, () => applyDisabled(isOwnDisabled));
   readState();
   drawMessage();
   draw();

@@ -145,6 +145,11 @@ const SEARCH_CLEAR = `.aekField:has(${TEXT('Search')}) .aekTextField__clear`;
 const TOGGLE = (name: string) => `#hubDemoToggle${name}`;
 const TOGGLE_STATUS = '#hubDemoToggleStatus';
 const LAYERS_ON = '[data-hub-demo="checkbox"] .hubDemoNestedToggles input:checked';
+/** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
+const FOLDER = (name: string) => `#hubDemoFolder${name}`;
+const FOLDER_STATUS = '#hubDemoFolderStatus';
+/** A fieldset demo's control by its name (`FIELDSET_ID`) */
+const FIELDSET = (name: string) => `#hubDemoFieldset${name}`;
 /** A monitor by its name (`MONITOR_ID`): the line's element, or the multiline text area */
 const MONITOR = (name: string) => `#hubDemoMonitor${name}`;
 const BADGE_INBOX = '#hubDemoBadgeInbox';
@@ -741,6 +746,65 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
             value:
               'Loaded scene “Harbour”\nSpawned 128 bodies\nPhysics on the worker thread\nStep 1: 132 bodies',
           },
+        ],
+      },
+    ],
+  },
+  folder: {
+    keyboard: [
+      {
+        name: 'Enter shuts and opens a folder; Tab goes into it; no shadows hides the inner one',
+        steps: [
+          { focusInBox: FOLDER('Light') },
+          { press: 'Enter' },
+          { expectAttr: FOLDER('Light'), name: 'aria-expanded', value: 'false' },
+          { expectText: FOLDER_STATUS, text: 'Sun light: shut' },
+          { press: 'Enter' },
+          { expectAttr: FOLDER('Light'), name: 'aria-expanded', value: 'true' },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('Intensity') },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('CastShadow') },
+          { press: 'Space' },
+          { expectAttr: `.aekFolder:has(> ${FOLDER('Shadow')})`, name: 'hidden', value: '' },
+        ],
+      },
+      {
+        name: 'a shut folder’s field is read when Space opens it',
+        steps: [
+          { focusInBox: FOLDER('Outside') },
+          { press: 'Enter' },
+          { focusInBox: FOLDER('Shadow') },
+          { press: 'Space' },
+          { expectAttr: FOLDER('Shadow'), name: 'aria-expanded', value: 'true' },
+          { expectText: FOLDER_STATUS, text: 'Shadow: open' },
+          // The bias isn't its default now: its reset button comes first
+          { press: 'Tab' },
+          { expectFocus: `.aekField:has(${FOLDER('Bias')}) .aekField__reset` },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('Bias') },
+          { expectValue: FOLDER('Bias'), value: '-0.0010' },
+        ],
+      },
+    ],
+  },
+  fieldset: {
+    keyboard: [
+      {
+        name: 'Tab goes from one section’s fields to the next’s',
+        steps: [
+          { focusInBox: FIELDSET('Region') },
+          { press: 'Tab' },
+          { expectFocus: FIELDSET('Email') },
+        ],
+      },
+      {
+        name: 'a disabled section’s fields are no tab stops',
+        steps: [
+          { click: 'Disable the notifications' },
+          { focusInBox: FIELDSET('Region') },
+          { press: 'Tab' },
+          { expectFocus: FIELDSET('Done') },
         ],
       },
     ],

@@ -27,6 +27,8 @@ import {
   createDivider,
   createDropDown,
   createEmptyState,
+  createFieldset,
+  createFolder,
   createHudRoot,
   createInputGlyph,
   createKbd,
@@ -1249,6 +1251,147 @@ const initMonitorStressDemo = createStressDemo('MonitorStress', (i, target, sche
   })
 );
 
+// --- Folder ---
+
+const FOLDER_ID = (name: string) => `${ID_PREFIX}Folder${name}`;
+
+/** In the page: a light's folder (open) with a nested shadow folder (shut, hidden while the light
+ * casts none: its `hidden` function), on one scheduler; each open and shut in the status line,
+ * and a kit button that changes the values from outside and refreshes (a shut folder's fields are
+ * read when it opens, without a flash) */
+const initFolderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = FOLDER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const light = { intensity: 1.2, castShadow: true, bias: -0.0005, mapSize: 1024 };
+  const scheduler = createBindingScheduler();
+  const report = (title: string) => (open: boolean) => {
+    status.textContent = `${title}: ${open ? 'open' : 'shut'}`;
+  };
+
+  const shadow = createFolder({
+    id: FOLDER_ID('Shadow'),
+    title: 'Shadow',
+    expanded: false,
+    hidden: () => !light.castShadow,
+    scheduler,
+    onExpandedChange: report('Shadow'),
+    children: [
+      createNumberField({
+        id: FOLDER_ID('Bias'),
+        label: 'Bias',
+        target: light,
+        key: 'bias',
+        step: 0.0001,
+        scheduler,
+      }),
+      createSelectField({
+        label: 'Map size',
+        target: light,
+        key: 'mapSize',
+        options: { '512': 512, '1024': 1024, '2048': 2048 },
+        scheduler,
+      }),
+    ],
+  });
+  const lightFolder = createFolder({
+    id: FOLDER_ID('Light'),
+    title: 'Sun light',
+    scheduler,
+    onExpandedChange: report('Sun light'),
+    children: [
+      createSlider({
+        id: FOLDER_ID('Intensity'),
+        label: 'Intensity',
+        target: light,
+        key: 'intensity',
+        min: 0,
+        max: 5,
+        step: 0.1,
+        scheduler,
+      }),
+      createCheckbox({
+        id: FOLDER_ID('CastShadow'),
+        label: 'Cast shadows',
+        target: light,
+        key: 'castShadow',
+        scheduler,
+        // Its folder's `hidden` function is re-read on the refresh
+        onChange: () => scheduler.refresh(),
+      }),
+      shadow,
+    ],
+  });
+  const outside = createButton({
+    id: FOLDER_ID('Outside'),
+    label: 'Change the values from outside',
+    onClick: () => {
+      light.intensity = Math.round(((light.intensity + 0.7) % 5) * 10) / 10;
+      light.bias = -0.001;
+      scheduler.refresh();
+    },
+  });
+  const group = addGroup(
+    root,
+    'A folder in a folder; the inner one shut, and hidden without shadows'
+  );
+  group.classList.add('hubDemoFields', 'hubDemoFolders');
+  group.append(lightFolder.cmp.elem, outside.cmp.elem);
+  root.append(status);
+};
+
+// --- Fieldset ---
+
+const FIELDSET_ID = (name: string) => `${ID_PREFIX}Fieldset${name}`;
+
+/** In the page: a form's two sections as fieldsets, the second one disabled by a Hub button (a
+ * state): every field in it, its slider's thumb too */
+const initFieldsetDemo: Demo = (box) => {
+  const controls = addGroup(box, 'States');
+  const root = addKitRoot(box);
+  const profile = { name: 'Ada', region: 'eu', email: true, sounds: false, volume: 6 };
+  const account = createFieldset({
+    legend: 'Account',
+    hint: 'Shown to other players',
+    children: [
+      createTextField({ id: FIELDSET_ID('Name'), label: 'Name', target: profile, key: 'name' }),
+      createSelectField({
+        id: FIELDSET_ID('Region'),
+        label: 'Region',
+        target: profile,
+        key: 'region',
+        options: [
+          { text: 'Europe', value: 'eu' },
+          { text: 'Americas', value: 'am' },
+          { text: 'Asia', value: 'as' },
+        ],
+      }),
+    ],
+  });
+  const notifications = createFieldset({
+    legend: 'Notifications',
+    children: [
+      createCheckbox({ id: FIELDSET_ID('Email'), label: 'Email', target: profile, key: 'email' }),
+      createSwitch({ label: 'Sounds', target: profile, key: 'sounds' }),
+      createSlider({
+        label: 'Volume',
+        target: profile,
+        key: 'volume',
+        min: 0,
+        max: 10,
+        showInput: false,
+      }),
+    ],
+  });
+  const done = createButton({ id: FIELDSET_ID('Done'), label: 'Done', variant: 'primary' });
+  const group = addGroup(root, 'Two sections of a form');
+  group.classList.add('hubDemoFields', 'hubDemoFieldsets');
+  group.append(account.cmp.elem, notifications.cmp.elem, done.cmp.elem);
+  addButton(controls, 'Disable the notifications', () => notifications.setDisabled(true));
+};
+
 // --- Tooltip ---
 
 const TOOLTIPS_WINDOW_ID = `${ID_PREFIX}Tooltips`;
@@ -2073,6 +2216,8 @@ const DEMOS: Record<string, Demo> = {
   checkbox: initCheckboxDemo,
   monitor: initMonitorDemo,
   monitorStress: initMonitorStressDemo,
+  folder: initFolderDemo,
+  fieldset: initFieldsetDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

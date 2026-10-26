@@ -225,6 +225,18 @@
   width: min(100%, 30rem);
 }
 
+// A folder (its fields inside) and a fieldset take a settings panel's width
+.hubComponentDemoGroup.hubDemoFolders > .aekFolder,
+.hubComponentDemoGroup.hubDemoFieldsets > .aekFieldset {
+  width: min(100%, 22rem);
+}
+
+// The fieldsets one under another, a form's sections apart, with "Done" under them
+.hubComponentDemoGroup.hubDemoFieldsets {
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 // The stress box's 200 fields (the dev page's), in columns
 .hubDemoStressGrid {
   display: grid;
