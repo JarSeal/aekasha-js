@@ -1257,6 +1257,35 @@ D9 and D10, and D7's monitor.
      stays correct meanwhile.
 3. Section 3, the property grid: the label column and its separator, the scheduler it owns or
    shares, `refresh()`, `add()`.
+   - **Done 2026-10-26.** `PropertyGrid.test.ts` (8); the `propertyGrid` box on both library
+     pages (a scene's settings: a text, a slider, a checkbox, a select, a long label cut, a folder
+     in a folder, a monitor; the column's width in the status line; a kit button that changes
+     values and refreshes), two keyboard scripts, `COMPONENT_USES`; on `aekasha/ui`:
+     `createPropertyGrid`, `PropertyGrid`, `PropertyGridProps`.
+   - **The columns are CSS subgrids** (not in D9): the content is a two-column grid, and every
+     field, the folder's four levels and the fieldset's two pass the columns down
+     (`grid-template-columns: subgrid`, `column-gap: normal`), so the controls line up at every
+     depth while a folder's indent narrows only its labels' column. Subgrid: Chrome 117, Safari
+     16, Firefox 71. The grid's rules are
+     `.aekPropertyGrid :where(…)` (one class of specificity, still layered): they re-lay the
+     fields' and folders' own zero-specificity layouts, whose stylesheets load in any order.
+   - **The separator is the columns' 24 px gap** (D9 named no size): WCAG 2.5.8's target, over
+     no control, so it steals no click from a label's reset button or an input's edge; at rest
+     it draws nothing, a line under the pointer or the focus, the accent while dragged. Keys:
+     ArrowLeft / ArrowRight ±1 % with D6's Shift / Alt, Home / End to 20 / 80 %.
+     `onLabelWidthChange` reports a gesture's end (the release, a key's keyup), not each move.
+     `resizable: false` leaves it out.
+   - **A field joins the scheduler of the container it's added to** (D4's "it gets the scheduler
+     of the property grid or form it's in"): `adoptFormScheduler` gives the grid's (or a folder's,
+     own or adopted) to every field and folder added without one, nested ones included, moving a
+     live field off the page's tick; one given its own `scheduler` keeps it. A folder added to a
+     grid passes the grid's on to what it adds later.
+   - **`refresh()` is its scheduler's**: with a shared one it reads every host's fields (a tab's
+     sections together, as today's tab refresh does). A grid has no `setVisible`: its
+     `scheduler` handle has it.
+   - Not done: the `isShown` cache (Phase 2 section 4's idea, section 2's note): the grid adopts
+     fields but doesn't track which folder hides each, and the walk is correct; the perf-auditor's
+     second pass (Phase 6) can weigh it against the 3 ms/s measured.
 4. Section 4, the declarative items (`items`, kind inference, D10's names, folder ids and
    `onFolderExpandedChange`, `custom`, buttons and separators) and the "Tweakpane parity" box (dev
    page) from Phase 0's census, so far as the fields exist.

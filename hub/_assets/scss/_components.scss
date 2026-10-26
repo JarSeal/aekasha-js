@@ -231,6 +231,11 @@
   width: min(100%, 22rem);
 }
 
+// A property grid takes a settings window's width
+.hubComponentDemoGroup.hubDemoGrids > .aekPropertyGrid {
+  width: min(100%, 26rem);
+}
+
 // The fieldsets one under another, a form's sections apart, with "Done" under them
 .hubComponentDemoGroup.hubDemoFieldsets {
   flex-direction: column;

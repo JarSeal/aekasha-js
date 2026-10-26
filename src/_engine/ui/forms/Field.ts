@@ -192,11 +192,47 @@ export type FieldShell<T> = {
 export type FormChild = CMPHandle | { cmp: CMPHandle };
 
 /**
- * Adds children to a container's content CMP, in order.
+ * Adds children to a container's content CMP, in order, and gives them `scheduler` when they have
+ * none of their own (`adoptFormScheduler`).
  * @internal
  */
-export const addFormChildren = (content: CMPHandle, children: readonly FormChild[]) => {
-  for (const child of children) content.add('isCmp' in child ? child : child.cmp);
+export const addFormChildren = (
+  content: CMPHandle,
+  children: readonly FormChild[],
+  scheduler?: BindingScheduler
+) => {
+  for (const child of children) {
+    const added = content.add('isCmp' in child ? child : child.cmp);
+    if (scheduler) adoptFormScheduler(added.elem, scheduler);
+  }
+};
+
+/** A field's or a folder's element and how it joins a container's scheduler */
+const schedulerAdopters = new WeakMap<Element, (scheduler: BindingScheduler) => void>();
+
+/**
+ * Says how the piece at `elem` (a field, a folder) joins the scheduler of a container it's added
+ * to, when it was given none of its own.
+ * @internal
+ */
+export const setSchedulerAdopter = (
+  elem: Element,
+  adopt: (scheduler: BindingScheduler) => void
+) => {
+  schedulerAdopters.set(elem, adopt);
+};
+
+/**
+ * Gives `scheduler` to `root` and every field and folder under it that has no scheduler of its own
+ * (D4: a field without one gets the scheduler of the grid or folder it's in): what a property
+ * grid and a folder call on what they add. One already in another container's moves.
+ * @internal
+ */
+export const adoptFormScheduler = (root: Element, scheduler: BindingScheduler) => {
+  schedulerAdopters.get(root)?.(scheduler);
+  for (const elem of root.querySelectorAll('.aekField, .aekFolder')) {
+    schedulerAdopters.get(elem)?.(scheduler);
+  }
 };
 
 /** Each field's element and its re-read of a disabled `<fieldset>` around it */
@@ -251,6 +287,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
       removeEntry?.();
       removeEntry = null;
       fieldsetReads.delete(root);
+      schedulerAdopters.delete(root);
       flash.dispose();
       labelTooltip.cmp.remove();
       labelElem.removeEventListener('click', onLabelClick);
@@ -437,16 +474,22 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   readState();
   drawMessage();
   draw();
+  const entry = {
+    read,
+    readState,
+    isShown: () => root.isConnected && !root.closest('[hidden]'),
+    interval: props.interval,
+  };
   // A live field with nothing to read it shares the page's tick; a held value has nothing to read
   const isBound = props.target !== undefined || props.get !== undefined;
   const scheduler =
     props.scheduler ?? (props.interval !== undefined && isBound ? getPageScheduler() : undefined);
-  if (scheduler) {
-    removeEntry = addScheduledBinding(scheduler, {
-      read,
-      readState,
-      isShown: () => root.isConnected && !root.closest('[hidden]'),
-      interval: props.interval,
+  if (scheduler) removeEntry = addScheduledBinding(scheduler, entry);
+  // Without one of its own, it joins the container's it's added to (the page's it leaves)
+  if (!props.scheduler) {
+    setSchedulerAdopter(root, (adopted) => {
+      removeEntry?.();
+      removeEntry = addScheduledBinding(adopted, entry);
     });
   }
 

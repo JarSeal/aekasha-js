@@ -3033,6 +3033,7 @@
     },
     "src/_engine/ui/forms/Field.ts": {
       "addFormChildren": "Function",
+      "adoptFormScheduler": "Function",
       "AnyFieldProps": "TypeAlias",
       "createField": "Function",
       "Field": "TypeAlias",
@@ -3043,7 +3044,8 @@
       "FieldShell": "TypeAlias",
       "FieldSpec": "TypeAlias",
       "FormChild": "TypeAlias",
-      "readFieldsetDisabled": "Function"
+      "readFieldsetDisabled": "Function",
+      "setSchedulerAdopter": "Function"
     },
     "src/_engine/ui/forms/Fieldset.ts": {
       "createFieldset": "Function",
@@ -3082,6 +3084,11 @@
       "createNumberSteps": "Function",
       "getStepModifier": "Function",
       "NumberSteps": "TypeAlias"
+    },
+    "src/_engine/ui/forms/PropertyGrid.ts": {
+      "createPropertyGrid": "Function",
+      "PropertyGrid": "TypeAlias",
+      "PropertyGridProps": "TypeAlias"
     },
     "src/_engine/ui/forms/RadioGroup.ts": {
       "createRadioGroup": "Function",
@@ -4410,6 +4417,8 @@
       "PopoverProps",
       "ProgressBar",
       "ProgressBarProps",
+      "PropertyGrid",
+      "PropertyGridProps",
       "RadioGroup",
       "RadioGroupProps",
       "RadioOption",
@@ -4498,6 +4507,7 @@
       "createNumberField",
       "createPopover",
       "createProgressBar",
+      "createPropertyGrid",
       "createRadioGroup",
       "createRangeSlider",
       "createSegmentedControl",

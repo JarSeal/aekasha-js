@@ -82,6 +82,8 @@ export { createFieldset } from './forms/Fieldset';
 export type { Fieldset, FieldsetProps } from './forms/Fieldset';
 export { createFolder } from './forms/Folder';
 export type { Folder, FolderProps } from './forms/Folder';
+export { createPropertyGrid } from './forms/PropertyGrid';
+export type { PropertyGrid, PropertyGridProps } from './forms/PropertyGrid';
 export { createCheckbox, createSwitch } from './forms/Checkbox';
 export type { Checkbox, CheckboxProps, Switch, SwitchProps } from './forms/Checkbox';
 export { createMonitor } from './forms/Monitor';

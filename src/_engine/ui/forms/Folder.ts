@@ -9,7 +9,7 @@ import {
   revealScheduledBindings,
   type BindingScheduler,
 } from './binding/BindingScheduler';
-import { addFormChildren, type FieldDyn, type FormChild } from './Field';
+import { addFormChildren, setSchedulerAdopter, type FieldDyn, type FormChild } from './Field';
 import './Folder.scss';
 import '../styles/kit.scss';
 
@@ -24,8 +24,9 @@ export type FolderProps = {
   onExpandedChange?: (expanded: boolean) => void;
   /** Hides the folder: a value, or a function re-read on every refresh (default false). */
   hidden?: FieldDyn<boolean>;
-  /** The scheduler of the fields in it: an open reads, once, those it hid since a refresh, and
-   * the scheduler's `refresh()` re-reads a `hidden` function. */
+  /** The scheduler of the fields in it, which those given none join: an open reads, once, those
+   * it hid since a refresh, and the scheduler's `refresh()` re-reads a `hidden` function. Without
+   * one, it takes the property grid's or the folder's it's added to. */
   scheduler?: BindingScheduler;
   /** Its first children, in order (`add` adds more). */
   children?: readonly FormChild[];
@@ -111,7 +112,7 @@ const resolveDyn = (value: FieldDyn<boolean> | undefined) =>
  * ```
  */
 export const createFolder = (props: FolderProps): Folder => {
-  const { scheduler } = props;
+  let scheduler = props.scheduler;
   let hiddenProp = props.hidden;
   let isHidden = false;
   let isOpen = props.expanded !== false;
@@ -214,20 +215,28 @@ export const createFolder = (props: FolderProps): Folder => {
   toggleButton.setAttribute('aria-expanded', String(isOpen));
   drawSettled();
   applyHidden(resolveDyn(hiddenProp));
-  if (props.children) addFormChildren(content, props.children);
   // Its `hidden` function is re-read with its fields'; it has no value to read
-  if (scheduler && typeof hiddenProp === 'function') {
-    removeEntry = addScheduledBinding(scheduler, {
-      read: () => {},
-      readState: () => applyHidden(resolveDyn(hiddenProp)),
-      isShown: () => false,
-    });
-  }
+  const joinScheduler = (to: BindingScheduler) => {
+    scheduler = to;
+    removeEntry?.();
+    removeEntry =
+      typeof hiddenProp === 'function'
+        ? addScheduledBinding(to, {
+            read: () => {},
+            readState: () => applyHidden(resolveDyn(hiddenProp)),
+            isShown: () => false,
+          })
+        : null;
+  };
+  if (scheduler) joinScheduler(scheduler);
+  // Without one of its own, the container's it's added to (whose call reaches its children too)
+  else setSchedulerAdopter(root, joinScheduler);
+  if (props.children) addFormChildren(content, props.children, scheduler);
 
   return {
     cmp,
     content,
-    add: (...children) => addFormChildren(content, children),
+    add: (...children) => addFormChildren(content, children, scheduler),
     isExpanded: () => isOpen,
     setExpanded: applyExpanded,
     toggle: () => applyExpanded(!isOpen),

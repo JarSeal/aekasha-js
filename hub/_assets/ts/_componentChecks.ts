@@ -150,6 +150,8 @@ const FOLDER = (name: string) => `#hubDemoFolder${name}`;
 const FOLDER_STATUS = '#hubDemoFolderStatus';
 /** A fieldset demo's control by its name (`FIELDSET_ID`) */
 const FIELDSET = (name: string) => `#hubDemoFieldset${name}`;
+/** A property grid demo's element by its name (`GRID_ID`) */
+const GRID = (name: string) => `#hubDemoGrid${name}`;
 /** A monitor by its name (`MONITOR_ID`): the line's element, or the multiline text area */
 const MONITOR = (name: string) => `#hubDemoMonitor${name}`;
 const BADGE_INBOX = '#hubDemoBadgeInbox';
@@ -805,6 +807,37 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { focusInBox: FIELDSET('Region') },
           { press: 'Tab' },
           { expectFocus: FIELDSET('Done') },
+        ],
+      },
+    ],
+  },
+  propertyGrid: {
+    keyboard: [
+      {
+        name: 'the label column’s separator: the arrows, Shift and End move it; the keyup reports it',
+        steps: [
+          { focusInBox: GRID('Separator') },
+          { press: 'ArrowRight' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '41' },
+          { expectText: GRID('Status'), text: 'Label column: 41 %' },
+          { press: 'Shift+ArrowLeft' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '31' },
+          { press: 'End' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '80' },
+          { expectText: GRID('Status'), text: 'Label column: 80 %' },
+        ],
+      },
+      {
+        name: 'Tab goes row by row, the separator after the rows',
+        steps: [
+          { focusInBox: GRID('Name') },
+          { press: 'Tab' },
+          { expectFocus: GRID('Speed') },
+          { press: 'Tab' },
+          { expectFocus: GRID('Wireframe') },
+          { focusInBox: GRID('Outside') },
+          { press: 'Shift+Tab' },
+          { expectFocus: GRID('Separator') },
         ],
       },
     ],

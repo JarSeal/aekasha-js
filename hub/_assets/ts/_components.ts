@@ -39,6 +39,7 @@ import {
   createNumberField,
   createPopover,
   createProgressBar,
+  createPropertyGrid,
   createRadioGroup,
   createRangeSlider,
   createSegmentedControl,
@@ -1392,6 +1393,106 @@ const initFieldsetDemo: Demo = (box) => {
   addButton(controls, 'Disable the notifications', () => notifications.setDisabled(true));
 };
 
+// --- Property grid ---
+
+const GRID_ID = (name: string) => `${ID_PREFIX}Grid${name}`;
+
+/** In the page: a scene's settings as a property grid (its own scheduler): fields of each kind, a
+ * long label cut, a folder in a folder whose controls line up with the top's, a monitor; the label
+ * column's width in the status line, and a kit button that changes values and refreshes */
+const initPropertyGridDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = GRID_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const scene = {
+    speed: 1.5,
+    wireframe: false,
+    shadows: true,
+    quality: 'high',
+    name: 'Harbour',
+    fogDensity: 0.02,
+    intensity: 1.2,
+    bias: -0.0005,
+    bodies: 128,
+  };
+  const grid = createPropertyGrid({
+    id: GRID_ID('Separator'),
+    onLabelWidthChange: (width) => {
+      status.textContent = `Label column: ${width} %`;
+    },
+    children: [
+      createTextField({ id: GRID_ID('Name'), label: 'Name', target: scene, key: 'name' }),
+      createSlider({
+        id: GRID_ID('Speed'),
+        label: 'Speed',
+        target: scene,
+        key: 'speed',
+        min: 0,
+        max: 5,
+        step: 0.1,
+      }),
+      createCheckbox({
+        id: GRID_ID('Wireframe'),
+        label: 'Wireframe',
+        target: scene,
+        key: 'wireframe',
+      }),
+      createSelectField({
+        label: 'Quality',
+        target: scene,
+        key: 'quality',
+        options: [
+          { text: 'Low', value: 'low' },
+          { text: 'High', value: 'high' },
+        ],
+      }),
+      createNumberField({
+        label: 'Exponential fog density near the horizon',
+        target: scene,
+        key: 'fogDensity',
+        min: 0,
+        step: 0.01,
+      }),
+      createFolder({
+        title: 'Sun light',
+        children: [
+          createSlider({
+            label: 'Intensity',
+            target: scene,
+            key: 'intensity',
+            min: 0,
+            max: 5,
+            step: 0.1,
+          }),
+          createSwitch({ label: 'Shadows', target: scene, key: 'shadows' }),
+          createFolder({
+            title: 'Shadow',
+            children: [
+              createNumberField({ label: 'Bias', target: scene, key: 'bias', step: 0.0001 }),
+            ],
+          }),
+        ],
+      }),
+      createMonitor({ label: 'Bodies', target: scene, key: 'bodies', precision: 0 }),
+    ],
+  });
+  const outside = createButton({
+    id: GRID_ID('Outside'),
+    label: 'Change the values from outside',
+    onClick: () => {
+      scene.speed = Math.round(((scene.speed + 1.3) % 5) * 10) / 10;
+      scene.bodies += 16;
+      grid.refresh();
+    },
+  });
+  const group = addGroup(root, 'A scene’s settings; drag the column’s edge, or use its arrows');
+  group.classList.add('hubDemoFields', 'hubDemoGrids');
+  group.append(grid.cmp.elem, outside.cmp.elem);
+  root.append(status);
+};
+
 // --- Tooltip ---
 
 const TOOLTIPS_WINDOW_ID = `${ID_PREFIX}Tooltips`;
@@ -2218,6 +2319,7 @@ const DEMOS: Record<string, Demo> = {
   monitorStress: initMonitorStressDemo,
   folder: initFolderDemo,
   fieldset: initFieldsetDemo,
+  propertyGrid: initPropertyGridDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,
