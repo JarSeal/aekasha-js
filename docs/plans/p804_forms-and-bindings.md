@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -828,10 +828,20 @@ D13. Small, and first: normalize's layer is under every field.
      kit's `CLAUDE.md` had none). The dev library pages' spinner, skeleton and progress bar texts
      say where their shots pause.
 
-### Phase 2: the binding core and the first fields
+### Phase 2: the binding core and the first fields — done
 
 D3-D6 and D7's number, text, checkbox and switch: the core is built against real fields, so its
 API is tried before the rest depend on it.
+
+- **Verified 2026-10-26** (after section 4): `yarn test` (193 files), `tsc` and `tsc -p hub`,
+  ESLint, `yarn hub:build`, `yarn verify:ui` (every box and script, 152 s; the number, text and
+  checkbox boxes' shots recorded), `yarn verify:embed` (both profiles), `yarn sbp --profile all`
+  (every budget within: no kit field is in an app or embed build yet, so the sizes are Phase 0's),
+  `yarn verify:scenes` (104 passed), `yarn verify:baselines --update` (the new names; docs 100 %).
+- **Open for Phase 4** (raised in section 1, not decided): D4 says a field with no scheduler is
+  read only by its own `refresh()`, so a monitor made alone (outside a grid or a form) would never
+  tick. Phase 4's monitor section decides: as D4 says, or a live field without a scheduler makes
+  one of its own.
 
 1. Section 1, `forms/binding/`: `Binding.ts` (the three forms, in-place writes, the events and
    `prev`), `BindingScheduler.ts` (refresh, the tick, visibility, intervals, the flash),
@@ -960,6 +970,39 @@ API is tried before the rest depend on it.
      looked at before `--update` records them.
 4. Section 4, the perf-auditor's first pass over the scheduler and the scrub with a 200-number
    demo; its findings fixed or written here.
+   - **Done 2026-10-26.** The demo is a box on the dev component library page only
+     (`numberFieldStress`: 200 number fields with `interval: 0` in one scheduler; "Values change
+     every frame", "Values stay", "Stop"; a frame-time readout), not on the public page, so
+     `verify:ui` doesn't run it. The perf-auditor agent read the code; a Playwright script (the
+     scratchpad's, not committed) profiled the box in headless Chromium on the dev server, 5 s per
+     scenario: a sampling heap profile with collected objects, a CPU profile, and the page's
+     script, style and layout time (`Performance.getMetrics`). The engine's profiler can't run
+     there (the Hub has no engine), so these replace D14's "the profiler's frame probe" for this
+     pass.
+   - **Before → after** (two quiet runs after, which agreed; every frame 16.7 ms throughout):
+     steady (nothing changes) script 6.0 → 3.8-4.3 ms/s, its JS allocation the two rAF loops'
+     own (about 5 KiB/s each: the scheduler's tick allocates nothing else); changing (all 200
+     every frame) script 58 → 36-40 ms/s and allocation 2.46 → 0.74-0.81 MiB/s; the scrub
+     (625 moves) script 2.5 → 1.8 ms/s; stopped: nothing.
+   - **Fixed** (the auditor's findings and the profile's): the number field formats once per
+     draw (`ValueText.ts`' `createValueFormatter` works out the decimals once when `precision` or
+     `step` sets them; `getValueText` / `getSpokenValueText` went), writes `aria-valuetext` only
+     when the text changed and the input's `value` only when it differs; the shell writes the
+     reset button's `hidden` only when it flips; the tick checks an entry's due time before
+     `isShown` (so an entry that isn't due skips the DOM walk; a hidden one is marked stale at
+     the frame it's due); a key step or a scrub move redraws the text itself only when it wrote
+     nothing (a write redraws through the shell); Alt's rules object is made once.
+   - **Left, with why:** **layout**, about 122 ms/s while all 200 change (one layout per frame,
+     about 10 µs per input): the inputs' own text layout. `contain: layout paint` on the box
+     changed nothing (tried and reverted). Phase 4's monitors draw text in a `<span>`; their pass
+     measures it again and tries size containment on a fixed-width cell. **`isShown`'s
+     `closest('[hidden]')`** per due entry: about 3 ms/s for 200 entries at `interval: 0`,
+     the steady state's main JS cost. Caching it needs the folder (Phase 4), which can mark its
+     fields when it collapses. **The flash** restarts a timer per changed field on a
+     `refresh()`; a host refreshes every few hundred ms, not per frame. **A gesture's per-step
+     objects** (`{ prev, last, source }` with `field`, the copies of an object value): D3's
+     event, per user input, not per frame. **`document.visibilityState`** read per frame:
+     negligible.
 
 ### Phase 3: choices and ranges
 

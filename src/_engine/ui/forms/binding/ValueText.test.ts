@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   constrainNumber,
+  createValueFormatter,
   formatNumber,
   getDecimalDigits,
   getShownDecimals,
-  getSpokenValueText,
-  getValueText,
   roundToDecimals,
 } from './ValueText';
 
@@ -77,15 +76,19 @@ describe('the value’s text (p804 D6)', () => {
   it('writes the shown decimals, never -0', () => {
     expect(formatNumber(1.5, 2)).toBe('1.50');
     expect(formatNumber(-0, 2)).toBe('0.00');
-    expect(getValueText(0.5, { step: 0.01 })).toBe('0.50');
-    expect(getValueText(3, {})).toBe('3.00');
+    expect(createValueFormatter({ step: 0.01 }).getText(0.5)).toBe('0.50');
+    expect(createValueFormatter({ step: 0.01, precision: 3 }).getText(0.5)).toBe('0.500');
+    const free = createValueFormatter({});
+    expect(free.getText(3)).toBe('3.00');
+    expect(free.getText(1.2345)).toBe('1.2345');
   });
 
   it('takes format’s text instead, and says the unit', () => {
     const options = { step: 1, unit: 'ms', format: (v: number) => `${v}!` };
-    expect(getValueText(5, options)).toBe('5!');
-    expect(getSpokenValueText(5, options)).toBe('5! ms');
-    expect(getSpokenValueText(5, { step: 1, unit: 'ms' })).toBe('5 ms');
-    expect(getSpokenValueText(5, { step: 1 })).toBe('5');
+    const formatted = createValueFormatter(options);
+    expect(formatted.getText(5)).toBe('5!');
+    expect(formatted.getSpokenText('5!')).toBe('5! ms');
+    const plain = createValueFormatter({ step: 1 });
+    expect(plain.getSpokenText(plain.getText(5))).toBe('5');
   });
 });

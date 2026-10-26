@@ -98,11 +98,13 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
       const entry = entries[i];
       const interval = entry.binding.interval;
       if (interval === undefined) continue;
+      // Not due yet: its visibility (a DOM walk) isn't read either; a hidden one is marked
+      // stale at the frame it's due
+      if (!entry.stale && now - entry.lastRead < interval) continue;
       if (!entry.binding.isShown()) {
         entry.stale = true;
         continue;
       }
-      if (!entry.stale && now - entry.lastRead < interval) continue;
       entry.lastRead = now;
       entry.stale = false;
       entry.binding.read(false);

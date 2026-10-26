@@ -270,10 +270,16 @@ export const createField = <T>(props: FieldProps<T>, spec: FieldSpec<T>): FieldS
   });
   const defaultValue = valueKind.copy(props.default ?? binding.peek());
 
+  /** Whether the reset button is hidden: written on a change only (a draw runs every frame for a
+   * live field whose value changes, D4) */
+  let isResetHidden = true;
   const draw = () => {
     spec.draw(binding.peek());
     // Shown (a tab stop) only while the value isn't the default
-    setAttrIf(resetButton.cmp.elem, 'hidden', valueKind.equals(binding.peek(), defaultValue));
+    const isDefault = valueKind.equals(binding.peek(), defaultValue);
+    if (isDefault === isResetHidden) return;
+    isResetHidden = isDefault;
+    setAttrIf(resetButton.cmp.elem, 'hidden', isDefault);
   };
 
   const applyDisabled = (on: boolean) => {

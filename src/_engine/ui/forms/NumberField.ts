@@ -1,12 +1,6 @@
 import { getPrimitiveValueKind } from './binding/Binding';
 import { evaluateValueExpression } from './binding/ValueExpression';
-import {
-  constrainNumber,
-  getSpokenValueText,
-  getValueText,
-  type NumberRules,
-  type ValueTextOptions,
-} from './binding/ValueText';
+import { constrainNumber, createValueFormatter, type NumberRules } from './binding/ValueText';
 import { createField, type Field, type FieldProps } from './Field';
 import { createTypedText } from './TypedText';
 import './NumberField.scss';
@@ -98,7 +92,9 @@ const getPointerScale = (step: number | undefined, value: number) => {
  */
 export const createNumberField = (props: NumberFieldProps): NumberField => {
   const { onInput, expressionUnits } = props;
-  const textOptions: ValueTextOptions = props;
+  const formatter = createValueFormatter(props);
+  /** The text last drawn (its aria-valuetext written): a draw that makes the same skips it */
+  let shownText: string | null = null;
   /** The key whose keyup ends the key gesture */
   let stepKey: string | null = null;
   let scrub: {
@@ -141,7 +137,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   }
 
   const drawText = (value: number) => {
-    const text = getValueText(value, textOptions);
+    const text = formatter.getText(value);
     if (input.value !== text) input.value = text;
   };
 
@@ -151,10 +147,15 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     control: box,
     labelFor: input,
     draw: (value) => {
+      // A draw is a change: the number is new, its text may not be (rounded to the same)
       input.setAttribute('aria-valuenow', String(value));
-      input.setAttribute('aria-valuetext', getSpokenValueText(value, textOptions));
+      const text = formatter.getText(value);
+      if (text !== shownText) {
+        shownText = text;
+        input.setAttribute('aria-valuetext', formatter.getSpokenText(text));
+      }
       // Typed text stays until it's written or put back
-      if (!isTyping()) drawText(value);
+      if (!isTyping() && input.value !== text) input.value = text;
     },
     applyDisabled: (on) => {
       if (on) input.setAttribute('disabled', '');
@@ -169,11 +170,18 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
   const { binding, field, labelElem } = shell;
 
   /** A key's or a scrub's value: Alt's finer steps leave the grid for a tenth of the step */
+  /** Alt's rules: a tenth of the step's grid (made once, not per pointer move) */
+  const fineRules = props.step !== undefined ? { ...props, step: props.step / 10 } : props;
   const constrain = (value: number, modifier = 1) =>
-    constrainNumber(
-      value,
-      modifier < 1 && props.step !== undefined ? { ...props, step: props.step * modifier } : props
-    );
+    constrainNumber(value, modifier < 1 ? fineRules : props);
+
+  /** A key's or a scrub's step: a write redraws through the shell, an equal value (at an end)
+   * doesn't, and typed text it ended still shows */
+  const stepTo = (value: number) => {
+    const before = binding.peek();
+    binding.step(value);
+    if (binding.peek() === before) drawText(before);
+  };
 
   const typed = createTypedText<number>({
     input,
@@ -235,8 +243,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     typed.end();
     if (stepKey !== null && stepKey !== e.key) endGesture();
     stepKey = e.key;
-    binding.step(target);
-    drawText(binding.peek());
+    stepTo(target);
   };
 
   const onKeyUp = (e: KeyboardEvent) => {
@@ -285,8 +292,7 @@ export const createNumberField = (props: NumberFieldProps): NumberField => {
     const modifier = getModifier(e);
     scrub.raw += (e.clientX - scrub.lastX) * scrub.scale * modifier;
     scrub.lastX = e.clientX;
-    binding.step(constrain(scrub.raw, modifier));
-    drawText(binding.peek());
+    stepTo(constrain(scrub.raw, modifier));
   };
 
   const onLabelPointerEnd = () => {

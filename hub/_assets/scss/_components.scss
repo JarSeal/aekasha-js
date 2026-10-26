@@ -204,6 +204,13 @@
   }
 }
 
+// The stress box's 200 fields (the dev page's), in columns
+.hubDemoStressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
 // A line under a row's fields (a search's results)
 .hubComponentDemoGroup > .hubDemoFieldNote {
   width: 100%;

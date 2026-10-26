@@ -3006,11 +3006,10 @@
     },
     "src/_engine/ui/forms/binding/ValueText.ts": {
       "constrainNumber": "Function",
+      "createValueFormatter": "Function",
       "formatNumber": "Function",
       "getDecimalDigits": "Function",
       "getShownDecimals": "Function",
-      "getSpokenValueText": "Function",
-      "getValueText": "Function",
       "NumberRules": "TypeAlias",
       "roundToDecimals": "Function",
       "ValueTextOptions": "TypeAlias"

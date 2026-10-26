@@ -117,18 +117,22 @@ export type ValueTextOptions = NumberRules & {
 };
 
 /**
- * A number part's text (p804 D6): `format`'s, else the value with its shown decimals; the unit
- * isn't in it (the field shows it after the text).
+ * A number part's text maker (p804 D6): `format`'s text, else the value with its shown decimals,
+ * worked out once when `precision` or `step` sets them (a field draws on every change, D4: one
+ * `toFixed` per draw). The unit isn't in the text (the field shows it after the text, and says it
+ * with `getSpokenText`).
  * @internal
  */
-export const getValueText = (value: number, options: ValueTextOptions) =>
-  options.format ? options.format(value) : formatNumber(value, getShownDecimals(options, value));
-
-/**
- * What assistive tech says for a number part (`aria-valuetext`): its text and its unit.
- * @internal
- */
-export const getSpokenValueText = (value: number, options: ValueTextOptions) => {
-  const text = getValueText(value, options);
-  return options.unit ? `${text} ${options.unit}` : text;
+export const createValueFormatter = (options: ValueTextOptions) => {
+  const { format, unit } = options;
+  const fixedDecimals =
+    options.precision ?? (hasStep(options) ? getDecimalDigits(options.step) : undefined);
+  return {
+    getText: (value: number) =>
+      format
+        ? format(value)
+        : formatNumber(value, fixedDecimals ?? Math.max(getDecimalDigits(value), 2)),
+    /** What assistive tech says (`aria-valuetext`): the text and the unit */
+    getSpokenText: (text: string) => (unit ? `${text} ${unit}` : text),
+  };
 };
