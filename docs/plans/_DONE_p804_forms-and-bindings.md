@@ -1,8 +1,8 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
-Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, popover and drop-down this builds on; its open items: D13), \_DONE_p801_design-foundation.md (the tokens, densities and motion), \_DONE_p618_review-debug-public-api.md (the pane types' Tweakpane fields, P7), p805_data-display.md (the label's context menu and the monitor's graph view: D1), p355_save-menu-and-file-server-settings.md (its settings on this plan's form), p426_sequencer-splines-and-cutscenes.md (the curve editor), p622_engine-6-major.md (the button's string `kbd`, deprecated here: D13), `docs/issues/ui-kit-review-items.md` (D13)
+Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, popover and drop-down this builds on; its open items: D13), \_DONE_p801_design-foundation.md (the tokens, densities and motion), \_DONE_p618_review-debug-public-api.md (the pane types' Tweakpane fields, P7), p805_data-display.md (the label's context menu and the monitor's graph view: D1), p355_save-menu-and-file-server-settings.md (its settings on this plan's form), p426_sequencer-splines-and-cutscenes.md (the curve editor), p622_engine-6-major.md (the button's string `kbd`, deprecated here: D13), `docs/issues/ui-kit-review-items.md` (D13; closed in Phase 1)
 
 # Forms and Bindings
 
@@ -1842,11 +1842,29 @@ D15 and D12's budgets.
      pages, no error or warning, the touched pages served without an error page),
      `yarn verify:ui` against its public build (every box and script, 255 s; `UI_ALLOWED_VIOLATIONS` is empty), `yarn test`.
 
-### Phase 8: versions and done
+### Phase 8: versions and done — done
 
 D16; the changelog entry with the restyle note; `yarn checkVersions --against main`; mark the plan
 done (the references: p800's Blocks line and §5 entry, p806's and p808's when written, p355,
 p426); time for the PR: `p804-forms-and-bindings` → `main` (p800 §6).
+
+1. Section 1, the versions and the changelog.
+   - **Done 2026-10-27.** Engine 5.13.0 (Golden Hour; p805 hadn't merged, so D16's first choice)
+     and app 1.17.0 (Preschooler); the toolkit unchanged at 2.2.1 (nothing in `src/toolkit/`).
+     `CHANGELOG.md`'s entry has D16's restyle note, with Phase 1's shots: the debug dialogs' and
+     the profiler's kit buttons a little taller, no drawer tab changed. The button's `kbd` saving
+     is given as measured (the `uiKit` embed's scene chunk 17.9 → 17.5 kB gzip), D13's 0.9 kB
+     being the button's and the menu's together. `yarn checkVersions --against main` passed.
+2. Section 2, the plan marked done.
+   - **Done 2026-10-27.** `git mv` to `_DONE_p804_forms-and-bindings.md`; the references: p800's
+     Blocks line, its §5 entry (done, with what the later plans build on, as p803's) and §7's p355
+     and p426 lines; p355's and p426's Related lines (p426's Grounding gets the curve editor);
+     p622's `kbd` line (5.13.0, no longer "or the minor p804 takes"); `_DONE_p803`'s Blocks line;
+     `docs/issues/renderer-custom-tone-mapping.md`'s Found line. p806 and p808 aren't written
+     yet, so they have no line to update. `src/_engine/ui/CLAUDE.md`'s binding core bullet loses
+     "no UI yet"; the root `CLAUDE.md`, the other nested ones and `readme.md` were Phase 7's.
+   - **Time for the PR:** `p804-forms-and-bindings` → `main` (p800 §6), the whole branch:
+     Phases 0-8.
 
 ---
 

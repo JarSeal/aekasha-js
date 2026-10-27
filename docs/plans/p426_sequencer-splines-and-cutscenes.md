@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Gameplay, Cameras, Cutscenes
-Related: \_DONE_p610_character-and-input-action-architecture.md (the brain contract and `setCharacterBrain` in code, which a takeover uses), \_DONE_p603_gameplay-architecture-contracts.md (C7: the sequencer and splines; C4: the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), \_DONE_p083_editor-creator-view.md (an editor view to draw splines in)
+Related: \_DONE_p610_character-and-input-action-architecture.md (the brain contract and `setCharacterBrain` in code, which a takeover uses), \_DONE_p603_gameplay-architecture-contracts.md (C7: the sequencer and splines; C4: the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), \_DONE_p083_editor-creator-view.md (an editor view to draw splines in), \_DONE_p804_forms-and-bindings.md (the UI kit's curve editor: D8, Phase 6 section 3)
 
 # Sequencer, Splines and Cutscenes — Stub
 
@@ -25,6 +25,11 @@ their shapes.
 ## Grounding (2026-10-09)
 
 - No spline, curve or path code in `src/` (no `CatmullRomCurve3` or `CurvePath` use).
+- Since 2026-10-27 (p804, engine 5.13.0): the UI kit's curve editor on `aekasha/ui`,
+  `createCurveEditor` with `evaluateCurve` and `getCurvePreset`: a y-of-x curve, a CSS
+  `cubic-bezier` easing or cubic Hermite keys with tangents (falloff and animation curves), not
+  a path. `evaluateCurve` scans the keys per call (fine at a few dozen); sorted keys and a binary
+  search are this plan's call if a track evaluates many.
 - Cameras: the ECS `CameraManager`, the follow camera rig (`followObjectCameraRig`, to the toolkit
   in p602's map) and the debug camera. A camera rail is a new rig.
 - The asset pipeline (`gatherAppData`, Zod schemas in `src/_engine/schemas/`) is where a new asset

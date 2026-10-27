@@ -2,7 +2,7 @@
 
 Status: open | to become a plan: an app's own tone mapping curve
 Category: Rendering, Debug
-Found: 2026-10-26, p804 Phase 0 (`docs/plans/p804_forms-and-bindings.md`, the event order probe)
+Found: 2026-10-26, p804 Phase 0 (`docs/plans/_DONE_p804_forms-and-bindings.md`, the event order probe)
 
 The Renderer controls tab (`src/_engine/kernel/render/debug/_dbg__Renderer.ts`) lists every three
 tone mapping constant, `THREE.CustomToneMapping` ("Custom", 5) among them. Picking it sets

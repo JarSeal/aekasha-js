@@ -3,7 +3,7 @@ Category: Debug, Dev tooling
 Related: \_DONE_p342_dev-file-server.md (builds on it: the routes, `writeDevFiles`, save entry
 writes, the "File server" folder; this plan is its §5 question 4), \_DONE_p085_material-editor-params-and-persistence.md
 (the material overrides this plan saves), p150_current-entity-data-source-info-on-edit-windows.md
-(origin info on the same camera and light data), p800_debugger-ui-overhaul.md (the menu and its settings on p803's and p804's components)
+(origin info on the same camera and light data), p800_debugger-ui-overhaul.md (the menu and its settings on p803's and p804's components), \_DONE_p804_forms-and-bindings.md (the settings' form: `createForm`'s validation, error summary and busy submit, the property grid and the fields)
 
 # Save Menu and File Server Settings
 
