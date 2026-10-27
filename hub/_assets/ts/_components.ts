@@ -315,7 +315,7 @@ const DIALOG_STATES: DialogState[] = [
   {
     label: 'With a drop-down',
     props: { closeOnEscape: true },
-    text: 'A drop-down in a dialog, as the uiKit embed opens it. Open its list and press Escape: the first press closes the list, the next the dialog.',
+    text: 'A drop-down in a dialog, as the uiKit embed’s form has one. Open its list and press Escape: the first press closes the list, the next the dialog.',
     hasDropDown: true,
   },
   {

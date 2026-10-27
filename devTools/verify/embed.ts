@@ -77,21 +77,23 @@ const UI_KIT = {
   window: '#uiKitEmbedWindow',
   windowTitle: '#uiKitEmbedWindow .aekWindow__title',
   dialog: '#uiKitEmbedDialog',
-  // Escape is pressed with the focus on its drop-down's trigger: on its close button, the button's
+  // Escape is pressed with the focus on its select's trigger: on its close button, the button's
   // tooltip would show and take the first Escape (the innermost overlay, p803 D7)
-  dialogFocus: '#uiKitEmbedDialog .aekDropDownTrigger',
+  dialogFocus: '#uiKitEmbedDialog .uiKitEmbedShade .aekDropDownTrigger',
   backdrop: '.uiKitEmbedBackdrop',
   // The host page's own button (embedHost.html), outside the HUD root
   hostButton: 'body > p > button',
   toast: '#uiKitEmbedToasts .aekToast',
-  list: '.uiKitEmbedList',
+  // The form's select (p804 D12): its list keeps its place in the DOM in the top layer
+  list: '.uiKitEmbedShade .aekDropDownList',
   tooltip: '.uiKitEmbedTooltip',
-  listItem: '.uiKitEmbedList li',
+  listItem: '.uiKitEmbedShade .aekDropDownList li',
 } as const;
-/** The window's button that opens the dialog, and the dialog's drop-down trigger the list opens
- * from: the scene opens neither at load (p803 Phase 8: a page's focus would jump into the embed) */
+/** The window's button that opens the dialog, and the trigger of the dialog's select the list
+ * opens from: the scene opens neither at load (p803 Phase 8: a page's focus would jump into the
+ * embed); the dialog opens once its form's module loaded */
 const UI_KIT_OPEN_DIALOG = '#uiKitEmbedWindow .uiKitEmbedOpenDialog';
-const UI_KIT_LIST_TRIGGER = '#uiKitEmbedDialog .aekDropDownTrigger';
+const UI_KIT_LIST_TRIGGER = '#uiKitEmbedDialog .uiKitEmbedShade .aekDropDownTrigger';
 /** The elements that must stay inside the container */
 const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list', 'tooltip'] as const;
 /** The elements whose font size must not follow the host's root */
@@ -301,7 +303,11 @@ const checkUiKitAtRoot = async (
       const headStylesBefore = await headStyles();
       const mounted = await page.evaluate(() => window.__embedTest.mount({ target: '#inline' }));
       if (mounted.isFallback) problems.push('mounted as the fallback');
-      // The dialog from the window's button, and its drop-down's list from its trigger
+      // The window's tooltip shows until the dialog opens (p804 D12: the dialog hides it), so it's
+      // measured first
+      await waitFor(async () => !!(await read()).tooltip);
+      const { tooltip } = await read();
+      // The dialog from the window's button, and its select's list from its trigger
       await page.click(UI_KIT_OPEN_DIALOG, { timeout: 10_000 });
       await page.click(UI_KIT_LIST_TRIGGER, { timeout: 10_000 });
       // Every piece open, and the toast done sliding in (its box the same on two polls)
@@ -311,9 +317,11 @@ const checkUiKitAtRoot = async (
         const toast = JSON.stringify(r.toast);
         const isSettled = toast === lastToast;
         lastToast = toast;
-        return isSettled && UI_KIT_INSIDE.every((name) => r[name]) && !!r.container;
+        return (
+          isSettled && UI_KIT_INSIDE.every((name) => name === 'tooltip' || r[name]) && !!r.container
+        );
       });
-      let r = await read();
+      let r = { ...(await read()), tooltip };
       const container = r.container;
       if (!container) {
         problems.push('no container');

@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   createActionMap,
   createMeshEntity,
+  getDelta,
   getECSWorld,
   getMaterial,
   loadScene,
@@ -13,30 +14,47 @@ import {
   closeDraggableWindow,
   CMP,
   createButton,
+  createCheckbox,
+  createColorField,
   createDropDown,
+  createFolder,
+  createForm,
   createKbd,
+  createMonitor,
   createProgressBar,
+  createPropertyGrid,
+  createQuaternionField,
+  createSelectField,
+  createSlider,
   createSplitButton,
+  createTextField,
   createToaster,
+  createVectorField,
+  getDraggableWindow,
   getHUDRootCMP,
   getKindWindowId,
   openDialog,
+  openDraggableWindow,
   registerDraggableWindowKind,
   removeToaster,
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
 } from 'aekasha/ui';
-import type { Button, ProgressBar, ToastType } from 'aekasha/ui';
+import type { Button, ProgressBar, PropertyGrid, ToastType } from 'aekasha/ui';
+import { SpinComponentType } from '../ecs/SpinComponent';
 import './exampleUiKit.scss';
 
 const SCENE_ID = 'exampleUiKit';
 const TOASTER_ID = 'exampleUiKitToasts';
 const SHAPE_WINDOW_KIND = 'exampleUiKitShape';
 const SETTINGS_WINDOW_ID = 'exampleUiKitSettings';
+const RENAME_WINDOW_ID = 'exampleUiKitRename';
 const MENU_DIALOG_ID = 'exampleUiKitMenu';
 const MENU_CONTEXT = 'MENU';
 /** A turn is an eighth of a full one: a shape's window shows them as eight segments */
 const TURNS_PER_REVOLUTION = 8;
+const RAD_TO_DEG = 180 / Math.PI;
+const NAME_MAX_LENGTH = 12;
 
 type ShapeId = 'box' | 'pyramid' | 'prism';
 
@@ -62,16 +80,34 @@ const shapeColors = {} as Record<ShapeId, string>;
 const shapeTurns = {} as Record<ShapeId, number>;
 const shapeEntityIds = {} as Record<ShapeId, number>;
 const shapeButtons = {} as Record<ShapeId, Button>;
+/** What the shapes are called: the Rename form changes it */
+const shapeNames = {} as Record<ShapeId, string>;
 /** The open shape windows' turn bars, set by their content and taken off when it goes */
 const turnBars = new Map<ShapeId, ProgressBar>();
 let groundColor = GROUND_COLORS[0].value;
+/** The shape the Scene settings window shows, and its grid while the window is open */
+let settingsShape: ShapeId = 'box';
+let settingsGrid: PropertyGrid | null = null;
 
-const getShapeName = (shapeId: ShapeId) => SHAPES.find((s) => s.id === shapeId)?.name ?? shapeId;
+const getShapeName = (shapeId: ShapeId) => shapeNames[shapeId] ?? shapeId;
+/** A shape's material id, from its first name: a rename leaves it */
+const getMaterialId = (shapeId: ShapeId) =>
+  `uiKit${SHAPES.find((s) => s.id === shapeId)?.name ?? shapeId}`;
 const getColorLabel = (color: string) => COLORS.find((c) => c.value === color)?.label ?? color;
 
-const setMaterialColor = (materialId: string, color: string) => {
+const getStandardMaterial = (materialId: string) => {
   const material = getMaterial(materialId);
-  if (material instanceof THREE.MeshStandardMaterial) material.color.set(color);
+  return material instanceof THREE.MeshStandardMaterial ? material : null;
+};
+
+const setMaterialColor = (materialId: string, color: string) =>
+  getStandardMaterial(materialId)?.color.set(color);
+
+const setMaterialWireframe = (materialId: string, on: boolean) => {
+  const material = getStandardMaterial(materialId);
+  if (!material || material.wireframe === on) return;
+  material.wireframe = on;
+  material.needsUpdate = true;
 };
 
 export const scene = async () => {
@@ -109,13 +145,22 @@ export const scene = async () => {
   });
 
   // A material outlives a visit: start each one from the defaults
+  const world = getECSWorld();
   for (const shape of SHAPES) {
     shapeColors[shape.id] = shape.color;
     shapeTurns[shape.id] = 0;
-    setMaterialColor(`uiKit${shape.name}`, shape.color);
+    shapeNames[shape.id] = shape.name;
+    setMaterialColor(getMaterialId(shape.id), shape.color);
+    setMaterialWireframe(getMaterialId(shape.id), false);
+    // The ECS example's SPIN (its system runs in every world): still until the settings spin it
+    world.addComponent(shapeEntityIds[shape.id], SpinComponentType.SPIN, {
+      axis: { x: 0, y: 1, z: 0 },
+      speed: 0,
+    });
   }
   groundColor = GROUND_COLORS[0].value;
   setMaterialColor('uiKitGround', groundColor);
+  settingsShape = 'box';
 
   const panel = createHudPanel();
   createToasts();
@@ -135,7 +180,8 @@ export const scene = async () => {
 };
 
 // #region ui-kit-hud (shown in the Hub: hub/pages/examples/ui-kit/)
-/** The HUD panel: a button per shape (its window), the turns, the settings and the menu */
+/** The HUD panel: a button per shape (its window), the turns, the settings, the rename form and
+ * the menu */
 const createHudPanel = () => {
   const panel = getHUDRootCMP().add({ class: 'exampleUiKitHud' });
   panel.add({ tag: 'h2', text: 'Shapes' });
@@ -143,7 +189,7 @@ const createHudPanel = () => {
     const button = createButton({
       label: shape.name,
       class: 'exampleUiKitShapeButton',
-      tooltip: `The ${shape.name.toLowerCase()}'s window: its colour and its turns`,
+      tooltip: 'Its window: its colour and its turns',
       onClick: () => toggleShapeWindow(shape.id),
     });
     // A custom property, which the button's swatch (its ::before) reads
@@ -151,15 +197,16 @@ const createHudPanel = () => {
     shapeButtons[shape.id] = button;
     panel.add(button.cmp);
   }
-  // An action and its variants: turn them all, or one, from the menu button next to it
+  // An action and its variants: turn them all, or one, from the menu button next to it. A getter
+  // of items, read on each open, so a renamed shape's item has its new name
   const turn = createSplitButton({
     label: 'Turn all',
     kbd: createKbd({ keys: 'Space' }),
     menuLabel: 'Turn one',
     onClick: () => turnAllShapes(),
-    items: [
+    items: () => [
       ...SHAPES.map((shape) => ({
-        label: `Turn the ${shape.name.toLowerCase()}`,
+        label: `Turn ${getShapeName(shape.id)}`,
         onSelect: () => turnShape(shape.id),
       })),
       { type: 'separator' as const },
@@ -168,6 +215,7 @@ const createHudPanel = () => {
   });
   panel.add(turn.cmp);
   panel.add(createButton({ label: 'Settings', onClick: () => toggleSettingsWindow() }).cmp);
+  panel.add(createButton({ label: 'Rename', onClick: () => toggleRenameWindow() }).cmp);
   // `kbd` is a hint (and `aria-keyshortcuts`): the key is the scene's action map's
   panel.add(
     createButton({ label: 'Menu', kbd: createKbd({ keys: 'Escape' }), onClick: () => openMenu() })
@@ -178,13 +226,15 @@ const createHudPanel = () => {
 
 const applyShapeColor = (shapeId: ShapeId, color: string) => {
   shapeColors[shapeId] = color;
-  setMaterialColor(`uiKit${getShapeName(shapeId)}`, color);
+  setMaterialColor(getMaterialId(shapeId), color);
   // Written in place: no new props object per update
   shapeButtons[shapeId].cmp.updateStyle({ '--swatch': color });
 };
 
+/** A colour from a shape window's drop-down: the settings' colour field shows it (a flash) */
 const setShapeColor = (shapeId: ShapeId, color: string) => {
   applyShapeColor(shapeId, color);
+  settingsGrid?.refresh();
   showToast(`${getShapeName(shapeId)}: ${getColorLabel(color)}`);
 };
 // #endregion ui-kit-hud
@@ -220,6 +270,8 @@ const createShapePanel = (shapeId: ShapeId) => {
       // The trigger's label re-reads `value` after this
       setShapeColor(shapeId, color);
     },
+    // A colour the settings' colour field set that isn't one of these
+    placeholder: 'Custom',
     title: 'Colour',
   });
   panel.add(colorDropDown.cmp);
@@ -245,28 +297,122 @@ const toggleShapeWindow = (shapeId: ShapeId) =>
 const toggleSettingsWindow = () =>
   toggleDraggableWindow({
     id: SETTINGS_WINDOW_ID,
-    title: 'Settings',
+    title: 'Scene settings',
     content: () => createSettingsPanel(),
     // A % position is the window's centre: near the right edge, below the toasts
-    position: { x: 86, y: 58 },
+    position: { x: 80, y: 56 },
     units: { position: { x: '%', y: '%' } },
-    size: { w: 260, h: 190 },
+    size: { w: 380, h: 400 },
     closeOnSceneChange: true,
   });
+// #endregion ui-kit-windows
 
+// #region ui-kit-settings (shown in the Hub: hub/pages/examples/ui-kit/)
+const ORIGIN = { x: 0, y: 0, z: 0 };
+const NO_ROTATION = { x: 0, y: 0, z: 0, w: 1 };
+
+const getSpin = (shapeId: ShapeId) =>
+  getECSWorld().getComponent(shapeEntityIds[shapeId], SpinComponentType.SPIN);
+
+/** The options of a select of the shapes: a getter, read on each open, has their names now */
+const getShapeOptions = () =>
+  SHAPES.map((shape) => ({ label: getShapeName(shape.id), value: shape.id }));
+
+/**
+ * The Scene settings: a property grid whose rows follow the shape picked at its top, each bound
+ * with a getter and a setter to the scene's own state (the ECS, the materials, this file's
+ * records), and a folder for the scene's ground and its frame time
+ */
 const createSettingsPanel = () => {
-  const panel = CMP({ class: 'exampleUiKitPanel' });
-  panel.add({ tag: 'label', text: 'Ground' });
-  const groundDropDown = createDropDown({
-    options: GROUND_COLORS,
-    value: () => groundColor,
-    onChange: (color) => {
-      groundColor = color;
-      setMaterialColor('uiKitGround', color);
+  const panel = CMP({
+    class: 'exampleUiKitPanel',
+    onRemoveCmp: () => {
+      if (settingsGrid === grid) settingsGrid = null;
     },
-    title: 'Ground',
   });
-  panel.add(groundDropDown.cmp);
+  const id = () => shapeEntityIds[settingsShape];
+  const grid = createPropertyGrid({
+    labelWidth: 30,
+    children: [
+      createSelectField({
+        label: 'Shape',
+        get: () => settingsShape,
+        set: (shapeId) => {
+          settingsShape = shapeId;
+        },
+        options: getShapeOptions,
+        // Every row reads the new shape's values (the changed ones flash)
+        onChange: () => grid.refresh(),
+      }),
+      // Its SPIN component's speed, in radians a second, shown in degrees
+      createSlider({
+        label: 'Spin',
+        get: () => (getSpin(settingsShape)?.speed ?? 0) * RAD_TO_DEG,
+        set: (degrees) => {
+          const spin = getSpin(settingsShape);
+          if (spin) spin.speed = degrees / RAD_TO_DEG;
+        },
+        min: 0,
+        max: 360,
+        step: 5,
+        unit: '°/s',
+      }),
+      createColorField({
+        label: 'Colour',
+        get: () => shapeColors[settingsShape],
+        set: (color) => applyShapeColor(settingsShape, color),
+        palette: COLORS.map((color) => color.value),
+        // A finished pick: the shape's window shows it
+        onChange: (_color, { last }) => {
+          if (last) updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
+        },
+      }),
+      // The ECS transform's vectors are to read: a write goes through setTransform
+      createVectorField({
+        label: 'Position',
+        get: () => getECSWorld().getPosition(id()) ?? ORIGIN,
+        set: (pos) => getECSWorld().setTransform(id(), { pos }),
+        step: 0.1,
+      }),
+      // Read every 100 ms: it follows the spin and the turns. Y first (YXZ), so a turn about y
+      // shows as its own angle all the way round (in XYZ past 90° it's x and z at 180°)
+      createQuaternionField({
+        label: 'Rotation',
+        get: () => getECSWorld().getRotation(id()) ?? NO_ROTATION,
+        set: (rot) => getECSWorld().setTransform(id(), { rot }),
+        order: 'YXZ',
+        interval: 100,
+      }),
+      createCheckbox({
+        label: 'Wireframe',
+        get: () => getStandardMaterial(getMaterialId(settingsShape))?.wireframe ?? false,
+        set: (on) => setMaterialWireframe(getMaterialId(settingsShape), on),
+      }),
+      createFolder({
+        title: 'Scene',
+        children: [
+          createSelectField({
+            label: 'Ground',
+            get: () => groundColor,
+            set: (color) => {
+              groundColor = color;
+              setMaterialColor('uiKitGround', color);
+            },
+            options: GROUND_COLORS,
+          }),
+          // Read every 200 ms (a monitor's default), while it shows
+          createMonitor({
+            label: 'Frame time',
+            get: () => getDelta() * 1000,
+            precision: 1,
+            unit: 'ms',
+          }),
+        ],
+      }),
+    ],
+  });
+  settingsGrid = grid;
+  panel.add(grid.cmp);
   panel.add({ tag: 'label', text: 'Toasts' });
   const row = panel.add({ class: 'exampleUiKitRow' });
   row.add(
@@ -281,7 +427,81 @@ const createSettingsPanel = () => {
   );
   return panel;
 };
-// #endregion ui-kit-windows
+// #endregion ui-kit-settings
+
+// #region ui-kit-form (shown in the Hub: hub/pages/examples/ui-kit/)
+const toggleRenameWindow = () =>
+  toggleDraggableWindow({
+    id: RENAME_WINDOW_ID,
+    title: 'Rename a shape',
+    content: () => createRenamePanel(),
+    // Under the HUD panel
+    position: { x: 16, y: 390 },
+    size: { w: 300, h: 320 },
+    closeOnSceneChange: true,
+  });
+
+const isNameTaken = (name: string, shapeId: ShapeId) =>
+  SHAPES.some(
+    (shape) =>
+      shape.id !== shapeId && getShapeName(shape.id).toLowerCase() === name.trim().toLowerCase()
+  );
+
+/**
+ * A form: a select and a required, checked text field bound to its own values (`{ target, key }`),
+ * which a valid submit reads. The form shows each error under its field and a summary that takes
+ * the focus; Enter in the text field submits it.
+ */
+const createRenamePanel = () => {
+  const values: { shapeId: ShapeId; name: string } = { shapeId: 'box', name: '' };
+  const form = createForm({
+    children: [
+      createSelectField({
+        label: 'Shape',
+        target: values,
+        key: 'shapeId',
+        options: getShapeOptions,
+      }),
+      createTextField({
+        label: 'New name',
+        target: values,
+        key: 'name',
+        hint: `At most ${NAME_MAX_LENGTH} characters`,
+        maxLength: NAME_MAX_LENGTH,
+        required: 'Give the shape a name',
+        validate: (name) =>
+          isNameTaken(name, values.shapeId) ? 'Another shape has that name' : null,
+      }),
+    ],
+    submitLabel: 'Rename',
+    resetLabel: 'Reset',
+    onSubmit: () => {
+      renameShape(values.shapeId, values.name.trim());
+      // The fields back to their defaults, the checks off until the next submit; the select's
+      // label read again (its value is the same, its option's name isn't)
+      form.reset();
+      form.refresh();
+    },
+  });
+  const panel = CMP({ class: 'exampleUiKitPanel' });
+  panel.add(form.cmp);
+  return panel;
+};
+
+const renameShape = (shapeId: ShapeId, name: string) => {
+  const previous = getShapeName(shapeId);
+  shapeNames[shapeId] = name;
+  shapeButtons[shapeId].setLabel(name);
+  // An open window's title: opening it again updates it
+  const windowId = getKindWindowId(SHAPE_WINDOW_KIND, shapeId);
+  if (getDraggableWindow(windowId)?.isOpen) {
+    openDraggableWindow({ id: windowId, title: name, focusFirstElement: false });
+  }
+  // The settings' shape select shows the new name
+  settingsGrid?.refresh();
+  showToast(`${previous} is now ${name}`, 'success');
+};
+// #endregion ui-kit-form
 
 // #region ui-kit-toasts (shown in the Hub: hub/pages/examples/ui-kit/)
 /** The scene's toaster, top right. The engine makes one only in the debug env, so an app that
@@ -390,8 +610,9 @@ const moveMenuFocus = (step: number) => {
 
 const resetColors = () => {
   for (const shape of SHAPES) applyShapeColor(shape.id, shape.color);
-  // The open shape windows' drop-downs show the new colours
+  // The open shape windows' drop-downs show the new colours, and the settings' colour field
   updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
+  settingsGrid?.refresh();
   showToast('Colours reset');
 };
 

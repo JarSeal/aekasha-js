@@ -1773,6 +1773,61 @@ D15 and D12's budgets.
      at 1400 and 390 px wide, no horizontal scroll, no page error).
 3. Section 3, the example's panel and form (as the user decided), its walkthrough; the `uiKit`
    profile's form and the budgets in `sbp.config.ts`.
+   - **Done 2026-10-27.** The user's calls at the start: D15's example as proposed, folded into
+     the existing Settings window, with the form in a window of its own; the `uiKit` profile's
+     form in its dialog.
+   - **The example** (`exampleUiKit.ts`, 639 lines, regions `ui-kit-settings` and `ui-kit-form`):
+     the Settings window is "Scene settings", a property grid whose rows follow a Shape select at
+     its top (`{ get, set }` over `settingsShape`, its `onChange` the grid's `refresh()`): Spin (a
+     slider in °/s over the ECS example's SPIN component, which each shape now gets with speed 0, so
+     the scene starts still), Colour (the colour field over `shapeColors`, the shape windows'
+     drop-down's value too: a drop-down pick refreshes the grid, a `last: true` colour change
+     rebuilds the shape windows, whose drop-down got `placeholder: 'Custom'`), Position (a vector
+     over `getPosition` / `setTransform`), Rotation (a quaternion field, `order: 'YXZ'`, since in
+     XYZ a spin about y past 90° shows as x and z at 180°; `interval: 100` to follow the spin),
+     Wireframe (the material's, `needsUpdate` on a change, reset on each visit), and a "Scene"
+     folder with the Ground select and a frame-time monitor (`getDelta`). The toast buttons stay
+     under it. "Rename" (a HUD button) opens a window with `createForm`: a Shape select and a New
+     name text field (`required` with its text, `maxLength` 12, `validate`: no other shape's name,
+     case ignored) over a plain object; a submit renames (the HUD button's `setLabel`, the split
+     button's menu, now an items getter, an open shape window's title through
+     `openDraggableWindow` with `focusFirstElement: false`, the settings' select), then
+     `form.reset()` and `form.refresh()` (the select's value is unchanged, so only a refresh redraws
+     its option's new name: found in the browser). A shape's material id stays its first name
+     (`getMaterialId`); the button's tooltip lost the shape's name ("Its window: …").
+   - **The embed's form is a module of its own** (`uiKitEmbedForm.ts`, over D12's "the scene gets
+     a small form"): the dialog's first open `import()`s it, so the build gives the form its own
+     chunk and `assets/uiKitEmbed.js` stays p800 D10's "what does a HUD cost". The dialog ("The
+     box", 340 × 320) holds a property grid bound to the box: Turn (a slider, -180° to 180°) and
+     Tilt (a number field, -90° to 90°) as the box's Euler y and x in degrees through
+     `setTransform`, Wireframe, Shade (a select of three colours with `placeholder: 'Custom'`) and
+     Colour (a hex number over the material), the select's and the colour's `onChange` refreshing
+     the grid. The select replaced the drop-down (`verify:embed` finds its trigger and list by the
+     field's class, `uiKitEmbedShade`; the list keeps its DOM place in the top layer). The taller
+     dialog covered the window's tooltip (shown at load): the dialog's open hides it, and
+     `verify:embed` measures the tooltip before its clicks.
+   - **The budgets** (`suggestBudget` of the report): `assets/uiKitEmbedForm.js` 19 KiB (17.2 kB:
+     the "forms group" line, since a group budget measures only initial code) and its CSS 5 KiB
+     (3.8 kB); `assets/hsva.js` 4 KiB (2.7 kB; the plan's 3 KiB is under the 1 KiB margin);
+     `assets/uiKitEmbed.js` 19 → 18 KiB (16.0 kB, the drop-down gone into the form) and its CSS
+     6 → 5 KiB (3.6 kB); and `modules: { '_engine/ui/forms/': 0 }` for the app and `uiKit`, so a
+     field reaching the first download fails. In the app's build Rollup shares the example's and
+     the embed form's fields as `assets/Slider.js` (17.2 kB) and `assets/DialogWindow.js`
+     (15.4 kB); the example's own chunk went from 4.7 to 11.5 kB.
+   - **Texts:** the example's page (intro, tags, description, "Scene settings" and "A form"
+     sections, the HUD image retaken at 1600 × 1000 in the dark theme with the debugger's bar
+     hidden), the scene JSONs' descriptions, the UI kit overview's and the forms page's "In a
+     build" and the component library's `build-text.md` (`{{sbp:…}}` of the form's chunks and the
+     picker), the dialog demo's text, and the embed's lines in `src/_engine/ui/CLAUDE.md`,
+     `devTools/sbp/CLAUDE.md` and `devTools/verify/CLAUDE.md` (they were wrong once the drop-down
+     went; section 4 keeps the rest).
+   - Checked: `yarn test` (215 files, 1824 tests), ESLint, `tsc` and `tsc -p hub`,
+     `yarn sbp --profile all` (all budgets within), `yarn verify:embed` (both profiles),
+     `yarn verify:ui --only dialog` (the demo's text: its two states' shots recorded),
+     `yarn verify:scenes --only exampleUiKit,uiKitEmbed` (8 passed), `yarn verify:baselines
+     --update` (the bundles; API and docs unchanged, no debug code), `yarn hub:build` (no
+     warning), and both scenes driven in Chrome (the settings, a spin, the form's errors and a
+     rename; the embed's dialog and its picker), no console error.
 4. Section 4, the `CLAUDE.md` files, `readme.md`, `layoutRules.ts`' note; `yarn hub:build` in both
    modes, `verify:ui` against the public build.
 

@@ -2,9 +2,15 @@
 
 Each field, editor and container is its own module with its own styles, so a build carries only
 the ones the app makes: a settings menu of number fields, sliders, checkboxes and selects brings
-no colour, rotation or editor code. Three pieces load or carry more:
+no colour, rotation or editor code. The `uiKit` embed profile measures a small form: its dialog
+holds a property grid of a slider, a number field, a checkbox, a select and a colour field, in a
+module the dialog's first open imports. From the last `yarn sbp` report (gzip), the fields, the
+grid, the binding and the scheduler come to {{sbp:uiKit.chunk:assets/uiKitEmbedForm.js}} of code
+and {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}} of styles, on top of the HUD's window, dialog
+and button. None of it is in the first download. Three pieces load or carry more:
 
-- **The colour picker** is its own chunk, loaded the first time a colour panel opens.
+- **The colour picker** is its own chunk, {{sbp:uiKit.chunk:assets/hsva.js}}, loaded the first
+  time a colour panel opens.
 - **The gradient and curve editors** are modules of their own, in a build only when the app makes
   one.
 - **[`addPropertyGridItems`](api:addPropertyGridItems)** can make any field from a value, so it

@@ -6,8 +6,8 @@ export type UiKitMountOptions = Omit<MountAekashaOptions, 'data' | 'features' | 
 
 /**
  * Mounts the uiKit embed (`sbp.config.ts`' `uiKit` profile, built into `dist-embed/uiKit/`): its
- * one scene, no feature, with the UI kit's window, toast, dialog and drop-down open over it (the
- * scene opens them). A site imports this module's built file and calls it:
+ * one scene, no feature, with the UI kit's window and toast open over it, and its dialog with a
+ * small form (the scene opens them). A site imports this module's built file and calls it:
  * `import { mount } from './aekasha/uiKit.embed.js'; mount({ target: '#kit' })`.
  */
 export const mount = (opts: UiKitMountOptions): Promise<AekashaMount> =>

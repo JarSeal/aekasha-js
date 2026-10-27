@@ -67,6 +67,9 @@ const profiles: SbpProfile[] = [
         // The built-in icons register only in the debug env (p611 D10)
         '_engine/ui/core/icons/BuiltInIcons.ts': 0,
         '_engine/ui/core/icons/svg/': 0,
+        // p804 D12: the form fields load with the scenes that make them (the UI kit example's
+        // settings and form), never in the first download
+        '_engine/ui/forms/': 0,
       },
     },
   },
@@ -105,8 +108,8 @@ const profiles: SbpProfile[] = [
   // #endregion banner-profile
   {
     // The UI kit in an embed (p801 D9): one code-made scene that opens a window with a button and
-    // its tooltip, a toast and a dialog with a drop-down, no feature, built into dist-embed/uiKit/;
-    // `yarn verify:embed` checks the kit's sizes and bounds in it
+    // its tooltip, a toast and a dialog with a small form (p804 D12), no feature, built into
+    // dist-embed/uiKit/; `yarn verify:embed` checks the kit's sizes and bounds in it
     id: 'uiKit',
     entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
     // Not `uiKit`: a scene file named like the entry would emit a second `assets/uiKit.css` (its
@@ -122,14 +125,26 @@ const profiles: SbpProfile[] = [
         'uiKit.embed.js': 2 * KIB,
         'assets/uiKit.embed.js': 296 * KIB,
         'assets/uiKit.css': 3 * KIB,
-        // The scene's chunk: the kit's window, dialog, drop-down, toaster, tooltip and button and
-        // their styles, loaded with the scene: what a HUD of those costs an app (p800 D10). Set by
-        // p803 Phase 7 from `suggestBudget` (17.9 KiB: the overlay layer, the windows' keys and
-        // ARIA, the searchable drop-down and the toaster's live regions from Phases 4-5; the
-        // button's 1.8 KiB with its Kbd and key names from Phase 7)
-        'assets/uiKitEmbed.js': 19 * KIB,
-        // The same pieces' styles, from `suggestBudget` (4.2 KiB: the button's 1.0 of it)
-        'assets/uiKitEmbed.css': 6 * KIB,
+        // The scene's chunk: the kit's window, dialog, toaster, tooltip and button and their
+        // styles, loaded with the scene: what a HUD of those costs an app (p800 D10). Set by p803
+        // Phase 7 from `suggestBudget` (17.9 KiB: the overlay layer, the windows' keys and ARIA,
+        // the searchable drop-down and the toaster's live regions from Phases 4-5; the button's
+        // 1.8 KiB with its Kbd and key names from Phase 7). p804 Phase 7: 19 → 18 KiB (16.0 KiB:
+        // the drop-down went into the dialog's form, below)
+        'assets/uiKitEmbed.js': 18 * KIB,
+        // The same pieces' styles, from `suggestBudget` (3.6 KiB: the button's 1.0 of it; the
+        // drop-down's went with it)
+        'assets/uiKitEmbed.css': 5 * KIB,
+        // p804 D12: the dialog's form, a module its first open imports (`uiKitEmbedForm.ts`): a
+        // property grid of a slider, a number field, a checkbox, a select (the drop-down) and a
+        // colour field, with the binding, the scheduler and the field shell they share: what a
+        // small form costs on top of the HUD. From `suggestBudget` (17.2 KiB)
+        'assets/uiKitEmbedForm.js': 19 * KIB,
+        // Its styles (3.8 KiB)
+        'assets/uiKitEmbedForm.css': 5 * KIB,
+        // The colour picker (`vanilla-colorful`'s HSVA picker), loaded on the colour panel's
+        // first open (p804 D8, D12): 2.7 KiB, its budget `suggestBudget`'s at least 1 KiB over
+        'assets/hsva.js': 4 * KIB,
       },
       groups: {
         three: 261 * KIB,
@@ -141,6 +156,10 @@ const profiles: SbpProfile[] = [
         app: 2 * KIB,
         // No feature reaches the initial chunks, as for the banner
         ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
+      },
+      modules: {
+        // p804 D12: the form fields load with the dialog's form
+        '_engine/ui/forms/': 0,
       },
     },
   },

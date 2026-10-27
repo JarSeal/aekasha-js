@@ -9,6 +9,11 @@ not a piece at a time: `yarn sbp --profile uiKit --why _engine/ui` lists its mod
   the debug env.
 - **The UI kit embed** (`uiKit` profile, which `yarn verify:embed` checks): the HUD root and CMP in
   the first download, {{sbp:uiKit.group:_engine/ui}} (budget {{sbp:uiKit.budget:_engine/ui}}); the
-  window, dialog, drop-down and toaster in its scene's chunk, {{sbp:uiKit.chunk:assets/uiKitEmbed.js}}
-  with its scene's code (budget {{sbp:uiKit.budget:assets/uiKitEmbed.js}}), and their styles,
-  {{sbp:uiKit.chunk:assets/uiKitEmbed.css}}.
+  window, dialog, button, tooltip and toaster in its scene's chunk,
+  {{sbp:uiKit.chunk:assets/uiKitEmbed.js}} with its scene's code (budget
+  {{sbp:uiKit.budget:assets/uiKitEmbed.js}}), and their styles,
+  {{sbp:uiKit.chunk:assets/uiKitEmbed.css}}; the dialog's form (a property grid of five fields) in
+  a chunk its first open loads, {{sbp:uiKit.chunk:assets/uiKitEmbedForm.js}} (budget
+  {{sbp:uiKit.budget:assets/uiKitEmbedForm.js}}) and {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}}
+  of styles, and the colour picker, {{sbp:uiKit.chunk:assets/hsva.js}} (budget
+  {{sbp:uiKit.budget:assets/hsva.js}}).
