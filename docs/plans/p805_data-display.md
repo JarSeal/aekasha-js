@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 section 1 done
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -492,6 +492,34 @@ each section for review.
 
 1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
    `yarn sbp --profile all` (the `_engine/ui` groups, the `uiKitEmbed` chunks: noted here).
+
+   As found (2026-10-27, `main` at `8f4d77ed`, the code as at `a858c060`: only plans changed):
+
+   - **`yarn sbp --profile all`:** passed, every diff unchanged, every budget within (one well
+     under: the app group, 12.0 kB of 14.0). Gzip, initial / lazy:
+
+     | Profile  | First download | `_engine/ui` group | Its budget | `uiKitEmbed` chunks (budget)                                           |
+     | -------- | -------------- | ------------------ | ---------- | ---------------------------------------------------------------------- |
+     | `app`    | 384.2 kB       | 5.4 kB / 42.2 kB   | 7 KiB      | –                                                                      |
+     | `banner` | 287.3 kB       | 4.0 kB / –         | 5 KiB      | –                                                                      |
+     | `uiKit`  | 286.4 kB       | 4.3 kB / 33.2 kB   | 6 KiB      | `uiKitEmbed.js` 16.0 kB (18 KiB), `uiKitEmbedForm.js` 17.2 kB (19 KiB) |
+
+     `_engine/ui/forms/` is 0 initial in `app` and `uiKit` (its `modules` lines): `data/` gets the
+     same lines.
+
+   - **`yarn verify:embed`:** every check passed (banner and uiKit, `INLINE` and `BACKGROUND`, the
+     UI kit at a 16 px and a 62.5 % root, the Hub's example page).
+   - **`yarn verify:ui`:** every state and keyboard script passed (81 boxes and states, axe clean),
+     but no screenshot baselines existed locally (87 new), so it was run again with
+     `--no-build --update` on `main` to record them: Phase 1's library split compares against
+     those.
+   - **`yarn verify:scenes --update`:** 101 recorded; `thirdPersonGymScene` fails in its three
+     debug configurations on WSL2 (SwiftShader), "the physics probe didn't reach step 600 in 300
+     s". It predates this plan: its `probeSteps: 600` came with `9e15d60d` (2026-10-13) and its
+     local baseline is still a 120-step entry (2026-10-22, `532910a+dirty`). The branch's runs read
+     those three as known, not as p805's; a `--headed` run on a real GPU (or a longer probe
+     timeout) is the fix, outside this plan.
+
 2. **The debugger's data display census** (a one-off script in the scratchpad, not committed):
    every table (its columns, groups, footer, row classes, clickable rows or cells, bars in cells,
    refresh rate, the most rows seen in the large scenes), every debugger list (each
