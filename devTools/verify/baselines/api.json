@@ -2801,7 +2801,9 @@
       "Badge": "TypeAlias",
       "BadgeProps": "TypeAlias",
       "BadgeTone": "TypeAlias",
-      "createBadge": "Function"
+      "BadgeValue": "TypeAlias",
+      "createBadge": "Function",
+      "updateBadge": "Function"
     },
     "src/_engine/ui/components/Button.ts": {
       "Button": "TypeAlias",
@@ -3022,6 +3024,31 @@
       "foldText": "Function",
       "getQueryWords": "Function",
       "matchesWords": "Function"
+    },
+    "src/_engine/ui/data/List.ts": {
+      "createList": "Function",
+      "List": "TypeAlias",
+      "ListAction": "TypeAlias",
+      "ListFilter": "TypeAlias",
+      "ListProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/ListRow.ts": {
+      "createElem": "Function",
+      "createListRows": "Function",
+      "ListActionCell": "TypeAlias",
+      "ListMarks": "TypeAlias",
+      "ListRow": "TypeAlias",
+      "ListRowsConfig": "TypeAlias",
+      "ListRowWritten": "TypeAlias",
+      "ROW_CLASS": "Variable",
+      "writeAttr": "Function"
+    },
+    "src/_engine/ui/data/Selection.ts": {
+      "createSelection": "Function",
+      "getSelectionGesture": "Function",
+      "SelectionGesture": "TypeAlias",
+      "SelectionMode": "TypeAlias",
+      "SelectionProps": "TypeAlias"
     },
     "src/_engine/ui/forms/AngleDial.ts": {
       "AngleDial": "TypeAlias",
@@ -4576,6 +4603,7 @@
       "Badge",
       "BadgeProps",
       "BadgeTone",
+      "BadgeValue",
       "BindingChange",
       "BindingScheduler",
       "BindingSchedulerProps",
@@ -4658,6 +4686,10 @@
       "KbdProps",
       "Link",
       "LinkProps",
+      "List",
+      "ListAction",
+      "ListFilter",
+      "ListProps",
       "LoadingOverlay",
       "LoadingOverlayProps",
       "Menu",
@@ -4714,6 +4746,7 @@
       "SelectOption",
       "SelectOptions",
       "SelectValue",
+      "SelectionMode",
       "Skeleton",
       "SkeletonProps",
       "Slider",
@@ -4799,6 +4832,7 @@
       "createInputGlyph",
       "createKbd",
       "createLink",
+      "createList",
       "createLoadingOverlay",
       "createMenu",
       "createMonitor",

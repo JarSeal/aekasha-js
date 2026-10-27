@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -890,7 +890,7 @@ As built (section 4):
   submenu) and a fields' menu box (`containers.ts`, not `fields.ts`, which is at 855 lines: the menu
   is a container's opt-in; on the forms fields guide), each with states and keyboard scripts.
 
-### Phase 2: tabs, the accordion, the splitter
+### Phase 2: tabs, the accordion, the splitter — done
 
 1. Tabs (D10).
 2. The accordion (D10).
@@ -971,6 +971,57 @@ As built (section 3):
 2. Virtual rows and reorder (D8), on the list.
 3. The tree: lazy children, the filter, virtual rows (D7).
 
+As built (section 1):
+
+- **`createList<T>`** (`data/List.ts`, `List.scss`, public with `ListProps`, `ListAction`,
+  `ListFilter`, `List`; the rows' parts in `data/ListRow.ts`, `@internal`, so `List.ts` stays under
+  800 lines): as D6, minus `reorder` and `virtual` (section 2), plus `label` (the name without a
+  heading), `headingLevel`, `isPlaceholder` (the debugger's `titlePlaceholder`), `disabled`,
+  `selected`, `onSelectionChange`, `getQuery` and `getKeyAt`. Decided on the way:
+  - **No `contextMenu` prop** (D6, D11 named one): the list would import the menu (about 10 kB
+    minified) whatever the app does with it, which D8's lesson rules out. The app makes
+    `createContextMenu` on `list.cmp.elem` and finds the row with `getKeyAt(elem)` (one context
+    menu over the whole list, as D11 wanted); the tree and the table do the same. The JSDoc, the
+    Hub page and the context menu's dev note say so.
+  - **`empty`** is a text or a CMP the app made (`createEmptyState`'s), not its props: the list
+    imports neither the empty state nor the button. No match is the list's own line and a "Clear
+    the filter" link-styled button.
+  - **The modes** (D4): `static` (`<ul>`) without `selection`, `onActivate` or `actions`; a listbox
+    with a `selection` or `onActivate` (a list with only `onActivate`, the debugger's row click,
+    is a listbox with no `aria-selected`); a grid with `actions`. Each action cell holds its own
+    `<button>` (not `createButton`: its toggle flips itself and has no icon setter), `aria-pressed`
+    from `pressed`, re-read after a press; `hidden` keeps the cell's width (`visibility`); a
+    disabled row's actions are disabled.
+  - **Selection doesn't follow the focus** (the arrows move only): Space selects (toggles in a
+    multiple selection), Enter and a click activate and, in a single selection, select. Shift + a
+    move or a click selects the range from the anchor, Ctrl / ⌘ + click toggles, Ctrl / ⌘ + A the
+    shown rows in place of the selection (again: none). A disabled row stays focusable (the menu's
+    rule) and is never selected or activated. Home / End go to the first / last row in a grid too
+    (D4's "as the listbox"), keeping the column like Up / Down.
+  - **The selection model is shared:** `data/Selection.ts` (`@internal` but `SelectionMode`, public:
+    `ListProps` names it, and the tree and table take it), `createSelection({ mode, getOrder })`
+    with the gestures, the anchor and `retain`; no DOM.
+  - **The tab stop is the list's own** (element based: a grid's stop can be an action button), not
+    `createRovingTabStop` (index based over one element per item); the keys use `getMoveTarget`
+    and the typeahead.
+  - **The filter field is a searchbox, not D4's combobox:** the focus moves into the list on
+    ArrowDown (D6), so no `aria-activedescendant`. Escape empties it through an overlay stack entry
+    while it has a query and the focus (a dialog around it stays open). The matched text is the
+    title, sub title, description, suffix and the badge's label; all but the badge are marked.
+  - **`BadgeValue`** (`Badge.ts`, public) is the badge prop's type the tabs and the list share,
+    written by `updateBadge` (`@internal`); `TabBadge` is its alias (no API change).
+  - **Focus kept:** `setItems` moves only the rows out of place (a moved focused row keeps the
+    focus); a removed or filtered out focused row gives it to the row now at its place.
+- **The library:** `_library/data.ts` and `dataChecks.ts` (`DATA_DEMOS`, `DATA_CHECKS`): static
+  parts, twelve scene objects (single, the filter field, a scrolling box; "Filter by “zz”"), five
+  layers (multiple) and four lights (a grid; "Empty the lights"); a clicked-row state and four
+  keyboard scripts.
+- **The Hub:** the data page is new now (`features/ui-kit/data/`, order 18, a `table` icon from
+  lucide), with its `## Lists` section; Phase 7 section 1 adds its "Showing live data" guide and
+  the other pieces. The UI kit overview's pieces table and intro link it. No `aek:covers` yet:
+  the kit's `CLAUDE.md` has the list and the selection as bullets of its UI kit section, which
+  Phase 7 section 4 moves into `## Data display`.
+
 ### Phase 4: the table
 
 1. The table: columns, formats and alignment, groups, footer, caption, sticky parts, stripes,
@@ -1020,11 +1071,14 @@ Filled by Phase 0's census and the later phases: what the port needs that isn't 
 now:
 
 - **The debugger list → `createList`** with `actions` (p806): `DebuggerListDef`'s `heading`,
-  `emptyText`, `perItemConfig.toggles` (`actions` with `pressed` and `iconOff`), `onClick`
-  (`onActivate`), `selectedItemId` (`selected`), `data` as a function (`items` on the tab's
-  scheduler), and each item's `subTitle`, `icon`, `badge`, `title`, `titlePlaceholder`,
-  `description`, `suffix`, `tooltip`, `disabled`. The keys change from Tab through every button to
-  one tab stop with arrows (D4): a visible change the debug suite's page says.
+  `emptyText` (`empty`), `perItemConfig.toggles` (`actions` with `pressed` and `iconOff`; a row's
+  `null` toggle value → the action's `hidden`), `onClick` (`onActivate`), `selectedItemId`
+  (`selection: 'single'` and `setSelected` on refresh: the debugger's selection is the open
+  window's, set from code), `data` as a function (`items` on the tab's scheduler), and each item's
+  `subTitle`, `icon` (`getSvgIcon`'s HTML), `badge`, `title`, `titlePlaceholder` (`isPlaceholder`),
+  `description`, `suffix`, `tooltip`, `disabled`. A row's context menu is a `createContextMenu`
+  on the list with `getKeyAt` (no prop: Phase 3 section 1). The keys change from Tab through
+  every button to one tab stop with arrows (D4): a visible change the debug suite's page says.
 - **The tab menus → `createTabs`** (p806): the drawer's and profiler's icon menus (`iconOnly`), the
   key shortcuts dialog's tab list; `_debugTabButtons.scss` goes.
 - **The profiler's and GPU memory's tables → `createTable`** (p807), with `setCell` for the live

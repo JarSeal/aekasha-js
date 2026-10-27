@@ -2,23 +2,13 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { swallowNextKeyUp } from '../overlays/OverlayStack';
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
-import { createBadge, type Badge, type BadgeTone } from './Badge';
+import { updateBadge, type Badge, type BadgeValue } from './Badge';
 import { createRovingTabStop, getMoveTarget } from './RovingFocus';
 import './Tabs.scss';
 import '../styles/kit.scss';
 
 /** A tab's badge: a count or a word, or the badge's label with its tone and spoken text. */
-export type TabBadge =
-  | string
-  | number
-  | {
-      /** What it shows */
-      label: string | number;
-      /** Its colour (default 'neutral'): never the only sign. */
-      tone?: BadgeTone;
-      /** What assistive tech hears in place of `label` (`'3 errors'`). */
-      spokenLabel?: string;
-    };
+export type TabBadge = BadgeValue;
 
 /** One tab of {@link createTabs}: its button and its panel's content. */
 export type TabDef = {
@@ -238,18 +228,9 @@ export const createTabs = (props: TabsProps): Tabs => {
 
   /** Writes a tab's badge in place (no allocation but the badge's first creation) */
   const writeBadge = (entry: TabEntry, badge: TabBadge | null | undefined) => {
-    if (badge === null || badge === undefined) return removeBadge(entry);
-    const isObject = typeof badge === 'object';
-    const label = isObject ? badge.label : badge;
-    const tone = isObject ? badge.tone : undefined;
-    const spokenLabel = isObject ? badge.spokenLabel : undefined;
-    if (entry.badge) {
-      entry.badge.setLabel(label, spokenLabel);
-      entry.badge.setTone(tone ?? 'neutral');
-      return;
-    }
-    entry.badge = createBadge({ label, tone, spokenLabel, class: 'aekTabs__badge' });
-    entry.tabCmp.add(entry.badge.cmp);
+    const next = updateBadge(entry.badge, badge, 'aekTabs__badge');
+    if (next && next !== entry.badge) entry.tabCmp.add(next.cmp);
+    entry.badge = next;
   };
 
   /** Writes a tab's button from its definition: its parts, tooltip and state */

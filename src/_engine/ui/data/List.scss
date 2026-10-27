@@ -1,0 +1,252 @@
+// The list's default styles (List.ts, p805 D6), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Rows on the surface they're on,
+// each at least 24 px tall (WCAG 2.5.8): the title in the text colour, the sub title, description
+// and suffix muted (4.5 on the surfaces, Tokens.test.ts), numbers in tabular figures. An
+// interactive row has the hover's surface; a selected one the accent's soft background and a bar
+// at its start (a shape, not only a colour); the focus ring is inset (the rows' box may scroll).
+@layer aek.components {
+  :where(.aekList) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekList__heading) {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekList__count) {
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-regular);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__search) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface);
+    color: var(--aek-text);
+    font: inherit;
+
+    &::placeholder {
+      color: var(--aek-text-muted);
+      opacity: 1;
+    }
+  }
+
+  :where(.aekList__rows) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--aek-list-max-height, none);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  :where(.aekList__rows[hidden], .aekList__row[hidden]) {
+    display: none;
+  }
+
+  :where(.aekList__row) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: stretch;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+  }
+
+  // The part that holds the content: the row itself, or a grid row's first cell
+  :where(.aekList__rows[data-mode='static'] > .aekList__row, .aekList__rows[data-mode='listbox']
+      > .aekList__row, .aekList__main) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+    padding: var(--aek-space-1) var(--aek-space-3);
+  }
+
+  :where(.aekList__rows[data-mode='listbox'] > .aekList__row, .aekList__main) {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekList__rows[data-mode='listbox'] > .aekList__row:hover, .aekList__row:hover
+      > .aekList__main) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekList__row[aria-selected='true']) {
+    background-color: var(--aek-accent-soft);
+    box-shadow: inset 3px 0 0 var(--aek-list-selected-color, var(--aek-accent));
+  }
+
+  :where(.aekList__row[aria-disabled='true'], .aekList__row[data-disabled]) {
+    color: var(--aek-text-disabled);
+  }
+
+  :where(.aekList__row[aria-disabled='true']),
+  :where(.aekList__row[aria-disabled='true']) :where(.aekList__main) {
+    cursor: not-allowed;
+  }
+
+  // Inside the rows' scroll box: a ring outside the row would be cut
+  :where(.aekList__row:focus-visible, .aekList__main:focus-visible, .aekList__action:focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekList__content) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  // The size is its font size: getSvgIcon's icon is 1em
+  :where(.aekList__icon) {
+    display: inline-flex;
+    flex: none;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekList__icon svg, .aekList__actionIcon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekList__badge) {
+    flex: none;
+  }
+
+  :where(.aekList__text) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.aekList__subTitle) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__title[data-placeholder]) {
+    color: var(--aek-text-muted);
+    font-style: italic;
+  }
+
+  :where(.aekList__description) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekList__suffix) {
+    flex: none;
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__subTitle[hidden], .aekList__description[hidden], .aekList__suffix[hidden], .aekList__icon[hidden]) {
+    display: none;
+  }
+
+  :where(.aekList__actionCell) {
+    display: flex;
+    flex: none;
+    align-items: center;
+    padding-inline-end: var(--aek-space-1);
+  }
+
+  :where(.aekList__action) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: max(24px, var(--aek-space-7));
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-sm);
+    background-color: transparent;
+    color: var(--aek-text);
+    font-size: var(--aek-icon-size-sm);
+    cursor: pointer;
+    appearance: none;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  // A hidden action keeps its cell's width, so the other actions stay aligned
+  :where(.aekList__action[hidden]) {
+    display: inline-flex;
+    visibility: hidden;
+  }
+
+  :where(.aekList__action[aria-pressed='false']) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekList__action:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+    color: var(--aek-text);
+  }
+
+  :where(.aekList__action:disabled) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  :where(.aekList__empty, .aekList__noMatch) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2);
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekList__empty[hidden], .aekList__noMatch[hidden]) {
+    display: none;
+  }
+
+  :where(.aekList__emptyText, .aekList__noMatchText) {
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+  }
+
+  :where(.aekList__clear) {
+    min-height: 24px;
+    margin: 0;
+    padding: 0 var(--aek-space-1);
+    border: 0;
+    background: none;
+    color: var(--aek-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  :where(.aekList__clear:hover) {
+    color: var(--aek-accent-hover);
+  }
+}

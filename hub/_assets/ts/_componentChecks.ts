@@ -16,6 +16,7 @@
  */
 import { CONTAINERS_CHECKS } from './_library/containersChecks';
 import { CORE_CHECKS } from './_library/coreChecks';
+import { DATA_CHECKS } from './_library/dataChecks';
 import { EDITORS_CHECKS } from './_library/editorsChecks';
 import { FIELDS_CHECKS } from './_library/fieldsChecks';
 import { LAYOUT_CHECKS } from './_library/layoutChecks';
@@ -99,4 +100,5 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   ...FIELDS_CHECKS,
   ...EDITORS_CHECKS,
   ...CONTAINERS_CHECKS,
+  ...DATA_CHECKS,
 };

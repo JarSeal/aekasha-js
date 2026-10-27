@@ -42,8 +42,9 @@
 | [Popover](hub:features/ui-kit/overlays#popovers)                                                | [`createPopover`](api:createPopover)                                                                                                                 | Interactive content next to its trigger: filters, a detail                   |
 | [Menu](hub:features/ui-kit/overlays#menus-and-split-buttons)                                    | [`createMenu`](api:createMenu)                                                                                                                       | A button's list of actions, on / off items and choices                       |
 | [Split button](hub:features/ui-kit/overlays#menus-and-split-buttons)                            | [`createSplitButton`](api:createSplitButton)                                                                                                         | An action, with its variants in a menu                                       |
+| [List](hub:features/ui-kit/data#lists)                                                          | [`createList`](api:createList)                                                                                                                       | Rows of the app's objects to select, act on and filter                       |
 
-The kit is in four pages, with a [component library](hub:features/ui-kit/library) that shows
+The kit is in five pages, with a [component library](hub:features/ui-kit/library) that shows
 every piece in every state:
 
 ::: cards features/ui-kit

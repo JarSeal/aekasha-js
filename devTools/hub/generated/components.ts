@@ -82,6 +82,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-link', calls: ['createLink'] },
   { slot: 'generated-components-menu', calls: ['createMenu', 'createSplitButton'] },
   { slot: 'generated-components-context-menu', calls: ['createContextMenu'] },
+  { slot: 'generated-components-list', calls: ['createList'] },
   { slot: 'generated-components-badge', calls: ['createBadge'] },
   { slot: 'generated-components-tag', calls: ['createTag'] },
   { slot: 'generated-components-spinner', calls: ['createSpinner'] },

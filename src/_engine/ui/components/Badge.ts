@@ -6,6 +6,20 @@ import '../styles/kit.scss';
 /** A badge's or a tag's colour: a status, the accent, or none. */
 export type BadgeTone = 'neutral' | 'accent' | 'info' | 'success' | 'warning' | 'danger';
 
+/** A badge as a piece's prop takes it (a tab's, a list row's): a count or a word, or the badge's
+ * label with its tone and spoken text. */
+export type BadgeValue =
+  | string
+  | number
+  | {
+      /** What it shows */
+      label: string | number;
+      /** Its colour (default 'neutral'): never the only sign. */
+      tone?: BadgeTone;
+      /** What assistive tech hears in place of `label` (`'3 errors'`). */
+      spokenLabel?: string;
+    };
+
 /** What {@link createBadge} draws. */
 export type BadgeProps = {
   /** What it shows: a count (`3`) or a status word (`'Beta'`). */
@@ -85,4 +99,30 @@ export const createBadge = (props: BadgeProps): Badge => {
     setLabel,
     setTone: (tone) => cmp.elem.setAttribute('data-tone', tone),
   };
+};
+
+/**
+ * Writes a piece's badge from its prop's value in place (a tab's, a list row's): null removes it,
+ * a value updates the badge there is or makes one with `className`, which the caller adds where it
+ * goes (it's new when the returned badge isn't the one passed).
+ * @internal
+ * @returns the badge now, or null
+ */
+export const updateBadge = (
+  badge: Badge | null,
+  value: BadgeValue | null | undefined,
+  className: string
+): Badge | null => {
+  if (value === null || value === undefined) {
+    badge?.cmp.remove();
+    return null;
+  }
+  const isObject = typeof value === 'object';
+  const label = isObject ? value.label : value;
+  const tone = (isObject ? value.tone : undefined) ?? 'neutral';
+  const spokenLabel = isObject ? value.spokenLabel : undefined;
+  if (!badge) return createBadge({ label, tone, spokenLabel, class: className });
+  badge.setLabel(label, spokenLabel);
+  badge.setTone(tone);
+  return badge;
 };

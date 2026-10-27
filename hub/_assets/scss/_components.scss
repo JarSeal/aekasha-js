@@ -350,3 +350,17 @@
   border-radius: var(--aek-radius-md);
   overflow: hidden;
 }
+
+// A list in a row takes a panel's width, its rows framed; the scene objects' box scrolls
+.hubComponentDemoGroup.hubDemoLists > .aekList {
+  width: min(100%, 24rem);
+
+  .aekList__rows {
+    border: 1px solid var(--aek-border);
+    border-radius: var(--aek-radius-md);
+  }
+}
+
+.aekList.hubDemoListScroll {
+  --aek-list-max-height: 12rem;
+}

@@ -1,7 +1,7 @@
 export { createAccordion } from './components/Accordion';
 export type { Accordion, AccordionItem, AccordionProps } from './components/Accordion';
 export { createBadge } from './components/Badge';
-export type { Badge, BadgeProps, BadgeTone } from './components/Badge';
+export type { Badge, BadgeProps, BadgeTone, BadgeValue } from './components/Badge';
 export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
 export { createButtonGroup } from './components/ButtonGroup';
@@ -178,6 +178,9 @@ export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
 export { createLink } from './components/Link';
 export type { Link, LinkProps } from './components/Link';
+export { createList } from './data/List';
+export type { List, ListAction, ListFilter, ListProps } from './data/List';
+export type { SelectionMode } from './data/Selection';
 export { createLoadingOverlay } from './components/LoadingOverlay';
 export type { LoadingOverlay, LoadingOverlayProps } from './components/LoadingOverlay';
 export { createMenu } from './overlays/Menu';
