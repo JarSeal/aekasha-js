@@ -1,3 +1,5 @@
+export { createAccordion } from './components/Accordion';
+export type { Accordion, AccordionItem, AccordionProps } from './components/Accordion';
 export { createBadge } from './components/Badge';
 export type { Badge, BadgeProps, BadgeTone } from './components/Badge';
 export { createButton } from './components/Button';

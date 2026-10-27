@@ -2788,6 +2788,12 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/Accordion.ts": {
+      "Accordion": "TypeAlias",
+      "AccordionItem": "TypeAlias",
+      "AccordionProps": "TypeAlias",
+      "createAccordion": "Function"
+    },
     "src/_engine/ui/components/Announcer.ts": {
       "announce": "Function"
     },
@@ -4552,6 +4558,9 @@
       "triplanarProjection"
     ],
     "aekasha/ui": [
+      "Accordion",
+      "AccordionItem",
+      "AccordionProps",
       "AddToastResponse",
       "AngleDial",
       "AngleDialProps",
@@ -4757,6 +4766,7 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createAccordion",
       "createAngleDial",
       "createBadge",
       "createBindingScheduler",

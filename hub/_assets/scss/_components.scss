@@ -250,13 +250,18 @@
   width: min(100%, 16rem);
 }
 
-// A tab panel's content: a line in the panel's padding
-.hubDemoTabPanel {
-  padding: var(--aek-space-4) var(--aek-space-3);
+// A tab's or a section's content: a line; in a tab panel, in a padding (a section has its own)
+.hubDemoTextPanel p {
+  margin: 0;
+}
 
-  p {
-    margin: 0;
-  }
+.aekTabs__panel > .hubDemoTextPanel {
+  padding: var(--aek-space-4) var(--aek-space-3);
+}
+
+// An accordion in a row takes a panel's width
+.hubComponentDemoGroup.hubDemoAccordions > .aekAccordion {
+  width: min(100%, 28rem);
 }
 
 // The parity box's custom item: a row of kit buttons (the day-night speed buttons)

@@ -390,6 +390,48 @@ inspector.select('log'); // from code: onSelect isn't called
 | Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel |
 | Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable          |
 
+## Accordions
+
+[`createAccordion`](api:createAccordion) stacks sections, each a heading with a button over a
+panel that opens and shuts with its height animated: one open at a time, or several with
+`multiple`. Give it the heading `level` that fits where it sits in your page or panel. A panel's
+`content` is a CMP, or a function that builds it the first time its section opens.
+
+```ts
+const help = createAccordion({
+  level: 3,
+  items: [
+    { key: 'move', title: 'How do I move?', content: moveHelp },
+    { key: 'save', title: 'How do I save?', content: () => buildSaveHelp() },
+  ],
+  expanded: ['move'],
+  onExpandedChange: (keys) => saveSetting('helpOpen', keys), // keeping it is yours
+});
+helpWindow.add(help.cmp);
+help.expand('save'); // from code: onExpandedChange isn't called
+```
+
+::: demo accordion
+:::
+
+- **An accordion or a folder?** A [folder](hub:features/ui-kit/forms#folders-and-fieldsets)
+  groups fields in a settings panel, joins their scheduler and has no heading. An accordion is a
+  page's or a panel's sections (a settings menu's groups, a help page's questions), each a real
+  heading in the document's outline.
+- Each panel is a landmark (`role="region"`, named by its header) while there are at most six:
+  more would crowd a screen reader's landmark list, so past six they're plain.
+- Shutting a section that holds the focus moves the focus to its header. Under reduced motion the
+  sections open and shut at once.
+
+| Accordion         |                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Props             | [`AccordionProps`](api:AccordionProps), a section's [`AccordionItem`](api:AccordionItem)                                                                                 |
+| Parts             | `.aekAccordion` with an `__item` per section, its `__heading` (the `<hN>`) holding `__trigger` (`__title`, `__chevron`), and `__region` holding `__clip` and `__content` |
+| States            | An item's `data-key`, `data-expanded`, `data-animating`; a trigger's `disabled`; a region's `hidden`                                                                     |
+| Custom properties | `--aek-accordion-padding` (the headers' and panels' inline padding)                                                                                                      |
+| Keys              | Each header a tab stop; Enter and Space open or shut its section; Up and Down move between the headers (wrapping), Home and End go to the first and last                 |
+| Assistive tech    | Headings of `level`, each holding a button with `aria-expanded` and `aria-controls`; each panel a `region` named by its header while there are at most six               |
+
 ## Key APIs
 
 - [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
@@ -406,6 +448,8 @@ inspector.select('log'); // from code: onSelect isn't called
   [`createSceneLoader`](api:createSceneLoader).
 - [`createTabs`](api:createTabs) ([`Tabs`](api:Tabs), [`TabDef`](api:TabDef),
   [`TabBadge`](api:TabBadge)).
+- [`createAccordion`](api:createAccordion) ([`Accordion`](api:Accordion),
+  [`AccordionItem`](api:AccordionItem)).
 
 ## Read more
 

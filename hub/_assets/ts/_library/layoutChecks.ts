@@ -1,5 +1,5 @@
 /**
- * The layout pieces' checks (`layout.ts`' demos): the tabs; the accordion and the splitter come
+ * The layout pieces' checks (`layout.ts`' demos): the tabs and the accordion; the splitter comes
  * next.
  */
 import type { UiDemoChecks } from '../_componentChecks';
@@ -9,6 +9,12 @@ const TAB = (name: string, key: string) => `#hubDemoTabs${name} [data-tab-key="$
 const TABS_LIST = (name: string) => `#hubDemoTabs${name} .aekTabs__list`;
 const SHOWN_PANEL = (name: string) => `#hubDemoTabs${name} .aekTabs__panel:not([hidden])`;
 const TABS_STATUS = '#hubDemoTabsStatus';
+/** An accordion demo's section by its id's name (`layout.ts`' `ACCORDION_ID`) and its key: its
+ * header and its panel */
+const SECTION = (name: string, key: string) => `#hubDemoAccordion${name} [data-key="${key}"]`;
+const HEADER = (name: string, key: string) => `${SECTION(name, key)} .aekAccordion__trigger`;
+const PANEL = (name: string, key: string) => `${SECTION(name, key)} .aekAccordion__region`;
+const ACCORDION_STATUS = '#hubDemoAccordionStatus';
 
 /** The layout group's checks by their demo's key (`data-hub-demo`) */
 export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
@@ -85,6 +91,52 @@ export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Home' },
           { expectFocus: TAB('Layers', 't1') },
           { expectAttr: TABS_LIST('Layers'), name: 'data-overflow', value: 'end' },
+        ],
+      },
+    ],
+  },
+  accordion: {
+    keyboard: [
+      {
+        name: 'one open: Enter and Space open a section and shut the other; the arrows move between headers, wrapping; each header a tab stop',
+        steps: [
+          { focusInBox: HEADER('Help', 'move') },
+          { expectAttr: HEADER('Help', 'move'), name: 'aria-expanded', value: 'true' },
+          { press: 'ArrowDown' },
+          { expectFocus: HEADER('Help', 'save') },
+          { press: 'Enter' },
+          { expectAttr: HEADER('Help', 'save'), name: 'aria-expanded', value: 'true' },
+          { expectAttr: HEADER('Help', 'move'), name: 'aria-expanded', value: 'false' },
+          { expectAttr: PANEL('Help', 'move'), name: 'hidden', value: '' },
+          { expectText: ACCORDION_STATUS, text: 'Help: save open' },
+          { press: 'End' },
+          { expectFocus: HEADER('Help', 'quit') },
+          { press: 'ArrowDown' },
+          { expectFocus: HEADER('Help', 'move') },
+          { press: 'Space' },
+          { expectAttr: HEADER('Help', 'move'), name: 'aria-expanded', value: 'true' },
+          { press: 'Tab' },
+          { expectFocus: HEADER('Help', 'save') },
+        ],
+      },
+      {
+        name: 'several open: the arrows pass the disabled section; Audio is built once',
+        steps: [
+          { focusInBox: HEADER('Settings', 'video') },
+          { press: 'Enter' },
+          { press: 'ArrowDown' },
+          { expectFocus: HEADER('Settings', 'audio') },
+          { press: 'Space' },
+          { expectText: PANEL('Settings', 'audio'), text: 'Volumes and the output: built once.' },
+          { expectText: ACCORDION_STATUS, text: 'Settings: video, audio open' },
+          { press: 'ArrowDown' },
+          { expectFocus: HEADER('Settings', 'controls') },
+          { press: 'ArrowUp' },
+          { press: 'Enter' },
+          { expectAttr: PANEL('Settings', 'audio'), name: 'hidden', value: '' },
+          { press: 'Enter' },
+          { expectText: PANEL('Settings', 'audio'), text: 'Volumes and the output: built once.' },
+          { expectAttr: HEADER('Settings', 'video'), name: 'aria-expanded', value: 'true' },
         ],
       },
     ],

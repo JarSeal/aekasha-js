@@ -1,0 +1,112 @@
+// The accordion's default styles (Accordion.ts, p805 D10), on the design tokens and layered (p803
+// D5): an app's unlayered rule wins, and every selector is in :where(). The sections are rows
+// split by `border` lines; a header is a quiet full-width button (the text colour, `surface-hover`
+// under the pointer) with its chevron at the end, turning a half as the section opens. The panel's
+// height animates through its grid row (0fr to 1fr), over `--aek-motion-base`, as the folder's;
+// while it moves its content is clipped (`data-animating`), open it isn't (focus rings reach
+// outside their controls). Its custom property: `--aek-accordion-padding`.
+@layer aek.components {
+  :where(.aekAccordion) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-block-start: 1px solid var(--aek-border);
+  }
+
+  :where(.aekAccordion__item) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-block-end: 1px solid var(--aek-border);
+  }
+
+  :where(.aekAccordion__heading) {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+  }
+
+  :where(.aekAccordion__trigger) {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--aek-space-3);
+    width: 100%;
+    // WCAG 2.5.8's target size, in every density
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-accordion-padding, var(--aek-space-4));
+    border: 0;
+    background: transparent;
+    color: var(--aek-text);
+    font-family: inherit;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekAccordion__trigger:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekAccordion__trigger:disabled) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  :where(.aekAccordion__title) {
+    min-width: 0;
+  }
+
+  :where(.aekAccordion__chevron) {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    color: var(--aek-text-muted);
+    transition: transform var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekAccordion__chevron) svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  :where(.aekAccordion__item[data-expanded] .aekAccordion__chevron) {
+    transform: rotate(180deg);
+  }
+
+  :where(.aekAccordion__region) {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekAccordion__item[data-expanded] > .aekAccordion__region) {
+    grid-template-rows: 1fr;
+  }
+
+  // The grid row's item, which shrinks to nothing (its content's padding couldn't)
+  :where(.aekAccordion__clip) {
+    min-height: 0;
+  }
+
+  :where(.aekAccordion__content) {
+    padding: var(--aek-space-2) var(--aek-accordion-padding, var(--aek-space-4)) var(--aek-space-4);
+  }
+
+  // Clipped while it moves; open it isn't, so focus rings show
+  :where(.aekAccordion__item[data-animating] > .aekAccordion__region > .aekAccordion__clip) {
+    overflow: hidden;
+  }
+
+  // `hidden` is the browser's display: none, which any author rule would beat: last, so it beats
+  // this file's own `display` at the same specificity
+  :where(.aekAccordion__region[hidden]) {
+    display: none;
+  }
+}

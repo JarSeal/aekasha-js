@@ -929,6 +929,22 @@ As built (section 1):
   splitter join it), its intro, tags and key APIs; both library pages' box and texts;
   `COMPONENT_USES`. The root `CLAUDE.md`'s `components/` list names the tabs.
 
+As built (section 2):
+
+- **`createAccordion`** (`components/Accordion.ts`, `Accordion.scss`, public with `AccordionProps`,
+  `AccordionItem`, `Accordion`): as D10, which named no handle: `{ cmp, expand, collapse,
+isExpanded, getExpanded }` (D7's tree names). An item is `{ key, title, content, disabled? }`,
+  its content built on its first open (a function's) and kept. `onExpandedChange(keys)` is the
+  user's clicks only (as the tabs' `onSelect`); `expand` without `multiple` shuts the open one.
+  Each header is a tab stop (the APG accordion), Up / Down / Home / End between the enabled ones,
+  wrapping. The folder's height motion, copied (a grid row, a timer per section), not shared: the
+  folder's is tied to its scheduler and form revealer. Shut with the focus inside, the focus goes
+  to its header.
+- **The library:** in `layout.ts` (a help list with one open, settings with several, a disabled
+  section and a panel built on first open; "Open every section"), two keyboard scripts. The core
+  page's `## Accordions` section, after the tabs. The demos' text panel (`createTextPanel`) is
+  shared by the tabs and the accordion, padded only inside a tab panel.
+
 ### Phase 3: the list and the tree
 
 1. The list: static, selectable, with actions; the filter (D6).
