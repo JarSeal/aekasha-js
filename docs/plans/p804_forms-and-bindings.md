@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
@@ -1709,7 +1709,7 @@ two leave it here). All four stayed in the plan.
      transform. Not done: the 200-monitor box again (the monitor's path didn't change here; the
      shell's event fix only reaches an edit field's `onChange`).
 
-### Phase 7: the Hub, the example, `CLAUDE.md`, readme
+### Phase 7: the Hub, the example, `CLAUDE.md`, readme — done
 
 D15 and D12's budgets.
 
@@ -1830,6 +1830,17 @@ D15 and D12's budgets.
      rename; the embed's dialog and its picker), no console error.
 4. Section 4, the `CLAUDE.md` files, `readme.md`, `layoutRules.ts`' note; `yarn hub:build` in both
    modes, `verify:ui` against the public build.
+   - **Done 2026-10-27.** The root `CLAUDE.md`'s Three-folder split names `forms/`' pieces (its
+     map line and `hub/CLAUDE.md` were section 1's); `src/_engine/ui/CLAUDE.md`'s header line and
+     its layout paragraph name the forms and their subfolders (`binding/`, `color/`, `rotation/`,
+     `gradient/`, `curve/`); `layoutRules.ts`' `UI_KIT_FOLDERS` note; `readme.md`'s UI kit bullet
+     (a "Forms:" sentence: the bindings, the scheduler, the fields, the value editors, the
+     containers), its tree's `ui/` comment and the examples line ("with a settings grid and a
+     form"). The roadmap had no forms item; the debug drawer's "built on Tweakpane" stays (p806).
+     `debug/CLAUDE.md` and the debug suite's page are unchanged (D15).
+   - Checked: `yarn hub:build` public (99 pages, no warning) and dev (the dev server's Hub: 106
+     pages, no error or warning, the touched pages served without an error page),
+     `yarn verify:ui` against its public build (every box and script, 255 s; `UI_ALLOWED_VIOLATIONS` is empty), `yarn test`.
 
 ### Phase 8: versions and done
 

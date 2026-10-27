@@ -27,7 +27,8 @@ const A = 'src/app/';
 /**
  * The UI kit's groups (p803 D2): `core/` (CMP, the HUD root, the bounds, motion, icons),
  * `components/` (one module per component), `overlays/` (the windows, the toaster, the overlay
- * layer), `forms/` (the drop-down, p804's fields), `styles/`, `fonts/` and `testing/` (the tests'
+ * layer), `forms/` (p804's fields, value editors and containers, the drop-down among them, with
+ * their binding and scheduler in `binding/`), `styles/`, `fonts/` and `testing/` (the tests'
  * shared helpers). p805 adds `data/`, p808 `game/`.
  */
 const UI_KIT_FOLDERS = ['core', 'components', 'overlays', 'forms', 'styles', 'fonts', 'testing'];
