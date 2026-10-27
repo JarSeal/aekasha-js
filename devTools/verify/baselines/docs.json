@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 2773,
-      "total": 2773
+      "documented": 2788,
+      "total": 2788
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2693,
-        "total": 2693
+        "documented": 2708,
+        "total": 2708
       },
       "members": {
         "documented": 890,
@@ -595,8 +595,8 @@
     },
     "engine/ui/components": {
       "exports": {
-        "documented": 52,
-        "total": 52
+        "documented": 60,
+        "total": 60
       },
       "members": {
         "documented": 0,
@@ -635,6 +635,20 @@
         "members": []
       }
     },
+    "engine/ui/data": {
+      "exports": {
+        "documented": 5,
+        "total": 5
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/ui/forms": {
       "exports": {
         "documented": 125,
@@ -651,8 +665,8 @@
     },
     "engine/ui/forms/binding": {
       "exports": {
-        "documented": 27,
-        "total": 27
+        "documented": 28,
+        "total": 28
       },
       "members": {
         "documented": 0,
@@ -721,8 +735,8 @@
     },
     "engine/ui/overlays": {
       "exports": {
-        "documented": 43,
-        "total": 43
+        "documented": 44,
+        "total": 44
       },
       "members": {
         "documented": 0,

@@ -792,6 +792,43 @@ As built (section 1):
   `_components.ts`); `yarn test`, both `tsc`s, ESLint and `yarn hub:build` pass; `yarn verify:ui`
   passes against Phase 0's screenshots (every box, state and keyboard script, no new shot).
 
+As built (section 2):
+
+- **`components/RovingFocus.ts`** (`@internal`): `getMoveTarget(key, from, { count, orientation?,
+  wrap?, pageSize?, isSkipped? })` (null for another key, -1 for a move key with nowhere to go,
+  which the caller still uses up; PageUp / PageDown only with `pageSize`, never wrapping, to the
+  nearest item not skipped), `createTypeahead({ getCount, getText })` → `{ type(letter, from),
+  clear }`, `isTypeaheadKey(e)`, and `createRovingTabStop({ getElems, indexOf? })` → `{ reset,
+  setIndex, getIndex, onFocusIn }` (`setIndex` writes only the old stop and the new, `reset` every
+  item: a long list's arrows don't rewrite every row; `onFocusIn` is the composite's listener, so
+  it has nothing to dispose). The menu and the button group are on it with no behaviour change
+  (their tests as they were). A disabled menu item stays focusable (no `isSkipped`); the button
+  group skips disabled buttons.
+- **`components/Announcer.ts`** (`@internal`): `announce(elem, text)` as Phase 0 said, the region in
+  a `WeakMap` by kit root (made again if it was taken out), the body for no kit root or the Hub's
+  `<html>`. Found on the way: a modal's `inert` covers the HUD root's other children, which would
+  silence a region there, so the overlay stack has `KEEP_LIVE_ATTR` (`data-aek-keep-live`,
+  `@internal`): a child carrying it is never made inert, and the region carries it.
+- **`data/Filter.ts`** (`@internal`, with `Filter.scss`: `.aekMark`, the drop-down's match look):
+  `foldText`, `getQueryWords`, `matchesWords`, `findMatchRanges(text, terms)` (ranges in the text's
+  own indices through a per-character origin map: a match ends past its letters' accents, composed
+  or decomposed, and surrogate pairs stay whole; overlapping and touching ranges merged, so no
+  longest-first order is needed) and `appendMarked(parent, text, terms)`. **The palette's scorer**
+  (D12: word starts, consecutive letters, the label before keywords) comes with the palette in
+  Phase 6, which is its only user. The drop-down keeps its own match (case only), as D6 leaves it.
+- **The scheduler:** `ScheduledBinding` is `ScheduledEntry`; `addScheduledRefresh(scheduler,
+  refresh, { interval?, isShown })` wraps `addScheduledBinding` (`refresh` gets `fromRefresh`); one
+  new test.
+- **`ui/data/` exists**, so `sbp.config.ts` has `'_engine/ui/data/': 0` in `app` and `uiKit`, and
+  the root `CLAUDE.md`'s `ui/` line names `data/` (Phase 7 section 4's line, done here). The kit's
+  `CLAUDE.md` has the three pieces as bullets of its UI kit section; Phase 7 section 4 moves the
+  filter into the `## Data display` section with its `aek:covers`.
+- Nothing new on `aekasha/ui` (all `@internal`), so no library box or Hub text in this section.
+- **Size:** the UI kit example's lazy chunk (`exampleUiKit.js`) grew 11.5 → 11.8 kB gzip: `Menu.ts`
+  lost 183 B and `RovingFocus.ts` brought 677 B (each module gzipped alone), the general move
+  (skipped items, page keys, `wrap`) the list, tree and tabs will share. No initial chunk and no
+  budget moved (`yarn sbp --profile all`); the baselines are recorded (`verify:baselines --update`).
+
 ### Phase 2: tabs, the accordion, the splitter
 
 1. Tabs (D10).

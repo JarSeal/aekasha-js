@@ -103,11 +103,11 @@
     },
     "assets/Kbd.js": {
       "bytes": 2768,
-      "gzip": 1228
+      "gzip": 1227
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24364
+      "gzip": 24363
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -131,7 +131,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 181
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -143,15 +143,15 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038903,
-      "gzip": 291112
+      "gzip": 291111
     },
     "assets/uiKitEmbed.css": {
       "bytes": 19264,
       "gzip": 3643
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 44990,
-      "gzip": 16416
+      "bytes": 45034,
+      "gzip": 16436
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 23274,
@@ -159,18 +159,18 @@
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 46467,
-      "gzip": 17650
+      "gzip": 17651
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 214
+      "gzip": 213
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
     "minified": 1057939,
-    "gzip": 296582
+    "gzip": 296581
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -186,7 +186,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2384,
-      "gzip": 1077
+      "gzip": 1076
     },
     "_engine/kernel/ecs": {
       "modules": 7,

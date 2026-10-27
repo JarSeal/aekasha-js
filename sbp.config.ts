@@ -70,6 +70,8 @@ const profiles: SbpProfile[] = [
         // p804 D12: the form fields load with the scenes that make them (the UI kit example's
         // settings and form), never in the first download
         '_engine/ui/forms/': 0,
+        // p805 D13: the data display loads with what shows it, as the forms do
+        '_engine/ui/data/': 0,
       },
     },
   },
@@ -160,6 +162,8 @@ const profiles: SbpProfile[] = [
       modules: {
         // p804 D12: the form fields load with the dialog's form
         '_engine/ui/forms/': 0,
+        // p805 D13: the data display too (its data window, Phase 7)
+        '_engine/ui/data/': 0,
       },
     },
   },

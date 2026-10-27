@@ -1,0 +1,11 @@
+// The filter's marks (Filter.ts, p805 D6): a match in a list's, a tree's or the palette's text, on
+// the design tokens and layered (p803 D5): an app's unlayered rule wins. The drop-down's match
+// looks the same.
+@layer aek.components {
+  :where(.aekMark) {
+    border-radius: 2px;
+    background-color: var(--aek-accent-soft);
+    color: inherit;
+    font-weight: var(--aek-font-weight-semibold);
+  }
+}

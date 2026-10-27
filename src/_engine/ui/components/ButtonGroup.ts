@@ -2,6 +2,7 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { swallowNextKeyUp } from '../overlays/OverlayStack';
 import type { Button } from './Button';
+import { createRovingTabStop, getMoveTarget } from './RovingFocus';
 import './Button.scss';
 import '../styles/kit.scss';
 
@@ -40,11 +41,6 @@ export type ButtonGroup = {
   setPressedIndex: (index: number) => void;
 };
 
-const KEYS = {
-  horizontal: { next: 'ArrowRight', previous: 'ArrowLeft' },
-  vertical: { next: 'ArrowDown', previous: 'ArrowUp' },
-};
-
 /**
  * Creates a button group (p803 D10): buttons joined into one row (or column), named as a group.
  * With `exclusive` its toggles are a toolbar with one pressed at a time: a press of another one
@@ -73,34 +69,20 @@ const KEYS = {
 export const createButtonGroup = (props: ButtonGroupProps): ButtonGroup => {
   const { buttons, exclusive = false, orientation = 'horizontal' } = props;
   const elems = buttons.map((button) => button.cmp.elem);
-  const keys = KEYS[orientation];
 
   const indexOf = (target: EventTarget | null) =>
     target ? elems.findIndex((elem) => elem.contains(target as Node)) : -1;
-  const isEnabled = (index: number) => !elems[index].hasAttribute('disabled');
+  const isDisabled = (index: number) => elems[index].hasAttribute('disabled');
+  const moveOptions = { count: elems.length, orientation, wrap: true, isSkipped: isDisabled };
 
   /** The one tab stop of a toolbar */
-  const setTabStop = (index: number) => {
-    for (let i = 0; i < elems.length; i++) {
-      elems[i].setAttribute('tabindex', i === index ? '0' : '-1');
-    }
-  };
-
-  /** The next enabled button from `from` in `step`'s direction, wrapping (-1: none) */
-  const findEnabled = (from: number, step: 1 | -1) => {
-    const count = elems.length;
-    for (let k = 1; k <= count; k++) {
-      const index = (((from + step * k) % count) + count) % count;
-      if (isEnabled(index)) return index;
-    }
-    return -1;
-  };
+  const tabStop = createRovingTabStop({ getElems: () => elems });
 
   const getPressedIndex = () => buttons.findIndex((button) => button.isPressed());
 
   const setPressedIndex = (index: number) => {
     for (let i = 0; i < buttons.length; i++) buttons[i].setPressed(i === index);
-    if (exclusive && index !== -1) setTabStop(index);
+    if (exclusive && index !== -1) tabStop.setIndex(index);
   };
 
   /** Capture, before the button's own click: a press of the pressed button changes nothing */
@@ -114,7 +96,7 @@ export const createButtonGroup = (props: ButtonGroupProps): ButtonGroup => {
     const index = indexOf(e.target);
     if (index === -1 || !buttons[index].isPressed()) return;
     for (let i = 0; i < buttons.length; i++) if (i !== index) buttons[i].setPressed(false);
-    setTabStop(index);
+    tabStop.setIndex(index);
     props.onChange?.(index);
   };
 
@@ -122,24 +104,14 @@ export const createButtonGroup = (props: ButtonGroupProps): ButtonGroup => {
     const { key } = e as KeyboardEvent;
     const index = indexOf(e.target);
     if (index === -1) return;
-    let next = -1;
-    if (key === keys.next) next = findEnabled(index, 1);
-    else if (key === keys.previous) next = findEnabled(index, -1);
-    else if (key === 'Home') next = findEnabled(elems.length - 1, 1);
-    else if (key === 'End') next = findEnabled(0, -1);
-    else return;
+    const next = getMoveTarget(key, index, moveOptions);
+    if (next === null) return;
     e.preventDefault();
     e.stopPropagation();
     swallowNextKeyUp(key);
     if (next === -1) return;
-    setTabStop(next);
+    tabStop.setIndex(next);
     elems[next].focus();
-  };
-
-  // The focus moving in some other way (a click, code) moves the tab stop with it
-  const onFocusIn = (e: Event) => {
-    const index = indexOf(e.target);
-    if (index !== -1) setTabStop(index);
   };
 
   const cmp = CMP({
@@ -158,14 +130,16 @@ export const createButtonGroup = (props: ButtonGroupProps): ButtonGroup => {
           { type: 'click', fn: onClickCapture },
           { type: 'click', fn: onClick, options: { capture: false } },
           { type: 'keydown', fn: onKeyDown },
-          { type: 'focusin', fn: onFocusIn },
+          // The focus moving in some other way (a click, code) moves the tab stop with it
+          { type: 'focusin', fn: tabStop.onFocusIn },
         ]
       : [],
   });
   for (const button of buttons) cmp.add(button.cmp);
   if (exclusive) {
     const pressed = getPressedIndex();
-    setTabStop(pressed !== -1 && isEnabled(pressed) ? pressed : findEnabled(-1, 1));
+    const first = getMoveTarget('Home', -1, moveOptions) ?? -1;
+    tabStop.reset(pressed !== -1 && !isDisabled(pressed) ? pressed : first);
   }
 
   return { cmp, buttons, getPressedIndex, setPressedIndex };

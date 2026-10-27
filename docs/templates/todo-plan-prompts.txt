@@ -250,3 +250,12 @@ Could the Hub search indexes be spread out to be two different searches to save 
 If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 
 ************************************
+
+DRAFT_BEER*******************
+Add dynamic tier size changing during run time for physics simulation tier sizes.
+- Two small engine changes would make runtime changes safe. Each is a fairly small addition:
+-- An in-place updatePhysicsTierPolicyRings. It would recompute withinSq / leaveSq on the running policy and keep the pending measurements. Decisions already read the radii when they're made, not when the positions are measured, so the measurements stay valid.
+-- An optional per-step transition budget in physicsTierSystem. Applying requests in entity id order would keep it deterministic.
+- Longer term, add count caps to the rings (maxMembers per tier, like Mass LOD). That gives you per-area behaviour without authoring zones. Per-area overrides proper belong with p352's Phase 5, cell driving with p353.
+
+************************************

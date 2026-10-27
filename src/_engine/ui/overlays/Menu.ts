@@ -2,6 +2,7 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
 import type { Kbd } from '../components/Kbd';
+import { createTypeahead, getMoveTarget, isTypeaheadKey } from '../components/RovingFocus';
 import { addShortcutHint } from '../components/ShortcutHint';
 import { showAnchored } from './Anchor';
 import { pushOverlay, swallowNextKeyUp } from './OverlayStack';
@@ -137,8 +138,6 @@ type Entry = {
   run: () => void;
 };
 
-/** How long typed letters make one search (the APG's typeahead) */
-const TYPEAHEAD_MS = 500;
 const ROLE_OF = { item: 'menuitem', checkbox: 'menuitemcheckbox', radio: 'menuitemradio' };
 
 const createPart = (className: string, text = '') => {
@@ -262,20 +261,6 @@ const buildItems = (parent: HTMLElement, items: MenuItem[], hints: StopHint[]) =
   return entries;
 };
 
-/** The next entry from `from` whose label starts with the typed letters (-1: none) */
-const findTypedEntry = (entries: Entry[], typed: string, from: number) => {
-  const count = entries.length;
-  // One letter, or one typed again ('ss'), looks past the focused item, so pressing it again goes
-  // on to the next; more letters include it
-  const needle = /^(.)\1*$/.test(typed) ? typed[0] : typed;
-  const start = needle.length === 1 ? 1 : 0;
-  for (let k = start; k < count + start; k++) {
-    const index = (from + k) % count;
-    if (entries[index].text.startsWith(needle)) return index;
-  }
-  return -1;
-};
-
 /** The `Kbd` handles an item array holds (not the strings: their hints are the menu's own) */
 const findHintHandles = (items: MenuItem[]) => {
   const handles: Kbd[] = [];
@@ -288,15 +273,6 @@ const findHintHandles = (items: MenuItem[]) => {
     }
   }
   return handles;
-};
-
-/** Where the arrows, Home and End move the focus from `index`, wrapping (null: another key) */
-const getMoveTarget = (key: string, index: number, count: number) => {
-  if (key === 'ArrowDown') return (index + 1) % count;
-  if (key === 'ArrowUp') return index <= 0 ? count - 1 : index - 1;
-  if (key === 'Home') return 0;
-  if (key === 'End') return count - 1;
-  return null;
 };
 
 /** Makes `anchor` the menu's trigger (its listeners and ARIA); returns what undoes it */
@@ -318,25 +294,6 @@ const wireTrigger = (
     anchor.removeAttribute('aria-expanded');
     anchor.removeAttribute('aria-controls');
   };
-};
-
-/** The APG menu's typeahead: letters typed within `TYPEAHEAD_MS` make one search */
-const createTypeahead = () => {
-  let typed = '';
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const clear = () => {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    typed = '';
-  };
-  /** Adds a letter; the entry to focus (-1: none) */
-  const type = (letter: string, entries: Entry[], from: number) => {
-    if (timer) clearTimeout(timer);
-    typed += letter.toLowerCase();
-    timer = setTimeout(clear, TYPEAHEAD_MS);
-    return findTypedEntry(entries, typed, from);
-  };
-  return { type, clear };
 };
 
 /**
@@ -379,7 +336,10 @@ export const createMenu = (props: MenuProps): Menu => {
   let entries: Entry[] = [];
   let hideAnchored: (() => void) | null = null;
   let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
-  const typeahead = createTypeahead();
+  const typeahead = createTypeahead({
+    getCount: () => entries.length,
+    getText: (index) => entries[index].text,
+  });
   const hints: StopHint[] = [];
   const isItemsGetter = typeof props.items === 'function';
 
@@ -456,13 +416,13 @@ export const createMenu = (props: MenuProps): Menu => {
   const onMenuKeyDown = (e: Event) => {
     const key = e as KeyboardEvent;
     const index = entries.findIndex((entry) => entry.elem === document.activeElement);
-    const moveTo = getMoveTarget(key.key, index, entries.length);
+    const moveTo = getMoveTarget(key.key, index, { count: entries.length, wrap: true });
     if (moveTo !== null) focusEntry(moveTo);
     else if (key.key === 'Enter' && index !== -1) pick(entries[index], false);
     else if (key.key === ' ' && index !== -1) pick(entries[index], entries[index].isCheckable);
     else if (key.key === 'Tab') close();
-    else if (key.key.length === 1 && !key.ctrlKey && !key.metaKey && !key.altKey) {
-      const found = typeahead.type(key.key, entries, Math.max(index, 0));
+    else if (isTypeaheadKey(key)) {
+      const found = typeahead.type(key.key, Math.max(index, 0));
       if (found !== -1) focusEntry(found);
     } else return;
     e.preventDefault();

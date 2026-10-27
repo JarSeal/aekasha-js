@@ -2788,6 +2788,9 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/Announcer.ts": {
+      "announce": "Function"
+    },
     "src/_engine/ui/components/Badge.ts": {
       "Badge": "TypeAlias",
       "BadgeProps": "TypeAlias",
@@ -2847,6 +2850,15 @@
       "createProgressBar": "Function",
       "ProgressBar": "TypeAlias",
       "ProgressBarProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/RovingFocus.ts": {
+      "createRovingTabStop": "Function",
+      "createTypeahead": "Function",
+      "getMoveTarget": "Function",
+      "isTypeaheadKey": "Function",
+      "MoveOptions": "TypeAlias",
+      "RovingTabStopProps": "TypeAlias",
+      "TypeaheadProps": "TypeAlias"
     },
     "src/_engine/ui/components/ShortcutHint.ts": {
       "addShortcutHint": "Function",
@@ -2982,6 +2994,13 @@
       "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
     },
+    "src/_engine/ui/data/Filter.ts": {
+      "appendMarked": "Function",
+      "findMatchRanges": "Function",
+      "foldText": "Function",
+      "getQueryWords": "Function",
+      "matchesWords": "Function"
+    },
     "src/_engine/ui/forms/AngleDial.ts": {
       "AngleDial": "TypeAlias",
       "AngleDialProps": "TypeAlias",
@@ -2999,13 +3018,14 @@
     },
     "src/_engine/ui/forms/binding/BindingScheduler.ts": {
       "addScheduledBinding": "Function",
+      "addScheduledRefresh": "Function",
       "BindingScheduler": "TypeAlias",
       "BindingSchedulerProps": "TypeAlias",
       "createBindingScheduler": "Function",
       "createFlash": "Function",
       "getPageScheduler": "Function",
       "revealScheduledBindings": "Function",
-      "ScheduledBinding": "TypeAlias"
+      "ScheduledEntry": "TypeAlias"
     },
     "src/_engine/ui/forms/binding/ValueExpression.ts": {
       "evaluateValueExpression": "Function",
@@ -3326,6 +3346,7 @@
     },
     "src/_engine/ui/overlays/OverlayStack.ts": {
       "DEBUGGER_ROOT_ATTR": "Variable",
+      "KEEP_LIVE_ATTR": "Variable",
       "OverlayProps": "TypeAlias",
       "pushOverlay": "Function",
       "swallowNextKeyUp": "Function"
