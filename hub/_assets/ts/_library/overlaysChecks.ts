@@ -21,6 +21,12 @@ const SPLIT_MENU_BUTTON = '#hubDemoMenuSplit > [aria-haspopup="menu"]';
 const MENU = '#hudRoot .aekMenu';
 const MENU_FOCUSED = `${MENU} .aekMenu__item:focus .aekMenu__label`;
 const MENU_STATUS = '#hubDemoMenuStatus';
+/** The View menu button (submenus, p805 D11); an item of its root level and of its open submenu
+ * by place, in the HUD root (a `clickHud` step adds the `#hudRoot`), and the same in the page */
+const MENU_VIEW = '#hubDemoMenuView';
+const VIEW_ITEM = (n: number) => `.aekMenu:not([data-submenu]) > .aekMenu__item:nth-child(${n})`;
+const VIEW_SUBITEM = (n: number) => `.aekMenu[data-submenu] > .aekMenu__item:nth-child(${n})`;
+const ROOT_ITEM = (n: number) => `#hudRoot ${VIEW_ITEM(n)}`;
 
 /** The overlays group's checks by their demo's key (`data-hub-demo`) */
 export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
@@ -212,6 +218,14 @@ export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
     states: [
       { name: 'the menu open', steps: [{ clickInBox: MENU_FILE }] },
       { name: 'the split button’s menu open', steps: [{ clickInBox: SPLIT_MENU_BUTTON }] },
+      {
+        name: 'the View menu with a submenu open in a submenu',
+        steps: [
+          { clickInBox: MENU_VIEW },
+          { clickHud: VIEW_ITEM(2) },
+          { clickHud: VIEW_SUBITEM(3) },
+        ],
+      },
     ],
     keyboard: [
       {
@@ -261,6 +275,72 @@ export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Escape' },
           { expectCount: MENU, count: 0 },
           { expectFocus: MENU_FILE },
+        ],
+      },
+      {
+        name: 'submenus: ArrowRight opens one on its first item, ArrowLeft goes back, Escape closes one level',
+        steps: [
+          { focusInBox: MENU_VIEW },
+          { press: 'Enter' },
+          { expectText: MENU_FOCUSED, text: 'Zoom' },
+          { expectAttr: ROOT_ITEM(1), name: 'aria-haspopup', value: 'menu' },
+          { expectAttr: ROOT_ITEM(1), name: 'aria-expanded', value: 'false' },
+          { press: 'ArrowRight' },
+          { expectCount: MENU, count: 2 },
+          { expectText: MENU_FOCUSED, text: 'Zoom in' },
+          { expectAttr: ROOT_ITEM(1), name: 'aria-expanded', value: 'true' },
+          { press: 'ArrowLeft' },
+          { expectCount: MENU, count: 1 },
+          { expectText: MENU_FOCUSED, text: 'Zoom' },
+          { press: 'ArrowDown' },
+          { press: 'Enter' },
+          { expectText: MENU_FOCUSED, text: 'Outline' },
+          { press: 'End' },
+          { expectText: MENU_FOCUSED, text: 'Layout' },
+          { press: 'ArrowRight' },
+          { expectCount: MENU, count: 3 },
+          { expectText: MENU_FOCUSED, text: 'Default' },
+          { press: 'ArrowDown' },
+          { press: 'Space' },
+          { expectText: MENU_STATUS, text: 'Layout: compact' },
+          { expectCount: MENU, count: 3 },
+          { press: 'Escape' },
+          { expectCount: MENU, count: 2 },
+          { expectText: MENU_FOCUSED, text: 'Layout' },
+          { press: 'Escape' },
+          { expectCount: MENU, count: 1 },
+          { expectText: MENU_FOCUSED, text: 'Panels' },
+          { press: 'Escape' },
+          { expectCount: MENU, count: 0 },
+          { expectFocus: MENU_VIEW },
+        ],
+      },
+      {
+        name: 'a pick in a submenu closes every level; a disabled submenu opens nothing; Tab closes them all',
+        steps: [
+          { focusInBox: MENU_VIEW },
+          { press: 'ArrowDown' },
+          { press: 'ArrowRight' },
+          { press: 'ArrowDown' },
+          { expectText: MENU_FOCUSED, text: 'Zoom out' },
+          { press: 'Enter' },
+          { expectCount: MENU, count: 0 },
+          { expectText: MENU_STATUS, text: 'View: Zoom out' },
+          { expectFocus: MENU_VIEW },
+          { press: 'ArrowDown' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowDown' },
+          { expectText: MENU_FOCUSED, text: 'Recent views' },
+          { expectAttr: ROOT_ITEM(3), name: 'aria-disabled', value: 'true' },
+          { press: 'ArrowRight' },
+          { expectCount: MENU, count: 1 },
+          { press: 'ArrowUp' },
+          { press: 'Space' },
+          { expectCount: MENU, count: 2 },
+          { expectText: MENU_FOCUSED, text: 'Outline' },
+          { press: 'Tab' },
+          { expectCount: MENU, count: 0 },
+          { expectFocus: MENU_VIEW },
         ],
       },
       {

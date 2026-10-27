@@ -829,6 +829,38 @@ As built (section 2):
   (skipped items, page keys, `wrap`) the list, tree and tabs will share. No initial chunk and no
   budget moved (`yarn sbp --profile all`); the baselines are recorded (`verify:baselines --update`).
 
+As built (section 3):
+
+- **`showAnchored` at a point:** `anchor: HTMLElement | AnchorPoint` (`{ x, y }`, viewport px), a
+  box of no size that a scroll doesn't move, no anchor watch, no `matchAnchorWidth`; a new
+  `themeFrom` element gives a point's overlay the forced theme and density (the context menu passes
+  its target).
+- **The menu's split:** `overlays/MenuItems.ts` (`@internal`) builds a level's items
+  (`buildMenuItems`, `MenuEntry`), finds the hint handles of a tree of items
+  (`findMenuHintHandles`) and holds `isInPointerPath`. `Menu.ts` keeps the types and
+  `createMenuSurface` (`@internal`): the menu without a trigger, `open({ anchor, focus?,
+  returnFocus?, themeFrom? })` at an element or a point, its levels, keys, pointer and hints.
+  `createMenu` is the surface with its trigger wired (no API change). Section 4's context menu
+  opens the surface at the pointer.
+- **Submenus** (`MenuSubmenuItem`, `type: 'submenu'`, public; also inside a group): as D11, each
+  level an `.aekMenu[data-submenu]` next to the root with its own stack entry, typeahead and
+  listeners. A click opens a submenu on its first item, as the keys do; a hover keeps the focus on
+  the item. Hovering another item closes an open submenu at once unless the pointer is heading for
+  it (the triangle from the move's start to the submenu's near edge), when the item under the
+  pointer is acted on after the delay. **Hints:** a getter's handles are removed at the close from
+  the open's whole item tree (a submenu never opened included), so a submenu's level stops its
+  hints without removing them.
+- **`--aek-submenu-delay`** (150 ms) is in `tokens.css` beside the tooltip's; the design
+  document's motion table shows every `*-delay` already, and the Styling page's token row names it.
+- **The library:** the menu box has a "View" menu button (submenus two levels deep, a disabled
+  one, a checkbox and a choice inside), a state with a submenu open in a submenu, and two
+  keyboard scripts; the File menu and the split button are unchanged (their scripts and shots
+  too, the box's own shot aside).
+- **Size:** the menu's code went from 5.6 to 9.3 kB minified (`Menu.ts` 6.2, `MenuItems.ts`
+  3.0), so the UI kit example's lazy chunk grew 11.8 → 13.2 kB gzip; no first download and no
+  budget moved. Submenus are in every menu (not opt-in, as D8's behaviours are): reviewed in
+  section 3's stop.
+
 ### Phase 2: tabs, the accordion, the splitter
 
 1. Tabs (D10).

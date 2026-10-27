@@ -22,20 +22,20 @@
       "gzip": 1046
     },
     "assets/banner.css": {
-      "bytes": 7098,
-      "gzip": 1930
+      "bytes": 7124,
+      "gzip": 1939
     },
     "assets/banner.embed.js": {
       "bytes": 1041345,
-      "gzip": 292075
+      "gzip": 292078
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 284
+      "gzip": 286
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -67,7 +67,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7544,
-      "gzip": 3075
+      "gzip": 3077
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -75,19 +75,19 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13861
+      "gzip": 13863
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1629
+      "gzip": 1630
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
-      "gzip": 6655
+      "gzip": 6657
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24362
+      "gzip": 24364
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,

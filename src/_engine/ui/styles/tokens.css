@@ -108,6 +108,7 @@
     --aek-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
     /* Delays: not motion, so reduced motion keeps them (a tooltip shown on hover) */
     --aek-tooltip-delay: 500ms;
+    --aek-submenu-delay: 150ms;
 
     /* The focus ring's colour is the theme's accent (in the theme blocks below) */
     --aek-focus-ring-width: 2px;

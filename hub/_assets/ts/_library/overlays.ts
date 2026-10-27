@@ -476,6 +476,72 @@ const initMenuDemo: Demo = (box) => {
     ],
   });
   addGroup(root, 'A split button: the action, and its variants in a menu').append(split.cmp.elem);
+
+  // Submenus (p805 D11), two levels deep
+  let isOutlineShown = true;
+  let layout = 'default';
+  const view = createButton({ id: MENU_ID('View'), label: 'View' });
+  createMenu({
+    anchor: view.cmp.elem,
+    items: () => [
+      {
+        type: 'submenu',
+        label: 'Zoom',
+        items: [
+          {
+            label: 'Zoom in',
+            kbd: createKbd({ keys: 'Ctrl++' }),
+            onSelect: report('View: Zoom in'),
+          },
+          {
+            label: 'Zoom out',
+            kbd: createKbd({ keys: 'Ctrl+-' }),
+            onSelect: report('View: Zoom out'),
+          },
+          { label: 'Fit to screen', onSelect: report('View: Fit to screen') },
+        ],
+      },
+      {
+        type: 'submenu',
+        label: 'Panels',
+        items: [
+          {
+            type: 'checkbox',
+            label: 'Outline',
+            checked: isOutlineShown,
+            onCheckedChange: (on) => {
+              isOutlineShown = on;
+              status.textContent = `Outline: ${on ? 'shown' : 'hidden'}`;
+            },
+          },
+          { type: 'separator' },
+          {
+            type: 'submenu',
+            label: 'Layout',
+            items: [
+              {
+                type: 'radio',
+                label: 'Layout',
+                value: layout,
+                options: [
+                  { value: 'default', label: 'Default' },
+                  { value: 'compact', label: 'Compact' },
+                ],
+                onValueChange: (value) => {
+                  layout = value;
+                  status.textContent = `Layout: ${value}`;
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { type: 'submenu', label: 'Recent views', disabled: true, items: [] },
+      { type: 'separator' },
+      { label: 'Full screen', onSelect: report('View: Full screen') },
+    ],
+  });
+  addGroup(root, 'A menu button with submenus, two levels deep').append(view.cmp.elem);
   root.append(status);
 };
 

@@ -3322,6 +3322,7 @@
       "AnchorBox": "TypeAlias",
       "AnchorPlacement": "TypeAlias",
       "AnchorPlacementInput": "TypeAlias",
+      "AnchorPoint": "TypeAlias",
       "AnchorSide": "TypeAlias",
       "computeAnchorPlacement": "Function",
       "hasTopLayer": "Function",
@@ -3335,14 +3336,27 @@
     },
     "src/_engine/ui/overlays/Menu.ts": {
       "createMenu": "Function",
+      "createMenuSurface": "Function",
       "Menu": "TypeAlias",
       "MenuActionItem": "TypeAlias",
       "MenuCheckboxItem": "TypeAlias",
       "MenuGroup": "TypeAlias",
       "MenuItem": "TypeAlias",
+      "MenuOpenOptions": "TypeAlias",
       "MenuProps": "TypeAlias",
       "MenuRadioGroup": "TypeAlias",
-      "MenuSeparator": "TypeAlias"
+      "MenuSeparator": "TypeAlias",
+      "MenuSubmenuItem": "TypeAlias",
+      "MenuSurface": "TypeAlias",
+      "MenuSurfaceProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/MenuItems.ts": {
+      "buildMenuItems": "Function",
+      "findMenuHintHandles": "Function",
+      "isInPointerPath": "Function",
+      "MenuEntry": "TypeAlias",
+      "MenuPoint": "TypeAlias",
+      "StopHint": "TypeAlias"
     },
     "src/_engine/ui/overlays/OverlayStack.ts": {
       "DEBUGGER_ROOT_ATTR": "Variable",
@@ -4609,6 +4623,7 @@
       "MenuProps",
       "MenuRadioGroup",
       "MenuSeparator",
+      "MenuSubmenuItem",
       "Monitor",
       "MonitorProps",
       "NumberField",

@@ -188,6 +188,7 @@ export type {
   MenuProps,
   MenuRadioGroup,
   MenuSeparator,
+  MenuSubmenuItem,
 } from './overlays/Menu';
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';

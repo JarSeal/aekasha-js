@@ -48,6 +48,11 @@
     outline-offset: calc(-1 * var(--aek-focus-ring-width));
   }
 
+  // A submenu item while its submenu is open: it stays marked with the focus in the submenu
+  :where(.aekMenu__item[aria-expanded='true']) {
+    background-color: var(--aek-surface-hover);
+  }
+
   :where(.aekMenu__item[aria-disabled='true']) {
     color: var(--aek-text-disabled);
     cursor: default;
@@ -122,6 +127,28 @@
     font-size: var(--aek-font-size-sm);
     font-weight: var(--aek-font-weight-semibold);
     content: attr(data-label);
+  }
+
+  // A submenu item's mark (p805 D11): a chevron toward its submenu, a CSS shape in the muted text
+  :where(.aekMenu__submenuMark) {
+    position: relative;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    margin-inline-start: var(--aek-space-3);
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekMenu__submenuMark)::before {
+    position: absolute;
+    inset: 0;
+    width: 0.4em;
+    height: 0.4em;
+    margin: auto;
+    border: solid currentcolor;
+    border-width: 0 0.12em 0.12em 0;
+    content: '';
+    transform: translateX(-0.1em) rotate(-45deg);
   }
 
   :where(.aekMenu__separator) {

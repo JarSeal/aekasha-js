@@ -3,8 +3,15 @@ import { CMP, classes } from '../core/CMP';
 import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
 import type { Kbd } from '../components/Kbd';
 import { createTypeahead, getMoveTarget, isTypeaheadKey } from '../components/RovingFocus';
-import { addShortcutHint } from '../components/ShortcutHint';
-import { showAnchored } from './Anchor';
+import { showAnchored, type AnchorPoint } from './Anchor';
+import {
+  buildMenuItems,
+  findMenuHintHandles,
+  isInPointerPath,
+  type MenuEntry,
+  type MenuPoint,
+  type StopHint,
+} from './MenuItems';
 import { pushOverlay, swallowNextKeyUp } from './OverlayStack';
 import './Menu.scss';
 import '../styles/kit.scss';
@@ -59,14 +66,29 @@ export type MenuRadioGroup = {
   onValueChange?: (value: string) => void;
 };
 
-/** A named group of a menu's actions and on / off items. */
+/** A menu's item that opens a submenu (p805 D11): ArrowRight, Enter, Space, a click or a hover
+ * of `--aek-submenu-delay` opens it beside the item. */
+export type MenuSubmenuItem = {
+  /** A submenu. */
+  type: 'submenu';
+  /** Its text, and its accessible name (the submenu's too). */
+  label: string;
+  /** Raw HTML of its icon (`getSvgIcon('gear')`), at `1em`. */
+  icon?: string;
+  /** Shown and focusable, but doesn't open (default false). */
+  disabled?: boolean;
+  /** The submenu's items: any of a menu's, another submenu too. */
+  items: MenuItem[];
+};
+
+/** A named group of a menu's actions, on / off items and submenus. */
 export type MenuGroup = {
   /** A group. */
   type: 'group';
   /** The group's name, shown above its items. */
   label: string;
   /** Its items. */
-  items: (MenuActionItem | MenuCheckboxItem)[];
+  items: (MenuActionItem | MenuCheckboxItem | MenuSubmenuItem)[];
 };
 
 /** A line between a menu's items. */
@@ -75,11 +97,13 @@ export type MenuSeparator = {
   type: 'separator';
 };
 
-/** One of a menu's items: an action, an on / off item, a one-of choice, a group or a separator. */
+/** One of a menu's items: an action, an on / off item, a one-of choice, a submenu, a group or a
+ * separator. */
 export type MenuItem =
   | MenuActionItem
   | MenuCheckboxItem
   | MenuRadioGroup
+  | MenuSubmenuItem
   | MenuGroup
   | MenuSeparator;
 
@@ -89,8 +113,8 @@ export type MenuProps = {
    * ArrowUp on its last. */
   anchor: HTMLElement;
   /** Its items, or a getter re-read on every open (so a checked state or a value is the app's).
-   * The menu removes their `kbd` hints: a getter's at each close (it makes new ones), an array's
-   * with the menu. */
+   * The menu removes their `kbd` hints, its submenus' too: a getter's at each close (it makes new
+   * ones), an array's with the menu. */
   items: MenuItem[] | (() => MenuItem[]);
   /** The menu's accessible name (default: the trigger's `aria-label`, else its text). */
   label?: string;
@@ -126,153 +150,17 @@ export type Menu = {
   isOpen: () => boolean;
 };
 
-/** A focusable item of the open menu */
-type Entry = {
-  elem: HTMLElement;
-  /** Its label, lowercased, for the typeahead */
-  text: string;
-  isDisabled: boolean;
-  /** Whether it stays open on Space (an on / off item, a choice) */
-  isCheckable: boolean;
-  /** Does what it does (flips, picks, runs) */
-  run: () => void;
-};
+/** How long a hover takes to open a submenu when `--aek-submenu-delay` can't be read */
+const DEFAULT_SUBMENU_DELAY_MS = 150;
 
-const ROLE_OF = { item: 'menuitem', checkbox: 'menuitemcheckbox', radio: 'menuitemradio' };
-
-const createPart = (className: string, text = '') => {
-  const span = document.createElement('span');
-  span.className = className;
-  span.textContent = text;
-  return span;
-};
-
-/** An item's element: its check mark (on / off and choices), icon and label (the shortcut's hint
- * is `buildItems`') */
-const createItemElem = (
-  kind: keyof typeof ROLE_OF,
-  props: { label: string; icon?: string; disabled?: boolean; checked?: boolean }
-) => {
-  const elem = document.createElement('div');
-  elem.className = 'aekMenu__item';
-  elem.setAttribute('role', ROLE_OF[kind]);
-  elem.setAttribute('tabindex', '-1');
-  if (props.disabled) elem.setAttribute('aria-disabled', 'true');
-  // A check mark or an icon: the menu lines the other items' labels up with theirs
-  if (kind !== 'item' || props.icon) elem.setAttribute('data-leading', '');
-  if (kind !== 'item') {
-    elem.setAttribute('aria-checked', String(Boolean(props.checked)));
-    const check = createPart('aekMenu__check');
-    check.setAttribute('aria-hidden', 'true');
-    elem.append(check);
-  }
-  if (props.icon) {
-    const icon = createPart('aekMenu__icon');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = props.icon;
-    elem.append(icon);
-  }
-  elem.append(createPart('aekMenu__label', props.label));
-  return elem;
-};
-
-/** A group's element, named by its label (shown by the stylesheet from `data-label`) */
-const createGroupElem = (label: string) => {
-  const elem = document.createElement('div');
-  elem.className = 'aekMenu__group';
-  elem.setAttribute('role', 'group');
-  elem.setAttribute('aria-label', label);
-  elem.setAttribute('data-label', label);
-  return elem;
-};
-
-/** A shortcut's hint's remover (`addShortcutHint`'s) */
-type StopHint = (removeHint: boolean) => void;
-
-/** Builds the items into `parent`, and returns its focusable entries in order; each hint's remover
- * goes into `hints` */
-const buildItems = (parent: HTMLElement, items: MenuItem[], hints: StopHint[]) => {
-  const entries: Entry[] = [];
-  const addEntry = (to: HTMLElement, item: MenuActionItem | MenuCheckboxItem) => {
-    const isCheckbox = item.type === 'checkbox';
-    let checked = isCheckbox && item.checked;
-    const elem = createItemElem(isCheckbox ? 'checkbox' : 'item', { ...item, checked });
-    to.append(elem);
-    if (item.kbd) {
-      hints.push(addShortcutHint({ owner: elem, kbd: item.kbd, className: 'aekMenu__kbd' }));
-    }
-    entries.push({
-      elem,
-      text: item.label.toLowerCase(),
-      isDisabled: Boolean(item.disabled),
-      isCheckable: isCheckbox,
-      run: () => {
-        if (item.type !== 'checkbox') return item.onSelect?.();
-        checked = !checked;
-        elem.setAttribute('aria-checked', String(checked));
-        item.onCheckedChange?.(checked);
-      },
-    });
-  };
-  for (const item of items) {
-    if (item.type === 'separator') {
-      const line = document.createElement('div');
-      line.className = 'aekMenu__separator';
-      line.setAttribute('role', 'separator');
-      parent.append(line);
-    } else if (item.type === 'group') {
-      const group = createGroupElem(item.label);
-      parent.append(group);
-      for (const groupItem of item.items) addEntry(group, groupItem);
-    } else if (item.type === 'radio') {
-      const group = createGroupElem(item.label);
-      parent.append(group);
-      let value = item.value;
-      const optionElems: HTMLElement[] = [];
-      for (const option of item.options) {
-        const elem = createItemElem('radio', { ...option, checked: option.value === value });
-        optionElems.push(elem);
-        group.append(elem);
-        entries.push({
-          elem,
-          text: option.label.toLowerCase(),
-          isDisabled: Boolean(option.disabled),
-          isCheckable: true,
-          run: () => {
-            for (const other of optionElems) {
-              other.setAttribute('aria-checked', String(other === elem));
-            }
-            if (option.value === value) return;
-            value = option.value;
-            item.onValueChange?.(option.value);
-          },
-        });
-      }
-    } else {
-      addEntry(parent, item);
-    }
-  }
-  // A check mark or an icon makes a column the other items line their labels up with
-  if (entries.some((entry) => entry.elem.hasAttribute('data-leading'))) {
-    parent.setAttribute('data-has-leading', '');
-  } else {
-    parent.removeAttribute('data-has-leading');
-  }
-  return entries;
-};
-
-/** The `Kbd` handles an item array holds (not the strings: their hints are the menu's own) */
-const findHintHandles = (items: MenuItem[]) => {
-  const handles: Kbd[] = [];
-  for (const item of items) {
-    const inner = item.type === 'group' ? item.items : [item];
-    for (const one of inner) {
-      if ((!one.type || one.type === 'item' || one.type === 'checkbox') && one.kbd) {
-        if (typeof one.kbd !== 'string') handles.push(one.kbd);
-      }
-    }
-  }
-  return handles;
+/** `--aek-submenu-delay` on the menu (`150ms`, `0.15s`), in ms: a delay, not motion, so reduced
+ * motion keeps it (the tooltip's rule) */
+const readSubmenuDelayMs = (elem: HTMLElement) => {
+  if (typeof getComputedStyle !== 'function') return DEFAULT_SUBMENU_DELAY_MS;
+  const value = getComputedStyle(elem).getPropertyValue('--aek-submenu-delay').trim();
+  const match = value.match(/^([\d.]+)(ms|s)$/);
+  if (!match) return DEFAULT_SUBMENU_DELAY_MS;
+  return Number(match[1]) * (match[2] === 's' ? 1000 : 1);
 };
 
 /** Makes `anchor` the menu's trigger (its listeners and ARIA); returns what undoes it */
@@ -297,21 +185,389 @@ const wireTrigger = (
 };
 
 /**
+ * What `createMenuSurface` makes a menu from: a menu button's (`createMenu`) or a context menu's.
+ * @internal
+ */
+export type MenuSurfaceProps = Pick<
+  MenuProps,
+  'items' | 'side' | 'align' | 'onOpen' | 'onClose' | 'class' | 'attr' | 'id'
+> & {
+  /** Its accessible name, read at each open */
+  getLabel: () => string;
+  /** At least as wide as an element it opens at (a menu button's) */
+  matchAnchorWidth?: boolean;
+  /** A node outside the menu a press or the focus may go to without closing it (the trigger,
+   * whose own click toggles it) */
+  isInside?: (node: Node) => boolean;
+  /** Runs after its removal (`cmp.remove()`) */
+  onRemove?: () => void;
+};
+
+/**
+ * Where `MenuSurface.open` opens the menu.
+ * @internal
+ */
+export type MenuOpenOptions = {
+  /** Its trigger, or a point in viewport px (a context menu at the pointer) */
+  anchor: HTMLElement | AnchorPoint;
+  /** The item that takes the focus (default 'first') */
+  focus?: 'first' | 'last';
+  /** Where the focus goes when it closes (default: what had it) */
+  returnFocus?: HTMLElement | null;
+  /** The element whose forced theme and density the menu takes at a point */
+  themeFrom?: HTMLElement;
+};
+
+/**
+ * A menu without a trigger of its own: `createMenu` wires one onto it, a context menu its target.
+ * @internal
+ */
+export type MenuSurface = {
+  /** The root level's element; `cmp.remove()` disposes of the menu */
+  cmp: CMPHandle;
+  open: (options: MenuOpenOptions) => void;
+  /** Closes every level, giving the focus back when it was in the menu (`returnFocus` true) */
+  close: (returnFocus?: boolean) => void;
+  /** Focuses the root level's first or last item */
+  focusItem: (which: 'first' | 'last') => void;
+  isOpen: () => boolean;
+};
+
+/** An open level of the menu: the root, or a submenu opened from an item of the level before */
+type Level = {
+  elem: HTMLElement;
+  entries: MenuEntry[];
+  typeahead: ReturnType<typeof createTypeahead>;
+  hints: StopHint[];
+  /** The item it opened from (none: the root) */
+  parent: MenuEntry | null;
+  hideAnchored: () => void;
+  removeOverlay: (returnFocus?: boolean) => void;
+};
+
+/** An entry of an open level, with its level's index */
+type Hit = { depth: number; entry: MenuEntry };
+
+/**
+ * Makes a menu that opens at an element or a point (p803 D10, p805 D11), with its submenus: one
+ * level per open submenu, each anchored to its item (`showAnchored`, on its right, flipped at the
+ * bounds) and an overlay stack entry of its own, so Escape closes one level.
+ * @internal
+ */
+export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
+  const { side = 'bottom', align = 'start' } = props;
+  const isItemsGetter = typeof props.items === 'function';
+  const levels: Level[] = [];
+  /** The open menu's items: a getter's, whose hint handles go at the close */
+  let openItems: MenuItem[] = [];
+  let submenuDelay = DEFAULT_SUBMENU_DELAY_MS;
+  /** A hovered submenu item's open, after the delay */
+  let openTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The pointer heading for an open submenu: where it stops is acted on after the delay */
+  let pathTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastPoint: MenuPoint | null = null;
+
+  const clearTimers = () => {
+    if (openTimer) clearTimeout(openTimer);
+    if (pathTimer) clearTimeout(pathTimer);
+    openTimer = null;
+    pathTimer = null;
+  };
+
+  const isInMenu = (node: Node) => levels.some((level) => level.elem.contains(node));
+
+  /** The deepest level holding `node` (-1: none) */
+  const findDepth = (node: Node) => {
+    for (let depth = levels.length - 1; depth >= 0; depth--) {
+      if (levels[depth].elem.contains(node)) return depth;
+    }
+    return -1;
+  };
+
+  const findHit = (target: EventTarget | null): Hit | null => {
+    const depth = target ? findDepth(target as Node) : -1;
+    if (depth === -1) return null;
+    const entry = levels[depth].entries.find((one) => one.elem.contains(target as Node));
+    return entry ? { depth, entry } : null;
+  };
+
+  const focusEntry = (level: Level | undefined, index: number) => {
+    level?.entries[index]?.elem.focus({ preventScroll: true });
+  };
+
+  /** Closes the levels from `depth` on, deepest first; `returnFocus` gives it back to what the
+   * level at `depth` returns it to (its item, or the root's) when it was in there */
+  const closeFrom = (depth: number, returnFocus: boolean) => {
+    if (depth >= levels.length) return;
+    clearTimers();
+    for (let d = levels.length - 1; d >= depth; d--) {
+      const level = levels[d];
+      level.typeahead.clear();
+      level.removeOverlay(returnFocus && d === depth);
+      level.hideAnchored();
+      // An array's handles stay for the next open; a string's hints always go
+      for (const stopHint of level.hints) stopHint(false);
+      level.parent?.elem.setAttribute('aria-expanded', 'false');
+      level.parent?.elem.removeAttribute('aria-controls');
+      if (d > 0) {
+        unlisten(level.elem);
+        level.elem.remove();
+      }
+    }
+    levels.length = depth;
+    if (depth > 0) return;
+    document.removeEventListener('pointerdown', onOutsidePress, true);
+    cmp.elem.replaceChildren();
+    cmp.elem.remove();
+    // A getter makes new hint handles on each open: this open's go, drawn or not
+    if (isItemsGetter) for (const handle of findMenuHintHandles(openItems)) handle.cmp.remove();
+    openItems = [];
+    lastPoint = null;
+    props.onClose?.();
+  };
+
+  /** In the capture phase on the document: a press anywhere but the menu (any level) and what
+   * counts as inside it (the trigger, whose own click toggles it) */
+  function onOutsidePress(e: Event) {
+    const target = e.target as Node | null;
+    if (target && (isInMenu(target) || props.isInside?.(target))) return;
+    closeFrom(0, false);
+  }
+
+  const makeLevel = (elem: HTMLElement, items: MenuItem[], parent: MenuEntry | null) => {
+    const level: Level = {
+      elem,
+      entries: [],
+      typeahead: createTypeahead({
+        getCount: () => level.entries.length,
+        getText: (index) => level.entries[index].text,
+      }),
+      hints: [],
+      parent,
+      hideAnchored: () => {},
+      removeOverlay: () => {},
+    };
+    level.entries = buildMenuItems(elem, items, level.hints);
+    return level;
+  };
+
+  /** Opens `entry`'s submenu beside it (the level after `depth`), closing another one open there;
+   * `focus` puts the focus on its first item (a key, a click), else it stays (a hover) */
+  const openSubmenu = (depth: number, entry: MenuEntry, focus: boolean) => {
+    const childDepth = depth + 1;
+    const open = levels[childDepth];
+    if (open?.parent === entry) {
+      if (focus) focusEntry(open, 0);
+      return;
+    }
+    closeFrom(childDepth, false);
+    if (entry.isDisabled || !entry.submenu) return;
+    const elem = document.createElement('div');
+    elem.className = 'aekMenu';
+    elem.id = `${cmp.id}-${childDepth}`;
+    elem.setAttribute('role', 'menu');
+    elem.setAttribute('data-submenu', '');
+    elem.setAttribute('aria-label', entry.elem.querySelector('.aekMenu__label')?.textContent ?? '');
+    (cmp.elem.parentElement ?? document.body).appendChild(elem);
+    const level = makeLevel(elem, entry.submenu, entry);
+    levels.push(level);
+    listen(elem);
+    entry.elem.setAttribute('aria-expanded', 'true');
+    entry.elem.setAttribute('aria-controls', elem.id);
+    level.hideAnchored = showAnchored({
+      elem,
+      anchor: entry.elem,
+      side: 'right',
+      align: 'start',
+      gap: 0,
+      onAnchorRemoved: () => closeFrom(childDepth, false),
+    });
+    level.removeOverlay = pushOverlay({
+      elem,
+      close: () => closeFrom(childDepth, true),
+      returnFocus: entry.elem,
+    });
+    if (focus) focusEntry(level, 0);
+  };
+
+  /** Picks an entry: what closes the menu closes it first, so what it runs (a dialog) gets the
+   * focus from the trigger */
+  const pick = (entry: MenuEntry, keepOpen: boolean) => {
+    if (entry.isDisabled) return;
+    if (!keepOpen) closeFrom(0, true);
+    entry.run();
+  };
+
+  const onKeyDown = (e: Event) => {
+    const key = e as KeyboardEvent;
+    const depth = findDepth(e.target as Node);
+    const level = levels[depth];
+    if (!level) return;
+    const index = level.entries.findIndex((one) => one.elem === document.activeElement);
+    const entry = level.entries[index];
+    const moveTo = getMoveTarget(key.key, index, { count: level.entries.length, wrap: true });
+    const opensSubmenu = key.key === 'ArrowRight' || key.key === 'Enter' || key.key === ' ';
+    if (moveTo !== null) focusEntry(level, moveTo);
+    else if (entry?.submenu && opensSubmenu) openSubmenu(depth, entry, true);
+    else if (key.key === 'ArrowLeft' && depth > 0) closeFrom(depth, true);
+    else if (key.key === 'Enter' && entry) pick(entry, false);
+    else if (key.key === ' ' && entry) pick(entry, entry.isCheckable);
+    else if (key.key === 'Tab') closeFrom(0, true);
+    else if (isTypeaheadKey(key)) {
+      const found = level.typeahead.type(key.key, Math.max(index, 0));
+      if (found !== -1) focusEntry(level, found);
+    } else return;
+    e.preventDefault();
+    e.stopPropagation();
+    swallowNextKeyUp(key.key);
+  };
+
+  const onClick = (e: Event) => {
+    const hit = findHit(e.target);
+    if (!hit) return;
+    if (hit.entry.submenu) openSubmenu(hit.depth, hit.entry, true);
+    else pick(hit.entry, false);
+  };
+
+  /** The pointer rests on `hit`'s item: it takes the focus, a submenu open beside another item of
+   * its level closes, and a submenu item opens its own after the delay */
+  const settleHover = ({ depth, entry }: Hit) => {
+    clearTimers();
+    if (document.activeElement !== entry.elem) entry.elem.focus({ preventScroll: true });
+    const child = levels[depth + 1];
+    if (child && child.parent !== entry) closeFrom(depth + 1, false);
+    if (!entry.submenu || entry.isDisabled || levels[depth + 1]) return;
+    openTimer = setTimeout(() => {
+      openTimer = null;
+      if (document.activeElement === entry.elem) openSubmenu(depth, entry, false);
+    }, submenuDelay);
+  };
+
+  const onPointerMove = (e: Event) => {
+    const { clientX = 0, clientY = 0 } = e as PointerEvent;
+    const point = { x: clientX, y: clientY };
+    const from = lastPoint;
+    lastPoint = point;
+    const hit = findHit(e.target);
+    if (!hit) return;
+    const child = levels[hit.depth + 1];
+    if (child && child.parent === hit.entry) {
+      clearTimers();
+      return;
+    }
+    // Heading for an open submenu across its level's other items: it stays open, and where the
+    // pointer stops is acted on after the delay
+    if (child && from && isInPointerPath(from, point, child.elem.getBoundingClientRect())) {
+      if (pathTimer) clearTimeout(pathTimer);
+      pathTimer = setTimeout(() => {
+        pathTimer = null;
+        if (levels[hit.depth]?.entries.includes(hit.entry)) settleHover(hit);
+      }, submenuDelay);
+      return;
+    }
+    settleHover(hit);
+  };
+
+  const onFocusOut = (e: Event) => {
+    const next = (e as FocusEvent).relatedTarget as Node | null;
+    if (next && !isInMenu(next) && !props.isInside?.(next)) closeFrom(0, false);
+  };
+
+  /** A submenu's listeners (the root's are its CMP's), capture as a CMP's are */
+  const LEVEL_LISTENERS: [string, (e: Event) => void][] = [
+    ['keydown', onKeyDown],
+    ['click', onClick],
+    ['pointermove', onPointerMove],
+    ['focusout', onFocusOut],
+  ];
+  const listen = (elem: HTMLElement) => {
+    for (const [type, fn] of LEVEL_LISTENERS) elem.addEventListener(type, fn, true);
+  };
+  const unlisten = (elem: HTMLElement) => {
+    for (const [type, fn] of LEVEL_LISTENERS) elem.removeEventListener(type, fn, true);
+  };
+
+  const open = ({ anchor, focus = 'first', returnFocus, themeFrom }: MenuOpenOptions) => {
+    const anchorElem = 'nodeType' in anchor ? anchor : null;
+    if (levels.length || (anchorElem && !anchorElem.isConnected)) return;
+    openItems = typeof props.items === 'function' ? props.items() : props.items;
+    const root = makeLevel(cmp.elem, openItems, null);
+    levels.push(root);
+    cmp.elem.setAttribute('aria-label', props.getLabel());
+    const owner = anchorElem ?? themeFrom;
+    const parent = hasHudRoot()
+      ? getHUDRootCMP().elem
+      : owner?.closest(`.${KIT_ROOT_CLASS}`) ?? document.body;
+    parent.appendChild(cmp.elem);
+    root.hideAnchored = showAnchored({
+      elem: cmp.elem,
+      anchor,
+      side,
+      align,
+      themeFrom,
+      matchAnchorWidth: props.matchAnchorWidth,
+      onAnchorRemoved: () => closeFrom(0, false),
+    });
+    root.removeOverlay = pushOverlay({
+      elem: cmp.elem,
+      close: () => closeFrom(0, true),
+      ...(returnFocus === undefined ? {} : { returnFocus }),
+    });
+    submenuDelay = readSubmenuDelayMs(cmp.elem);
+    document.addEventListener('pointerdown', onOutsidePress, true);
+    focusEntry(root, focus === 'first' ? 0 : root.entries.length - 1);
+    props.onOpen?.();
+  };
+
+  const cmp: CMPHandle = CMP({
+    id: props.id,
+    idAttr: true,
+    class: classes('aekMenu', props.class),
+    attr: { ...props.attr, role: 'menu' },
+    listeners: LEVEL_LISTENERS.map(([type, fn]) => ({ type, fn })),
+    onRemoveCmp: () => {
+      closeFrom(0, false);
+      if (!isItemsGetter) {
+        for (const handle of findMenuHintHandles(props.items as MenuItem[])) handle.cmp.remove();
+      }
+      props.onRemove?.();
+    },
+  });
+
+  return {
+    cmp,
+    open,
+    close: (returnFocus = true) => closeFrom(0, returnFocus),
+    focusItem: (which) => {
+      const root = levels[0];
+      focusEntry(root, which === 'first' ? 0 : (root?.entries.length ?? 0) - 1);
+    },
+    isOpen: () => levels.length > 0,
+  };
+};
+
+/**
  * Creates a menu (p803 D10, the APG menu button): a list of actions, on / off items, one-of
- * choices, groups and separators, opened by its trigger and anchored to it.
+ * choices, submenus (p805 D11), groups and separators, opened by its trigger and anchored to it.
  * - Parts: `.aekMenu` (`role="menu"`), in the HUD root while it's open, in the browser's top layer
  *   (else at `--aek-z-tooltip`); `.aekMenu__item` (`menuitem`, `menuitemcheckbox`,
  *   `menuitemradio`; `aria-disabled`, `aria-checked`; `aria-keyshortcuts` from its `kbd`) with
- *   `__check`, `__icon`, `__label` and `__kbd`; `.aekMenu__group` (`role="group"`, its label from `data-label`);
- *   `.aekMenu__separator`.
- * - ARIA: the trigger gets `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`.
+ *   `__check`, `__icon`, `__label`, `__kbd` and a submenu item's `__submenuMark`; `.aekMenu__group`
+ *   (`role="group"`, its label from `data-label`); `.aekMenu__separator`. An open submenu is an
+ *   `.aekMenu[data-submenu]` of its own beside its item, named by the item's label.
+ * - ARIA: the trigger gets `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`; a submenu
+ *   item `aria-haspopup="menu"`, `aria-expanded` and, while open, `aria-controls`.
  * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last.
  *   In the menu: the arrows move (wrapping), Home and End go to the ends, a typed letter (or a few,
  *   quickly) goes to the next item that starts with them; Enter picks the item and closes the menu,
  *   Space too, except on an on / off item or a choice, which it flips and keeps the menu open;
- *   Escape (the kit's overlay stack) and Tab close it with the focus back on the trigger. A disabled
- *   item is focusable and picks nothing. The keys reach no key binding.
- * - Pointer: hovering an item focuses it, a click picks it, a press outside closes the menu.
+ *   ArrowRight, Enter or Space on a submenu item opens it on its first item, and ArrowLeft in a
+ *   submenu closes it back to its item; Escape (the kit's overlay stack) closes one level, the last
+ *   with the focus back on the trigger; Tab closes every level, with the focus back on the
+ *   trigger. A disabled item is focusable and picks or opens nothing. The keys reach no key binding.
+ * - Pointer: hovering an item focuses it, a click picks it (or opens its submenu), a press outside
+ *   closes the menu. Hovering a submenu item opens it after `--aek-submenu-delay` (150 ms; a delay,
+ *   not motion), and the submenu stays open while the pointer heads for it across the other items.
  *
  * The menu isn't added anywhere: dispose of it with `cmp.remove()` when its trigger goes.
  * @example
@@ -324,6 +580,10 @@ const wireTrigger = (
  *     { label: 'Save', kbd: createKbd({ keys: 'Ctrl+S' }), onSelect: () => saveScene() },
  *     { type: 'checkbox', label: 'Autosave', checked: settings.autosave,
  *       onCheckedChange: (on) => (settings.autosave = on) },
+ *     { type: 'submenu', label: 'Export', items: [
+ *       { label: 'As glTF', onSelect: () => exportScene('gltf') },
+ *       { label: 'As JSON', onSelect: () => exportScene('json') },
+ *     ] },
  *     { type: 'separator' },
  *     { label: 'Quit', onSelect: () => quitToMenu() },
  *   ],
@@ -331,157 +591,45 @@ const wireTrigger = (
  * ```
  */
 export const createMenu = (props: MenuProps): Menu => {
-  const { anchor, side = 'bottom', align = 'start' } = props;
-  let isOpen = false;
-  let entries: Entry[] = [];
-  let hideAnchored: (() => void) | null = null;
-  let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
-  const typeahead = createTypeahead({
-    getCount: () => entries.length,
-    getText: (index) => entries[index].text,
+  const { anchor } = props;
+  const surface = createMenuSurface({
+    ...props,
+    getLabel: () =>
+      props.label ?? anchor.getAttribute('aria-label') ?? (anchor.textContent ?? '').trim(),
+    matchAnchorWidth: true,
+    isInside: (node) => anchor.contains(node),
+    onOpen: () => {
+      anchor.setAttribute('aria-expanded', 'true');
+      props.onOpen?.();
+    },
+    onClose: () => {
+      anchor.setAttribute('aria-expanded', 'false');
+      props.onClose?.();
+    },
+    onRemove: () => unwireTrigger(),
   });
-  const hints: StopHint[] = [];
-  const isItemsGetter = typeof props.items === 'function';
 
-  /** Closes it; `returnFocus` false when the focus went elsewhere (an outside press) */
-  const close = (returnFocus = true) => {
-    if (!isOpen) return;
-    isOpen = false;
-    typeahead.clear();
-    document.removeEventListener('pointerdown', onOutsidePress, true);
-    removeOverlay?.(returnFocus);
-    removeOverlay = null;
-    hideAnchored?.();
-    hideAnchored = null;
-    anchor.setAttribute('aria-expanded', 'false');
-    // A getter makes new hints on each open, an array's are kept for the next
-    for (const stopHint of hints) stopHint(isItemsGetter);
-    hints.length = 0;
-    cmp.elem.replaceChildren();
-    entries = [];
-    cmp.elem.remove();
-    props.onClose?.();
-  };
-
-  /** In the capture phase on the document: a press anywhere but the menu and its trigger (whose
-   * own click toggles it) */
-  function onOutsidePress(e: Event) {
-    const target = e.target as Node | null;
-    if (target && (cmp.elem.contains(target) || anchor.contains(target))) return;
-    close(false);
-  }
-
-  const focusEntry = (index: number) => {
-    entries[index]?.elem.focus({ preventScroll: true });
-  };
-
-  const open = (focus: 'first' | 'last' = 'first') => {
-    if (isOpen || !anchor.isConnected) return;
-    isOpen = true;
-    const items = typeof props.items === 'function' ? props.items() : props.items;
-    entries = buildItems(cmp.elem, items, hints);
-    cmp.elem.setAttribute(
-      'aria-label',
-      props.label ?? anchor.getAttribute('aria-label') ?? (anchor.textContent ?? '').trim()
-    );
-    const parent = hasHudRoot()
-      ? getHUDRootCMP().elem
-      : anchor.closest(`.${KIT_ROOT_CLASS}`) ?? document.body;
-    parent.appendChild(cmp.elem);
-    anchor.setAttribute('aria-expanded', 'true');
-    hideAnchored = showAnchored({
-      elem: cmp.elem,
-      anchor,
-      side,
-      align,
-      matchAnchorWidth: true,
-      onAnchorRemoved: () => close(false),
-    });
-    removeOverlay = pushOverlay({ elem: cmp.elem, close: () => close(), returnFocus: anchor });
-    document.addEventListener('pointerdown', onOutsidePress, true);
-    focusEntry(focus === 'first' ? 0 : entries.length - 1);
-    props.onOpen?.();
-  };
-
-  const toggle = () => (isOpen ? close() : open());
-
-  /** Picks an entry: what closes the menu closes it first, so what it runs (a dialog) gets the
-   * focus from the trigger */
-  const pick = (entry: Entry, keepOpen: boolean) => {
-    if (entry.isDisabled) return;
-    if (!keepOpen) close();
-    entry.run();
-  };
-
-  const onMenuKeyDown = (e: Event) => {
-    const key = e as KeyboardEvent;
-    const index = entries.findIndex((entry) => entry.elem === document.activeElement);
-    const moveTo = getMoveTarget(key.key, index, { count: entries.length, wrap: true });
-    if (moveTo !== null) focusEntry(moveTo);
-    else if (key.key === 'Enter' && index !== -1) pick(entries[index], false);
-    else if (key.key === ' ' && index !== -1) pick(entries[index], entries[index].isCheckable);
-    else if (key.key === 'Tab') close();
-    else if (isTypeaheadKey(key)) {
-      const found = typeahead.type(key.key, Math.max(index, 0));
-      if (found !== -1) focusEntry(found);
-    } else return;
-    e.preventDefault();
-    e.stopPropagation();
-    swallowNextKeyUp(key.key);
-  };
-
-  const getEntryOf = (target: EventTarget | null) =>
-    target ? entries.find((entry) => entry.elem.contains(target as Node)) : undefined;
+  const open = (focus: 'first' | 'last' = 'first') =>
+    surface.open({ anchor, focus, returnFocus: anchor });
+  const toggle = () => (surface.isOpen() ? surface.close() : open());
 
   const onAnchorKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
     e.stopPropagation();
     swallowNextKeyUp(e.key);
-    if (isOpen) focusEntry(e.key === 'ArrowDown' ? 0 : entries.length - 1);
-    else open(e.key === 'ArrowDown' ? 'first' : 'last');
+    const which = e.key === 'ArrowDown' ? 'first' : 'last';
+    if (surface.isOpen()) surface.focusItem(which);
+    else open(which);
   };
 
-  const cmp: CMPHandle = CMP({
-    id: props.id,
-    idAttr: true,
-    class: classes('aekMenu', props.class),
-    attr: { ...props.attr, role: 'menu' },
-    listeners: [
-      { type: 'keydown', fn: onMenuKeyDown },
-      {
-        type: 'click',
-        fn: (e) => {
-          const entry = getEntryOf(e.target);
-          if (entry) pick(entry, false);
-        },
-      },
-      {
-        type: 'pointermove',
-        fn: (e) => {
-          const entry = getEntryOf(e.target);
-          if (entry && document.activeElement !== entry.elem) {
-            entry.elem.focus({ preventScroll: true });
-          }
-        },
-      },
-      {
-        type: 'focusout',
-        fn: (e) => {
-          const next = (e as FocusEvent).relatedTarget as Node | null;
-          if (next && !cmp.elem.contains(next) && !anchor.contains(next)) close(false);
-        },
-      },
-    ],
-    onRemoveCmp: () => {
-      close(false);
-      unwireTrigger();
-      if (!isItemsGetter) {
-        for (const handle of findHintHandles(props.items as MenuItem[])) handle.cmp.remove();
-      }
-    },
-  });
-  const unwireTrigger = wireTrigger(anchor, cmp.id, toggle, onAnchorKeyDown);
+  const unwireTrigger = wireTrigger(anchor, surface.cmp.id, toggle, onAnchorKeyDown);
 
-  return { cmp, open, close: () => close(), toggle, isOpen: () => isOpen };
+  return {
+    cmp: surface.cmp,
+    open,
+    close: () => surface.close(),
+    toggle,
+    isOpen: surface.isOpen,
+  };
 };

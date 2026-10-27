@@ -250,9 +250,10 @@ createPopover({ anchor: filters.elem, label: 'Filters', content: () => createFil
 ## Menus and split buttons
 
 [`createMenu`](api:createMenu) gives a button a menu: actions, on / off items, one-of choices,
-named groups and separators. It works from the keyboard as menus do everywhere: Enter, Space or
-ArrowDown opens it, the arrows move, a typed letter jumps, Enter picks, Escape closes, and the
-focus goes back to the button. Pass the items as a function to read your state on every open.
+submenus, named groups and separators. It works from the keyboard as menus do everywhere: Enter,
+Space or ArrowDown opens it, the arrows move, a typed letter jumps, Enter picks, Escape closes,
+and the focus goes back to the button. Pass the items as a function to read your state on every
+open.
 
 ```ts
 const view = createButton({ label: 'View' });
@@ -277,6 +278,14 @@ createMenu({
       ],
       onValueChange: (value) => (settings.shading = value),
     },
+    {
+      type: 'submenu',
+      label: 'Zoom',
+      items: [
+        { label: 'In', onSelect: () => zoomBy(1.25) },
+        { label: 'Out', onSelect: () => zoomBy(0.8) },
+      ],
+    },
   ],
 });
 
@@ -296,12 +305,20 @@ the menu's button when it closes. An item's `kbd` is a key hint you make with `c
 the menu removes: a getter's at each close (the getter makes new ones on the next open), an
 array's with the menu.
 
-| Menu           |                                                                                                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Props          | [`MenuProps`](api:MenuProps) (its items: [`MenuItem`](api:MenuItem)), [`SplitButtonProps`](api:SplitButtonProps)                                                                                             |
-| Parts          | `.aekMenu` with `__item` (`__icon`, `__label`, `__kbd`, `__check`), `__group`, `__separator`; a split button is `.aekButtonGroup.aekSplitButton`                                                             |
-| Keys           | On the trigger: Enter, Space, ArrowDown open on the first item, ArrowUp on the last. In it: the arrows (wrapping), Home, End, typed letters, Enter picks, Space flips a checkable item, Escape and Tab close |
-| Assistive tech | `role="menu"` of `menuitem`, `menuitemcheckbox` and `menuitemradio`; the trigger has `aria-haspopup="menu"` and `aria-expanded`                                                                              |
+A submenu (`type: 'submenu'`, its `items` any of a menu's, another submenu too) opens beside its
+item, flipped to the other side where it doesn't fit. ArrowRight, Enter or Space opens it on its
+first item and ArrowLeft goes back; Escape closes one level at a time, and a pick or Tab closes
+them all. With the pointer, a submenu opens after `--aek-submenu-delay` (150 ms) of hover and
+stays open while the pointer heads for it across the other items, so a diagonal move doesn't
+close it on the way.
+
+| Menu              |                                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`MenuProps`](api:MenuProps) (its items: [`MenuItem`](api:MenuItem)), [`SplitButtonProps`](api:SplitButtonProps)                                                                                                                                                                                                  |
+| Parts             | `.aekMenu` with `__item` (`__icon`, `__label`, `__kbd`, `__check`, `__submenuMark`), `__group`, `__separator`; an open submenu is an `.aekMenu[data-submenu]` of its own; a split button is `.aekButtonGroup.aekSplitButton`                                                                                      |
+| Keys              | On the trigger: Enter, Space, ArrowDown open on the first item, ArrowUp on the last. In it: the arrows (wrapping), Home, End, typed letters, Enter picks, Space flips a checkable item; on a submenu item ArrowRight, Enter or Space opens it, in a submenu ArrowLeft closes it; Escape closes one level, Tab all |
+| Custom properties | `--aek-submenu-delay` (150 ms), on the menu or any ancestor                                                                                                                                                                                                                                                       |
+| Assistive tech    | `role="menu"` of `menuitem`, `menuitemcheckbox` and `menuitemradio`; the trigger and a submenu item have `aria-haspopup="menu"` and `aria-expanded`; a submenu is named by its item                                                                                                                               |
 
 ## Escape, focus and stacking
 
