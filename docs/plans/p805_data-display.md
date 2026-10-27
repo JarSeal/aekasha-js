@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 section 1 done
+Status: in progress | Phase 0 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -131,21 +131,21 @@ p800 §3 and §4.4 hold, with these differences and additions:
 
 `ui/data/` is new (a layout rule); the other pieces go where their kind is, as p803 D2 put them:
 
-| Path                                                    | What                                                                                       |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `data/Table.ts` (`TableRows.ts` if large)               | the table (D5)                                                                             |
-| `data/List.ts`                                          | the list (D6)                                                                              |
-| `data/Tree.ts`                                          | the tree (D7)                                                                              |
-| `data/Filter.ts`                                        | matching and marking text (the list, the tree, the palette)                                |
-| `data/VirtualRows.ts`, `data/Reorder.ts`                | the opt-in behaviours (D8)                                                                 |
-| `data/graphs/`                                          | `Sparkline.ts`, `Donut.ts`, `StackedBar.ts`, `Chart.ts`, `ChartScale.ts`, `TimeSeries.ts`  |
-| `data/StatTile.ts`                                      | (D9)                                                                                       |
-| `components/Tabs.ts`, `Accordion.ts`, `Splitter.ts`     | general layout pieces, next to the button group (D10)                                      |
-| `components/RovingFocus.ts`                             | `@internal`: roving focus and typeahead (D4); the menu's `createTypeahead` moves here      |
-| `components/Announcer.ts`                               | `@internal`: one polite live region per kit root (D4), unless Phase 0 reuses the toaster's |
-| `overlays/ContextMenu.ts`, `overlays/CommandPalette.ts` | on the overlay stack (D11, D12); the menu's submenus in `Menu.ts`                          |
-| `forms/FieldContextMenu.ts`, `forms/GraphMonitor.ts`    | the fields' menu (D11), the monitor's graph view (D9)                                      |
-| `core/ThemeWatch.ts`                                    | `@internal`: the theme signal a canvas needs (D9)                                          |
+| Path                                                    | What                                                                                      |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `data/Table.ts` (`TableRows.ts` if large)               | the table (D5)                                                                            |
+| `data/List.ts`                                          | the list (D6)                                                                             |
+| `data/Tree.ts`                                          | the tree (D7)                                                                             |
+| `data/Filter.ts`                                        | matching and marking text (the list, the tree, the palette)                               |
+| `data/VirtualRows.ts`, `data/Reorder.ts`                | the opt-in behaviours (D8)                                                                |
+| `data/graphs/`                                          | `Sparkline.ts`, `Donut.ts`, `StackedBar.ts`, `Chart.ts`, `ChartScale.ts`, `TimeSeries.ts` |
+| `data/StatTile.ts`                                      | (D9)                                                                                      |
+| `components/Tabs.ts`, `Accordion.ts`, `Splitter.ts`     | general layout pieces, next to the button group (D10)                                     |
+| `components/RovingFocus.ts`                             | `@internal`: roving focus and typeahead (D4); the menu's `createTypeahead` moves here     |
+| `components/Announcer.ts`                               | `@internal`: one polite live region per kit root (D4; Phase 0: not the toaster's)         |
+| `overlays/ContextMenu.ts`, `overlays/CommandPalette.ts` | on the overlay stack (D11, D12); the menu's submenus in `Menu.ts`                         |
+| `forms/FieldContextMenu.ts`, `forms/GraphMonitor.ts`    | the fields' menu (D11), the monitor's graph view (D9)                                     |
+| `core/ThemeWatch.ts`                                    | `@internal`: the theme signal a canvas needs (D9)                                         |
 
 Each public module is on `aekasha/ui` by name (p803 D12: one entry). The Hub's pages follow the
 folders: the table, list, tree, graphs and stat tile on a new data page; the tabs, accordion and
@@ -166,7 +166,8 @@ What every collection (table, list, tree) shares:
   text node.
 - **On the scheduler:** a collection given `scheduler` and `interval` re-reads `rows` (a getter)
   on the host's tick while it's shown, as a monitor does (p804 D4). The scheduler gets a generic
-  entry for that (`addScheduledRefresh(scheduler, refresh, interval)`, `@internal`), so a tab, a
+  entry for that (`addScheduledRefresh(scheduler, refresh, { interval?, isShown })`, `@internal`,
+  a wrapper over `addScheduledBinding`, whose entry Phase 0 found generic already), so a tab, a
   window and an app panel keep one tick each.
 - **Text is text:** every string is written with `textContent`; rich content is a renderer that
   returns a CMP (a cell, a row, a node), which the piece removes with its row.
@@ -196,7 +197,7 @@ What every collection (table, list, tree) shares:
   | accordion                            | APG accordion                                  | Enter / Space; Up / Down / Home / End between headers                                                                  |
   | splitter                             | APG window splitter                            | arrows (Shift ×10), Home / End, Enter collapses and restores                                                           |
   | context menu, submenus               | APG menu                                       | the menu's, plus Right / Left into and out of a submenu                                                                |
-  | command palette                      | APG combobox with a grouped listbox, modal     | Up / Down, PageUp / PageDown, Home / End in the list, Enter, Escape clears then closes                                 |
+  | command palette                      | APG combobox with a grouped listbox, modal     | Up / Down, PageUp / PageDown, Enter, Escape closes (Home / End stay the input's caret; Phase 0 step 5)                 |
 
 - **Announcements:** a sort ("Sorted by Size, descending"), a filter's count ("12 of 340"), a
   move ("Lamp moved to 3 of 8") and a lazy load's end go to one polite live region per kit root
@@ -224,10 +225,11 @@ its number as text), headerTooltip?, hidden? }`.
   it controlled (the app sorts, the table shows), otherwise the table sorts its copy of the order.
 - **Groups and footer:** `groups: [{ key, label, rows }]` as `<tbody>`s, each with a header row
   (the profiler's "App"); `footer` rows in `<tfoot>` (the breakdown's total).
-- **Highlight:** `highlight: 'row' | 'column' | 'cell' | 'cross'` on hover and focus (the
-  `surface-hover` role; a column through `data-highlight` on its cells); `striped` with
-  `--aek-table-stripe`, its strength Phase 0's (p801 §4's open item) in both themes under the
-  contrast test.
+- **Highlight:** `highlight: 'row' | 'column' | 'cell' | 'cross'` on hover and focus
+  (`--aek-table-highlight`, the text colour at 8 %: Phase 0 found `surface-hover` too close to the
+  stripe in dark and darker than a window's surface; a column through `data-highlight` on its
+  cells); `striped` with `--aek-table-stripe`, the text colour at 3 % over any surface (Phase 0
+  step 4, closing p801 §4's open item).
 - **Sticky:** `sticky: { header?, firstColumn? }` inside the table's scroll box.
 - **Responsive:** the table sits in a scroll box (`role="region"` named by the caption and a tab
   stop only while it overflows: axe's `scrollable-region-focusable`); `stackBelow: <px>` turns each
@@ -235,6 +237,8 @@ its number as text), headerTooltip?, hidden? }`.
   embed and a window measure their own box), with the table roles kept as attributes (a
   `display` change drops them in some browsers).
 - **Virtual:** D8 (a spacer row before and after, `aria-rowcount`, `aria-rowindex`).
+- **Layout:** `table-layout: fixed` when every shown column has a `width` (Phase 0's probe: a
+  tenth off a full refresh's layout in Chromium), the browser's auto layout otherwise.
 
 ### D6. The list
 
@@ -302,11 +306,16 @@ the piece. A list without them carries neither.
   polyline with gaps at `NaN`, a dot on the last value, auto or fixed scale; `push(value)` into a
   kept ring buffer or `setValues`. `aria-hidden` with its figure as text beside it (p800 D8's
   written deviation), or `label` for `role="img"`. Updated at the scheduler's rate, not per frame:
-  the points' string allocates, which the perf-auditor weighs against a canvas in Phase 0.
-- **Donut** (`createDonut({ value? | parts?, label, centre?, size? })`): the pie's
+  the points' string allocates, which Phase 0's probe accepted against a canvas (same cost, and
+  the stroke stays in CSS). `area: true` fills under the line (the census' "Over time" ones).
+- **Donut** (`createDonut({ value? | parts?, label?, centre?, size? })`): the pie's
   `conic-gradient`, generalised: one value (0..1, `role="meter"` with `aria-valuenow`) or parts
-  (`role="img"`, its label listing them, a legend). Its track `surface-hover`, its fill `text` or a
-  part's colour (p801 §4). The ray cast tab moves onto it and the pie goes (D1).
+  (`role="img"`, its label listing them, a legend). Without `label` it's decorative
+  (`aria-hidden`, no role): a figure beside it already says what it shows, as the sparkline's
+  `aria-hidden` form (p800 D8's written deviation). Its track `surface-hover`, its fill `text` or a
+  part's colour (p801 §4). The ray cast tab moves onto it and the pie goes (D1): its 12 pies show
+  how far each measuring window has run, beside the row's figure, so it uses the decorative form
+  (§4.1).
 - **Stacked bar** (`createStackedBar({ parts, total?, label, legend? })`): 100 % or against a
   total, flex segments with their names in `title`, `role="img"` and a label; a table cell's
   `kind: 'bar'` (D5), the profiler's frame by stage and memory by category (p807).
@@ -314,7 +323,8 @@ the piece. A list without them carries neither.
 description?, yFormat?, xFormat?, stacked? })`): SVG, axes with nice ticks (`ChartScale.ts`), a
   legend, `role="img"` named by its title and description, and the values in a visually hidden
   `<table>` with a "Show as table" button that shows it. Updated with `setSeries`.
-- **Series colours:** p801's tokens have no categorical set. `--aek-chart-1` … `--aek-chart-6` in
+- **Series colours** (Phase 0 step 4 picked the six and their order: blue, orange, violet, aqua,
+  yellow, magenta): p801's tokens have no categorical set. `--aek-chart-1` … `--aek-chart-6` in
   both themes: 3:1 against `surface` (the contrast test), told apart under the common colour
   vision deficiencies (Phase 0's check), named in the design document's colour section (a group in
   `devTools/hub/generated/design.ts`). The status roles stay for status (p800 D6): a threshold
@@ -325,8 +335,10 @@ thresholds? })` → `{ cmp, push, pushAll, clear, setRange, pause, resume }`): a
   drawn at most once per animation frame while it's shown (an `IntersectionObserver` and the
   host's visibility), sized for the device pixel ratio. No allocation per push or draw (the
   perf-auditor, D14). `aria-hidden`, with a text summary beside it (latest, min, max) updated at
-  the scheduler's rate. The renderer (a path per frame or a shifted bitmap) is Phase 0's probe's
-  pick. p807's stats panels build on it after the perf-auditor's pass (p800 §5).
+  the scheduler's rate. The renderer is a shifted bitmap (Phase 0's probe: the new segments
+  stroked on the moved image, the path redrawn whole only on a resize, a rescale, a theme change
+  or a resume), the auto range growing to a nice ceiling and shrinking only after a whole buffer
+  under it. p807's stats panels build on it after the perf-auditor's pass (p800 §5).
 - **The canvas's colours:** CSS follows the theme by itself; a canvas reads the tokens once and
   again on a change. `core/ThemeWatch.ts` (`onKitThemeChange(elem, fn)`, `@internal`): one
   `matchMedia('(prefers-color-scheme: dark)')` listener and one `MutationObserver` on the document
@@ -390,19 +402,33 @@ collapsible?, onSizeChange?, label })` → `{ cmp, setSize, getSize, collapse, r
 ### D12. The command palette
 
 - `createCommandPalette({ commands?, source?, label, placeholder?, groups?, recent?,
-onRecentChange?, emptyText?, onSelect? })` → `{ cmp, open, close, isOpen, setCommands }`. A
+onRecentChange?, hint?, emptyText?, loadingText?, errorText?, hints?, renderRow?, onQueryChange?,
+onSelect?, onOpen?, onClose? })` → `{ cmp, open({ query? }), close, isOpen, setCommands }`,
+  generic over its command type (`@template`, so `renderRow` reads the app's own fields). A
   command is `{ id, label, group?, keywords?, description?, icon?, kbd? (a Kbd handle), disabled?,
-run() }`; `source(query)` may be async (debounced, a spinner, a stale result dropped).
-- A modal on the overlay layer (p803 D7: the focus trap, `inert`, the focus returned), near the
-  top of the HUD bounds; an input as a combobox over a grouped listbox; ranked by `Filter.ts`'
-  scorer (word starts, consecutive letters, the label before keywords) with the matches marked;
-  the recent commands first on an empty query (`recent` is the app's: no storage here).
+href?, matchTerms?, run? }` (`run` or `href`: an `href` row is an `<a>`, a modified click left to
+  the browser). `source(query)` returns `Command[]` or `{ commands, total }` ("50 of 214"), or a
+  promise of either: a promise is debounced with a spinner (`loadingText`) and dropped when stale,
+  a rejection shows `errorText`; a result returned at once renders at once.
+- A modal on the overlay layer (p803 D7: the focus trap, `inert` on the HUD root's other children,
+  the focus returned), near the top of the HUD bounds and the whole of them below a width, with a
+  Close button, a backdrop that closes on a click and a footer of key hints (`hints`, hidden
+  without hover); an input as a combobox over a grouped listbox (the groups in order of first
+  appearance unless `groups` fixes one, their labels sticky); `commands` ranked by `Filter.ts`'
+  scorer (word starts, consecutive letters, the label before keywords), a `source`'s results kept
+  in its order; the matches marked (`matchTerms`, else the query's words; a `renderRow` marks with
+  the `appendMarked` it's given); the recent commands first on an empty query, else `hint`
+  (`recent` is the app's: no storage here, the query neither: `onQueryChange`, `open({ query })`,
+  the query selected on open). Escape closes, never clears first.
 - **No key of its own:** the kit doesn't read input (it runs without the engine). The guide shows
   Ctrl / ⌘+K through an action map, the example binds it.
-- **The Hub's search moves onto it** (proposed: Phase 7 section 2): its source is MiniSearch's
-  results, its groups the sections, its rows the breadcrumb and the marked snippet (a row
-  renderer). The Hub's own `<dialog>` code goes. If its rows, its speed or its chunk size don't
-  fit, the search stays as it is and the reason is written here.
+- **The Hub's search moves onto it** (Phase 7 section 2; Phase 0 step 5 mapped every feature):
+  its source is MiniSearch's results (`total` the full count, `matchTerms` its matched terms),
+  its groups the sections, its rows the breadcrumb, the API kind badge and the marked snippet
+  (`renderRow`), its stored query through `onQueryChange` and `open({ query })`, the page made
+  inert and its scroll locked in `onOpen` / `onClose`. One HUD root shared with the library pages'
+  chunk (`_kitRoot.ts`), above the Hub's header. The Hub's `<dialog>` code goes. If the measured
+  chunk or the look don't hold up there, the search stays and the reason is written here.
 
 ### D13. Size
 
@@ -488,7 +514,7 @@ scripts, the kit's `CLAUDE.md`; then `yarn test`, `tsc`, ESLint, `yarn hub:build
 `verify:ui --only <pieces>`, `verify:baselines` (the new names recorded). Each phase stops after
 each section for review.
 
-### Phase 0: baselines and checks
+### Phase 0: baselines and checks — done
 
 1. On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
    `yarn sbp --profile all` (the `_engine/ui` groups, the `uiKitEmbed` chunks: noted here).
@@ -530,6 +556,48 @@ each section for review.
    `drawImage`, at a device pixel ratio of 1 and 2), the sparkline (SVG string against a small
    canvas at 4 Hz with 40 of them), the table (500 rows at 10 Hz: `setCell` against today's
    `innerHTML`). The picks into D9 and D5.
+
+   As found (2026-10-27; a scratchpad page per probe, Playwright's Chromium and Firefox, headless
+   and headed under WSLg, 5 s measured after a 1 s warm-up; script time per update, the table's
+   with the forced style and layout of its change). Under WSL2 both browsers rasterize in
+   software, so the figures are this machine's and the comparisons are what carries over; headed
+   and headless agreed. Chromium records canvas 2D calls and rasterizes them later, so its script
+   time leaves the raster out: a canvas pick rests on the frame rate and on Firefox, which
+   rasterizes in step (its clock has a 1 ms resolution).
+
+   | Probe                                                                  | Chromium (median / p95 ms, fps)                     | Firefox (median / p95 ms, fps) |
+   | ---------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
+   | Time series, 8 × 600, path per frame, DPR 1 / 2                        | 0.0 / 0.1, 60 · 0.0 / 0.1, 60                       | 0 / 1, 60 · 3 / 6, 60          |
+   | Time series, 8 × 600, shifted bitmap, DPR 1 / 2                        | 0.1 / 0.2, 60 · 0.2 / 0.4, 60                       | 0 / 1, 60 · 0 / 1, 60          |
+   | Time series, 8 panels (64 series), path, DPR 1 / 2                     | 0.2 / 0.4, 60 · 0.2 / 0.4, **47** (p95 frame 33 ms) | 2 / 3, 60 · **19 / 33, 46**    |
+   | Time series, 8 panels (64 series), shifted bitmap, DPR 1 / 2           | 0.6 / 0.8, 60 · 1.7 / 2.4, 60                       | 1 / 2, 60 · 3 / 5, 60          |
+   | Sparklines, 40 × 60 at 4 Hz, SVG `points` / canvas, DPR 2              | 0.2 / 0.5 · 0.1 / 0.3                               | 0 / 1 · 1 / 2                  |
+   | Table, 500 × 6 at 10 Hz, every figure changed: `innerHTML` / `setCell` | 17.0 / 19.8 · 12.5 / 16.1                           | 21 / 24 · 12 / 16              |
+   | The same with `table-layout: fixed`                                    | 15.1 / 17.5 · 10.7 / 14.1                           | 20 / 23 · 12 / 16              |
+   | Table, a tenth of the rows changed: `innerHTML` / `setCell`            | 16.0 / 18.6 · 3.9 / 4.6                             | 19 / 23 · 3 / 5                |
+
+   No case had a long task. The picks:
+
+   - **The time series draws a shifted bitmap** (D9): each frame the drawn canvas moves one sample
+     left by `drawImage` (through a back canvas) and only the new segment of each series is
+     stroked. The path redraw is its full draw (a resize, a rescale, a theme change, a resume).
+     The path per frame is free at one panel, but at p807's scale (several panels at DPR 2) it
+     drops to ~46 fps in both browsers, the bitmap holding 60. A rescale costs a full redraw, so
+     the auto range grows to a nice ceiling with headroom (`ChartScale.ts`) and shrinks only after
+     a whole buffer under it, never on every new max.
+   - **The sparkline stays SVG** (D9): 40 of them at 4 Hz cost ~0.2 ms either way, and SVG keeps
+     its stroke in CSS (the theme without `ThemeWatch.ts`), sharp at any DPR and the census' area
+     fill a `<polygon>`. The points' string allocates a few hundred bytes per update at the
+     scheduler's rate, not per frame: accepted.
+   - **The table writes kept text nodes** (D3, D5): `setCell` and `setRows`' cell diff are 4-5 times
+     cheaper than `innerHTML` when a tenth of the rows change (the live case: a profiler's figures
+     don't all move each tick), and still a quarter to a half cheaper when every figure changes.
+     What remains then is the table's layout of 500 rows of new text; `table-layout: fixed` takes
+     10-15 % of it in Chromium, none in Firefox, so it's what a table with every column's `width`
+     given uses, not a default. A table that big refreshing every figure at 10 Hz costs ~11-12 ms a
+     tick, about 12 % of the main thread: D8's virtual rows are its answer (the guide says so),
+     and D14's perf-auditor pass measures it.
+
 4. **Checks that decide details:** linkedom 0.18.13's table API, observers, canvas and clipboard
    (D14's shims); the menu's typeahead and roving focus extracted with no behaviour change (its
    tests); whether the toaster's live regions can be the announcer (D2); the flat tree against
@@ -537,9 +605,151 @@ each section for review.
    `verify:embed` run (D5); the chart colours (six, both themes, 3:1, the common colour vision
    deficiencies simulated) and the table's stripe strength (D5, D9); the grid's graph monitor as an
    `import()` against a static import (D9); the scheduler's generic entry against its tests (D3).
+
+   As found (2026-10-27; scratch scripts and pages, Chromium 153 and Firefox 155 through
+   Playwright, the dataviz validator for the colours):
+
+   - **linkedom 0.18.13** has no table API (`rows`, `tBodies`, `tHead`, `insertRow`, `cells`,
+     `rowIndex`, `cellIndex`, `colSpan` are all undefined), no `ResizeObserver`,
+     `IntersectionObserver`, `matchMedia`, `navigator.clipboard`, 2D context (`getContext` returns
+     null), `Text.splitText`, `<dialog>.showModal`, `CSS` or ARIA property reflection (`ariaSelected`
+     writes no attribute); it has `MutationObserver`, settable `scrollTop`, SVG `createElementNS`,
+     `Text.data` writes, `normalize('NFD')` and `Intl.Collator`. `KitDom` adds focus, the event
+     order, form controls, pointer capture and shadow roots, none of these. So: the pieces build
+     tables with `createElement` and read rows from their own maps, never the table API; `Filter.ts`
+     marks matches by building the text nodes and `<mark>`s itself (no `splitText`); ARIA is
+     written as attributes (the kit's rule already). D14's shims go into `KitDom` (Phase 1
+     section 2): `stubResizeObserver` and `stubIntersectionObserver` (fakes the test fires with
+     sizes and intersections), `stubMatchMedia` (a query list the test flips, `ThemeWatch.ts`'),
+     `createRecording2dContext` (a canvas whose `getContext('2d')` records calls: the time series'
+     draws) and `stubClipboard` (`readText` / `writeText`, the fields' menu's Paste).
+   - **The menu's keys move out unchanged:** `findTypedEntry` and `getMoveTarget` (`Menu.ts:266`,
+     `:294`) are pure, and the typeahead reads only each entry's lowercased `text`;
+     `Menu.test.ts` pins the arrows' wrap, Home / End, a repeated letter, several letters, the
+     500 ms reset and the timer cleared on removal. `RovingFocus.ts` takes them (a `getText(index)`
+     in place of `Entry`, a `wrap` option: the menu and tabs wrap, a list and a tree don't, plus
+     PageUp / PageDown) and the button group's roving tab stop (`ButtonGroup.ts:83-140`:
+     `tabindex` 0 / -1, `focusin` keeping the last one, skipping disabled), which a list, a tree
+     and tabs need and the menu doesn't (its items take the focus with `tabindex="-1"`). The button
+     group moves onto it too, its tests pinning it.
+   - **The announcer is its own** (D2's `Announcer.ts`): the toaster's two live regions belong to
+     a toaster, which an app doesn't have to make (the engine's is debug only), and one is
+     assertive. `announce(elem, text)` finds the kit root from `elem` (`closest('.aekUi')`) and
+     makes one polite `role="status"` region there on first use (`aekVisuallyHidden`), emptying it
+     and writing 50 ms later as the toaster does (`Toaster.ts:364`), so the same text is read again.
+   - **The flat tree passes:** a flat `role="tree"` (as `<ul>` / `<li>` and as `<div>`s, with
+     `aria-level`, `-setsize`, `-posinset`, `-expanded`, `-selected`) and a nested one with
+     `role="group"`s both have no axe violation (WCAG 2.2 AA and best practice) in Chromium and
+     Firefox, and both browsers expose the flat one's levels in their accessibility tree. VoiceOver
+     can't run here (Linux): D7's flat form stands, and the VoiceOver pass is by hand in Phase 3
+     section 3 (§5).
+   - **Container queries** work in both browsers (`container-type: inline-size` and an
+     `@container` rule computed as expected); `verify:ui` and `verify:embed` run Chromium. D5's
+     `stackBelow` stands.
+   - **The chart colours** (D9; validator: lightness band, chroma, adjacent CVD ΔE ≥ 8, normal-vision
+     ΔE ≥ 15, 3:1 on the surface). The reference palette's first six fail 3:1 on white for aqua,
+     yellow and magenta (2.82, 2.17, 2.69), and darkening them brings aqua next to orange under
+     protan (ΔE 6.3); green fails in every order (next to yellow under protan, ΔE 3.0), and it's
+     the success role's hue anyway. Of the 120 orders with blue first, four pass every check in
+     both themes; the pick:
+
+     | Token           | Hue     | Dark (on `#0c1321`) | Light (on `#ffffff`) |
+     | --------------- | ------- | ------------------- | -------------------- |
+     | `--aek-chart-1` | blue    | `#3987e5`           | `#2a78d6`            |
+     | `--aek-chart-2` | orange  | `#d95926`           | `#eb6834`            |
+     | `--aek-chart-3` | violet  | `#9085e9`           | `#4a3aa7`            |
+     | `--aek-chart-4` | aqua    | `#199e70`           | `#16956a`            |
+     | `--aek-chart-5` | yellow  | `#c98500`           | `#b07c00`            |
+     | `--aek-chart-6` | magenta | `#d55181`           | `#d4508a`            |
+
+     Worst adjacent CVD ΔE 8.3 (light, yellow and aqua, protan), 8.4 (dark); normal vision 17.1 /
+     19.3; all six at least 3:1 on `surface` in both themes and on the dark `surface-raised`
+     (`#141e31`). Not on the light `surface-hover` (orange 2.82): a chart doesn't sit there. The
+     check is adjacent pairs, which is what D9's forms need (lines, bars, stacks). With every pair
+     in play (a scatter, which D9 doesn't have), the light theme's first three pass but the dark
+     blue and violet don't (normal vision ΔE 9.8; violet reads as blue under protan and deutan
+     whatever its step: four tried). So a future scatter caps at two series or adds shapes. The
+     status roles stay apart (no green or red series). `Tokens.test.ts` gets the six with their
+     3:1 pairs on `surface` (and the dark `surface-raised`).
+
+   - **The table's stripe and highlight** (D5): the stripe is the text colour at 3 % over whatever
+     surface the table is on (`--aek-table-stripe: color-mix(in srgb, var(--aek-text) 3%,
+transparent)`), the old debugger's `rgba(255,255,255,0.04)` made theme-aware: `surface-hover`
+     can't be it (in dark it's darker than `surface-raised`, so it would darken a window's rows,
+     and a hover on a striped row would match it: 1.01). The highlight (hover and focus) is the
+     text colour at 8 % (`--aek-table-highlight`), not D5's `surface-hover`: it stays apart from the
+     stripe on every surface (1.11 to 1.15) and from the surface (1.18 to 1.23). The muted text
+     keeps 5.18:1 or more on both, the text more. Both are translucent: `Tokens.test.ts` gives
+     them a reason (a background under text whose contrast the table's test computes over each
+     surface).
+   - **The graph monitor's `import()`** can't be measured before the time series exists. D9's
+     `import()` stays; Phase 5 section 3 measures the time series' gzip in the grid's chunk both
+     ways and makes it static only if it adds under 0.5 kB to every declarative grid.
+   - **The scheduler needs no change:** its entry (`ScheduledBinding`, `BindingScheduler.ts:27`)
+     is `{ read(fromRefresh), readState?, isShown, interval? }`, nothing a binding's. D3's
+     `addScheduledRefresh(scheduler, refresh, { interval?, isShown })` is a thin wrapper over
+     `addScheduledBinding` (the entry type renamed `ScheduledEntry`, an internal rename), so a
+     collection gets `refresh()`, the tick and the read when it shows again with no new code in
+     the scheduler; its tests stay as they are, plus one for a collection's entry.
+
 5. **The Hub's search against the palette** (D12): each of its features (grouping, breadcrumbs,
    snippets, the stored query, the API entries, its chunk's size) mapped to a palette prop or a
    row renderer, or written down as a reason to keep it.
+
+   As found (2026-10-27; `hub/_assets/ts/_search.ts`, `hub.ts`' search part, `_search.scss`,
+   `devTools/hub/searchProtocol.ts`; the sizes from a scratch build with `buildScripts`' Vite
+   config): **every feature maps**, none is a reason to keep the search, so it moves onto the
+   palette in Phase 7 section 2 (D12). What it takes:
+
+   | The search today                                                                                                                                                  | On the palette                                                                                                                                                                                                                                                          |
+   | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | The chunk on first use (the button's focus or hover preloads; a click, ⌘K / Ctrl+K, `/` opens), then the payload by `<meta>`; a failed load tried again           | Stays `hub.ts`' (D12: no key of its own): the chunk is the palette with the Hub's source                                                                                                                                                                                |
+   | "Loading the search…" until the payload is in, then the query run again                                                                                           | `source` returns a promise until then (the spinner, `loadingText`), its results once loaded synchronously: a returned array renders in the same input event, no debounce, no spinner; only a promise is debounced and dropped when stale                                |
+   | "The search could not load…", tried again on the next open                                                                                                        | A rejected `source` shows `errorText` in the status; the next query calls it again                                                                                                                                                                                      |
+   | MiniSearch's ranking, 50 at most                                                                                                                                  | With a `source`, the palette keeps its order (no `Filter.ts` scoring); `source` returns `{ commands, total }`, the status "50 of 214 results" (better than today's "50+")                                                                                               |
+   | Groups by top-level section, ordered by each one's best result, labelled by the menu ("Home" for none); `role="group"` named by a presentation label, kept sticky | A command's `group` (a label); the groups in order of first appearance unless `groups` fixes one; the same ARIA; the labels sticky                                                                                                                                      |
+   | A row: the breadcrumb (`›`), the title (or an API result's kind badge and `<code>` name), a two-line snippet around the first match                               | `renderRow(command, { appendMarked })`, the palette generic over its command type (`@template`), so the Hub's renderer reads its own fields (crumbs, kind, snippet); the breadcrumb, the snippet window and the kind badge's classes stay the Hub's                     |
+   | The marks are MiniSearch's matched terms (prefix and fuzzy: `mes` marks `meshes`), longest first                                                                  | A command's `matchTerms` (default: the query's words), which `appendMarked` marks through `Filter.ts` (longest first, case and accents ignored)                                                                                                                         |
+   | A row is an `<a role="option">`: Enter clicks it, a plain click closes the dialog (a same-page anchor only scrolls), a modified or middle click opens a tab       | A command's `href` (its `run` optional then): an `<a>` row, Enter follows it, a plain click closes and follows, a modified click is left to the browser with the palette open                                                                                           |
+   | `aria-activedescendant`, the arrows wrap, the first result active without scrolling, the pointer's row active without scrolling                                   | The palette's (D4); Home / End stay the input's caret (the APG's editable combobox), so D4's row changes                                                                                                                                                                |
+   | Escape closes and keeps the query (its first Escape would only clear a search input); the last query in `sessionStorage`, reopened selected                       | Escape closes, never clears first (D4's row changes: the reopened query is selected, so typing replaces it); `onQueryChange(query)` and `open({ query })`, the storage the Hub's (D12: none in the kit)                                                                 |
+   | The status: a hint on an empty query, the count, "No results for …" with "Did you mean" links (a fuzzy title search)                                              | `hint` (an empty query with no `recent`); `emptyText` a text or `(query) => CMP` (the Hub's links); the count the palette's own, in its `role="status"` line                                                                                                            |
+   | A Close button; a click on the backdrop closes; the hints footer (`↑↓`, `↵`, `esc`, `aria-hidden`), hidden under `(hover: none)`; the whole screen under 640 px   | All needed by a touch HUD too: the palette has the Close button, the backdrop click, a hints footer of `Kbd`s with the app's verbs (`hints: { select: 'to open' }`, default "to run") hidden without hover, and the whole HUD bounds below a width (a container query)  |
+   | A native `<dialog>`: the top layer, the whole page inert, `::backdrop` (`--aek-backdrop`, `tokens.test.ts` checks its fallback), the page's scroll locked         | The kit's modal makes only the HUD root's other children inert (it doesn't own a host page): the Hub sets `inert` on its own page and locks its scroll in `onOpen` / `onClose` (two props D12 adds); the backdrop the palette's, `tokens.test.ts`' check moving with it |
+
+   Besides the props, the Hub needs:
+
+   - **One HUD root for two chunks:** `createHudRoot` throws on a second call, a Hub page has no
+     `#hudRoot`, and the library pages' chunk makes one at load (`_components.ts:3397`). A ⌘K
+     before that chunk ran would make it first, so both use a small `_kitRoot.ts`: the root made
+     once in a slot at the end of `<body>`, by whichever runs first.
+   - **Above the header:** the HUD root is `position: fixed` with no `z-index`, under the Hub's
+     sticky header (`z-index: 50`): the Hub's stylesheet gives `#hudRoot` one above it (the
+     library's windows and dialogs get it too).
+   - **The library pages' switches:** the palette is in the HUD root, which their theme and
+     density switches set, so there it follows them, as the demos' windows do: accepted.
+   - **What goes from the Hub:** `_search.ts`' dialog code (the source, the rows and the snippet
+     stay), most of `_search.scss` (the rows' parts stay), `hub.ts`' two `<dialog>` workarounds
+     (the Escape listener's `closest('dialog')`, `isEditable`'s `dialog:not([open])`: the stack
+     stops Escape and returns the focus itself).
+   - **The look becomes the kit's:** the chrome on the kit's type scale and density, not the
+     Hub's `rem` sizes (the colours are the same roles: `--hub-*` alias the kit's). Phase 7
+     section 2 shows before and after screenshots for review.
+   - **Checks:** today the dialog has none in a browser (`search.test.ts` round-trips the payload
+     only). Phase 7 section 2 adds a Node test of the Hub's source against the built payload
+     (groups, crumbs, marks, API rows) and a `verify:ui` script on its public Hub build's header
+     search (⌘K, a query, the arrows, Enter lands on the page and anchor, Escape returns the
+     focus to the button).
+
+   **Size** (gzip): today's chunk is 9.2 kB (26.3 kB raw): MiniSearch and the protocol 6.4, the
+   dialog 2.8; its styles are in `hub.css`. The kit pieces the palette will import, measured as
+   stand-ins: the HUD root with `kit.scss` adds 3.9 kB of script and 1.9 kB of CSS (mostly
+   `tokens.css` again, which `hub.css` has: harmless), the popover's set (the stack, the anchor,
+   the focus trap, the spinner) 6.5 + 2.2, the menu's (with the typeahead and `Kbd`) 9.5 + 2.8.
+   So the first search loads about 9-12 kB more, less the part of the dialog's 2.8 that goes,
+   against the 373 KiB payload it loads anyway (2-3 %): accepted; on the library pages the kit's
+   modules are shared with `_components`' chunk. Phase 7 section 2 measures the real chunk. Seen
+   on the way, not this plan's: the payload is 373 KiB gzipped (p619: 256), its warning at 450.
 
 ### Phase 1: groundwork
 
@@ -586,7 +796,12 @@ each section for review.
 
 1. The Hub's data page and its guide, the core, overlays and forms pages' additions, every box on
    both library pages, the "Debugger parity" box (D14, D15).
-2. The Hub's search on the palette, or the reason it stays (D12).
+2. The Hub's search on the palette (D12, Phase 0 step 5): the Hub's source and row renderer in
+   `_search.ts`, `_kitRoot.ts` (the library's chunk on it too), `#hudRoot`'s `z-index`, the page's
+   `inert` and scroll lock, `_search.scss` down to the rows' parts and `tokens.test.ts`' backdrop
+   check moved, `hub.ts`' two `<dialog>` workarounds removed; a Node test of the source against
+   the built payload and a `verify:ui` script on the header search; the chunk measured against
+   step 5's 9.2 kB, and before and after screenshots for review. Or the reason it stays.
 3. The example's inspector, the `uiKit` profile's data window and its budget lines (D13, D15).
 4. `src/_engine/ui/CLAUDE.md`, the root `CLAUDE.md`, `readme.md`, `layoutRules.ts`' note,
    `debug/CLAUDE.md`; p800's §5 entry for p805 (what the later plans build on) and §4 below
@@ -617,6 +832,104 @@ now:
   figures; the Objects tab's sparklines → `createSparkline` or the time series; the breakdown's bars
   → bar cells.
 
+### 4.1 The census (Phase 0, 2026-10-27, `main` at `8f4d77ed`)
+
+A one-off script in the scratchpad (sites by grep, each read by hand) and a Playwright pass over
+the larger scenes in the debug env (every drawer tab and profiler tab opened, `tbody` rows and
+list rows counted: "Most rows"). §1.1's "33 `<table>` sites" and GPU memory's "eight tables" were
+wrong: there are **14 table templates in 4 files, 15 tables drawn** (the assets helper twice),
+GPU memory has nine. Every one is an HTML string through `CMP({ html })`, re-rendered whole on
+its tab's refresh; none sorts, has a sticky part or a caption; all use `tabular-nums`.
+
+**Tables**
+
+| Site                                                                         | Columns                                                                                           | Groups, footer, row classes                                                                                                                | Interaction                                                           | Refresh               | Most rows               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | --------------------- | ----------------------- |
+| Overview `_dbg__ProfilerOverview.ts:579`                                     | label (`<th>`), value, sub + action; no `<thead>`                                                 | an "App" `<tbody>` with a `colspan` header row; `isNA`, `isWarn`                                                                           | a row's action button (`data-metric`), one handler on the table       | 1, 2, 4 or 10 Hz (4)  | 14 (default rows)       |
+| Objects, by kind / by owner `…Objects.ts:261` (one template)                 | label + sub line, Objects, Triangles, Vertices (each "in view / total"), a bar                    | a Total row in the `<tbody>` (`isTotal`, not a `<tfoot>`)                                                                                  | the "Bars" measure switch above (a segmented control, `data-measure`) | the profiler's rate   | 6 / 5, + Total          |
+| Objects, ECS worlds `…Objects.ts:340`                                        | world, entity count, "entities"; no `<thead>`                                                     | –                                                                                                                                          | –                                                                     | the profiler's rate   | 1                       |
+| Objects, heaviest `…Objects.ts:386`                                          | rank, object + entity line, kind, triangles, instances, action                                    | –                                                                                                                                          | Edit (`data-heavy`) opens the entity's window                         | the profiler's rate   | 10 (cap)                |
+| GPU memory, categories `_dbg__GPUMemory.ts:214`                              | Category, Size, Count                                                                             | sorted by size, then two fixed rows with text in the Size cell                                                                             | –                                                                     | 500 ms                | 10                      |
+| GPU memory, peaks `:221`                                                     | Peak, Size, Reached                                                                               | –                                                                                                                                          | –                                                                     | 500 ms                | 2                       |
+| GPU memory, frame `:242`                                                     | (label), Last, Min, Avg, Max                                                                      | a heading with "(main loop paused)"                                                                                                        | –                                                                     | 500 ms                | 4                       |
+| GPU memory, sources `:276`                                                   | source + owner line (`title` the id), Size, GPU objects                                           | `<tfoot>` Total; untracked class at 0 B; an empty row's text                                                                               | –                                                                     | 500 ms                | 10                      |
+| GPU memory, by owner `:359`                                                  | Owner, Textures, Geometry, Total, Items                                                           | an owner row then its cells' rows (indented: a two-level hierarchy), the current scene's class, an Untracked row with a %, `<tfoot>` Total | –                                                                     | 500 ms                | 3                       |
+| GPU memory, untracked `:367`                                                 | Untracked, Size                                                                                   | sorted by size                                                                                                                             | –                                                                     | 500 ms                | 4                       |
+| GPU memory, snapshot categories `:449`                                       | Category, Size, Count (signed deltas)                                                             | –                                                                                                                                          | –                                                                     | 500 ms                | –                       |
+| GPU memory, left behind `:457`                                               | allocation + scene / visit / site line, Count, Size                                               | at most 12 (`DIFF_MAX_ROWS`) and a "+N more" `colspan` row, `<tfoot>` Total                                                                | –                                                                     | 500 ms                | 13 (cap)                |
+| GPU memory, asset diff `:466`                                                | asset + kind / owner line, Then, Now, Change; counts in the header text                           | at most 12 and a "+N more" row                                                                                                             | –                                                                     | 500 ms                | 13 (cap)                |
+| Assets info window `_dbg__Assets.ts:582` (`table()`, used at `:646`, `:703`) | a texture array's layers (#, Layer or Member, Source); an atlas's cells (Cell, At, Size, UV rect) | –                                                                                                                                          | –                                                                     | built with the window | not measured (a window) |
+
+Row styles: the profiler stripes odd rows `rgba(255,255,255,0.04)` (`Profiler.module.scss:41`; its
+sparklines' rows `:154` too); GPU memory has no stripe, right-aligned numbers and a `<tfoot>` with
+a top border and `$debugGuiBackgroundLighter2`; the assets table's head has that background. Two
+lines in one cell (a name, a dimmed owner or scene line under it) are in five tables: the table's
+`cell(row)` renderer, or a column `format` returning two lines, has to cover it.
+
+**Bars, sparklines, the pie**
+
+- **The breakdown's bar** (`…Objects.ts:196`): two segments, in view (`$debugTextColor`) and culled
+  (that at 30 %), as shares of the table's total, its figures in `title`; in a cell (D5's
+  `kind: 'bar'`).
+- **The GPU memory budget bar** (`_dbg__GPUMemory.ts:212`): one fill against the budget, clamped,
+  a text label beside it ("62 % of the 512 MB budget (over budget)"), an over-budget class, a width
+  transition: a stacked bar of one part against a `total`, its over state a status role.
+- **The "Over time" sparklines** (`…Objects.ts:406`): three series (triangles in view, meshes in
+  view, draw calls), 60 samples (`HISTORY_LENGTH`, 15 s at 4 Hz), auto-scaled from 0 to the max, a
+  filled `<polygon>` under each `<polyline>`, gaps at `NaN`, `aria-hidden`, the latest and the
+  max as text beside it: D9's sparkline needs the fill (an `area` option).
+- **The pie** (`_dbg__PercentagePie.ts`, used at `kernel/render/debug/_dbg__Raycast.ts:292`): 12 of
+  them (three stat blocks, three's rays, physics rays and shape casts, × four windows), each showing
+  how far its measuring window has run (`pie.set(win.progress * 100)`, `:371`), not a share. So
+  the donut that replaces it is a single value, decorative next to the row's figure (`aria-hidden`)
+  rather than a `meter`: D9's donut keeps the one-value form, and the ray cast tab is its first
+  user in that form.
+- **A key-value grid** (`…Objects.ts:330`, the component types by entity count): `<div>`s, not a
+  table; a static list (D6) with a suffix, or a two-column table.
+
+**Debugger lists** (`debuggerListCMP`, 13 sites in 11 files; every one `data` as a function but
+the space demo's)
+
+| Site                                                                                  | List fields                                                                                           | Item fields                                                                                                           | Most rows           |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Cameras `kernel/camera/debug/_dbg__CameraGUI.ts:616`                                  | `onClick`, `selectedItemId`, a toggle (helper)                                                        | `subTitle`, `title`, `titlePlaceholder`, `toggleValues`                                                               | 2                   |
+| Lights `kernel/light/debug/_dbg__LightGUI.ts:1124`                                    | `emptyText`, `onClick`, `selectedItemId`, toggles                                                     | `subTitle`, `icon`, `badge`, `title`, `titlePlaceholder`, `toggleValues`                                              | 12                  |
+| ECS worlds `kernel/ecs/debug/_dbg__ECS.ts:223`                                        | `emptyText`, `onClick`, `selectedItemId`                                                              | `subTitle`, `title`, `suffix`                                                                                         | 1                   |
+| Assets `kernel/assets/debug/_dbg__Assets.ts:1111`                                     | `emptyText`, `onClick`, `selectedItemId`; its own heading above (the count and a scope switch button) | `subTitle`, `icon`, `title`, `description`, `tooltip`                                                                 | 57 (gym)            |
+| Physics entities `features/physics/debug/_dbg__PhysicsAPI.ts:1163`                    | `heading`, `emptyText`, `onClick`, `selectedItemId`, a toggle (wireframe)                             | `subTitle`, `title`, `toggleValues`                                                                                   | 86 (`physicsTiers`) |
+| Characters `features/character/debug/_dbg__Character.ts:340`                          | `emptyText`, `onClick`, `selectedItemId`, toggles                                                     | `subTitle`, `title`, `toggleValues`                                                                                   | 3                   |
+| PostFX `features/postfx/debug/_dbg__PostFX.ts:628`                                    | `heading`, `emptyText`, `onClick`, `selectedItemId`                                                   | `subTitle`, `badge`, `title`, `titlePlaceholder`, `tooltip`, `disabled`                                               | 1                   |
+| LOD entities `features/lod/debug/_dbg__LOD.ts:625`                                    | `heading`, `emptyText`, `onClick`, `selectedItemId`                                                   | `subTitle`, `title`, `suffix`; a capped list with a disabled "…and N more" row                                        | 12                  |
+| `assetCompare` ×3 `app/scenes/assetCompare/_dbg__assetCompare.ts:226`, `:232`, `:238` | `heading`, `emptyText`                                                                                | `subTitle`, `badge`, `title`, `titlePlaceholder`, `description`, `suffix`, `disabled` (a total row, a "Loading…" row) | 8 each              |
+| `lodShowcase` lanes `app/scenes/lodShowcase/_dbg__lodShowcase.ts:379`                 | `heading`, `emptyText`                                                                                | `subTitle`, `title`, `description`, `suffix`, `tooltip`                                                               | 6                   |
+| `space` `app/scenes/space/_dbg__spaceDemo.ts:153`                                     | `heading`, `emptyText`, `data` an array                                                               | `subTitle`, `title`, `description`, `suffix`                                                                          | 4                   |
+
+Every `DebuggerListDef` and `DebuggerListItem` field has a user but `id` alone, so §4's mapping
+covers them all; two shapes it didn't name: a list's own heading with a control in it (the assets
+tab: `heading` takes a CMP, or the tab keeps its own above the list) and a capped list's "…and N
+more" row (LOD: an `overflow` text, or virtual rows instead of the cap).
+
+The counts (nine scenes: `largeWorld`, `physicsTiers`, `lodShowcase`, `space`, `scene01`,
+`assetCompare`, `physicsTest`, `thirdPersonGymScene`, `skyShowcase`; no snapshot taken, so the
+diff tables weren't drawn) say: the largest list is 86 rows and the largest table 14, nothing near
+D8's ~200 where the guide suggests virtual rows, and a refresh writes at most about 70 table cells
+(GPU memory's at 2 Hz) or 60 (the Overview's at up to 10 Hz). So no debugger list or table needs
+virtual rows today (`physicsTiers`' list is the one that grows with a scene), and D14's 500 live
+rows at 10 Hz is headroom for p807, not today's load; §5's "hundreds of changing figures" holds for
+p807's richer tables, not the current ones.
+
+**Tab menus**
+
+- **The drawer** (`debug/_dbg__DebuggerGUI.ts:141`), **the profiler window**
+  (`profiler/_dbg__Profiler.ts:202`) and **the editor drawer** (`editors/_dbg__EditorDrawer.ts:124`):
+  icon-only `<button>`s named by `title` (the drawer's adds "(scene tab: <id>)" and a scene-tab
+  class), the selected one by class, no tab roles, every button a tab stop. The drawer's menu holds
+  15 tabs (`testDebugScene`; a scene tab adds one) in two wrapped rows at its width: `createTabs`' overflow is a scroll with faded
+  edges (D10), so p806 either wraps (a `wrap` option) or accepts the scroll.
+- **The key shortcuts dialog** (`debug/_dbg__DebugKeyShortcuts.ts:542`): `role="tablist"`, `tab`,
+  one `tabpanel`, `aria-selected`; no `aria-controls`, no arrow keys (every tab a tab stop), text
+  labels, two tabs.
+
 ---
 
 ## 5. Risks
@@ -631,8 +944,9 @@ now:
   for the list, tree and table grid in their sections.
 - **The canvas and the theme:** a time series drawn in the wrong colours after a theme switch.
   `ThemeWatch.ts`, and a `verify:ui` shot after a switch.
-- **The Hub's search** is public and used: D12 moves it only if Phase 0's mapping fits, and keeps
-  its checks.
+- **The Hub's search** is public and used: Phase 0's mapping fit, and D12 moves it with the checks
+  it never had in a browser (a `verify:ui` script) and screenshots for review; the measured chunk
+  or the look can still keep it as it is.
 
 ---
 
