@@ -432,6 +432,50 @@ help.expand('save'); // from code: onExpandedChange isn't called
 | Keys              | Each header a tab stop; Enter and Space open or shut its section; Up and Down move between the headers (wrapping), Home and End go to the first and last                 |
 | Assistive tech    | Headings of `level`, each holding a button with `aria-expanded` and `aria-controls`; each panel a `region` named by its header while there are at most six               |
 
+## Splitters
+
+[`createSplitter`](api:createSplitter) puts two panes side by side (or one above the other with
+`orientation: 'vertical'`) with a separator between them that the pointer drags and the keys
+move. Its `size` is the first pane's, a percent of the splitter (the default) or px
+(`unit: 'px'`), kept between `min` and `max`; the second pane takes the rest. With `collapsible`,
+Enter on the separator collapses the first pane and restores it.
+
+```ts
+const split = createSplitter({
+  label: 'Outline width', // the separator's name
+  first: outlinePanel,
+  second: propertiesPanel,
+  size: settings.outlineWidth ?? 35,
+  min: 15,
+  max: 70,
+  collapsible: true,
+  onSizeChange: (size) => saveSetting('outlineWidth', size), // after a drag or a key: yours to keep
+});
+inspectorWindow.add(split.cmp);
+split.collapse(); // from code: onCollapsedChange isn't called
+```
+
+::: demo splitter
+:::
+
+- **Give it room:** the splitter fills the box you put it in, so give that box a height (a
+  window's content, a flex child that grows). Each pane scrolls its own content.
+- The separator's gutter is narrow (`--aek-splitter-gutter`), but its pointer target is 24 px
+  across, reaching over the panes' edges: keep a pane's controls a little way from it (a padding).
+- In px without a `max`, the first pane can grow to the splitter's size less the separator's,
+  measured as the splitter resizes.
+- The [property grid](hub:features/ui-kit/forms#property-grids)'s label column moves with
+  the same keys and drag.
+
+| Splitter          |                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`SplitterProps`](api:SplitterProps)                                                                                                                            |
+| Parts             | `.aekSplitter` with two `__pane`s (`data-pane="first"` and `"second"`) and `__separator`                                                                        |
+| States            | `data-orientation`, `data-collapsed`, `--aek-splitter-size` (set by the splitter); the first pane's `hidden` while collapsed; the separator's `data-dragging`   |
+| Custom properties | `--aek-splitter-gutter` (the separator's width)                                                                                                                 |
+| Keys              | On the separator: the arrows along it move it by `step` (Shift ×10, Alt ×0.1), Home and End go to `min` and `max`; Enter collapses and restores (`collapsible`) |
+| Assistive tech    | A focusable `separator` named by `label`, with `aria-valuenow`, `-min`, `-max`, `-valuetext` ("35 %", "Collapsed") and `aria-controls` the first pane           |
+
 ## Key APIs
 
 - [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
@@ -450,6 +494,7 @@ help.expand('save'); // from code: onExpandedChange isn't called
   [`TabBadge`](api:TabBadge)).
 - [`createAccordion`](api:createAccordion) ([`Accordion`](api:Accordion),
   [`AccordionItem`](api:AccordionItem)).
+- [`createSplitter`](api:createSplitter) ([`Splitter`](api:Splitter)).
 
 ## Read more
 

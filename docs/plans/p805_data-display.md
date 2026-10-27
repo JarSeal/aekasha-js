@@ -945,6 +945,26 @@ isExpanded, getExpanded }` (D7's tree names). An item is `{ key, title, content,
   page's `## Accordions` section, after the tabs. The demos' text panel (`createTextPanel`) is
   shared by the tabs and the accordion, padded only inside a tab panel.
 
+As built (section 3):
+
+- **`createSplitter`** (`components/Splitter.ts`, `Splitter.scss`, public with `SplitterProps`,
+  `Splitter`): as D10, plus `step`, `collapsed` and `onCollapsedChange` (a collapse isn't a size:
+  `onSizeChange` reporting 0 would be persisted and restored as one), and `isCollapsed`.
+  `orientation` is the panes' (side by side by default: the separator's `aria-orientation` is
+  vertical). Defaults: 50 % from 10 to 90 by 1, or 240 px from 0 to the measured room (a
+  `ResizeObserver` only without a `max`) by 10. Collapsed, the first pane is `hidden` and its size
+  kept; an arrow or a drag restores it. The gutter is `--aek-splitter-gutter` (`--aek-space-3`),
+  its pointer target a 24 px `::after` over the panes' edges (a 24 px gutter, the grid's, would be
+  too wide between panes).
+- **`components/SeparatorInput.ts`** (`@internal`): the keys and the drag, the value its owner's
+  to keep and draw; no styles, so the property grid carries none of the splitter's. **The
+  property grid's label column is on it** with no API or behaviour change (its tests as they
+  were, `getStepModifier` no longer imported there); it uses `forms/PointerDrag.ts`, as D10 said
+  (the grid had its own pointer code).
+- **The library:** in `layout.ts`: a collapsible outline beside its properties in percent and a
+  stacked editor and console in px ("Collapse the outline"), two keyboard scripts. The core page's
+  `## Splitters` section, after the accordions.
+
 ### Phase 3: the list and the tree
 
 1. The list: static, selectable, with actions; the filter (D6).

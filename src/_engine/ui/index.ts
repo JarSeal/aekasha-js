@@ -207,6 +207,8 @@ export { createSpinner } from './components/Spinner';
 export type { Spinner, SpinnerProps } from './components/Spinner';
 export { createSplitButton } from './components/SplitButton';
 export type { SplitButton, SplitButtonProps } from './components/SplitButton';
+export { createSplitter } from './components/Splitter';
+export type { Splitter, SplitterProps } from './components/Splitter';
 export { createTabs } from './components/Tabs';
 export type { TabBadge, TabDef, Tabs, TabsProps } from './components/Tabs';
 export { createTag } from './components/Tag';

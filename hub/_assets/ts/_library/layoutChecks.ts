@@ -1,6 +1,5 @@
 /**
- * The layout pieces' checks (`layout.ts`' demos): the tabs and the accordion; the splitter comes
- * next.
+ * The layout pieces' checks (`layout.ts`' demos): the tabs, the accordion and the splitter.
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
@@ -15,6 +14,10 @@ const SECTION = (name: string, key: string) => `#hubDemoAccordion${name} [data-k
 const HEADER = (name: string, key: string) => `${SECTION(name, key)} .aekAccordion__trigger`;
 const PANEL = (name: string, key: string) => `${SECTION(name, key)} .aekAccordion__region`;
 const ACCORDION_STATUS = '#hubDemoAccordionStatus';
+/** A splitter demo's separator and first pane by its id's name (`layout.ts`' `SPLITTER_ID`) */
+const SEPARATOR = (name: string) => `#hubDemoSplitter${name} > .aekSplitter__separator`;
+const FIRST_PANE = (name: string) => `#hubDemoSplitter${name} > [data-pane="first"]`;
+const SPLITTER_STATUS = '#hubDemoSplitterStatus';
 
 /** The layout group's checks by their demo's key (`data-hub-demo`) */
 export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
@@ -137,6 +140,51 @@ export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Enter' },
           { expectText: PANEL('Settings', 'audio'), text: 'Volumes and the output: built once.' },
           { expectAttr: HEADER('Settings', 'video'), name: 'aria-expanded', value: 'true' },
+        ],
+      },
+    ],
+  },
+  splitter: {
+    keyboard: [
+      {
+        name: 'side by side: Left and Right move it (Shift ×10), Home and End to its range, Enter collapses and restores',
+        steps: [
+          { focusInBox: SEPARATOR('Outline') },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuenow', value: '35' },
+          { press: 'ArrowRight' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuenow', value: '36' },
+          { expectText: SPLITTER_STATUS, text: 'Outline width: 36 %' },
+          { press: 'Shift+ArrowLeft' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuenow', value: '26' },
+          { press: 'ArrowDown' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuenow', value: '26' },
+          { press: 'Home' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuetext', value: '15 %' },
+          { press: 'End' },
+          { expectText: SPLITTER_STATUS, text: 'Outline width: 70 %' },
+          { press: 'Enter' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuetext', value: 'Collapsed' },
+          { expectAttr: FIRST_PANE('Outline'), name: 'hidden', value: '' },
+          { expectText: SPLITTER_STATUS, text: 'Outline collapsed' },
+          { press: 'Enter' },
+          { expectAttr: SEPARATOR('Outline'), name: 'aria-valuenow', value: '70' },
+          { expectAttr: FIRST_PANE('Outline'), name: 'hidden', value: null },
+          { expectText: SPLITTER_STATUS, text: 'Outline restored' },
+        ],
+      },
+      {
+        name: 'stacked in px: Up and Down move it by 10 px, Home and End to its range',
+        steps: [
+          { focusInBox: SEPARATOR('Console') },
+          { press: 'ArrowDown' },
+          { expectAttr: SEPARATOR('Console'), name: 'aria-valuetext', value: '90 px' },
+          { expectStyle: FIRST_PANE('Console'), name: 'height', value: '90px' },
+          { press: 'ArrowRight' },
+          { expectAttr: SEPARATOR('Console'), name: 'aria-valuenow', value: '90' },
+          { press: 'End' },
+          { expectText: SPLITTER_STATUS, text: 'Editor height: 160 px' },
+          { press: 'Home' },
+          { expectAttr: SEPARATOR('Console'), name: 'aria-valuenow', value: '40' },
         ],
       },
     ],

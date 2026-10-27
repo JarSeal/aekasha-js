@@ -264,6 +264,20 @@
   width: min(100%, 28rem);
 }
 
+// A splitter in a row: a panel's size, framed, its panes' text in a padding
+.hubComponentDemoGroup.hubDemoSplitters > .aekSplitter {
+  width: min(100%, 28rem);
+  height: 10rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+}
+
+.aekSplitter__pane > .hubDemoPaneText {
+  display: grid;
+  gap: var(--aek-space-1);
+  padding: var(--aek-space-3);
+}
+
 // The parity box's custom item: a row of kit buttons (the day-night speed buttons)
 .hubDemoParityCustom {
   display: flex;

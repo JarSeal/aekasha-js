@@ -78,6 +78,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-button-group', calls: ['createButtonGroup'] },
   { slot: 'generated-components-tabs', calls: ['createTabs'] },
   { slot: 'generated-components-accordion', calls: ['createAccordion'] },
+  { slot: 'generated-components-splitter', calls: ['createSplitter'] },
   { slot: 'generated-components-link', calls: ['createLink'] },
   { slot: 'generated-components-menu', calls: ['createMenu', 'createSplitButton'] },
   { slot: 'generated-components-context-menu', calls: ['createContextMenu'] },

@@ -1,0 +1,116 @@
+// The splitter's default styles (Splitter.ts, p805 D10), on the design tokens and layered (p803
+// D5): an app's unlayered rule wins, and every selector is in :where(). A grid of three tracks:
+// the first pane at `--aek-splitter-size` (the script sets it), the separator, and the second pane
+// taking the rest; each placed in its own track, so the first pane's `hidden` (collapsed) moves
+// nothing. The separator is a gutter (`--aek-splitter-gutter`) with a line in its middle, stronger
+// under the pointer and with the focus, the accent while dragged; its pointer target reaches 24 px
+// (WCAG 2.5.8) past a narrower gutter, over the panes' edges. The panes scroll their own content.
+@layer aek.components {
+  :where(.aekSplitter) {
+    display: grid;
+    grid-template-columns: var(--aek-splitter-size, 50%) auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  :where(.aekSplitter[data-orientation='vertical']) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--aek-splitter-size, 50%) auto minmax(0, 1fr);
+  }
+
+  :where(.aekSplitter__pane) {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  :where(.aekSplitter__pane[data-pane='first']) {
+    grid-area: 1 / 1;
+  }
+
+  :where(.aekSplitter__separator) {
+    position: relative;
+    grid-area: 1 / 2;
+    width: var(--aek-splitter-gutter, var(--aek-space-3));
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  :where(.aekSplitter__pane[data-pane='second']) {
+    grid-area: 1 / 3;
+  }
+
+  :where(.aekSplitter[data-orientation='vertical'] > .aekSplitter__separator) {
+    grid-area: 2 / 1;
+    width: auto;
+    height: var(--aek-splitter-gutter, var(--aek-space-3));
+    cursor: row-resize;
+  }
+
+  :where(.aekSplitter[data-orientation='vertical'] > .aekSplitter__pane[data-pane='second']) {
+    grid-area: 3 / 1;
+  }
+
+  // The line
+  :where(.aekSplitter__separator)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    border-radius: 1px;
+    background-color: var(--aek-border);
+    transform: scaleX(0.5);
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSplitter[data-orientation='vertical'] > .aekSplitter__separator)::before {
+    top: calc(50% - 1px);
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: auto;
+    height: 2px;
+    transform: scaleY(0.5);
+  }
+
+  :where(.aekSplitter__separator:hover, .aekSplitter__separator:focus-visible)::before {
+    background-color: var(--aek-border-strong);
+    transform: none;
+  }
+
+  :where(.aekSplitter__separator[data-dragging])::before {
+    background-color: var(--aek-accent);
+    transform: none;
+  }
+
+  // The pointer's target: 24 px across, centred on the gutter
+  :where(.aekSplitter__separator)::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 12px);
+    width: 24px;
+  }
+
+  :where(.aekSplitter[data-orientation='vertical'] > .aekSplitter__separator)::after {
+    top: calc(50% - 12px);
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: auto;
+    height: 24px;
+  }
+
+  // `hidden` is the browser's display: none, which any author rule would beat: last, so it beats
+  // this file's own rules at the same specificity
+  :where(.aekSplitter__pane[hidden]) {
+    display: none;
+  }
+}

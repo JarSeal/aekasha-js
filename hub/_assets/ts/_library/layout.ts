@@ -1,9 +1,9 @@
 /**
  * The component library's layout pieces (the Hub's `features/ui-kit/core/` page, after its
  * components; their own module so `core.ts` stays under the coding standards' 800 lines, p805
- * D15): the tabs and the accordion; the splitter comes next.
+ * D15): the tabs, the accordion and the splitter.
  */
-import { CMP, createAccordion, createTabs, getSvgIcon } from 'aekasha/ui';
+import { CMP, createAccordion, createSplitter, createTabs, getSvgIcon } from 'aekasha/ui';
 import type { CMPHandle, TabDef, Tabs } from 'aekasha/ui';
 import { ID_PREFIX, addButton, addGroup, addKitRoot } from './page';
 import type { Demo } from './page';
@@ -190,8 +190,71 @@ const initAccordionDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Splitter ---
+
+const SPLITTER_ID = (name: string) => `${ID_PREFIX}Splitter${name}`;
+
+/** Text lines in a pane's padding */
+const createPaneText = (...lines: string[]) => {
+  const panel = CMP({ class: 'hubDemoTextPanel hubDemoPaneText' });
+  for (const line of lines) panel.add({ tag: 'p', text: line });
+  return panel;
+};
+
+/** In the page: a collapsible splitter in percent and a stacked one in px; what the user moves
+ * shows in the status line */
+const initSplitterDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = SPLITTER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const row = (label: string, cmp: CMPHandle) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoSplitters');
+    group.append(cmp.elem);
+    return group;
+  };
+
+  const outline = createSplitter({
+    id: SPLITTER_ID('Outline'),
+    label: 'Outline width',
+    first: createPaneText('Scene', 'Camera', 'Sun', 'Terrain', 'Player'),
+    second: createPaneText('Player: its position, its speed and its health.'),
+    size: 35,
+    min: 15,
+    max: 70,
+    collapsible: true,
+    onSizeChange: (size) => (status.textContent = `Outline width: ${size} %`),
+    onCollapsedChange: (on) => (status.textContent = `Outline ${on ? 'collapsed' : 'restored'}`),
+  });
+  const outlineRow = row(
+    'Side by side, in percent: Left and Right move it, Enter collapses the outline and restores it',
+    outline.cmp
+  );
+  addButton(outlineRow, 'Collapse the outline', () => outline.collapse());
+
+  row(
+    'Stacked, in px (40 to 160): Up and Down move it by 10 px',
+    createSplitter({
+      id: SPLITTER_ID('Console'),
+      label: 'Editor height',
+      orientation: 'vertical',
+      unit: 'px',
+      size: 80,
+      min: 40,
+      max: 160,
+      first: createPaneText('The editor.'),
+      second: createPaneText('The console: no messages.'),
+      onSizeChange: (size) => (status.textContent = `Editor height: ${size} px`),
+    }).cmp
+  );
+  root.append(status);
+};
+
 /** The layout group's demos by their box's key (`data-hub-demo`) */
 export const LAYOUT_DEMOS: Record<string, Demo> = {
   tabs: initTabsDemo,
   accordion: initAccordionDemo,
+  splitter: initSplitterDemo,
 };

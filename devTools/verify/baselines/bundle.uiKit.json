@@ -59,11 +59,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13864
+      "gzip": 13866
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1634
+      "gzip": 1633
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -131,7 +131,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 182
+      "gzip": 181
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -151,15 +151,15 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 45202,
-      "gzip": 16519
+      "gzip": 16521
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 23274,
       "gzip": 3916
     },
     "assets/uiKitEmbedForm.js": {
-      "bytes": 48476,
-      "gzip": 18318
+      "bytes": 48597,
+      "gzip": 18448
     },
     "uiKit.embed.js": {
       "bytes": 249,

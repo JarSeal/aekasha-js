@@ -2866,6 +2866,10 @@
       "RovingTabStopProps": "TypeAlias",
       "TypeaheadProps": "TypeAlias"
     },
+    "src/_engine/ui/components/SeparatorInput.ts": {
+      "createSeparatorInput": "Function",
+      "SeparatorInputProps": "TypeAlias"
+    },
     "src/_engine/ui/components/ShortcutHint.ts": {
       "addShortcutHint": "Function",
       "ShortcutHintProps": "TypeAlias"
@@ -2884,6 +2888,11 @@
       "createSplitButton": "Function",
       "SplitButton": "TypeAlias",
       "SplitButtonProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Splitter.ts": {
+      "createSplitter": "Function",
+      "Splitter": "TypeAlias",
+      "SplitterProps": "TypeAlias"
     },
     "src/_engine/ui/components/Tabs.ts": {
       "createTabs": "Function",
@@ -4714,6 +4723,8 @@
       "SpinnerProps",
       "SplitButton",
       "SplitButtonProps",
+      "Splitter",
+      "SplitterProps",
       "SvgIconKey",
       "SvgIconSize",
       "Switch",
@@ -4806,6 +4817,7 @@
       "createSlider",
       "createSpinner",
       "createSplitButton",
+      "createSplitter",
       "createSwitch",
       "createTabs",
       "createTag",

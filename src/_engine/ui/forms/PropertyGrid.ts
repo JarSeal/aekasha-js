@@ -1,12 +1,13 @@
 // The property grid (p804 D9): the label column layout the debugger's panes use. Its fields, and
 // the folders' in it at any depth, line up in two columns (the label, the control) through CSS
-// subgrids; the column's width is a separator the pointer drags and the arrows move. It owns a
-// scheduler, or shares a host's, which the fields added without one join.
+// subgrids; the column's width is a separator the pointer drags and the arrows move (the splitter's
+// input, `components/SeparatorInput.ts`, p805 D10). It owns a scheduler, or shares a host's, which
+// the fields added without one join.
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { createBindingScheduler, type BindingScheduler } from './binding/BindingScheduler';
+import { createSeparatorInput } from '../components/SeparatorInput';
 import { addFormChildren, type FormChild } from './Field';
-import { getStepModifier } from './NumberSteps';
 import './PropertyGrid.scss';
 import '../styles/kit.scss';
 
@@ -104,18 +105,14 @@ export const createPropertyGrid = (props: PropertyGridProps = {}): PropertyGrid 
   const isOwnScheduler = !props.scheduler;
   const scheduler = props.scheduler ?? createBindingScheduler({ visible: props.visible });
   let labelWidth = constrainWidth(props.labelWidth ?? DEFAULT_LABEL_WIDTH);
-  let drag: { pointerId: number } | null = null;
-  /** The key whose keyup reports the width */
-  let stepKey: string | null = null;
+  let separatorInput: { dispose: () => void } | null = null;
 
   const cmp = CMP({
     class: classes('aekPropertyGrid', props.class),
     attr: props.attr,
     onRemoveCmp: () => {
-      if (separator) {
-        for (const [type, fn] of listeners)
-          separator.removeEventListener(type, fn as EventListener);
-      }
+      separatorInput?.dispose();
+      separatorInput = null;
       if (isOwnScheduler) scheduler.dispose();
     },
   });
@@ -137,65 +134,11 @@ export const createPropertyGrid = (props: PropertyGridProps = {}): PropertyGrid 
     drawWidth();
   };
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    let width: number | null = null;
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      const step = KEY_STEP * getStepModifier(e);
-      width = labelWidth + (e.key === 'ArrowLeft' ? -step : step);
-    } else if (e.key === 'Home') {
-      width = MIN_LABEL_WIDTH;
-    } else if (e.key === 'End') {
-      width = MAX_LABEL_WIDTH;
-    }
-    if (width === null) return;
-    e.preventDefault();
-    e.stopPropagation();
-    stepKey = e.key;
-    moveTo(width);
-  };
-
-  const onKeyUp = (e: KeyboardEvent) => {
-    if (e.key !== stepKey) return;
-    e.stopPropagation();
-    stepKey = null;
-    props.onLabelWidthChange?.(labelWidth);
-  };
-
   /** The pointer's x as a percent of the grid's width */
-  const getWidthAt = (clientX: number) => {
+  const getWidthAt = (e: PointerEvent) => {
     const rect = root.getBoundingClientRect();
-    return rect.width > 0 ? ((clientX - rect.left) / rect.width) * 100 : labelWidth;
+    return rect.width > 0 ? ((e.clientX - rect.left) / rect.width) * 100 : labelWidth;
   };
-
-  const onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0 || !separator) return;
-    // No text selection; the focus stays where it was
-    e.preventDefault();
-    separator.setPointerCapture?.(e.pointerId);
-    separator.setAttribute('data-dragging', '');
-    drag = { pointerId: e.pointerId };
-  };
-
-  const onPointerMove = (e: PointerEvent) => {
-    if (drag?.pointerId === e.pointerId) moveTo(getWidthAt(e.clientX));
-  };
-
-  const onPointerEnd = (e: PointerEvent) => {
-    if (drag?.pointerId !== e.pointerId || !separator) return;
-    drag = null;
-    separator.removeAttribute('data-dragging');
-    props.onLabelWidthChange?.(labelWidth);
-  };
-
-  const listeners: [string, (e: never) => void][] = [
-    ['keydown', onKeyDown],
-    ['keyup', onKeyUp],
-    ['pointerdown', onPointerDown],
-    ['pointermove', onPointerMove],
-    ['pointerup', onPointerEnd],
-    ['pointercancel', onPointerEnd],
-    ['lostpointercapture', onPointerEnd],
-  ];
 
   if (separator) {
     separator.className = 'aekPropertyGrid__separator';
@@ -211,7 +154,16 @@ export const createPropertyGrid = (props: PropertyGridProps = {}): PropertyGrid 
     ]) {
       separator.setAttribute(name, value);
     }
-    for (const [type, fn] of listeners) separator.addEventListener(type, fn as EventListener);
+    separatorInput = createSeparatorInput(separator, {
+      axis: 'x',
+      step: KEY_STEP,
+      get: () => labelWidth,
+      getMin: () => MIN_LABEL_WIDTH,
+      getMax: () => MAX_LABEL_WIDTH,
+      set: moveTo,
+      getValueAt: getWidthAt,
+      onCommit: () => props.onLabelWidthChange?.(labelWidth),
+    });
     root.append(separator);
   }
   drawWidth();
