@@ -13,6 +13,7 @@ Fix or tweak these list items:
 - In the Hub, make the A-Z index its own sub page in the Documentation. Also in there make Issues and Versions be one main menu element ("Versions & Issues") to save space on the main menu and be more clear. Use the Versions icon for it. Leave the Issues quick link on the Hub's home page. Also add the changelog as its own page (as a sub page under the main menu). The main page for Versions & Issues can show the versions and then have cards for Issues and Changelog.
 - The dialog heading bar icon appears to be way too large. Make it the right size.
 - The Engine favicon is black. My Chrome browser is in dark mode and the favicon is not visible because the tab is also black/dark. The favicon color should be something between the light and dark but not the accent color that the Hub has. Pick a good color for it.
+- The UI kit components that use scrollbars (and the Hub scrollbars) should have a proper background color (for dark and light mode). They could be the same color as the background the scroll bar is on and it could have a thin line in the middle that shows the length of the scroll bar. The end buttons and the scroll bar should also have a specific color that ties them to the theme. Those should be in the design document.
 
 If any of these fixes/tweaks are large refactorings/fixes then produce a separate plan for each large one.
 

@@ -59,6 +59,37 @@ lightsPanel.add(lights.cmp);
 - **Live data.** `setItems` replaces the items, `setItem(key, item)` one of them: a figure that
   changes every frame writes one text node. Give `items` as a function and a `scheduler` (with
   `interval` for a live list) and the list reads it on the scheduler's tick while it shows.
+- **Long lists** render only the rows their box shows with `virtual: createVirtualRows()`, a
+  spacer standing in for the others: worth it past about 200 rows. Every row is one height then
+  (`rowHeight`, or the first row's, measured), and the box needs a height to scroll in
+  (`--aek-list-max-height`, 12 rows by default). The focused row stays rendered however far the
+  box scrolls, and screen readers hear each row's place ("12 of 5000"). The browser's find can't
+  see the rows not rendered: give such a list a `filter`.
+- **Reordering.** `reorder: createListReorder({ onReorder })` lets the user move a row with
+  Alt + ArrowUp / ArrowDown or a drag (on a touch screen by the row's handle, since a drag on the
+  row scrolls): a line shows where it drops, the box scrolls near its edges, Escape cancels, and
+  each move is announced. `onReorder({ key, from, to })` is yours to apply (or `optimistic: true`
+  has the list move the row first). Not while the list is filtered.
+
+```ts
+let layers = getLayers();
+const layerList = createList<Layer>({
+  label: 'Layers',
+  items: () => layers,
+  title: (layer) => layer.name,
+  reorder: createListReorder({
+    onReorder: ({ from, to }) => {
+      const next = layers.slice();
+      next.splice(to, 0, ...next.splice(from, 1));
+      layers = next;
+      layerList.refresh(); // the rows follow, the focus stays on the moved one
+    },
+  }),
+});
+```
+
+- **Virtual rows and reorder are values you pass**, as the context menu is something you add: a
+  list without them carries none of their code.
 - **A context menu** is yours to add, over the whole list: `createContextMenu` on `cmp.elem`,
   finding the row with `getKeyAt` (a list without one carries none of the menu's code).
 
@@ -72,19 +103,22 @@ createContextMenu({
 });
 ```
 
-| List              |                                                                                                                                                                                                                                                                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`ListProps`](api:ListProps), an action's [`ListAction`](api:ListAction), the filter's [`ListFilter`](api:ListFilter)                                                                                                                                                                                                                |
-| Parts             | `.aekList` with `__header` (`__heading`, `__headingText`, `__count`), `__filter` (`__search`), `__rows`, each `__row` (`__main` in a grid, `__content`: `__icon`, `__badge`, `__text` with `__subTitle`, `__title`, `__description`; `__suffix`; a grid's `__actionCell` and `__action`), `__empty`, `__noMatch` (`__clear`); the matches' `.aekMark` |
-| States            | the rows' `data-mode` (`static`, `listbox`, `grid`); a row's `data-key`, `aria-selected`, `aria-disabled` (`data-disabled` in a plain list), `hidden` while filtered out; a title's `data-placeholder`; an action's `aria-pressed`, `disabled`, `hidden`                                                                             |
-| Custom properties | `--aek-list-max-height` (the rows' box scrolls past it), `--aek-list-selected-color` (the selected row's bar)                                                                                                                                                                                                                         |
-| Keys              | One tab stop; Up and Down between the shown rows (no wrapping), Home, End, PageUp, PageDown, a letter to the next title starting with it; Space selects, Enter activates; Shift + a move, Ctrl / ⌘ + A (multiple); Left and Right between a grid row's cells; the search field's ArrowDown into the list and Escape empties it        |
-| Assistive tech    | `role="listbox"` of `option`s (`aria-multiselectable`), or `role="grid"` of `row`s and `gridcell`s, named by the heading or `label`; `aria-selected`, `aria-disabled`; a toggle's `aria-pressed`; the filter's count read politely                                                                                                   |
+| List              |                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`ListProps`](api:ListProps), an action's [`ListAction`](api:ListAction), the filter's [`ListFilter`](api:ListFilter)                                                                                                                                                                                                                                                                                                            |
+| Parts             | `.aekList` with `__header` (`__heading`, `__headingText`, `__count`), `__filter` (`__search`), `__rows` (virtual rows' `__spacer`s, a drag's `__dropLine`), each `__row` (`__main` in a grid, a reorder's `__handle`, `__content`: `__icon`, `__badge`, `__text` with `__subTitle`, `__title`, `__description`; `__suffix`; a grid's `__actionCell` and `__action`), `__empty`, `__noMatch` (`__clear`); the matches' `.aekMark` |
+| States            | the rows' `data-mode` (`static`, `listbox`, `grid`); a row's `data-key`, `aria-selected`, `aria-disabled` (`data-disabled` in a plain list), `hidden` while filtered out; a row's `data-dragging`, `data-pinned` (a virtual row kept at its offset); the rows' `data-virtual`, `data-reorder`; a title's `data-placeholder`; an action's `aria-pressed`, `disabled`, `hidden`                                                    |
+| Custom properties | `--aek-list-max-height` (the rows' box scrolls past it; 12 rows with virtual rows), `--aek-list-selected-color` (the selected row's bar), `--aek-list-row-height` (virtual rows' height, the list's)                                                                                                                                                                                                                             |
+| Keys              | One tab stop; Up and Down between the shown rows (no wrapping), Home, End, PageUp, PageDown, a letter to the next title starting with it; Space selects, Enter activates; Shift + a move, Ctrl / ⌘ + A (multiple); Left and Right between a grid row's cells; Alt + ArrowUp / ArrowDown move a row (reorder); the search field's ArrowDown into the list and Escape empties it                                                   |
+| Assistive tech    | `role="listbox"` of `option`s (`aria-multiselectable`), or `role="grid"` of `row`s and `gridcell`s, named by the heading or `label`; `aria-selected`, `aria-disabled`; a toggle's `aria-pressed`; virtual rows' `aria-setsize` / `aria-posinset` (`aria-rowcount` / `aria-rowindex` in a grid); the filter's count and a move read politely                                                                                      |
 
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),
   [`ListAction`](api:ListAction), [`ListFilter`](api:ListFilter)).
+- [`createVirtualRows`](api:createVirtualRows) ([`VirtualRows`](api:VirtualRows)) and
+  [`createListReorder`](api:createListReorder) ([`ListReorder`](api:ListReorder),
+  [`ListReorderChange`](api:ListReorderChange)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and
   [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists.
 

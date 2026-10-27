@@ -3,7 +3,8 @@ import { countListeners, dispatchKey, stubKitDomAsync, type KitKeyInit } from '.
 import { CMP } from '../core/CMP';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
 import { createBindingScheduler } from '../forms/binding/BindingScheduler';
-import { createList, type List, type ListProps } from './List';
+import { createList } from './List';
+import type { List, ListProps } from './ListTypes';
 
 type Item = { id: string; name: string; kind?: string; count?: number; on?: boolean };
 

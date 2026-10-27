@@ -85,6 +85,55 @@ export const DATA_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
+        name: 'virtual rows: End renders and focuses the last of 5,000, its place said; the filter finds one far down',
+        steps: [
+          { focusInBox: ROW('Assets', 'asset0') },
+          { expectAttr: ROW('Assets', 'asset0'), name: 'aria-setsize', value: '5000' },
+          { press: 'End' },
+          { expectFocus: ROW('Assets', 'asset4999') },
+          { expectAttr: ROW('Assets', 'asset4999'), name: 'aria-posinset', value: '5000' },
+          { expectCount: ROW('Assets', 'asset2500'), count: 0 },
+          { press: 'Home' },
+          { expectFocus: ROW('Assets', 'asset0') },
+          { focusInBox: SEARCH('Assets') },
+          { press: '4' },
+          { press: '9' },
+          { press: '9' },
+          { press: '9' },
+          { expectText: COUNT('Assets'), text: '1 of 5000' },
+          { press: 'ArrowDown' },
+          { expectFocus: ROW('Assets', 'asset4998') },
+        ],
+      },
+      {
+        name: 'reorder: Alt + ArrowDown moves the focused row and keeps the focus on it; Alt + ArrowUp back',
+        steps: [
+          // A plain arrow first: Chromium shows no focus ring for a key pressed with Alt after a
+          // scripted focus, as for a click
+          { focusInBox: ROW('Order', 'sky') },
+          { press: 'ArrowDown' },
+          { expectFocus: ROW('Order', 'opaque') },
+          { press: 'Alt+ArrowDown' },
+          { expectText: LIST_STATUS, text: 'Moved Opaque to 3' },
+          {
+            expectAttr: '#hubDemoListOrder .aekList__row:nth-child(3)',
+            name: 'data-key',
+            value: 'opaque',
+          },
+          { expectFocus: ROW('Order', 'opaque') },
+          { press: 'Alt+ArrowUp' },
+          { press: 'Alt+ArrowUp' },
+          { expectText: LIST_STATUS, text: 'Moved Opaque to 1' },
+          {
+            expectAttr: '#hubDemoListOrder .aekList__row:nth-child(1)',
+            name: 'data-key',
+            value: 'opaque',
+          },
+          { press: 'Alt+ArrowUp' },
+          { expectFocus: ROW('Order', 'opaque') },
+        ],
+      },
+      {
         name: 'actions: Right to a toggle, Space presses it, Down keeps the column, past a hidden one to the row',
         steps: [
           { focusInBox: MAIN('Lights', 'sun') },

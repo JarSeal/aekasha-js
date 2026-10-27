@@ -497,6 +497,8 @@ export type KitPointerInit = KitKeyInit & {
   pointerId?: number;
   /** The button pressed (0 primary) */
   button?: number;
+  /** 'mouse' (default), 'touch' or 'pen' */
+  pointerType?: string;
   clientX?: number;
   clientY?: number;
 };
@@ -596,6 +598,50 @@ export const stubClipboard = (props: { text?: string; readable?: boolean } = {})
     },
     restore: () => {
       Reflect.deleteProperty(globalThis.navigator, 'clipboard');
+    },
+  };
+};
+
+/**
+ * A `ResizeObserver` for a test (p805 D14; linkedom has none): the observers a piece makes, which
+ * the test fires with a content box's size (`resize(elem, { width?, height })`, the observers
+ * watching `elem` called as a browser would after a layout). `observerCount()` says how many still
+ * watch something (none after the piece's removal); `restore()` takes it away again.
+ * @internal
+ */
+export const stubResizeObserver = () => {
+  const observers = new Set<{ callback: ResizeObserverCallback; elems: Set<Element> }>();
+  class StubResizeObserver {
+    private readonly entry: { callback: ResizeObserverCallback; elems: Set<Element> };
+    constructor(callback: ResizeObserverCallback) {
+      this.entry = { callback, elems: new Set() };
+      observers.add(this.entry);
+    }
+    observe(elem: Element) {
+      this.entry.elems.add(elem);
+    }
+    unobserve(elem: Element) {
+      this.entry.elems.delete(elem);
+    }
+    disconnect() {
+      this.entry.elems.clear();
+      observers.delete(this.entry);
+    }
+  }
+  vi.stubGlobal('ResizeObserver', StubResizeObserver);
+  return {
+    resize: (elem: Element, size: { width?: number; height: number }) => {
+      const contentRect = { width: size.width ?? 0, height: size.height } as DOMRectReadOnly;
+      for (const observer of observers) {
+        if (!observer.elems.has(elem)) continue;
+        const entry = { target: elem, contentRect } as ResizeObserverEntry;
+        observer.callback([entry], observer as unknown as ResizeObserver);
+      }
+    },
+    observerCount: () => [...observers].filter((observer) => observer.elems.size > 0).length,
+    restore: () => {
+      observers.clear();
+      Reflect.deleteProperty(globalThis, 'ResizeObserver');
     },
   };
 };

@@ -3026,16 +3026,14 @@
       "matchesWords": "Function"
     },
     "src/_engine/ui/data/List.ts": {
-      "createList": "Function",
-      "List": "TypeAlias",
-      "ListAction": "TypeAlias",
-      "ListFilter": "TypeAlias",
-      "ListProps": "TypeAlias"
+      "createList": "Function"
     },
     "src/_engine/ui/data/ListRow.ts": {
       "createElem": "Function",
       "createListRows": "Function",
       "ListActionCell": "TypeAlias",
+      "ListEntry": "TypeAlias",
+      "ListEntryText": "TypeAlias",
       "ListMarks": "TypeAlias",
       "ListRow": "TypeAlias",
       "ListRowsConfig": "TypeAlias",
@@ -3043,12 +3041,37 @@
       "ROW_CLASS": "Variable",
       "writeAttr": "Function"
     },
+    "src/_engine/ui/data/ListTypes.ts": {
+      "List": "TypeAlias",
+      "ListAction": "TypeAlias",
+      "ListFilter": "TypeAlias",
+      "ListProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/Reorder.ts": {
+      "createListReorder": "Function",
+      "ListReorder": "TypeAlias",
+      "ListReorderChange": "TypeAlias",
+      "ListReorderHost": "TypeAlias",
+      "ListReorderImpl": "TypeAlias",
+      "ListReorderProps": "TypeAlias",
+      "ListReorderView": "TypeAlias",
+      "useListReorder": "Function"
+    },
     "src/_engine/ui/data/Selection.ts": {
       "createSelection": "Function",
       "getSelectionGesture": "Function",
       "SelectionGesture": "TypeAlias",
       "SelectionMode": "TypeAlias",
       "SelectionProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/VirtualRows.ts": {
+      "createVirtualRows": "Function",
+      "getVirtualWindow": "Function",
+      "useVirtualRows": "Function",
+      "VirtualRows": "TypeAlias",
+      "VirtualRowsImpl": "TypeAlias",
+      "VirtualRowsProps": "TypeAlias",
+      "VirtualRowsView": "TypeAlias"
     },
     "src/_engine/ui/forms/AngleDial.ts": {
       "AngleDial": "TypeAlias",
@@ -3565,7 +3588,8 @@
       "KitKeyInit": "TypeAlias",
       "KitPointerInit": "TypeAlias",
       "stubClipboard": "Function",
-      "stubKitDomAsync": "Function"
+      "stubKitDomAsync": "Function",
+      "stubResizeObserver": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",
@@ -4690,6 +4714,9 @@
       "ListAction",
       "ListFilter",
       "ListProps",
+      "ListReorder",
+      "ListReorderChange",
+      "ListReorderProps",
       "LoadingOverlay",
       "LoadingOverlayProps",
       "Menu",
@@ -4794,6 +4821,8 @@
       "VectorField",
       "VectorFieldProps",
       "VectorValue",
+      "VirtualRows",
+      "VirtualRowsProps",
       "WindowCycleKeys",
       "addPropertyGridItems",
       "addToast",
@@ -4833,6 +4862,7 @@
       "createKbd",
       "createLink",
       "createList",
+      "createListReorder",
       "createLoadingOverlay",
       "createMenu",
       "createMonitor",
@@ -4859,6 +4889,7 @@
       "createToaster",
       "createTooltip",
       "createVectorField",
+      "createVirtualRows",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",

@@ -1,17 +1,58 @@
-// A list's rows (p805 D6): each made once for its key, its parts written only when their text
-// changed, so a live figure writes one text node. `List.ts` keeps the rows' order, the filter, the
-// selection and the keys.
+// A list's entries and rows (p805 D6, D8). An entry is an item's key, its text as last read and its
+// state, for every item; a row is the elements that show one entry, made only where it renders
+// (every entry without virtual rows) and bound to another entry when it's recycled. A row writes a
+// part only when its text changed, so a live figure writes one text node. `List.ts` keeps the
+// order, the filter, the selection, the keys and which entries render.
 import type { CMPHandle } from '../core/CMPTypes';
 import { updateBadge, type Badge, type BadgeValue } from '../components/Badge';
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
 import { appendMarked, foldText } from './Filter';
-import type { ListAction, ListProps } from './List';
+import type { ListAction, ListProps } from './ListTypes';
 
 /**
- * The last values written to a row's parts, so an unchanged one isn't written.
+ * An entry's parts as last read from its item.
+ * @internal
+ */
+export type ListEntryText = {
+  title: string;
+  subTitle: string;
+  description: string;
+  suffix: string;
+  icon: string;
+  tooltip: string;
+  badge: BadgeValue | null;
+  isPlaceholder: boolean;
+  isDisabled: boolean;
+};
+
+/**
+ * One item of the list: its key, its text, its state and the row showing it (null where it
+ * doesn't render).
+ * @internal
+ */
+export type ListEntry<T> = {
+  key: string;
+  item: T;
+  /** Its index in the items */
+  index: number;
+  /** Its index among the shown entries (-1: filtered out) */
+  shownIndex: number;
+  isShown: boolean;
+  isSelected: boolean;
+  text: ListEntryText;
+  /** The text folded, for the filter */
+  folded: string;
+  /** The title folded, for the typeahead */
+  foldedTitle: string;
+  view: ListRow<T> | null;
+};
+
+/**
+ * The last values a row wrote, so an unchanged one isn't written again.
  * @internal
  */
 export type ListRowWritten = {
+  key: string;
   title: string;
   subTitle: string;
   description: string;
@@ -23,7 +64,8 @@ export type ListRowWritten = {
   badgeSpoken: string | undefined;
   isPlaceholder: boolean;
   isDisabled: boolean;
-  /** The query the title and description were last marked for */
+  isSelected: boolean;
+  /** The query the parts were last marked for */
   query: string;
 };
 
@@ -43,14 +85,12 @@ export type ListActionCell = {
 };
 
 /**
- * A row of the list: its elements, its item and what it last showed.
+ * The elements that show an entry, and what they last showed.
  * @internal
  */
 export type ListRow<T> = {
-  key: string;
-  item: T;
-  /** Its index in `rows` */
-  index: number;
+  /** The entry it shows (null: in the pool) */
+  entry: ListEntry<T> | null;
   /** The row: an `<li>`, an option or a grid row */
   elem: HTMLElement;
   /** What takes the focus for the row: the option, or the grid row's first cell (the `<li>`) */
@@ -64,15 +104,11 @@ export type ListRow<T> = {
   icon: HTMLElement | null;
   badge: Badge | null;
   rendered: CMPHandle | null;
+  /** The item `rendered` was made from */
+  renderedItem: T | undefined;
   tooltip: Tooltip | null;
   actions: ListActionCell[];
   written: ListRowWritten;
-  /** The row's text folded, for the filter */
-  folded: string;
-  /** The title folded, for the typeahead */
-  foldedTitle: string;
-  isShown: boolean;
-  isSelected: boolean;
 };
 
 /**
@@ -80,6 +116,7 @@ export type ListRow<T> = {
  * @internal
  */
 export const ROW_CLASS = 'aekList__row';
+
 /**
  * An element with its class.
  * @internal
@@ -114,18 +151,108 @@ export type ListRowsConfig<T> = {
   props: ListProps<T>;
   mode: 'static' | 'listbox' | 'grid';
   marks: ListMarks;
+  /** Whether rows have a drag handle (a reorder) */
+  hasHandle: boolean;
+};
+
+/** A drag handle's grip: six dots, in the text colour */
+const GRIP_SVG =
+  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="3.5" r="1.25"/><circle cx="10.5" cy="3.5" r="1.25"/><circle cx="5.5" cy="8" r="1.25"/><circle cx="10.5" cy="8" r="1.25"/><circle cx="5.5" cy="12.5" r="1.25"/><circle cx="10.5" cy="12.5" r="1.25"/></svg>';
+
+/** A badge's value, split for comparing */
+const splitBadge = (value: BadgeValue | null) => {
+  const isObject = typeof value === 'object' && value !== null;
+  return {
+    label: isObject ? value.label : value,
+    tone: (isObject ? value.tone : undefined) ?? 'neutral',
+    spoken: isObject ? value.spokenLabel : undefined,
+  };
 };
 
 /**
- * A list's row writer: `createRow(key, item)` makes a row and writes it, `writeRow(row, isNewItem)`
- * reads its item again and writes what changed (`isNewItem`: a `render` row is rendered again),
- * `disposeRow(row)` removes it with its tooltips and rendered CMP.
+ * A list's entries and rows: `createEntry(key, item)` and `readEntry(entry)` (its text read again,
+ * folded again when it changed: whether it did), `createRow()`, `bindRow(row, entry)` (shows the
+ * entry: a recycled row writes only what differs), `writeRow(row, isNewItem)` (the entry's text
+ * and state written; `isNewItem` renders a `render` row again) and `disposeRow(row)` (removed
+ * with its tooltips and rendered CMP).
  * @internal
  */
-export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => {
+export const createListRows = <T>({ props, mode, marks, hasHandle }: ListRowsConfig<T>) => {
   const { actions = [] } = props;
   const isInteractive = mode !== 'static';
   const selectionMode = props.selection ?? 'none';
+
+  // --- Entries ---
+
+  const readEntry = (entry: ListEntry<T>) => {
+    const { item, text } = entry;
+    const title = props.title?.(item) ?? entry.key;
+    const isDisabled = props.disabled?.(item) ?? false;
+    const tooltip = props.tooltip?.(item) ?? '';
+    text.isDisabled = isDisabled;
+    text.tooltip = tooltip;
+    if (props.render) {
+      if (text.title === title && entry.folded) return false;
+      text.title = title;
+      entry.folded = entry.foldedTitle = foldText(title);
+      return true;
+    }
+    const subTitle = props.subTitle?.(item) ?? '';
+    const description = props.description?.(item) ?? '';
+    const suffix = props.suffix?.(item) ?? '';
+    const badge = props.badge?.(item) ?? null;
+    text.icon = props.icon?.(item) ?? '';
+    text.isPlaceholder = props.isPlaceholder?.(item) ?? false;
+    const badgeLabel = splitBadge(badge).label ?? '';
+    const oldLabel = splitBadge(text.badge).label ?? '';
+    text.badge = badge;
+    if (
+      entry.folded &&
+      title === text.title &&
+      subTitle === text.subTitle &&
+      description === text.description &&
+      suffix === text.suffix &&
+      badgeLabel === oldLabel
+    ) {
+      return false;
+    }
+    if (title !== text.title || !entry.foldedTitle) entry.foldedTitle = foldText(title);
+    text.title = title;
+    text.subTitle = subTitle;
+    text.description = description;
+    text.suffix = suffix;
+    entry.folded = foldText(`${title} ${subTitle} ${description} ${suffix} ${badgeLabel}`);
+    return true;
+  };
+
+  const createEntry = (key: string, item: T): ListEntry<T> => {
+    const entry: ListEntry<T> = {
+      key,
+      item,
+      index: -1,
+      shownIndex: -1,
+      isShown: true,
+      isSelected: false,
+      text: {
+        title: '',
+        subTitle: '',
+        description: '',
+        suffix: '',
+        icon: '',
+        tooltip: '',
+        badge: null,
+        isPlaceholder: false,
+        isDisabled: false,
+      },
+      folded: '',
+      foldedTitle: '',
+      view: null,
+    };
+    readEntry(entry);
+    return entry;
+  };
+
+  // --- Writing a row ---
 
   /** Writes a text part made on first use; an empty text hides it */
   const writePart = (
@@ -153,7 +280,6 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
   const writeTitle = (row: ListRow<T>, text: string) => {
     if (row.written.title === text && row.written.query === marks.query) return;
     row.written.title = text;
-    row.foldedTitle = foldText(text);
     const elem = row.title as HTMLElement;
     if (marks.words.length) {
       elem.textContent = '';
@@ -168,32 +294,32 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
       if (!html) return;
       row.icon = createElem('span', 'aekList__icon');
       row.icon.setAttribute('aria-hidden', 'true');
-      row.content.insertBefore(row.icon, row.content.firstChild);
+      // Before the badge, if there's one, and the text
+      row.content.insertBefore(row.icon, row.badge?.cmp.elem ?? row.title?.parentNode ?? null);
     }
     writeAttr(row.icon, 'hidden', html ? null : '');
     row.icon.innerHTML = html;
   };
 
-  const writeBadge = (row: ListRow<T>, value: BadgeValue | null | undefined) => {
-    const isObject = typeof value === 'object' && value !== null;
-    const label = isObject ? value.label : value ?? null;
-    const tone = (isObject ? value.tone : undefined) ?? 'neutral';
-    const spoken = isObject ? value.spokenLabel : undefined;
+  const writeBadge = (row: ListRow<T>, value: BadgeValue | null) => {
+    const { label, tone, spoken } = splitBadge(value);
     const { written } = row;
+    const next = label ?? null;
     if (
-      written.badgeLabel === label &&
+      written.badgeLabel === next &&
       written.badgeTone === tone &&
       written.badgeSpoken === spoken
     ) {
       return;
     }
-    written.badgeLabel = label;
+    written.badgeLabel = next;
     written.badgeTone = tone;
     written.badgeSpoken = spoken;
-    const next = updateBadge(row.badge, label === null ? null : value, 'aekList__badge');
-    if (next && next !== row.badge)
-      row.content.insertBefore(next.cmp.elem, row.title?.parentNode ?? null);
-    row.badge = next;
+    const badge = updateBadge(row.badge, next === null ? null : value, 'aekList__badge');
+    if (badge && badge !== row.badge) {
+      row.content.insertBefore(badge.cmp.elem, row.title?.parentNode ?? null);
+    }
+    row.badge = badge;
   };
 
   const writeTooltip = (row: ListRow<T>, text: string) => {
@@ -207,9 +333,9 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
   };
 
   const writeAction = (row: ListRow<T>, cell: ListActionCell, action: ListAction<T>) => {
-    const { item } = row;
+    const { item, text } = row.entry as ListEntry<T>;
     const isHidden = action.hidden?.(item) ?? false;
-    const isDisabled = row.written.isDisabled || (action.disabled?.(item) ?? false);
+    const isDisabled = text.isDisabled || (action.disabled?.(item) ?? false);
     const pressed = action.pressed ? action.pressed(item) : null;
     const label = typeof action.label === 'function' ? action.label(item) : action.label;
     const iconHtml = pressed === false && action.iconOff ? action.iconOff : action.icon;
@@ -237,58 +363,58 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
     }
   };
 
-  /** Reads a row's item and writes its changed parts; `isNewItem` renders a `render` row again */
+  /** Writes the row's entry: its key, state and parts where they differ from what it shows */
   const writeRow = (row: ListRow<T>, isNewItem: boolean) => {
-    const { item, written } = row;
-    const title = props.title?.(item) ?? row.key;
-    const isDisabled = props.disabled?.(item) ?? false;
-    if (written.isDisabled !== isDisabled) {
-      written.isDisabled = isDisabled;
-      if (isInteractive) writeAttr(row.elem, 'aria-disabled', isDisabled ? 'true' : null);
-      else writeAttr(row.elem, 'data-disabled', isDisabled ? '' : null);
+    const entry = row.entry;
+    if (!entry) return;
+    const { elem, written } = row;
+    if (written.key !== entry.key) {
+      written.key = entry.key;
+      elem.setAttribute('data-key', entry.key);
+    }
+    if (written.isDisabled !== entry.text.isDisabled) {
+      written.isDisabled = entry.text.isDisabled;
+      const isDisabled = written.isDisabled;
+      if (isInteractive) writeAttr(elem, 'aria-disabled', isDisabled ? 'true' : null);
+      else writeAttr(elem, 'data-disabled', isDisabled ? '' : null);
+    }
+    if (selectionMode !== 'none' && written.isSelected !== entry.isSelected) {
+      written.isSelected = entry.isSelected;
+      elem.setAttribute('aria-selected', String(entry.isSelected));
     }
     if (props.render) {
-      if (isNewItem || !row.rendered) {
+      if (isNewItem || !row.rendered || row.renderedItem !== entry.item) {
         row.rendered?.remove();
-        row.rendered = props.render(item);
+        row.rendered = props.render(entry.item);
+        row.renderedItem = entry.item;
         row.content.append(row.rendered.elem);
       }
-      if (written.title !== title) {
-        written.title = title;
-        row.foldedTitle = row.folded = foldText(title);
-      }
     } else {
-      const before = written.title + written.subTitle + written.description + written.suffix;
-      const badgeBefore = written.badgeLabel;
-      writeIcon(row, props.icon?.(item) ?? '');
-      writeBadge(row, props.badge?.(item));
-      writeTitle(row, title);
-      const text = row.title?.parentNode as HTMLElement;
-      writePart(row, 'subTitle', props.subTitle?.(item) ?? '', (e) => text.prepend(e));
-      writePart(row, 'description', props.description?.(item) ?? '', (e) => text.append(e));
-      writePart(row, 'suffix', props.suffix?.(item) ?? '', (e) => row.content.append(e));
+      writeIcon(row, entry.text.icon);
+      writeBadge(row, entry.text.badge);
+      writeTitle(row, entry.text.title);
+      const textElem = row.title?.parentNode as HTMLElement;
+      writePart(row, 'subTitle', entry.text.subTitle, (e) => textElem.prepend(e));
+      writePart(row, 'description', entry.text.description, (e) => textElem.append(e));
+      writePart(row, 'suffix', entry.text.suffix, (e) => row.content.append(e));
       written.query = marks.query;
-      const isPlaceholder = props.isPlaceholder?.(item) ?? false;
-      if (written.isPlaceholder !== isPlaceholder) {
-        written.isPlaceholder = isPlaceholder;
-        writeAttr(row.title as HTMLElement, 'data-placeholder', isPlaceholder ? '' : null);
-      }
-      // The filter's text: folded again only when a part of it changed
-      if (
-        before !== written.title + written.subTitle + written.description + written.suffix ||
-        badgeBefore !== written.badgeLabel ||
-        !row.folded
-      ) {
-        row.folded = foldText(
-          `${written.title} ${written.subTitle} ${written.description} ${written.suffix} ${written.badgeLabel ?? ''}`
-        );
+      if (written.isPlaceholder !== entry.text.isPlaceholder) {
+        written.isPlaceholder = entry.text.isPlaceholder;
+        writeAttr(row.title as HTMLElement, 'data-placeholder', written.isPlaceholder ? '' : null);
       }
     }
-    writeTooltip(row, props.tooltip?.(item) ?? '');
+    writeTooltip(row, entry.text.tooltip);
     for (let i = 0; i < actions.length; i++) writeAction(row, row.actions[i], actions[i]);
   };
 
-  const createRow = (key: string, item: T): ListRow<T> => {
+  const bindRow = (row: ListRow<T>, entry: ListEntry<T>) => {
+    if (row.entry && row.entry !== entry) row.entry.view = null;
+    row.entry = entry;
+    entry.view = row;
+    writeRow(row, false);
+  };
+
+  const createRow = (): ListRow<T> => {
     let elem: HTMLElement;
     let main: HTMLElement;
     if (mode === 'static') {
@@ -305,21 +431,24 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
       main.setAttribute('tabindex', '-1');
       elem.append(main);
     }
-    elem.setAttribute('data-key', key);
     if (selectionMode !== 'none') elem.setAttribute('aria-selected', 'false');
+    if (hasHandle) {
+      const grip = createElem('span', 'aekList__handle');
+      grip.setAttribute('aria-hidden', 'true');
+      grip.innerHTML = GRIP_SVG;
+      main.append(grip);
+    }
     const content = createElem('span', 'aekList__content');
     main.append(content);
     let title: HTMLElement | null = null;
     if (!props.render) {
-      const text = createElem('span', 'aekList__text');
+      const textElem = createElem('span', 'aekList__text');
       title = createElem('span', 'aekList__title');
-      text.append(title);
-      content.append(text);
+      textElem.append(title);
+      content.append(textElem);
     }
     const row: ListRow<T> = {
-      key,
-      item,
-      index: -1,
+      entry: null,
       elem,
       main,
       content,
@@ -330,9 +459,11 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
       icon: null,
       badge: null,
       rendered: null,
+      renderedItem: undefined,
       tooltip: null,
       actions: [],
       written: {
+        key: '',
         title: '',
         subTitle: '',
         description: '',
@@ -344,12 +475,9 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
         badgeSpoken: undefined,
         isPlaceholder: false,
         isDisabled: false,
+        isSelected: false,
         query: '',
       },
-      folded: '',
-      foldedTitle: '',
-      isShown: true,
-      isSelected: false,
     };
     for (let i = 0; i < actions.length; i++) {
       const cell = createElem('div', 'aekList__actionCell');
@@ -374,11 +502,12 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
         isHidden: false,
       });
     }
-    writeRow(row, true);
     return row;
   };
 
   const disposeRow = (row: ListRow<T>) => {
+    if (row.entry) row.entry.view = null;
+    row.entry = null;
     row.tooltip?.cmp.remove();
     row.tooltip = null;
     for (const cell of row.actions) cell.tooltip.cmp.remove();
@@ -387,5 +516,5 @@ export const createListRows = <T>({ props, mode, marks }: ListRowsConfig<T>) => 
     row.elem.remove();
   };
 
-  return { createRow, writeRow, disposeRow };
+  return { createEntry, readEntry, createRow, bindRow, writeRow, disposeRow };
 };

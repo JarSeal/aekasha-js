@@ -60,6 +60,30 @@
     display: none;
   }
 
+  // Virtual rows (D8): every row one height, the box 12 rows tall unless the app says, the
+  // spacers standing in for the rows not rendered, the focused row kept at its offset
+  :where(.aekList__rows[data-virtual]) {
+    max-height: var(--aek-list-max-height, calc(12 * var(--aek-list-row-height, 28px)));
+  }
+
+  :where(.aekList__rows[data-virtual] > .aekList__row) {
+    flex: none;
+    height: var(--aek-list-row-height);
+    overflow: hidden;
+  }
+
+  :where(.aekList__spacer) {
+    flex: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(.aekList__row[data-pinned]) {
+    position: absolute;
+    inset-inline: 0;
+  }
+
   :where(.aekList__row) {
     position: relative;
     box-sizing: border-box;
@@ -108,6 +132,51 @@
   :where(.aekList__row:focus-visible, .aekList__main:focus-visible, .aekList__action:focus-visible) {
     outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
     outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  // A reorder's (D8): a grip the drag starts from on a touch screen, at least 24 px wide
+  :where(.aekList__handle) {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    min-width: 24px;
+    margin-inline: calc(-1 * var(--aek-space-2)) var(--aek-space-1);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-icon-size-sm);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  :where(.aekList__handle svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  // The dragged row: lifted over the others (it follows the pointer by a transform the script
+  // writes, none under reduced motion), its outline the sign that holds without movement
+  :where(.aekList__row[data-dragging]) {
+    z-index: 1;
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    outline: var(--aek-focus-ring-width) dashed var(--aek-accent);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+    cursor: grabbing;
+    // Lifted at once: the hover's fade would leave the rows under it showing through
+    transition: none;
+  }
+
+  // Where it drops: a line across the box at the gap
+  :where(.aekList__dropLine) {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 2;
+    height: 2px;
+    margin-top: -1px;
+    background-color: var(--aek-accent);
+    pointer-events: none;
   }
 
   :where(.aekList__content) {

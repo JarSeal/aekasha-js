@@ -1,8 +1,8 @@
 /**
  * The component library's data display (the Hub's `features/ui-kit/data/` page, p805): the list so
- * far; the tree, the table, the graphs and the stat tile join it.
+ * far (with virtual rows and reorder); the tree, the table, the graphs and the stat tile join it.
  */
-import { createList, getSvgIcon } from 'aekasha/ui';
+import { createList, createListReorder, createVirtualRows, getSvgIcon } from 'aekasha/ui';
 import type { CMPHandle } from 'aekasha/ui';
 import { ID_PREFIX, addButton, addGroup, addKitRoot } from './page';
 import type { Demo } from './page';
@@ -60,8 +60,18 @@ const LIGHTS: DemoLight[] = [
   { id: 'baked', name: 'Baked fill', type: 'PL', on: true, paused: false },
 ];
 
-/** In the page: a static list, a selectable one with a filter field, a multiple selection and one
- * with actions; what the user selects, opens and presses shows in the status line */
+type DrawPass = { id: string; name: string; description: string };
+
+const DRAW_PASSES: DrawPass[] = [
+  { id: 'sky', name: 'Sky', description: 'The sky box, behind everything' },
+  { id: 'opaque', name: 'Opaque', description: 'The meshes, front to back' },
+  { id: 'shadows', name: 'Shadows', description: 'The shadow maps' },
+  { id: 'transparent', name: 'Transparent', description: 'Back to front' },
+  { id: 'hud', name: 'HUD', description: 'The UI over the canvas' },
+];
+
+/** In the page: a static list, a selectable one with a filter field, a multiple selection, one
+ * with actions, a virtual one and a reorderable one; what the user selects, opens and presses shows in the status line */
 const initListDemo: Demo = (box) => {
   const root = addKitRoot(box);
   const status = document.createElement('p');
@@ -172,6 +182,50 @@ const initListDemo: Demo = (box) => {
   });
   row('With actions: a grid, Left and Right between a row’s cells; a disabled row', lights.cmp);
   addButton(states, 'Empty the lights', () => lights.setItems([]));
+
+  const assets: SceneObject[] = Array.from({ length: 5000 }, (_, i) => {
+    const object = OBJECTS[i % OBJECTS.length];
+    return { ...object, id: `asset${i}`, name: `${object.name} ${i + 1}`, entity: i + 1 };
+  });
+  row(
+    'Virtual rows: 5,000 assets, only the rows the box shows rendered; the filter finds any',
+    createList<SceneObject>({
+      id: LIST_ID('Assets'),
+      heading: 'Assets',
+      headingLevel: 3,
+      items: assets,
+      title: (asset) => asset.name,
+      icon: (asset) => getSvgIcon(KIND_ICONS[asset.kind]),
+      suffix: (asset) => asset.kind,
+      selection: 'single',
+      onActivate: (asset) => report(`Opened: ${asset.name}`),
+      filter: { field: true, fieldLabel: 'Filter the assets', placeholder: 'Filter assets' },
+      virtual: createVirtualRows(),
+    }).cmp
+  );
+
+  let passes = [...DRAW_PASSES];
+  const order = createList<DrawPass>({
+    id: LIST_ID('Order'),
+    label: 'Draw order',
+    items: () => passes,
+    title: (pass) => pass.name,
+    description: (pass) => pass.description,
+    reorder: createListReorder({
+      onReorder: ({ from, to }) => {
+        const next = passes.slice();
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        passes = next;
+        order.refresh();
+        report(`Moved ${moved.name} to ${to + 1}`);
+      },
+    }),
+  });
+  row(
+    'Reorder: Alt + ArrowUp or ArrowDown, or a drag (by the handle on a touch screen)',
+    order.cmp
+  );
   root.append(status);
 };
 

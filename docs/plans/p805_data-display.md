@@ -1022,6 +1022,51 @@ As built (section 1):
   the kit's `CLAUDE.md` has the list and the selection as bullets of its UI kit section, which
   Phase 7 section 4 moves into `## Data display`.
 
+As built (section 2):
+
+- **Opt-in by handle, not by import** (D8): `createVirtualRows({ rowHeight?, overscan? })`
+  (`data/VirtualRows.ts`) and `createListReorder({ onReorder, optimistic? })` (`data/Reorder.ts`)
+  return opaque handles (`{ kind }`: `VirtualRows`, `ListReorder`), their code kept in a `WeakMap`
+  by handle in their own module; the list calls `useVirtualRows(props.virtual)` /
+  `useListReorder(props.reorder)` (`@internal`, a lookup each), so a list without them carries
+  none of their code (the scheduler's states' pattern). Public on `aekasha/ui` with
+  `VirtualRowsProps`, `ListReorderProps`, `ListReorderChange`. The tree (section 3) takes the same
+  `virtual`.
+- **Entries and rows:** the list now keeps an entry per item (`ListEntry`: the parts as last read,
+  the folds for the filter and the typeahead, the selected and shown state) and a row
+  (`ListRow`, the elements) per rendered entry: every entry without virtual rows (as section 1),
+  the window's with them, a row let go of pooled and bound to another entry (writing only what
+  differs). The tab stop is kept by key and cell, not by element (a recycled element may show
+  another key). `ListTypes.ts` holds the public types, so `List.ts` stays under 800 lines.
+- **Virtual rows:** as D8, the window from `getVirtualWindow` (pure, tested alone), the box's
+  `scrollTop` and height kept from a passive `scroll` listener and a `ResizeObserver` (no layout
+  read per scroll). One height for every row: `rowHeight`, or the first rendered row's measured
+  once (28 px until then), written as `--aek-list-row-height`; the box defaults to 12 rows tall
+  (`--aek-list-max-height`). The tab stop's row and a dragged one stay rendered out of the window,
+  `data-pinned` at their offset (absolute, after the bottom spacer), so the focus never drops.
+  `aria-setsize` / `aria-posinset` on each rendered row (a grid: `aria-rowcount` on the box,
+  `aria-rowindex` on the rows). A move key, the typeahead and `focusKey` scroll to the row and
+  render it before focusing it. KitDom's `stubResizeObserver` came with it (Phase 1's note).
+- **Reorder:** as D8 (Alt + ArrowUp / ArrowDown; a pointer drag past 4 px, on a touch screen from
+  the row's `.aekList__handle`, `touch-action: none`; the lifted row `data-dragging`, following by
+  a `translateY` unless the motion factor was 0 at the start, a dashed outline either way; the
+  drop line; the edge scroll within 32 px; Escape cancels through an overlay stack entry; the
+  click after a drop stopped; each move announced). Decided on the way: not while filtered (a
+  move among hidden rows has no clear place) nor on a disabled row; a list with `reorder` is a
+  listbox at least (keys need a focusable row); `optimistic` moves the entry by a `setItems` of
+  the list's own items, so the app's next `setItems` wins.
+- **Found on the way:** moving the focused row's element (a reorder, any `setItems` that moves
+  it) blurs it in a browser, and a focus given back by script shows no ring in Chromium. The
+  placement now keeps the focused row in place and moves the others around it. Also, Chromium
+  doesn't switch to keyboard focus rings for a key pressed with Alt, Ctrl or ⌘: the reorder's
+  keyboard script starts with a plain arrow, as a keyboard user does.
+- **The library:** the list box gained 5,000 virtual assets with a filter field and a
+  reorderable draw order, and two keyboard scripts (End to the last of 5,000 with its place, the
+  filter finding one far down; Alt + arrows with the focus kept). The drag is a pointer's: unit
+  tests only (`Reorder.test.ts`).
+- **Size:** no first download moved (`verify:baselines`' bundles unchanged; nothing in the app or
+  the embeds uses the list yet). Phase 7 section 3's data window measures the list's chunk.
+
 ### Phase 4: the table
 
 1. The table: columns, formats and alignment, groups, footer, caption, sticky parts, stripes,

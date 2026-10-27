@@ -1,13 +1,8 @@
-import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
+import type { CMPAttr } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { announce } from '../components/Announcer';
-import type { BadgeValue } from '../components/Badge';
 import { createTypeahead, getMoveTarget, isTypeaheadKey } from '../components/RovingFocus';
-import {
-  addScheduledRefresh,
-  getPageScheduler,
-  type BindingScheduler,
-} from '../forms/binding/BindingScheduler';
+import { addScheduledRefresh, getPageScheduler } from '../forms/binding/BindingScheduler';
 import { pushOverlay, swallowNextKeyUp } from '../overlays/OverlayStack';
 import { getQueryWords, matchesWords } from './Filter';
 import {
@@ -15,171 +10,22 @@ import {
   createListRows,
   ROW_CLASS,
   writeAttr,
+  type ListEntry,
   type ListMarks,
   type ListRow,
 } from './ListRow';
-import {
-  createSelection,
-  getSelectionGesture,
-  type SelectionGesture,
-  type SelectionMode,
-} from './Selection';
+import type { List, ListProps } from './ListTypes';
+import { useListReorder } from './Reorder';
+import { createSelection, getSelectionGesture, type SelectionGesture } from './Selection';
+import { useVirtualRows } from './VirtualRows';
 import './List.scss';
 import '../styles/kit.scss';
 
-/**
- * A button on every row of a {@link createList} (the list is a grid then: one row per item, the
- * row's content and its actions its cells), such as a visibility toggle.
- * @template T the items' type
- */
-export type ListAction<T> = {
-  /** Its key, unique among the actions */
-  key: string;
-  /** Its accessible name and tooltip ('Show'), or a function of the item. */
-  label: string | ((item: T) => string);
-  /** Raw HTML of its icon (`getSvgIcon('eye')`). */
-  icon: string;
-  /** Raw HTML of its icon while `pressed` says false (`getSvgIcon('eyeOff')`); default `icon`. */
-  iconOff?: string;
-  /** Makes it a toggle (`aria-pressed`) with this state for the item, read again after a press. */
-  pressed?: (item: T) => boolean;
-  /** Disables it on the item's row (a disabled row's actions are disabled too). */
-  disabled?: (item: T) => boolean;
-  /** Leaves its cell empty on the item's row, keeping the other actions aligned. */
-  hidden?: (item: T) => boolean;
-  /** Its press (a click, Enter or Space on it). The row is read again after it, so an action that
-   * changes the item in place shows the change. */
-  onPress: (item: T, key: string) => void;
-};
-
-/**
- * The filter of a {@link createList}: a query that shows only the rows matching it, the matches
- * marked.
- * @template T the items' type
- */
-export type ListFilter<T> = {
-  /** The query at the start (default none). */
-  query?: string;
-  /** Whether an item matches a query that isn't empty. Default: every word of the query is in
-   * the row's text (its title, sub title, description, suffix and badge), case and accents
-   * ignored. */
-  match?: (item: T, query: string) => boolean;
-  /** Puts a search field above the list (default false): ArrowDown goes from it into the list,
-   * Escape empties it. Without it the app sets the query with `setQuery`. */
-  field?: boolean;
-  /** The search field's accessible name (default 'Filter'). */
-  fieldLabel?: string;
-  /** The search field's placeholder (default 'Filter'). */
-  placeholder?: string;
-  /** The user's queries (the search field, the "Clear the filter" button): keeping it is the
-   * app's. */
-  onQueryChange?: (query: string) => void;
-};
-
-/**
- * What {@link createList} makes a list from: its items, how each row shows one, and how the rows
- * are used.
- * @template T the items' type
- */
-export type ListProps<T> = {
-  /** The items, in order, or a function returning them, read again on `refresh` and on the
-   * scheduler's tick (`interval`). */
-  items: readonly T[] | (() => readonly T[]);
-  /** An item's key, unique in the list (default its `id`, as a string): a kept key keeps its row
-   * (its focus, selection and scroll) when the items change. */
-  getKey?: (item: T) => string;
-  /** A row's title (default its key). With `render`, still its text for the typeahead and the
-   * filter. */
-  title?: (item: T) => string;
-  /** A small line above the title (`'[app 2] [entity 14]'`). */
-  subTitle?: (item: T) => string | null | undefined;
-  /** A dimmed line under the title. */
-  description?: (item: T) => string | null | undefined;
-  /** Short text at the row's end (a count), in tabular figures. */
-  suffix?: (item: T) => string | null | undefined;
-  /** Raw HTML of an icon before the title (`getSvgIcon('lightbulb')`). */
-  icon?: (item: T) => string | null | undefined;
-  /** A badge before the title (a type's shorthand, a count). */
-  badge?: (item: T) => BadgeValue | null | undefined;
-  /** The row's tooltip. */
-  tooltip?: (item: T) => string | null | undefined;
-  /** Whether the title is a stand-in (an unnamed object's): italic and muted. */
-  isPlaceholder?: (item: T) => boolean;
-  /** Disables a row: dimmed, not selected or activated, its actions disabled. */
-  disabled?: (item: T) => boolean;
-  /** A row's content as a CMP in place of the parts above, called again when the item changes
-   * (another object for its key), the old one removed. */
-  render?: (item: T) => CMPHandle;
-  /** A heading above the list with its count ("12 of 340" while filtered), which names it. */
-  heading?: string;
-  /** The heading's level (`h2` to `h6`); a paragraph by default. */
-  headingLevel?: 2 | 3 | 4 | 5 | 6;
-  /** The list's accessible name without a heading. A selectable list or one with actions needs
-   * one of the two. */
-  label?: string;
-  /** What the user can select (default 'none'): one row, or several (Ctrl / ⌘ and Shift). */
-  selection?: SelectionMode;
-  /** The selected keys at the start. */
-  selected?: readonly string[];
-  /** The user's changes to the selection (and a selected key the items lost), in the list's
-   * order. */
-  onSelectionChange?: (keys: string[]) => void;
-  /** The buttons on every row (a visibility toggle): the list is an APG grid then. */
-  actions?: ListAction<T>[];
-  /** A row's activation: a click without Shift, Ctrl or ⌘, or Enter (the debugger's open the
-   * entity's window). A list with it and no selection is still a listbox. */
-  onActivate?: (item: T, key: string) => void;
-  /** Filters the rows by a query, marking the matches. */
-  filter?: ListFilter<T>;
-  /** What shows in place of the rows when there are none: a text, or a CMP (`createEmptyState`'s),
-   * which the list removes with itself. */
-  empty?: string | CMPHandle;
-  /** Reads `items` (a function) on this scheduler: its `refresh()`, and its tick every
-   * `interval` ms while the list shows. */
-  scheduler?: BindingScheduler;
-  /** Reads `items` (a function) every this many ms while the list shows (0: every frame), on
-   * `scheduler` or the page's. */
-  interval?: number;
-  /** Extra classes for the list's element. */
-  class?: string | string[];
-  /** Extra attributes for the list's element. */
-  attr?: CMPAttr;
-  /** The list's element id (default: a generated one, not written to the element). */
-  id?: string;
-};
-
-/** A list {@link createList} made: its CMP and its controls. */
-export type List<T> = {
-  /** The list's element: its heading, search field, rows and empty state. `cmp.remove()` removes
-   * the rows' tooltips and rendered CMPs with it. */
-  cmp: CMPHandle;
-  /** Replaces the items (an array, or a function read again on `refresh`): a kept key keeps its
-   * row, a part is written only when its text changed. */
-  setItems: (items: readonly T[] | (() => readonly T[])) => void;
-  /** Replaces one item by its key and writes its row's changed parts: a live figure, with no
-   * allocation of the list's own. An unknown key does nothing. */
-  setItem: (key: string, item: T) => void;
-  /** Sets the selected keys without calling `onSelectionChange`. */
-  setSelected: (keys: readonly string[]) => void;
-  /** The selected keys, in the list's order */
-  getSelected: () => string[];
-  /** Sets the filter's query (and the search field's text) without calling `onQueryChange`. */
-  setQuery: (query: string) => void;
-  /** The filter's query */
-  getQuery: () => string;
-  /** Focuses a row by its key (a shown one) and makes it the list's tab stop. */
-  focusKey: (key: string) => void;
-  /** Scrolls the list's box (never the page) so a row shows. */
-  scrollToKey: (key: string) => void;
-  /** The key of the row holding an element (a context menu's), or null: what a
-   * `createContextMenu` on `cmp.elem` finds its row by. */
-  getKeyAt: (elem: Element) => string | null;
-  /** Reads `items` again (a function's) and writes what changed. */
-  refresh: () => void;
-};
-
 /** The page size of PageUp and PageDown when the list doesn't scroll */
 const DEFAULT_PAGE_SIZE = 10;
+
+/** Where the focus was in the rows before a change: its entry's key, its cell and its index */
+type FocusMark = { key: string; column: number; index: number; elem: HTMLElement };
 
 const defaultGetKey = (item: unknown) => String((item as { id?: unknown }).id);
 
@@ -187,28 +33,36 @@ const defaultGetKey = (item: unknown) => String((item as { id?: unknown }).id);
  * Creates a list (p805 D6): rows of an app's items, each a title with an optional icon, badge,
  * sub title, description, suffix and tooltip (or a CMP of `render`), kept by key, so new items
  * write only what changed. Static (a `<ul>`), selectable (the APG listbox), or with `actions` on
- * every row (the APG grid); filtered by a query with the matches marked.
+ * every row (the APG grid); filtered by a query with the matches marked. Long lists render only
+ * the rows their box shows (`virtual`), and the user can move the rows (`reorder`): both are
+ * values the app passes, so a list without them carries neither's code.
  * - Parts: `.aekList`, `.aekList__header` with `__heading` (`__headingText`, `__count`), `__filter`
  *   with `__search`, `.aekList__rows` (`data-mode="static" | "listbox" | "grid"`), a `.aekList__row`
- *   per item (`data-key`, `aria-selected`, `aria-disabled`, `hidden` while filtered out) with
- *   `__main` (a grid row's first cell) and `__content`: `__icon`, `__badge`, `__text` (`__subTitle`,
+ *   per item (`data-key`, `aria-selected`, `aria-disabled`, `hidden` while filtered out,
+ *   `data-dragging`, `data-pinned`) with `__main` (a grid row's first cell), `__handle` (a
+ *   reorder's) and `__content`: `__icon`, `__badge`, `__text` (`__subTitle`,
  *   `__title` with `data-placeholder`, `__description`), `__suffix`; a grid row's `__actionCell`s
  *   with an `__action` button each (`aria-pressed`); `.aekList__empty` and `.aekList__noMatch`
- *   (with `__clear`). The matches are `<mark class="aekMark">`s.
+ *   (with `__clear`); virtual rows' `__spacer`s, a drag's `__dropLine`. The matches are
+ *   `<mark class="aekMark">`s.
  * - Custom properties (read on any ancestor, the token as the fallback): `--aek-list-max-height`
- *   (the rows' box scrolls past it; default none), `--aek-list-selected-color` (the selected
- *   row's bar, default the accent).
+ *   (the rows' box scrolls past it; default none, 12 rows with `virtual`),
+ *   `--aek-list-selected-color` (the selected row's bar, default the accent),
+ *   `--aek-list-row-height` (virtual rows' height, written by the list once measured).
  * - Keys (a listbox, a grid): the list is one tab stop. Up / Down move between the shown rows (no
  *   wrapping), Home / End to the ends, PageUp / PageDown by the box's height, a letter to the next
  *   title starting with it; Space selects (toggles in a multiple selection), Enter activates (and
  *   selects in a single one); with a multiple selection Shift + a move or a click selects the range
  *   from the last picked row, Ctrl / ⌘ + click toggles and Ctrl / ⌘ + A selects every row (or
  *   none). In a grid, Left / Right move between a row's cells, Up / Down keep the column, and Enter
- *   or Space presses an action. The search field's ArrowDown enters the list, its Escape empties
- *   it. The keys it uses reach no key binding.
+ *   or Space presses an action. With `reorder`, Alt + ArrowUp / ArrowDown move the focused row.
+ *   The search field's ArrowDown enters the list, its Escape empties it. The keys it uses reach no
+ *   key binding.
  * - ARIA: `role="listbox"` (`aria-multiselectable`) of `option`s, or `role="grid"` of `row`s and
  *   `gridcell`s, named by the heading or `label`; `aria-selected`, `aria-disabled`; a toggle's
- *   `aria-pressed`. A filter's count ("12 of 340", "No matches for …") is announced politely.
+ *   `aria-pressed`; with `virtual`, `aria-setsize` / `aria-posinset` (`aria-rowcount` /
+ *   `aria-rowindex` in a grid). A filter's count ("12 of 340", "No matches for …") and a move
+ *   ("Lamp moved to 3 of 8") are announced politely.
  *
  * A context menu over the rows is the app's: `createContextMenu({ target: list.cmp.elem, … })`,
  * its items found by `getKeyAt` (as below), so a list without one carries none of its code.
@@ -254,188 +108,316 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
   const { actions = [], filter } = props;
   const getKey = props.getKey ?? defaultGetKey;
   const selectionMode = props.selection ?? 'none';
+  const virtualImpl = useVirtualRows(props.virtual);
+  const reorderImpl = useListReorder(props.reorder);
   const mode =
     actions.length > 0
       ? 'grid'
-      : selectionMode !== 'none' || props.onActivate
+      : selectionMode !== 'none' || props.onActivate || reorderImpl
         ? 'listbox'
         : 'static';
   const isInteractive = mode !== 'static';
   let source = props.items;
-  let rows: ListRow<T>[] = [];
-  const byKey = new Map<string, ListRow<T>>();
+  let entries: ListEntry<T>[] = [];
+  /** The entries the filter shows, in order */
+  let shown: ListEntry<T>[] = [];
+  const byKey = new Map<string, ListEntry<T>>();
   let query = filter?.query ?? '';
   let queryWords = getQueryWords(query);
-  let shownCount = 0;
-  /** The element with `tabindex="0"`: a row's main element or an action's button */
-  let stop: HTMLElement | null = null;
+  const marks: ListMarks = { query, words: queryWords };
+  /** The tab stop: an entry's key and its cell (0 the main element, n the nth action) */
+  let stopKey: string | null = null;
+  let stopColumn = 0;
+  /** The element with `tabindex="0"` */
+  let stopElem: HTMLElement | null = null;
+  /** A row a drag keeps rendered */
+  let heldKey: string | null = null;
+  /** Virtual rows' rendered entries, and the rows they let go of */
+  let mounted: ListEntry<T>[] = [];
+  const pool: ListRow<T>[] = [];
   let removeScheduled: (() => void) | null = null;
 
+  const { createEntry, readEntry, createRow, bindRow, writeRow, disposeRow } = createListRows({
+    props,
+    mode,
+    marks,
+    hasHandle: Boolean(reorderImpl),
+  });
   const selection = createSelection({
     mode: selectionMode,
-    getOrder: () => rows.filter((row) => row.isShown && !row.written.isDisabled).map((r) => r.key),
+    getOrder: () => shown.filter((entry) => !entry.text.isDisabled).map((entry) => entry.key),
   });
   const typeahead = createTypeahead({
-    getCount: () => rows.length,
-    getText: (index) => (rows[index].isShown ? rows[index].foldedTitle : ''),
+    getCount: () => entries.length,
+    getText: (index) => (entries[index].isShown ? entries[index].foldedTitle : ''),
   });
 
-  const marks: ListMarks = { query, words: queryWords };
-  const { createRow, writeRow, disposeRow } = createListRows({ props, mode, marks });
+  // --- The tab stop and the focus ---
 
-  // --- The list's state: filter, selection, tab stop, count ---
-
-  const isMatch = (row: ListRow<T>) => {
-    if (!queryWords.length) return true;
-    if (filter?.match) return filter.match(row.item, query);
-    return matchesWords(row.folded, queryWords);
+  /** An entry's focusable cell (`column` 0 its main element; a hidden action's falls back to it) */
+  const getCellElem = (entry: ListEntry<T>, column: number) => {
+    const row = entry.view;
+    if (!row) return null;
+    const cell = column > 0 ? row.actions[column - 1] : null;
+    return cell && !cell.isHidden ? cell.button : row.main;
   };
 
-  const writeSelected = (row: ListRow<T>) => {
-    const isSelected = selection.has(row.key);
-    if (row.isSelected === isSelected) return;
-    row.isSelected = isSelected;
-    row.elem.setAttribute('aria-selected', String(isSelected));
+  /** Writes the tab stop's `tabindex` where it is now (a recycled row may have taken the old one) */
+  const writeStop = () => {
+    const entry = stopKey === null ? undefined : byKey.get(stopKey);
+    const next = entry ? getCellElem(entry, stopColumn) : null;
+    if (stopElem && stopElem !== next) stopElem.setAttribute('tabindex', '-1');
+    next?.setAttribute('tabindex', '0');
+    stopElem = next;
   };
 
-  /** The focusable elements of a row: its main element, then its shown actions' buttons */
-  const getCells = (row: ListRow<T>) => {
-    const cells: HTMLElement[] = [row.main];
-    for (const cell of row.actions) if (!cell.isHidden) cells.push(cell.button);
-    return cells;
+  const setStop = (entry: ListEntry<T> | null, column = 0) => {
+    stopKey = entry?.key ?? null;
+    stopColumn = column;
+    writeStop();
   };
 
-  const setStop = (elem: HTMLElement | null) => {
-    if (elem === stop) return;
-    stop?.setAttribute('tabindex', '-1');
-    elem?.setAttribute('tabindex', '0');
-    stop = elem;
-  };
-
-  const findRow = (target: EventTarget | null) => {
+  const findEntry = (target: EventTarget | null) => {
     const elem = (target as Element | null)?.closest?.(`.${ROW_CLASS}`);
     if (!elem || elem.parentNode !== rowsCmp.elem) return null;
     return byKey.get(elem.getAttribute('data-key') ?? '') ?? null;
   };
 
-  /** Puts the tab stop on a shown row when it's on none: the shown row nearest `near` (where a
-   * focused row was), else the first selected one, else the first */
-  const ensureStop = (near: number | null = null) => {
+  /** Puts the tab stop on a shown entry when it's on none: the shown one nearest `near` (where a
+   * focused row was), else the first selected, else the first */
+  const ensureStop = (near: number | null) => {
     if (!isInteractive) return;
-    const stopRow = stop ? findRow(stop) : null;
-    if (stopRow?.isShown && stop?.isConnected && !stop.hasAttribute('hidden')) return;
-    let next: ListRow<T> | null = null;
+    const current = stopKey === null ? undefined : byKey.get(stopKey);
+    if (current?.isShown) return;
+    let next: ListEntry<T> | null = null;
     if (near !== null) {
-      for (let d = 0; d < rows.length && !next; d++) {
-        const after = rows[near + d];
-        const before = rows[near - d];
+      for (let d = 0; d < entries.length && !next; d++) {
+        const after = entries[near + d];
+        const before = entries[near - d];
         next = after?.isShown ? after : before?.isShown ? before : null;
       }
     }
-    next ??= rows.find((row) => row.isShown && row.isSelected) ?? null;
-    next ??= rows.find((row) => row.isShown) ?? null;
-    setStop(next ? next.main : null);
+    next ??= shown.find((entry) => entry.isSelected) ?? shown[0] ?? null;
+    setStop(next);
+  };
+
+  /** The focus in the rows before a change that may remove, hide or move its row */
+  const captureFocus = (): FocusMark | null => {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active || !rowsCmp.elem.contains(active)) return null;
+    const entry = findEntry(active);
+    if (!entry) return null;
+    const column = entry.view?.actions.findIndex((cell) => cell.button === active) ?? -1;
+    return { key: entry.key, column: column + 1, index: entry.index, elem: active };
+  };
+
+  /** After the change: the focus back on its cell, or on the tab stop when its row went */
+  const restoreFocus = (focus: FocusMark | null) => {
+    if (!focus) return;
+    const entry = byKey.get(focus.key);
+    const elem = entry?.isShown ? getCellElem(entry, focus.column) : null;
+    const target = elem ?? stopElem;
+    if (target && document.activeElement !== target) target.focus();
+  };
+
+  // --- Rendering ---
+
+  /** Puts `elems` in the rows' box in this order, moving only those out of place. The one holding
+   * the focus stays put and the others move around it: a moved element loses the focus, and
+   * one given back by script shows no focus ring in Chromium. */
+  const placeElems = (elems: readonly HTMLElement[]) => {
+    const parent = rowsCmp.elem;
+    const active = document.activeElement;
+    const at = active ? elems.findIndex((elem) => elem.contains(active)) : -1;
+    if (at === -1 || elems[at].parentNode !== parent) {
+      let cursor = parent.firstElementChild;
+      for (const elem of elems) {
+        if (elem === cursor) cursor = cursor.nextElementSibling;
+        else parent.insertBefore(elem, cursor);
+      }
+      return;
+    }
+    let ref: HTMLElement = elems[at];
+    for (let i = at - 1; i >= 0; i--) {
+      if (elems[i].nextElementSibling !== ref) parent.insertBefore(elems[i], ref);
+      ref = elems[i];
+    }
+    ref = elems[at];
+    for (let i = at + 1; i < elems.length; i++) {
+      if (ref.nextElementSibling !== elems[i]) parent.insertBefore(elems[i], ref.nextSibling);
+      ref = elems[i];
+    }
+  };
+
+  /** Lets go of an entry's row: back to the pool (virtual rows) */
+  const unmount = (entry: ListEntry<T>) => {
+    const row = entry.view;
+    if (!row) return;
+    entry.view = null;
+    row.entry = null;
+    row.elem.remove();
+    row.elem.removeAttribute('data-pinned');
+    row.elem.style.removeProperty('top');
+    pool.push(row);
+  };
+
+  const mount = (entry: ListEntry<T>) => {
+    if (entry.view) return entry.view;
+    const row = pool.pop() ?? createRow();
+    // A recycled row's focusables were another entry's: none is the stop until `writeStop`
+    if (isInteractive) row.main.setAttribute('tabindex', '-1');
+    for (const cell of row.actions) cell.button.setAttribute('tabindex', '-1');
+    bindRow(row, entry);
+    return row;
+  };
+
+  /** Every entry's row in the items' order, the filtered out ones hidden */
+  const renderAll = () => {
+    const elems: HTMLElement[] = [];
+    for (const entry of entries) {
+      const row = mount(entry);
+      writeAttr(row.elem, 'hidden', entry.isShown ? null : '');
+      elems.push(row.elem);
+    }
+    placeElems(elems);
+  };
+
+  /** The rows the box shows, the tab stop's and a dragged one (placed at their offset when out of
+   * the window), between the spacers */
+  const renderWindow = (view: NonNullable<typeof virtualView>) => {
+    const { start, end } = view.getWindow(shown.length);
+    const inWindow = shown.slice(start, end);
+    const kept = new Set<ListEntry<T>>(inWindow);
+    const pinned: ListEntry<T>[] = [];
+    for (const key of [stopKey, heldKey]) {
+      const entry = key === null ? undefined : byKey.get(key);
+      if (!entry?.isShown || kept.has(entry)) continue;
+      kept.add(entry);
+      pinned.push(entry);
+    }
+    for (const entry of mounted) if (!kept.has(entry)) unmount(entry);
+    mounted = [...kept];
+    const height = view.getRowHeight();
+    const elems: HTMLElement[] = [view.top];
+    for (const entry of mounted) {
+      const { elem } = mount(entry);
+      const isPinned = entry.shownIndex < start || entry.shownIndex >= end;
+      writeAttr(elem, 'data-pinned', isPinned ? '' : null);
+      if (isPinned) elem.style.top = `${entry.shownIndex * height}px`;
+      else elem.style.removeProperty('top');
+      if (mode === 'grid') writeAttr(elem, 'aria-rowindex', String(entry.shownIndex + 1));
+      else {
+        writeAttr(elem, 'aria-setsize', String(shown.length));
+        writeAttr(elem, 'aria-posinset', String(entry.shownIndex + 1));
+      }
+      if (!isPinned) elems.push(elem);
+    }
+    elems.push(view.bottom);
+    for (const entry of pinned) elems.push((entry.view as ListRow<T>).elem);
+    placeElems(elems);
+    if (mode === 'grid') writeAttr(rowsCmp.elem, 'aria-rowcount', String(shown.length));
+    view.layout(shown.length, start, end);
+    // The first row shown gives the height when none was given: the window again with it
+    const first = mounted[0]?.view;
+    if (first && view.measure(first.elem)) renderWindow(view);
+  };
+
+  const renderRows = () => {
+    if (virtualView) renderWindow(virtualView);
+    else renderAll();
+    writeStop();
+  };
+
+  // --- The list's state: filter, selection, count ---
+
+  const isMatch = (entry: ListEntry<T>) => {
+    if (!queryWords.length) return true;
+    if (filter?.match) return filter.match(entry.item, query);
+    return matchesWords(entry.folded, queryWords);
   };
 
   const writeCount = () => {
     if (!countElem) return;
-    const total = rows.length;
-    countElem.textContent = queryWords.length ? `${shownCount} of ${total}` : String(total);
+    const total = entries.length;
+    countElem.textContent = queryWords.length ? `${shown.length} of ${total}` : String(total);
   };
 
   /** Shows the rows, the empty state or the no match line, by the counts */
   const writeEmpty = () => {
-    const total = rows.length;
-    writeAttr(rowsCmp.elem, 'hidden', shownCount ? null : '');
+    const total = entries.length;
+    writeAttr(rowsCmp.elem, 'hidden', shown.length ? null : '');
     writeAttr(emptyElem, 'hidden', total ? '' : null);
-    writeAttr(noMatchElem, 'hidden', total && !shownCount ? null : '');
-    if (!total || shownCount) return;
+    writeAttr(noMatchElem, 'hidden', total && !shown.length ? null : '');
+    if (!total || shown.length) return;
     const text = `No matches for “${query}”`;
     if (noMatchText.textContent !== text) noMatchText.textContent = text;
   };
 
-  /** Shows or hides each row by the query (and rewrites its marks when the query changed) */
+  /** Matches every entry against the query (a rendered row's marks rewritten for a new one) */
   const applyFilter = () => {
-    shownCount = 0;
-    for (const row of rows) {
-      if (!props.render && row.written.query !== query) writeRow(row, false);
-      const isShown = isMatch(row);
-      if (row.isShown !== isShown) {
-        row.isShown = isShown;
-        writeAttr(row.elem, 'hidden', isShown ? null : '');
-      }
-      if (isShown) shownCount++;
+    shown = [];
+    for (const entry of entries) {
+      const row = entry.view;
+      if (row && !props.render && row.written.query !== query) writeRow(row, false);
+      entry.isShown = isMatch(entry);
+      entry.shownIndex = entry.isShown ? shown.length : -1;
+      if (entry.isShown) shown.push(entry);
     }
     writeCount();
     writeEmpty();
   };
 
-  /** Drops the selected keys the rows lost, reporting it */
-  const retainSelection = (report: boolean) => {
-    const changed = selection.retain((key) => byKey.has(key));
-    for (const row of rows) writeSelected(row);
-    if (changed && report) props.onSelectionChange?.(selection.get());
-  };
-
-  /** The focused element in the rows, and its row's index, before a change that may remove or hide
-   * it: the focus goes to the tab stop after it, if it went */
-  const captureFocus = () => {
-    const active = document.activeElement as HTMLElement | null;
-    if (!active || !rowsCmp.elem.contains(active)) return null;
-    return { active, index: findRow(active)?.index ?? 0 };
-  };
-
-  const restoreFocus = (focus: { active: HTMLElement; index: number } | null) => {
-    ensureStop(focus ? Math.min(focus.index, rows.length - 1) : null);
-    if (!focus) return;
-    const { active } = focus;
-    const row = findRow(active);
-    if (active.isConnected && row?.isShown && !active.hasAttribute('hidden')) {
-      if (document.activeElement !== active) active.focus();
-    } else stop?.focus();
-  };
-
-  /** Puts the rows' elements in `next`'s order, moving only those out of place */
-  const placeRows = (next: ListRow<T>[]) => {
-    const parent = rowsCmp.elem;
-    let cursor = parent.firstElementChild;
-    for (let i = 0; i < next.length; i++) {
-      const row = next[i];
-      row.index = i;
-      if (row.elem === cursor) cursor = cursor.nextElementSibling;
-      else parent.insertBefore(row.elem, cursor);
+  /** Writes each entry's selected state where it changed */
+  const writeSelection = () => {
+    for (const entry of entries) {
+      const isSelected = selection.has(entry.key);
+      if (entry.isSelected === isSelected) continue;
+      entry.isSelected = isSelected;
+      if (entry.view) writeRow(entry.view, false);
     }
+  };
+
+  /** After the entries or the query changed: the tab stop, the rows, the focus */
+  const settle = (focus: FocusMark | null) => {
+    ensureStop(focus ? Math.min(focus.index, entries.length - 1) : null);
+    renderRows();
+    restoreFocus(focus);
   };
 
   const setRowsFrom = (items: readonly T[], report: boolean) => {
     const focus = captureFocus();
-    const next: ListRow<T>[] = [];
+    const next: ListEntry<T>[] = [];
     const seen = new Set<string>();
     for (const item of items) {
       const key = getKey(item);
       if (seen.has(key)) continue;
       seen.add(key);
-      let row = byKey.get(key);
-      if (row) {
-        const isNewItem = row.item !== item;
-        row.item = item;
-        writeRow(row, isNewItem);
+      let entry = byKey.get(key);
+      if (entry) {
+        const isNewItem = entry.item !== item;
+        entry.item = item;
+        readEntry(entry);
+        if (entry.view) writeRow(entry.view, isNewItem);
       } else {
-        row = createRow(key, item);
-        byKey.set(key, row);
+        entry = createEntry(key, item);
+        byKey.set(key, entry);
       }
-      next.push(row);
+      entry.index = next.length;
+      next.push(entry);
     }
-    for (const row of rows) {
-      if (seen.has(row.key)) continue;
-      byKey.delete(row.key);
-      disposeRow(row);
+    for (const entry of entries) {
+      if (seen.has(entry.key)) continue;
+      byKey.delete(entry.key);
+      if (virtualView) unmount(entry);
+      else if (entry.view) disposeRow(entry.view);
     }
-    rows = next;
-    placeRows(rows);
+    if (virtualView) mounted = mounted.filter((entry) => seen.has(entry.key));
+    entries = next;
     applyFilter();
-    retainSelection(report);
-    restoreFocus(focus);
+    const changed = selection.retain((key) => byKey.has(key));
+    writeSelection();
+    if (changed && report) props.onSelectionChange?.(selection.get());
+    settle(focus);
   };
 
   const readItems = () => (typeof source === 'function' ? source() : source);
@@ -450,47 +432,54 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
   };
 
   const reportSelection = () => {
-    for (const row of rows) writeSelected(row);
+    writeSelection();
     props.onSelectionChange?.(selection.get());
   };
 
-  const pick = (row: ListRow<T>, gesture: SelectionGesture) => {
-    if (row.written.isDisabled || selectionMode === 'none') return;
-    if (selection.pick(row.key, gesture)) reportSelection();
+  const pick = (entry: ListEntry<T>, gesture: SelectionGesture) => {
+    if (entry.text.isDisabled || selectionMode === 'none') return;
+    if (selection.pick(entry.key, gesture)) reportSelection();
   };
 
-  const activate = (row: ListRow<T>) => {
-    if (row.written.isDisabled) return;
-    if (selectionMode === 'single') pick(row, 'replace');
-    props.onActivate?.(row.item, row.key);
+  const activate = (entry: ListEntry<T>) => {
+    if (entry.text.isDisabled) return;
+    if (selectionMode === 'single') pick(entry, 'replace');
+    props.onActivate?.(entry.item, entry.key);
   };
 
-  /** Focuses a row's cell (`column` 0 its main element; a hidden action's falls back to it) */
-  const focusRow = (row: ListRow<T>, column = 0) => {
-    const cell = column > 0 ? row.actions[column - 1] : null;
-    const elem = cell && !cell.isHidden ? cell.button : row.main;
-    setStop(elem);
-    elem.focus();
+  /** Focuses an entry's cell, rendering it first (virtual rows scroll to it) */
+  const focusRow = (entry: ListEntry<T>, column = 0) => {
+    virtualView?.scrollToIndex(entry.shownIndex);
+    stopKey = entry.key;
+    stopColumn = column;
+    renderRows();
+    stopElem?.focus();
   };
 
   /** The page size: the rows that fit the box when it scrolls */
-  const getPageSize = (row: ListRow<T>) => {
+  const getPageSize = (entry: ListEntry<T>) => {
+    if (virtualView) return virtualView.getPageSize();
     const box = rowsCmp.elem;
-    const height = row.elem.offsetHeight;
+    const height = entry.view?.elem.offsetHeight;
     if (!height || !(box.scrollHeight > box.clientHeight)) return DEFAULT_PAGE_SIZE;
     return Math.max(1, Math.floor(box.clientHeight / height));
   };
 
   const onKeyDown = (e: Event) => {
     const ke = e as KeyboardEvent;
-    const row = findRow(e.target);
-    if (!row) return;
+    const entry = findEntry(e.target);
+    const row = entry?.view;
+    if (!entry || !row) return;
     const target = e.target as HTMLElement;
     const actionIndex = row.actions.findIndex((cell) => cell.button === target);
     const column = actionIndex + 1;
     const { key } = ke;
     const isMod = ke.ctrlKey || ke.metaKey;
 
+    if (reorderView?.onKeyDown(ke, entry.key)) {
+      useKey(ke);
+      return;
+    }
     if (isMod && !ke.altKey && key.toLowerCase() === 'a' && selectionMode === 'multiple') {
       useKey(ke);
       if (selection.all()) reportSelection();
@@ -498,25 +487,24 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     }
     if (mode === 'grid' && (key === 'ArrowLeft' || key === 'ArrowRight') && !isMod) {
       useKey(ke);
-      const cells = getCells(row);
-      const at = cells.indexOf(target);
-      const next = cells[at + (key === 'ArrowRight' ? 1 : -1)];
+      const cells = [row.main, ...row.actions.filter((c) => !c.isHidden).map((c) => c.button)];
+      const next = cells[cells.indexOf(target) + (key === 'ArrowRight' ? 1 : -1)];
       if (next) {
-        setStop(next);
+        setStop(entry, next === row.main ? 0 : Number(next.getAttribute('data-action')) + 1);
         next.focus();
       }
       return;
     }
     if (!ke.altKey && !isMod) {
-      const next = getMoveTarget(key, row.index, {
-        count: rows.length,
-        pageSize: key.startsWith('Page') ? getPageSize(row) : undefined,
-        isSkipped: (index) => !rows[index].isShown,
+      const next = getMoveTarget(key, entry.index, {
+        count: entries.length,
+        pageSize: key.startsWith('Page') ? getPageSize(entry) : undefined,
+        isSkipped: (index) => !entries[index].isShown,
       });
       if (next !== null) {
         useKey(ke);
         if (next === -1) return;
-        const to = rows[next];
+        const to = entries[next];
         focusRow(to, column);
         if (ke.shiftKey && selectionMode === 'multiple') pick(to, 'range');
         return;
@@ -525,46 +513,50 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     if (actionIndex !== -1) return;
     if (key === ' ' && !isMod) {
       useKey(ke);
-      pick(row, getSelectionGesture(ke, selectionMode === 'multiple'));
+      pick(entry, getSelectionGesture(ke, selectionMode === 'multiple'));
       return;
     }
     if (key === 'Enter' && !isMod && !ke.shiftKey) {
       useKey(ke);
-      activate(row);
+      activate(entry);
       return;
     }
     if (isTypeaheadKey(ke) && key !== ' ') {
       useKey(ke);
-      const index = typeahead.type(key, row.index);
-      if (index !== -1) focusRow(rows[index]);
+      const index = typeahead.type(key, entry.index);
+      if (index !== -1) focusRow(entries[index]);
     }
   };
 
   const onClick = (e: Event) => {
-    const row = findRow(e.target);
-    if (!row) return;
+    const entry = findEntry(e.target);
+    if (!entry) return;
     const button = (e.target as Element).closest('.aekList__action');
     if (button) {
       const index = Number(button.getAttribute('data-action'));
-      const cell = row.actions[index];
+      const cell = entry.view?.actions[index];
       if (!cell || cell.isDisabled) return;
-      actions[index].onPress(row.item, row.key);
-      // Its row read again: an action that changed the item in place shows it
-      const live = byKey.get(row.key);
-      if (live) writeRow(live, false);
+      actions[index].onPress(entry.item, entry.key);
+      // Its item read again: an action that changed it in place shows it
+      readEntry(entry);
+      if (entry.view) writeRow(entry.view, false);
       return;
     }
-    if (row.written.isDisabled) return;
+    if (entry.text.isDisabled) return;
     const me = e as MouseEvent;
-    pick(row, getSelectionGesture(me));
-    if (!me.shiftKey && !me.ctrlKey && !me.metaKey) props.onActivate?.(row.item, row.key);
+    pick(entry, getSelectionGesture(me));
+    if (!me.shiftKey && !me.ctrlKey && !me.metaKey) props.onActivate?.(entry.item, entry.key);
   };
 
   const onFocusIn = (e: Event) => {
     const target = e.target as HTMLElement;
-    const row = findRow(target);
-    if (row && (target === row.main || row.actions.some((cell) => cell.button === target))) {
-      setStop(target);
+    const entry = findEntry(target);
+    const row = entry?.view;
+    if (!entry || !row) return;
+    if (target === row.main) setStop(entry, 0);
+    else {
+      const index = row.actions.findIndex((cell) => cell.button === target);
+      if (index !== -1) setStop(entry, index + 1);
     }
   };
 
@@ -590,11 +582,11 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     marks.words = queryWords;
     if (searchElem && searchElem.value !== next) searchElem.value = next;
     applyFilter();
-    restoreFocus(focus);
+    settle(focus);
     if (queryWords.length) {
       announce(
         cmp.elem,
-        shownCount ? `${shownCount} of ${rows.length}` : `No matches for ${query.trim()}`
+        shown.length ? `${shown.length} of ${entries.length}` : `No matches for ${query.trim()}`
       );
     }
     syncEscapeEntry();
@@ -614,8 +606,14 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
       removeEscapeEntry?.(false);
       removeEscapeEntry = null;
       typeahead.clear();
-      for (const row of rows) disposeRow(row);
-      rows = [];
+      reorderView?.dispose();
+      virtualView?.dispose();
+      for (const entry of entries) if (entry.view) disposeRow(entry.view);
+      for (const row of pool) disposeRow(row);
+      pool.length = 0;
+      entries = [];
+      shown = [];
+      mounted = [];
       byKey.clear();
     },
   });
@@ -641,9 +639,9 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
   if (filter?.field) {
     const onSearchKeyDown = (e: Event) => {
       const ke = e as KeyboardEvent;
-      if (ke.key === 'ArrowDown' && stop && shownCount) {
+      if (ke.key === 'ArrowDown' && stopElem && shown.length) {
         useKey(ke);
-        stop.focus();
+        stopElem.focus();
       } else if (ke.key === 'Escape' && query) {
         // Outside a HUD root (the overlay stack's entry takes it first under one)
         useKey(ke);
@@ -676,10 +674,11 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
   if (isInteractive) {
     rowsAttr.role = mode;
     if (selectionMode === 'multiple') rowsAttr['aria-multiselectable'] = 'true';
-    if (headingTextId) rowsAttr['aria-labelledby'] = headingTextId;
-    else if (props.label) rowsAttr['aria-label'] = props.label;
-  } else if (headingTextId) rowsAttr['aria-labelledby'] = headingTextId;
+  }
+  if (headingTextId) rowsAttr['aria-labelledby'] = headingTextId;
   else if (props.label) rowsAttr['aria-label'] = props.label;
+  if (virtualImpl) rowsAttr['data-virtual'] = '';
+  if (reorderImpl) rowsAttr['data-reorder'] = '';
   const rowsCmp = cmp.add({
     tag: mode === 'static' ? 'ul' : 'div',
     idAttr: true,
@@ -710,9 +709,34 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     attr: { type: 'button' },
     onClick: () => {
       setQueryFrom('', true);
-      (searchElem ?? stop)?.focus();
+      (searchElem ?? stopElem)?.focus();
     },
   });
+
+  const virtualView =
+    virtualImpl?.attach(rowsCmp.elem, mode === 'static' ? 'li' : 'div', () => renderRows()) ?? null;
+  const reorderView =
+    reorderImpl?.attach({
+      root: cmp.elem,
+      box: rowsCmp.elem,
+      getKeys: () => entries.map((entry) => entry.key),
+      canMove: (key) => !queryWords.length && byKey.get(key)?.text.isDisabled === false,
+      keyAt: (elem) => findEntry(elem)?.key ?? null,
+      getRendered: () =>
+        shown.flatMap((entry) => (entry.view ? [{ key: entry.key, elem: entry.view.elem }] : [])),
+      holdRow: (key) => {
+        heldKey = key;
+        if (virtualView) renderRows();
+      },
+      move: (key, to) => {
+        const items = entries.map((entry) => entry.item);
+        const from = byKey.get(key)?.index ?? -1;
+        if (from === -1) return;
+        items.splice(to, 0, ...items.splice(from, 1));
+        setRowsFrom(items, false);
+      },
+      getTitle: (key) => byKey.get(key)?.text.title ?? key,
+    }) ?? null;
 
   if (props.selected) selection.set(props.selected);
   setRowsFrom(readItems(), false);
@@ -735,39 +759,46 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
       setRowsFrom(readItems(), true);
     },
     setItem: (key, item) => {
-      const row = byKey.get(key);
-      if (!row || getKey(item) !== key) return;
-      const isNewItem = row.item !== item;
-      row.item = item;
-      writeRow(row, isNewItem);
-      const isShown = isMatch(row);
-      if (isShown === row.isShown) return;
-      // Its match changed: the counts and the tab stop follow
+      const entry = byKey.get(key);
+      if (!entry || getKey(item) !== key) return;
+      const isNewItem = entry.item !== item;
+      entry.item = item;
+      const isTextChanged = readEntry(entry);
+      if (entry.view) writeRow(entry.view, isNewItem);
+      if (!isTextChanged || isMatch(entry) === entry.isShown) return;
+      // Its match changed: the counts, the rows and the tab stop follow
       const focus = captureFocus();
       applyFilter();
-      restoreFocus(focus);
+      settle(focus);
     },
     setSelected: (keys) => {
       selection.set(keys.filter((key) => byKey.has(key)));
-      for (const row of rows) writeSelected(row);
+      writeSelection();
     },
     getSelected: () => selection.get(),
     setQuery: (next) => setQueryFrom(next, false),
     getQuery: () => query,
     focusKey: (key) => {
-      const row = byKey.get(key);
-      if (row?.isShown) focusRow(row);
+      const entry = byKey.get(key);
+      if (entry?.isShown) focusRow(entry);
     },
     scrollToKey: (key) => {
-      const row = byKey.get(key);
-      if (!row?.isShown) return;
+      const entry = byKey.get(key);
+      if (!entry?.isShown) return;
+      if (virtualView) {
+        virtualView.scrollToIndex(entry.shownIndex);
+        renderRows();
+        return;
+      }
+      const elem = entry.view?.elem;
+      if (!elem) return;
       const box = rowsCmp.elem;
-      const top = row.elem.offsetTop;
-      const bottom = top + row.elem.offsetHeight;
+      const top = elem.offsetTop;
+      const bottom = top + elem.offsetHeight;
       if (top < box.scrollTop) box.scrollTop = top;
       else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
     },
-    getKeyAt: (elem) => findRow(elem)?.key ?? null,
+    getKeyAt: (elem) => findEntry(elem)?.key ?? null,
     refresh: () => setRowsFrom(readItems(), true),
   };
 };
