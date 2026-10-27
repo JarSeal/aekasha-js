@@ -760,6 +760,38 @@ transparent)`), the old debugger's `rgba(255,255,255,0.04)` made theme-aware: `s
 3. **The menu at a point and its submenus** (D11).
 4. **The context menu and the fields' menu** (D11), with the shell's handle map.
 
+As built (section 1):
+
+- **The layout rule:** `UI_KIT_FOLDERS` has `data` (after `forms`), its note saying what the folder
+  holds (Phase 7 section 4's `layoutRules.ts` note is done). The folder itself comes with its
+  first file (section 2's `Filter.ts`), and with it the SBP `modules` lines
+  (`'_engine/ui/data/': 0` in `app` and `uiKit`): `sbp.config.ts` refuses a key naming no folder.
+- **The library split:** `_components.ts` stays the chunk's entry (`HUB_COMPONENTS_FILE`, the
+  `_components-*.js` chunk `scripts.test.ts` checks): `DEMOS` merging the group maps, the settings
+  and `initComponents`. `_componentChecks.ts` keeps the step types and merges `UI_DEMO_CHECKS`, so
+  `devTools/verify/*` import it as before. The groups are modules in `hub/_assets/ts/_library/`,
+  each exporting its map (`CORE_DEMOS`, `CORE_CHECKS`):
+  - `page.ts`: `Demo`, `ID_PREFIX`, `TOASTER_ID`, `openedIds`, `kitRoots` and the page's parts
+    (`addGroup`, `addButton`, `addKitRoot`, `createPanel`, `addPanelButton`).
+  - `core.ts` (the kit's `core/` and `components/`: the Hub's core page) and `overlays.ts`.
+  - **Forms in three, not one** (one module would be about 2100 lines): by the Hub's three forms
+    guides, `fields.ts` (855 lines), `editors.ts` and `containers.ts` (the parity box in it), and
+    `stress.ts`, the dev page's two stress boxes, out of `fields.ts`.
+  - `<group>Checks.ts` beside each (`stress.ts` has none). Two cross-group imports: the dialog's
+    drop-down state takes `createDemoDropDown` from `fields.ts`, `overlaysChecks.ts` takes `LIST`
+    from `fieldsChecks.ts`.
+  - The data group's `data.ts` and `dataChecks.ts` come with Phase 3's first piece; the tabs,
+    accordion and splitter go into `core.ts`, the context menu and palette into `overlays.ts`, the
+    fields' menu and graph monitor into `fields.ts` (D2's pages).
+- **Docs:** `hub/CLAUDE.md` (the sources and the component library: a new piece's demo in its
+  group's map, its checks in the group's checks module), `docs/techniques/hub-authoring.md`,
+  `devTools/verify/CLAUDE.md`, `src/_engine/ui/CLAUDE.md`'s "With it" line and the dev library
+  page's intro.
+- **Checked:** the moved code is the old code (a sorted-lines diff of both splits: only the
+  imports, headers, group maps, `export`s and the checks' comments naming `<group>.ts` in place of
+  `_components.ts`); `yarn test`, both `tsc`s, ESLint and `yarn hub:build` pass; `yarn verify:ui`
+  passes against Phase 0's screenshots (every box, state and keyboard script, no new shot).
+
 ### Phase 2: tabs, the accordion, the splitter
 
 1. Tabs (D10).
