@@ -978,7 +978,7 @@
     },
     "exampleUiKit": {
       "name": "Example: An app HUD from the UI kit",
-      "description": "Three shapes and a HUD built from the UI kit: a panel of kit buttons with tooltips and key hints, a split button with a menu, a window per shape with a colour drop-down and a progress bar of its turns, a settings window, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own and whose Reload shows the app's loading overlay.",
+      "description": "Three shapes and a HUD built from the UI kit: a panel of kit buttons with tooltips and key hints, a split button with a menu, a window per shape with a colour drop-down and a progress bar of its turns, a Scene settings window whose property grid edits the picked shape (its spin, colour, position, rotation and wireframe) with a folder for the ground and the frame time, a Rename form that checks its fields, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own and whose Reload shows the app's loading overlay.",
       "backgroundColor": "#1c212b",
       "cameras": [
         {
@@ -1155,7 +1155,7 @@
     },
     "uiKitEmbed": {
       "name": "UI kit embed",
-      "description": "The uiKit embed's scene: a box made in code, a draggable window with a button and its tooltip, a toast, and a dialog with a drop-down that the window's button opens, all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
+      "description": "The uiKit embed's scene: a box made in code, a draggable window with a button and its tooltip, a toast, and a dialog with a small form bound to the box (a slider, a number field, a checkbox, a select and a colour field) that the window's button opens, all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
       "backgroundColor": "#1c212b",
       "cameras": [
         {

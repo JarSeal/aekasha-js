@@ -1,0 +1,155 @@
+// The property grid's styles (PropertyGrid.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins. Unlike the kit's other rules, these are `.aekPropertyGrid :where(…)`,
+// one class of specificity: they re-lay the fields' own layouts (the checkbox's grid areas, the
+// shell's column, the folder's flex box), which are zero-specificity rules in stylesheets that may
+// load before or after this one.
+//
+// Two columns, the label (`--aek-property-grid-label-width`) and the control, with a 24 px gap that
+// is the separator's target (WCAG 2.5.8: it covers no control). Every row spans both; a field, a
+// folder and its parts, and a fieldset pass the columns down as subgrids, so the controls line up
+// at every depth while a folder's indent (its content's margin, padding and line) narrows its
+// labels' column only. Its custom properties: `--aek-property-grid-label-width` (the grid sets it)
+// and `--aek-property-grid-row-gap`.
+@layer aek.components {
+  :where(.aekPropertyGrid) {
+    position: relative;
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  .aekPropertyGrid > :where(.aekPropertyGrid__content) {
+    display: grid;
+    grid-template-columns: var(--aek-property-grid-label-width, 40%) minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: var(--aek-property-grid-row-gap, var(--aek-space-2));
+    min-width: 0;
+  }
+
+  // Every row spans both columns
+  .aekPropertyGrid
+    :where(
+      .aekPropertyGrid__content,
+      .aekFolder,
+      .aekFolder__region,
+      .aekFolder__clip,
+      .aekFolder__content,
+      .aekFieldset,
+      .aekFieldset__content,
+      .aekPropertyGrid__buttonRow
+    )
+    > :where(*) {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  // The containers and the fields pass the columns down
+  .aekPropertyGrid
+    :where(
+      .aekFolder,
+      .aekFolder__region,
+      .aekFolder__clip,
+      .aekFolder__content,
+      .aekFieldset,
+      .aekFieldset__content,
+      .aekField,
+      .aekPropertyGrid__buttonRow
+    ) {
+    display: grid;
+    grid-template-columns: subgrid;
+    // The grid's gap: a subgrid's own (the shell's and the folder's `gap`) would move the columns
+    column-gap: normal;
+  }
+
+  .aekPropertyGrid :where(.aekFolder__content, .aekFieldset__content) {
+    row-gap: var(--aek-property-grid-row-gap, var(--aek-space-2));
+  }
+
+  // A field: its label row in the first column, its control and its message in the second
+  .aekPropertyGrid :where(.aekField) {
+    align-items: center;
+    row-gap: var(--aek-space-1);
+  }
+
+  .aekPropertyGrid :where(.aekField) > :where(.aekField__head) {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .aekPropertyGrid :where(.aekField) > :where(.aekField__control) {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .aekPropertyGrid :where(.aekField) > :where(.aekField__message) {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  // A checkbox's or a switch's label is a column's name here, as the others' are
+  .aekPropertyGrid
+    :where(.aekField[data-kind='checkbox'], .aekField[data-kind='switch'])
+    :where(.aekField__label) {
+    color: var(--aek-text-muted);
+  }
+
+  .aekPropertyGrid
+    :where(.aekField[data-kind='checkbox'][data-disabled], .aekField[data-kind='switch'][data-disabled])
+    :where(.aekField__label) {
+    color: var(--aek-text-disabled);
+  }
+
+  // A button item: across both columns, or with its label in the first and itself in the second
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonRow) {
+    align-items: center;
+  }
+
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonRow[data-labelled]) > :where(.aekButton) {
+    grid-column: 2;
+  }
+
+  .aekPropertyGrid :where(.aekPropertyGrid__buttonLabel) {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // The column's edge, over the gap: a line under the pointer, while dragged and with the focus
+  :where(.aekPropertyGrid__separator) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--aek-property-grid-label-width, 40%);
+    width: 24px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  :where(.aekPropertyGrid__separator)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    border-radius: 1px;
+    background-color: transparent;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekPropertyGrid__separator:hover, .aekPropertyGrid__separator:focus-visible)::before {
+    background-color: var(--aek-border-strong);
+  }
+
+  :where(.aekPropertyGrid__separator[data-dragging])::before {
+    background-color: var(--aek-accent);
+  }
+
+  // `hidden` is the browser's display: none, which the rules above beat: last, at their
+  // specificity
+  .aekPropertyGrid :where([hidden]) {
+    display: none;
+  }
+}

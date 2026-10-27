@@ -1,0 +1,103 @@
+// The folder's default styles (Folder.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). The button is a quiet row (the text
+// colour, `surface-hover` under the pointer), its chevron turning a quarter as the folder opens.
+// The region's height animates through its grid row (0fr to 1fr), over `--aek-motion-base`; while
+// it moves its content is clipped (`data-animating`), open it isn't (the fields' focus rings
+// reach outside them). Each level's content is indented by `--aek-folder-indent` beside a line in
+// `border`, so nested levels step in. Its custom properties: `--aek-folder-indent`,
+// `--aek-folder-gap`.
+@layer aek.components {
+  :where(.aekFolder) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekFolder__toggle) {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    width: 100%;
+    // WCAG 2.5.8's target size, in every density
+    min-height: 24px;
+    margin: 0;
+    padding: var(--aek-space-1) var(--aek-space-2);
+    border: 0;
+    border-radius: var(--aek-radius-md);
+    background: transparent;
+    color: var(--aek-text);
+    font: inherit;
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  :where(.aekFolder__toggle:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekFolder__chevron) {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    color: var(--aek-text-muted);
+    transition: transform var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekFolder__chevron) svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  :where(.aekFolder[data-expanded] > .aekFolder__toggle .aekFolder__chevron) {
+    transform: rotate(90deg);
+  }
+
+  :where(.aekFolder__title) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekFolder__region) {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekFolder[data-expanded] > .aekFolder__region) {
+    grid-template-rows: 1fr;
+  }
+
+  // The grid row's item, which shrinks to nothing (its content's padding couldn't)
+  :where(.aekFolder__clip) {
+    min-height: 0;
+  }
+
+  :where(.aekFolder__content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-folder-gap, var(--aek-space-3));
+    // Beside the chevron's middle: the toggle's padding and half the chevron
+    margin-inline-start: calc(var(--aek-space-2) + 0.5em);
+    padding-block: var(--aek-space-2);
+    padding-inline-start: var(--aek-folder-indent, var(--aek-space-3));
+    border-inline-start: 1px solid var(--aek-border);
+  }
+
+  // Clipped while it moves; open it isn't, so the fields' focus rings show
+  :where(.aekFolder[data-animating] > .aekFolder__region > .aekFolder__clip) {
+    overflow: hidden;
+  }
+
+  // `hidden` is the browser's display: none, which any author rule would beat: last, so it beats
+  // this file's own `display` at the same specificity
+  :where(.aekFolder[hidden], .aekFolder__region[hidden]) {
+    display: none;
+  }
+}

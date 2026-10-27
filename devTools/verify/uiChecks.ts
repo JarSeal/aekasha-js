@@ -116,6 +116,7 @@ export const describeStep = (step: UiRunStep | UiKeyStep) => {
   }
   if ('expectCount' in step) return `expectCount ${step.expectCount} = ${step.count}`;
   if ('expectText' in step) return `expectText ${step.expectText} "${step.text}"`;
+  if ('expectValue' in step) return `expectValue ${step.expectValue} "${step.value}"`;
   if ('expectStyle' in step) {
     return `expectStyle ${step.expectStyle} ${step.name}="${step.value}"`;
   }

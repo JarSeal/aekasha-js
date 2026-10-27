@@ -3,7 +3,7 @@
   "id": "exampleUiKit",
   "sceneFile": "./examples/uiKit/exampleUiKit.ts",
   "name": "Example: An app HUD from the UI kit",
-  "description": "Three shapes and a HUD built from the UI kit: a panel of kit buttons with tooltips and key hints, a split button with a menu, a window per shape with a colour drop-down and a progress bar of its turns, a settings window, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own and whose Reload shows the app's loading overlay.",
+  "description": "Three shapes and a HUD built from the UI kit: a panel of kit buttons with tooltips and key hints, a split button with a menu, a window per shape with a colour drop-down and a progress bar of its turns, a Scene settings window whose property grid edits the picked shape (its spin, colour, position, rotation and wireframe) with a folder for the ground and the frame time, a Rename form that checks its fields, toasts, and a pause menu dialog opened with Escape, whose arrow keys are an action map in a context of its own and whose Reload shows the app's loading overlay.",
   "backgroundColor": "#1c212b",
   "cameras": ["exampleUiKitCamera"],
   "lights": ["exampleUiKitAmbient", "exampleUiKitSun"]

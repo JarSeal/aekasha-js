@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802 and p803 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803 and p804 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -397,7 +397,9 @@ Every component, from its first version:
   sliders), Coloris (no dependencies, accessible, a popup with inputs), `iro.js` (wheel and box
   layouts). Criteria: gzip size, keyboard and screen reader use, alpha, HSV / HSL / RGB / hex, how
   far its look can follow our tokens (a shadow root needs `::part`), maintenance (last release,
-  open issues), licence.
+  open issues), licence. **Picked (p804 Phase 0, 2026-10-26): `vanilla-colorful`'s HSVA picker**,
+  about 3 KiB gzip, defined under the kit's own tag from its base class (p804 D8, its study in
+  p804's Phase 0 step 4).
 - Ours around it: the swatch and text input (hex, `rgb()`, `hsl()`, three.js float triples), an
   intensity field for HDR colours (light colours and emissive), linear / sRGB awareness for
   `THREE.Color` (the picker shows sRGB, the binding stores what the target expects), recent and
@@ -606,9 +608,8 @@ API, anchored) with the tooltip, popover and menu on it; §4.2's components; `ya
 (axe-core, keyboard scripts, screenshots of the public component library page, `hub/CLAUDE.md`
 says how a new piece joins it); the Hub's UI kit section, where a new component gets its section
 and `::: demo`. The percentage pie, the debugger list and the tab buttons moved to p805 with the
-context menu, which opens p803's menu (its D1). Its open review items are
-`docs/issues/ui-kit-review-items.md` and, for p804, the button's key hint below. What follows is
-the sketch as written.
+context menu, which opens p803's menu (its D1). Its open review items and the button's key hint
+below went to p804 (its D13), whose Phase 1 settled them. What follows is the sketch as written.
 
 - The layout: `ui/core/` (CMP, HUD root, icons), `ui/components/` (§4.2), `ui/overlays/` (windows,
   dialogs, popover, tooltip, toaster, context menu), `ui/forms/` (p804), `ui/data/` (p805),
@@ -623,10 +624,21 @@ the sketch as written.
 
 ### p804 — Forms and bindings
 
-Written: `p804_forms-and-bindings.md` (2026-10-26, draft). It changes D9's events (its D3), moves
-the label's context menu and the monitor's graph view to p805, keeps the gradient and curve
-editors with a fallback home (its D1), and takes `docs/issues/ui-kit-review-items.md` (its D13).
-What follows is the sketch as written.
+Done: `_DONE_p804_forms-and-bindings.md` (2026-10-27, engine 5.13.0, app 1.17.0). What the later
+plans build on, each written there: the binding (its D3: `{ target, key }` written in place,
+`{ get, set }`, `{ value }`; `onChange` on every write with `last`, Tweakpane's order, pinned by
+`Binding.test.ts`; a refresh fires nothing; this changed D9's events) and the scheduler (its D4:
+`refresh()`, one `requestAnimationFrame` tick per host for the fields with an `interval`, shown
+fields only, the flash); the field shell and value editing (its D5, D6); every field, value editor
+and container of §4.3 in `ui/forms/`, the gradient and curve editors included (`evaluateGradient`,
+`evaluateCurve`, `getCurvePreset`); the colour picker (`vanilla-colorful`'s HSVA, lazy, behind
+`color/ColorPicker.ts`); `createForm` (validation, the error summary, a busy submit: what p355's
+and p808's settings build on); `addPropertyGridItems`, the pane sections' shape with Tweakpane's
+names and its inference (its D10), with its §4, what p806's port rewrites by hand, and the dev
+component library's "Tweakpane parity" box; normalize in `@layer aek.page` and the button's and
+menu's `kbd` as a `Kbd` handle, the string deprecated until p622 (its D13, closing p803's review
+items). The label's context menu (Reset, Copy, Paste) and the monitor's graph view are p805's (its
+D1). What follows is the sketch as written.
 
 - Phase 0: the colour picker study (D13); the binding scheduler's design checked against today's
   builder (`_dbg__DebuggerPaneBuilder.ts`) and undo (`UndoRedo.ts`).
@@ -734,8 +746,10 @@ p622 is expanded into a full plan at that point (its stub says so).
 - **p150** (origin info on the camera and light edit windows) and **p373** (merge debugging): if
   they land before p806, they use the current panels and p806 ports them with the rest; after, they
   use the components.
-- **p355** (save menu): its menu and settings use p803 / p804.
-- **p426** (sequencer): its curve and timeline editing reuses p804's curve editor.
+- **p355** (save menu): its menu and settings use p803's and p804's components (done: p804's
+  form, property grid and fields).
+- **p426** (sequencer): its curve and timeline editing reuses p804's curve editor (done:
+  `createCurveEditor`, `evaluateCurve`).
 - **p770** (the key binding refactoring prompt): its rebinding UI is p808's settings menu's
   controls page.
 - **`docs/issues/ui-kit-in-an-embed.md`**: fixed and closed by p801 (D4).

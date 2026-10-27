@@ -194,6 +194,85 @@
   width: min(100%, 20rem);
 }
 
+// A row of fields: each a width of its own (the row is a wrapping flex box) and aligned at the top,
+// so a field with a message line doesn't push its neighbour down
+.hubComponentDemoGroup.hubDemoFields {
+  align-items: start;
+
+  > .aekField {
+    width: min(100%, 16rem);
+  }
+}
+
+// A slider's track takes room beside its spin button
+.hubComponentDemoGroup.hubDemoSliders > .aekField {
+  width: min(100%, 22rem);
+}
+
+// A row of radios or segments takes its content's width, up to the box's
+.hubComponentDemoGroup.hubDemoChoices > .aekField {
+  width: auto;
+  max-width: 100%;
+}
+
+// The segmented control filling its width needs one to fill
+.hubComponentDemoGroup.hubDemoChoices > .aekField:has(.aekSegmented[data-fill]) {
+  width: min(100%, 20rem);
+}
+
+// A range slider with a spin button at each end takes more
+.hubComponentDemoGroup.hubDemoSliders > .aekField.hubDemoRangeInputs {
+  width: min(100%, 30rem);
+}
+
+// A folder (its fields inside) and a fieldset take a settings panel's width
+.hubComponentDemoGroup.hubDemoFolders > .aekFolder,
+.hubComponentDemoGroup.hubDemoFieldsets > .aekFieldset {
+  width: min(100%, 22rem);
+}
+
+// A property grid takes a settings window's width
+.hubComponentDemoGroup.hubDemoGrids > .aekPropertyGrid {
+  width: min(100%, 26rem);
+}
+
+// A form takes a dialog's width
+.hubComponentDemoGroup.hubDemoForms > .aekForm {
+  width: min(100%, 24rem);
+}
+
+// The parity box's custom item: a row of kit buttons (the day-night speed buttons)
+.hubDemoParityCustom {
+  display: flex;
+  gap: 0.25rem;
+}
+
+// The fieldsets one under another, a form's sections apart, with "Done" under them
+.hubComponentDemoGroup.hubDemoFieldsets {
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// The stress box's 200 fields (the dev page's), in columns
+.hubDemoStressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+// A line under a row's fields (a search's results)
+.hubComponentDemoGroup > .hubDemoFieldNote {
+  width: 100%;
+}
+
+// The checkboxes a mixed one stands for, indented under it
+.hubDemoNestedToggles {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding-inline-start: 1.5rem;
+}
+
 // A skeleton's text lines in a row take a width of their own (empty, they'd shrink to nothing)
 .hubDemoSkeleton {
   width: min(100%, 16rem);

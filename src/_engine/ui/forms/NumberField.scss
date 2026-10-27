@@ -1,0 +1,24 @@
+// The number field's own styles (NumberField.ts), on the design tokens and layered (p803 D5): its
+// text in tabular figures (p800 D5), its unit, and the label's scrub cursor. The box, the input,
+// the error and the flash are the fields' (`.aekField__box`, Field.scss).
+@layer aek.components {
+  :where(.aekNumberField__input) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :where(.aekNumberField__unit) {
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+  }
+
+  // A drag on a number's label changes it (the scrub)
+  :where(.aekField[data-kind='number']:not([data-disabled]) .aekField__label:not(.aekVisuallyHidden)) {
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  :where(.aekField[data-scrubbing]) {
+    cursor: ew-resize;
+  }
+}

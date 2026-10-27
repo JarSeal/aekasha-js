@@ -73,7 +73,9 @@ export const takeStepsAsync = async (page: Page, piece: string, steps: UiRunStep
 const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
   page.evaluate(
     ({ s, box }) => {
-      const active = document.activeElement;
+      // The focused element in an open shadow root (the colour picker's slider), not its host
+      let active = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
       const activeText = !active
         ? 'nothing'
         : `${active.tagName.toLowerCase()}${active.id ? `#${active.id}` : ''}${
@@ -105,6 +107,14 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
         const text = (el?.textContent ?? '').trim();
         return { ok: !!el && text === s.text, actual: el ? `"${text}"` : 'no element' };
       }
+      if ('expectValue' in s) {
+        const el = document.querySelector<HTMLInputElement>(s.expectValue);
+        const value = el?.value;
+        return {
+          ok: typeof value === 'string' && value === s.value,
+          actual: el ? `value "${value}"` : 'no element',
+        };
+      }
       if ('expectStyle' in s) {
         const el = document.querySelector(s.expectStyle);
         const value = el ? getComputedStyle(el).getPropertyValue(s.name).trim() : undefined;
@@ -130,11 +140,14 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
 /**
  * The focused element without an outline, described; null when it has one or it's the body. A
  * focused element with `aria-activedescendant` (a drop-down's list) shows the ring on that option
- * instead (p803 D7), so the option is the one read.
+ * instead (p803 D7), so the option is the one read; in an open shadow root, the element focused
+ * there (p804 Phase 5: the colour picker's sliders).
  */
 const readMissingOutline = (page: Page) =>
   page.evaluate(() => {
-    const focused = document.activeElement;
+    // In an open shadow root, the element focused there: its ring is on it, not on the host
+    let focused = document.activeElement;
+    while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
     if (!focused || focused === document.body) return null;
     const activeId = focused.getAttribute('aria-activedescendant');
     const el = (activeId && document.getElementById(activeId)) || focused;
@@ -210,6 +223,23 @@ ${box} {
   margin: 0 !important;
   z-index: 2147483647 !important;
 }`;
+
+/**
+ * Offsets the box by the fraction of a pixel its place on the page has (`position: relative`,
+ * which, unlike a transform, leaves its fixed children alone), before a state's steps: an overlay
+ * they open anchored to it then lands on whole pixels too. Where the page lays the box out (a text
+ * above it grown by a line) moves an open overlay by whole pixels only, which its clipped shot
+ * doesn't see; a fraction would antialias its text differently.
+ */
+export const alignBoxAsync = (page: Page, piece: string) =>
+  page.evaluate((box) => {
+    const el = document.querySelector<HTMLElement>(box);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    el.style.left = `${Math.round(rect.left) - rect.left}px`;
+    el.style.top = `${Math.round(rect.top) - rect.top}px`;
+  }, boxSelector(piece));
 
 /** The box's screenshot, pinned (`getPinBoxCss`) */
 const captureBoxAsync = async (page: Page, piece: string) => {

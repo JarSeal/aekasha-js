@@ -1,0 +1,98 @@
+// The form's default styles (Form.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). A column: the error summary (a danger
+// border on the left, its title with the field message's `!` mark, never the colour alone, and its
+// links in the danger colour), the children and the buttons' row. The body fieldset only disables:
+// the browser's border, padding and `min-inline-size` are undone. Its custom properties:
+// `--aek-form-gap` and `--aek-form-summary-border-color`.
+@layer aek.components {
+  :where(.aekForm),
+  :where(.aekForm__body),
+  :where(.aekForm__content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-form-gap, var(--aek-space-4));
+    min-width: 0;
+  }
+
+  :where(.aekForm) {
+    margin: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekForm__body) {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  :where(.aekForm__summary) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    padding: var(--aek-space-3) var(--aek-space-4);
+    border: 1px solid var(--aek-border);
+    border-left: 4px solid var(--aek-form-summary-border-color, var(--aek-danger));
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface);
+  }
+
+  :where(.aekForm__summaryTitle) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+    margin: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  // The field message's mark (Field.scss), at the title's size
+  :where(.aekForm__summaryTitle)::before {
+    content: '!';
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-danger);
+    color: var(--aek-surface);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+  }
+
+  :where(.aekForm__summaryList) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // A 24 px target (WCAG 2.5.8) in every density; underlined, never the colour alone
+  :where(.aekForm__summaryLink) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    color: var(--aek-danger);
+    line-height: var(--aek-line-height-base);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  :where(.aekForm__actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--aek-space-2);
+  }
+
+  // `hidden` is the browser's display: none, which the summary's own rule would beat: last
+  :where(.aekForm__summary[hidden]) {
+    display: none;
+  }
+}

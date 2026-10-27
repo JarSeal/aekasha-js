@@ -1,0 +1,151 @@
+// The field shell's default styles (Field.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A field stands alone as a label
+// row over its control and its message line; the property grid (p804 D9) lays its fields out in
+// a label column. A typed field's box and input (the number's, the text's) are here: a control
+// (`surface`, `border-control`, as the drop-down's trigger), an error's border the danger colour,
+// and a change from outside a flash of `accent-soft` that fades out over `--aek-motion-base`
+// (with `--aek-motion: 0`, a tint as long as `data-flash`, then gone). Its custom properties:
+// `--aek-field-control-bg`, `--aek-field-control-border-color`, `--aek-field-radius` and
+// `--aek-field-flash-color`, which the checkbox and the switch read too.
+@layer aek.components {
+  :where(.aekField) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  // `hidden` is the browser's display: none, which any author rule would beat
+  :where(.aekField[hidden], .aekField__reset[hidden], .aekField__message[hidden]) {
+    display: none;
+  }
+
+  :where(.aekField__head) {
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    // The reset button's row keeps its height whether it shows or not
+    min-height: 24px;
+  }
+
+  :where(.aekField__label) {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text-muted);
+    line-height: var(--aek-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // A required field's mark (`required`), its text said by the control's `required`
+  :where(.aekField__required) {
+    margin-inline-start: 0.25em;
+    color: var(--aek-danger);
+  }
+
+  :where(.aekField[data-disabled] .aekField__label) {
+    color: var(--aek-text-disabled);
+  }
+
+  :where(.aekField[data-disabled] .aekField__required) {
+    color: inherit;
+  }
+
+  // Small and quiet, at the 24 px target size (WCAG 2.5.8) in every density
+  :where(.aekField__reset) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  :where(.aekField__control) {
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekField__message) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+    margin: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekField__message[data-type='error']) {
+    color: var(--aek-danger);
+  }
+
+  // The error's mark: never the colour alone (p800 D6)
+  :where(.aekField__message[data-type='error'])::before {
+    content: '!';
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-danger);
+    color: var(--aek-surface);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+  }
+
+  :where(.aekField__box) {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: calc(var(--aek-space-7) * 2);
+    // WCAG 2.5.8's target size, in every density
+    min-height: 24px;
+    padding: 0 var(--aek-space-3) 0 0;
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekField__box[data-flash]) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  :where(.aekField[data-invalid] .aekField__box) {
+    border-color: var(--aek-danger);
+  }
+
+  :where(.aekField[data-disabled] .aekField__box) {
+    border-color: var(--aek-border);
+  }
+
+  :where(.aekField__input) {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    // The input fills the box (the kit's ring is on it), the padding inside it
+    padding: var(--aek-space-2) 0 var(--aek-space-2) var(--aek-space-3);
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--aek-text);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekField__input)::placeholder {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekField__input:disabled) {
+    color: var(--aek-text-disabled);
+  }
+}

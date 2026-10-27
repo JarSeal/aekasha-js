@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { stubKitDomAsync } from '../testing/KitDom';
 import { createKbd } from './Kbd';
-import { getKeyName, getKeyPlatform, splitKeyChord } from './KeyNames';
+import { getAriaKeyShortcuts, getKeyName, getKeyPlatform, splitKeyChord } from './KeyNames';
 
 beforeAll(async () => {
   await stubKitDomAsync();
@@ -27,6 +27,13 @@ describe('key names (p803 D10)', () => {
     expect(getKeyName(' ', 'mac')).toEqual({ shown: 'Space', spoken: 'Space' });
     expect(getKeyName('e', 'mac')).toEqual({ shown: 'E', spoken: 'E' });
     expect(getKeyName('F6', 'mac')).toEqual({ shown: 'F6', spoken: 'F6' });
+  });
+
+  it('writes ARIA shortcut names', () => {
+    expect(getAriaKeyShortcuts('Ctrl+Shift+P / Meta+Shift+P')).toBe('Control+Shift+P Meta+Shift+P');
+    expect(getAriaKeyShortcuts('Ctrl++')).toBe('Control+Plus');
+    expect(getAriaKeyShortcuts('Alt+ArrowUp')).toBe('Alt+ArrowUp');
+    expect(getAriaKeyShortcuts('Esc')).toBe('Escape');
   });
 
   it('reads the platform from navigator when asked, not at load', () => {
@@ -82,6 +89,20 @@ describe('kbd (p803 D10)', () => {
     expect(kbd.cmp.elem).toBe(elem);
     expect(getKeys(elem)).toEqual(['Esc']);
     expect(elem.querySelector('.aekVisuallyHidden')?.textContent).toBe('Escape');
+    kbd.cmp.remove();
+  });
+
+  it('gives its keys as aria-keyshortcuts, and tells a listener of new keys (p804 D13)', () => {
+    const kbd = createKbd({ keys: 'Ctrl+S / Meta+S', platform: 'other' });
+    expect(kbd.getAriaKeyShortcuts()).toBe('Control+S Meta+S');
+    const onKeys = vi.fn();
+    const removeListener = kbd.onKeysChange(onKeys);
+    kbd.setKeys('Ctrl++');
+    expect(onKeys).toHaveBeenCalledWith('Ctrl++');
+    expect(kbd.getAriaKeyShortcuts()).toBe('Control+Plus');
+    removeListener();
+    kbd.setKeys('F5');
+    expect(onKeys).toHaveBeenCalledTimes(1);
     kbd.cmp.remove();
   });
 

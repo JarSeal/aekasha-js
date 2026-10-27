@@ -11,8 +11,10 @@
  *   time, a browser context per setting), so no state leaks into the next.
  * - A setting is the Hub's theme (its toggle's saved value, and the colour scheme emulated) and
  *   the page's own theme and density switches, which set the HUD root's attributes.
- * - After the steps, it waits for the page to settle (no animation running, the HUD root's boxes
- *   the same on two polls), then runs axe-core (`UI_AXE_TAGS`) over the box and the HUD root,
+ * - Before the steps the box is offset to whole pixels (`uiPage.ts`' `alignBoxAsync`), so an
+ *   overlay anchored to it doesn't move by a fraction when the page above it changes. After the
+ *   steps, it waits for the page to settle (no animation running, the HUD root's boxes the same on
+ *   two polls; an infinite animation paused at the box's `pauseAt`), then runs axe-core (`UI_AXE_TAGS`) over the box and the HUD root,
  *   where the demos' overlays open. A console or page error fails the state too.
  * - Then each keyboard script of the table, on its own page load per setting (`uiPage.ts`'
  *   `runKeyStepsAsync`): its clicks, focus moves and keys, each expectation polled for up to 3 s
@@ -39,6 +41,7 @@ import { UI_DEMO_CHECKS, type UiKeyScript } from '../../hub/_assets/ts/_componen
 import { launchChromium } from './browser';
 import { createHubPreviewServer } from '../hub/previewServer';
 import {
+  alignBoxAsync,
   BOX_BUTTON,
   boxSelector,
   captureStateAsync,
@@ -80,6 +83,12 @@ const LOAD_TIMEOUT_MS = 30_000;
 /** How long a state may take to settle before it's checked as it is (with a note) */
 const SETTLE_TIMEOUT_MS = 5_000;
 const SETTLE_POLL_MS = 100;
+/**
+ * Where in its duration an infinite animation is paused for the shot, unless the box's checks name
+ * their own (`pauseAt`): past its start, where the indeterminate bar's slide is on the track
+ * (p804 D13: at 0 it was still off its left edge)
+ */
+const DEFAULT_PAUSE_AT = 0.4;
 /** The Hub's theme toggle's saved value (`hub.ts`), read before the first paint */
 const HUB_THEME_KEY = 'aekHubTheme';
 /** The targets printed per violation; the rest counted */
@@ -138,20 +147,21 @@ const createSettingContextAsync = async (browser: Browser, setting: UiSetting) =
 
 /**
  * Waits for no running animation and the HUD root's boxes the same on two polls; false on a
- * timeout. An infinite animation (a spinner) never ends: it's paused at its start, which also
- * makes its shot the same on every run.
+ * timeout. An infinite animation (a spinner) never ends: it's paused at `pauseAt` of its duration
+ * (after its delay), which also makes its shot the same on every run.
  */
-const settleAsync = async (page: Page) => {
+const settleAsync = async (page: Page, pauseAt: number) => {
   const end = Date.now() + SETTLE_TIMEOUT_MS;
   let last = '';
   while (Date.now() < end) {
     // No named function in the page: tsx wraps those in a helper the page doesn't have
-    const now = await page.evaluate(() => {
+    const now = await page.evaluate((fraction) => {
       const animations = document.getAnimations();
       for (const a of animations) {
         if (a.playState !== 'running' || a.effect?.getTiming().iterations !== Infinity) continue;
+        const timing = a.effect.getComputedTiming();
         a.pause();
-        a.currentTime = 0;
+        a.currentTime = (timing.delay ?? 0) + Number(timing.duration) * fraction;
       }
       const running = animations.some((a) => a.playState === 'running');
       const boxes = [...document.querySelectorAll('#hudRoot *')].map((el) => {
@@ -159,7 +169,7 @@ const settleAsync = async (page: Page) => {
         return `${r.x},${r.y},${r.width},${r.height}`;
       });
       return running ? null : boxes.join(';');
-    });
+    }, pauseAt);
     if (now !== null && now === last) return true;
     last = now ?? '';
     await page.waitForTimeout(SETTLE_POLL_MS);
@@ -224,11 +234,15 @@ const runStateAsync = async (
     env.url,
     setting,
     async (page, problems) => {
+      await alignBoxAsync(page, piece);
       await takeStepsAsync(page, piece, state.steps);
       // The pointer off the clicked button (its hover would change when the box is pinned for its
       // shot) to a corner no demo opens anything in, before the settle waits out the transitions
       await page.mouse.move(VIEWPORT.width - 1, VIEWPORT.height - 1);
-      if (!(await settleAsync(page))) problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
+      const pauseAt = UI_DEMO_CHECKS[piece]?.pauseAt ?? DEFAULT_PAUSE_AT;
+      if (!(await settleAsync(page, pauseAt))) {
+        problems.push(`not settled after ${SETTLE_TIMEOUT_MS} ms`);
+      }
       const shot = await checkSnapshotAsync(
         getSnapshotFile(piece, state.name, setting),
         await captureStateAsync(page, piece),

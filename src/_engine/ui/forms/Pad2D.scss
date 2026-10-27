@@ -1,0 +1,118 @@
+// The 2D pad's styles (Pad2D.ts), on the design tokens and layered (p803 D5): the pad a square
+// control (`--aek-pad2d-size`, a control's background and border) on a line of its own over the
+// vector field's axes (VectorField.scss, imported with the parts), with the lines through 0, a
+// line from 0 to the point and the point (the slider thumb's look). The kit's ring is on the pad.
+@layer aek.components {
+  :where(.aekPad2D) {
+    flex-wrap: wrap;
+    row-gap: var(--aek-space-2);
+  }
+
+  :where(.aekPad2D__break) {
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  :where(.aekPad2D__pad) {
+    position: relative;
+    display: block;
+    flex: none;
+    box-sizing: border-box;
+    width: max(48px, var(--aek-pad2d-size, calc(var(--aek-space-7) * 4)));
+    height: max(48px, var(--aek-pad2d-size, calc(var(--aek-space-7) * 4)));
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    cursor: crosshair;
+    // The drag is the pad's, not the page's scroll or a text selection
+    touch-action: none;
+    user-select: none;
+    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  // An outside change flashes the pad with the axes' boxes (the row's `data-flash`)
+  .aekVectorField[data-flash] :where(.aekPad2D__pad) {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  :where(.aekField[data-invalid] .aekPad2D__pad) {
+    border-color: var(--aek-danger);
+  }
+
+  :where(.aekField[data-disabled] .aekPad2D__pad) {
+    border-color: var(--aek-border);
+    cursor: default;
+  }
+
+  // The lines through 0: x across, y down
+  :where(.aekPad2D__axis) {
+    position: absolute;
+    background-color: var(--aek-border);
+    pointer-events: none;
+  }
+
+  :where(.aekPad2D__axis[data-axis='x']) {
+    right: 0;
+    left: 0;
+    height: 1px;
+  }
+
+  :where(.aekPad2D__axis[data-axis='y']) {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+  }
+
+  :where(.aekPad2D__line) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    stroke: var(--aek-pad2d-point-color, var(--aek-accent));
+    stroke-width: 2px;
+  }
+
+  // The point: 16 px of a 24 px target, as the slider's thumb
+  :where(.aekPad2D__point) {
+    position: absolute;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border-radius: var(--aek-radius-full);
+  }
+
+  :where(.aekPad2D__point)::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    box-sizing: border-box;
+    border: 2px solid var(--aek-surface);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-pad2d-point-color, var(--aek-accent));
+    box-shadow: var(--aek-shadow-sm);
+    transition: inset var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekPad2D__pad:hover .aekPad2D__point, .aekPad2D__pad[data-dragging] .aekPad2D__point)::before {
+    inset: 3px;
+  }
+
+  :where(.aekField[data-disabled] .aekPad2D__point)::before {
+    inset: 4px;
+    background-color: var(--aek-text-disabled);
+    box-shadow: none;
+  }
+
+  :where(.aekField[data-disabled] .aekPad2D__line) {
+    stroke: var(--aek-text-disabled);
+  }
+
+  // Last, over the parts' own `display`
+  :where(.aekPad2D__axis[hidden], .aekPad2D__line[hidden]) {
+    display: none;
+  }
+}

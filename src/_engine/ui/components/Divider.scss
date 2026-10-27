@@ -1,6 +1,6 @@
 // The divider's default styles (Divider.ts), on the design tokens and layered (p803 D5): an app's
-// unlayered rule wins, and every selector is in :where(). The line is a border, so normalize.scss'
-// unlayered `hr { height: 0 }` agrees with it; the browser's own hr styles are beaten by any layer.
+// unlayered rule wins, and every selector is in :where(). The line is a border; the browser's own hr
+// styles and the full page's normalize (@layer aek.page, p804 D13) are beaten by this layer.
 @layer aek.components {
   // Across: the whole width, also in a flex column that doesn't stretch its items (an empty hr
   // would shrink to nothing there)

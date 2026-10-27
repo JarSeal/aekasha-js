@@ -43,7 +43,8 @@ export type UiKeyStep =
   | { keyDown: string }
   /** Releases a key a `keyDown` held */
   | { keyUp: string }
-  /** The focused element matches this selector (`body`: nothing focused) */
+  /** The focused element matches this selector (`body`: nothing focused); in an open shadow root,
+   * the element focused there (a colour picker's `[part="saturation"]`) */
   | { expectFocus: string }
   /** The focused element is the demo box's button whose text is this, exactly (an overlay's
    * opener, which its close gives the focus back to) */
@@ -54,6 +55,8 @@ export type UiKeyStep =
   | { expectCount: string; count: number }
   /** The first element matching `expectText` has this text, trimmed */
   | { expectText: string; text: string }
+  /** The first element matching `expectValue` (an input, a textarea) has this `value`, as is */
+  | { expectValue: string; value: string }
   /** The first element matching `expectStyle` has the computed style property `name` (CSS's name:
    * `left`, `border-top-width`) at `value` (a used length in px: `576px`) */
   | { expectStyle: string; name: string; value: string }
@@ -67,7 +70,13 @@ export type UiCheckState = { name: string; steps: UiCheckStep[] };
 export type UiKeyScript = { name: string; steps: UiKeyStep[] };
 
 /** A demo's checks beyond its buttons */
-export type UiDemoChecks = { states?: UiCheckState[]; keyboard?: UiKeyScript[] };
+export type UiDemoChecks = {
+  states?: UiCheckState[];
+  keyboard?: UiKeyScript[];
+  /** Where in its duration (0-1) the settle pauses an infinite animation for the shot (a spinner,
+   * the indeterminate bar's slide): default 0.4 (`ui.ts`' `DEFAULT_PAUSE_AT`), where both show */
+  pauseAt?: number;
+};
 
 const WINDOW = '#hudRoot #hubDemoWindow';
 const WINDOW_HEADER = `${WINDOW} .aekWindow__header`;
@@ -101,6 +110,103 @@ const SPLIT_MENU_BUTTON = '#hubDemoMenuSplit > [aria-haspopup="menu"]';
 const MENU = '#hudRoot .aekMenu';
 const MENU_FOCUSED = `${MENU} .aekMenu__item:focus .aekMenu__label`;
 const MENU_STATUS = '#hubDemoMenuStatus';
+/** A number field's input by its label (`_components.ts`' `NUMBER_ID`), its reset button, and
+ * the box's status line */
+const NUMBER = (name: string) => `#hubDemoNumber${name}`;
+const NUMBER_RESET = (name: string) => `.aekField:has(${NUMBER(name)}) .aekField__reset`;
+const NUMBER_STATUS = '#hubDemoNumberStatus';
+/** A slider's control by its name (`_components.ts`' `SLIDER_ID`: the spin button, or the thumb
+ * without the input), and the box's status line */
+const SLIDER = (name: string) => `#hubDemoSlider${name}`;
+const SLIDER_STATUS = '#hubDemoSliderStatus';
+/** A range slider's stop by its name (`_components.ts`' `RANGE_ID`) and part (`min`, `max`,
+ * `range`: the span), and the box's status line */
+const RANGE = (name: string, part: 'min' | 'max' | 'range') => `#hubDemoRange${name}-${part}`;
+const RANGE_STATUS = '#hubDemoRangeStatus';
+/** A radio of the radio group box by its group's name (`_components.ts`' `RADIO_ID`) and place,
+ * the same checked, and the box's status line */
+const RADIO = (name: string, index: number) => `#hubDemoRadio${name}-${index}`;
+const RADIO_CHECKED = (name: string, index: number) => `${RADIO(name, index)}:checked`;
+const RADIO_STATUS = '#hubDemoRadioStatus';
+/** A select field's trigger by its name (`_components.ts`' `SELECT_ID`), its shown value, and the
+ * box's status line */
+const SELECT = (name: string) => `#hubDemoSelect${name}`;
+const SELECT_VALUE = (name: string) => `${SELECT(name)} .aekDropDownLabel`;
+const SELECT_STATUS = '#hubDemoSelectStatus';
+/** The select box's open list and filter: in the field (the Popover API's top layer leaves it in
+ * its place), not in the HUD root as a window's drop-down is */
+const SELECT_LIST = '[data-hub-demo="selectField"] .aekDropDownList';
+const SELECT_SEARCH = '[data-hub-demo="selectField"] .aekDropDownSearch';
+/** A text field's input by its label (`_components.ts`' `TEXT_ID`), and the box's lines */
+const TEXT = (name: string) => `#hubDemoText${name}`;
+const TEXT_STATUS = '#hubDemoTextStatus';
+const TEXT_RESULTS = '#hubDemoTextResults';
+const SEARCH_CLEAR = `.aekField:has(${TEXT('Search')}) .aekTextField__clear`;
+/** A checkbox's or a switch's input by its name (`TOGGLE_ID`), and the box's status line */
+const TOGGLE = (name: string) => `#hubDemoToggle${name}`;
+const TOGGLE_STATUS = '#hubDemoToggleStatus';
+const LAYERS_ON = '[data-hub-demo="checkbox"] .hubDemoNestedToggles input:checked';
+/** A colour field's text input by its name (`_components.ts`' `COLOR_ID`), its swatch and its
+ * alpha's spin button, the open panel's swatches, and the box's status line */
+const COLOR = (name: string) => `#hubDemoColor${name}`;
+const COLOR_SWATCH = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__swatch`;
+const COLOR_ALPHA = (name: string) => `.aekField:has(${COLOR(name)}) .aekColorField__part input`;
+const COLOR_PANEL_SWATCH = (n: number) =>
+  `#hudRoot .aekColorPopover .aekColorPanel__picker + .aekColorPanel__group .aekColorPanel__swatch:nth-child(${n})`;
+/** The picker's parts, focused in its shadow root (`expectFocus` reads the element focused there) */
+const PICKER_PART = (part: string) => `[part="${part}"]`;
+const COLOR_STATUS = '#hubDemoColorStatus';
+/** A vector field's axis by the field's name (`_components.ts`' `VECTOR_ID`, the group's id) and
+ * the axis' place (`data-axis`), its link toggle, and the box's status line */
+const VECTOR_AXIS = (name: string, axis: string) =>
+  `#hubDemoVector${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const VECTOR_LINK = (name: string) => `#hubDemoVector${name} .aekVectorField__link`;
+const VECTOR_STATUS = '#hubDemoVectorStatus';
+/** A rotation or quaternion field's part by the field's name (`_components.ts`' `ROTATION_ID`,
+ * the group's id) and its place (`data-axis`), and the box's status line */
+const ROTATION_PART = (name: string, axis: string) =>
+  `#hubDemoRotation${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const ROTATION_ORDER = '#hubDemoRotationRotation .aekDropDownTrigger';
+const ROTATION_STATUS = '#hubDemoRotationStatus';
+/** An angle dial's control by its name (`_components.ts`' `ANGLE_ID`: the spin button's id, or
+ * the dial's without one), and the box's status line */
+const ANGLE = (name: string) => `#hubDemoAngle${name}`;
+const ANGLE_STATUS = '#hubDemoAngleStatus';
+/** A 2D pad's pad and axis by the field's name (`PAD_ID`, the row's id), and the status line */
+const PAD = (name: string) => `#hubDemoPad${name} .aekPad2D__pad`;
+const PAD_AXIS = (name: string, axis: string) =>
+  `#hubDemoPad${name} .aekVectorField__axis[data-axis="${axis}"] input`;
+const PAD_STATUS = '#hubDemoPadStatus';
+/** A gradient editor's stop handle by the editor's name (`GRADIENT_ID`, the group's id) and its
+ * place in the array (1-based), its row's parts, and the box's status line */
+const GRADIENT_STOP = (name: string, n: number) =>
+  `#hubDemoGradient${name} .aekGradientEditor__stop:nth-child(${n})`;
+const GRADIENT_STOPS = (name: string) => `#hubDemoGradient${name} .aekGradientEditor__stop`;
+const GRADIENT_POSITION = (name: string) =>
+  `#hubDemoGradient${name} input[aria-label="Stop position"]`;
+const GRADIENT_SWATCH = (name: string) => `#hubDemoGradient${name} .aekColorField__swatch`;
+const GRADIENT_STATUS = '#hubDemoGradientStatus';
+/** A curve editor's point by the editor's name (`CURVE_ID`, the group's id) and its place in the
+ * array (1-based), its row's parts, and the box's status line */
+const CURVE_POINT = (name: string, n: number) =>
+  `#hubDemoCurve${name} .aekCurveEditor__point:nth-child(${n})`;
+const CURVE_POINTS = (name: string) => `#hubDemoCurve${name} .aekCurveEditor__point`;
+const CURVE_X = (name: string) => `#hubDemoCurve${name} input[aria-label$=" X"]`;
+const CURVE_PRESETS = (name: string) => `#hubDemoCurve${name} .aekCurveEditor__presets`;
+const CURVE_STATUS = '#hubDemoCurveStatus';
+/** A folder demo's element by its name (`FOLDER_ID`): a folder's button, a field's control */
+const FOLDER = (name: string) => `#hubDemoFolder${name}`;
+const FOLDER_STATUS = '#hubDemoFolderStatus';
+/** A fieldset demo's control by its name (`FIELDSET_ID`) */
+const FIELDSET = (name: string) => `#hubDemoFieldset${name}`;
+/** A property grid demo's element by its name (`GRID_ID`) */
+const GRID = (name: string) => `#hubDemoGrid${name}`;
+/** A form demo's element by its name (`FORM_ID`): a field's control, the status line */
+const FORM = (name: string) => `#hubDemoForm${name}`;
+const FORM_SUMMARY = `${FORM('Form')} .aekForm__summary`;
+const FORM_LINKS = `${FORM_SUMMARY} .aekForm__summaryLink`;
+/** A monitor by its name (`MONITOR_ID`): the line's element, or the multiline text area */
+const MONITOR = (name: string) => `#hubDemoMonitor${name}`;
 const BADGE_INBOX = '#hubDemoBadgeInbox';
 const TAG = (name: string) => `#hubDemoTag${name}`;
 const TAG_STATUS = '#hubDemoTagStatus';
@@ -325,6 +431,859 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
           { expectCount: SEARCH, count: 0 },
           { expectText: `#hudRoot ${SEARCHABLE_TRIGGER} .aekDropDownLabel`, text: 'Violet' },
           { expectFocus: `#hudRoot ${SEARCHABLE_TRIGGER}` },
+        ],
+      },
+    ],
+  },
+  numberField: {
+    keyboard: [
+      {
+        name: 'the arrows step (Shift ×10), each keyup writing last: true; the reset button shows',
+        steps: [
+          { focusInBox: NUMBER('Speed') },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '1.5' },
+          { expectAttr: NUMBER_RESET('Speed'), name: 'hidden', value: '' },
+          { press: 'ArrowUp' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '1.6' },
+          { expectText: NUMBER_STATUS, text: 'Speed: 1.6 (last, user)' },
+          { press: 'Shift+ArrowUp' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.6' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuetext', value: '2.6 m/s' },
+          { expectAttr: NUMBER_RESET('Speed'), name: 'hidden', value: null },
+        ],
+      },
+      {
+        name: 'a typed expression is written on Enter, rounded; Escape puts the text back',
+        steps: [
+          { focusInBox: NUMBER('Speed') },
+          { press: 'ControlOrMeta+A' },
+          { press: '3' },
+          { press: '*' },
+          { press: '0' },
+          { press: '.' },
+          { press: '7' },
+          { press: 'Enter' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.1' },
+          { expectText: NUMBER_STATUS, text: 'Speed: 2.1 (last, user)' },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: 'Escape' },
+          { expectAttr: NUMBER('Speed'), name: 'aria-valuenow', value: '2.1' },
+          { expectFocus: NUMBER('Speed') },
+        ],
+      },
+      {
+        name: 'Home and End go to the minimum and the maximum',
+        steps: [
+          { focusInBox: NUMBER('Volume') },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '80 %' },
+          { press: 'End' },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '100 %' },
+          { press: 'Home' },
+          { expectAttr: NUMBER('Volume'), name: 'aria-valuetext', value: '0 %' },
+        ],
+      },
+      {
+        name: 'the reset button writes the default and gives the focus back to the input',
+        steps: [
+          { focusInBox: NUMBER('Heading') },
+          { press: 'ArrowUp' },
+          { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '105' },
+          { press: 'Shift+Tab' },
+          { expectFocus: NUMBER_RESET('Heading') },
+          { press: 'Enter' },
+          { expectAttr: NUMBER('Heading'), name: 'aria-valuenow', value: '90' },
+          { expectAttr: NUMBER_RESET('Heading'), name: 'hidden', value: '' },
+          { expectFocus: NUMBER('Heading') },
+        ],
+      },
+    ],
+  },
+  slider: {
+    keyboard: [
+      {
+        name: 'the spin button steps the slider; the track is no tab stop',
+        steps: [
+          { focusInBox: SLIDER('Fov') },
+          { expectAttr: SLIDER('Fov'), name: 'role', value: 'spinbutton' },
+          { press: 'ArrowUp' },
+          { expectAttr: SLIDER('Fov'), name: 'aria-valuetext', value: '76 °' },
+          { expectText: SLIDER_STATUS, text: 'Field of view: 76 (last, user)' },
+          { press: 'Shift+ArrowDown' },
+          { expectAttr: SLIDER('Fov'), name: 'aria-valuenow', value: '66' },
+          // Past the track to the label row's reset button (shown: the value isn't the default)
+          { press: 'Shift+Tab' },
+          { expectFocus: `.aekField:has(${SLIDER('Fov')}) .aekField__reset` },
+          { press: 'Shift+Tab' },
+          { expectFocus: SLIDER('Volume') },
+        ],
+      },
+      {
+        name: 'without the input the thumb is the slider: the four arrows, Home and End',
+        steps: [
+          { focusInBox: SLIDER('Quality') },
+          { expectAttr: SLIDER('Quality'), name: 'role', value: 'slider' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'High' },
+          { press: 'ArrowRight' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Ultra' },
+          { expectText: SLIDER_STATUS, text: 'Quality: Ultra (last, user)' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowLeft' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuenow', value: '1' },
+          { press: 'End' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Max' },
+          { press: 'Home' },
+          { expectAttr: SLIDER('Quality'), name: 'aria-valuetext', value: 'Low' },
+          { expectFocus: SLIDER('Quality') },
+        ],
+      },
+    ],
+  },
+  rangeSlider: {
+    keyboard: [
+      {
+        name: 'each thumb steps, stopping at the other less the gap; Tab goes thumb to thumb',
+        steps: [
+          { focusInBox: RANGE('Price', 'min') },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuetext', value: '100 €' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuenow', value: '110' },
+          { expectText: RANGE_STATUS, text: 'Price: 110–350 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Price', 'min'), name: 'aria-valuenow', value: '300' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuemin', value: '350' },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Price', 'max') },
+          { press: 'Home' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuenow', value: '350' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Price', 'max'), name: 'aria-valuenow', value: '360' },
+        ],
+      },
+      {
+        name: 'the span is the third stop: the arrows move both, Home and End to the ends',
+        steps: [
+          { focusInBox: RANGE('Years', 'max') },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Years', 'range') },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2000 to 2020' },
+          { press: 'ArrowRight' },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2001 to 2021' },
+          { expectText: RANGE_STATUS, text: 'Years: 2001–2021 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Years', 'range'), name: 'aria-valuetext', value: '2010 to 2030' },
+          { press: 'Home' },
+          { expectAttr: RANGE('Years', 'min'), name: 'aria-valuenow', value: '1990' },
+          { expectAttr: RANGE('Years', 'max'), name: 'aria-valuenow', value: '2010' },
+        ],
+      },
+      {
+        name: 'with spin buttons: a typed value on Enter, the keys, each end kept by the gap',
+        steps: [
+          { focusInBox: RANGE('Altitude', 'min') },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'role', value: 'spinbutton' },
+          { press: 'ControlOrMeta+A' },
+          { press: '2' },
+          { press: '.' },
+          { press: '5' },
+          { press: 'k' },
+          { press: 'm' },
+          { press: 'Enter' },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'aria-valuenow', value: '2500' },
+          { expectValue: RANGE('Altitude', 'min'), value: '2500' },
+          { expectText: RANGE_STATUS, text: 'Altitude: 2500–6000 (last, user)' },
+          { press: 'End' },
+          { expectAttr: RANGE('Altitude', 'min'), name: 'aria-valuetext', value: '5500 m' },
+          { press: 'Tab' },
+          { expectFocus: RANGE('Altitude', 'max') },
+          { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuemin', value: '6000' },
+          { press: 'Shift+ArrowUp' },
+          { expectAttr: RANGE('Altitude', 'max'), name: 'aria-valuenow', value: '7000' },
+        ],
+      },
+    ],
+  },
+  radioGroup: {
+    keyboard: [
+      {
+        name: 'a radio group is one tab stop: the arrows pick (wrapping), skipping a disabled one',
+        steps: [
+          { focusInBox: RADIO('Difficulty', 1) },
+          { press: 'ArrowDown' },
+          { expectFocus: RADIO('Difficulty', 2) },
+          { expectCount: RADIO_CHECKED('Difficulty', 2), count: 1 },
+          { expectText: RADIO_STATUS, text: 'Difficulty: hard' },
+          { press: 'ArrowDown' },
+          { expectFocus: RADIO('Difficulty', 0) },
+          { expectText: RADIO_STATUS, text: 'Difficulty: easy' },
+          // Out of the group to the next one's checked radio
+          { press: 'Tab' },
+          { expectFocus: RADIO('Shadows', 1) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Shadows', 2) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Shadows', 0) },
+          { expectText: RADIO_STATUS, text: 'Shadows: off' },
+        ],
+      },
+      {
+        name: 'a segmented control is the same: one tab stop, the arrows pick',
+        steps: [
+          { focusInBox: RADIO('Camera', 0) },
+          { press: 'ArrowRight' },
+          { expectFocus: RADIO('Camera', 1) },
+          { expectCount: RADIO_CHECKED('Camera', 1), count: 1 },
+          { expectText: RADIO_STATUS, text: 'Camera: follow' },
+          { press: 'Tab' },
+          { expectFocus: RADIO('Simulation', 0) },
+          { press: 'ArrowLeft' },
+          { expectFocus: RADIO('Simulation', 2) },
+          { expectText: RADIO_STATUS, text: 'Simulation: stop' },
+        ],
+      },
+    ],
+  },
+  selectField: {
+    keyboard: [
+      {
+        name: 'Enter opens the list on the value; the arrows and Enter pick, the focus comes back',
+        steps: [
+          { focusInBox: SELECT('ShadowMap') },
+          { press: 'Enter' },
+          { expectCount: SELECT_LIST, count: 1 },
+          { expectActiveOption: '1024' },
+          { press: 'ArrowDown' },
+          { expectActiveOption: '2048' },
+          { press: 'Enter' },
+          { expectCount: SELECT_LIST, count: 0 },
+          { expectText: SELECT_STATUS, text: 'Shadow map: 2048' },
+          { expectText: SELECT_VALUE('ShadowMap'), text: '2048' },
+          { expectFocus: SELECT('ShadowMap') },
+        ],
+      },
+      {
+        name: 'Escape closes the list without a change',
+        steps: [
+          { focusInBox: SELECT('ToneMapping') },
+          { press: 'Space' },
+          { expectCount: SELECT_LIST, count: 1 },
+          { press: 'ArrowUp' },
+          { press: 'Escape' },
+          { expectCount: SELECT_LIST, count: 0 },
+          { expectText: SELECT_VALUE('ToneMapping'), text: 'ACES Filmic' },
+          { expectFocus: SELECT('ToneMapping') },
+        ],
+      },
+      {
+        name: 'searchable: typing filters the list, Enter picks the match',
+        steps: [
+          { focusInBox: SELECT('Spawn') },
+          { press: 'Enter' },
+          { expectFocus: SELECT_SEARCH },
+          { press: 'r' },
+          { press: 'i' },
+          { expectActiveOption: 'Ridge' },
+          { press: 'Enter' },
+          { expectText: SELECT_STATUS, text: 'Spawn point: ridge' },
+          { expectFocus: SELECT('Spawn') },
+        ],
+      },
+    ],
+  },
+  textField: {
+    keyboard: [
+      {
+        name: 'typed text is written on Enter; Escape puts the text back',
+        steps: [
+          { focusInBox: TEXT('Name') },
+          { press: 'ControlOrMeta+A' },
+          { press: 'b' },
+          { press: 'o' },
+          { press: 'b' },
+          { press: 'Enter' },
+          { expectText: TEXT_STATUS, text: 'Name: "bob" (last)' },
+          { press: 'ControlOrMeta+A' },
+          { press: 'x' },
+          { expectValue: TEXT('Name'), value: 'x' },
+          { press: 'Escape' },
+          { expectValue: TEXT('Name'), value: 'bob' },
+          { expectFocus: TEXT('Name') },
+        ],
+      },
+      {
+        name: 'multiline: Enter is a new line, Ctrl/⌘+Enter writes',
+        steps: [
+          { focusInBox: TEXT('Notes') },
+          { press: 'ControlOrMeta+A' },
+          { press: 'a' },
+          { press: 'Enter' },
+          { press: 'b' },
+          { expectValue: TEXT('Notes'), value: 'a\nb' },
+          { expectText: TEXT_STATUS, text: '' },
+          { press: 'ControlOrMeta+Enter' },
+          { expectText: TEXT_STATUS, text: 'Notes: "a / b" (last)' },
+        ],
+      },
+      {
+        name: 'search: typing filters the list; the clear button empties it and returns the focus',
+        steps: [
+          { focusInBox: TEXT('Search') },
+          { press: 'm' },
+          { press: 'e' },
+          { expectText: TEXT_RESULTS, text: '2 of 8: Comet, Meteor' },
+          { press: 'Tab' },
+          { expectFocus: SEARCH_CLEAR },
+          { press: 'Enter' },
+          { expectValue: TEXT('Search'), value: '' },
+          { expectFocus: TEXT('Search') },
+          {
+            expectText: TEXT_RESULTS,
+            text: '8 of 8: Asteroid, Comet, Galaxy, Meteor, Moon, Nebula, Planet, Star',
+          },
+        ],
+      },
+    ],
+  },
+  checkbox: {
+    keyboard: [
+      {
+        name: 'Space flips a checkbox; Tab goes on to the next',
+        steps: [
+          { focusInBox: TOGGLE('Shadows') },
+          { press: 'Space' },
+          { expectText: TOGGLE_STATUS, text: 'Shadows: off' },
+          { press: 'Tab' },
+          { expectFocus: TOGGLE('Fog') },
+          { press: 'Space' },
+          { expectText: TOGGLE_STATUS, text: 'Fog: on' },
+        ],
+      },
+      {
+        name: 'a mixed checkbox: Space sets all three, and again clears them',
+        steps: [
+          { focusInBox: TOGGLE('All') },
+          { expectCount: `${TOGGLE('All')}:indeterminate`, count: 1 },
+          { expectCount: LAYERS_ON, count: 2 },
+          { press: 'Space' },
+          { expectCount: `${TOGGLE('All')}:indeterminate`, count: 0 },
+          { expectCount: LAYERS_ON, count: 3 },
+          { press: 'Space' },
+          { expectCount: LAYERS_ON, count: 0 },
+          { expectText: TOGGLE_STATUS, text: 'All layers: off' },
+        ],
+      },
+      {
+        name: 'a switch: Space flips it and its text',
+        steps: [
+          { focusInBox: TOGGLE('Vsync') },
+          { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'On' },
+          { press: 'Space' },
+          { expectText: `.aekField:has(${TOGGLE('Vsync')}) .aekSwitch__text`, text: 'Off' },
+          { expectText: TOGGLE_STATUS, text: 'V-sync: off' },
+        ],
+      },
+    ],
+  },
+  colorField: {
+    keyboard: [
+      {
+        name: 'typed text is written on Enter; Escape puts the text back',
+        steps: [
+          { focusInBox: COLOR('Fog') },
+          { press: 'ControlOrMeta+A' },
+          { press: '#' },
+          { press: 'f' },
+          { press: '0' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectValue: COLOR('Fog'), value: '#ff0000' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0xff0000 (last)' },
+          { press: 'ControlOrMeta+A' },
+          { press: 'x' },
+          { press: 'Escape' },
+          { expectValue: COLOR('Fog'), value: '#ff0000' },
+          { expectFocus: COLOR('Fog') },
+        ],
+      },
+      {
+        name: 'the swatch opens the panel on the picker’s plane; the arrows step it; a palette swatch sets the colour; Escape returns',
+        steps: [
+          { focusInBox: COLOR_SWATCH('Fog') },
+          { press: 'Enter' },
+          { expectAttr: COLOR_SWATCH('Fog'), name: 'aria-expanded', value: 'true' },
+          // Loaded on this first open, then focused
+          { expectFocus: PICKER_PART('saturation') },
+          // Saturation +1 %: h 208.5, s 20.1, v 78.0 rounded by the picker to 209, 21, 78
+          { press: 'ArrowRight' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0x9db3c7 (last)' },
+          { expectValue: COLOR('Fog'), value: '#9db3c7' },
+          { press: 'Tab' },
+          { expectFocus: PICKER_PART('hue') },
+          // No alpha slider: the fog is a 24-bit number
+          { press: 'Tab' },
+          { expectFocus: COLOR_PANEL_SWATCH(1) },
+          { press: 'Tab' },
+          { expectFocus: COLOR_PANEL_SWATCH(2) },
+          { press: 'Enter' },
+          { expectText: COLOR_STATUS, text: 'Fog: 0xd7c4a3 (last)' },
+          { expectAttr: COLOR_PANEL_SWATCH(2), name: 'aria-current', value: 'true' },
+          // The focused swatch's tooltip is the top overlay: the first Escape closes it
+          { press: 'Escape' },
+          { expectCount: '#hudRoot .aekTooltip', count: 0 },
+          { expectFocus: COLOR_PANEL_SWATCH(2) },
+          { press: 'Escape' },
+          { expectFocus: COLOR_SWATCH('Fog') },
+          { expectCount: '#hudRoot .aekColorPopover', count: 0 },
+          { expectValue: COLOR('Fog'), value: '#d7c4a3' },
+        ],
+      },
+      {
+        name: 'the alpha’s spin button steps it, the text following',
+        steps: [
+          { focusInBox: COLOR_ALPHA('Tint') },
+          { press: 'ArrowUp' },
+          { expectText: COLOR_STATUS, text: 'Tint: #3fd8f282 (last)' },
+          { expectValue: COLOR('Tint'), value: '#3fd8f282' },
+          { press: 'Shift+ArrowDown' },
+          { expectValue: COLOR('Tint'), value: '#3fd8f269' },
+        ],
+      },
+    ],
+  },
+  vectorField: {
+    keyboard: [
+      {
+        name: 'the arrows step an axis; Tab goes axis by axis',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Position', 'x') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Position: 1.1, 2, 3 (last)' },
+          { press: 'Tab' },
+          { expectFocus: VECTOR_AXIS('Position', 'y') },
+          { press: 'Shift+ArrowDown' },
+          { expectText: VECTOR_STATUS, text: 'Position: 1.1, 1, 3 (last)' },
+          { expectValue: VECTOR_AXIS('Position', 'y'), value: '1.0' },
+        ],
+      },
+      {
+        name: 'linked: an axis scales the others; the toggle after the axes unlinks them',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Scale', 'x') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Scale: 1.1, 1.1, 1.1 (last)' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { expectFocus: VECTOR_LINK('Scale') },
+          { expectAttr: VECTOR_LINK('Scale'), name: 'aria-pressed', value: 'true' },
+          { press: 'Space' },
+          { expectAttr: VECTOR_LINK('Scale'), name: 'aria-pressed', value: 'false' },
+          { press: 'Shift+Tab' },
+          { expectFocus: VECTOR_AXIS('Scale', 'z') },
+          { press: 'ArrowUp' },
+          { expectText: VECTOR_STATUS, text: 'Scale: 1.1, 1.1, 1.2 (last)' },
+        ],
+      },
+      {
+        name: 'a typed value is written on Enter, kept to its axis’ own rules',
+        steps: [
+          { focusInBox: VECTOR_AXIS('Size', 'y') },
+          { press: 'ControlOrMeta+A' },
+          { press: '-' },
+          { press: '5' },
+          { press: 'Enter' },
+          { expectText: VECTOR_STATUS, text: 'Size: 1920, 1 (last)' },
+          { expectValue: VECTOR_AXIS('Size', 'y'), value: '1' },
+        ],
+      },
+    ],
+  },
+  rotationField: {
+    keyboard: [
+      {
+        name: 'an Euler angle steps by π / 8, shown as 22.5°; Tab reaches the order, a pick keeps the angles',
+        steps: [
+          { focusInBox: ROTATION_PART('Rotation', 'y') },
+          { press: 'ArrowUp' },
+          { expectValue: ROTATION_PART('Rotation', 'y'), value: '67.5' },
+          { expectText: ROTATION_STATUS, text: 'Rotation: 0.000, 1.178, 0.000, XYZ (last)' },
+          { press: 'Tab' },
+          { press: 'Tab' },
+          { expectFocus: ROTATION_ORDER },
+          { press: 'Enter' },
+          { press: 'ArrowDown' },
+          { press: 'Enter' },
+          { expectFocus: ROTATION_ORDER },
+          { expectText: ROTATION_STATUS, text: 'Rotation: 0.000, 1.178, 0.000, YXZ (last)' },
+          { expectValue: ROTATION_PART('Rotation', 'y'), value: '67.5' },
+        ],
+      },
+      {
+        name: 'a quaternion: a typed Euler angle, the raw components following',
+        steps: [
+          { focusInBox: ROTATION_PART('Facing', 'y') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectText: ROTATION_STATUS, text: 'Facing: 0.000, 0.707, 0.000, 0.707 (last)' },
+          {
+            expectText: '#hubDemoRotationFacing .aekQuaternionField__raw',
+            text: 'x 0.000, y 0.707, z 0.000, w 0.707',
+          },
+        ],
+      },
+      {
+        name: 'axis-angle: the angle in degrees about the axis shown',
+        steps: [
+          { focusInBox: ROTATION_PART('Spin', 'angle') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectText: ROTATION_STATUS, text: 'Spin: 0.707, 0.000, 0.000, 0.707 (last)' },
+        ],
+      },
+    ],
+  },
+  angleDial: {
+    keyboard: [
+      {
+        name: 'the spin button steps by π / 8, shown as 22.5°',
+        steps: [
+          { focusInBox: ANGLE('Heading') },
+          { press: 'ArrowUp' },
+          { expectValue: ANGLE('Heading'), value: '67.5' },
+          { expectText: ANGLE_STATUS, text: 'Heading: 1.178 (last)' },
+        ],
+      },
+      {
+        name: 'a compass in degrees: a typed -90 wraps to 270',
+        steps: [
+          { focusInBox: ANGLE('Azimuth') },
+          { press: 'ControlOrMeta+A' },
+          { press: '-' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectValue: ANGLE('Azimuth'), value: '270' },
+          { expectText: ANGLE_STATUS, text: 'Sun azimuth: 270 (last)' },
+        ],
+      },
+      {
+        name: 'without the spin button the dial is the slider: the arrows, Shift ×10, End',
+        steps: [
+          { focusInBox: ANGLE('Spin') },
+          { press: 'ArrowRight' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '1' },
+          { press: 'Shift+ArrowRight' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '11' },
+          { press: 'End' },
+          { expectAttr: ANGLE('Spin'), name: 'aria-valuenow', value: '180' },
+          { expectText: ANGLE_STATUS, text: 'Spin: 3.142 (last)' },
+        ],
+      },
+    ],
+  },
+  pad2d: {
+    keyboard: [
+      {
+        name: 'the pad’s arrows move the point, Shift ×10; its axes follow',
+        steps: [
+          { focusInBox: PAD('Offset') },
+          { press: 'ArrowRight' },
+          { expectText: PAD_STATUS, text: 'Offset: 0.26, -0.5 (last)' },
+          { press: 'Shift+ArrowUp' },
+          { expectText: PAD_STATUS, text: 'Offset: 0.26, -0.4 (last)' },
+          { expectValue: PAD_AXIS('Offset', 'y'), value: '-0.40' },
+        ],
+      },
+      {
+        name: 'Tab goes from the pad to its axes; y down: ArrowUp lowers y',
+        steps: [
+          { focusInBox: PAD('Anchor') },
+          { press: 'ArrowUp' },
+          { expectText: PAD_STATUS, text: 'Anchor: 50, 24 (last)' },
+          { press: 'Tab' },
+          { expectFocus: PAD_AXIS('Anchor', 'x') },
+          { press: 'ControlOrMeta+A' },
+          { press: '7' },
+          { press: '5' },
+          { press: 'Enter' },
+          { expectText: PAD_STATUS, text: 'Anchor: 75, 24 (last)' },
+        ],
+      },
+    ],
+  },
+  gradientEditor: {
+    keyboard: [
+      {
+        name: 'a stop’s arrows move it; Insert adds one after it, focused; Delete removes it',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Sky', 2) },
+          { press: 'ArrowRight' },
+          { expectAttr: GRADIENT_STOP('Sky', 2), name: 'aria-valuenow', value: '51' },
+          {
+            expectText: GRADIENT_STATUS,
+            text: 'Sky ramp: #0b1d3a 0, #f2a65a 0.51, #9fd3ff 1 (last)',
+          },
+          { press: 'Insert' },
+          { expectCount: GRADIENT_STOPS('Sky'), count: 4 },
+          { expectFocus: GRADIENT_STOP('Sky', 3) },
+          { press: 'Delete' },
+          { expectCount: GRADIENT_STOPS('Sky'), count: 3 },
+          { expectFocus: GRADIENT_STOP('Sky', 3) },
+        ],
+      },
+      {
+        name: 'Tab goes from the stops to the selected one’s position: a typed place',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Sky', 3) },
+          { press: 'Tab' },
+          { expectFocus: GRADIENT_POSITION('Sky') },
+          { press: 'ControlOrMeta+A' },
+          { press: '9' },
+          { press: '0' },
+          { press: 'Enter' },
+          { expectAttr: GRADIENT_STOP('Sky', 3), name: 'aria-valuenow', value: '90' },
+          {
+            expectText: GRADIENT_STATUS,
+            text: 'Sky ramp: #0b1d3a 0, #f2a65a 0.5, #9fd3ff 0.9 (last)',
+          },
+        ],
+      },
+      {
+        name: 'Enter on a stop opens its colour panel on the picker; Escape returns to the swatch',
+        steps: [
+          { focusInBox: GRADIENT_STOP('Fade', 2) },
+          { press: 'Enter' },
+          { expectAttr: GRADIENT_SWATCH('Fade'), name: 'aria-expanded', value: 'true' },
+          { expectFocus: '[part="saturation"]' },
+          { press: 'Escape' },
+          { expectAttr: GRADIENT_SWATCH('Fade'), name: 'aria-expanded', value: 'false' },
+          { expectFocus: GRADIENT_SWATCH('Fade') },
+        ],
+      },
+    ],
+  },
+  curveEditor: {
+    keyboard: [
+      {
+        name: 'a key’s arrows move it; Insert adds one after it, focused; Delete removes it',
+        steps: [
+          { focusInBox: CURVE_POINT('Falloff', 2) },
+          { press: 'ArrowUp' },
+          { expectAttr: CURVE_POINT('Falloff', 2), name: 'aria-valuenow', value: '0.61' },
+          {
+            expectText: CURVE_STATUS,
+            text: 'Falloff: (0, 1), (8, 0.61), (20, 0) (last)',
+          },
+          { press: 'Insert' },
+          { expectCount: CURVE_POINTS('Falloff'), count: 4 },
+          { expectFocus: CURVE_POINT('Falloff', 3) },
+          { press: 'Delete' },
+          { expectCount: CURVE_POINTS('Falloff'), count: 3 },
+          { expectFocus: CURVE_POINT('Falloff', 3) },
+        ],
+      },
+      {
+        name: 'Tab goes from the handles to the selected one’s X: a typed place',
+        steps: [
+          { focusInBox: CURVE_POINT('Easing', 2) },
+          { press: 'Tab' },
+          { expectFocus: CURVE_X('Easing') },
+          { press: 'ControlOrMeta+A' },
+          { press: '0' },
+          { press: '.' },
+          { press: '9' },
+          { press: 'Enter' },
+          {
+            expectAttr: CURVE_POINT('Easing', 2),
+            name: 'aria-valuetext',
+            value: 'X 0.90, Y 1.00',
+          },
+          { expectText: CURVE_STATUS, text: 'Easing: 0.25, 0.1, 0.9, 1 (last)' },
+        ],
+      },
+      {
+        name: 'the presets menu: End and Enter pick smoothstep, the focus back on its button',
+        steps: [
+          { focusInBox: CURVE_PRESETS('Easing') },
+          { press: 'Enter' },
+          { expectAttr: CURVE_PRESETS('Easing'), name: 'aria-expanded', value: 'true' },
+          { press: 'End' },
+          { press: 'Enter' },
+          { expectText: CURVE_STATUS, text: 'Easing: 0.333, 0, 0.667, 1 (last)' },
+          { expectFocus: CURVE_PRESETS('Easing') },
+        ],
+      },
+    ],
+  },
+  monitor: {
+    keyboard: [
+      {
+        name: 'a step shows on the tick; Tab passes the lines and stops at the multiline block',
+        steps: [
+          { focusInBox: MONITOR('Step') },
+          { press: 'Enter' },
+          { expectText: `${MONITOR('Bodies')} .aekMonitor__value`, text: '132' },
+          { expectText: `${MONITOR('Paused')} .aekMonitor__value`, text: 'On' },
+          { expectText: `${MONITOR('Position')} .aekMonitor__value`, text: '1.25, 0.50, -3.50' },
+          { press: 'Tab' },
+          { expectFocus: MONITOR('Log') },
+          {
+            expectValue: MONITOR('Log'),
+            value:
+              'Loaded scene “Harbour”\nSpawned 128 bodies\nPhysics on the worker thread\nStep 1: 132 bodies',
+          },
+        ],
+      },
+    ],
+  },
+  folder: {
+    keyboard: [
+      {
+        name: 'Enter shuts and opens a folder; Tab goes into it; no shadows hides the inner one',
+        steps: [
+          { focusInBox: FOLDER('Light') },
+          { press: 'Enter' },
+          { expectAttr: FOLDER('Light'), name: 'aria-expanded', value: 'false' },
+          { expectText: FOLDER_STATUS, text: 'Sun light: shut' },
+          { press: 'Enter' },
+          { expectAttr: FOLDER('Light'), name: 'aria-expanded', value: 'true' },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('Intensity') },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('CastShadow') },
+          { press: 'Space' },
+          { expectAttr: `.aekFolder:has(> ${FOLDER('Shadow')})`, name: 'hidden', value: '' },
+        ],
+      },
+      {
+        name: 'a shut folder’s field is read when Space opens it',
+        steps: [
+          { focusInBox: FOLDER('Outside') },
+          { press: 'Enter' },
+          { focusInBox: FOLDER('Shadow') },
+          { press: 'Space' },
+          { expectAttr: FOLDER('Shadow'), name: 'aria-expanded', value: 'true' },
+          { expectText: FOLDER_STATUS, text: 'Shadow: open' },
+          // The bias isn't its default now: its reset button comes first
+          { press: 'Tab' },
+          { expectFocus: `.aekField:has(${FOLDER('Bias')}) .aekField__reset` },
+          { press: 'Tab' },
+          { expectFocus: FOLDER('Bias') },
+          { expectValue: FOLDER('Bias'), value: '-0.0010' },
+        ],
+      },
+    ],
+  },
+  fieldset: {
+    keyboard: [
+      {
+        name: 'Tab goes from one section’s fields to the next’s',
+        steps: [
+          { focusInBox: FIELDSET('Region') },
+          { press: 'Tab' },
+          { expectFocus: FIELDSET('Email') },
+        ],
+      },
+      {
+        name: 'a disabled section’s fields are no tab stops',
+        steps: [
+          { click: 'Disable the notifications' },
+          { focusInBox: FIELDSET('Region') },
+          { press: 'Tab' },
+          { expectFocus: FIELDSET('Done') },
+        ],
+      },
+    ],
+  },
+  propertyGrid: {
+    keyboard: [
+      {
+        name: 'the label column’s separator: the arrows, Shift and End move it; the keyup reports it',
+        steps: [
+          { focusInBox: GRID('Separator') },
+          { press: 'ArrowRight' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '41' },
+          { expectText: GRID('Status'), text: 'Label column: 41 %' },
+          { press: 'Shift+ArrowLeft' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '31' },
+          { press: 'End' },
+          { expectAttr: GRID('Separator'), name: 'aria-valuenow', value: '80' },
+          { expectText: GRID('Status'), text: 'Label column: 80 %' },
+        ],
+      },
+      {
+        name: 'Tab goes row by row, the separator after the rows',
+        steps: [
+          { focusInBox: GRID('Name') },
+          { press: 'Tab' },
+          { expectFocus: GRID('Speed') },
+          { press: 'Tab' },
+          { expectFocus: GRID('Wireframe') },
+          { focusInBox: GRID('Outside') },
+          { press: 'Shift+Tab' },
+          { expectFocus: GRID('Separator') },
+        ],
+      },
+    ],
+  },
+  form: {
+    keyboard: [
+      {
+        name: 'Enter in a field submits: the summary takes the focus, and its link the field’s',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { expectFocus: FORM_SUMMARY },
+          { expectCount: FORM_LINKS, count: 3 },
+          { expectText: `${FORM_SUMMARY} li:first-child`, text: 'Enter a name' },
+          { press: 'Tab' },
+          { expectFocus: `${FORM_SUMMARY} li:first-child a` },
+          { press: 'Enter' },
+          { expectFocus: FORM('Name') },
+        ],
+      },
+      {
+        name: 'after a submit, a fixed field’s error and link go when the focus leaves it',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { focusInBox: FORM('Name') },
+          { press: 'a' },
+          { press: 'd' },
+          { press: 'a' },
+          { press: 'Tab' },
+          { expectFocus: FORM('Region') },
+          {
+            expectAttr: `.aekField:has(> .aekField__control ${FORM('Name')})`,
+            name: 'data-invalid',
+            value: null,
+          },
+          { expectCount: FORM_LINKS, count: 2 },
+        ],
+      },
+      {
+        name: 'the reset button puts the defaults back and the summary away',
+        steps: [
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { focusInBox: `${FORM('Form')} button[type="reset"]` },
+          { press: 'Enter' },
+          { expectAttr: FORM_SUMMARY, name: 'hidden', value: '' },
+          { expectText: FORM('Status'), text: 'Reset: every field at its default' },
+        ],
+      },
+      {
+        name: 'filled in, Enter submits: the status says so after the submit’s promise',
+        steps: [
+          { click: 'Fill it in' },
+          { focusInBox: FORM('Name') },
+          { press: 'Enter' },
+          { expectText: FORM('Status'), text: 'Created Ada (Europe, 36)' },
+          { expectAttr: FORM_SUMMARY, name: 'hidden', value: '' },
         ],
       },
     ],
@@ -636,6 +1595,9 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
     ],
   },
   progressBar: {
+    // The indeterminate slide eases out fast (`--aek-ease-standard`): at a fifth of its time the
+    // bar is mid-track (30-70 %), at the default 0.4 it's already past the right edge
+    pauseAt: 0.2,
     keyboard: [
       {
         name: 'no keys; the track is a progressbar with its value, none while indeterminate',

@@ -17,12 +17,51 @@ const listeners = new WeakMap<object, Map<string, ListenerEntry[]>>();
 const isCaptureOption = (options?: boolean | AddEventListenerOptions | EventListenerOptions) =>
   typeof options === 'boolean' ? options : Boolean(options?.capture);
 
+/** A node's shadow root, when it's one (linkedom's: a fragment with a `host`) */
+const asShadowRoot = (node: unknown) => {
+  const root = node as { nodeType?: number; host?: KitTarget } | null;
+  return root?.nodeType === 11 && root.host ? (root as ShadowRoot) : null;
+};
+
+/** The top of a node's tree: the document, a shadow root, or a detached node */
+const getRoot = (node: Node) => {
+  let top = node;
+  while (top.parentNode) top = top.parentNode;
+  return top;
+};
+
+/** Whether `ancestor` is `node` or holds it, across shadow roots to their hosts */
+const isShadowIncludingAncestor = (ancestor: unknown, node: unknown) => {
+  for (let n = node as Node | null; n; n = n.parentNode ?? asShadowRoot(n)?.host ?? null) {
+    if (n === ancestor) return true;
+  }
+  return false;
+};
+
+/**
+ * The DOM's retargeting: `target` as a listener on `node` sees it, the host of each shadow root
+ * `node` isn't in (a press in a colour picker's plane is a press on the picker for the page).
+ */
+const retarget = (target: unknown, node: unknown) => {
+  if (typeof (target as Node | null)?.parentNode === 'undefined') return target;
+  let seen = target as Node;
+  for (;;) {
+    const root = asShadowRoot(getRoot(seen));
+    if (!root || isShadowIncludingAncestor(root, node)) return seen;
+    seen = root.host;
+  }
+};
+
 /** The target and its ancestors: an element's parent is its parentNode, the document's the
- * window's event target */
-const getEventPath = (target: KitTarget) => {
+ * window's event target, and a shadow root's its host for a composed event (a key, a pointer, a
+ * focus change: `dispatchKey` and `dispatchPointer` make them composed, as a browser's are; a
+ * library's own events, a colour picker's `move`, stay in its root) */
+const getEventPath = (target: KitTarget, composed: boolean) => {
   const path: KitTarget[] = [];
-  for (let node: KitTarget | null = target; node; node = node._getParent?.() ?? null) {
+  for (let node: KitTarget | null = target; node; ) {
     path.push(node);
+    const host: KitTarget | null = composed ? asShadowRoot(node)?.host ?? null : null;
+    node = node._getParent?.() ?? host;
   }
   return path;
 };
@@ -62,12 +101,17 @@ const patchEventTarget = (proto: EventTarget) => {
       if (index !== -1) list!.splice(index, 1);
     },
     dispatchEvent(this: KitTarget, event: KitEvent) {
-      const path = getEventPath(this);
+      const path = getEventPath(this, Boolean(event.composed));
       const e = event as unknown as Record<string, unknown>;
-      e.target = path[0];
+      const target = path[0];
+      const relatedTarget = e.relatedTarget;
+      e.target = target;
       const invoke = (node: KitTarget, phase: number, capture: boolean | null) => {
         const list = listeners.get(node)?.get(event.type);
         if (!list) return;
+        // Retargeted for a listener outside a shadow root the event came from
+        e.target = retarget(target, node);
+        if (relatedTarget) e.relatedTarget = retarget(relatedTarget, node);
         e.currentTarget = node;
         e.eventPhase = phase;
         for (const l of [...list]) {
@@ -88,6 +132,7 @@ const patchEventTarget = (proto: EventTarget) => {
       }
       e.currentTarget = null;
       e.eventPhase = 0;
+      e.target = target;
       return !event.defaultPrevented;
     },
   });
@@ -111,11 +156,26 @@ const shimFocus = (document: Document, window: Window & typeof globalThis) => {
   let active: HTMLElement | null = null;
   Object.defineProperty(document, 'activeElement', {
     configurable: true,
-    get: () => (active?.isConnected ? active : document.body),
+    // In a shadow root, its host (the browser's retargeting); the root's own `activeElement` is
+    // the element
+    get: () => (active?.isConnected ? retarget(active, document) : document.body),
+  });
+  const shadowProto = Object.getPrototypeOf(
+    document.createElement('div').attachShadow({ mode: 'open' })
+  ) as object;
+  Object.defineProperty(shadowProto, 'activeElement', {
+    configurable: true,
+    get(this: ShadowRoot) {
+      return active?.isConnected && isShadowIncludingAncestor(this, active)
+        ? retarget(active, this)
+        : null;
+    },
   });
   const fire = (target: Element, type: string, relatedTarget: Element | null) => {
     const bubbles = type === 'focusin' || type === 'focusout';
-    target.dispatchEvent(Object.assign(new window.Event(type, { bubbles }), { relatedTarget }));
+    target.dispatchEvent(
+      Object.assign(new window.Event(type, { bubbles }), { relatedTarget, composed: true })
+    );
   };
   const focus = (elem: HTMLElement) => {
     if (active === elem || !elem.isConnected || !isFocusable(elem)) return;
@@ -155,10 +215,213 @@ const shimFocus = (document: Document, window: Window & typeof globalThis) => {
   });
 };
 
+type TextControl = HTMLInputElement | HTMLTextAreaElement;
+type Selection = { start: number; end: number };
+
+/** The elements holding a pointer's capture, by pointer id */
+const pointerCaptures = new Map<number, Element>();
+
+/**
+ * The form controls as the fields use them (p804 D14; linkedom 0.18.13's gaps, Phase 0 step 5),
+ * grown as the fields need them: an input's or a textarea's `value` kept apart from its
+ * `defaultValue` (linkedom writes the attribute on every set), the selection API
+ * (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`; a new value puts the caret
+ * at its end), a checkbox's `checked` kept apart from `defaultChecked` (the attribute is the default,
+ * the property the state), its `indeterminate`, and its `click()` (not disabled) flipping it, a
+ * cancelled click putting it back, then `input` and `change`; a radio's `checked` unchecking its
+ * group (the same name in the same tree) and its `click()` checking it, with `input` and `change`
+ * only when it wasn't checked; and pointer capture
+ * (`setPointerCapture`, `releasePointerCapture`,
+ * `hasPointerCapture`; `lostpointercapture` on a release, `dispatchPointer` routes a captured
+ * pointer's events and releases it on `pointerup` / `pointercancel`).
+ */
+const shimFormControls = (window: Window & typeof globalThis) => {
+  const values = new WeakMap<TextControl, string>();
+  const selections = new WeakMap<TextControl, Selection>();
+  const textControls = [window.HTMLInputElement, window.HTMLTextAreaElement];
+  for (const Control of textControls) {
+    const isTextarea = Control === window.HTMLTextAreaElement;
+    const getDefault = (elem: TextControl) =>
+      isTextarea ? elem.textContent ?? '' : elem.getAttribute('value') ?? '';
+    const getValue = (elem: TextControl) => values.get(elem) ?? getDefault(elem);
+    const getSelection = (elem: TextControl) => {
+      const length = getValue(elem).length;
+      const selection = selections.get(elem) ?? { start: length, end: length };
+      return { start: Math.min(selection.start, length), end: Math.min(selection.end, length) };
+    };
+    Object.defineProperties(Control.prototype, {
+      value: {
+        configurable: true,
+        get(this: TextControl) {
+          return getValue(this);
+        },
+        set(this: TextControl, value: unknown) {
+          const text = String(value ?? '');
+          values.set(this, text);
+          selections.set(this, { start: text.length, end: text.length });
+        },
+      },
+      defaultValue: {
+        configurable: true,
+        get(this: TextControl) {
+          return getDefault(this);
+        },
+        set(this: TextControl, value: unknown) {
+          if (isTextarea) this.textContent = String(value ?? '');
+          else this.setAttribute('value', String(value ?? ''));
+        },
+      },
+      selectionStart: {
+        configurable: true,
+        get(this: TextControl) {
+          return getSelection(this).start;
+        },
+      },
+      selectionEnd: {
+        configurable: true,
+        get(this: TextControl) {
+          return getSelection(this).end;
+        },
+      },
+    });
+    Object.assign(Control.prototype, {
+      setSelectionRange(this: TextControl, start: number, end: number) {
+        selections.set(this, { start: Math.min(start, end), end: Math.max(start, end) });
+      },
+      select(this: TextControl) {
+        selections.set(this, { start: 0, end: getValue(this).length });
+      },
+    });
+  }
+  shimCheckboxes(window);
+  Object.assign(window.HTMLElement.prototype, {
+    setPointerCapture(this: Element, pointerId: number) {
+      const previous = pointerCaptures.get(pointerId);
+      if (previous === this) return;
+      pointerCaptures.set(pointerId, this);
+      if (previous) fireLostCapture(previous, pointerId);
+    },
+    releasePointerCapture(this: Element, pointerId: number) {
+      if (pointerCaptures.get(pointerId) !== this) return;
+      pointerCaptures.delete(pointerId);
+      fireLostCapture(this, pointerId);
+    },
+    hasPointerCapture(this: Element, pointerId: number) {
+      return pointerCaptures.get(pointerId) === this;
+    },
+  });
+};
+
+/** The radios of `radio`'s group: the same name in the same tree (detached ones too) */
+const getRadioGroup = (radio: HTMLInputElement) => {
+  const name = radio.getAttribute('name');
+  if (!name) return [radio];
+  let root: Node = radio;
+  while (root.parentNode) root = root.parentNode;
+  const radios = [
+    ...(root as ParentNode).querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+  ];
+  return radios.filter((other) => other.getAttribute('name') === name);
+};
+
+const shimCheckboxes = (window: Window & typeof globalThis) => {
+  const checkedStates = new WeakMap<HTMLInputElement, boolean>();
+  const indeterminates = new WeakMap<HTMLInputElement, boolean>();
+  const proto = window.HTMLInputElement.prototype;
+  const elementClick = window.HTMLElement.prototype.click;
+  Object.defineProperties(proto, {
+    checked: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return checkedStates.get(this) ?? this.hasAttribute('checked');
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        // A radio checked unchecks the rest of its group
+        if (on && this.getAttribute('type') === 'radio') {
+          for (const other of getRadioGroup(this)) checkedStates.set(other, false);
+        }
+        checkedStates.set(this, Boolean(on));
+      },
+    },
+    defaultChecked: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return this.hasAttribute('checked');
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        this.toggleAttribute('checked', Boolean(on));
+      },
+    },
+    indeterminate: {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return indeterminates.get(this) ?? false;
+      },
+      set(this: HTMLInputElement, on: unknown) {
+        indeterminates.set(this, Boolean(on));
+      },
+    },
+  });
+  Object.assign(proto, {
+    click(this: HTMLInputElement) {
+      const type = this.getAttribute('type');
+      if (type === 'radio') {
+        clickRadio(this);
+        return;
+      }
+      if (type !== 'checkbox') {
+        elementClick.call(this);
+        return;
+      }
+      if (this.hasAttribute('disabled')) return;
+      const wasChecked = this.checked;
+      const wasIndeterminate = this.indeterminate;
+      // The browser's order: flipped, the click (cancelable), then input and change
+      this.checked = !wasChecked;
+      this.indeterminate = false;
+      const click = new window.Event('click', { bubbles: true, cancelable: true });
+      if (!this.dispatchEvent(click)) {
+        this.checked = wasChecked;
+        this.indeterminate = wasIndeterminate;
+        return;
+      }
+      this.dispatchEvent(new window.Event('input', { bubbles: true }));
+      this.dispatchEvent(new window.Event('change', { bubbles: true }));
+    },
+  });
+
+  /** A radio's click: checked (its group's others unchecked), the cancelable click, then `input`
+   * and `change` only when it wasn't checked before */
+  const clickRadio = (radio: HTMLInputElement) => {
+    if (radio.hasAttribute('disabled')) return;
+    const wasChecked = getRadioGroup(radio).find((other) => other.checked) ?? null;
+    radio.checked = true;
+    const click = new window.Event('click', { bubbles: true, cancelable: true });
+    if (!radio.dispatchEvent(click)) {
+      radio.checked = false;
+      if (wasChecked) wasChecked.checked = true;
+      return;
+    }
+    if (wasChecked === radio) return;
+    radio.dispatchEvent(new window.Event('input', { bubbles: true }));
+    radio.dispatchEvent(new window.Event('change', { bubbles: true }));
+  };
+};
+
+const fireLostCapture = (elem: Element, pointerId: number) => {
+  elem.dispatchEvent(
+    Object.assign(new window.Event('lostpointercapture', { bubbles: true }), { pointerId })
+  );
+};
+
 /**
  * Stubs `document`, `window` and the element classes the kit uses with a linkedom page that has
- * the browser's event order (capture, target, bubble) and focus (see `shimFocus`), for the kit's
- * tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
+ * the browser's event order (capture, target, bubble), focus (see `shimFocus`), the form
+ * controls the fields use (see `shimFormControls`) and open shadow roots (a composed event's path
+ * goes from the root to its host, its `target` and `relatedTarget` retargeted to the host for a
+ * listener outside; `document.activeElement` is the host of a focused element in one, the root's
+ * `activeElement` the element; the global `CustomEvent` is linkedom's, for a library's events),
+ * for the kit's tests. Call it in `beforeAll` (an import isn't there yet in `vi.hoisted`), before the module
  * under test adds a listener.
  * @internal
  * @param html the page (default: an empty body with a `#hudSlot` for `createHudRoot`)
@@ -177,11 +440,15 @@ export const stubKitDomAsync = async (
   if (!proto) throw new Error('stubKitDomAsync: no EventTarget in linkedom’s document');
   patchEventTarget(proto as EventTarget);
   shimFocus(document as unknown as Document, window as unknown as Window & typeof globalThis);
+  shimFormControls(window as unknown as Window & typeof globalThis);
+  pointerCaptures.clear();
   Object.assign(window, { innerWidth: 1280, innerHeight: 720 });
   vi.stubGlobal('document', document);
   vi.stubGlobal('window', window);
   vi.stubGlobal('HTMLElement', window.HTMLElement);
   vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
+  // Node's own has a read-only `target`, which the dispatch above sets (a library's events)
+  vi.stubGlobal('CustomEvent', window.CustomEvent);
   // A frame is a 16 ms timer, so a test's fake timers run it (`vi.advanceTimersByTime`)
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) =>
     setTimeout(() => fn(Date.now()), 16)
@@ -211,6 +478,8 @@ export const dispatchKey = (
   init: KitKeyInit = {}
 ) => {
   const event = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+    // A browser's key and pointer events cross a shadow root to its host
+    composed: true,
     key,
     shiftKey: false,
     ctrlKey: false,
@@ -221,6 +490,63 @@ export const dispatchKey = (
   });
   target.dispatchEvent(event);
   return event as unknown as KeyboardEvent;
+};
+
+/** What a pointer event carries (linkedom has no `PointerEvent` or `MouseEvent`) */
+export type KitPointerInit = KitKeyInit & {
+  pointerId?: number;
+  /** The button pressed (0 primary) */
+  button?: number;
+  clientX?: number;
+  clientY?: number;
+};
+
+/**
+ * Dispatches a pointer event at `target`, bubbling and cancelable like a browser's. A pointer an
+ * element captured goes to that element (`setPointerCapture`), and `pointerup` / `pointercancel`
+ * release its capture after the event (`lostpointercapture`), as a browser does.
+ * @internal
+ * @returns the event, to read `defaultPrevented`
+ */
+export const dispatchPointer = (
+  target: EventTarget,
+  type:
+    | 'pointerdown'
+    | 'pointermove'
+    | 'pointerup'
+    | 'pointercancel'
+    | 'pointerenter'
+    | 'pointerleave'
+    | 'click',
+  init: KitPointerInit = {}
+) => {
+  const pointerId = init.pointerId ?? 1;
+  const event = Object.assign(new window.Event(type, { bubbles: true, cancelable: true }), {
+    // A browser's key and pointer events cross a shadow root to its host
+    composed: true,
+    pointerId,
+    pointerType: 'mouse',
+    isPrimary: true,
+    button: 0,
+    buttons: type === 'pointerup' || type === 'click' ? 0 : 1,
+    clientX: 0,
+    clientY: 0,
+    shiftKey: false,
+    ctrlKey: false,
+    altKey: false,
+    metaKey: false,
+    ...init,
+  });
+  const captured = type === 'click' ? undefined : pointerCaptures.get(pointerId);
+  (captured ?? target).dispatchEvent(event);
+  if (type === 'pointerup' || type === 'pointercancel') {
+    const holder = pointerCaptures.get(pointerId);
+    if (holder) {
+      pointerCaptures.delete(pointerId);
+      fireLostCapture(holder, pointerId);
+    }
+  }
+  return event as unknown as PointerEvent;
 };
 
 /**

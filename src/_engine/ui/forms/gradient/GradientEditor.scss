@@ -1,0 +1,157 @@
+// The gradient editor's styles (GradientEditor.ts), on the design tokens and layered (p803 D5): the
+// track (inset by half a handle, so a handle at an end stays inside it) with the bar, the gradient
+// (the inline `--aek-gradient-editor-value`) over the colour field's checkerboard, and the lane
+// under it with a handle per stop: a 24 px target with its stop's colour in a chip and a notch up
+// to the bar, the selected one ringed in the accent. The row under it holds the position's box,
+// the colour's parts (ColorField.scss) and the add and remove buttons.
+@layer aek.components {
+  :where(.aekGradientEditor) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekGradientEditor__track) {
+    position: relative;
+    display: block;
+    padding: 0 12px;
+    cursor: copy;
+    // The drag is the editor's, not the page's scroll or a text selection
+    touch-action: none;
+    user-select: none;
+  }
+
+  :where(.aekGradientEditor__bar) {
+    display: block;
+    box-sizing: border-box;
+    height: var(--aek-gradient-editor-bar-height, 24px);
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background:
+      var(--aek-gradient-editor-value, none),
+      repeating-conic-gradient(
+          var(--aek-color-field-checker, var(--aek-border-strong)) 0 25%,
+          var(--aek-surface) 0 50%
+        )
+        0 0 / 8px 8px;
+  }
+
+  :where(.aekGradientEditor__bar[data-flash]) {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+  }
+
+  :where(.aekField[data-invalid] .aekGradientEditor__bar) {
+    border-color: var(--aek-danger);
+  }
+
+  :where(.aekGradientEditor__stops) {
+    position: relative;
+    display: block;
+    height: 24px;
+  }
+
+  :where(.aekGradientEditor__stop) {
+    position: absolute;
+    top: 0;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    border-radius: var(--aek-radius-sm);
+    cursor: grab;
+  }
+
+  :where(.aekGradientEditor__track[data-dragging] .aekGradientEditor__stop) {
+    cursor: grabbing;
+  }
+
+  // The notch up to the bar, then the chip: the stop's colour over the checkerboard
+  :where(.aekGradientEditor__stop)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 6px;
+    margin-left: -1px;
+    background-color: var(--aek-border-strong);
+  }
+
+  :where(.aekGradientEditor__stop)::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 4px;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--aek-surface);
+    border-radius: var(--aek-radius-sm);
+    background:
+      linear-gradient(var(--aek-color-field-value), var(--aek-color-field-value)),
+      repeating-conic-gradient(
+          var(--aek-color-field-checker, var(--aek-border-strong)) 0 25%,
+          var(--aek-surface) 0 50%
+        )
+        0 0 / 6px 6px;
+    box-shadow: 0 0 0 1px var(--aek-border-strong);
+  }
+
+  :where(.aekGradientEditor__stop[data-selected])::before {
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekGradientEditor__stop[data-selected])::after {
+    box-shadow: 0 0 0 2px var(--aek-accent);
+  }
+
+  :where(.aekField[data-disabled] .aekGradientEditor__track) {
+    cursor: default;
+  }
+
+  :where(.aekField[data-disabled] .aekGradientEditor__bar),
+  :where(.aekField[data-disabled] .aekGradientEditor__stop)::after {
+    opacity: 0.5;
+  }
+
+  :where(.aekField[data-disabled] .aekGradientEditor__stop) {
+    cursor: default;
+  }
+
+  // Disabled, the selection is no accent
+  :where(.aekField[data-disabled] .aekGradientEditor__stop[data-selected])::before {
+    background-color: var(--aek-border-strong);
+  }
+
+  :where(.aekField[data-disabled] .aekGradientEditor__stop[data-selected])::after {
+    box-shadow: 0 0 0 1px var(--aek-border-strong);
+  }
+
+  :where(.aekGradientEditor__row) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekGradientEditor__position) {
+    display: flex;
+    flex: 0 1 5em;
+    min-width: 4em;
+  }
+
+  // The colour's parts share the row with the position and the buttons
+  :where(.aekGradientEditor__row) > :where(.aekColorField) {
+    flex: 1 1 9em;
+  }
+
+  // At the 24 px target size (WCAG 2.5.8) in every density
+  :where(.aekGradientEditor__add, .aekGradientEditor__remove) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+}

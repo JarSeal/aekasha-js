@@ -10,7 +10,7 @@ navigation is a real link). `size` is `sm`, `md` or `lg`.
 const save: Button = createButton({
   label: 'Save',
   variant: 'primary',
-  kbd: 'Ctrl+S', // a hint and aria-keyshortcuts; binding the key is yours
+  kbd: createKbd({ keys: 'Ctrl+S' }), // a hint and aria-keyshortcuts; binding the key is yours
   onClick: () => {
     save.setLoading(true); // the width kept, a spinner, aria-busy, clicks ignored
     saveGameAsync().finally(() => save.setLoading(false));
@@ -30,6 +30,8 @@ createButton({
   variant: 'danger',
   holdToConfirmMs: 800,
   onClick: deleteSave,
+  // A click with no press (a screen reader's browse mode) can't hold: confirm another way
+  onUnheldClick: () => openDeleteDialog(),
 });
 ```
 
@@ -37,10 +39,15 @@ createButton({
 :::
 
 - A hold to confirm fills across the button while it's held, and an early release cancels. Under
-  reduced motion the fill steps instead of sliding: it's information, so it still shows. It
-  ignores a click without a press, which is how some screen readers activate a button in their
-  browse mode, so give such an action another way too (a confirmation
-  [dialog](hub:features/ui-kit/overlays#dialogs)).
+  reduced motion the fill steps instead of sliding: it's information, so it still shows. A click
+  without a press, which is how some screen readers activate a button in their browse mode,
+  can't hold: it calls `onUnheldClick`, where you confirm another way (a confirmation
+  [dialog](hub:features/ui-kit/overlays#dialogs)). Without it, such a click does nothing.
+- `kbd` takes a [key hint](#key-hints-and-input-glyphs) you make with `createKbd`: the button
+  draws it after the label, names its keys in `aria-keyshortcuts` (a later `setKeys` included)
+  and removes it with itself. A button without one carries none of the hint's code. A string
+  (`kbd: 'Ctrl+S'`) still works, deprecated until engine 6.0.0: the button loads the hint's code
+  for it, so the hint appears a frame later.
 - `tooltip` adds a tooltip; an `iconOnly` button gets its label as one.
 - An action with variants is a split button: see
   [menus and split buttons](hub:features/ui-kit/overlays#menus-and-split-buttons).
@@ -150,7 +157,8 @@ are shown with "or". On macOS the modifiers are symbols (⌘ ⇧ ⌥ ⌃), and a
 words ("Command+Shift+P"). [`createInputGlyph`](api:createInputGlyph) draws one input for a
 prompt: a key cap, or a mouse with the button, the wheel or its movement in the accent. It takes
 an action map binding's shape, so a binding goes in as it is. Both are sized in `em`, so they
-follow their text, and both are display only: binding the key is the app's.
+follow their text, and both are display only: binding the key is the app's. A button's or a menu
+item's `kbd` takes the hint's handle, and names its keys in `aria-keyshortcuts`.
 
 ```ts
 const hint = panel.add({ tag: 'p', text: 'Command palette: ' });
@@ -351,5 +359,7 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
 ## Read more
 
 - [The UI kit](hub:features/ui-kit): components, the HUD root, styling.
+- [Forms and fields](hub:features/ui-kit/forms): the fields a settings menu or a panel is built
+  from.
 - [Windows and overlays](hub:features/ui-kit/overlays): what opens over the HUD.
 - [The component library](hub:features/ui-kit/library): every piece in every state.

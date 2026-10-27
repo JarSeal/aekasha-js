@@ -1,0 +1,44 @@
+// The fieldset's default styles (Fieldset.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). No box around it: a section's
+// heading (the legend, in the text colour and the semibold weight) over its hint and its fields.
+// The browser's own fieldset styles (its border, padding and `min-inline-size: min-content`) are
+// undone, so a long field doesn't widen it. Its custom property: `--aek-fieldset-gap`.
+@layer aek.components {
+  :where(.aekFieldset) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekFieldset__legend) {
+    // A legend is laid out apart from the flex box: a float puts it in the flow
+    float: left;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekFieldset__hint) {
+    margin: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekFieldset__content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-fieldset-gap, var(--aek-space-4));
+    min-width: 0;
+  }
+}

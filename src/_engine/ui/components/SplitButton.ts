@@ -2,6 +2,7 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { createMenu, type Menu, type MenuItem } from '../overlays/Menu';
 import { createButton, type Button } from './Button';
+import type { Kbd } from './Kbd';
 import './Button.scss';
 import '../styles/kit.scss';
 
@@ -22,8 +23,9 @@ export type SplitButtonProps = {
   size?: 'sm' | 'md' | 'lg';
   /** Raw HTML of the action's icon (`getSvgIcon('fileCode')`). */
   icon?: string;
-  /** The action's shortcut's hint (`'Ctrl+S'`). */
-  kbd?: string;
+  /** The action's shortcut's hint (`createKbd({ keys: 'Ctrl+S' })`), as the button's `kbd`; a
+   * string is deprecated (removed in engine 6.0.0). */
+  kbd?: Kbd | string;
   /** Disables both buttons (default false). */
   disabled?: boolean;
   /** Extra classes for the group. */

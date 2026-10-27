@@ -16,29 +16,53 @@
  * app's content is the app's; everything else is the kit's.
  */
 import {
+  addPropertyGridItems,
   addToast,
   closeDraggableWindow,
   CMP,
   createBadge,
+  createBindingScheduler,
   createButton,
   createButtonGroup,
+  createCheckbox,
+  createColorField,
   createDivider,
+  createAngleDial,
   createDropDown,
   createEmptyState,
+  createFieldset,
+  createFolder,
+  createForm,
+  createCurveEditor,
+  createGradientEditor,
   createHudRoot,
   createInputGlyph,
   createKbd,
   createLink,
   createLoadingOverlay,
   createMenu,
+  createMonitor,
+  createNumberField,
+  createPad2D,
   createPopover,
   createProgressBar,
+  createQuaternionField,
+  createPropertyGrid,
+  createRadioGroup,
+  createRangeSlider,
+  createRotationField,
+  createSegmentedControl,
+  createSelectField,
   createSkeleton,
+  createSlider,
   createSpinner,
   createSplitButton,
+  createSwitch,
   createTag,
+  createTextField,
   createToaster,
   createTooltip,
+  createVectorField,
   fitAllDraggableWindowsToScreen,
   getDraggableWindowsOfKind,
   getHUDRootCMP,
@@ -49,16 +73,30 @@ import {
   registerBuiltInIcons,
   registerDraggableWindowKind,
   removeDraggableWindow,
+  setRecentColors,
   toggleDraggableWindow,
+  evaluateGradient,
+  evaluateCurve,
 } from 'aekasha/ui';
 import type {
+  BindingScheduler,
   BuiltInIconName,
   Button,
   ButtonProps,
   DialogProps,
   DropDownProps,
+  Field,
   InputGlyphInput,
+  MonitorProps,
+  NumberFieldProps,
+  RadioGroupProps,
+  RangeSliderProps,
+  SegmentedControlProps,
+  SelectValue,
+  SliderProps,
+  TextFieldProps,
   OpenDraggableWindowProps,
+  PropertyGridItem,
   ProgressBarProps,
   CMPHandle,
   Tooltip,
@@ -277,7 +315,7 @@ const DIALOG_STATES: DialogState[] = [
   {
     label: 'With a drop-down',
     props: { closeOnEscape: true },
-    text: 'A drop-down in a dialog, as the uiKit embed opens it. Open its list and press Escape: the first press closes the list, the next the dialog.',
+    text: 'A drop-down in a dialog, as the uiKit embed’s form has one. Open its list and press Escape: the first press closes the list, the next the dialog.',
     hasDropDown: true,
   },
   {
@@ -400,6 +438,2075 @@ const initDropDownDemo: Demo = (box) => {
       removeOnClose: true,
       content: createDropDownPanel,
     });
+  });
+};
+
+// --- Number field ---
+
+const NUMBER_ID = (name: string) => `${ID_PREFIX}Number${name}`;
+
+/** In the page: the fields draw in their rows, bound to one object, and each write shows in the
+ * box's status line; a kit button changes the speed from outside, which the next refresh flashes */
+const initNumberFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = NUMBER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = { speed: 1.5, heading: 90, volume: 0.8, size: 4, limit: 12 };
+  const scheduler = createBindingScheduler();
+  const make = (name: string, props: Partial<NumberFieldProps>) => {
+    const field = createNumberField({
+      id: NUMBER_ID(name),
+      label: name,
+      target: settings,
+      key: name.toLowerCase(),
+      scheduler,
+      onChange: (value, { last, source }) => {
+        status.textContent = `${name}: ${value} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as NumberFieldProps);
+    return field;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+
+  row(
+    'A step, a minimum and a unit; a hint',
+    make('Speed', { min: 0, step: 0.1, unit: 'm/s', hint: 'Drag the label, or type 3 * 0.5' }).cmp
+      .elem
+  );
+  row(
+    'An angle that wraps at ±180, typed in deg or rad',
+    make('Heading', {
+      min: -180,
+      max: 180,
+      step: 15,
+      wrap: true,
+      unit: '°',
+      expressionUnits: { deg: 1, rad: 180 / Math.PI },
+    }).cmp.elem
+  );
+  row(
+    'Formatted as a percent, typed with %',
+    make('Volume', {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      format: (value) => `${Math.round(value * 100)} %`,
+      expressionUnits: { '%': 0.01 },
+    }).cmp.elem
+  );
+  row('Live: each valid keystroke writes', make('Size', { step: 1, live: true }).cmp.elem);
+  const limit = make('Limit', { step: 1, max: 20 });
+  limit.setError('Must be below 10');
+  const disabled = make('Disabled', { target: settings, key: 'speed', disabled: true });
+  row('An error, and disabled', limit.cmp.elem, disabled.cmp.elem);
+  const outside = createButton({
+    id: NUMBER_ID('Outside'),
+    label: 'Change the speed from outside',
+    onClick: () => {
+      settings.speed = Math.round((settings.speed + 1) * 10) / 10;
+      // What a host's refresh does: the field flashes the value it didn't write
+      scheduler.refresh();
+    },
+  });
+  row('A change from outside, then the scheduler’s refresh()', outside.cmp.elem);
+  root.append(status);
+};
+
+// --- Number field stress (the dev page's: p804 D14's perf pass) ---
+
+const STRESS_COUNT = 200;
+/** The frames the readout averages: about 2 s at 60 Hz */
+const STRESS_FRAMES = 120;
+
+/** A field the stress boxes make: the `index`th, bound to `target.value`, with `interval: 0` */
+type StressField = (
+  index: number,
+  target: { value: number },
+  scheduler: BindingScheduler
+) => Field<number>;
+
+/** 200 fields of one kind with `interval: 0` in one scheduler, bound to values that change every
+ * frame or stay: the tick's cost, read from the frame times in the readout or a profile */
+const createStressDemo =
+  (name: string, makeField: StressField): Demo =>
+  (box) => {
+    const controls = addGroup(box, 'Run');
+    const root = addKitRoot(box);
+    const readout = document.createElement('p');
+    readout.id = `${ID_PREFIX}${name}Readout`;
+    readout.className = 'hubDemoLine';
+    readout.textContent = 'Stopped';
+    root.append(readout);
+    const values = Array.from({ length: STRESS_COUNT }, (_, i) => ({ value: i / 100 }));
+    const scheduler = createBindingScheduler({ visible: false });
+    const grid = document.createElement('div');
+    grid.className = 'hubDemoStressGrid';
+    for (let i = 0; i < STRESS_COUNT; i++) {
+      grid.append(makeField(i, values[i], scheduler).cmp.elem);
+    }
+    root.append(grid);
+
+    let isChanging = false;
+    let frame: number | null = null;
+    const deltas = new Float64Array(STRESS_FRAMES);
+    let count = 0;
+    let last = 0;
+    let lastReadout = 0;
+    const loop = (now: number) => {
+      frame = requestAnimationFrame(loop);
+      if (isChanging) {
+        for (let i = 0; i < STRESS_COUNT; i++) {
+          values[i].value = Math.round(Math.sin(now / 500 + i) * 10000) / 100;
+        }
+      }
+      if (last) deltas[count++ % STRESS_FRAMES] = now - last;
+      last = now;
+      if (now - lastReadout < 500 || count < STRESS_FRAMES) return;
+      lastReadout = now;
+      let sum = 0;
+      let worst = 0;
+      for (let i = 0; i < STRESS_FRAMES; i++) {
+        sum += deltas[i];
+        worst = Math.max(worst, deltas[i]);
+      }
+      readout.textContent = `${isChanging ? 'Changing' : 'Steady'}: frames ${(sum / STRESS_FRAMES).toFixed(1)} ms on average, ${worst.toFixed(1)} ms at worst (last ${STRESS_FRAMES})`;
+    };
+    const run = (changing: boolean) => {
+      isChanging = changing;
+      count = 0;
+      last = 0;
+      scheduler.setVisible(true);
+      if (frame === null) frame = requestAnimationFrame(loop);
+    };
+    addButton(controls, 'Values change every frame', () => run(true));
+    addButton(controls, 'Values stay', () => run(false));
+    addButton(controls, 'Stop', () => {
+      scheduler.setVisible(false);
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      readout.textContent = 'Stopped';
+    });
+  };
+
+const initNumberFieldStressDemo = createStressDemo('Stress', (i, target, scheduler) =>
+  createNumberField({
+    label: `Value ${i + 1}`,
+    target,
+    key: 'value',
+    step: 0.01,
+    interval: 0,
+    scheduler,
+  })
+);
+
+// --- Slider ---
+
+const SLIDER_ID = (name: string) => `${ID_PREFIX}Slider${name}`;
+const QUALITY_NAMES = ['Low', 'Medium', 'High', 'Ultra', 'Max'];
+
+/** In the page: sliders with the spin button (a format, labelled ticks), one without it (the
+ * thumb is the slider) and a disabled one, bound to one object; each write in the status line */
+const initSliderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = SLIDER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = { volume: 0.8, fov: 75, quality: 2, gamma: 2.2 };
+  const make = (name: string, key: keyof typeof settings, props: Partial<SliderProps>) =>
+    createSlider({
+      id: SLIDER_ID(name),
+      label: name,
+      target: settings,
+      key,
+      onChange: (value, { last, source }) => {
+        const text = key === 'quality' ? QUALITY_NAMES[value] : value;
+        status.textContent = `${name}: ${text} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as SliderProps);
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoSliders');
+    group.append(...elems);
+  };
+
+  row(
+    'A step and a format, typed with %',
+    make('Volume', 'volume', {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      format: (value) => `${Math.round(value * 100)} %`,
+      expressionUnits: { '%': 0.01 },
+    }).cmp.elem
+  );
+  row(
+    'A unit and labelled ticks',
+    make('Field of view', 'fov', {
+      id: SLIDER_ID('Fov'),
+      min: 30,
+      max: 120,
+      step: 1,
+      unit: '°',
+      ticks: [
+        { value: 30, label: '30°' },
+        { value: 60, label: '60°' },
+        { value: 90, label: '90°' },
+        { value: 120, label: '120°' },
+      ],
+    }).cmp.elem
+  );
+  row(
+    'Without the input: the thumb is the slider, five ticks',
+    make('Quality', 'quality', {
+      min: 0,
+      max: 4,
+      step: 1,
+      showInput: false,
+      ticks: 5,
+      format: (value) => QUALITY_NAMES[value] ?? String(value),
+      hint: 'Drag, or use the arrow keys',
+    }).cmp.elem
+  );
+  row('Disabled', make('Gamma', 'gamma', { min: 1, max: 3, step: 0.1, disabled: true }).cmp.elem);
+  root.append(status);
+};
+
+// --- Range slider ---
+
+const RANGE_ID = (name: string) => `${ID_PREFIX}Range${name}`;
+/** How many items each 20 € of the price range holds: the price slider's histogram */
+const PRICE_COUNTS = [
+  3, 6, 11, 17, 24, 28, 25, 19, 14, 12, 15, 18, 13, 8, 5, 4, 6, 7, 4, 2, 1, 2, 1, 1, 0,
+];
+
+/** In the page: a price range with a histogram and a gap, a span of years with labelled ticks,
+ * an altitude band with its spin buttons, and a disabled one, bound to one object; each write in
+ * the status line */
+const initRangeSliderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = RANGE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const filters = {
+    price: { min: 100, max: 350 },
+    years: { min: 2000, max: 2020 },
+    altitude: { min: 1500, max: 6000 },
+    depth: { min: 2, max: 6 },
+  };
+  const make = (name: string, key: keyof typeof filters, props: Partial<RangeSliderProps>) =>
+    createRangeSlider({
+      id: RANGE_ID(name),
+      label: name,
+      target: filters,
+      key,
+      onChange: (value, { last, source }) => {
+        status.textContent = `${name}: ${value.min}–${value.max} (${last ? 'last' : 'step'}, ${source})`;
+      },
+      ...props,
+    } as RangeSliderProps);
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoSliders');
+    group.append(...elems);
+  };
+
+  row(
+    'A histogram, and a gap of 50 € the thumbs keep',
+    make('Price', 'price', {
+      min: 0,
+      max: 500,
+      step: 10,
+      minGap: 50,
+      unit: '€',
+      histogram: PRICE_COUNTS,
+      hint: 'Drag the bar between the thumbs to move both',
+    }).cmp.elem
+  );
+  row(
+    'Labelled ticks; the thumbs may meet',
+    make('Years', 'years', {
+      min: 1990,
+      max: 2030,
+      step: 1,
+      ticks: [1990, 2000, 2010, 2020, 2030].map((year) => ({ value: year, label: String(year) })),
+    }).cmp.elem
+  );
+  const altitude = make('Altitude', 'altitude', {
+    min: 0,
+    max: 9000,
+    step: 100,
+    minGap: 500,
+    unit: 'm',
+    showInputs: true,
+    expressionUnits: { km: 1000 },
+    hint: 'Type an exact value (2.5km works), or drag',
+  }).cmp.elem;
+  altitude.classList.add('hubDemoRangeInputs');
+  row('With spin buttons: exact values typed, the track for the pointer', altitude);
+  row(
+    'Disabled',
+    make('Depth', 'depth', { min: 0, max: 10, step: 1, unit: 'm', disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Radio group and segmented control ---
+
+const RADIO_ID = (name: string) => `${ID_PREFIX}Radio${name}`;
+
+/** In the page: radio groups (a column with a hint, a row with a disabled option), segmented
+ * controls (text filling the width, icons alone) and disabled ones, bound to one object; each pick
+ * in the box's status line */
+const initRadioGroupDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = RADIO_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = {
+    difficulty: 'normal',
+    shadows: 'low',
+    camera: 'orbit',
+    simulation: 'play',
+    quality: 'high',
+  };
+  type Key = keyof typeof settings;
+  const report = (label: string) => (value: string) => {
+    status.textContent = `${label}: ${value}`;
+  };
+  const options = (...labels: string[]) =>
+    labels.map((label) => ({ value: label.toLowerCase(), label }));
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields', 'hubDemoChoices');
+    group.append(...elems);
+  };
+  const radios = (label: string, key: Key, props: Partial<RadioGroupProps<string>> = {}) =>
+    createRadioGroup({
+      id: RADIO_ID(label),
+      label,
+      target: settings,
+      key,
+      options: options('Easy', 'Normal', 'Hard'),
+      onChange: report(label),
+      ...props,
+    } as RadioGroupProps<string>).cmp.elem;
+  const segments = (label: string, key: Key, props: Partial<SegmentedControlProps<string>>) =>
+    createSegmentedControl({
+      id: RADIO_ID(label),
+      label,
+      target: settings,
+      key,
+      options: [],
+      onChange: report(label),
+      ...props,
+    } as SegmentedControlProps<string>).cmp.elem;
+
+  row(
+    'A radio group: a column, with a hint',
+    radios('Difficulty', 'difficulty', { hint: 'Changes how hard the enemies hit' })
+  );
+  row(
+    'A row; one option disabled',
+    radios('Shadows', 'shadows', {
+      orientation: 'horizontal',
+      options: [
+        ...options('Off', 'Low', 'High'),
+        { value: 'ultra', label: 'Ultra', disabled: true },
+      ],
+    })
+  );
+  row(
+    'A segmented control: text, filling the width',
+    segments('Camera', 'camera', { options: options('Orbit', 'Follow', 'Free'), fill: true })
+  );
+  row(
+    'Icons alone: their names in tooltips',
+    segments('Simulation', 'simulation', {
+      options: [
+        { value: 'play', label: 'Play', icon: getSvgIcon('playFill'), iconOnly: true },
+        { value: 'pause', label: 'Pause', icon: getSvgIcon('pause'), iconOnly: true },
+        { value: 'stop', label: 'Stop', icon: getSvgIcon('stop'), iconOnly: true },
+      ],
+    })
+  );
+  row(
+    'Disabled',
+    radios('Mode', 'difficulty', { disabled: true, orientation: 'horizontal' }),
+    segments('Quality', 'quality', { options: options('Low', 'High'), disabled: true })
+  );
+  root.append(status);
+};
+
+// --- Select field ---
+
+const SELECT_ID = (name: string) => `${ID_PREFIX}Select${name}`;
+const SPAWN_POINTS = ['Harbour', 'Lighthouse', 'Mill', 'Quarry', 'Ridge', 'Square', 'Tower'];
+
+/** In the page: select fields in Tweakpane's two option forms, a searchable one over a getter's
+ * list that a kit button grows, the placeholder, an error and disabled, bound to one object; each
+ * pick in the box's status line */
+const initSelectFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = SELECT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const settings = {
+    shadowMap: 1024,
+    toneMapping: 'aces',
+    spawn: 'mill',
+    material: 'missing',
+    preset: 'medium',
+  };
+  const report = (label: string) => (value: SelectValue) => {
+    status.textContent = `${label}: ${value}`;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const spawnPoints = [...SPAWN_POINTS];
+
+  row(
+    'Tweakpane’s object form: number values',
+    createSelectField({
+      id: SELECT_ID('ShadowMap'),
+      label: 'Shadow map',
+      target: settings,
+      key: 'shadowMap',
+      options: { '512': 512, '1024': 1024, '2048': 2048, '4096': 4096 },
+      onChange: report('Shadow map'),
+    }).cmp.elem
+  );
+  row(
+    'The array form, with a hint',
+    createSelectField({
+      id: SELECT_ID('ToneMapping'),
+      label: 'Tone mapping',
+      target: settings,
+      key: 'toneMapping',
+      options: [
+        { text: 'None', value: 'none' },
+        { text: 'Linear', value: 'linear' },
+        { text: 'ACES Filmic', value: 'aces' },
+        { text: 'AgX', value: 'agx' },
+      ],
+      hint: 'How the HDR image is mapped to the screen',
+      onChange: report('Tone mapping'),
+    }).cmp.elem
+  );
+  const spawn = createSelectField({
+    id: SELECT_ID('Spawn'),
+    label: 'Spawn point',
+    target: settings,
+    key: 'spawn',
+    options: () => spawnPoints.map((name) => ({ text: name, value: name.toLowerCase() })),
+    searchable: true,
+    searchPlaceholder: 'Filter places',
+    onChange: report('Spawn point'),
+  });
+  const add = createButton({
+    id: SELECT_ID('Add'),
+    label: 'Add a place, then refresh()',
+    onClick: () => {
+      spawnPoints.push(`Camp ${spawnPoints.length - SPAWN_POINTS.length + 1}`);
+      spawn.refresh();
+    },
+  });
+  row('Searchable, its options a getter’s', spawn.cmp.elem, add.cmp.elem);
+  row(
+    'A value no option has: the placeholder',
+    createSelectField({
+      label: 'Material',
+      target: settings,
+      key: 'material',
+      options: { Metal: 'metal', Wood: 'wood' },
+      placeholder: 'Pick a material',
+      onChange: report('Material'),
+    }).cmp.elem
+  );
+  const invalid = createSelectField({
+    label: 'Preset',
+    target: settings,
+    key: 'preset',
+    options: { Low: 'low', Medium: 'medium', High: 'high' },
+  });
+  invalid.setError('Not supported on this device');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createSelectField({
+      label: 'Locked',
+      value: 'medium',
+      options: { Low: 'low', Medium: 'medium' },
+      disabled: true,
+    }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Text field ---
+
+const TEXT_ID = (name: string) => `${ID_PREFIX}Text${name}`;
+const SEARCH_WORDS = ['Asteroid', 'Comet', 'Galaxy', 'Meteor', 'Moon', 'Nebula', 'Planet', 'Star'];
+
+/** In the page: the fields bound to one object, each write in the box's status line; the search
+ * field filters a list of words as you type */
+const initTextFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TEXT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const profile = {
+    name: 'Ada',
+    title: 'Pilot',
+    notes: 'Line one\nLine two',
+    query: '',
+    code: 'x',
+  };
+  const report = (label: string) => (value: string, change: { last: boolean }) => {
+    status.textContent = `${label}: "${value.replace(/\n/g, ' / ')}" (${change.last ? 'last' : 'step'})`;
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+    return group;
+  };
+  const make = (name: string, key: keyof typeof profile, props: Partial<TextFieldProps> = {}) =>
+    createTextField({
+      id: TEXT_ID(name),
+      label: name,
+      target: profile,
+      key,
+      onChange: report(name),
+      ...props,
+    } as TextFieldProps).cmp.elem;
+
+  row(
+    'Written on Enter or a blur; a hint and a maximum length',
+    make('Name', 'name', {
+      hint: 'Up to 24 characters',
+      maxLength: 24,
+    })
+  );
+  row('Live: each keystroke writes', make('Title', 'title', { live: true }));
+  row(
+    'Multiline (4 rows): Ctrl/⌘+Enter or a blur writes',
+    make('Notes', 'notes', {
+      multiline: true,
+      rows: 4,
+    })
+  );
+  const results = document.createElement('p');
+  results.id = TEXT_ID('Results');
+  // Under the field, across the row
+  results.className = 'hubDemoLine hubDemoFieldNote';
+  const showResults = (query: string) => {
+    const matches = SEARCH_WORDS.filter((word) => word.toLowerCase().includes(query.toLowerCase()));
+    results.textContent = `${matches.length} of ${SEARCH_WORDS.length}: ${matches.join(', ') || 'none'}`;
+  };
+  showResults('');
+  row(
+    'Search: the list filters 250 ms after typing, at once on Enter or a clear',
+    make('Search', 'query', {
+      type: 'search',
+      labelHidden: true,
+      placeholder: 'Filter the words',
+      onSearch: showResults,
+    }),
+    results
+  );
+  const code = createTextField({
+    id: TEXT_ID('Code'),
+    label: 'Code',
+    target: profile,
+    key: 'code',
+    onChange: report('Code'),
+  });
+  code.setError('Codes are 6 characters');
+  const disabled = createTextField({
+    id: TEXT_ID('Disabled'),
+    label: 'Disabled',
+    value: 'Read me',
+    disabled: true,
+  });
+  row('An error, and disabled', code.cmp.elem, disabled.cmp.elem);
+  root.append(status);
+};
+
+// --- Checkbox and switch ---
+
+const TOGGLE_ID = (name: string) => `${ID_PREFIX}Toggle${name}`;
+
+/** In the page: checkboxes (a mixed one over three), switches and disabled ones, each write in
+ * the box's status line */
+const initCheckboxDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TOGGLE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (on: boolean) => {
+    status.textContent = `${label}: ${on ? 'on' : 'off'}`;
+  };
+  const settings = { shadows: true, fog: false, vsync: true, music: false };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+
+  row(
+    'Checkboxes',
+    createCheckbox({
+      id: TOGGLE_ID('Shadows'),
+      label: 'Shadows',
+      target: settings,
+      key: 'shadows',
+      onChange: report('Shadows'),
+    }).cmp.elem,
+    createCheckbox({
+      id: TOGGLE_ID('Fog'),
+      label: 'Fog',
+      target: settings,
+      key: 'fog',
+      onChange: report('Fog'),
+    }).cmp.elem
+  );
+
+  // A mixed checkbox over three: it shows mixed while some are on, and sets them all
+  const layers = { terrain: true, water: false, clouds: true };
+  const names = Object.keys(layers) as (keyof typeof layers)[];
+  const count = () => names.filter((name) => layers[name]).length;
+  const children = names.map((name) =>
+    createCheckbox({
+      id: TOGGLE_ID(name),
+      label: name[0].toUpperCase() + name.slice(1),
+      target: layers,
+      key: name,
+      onChange: (on) => {
+        report(name)(on);
+        syncAll();
+      },
+    })
+  );
+  const all = createCheckbox({
+    id: TOGGLE_ID('All'),
+    label: 'All layers',
+    get: () => count() === names.length,
+    set: (on) => {
+      for (const name of names) layers[name] = on;
+      for (const child of children) child.refresh();
+    },
+    onChange: report('All layers'),
+  });
+  const syncAll = () => {
+    all.refresh();
+    all.setIndeterminate(count() > 0 && count() < names.length);
+  };
+  syncAll();
+  const nested = document.createElement('div');
+  nested.className = 'hubDemoNestedToggles';
+  nested.append(...children.map((child) => child.cmp.elem));
+  row('Mixed: “All layers” over three', all.cmp.elem, nested);
+
+  row(
+    'Switches: one with its state as text',
+    createSwitch({
+      id: TOGGLE_ID('Vsync'),
+      label: 'V-sync',
+      target: settings,
+      key: 'vsync',
+      onText: 'On',
+      offText: 'Off',
+      onChange: report('V-sync'),
+    }).cmp.elem,
+    createSwitch({
+      id: TOGGLE_ID('Music'),
+      label: 'Music',
+      target: settings,
+      key: 'music',
+      onChange: report('Music'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createCheckbox({ label: 'Checked, disabled', value: true, disabled: true }).cmp.elem,
+    createCheckbox({ label: 'Off, disabled', value: false, disabled: true }).cmp.elem,
+    createSwitch({ label: 'Switch, disabled', value: true, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Colour field ---
+
+const COLOR_ID = (name: string) => `${ID_PREFIX}Color${name}`;
+const COLOR_PALETTE = ['#9fb4c7', '#d7c4a3', '#3a4a5c', '#e07a5f', '#81b29a', '#f2cc8f'];
+
+/** In the page: colour fields in each of the three forms, each write in the box's status line; a
+ * kit button changes the sun from outside and refreshes (the flash); the recent colours seeded as
+ * an owner would restore them */
+const initColorFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = COLOR_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  /** A value as the status line says it: a number in hex, an object's floats to 3 decimals */
+  const sayColor = (value: unknown) => {
+    if (typeof value === 'number') return `0x${value.toString(16).padStart(6, '0')}`;
+    if (typeof value === 'object' && value) {
+      return Object.values(value as Record<string, number>)
+        .map((channel) => channel.toFixed(3))
+        .join(', ');
+    }
+    return String(value);
+  };
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    status.textContent = `${label}: ${sayColor(value)} (${change.last ? 'last' : 'step'})`;
+  };
+  setRecentColors(['#ffd166', '#06d6a0', '#118ab2']);
+  // A THREE.Color's shape: linear floats, written in place
+  const scene = { fog: 0x9fb4c7, tint: '#3fd8f280', sun: { r: 1, g: 0.6, b: 0.3 }, intensity: 3 };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+    return group;
+  };
+  const fog = createColorField({
+    id: COLOR_ID('Fog'),
+    label: 'Fog',
+    target: scene,
+    key: 'fog',
+    palette: COLOR_PALETTE,
+    hint: 'A 24-bit number, as getHex() gives',
+    scheduler,
+    onChange: report('Fog'),
+  });
+  const fogRow = row('A number, with a palette and the recent colours', fog.cmp.elem);
+  addButton(fogRow, 'The fog’s panel open', () =>
+    fog.cmp.elem.querySelector<HTMLElement>('.aekColorField__swatch')?.click()
+  );
+  const tint = createColorField({
+    id: COLOR_ID('Tint'),
+    label: 'Tint',
+    target: scene,
+    key: 'tint',
+    scheduler,
+    onChange: report('Tint'),
+  });
+  const tintRow = row('A hex string with alpha', tint.cmp.elem);
+  addButton(tintRow, 'The tint’s panel open', () =>
+    tint.cmp.elem.querySelector<HTMLElement>('.aekColorField__swatch')?.click()
+  );
+  const sun = createColorField({
+    id: COLOR_ID('Sun'),
+    label: 'Sun',
+    target: scene,
+    key: 'sun',
+    colorSpace: 'linear',
+    intensity: {
+      target: scene,
+      key: 'intensity',
+      min: 0,
+      step: 0.1,
+      onChange: (value, { last }) => {
+        status.textContent = `Intensity: ${value} (${last ? 'last' : 'step'})`;
+      },
+    },
+    scheduler,
+    onChange: report('Sun'),
+  });
+  const change = createButton({
+    id: COLOR_ID('Change'),
+    label: 'Change the sun from outside',
+    size: 'sm',
+    onClick: () => {
+      scene.sun = { r: 0.2, g: 0.4, b: 1 };
+      scene.intensity = 1.5;
+      scheduler.refresh();
+    },
+  });
+  row('Linear floats (a THREE.Color) with an intensity', sun.cmp.elem, change.cmp.elem);
+  const invalid = createColorField({ id: COLOR_ID('Invalid'), label: 'Accent', value: '#e07a5f' });
+  invalid.setError('Too close to the background');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createColorField({ label: 'Locked', value: 0x3a4a5c, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Vector field ---
+
+const VECTOR_ID = (name: string) => `${ID_PREFIX}Vector${name}`;
+
+/** In the page: vector fields bound to one object, each write in the box's status line; a kit
+ * button moves the position from outside and refreshes (the flash) */
+const initVectorFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = VECTOR_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    const axes = Array.isArray(value) ? value : Object.values(value as Record<string, number>);
+    status.textContent = `${label}: ${axes.join(', ')} (${change.last ? 'last' : 'step'})`;
+  };
+  // A mesh's shape: its position and scale, objects written in place
+  const mesh = {
+    position: { x: 1, y: 2, z: 3 },
+    scale: { x: 1, y: 1, z: 1 },
+    size: [1920, 1080],
+    quaternion: { x: 0, y: 0, z: 0, w: 1 },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const move = createButton({
+    id: VECTOR_ID('Move'),
+    label: 'Move it from outside',
+    size: 'sm',
+    onClick: () => {
+      mesh.position.x = -4;
+      mesh.position.z = 0.5;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'An { x, y, z } object, step 0.1',
+    createVectorField({
+      id: VECTOR_ID('Position'),
+      label: 'Position',
+      target: mesh,
+      key: 'position',
+      step: 0.1,
+      scheduler,
+      onChange: report('Position'),
+    }).cmp.elem,
+    move.cmp.elem
+  );
+  row(
+    'Linked: one axis scales the others',
+    createVectorField({
+      id: VECTOR_ID('Scale'),
+      label: 'Scale',
+      target: mesh,
+      key: 'scale',
+      min: 0.1,
+      step: 0.1,
+      linkable: true,
+      linked: true,
+      hint: 'The link toggle after the axes',
+      onChange: report('Scale'),
+    }).cmp.elem
+  );
+  row(
+    'An array, each axis named, with its own rules',
+    createVectorField({
+      id: VECTOR_ID('Size'),
+      label: 'Size',
+      target: mesh,
+      key: 'size',
+      step: 1,
+      unit: 'px',
+      axes: { x: { label: 'W', min: 1 }, y: { label: 'H', min: 1 } },
+      onChange: report('Size'),
+    }).cmp.elem
+  );
+  row(
+    'Four axes',
+    createVectorField({
+      id: VECTOR_ID('Raw'),
+      label: 'Raw quaternion',
+      target: mesh,
+      key: 'quaternion',
+      min: -1,
+      max: 1,
+      step: 0.01,
+      onChange: report('Raw quaternion'),
+    }).cmp.elem
+  );
+  const invalid = createVectorField({ id: VECTOR_ID('Invalid'), label: 'Spawn', value: [0, -50] });
+  invalid.setError('Below the level');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createVectorField({ label: 'Locked', value: { x: 1, y: 1 }, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Rotation and quaternion fields ---
+
+const ROTATION_ID = (name: string) => `${ID_PREFIX}Rotation${name}`;
+
+/** In the page: an Euler and quaternions in degrees, each write in the box's status line (the
+ * radians and components to 3 decimals); a kit button turns the facing from outside (the flash) */
+const initRotationFieldDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = ROTATION_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: unknown, change: { last: boolean }) => {
+    const parts = Object.values(value as Record<string, number | string>).map((part) =>
+      typeof part === 'number' ? part.toFixed(3) : part
+    );
+    status.textContent = `${label}: ${parts.join(', ')} (${change.last ? 'last' : 'step'})`;
+  };
+  // A mesh's shape: a THREE.Euler's and a THREE.Quaternion's, written in place
+  const body = {
+    rotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
+    facing: { x: 0, y: 0, z: 0, w: 1 },
+    spin: { x: 0, y: 0, z: 0, w: 1 },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  row(
+    'An Euler in degrees, its step π / 8 (Tweakpane’s), with its order',
+    createRotationField({
+      id: ROTATION_ID('Rotation'),
+      label: 'Rotation',
+      target: body,
+      key: 'rotation',
+      step: Math.PI / 8,
+      showOrder: true,
+      onChange: report('Rotation'),
+    }).cmp.elem
+  );
+  const turn = createButton({
+    id: ROTATION_ID('Turn'),
+    label: 'Turn it from outside',
+    size: 'sm',
+    onClick: () => {
+      // Half a turn about Y
+      body.facing = { x: 0, y: 1, z: 0, w: 0 };
+      scheduler.refresh();
+    },
+  });
+  row(
+    'A quaternion as Euler angles, its raw components under them',
+    createQuaternionField({
+      id: ROTATION_ID('Facing'),
+      label: 'Facing',
+      target: body,
+      key: 'facing',
+      showRaw: true,
+      scheduler,
+      onChange: report('Facing'),
+    }).cmp.elem,
+    turn.cmp.elem
+  );
+  row(
+    'A quaternion as an axis and an angle',
+    createQuaternionField({
+      id: ROTATION_ID('Spin'),
+      label: 'Spin',
+      target: body,
+      key: 'spin',
+      edit: 'axisAngle',
+      onChange: report('Spin'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createRotationField({
+      label: 'Locked',
+      value: { x: 0, y: Math.PI / 2, z: 0 },
+      disabled: true,
+    }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Angle dial ---
+
+const ANGLE_ID = (name: string) => `${ID_PREFIX}Angle${name}`;
+
+/** In the page: dials in radians and in degrees, each write in the box's status line (to 3
+ * decimals); a kit button turns the heading from outside (the flash) */
+const initAngleDialDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = ANGLE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: number, change: { last: boolean }) => {
+    status.textContent = `${label}: ${Number(value.toFixed(3))} (${change.last ? 'last' : 'step'})`;
+  };
+  // A body's yaw in radians, a sun's azimuth in degrees
+  const scene = { heading: Math.PI / 4, azimuth: 160, spin: 0, hatch: Math.PI / 6 };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const turn = createButton({
+    id: ANGLE_ID('Turn'),
+    label: 'Turn it from outside',
+    size: 'sm',
+    onClick: () => {
+      scene.heading = -Math.PI / 2;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'Radians, its step π / 8 (Tweakpane’s): 0 at the right, anticlockwise',
+    createAngleDial({
+      id: ANGLE_ID('Heading'),
+      label: 'Heading',
+      target: scene,
+      key: 'heading',
+      step: Math.PI / 8,
+      scheduler,
+      onChange: report('Heading'),
+    }).cmp.elem,
+    turn.cmp.elem
+  );
+  row(
+    'A compass in degrees, 0 to 360: 0 at the top, clockwise',
+    createAngleDial({
+      id: ANGLE_ID('Azimuth'),
+      label: 'Sun azimuth',
+      target: scene,
+      key: 'azimuth',
+      angleUnit: 'degrees',
+      min: 0,
+      max: 360,
+      convention: 'compass',
+      hint: 'Shift snaps a drag to 15°',
+      onChange: report('Sun azimuth'),
+    }).cmp.elem
+  );
+  row(
+    'Without the spin button: the dial is the slider',
+    createAngleDial({
+      id: ANGLE_ID('Spin'),
+      label: 'Spin',
+      target: scene,
+      key: 'spin',
+      showInput: false,
+      onChange: report('Spin'),
+    }).cmp.elem
+  );
+  row(
+    'Clamped to a quarter turn (no wrap)',
+    createAngleDial({
+      id: ANGLE_ID('Hatch'),
+      label: 'Hatch angle',
+      target: scene,
+      key: 'hatch',
+      min: 0,
+      max: Math.PI / 2,
+      wrap: false,
+      onChange: report('Hatch angle'),
+    }).cmp.elem
+  );
+  const invalid = createAngleDial({ label: 'Tilt', value: Math.PI / 3 });
+  invalid.setError('Steeper than the slope allows');
+  row(
+    'An error, and disabled',
+    invalid.cmp.elem,
+    createAngleDial({ label: 'Locked', value: -Math.PI / 4, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- 2D pad ---
+
+const PAD_ID = (name: string) => `${ID_PREFIX}Pad${name}`;
+
+/** In the page: an offset with y up and a screen anchor with y down, each write in the box's
+ * status line; a kit button moves the offset from outside (the flash) */
+const initPad2DDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = PAD_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report =
+    (label: string) => (value: { x: number; y: number }, change: { last: boolean }) => {
+      const axes = [value.x, value.y].map((axis) => Number(axis.toFixed(3)));
+      status.textContent = `${label}: ${axes.join(', ')} (${change.last ? 'last' : 'step'})`;
+    };
+  // A THREE.Vector2's shape, written in place
+  const layout = { offset: { x: 0.25, y: -0.5 }, anchor: { x: 50, y: 25 } };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const move = createButton({
+    id: PAD_ID('Move'),
+    label: 'Move it from outside',
+    size: 'sm',
+    onClick: () => {
+      layout.offset.x = -0.75;
+      layout.offset.y = 0.75;
+      scheduler.refresh();
+    },
+  });
+  row(
+    'An offset, -1 to 1 by 0.01, y up (the defaults)',
+    createPad2D({
+      id: PAD_ID('Offset'),
+      label: 'Offset',
+      target: layout,
+      key: 'offset',
+      scheduler,
+      onChange: report('Offset'),
+    }).cmp.elem,
+    move.cmp.elem
+  );
+  row(
+    'Screen coordinates: 0 to 100 px, y down',
+    createPad2D({
+      id: PAD_ID('Anchor'),
+      label: 'Anchor',
+      target: layout,
+      key: 'anchor',
+      min: 0,
+      max: 100,
+      step: 1,
+      unit: 'px',
+      invertY: true,
+      hint: 'The arrows move the point; the axes type it',
+      onChange: report('Anchor'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createPad2D({ label: 'Locked', value: { x: -0.5, y: 0.5 }, disabled: true }).cmp.elem
+  );
+  root.append(status);
+};
+
+// --- Gradient editor ---
+
+const GRADIENT_ID = (name: string) => `${ID_PREFIX}Gradient${name}`;
+
+/** In the page: a sky ramp and a fade, each write in the box's status line (the stops), and the
+ * ramp's colour at a quarter through `evaluateGradient`; a kit button shifts it from outside */
+const initGradientEditorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = GRADIENT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const sample = document.createElement('p');
+  sample.id = GRADIENT_ID('Sample');
+  sample.className = 'hubDemoLine';
+  const sampled = { r: 0, g: 0, b: 0, a: 1 };
+  const byte = (channel: number) =>
+    Math.round(channel * 255)
+      .toString(16)
+      .padStart(2, '0');
+  const showSample = () => {
+    evaluateGradient(sky.ramp, 0.25, sampled);
+    sample.textContent = `evaluateGradient(ramp, 0.25): #${byte(sampled.r)}${byte(sampled.g)}${byte(sampled.b)}`;
+  };
+  const report =
+    (label: string) =>
+    (value: { stops: { t: number; color: string }[] }, change: { last: boolean }) => {
+      const stops = value.stops.map((stop) => `${stop.color} ${Number(stop.t.toFixed(3))}`);
+      status.textContent = `${label}: ${stops.join(', ')} (${change.last ? 'last' : 'step'})`;
+      showSample();
+    };
+  // A sky's colours through the day, and a fade's alpha
+  const sky = {
+    ramp: {
+      stops: [
+        { t: 0, color: '#0b1d3a' },
+        { t: 0.5, color: '#f2a65a' },
+        { t: 1, color: '#9fd3ff' },
+      ],
+    },
+    fade: {
+      stops: [
+        { t: 0, color: '#3fd8f200' },
+        { t: 1, color: '#3fd8f2ff' },
+      ],
+    },
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const shift = createButton({
+    id: GRADIENT_ID('Shift'),
+    label: 'Shift it from outside',
+    size: 'sm',
+    onClick: () => {
+      sky.ramp.stops[1].t = 0.3;
+      scheduler.refresh();
+      showSample();
+    },
+  });
+  row(
+    'A sky ramp, three stops, with a palette',
+    createGradientEditor({
+      id: GRADIENT_ID('Sky'),
+      label: 'Sky ramp',
+      target: sky,
+      key: 'ramp',
+      palette: ['#0b1d3a', '#f2a65a', '#9fd3ff', '#ffffff'],
+      scheduler,
+      onChange: report('Sky ramp'),
+    }).cmp.elem,
+    shift.cmp.elem
+  );
+  row(
+    'With alpha: a fade',
+    createGradientEditor({
+      id: GRADIENT_ID('Fade'),
+      label: 'Fade',
+      target: sky,
+      key: 'fade',
+      alpha: true,
+      hint: 'A press on the bar adds a stop; Delete removes the focused one',
+      onChange: report('Fade'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createGradientEditor({
+      label: 'Locked',
+      value: {
+        stops: [
+          { t: 0, color: '#000000' },
+          { t: 1, color: '#ffffff' },
+        ],
+      },
+      disabled: true,
+    }).cmp.elem
+  );
+  showSample();
+  root.append(status, sample);
+};
+
+// --- Curve editor ---
+
+const CURVE_ID = (name: string) => `${ID_PREFIX}Curve${name}`;
+
+/** In the page: an easing with the presets and a falloff as keys, each write in the box's status
+ * line, and the easing's value at the middle through `evaluateCurve`; a kit button sets the
+ * easing from outside */
+const initCurveEditorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const status = document.createElement('p');
+  status.id = CURVE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const sample = document.createElement('p');
+  sample.id = CURVE_ID('Sample');
+  sample.className = 'hubDemoLine';
+  const showSample = () => {
+    sample.textContent = `evaluateCurve(easing, 0.5): ${evaluateCurve(curves.easing, 0.5).toFixed(3)}`;
+  };
+  const round = (n: number) => Number(n.toFixed(3));
+  const report =
+    (label: string) =>
+    (
+      value: number[] | { x: number; y: number; inTangent?: number; outTangent?: number }[],
+      change: { last: boolean }
+    ) => {
+      const text = value
+        .map((part) =>
+          typeof part === 'number' ? `${round(part)}` : `(${round(part.x)}, ${round(part.y)})`
+        )
+        .join(', ');
+      status.textContent = `${label}: ${text} (${change.last ? 'last' : 'step'})`;
+      showSample();
+    };
+  // CSS's `ease`, and a light's falloff over 20 m
+  const curves = {
+    easing: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
+    falloff: [
+      { x: 0, y: 1, outTangent: 0 },
+      { x: 8, y: 0.6 },
+      { x: 20, y: 0 },
+    ],
+  };
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const reset = createButton({
+    id: CURVE_ID('Reset'),
+    label: 'Set it from outside',
+    size: 'sm',
+    onClick: () => {
+      curves.easing.splice(0, 4, 0.42, 0, 0.58, 1);
+      scheduler.refresh();
+      showSample();
+    },
+  });
+  row(
+    'An easing, CSS’s cubic-bezier, with the presets',
+    createCurveEditor({
+      id: CURVE_ID('Easing'),
+      label: 'Easing',
+      target: curves,
+      key: 'easing',
+      scheduler,
+      onChange: report('Easing'),
+    }).cmp.elem,
+    reset.cmp.elem
+  );
+  row(
+    'Keys: a falloff over 20 m',
+    createCurveEditor({
+      id: CURVE_ID('Falloff'),
+      label: 'Falloff',
+      target: curves,
+      key: 'falloff',
+      axes: { x: { min: 0, max: 20, step: 0.1 } },
+      hint: 'A press on the plot adds a key; Delete removes the focused one',
+      onChange: report('Falloff'),
+    }).cmp.elem
+  );
+  row(
+    'Disabled',
+    createCurveEditor({
+      label: 'Locked',
+      value: [0, 0, 0.58, 1],
+      disabled: true,
+    }).cmp.elem
+  );
+  showSample();
+  root.append(status, sample);
+};
+
+// --- Monitor ---
+
+const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
+
+/** In the page: monitors of a small simulation's values on one scheduler, which a kit button
+ * steps (the tick draws them, no flash); `readonly: true` on each field; a multiline block, a
+ * hint and a disabled one */
+const initMonitorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const scheduler = createBindingScheduler();
+  const sim = {
+    frameMs: 16.4,
+    bodies: 128,
+    paused: false,
+    state: 'Running',
+    position: { x: 1.25, y: 0, z: -3.5 },
+    log: 'Loaded scene “Harbour”\nSpawned 128 bodies\nPhysics on the worker thread',
+  };
+  let steps = 0;
+  const row = (label: string, ...elems: HTMLElement[]) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoFields');
+    group.append(...elems);
+  };
+  const monitor = (name: string, props: Partial<MonitorProps<unknown>>) =>
+    createMonitor({
+      id: MONITOR_ID(name),
+      label: name,
+      scheduler,
+      ...props,
+    } as MonitorProps<unknown>).cmp.elem;
+
+  const step = createButton({
+    id: MONITOR_ID('Step'),
+    label: 'Step the simulation',
+    onClick: () => {
+      steps++;
+      sim.frameMs = 16.4 + (steps % 3) * 0.8;
+      sim.bodies = 128 + steps * 4;
+      sim.paused = steps % 2 === 1;
+      sim.state = sim.paused ? 'Paused' : 'Running';
+      sim.position.y = steps * 0.5;
+      sim.log += `\nStep ${steps}: ${sim.bodies} bodies`;
+    },
+  });
+  row(
+    'Read on the tick: a kit button changes the values',
+    monitor('Frame time', { target: sim, key: 'frameMs', precision: 1, unit: 'ms', interval: 0 }),
+    monitor('Bodies', { target: sim, key: 'bodies', precision: 0 }),
+    monitor('Paused', { target: sim, key: 'paused' }),
+    monitor('State', { target: sim, key: 'state' }),
+    monitor('Position', { target: sim, key: 'position', precision: 2 }),
+    step.cmp.elem
+  );
+  row(
+    'Multiline: a block of lines, a tab stop',
+    monitor('Log', { target: sim, key: 'log', multiline: true, rows: 4 })
+  );
+
+  const options = [
+    { value: 'easy', label: 'Easy' },
+    { value: 'hard', label: 'Hard' },
+  ];
+  row(
+    'readonly: true on each field',
+    createNumberField({ label: 'Speed', value: 1.5, step: 0.1, unit: 'm/s', readonly: true }).cmp
+      .elem,
+    createSlider({
+      label: 'Volume',
+      value: 0.8,
+      min: 0,
+      max: 1,
+      format: (value) => `${Math.round(value * 100)} %`,
+      readonly: true,
+    }).cmp.elem,
+    createRangeSlider({
+      label: 'Price',
+      value: { min: 40, max: 120 },
+      min: 0,
+      max: 200,
+      step: 10,
+      unit: '€',
+      readonly: true,
+    }).cmp.elem,
+    createCheckbox({ label: 'Shadows', value: true, readonly: true }).cmp.elem,
+    createSwitch({ label: 'V-sync', value: false, readonly: true }).cmp.elem,
+    createSegmentedControl({ label: 'Difficulty', value: 'hard', options, readonly: true }).cmp
+      .elem,
+    createSelectField({
+      label: 'Shadow map',
+      value: 1024,
+      options: { '512': 512, '1024': 1024, '2048': 2048 },
+      readonly: true,
+    }).cmp.elem,
+    createTextField({ label: 'Name', value: 'Ada', readonly: true }).cmp.elem
+  );
+  row(
+    'A hint, and disabled',
+    monitor('Draw calls', { value: 42, precision: 0, hint: 'Counted after the last frame' }),
+    monitor('Disabled', { value: 'Off', disabled: true })
+  );
+};
+
+const initMonitorStressDemo = createStressDemo('MonitorStress', (i, target, scheduler) =>
+  createMonitor({
+    label: `Value ${i + 1}`,
+    target,
+    key: 'value',
+    precision: 2,
+    interval: 0,
+    scheduler,
+  })
+);
+
+// --- Folder ---
+
+const FOLDER_ID = (name: string) => `${ID_PREFIX}Folder${name}`;
+
+/** In the page: a light's folder (open) with a nested shadow folder (shut, hidden while the light
+ * casts none: its `hidden` function), on one scheduler; each open and shut in the status line,
+ * and a kit button that changes the values from outside and refreshes (a shut folder's fields are
+ * read when it opens, without a flash) */
+const initFolderDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = FOLDER_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const light = { intensity: 1.2, castShadow: true, bias: -0.0005, mapSize: 1024 };
+  const scheduler = createBindingScheduler();
+  const report = (title: string) => (open: boolean) => {
+    status.textContent = `${title}: ${open ? 'open' : 'shut'}`;
+  };
+
+  const shadow = createFolder({
+    id: FOLDER_ID('Shadow'),
+    title: 'Shadow',
+    expanded: false,
+    hidden: () => !light.castShadow,
+    scheduler,
+    onExpandedChange: report('Shadow'),
+    children: [
+      createNumberField({
+        id: FOLDER_ID('Bias'),
+        label: 'Bias',
+        target: light,
+        key: 'bias',
+        step: 0.0001,
+        scheduler,
+      }),
+      createSelectField({
+        label: 'Map size',
+        target: light,
+        key: 'mapSize',
+        options: { '512': 512, '1024': 1024, '2048': 2048 },
+        scheduler,
+      }),
+    ],
+  });
+  const lightFolder = createFolder({
+    id: FOLDER_ID('Light'),
+    title: 'Sun light',
+    scheduler,
+    onExpandedChange: report('Sun light'),
+    children: [
+      createSlider({
+        id: FOLDER_ID('Intensity'),
+        label: 'Intensity',
+        target: light,
+        key: 'intensity',
+        min: 0,
+        max: 5,
+        step: 0.1,
+        scheduler,
+      }),
+      createCheckbox({
+        id: FOLDER_ID('CastShadow'),
+        label: 'Cast shadows',
+        target: light,
+        key: 'castShadow',
+        scheduler,
+        // Its folder's `hidden` function is re-read on the refresh
+        onChange: () => scheduler.refresh(),
+      }),
+      shadow,
+    ],
+  });
+  const outside = createButton({
+    id: FOLDER_ID('Outside'),
+    label: 'Change the values from outside',
+    onClick: () => {
+      light.intensity = Math.round(((light.intensity + 0.7) % 5) * 10) / 10;
+      light.bias = -0.001;
+      scheduler.refresh();
+    },
+  });
+  const group = addGroup(
+    root,
+    'A folder in a folder; the inner one shut, and hidden without shadows'
+  );
+  group.classList.add('hubDemoFields', 'hubDemoFolders');
+  group.append(lightFolder.cmp.elem, outside.cmp.elem);
+  root.append(status);
+};
+
+// --- Fieldset ---
+
+const FIELDSET_ID = (name: string) => `${ID_PREFIX}Fieldset${name}`;
+
+/** In the page: a form's two sections as fieldsets, the second one disabled by a Hub button (a
+ * state): every field in it, its slider's thumb too */
+const initFieldsetDemo: Demo = (box) => {
+  const controls = addGroup(box, 'States');
+  const root = addKitRoot(box);
+  const profile = { name: 'Ada', region: 'eu', email: true, sounds: false, volume: 6 };
+  const account = createFieldset({
+    legend: 'Account',
+    hint: 'Shown to other players',
+    children: [
+      createTextField({ id: FIELDSET_ID('Name'), label: 'Name', target: profile, key: 'name' }),
+      createSelectField({
+        id: FIELDSET_ID('Region'),
+        label: 'Region',
+        target: profile,
+        key: 'region',
+        options: [
+          { text: 'Europe', value: 'eu' },
+          { text: 'Americas', value: 'am' },
+          { text: 'Asia', value: 'as' },
+        ],
+      }),
+    ],
+  });
+  const notifications = createFieldset({
+    legend: 'Notifications',
+    children: [
+      createCheckbox({ id: FIELDSET_ID('Email'), label: 'Email', target: profile, key: 'email' }),
+      createSwitch({ label: 'Sounds', target: profile, key: 'sounds' }),
+      createSlider({
+        label: 'Volume',
+        target: profile,
+        key: 'volume',
+        min: 0,
+        max: 10,
+        showInput: false,
+      }),
+    ],
+  });
+  const done = createButton({ id: FIELDSET_ID('Done'), label: 'Done', variant: 'primary' });
+  const group = addGroup(root, 'Two sections of a form');
+  group.classList.add('hubDemoFields', 'hubDemoFieldsets');
+  group.append(account.cmp.elem, notifications.cmp.elem, done.cmp.elem);
+  addButton(controls, 'Disable the notifications', () => notifications.setDisabled(true));
+};
+
+// --- Property grid ---
+
+const GRID_ID = (name: string) => `${ID_PREFIX}Grid${name}`;
+
+/** In the page: a scene's settings as a property grid (its own scheduler): fields of each kind, a
+ * long label cut, a folder in a folder whose controls line up with the top's, a monitor; the label
+ * column's width in the status line, and a kit button that changes values and refreshes */
+const initPropertyGridDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = GRID_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const scene = {
+    speed: 1.5,
+    wireframe: false,
+    shadows: true,
+    quality: 'high',
+    name: 'Harbour',
+    fogDensity: 0.02,
+    intensity: 1.2,
+    bias: -0.0005,
+    bodies: 128,
+  };
+  const grid = createPropertyGrid({
+    id: GRID_ID('Separator'),
+    onLabelWidthChange: (width) => {
+      status.textContent = `Label column: ${width} %`;
+    },
+    children: [
+      createTextField({ id: GRID_ID('Name'), label: 'Name', target: scene, key: 'name' }),
+      createSlider({
+        id: GRID_ID('Speed'),
+        label: 'Speed',
+        target: scene,
+        key: 'speed',
+        min: 0,
+        max: 5,
+        step: 0.1,
+      }),
+      createCheckbox({
+        id: GRID_ID('Wireframe'),
+        label: 'Wireframe',
+        target: scene,
+        key: 'wireframe',
+      }),
+      createSelectField({
+        label: 'Quality',
+        target: scene,
+        key: 'quality',
+        options: [
+          { text: 'Low', value: 'low' },
+          { text: 'High', value: 'high' },
+        ],
+      }),
+      createNumberField({
+        label: 'Exponential fog density near the horizon',
+        target: scene,
+        key: 'fogDensity',
+        min: 0,
+        step: 0.01,
+      }),
+      createFolder({
+        title: 'Sun light',
+        children: [
+          createSlider({
+            label: 'Intensity',
+            target: scene,
+            key: 'intensity',
+            min: 0,
+            max: 5,
+            step: 0.1,
+          }),
+          createSwitch({ label: 'Shadows', target: scene, key: 'shadows' }),
+          createFolder({
+            title: 'Shadow',
+            children: [
+              createNumberField({ label: 'Bias', target: scene, key: 'bias', step: 0.0001 }),
+            ],
+          }),
+        ],
+      }),
+      createMonitor({ label: 'Bodies', target: scene, key: 'bodies', precision: 0 }),
+    ],
+  });
+  const outside = createButton({
+    id: GRID_ID('Outside'),
+    label: 'Change the values from outside',
+    onClick: () => {
+      scene.speed = Math.round(((scene.speed + 1.3) % 5) * 10) / 10;
+      scene.bodies += 16;
+      grid.refresh();
+    },
+  });
+  const group = addGroup(root, 'A scene’s settings; drag the column’s edge, or use its arrows');
+  group.classList.add('hubDemoFields', 'hubDemoGrids');
+  group.append(grid.cmp.elem, outside.cmp.elem);
+  root.append(status);
+};
+
+// --- Tweakpane parity (the dev page's: p804 D14) ---
+
+/** One property grid of declarative items, a row per row of p804 Phase 0's census whose field
+ * exists, each hinted with the census's source line; the last write in the status line */
+const initPropertyGridParityDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const state = {
+    oracle: false,
+    shadowIntensity: 1,
+    domain: 'default',
+    storageMode: 'MAP',
+    cellSize: 4,
+    bias: -0.00005,
+    radius: 1,
+    scope: 'Scene',
+    maxMembers: 1234,
+    summary: 'default: 128 members in 42 cells\nplayers: 2 members in 2 cells',
+    labelText: 'Ray 1',
+    castShadow: true,
+    shadowMapSize: 1024,
+    cellsColor: 0x44aaff,
+    skyColor: '#87ceeb',
+    helperColor: '#ff00ff',
+    gridCenterColor: { r: 0.27, g: 0.27, b: 0.27 },
+    cameraPosition: { x: 0, y: 5, z: 10 },
+    bodyRotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
+  };
+  const note = {
+    text: 'The env bake already lights PBR materials, and this adds to it. For Lambert/Phong materials (no environment) and stylized looks.',
+  };
+  const report =
+    (label: string) =>
+    (value: unknown, { last }: { last: boolean }) => {
+      status.textContent = `${label}: ${String(value)} (${last ? 'last' : 'step'})`;
+    };
+  const field = (source: string, item: PropertyGridItem): PropertyGridItem =>
+    ({
+      hint: source,
+      ...item,
+      ...('label' in item && item.type === undefined ? { onChange: report(item.label) } : {}),
+    }) as PropertyGridItem;
+  const grid = createPropertyGrid();
+  addPropertyGridItems(grid, [
+    {
+      type: 'folder',
+      title: 'Edit fields',
+      items: [
+        field('_dbg__SpatialGrid.ts:568', {
+          target: state,
+          key: 'oracle',
+          label: 'Brute-force oracle',
+        }),
+        field('_dbg__LightGUI.ts:838', {
+          target: state,
+          key: 'shadowIntensity',
+          label: 'Shadow Intensity',
+          min: 0,
+          max: 10,
+          step: 0.001,
+        }),
+        field('_dbg__SpatialGrid.ts:508', {
+          target: state,
+          key: 'domain',
+          label: 'Domain',
+          options: [
+            { value: 'default', text: 'Default' },
+            { value: 'players', text: 'Players' },
+          ],
+        }),
+        field('_dbg__ECS.ts:120', {
+          target: state,
+          key: 'storageMode',
+          label: 'Storage mode',
+          options: { Map: 'MAP', 'Typed Array': 'TYPED_ARRAY' },
+        }),
+        field('_dbg__SpatialGrid.ts:522', {
+          target: state,
+          key: 'cellSize',
+          label: 'Cell size',
+          min: 0.1,
+          step: 0.5,
+        }),
+        field('_dbg__LightGUI.ts:816', {
+          target: state,
+          key: 'bias',
+          label: 'Shadow Bias',
+          step: 0.00001,
+        }),
+        field('_dbg__LightGUI.ts:865', {
+          target: state,
+          key: 'radius',
+          label: 'Shadow Radius',
+          min: 0,
+        }),
+        field('_dbg__RayTester.ts:557', { target: state, key: 'labelText', label: 'Label' }),
+        field('_dbg__SpatialGrid.ts:586', {
+          target: state,
+          key: 'cellsColor',
+          label: 'Wireframe color',
+          kind: 'color',
+        }),
+        field('_dbg__BaseFolder.ts:26', { target: state, key: 'skyColor', label: 'Color' }),
+        field('_dbg__RayTester.ts:492', {
+          target: state,
+          key: 'helperColor',
+          label: 'Helper color',
+          kind: 'color',
+        }),
+        field('_dbg__DebugTools.ts:682', {
+          target: state,
+          key: 'gridCenterColor',
+          label: "Grid's center line color",
+        }),
+        field('_dbg__DebugTools.ts:549', {
+          target: state,
+          key: 'cameraPosition',
+          label: 'Position',
+        }),
+        field('_dbg__Character.ts:213', {
+          target: state,
+          key: 'bodyRotation',
+          label: 'Rotation',
+          step: Math.PI / 8,
+        }),
+        field('the view: list blade (_dbg__LightGUI.ts)', {
+          kind: 'select',
+          label: 'Shadow map width',
+          value: 1024,
+          options: { '512': 512, '1024': 1024, '2048': 2048 },
+        }),
+      ],
+    },
+    {
+      type: 'folder',
+      title: 'Monitors',
+      items: [
+        field('_dbg__SpatialGrid.ts:521', {
+          target: state,
+          key: 'scope',
+          label: 'Scope',
+          readonly: true,
+        }),
+        field('_dbg__LightGUI.ts:506', {
+          get: () => Math.floor(performance.now() / 250) % 100,
+          label: 'Intensity',
+          readonly: true,
+          interval: 250,
+        }),
+        field('_dbg__SpatialGrid.ts:560', {
+          target: state,
+          key: 'maxMembers',
+          label: 'Max members',
+          readonly: true,
+          format: (value) => (value as number).toLocaleString('en'),
+        }),
+        field('_dbg__SpatialGrid.ts:674', {
+          target: state,
+          key: 'summary',
+          label: 'All domains',
+          readonly: true,
+          multiline: true,
+          rows: 4,
+          interval: 0,
+        }),
+        field('_dbg__AmbientLightFolder.ts:21', {
+          target: note,
+          key: 'text',
+          label: 'Note',
+          readonly: true,
+          multiline: true,
+          rows: 3,
+        }),
+      ],
+    },
+    {
+      type: 'folder',
+      title: 'Hidden and disabled functions',
+      items: [
+        field('the checkbox the two below read', {
+          target: state,
+          key: 'castShadow',
+          label: 'Cast shadow',
+        }),
+        field('a disabled function', {
+          target: state,
+          key: 'bias',
+          label: 'Bias',
+          step: 0.00001,
+          disabled: () => !state.castShadow,
+        }),
+        field('a hidden function', {
+          target: state,
+          key: 'shadowMapSize',
+          label: 'Map size',
+          options: { '512': 512, '1024': 1024 },
+          hidden: () => !state.castShadow,
+        }),
+        { type: 'button', title: 'Refresh (the tab’s refresh)', onClick: () => grid.refresh() },
+      ],
+    },
+    {
+      type: 'folder',
+      title: 'Structure',
+      expanded: false,
+      items: [
+        {
+          type: 'folder',
+          title: 'A nested folder',
+          items: [{ target: state, key: 'cellSize', label: 'Cell size', step: 0.5 }],
+        },
+        { type: 'separator' },
+        {
+          type: 'button',
+          title: 'A button',
+          onClick: () => (status.textContent = 'A button: clicked'),
+        },
+        {
+          type: 'button',
+          title: 'Rebuild',
+          label: 'With a label',
+          onClick: () => (status.textContent = 'With a label: clicked'),
+        },
+        {
+          type: 'custom',
+          build: (container) => {
+            // _dbg__DayNightFolder.ts' speed buttons, as kit buttons in the custom item's CMP
+            const row = container.add({ class: 'hubDemoParityCustom' });
+            for (const speed of [1, 10, 100]) {
+              row.add(
+                createButton({
+                  label: `×${speed}`,
+                  size: 'sm',
+                  onClick: () => (status.textContent = `Speed: ×${speed}`),
+                }).cmp
+              );
+            }
+          },
+        },
+      ],
+    },
+  ]);
+  const group = addGroup(root, 'The census’s rows, each hinted with its source');
+  group.classList.add('hubDemoFields', 'hubDemoGrids');
+  group.append(grid.cmp.elem);
+  root.append(status);
+};
+
+// --- Form ---
+
+const FORM_ID = (name: string) => `${ID_PREFIX}Form${name}`;
+
+/** In the page: a new player's form in two fieldsets (a required name with a length check, a
+ * required region, an age of 13 or more, the rules to accept), its submit a promise (the button
+ * loading for a moment); Hub buttons submit it empty (the summary and the errors) and fill it in */
+const initFormDemo: Demo = (box) => {
+  const controls = addGroup(box, 'States');
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = FORM_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const player = { name: '', region: '', age: 30, rules: false };
+  const regions = [
+    { text: 'Europe', value: 'eu' },
+    { text: 'Americas', value: 'am' },
+    { text: 'Asia', value: 'as' },
+  ];
+  const form = createForm({
+    id: FORM_ID('Form'),
+    submitLabel: 'Create',
+    resetLabel: 'Start again',
+    onSubmit: () => {
+      status.textContent = 'Creating…';
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          const region = regions.find((option) => option.value === player.region)?.text;
+          status.textContent = `Created ${player.name} (${region}, ${player.age})`;
+          resolve();
+        }, 400);
+      });
+    },
+    onReset: () => {
+      status.textContent = 'Reset: every field at its default';
+    },
+    children: [
+      createFieldset({
+        legend: 'Player',
+        children: [
+          createTextField({
+            id: FORM_ID('Name'),
+            label: 'Name',
+            target: player,
+            key: 'name',
+            required: 'Enter a name',
+            validate: (name) =>
+              name.trim().length < 3 ? 'Name must be 3 characters or more' : null,
+          }),
+          createSelectField({
+            id: FORM_ID('Region'),
+            label: 'Region',
+            target: player,
+            key: 'region',
+            options: regions,
+            placeholder: 'Choose a region',
+            required: 'Choose a region',
+          }),
+          createNumberField({
+            id: FORM_ID('Age'),
+            label: 'Age',
+            target: player,
+            key: 'age',
+            min: 0,
+            max: 120,
+            step: 1,
+            hint: 'Players are 13 or older',
+            validate: (age) => (age < 13 ? 'Age must be 13 or more' : null),
+          }),
+        ],
+      }),
+      createFieldset({
+        legend: 'Rules',
+        children: [
+          createCheckbox({
+            id: FORM_ID('Rules'),
+            label: 'I accept the rules',
+            target: player,
+            key: 'rules',
+            required: 'Accept the rules to go on',
+          }),
+        ],
+      }),
+    ],
+  });
+  const group = addGroup(root, 'A new player; Create checks it');
+  group.classList.add('hubDemoFields', 'hubDemoForms');
+  group.append(form.cmp.elem);
+  root.append(status);
+  addButton(controls, 'Submit it empty', () => form.submit());
+  addButton(controls, 'Fill it in', () => {
+    Object.assign(player, { name: 'Ada', region: 'eu', age: 36, rules: true });
+    form.refresh();
   });
 };
 
@@ -647,7 +2754,7 @@ const initButtonDemo: Demo = (box) => {
   const save: Button = make('Save', {
     label: 'Save',
     variant: 'primary',
-    kbd: 'Ctrl+S',
+    kbd: createKbd({ keys: 'Ctrl+S' }),
     onClick: () => {
       save.setLoading(true);
       report('Saving…');
@@ -678,6 +2785,8 @@ const initButtonDemo: Demo = (box) => {
       variant: 'danger',
       holdToConfirmMs: 800,
       onClick: () => report('Deleted (held)'),
+      // A screen reader's browse mode clicks with no press: the app confirms another way
+      onUnheldClick: () => report('A click with no hold: the app asks to confirm'),
     })
   );
   root.append(status);
@@ -760,12 +2869,12 @@ const initMenuDemo: Demo = (box) => {
   createMenu({
     anchor: file.cmp.elem,
     items: () => [
-      { label: 'New', kbd: 'Ctrl+N', onSelect: report('File: New') },
-      { label: 'Open…', kbd: 'Ctrl+O', onSelect: report('File: Open…') },
+      { label: 'New', kbd: createKbd({ keys: 'Ctrl+N' }), onSelect: report('File: New') },
+      { label: 'Open…', kbd: createKbd({ keys: 'Ctrl+O' }), onSelect: report('File: Open…') },
       {
         label: 'Save',
         icon: getSvgIcon('fileCode'),
-        kbd: 'Ctrl+S',
+        kbd: createKbd({ keys: 'Ctrl+S' }),
         onSelect: report('File: Save'),
       },
       { type: 'separator' },
@@ -1215,6 +3324,28 @@ const DEMOS: Record<string, Demo> = {
   window: initWindowDemo,
   dialog: initDialogDemo,
   dropDown: initDropDownDemo,
+  numberField: initNumberFieldDemo,
+  numberFieldStress: initNumberFieldStressDemo,
+  slider: initSliderDemo,
+  rangeSlider: initRangeSliderDemo,
+  radioGroup: initRadioGroupDemo,
+  selectField: initSelectFieldDemo,
+  textField: initTextFieldDemo,
+  checkbox: initCheckboxDemo,
+  colorField: initColorFieldDemo,
+  vectorField: initVectorFieldDemo,
+  rotationField: initRotationFieldDemo,
+  angleDial: initAngleDialDemo,
+  pad2d: initPad2DDemo,
+  gradientEditor: initGradientEditorDemo,
+  curveEditor: initCurveEditorDemo,
+  monitor: initMonitorDemo,
+  monitorStress: initMonitorStressDemo,
+  folder: initFolderDemo,
+  fieldset: initFieldsetDemo,
+  propertyGrid: initPropertyGridDemo,
+  propertyGridParity: initPropertyGridParityDemo,
+  form: initFormDemo,
   tooltip: initTooltipDemo,
   popover: initPopoverDemo,
   toaster: initToasterDemo,

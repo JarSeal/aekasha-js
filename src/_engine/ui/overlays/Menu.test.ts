@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createKbd } from '../components/Kbd';
 import { createMenu, type MenuItem, type MenuProps } from './Menu';
 
 let trigger: HTMLButtonElement;
@@ -77,7 +78,11 @@ describe('menu (p803 D10)', () => {
   it('Enter picks an action after closing, with the focus back on the trigger', () => {
     const states: boolean[] = [];
     const menu = addMenu([
-      { label: 'Save', kbd: 'Ctrl+S', onSelect: () => states.push(menu.isOpen()) },
+      {
+        label: 'Save',
+        kbd: createKbd({ keys: 'Ctrl+S' }),
+        onSelect: () => states.push(menu.isOpen()),
+      },
     ]);
     trigger.focus();
     menu.open();
@@ -224,6 +229,48 @@ describe('menu (p803 D10)', () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(menu.isOpen()).toBe(false);
     menu.cmp.remove();
+  });
+
+  it('draws its items’ hints: a getter’s removed at each close, an array’s with the menu (p804 D13)', async () => {
+    const kept = createKbd({ keys: 'Ctrl+S' });
+    const removeKept = vi.spyOn(kept.cmp, 'remove');
+    const menu = addMenu([
+      { label: 'Save', kbd: kept },
+      { type: 'group', label: 'Edit', items: [{ label: 'Undo', kbd: 'Ctrl+Z' }] },
+    ]);
+    menu.open();
+    const [save, undo] = getItems();
+    expect(save.getAttribute('aria-keyshortcuts')).toBe('Control+S');
+    expect(kept.cmp.elem.parentElement).toBe(save);
+    expect(kept.cmp.elem.getAttribute('aria-hidden')).toBe('true');
+    kept.setKeys('Ctrl+Shift+S');
+    expect(save.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+S');
+    // The deprecated string: drawn once Kbd has loaded
+    expect(undo.querySelector('.aekMenu__kbd')).toBeNull();
+    await vi.dynamicImportSettled();
+    expect(undo.getAttribute('aria-keyshortcuts')).toBe('Control+Z');
+    expect(undo.querySelector('.aekMenu__kbd')?.getAttribute('aria-hidden')).toBe('true');
+    menu.close();
+    menu.open();
+    expect(kept.cmp.elem.parentElement).toBe(getItems()[0]);
+    expect(removeKept).not.toHaveBeenCalled();
+    menu.cmp.remove();
+    expect(removeKept).toHaveBeenCalledTimes(1);
+
+    const removes: (() => void)[] = [];
+    const fromGetter = addMenu(() => {
+      const kbd = createKbd({ keys: 'F2' });
+      removes.push(vi.spyOn(kbd.cmp, 'remove'));
+      return [{ label: 'Rename', kbd }];
+    });
+    fromGetter.open();
+    fromGetter.close();
+    fromGetter.open();
+    expect(removes).toHaveLength(2);
+    expect(removes[0]).toHaveBeenCalledTimes(1);
+    expect(removes[1]).not.toHaveBeenCalled();
+    fromGetter.cmp.remove();
+    expect(removes[1]).toHaveBeenCalledTimes(1);
   });
 
   it('re-reads a getter on every open', () => {

@@ -1,0 +1,46 @@
+// The range slider's own styles (RangeSlider.ts), on the design tokens and layered (p803 D5); the
+// track, the thumbs, the ticks and the histogram are the slider's (Slider.scss). The fill is the
+// span between the thumbs: a 24 px target (it drags both, and it's a tab stop with the kit's ring),
+// its bar drawn in its ::before. The thumbs sit over it.
+@layer aek.components {
+  :where(.aekField[data-kind='range'] .aekSlider__thumb) {
+    z-index: 1;
+  }
+
+  :where(.aekRangeSlider__span) {
+    top: -10px;
+    bottom: -10px;
+    border-radius: var(--aek-radius-sm);
+    background-color: transparent;
+    cursor: grab;
+  }
+
+  :where(.aekSlider[data-dragging] .aekRangeSlider__span) {
+    cursor: grabbing;
+  }
+
+  :where(.aekField[data-disabled] .aekRangeSlider__span) {
+    background-color: transparent;
+    cursor: default;
+  }
+
+  // The bar
+  :where(.aekRangeSlider__span)::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    left: 0;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-slider-fill-color, var(--aek-accent));
+  }
+
+  :where(.aekField[data-disabled] .aekRangeSlider__span)::before {
+    background-color: var(--aek-text-disabled);
+  }
+
+  :where(.aekRangeSlider__span[data-flash])::before {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+  }
+}

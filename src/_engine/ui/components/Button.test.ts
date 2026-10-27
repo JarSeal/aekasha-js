@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
 import { createButton, type ButtonProps } from './Button';
-import { getAriaKeyShortcuts } from './KeyNames';
+import { createKbd } from './Kbd';
 
 const HOLD_MS = 800;
 
@@ -77,23 +77,46 @@ describe('button (p803 D10)', () => {
     expect(countListeners(elem)).toBe(0);
   });
 
-  it('describes itself with a tooltip, and shows a shortcut it names in aria-keyshortcuts', () => {
-    const { cmp } = addButton({ label: 'Save', tooltip: 'Saves the scene', kbd: 'Ctrl+S' });
+  it('describes itself with a tooltip, and shows a Kbd it names in aria-keyshortcuts (p804 D13)', () => {
+    const kbd = createKbd({ keys: 'Ctrl+S' });
+    const removeKbd = vi.spyOn(kbd.cmp, 'remove');
+    const { cmp } = addButton({ label: 'Save', tooltip: 'Saves the scene', kbd });
     const elem = cmp.elem;
     expect(elem.getAttribute('aria-describedby')).toMatch(/\S/);
     expect(elem.getAttribute('aria-keyshortcuts')).toBe('Control+S');
-    const kbd = elem.querySelector('.aekButton__kbd');
-    expect(kbd?.tagName).toBe('KBD');
-    expect(kbd?.getAttribute('aria-hidden')).toBe('true');
+    expect(getParts(elem)).toEqual(['aekButton__label', 'aekKbd aekButton__kbd']);
+    expect(kbd.cmp.elem.tagName).toBe('KBD');
+    expect(kbd.cmp.elem.getAttribute('aria-hidden')).toBe('true');
+    kbd.setKeys('Ctrl+Shift+S');
+    expect(elem.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+S');
     cmp.remove();
     expect(elem.hasAttribute('aria-describedby')).toBe(false);
+    expect(removeKbd).toHaveBeenCalledTimes(1);
+    // Its keys' listener went with it
+    kbd.setKeys('F5');
+    expect(elem.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+S');
   });
 
-  it('writes ARIA shortcut names', () => {
-    expect(getAriaKeyShortcuts('Ctrl+Shift+P / Meta+Shift+P')).toBe('Control+Shift+P Meta+Shift+P');
-    expect(getAriaKeyShortcuts('Ctrl++')).toBe('Control+Plus');
-    expect(getAriaKeyShortcuts('Alt+ArrowUp')).toBe('Alt+ArrowUp');
-    expect(getAriaKeyShortcuts('Esc')).toBe('Escape');
+  it('draws a string kbd (deprecated) once Kbd has loaded, before a hold’s fill', async () => {
+    const { cmp } = addButton({ label: 'Delete', kbd: 'Del', holdToConfirmMs: HOLD_MS });
+    const elem = cmp.elem;
+    expect(elem.querySelector('.aekButton__kbd')).toBeNull();
+    await vi.dynamicImportSettled();
+    expect(getParts(elem)).toEqual([
+      'aekButton__label',
+      'aekKbd aekButton__kbd',
+      'aekButton__hold',
+      'aekButton__holdText',
+    ]);
+    expect(elem.getAttribute('aria-keyshortcuts')).toBe('Delete');
+    cmp.remove();
+
+    // Removed before Kbd loaded: nothing is drawn
+    const early = addButton({ label: 'Save', kbd: 'Ctrl+S' });
+    early.cmp.remove();
+    await vi.dynamicImportSettled();
+    expect(getParts(early.cmp.elem)).toEqual(['aekButton__label']);
+    expect(early.cmp.elem.hasAttribute('aria-keyshortcuts')).toBe(false);
   });
 
   it('clicks; while loading it is busy and ignores them; disabled it is disabled', () => {
@@ -186,6 +209,40 @@ describe('button (p803 D10)', () => {
     vi.advanceTimersByTime(HOLD_MS);
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(dispatchKey(elem, 'keydown', 'a').defaultPrevented).toBe(false);
+    button.cmp.remove();
+  });
+
+  it('calls onUnheldClick for a click no press started, never after a press or while loading', () => {
+    const onClick = vi.fn();
+    const onUnheldClick = vi.fn();
+    const button = addButton({ label: 'Delete', holdToConfirmMs: HOLD_MS, onClick, onUnheldClick });
+    const elem = button.cmp.elem;
+    // Assistive tech's click, with no press
+    click(elem);
+    expect(onUnheldClick).toHaveBeenCalledTimes(1);
+
+    // A pointer's release clicks after its press
+    pointer(elem, 'pointerdown');
+    vi.advanceTimersByTime(HOLD_MS - 1);
+    pointer(elem, 'pointerup');
+    click(elem);
+    expect(onUnheldClick).toHaveBeenCalledTimes(1);
+
+    // No click follows a cancel or a held key, so the next one is unheld
+    pointer(elem, 'pointerdown');
+    pointer(elem, 'pointercancel');
+    click(elem);
+    expect(onUnheldClick).toHaveBeenCalledTimes(2);
+    elem.focus();
+    dispatchKey(elem, 'keydown', ' ');
+    dispatchKey(elem, 'keyup', ' ');
+    click(elem);
+    expect(onUnheldClick).toHaveBeenCalledTimes(3);
+
+    button.setLoading(true);
+    click(elem);
+    expect(onUnheldClick).toHaveBeenCalledTimes(3);
+    expect(onClick).not.toHaveBeenCalled();
     button.cmp.remove();
   });
 

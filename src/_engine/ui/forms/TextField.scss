@@ -1,0 +1,49 @@
+// The text field's own styles (TextField.ts), on the design tokens and layered (p803 D5): a
+// multiline field's textarea (resized vertically, its padding on all sides), and a search field's
+// mark and clear button. The box, the input, the error and the flash are the fields'
+// (`.aekField__box`, Field.scss).
+@layer aek.components {
+  :where(.aekTextField[data-multiline]) {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  :where(.aekTextField[data-multiline] .aekTextField__input) {
+    padding: var(--aek-space-2) var(--aek-space-3);
+    line-height: var(--aek-line-height-base);
+    resize: vertical;
+  }
+
+  :where(.aekTextField[data-search]) {
+    padding-right: 0;
+  }
+
+  :where(.aekTextField__icon) {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-inline-start: var(--aek-space-3);
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekTextField__icon svg) {
+    display: block;
+    width: 1em;
+    height: 1em;
+  }
+
+  :where(.aekTextField[data-search] .aekTextField__input) {
+    padding-left: 0;
+  }
+
+  // At the 24 px target size (WCAG 2.5.8) in every density, inside the box
+  :where(.aekTextField__clear) {
+    flex-shrink: 0;
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  // `hidden` is the browser's display: none, which the button's own display would beat
+  :where(.aekTextField__clear[hidden]) {
+    display: none;
+  }
+}

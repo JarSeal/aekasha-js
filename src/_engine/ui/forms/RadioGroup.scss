@@ -1,0 +1,184 @@
+// The radio group's and the segmented control's styles (RadioGroup.ts), on the design tokens and
+// layered (p803 D5). A radio is a native input with `appearance: none`, a 24 px target (WCAG 2.5.8)
+// in both densities, its ring drawn in its ::before and its dot in its ::after, as the checkbox's
+// box is. A segmented control is a row of segments in a control's frame, each a label with its
+// radio laid over it, transparent, so the kit's focus ring on the radio rings the segment; the
+// picked one is the `accent`. A change from outside flashes a ring around the group.
+@layer aek.components {
+  :where(.aekRadioGroup) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--aek-space-1);
+    border-radius: var(--aek-radius-sm);
+    transition: box-shadow var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekRadioGroup[data-orientation='horizontal']) {
+    flex-flow: row wrap;
+    align-items: center;
+    column-gap: var(--aek-space-4);
+  }
+
+  :where(.aekRadioGroup[data-flash], .aekSegmented[data-flash]) {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition-duration: 0s;
+  }
+
+  // --- The radio ---
+
+  :where(.aekRadio) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    color: var(--aek-text);
+    line-height: var(--aek-line-height-tight);
+    cursor: pointer;
+  }
+
+  :where(.aekRadio:has(:disabled)) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekRadio__input) {
+    position: relative;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-full);
+    background: transparent;
+    cursor: inherit;
+    appearance: none;
+  }
+
+  // A pseudo-element can't be inside :where(): it goes after it
+  :where(.aekRadio__input)::before,
+  :where(.aekRadio__input)::after {
+    content: '';
+    position: absolute;
+    box-sizing: border-box;
+    border-radius: var(--aek-radius-full);
+  }
+
+  // The ring
+  :where(.aekRadio__input)::before {
+    inset: calc((24px - var(--aek-radio-size, 16px)) / 2);
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    transition: border-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekRadio__input:checked)::before {
+    border-color: var(--aek-accent);
+  }
+
+  // The dot
+  :where(.aekRadio__input:checked)::after {
+    inset: calc((24px - var(--aek-radio-size, 16px)) / 2 + 4px);
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekRadio__input:disabled)::before {
+    border-color: var(--aek-border);
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekRadio__input:disabled:checked)::after {
+    background-color: var(--aek-text-disabled);
+  }
+
+  // --- The segmented control ---
+
+  :where(.aekSegmented) {
+    display: inline-flex;
+    gap: 2px;
+    max-width: 100%;
+    padding: 2px;
+    border: 1px solid var(--aek-field-control-border-color, var(--aek-border-control));
+    border-radius: var(--aek-field-radius, var(--aek-radius-md));
+    background-color: var(--aek-field-control-bg, var(--aek-surface));
+    transition: box-shadow var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekSegmented[data-fill]) {
+    display: flex;
+    width: 100%;
+  }
+
+  :where(.aekField[data-disabled] .aekSegmented) {
+    border-color: var(--aek-border);
+  }
+
+  :where(.aekSegmented__segment) {
+    position: relative;
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: var(--aek-space-1);
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0 var(--aek-space-3);
+    border-radius: calc(var(--aek-field-radius, var(--aek-radius-md)) - 2px);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSegmented[data-fill] .aekSegmented__segment) {
+    flex: 1 1 0;
+  }
+
+  :where(.aekSegmented__segment:has(.aekVisuallyHidden)) {
+    padding: 0 var(--aek-space-2);
+  }
+
+  :where(.aekSegmented__segment:hover:not(:has(:disabled, :checked))) {
+    background-color: var(--aek-surface-hover);
+    color: var(--aek-text);
+  }
+
+  :where(.aekSegmented__segment:has(:checked)) {
+    background-color: var(--aek-segmented-selected-bg, var(--aek-accent));
+    color: var(--aek-segmented-selected-color, var(--aek-on-accent));
+  }
+
+  :where(.aekSegmented__segment:has(:disabled)) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekSegmented__segment:has(:disabled:checked)) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  // Over the whole segment, transparent: a click anywhere picks it, and its focus ring is the
+  // segment's
+  :where(.aekSegmented__input) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    cursor: inherit;
+    appearance: none;
+  }
+
+  :where(.aekSegmented__icon) {
+    display: inline-flex;
+    font-size: 1.15em;
+  }
+}

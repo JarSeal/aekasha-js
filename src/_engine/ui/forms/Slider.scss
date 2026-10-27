@@ -1,0 +1,209 @@
+// The track's styles (SliderTrack.ts: the slider's and the range slider's), on the design tokens
+// and layered (p803 D5). The track is 24 px tall (WCAG 2.5.8's target, in both densities) with the
+// rail across its middle, inset by half the thumb so the thumb stays inside it at the ends; the
+// fill is the `accent` up to the thumb (or between the range's thumbs). A histogram goes over the
+// rail and tick labels under it, the track's height growing for each. A thumb is a 24 px target with its
+// dot drawn in its ::before (the kit's ring is on the thumb when it's a slider). The spin button's
+// box after the track is the number field's (Field.scss), `--aek-slider-input-width` wide. The
+// bubble over a thumb shows while it's dragged.
+@layer aek.components {
+  :where(.aekSlider__row) {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--aek-space-3);
+    min-width: 0;
+  }
+
+  :where(.aekSlider__row) > :where(.aekField__box) {
+    flex: 0 0 var(--aek-slider-input-width, 5em);
+    min-width: 0;
+  }
+
+  :where(.aekSlider) {
+    position: relative;
+    display: block;
+    flex: 1;
+    min-width: calc(var(--aek-space-7) * 2);
+    height: 24px;
+    cursor: pointer;
+    // The drag is the slider's, not the page's scroll or a text selection
+    touch-action: none;
+    user-select: none;
+  }
+
+  // Room for the tick labels under the rail, and for a histogram over it: heights, not padding
+  // (every part is placed absolutely, and a page's unlayered box-sizing reset would beat ours)
+  :where(.aekSlider[data-tick-labels]) {
+    height: calc(24px + var(--aek-font-size-xs) * var(--aek-line-height-tight));
+  }
+
+  :where(.aekSlider[data-histogram]) {
+    height: calc(24px + var(--aek-slider-histogram-height, 32px));
+  }
+
+  :where(.aekSlider[data-histogram][data-tick-labels]) {
+    height: calc(
+      24px + var(--aek-slider-histogram-height, 32px) + var(--aek-font-size-xs) *
+        var(--aek-line-height-tight)
+    );
+  }
+
+  :where(.aekSlider__histogram) {
+    position: absolute;
+    top: 0;
+    right: 12px;
+    left: 12px;
+    // Down to 2 px over the rail
+    height: calc(var(--aek-slider-histogram-height, 32px) + 8px);
+  }
+
+  :where(.aekSlider__bars) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: var(--aek-slider-rail-color, var(--aek-border-control));
+  }
+
+  // The bars between the thumbs: the same bars in the fill's colour, clipped to the range
+  :where(.aekSlider__bars_active) {
+    fill: var(--aek-slider-fill-color, var(--aek-accent));
+    opacity: 0.5;
+  }
+
+  :where(.aekField[data-disabled] .aekSlider__bars_active) {
+    fill: var(--aek-text-disabled);
+  }
+
+  :where(.aekField[data-disabled] .aekSlider) {
+    cursor: default;
+  }
+
+  :where(.aekSlider__rail) {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    left: 12px;
+    height: 4px;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-slider-rail-color, var(--aek-border-control));
+  }
+
+  // After the rail's own rule, which it overrides
+  :where(.aekSlider[data-histogram]) > :where(.aekSlider__rail) {
+    top: calc(var(--aek-slider-histogram-height, 32px) + 10px);
+  }
+
+  :where(.aekSlider__fill) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: inherit;
+    background-color: var(--aek-slider-fill-color, var(--aek-accent));
+  }
+
+  // Disabled: the rail quieter than the fill, both grey
+  :where(.aekField[data-disabled] .aekSlider__rail) {
+    background-color: var(--aek-border);
+  }
+
+  :where(.aekField[data-disabled] .aekSlider__fill) {
+    background-color: var(--aek-text-disabled);
+  }
+
+  :where(.aekSlider__ticks) {
+    position: absolute;
+    inset: 0;
+  }
+
+  :where(.aekSlider__tick) {
+    position: absolute;
+    top: -3px;
+    width: 1px;
+    height: 10px;
+    margin-left: -0.5px;
+    background-color: var(--aek-border-strong);
+  }
+
+  :where(.aekSlider__tickLabel) {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  :where(.aekSlider__thumb) {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border-radius: var(--aek-radius-full);
+  }
+
+  // The dot: 16 px of the 24 px target, a ring of the surface around the accent
+  :where(.aekSlider__thumb)::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    box-sizing: border-box;
+    border: 2px solid var(--aek-surface);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-slider-thumb-color, var(--aek-accent));
+    box-shadow: var(--aek-shadow-sm);
+    transition:
+      inset var(--aek-motion-fast) var(--aek-ease-standard),
+      box-shadow var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSlider:hover .aekSlider__thumb, .aekSlider[data-dragging] .aekSlider__thumb)::before {
+    inset: 3px;
+  }
+
+  :where(.aekSlider__thumb[data-flash])::before {
+    box-shadow: 0 0 0 3px var(--aek-field-flash-color, var(--aek-accent-soft));
+  }
+
+  :where(.aekField[data-disabled] .aekSlider__thumb)::before {
+    inset: 4px;
+    background-color: var(--aek-text-disabled);
+    box-shadow: none;
+  }
+
+  // The value while it's dragged: over the thumb, as the tooltip looks
+  :where(.aekSlider__bubble) {
+    position: absolute;
+    bottom: calc(100% + var(--aek-space-1));
+    left: 50%;
+    padding: var(--aek-space-1) var(--aek-space-2);
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-sm);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, var(--aek-space-1));
+    transition:
+      opacity var(--aek-motion-fast) var(--aek-ease-standard),
+      transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSlider__thumb[data-dragging] .aekSlider__bubble) {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
