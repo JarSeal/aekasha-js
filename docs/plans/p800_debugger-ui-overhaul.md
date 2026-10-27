@@ -652,6 +652,14 @@ D1). What follows is the sketch as written.
 
 ### p805 — Data display
 
+Written: `p805_data-display.md` (2026-10-27, draft). Beyond this sketch: `ui/data/` for the table,
+list, tree, graphs and stat tile, the tabs, accordion and splitter in `components/`, the context
+menu (with the menu's submenus) and the palette in `overlays/` (its D2); p803's and p804's moves
+(the donut in place of the pie, the fields' context menu, the monitor's graph view); virtual rows
+and reorder passed in by the app, not imported by the list (its D8, p804 D13's pattern); chart
+colour tokens (its D9); the Hub's ⌘K search proposed onto the palette (its D12). The debugger's
+lists, tab menus and tables stay for p806 / p807 (its §4). What follows is the sketch as written.
+
 - The table, list, tree, graphs, stat tile, tabs, accordion, splitter, context menu and command
   palette (§4.4). The running graph's renderer measured with the perf-auditor agent before p807
   builds on it.
