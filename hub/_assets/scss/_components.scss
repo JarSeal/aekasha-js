@@ -241,6 +241,24 @@
   width: min(100%, 24rem);
 }
 
+// Tabs in a row take a panel's width; the narrow one overflows (its faded edges)
+.hubComponentDemoGroup.hubDemoTabs > .aekTabs {
+  width: min(100%, 28rem);
+}
+
+.hubComponentDemoGroup.hubDemoTabs > .aekTabs.hubDemoTabsNarrow {
+  width: min(100%, 16rem);
+}
+
+// A tab panel's content: a line in the panel's padding
+.hubDemoTabPanel {
+  padding: var(--aek-space-4) var(--aek-space-3);
+
+  p {
+    margin: 0;
+  }
+}
+
 // The parity box's custom item: a row of kit buttons (the day-night speed buttons)
 .hubDemoParityCustom {
   display: flex;

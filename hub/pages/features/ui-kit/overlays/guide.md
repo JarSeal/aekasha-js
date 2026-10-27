@@ -320,6 +320,50 @@ close it on the way.
 | Custom properties | `--aek-submenu-delay` (150 ms), on the menu or any ancestor                                                                                                                                                                                                                                                       |
 | Assistive tech    | `role="menu"` of `menuitem`, `menuitemcheckbox` and `menuitemradio`; the trigger and a submenu item have `aria-haspopup="menu"` and `aria-expanded`; a submenu is named by its item                                                                                                                               |
 
+## Context menus
+
+[`createContextMenu`](api:createContextMenu) opens the same menu over everything inside an
+element: a right click opens it at the pointer, the ContextMenu key or Shift+F10 at the focused
+element, and a touch held still for half a second at the touch. Its `items` can be a function of
+the element it's opening on, read at each open, so one menu serves a whole list: find the row from
+the element, and return no items where there's nothing to offer (the browser's own menu shows
+there, as it does on Shift+right click).
+
+```ts
+createContextMenu({
+  target: outlinePanel.elem,
+  items: (elem) => {
+    const row = elem.closest<HTMLElement>('[data-entity-id]');
+    if (!row) return [];
+    const id = Number(row.dataset.entityId);
+    return [
+      { label: 'Focus', onSelect: () => focusEntity(id) },
+      {
+        type: 'checkbox',
+        label: 'Visible',
+        checked: isVisible(id),
+        onCheckedChange: (on) => setVisible(id, on),
+      },
+      { label: 'Delete', onSelect: () => deleteEntity(id) },
+    ];
+  },
+});
+```
+
+::: demo contextMenu
+:::
+
+Escape or a pick closes it with the focus back on what had it: the focused row, when the keys
+opened it. Some browsers fire their own context menu event after the key or a long press; the
+kit's menu is already open then, and that event is dropped.
+
+| Context menu   |                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| Props          | [`ContextMenuProps`](api:ContextMenuProps) (its items: [`MenuItem`](api:MenuItem))                  |
+| Parts          | The menu's (`.aekMenu`), opened at the pointer or below the focused element                         |
+| Keys           | On an element inside the target: the ContextMenu key and Shift+F10 open it; in it, the menu's keys  |
+| Assistive tech | The menu's, named by `label` (default "Context menu"); nothing on the target, which isn't a trigger |
+
 ## Escape, focus and stacking
 
 Every open overlay (a dialog, a drop-down's list, a tooltip, a popover, a menu, a toast holding
@@ -354,8 +398,8 @@ the focus) is on one stack, and the kit keeps the same rules for all of them:
   [`removeToast`](api:removeToast).
 - [`createTooltip`](api:createTooltip) ([`Tooltip`](api:Tooltip)) and
   [`createPopover`](api:createPopover) ([`Popover`](api:Popover)).
-- [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)) and
-  [`createSplitButton`](api:createSplitButton).
+- [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)),
+  [`createSplitButton`](api:createSplitButton) and [`createContextMenu`](api:createContextMenu).
 
 ## Read more
 

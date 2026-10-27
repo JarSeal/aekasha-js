@@ -18,6 +18,7 @@ import { CONTAINERS_CHECKS } from './_library/containersChecks';
 import { CORE_CHECKS } from './_library/coreChecks';
 import { EDITORS_CHECKS } from './_library/editorsChecks';
 import { FIELDS_CHECKS } from './_library/fieldsChecks';
+import { LAYOUT_CHECKS } from './_library/layoutChecks';
 import { OVERLAYS_CHECKS } from './_library/overlaysChecks';
 
 /** A step that opens a state: a Hub button in the demo box by its text, an element in the HUD
@@ -28,7 +29,10 @@ export type UiCheckStep =
   /** The first element in the HUD root matching this selector */
   | { clickHud: string }
   /** The first element in the demo box matching this selector (a kit button drawn in the page) */
-  | { clickInBox: string };
+  | { clickInBox: string }
+  /** A right click on the first element in the demo box matching this selector (a context menu,
+   * p805 D11: the browser's own `contextmenu` event) */
+  | { contextClickInBox: string };
 
 /**
  * A keyboard script's step. Selectors are the page's (`#hudRoot …` for the kit's). Each `expect*`
@@ -90,6 +94,7 @@ export type UiDemoChecks = {
 /** Every demo's checks by its key (`_components.ts`' `DEMOS`) */
 export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   ...CORE_CHECKS,
+  ...LAYOUT_CHECKS,
   ...OVERLAYS_CHECKS,
   ...FIELDS_CHECKS,
   ...EDITORS_CHECKS,

@@ -190,6 +190,10 @@ export type {
   MenuSeparator,
   MenuSubmenuItem,
 } from './overlays/Menu';
+export { createContextMenu } from './overlays/ContextMenu';
+export type { ContextMenu, ContextMenuProps, ContextMenuSource } from './overlays/ContextMenu';
+export { createFieldContextMenu } from './forms/FieldContextMenu';
+export type { FieldContextMenuProps } from './forms/FieldContextMenu';
 export { getMotionFactor } from './core/Motion';
 export { createPopover } from './overlays/Popover';
 export type { Popover, PopoverProps } from './overlays/Popover';
@@ -201,6 +205,8 @@ export { createSpinner } from './components/Spinner';
 export type { Spinner, SpinnerProps } from './components/Spinner';
 export { createSplitButton } from './components/SplitButton';
 export type { SplitButton, SplitButtonProps } from './components/SplitButton';
+export { createTabs } from './components/Tabs';
+export type { TabBadge, TabDef, Tabs, TabsProps } from './components/Tabs';
 export { createTag } from './components/Tag';
 export type { Tag, TagProps } from './components/Tag';
 export {

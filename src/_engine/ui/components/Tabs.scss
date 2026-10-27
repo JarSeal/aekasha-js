@@ -1,0 +1,150 @@
+// The tabs' default styles (Tabs.ts, p805 D10), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A tab is a quiet button on the
+// list's line; the selected one has the accent's line (a shape, not only a colour) and the text
+// colour, the others the muted text. An overflowing list scrolls, its cut edges faded by a mask
+// (`data-overflow`, written by the script from the scroll).
+@layer aek.components {
+  :where(.aekTabs) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  :where(.aekTabs[data-orientation='vertical']) {
+    flex-direction: row;
+  }
+
+  :where(.aekTabs__list) {
+    --aek-tabs-fade-start: 0px;
+    --aek-tabs-fade-end: 0px;
+
+    position: relative;
+    display: flex;
+    flex: none;
+    min-width: 0;
+    overflow: auto hidden;
+    // A focused tab scrolled into view clears the faded edge
+    scroll-padding-inline: var(--aek-tabs-fade-size, var(--aek-space-6));
+    scrollbar-width: thin;
+    // The line the tabs sit on: a shadow, so it stays put while the tabs scroll
+    box-shadow: inset 0 -1px 0 var(--aek-border);
+  }
+
+  :where(.aekTabs__list[data-overflow]) {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--aek-tabs-fade-start),
+      #000 calc(100% - var(--aek-tabs-fade-end)),
+      transparent
+    );
+  }
+
+  :where(.aekTabs__list[data-overflow='start'], .aekTabs__list[data-overflow='both']) {
+    --aek-tabs-fade-start: var(--aek-tabs-fade-size, var(--aek-space-6));
+  }
+
+  :where(.aekTabs__list[data-overflow='end'], .aekTabs__list[data-overflow='both']) {
+    --aek-tabs-fade-end: var(--aek-tabs-fade-size, var(--aek-space-6));
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] > .aekTabs__list) {
+    flex-direction: column;
+    overflow: hidden auto;
+    scroll-padding-block: var(--aek-tabs-fade-size, var(--aek-space-6));
+    box-shadow: inset -1px 0 0 var(--aek-border);
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] > .aekTabs__list[data-overflow]) {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--aek-tabs-fade-start),
+      #000 calc(100% - var(--aek-tabs-fade-end)),
+      transparent
+    );
+  }
+
+  :where(.aekTabs__tab) {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--aek-space-2);
+    // WCAG 2.5.8's target size, in every density
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: 0 var(--aek-space-4);
+    border: 0;
+    background-color: transparent;
+    color: var(--aek-text-muted);
+    font-family: inherit;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-medium);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    appearance: none;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard),
+      box-shadow var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  // Inside the list's scroll box: a ring outside the tab would be cut
+  :where(.aekTabs__tab:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] .aekTabs__tab) {
+    justify-content: flex-start;
+  }
+
+  :where(.aekTabs__tab[data-icon-only]) {
+    justify-content: center;
+    min-width: max(24px, var(--aek-space-7));
+    padding: 0 var(--aek-space-3);
+  }
+
+  :where(.aekTabs__tab:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+    color: var(--aek-text);
+  }
+
+  :where(.aekTabs__tab[aria-selected='true']) {
+    box-shadow: inset 0 -2px 0 var(--aek-tabs-indicator-color, var(--aek-accent));
+    color: var(--aek-text);
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] .aekTabs__tab[aria-selected='true']) {
+    box-shadow: inset -2px 0 0 var(--aek-tabs-indicator-color, var(--aek-accent));
+  }
+
+  :where(.aekTabs__tab:disabled) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  :where(.aekTabs__icon) {
+    display: inline-flex;
+  }
+
+  :where(.aekTabs__icon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekTabs__panels) {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  :where(.aekTabs__panel[hidden]) {
+    display: none;
+  }
+}

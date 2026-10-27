@@ -4,7 +4,7 @@
 // actions (a row of tool buttons is the button group's).
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
 import { getPrimitiveValueKind } from './binding/Binding';
-import { createField, type Field, type FieldProps } from './Field';
+import { createField, getChoiceClipboard, type Field, type FieldProps } from './Field';
 import { buildMonitor } from './Monitor';
 import './RadioGroup.scss';
 import '../styles/kit.scss';
@@ -124,6 +124,7 @@ const createChoiceField = <T extends RadioValue>(
     control: group,
     isGroup: true,
     groupRole: 'radiogroup',
+    clipboard: getChoiceClipboard(() => options),
     // The group is what the message describes and an error marks: a radio takes no aria-invalid
     messageFor: [group],
     flashElem: group,

@@ -11,14 +11,16 @@ import {
   type BindingSource,
   type BindingValueKind,
 } from '../binding/Binding';
-import type { NumberRules } from '../binding/ValueText';
-import { createField, type Field, type FieldProps } from '../Field';
+import { roundToDecimals, type NumberRules } from '../binding/ValueText';
+import { createField, type Field, type FieldClipboard, type FieldProps } from '../Field';
 import { buildMonitor, readFirstValue } from '../Monitor';
 import { createColorParts } from './ColorParts';
 import {
   createColorCodec,
   formatColorHex,
   getColorForm,
+  parseColorText,
+  type ColorCodec,
   type ColorFieldValue,
   type Rgba,
 } from './ColorValue';
@@ -70,6 +72,49 @@ export type ColorFieldProps<T extends ColorFieldValue = ColorFieldValue> = Field
  * @template T the bound value's form
  */
 export type ColorField<T extends ColorFieldValue = ColorFieldValue> = Field<T>;
+
+/** An sRGB channel as `rgb()` writes it: 0-255 */
+const toByte = (channel: number) => Math.round(Math.min(1, Math.max(0, channel)) * 255);
+
+/**
+ * A colour field's value as text for the fields' context menu (p805 D11): its text, a pasted colour
+ * as a typed one, and Copy as hex, `rgb()` and sRGB floats.
+ */
+const getColorClipboard = <T extends ColorFieldValue>(codec: ColorCodec): FieldClipboard<T> => {
+  const shown: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+  const read = (value: T) => codec.read(value, shown);
+  const withAlpha = (parts: number[], color: Rgba) =>
+    codec.hasAlpha ? [...parts, color.a] : parts;
+  return {
+    getText: (value) => formatColorHex(read(value), codec.hasAlpha),
+    parse: (text) => {
+      const result = parseColorText(text);
+      return result.value ? { value: codec.write(result.value) as T } : { error: result.error };
+    },
+    copyAs: [
+      { label: 'Hex', getText: (value) => formatColorHex(read(value), codec.hasAlpha) },
+      {
+        label: 'rgb()',
+        getText: (value) => {
+          const color = read(value);
+          const bytes = [toByte(color.r), toByte(color.g), toByte(color.b)];
+          return codec.hasAlpha
+            ? `rgba(${bytes.join(', ')}, ${roundToDecimals(color.a, 3)})`
+            : `rgb(${bytes.join(', ')})`;
+        },
+      },
+      {
+        label: 'sRGB floats',
+        getText: (value) => {
+          const color = read(value);
+          return withAlpha([color.r, color.g, color.b], color)
+            .map((channel) => roundToDecimals(channel, 4))
+            .join(', ');
+        },
+      },
+    ],
+  };
+};
 
 /**
  * Creates a colour field (p804 D8): a swatch that opens the colour panel, and the colour as text,
@@ -188,6 +233,7 @@ export const createColorField = <T extends ColorFieldValue>(
       applyDisabled: parts.applyDisabled,
       onRead: parts.onRead,
       onRemove: parts.dispose,
+      clipboard: getColorClipboard(codec),
     }
   );
   parts.attach(shell.binding, {

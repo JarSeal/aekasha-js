@@ -135,6 +135,20 @@ export type Field<T> = {
 };
 
 /**
+ * A field's value as text, for the fields' context menu (p805 D11): Copy, Paste and "Copy as".
+ * @template T the value's type
+ * @internal
+ */
+export type FieldClipboard<T> = {
+  /** The value's text, what Copy puts on the clipboard */
+  getText: (value: T) => string;
+  /** A pasted text as a value, or why it isn't one (the field's message); none: no Paste */
+  parse?: (text: string) => { value: T; error?: undefined } | { value?: undefined; error: string };
+  /** More forms Copy as offers (a colour's `rgb()`, a vector's array) */
+  copyAs?: { label: string; getText: (value: T) => string }[];
+};
+
+/**
  * What a field gives the shell: its control and how it draws.
  * @internal
  */
@@ -177,6 +191,8 @@ export type FieldSpec<T> = {
   isTextOnly?: boolean;
   /** Runs when the field is removed: the control's own listeners, timers, overlay entries */
   onRemove?: () => void;
+  /** The value as text for the fields' context menu (default: by the value's type, `null` none) */
+  clipboard?: FieldClipboard<T> | null;
 };
 
 /**
@@ -277,6 +293,78 @@ const formFields = new WeakMap<Element, FormFieldEntry>();
  */
 export const getFormField = (elem: Element) => formFields.get(elem);
 
+/**
+ * What the fields' context menu (p805 D11, `FieldContextMenu.ts`) reads of a field, any field's,
+ * a monitor's too.
+ * @internal
+ */
+export type FieldMenuEntry = {
+  label: string;
+  /** The label: a right click on it opens the menu */
+  labelElem: HTMLElement;
+  isMonitor: boolean;
+  isDisabled: () => boolean;
+  /** Whether the value is the default (Reset does nothing) */
+  isDefault: () => boolean;
+  reset: () => void;
+  /** The value's text; none: no Copy */
+  getText: (() => string) | null;
+  /** Writes a pasted text as the user's change, or shows why it isn't a value (the field's
+   * message); none: no Paste */
+  paste: ((text: string) => void) | null;
+  copyAs: { label: string; getText: () => string }[];
+};
+
+/** Each field's element and what its context menu reads */
+const fieldMenuEntries = new WeakMap<Element, FieldMenuEntry>();
+
+/**
+ * The field at `elem` as the fields' context menu reads it, or undefined (not a field).
+ * @internal
+ */
+export const getFieldMenuEntry = (elem: Element) => fieldMenuEntries.get(elem);
+
+/** What a field's value is as text when it gives none: a string's and a boolean's both ways, a
+ * number's and an object's (JSON) copied only (a field with rules, a number field, gives its own
+ * parse) */
+const getDefaultClipboard = <T>(value: T): FieldClipboard<T> | null => {
+  if (typeof value === 'string') {
+    return { getText: (v) => String(v), parse: (text) => ({ value: text as T }) };
+  }
+  if (typeof value === 'boolean') {
+    return {
+      getText: (v) => String(v),
+      parse: (text) => {
+        const word = text.trim().toLowerCase();
+        if (word === 'true' || word === 'on' || word === '1') return { value: true as T };
+        if (word === 'false' || word === 'off' || word === '0') return { value: false as T };
+        return { error: `“${text}” is neither on nor off` };
+      },
+    };
+  }
+  if (typeof value === 'number') return { getText: (v) => String(v) };
+  if (value !== null && typeof value === 'object') return { getText: (v) => JSON.stringify(v) };
+  return null;
+};
+
+/**
+ * A choice field's value as text for the fields' context menu (p805 D11): Copy its option's label
+ * (else the value), Paste an enabled option's label (case ignored) or value.
+ * @internal
+ */
+export const getChoiceClipboard = <T>(
+  getOptions: () => readonly { value: T; label: string; disabled?: boolean }[]
+): FieldClipboard<T> => ({
+  getText: (value) => getOptions().find((option) => option.value === value)?.label ?? String(value),
+  parse: (text) => {
+    const lower = text.toLowerCase();
+    const option = getOptions().find(
+      (one) => !one.disabled && (one.label.toLowerCase() === lower || String(one.value) === text)
+    );
+    return option ? { value: option.value } : { error: `No option “${text}”` };
+  },
+});
+
 /** A folder's element and its open, which a form's summary link calls */
 const formRevealers = new WeakMap<Element, () => void>();
 
@@ -358,6 +446,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
       fieldsetReads.delete(root);
       schedulerAdopters.delete(root);
       formFields.delete(root);
+      fieldMenuEntries.delete(root);
       flash.dispose();
       labelTooltip.cmp.remove();
       labelElem.removeEventListener('click', onLabelClick);
@@ -584,6 +673,38 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
       targetId: (spec.isGroup ? spec.control : labelFor).id,
     });
   }
+  const clipboard =
+    spec.clipboard === undefined ? getDefaultClipboard(binding.peek()) : spec.clipboard;
+  fieldMenuEntries.set(root, {
+    label: props.label,
+    labelElem,
+    isMonitor: Boolean(spec.isMonitor),
+    isDisabled: () => isDisabled,
+    isDefault: () => valueKind.equals(binding.peek(), defaultValue),
+    reset: field.reset,
+    getText: clipboard ? () => clipboard.getText(binding.peek()) : null,
+    paste:
+      clipboard?.parse && !spec.isMonitor
+        ? (text) => {
+            const result = clipboard.parse?.(text.trim());
+            if (!result) return;
+            if (result.error !== undefined) {
+              ownError = result.error;
+              drawMessage();
+              return;
+            }
+            if (ownError !== null) {
+              ownError = null;
+              drawMessage();
+            }
+            binding.change(result.value);
+          }
+        : null,
+    copyAs: (clipboard?.copyAs ?? []).map(({ label, getText }) => ({
+      label,
+      getText: () => getText(binding.peek()),
+    })),
+  });
   readState();
   drawMessage();
   draw();

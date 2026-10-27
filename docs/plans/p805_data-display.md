@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -751,7 +751,7 @@ transparent)`), the old debugger's `rgba(255,255,255,0.04)` made theme-aware: `s
    modules are shared with `_components`' chunk. Phase 7 section 2 measures the real chunk. Seen
    on the way, not this plan's: the payload is 373 KiB gzipped (p619: 256), its warning at 450.
 
-### Phase 1: groundwork
+### Phase 1: groundwork — done
 
 1. **The folders and the library split:** `ui/data/` and its layout rule; the library's script and
    checks split by group (D15), no change in what they draw.
@@ -795,11 +795,11 @@ As built (section 1):
 As built (section 2):
 
 - **`components/RovingFocus.ts`** (`@internal`): `getMoveTarget(key, from, { count, orientation?,
-  wrap?, pageSize?, isSkipped? })` (null for another key, -1 for a move key with nowhere to go,
+wrap?, pageSize?, isSkipped? })` (null for another key, -1 for a move key with nowhere to go,
   which the caller still uses up; PageUp / PageDown only with `pageSize`, never wrapping, to the
   nearest item not skipped), `createTypeahead({ getCount, getText })` → `{ type(letter, from),
-  clear }`, `isTypeaheadKey(e)`, and `createRovingTabStop({ getElems, indexOf? })` → `{ reset,
-  setIndex, getIndex, onFocusIn }` (`setIndex` writes only the old stop and the new, `reset` every
+clear }`, `isTypeaheadKey(e)`, and `createRovingTabStop({ getElems, indexOf? })` → `{ reset,
+setIndex, getIndex, onFocusIn }` (`setIndex` writes only the old stop and the new, `reset` every
   item: a long list's arrows don't rewrite every row; `onFocusIn` is the composite's listener, so
   it has nothing to dispose). The menu and the button group are on it with no behaviour change
   (their tests as they were). A disabled menu item stays focusable (no `isSkipped`); the button
@@ -817,7 +817,7 @@ As built (section 2):
   (D12: word starts, consecutive letters, the label before keywords) comes with the palette in
   Phase 6, which is its only user. The drop-down keeps its own match (case only), as D6 leaves it.
 - **The scheduler:** `ScheduledBinding` is `ScheduledEntry`; `addScheduledRefresh(scheduler,
-  refresh, { interval?, isShown })` wraps `addScheduledBinding` (`refresh` gets `fromRefresh`); one
+refresh, { interval?, isShown })` wraps `addScheduledBinding` (`refresh` gets `fromRefresh`); one
   new test.
 - **`ui/data/` exists**, so `sbp.config.ts` has `'_engine/ui/data/': 0` in `app` and `uiKit`, and
   the root `CLAUDE.md`'s `ui/` line names `data/` (Phase 7 section 4's line, done here). The kit's
@@ -839,7 +839,7 @@ As built (section 3):
   (`buildMenuItems`, `MenuEntry`), finds the hint handles of a tree of items
   (`findMenuHintHandles`) and holds `isInPointerPath`. `Menu.ts` keeps the types and
   `createMenuSurface` (`@internal`): the menu without a trigger, `open({ anchor, focus?,
-  returnFocus?, themeFrom? })` at an element or a point, its levels, keys, pointer and hints.
+returnFocus?, themeFrom? })` at an element or a point, its levels, keys, pointer and hints.
   `createMenu` is the surface with its trigger wired (no API change). Section 4's context menu
   opens the surface at the pointer.
 - **Submenus** (`MenuSubmenuItem`, `type: 'submenu'`, public; also inside a group): as D11, each
@@ -858,14 +858,76 @@ As built (section 3):
   too, the box's own shot aside).
 - **Size:** the menu's code went from 5.6 to 9.3 kB minified (`Menu.ts` 6.2, `MenuItems.ts`
   3.0), so the UI kit example's lazy chunk grew 11.8 → 13.2 kB gzip; no first download and no
-  budget moved. Submenus are in every menu (not opt-in, as D8's behaviours are): reviewed in
-  section 3's stop.
+  budget moved. Submenus are in every menu (not opt-in, as D8's behaviours are): kept at the
+  review (the context menu, the fields' menu and the debugger's menus all use them).
+
+As built (section 4):
+
+- **`createContextMenu`** (`overlays/ContextMenu.ts`, public with `ContextMenuProps`,
+  `ContextMenuSource`, `ContextMenu`): as D11, on `createMenuSurface`. `items` a function gets the
+  element and the source (`'pointer'`, `'keyboard'`, `'touch'`); `label` a string or a function of
+  the element. The keys open it anchored to the focused element (below its start), not at a point.
+  The browser's own `contextmenu` after the key or a long press is dropped until the menu closes
+  (1 s at most): Chromium fires one for the key, at once or on its keyup.
+- **The fields' copy and paste aren't `ValueText.ts`'** (it formats numbers only, §1.2 overstated
+  it): each field's own clipboard code is. The shell takes a `FieldSpec.clipboard`
+  (`FieldClipboard`: `getText`, `parse`, `copyAs`) and keeps a `FieldMenuEntry` per field, monitors
+  included (`getFieldMenuEntry`; the form's `getFormField` stays as it was). Fields with their own:
+  the number field and slider (an expression, kept to the rules), the vector, rotation, quaternion
+  and pad (the parts' list; the vector's Copy as Array and Object), the colour field (Copy as Hex,
+  `rgb()`, sRGB floats), the radio, segmented and select (the option's label or value) and the
+  monitor (its text). The default: a string's and a boolean's both ways, a number's and an
+  object's (JSON) copied only, which the range slider, angle dial, gradient and curve editors keep.
+- **`createFieldContextMenu`** (`forms/FieldContextMenu.ts`, public with `FieldContextMenuProps`):
+  as D11; the pointer opens it on a field's label only, the keys anywhere in the field.
+- **KitDom:** `stubClipboard` only. Phase 0 put all of D14's shims into section 2, which added none
+  of them: each comes with its first user (`stubResizeObserver` with Phase 3's virtual rows,
+  `stubIntersectionObserver`, `stubMatchMedia` and `createRecording2dContext` with Phase 5's time
+  series).
+- **`yarn verify:ui`'s steps** gained `contextClickInBox` (a right click, so a state shows a context
+  menu opened by the browser's own event).
+- **The library:** a context menu box (`overlays.ts`: rows sharing one menu, with a checkbox and a
+  submenu) and a fields' menu box (`containers.ts`, not `fields.ts`, which is at 855 lines: the menu
+  is a container's opt-in; on the forms fields guide), each with states and keyboard scripts.
 
 ### Phase 2: tabs, the accordion, the splitter
 
 1. Tabs (D10).
 2. The accordion (D10).
 3. The splitter, and the property grid's label column on it (D10).
+
+As built (section 1):
+
+- **`createTabs`** (`components/Tabs.ts`, `Tabs.scss`, public with `TabsProps`, `TabDef`,
+  `TabBadge`, `Tabs`): as D10, plus `class`, `attr` and `id`. On `RovingFocus.ts` (the tab stop on
+  the selected tab, `wrap: true`, disabled tabs skipped). Decided on the way:
+  - **Every panel element exists from the start** (`role="tabpanel"`, `hidden`), so a tab's
+    `aria-controls` always names one; only the content is built on first show. A CMP given as
+    `content` is always kept; `keepMounted` (default true) applies to a function's.
+  - **An icon-only tab's label is visually hidden text**, not D10's `aria-label`, so a badge stays
+    in its name ("Lights 3"); the label is its tooltip too.
+  - **`onSelect` is the user's selections** (a click, an arrow with automatic activation, Enter or
+    Space); `select` and the initial `selected` don't call it, as the button group's
+    `setPressedIndex`. `setTabs` removing the selected tab does: the first enabled tab takes its
+    place.
+  - **Manual activation**: the arrows move the focus only, the button's own click on Enter / Space
+    selects, and a `focusout` leaving the list puts the tab stop back on the selected tab (the APG
+    example leaves it on the last focused one, so Tab from there could land on the selected tab).
+  - **A disabled tab** is the native `disabled` (not focusable, passed over by the arrows). No
+    typeahead and no Delete (the APG's optional keys).
+  - **The overflow:** a passive `scroll` listener and a `ResizeObserver` write `data-overflow`
+    (`start`, `end`, `both`), a CSS mask fades those edges (`--aek-tabs-fade-size`, with
+    `scroll-padding` so a focused tab clears it); `select` and a resize centre a tab that's cut or
+    under a fade by scrolling the list itself (never `scrollIntoView`, which scrolls the page too). The focus ring is inset: the scroll box would
+    cut an outer one. No `wrap` option (§4.1's drawer: p806 decides).
+- **The library:** the tabs, accordion and splitter are a group module of their own,
+  `_library/layout.ts` and `layoutChecks.ts` (`LAYOUT_DEMOS`, `LAYOUT_CHECKS`), not `core.ts`: it
+  was at 633 lines, and the three would pass the coding standards' 800. The tabs box: automatic
+  with a badge and a disabled tab, manual with a panel built on first selection, vertical icon-only,
+  and ten tabs in a narrow box ("Select Layer 6": both edges faded); four keyboard scripts.
+- **The Hub:** the core page's `## Tabs` section (after the loading overlays: the accordion and
+  splitter join it), its intro, tags and key APIs; both library pages' box and texts;
+  `COMPONENT_USES`. The root `CLAUDE.md`'s `components/` list names the tabs.
 
 ### Phase 3: the list and the tree
 

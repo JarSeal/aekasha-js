@@ -149,6 +149,8 @@ export const buildMonitor = <T>(
         else area.removeAttribute('disabled');
       },
       onRefresh: spec.redrawOnRefresh ? redraw : undefined,
+      // The fields' context menu copies the text it shows
+      clipboard: { getText: spec.getText },
     }
   );
   return { shell, redraw };

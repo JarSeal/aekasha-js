@@ -2,7 +2,7 @@
 // Tweakpane's two `options` forms, so a ported list is a rename.
 import { getPrimitiveValueKind } from './binding/Binding';
 import { createDropDown, type DropDownOption } from './DropDown';
-import { createField, type Field, type FieldProps } from './Field';
+import { createField, getChoiceClipboard, type Field, type FieldProps } from './Field';
 import { buildMonitor } from './Monitor';
 import type { RadioValue } from './RadioGroup';
 import './SelectField.scss';
@@ -184,6 +184,7 @@ export const createSelectField = <T extends SelectValue>(
 
   shell = createField<T>(props, {
     kind: 'select',
+    clipboard: getChoiceClipboard(readEntries),
     valueKind: getPrimitiveValueKind<T>(),
     control: dropDown.cmp.elem,
     labelFor: trigger,

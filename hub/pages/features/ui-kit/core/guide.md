@@ -341,6 +341,55 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
 | Custom properties | `--aek-loading-overlay-bg`, `--aek-loading-overlay-z`, `--aek-loading-overlay-spinner-size` |
 | Assistive tech    | The text is a `role="status"`, so a `setText` is read; the spinner is decorative            |
 
+## Tabs
+
+[`createTabs`](api:createTabs) puts a tab list over panels and shows one panel at a time. A
+panel's `content` is a CMP, or a function that builds it the first time its tab is selected:
+use a function for a panel that costs something to build (a table of the scene's meshes), and it
+stays built after (`keepMounted: false` removes it when another tab is selected, and builds it
+again on its next selection).
+
+```ts
+const inspector = createTabs({
+  label: 'Inspector',
+  tabs: [
+    { key: 'props', label: 'Properties', content: propertiesPanel },
+    // Built on its first selection
+    { key: 'stats', label: 'Stats', content: () => buildStatsPanel() },
+    { key: 'log', label: 'Log', badge: 0, content: logPanel },
+  ],
+  onSelect: (key) => saveInspectorTab(key), // the user's selections; keeping it is yours
+});
+inspectorWindow.add(inspector.cmp);
+
+inspector.setBadge('log', { label: 3, tone: 'warning', spokenLabel: '3 warnings' });
+inspector.select('log'); // from code: onSelect isn't called
+```
+
+::: demo tabs
+:::
+
+- **Automatic or manual.** With automatic activation (the default) the arrows select as they
+  move, which suits panels that show at once. With `activation: 'manual'` the arrows only move
+  the focus and Enter or Space selects, so passing over a tab doesn't build its panel.
+- **Icon-only tabs** (`iconOnly`, with an `icon`) keep the label for assistive tech (visually
+  hidden text, with the badge their name) and show it as a tooltip, as a debugger's tab menu does.
+  `orientation: 'vertical'` puts the tab list at the start of the panels; Up and Down move then.
+- **Many tabs** scroll: the tab list scrolls along its orientation, its cut edges faded, and a tab
+  the keys or `select` reach is scrolled into view (the list, never the page).
+- `setTabs` replaces the tabs: a tab whose key stays keeps its button, its panel and its built
+  content (built again when its `content` changed), so a scene's own tab can come and go. When
+  the selected tab goes, the first enabled one is selected and reported to `onSelect`.
+
+| Tabs              |                                                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                       |
+| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                               |
+| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden`                 |
+| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                               |
+| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel |
+| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable          |
+
 ## Key APIs
 
 - [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
@@ -355,6 +404,8 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
   [`createEmptyState`](api:createEmptyState) ([`EmptyState`](api:EmptyState)).
 - [`createLoadingOverlay`](api:createLoadingOverlay) ([`LoadingOverlay`](api:LoadingOverlay)), with
   [`createSceneLoader`](api:createSceneLoader).
+- [`createTabs`](api:createTabs) ([`Tabs`](api:Tabs), [`TabDef`](api:TabDef),
+  [`TabBadge`](api:TabBadge)).
 
 ## Read more
 

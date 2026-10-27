@@ -101,6 +101,9 @@ describe('describeStep', () => {
     expect(describeStep({ press: 'Shift+Tab' })).toBe('press Shift+Tab');
     expect(describeStep({ focusBox: 'Default' })).toBe('focusBox "Default"');
     expect(describeStep({ clickInBox: '.aekButton' })).toBe('clickInBox .aekButton');
+    expect(describeStep({ contextClickInBox: '.aekField__label' })).toBe(
+      'contextClickInBox .aekField__label'
+    );
     expect(describeStep({ keyDown: 'Enter' })).toBe('keyDown Enter');
     expect(describeStep({ keyUp: 'Enter' })).toBe('keyUp Enter');
     expect(describeStep({ focusInBox: '.aekButton' })).toBe('focusInBox .aekButton');

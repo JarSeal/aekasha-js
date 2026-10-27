@@ -49,6 +49,11 @@ const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) 
       .locator(`${boxSelector(piece)} ${step.clickInBox}`)
       .first()
       .click();
+  } else if ('contextClickInBox' in step) {
+    await page
+      .locator(`${boxSelector(piece)} ${step.contextClickInBox}`)
+      .first()
+      .click({ button: 'right' });
   } else if ('focusInBox' in step) {
     await page
       .locator(`${boxSelector(piece)} ${step.focusInBox}`)

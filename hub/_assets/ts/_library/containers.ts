@@ -1,12 +1,15 @@
 /**
  * The component library's containers (the Hub's `features/ui-kit/forms/` containers guide): the
- * folder, the fieldset, the property grid (and the dev page's Tweakpane parity box) and the form.
+ * folder, the fieldset, the property grid (and the dev page's Tweakpane parity box), the form, and
+ * the fields' context menu (a container's opt-in, on the fields guide).
  */
 import {
   addPropertyGridItems,
   createBindingScheduler,
   createButton,
   createCheckbox,
+  createColorField,
+  createFieldContextMenu,
   createFieldset,
   createFolder,
   createForm,
@@ -17,6 +20,7 @@ import {
   createSlider,
   createSwitch,
   createTextField,
+  createVectorField,
 } from 'aekasha/ui';
 import type { PropertyGridItem } from 'aekasha/ui';
 import { ID_PREFIX, addGroup, addButton, addKitRoot } from './page';
@@ -611,10 +615,81 @@ const initFormDemo: Demo = (box) => {
 };
 
 /** The containers group's demos by their box's key (`data-hub-demo`) */
+// --- Fields' context menu ---
+
+const FIELD_MENU_ID = (name: string) => `${ID_PREFIX}FieldMenu${name}`;
+
+/** In the page: fields of every kind under one fields' menu; each change in the status line */
+const initFieldContextMenuDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = FIELD_MENU_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (label: string) => (value: unknown) =>
+    (status.textContent = `${label}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`);
+  const camera = { speed: 4, tint: '#4f8cc9', offset: { x: 0, y: 1.5, z: -3 }, quality: 'high' };
+  const group = addGroup(
+    root,
+    'Right-click a label, or press the ContextMenu key or Shift+F10 in a field'
+  );
+  group.classList.add('hubDemoFields');
+  const fields = [
+    createNumberField({
+      id: FIELD_MENU_ID('Speed'),
+      label: 'Speed',
+      target: camera,
+      key: 'speed',
+      min: 0,
+      max: 20,
+      step: 0.5,
+      onChange: report('Speed'),
+    }),
+    createColorField({
+      id: FIELD_MENU_ID('Tint'),
+      label: 'Tint',
+      target: camera,
+      key: 'tint',
+      onChange: report('Tint'),
+    }),
+    createVectorField({
+      id: FIELD_MENU_ID('Offset'),
+      label: 'Offset',
+      target: camera,
+      key: 'offset',
+      step: 0.1,
+      onChange: report('Offset'),
+    }),
+    createSelectField({
+      id: FIELD_MENU_ID('Quality'),
+      label: 'Quality',
+      target: camera,
+      key: 'quality',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'High', value: 'high' },
+      ],
+      onChange: report('Quality'),
+    }),
+    createMonitor({
+      id: FIELD_MENU_ID('Distance'),
+      label: 'Distance',
+      get: () => Math.hypot(camera.offset.x, camera.offset.y, camera.offset.z),
+      precision: 2,
+      unit: 'm',
+    }),
+    createNumberField({ id: FIELD_MENU_ID('Locked'), label: 'Locked', value: 1, disabled: true }),
+  ];
+  for (const field of fields) group.append(field.cmp.elem);
+  createFieldContextMenu({ container: group });
+  root.append(status);
+};
+
 export const CONTAINERS_DEMOS: Record<string, Demo> = {
   folder: initFolderDemo,
   fieldset: initFieldsetDemo,
   propertyGrid: initPropertyGridDemo,
   propertyGridParity: initPropertyGridParityDemo,
   form: initFormDemo,
+  fieldContextMenu: initFieldContextMenuDemo,
 };

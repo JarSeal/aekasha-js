@@ -51,7 +51,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7543,
-      "gzip": 3075
+      "gzip": 3077
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -63,7 +63,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1633
+      "gzip": 1634
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -107,7 +107,7 @@
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24363
+      "gzip": 24364
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -143,7 +143,7 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 1038903,
-      "gzip": 291114
+      "gzip": 291111
     },
     "assets/uiKitEmbed.css": {
       "bytes": 19264,
@@ -158,8 +158,8 @@
       "gzip": 3916
     },
     "assets/uiKitEmbedForm.js": {
-      "bytes": 46467,
-      "gzip": 17651
+      "bytes": 48476,
+      "gzip": 18318
     },
     "uiKit.embed.js": {
       "bytes": 249,

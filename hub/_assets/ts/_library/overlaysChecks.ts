@@ -27,6 +27,9 @@ const MENU_VIEW = '#hubDemoMenuView';
 const VIEW_ITEM = (n: number) => `.aekMenu:not([data-submenu]) > .aekMenu__item:nth-child(${n})`;
 const VIEW_SUBITEM = (n: number) => `.aekMenu[data-submenu] > .aekMenu__item:nth-child(${n})`;
 const ROOT_ITEM = (n: number) => `#hudRoot ${VIEW_ITEM(n)}`;
+/** The context menu box's row by its place (`overlays.ts`' `CONTEXT_ID`) and its status line */
+const CONTEXT_ROW = (n: number) => `#hubDemoContextRow${n}`;
+const CONTEXT_STATUS = '#hubDemoContextStatus';
 
 /** The overlays group's checks by their demo's key (`data-hub-demo`) */
 export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
@@ -357,6 +360,53 @@ export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Tab' },
           { expectCount: MENU, count: 0 },
           { expectFocus: SPLIT_MENU_BUTTON },
+        ],
+      },
+    ],
+  },
+  contextMenu: {
+    states: [
+      {
+        name: 'a row’s menu open by a right click',
+        steps: [{ contextClickInBox: CONTEXT_ROW(0) }],
+      },
+      {
+        name: 'a row’s menu with its submenu open',
+        steps: [{ contextClickInBox: CONTEXT_ROW(0) }, { clickHud: VIEW_ITEM(3) }],
+      },
+    ],
+    keyboard: [
+      {
+        name: 'the ContextMenu key opens a row’s menu on its first item; a pick in its submenu closes it, the focus back on the row',
+        steps: [
+          { focusInBox: CONTEXT_ROW(1) },
+          { press: 'ContextMenu' },
+          { expectCount: MENU, count: 1 },
+          { expectAttr: `${MENU}:not([data-submenu])`, name: 'aria-label', value: 'Crate actions' },
+          { expectText: MENU_FOCUSED, text: 'Focus' },
+          { press: 'ArrowDown' },
+          { press: 'Space' },
+          { expectText: CONTEXT_STATUS, text: 'Crate: hidden' },
+          { expectCount: MENU, count: 1 },
+          { press: 'ArrowDown' },
+          { press: 'ArrowRight' },
+          { expectText: MENU_FOCUSED, text: 'Front' },
+          { press: 'Enter' },
+          { expectCount: MENU, count: 0 },
+          { expectText: CONTEXT_STATUS, text: 'Crate moved to the front' },
+          { expectFocus: CONTEXT_ROW(1) },
+        ],
+      },
+      {
+        name: 'Shift+F10 opens it too; Escape closes it, the focus back on the row',
+        steps: [
+          { focusInBox: CONTEXT_ROW(2) },
+          { press: 'Shift+F10' },
+          { expectCount: MENU, count: 1 },
+          { expectText: MENU_FOCUSED, text: 'Focus' },
+          { press: 'Escape' },
+          { expectCount: MENU, count: 0 },
+          { expectFocus: CONTEXT_ROW(2) },
         ],
       },
     ],

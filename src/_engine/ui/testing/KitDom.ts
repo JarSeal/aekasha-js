@@ -565,3 +565,37 @@ export const countListeners = (target: EventTarget, type?: string) => {
   for (const list of byType.values()) count += list.length;
   return count;
 };
+
+/**
+ * A clipboard for a test (p805 D14; Node's `navigator` has none): `navigator.clipboard`'s
+ * `readText` and `writeText` over a text the test reads (`getText`) and fills (`setText`).
+ * `readable: false` makes `readText` reject, as a denied permission does. `restore()` takes it
+ * away again.
+ * @internal
+ */
+export const stubClipboard = (props: { text?: string; readable?: boolean } = {}) => {
+  let text = props.text ?? '';
+  const clipboard = {
+    readText: () =>
+      props.readable === false
+        ? Promise.reject(new Error('Read permission denied'))
+        : Promise.resolve(text),
+    writeText: (value: string) => {
+      text = value;
+      return Promise.resolve();
+    },
+  };
+  Object.defineProperty(globalThis.navigator, 'clipboard', {
+    configurable: true,
+    value: clipboard,
+  });
+  return {
+    getText: () => text,
+    setText: (value: string) => {
+      text = value;
+    },
+    restore: () => {
+      Reflect.deleteProperty(globalThis.navigator, 'clipboard');
+    },
+  };
+};

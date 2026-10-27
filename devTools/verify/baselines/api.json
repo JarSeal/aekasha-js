@@ -2879,6 +2879,13 @@
       "SplitButton": "TypeAlias",
       "SplitButtonProps": "TypeAlias"
     },
+    "src/_engine/ui/components/Tabs.ts": {
+      "createTabs": "Function",
+      "TabBadge": "TypeAlias",
+      "TabDef": "TypeAlias",
+      "Tabs": "TypeAlias",
+      "TabsProps": "TypeAlias"
+    },
     "src/_engine/ui/components/Tag.ts": {
       "createTag": "Function",
       "Tag": "TypeAlias",
@@ -3131,18 +3138,26 @@
       "createField": "Function",
       "Field": "TypeAlias",
       "FieldChange": "TypeAlias",
+      "FieldClipboard": "TypeAlias",
       "FieldDyn": "TypeAlias",
+      "FieldMenuEntry": "TypeAlias",
       "FieldOptions": "TypeAlias",
       "FieldProps": "TypeAlias",
       "FieldShell": "TypeAlias",
       "FieldSpec": "TypeAlias",
       "FormChild": "TypeAlias",
       "FormFieldEntry": "TypeAlias",
+      "getChoiceClipboard": "Function",
+      "getFieldMenuEntry": "Function",
       "getFormField": "Function",
       "readFieldsetDisabled": "Function",
       "revealFormChild": "Function",
       "setFormRevealer": "Function",
       "setSchedulerAdopter": "Function"
+    },
+    "src/_engine/ui/forms/FieldContextMenu.ts": {
+      "createFieldContextMenu": "Function",
+      "FieldContextMenuProps": "TypeAlias"
     },
     "src/_engine/ui/forms/Fieldset.ts": {
       "createFieldset": "Function",
@@ -3186,6 +3201,7 @@
       "buildNumberField": "Function",
       "buildNumberMonitor": "Function",
       "createNumberField": "Function",
+      "getNumberClipboard": "Function",
       "NumberField": "TypeAlias",
       "NumberFieldBuild": "TypeAlias",
       "NumberFieldParts": "TypeAlias",
@@ -3328,6 +3344,12 @@
       "hasTopLayer": "Function",
       "showAnchored": "Function",
       "ShowAnchoredProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/ContextMenu.ts": {
+      "ContextMenu": "TypeAlias",
+      "ContextMenuProps": "TypeAlias",
+      "ContextMenuSource": "TypeAlias",
+      "createContextMenu": "Function"
     },
     "src/_engine/ui/overlays/FocusTrap.ts": {
       "getFirstFocusable": "Function",
@@ -3500,6 +3522,7 @@
       "dispatchPointer": "Function",
       "KitKeyInit": "TypeAlias",
       "KitPointerInit": "TypeAlias",
+      "stubClipboard": "Function",
       "stubKitDomAsync": "Function"
     },
     "src/_engine/utils/Assert.ts": {
@@ -4562,6 +4585,9 @@
       "ColorFieldProps",
       "ColorFieldValue",
       "ColorIntensityProps",
+      "ContextMenu",
+      "ContextMenuProps",
+      "ContextMenuSource",
       "CurveBezier",
       "CurveEditor",
       "CurveEditorProps",
@@ -4588,6 +4614,7 @@
       "EulerValue",
       "Field",
       "FieldChange",
+      "FieldContextMenuProps",
       "FieldDyn",
       "FieldOptions",
       "FieldProps",
@@ -4694,6 +4721,10 @@
       "TProps",
       "TSettings",
       "TStyle",
+      "TabBadge",
+      "TabDef",
+      "Tabs",
+      "TabsProps",
       "Tag",
       "TagProps",
       "TextField",
@@ -4733,10 +4764,12 @@
       "createButtonGroup",
       "createCheckbox",
       "createColorField",
+      "createContextMenu",
       "createCurveEditor",
       "createDivider",
       "createDropDown",
       "createEmptyState",
+      "createFieldContextMenu",
       "createFieldset",
       "createFolder",
       "createForm",
@@ -4764,6 +4797,7 @@
       "createSpinner",
       "createSplitButton",
       "createSwitch",
+      "createTabs",
       "createTag",
       "createTextField",
       "createToaster",

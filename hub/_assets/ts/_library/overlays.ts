@@ -7,6 +7,7 @@ import {
   closeDraggableWindow,
   CMP,
   createButton,
+  createContextMenu,
   createKbd,
   createMenu,
   createPopover,
@@ -546,6 +547,70 @@ const initMenuDemo: Demo = (box) => {
 };
 
 /** The overlays group's demos by their box's key (`data-hub-demo`) */
+// --- Context menu ---
+
+const CONTEXT_ID = (name: string) => `${ID_PREFIX}Context${name}`;
+
+/** In the page: a scene's objects as rows, one context menu for them all (the row found from the
+ * element); what an item does in the status line */
+const initContextMenuDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = CONTEXT_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const objects = [
+    { name: 'Lamp', isVisible: true },
+    { name: 'Crate', isVisible: true },
+    { name: 'Door', isVisible: false },
+  ];
+  const group = addGroup(
+    root,
+    'Right-click a row, or focus it and press the ContextMenu key or Shift+F10'
+  );
+  objects.forEach((object, index) => {
+    const row = createButton({ id: CONTEXT_ID(`Row${index}`), label: object.name });
+    row.cmp.elem.setAttribute('data-object', String(index));
+    group.append(row.cmp.elem);
+  });
+  const getObject = (elem: Element) => {
+    const row = elem.closest<HTMLElement>('[data-object]');
+    return row ? objects[Number(row.dataset.object)] : null;
+  };
+  createContextMenu({
+    target: group,
+    label: (elem) => `${getObject(elem)?.name ?? 'Object'} actions`,
+    items: (elem) => {
+      const object = getObject(elem);
+      if (!object) return [];
+      return [
+        { label: 'Focus', onSelect: () => (status.textContent = `Focus: ${object.name}`) },
+        {
+          type: 'checkbox',
+          label: 'Visible',
+          checked: object.isVisible,
+          onCheckedChange: (on) => {
+            object.isVisible = on;
+            status.textContent = `${object.name}: ${on ? 'shown' : 'hidden'}`;
+          },
+        },
+        {
+          type: 'submenu',
+          label: 'Move to',
+          items: ['Front', 'Back', 'Origin'].map((place) => ({
+            label: place,
+            onSelect: () =>
+              (status.textContent = `${object.name} moved to the ${place.toLowerCase()}`),
+          })),
+        },
+        { type: 'separator' },
+        { label: 'Delete', disabled: true },
+      ];
+    },
+  });
+  root.append(status);
+};
+
 export const OVERLAYS_DEMOS: Record<string, Demo> = {
   window: initWindowDemo,
   dialog: initDialogDemo,
@@ -553,4 +618,5 @@ export const OVERLAYS_DEMOS: Record<string, Demo> = {
   popover: initPopoverDemo,
   toaster: initToasterDemo,
   menu: initMenuDemo,
+  contextMenu: initContextMenuDemo,
 };

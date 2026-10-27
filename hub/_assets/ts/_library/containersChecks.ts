@@ -16,6 +16,16 @@ const FORM = (name: string) => `#hubDemoForm${name}`;
 const FORM_SUMMARY = `${FORM('Form')} .aekForm__summary`;
 const FORM_LINKS = `${FORM_SUMMARY} .aekForm__summaryLink`;
 
+/** A fields' menu box's field by its name (`containers.ts`' `FIELD_MENU_ID`: the control's id),
+ * its label, the box's status line, and an item of the open menu by its place */
+const FIELD_MENU = (name: string) => `#hubDemoFieldMenu${name}`;
+const FIELD_MENU_LABEL = (name: string) => `.aekField:has(${FIELD_MENU(name)}) .aekField__label`;
+const FIELD_MENU_STATUS = '#hubDemoFieldMenuStatus';
+const FIELD_MENU_ITEM = (n: number) =>
+  `.aekMenu:not([data-submenu]) > .aekMenu__item:nth-child(${n})`;
+const OPEN_MENU = '#hudRoot .aekMenu';
+const OPEN_MENU_FOCUSED = `${OPEN_MENU} .aekMenu__item:focus .aekMenu__label`;
+
 /** The containers group's checks by their demo's key (`data-hub-demo`) */
 export const CONTAINERS_CHECKS: Record<string, UiDemoChecks> = {
   folder: {
@@ -162,6 +172,40 @@ export const CONTAINERS_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Enter' },
           { expectText: FORM('Status'), text: 'Created Ada (Europe, 36)' },
           { expectAttr: FORM_SUMMARY, name: 'hidden', value: '' },
+        ],
+      },
+    ],
+  },
+  fieldContextMenu: {
+    states: [
+      {
+        name: 'a colour field’s menu with Copy as open',
+        steps: [{ contextClickInBox: FIELD_MENU_LABEL('Tint') }, { clickHud: FIELD_MENU_ITEM(5) }],
+      },
+      { name: 'a monitor’s menu', steps: [{ contextClickInBox: FIELD_MENU_LABEL('Distance') }] },
+    ],
+    keyboard: [
+      {
+        name: 'the ContextMenu key in a field opens its menu: Reset off at the default, on after a change, and it resets',
+        steps: [
+          { focusInBox: FIELD_MENU('Speed') },
+          { press: 'ContextMenu' },
+          { expectCount: OPEN_MENU, count: 1 },
+          { expectAttr: OPEN_MENU, name: 'aria-label', value: 'Speed' },
+          { expectText: OPEN_MENU_FOCUSED, text: 'Reset' },
+          { expectAttr: `#hudRoot ${FIELD_MENU_ITEM(1)}`, name: 'aria-disabled', value: 'true' },
+          { press: 'Escape' },
+          { expectCount: OPEN_MENU, count: 0 },
+          { expectFocus: FIELD_MENU('Speed') },
+          { press: 'ArrowUp' },
+          { expectText: FIELD_MENU_STATUS, text: 'Speed: 4.5' },
+          { press: 'Shift+F10' },
+          { expectAttr: `#hudRoot ${FIELD_MENU_ITEM(1)}`, name: 'aria-disabled', value: null },
+          { press: 'Enter' },
+          { expectCount: OPEN_MENU, count: 0 },
+          { expectText: FIELD_MENU_STATUS, text: 'Speed: 4' },
+          { expectValue: FIELD_MENU('Speed'), value: '4.0' },
+          { expectFocus: FIELD_MENU('Speed') },
         ],
       },
     ],

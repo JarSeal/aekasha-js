@@ -441,3 +441,36 @@ and never flashes.
 | States            | `data-kind="monitor"`, `data-disabled`                                                                  |
 | Custom properties | `--aek-monitor-bg`, `--aek-monitor-color`, `--aek-monitor-font` (the multiline block's)                 |
 | Assistive tech    | Text read after its label, not announced; the multiline block a read-only text area and a tab stop      |
+
+## The fields' context menu
+
+[`createFieldContextMenu`](api:createFieldContextMenu) gives every field in a container (a property
+grid, a form, any panel) one context menu: **Reset** to the field's default, **Copy** the value as
+text, **Paste** a value and **Copy as**, other forms of a colour (hex, `rgb()`, sRGB floats) or a
+vector (an array, an object). A right click on a field's label opens it; on the control the
+browser's own menu stays, with a text's Cut, Copy and Paste. With the focus in a field, the
+ContextMenu key or Shift+F10 opens it too. Fields added to the container later have it as well.
+
+```ts
+const grid = createPropertyGrid({ children: [speedField, tintField, offsetField] });
+settingsPanel.add(grid.cmp);
+const fieldsMenu = createFieldContextMenu({ container: grid.cmp.elem });
+// With the panel: fieldsMenu.cmp.remove()
+```
+
+::: demo fieldContextMenu
+:::
+
+What Copy writes is the field's own text: a number as it is, a colour's hex, a vector's
+`1, 2.5, -3`, an option's label, a monitor's text. A paste goes through the same checks as typing:
+a number field takes an expression and keeps it to its `min`, `max` and `step`, a colour field
+reads any colour text it reads typed, a choice takes an option's label or value. A text that isn't
+a value is the field's message, as a typed one is. The browser may ask the user before the page
+reads the clipboard, so a paste can wait for that.
+
+| Fields' context menu |                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props                | [`FieldContextMenuProps`](api:FieldContextMenuProps)                                                                                                              |
+| Items                | Reset (off at the default, for a monitor and a disabled field), Copy, Paste (off for a monitor, a disabled field, and where the clipboard can't be read), Copy as |
+| Keys                 | The ContextMenu key and Shift+F10 in a field; the menu's keys in it                                                                                               |
+| Assistive tech       | The menu's, named by the field's label                                                                                                                            |
