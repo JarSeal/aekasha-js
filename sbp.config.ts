@@ -110,8 +110,9 @@ const profiles: SbpProfile[] = [
   // #endregion banner-profile
   {
     // The UI kit in an embed (p801 D9): one code-made scene that opens a window with a button and
-    // its tooltip, a toast and a dialog with a small form (p804 D12), no feature, built into
-    // dist-embed/uiKit/; `yarn verify:embed` checks the kit's sizes and bounds in it
+    // its tooltip, a toast, a dialog with a small form (p804 D12) and a data window (p805 D13),
+    // no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks the kit's sizes and
+    // bounds in it
     id: 'uiKit',
     entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
     // Not `uiKit`: a scene file named like the entry would emit a second `assets/uiKit.css` (its
@@ -147,6 +148,17 @@ const profiles: SbpProfile[] = [
         // The colour picker (`vanilla-colorful`'s HSVA picker), loaded on the colour panel's
         // first open (p804 D8, D12): 2.7 KiB, its budget `suggestBudget`'s at least 1 KiB over
         'assets/hsva.js': 4 * KIB,
+        // p805 D13: the data window, a module its button's first press imports
+        // (`uiKitEmbedData.ts`): tabs of a sortable, selectable table, a list with an action per
+        // row, and a stat tile with a sparkline: what a few data pieces cost on top of the HUD.
+        // From `suggestBudget` (19.3 KiB)
+        'assets/uiKitEmbedData.js': 21 * KIB,
+        // Its styles (3.9 KiB)
+        'assets/uiKitEmbedData.css': 5 * KIB,
+        // The binding scheduler, which the form's fields and the data window's collections share
+        // (a collection imports it for its `scheduler` prop), so the build makes it a chunk of
+        // its own: 0.8 KiB, from the form's chunk (p805 Phase 7)
+        'assets/BindingScheduler.js': 2 * KIB,
       },
       groups: {
         three: 261 * KIB,
@@ -162,7 +174,7 @@ const profiles: SbpProfile[] = [
       modules: {
         // p804 D12: the form fields load with the dialog's form
         '_engine/ui/forms/': 0,
-        // p805 D13: the data display too (its data window, Phase 7)
+        // p805 D13: the data display too: its data window loads it
         '_engine/ui/data/': 0,
       },
     },

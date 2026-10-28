@@ -3,7 +3,7 @@
   "id": "uiKitEmbed",
   "sceneFile": "./profiles/uiKit/uiKitEmbed.ts",
   "name": "UI kit embed",
-  "description": "The uiKit embed's scene: a box made in code, a draggable window with a button and its tooltip, a toast, and a dialog with a small form bound to the box (a slider, a number field, a checkbox, a select and a colour field) that the window's button opens, all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
+  "description": "The uiKit embed's scene: a box made in code, a draggable window with a button and its tooltip, a toast, and a dialog with a small form bound to the box (a slider, a number field, a checkbox, a select and a colour field) that the window's second button opens, and a data window the third opens (tabs of a sortable, selectable table of shades that colours the box, a list of the scene's objects with a visibility toggle each, and the frame time as a stat tile with a sparkline), all from the UI kit. Mounted into a page it doesn't own, they size from the browser's font size and stay inside the mount's container.",
   "backgroundColor": "#1c212b",
   "cameras": ["uiKitEmbedCamera"],
   "lights": ["uiKitEmbedLight"]

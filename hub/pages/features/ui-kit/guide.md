@@ -141,8 +141,8 @@ has each way, the tokens, the themes, the fonts and a worked example.
 
 A build carries only the pieces the app imports, with their styles, and loads them with the code
 that uses them. From the last `yarn sbp` report (gzip), for the `uiKit` embed profile, a scene
-with a window, a dialog, a toast, a button and a tooltip over one box, and a small form in the
-dialog:
+with a window, a dialog, a toast, a button and a tooltip over one box, a small form in the dialog
+and a data window:
 
 - **The kit in the first download:** {{sbp:uiKit.group:_engine/ui}}: the HUD root and CMP, which
   the engine's boot needs.
@@ -154,6 +154,12 @@ dialog:
   {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}} of styles for a property grid of five
   [fields](hub:features/ui-kit/forms#in-a-build), and {{sbp:uiKit.chunk:assets/hsva.js}} for the
   colour picker the first time its panel opens.
+- **What a few data pieces add,** loaded on the data window's first open:
+  {{sbp:uiKit.chunk:assets/uiKitEmbedData.js}} of code and
+  {{sbp:uiKit.chunk:assets/uiKitEmbedData.css}} of styles for a table, a list with an action per
+  row, tabs, a stat tile and a sparkline ([data display](hub:features/ui-kit/data#in-a-build)),
+  and {{sbp:uiKit.chunk:assets/BindingScheduler.js}} for the scheduler the form and the
+  collections share.
 
 The [smallest build](hub:features/smallest-build) page shows how the numbers are measured and
 kept under their budgets.

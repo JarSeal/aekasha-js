@@ -113,6 +113,86 @@ second map, in a context of its own that is off until the menu opens.
 - Both maps have the scene's `sceneId`, so they're inactive in any other scene, and the next
   visit's maps replace them by their ids.
 
+## The inspector
+
+Inspector opens a window that shows the scene's objects in a tree beside two tabs: the picked
+object's properties, and the frame's figures. The scene file describes its objects; the inspector
+(a module of its own) reads and edits them only through that description.
+
+<<< src/app/examples/uiKit/exampleUiKit.ts#ui-kit-outline
+
+- Each object has its key, its name, its entity, and what the inspector may edit: a colour with
+  its options and its first value, a light's intensity, a shape's turn. The getters and setters
+  are the scene's own, so a colour picked in the inspector reaches the HUD's swatch, the shape's
+  window and the settings as a pick anywhere else does; `last` says the user let go, and the other
+  windows are updated only then.
+- `getOutline` is read again on every refresh of the inspector. The rename, the settings' colour
+  field and the shape windows' drop-downs call `refreshInspector()`, so the tree has the new name
+  and the picked object's rows the new colour.
+- The lights are found by their JSON's app ids (`getLightObject` in the inspector's module), and
+  their colour and intensity are read from the light itself.
+
+<<< src/app/examples/uiKit/exampleUiKitInspector.ts#ui-kit-inspector
+
+- The tree's `roots` is a function, so `refresh()` reads the outline again; a row keeps its
+  element by its key, so the selection and the focus stay. Its `badge` is the object's kind, and
+  a hidden object's name is muted (`isPlaceholder`). The filter field above it finds an object by
+  its name or its kind.
+- The tabs' Stats panel is a function: it's built the first time the tab shows, and kept after.
+- The splitter's separator is a tab stop: the arrows move it, Enter folds the outline away and
+  back, and a drag moves it too.
+- One context menu serves every row: `getKeyAt` finds the row's key from the element it opens on
+  (a right click, the ContextMenu key or Shift+F10 on the focused row, a long press). Its items are
+  made on each open, so Visible is checked as the object is now, and Colour is a submenu of the
+  object's colours with the current one picked. A group's row has no items, so the browser's own
+  menu shows there.
+
+### Properties
+
+<<< src/app/examples/uiKit/exampleUiKitInspector.ts#ui-kit-inspector-properties
+
+- The grid is made again for each pick: a light has no rotation, a shape no intensity.
+- The colour field's and the slider's `default` is the object's first value, so the fields'
+  context menu's Reset goes back to it; the menu also copies a value and pastes one
+  (`createFieldContextMenu` over the grid, removed with it).
+- The rotation is read every 100 ms while it shows, so it follows the turns and the spin.
+- Visible disables the object's entity (`setDisabled`), which hides its mesh or turns its light
+  off; the tree mutes its row.
+
+### Stats
+
+<<< src/app/examples/uiKit/exampleUiKitInspector.ts#ui-kit-inspector-stats
+
+- The figures come from a system in the `LATE_MAIN` stage, which runs right after the frame's
+  render: three counts the draw calls and triangles as it renders and resets them as its next
+  frame starts, so a system before the render would read 0. The panel removes the system when it
+  goes.
+- The time series takes the frame time every frame (`push` allocates nothing and it draws at most
+  once a frame, only while it shows). The tiles show the average over a quarter of a second: a
+  figure that changes every frame can't be read.
+- The table's rows are a function of the outline, sorted by their triangles at the start; a
+  header's button sorts by another column, and a row's activation (a click, Enter) picks its
+  object and shows its properties.
+
+## The command palette
+
+Ctrl+K (⌘K on a Mac), or Commands, opens a palette of the scene's commands: turn the shapes,
+open the windows, inspect any object, pause, reload.
+
+<<< src/app/examples/uiKit/exampleUiKit.ts#ui-kit-commands
+
+<<< src/app/examples/uiKit/exampleUiKitPalette.ts#ui-kit-palette
+
+- The commands are made on each open, so a renamed shape is found by its new name; their ids stay
+  the same, so the recent ones stay recent. An empty query lists the recent commands first.
+- A command's `kbd` is shown, not bound: Space and Escape are the gameplay map's keys.
+- The palette's key is an action map of its own context, `SHORTCUTS`, which stays on while the
+  pause menu turns `GAMEPLAY` off. An action map still takes the keys typed into a text field, so
+  the palette turns `GAMEPLAY` off while it's open and back to how it was when it closes: the
+  pause menu may have turned it off.
+- A command runs after the palette closed and gave the focus back, so a window it opens returns
+  the focus to the same place.
+
 ## The scene loader
 
 "Reload the scene" loads the scene again through the app's scene loader, which every scene goes

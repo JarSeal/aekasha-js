@@ -40,8 +40,16 @@ import {
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
 } from 'aekasha/ui';
-import type { Button, ProgressBar, PropertyGrid, ToastType } from 'aekasha/ui';
+import type { Button, PaletteCommand, ProgressBar, PropertyGrid, ToastType } from 'aekasha/ui';
 import { SpinComponentType } from '../ecs/SpinComponent';
+import {
+  getLightObject,
+  openInspector,
+  refreshInspector,
+  toggleInspectorWindow,
+} from './exampleUiKitInspector';
+import type { InspectedGroup, InspectedObject } from './exampleUiKitInspector';
+import { createScenePalette } from './exampleUiKitPalette';
 import './exampleUiKit.scss';
 
 const SCENE_ID = 'exampleUiKit';
@@ -74,6 +82,23 @@ const GROUND_COLORS = [
   { value: '#a89a7c', label: 'Sand' },
   { value: '#5f7356', label: 'Moss' },
 ];
+const LIGHT_COLORS = [
+  { value: '#ffffff', label: 'White' },
+  { value: '#fff2d9', label: 'Warm' },
+  { value: '#d9e6ff', label: 'Cool' },
+  { value: '#ffc48f', label: 'Dusk' },
+];
+/** The scene's lights (its JSON's), as the inspector shows them, with their JSON's values */
+const LIGHTS = [
+  {
+    key: 'ambient',
+    appId: 'exampleUiKitAmbient',
+    name: 'Ambient',
+    color: '#ffffff',
+    intensity: 0.6,
+  },
+  { key: 'sun', appId: 'exampleUiKitSun', name: 'Sun', color: '#fff2d9', intensity: 3 },
+];
 
 // The scene's state, set again on every visit
 const shapeColors = {} as Record<ShapeId, string>;
@@ -85,9 +110,12 @@ const shapeNames = {} as Record<ShapeId, string>;
 /** The open shape windows' turn bars, set by their content and taken off when it goes */
 const turnBars = new Map<ShapeId, ProgressBar>();
 let groundColor = GROUND_COLORS[0].value;
+let groundEntityId = -1;
 /** The shape the Scene settings window shows, and its grid while the window is open */
 let settingsShape: ShapeId = 'box';
 let settingsGrid: PropertyGrid | null = null;
+/** The palette's opener while the scene is in */
+let openPalette: (() => void) | null = null;
 
 const getShapeName = (shapeId: ShapeId) => shapeNames[shapeId] ?? shapeId;
 /** A shape's material id, from its first name: a rename leaves it */
@@ -111,7 +139,7 @@ const setMaterialWireframe = (materialId: string, on: boolean) => {
 };
 
 export const scene = async () => {
-  createMeshEntity({
+  groundEntityId = createMeshEntity({
     geo: { id: 'uiKitGround', type: 'BOX', params: { width: 12, height: 0.2, depth: 8 } },
     mat: { id: 'uiKitGround', type: 'STANDARD', params: { color: GROUND_COLORS[0].value } },
     position: { y: -0.1 },
@@ -164,6 +192,8 @@ export const scene = async () => {
 
   const panel = createHudPanel();
   createToasts();
+  const palette = createScenePalette(SCENE_ID, getCommands);
+  openPalette = palette.open;
   // Registered on every visit, which replaces the kind's options: its windows close with the
   // scene and aren't saved (saveToLS), so none is restored before a visit registers it. A kind
   // whose windows are restored after a reload is registered once, in the app's `start`.
@@ -176,6 +206,8 @@ export const scene = async () => {
   registerOnSceneExit(SCENE_ID, () => {
     panel.remove();
     removeToaster(TOASTER_ID);
+    palette.remove();
+    openPalette = null;
   });
 };
 
@@ -216,7 +248,18 @@ const createHudPanel = () => {
   panel.add(turn.cmp);
   panel.add(createButton({ label: 'Settings', onClick: () => toggleSettingsWindow() }).cmp);
   panel.add(createButton({ label: 'Rename', onClick: () => toggleRenameWindow() }).cmp);
+  panel.add(
+    createButton({ label: 'Inspector', onClick: () => toggleInspectorWindow(inspectorScene) }).cmp
+  );
   // `kbd` is a hint (and `aria-keyshortcuts`): the key is the scene's action map's
+  panel.add(
+    createButton({
+      label: 'Commands',
+      // The platform's chord of the two the palette's map binds: ⌘K on a Mac, Ctrl+K elsewhere
+      kbd: createKbd({ keys: /Mac|iP(hone|ad)/.test(navigator.platform) ? 'Meta+K' : 'Ctrl+K' }),
+      onClick: () => openPalette?.(),
+    }).cmp
+  );
   panel.add(
     createButton({ label: 'Menu', kbd: createKbd({ keys: 'Escape' }), onClick: () => openMenu() })
       .cmp
@@ -231,10 +274,12 @@ const applyShapeColor = (shapeId: ShapeId, color: string) => {
   shapeButtons[shapeId].cmp.updateStyle({ '--swatch': color });
 };
 
-/** A colour from a shape window's drop-down: the settings' colour field shows it (a flash) */
+/** A colour from a shape window's drop-down: the settings' and the inspector's colour fields
+ * show it (a flash) */
 const setShapeColor = (shapeId: ShapeId, color: string) => {
   applyShapeColor(shapeId, color);
   settingsGrid?.refresh();
+  refreshInspector();
   showToast(`${getShapeName(shapeId)}: ${getColorLabel(color)}`);
 };
 // #endregion ui-kit-hud
@@ -362,9 +407,11 @@ const createSettingsPanel = () => {
         get: () => shapeColors[settingsShape],
         set: (color) => applyShapeColor(settingsShape, color),
         palette: COLORS.map((color) => color.value),
-        // A finished pick: the shape's window shows it
+        // A finished pick: the shape's window and the inspector show it
         onChange: (_color, { last }) => {
-          if (last) updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
+          if (!last) return;
+          updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
+          refreshInspector();
         },
       }),
       // The ECS transform's vectors are to read: a write goes through setTransform
@@ -399,6 +446,9 @@ const createSettingsPanel = () => {
               setMaterialColor('uiKitGround', color);
             },
             options: GROUND_COLORS,
+            // The inspector's colour field can set one these aren't
+            placeholder: 'Custom',
+            onChange: () => refreshInspector(),
           }),
           // Read every 200 ms (a monitor's default), while it shows
           createMonitor({
@@ -435,8 +485,8 @@ const toggleRenameWindow = () =>
     id: RENAME_WINDOW_ID,
     title: 'Rename a shape',
     content: () => createRenamePanel(),
-    // Under the HUD panel
-    position: { x: 16, y: 390 },
+    // Right of the HUD panel, under the shapes' windows
+    position: { x: 260, y: 300 },
     size: { w: 300, h: 320 },
     closeOnSceneChange: true,
   });
@@ -497,8 +547,9 @@ const renameShape = (shapeId: ShapeId, name: string) => {
   if (getDraggableWindow(windowId)?.isOpen) {
     openDraggableWindow({ id: windowId, title: name, focusFirstElement: false });
   }
-  // The settings' shape select shows the new name
+  // The settings' shape select shows the new name, the inspector's outline too
   settingsGrid?.refresh();
+  refreshInspector();
   showToast(`${previous} is now ${name}`, 'success');
 };
 // #endregion ui-kit-form
@@ -608,11 +659,127 @@ const moveMenuFocus = (step: number) => {
 };
 // #endregion ui-kit-menu
 
+// #region ui-kit-outline (shown in the Hub: hub/pages/examples/ui-kit/)
+/**
+ * The scene's objects as the inspector shows them: each with its entity and what the inspector
+ * may edit, bound to this file's records. Read on each refresh of the inspector, so a renamed
+ * shape has its new name.
+ */
+const getOutline = (): InspectedGroup[] => [
+  {
+    key: 'meshes',
+    name: 'Meshes',
+    objects: [
+      ...SHAPES.map(
+        (shape): InspectedObject => ({
+          key: shape.id,
+          name: getShapeName(shape.id),
+          kind: 'Shape',
+          entityId: shapeEntityIds[shape.id],
+          rotates: true,
+          color: {
+            get: () => shapeColors[shape.id],
+            set: (color, last) => {
+              applyShapeColor(shape.id, color);
+              // The other windows once a pick is done: not on every step of a drag
+              if (!last) return;
+              updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
+              settingsGrid?.refresh();
+            },
+            options: COLORS,
+            default: shape.color,
+          },
+          turn: () => turnShape(shape.id),
+        })
+      ),
+      {
+        key: 'ground',
+        name: 'Ground',
+        kind: 'Ground',
+        entityId: groundEntityId,
+        color: {
+          get: () => groundColor,
+          set: (color, last) => {
+            groundColor = color;
+            setMaterialColor('uiKitGround', color);
+            if (last) settingsGrid?.refresh();
+          },
+          options: GROUND_COLORS,
+          default: GROUND_COLORS[0].value,
+        },
+      },
+    ],
+  },
+  {
+    key: 'lights',
+    name: 'Lights',
+    // Each bound to its light by its app id: its colour and intensity
+    objects: LIGHTS.map((light) => getLightObject({ ...light, colors: LIGHT_COLORS })),
+  },
+];
+
+const inspectorScene = { getOutline };
+// #endregion ui-kit-outline
+
+// #region ui-kit-commands (shown in the Hub: hub/pages/examples/ui-kit/)
+/** The palette's commands, made on each open: the shapes' names now */
+const getCommands = (): PaletteCommand[] => [
+  {
+    id: 'turnAll',
+    label: 'Turn all the shapes',
+    group: 'Shapes',
+    kbd: 'Space',
+    run: turnAllShapes,
+  },
+  ...SHAPES.map((shape) => ({
+    id: `turn:${shape.id}`,
+    label: `Turn ${getShapeName(shape.id)}`,
+    group: 'Shapes',
+    run: () => turnShape(shape.id),
+  })),
+  { id: 'resetColors', label: 'Reset the colours', group: 'Shapes', run: resetColors },
+  {
+    id: 'settings',
+    label: 'Scene settings',
+    group: 'Windows',
+    keywords: ['spin', 'ground'],
+    run: toggleSettingsWindow,
+  },
+  { id: 'rename', label: 'Rename a shape', group: 'Windows', run: toggleRenameWindow },
+  {
+    id: 'inspector',
+    label: 'Inspector',
+    group: 'Windows',
+    run: () => toggleInspectorWindow(inspectorScene),
+  },
+  // Every object of the outline, found by its name or its kind
+  ...getOutline().flatMap((group) =>
+    group.objects.map((object) => ({
+      id: `inspect:${object.key}`,
+      label: `Inspect ${object.name}`,
+      group: 'Inspect',
+      keywords: [object.kind],
+      run: () => openInspector(inspectorScene, object.key),
+    }))
+  ),
+  { id: 'menu', label: 'Pause menu', group: 'Scene', kbd: 'Escape', run: openMenu },
+  {
+    id: 'reload',
+    label: 'Reload the scene',
+    group: 'Scene',
+    run: () => void loadScene({ sceneId: SCENE_ID }),
+  },
+];
+
+// #endregion ui-kit-commands
+
 const resetColors = () => {
   for (const shape of SHAPES) applyShapeColor(shape.id, shape.color);
-  // The open shape windows' drop-downs show the new colours, and the settings' colour field
+  // The open shape windows' drop-downs show the new colours, and the settings' and the
+  // inspector's colour fields
   updateDraggableWindowsOfKind(SHAPE_WINDOW_KIND);
   settingsGrid?.refresh();
+  refreshInspector();
   showToast('Colours reset');
 };
 

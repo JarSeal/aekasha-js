@@ -16,4 +16,9 @@ not a piece at a time: `yarn sbp --profile uiKit --why _engine/ui` lists its mod
   a chunk its first open loads, {{sbp:uiKit.chunk:assets/uiKitEmbedForm.js}} (budget
   {{sbp:uiKit.budget:assets/uiKitEmbedForm.js}}) and {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}}
   of styles, and the colour picker, {{sbp:uiKit.chunk:assets/hsva.js}} (budget
-  {{sbp:uiKit.budget:assets/hsva.js}}).
+  {{sbp:uiKit.budget:assets/hsva.js}}); the data window (a table, a list, tabs, a stat tile and a
+  sparkline) in a chunk its first open loads, {{sbp:uiKit.chunk:assets/uiKitEmbedData.js}} (budget
+  {{sbp:uiKit.budget:assets/uiKitEmbedData.js}}) and
+  {{sbp:uiKit.chunk:assets/uiKitEmbedData.css}} of styles, and the scheduler the form and the
+  data window share, {{sbp:uiKit.chunk:assets/BindingScheduler.js}} (budget
+  {{sbp:uiKit.budget:assets/BindingScheduler.js}}).

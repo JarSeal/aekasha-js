@@ -1729,6 +1729,78 @@ rootUrl })` → `{ search, suggest }`, `getSnippet`; no Node imports, beside `se
   (Search), `hub/CLAUDE.md` (the library's root) and `devTools/verify/CLAUDE.md` (the steps)
   say what changed.
 
+As built (section 3, from `b6de4f78`: sections 1 and 2 committed):
+
+- **The example's inspector** is its own module, `examples/uiKit/exampleUiKitInspector.ts`: the
+  scene file describes its objects (`InspectorScene`'s `getOutline()`: groups of
+  `InspectedObject`s, each with its key, name, kind, entity, and what may be edited: a colour with
+  its options and first value, a light's intensity, a shape's turn), and the inspector reads and
+  edits them only through that. `getLightObject` binds a light by its app id. The window's helpers
+  (`toggleInspectorWindow`, `openInspector(scene, key)`, `refreshInspector`) live there too; the
+  scene calls `refreshInspector()` after a rename, a reset, a shape window's or the settings'
+  colour, and the ground's select. D15's pieces: a tree (`roots` a function, the kind as a badge,
+  a hidden object muted by `isPlaceholder`, a filter field, single selection) beside a
+  collapsible splitter, and tabs: Properties (a grid made again per pick, each kind its rows:
+  position, a shape's rotation at 100 ms, colour, a light's intensity, Visible through
+  `setDisabled`; `default`s the first values; `createFieldContextMenu` over it) and Stats (built on
+  first show: tiles of the frame time with a sparkline, the draw calls and the triangles, a frame
+  time series with a 60 fps line, a sortable table of the meshes whose row's activation picks the
+  object).
+- **The tree's context menu** is D15's but "Focus" (the example has no camera control): Show its
+  properties, Visible (a checkbox item), Colour (a submenu of a radio group: D11's submenus in an
+  app), Turn (shapes), Copy the name. A group's row has no items (the browser's menu).
+- **Stats read after the render:** a `LATE_MAIN` system (`world.addSystem`, removed with the
+  panel), not a scene looper: three resets `info.render` as its next frame starts, so a looper
+  (before the render) read 0 draw calls (the first run showed it; `_dbg__GPUMemory.ts` has the same
+  note). The tiles show a quarter second's average; the time series takes every frame.
+- **The palette** is `examples/uiKit/exampleUiKitPalette.ts` (`createScenePalette(sceneId,
+  getCommands)`: the palette, its Ctrl / ⌘ + K map in a `SHORTCUTS` context, the recent list in
+  memory across visits, `GAMEPLAY` off while open and restored as it was, since the pause menu may
+  have it off); the scene's commands (`getCommands`, made on each open: Shapes, Windows, Inspect
+  every object, Scene) stay in the scene file. The HUD got Inspector and Commands buttons (the
+  hint the platform's one chord: both read "Ctrl + K or Meta K" and overflowed the panel); the
+  Rename window moved right of the panel (`x: 260, y: 300`), which now reaches it.
+- **Size of the files:** the scene file is 805 lines with the outline and the commands (the
+  palette and the window helpers moved out to stay near 800), the inspector 522, the palette 66.
+- **The `uiKit` profile's data window** (`profiles/uiKit/uiKitEmbedData.ts`, `createDataTabs`): a
+  third button ("Open the data", `uiKitEmbedOpenData`) imports it on the first press and opens a
+  draggable window (`uiKitEmbedData`, 360 × 300 at 252, 16) of tabs: Shades (a sortable, single
+  selection table of five shades whose pick colours the box), Objects (a list of the box and the
+  light, a visibility toggle action each, its eye icons inline SVG: the built-in icons register
+  only in the debug env), Frame (a stat tile with its change and a sparkline, from a scene looper
+  at 4 Hz, built on first show). The first window is 220 × 230 now (was 190), which
+  `verify:embed`'s drag still keeps inside (its comment updated). `verify:embed` doesn't open the
+  data window (its checks are the kit's sizes and bounds, which the first window and the dialog
+  cover).
+- **Budgets** (`suggestBudget`): `assets/uiKitEmbedData.js` 19.3 KiB → 21 KiB,
+  `assets/uiKitEmbedData.css` 3.9 → 5 KiB, and a new shared chunk, `assets/BindingScheduler.js`
+  0.8 → 2 KiB: the table and the list import the scheduler (their `scheduler` prop) as the form's
+  fields do, so the build splits it out of the form's chunk (18.1 → 17.5 KiB, its budget 19 kept).
+  The first download didn't move (286.7 KiB, its `_engine/ui` group 4.3); `data/` stays 0 there.
+  The Hub's sizes: the data page's new `## In a build`, the UI kit overview's and the library's
+  build texts, and the forms page's (the scheduler no longer in the form's chunk).
+- **In the app's build** (gzip; it holds both scenes): the example's chunk `exampleUiKit.js`
+  13.4 → 29.9 kB (+16.5: the inspector, the palette and the pieces only it uses: the tree, the
+  splitter, the time series, the context menu, the palette) and its CSS 2.1 → 4.4; the pieces
+  both scenes use (the table, the list's parts, the tabs, the sparkline, the stat tile) a shared
+  `Table.js` 13.8 kB and `Table.css` 3.3, `BindingScheduler.js` 0.9 as in the embed. The first
+  download moved by what the new code keeps of modules already there (`getLightByAppId`: the app's
+  `_engine/kernel/light` +0.1 kB; `createSceneAppLooper`: the uiKit entry's `_engine/kernel/scene`
+  +0.2), within the check's tolerance. `verify:baselines --update` recorded `bundle.json` and
+  `bundle.uiKit.json`; the API, the docs (100 %) and the debug-code checks unchanged.
+- **Checked:** `yarn test` (241 files), ESLint, `tsc` and `tsc -p hub`, `yarn sbp --profile uiKit`
+  (every budget within), `yarn hub:build`, `yarn verify:embed --no-build` (all passed),
+  `yarn verify:scenes --only exampleUiKit,uiKitEmbed` (8 passed, WebGL on WSL2), and both scenes
+  driven in Chromium (WebGL2): the inspector's pick, context menu and Colour submenu, Stats' figures,
+  the palette's "Inspect Sun"; the data window's shade pick, visibility toggle and Frame tab.
+  `verify:ui` wasn't run: no kit piece or library box changed.
+- **The Hub:** the example page's `## The inspector` (`### Properties`, `### Stats`) and `## The
+  command palette`, from the regions `ui-kit-outline`, `ui-kit-commands` (`exampleUiKit.ts`),
+  `ui-kit-inspector`, `-properties`, `-stats` (`exampleUiKitInspector.ts`) and `ui-kit-palette`
+  (`exampleUiKitPalette.ts`); its intro, description and tags; both scenes' JSON descriptions.
+- **For section 4:** `src/_engine/ui/CLAUDE.md`'s "Bounds in an embed" names the profile's
+  contents (add the data window); `devTools/sbp/CLAUDE.md` is done.
+
 ### Phase 8: versions and done
 
 Engine minor, app minor, the Project entry (D16); `yarn checkVersions --against main`; the plan

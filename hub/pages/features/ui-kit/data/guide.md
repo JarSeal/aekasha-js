@@ -688,6 +688,27 @@ your own beside the kit's pieces does the same: give it the token as its CSS `co
 `matchMedia('(prefers-color-scheme: dark)')` change and on a `MutationObserver` of the document
 for those two attributes.
 
+## In a build
+
+Each piece is its own module with its own styles, and none is in the first download: a build
+carries the ones the app makes, loaded with the code that makes them. The `uiKit` embed profile
+measures a few of them together: its window's third button opens a data window, from a module
+the first press imports, with tabs of a sortable, selectable table, a list with a visibility
+toggle on each row, and a stat tile with a sparkline. From the last `yarn sbp` report (gzip), that
+comes to {{sbp:uiKit.chunk:assets/uiKitEmbedData.js}} of code and
+{{sbp:uiKit.chunk:assets/uiKitEmbedData.css}} of styles on top of the HUD's window, dialog and
+button, and the [forms'](hub:features/ui-kit/forms#in-a-build) scheduler,
+{{sbp:uiKit.chunk:assets/BindingScheduler.js}}, which a collection carries for its `scheduler`
+prop. What a piece doesn't always need, it takes as a value instead of importing it:
+
+- **Virtual rows and reorder** are `createVirtualRows()` and `createListReorder()`, passed in: a
+  list without them carries neither.
+- **A stat tile's sparkline** is one you make with `createSparkline` and give it: a tile without
+  one carries no graph code.
+- **The time series and the chart** are modules of their own, in a build only when the app makes
+  one; a property grid's `view: 'graph'` monitor loads the time series with an `import()` when
+  it's made, so a grid without one carries none.
+
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),

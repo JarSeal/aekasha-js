@@ -5,9 +5,11 @@ the ones the app makes: a settings menu of number fields, sliders, checkboxes an
 no colour, rotation or editor code. The `uiKit` embed profile measures a small form: its dialog
 holds a property grid of a slider, a number field, a checkbox, a select and a colour field, in a
 module the dialog's first open imports. From the last `yarn sbp` report (gzip), the fields, the
-grid, the binding and the scheduler come to {{sbp:uiKit.chunk:assets/uiKitEmbedForm.js}} of code
-and {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}} of styles, on top of the HUD's window, dialog
-and button. None of it is in the first download. Three pieces load or carry more:
+grid and the binding come to {{sbp:uiKit.chunk:assets/uiKitEmbedForm.js}} of code and
+{{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}} of styles, on top of the HUD's window, dialog and
+button, and the scheduler to {{sbp:uiKit.chunk:assets/BindingScheduler.js}} (a chunk of its own
+there: the profile's [data window](hub:features/ui-kit/data#in-a-build) shares it). None of it is
+in the first download. Three pieces load or carry more:
 
 - **The colour picker** is its own chunk, {{sbp:uiKit.chunk:assets/hsva.js}}, loaded the first
   time a colour panel opens.
