@@ -126,7 +126,7 @@ describe('table (p805 D5): its parts', () => {
       rows: [{ id: 'a', name: 'A', size: 1, count: null }, ...ITEMS],
     });
     const headers = queryAll(table, 'thead th');
-    expect(headers.map((th) => th.getAttribute('data-align'))).toEqual([null, 'end', 'end']);
+    expect(headers.map((th) => th.getAttribute('data-align'))).toEqual(['center', 'end', 'end']);
     expect(getRow(table, 'a').children[0].getAttribute('data-align')).toBe('center');
     expect(getRow(table, 'a').children[1].getAttribute('data-align')).toBe('end');
     // count's first value is null: the next one (12) says

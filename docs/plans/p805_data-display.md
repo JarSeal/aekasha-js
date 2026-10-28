@@ -1629,6 +1629,43 @@ As built:
    `debug/CLAUDE.md`; p800's §5 entry for p805 (what the later plans build on) and §4 below
    completed for p806 and p807.
 
+As built (section 1, from `46094479`: Phase 6 committed):
+
+- **Most of step 1 came with the components:** every piece's box is on both library pages
+  (checked: the dev page has every public box plus its six dev-only ones), and the core, overlays
+  and forms pages have D15's sections (the tabs, accordion, splitter; the context menu, submenus,
+  palette; the fields' menu, graph monitor). What was left: the guide and the parity box.
+- **The data page's `## Showing live data`** (after the stat tiles, before Key APIs): the three
+  ways (read everything again by key, set one figure, a panel's scheduler and what it skips),
+  an example with a scheduler's table, a stat tile and a time series pushed per frame; `### Which
+  piece for what` (a table of each piece's use and update, D15's "which chart for what": the time
+  series' "Which graph" bullet now links it), `### Long and busy collections` (Phase 4 section 3's
+  costs, virtual rows, the filter), `### Colours on a canvas` (what the time series does, and how
+  an app's own canvas does the same: `ThemeWatch.ts` is `@internal`). The intro and Key APIs link
+  it.
+- **The "Debugger parity" box** (dev page only, `debuggerParity`), `_library/parity.ts` with its
+  tables in `parityTables.ts` (708 lines: the 15 tables don't fit one module with the rest): an
+  accordion of six shut sections, each built on first open: the profiler's 4 tables, GPU memory's
+  9, the assets window's 2, the 11 debugger list shapes (13 sites), the 4 tab menus (the drawer's
+  16 icon tabs in a narrow box, the profiler's, the key shortcuts dialog's) and the bars,
+  sparklines, the pie (the Phase 5 donut) and the key-value grid. Each row's label is the census'
+  source line and what its port takes that isn't a rename (code spans as `<code>`). A kit switch,
+  off at the start, runs the census' refreshes at 4 Hz: the Overview by `setCell`, GPU memory's
+  frame table as `rows` on the box's scheduler (500 ms), the budget bar, the sparklines, the
+  donuts. No checks (the dev page's boxes have none; `verify:ui` builds the public Hub). Its dev
+  text lists the shapes that don't map one to one, for section 4's §4: two tables without a header
+  row (the labels are new); a row class (`isWarn`, `isNA`, the 0 B source, the current scene) has
+  no row form (a cell's `tone`, a word, a badge); the “+N more” `colspan` row a footer row; GPU
+  memory's by owner a two-level hierarchy drawn by a `cell`, unsorted; a header's live count and
+  the “(main loop paused)” heading need a line beside the table (labels and caption are fixed);
+  the assets tab's heading with its control stays the tab's own; the drawer's tabs scroll where
+  they wrap today, and a scene tab's class has no per-tab form.
+- **Fixed on the way (the engine):** a column given `align` (not inferred) never wrote its
+  header's `data-align` (`TableRows.ts`' `createTableColumn`), so its header stayed at the start
+  over end-aligned cells; `Table.test.ts`' alignment test had pinned the wrong `null`.
+- `graphs.ts` exports `addFigureLine` and `addLiveSwitch` (the box uses both); `_components.ts`,
+  `hub/CLAUDE.md` name the new modules.
+
 ### Phase 8: versions and done
 
 Engine minor, app minor, the Project entry (D16); `yarn checkVersions --against main`; the plan

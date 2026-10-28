@@ -158,6 +158,8 @@ export const createTableColumn = <T>(
   const header = withRole(createElem('th', 'aekTable__header'), 'columnheader');
   header.setAttribute('scope', 'col');
   header.setAttribute('data-key', def.key);
+  // A given alignment is the header's too (an inferred one is written with the first value)
+  if (def.align && def.align !== 'start') header.setAttribute('data-align', def.align);
   if (def.minWidth !== undefined) header.style.minWidth = toLength(def.minWidth);
   let sortButton: HTMLButtonElement | null = null;
   if (def.sortable) {

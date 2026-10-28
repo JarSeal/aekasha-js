@@ -284,6 +284,43 @@
   gap: 0.25rem;
 }
 
+// The debugger parity box (`_library/parity.ts`): its sections' rows one under another; a row's
+// label is the census's source line and its note, a page's text, not a heading
+.hubDemoParitySection {
+  display: grid;
+  gap: 1rem;
+  padding-block: var(--aek-space-3);
+
+  > .hubComponentDemoGroup > p:first-child {
+    font-weight: 400;
+  }
+}
+
+// The assets tab's own heading above its list: the count and its scope switch
+.hubDemoParityHeader {
+  display: flex;
+  gap: var(--aek-space-3);
+  align-items: center;
+  margin-block-end: var(--aek-space-2);
+
+  h4 {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+  }
+}
+
+// A cell holding text and a piece (the Overview's action, the owner's badge); the by owner table's
+// second level indented
+.hubDemoParityCell {
+  display: flex;
+  gap: var(--aek-space-2);
+  align-items: center;
+
+  &[data-level='1'] {
+    padding-inline-start: var(--aek-space-4);
+  }
+}
+
 // The fieldsets one under another, a form's sections apart, with "Done" under them
 .hubComponentDemoGroup.hubDemoFieldsets {
   flex-direction: column;

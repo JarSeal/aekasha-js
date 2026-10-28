@@ -543,8 +543,8 @@ requestAnimationFrame(tick);
   times a second while samples come, in view or not, held while paused, and isn't a live region. `summary: false` leaves it out, for a figure beside it
   that says what it shows; `ticks: false` leaves out the grid's values.
 - **Which graph.** A [sparkline](#sparklines) for a few values a second beside a figure, a
-  [chart](#charts) for figures that change now and then, a time series for a figure every frame.
-  A field's value as a graph is a [graph monitor](hub:features/ui-kit/forms#graph-monitors).
+  [chart](#charts) for figures that change now and then, a time series for a figure every frame:
+  [which piece for what](#which-piece-for-what) compares them all.
 
 | Time series       |                                                                                                                                                                                                                                              |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -596,6 +596,98 @@ frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
 | Keys              | None                                                                                                                   |
 | Assistive tech    | Plain text in reading order, the change in words; the arrow and the signed text `aria-hidden`; not live                |
 
+## Showing live data
+
+Every piece here can show figures that change while the app runs: a profiler's, a HUD's, an
+object's state in a panel. A change reaches the screen one of three ways.
+
+- **Read everything again.** Give `rows` (a list's `items`, a tree's `roots`) as a function and
+  call `refresh()`, or pass new data to `setRows` (`setItems`, `setRoots`). The piece reads every
+  row and matches it to what it shows by key: a kept row keeps its element (its focus, selection
+  and scroll stay), a new row is added in its place, a gone one removed, and only a cell whose
+  text changed is written. The cost grows with the rows read: for data whose rows come and go, a
+  few times a second.
+- **Set one figure.** `setCell(key, column, value)` on a table, `setItem(key, item)` on a list,
+  `setNode(key, node)` on a tree, `setValue` on a stat tile or a donut, `push` on a time series:
+  one value, written to one text node (or drawn) only when it changed, with nothing of the
+  piece's own allocated. As often as the figure changes, every frame included. A table doesn't
+  sort again on `setCell` (a row doesn't jump under the pointer); its next read does.
+- **On a panel's scheduler.** A panel that refreshes as a whole (a window, a tab) makes one
+  [`createBindingScheduler`](api:createBindingScheduler) and gives it to its pieces with an
+  `interval` (in ms; 0 every frame). Its tick reads each piece at its interval, and only while
+  the piece shows: a closed tab, a shut accordion section or a hidden window costs nothing. Its
+  `refresh()` reads them all at once (after a change you made), and `setVisible(false)` stops the
+  tick while the panel is away. An `interval` without a `scheduler` uses the page's own. A
+  panel's fields and monitors share it ([the scheduler](hub:features/ui-kit/forms/binding#refresh-and-the-scheduler)).
+
+```ts
+const scheduler = createBindingScheduler(); // one per panel
+const memory = createTable<Category>({
+  caption: 'GPU memory',
+  columns,
+  rows: () => getMemoryCategories(), // read every 500 ms while it shows
+  scheduler,
+  interval: 500,
+});
+const frameTime = createStatTile({
+  label: 'Frame time',
+  unit: 'ms',
+  format: (ms) => ms.toFixed(1),
+});
+const stages = createTimeSeries({
+  series: [{ label: 'Physics' }, { label: 'Render' }],
+  unit: 'ms',
+});
+statsPanel.add(frameTime.cmp);
+statsPanel.add(stages.cmp);
+statsPanel.add(memory.cmp);
+
+const sample = new Float64Array(2); // reused: nothing allocated per frame
+const tick = () => {
+  frameTime.setValue(getFrameMs()); // one text node, when its text changed
+  sample[0] = getPhysicsMs();
+  sample[1] = getRenderMs();
+  stages.pushAll(sample); // drawn once this frame, if it shows
+  requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
+```
+
+### Which piece for what
+
+| Piece                          | For                                                            | Updating it                                                                                        |
+| ------------------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [Stat tile](#stat-tiles)       | One figure that matters, with its change                       | `setValue` as often as it changes; `setDelta` per period                                           |
+| [Sparkline](#sparklines)       | A few values a second beside a figure                          | `push` at a scheduler's rate, not every frame: each push redraws its SVG                           |
+| [Donut](#donuts)               | A share or a progress beside a figure; a whole of a few parts  | `setValue` as often as it changes; `setParts` now and then                                         |
+| [Stacked bar](#stacked-bars)   | A whole's parts, a budget                                      | `setParts` now and then                                                                            |
+| [Chart](#charts)               | A few series that change now and then, their values as a table | `setSeries`, which draws it whole                                                                  |
+| [Time series](#time-series)    | Figures that change every frame                                | `push` / `pushAll` every frame: drawn at most once a frame, only while it shows                    |
+| [Table](#tables)               | Figures in columns                                             | `setCell` for the figures that changed; `rows` a function on a scheduler for rows that come and go |
+| [List](#lists), [tree](#trees) | An app's objects                                               | `setItem` / `setNode` for one; `items` / `roots` a function on a scheduler                         |
+
+A field's value as a graph is a [graph monitor](hub:features/ui-kit/forms#graph-monitors).
+
+### Long and busy collections
+
+Each changed figure is text the browser lays out again. In a table of 500 rows, setting a tenth of
+them takes a few milliseconds and every figure about 15, most of it that layout, whether by
+`setCell` or a `refresh`. Past a few hundred changing rows, or about 200 rows of any kind,
+`virtual: createVirtualRows()` renders only the rows the box shows (give a table's columns a
+`width`, so the rows on screen don't size them); a long list or tree gets a `filter` too, since
+the browser's find can't see the rows not rendered.
+
+### Colours on a canvas
+
+The pieces in HTML and SVG follow the theme by themselves. The time series draws on a canvas,
+which can't: it reads its colours (any CSS colour, a token or a `color-mix()`) when it first
+draws and again when the theme or the density changes (the system's colour scheme, or
+`data-aek-theme` / `data-aek-density` written on any element), never once per frame. A canvas of
+your own beside the kit's pieces does the same: give it the token as its CSS `color`, read
+`getComputedStyle(canvas).color` at its first draw, and again on a
+`matchMedia('(prefers-color-scheme: dark)')` change and on a `MutationObserver` of the document
+for those two attributes.
+
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),
@@ -617,7 +709,8 @@ frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
   [`GraphPart`](api:GraphPart) and [`GraphPartFormat`](api:GraphPartFormat), and
   [`createStatTile`](api:createStatTile) ([`StatTile`](api:StatTile)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and
-  [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists and trees.
+  [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists, trees and
+  tables ([showing live data](#showing-live-data)).
 
 ## Read more
 

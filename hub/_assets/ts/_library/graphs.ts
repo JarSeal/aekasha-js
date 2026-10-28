@@ -32,8 +32,14 @@ const addPanel = (root: HTMLElement, label: string) => {
   return group;
 };
 
-/** A figure's line: its name, its value and its graph, as a panel shows one */
-const addFigureLine = (parent: HTMLElement, name: string, value: string, graph: CMPHandle) => {
+/** A figure's line: its name, its value and its graph, as a panel shows one (the parity box's
+ * too) */
+export const addFigureLine = (
+  parent: HTMLElement,
+  name: string,
+  value: string,
+  graph: CMPHandle
+) => {
   const line = document.createElement('p');
   line.className = 'hubDemoLine hubDemoFigure';
   const label = document.createElement('span');
@@ -365,7 +371,11 @@ const writeStages = (out: Float64Array, i: number) => {
 
 /** A kit switch for a live run (no state of its own: the box's buttons are its states, and it's
  * off at the start, so the shots hold) */
-const addLiveSwitch = (parent: HTMLElement, label: string, onToggle: (on: boolean) => void) => {
+export const addLiveSwitch = (
+  parent: HTMLElement,
+  label: string,
+  onToggle: (on: boolean) => void
+) => {
   const live = createSwitch({ label, value: false, onChange: (on) => onToggle(on) });
   parent.append(live.cmp.elem);
 };
