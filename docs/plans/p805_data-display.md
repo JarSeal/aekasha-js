@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1614,7 +1614,7 @@ As built:
   (`Monitor.ts`' graph slot, the shell's `onSample`), within the check's tolerance and not
   recorded then.
 
-### Phase 7: the Hub, the example, `CLAUDE.md`, readme
+### Phase 7: the Hub, the example, `CLAUDE.md`, readme — done
 
 1. The Hub's data page and its guide, the core, overlays and forms pages' additions, every box on
    both library pages, the "Debugger parity" box (D14, D15).
@@ -1801,6 +1801,34 @@ As built (section 3, from `b6de4f78`: sections 1 and 2 committed):
 - **For section 4:** `src/_engine/ui/CLAUDE.md`'s "Bounds in an embed" names the profile's
   contents (add the data window); `devTools/sbp/CLAUDE.md` is done.
 
+As built (section 4):
+
+- **`src/_engine/ui/CLAUDE.md`:** the data pieces' bullets (the filter, the selection, lists,
+  virtual rows, reorder, the collections' parts, trees, tables, graphs, charts, time series, stat
+  tiles) moved from `## UI kit` into a new `## Data display` (after Forms and bindings) with an
+  intro of what the collections share and what's budgeted; the data page has its `aek:covers`.
+  The tabs, accordion, splitter, roving focus and announcer stay under `## UI kit` (they're
+  `components/`), the context menu and palette under The overlay layer, the fields' menu and graph
+  monitor under Forms and bindings. "Bounds in an embed" names the data window. The file and this
+  plan were already off Prettier at `b6de4f78` (its one change in the kit's file would turn a code
+  span `` ` / ` `` into `` `/` ``), so neither was reformatted.
+- **The root `CLAUDE.md`:** the map line for the kit's file names the data display section; the
+  `data/` line lost its "so far".
+- **`readme.md`:** the UI kit bullet (tabs, accordions, split panes; menus with submenus, context
+  menus, the command palette; monitors as graphs and the fields' context menu; a data display
+  sentence), the source tree's `ui/` comment (`data/`, the palette), the examples line (the
+  inspector and the palette).
+- **Already done earlier:** `layoutRules.ts`' note (Phase 1 section 1 wrote `data/` into it) and
+  `debug/CLAUDE.md`'s pie line (Phase 5 section 1).
+- **p800 §5:** p805's entry says what the later plans build on (the collections' model, the
+  pieces, the tokens, §4, the size), in p804's shape; its first paragraph replaced.
+- **§4 below** completed for p806 and p807: the list's two hand-made shapes, the tab menus'
+  open decisions, the fields' menu per tab; the tables' hand-made shapes (no header row, row
+  classes, the "+N more" row, the by-owner hierarchy, the live heading counts), the bars, the
+  sparklines, the key-value grid, the stats panels on the time series, reading `info.render` after
+  the render; and the open items (virtual rows on a density switch, the scheduler's `isShown`, the
+  collections' scheduler import).
+
 ### Phase 8: versions and done
 
 Engine minor, app minor, the Project entry (D16); `yarn checkVersions --against main`; the plan
@@ -1811,10 +1839,13 @@ when written, p804's and p803's `Related` / `Blocks`).
 
 ## 4. For p806 and p807
 
-Filled by Phase 0's census and the later phases: what the port needs that isn't a rename. Known
-now:
+What each port needs that isn't a rename, from Phase 0's census (§4.1) and the "Debugger parity"
+box (the dev component library, Phase 7 section 1: every shape below built from the new pieces,
+with the census' source line on each row). Completed in Phase 7 section 4.
 
-- **The debugger list → `createList`** with `actions` (p806): `DebuggerListDef`'s `heading`,
+**p806: the debugger's lists and tab menus**
+
+- **The debugger list → `createList`** with `actions`: `DebuggerListDef`'s `heading`,
   `emptyText` (`empty`), `perItemConfig.toggles` (`actions` with `pressed` and `iconOff`; a row's
   `null` toggle value → the action's `hidden`), `onClick` (`onActivate`), `selectedItemId`
   (`selection: 'single'` and `setSelected` on refresh: the debugger's selection is the open
@@ -1823,14 +1854,58 @@ now:
   `description`, `suffix`, `tooltip`, `disabled`. A row's context menu is a `createContextMenu`
   on the list with `getKeyAt` (no prop: Phase 3 section 1). The keys change from Tab through
   every button to one tab stop with arrows (D4): a visible change the debug suite's page says.
-- **The tab menus → `createTabs`** (p806): the drawer's and profiler's icon menus (`iconOnly`), the
-  key shortcuts dialog's tab list; `_debugTabButtons.scss` goes.
-- **The profiler's and GPU memory's tables → `createTable`** (p807), with `setCell` for the live
-  figures (or `rows` as a function on the tab's scheduler: a few milliseconds a tick at the
-  census' sizes, Phase 4 section 3's figures); the two-line cells a `cell` renderer; the breakdown's
-  bars `kind: 'bar'` with the total in the footer; the Overview's and heaviest objects' row
-  buttons `onRowActivate` or a `cell` button; the Objects tab's sparklines → `createSparkline` or the time series; the breakdown's bars
-  → bar cells.
+- **Two list shapes by hand:** the assets tab's own heading with its scope switch stays the tab's,
+  above a list without `heading` (`heading` is text); LOD's capped list's disabled "…and N more"
+  row stays a disabled item, or the cap goes and the list takes virtual rows (no list reaches D8's
+  ~200 today: 86 rows at most, `physicsTiers`).
+- **The tab menus → `createTabs`:** the drawer's and the profiler's icon menus (`iconOnly`, the
+  label its tooltip), the editor drawer's, the key shortcuts dialog's tab list;
+  `_debugTabButtons.scss` goes. Decisions left to p806: the drawer's 15 tabs (16 with a scene tab) wrap into two rows
+  today, where `createTabs` scrolls with faded edges (a `wrap` option, or the scroll accepted:
+  the parity box shows the scroll in a narrow box); a scene tab's class ("(scene tab: <id>)" in its
+  `title` and a class) has no per-tab form (`TabDef` has no `class`: its label, or a badge); the tab
+  host keeps mounting its content into the panel the tabs give it, or builds `content` per tab.
+- **The fields' menu** on every debugger grid: `createFieldContextMenu({ container })` per tab
+  (D11), removed with it.
+
+**p807: the profiler's and GPU memory's tables, bars and graphs**
+
+- **The tables → `createTable`**, with `setCell` for the live figures (the Overview's at up to
+  10 Hz) or `rows` as a function on the tab's scheduler (a few milliseconds a tick at the census'
+  sizes, Phase 4 section 3's figures); the two-line cells (a name and a dimmed owner or scene
+  line, in five tables) a `cell` renderer; the Overview's and the heaviest objects' row buttons
+  `onRowActivate` or a `cell` button; the breakdown's bars `kind: 'bar'` with the total in the
+  footer (`<tfoot>` where the census has a Total row in the body).
+- **Table shapes by hand:** the Overview and the ECS worlds table have no header row (their
+  column labels are new; `captionHidden` for the caption); a row class (`isWarn`, `isNA`, the 0 B
+  source, the current scene) has no row form: a cell's `tone` with its word, or a badge in a
+  `cell`; GPU memory's "+N more" `colspan` row becomes a footer row; its by-owner table is a
+  two-level hierarchy (an owner, then its cells' rows, indented): a `cell` renderer and the rows
+  unsorted (no treegrid: D1); the asset diff's counts in its header text and the frame table's "(main loop paused)"
+  go on a line beside the table (the caption and the labels are fixed at creation).
+- **The bars:** the GPU memory budget bar → `createStackedBar` of one part against a `total`
+  (its over state `data-over`, the text beside it kept); the Objects tab's "Over time"
+  sparklines → `createSparkline({ area: true, min: 0 })` with the latest and the max as text beside
+  them; the component types' key-value grid → a static list with a `suffix`, or a two-column table.
+- **The stats panels** (p807 Phase 0's gate) on `createTimeSeries`: one clock per panel
+  (`pushAll` once a frame, its array reused), the canvas's colours through `ThemeWatch.ts` (by the
+  time series itself), the summary off where the panel shows its own figure (`summary: false`);
+  Phase 5 section 3's figures are the baseline (8 panels at DPR 2 about 0.3 ms a frame in
+  Chromium).
+- **Figures read after the render:** three resets `renderer.info.render` as its next frame
+  starts, so a panel's draw calls and triangles are read in `LATE_MAIN` (`_dbg__GPUMemory.ts` does;
+  the UI kit example's Stats tab learnt it in Phase 7 section 3).
+
+**Open, for either**
+
+- Virtual rows measure their row height once (D8), so a box made in one density keeps it after a
+  switch; `ThemeWatch.ts`' density change is where to measure again (Phases 3-5's note).
+- The scheduler's `isShown` walks the DOM (`closest('[hidden]')`) for each due entry, and a live
+  monitor makes its text's string when the text changes (the perf-auditor's two notes, Phase 5
+  section 3): fine at today's sizes, the first places to look if a ported tab's tick shows up.
+- A collection imports the scheduler for its `scheduler` prop (0.8 kB gzip, a shared chunk in the
+  `uiKit` build): an opt-in value like the virtual rows would drop it from a collection without
+  one.
 
 ### 4.1 The census (Phase 0, 2026-10-27, `main` at `8f4d77ed`)
 
