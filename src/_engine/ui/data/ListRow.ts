@@ -6,6 +6,7 @@
 import type { CMPHandle } from '../core/CMPTypes';
 import { updateBadge, type Badge, type BadgeValue } from '../components/Badge';
 import { createTooltip, type Tooltip } from '../overlays/Tooltip';
+import { createElem, writeAttr } from './CollectionParts';
 import { appendMarked, foldText } from './Filter';
 import type { ListAction, ListProps } from './ListTypes';
 
@@ -116,26 +117,6 @@ export type ListRow<T> = {
  * @internal
  */
 export const ROW_CLASS = 'aekList__row';
-
-/**
- * An element with its class.
- * @internal
- */
-export const createElem = (tag: string, className: string) => {
-  const elem = document.createElement(tag);
-  elem.className = className;
-  return elem;
-};
-
-/**
- * Writes an attribute only when it changes; `null` removes it.
- * @internal
- */
-export const writeAttr = (elem: Element, name: string, value: string | null) => {
-  if (value === null) {
-    if (elem.hasAttribute(name)) elem.removeAttribute(name);
-  } else if (elem.getAttribute(name) !== value) elem.setAttribute(name, value);
-};
 
 /**
  * The filter's query as the rows mark it: the list writes it, the rows read it.

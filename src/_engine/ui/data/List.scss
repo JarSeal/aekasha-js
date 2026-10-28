@@ -4,6 +4,7 @@
 // and suffix muted (4.5 on the surfaces, Tokens.test.ts), numbers in tabular figures. An
 // interactive row has the hover's surface; a selected one the accent's soft background and a bar
 // at its start (a shape, not only a colour); the focus ring is inset (the rows' box may scroll).
+// The heading, the search field and the empty lines are CollectionParts.scss'.
 @layer aek.components {
   :where(.aekList) {
     display: flex;
@@ -13,36 +14,6 @@
     color: var(--aek-text);
     font-size: var(--aek-font-size-sm);
     line-height: var(--aek-line-height-tight);
-  }
-
-  :where(.aekList__heading) {
-    margin: 0;
-    font-size: var(--aek-font-size-md);
-    font-weight: var(--aek-font-weight-semibold);
-  }
-
-  :where(.aekList__count) {
-    color: var(--aek-text-muted);
-    font-weight: var(--aek-font-weight-regular);
-    font-variant-numeric: var(--aek-numeric-tabular);
-  }
-
-  :where(.aekList__search) {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: max(24px, var(--aek-space-7));
-    margin: 0;
-    padding: var(--aek-space-2) var(--aek-space-3);
-    border: 1px solid var(--aek-border-control);
-    border-radius: var(--aek-radius-sm);
-    background-color: var(--aek-surface);
-    color: var(--aek-text);
-    font: inherit;
-
-    &::placeholder {
-      color: var(--aek-text-muted);
-      opacity: 1;
-    }
   }
 
   :where(.aekList__rows) {
@@ -284,38 +255,5 @@
   :where(.aekList__action:disabled) {
     color: var(--aek-text-disabled);
     cursor: not-allowed;
-  }
-
-  :where(.aekList__empty, .aekList__noMatch) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--aek-space-2);
-    color: var(--aek-text-muted);
-  }
-
-  :where(.aekList__empty[hidden], .aekList__noMatch[hidden]) {
-    display: none;
-  }
-
-  :where(.aekList__emptyText, .aekList__noMatchText) {
-    margin: 0;
-    padding: var(--aek-space-2) var(--aek-space-3);
-  }
-
-  :where(.aekList__clear) {
-    min-height: 24px;
-    margin: 0;
-    padding: 0 var(--aek-space-1);
-    border: 0;
-    background: none;
-    color: var(--aek-accent);
-    font: inherit;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
-  :where(.aekList__clear:hover) {
-    color: var(--aek-accent-hover);
   }
 }

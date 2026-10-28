@@ -3,17 +3,17 @@ import { CMP, classes } from '../core/CMP';
 import { announce } from '../components/Announcer';
 import { createTypeahead, getMoveTarget, isTypeaheadKey } from '../components/RovingFocus';
 import { addScheduledRefresh, getPageScheduler } from '../forms/binding/BindingScheduler';
-import { pushOverlay, swallowNextKeyUp } from '../overlays/OverlayStack';
-import { getQueryWords, matchesWords } from './Filter';
 import {
-  createElem,
-  createListRows,
-  ROW_CLASS,
+  addCollectionEmpty,
+  addCollectionHeader,
+  addCollectionSearch,
+  placeElems,
+  useCollectionKey,
   writeAttr,
-  type ListEntry,
-  type ListMarks,
-  type ListRow,
-} from './ListRow';
+  writeCollectionCount,
+} from './CollectionParts';
+import { getQueryWords, matchesWords } from './Filter';
+import { createListRows, ROW_CLASS, type ListEntry, type ListMarks, type ListRow } from './ListRow';
 import type { List, ListProps } from './ListTypes';
 import { useListReorder } from './Reorder';
 import { createSelection, getSelectionGesture, type SelectionGesture } from './Selection';
@@ -222,33 +222,6 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
 
   // --- Rendering ---
 
-  /** Puts `elems` in the rows' box in this order, moving only those out of place. The one holding
-   * the focus stays put and the others move around it: a moved element loses the focus, and
-   * one given back by script shows no focus ring in Chromium. */
-  const placeElems = (elems: readonly HTMLElement[]) => {
-    const parent = rowsCmp.elem;
-    const active = document.activeElement;
-    const at = active ? elems.findIndex((elem) => elem.contains(active)) : -1;
-    if (at === -1 || elems[at].parentNode !== parent) {
-      let cursor = parent.firstElementChild;
-      for (const elem of elems) {
-        if (elem === cursor) cursor = cursor.nextElementSibling;
-        else parent.insertBefore(elem, cursor);
-      }
-      return;
-    }
-    let ref: HTMLElement = elems[at];
-    for (let i = at - 1; i >= 0; i--) {
-      if (elems[i].nextElementSibling !== ref) parent.insertBefore(elems[i], ref);
-      ref = elems[i];
-    }
-    ref = elems[at];
-    for (let i = at + 1; i < elems.length; i++) {
-      if (ref.nextElementSibling !== elems[i]) parent.insertBefore(elems[i], ref.nextSibling);
-      ref = elems[i];
-    }
-  };
-
   /** Lets go of an entry's row: back to the pool (virtual rows) */
   const unmount = (entry: ListEntry<T>) => {
     const row = entry.view;
@@ -279,7 +252,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
       writeAttr(row.elem, 'hidden', entry.isShown ? null : '');
       elems.push(row.elem);
     }
-    placeElems(elems);
+    placeElems(rowsCmp.elem, elems);
   };
 
   /** The rows the box shows, the tab stop's and a dragged one (placed at their offset when out of
@@ -314,7 +287,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     }
     elems.push(view.bottom);
     for (const entry of pinned) elems.push((entry.view as ListRow<T>).elem);
-    placeElems(elems);
+    placeElems(rowsCmp.elem, elems);
     if (mode === 'grid') writeAttr(rowsCmp.elem, 'aria-rowcount', String(shown.length));
     view.layout(shown.length, start, end);
     // The first row shown gives the height when none was given: the window again with it
@@ -336,23 +309,6 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     return matchesWords(entry.folded, queryWords);
   };
 
-  const writeCount = () => {
-    if (!countElem) return;
-    const total = entries.length;
-    countElem.textContent = queryWords.length ? `${shown.length} of ${total}` : String(total);
-  };
-
-  /** Shows the rows, the empty state or the no match line, by the counts */
-  const writeEmpty = () => {
-    const total = entries.length;
-    writeAttr(rowsCmp.elem, 'hidden', shown.length ? null : '');
-    writeAttr(emptyElem, 'hidden', total ? '' : null);
-    writeAttr(noMatchElem, 'hidden', total && !shown.length ? null : '');
-    if (!total || shown.length) return;
-    const text = `No matches for “${query}”`;
-    if (noMatchText.textContent !== text) noMatchText.textContent = text;
-  };
-
   /** Matches every entry against the query (a rendered row's marks rewritten for a new one) */
   const applyFilter = () => {
     shown = [];
@@ -363,8 +319,8 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
       entry.shownIndex = entry.isShown ? shown.length : -1;
       if (entry.isShown) shown.push(entry);
     }
-    writeCount();
-    writeEmpty();
+    writeCollectionCount(countElem, shown.length, entries.length, queryWords.length > 0);
+    emptyParts.write(rowsCmp.elem, entries.length, shown.length, query);
   };
 
   /** Writes each entry's selected state where it changed */
@@ -424,13 +380,6 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
 
   // --- The user's input ---
 
-  /** Uses a key up: no default, no further listener, its keyup swallowed */
-  const useKey = (e: KeyboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    swallowNextKeyUp(e.key);
-  };
-
   const reportSelection = () => {
     writeSelection();
     props.onSelectionChange?.(selection.get());
@@ -477,16 +426,16 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     const isMod = ke.ctrlKey || ke.metaKey;
 
     if (reorderView?.onKeyDown(ke, entry.key)) {
-      useKey(ke);
+      useCollectionKey(ke);
       return;
     }
     if (isMod && !ke.altKey && key.toLowerCase() === 'a' && selectionMode === 'multiple') {
-      useKey(ke);
+      useCollectionKey(ke);
       if (selection.all()) reportSelection();
       return;
     }
     if (mode === 'grid' && (key === 'ArrowLeft' || key === 'ArrowRight') && !isMod) {
-      useKey(ke);
+      useCollectionKey(ke);
       const cells = [row.main, ...row.actions.filter((c) => !c.isHidden).map((c) => c.button)];
       const next = cells[cells.indexOf(target) + (key === 'ArrowRight' ? 1 : -1)];
       if (next) {
@@ -502,7 +451,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
         isSkipped: (index) => !entries[index].isShown,
       });
       if (next !== null) {
-        useKey(ke);
+        useCollectionKey(ke);
         if (next === -1) return;
         const to = entries[next];
         focusRow(to, column);
@@ -512,17 +461,17 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     }
     if (actionIndex !== -1) return;
     if (key === ' ' && !isMod) {
-      useKey(ke);
+      useCollectionKey(ke);
       pick(entry, getSelectionGesture(ke, selectionMode === 'multiple'));
       return;
     }
     if (key === 'Enter' && !isMod && !ke.shiftKey) {
-      useKey(ke);
+      useCollectionKey(ke);
       activate(entry);
       return;
     }
     if (isTypeaheadKey(ke) && key !== ' ') {
-      useKey(ke);
+      useCollectionKey(ke);
       const index = typeahead.type(key, entry.index);
       if (index !== -1) focusRow(entries[index]);
     }
@@ -560,19 +509,6 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     }
   };
 
-  /** While the search field has a query and the focus, an overlay stack entry: Escape empties it
-   * before closing a dialog the list is in */
-  let removeEscapeEntry: ((returnFocus?: boolean) => void) | null = null;
-  const syncEscapeEntry = () => {
-    const isWanted = Boolean(searchElem && query && document.activeElement === searchElem);
-    if (isWanted && !removeEscapeEntry && searchElem) {
-      removeEscapeEntry = pushOverlay({ elem: searchElem, close: () => setQueryFrom('', true) });
-    } else if (!isWanted && removeEscapeEntry) {
-      removeEscapeEntry(false);
-      removeEscapeEntry = null;
-    }
-  };
-
   const setQueryFrom = (next: string, byUser: boolean) => {
     if (next === query) return;
     const focus = captureFocus();
@@ -580,7 +516,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     queryWords = getQueryWords(next);
     marks.query = query;
     marks.words = queryWords;
-    if (searchElem && searchElem.value !== next) searchElem.value = next;
+    search?.setValue(next);
     applyFilter();
     settle(focus);
     if (queryWords.length) {
@@ -589,7 +525,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
         shown.length ? `${shown.length} of ${entries.length}` : `No matches for ${query.trim()}`
       );
     }
-    syncEscapeEntry();
+    search?.syncEscapeEntry();
     if (byUser) filter?.onQueryChange?.(next);
   };
 
@@ -603,8 +539,7 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     onRemoveCmp: () => {
       removeScheduled?.();
       removeScheduled = null;
-      removeEscapeEntry?.(false);
-      removeEscapeEntry = null;
+      search?.dispose();
       typeahead.clear();
       reorderView?.dispose();
       virtualView?.dispose();
@@ -618,57 +553,28 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
     },
   });
 
-  let countElem: HTMLElement | null = null;
-  let headingTextId: string | null = null;
-  if (props.heading !== undefined) {
-    const header = cmp.add({ class: 'aekList__header' });
-    const heading = createElem(
-      props.headingLevel ? `h${props.headingLevel}` : 'p',
-      'aekList__heading'
-    );
-    const text = createElem('span', 'aekList__headingText');
-    text.textContent = props.heading;
-    headingTextId = `${cmp.id}-heading`;
-    text.id = headingTextId;
-    countElem = createElem('span', 'aekList__count');
-    heading.append(text, ' ', countElem);
-    header.elem.append(heading);
-  }
+  const { countElem, headingTextId } = addCollectionHeader(cmp, {
+    block: 'aekList',
+    heading: props.heading,
+    headingLevel: props.headingLevel,
+  });
 
-  let searchElem: HTMLInputElement | null = null;
-  if (filter?.field) {
-    const onSearchKeyDown = (e: Event) => {
-      const ke = e as KeyboardEvent;
-      if (ke.key === 'ArrowDown' && stopElem && shown.length) {
-        useKey(ke);
-        stopElem.focus();
-      } else if (ke.key === 'Escape' && query) {
-        // Outside a HUD root (the overlay stack's entry takes it first under one)
-        useKey(ke);
-        setQueryFrom('', true);
-      }
-    };
-    searchElem = cmp.add({ class: 'aekList__filter' }).add({
-      tag: 'input',
-      class: 'aekList__search',
-      attr: {
-        // Not type="search": the browsers' own clear button and Escape differ (the text field's)
-        type: 'text',
-        role: 'searchbox',
-        'aria-label': filter.fieldLabel ?? 'Filter',
-        placeholder: filter.placeholder ?? 'Filter',
-        autocomplete: 'off',
-        spellcheck: 'false',
-      },
-      listeners: [
-        { type: 'input', fn: () => setQueryFrom((searchElem as HTMLInputElement).value, true) },
-        { type: 'keydown', fn: onSearchKeyDown },
-        { type: 'focus', fn: () => syncEscapeEntry() },
-        { type: 'blur', fn: () => syncEscapeEntry() },
-      ],
-    }).elem as HTMLInputElement;
-    searchElem.value = query;
-  }
+  const search = filter?.field
+    ? addCollectionSearch(cmp, {
+        block: 'aekList',
+        label: filter.fieldLabel,
+        placeholder: filter.placeholder,
+        query,
+        getQuery: () => query,
+        onInput: (text) => setQueryFrom(text, true),
+        onArrowDown: () => {
+          if (!stopElem || !shown.length) return false;
+          stopElem.focus();
+          return true;
+        },
+        onEscape: () => setQueryFrom('', true),
+      })
+    : null;
 
   const rowsAttr: CMPAttr = { 'data-mode': mode };
   if (isInteractive) {
@@ -692,29 +598,27 @@ export const createList = <T>(props: ListProps<T>): List<T> => {
         ]
       : [],
   });
-  searchElem?.setAttribute('aria-controls', rowsCmp.id);
+  search?.elem.setAttribute('aria-controls', rowsCmp.id);
 
-  const emptyCmp = cmp.add({ class: 'aekList__empty' });
-  if (typeof props.empty === 'string') {
-    emptyCmp.add({ tag: 'p', class: 'aekList__emptyText', text: props.empty });
-  } else if (props.empty) emptyCmp.add(props.empty);
-  const emptyElem = emptyCmp.elem;
-  const noMatchCmp = cmp.add({ class: 'aekList__noMatch' });
-  const noMatchElem = noMatchCmp.elem;
-  const noMatchText = noMatchCmp.add({ tag: 'p', class: 'aekList__noMatchText' }).elem;
-  noMatchCmp.add({
-    tag: 'button',
-    class: 'aekList__clear',
-    text: 'Clear the filter',
-    attr: { type: 'button' },
-    onClick: () => {
+  const emptyParts = addCollectionEmpty(cmp, {
+    block: 'aekList',
+    empty: props.empty,
+    onClear: () => {
       setQueryFrom('', true);
-      (searchElem ?? stopElem)?.focus();
+      (search?.elem ?? stopElem)?.focus();
     },
   });
 
   const virtualView =
-    virtualImpl?.attach(rowsCmp.elem, mode === 'static' ? 'li' : 'div', () => renderRows()) ?? null;
+    virtualImpl?.attach(
+      rowsCmp.elem,
+      {
+        spacerTag: mode === 'static' ? 'li' : 'div',
+        spacerClass: 'aekList__spacer',
+        rowHeightProperty: '--aek-list-row-height',
+      },
+      () => renderRows()
+    ) ?? null;
   const reorderView =
     reorderImpl?.attach({
       root: cmp.elem,

@@ -3018,6 +3018,18 @@
       "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
     },
+    "src/_engine/ui/data/CollectionParts.ts": {
+      "addCollectionEmpty": "Function",
+      "addCollectionHeader": "Function",
+      "addCollectionSearch": "Function",
+      "CollectionHeaderProps": "TypeAlias",
+      "CollectionSearchProps": "TypeAlias",
+      "createElem": "Function",
+      "placeElems": "Function",
+      "useCollectionKey": "Function",
+      "writeAttr": "Function",
+      "writeCollectionCount": "Function"
+    },
     "src/_engine/ui/data/Filter.ts": {
       "appendMarked": "Function",
       "findMatchRanges": "Function",
@@ -3029,7 +3041,6 @@
       "createList": "Function"
     },
     "src/_engine/ui/data/ListRow.ts": {
-      "createElem": "Function",
       "createListRows": "Function",
       "ListActionCell": "TypeAlias",
       "ListEntry": "TypeAlias",
@@ -3038,8 +3049,7 @@
       "ListRow": "TypeAlias",
       "ListRowsConfig": "TypeAlias",
       "ListRowWritten": "TypeAlias",
-      "ROW_CLASS": "Variable",
-      "writeAttr": "Function"
+      "ROW_CLASS": "Variable"
     },
     "src/_engine/ui/data/ListTypes.ts": {
       "List": "TypeAlias",
@@ -3064,12 +3074,39 @@
       "SelectionMode": "TypeAlias",
       "SelectionProps": "TypeAlias"
     },
+    "src/_engine/ui/data/Tree.ts": {
+      "createTree": "Function"
+    },
+    "src/_engine/ui/data/TreeNodes.ts": {
+      "createTreeNodes": "Function",
+      "STATUS_KEY_PREFIX": "Variable",
+      "TreeEntry": "TypeAlias",
+      "TreeEntryText": "TypeAlias",
+      "TreeLine": "TypeAlias",
+      "TreeLoad": "TypeAlias",
+      "TreeStatus": "TypeAlias"
+    },
+    "src/_engine/ui/data/TreeRow.ts": {
+      "createTreeRows": "Function",
+      "TREE_ROW_CLASS": "Variable",
+      "TREE_STATUS_CLASS": "Variable",
+      "TreeMarks": "TypeAlias",
+      "TreeRow": "TypeAlias",
+      "TreeRowWritten": "TypeAlias",
+      "writeStatusRow": "Function"
+    },
+    "src/_engine/ui/data/TreeTypes.ts": {
+      "Tree": "TypeAlias",
+      "TreeFilter": "TypeAlias",
+      "TreeProps": "TypeAlias"
+    },
     "src/_engine/ui/data/VirtualRows.ts": {
       "createVirtualRows": "Function",
       "getVirtualWindow": "Function",
       "useVirtualRows": "Function",
       "VirtualRows": "TypeAlias",
       "VirtualRowsImpl": "TypeAlias",
+      "VirtualRowsParts": "TypeAlias",
       "VirtualRowsProps": "TypeAlias",
       "VirtualRowsView": "TypeAlias"
     },
@@ -4816,6 +4853,9 @@
       "ToasterSettings",
       "Tooltip",
       "TooltipProps",
+      "Tree",
+      "TreeFilter",
+      "TreeProps",
       "VectorAxisName",
       "VectorAxisProps",
       "VectorField",
@@ -4888,6 +4928,7 @@
       "createTextField",
       "createToaster",
       "createTooltip",
+      "createTree",
       "createVectorField",
       "createVirtualRows",
       "databaseXIcon",

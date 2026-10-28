@@ -17,7 +17,7 @@ export type VirtualRowsProps = {
   overscan?: number;
 };
 
-/** Virtual rows {@link createVirtualRows} made: give it to one list as its `virtual`. */
+/** Virtual rows {@link createVirtualRows} made: give it to one list or tree as its `virtual`. */
 export type VirtualRows = {
   /** Always 'virtualRows': what it is, for the collection that takes it */
   readonly kind: 'virtualRows';
@@ -69,13 +69,24 @@ export type VirtualRowsView = {
 };
 
 /**
+ * How a collection's rows look to its virtual rows: its spacers' tag (its rows' tag: `li` in a
+ * `<ul>`) and class, and the custom property the measured row height is written to.
+ * @internal
+ */
+export type VirtualRowsParts = {
+  spacerTag: string;
+  spacerClass: string;
+  rowHeightProperty: string;
+};
+
+/**
  * What a collection does with virtual rows: `attach` them to its scroll box.
  * @internal
  */
 export type VirtualRowsImpl = {
-  /** Starts them on the box: `spacerTag` its children's tag (`li` in a `<ul>`), `onChange` called
-   * when the scroll or the box's height moves the window (a measured row height too) */
-  attach: (box: HTMLElement, spacerTag: string, onChange: () => void) => VirtualRowsView;
+  /** Starts them on the box, `onChange` called when the scroll or the box's height moves the
+   * window (a measured row height too) */
+  attach: (box: HTMLElement, parts: VirtualRowsParts, onChange: () => void) => VirtualRowsView;
 };
 
 /** Each handle's code, which `useVirtualRows` reads */
@@ -89,20 +100,20 @@ const impls = new WeakMap<VirtualRows, VirtualRowsImpl>();
 export const useVirtualRows = (virtual: VirtualRows | undefined) =>
   (virtual && impls.get(virtual)) ?? null;
 
-const createSpacer = (tag: string) => {
-  const spacer = document.createElement(tag);
-  spacer.className = 'aekList__spacer';
+const createSpacer = ({ spacerTag, spacerClass }: VirtualRowsParts) => {
+  const spacer = document.createElement(spacerTag);
+  spacer.className = spacerClass;
   spacer.setAttribute('aria-hidden', 'true');
-  if (tag !== 'li') spacer.setAttribute('role', 'presentation');
+  if (spacerTag !== 'li') spacer.setAttribute('role', 'presentation');
   return spacer;
 };
 
 /**
- * Creates virtual rows (p805 D8) for one list: only the rows its box shows are rendered (and the
- * focused one, so the focus never drops), a spacer before and after standing in for the others.
- * Past about 200 rows a list scrolls and filters faster with them.
+ * Creates virtual rows (p805 D8) for one list or tree: only the rows its box shows are rendered
+ * (and the focused one, so the focus never drops), a spacer before and after standing in for the
+ * others. Past about 200 rows a list or a tree scrolls and filters faster with them.
  * - Every row is one height: `rowHeight`, or the first row's, measured once. The rows' box needs a
- *   height to scroll in (`--aek-list-max-height`, by default 12 rows).
+ *   height to scroll in (`--aek-list-max-height` / `--aek-tree-max-height`, by default 12 rows).
  * - The rows not rendered aren't in the page: the browser's find can't see them (the list's filter
  *   can), and assistive tech hears each row's place by its `aria-posinset` and `aria-setsize`
  *   (`aria-rowindex` and `aria-rowcount` in a grid).
@@ -125,18 +136,22 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
   const overscan = Math.max(0, props.overscan ?? DEFAULT_OVERSCAN);
   const handle: VirtualRows = { kind: 'virtualRows' };
 
-  const attach = (box: HTMLElement, spacerTag: string, onChange: () => void): VirtualRowsView => {
+  const attach = (
+    box: HTMLElement,
+    parts: VirtualRowsParts,
+    onChange: () => void
+  ): VirtualRowsView => {
     let measured = props.rowHeight ?? 0;
     let scrollTop = box.scrollTop || 0;
     let viewportHeight = box.clientHeight || 0;
     let last = { start: -1, end: -1 };
     let count = 0;
-    const top = createSpacer(spacerTag);
-    const bottom = createSpacer(spacerTag);
+    const top = createSpacer(parts);
+    const bottom = createSpacer(parts);
 
     const getRowHeight = () => measured || DEFAULT_ROW_HEIGHT;
     const writeRowHeight = () => {
-      if (measured) box.style.setProperty('--aek-list-row-height', `${measured}px`);
+      if (measured) box.style.setProperty(parts.rowHeightProperty, `${measured}px`);
     };
     writeRowHeight();
 
@@ -213,7 +228,7 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
         box.removeEventListener('scroll', onScroll);
         observer?.disconnect();
         observer = null;
-        box.style.removeProperty('--aek-list-row-height');
+        box.style.removeProperty(parts.rowHeightProperty);
       },
     };
   };

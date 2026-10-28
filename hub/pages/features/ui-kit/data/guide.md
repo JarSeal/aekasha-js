@@ -112,15 +112,83 @@ createContextMenu({
 | Keys              | One tab stop; Up and Down between the shown rows (no wrapping), Home, End, PageUp, PageDown, a letter to the next title starting with it; Space selects, Enter activates; Shift + a move, Ctrl / ⌘ + A (multiple); Left and Right between a grid row's cells; Alt + ArrowUp / ArrowDown move a row (reorder); the search field's ArrowDown into the list and Escape empties it                                                   |
 | Assistive tech    | `role="listbox"` of `option`s (`aria-multiselectable`), or `role="grid"` of `row`s and `gridcell`s, named by the heading or `label`; `aria-selected`, `aria-disabled`; a toggle's `aria-pressed`; virtual rows' `aria-setsize` / `aria-posinset` (`aria-rowcount` / `aria-rowindex` in a grid); the filter's count and a move read politely                                                                                      |
 
+## Trees
+
+[`createTree`](api:createTree) shows nested nodes, a row per shown node: the user opens and closes
+them. You pass the roots, how to find a node's children and a function per part, as for a list:
+its `title`, and optionally an `icon`, a `badge`, a `suffix` and a `tooltip`. Each row is kept by
+its key (unique in the whole tree), so new nodes write only what changed, and a kept key keeps its
+open state and selection.
+
+```ts
+type SceneNode = { id: string; name: string; children: SceneNode[] };
+
+const outline = createTree<SceneNode>({
+  label: 'Scene',
+  roots: () => [getSceneRoot()], // a function: read again on refresh and on the scheduler
+  getChildren: (node) => node.children,
+  title: (node) => node.name,
+  suffix: (node) => (node.children.length ? String(node.children.length) : null),
+  selection: 'single',
+  expanded: savedExpandedKeys, // yours to keep: onExpandedChange reports the user's changes
+  onExpandedChange: (keys) => saveExpandedKeys(keys),
+  onActivate: (node) => openNodeWindow(node.id), // a click or Enter
+  filter: { field: true },
+});
+outlinePanel.add(outline.cmp);
+
+outline.focusKey(pickedNodeId); // opens its ancestors, scrolls it into the box, focuses it
+```
+
+::: demo tree
+:::
+
+- **Opening and closing.** Right opens a node, or goes to its first child when it's open; Left
+  closes it, or goes to its parent; `*` opens its siblings; a click on the chevron opens and closes
+  it. Enter activates (`onActivate`); without it Enter opens and closes, and so does a click in a
+  tree with no `selection`. `onExpandedChange` gets the user's changes, `expand` and `collapse`
+  change them from code without calling it, and `expanded` restores them, keys of nodes not known
+  yet included.
+- **Lazy children.** Where `getChildren` returns nothing, `loadChildrenAsync` loads a node's
+  children on its first open: a loading row under it meanwhile (the node `aria-busy`), the end
+  announced, the result kept (`reloadChildren` loads it again). A failure shows an error row
+  (`errorText`) that Enter, Space or a click retries. A node closed or removed before its load ends
+  drops the result. `hasChildren` says which nodes not loaded yet show as ones that open (a file
+  doesn't).
+- **Selecting** is the list's: `selection` `'single'` or `'multiple'` (Space, Shift + a move or a
+  click for a range across levels, Ctrl / ⌘ + A every shown node), `onSelectionChange`,
+  `setSelected`.
+- **Filtering.** `filter` shows the matching nodes with their ancestors, opened, the matches
+  marked; the filter's opens and closes are its own, and your expanded keys come back when the
+  query is cleared (with the focused node's ancestors opened, so it stays where you found it). The
+  filter searches the nodes the tree knows: a lazy node's children once loaded.
+- **Live data and big trees** as the list: `setRoots`, `setNode(key, node)` for one node's
+  figures, `roots` as a function with a `scheduler` and `interval`, and
+  `virtual: createVirtualRows()` (the same handle) for a tree that shows hundreds of rows. The tree
+  reads every node it knows on a refresh.
+- **A context menu** is yours to add, as for a list: `createContextMenu` on `cmp.elem`, finding the
+  node with `getKeyAt`.
+
+| Tree              |                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TreeProps`](api:TreeProps), the filter's [`TreeFilter`](api:TreeFilter)                                                                                                                                                                                                                                                                                  |
+| Parts             | `.aekTree` with `__header` (`__heading`, `__headingText`, `__count`), `__filter` (`__search`), `__rows` (virtual rows' `__spacer`s), each `__row` (`__twisty`, `__content`: `__icon`, `__badge`, `__title`, `__suffix`), a lazy node's `__status` (`__statusMark`, `__statusText`, `__retry`), `__empty`, `__noMatch` (`__clear`); the matches' `.aekMark` |
+| States            | a row's `data-key`, `aria-expanded`, `aria-selected`, `aria-disabled`, `aria-busy` (its children loading), `data-pinned` (a virtual row kept at its offset); a status row's `data-status` (`loading`, `error`); the rows' `data-virtual`; a title's `data-placeholder`                                                                                     |
+| Custom properties | `--aek-tree-max-height` (the rows' box scrolls past it; 12 rows with virtual rows), `--aek-tree-indent` (each level's step), `--aek-tree-selected-color` (the selected row's bar), `--aek-tree-row-height` (virtual rows' height, the tree's), `--aek-tree-level` (a row's level, the tree's)                                                              |
+| Keys              | One tab stop; Up and Down between the shown rows (no wrapping), Home, End, PageUp, PageDown; Right opens or enters, Left closes or leaves, `*` opens the siblings, a letter to the next title starting with it; Enter activates (or opens and closes), Space selects; Shift + a move, Ctrl / ⌘ + A (multiple); Enter or Space on an error row retries      |
+| Assistive tech    | One flat `role="tree"` (`aria-multiselectable`) of `treeitem`s named by the heading or `label`, each with `aria-level`, `aria-setsize` and `aria-posinset` among its shown siblings, `aria-expanded`, `aria-selected`, `aria-disabled`, `aria-busy`; an error row is a tree item; the filter's count and a load's end read politely                        |
+
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),
   [`ListAction`](api:ListAction), [`ListFilter`](api:ListFilter)).
-- [`createVirtualRows`](api:createVirtualRows) ([`VirtualRows`](api:VirtualRows)) and
-  [`createListReorder`](api:createListReorder) ([`ListReorder`](api:ListReorder),
+- [`createVirtualRows`](api:createVirtualRows) ([`VirtualRows`](api:VirtualRows)), for a list or
+  a tree, and [`createListReorder`](api:createListReorder) ([`ListReorder`](api:ListReorder),
   [`ListReorderChange`](api:ListReorderChange)).
+- [`createTree`](api:createTree) ([`Tree`](api:Tree), [`TreeProps`](api:TreeProps),
+  [`TreeFilter`](api:TreeFilter)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and
-  [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists.
+  [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists and trees.
 
 ## Read more
 

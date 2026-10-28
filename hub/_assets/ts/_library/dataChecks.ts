@@ -1,5 +1,5 @@
 /**
- * The data display's checks (`data.ts`' demos): the list so far.
+ * The data display's checks (`data.ts`' demos): the list and the tree so far.
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
@@ -12,6 +12,13 @@ const ACTION = (name: string, key: string, index: number) =>
 const SEARCH = (name: string) => `#hubDemoList${name} .aekList__search`;
 const COUNT = (name: string) => `#hubDemoList${name} .aekList__count`;
 const LIST_STATUS = '#hubDemoListStatus';
+
+/** A tree demo's node row by its id's name (`data.ts`' `TREE_ID`) and its key */
+const NODE = (name: string, key: string) => `#hubDemoTree${name} .aekTree__row[data-key="${key}"]`;
+const TREE_SEARCH = (name: string) => `#hubDemoTree${name} .aekTree__search`;
+const TREE_COUNT = (name: string) => `#hubDemoTree${name} .aekTree__count`;
+const TREE_STATUS_ROW = (name: string) => `#hubDemoTree${name} .aekTree__status`;
+const TREE_STATUS = '#hubDemoTreeStatus';
 
 /** The data group's checks by their demo's key (`data-hub-demo`) */
 export const DATA_CHECKS: Record<string, UiDemoChecks> = {
@@ -155,6 +162,119 @@ export const DATA_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Enter' },
           { expectText: LIST_STATUS, text: 'Opened: Sun' },
           { expectAttr: ROW('Lights', 'sun'), name: 'aria-selected', value: 'true' },
+        ],
+      },
+    ],
+  },
+  tree: {
+    states: [{ name: 'Outline: a row clicked', steps: [{ clickInBox: NODE('Outline', 'props') }] }],
+    keyboard: [
+      {
+        name: 'the APG tree: Left and Right close, open, enter and leave; a letter; * opens the siblings; Enter opens and selects',
+        steps: [
+          { focusInBox: NODE('Outline', 'world') },
+          { press: 'ArrowLeft' },
+          { expectAttr: NODE('Outline', 'world'), name: 'aria-expanded', value: 'false' },
+          { press: 'ArrowDown' },
+          { expectFocus: NODE('Outline', 'player') },
+          { press: 'ArrowUp' },
+          { press: 'ArrowRight' },
+          { expectAttr: NODE('Outline', 'world'), name: 'aria-expanded', value: 'true' },
+          { expectFocus: NODE('Outline', 'world') },
+          { press: 'ArrowRight' },
+          { expectFocus: NODE('Outline', 'camera') },
+          { press: 'p' },
+          { expectFocus: NODE('Outline', 'props') },
+          { press: 'ArrowRight' },
+          { press: 'ArrowRight' },
+          { expectFocus: NODE('Outline', 'crate') },
+          { expectAttr: NODE('Outline', 'crate'), name: 'aria-level', value: '3' },
+          { press: 'ArrowLeft' },
+          { expectFocus: NODE('Outline', 'props') },
+          { press: '*' },
+          { expectAttr: NODE('Outline', 'vegetation'), name: 'aria-expanded', value: 'true' },
+          { press: 'Enter' },
+          { expectText: TREE_STATUS, text: 'Opened: Props' },
+          { expectAttr: NODE('Outline', 'props'), name: 'aria-selected', value: 'true' },
+          { press: 'End' },
+          { expectFocus: NODE('Outline', 'ui') },
+          { press: 'Home' },
+          { expectFocus: NODE('Outline', 'world') },
+        ],
+      },
+      {
+        name: 'the filter: the matches with their ancestors, opened and counted; a cleared query keeps the focused node shown',
+        steps: [
+          { focusInBox: TREE_SEARCH('Outline') },
+          { press: 'r' },
+          { press: 'o' },
+          { expectText: TREE_COUNT('Outline'), text: '2 of 19' },
+          { expectText: `${NODE('Outline', 'rock')} .aekTree__title mark`, text: 'Ro' },
+          { expectCount: NODE('Outline', 'crate'), count: 0 },
+          { press: 'ArrowDown' },
+          { expectFocus: NODE('Outline', 'world') },
+          { press: 'End' },
+          { expectFocus: NODE('Outline', 'rock') },
+          { press: 'Shift+Tab' },
+          { expectFocus: TREE_SEARCH('Outline') },
+          { press: 'Escape' },
+          { expectValue: TREE_SEARCH('Outline'), value: '' },
+          { expectText: TREE_COUNT('Outline'), text: '19' },
+          { expectAttr: NODE('Outline', 'vegetation'), name: 'aria-expanded', value: 'true' },
+          { expectAttr: NODE('Outline', 'rock'), name: 'tabindex', value: '0' },
+        ],
+      },
+      {
+        name: 'lazy children: Right loads and enters, a failure’s row takes the focus and Enter retries',
+        steps: [
+          { focusInBox: NODE('Assets', 'textures') },
+          { press: 'ArrowRight' },
+          { expectCount: NODE('Assets', 'textures/stone'), count: 1 },
+          { press: 'ArrowRight' },
+          { expectFocus: NODE('Assets', 'textures/stone') },
+          { press: 'ArrowRight' },
+          { expectCount: NODE('Assets', 'textures/stone/albedo.ktx2'), count: 1 },
+          { press: 'ArrowLeft' },
+          { expectAttr: NODE('Assets', 'textures/stone'), name: 'aria-expanded', value: 'false' },
+          { press: 'ArrowLeft' },
+          { press: 'ArrowLeft' },
+          { expectFocus: NODE('Assets', 'textures') },
+          { expectCount: NODE('Assets', 'textures/stone'), count: 0 },
+          { press: 'ArrowDown' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowRight' },
+          { expectAttr: TREE_STATUS_ROW('Assets'), name: 'data-status', value: 'error' },
+          { press: 'ArrowRight' },
+          { expectFocus: TREE_STATUS_ROW('Assets') },
+          { press: 'Enter' },
+          { expectCount: NODE('Assets', 'remote/props.glb'), count: 1 },
+          { expectFocus: NODE('Assets', 'remote') },
+        ],
+      },
+      {
+        name: 'virtual rows: * opens every chunk, End renders and focuses the last of 5,040, its place said; the filter finds one far down',
+        steps: [
+          { focusInBox: NODE('Tiles', 'c0') },
+          { press: '*' },
+          // The last chunk is far below the box, so its row isn't rendered: End shows it opened
+          { press: 'End' },
+          { expectFocus: NODE('Tiles', 'c39t124') },
+          { expectAttr: NODE('Tiles', 'c39t124'), name: 'aria-level', value: '2' },
+          { expectAttr: NODE('Tiles', 'c39t124'), name: 'aria-posinset', value: '125' },
+          { expectCount: NODE('Tiles', 'c20t0'), count: 0 },
+          { press: 'Home' },
+          { expectFocus: NODE('Tiles', 'c0') },
+          { focusInBox: TREE_SEARCH('Tiles') },
+          { press: '3' },
+          { press: '9' },
+          { press: '.' },
+          { press: '1' },
+          { press: '2' },
+          { press: '4' },
+          { expectText: TREE_COUNT('Tiles'), text: '1 of 5040' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowDown' },
+          { expectFocus: NODE('Tiles', 'c39t124') },
         ],
       },
     ],

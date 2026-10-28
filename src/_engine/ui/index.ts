@@ -291,3 +291,5 @@ export { getSvgIcon, registerBuiltInIcons, registerIcon } from './core/icons/Svg
 export type { BuiltInIconName, SvgIconKey, SvgIconSize } from './core/icons/SvgIcon';
 export { createTooltip } from './overlays/Tooltip';
 export type { Tooltip, TooltipProps } from './overlays/Tooltip';
+export { createTree } from './data/Tree';
+export type { Tree, TreeFilter, TreeProps } from './data/TreeTypes';

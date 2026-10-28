@@ -86,6 +86,7 @@ export const COMPONENT_USES = [
     slot: 'generated-components-list',
     calls: ['createList', 'createVirtualRows', 'createListReorder'],
   },
+  { slot: 'generated-components-tree', calls: ['createTree'] },
   { slot: 'generated-components-badge', calls: ['createBadge'] },
   { slot: 'generated-components-tag', calls: ['createTag'] },
   { slot: 'generated-components-spinner', calls: ['createSpinner'] },

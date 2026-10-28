@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -965,7 +965,7 @@ As built (section 3):
   stacked editor and console in px ("Collapse the outline"), two keyboard scripts. The core page's
   `## Splitters` section, after the accordions.
 
-### Phase 3: the list and the tree
+### Phase 3: the list and the tree — done
 
 1. The list: static, selectable, with actions; the filter (D6).
 2. Virtual rows and reorder (D8), on the list.
@@ -1066,6 +1066,73 @@ As built (section 2):
   tests only (`Reorder.test.ts`).
 - **Size:** no first download moved (`verify:baselines`' bundles unchanged; nothing in the app or
   the embeds uses the list yet). Phase 7 section 3's data window measures the list's chunk.
+
+As built (section 3):
+
+- **`createTree<T>`** (`data/Tree.ts`, `Tree.scss`, public with `TreeProps`, `TreeFilter`, `Tree`;
+  its model in `data/TreeNodes.ts`, no DOM, and its rows in `data/TreeRow.ts`, both `@internal`,
+  so `Tree.ts` stays under 800 lines): as D7, with the list's names where D7 differs: `title` for a
+  node's text (D7's per-node `label`; `label` is the tree's accessible name, as the list's), plus
+  `suffix`, `tooltip`, `isPlaceholder`, `disabled`, `heading`, `headingLevel`, `selected`,
+  `onSelectionChange`, `empty`, `loadingText`, `errorText`, `scheduler`, `interval`, and on the
+  handle `isExpanded`, `reloadChildren`, `setQuery`, `getQuery`, `getKeyAt`. No `contextMenu` prop
+  (section 1's reason). Decided on the way:
+  - **The children:** `getChildren(node)` returning an array is the children (read on every
+    refresh); `null` / `undefined` hands the node to `loadChildrenAsync` (without it a leaf), so a
+    tree can mix both. `hasChildren` says whether a node not loaded yet shows as one that opens
+    (default true); once loaded, its children say.
+  - **The tree reads every known node on a refresh** (the filter matches them all): the nodes
+    `getChildren` gives and the lazy nodes' loaded children, never starting a load. A repeated key
+    is passed over (its first place wins), so a cycle ends.
+  - **Only the shown lines have rows**, with or without `virtual` (a closed subtree has no
+    elements; the rows go to a pool and are bound again). `aria-setsize` / `aria-posinset` count
+    the shown siblings (while filtering, the shown ones).
+  - **Lazy loads:** a record per load; a close before the end, the node's removal, `reloadChildren`
+    or the tree's removal drops the record, and the result is dropped when it comes (checked after
+    the `await`). A loaded result is kept (closed and opened again: no second load) until
+    `reloadChildren`. The loading row is `aria-hidden` (the node's `aria-busy` says it, and the end
+    is announced: "Props: 3 items", or the error text); the error row is a `treeitem` one level
+    down whose Enter, Space or click retries (a row, not a button: a button inside a tree is
+    axe's `aria-required-children`). `expanded` keys of nodes not known yet are kept, so a
+    restored lazy subtree opens level by level as it loads; `getExpanded` gives the known ones in
+    the tree's order, then the others.
+  - **The filter's opens and closes are its own:** while filtering the matches' ancestors show
+    open unless the user closed them (unreported); the expanded keys come back when the query is
+    cleared, with the tab stop's ancestors opened so the node the user reached stays shown
+    (reported when the user cleared it). Code's `expand` / `collapse` while filtering change both.
+    A node is expandable in the filter's view only with a match below it (the filter doesn't
+    search a lazy node's unloaded children).
+  - **Keys and clicks** (D4's APG tree, plus PageUp / PageDown as the list): Enter is
+    `onActivate`, or opens and closes without it; a click on the twisty opens and closes, on a row
+    selects and activates, or opens and closes in a tree with neither `selection` nor `onActivate`.
+    A disabled node isn't selected or activated, but opens and closes. Closing a node with the
+    tab stop under it moves the stop and the focus to it. `focusKey` and `scrollToKey` open the
+    node's ancestors first (unreported, as `expand`).
+  - **What the list and the tree share** moved out of `List.ts` into `data/CollectionParts.ts`
+    (`@internal`, with `CollectionParts.scss`): the heading with its count, the search field with
+    its overlay stack entry, the empty and no match lines, `placeElems`, `createElem`,
+    `writeAttr`, `useCollectionKey`. `block` names each piece's classes (`aekList__search`,
+    `aekTree__search`, unchanged for the list), the stylesheet styles both; `List.ts` went from
+    804 to 700 lines. `VirtualRowsImpl.attach` takes `{ spacerTag, spacerClass,
+    rowHeightProperty }` (`VirtualRowsParts`) for the tree's names.
+  - **VoiceOver** (Phase 0 left the flat tree's pass by hand to this section): not run (Linux);
+    still open for §5's by-hand pass on a Mac. axe in `verify:ui` checks the flat form.
+- **The library:** the tree box in `data.ts` / `dataChecks.ts`: a scene outline (single
+  selection, a filter field, a scrolling box), lazy asset folders (the remote library failing every
+  other try, the archive taking a minute) and 5,040 tiles with virtual rows and a multiple
+  selection; "Filter by “ro”" and "Open the slow and the failing folders" states, a clicked-row
+  state, four keyboard scripts (the APG keys, the filter with a cleared query, lazy children with a
+  failure and its retry, virtual rows).
+- **The Hub:** the data page's `## Trees` section and its key APIs, its intro and tags, the UI kit
+  overview's pieces table, both library pages' box and texts, `COMPONENT_USES`.
+- **Size:** no first download moved (`verify:baselines`' bundles unchanged: nothing in the app or
+  the embeds uses the tree yet). Each module minified and gzipped alone: `Tree.ts` 4.1 kB,
+  `TreeNodes.ts` 1.8, `TreeRow.ts` 1.7, `CollectionParts.ts` 1.3 (shared with the list, which lost
+  as much). Phase 7 section 3's inspector measures the tree's chunk.
+- **Seen on the way, not changed:** virtual rows measure the row height once (D8), so a box made
+  in one density keeps that height after a switch to the other (the library's density switch shows
+  it on the list's and the tree's virtual boxes). The table's virtual rows (Phase 4 section 3) are
+  the place to measure again on `ThemeWatch.ts`' density change (Phase 5 section 3), if wanted.
 
 ### Phase 4: the table
 

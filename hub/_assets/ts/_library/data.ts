@@ -1,8 +1,15 @@
 /**
- * The component library's data display (the Hub's `features/ui-kit/data/` page, p805): the list so
- * far (with virtual rows and reorder); the tree, the table, the graphs and the stat tile join it.
+ * The component library's data display (the Hub's `features/ui-kit/data/` page, p805): the list
+ * (with virtual rows and reorder) and the tree so far; the table, the graphs and the stat tile join
+ * them.
  */
-import { createList, createListReorder, createVirtualRows, getSvgIcon } from 'aekasha/ui';
+import {
+  createList,
+  createListReorder,
+  createTree,
+  createVirtualRows,
+  getSvgIcon,
+} from 'aekasha/ui';
 import type { CMPHandle } from 'aekasha/ui';
 import { ID_PREFIX, addButton, addGroup, addKitRoot } from './page';
 import type { Demo } from './page';
@@ -229,7 +236,189 @@ const initListDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Tree ---
+
+const TREE_ID = (name: string) => `${ID_PREFIX}Tree${name}`;
+
+type OutlineNode = {
+  id: string;
+  name: string;
+  kind: SceneObject['kind'];
+  triangles?: number;
+  children?: OutlineNode[];
+};
+
+const group = (id: string, name: string, children: OutlineNode[]): OutlineNode => ({
+  id,
+  name,
+  kind: 'Group',
+  children,
+});
+const mesh = (id: string, name: string, triangles: number): OutlineNode => ({
+  id,
+  name,
+  kind: 'Mesh',
+  triangles,
+});
+
+const OUTLINE: OutlineNode[] = [
+  group('world', 'World', [
+    { id: 'camera', name: 'Main camera', kind: 'Camera' },
+    { id: 'sun', name: 'Sun', kind: 'Light' },
+    mesh('terrain', 'Terrain', 131072),
+    group('props', 'Props', [
+      mesh('crate', 'Crate', 12),
+      mesh('barrel', 'Barrel', 960),
+      mesh('fence', 'Fence', 4320),
+      mesh('gate', 'Gate', 880),
+    ]),
+    group('vegetation', 'Vegetation', [
+      mesh('pine', 'Pine tree', 18500),
+      mesh('rock', 'Rock', 6200),
+    ]),
+    mesh('water', 'Water', 2048),
+  ]),
+  group('player', 'Player', [
+    mesh('body', 'Body', 9400),
+    { id: 'rig', name: 'Camera rig', kind: 'Camera' },
+  ]),
+  group('ui', 'UI', [mesh('hud', 'HUD', 0), mesh('pause', 'Pause menu', 0)]),
+];
+
+type AssetNode = { id: string; name: string; isFile?: boolean };
+
+const ASSET_FOLDERS: AssetNode[] = [
+  { id: 'textures', name: 'Textures' },
+  { id: 'models', name: 'Models' },
+  { id: 'remote', name: 'Remote library' },
+  { id: 'archive', name: 'Archive (slow)' },
+];
+
+const ASSET_FILES: Record<string, AssetNode[]> = {
+  textures: [
+    { id: 'textures/stone', name: 'Stone' },
+    { id: 'textures/grass.ktx2', name: 'grass.ktx2', isFile: true },
+    { id: 'textures/sand.ktx2', name: 'sand.ktx2', isFile: true },
+  ],
+  'textures/stone': [
+    { id: 'textures/stone/albedo.ktx2', name: 'albedo.ktx2', isFile: true },
+    { id: 'textures/stone/normal.ktx2', name: 'normal.ktx2', isFile: true },
+  ],
+  models: [
+    { id: 'models/crate.glb', name: 'crate.glb', isFile: true },
+    { id: 'models/barrel.glb', name: 'barrel.glb', isFile: true },
+  ],
+  remote: [{ id: 'remote/props.glb', name: 'props.glb', isFile: true }],
+};
+
+/** A folder's files after a short wait; the remote library fails every other try, the archive
+ * takes a minute (its loading row stays for the page's shots) */
+const createAssetLoader = () => {
+  let remoteTries = 0;
+  return (folder: AssetNode) => {
+    if (folder.id === 'remote' && ++remoteTries % 2 === 1) {
+      return Promise.reject(new Error('Couldn’t reach the library.'));
+    }
+    const delay = folder.id === 'archive' ? 60000 : 300;
+    return new Promise<AssetNode[]>((resolve) => {
+      setTimeout(() => resolve(ASSET_FILES[folder.id] ?? []), delay);
+    });
+  };
+};
+
+type Tile = { id: string; name: string; children?: Tile[] };
+
+/** In the page: a scene outline (single selection, a filter field), lazy asset folders (one
+ * failing, one slow) and 5,000 tiles with virtual rows; what the user selects and opens shows in
+ * the status line */
+const initTreeDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TREE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (text: string) => (status.textContent = text);
+  const states = addGroup(root, 'From code: a filter, a running and a failed load');
+  const row = (label: string, cmp: CMPHandle) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoLists');
+    group.append(cmp.elem);
+    return group;
+  };
+
+  const outline = createTree<OutlineNode>({
+    id: TREE_ID('Outline'),
+    heading: 'Scene',
+    headingLevel: 3,
+    roots: OUTLINE,
+    getChildren: (node) => node.children,
+    title: (node) => node.name,
+    icon: (node) => getSvgIcon(KIND_ICONS[node.kind]),
+    suffix: (node) =>
+      node.children
+        ? String(node.children.length)
+        : node.triangles
+          ? `${node.triangles.toLocaleString('en')} tris`
+          : null,
+    expanded: ['world'],
+    selection: 'single',
+    onSelectionChange: (keys) => report(`Selected: ${keys.join(', ') || 'none'}`),
+    onActivate: (node) => report(`Opened: ${node.name}`),
+    filter: { field: true, fieldLabel: 'Filter the scene', placeholder: 'Filter the scene' },
+  });
+  row(
+    'A scene outline: Right and Left open and close, Enter or a click opens and selects',
+    outline.cmp
+  );
+  outline.cmp.elem.classList.add('hubDemoListScroll');
+  addButton(states, 'Filter by “ro”', () => outline.setQuery('ro'));
+
+  const assets = createTree<AssetNode>({
+    id: TREE_ID('Assets'),
+    label: 'Assets',
+    roots: ASSET_FOLDERS,
+    getChildren: () => undefined,
+    loadChildrenAsync: createAssetLoader(),
+    hasChildren: (node) => !node.isFile,
+    title: (node) => node.name,
+    icon: (node) => getSvgIcon(node.isFile ? 'texture' : 'assets'),
+    errorText: (error) => (error as Error).message,
+  });
+  row(
+    'Lazy children: loaded on the first open, a loading row meanwhile, a failure’s row retries',
+    assets.cmp
+  );
+  addButton(states, 'Open the slow and the failing folders', () => {
+    assets.expand('archive');
+    assets.expand('remote');
+  });
+
+  const tiles: Tile[] = Array.from({ length: 40 }, (_, c) => ({
+    id: `c${c}`,
+    name: `Chunk ${c}`,
+    children: Array.from({ length: 125 }, (_, t) => ({ id: `c${c}t${t}`, name: `Tile ${c}.${t}` })),
+  }));
+  row(
+    'Virtual rows: 40 chunks of 125 tiles, only the rows the box shows rendered; * opens them all',
+    createTree<Tile>({
+      id: TREE_ID('Tiles'),
+      heading: 'Tiles',
+      headingLevel: 3,
+      roots: tiles,
+      getChildren: (tile) => tile.children,
+      title: (tile) => tile.name,
+      expanded: ['c0'],
+      selection: 'multiple',
+      onSelectionChange: (keys) => report(`Tiles: ${keys.length} selected`),
+      filter: { field: true, fieldLabel: 'Filter the tiles', placeholder: 'Filter tiles' },
+      virtual: createVirtualRows(),
+    }).cmp
+  );
+  root.append(status);
+};
+
 /** The data group's demos by their box's key (`data-hub-demo`) */
 export const DATA_DEMOS: Record<string, Demo> = {
   list: initListDemo,
+  tree: initTreeDemo,
 };

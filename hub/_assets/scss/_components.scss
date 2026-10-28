@@ -351,11 +351,12 @@
   overflow: hidden;
 }
 
-// A list in a row takes a panel's width, its rows framed; the scene objects' box scrolls
-.hubComponentDemoGroup.hubDemoLists > .aekList {
+// A list or a tree in a row takes a panel's width, its rows framed; the scene objects' and the
+// scene outline's boxes scroll
+.hubComponentDemoGroup.hubDemoLists > :is(.aekList, .aekTree) {
   width: min(100%, 24rem);
 
-  .aekList__rows {
+  :is(.aekList__rows, .aekTree__rows) {
     border: 1px solid var(--aek-border);
     border-radius: var(--aek-radius-md);
   }
@@ -363,4 +364,8 @@
 
 .aekList.hubDemoListScroll {
   --aek-list-max-height: 12rem;
+}
+
+.aekTree.hubDemoListScroll {
+  --aek-tree-max-height: 12rem;
 }

@@ -12,6 +12,12 @@ import { createVirtualRows, getVirtualWindow, useVirtualRows } from './VirtualRo
 
 type Item = { id: string; name: string };
 
+const LIST_PARTS = {
+  spacerTag: 'div',
+  spacerClass: 'aekList__spacer',
+  rowHeightProperty: '--aek-list-row-height',
+};
+
 const makeItems = (count: number) =>
   Array.from({ length: count }, (_, i) => ({ id: `k${i}`, name: `Item ${i}` }));
 
@@ -63,7 +69,7 @@ describe('virtual rows on a box', () => {
     document.body.append(box);
     const onChange = vi.fn();
     const impl = useVirtualRows(createVirtualRows({ rowHeight: 20, overscan: 0 }));
-    const view = impl?.attach(box, 'div', onChange);
+    const view = impl?.attach(box, LIST_PARTS, onChange);
     if (!view) throw new Error('no virtual rows');
     expect(view.top.getAttribute('aria-hidden')).toBe('true');
     expect(view.top.getAttribute('role')).toBe('presentation');
@@ -95,7 +101,11 @@ describe('virtual rows on a box', () => {
 
   it('measures the first row once when no height was given, and writes it', () => {
     const box = document.createElement('div');
-    const view = useVirtualRows(createVirtualRows())?.attach(box, 'li', () => {});
+    const view = useVirtualRows(createVirtualRows())?.attach(
+      box,
+      { ...LIST_PARTS, spacerTag: 'li' },
+      () => {}
+    );
     if (!view) throw new Error('no virtual rows');
     expect(view.top.tagName).toBe('LI');
     expect(view.top.hasAttribute('role')).toBe(false);
