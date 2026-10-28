@@ -390,6 +390,14 @@
   width: min(100%, 18rem);
 }
 
+// The dev page's table stress boxes: a box that scrolls
+.hubDemoStressTable > .aekTable {
+  --aek-table-max-height: 20rem;
+  --aek-table-bg: var(--aek-bg);
+
+  width: min(100%, 40rem);
+}
+
 // A cell renderer's two lines: the object, its entity and owner dimmed under it
 .hubDemoTwoLines {
   display: flex;

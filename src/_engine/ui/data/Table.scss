@@ -125,6 +125,36 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
     display: none;
   }
 
+  // --- Virtual rows: one height, the cells on one line; the spacers stand in for the rows not
+  // rendered; the tab stop's row out of the window is rendered but hidden (it's off the box's view
+  // anyway) ---
+
+  :where(.aekTable__body[data-virtual] > .aekTable__row) {
+    height: var(--aek-table-row-height, auto);
+  }
+
+  :where(.aekTable__body[data-virtual] > .aekTable__row > .aekTable__cell) {
+    height: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekTable__spacerCell) {
+    height: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  :where(.aekTable__row[data-pinned]) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   // --- Sort: the header's button and its mark (both triangles faint until sorted, then the one
   // pointing the sort's way) ---
 
@@ -261,6 +291,15 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
   }
 
   :where(.aekTable[data-striped] tbody > .aekTable__row:nth-child(even of .aekTable__row)) {
+    --aek-table-row-tint: #{$stripe};
+  }
+
+  // Virtual rows: the window's place, not its child order, gives a row its stripe
+  :where(.aekTable[data-striped] .aekTable__body[data-virtual] > .aekTable__row) {
+    --aek-table-row-tint: transparent;
+  }
+
+  :where(.aekTable[data-striped] .aekTable__body[data-virtual] > .aekTable__row[data-stripe]) {
     --aek-table-row-tint: #{$stripe};
   }
 

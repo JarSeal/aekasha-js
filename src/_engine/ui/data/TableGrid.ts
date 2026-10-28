@@ -7,16 +7,12 @@ import { pushOverlay } from '../overlays/OverlayStack';
 import { useCollectionKey } from './CollectionParts';
 import { findCellControl, isInCellControl, type TableNavRow } from './TableRows';
 
-/** The page size of PageUp and PageDown when the table's box doesn't scroll */
-const DEFAULT_PAGE_SIZE = 10;
-
 /**
  * What the grid reads from the table and calls on it.
  * @internal
  */
 export type TableGridProps = {
   table: HTMLElement;
-  box: HTMLElement;
   /** The grid's rows in order at the last render (their `index` set) */
   getRows: () => readonly TableNavRow[];
   /** The grid row of a `<tr>` */
@@ -25,6 +21,12 @@ export type TableGridProps = {
   getTarget: (row: TableNavRow, column: number) => HTMLElement;
   /** Where the tab stop starts: the first selected row, else the first data row */
   getStartIndex: () => number;
+  /** Renders a row that isn't (virtual rows: scrolls the box to it), before the focus goes there */
+  reveal: (row: TableNavRow) => void;
+  /** Renders the rows again, the tab stop's kept (a stop moved to a row not rendered) */
+  place: () => void;
+  /** PageUp's and PageDown's step from a row */
+  getPageSize: (row: TableNavRow) => number;
   /** Space on a data row's cell */
   onSpace: (key: string, e: KeyboardEvent) => void;
   /** Enter on a data row's cell holding no control */
@@ -47,10 +49,11 @@ export type TableGridProps = {
  * the table stays open).
  * @internal
  * @returns `settle(hadFocus)` after a render (the tab stop on a row that's still there, else the
- * one now at its place; the focus given back when its row went), `hasFocus` and `dispose`
+ * one now at its place; the focus given back when its row went), `hasFocus`, `getStop` and
+ * `dispose`
  */
 export const createTableGrid = (props: TableGridProps) => {
-  const { table, box } = props;
+  const { table } = props;
   let stopRow: TableNavRow | null = null;
   /** The stop's place, for when its row goes; -1 before the first */
   let stopIndex = -1;
@@ -69,13 +72,16 @@ export const createTableGrid = (props: TableGridProps) => {
     }
     stopRow = row;
     stopIndex = row ? row.index : -1;
-    const next = row ? props.getTarget(row, Math.min(stopColumn, row.cells.length - 1)) : null;
+    // A row not rendered (virtual rows) is rendered as the stop's
+    if (row && !row.elem) props.place();
+    const next = row && row.elem ? props.getTarget(row, Math.min(stopColumn, row.size - 1)) : null;
     if (stopElem && stopElem !== next) stopElem.setAttribute('tabindex', '-1');
     next?.setAttribute('tabindex', '0');
     stopElem = next;
   };
 
   const focusAt = (row: TableNavRow, column: number) => {
+    props.reveal(row);
     stopRow = row;
     stopIndex = row.index;
     stopColumn = column;
@@ -104,12 +110,6 @@ export const createTableGrid = (props: TableGridProps) => {
     if (inside && target) removeEntry = pushOverlay({ elem: inside, close: () => target.focus() });
   };
 
-  const getPageSize = (row: TableNavRow) => {
-    const height = row.elem.offsetHeight;
-    if (!height || !(box.scrollHeight > box.clientHeight)) return DEFAULT_PAGE_SIZE;
-    return Math.max(1, Math.floor(box.clientHeight / height));
-  };
-
   const onKeyDown = (e: Event) => {
     const ke = e as KeyboardEvent;
     const at = locate(ke.target);
@@ -133,7 +133,7 @@ export const createTableGrid = (props: TableGridProps) => {
       if (isMod) return;
       useCollectionKey(ke);
       const next = column + (key === 'ArrowRight' ? 1 : -1);
-      if (next < 0 || next >= row.cells.length) return;
+      if (next < 0 || next >= row.size) return;
       wantedColumn = next;
       focusAt(row, next);
       return;
@@ -141,20 +141,20 @@ export const createTableGrid = (props: TableGridProps) => {
     if (key === 'Home' || key === 'End') {
       useCollectionKey(ke);
       const toRow = isMod ? rows[key === 'Home' ? 0 : rows.length - 1] : row;
-      wantedColumn = key === 'Home' ? 0 : toRow.cells.length - 1;
+      wantedColumn = key === 'Home' ? 0 : toRow.size - 1;
       focusAt(toRow, wantedColumn);
       return;
     }
     if (!isMod) {
       const next = getMoveTarget(key, row.index, {
         count: rows.length,
-        pageSize: key.startsWith('Page') ? getPageSize(row) : undefined,
+        pageSize: key.startsWith('Page') ? props.getPageSize(row) : undefined,
       });
       if (next !== null) {
         useCollectionKey(ke);
         if (next === -1) return;
         const toRow = rows[next];
-        focusAt(toRow, Math.min(wantedColumn, toRow.cells.length - 1));
+        focusAt(toRow, Math.min(wantedColumn, toRow.size - 1));
         if (ke.shiftKey && toRow.key !== null) props.onRange(toRow.key);
         return;
       }
@@ -205,7 +205,7 @@ export const createTableGrid = (props: TableGridProps) => {
       stopIndex = at.row.index;
       stopColumn = at.column;
       // A one-cell row (a group's header, the empty row) keeps the column Up / Down come back to
-      if (at.row.cells.length > 1) wantedColumn = at.column;
+      if (at.row.size > 1) wantedColumn = at.column;
       writeStop();
     }
     syncEntry(e.target as Element);
@@ -228,6 +228,8 @@ export const createTableGrid = (props: TableGridProps) => {
       if (hadFocus && !table.contains(document.activeElement)) stopElem?.focus();
     },
     hasFocus: () => table.contains(document.activeElement),
+    /** The tab stop's row (the table keeps it rendered), or null */
+    getStop: () => (stopRow && stopRow.index !== -1 ? stopRow : null),
     dispose: () => {
       removeEntry?.(false);
       removeEntry = null;

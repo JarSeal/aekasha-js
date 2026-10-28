@@ -99,6 +99,37 @@ describe('virtual rows on a box', () => {
     box.remove();
   });
 
+  it('an inset (a table’s caption and header above the rows, a sticky header over them)', () => {
+    const box = document.createElement('div');
+    document.body.append(box);
+    const onChange = vi.fn();
+    const view = useVirtualRows(createVirtualRows({ rowHeight: 20, overscan: 0 }))?.attach(
+      box,
+      LIST_PARTS,
+      onChange
+    );
+    if (!view) throw new Error('no virtual rows');
+    observers.resize(box, { height: 100 });
+    box.scrollTop = 200;
+    box.dispatchEvent(new window.Event('scroll'));
+    expect(view.getWindow(100)).toEqual({ start: 10, end: 15 });
+    onChange.mockClear();
+    // The rows start 60 px down, and a 20 px header covers the box's top
+    view.setInset(60, 20);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(view.getWindow(100)).toEqual({ start: 8, end: 12 });
+    expect(view.getPageSize()).toBe(4);
+    view.setInset(60, 20);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    // Row 2 is at 100 px: its top shows below the header at 80
+    view.scrollToIndex(2);
+    expect(box.scrollTop).toBe(80);
+    view.scrollToIndex(40);
+    expect(box.scrollTop).toBe(60 + 41 * 20 - 100);
+    view.dispose();
+    box.remove();
+  });
+
   it('measures the first row once when no height was given, and writes it', () => {
     const box = document.createElement('div');
     const view = useVirtualRows(createVirtualRows())?.attach(

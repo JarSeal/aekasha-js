@@ -8,7 +8,9 @@ import {
 } from '../testing/KitDom';
 import { CMP } from '../core/CMP';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createBindingScheduler } from '../forms/binding/BindingScheduler';
 import { createTable } from './Table';
+import { createVirtualRows } from './VirtualRows';
 import type { Table, TableColumn, TableProps } from './TableTypes';
 
 type Item = { id: string; name: string; size: number; count?: number | null; state?: string };
@@ -762,9 +764,9 @@ describe('table: cells, bars and header tooltips', () => {
     const cell = mesh.children[1] as HTMLElement;
     expect(cell.getAttribute('data-kind')).toBe('bar');
     expect(cell.querySelector('.aekTable__bar')?.getAttribute('aria-hidden')).toBe('true');
-    expect(widths('mesh')).toEqual(['60.0%', '20.0%']);
-    expect(widths('light')).toEqual(['10.0%', '0.0%']);
-    expect(widths('total')).toEqual(['70.0%', '30.0%']);
+    expect(widths('mesh')).toEqual(['60%', '20%']);
+    expect(widths('light')).toEqual(['10%', '0%']);
+    expect(widths('total')).toEqual(['70%', '30%']);
     expect(cell.querySelector('.aekTable__barText')?.textContent).toBe('30 / 10');
     table.cmp.remove();
 
@@ -783,7 +785,7 @@ describe('table: cells, bars and header tooltips', () => {
     });
     getHUDRootCMP().add(budget.cmp);
     const meshBar = budget.cmp.elem.querySelector('[data-key="mesh"] .aekTable__barPart');
-    expect((meshBar as HTMLElement).style.width).toBe('30.0%');
+    expect((meshBar as HTMLElement).style.width).toBe('30%');
     expect(
       budget.cmp.elem.querySelector('[data-key="mesh"] .aekTable__barText')?.hasAttribute('hidden')
     ).toBe(true);
@@ -803,5 +805,194 @@ describe('table: cells, bars and header tooltips', () => {
     expect(sizeHeader.getAttribute('aria-describedby')).toBeTruthy();
     table.cmp.remove();
     expect(button.hasAttribute('aria-describedby')).toBe(false);
+  });
+});
+
+describe('table: live data (p805 D3)', () => {
+  it('setCell writes one text node only when its text changed, until the row is read again', () => {
+    const format = vi.fn((size: unknown) => `${size as number} kB`);
+    const table = add({
+      columns: [COLUMNS[0], { key: 'size', label: 'Size', format, sortable: true }],
+      sort: { key: 'size', direction: 'ascending' },
+    });
+    const cell = getRow(table, 'tex').children[1];
+    const text = cell.lastChild as Text;
+    let writes = 0;
+    // linkedom's accessor is up the prototype chain
+    let proto: object | null = Object.getPrototypeOf(text);
+    let data = proto ? Object.getOwnPropertyDescriptor(proto, 'data') : undefined;
+    while (!data && proto) {
+      proto = Object.getPrototypeOf(proto);
+      data = proto ? Object.getOwnPropertyDescriptor(proto, 'data') : undefined;
+    }
+    Object.defineProperty(text, 'data', {
+      get: () => data?.get?.call(text) as string,
+      set: (value: string) => {
+        writes++;
+        data?.set?.call(text, value);
+      },
+    });
+    table.setCell('tex', 'size', 4096);
+    expect(text.data).toBe('4096 kB');
+    expect(cell.lastChild).toBe(text);
+    expect(writes).toBe(1);
+    table.setCell('tex', 'size', 4096);
+    expect(writes).toBe(1);
+    // Not sorted again until the next read; an unknown key or column does nothing
+    expect(getKeys(table)).toEqual(['geo', 'tex', 'rt']);
+    table.setCell('nope', 'size', 1);
+    table.setCell('tex', 'nope', 1);
+    // The next read takes the row's value back
+    table.refresh();
+    expect(text.data).toBe('1024 kB');
+    table.cmp.remove();
+  });
+
+  it('setCell on a bar column measures its bars again', () => {
+    type Kind = { id: string; count: number };
+    const table = createTable<Kind>({
+      caption: 'Kinds',
+      columns: [{ key: 'count', label: 'Count', kind: 'bar' }],
+      rows: [
+        { id: 'a', count: 50 },
+        { id: 'b', count: 100 },
+      ],
+    });
+    getHUDRootCMP().add(table.cmp);
+    const width = (key: string) =>
+      (getRow(table, key).querySelector('.aekTable__barPart') as HTMLElement).style.width;
+    expect([width('a'), width('b')]).toEqual(['50%', '100%']);
+    table.setCell('a', 'count', 200);
+    expect([width('a'), width('b')]).toEqual(['100%', '50%']);
+    table.cmp.remove();
+  });
+
+  it('a function’s rows read on the scheduler’s refresh while shown; its entry gone with the table', () => {
+    let items = ITEMS.slice(0, 1);
+    const scheduler = createBindingScheduler();
+    const table = add({ rows: () => items, scheduler });
+    items = ITEMS;
+    scheduler.refresh();
+    expect(getKeys(table)).toEqual(['tex', 'geo', 'rt']);
+    table.cmp.remove();
+    items = [];
+    expect(() => scheduler.refresh()).not.toThrow();
+    scheduler.dispose();
+  });
+});
+
+describe('table: virtual rows (p805 D8)', () => {
+  type Big = { id: string; name: string; size: number };
+  const makeRows = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({ id: `k${i}`, name: `Row ${i}`, size: i }));
+
+  const addVirtual = (props: Partial<TableProps<Big>> = {}) => {
+    const table = createTable<Big>({
+      caption: 'Big',
+      columns: [
+        { key: 'name', label: 'Name', rowHeader: true },
+        { key: 'size', label: 'Size', sortable: true },
+      ],
+      rows: makeRows(1000),
+      virtual: createVirtualRows({ rowHeight: 20 }),
+      ...props,
+    });
+    getHUDRootCMP().add(table.cmp);
+    const box = table.cmp.elem.querySelector('.aekTable__scroll') as HTMLElement;
+    observers.resize(box, { height: 100 });
+    const bodyKeys = () =>
+      [...box.querySelectorAll('tbody.aekTable__body > .aekTable__row:not([data-pinned])')].map(
+        (row) => row.getAttribute('data-key')
+      );
+    const scrollTo = (top: number) => {
+      box.scrollTop = top;
+      box.dispatchEvent(new window.Event('scroll'));
+    };
+    return { table, box, bodyKeys, scrollTo };
+  };
+
+  it('renders the window between spacer rows, with the row count and each row’s index', () => {
+    const { table, box, bodyKeys, scrollTo } = addVirtual({
+      footer: [{ id: 'total', name: 'Total', size: 0 }],
+    });
+    const tableElem = box.querySelector('table') as HTMLElement;
+    const tbody = box.querySelector('tbody.aekTable__body') as HTMLElement;
+    expect(tbody.hasAttribute('data-virtual')).toBe(true);
+    expect(bodyKeys()).toEqual(Array.from({ length: 9 }, (_, i) => `k${i}`));
+    const [top, bottom] = [...tbody.querySelectorAll('.aekTable__spacer')] as HTMLElement[];
+    expect(tbody.firstElementChild).toBe(top);
+    expect(top.getAttribute('aria-hidden')).toBe('true');
+    expect(top.querySelector('td')?.getAttribute('colspan')).toBe('2');
+    expect(bottom.style.height).toBe(`${991 * 20}px`);
+    // The header row, 1000 rows and the footer's
+    expect(tableElem.getAttribute('aria-rowcount')).toBe('1002');
+    expect(box.querySelector('thead tr')?.getAttribute('aria-rowindex')).toBe('1');
+    expect(getRow(table, 'k3').getAttribute('aria-rowindex')).toBe('5');
+    expect(getRow(table, 'total').getAttribute('aria-rowindex')).toBe('1002');
+    expect(getRow(table, 'k3').hasAttribute('data-stripe')).toBe(true);
+    expect(getRow(table, 'k2').hasAttribute('data-stripe')).toBe(false);
+    scrollTo(500);
+    expect(bodyKeys()).toEqual(Array.from({ length: 13 }, (_, i) => `k${21 + i}`));
+    expect(top.style.height).toBe('420px');
+    // The footer always renders
+    expect(getRow(table, 'total')).not.toBe(null);
+    table.cmp.remove();
+  });
+
+  it('recycles the views it lets go of; a recycled one shows its new row', () => {
+    const { table, box, scrollTo } = addVirtual();
+    const seen = new Set(box.querySelectorAll('tbody .aekTable__row'));
+    for (let top = 0; top <= 4000; top += 100) scrollTo(top);
+    for (const row of box.querySelectorAll('tbody .aekTable__row')) seen.add(row);
+    expect(seen.size).toBeLessThanOrEqual(15);
+    expect(getTexts(getRow(table, 'k200'))).toEqual(['Row 200', '200']);
+    table.cmp.remove();
+  });
+
+  it('sorts every row, not the window’s; setCell on a row not rendered shows when it renders', () => {
+    const { table, bodyKeys, scrollTo } = addVirtual();
+    table.setSort({ key: 'size', direction: 'descending' });
+    expect(bodyKeys().slice(0, 3)).toEqual(['k999', 'k998', 'k997']);
+    table.setCell('k500', 'size', -1);
+    expect(getRow(table, 'k500')).toBe(null);
+    scrollTo(499 * 20);
+    expect(getTexts(getRow(table, 'k500'))).toEqual(['Row 500', '-1']);
+    table.scrollToKey('k10');
+    expect(getRow(table, 'k10')).not.toBe(null);
+    table.cmp.remove();
+  });
+
+  it('a grid: the keys render a row out of the window, the tab stop’s row kept while scrolled away', () => {
+    const { table, box, scrollTo } = addVirtual({ selection: 'single' });
+    const first = getRow(table, 'k0').children[1] as HTMLElement;
+    first.focus();
+    press('End', { ctrlKey: true });
+    expect(focused()).toEqual({ key: 'k999', column: 1 });
+    expect(box.scrollTop).toBe(1000 * 20 - 100);
+    press('PageUp');
+    expect(focused().key).toBe('k994');
+    press(' ');
+    expect(table.getSelected()).toEqual(['k994']);
+    scrollTo(0);
+    const pinned = box.querySelector('[data-pinned]') as HTMLElement;
+    expect(pinned.getAttribute('data-key')).toBe('k994');
+    expect(pinned.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(pinned.children[1]);
+    expect(box.querySelectorAll('[tabindex="0"]')).toHaveLength(1);
+    // Moving on from it renders the next row
+    press('ArrowDown');
+    expect(focused().key).toBe('k995');
+    expect(getRow(table, 'k995').hasAttribute('data-pinned')).toBe(false);
+    table.cmp.remove();
+    expect(countListeners(box)).toBe(0);
+    expect(observers.observerCount()).toBe(0);
+  });
+
+  it('no stacked layout with virtual rows', () => {
+    const { table } = addVirtual({ stackBelow: 400 });
+    expect(query(table, '.aekTable__cellLabel')).toBe(null);
+    observers.resize(table.cmp.elem, { width: 300, height: 200 });
+    expect(table.cmp.elem.hasAttribute('data-stacked')).toBe(false);
+    table.cmp.remove();
   });
 });

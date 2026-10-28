@@ -372,6 +372,27 @@ export const DATA_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
+        name: 'virtual rows: Ctrl+End renders and focuses the last of 2,000, the row count and index said; Ctrl+Home back',
+        steps: [
+          { focusInBox: TABLE_CELL('Draws', 'd0', 1) },
+          { expectAttr: `${TABLE('Draws')} table`, name: 'aria-rowcount', value: '2001' },
+          // A plain key first: Chromium keeps a click's focus modality through a Ctrl chord
+          { press: 'ArrowDown' },
+          { expectFocus: TABLE_CELL('Draws', 'd1', 1) },
+          { press: 'Control+End' },
+          { expectFocus: TABLE_CELL('Draws', 'd1999', 3) },
+          { expectAttr: TABLE_ROW('Draws', 'd1999'), name: 'aria-rowindex', value: '2001' },
+          { press: 'ArrowUp' },
+          { expectFocus: TABLE_CELL('Draws', 'd1998', 3) },
+          { press: 'Space' },
+          { expectText: TABLE_STATUS, text: 'Selected: d1998' },
+          { press: 'Control+Home' },
+          { expectFocus: TABLE_HEADER('Draws', 'name') },
+          { press: 'ArrowDown' },
+          { expectFocus: TABLE_CELL('Draws', 'd0', 1) },
+        ],
+      },
+      {
         name: 'the box that overflows is a tab stop named by the caption; the others aren’t; the narrow one stacks',
         steps: [
           { focusInBox: TABLE_BOX('Owners') },

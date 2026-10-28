@@ -2,7 +2,8 @@
 
 `createTable({ caption, columns, rows })` shows an app's rows under its columns: each cell a value
 as text (a column's `format`), a number aligned to the end in tabular figures, a CMP (`cell`) or a
-bar (`kind: 'bar'`). Rows are kept by key, so new rows write only the cells whose text changed.
+bar (`kind: 'bar'`). Rows are kept by key, so new rows write only the cells whose text changed, and `setCell` writes
+one live figure; `virtual` renders only the rows the box shows.
 `groups` add a `<tbody>` each under a header row, `footer` a total in a `<tfoot>`; a column can be
 the rows' headers (`rowHeader`), carry a status (`tone`: its colour and a mark, the text saying it
 too), sort the rows (`sortable`: its header a button, ascending then descending, stable, the
@@ -21,6 +22,7 @@ caption, so the arrows scroll it.
   of in view and culled against the total in the footer), the heaviest objects (a grid with a
   multiple selection, an object and its owner on two lines, an Edit button) and three assets in a
   narrow box, stacked, the sortable headers as chips. **Empty the overview** shows the empty row;
-  a row clicked selects it; a right click opens the row's context menu.
-- **What the page can't show:** the highlight is the pointer's and the focus's; live figures and
-  virtual rows come with the table's next section.
+  2,000 draw calls in a virtual grid (sticky header, sortable by triangles) and a row clicked
+  selects it; a right click opens the row's context menu.
+- **What the page can't show:** the highlight is the pointer's and the focus's; live figures are
+  the dev page's ("Tables under load"), which measures them.

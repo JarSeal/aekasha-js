@@ -548,10 +548,22 @@ const HEAVY_OBJECTS: HeavyObject[] = OBJECTS.filter((object) => object.triangles
 
 const formatCount = (value: unknown) => (value as number).toLocaleString('en');
 
+/** A frame's draw calls: thousands, for virtual rows */
+type DrawCall = { id: string; name: string; material: string; triangles: number };
+
+const DRAW_MATERIALS = ['Terrain', 'Water', 'Bark', 'Leaves', 'Rock', 'Metal', 'Glass'];
+
+const DRAW_CALLS: DrawCall[] = Array.from({ length: 2000 }, (_, i) => ({
+  id: `d${i}`,
+  name: `Draw ${i + 1}`,
+  material: DRAW_MATERIALS[(i * 5) % DRAW_MATERIALS.length],
+  triangles: ((i * 7919) % 20000) + 12,
+}));
+
 /** In the page: a profiler's overview (a group, stripes, a row's highlight, tones), the memory by
  * owner (sticky parts in a box that scrolls both ways, a total, the cross highlight), the objects
  * by kind (sortable, bars, a total), the heaviest objects (a grid: a multiple selection, a
- * two-line cell, an Edit button, a context menu) and assets stacked in a narrow box (sortable:
+ * two-line cell, an Edit button, a context menu), 2,000 draw calls (virtual rows) and assets stacked in a narrow box (sortable:
  * its headers as chips); what the user sorts, selects, opens and presses shows in the status line */
 const initTableDemo: Demo = (box) => {
   const root = addKitRoot(box);
@@ -718,6 +730,25 @@ const initTableDemo: Demo = (box) => {
     'A grid: arrows over the cells, a multiple selection, Enter opens, Enter or F2 into the Edit button, a context menu (Shift+F10)',
     heaviest.cmp,
     'hubDemoTableWide'
+  );
+
+  row(
+    'Virtual rows: 2,000 draw calls in a grid, only the rows the box shows rendered, sortable by triangles',
+    createTable<DrawCall>({
+      id: TABLE_ID('Draws'),
+      caption: 'Draw calls',
+      columns: [
+        { key: 'name', label: 'Draw', rowHeader: true, width: 112 },
+        { key: 'material', label: 'Material', width: 112 },
+        { key: 'triangles', label: 'Triangles', format: formatCount, sortable: true, width: 96 },
+      ],
+      rows: DRAW_CALLS,
+      selection: 'single',
+      onSelectionChange: (keys) => report(`Selected: ${keys.join(', ') || 'none'}`),
+      sticky: { header: true },
+      virtual: createVirtualRows(),
+    }).cmp,
+    'hubDemoTableScroll'
   );
 
   row(

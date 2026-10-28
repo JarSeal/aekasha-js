@@ -1,6 +1,8 @@
 // The table's public types (p805 D5), out of `Table.ts` so it stays under 800 lines.
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
+import type { BindingScheduler } from '../forms/binding/BindingScheduler';
 import type { SelectionMode } from './Selection';
+import type { VirtualRows } from './VirtualRows';
 
 /** A cell's status (p800 D6): the status role's colour and a mark, never the colour alone. */
 export type TableTone = 'info' | 'success' | 'warning' | 'danger';
@@ -105,8 +107,20 @@ export type TableProps<T> = {
   /** What the pointer and the focus tint: the row, the column, the cell, or both the row and the
    * column (`--aek-table-highlight`). */
   highlight?: 'row' | 'column' | 'cell' | 'cross';
-  /** Below this width (px) of the table's own box, each row is a card of "label: value" lines. */
+  /** Below this width (px) of the table's own box, each row is a card of "label: value" lines.
+   * Not with `virtual` (its rows are one height). */
   stackBelow?: number;
+  /** Renders only the ungrouped rows its box shows (`createVirtualRows()`): for a long table, past
+   * about 200 rows. Every row is one height, its cells on one line, and the box needs one
+   * (`--aek-table-max-height`); give every column a `width`, or the widths follow the rows shown.
+   * The groups and the footer always render. */
+  virtual?: VirtualRows;
+  /** Reads `rows`, `groups` and `footer` (functions) on this scheduler: its `refresh()`, and its
+   * tick every `interval` ms while the table shows. */
+  scheduler?: BindingScheduler;
+  /** Reads `rows`, `groups` and `footer` (functions) every this many ms while the table shows (0:
+   * every frame), on `scheduler` or the page's. */
+  interval?: number;
   /** What shows in place of the rows when there are none: a text, or a CMP (`createEmptyState`'s),
    * which the table removes with itself. */
   empty?: string | CMPHandle;
@@ -154,6 +168,11 @@ export type Table<T> = {
   setGroups: (groups: readonly TableGroup<T>[] | (() => readonly TableGroup<T>[])) => void;
   /** Replaces the footer's rows, as `setRows`. */
   setFooter: (rows: readonly T[] | (() => readonly T[])) => void;
+  /** Sets one cell's value (a live figure) until its row is read again, and writes its text node
+   * when the text changed: nothing allocated of the table's own. The rows aren't sorted again
+   * (the next read does), a bar column's bars are measured again. An unknown key or column does
+   * nothing. */
+  setCell: (key: string, column: string, value: unknown) => void;
   /** Sets the sort without calling `onSortChange`, sorting the rows unless `manualSort`; `null`
    * for the rows' own order. */
   setSort: (sort: TableSort | null) => void;

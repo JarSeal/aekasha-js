@@ -17,7 +17,8 @@ export type VirtualRowsProps = {
   overscan?: number;
 };
 
-/** Virtual rows {@link createVirtualRows} made: give it to one list or tree as its `virtual`. */
+/** Virtual rows {@link createVirtualRows} made: give it to one list, tree or table as its
+ * `virtual`. */
 export type VirtualRows = {
   /** Always 'virtualRows': what it is, for the collection that takes it */
   readonly kind: 'virtualRows';
@@ -64,6 +65,9 @@ export type VirtualRowsView = {
   scrollToIndex: (index: number) => void;
   /** The rows the box shows: PageUp's and PageDown's step */
   getPageSize: () => number;
+  /** Where the rows start in the box's content (px: the table's caption and header row above
+   * them) and how much of the box's top covers them (a sticky header); both 0 by default */
+  setInset: (top: number, covered: number) => void;
   /** Removes the listeners and the observer (the spacers go with the box) */
   dispose: () => void;
 };
@@ -109,11 +113,15 @@ const createSpacer = ({ spacerTag, spacerClass }: VirtualRowsParts) => {
 };
 
 /**
- * Creates virtual rows (p805 D8) for one list or tree: only the rows its box shows are rendered
- * (and the focused one, so the focus never drops), a spacer before and after standing in for the
- * others. Past about 200 rows a list or a tree scrolls and filters faster with them.
+ * Creates virtual rows (p805 D8) for one list, tree or table: only the rows its box shows are
+ * rendered (and the focused one, so the focus never drops), a spacer before and after standing in
+ * for the others. Past about 200 rows a list, a tree or a table scrolls and filters faster with
+ * them.
  * - Every row is one height: `rowHeight`, or the first row's, measured once. The rows' box needs a
- *   height to scroll in (`--aek-list-max-height` / `--aek-tree-max-height`, by default 12 rows).
+ *   height to scroll in (`--aek-list-max-height` / `--aek-tree-max-height`, by default 12 rows;
+ *   `--aek-table-max-height`). A table's virtual rows are its ungrouped rows (its groups and footer
+ *   always render), its cells on one line; give every column a `width`, or the columns' widths
+ *   follow the rows rendered.
  * - The rows not rendered aren't in the page: the browser's find can't see them (the list's filter
  *   can), and assistive tech hears each row's place by its `aria-posinset` and `aria-setsize`
  *   (`aria-rowindex` and `aria-rowcount` in a grid).
@@ -146,6 +154,8 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
     let viewportHeight = box.clientHeight || 0;
     let last = { start: -1, end: -1 };
     let count = 0;
+    let insetTop = 0;
+    let covered = 0;
     const top = createSpacer(parts);
     const bottom = createSpacer(parts);
 
@@ -157,11 +167,12 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
 
     const getWindow = (rowCount: number) => {
       count = rowCount;
+      const height = viewportHeight || getRowHeight() * UNMEASURED_ROWS;
       return getVirtualWindow({
         count: rowCount,
         rowHeight: getRowHeight(),
-        scrollTop,
-        viewportHeight: viewportHeight || getRowHeight() * UNMEASURED_ROWS,
+        scrollTop: scrollTop + covered - insetTop,
+        viewportHeight: height - covered,
         overscan,
       });
     };
@@ -212,10 +223,10 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
       },
       scrollToIndex: (index) => {
         const height = getRowHeight();
-        const rowTop = index * height;
+        const rowTop = insetTop + index * height;
         const view = viewportHeight || box.clientHeight;
         let next = scrollTop;
-        if (rowTop < scrollTop) next = rowTop;
+        if (rowTop < scrollTop + covered) next = rowTop - covered;
         else if (rowTop + height > scrollTop + view) next = rowTop + height - view;
         if (next === scrollTop) return;
         box.scrollTop = next;
@@ -223,7 +234,16 @@ export const createVirtualRows = (props: VirtualRowsProps = {}): VirtualRows => 
         scrollTop = box.scrollTop || next;
       },
       getPageSize: () =>
-        Math.max(1, Math.floor((viewportHeight || box.clientHeight) / getRowHeight()) || 1),
+        Math.max(
+          1,
+          Math.floor(((viewportHeight || box.clientHeight) - covered) / getRowHeight()) || 1
+        ),
+      setInset: (top, cover) => {
+        if (top === insetTop && cover === covered) return;
+        insetTop = top;
+        covered = cover;
+        update();
+      },
       dispose: () => {
         box.removeEventListener('scroll', onScroll);
         observer?.disconnect();

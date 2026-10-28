@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1134,7 +1134,7 @@ As built (section 3):
   it on the list's and the tree's virtual boxes). The table's virtual rows (Phase 4 section 3) are
   the place to measure again on `ThemeWatch.ts`' density change (Phase 5 section 3), if wanted.
 
-### Phase 4: the table
+### Phase 4: the table — done
 
 1. The table: columns, formats and alignment, groups, footer, caption, sticky parts, stripes,
    highlight, the empty state, the scroll box and the stacked layout (D5).
@@ -1260,6 +1260,66 @@ As built (section 2):
   context menu, a "Keys in a grid" table) and key APIs (`TableSort`), its intro and tags, the UI
   kit overview's row, both library pages' texts.
 
+As built (section 3):
+
+- **Records and views** (D8's "rows recycled by key", which section 1's element per row couldn't
+  do): a record per row (its key, row, the values read for every shown column, its grid row,
+  order, place among the ungrouped rows) and a view per rendered row (the `<tr>` and its cells),
+  pooled and bound to another record, written only when it shows another record or is behind its
+  read. Without `virtual` every record keeps a view, as section 1's rows did (its tests unchanged).
+  A render is the read (the values, the sort, the bars' lengths, the selection's order, the grid's
+  rows) and the placing; a virtual scroll is the placing alone (never a read or a sort).
+- **`setCell(key, column, value)`** as D3: the record's value, the rendered cell's text node
+  written when its text changed, nothing allocated of the table's own. It doesn't sort (a row
+  jumping under the pointer at a figure's rate), and the value holds until the row is read again;
+  on a bar column the column's bars are measured again (O(rows)).
+- **`scheduler` / `interval`** as the list's (`addScheduledRefresh`).
+- **Virtual rows** as D8, with these decisions: **only the ungrouped rows** are virtual (the
+  groups and the footer, short, always render); the spacers are `<tr>`s with one cell across the
+  columns; `aria-rowcount` / `aria-rowindex` count the header row, the rows, the groups' header
+  rows and the footer's; the stripes follow the row's place (`data-stripe`), not the child order;
+  **the tab stop's row out of the window is rendered visually hidden** after the bottom spacer
+  (the list puts it at its offset: an absolute `<tr>` would leave the table's columns, and the row
+  is off the box's view anyway); **`VirtualRowsView.setInset(top, covered)`** (new, 0 for the list
+  and the tree): the table's rows start below its caption and header row, and a sticky header
+  covers the box's top, measured once in the page and on a resize. `stackBelow` is ignored with
+  `virtual` (cards aren't one height). The guide says to give every column a `width` (the auto
+  layout would size the columns by the rows on screen).
+- **Density change** (Phase 3's note): not done; virtual rows still measure their height once.
+  Phase 5 section 3's `ThemeWatch.ts` is where it can be added for the list, the tree and the
+  table at once.
+- **The perf pass** (D14): the dev page's "Tables under load" box (500 rows of five figures, every
+  column a width, a sticky header and stripes; updates at 10 Hz) and a virtual one (10,000 rows),
+  each update's script time with the style and layout it forces (read back at once, as Phase 0's
+  probe), in headless Chromium under WSL2 (software raster) on the dev server:
+
+  | Mode                                         | Update, median / p95 | Frames |
+  | -------------------------------------------- | -------------------- | ------ |
+  | 500 rows, `setCell` on a tenth of the rows   | 4.7-5.1 / 5.8-6.1 ms | 60 fps |
+  | 500 rows, `setCell` on every figure          | 15.9-17.2 / 18-21 ms | 60 fps |
+  | 500 rows, `refresh` of every figure          | 16.0-17.3 / 21-25 ms | 60 fps |
+  | 10,000 virtual rows, `refresh` (every value) | 4.3-4.4 / 5.5-5.8 ms | 60 fps |
+  | 10,000 virtual rows scrolled 37 px a frame   | –                    | 60 fps |
+
+  Phase 0's probe had 3.9 ms for a tenth and 12.5 for every figure (no stripes or sticky header).
+  Every figure of 500 rows is the browser's layout of the new text, the same by `setCell` or a
+  refresh; virtual rows are its answer, as the guide says. The perf-auditor read the three paths:
+  no layout read per render or scroll (the inset and the row height measured once), `setCell`
+  O(1) with every write behind a change check, a virtual scroll O(window). Its small findings
+  were taken: a column without `format` makes no string for an unchanged primitive value (an
+  array may change in place), a group's rows placed from one array, the selection's order built
+  only with a selection, the released attributes a constant. Not taken: one small object per
+  scroll event in `VirtualRows.ts` (shared with the list and the tree; negligible).
+- **The library:** the table box gained 2,000 draw calls in a virtual grid (a single selection,
+  sortable by triangles, a sticky header) and a keyboard script (Ctrl+End to the last row with
+  its index, ArrowUp, Space, Ctrl+Home). Found on the way: `verify:ui` sets each setting by
+  clicking the page's radios, and Chromium keeps that pointer modality through a Ctrl chord (no
+  focus ring after Ctrl+End): the script starts with a plain arrow, as Phase 3 section 2's reorder
+  script does.
+- **The Hub:** the Tables section's "Live figures" and "Long tables", its reference rows, the
+  library texts, the dev page's stress box and its text; `createVirtualRows`' JSDoc and key APIs
+  name the table.
+
 ### Phase 5: graphs and figures
 
 1. The sparkline, the donut (the ray cast tab moved onto it, the pie removed), the stacked bar,
@@ -1312,7 +1372,10 @@ now:
 - **The tab menus → `createTabs`** (p806): the drawer's and profiler's icon menus (`iconOnly`), the
   key shortcuts dialog's tab list; `_debugTabButtons.scss` goes.
 - **The profiler's and GPU memory's tables → `createTable`** (p807), with `setCell` for the live
-  figures; the Objects tab's sparklines → `createSparkline` or the time series; the breakdown's bars
+  figures (or `rows` as a function on the tab's scheduler: a few milliseconds a tick at the
+  census' sizes, Phase 4 section 3's figures); the two-line cells a `cell` renderer; the breakdown's
+  bars `kind: 'bar'` with the total in the footer; the Overview's and heaviest objects' row
+  buttons `onRowActivate` or a `cell` button; the Objects tab's sparklines → `createSparkline` or the time series; the breakdown's bars
   → bar cells.
 
 ### 4.1 The census (Phase 0, 2026-10-27, `main` at `8f4d77ed`)

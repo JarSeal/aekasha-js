@@ -3083,18 +3083,23 @@
     },
     "src/_engine/ui/data/TableRows.ts": {
       "compareTableValues": "Function",
-      "createTableCell": "Function",
       "createTableColumn": "Function",
       "createTableSorter": "Function",
-      "disposeTableRow": "Function",
+      "createTableView": "Function",
+      "disposeTableView": "Function",
       "findCellControl": "Function",
       "isInCellControl": "Function",
+      "listenColumnHighlight": "Function",
+      "measureTableBar": "Function",
+      "readTableRow": "Function",
       "TableCell": "TypeAlias",
       "TableColumnState": "TypeAlias",
       "TableNavRow": "TypeAlias",
       "TableRowRecord": "TypeAlias",
+      "TableRowView": "TypeAlias",
       "writeTableBars": "Function",
-      "writeTableRow": "Function"
+      "writeTableCell": "Function",
+      "writeTableView": "Function"
     },
     "src/_engine/ui/data/TableTypes.ts": {
       "Table": "TypeAlias",
