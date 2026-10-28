@@ -307,7 +307,7 @@ is one tab stop, as the APG data grid:
 
 ## Graphs
 
-Small graphs that sit beside a figure or in a panel. Each takes its colours from the theme: a
+Small graphs that sit beside a figure or in a panel, and charts of a few series. Each takes its colours from the theme: a
 line in the text colour unless you give one, a whole's parts in the chart series, `--aek-chart-1`
 to `--aek-chart-6` (blue, orange, violet, aqua, yellow, magenta), in an order that keeps
 neighbours apart for readers with the common colour vision deficiencies. A series is never a
@@ -444,6 +444,57 @@ memory.setParts([{ label: 'Used', value: getUsedMegabytes() }]); // the total is
 | Keys              | None                                                                                                                                                    |
 | Assistive tech    | `role="img"` named by `label` and every part's amount; the legend `aria-hidden`                                                                         |
 
+### Charts
+
+[`createChart`](api:createChart) draws lines or bars of a few series, with a y axis, a legend and
+the values as a table.
+
+```ts
+const results = createChart({
+  type: 'bar',
+  title: 'Frame time by scene',
+  description: 'The gym spends most of its frame in physics.', // the trend, in words
+  categories: ['Space', 'Gym', 'Large world'],
+  series: [
+    { label: 'Physics', values: [1.2, 6.8, 3.1] },
+    { label: 'Render', values: [5.4, 4.9, 9.7] },
+  ],
+  stacked: true,
+  yFormat: (ms) => `${ms} ms`,
+});
+benchmarkPanel.add(results.cmp);
+```
+
+::: demo chart
+:::
+
+- **Bars** (`type: 'bar'`): a band per category, the series side by side, or with `stacked`
+  piled up (positives up from 0, negatives down). The y axis always includes 0.
+- **Lines** (`type: 'line'`): a point per category, or over a numeric `x` (seconds, metres) with
+  its own nice ticks; `null` or `NaN` is a gap, and up to 40 points each get a dot.
+- **The y axis.** From the values' range widened to nice ticks (1, 2, 2.5 or 5 times a power of
+  ten), or `yMin` / `yMax`. `yFormat` writes its ticks and the table's values, `xFormat` a
+  numeric x's.
+- **Series.** Each in the chart series' colours in order unless it has its `color`; the legend
+  names them (with more than one series, or `legend`). Keep a chart to a few series: past two in
+  a chart where any line can cross any other, the dark theme's blue and violet come close.
+- **Assistive tech.** The chart is an image named by its `title` and described by its
+  `description`: write the trend a reader should see there ("doubled for one sample at 6 s").
+  The values are a `<table>` (captioned by the title, a row per category, a column per series)
+  that a screen reader always has; "Show as table" shows it on the page too.
+- **Updates.** `setSeries(series, { categories, x })` draws it again whole: a chart is for
+  figures that change now and then (a benchmark's results, a level's history). A line drawn every
+  frame is a time series.
+
+| Chart             |                                                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`ChartProps`](api:ChartProps), a series' [`ChartSeries`](api:ChartSeries), the axis' [`ChartAxis`](api:ChartAxis)                                                                                  |
+| Parts             | `.aekChart` holding `__title`, `__description`, `__figure` (`__yAxis` and `__xAxis` with their `__tick`s, `__plot` with `__svg`: `__grid`s, a `__series` group each with `__bar`s or `__line` and `__points`), the legend, `__toggle` and `__tableBox` with `__table` |
+| States            | `data-type` (`line`, `bar`); a grid line's `data-zero`; an x tick's `data-edge`; `__tableBox`'s `data-shown`                                                                                       |
+| Custom properties | `--aek-chart-height` (the plot's), `--aek-chart-grid-color`, `--aek-chart-line-width`, `--aek-chart-color` (a series' group's, written by the chart)                                                |
+| Keys              | The toggle is a button (Enter, Space)                                                                                                                                                               |
+| Assistive tech    | The figure `role="img"`, `aria-labelledby` the title and `aria-describedby` the description; the values' table always read, visually hidden until the toggle (`aria-expanded`, `aria-controls`) shows it; the legend `aria-hidden` |
+
 ## Stat tiles
 
 [`createStatTile`](api:createStatTile) shows one figure that matters, large, with its unit, its
@@ -499,7 +550,8 @@ frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
   [`TableTone`](api:TableTone)).
 - [`createSparkline`](api:createSparkline) ([`Sparkline`](api:Sparkline)),
   [`createDonut`](api:createDonut) ([`Donut`](api:Donut)),
-  [`createStackedBar`](api:createStackedBar) ([`StackedBar`](api:StackedBar)), their parts'
+  [`createStackedBar`](api:createStackedBar) ([`StackedBar`](api:StackedBar)),
+  [`createChart`](api:createChart) ([`Chart`](api:Chart), [`ChartSeries`](api:ChartSeries)), the parts'
   [`GraphPart`](api:GraphPart) and [`GraphPartFormat`](api:GraphPartFormat), and
   [`createStatTile`](api:createStatTile) ([`StatTile`](api:StatTile)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and

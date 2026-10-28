@@ -1,11 +1,17 @@
 /**
  * The component library's graphs and figures (the Hub's `features/ui-kit/data/` page, p805 D9):
- * the sparkline, the donut, the stacked bar and the stat tile; the static charts and the time
- * series join them. Out of `data.ts` for its size. Every figure is fixed (no clock, no random), so
+ * the sparkline, the donut, the stacked bar, the stat tile and the static chart; the time series
+ * joins them. Out of `data.ts` for its size. Every figure is fixed (no clock, no random), so
  * the screenshots hold; each sits on a `surface` panel, the surface the chart series are checked
  * on.
  */
-import { createDonut, createSparkline, createStackedBar, createStatTile } from 'aekasha/ui';
+import {
+  createChart,
+  createDonut,
+  createSparkline,
+  createStackedBar,
+  createStatTile,
+} from 'aekasha/ui';
 import type { CMPHandle, GraphPart } from 'aekasha/ui';
 import { ID_PREFIX, addButton, addGroup, addKitRoot } from './page';
 import type { Demo } from './page';
@@ -233,10 +239,119 @@ const initStatTileDemo: Demo = (box) => {
   });
 };
 
+// --- Chart ---
+
+const SCENES = ['Space', 'Gym', 'Large world', 'LOD showcase', 'Sky'];
+/** A run's frame time, every 2 s: a load spike at 6 s, a dropped sample at 14 s */
+const RUN_SECONDS = Array.from({ length: 16 }, (_, i) => i * 2);
+const RUN_FRAME = [
+  16.4,
+  16.8,
+  17.1,
+  31.2,
+  18.4,
+  16.9,
+  16.6,
+  null,
+  16.2,
+  16.5,
+  16.3,
+  16.8,
+  17.0,
+  16.4,
+  16.2,
+  16.1,
+];
+const RUN_PHYSICS = [
+  3.1,
+  3.2,
+  3.4,
+  9.8,
+  4.2,
+  3.3,
+  3.2,
+  null,
+  3.1,
+  3.0,
+  3.2,
+  3.3,
+  3.4,
+  3.2,
+  3.1,
+  3.0,
+];
+
+const milliseconds = (ms: number) => `${ms} ms`;
+
+const initChartDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+
+  const stages = createChart({
+    id: GRAPH_ID('StagesChart'),
+    type: 'bar',
+    title: 'Frame time by scene',
+    description: 'The large world spends most of its frame rendering, the gym in physics.',
+    categories: SCENES,
+    series: [
+      { label: 'Physics', values: [1.2, 6.8, 3.1, 0.4, 0.2] },
+      { label: 'Logic', values: [0.8, 1.9, 2.4, 1.1, 0.6] },
+      { label: 'Render', values: [5.4, 4.9, 9.7, 7.8, 6.1] },
+    ],
+    stacked: true,
+    yFormat: milliseconds,
+    xLabel: 'Scene',
+  });
+  const bars = addPanel(root, 'Stacked bars by category, their values as a table');
+  bars.append(stages.cmp.elem);
+  addButton(bars, 'Show the table', () => stages.setTableShown(true));
+
+  const drawCalls = createChart({
+    id: GRAPH_ID('DrawCallsChart'),
+    type: 'bar',
+    title: 'Draw calls by scene',
+    categories: SCENES,
+    series: [
+      { label: 'Drawn', values: [120, 340, 980, 610, 40] },
+      { label: 'Culled', values: [80, 120, 2100, 1400, 0] },
+    ],
+    xLabel: 'Scene',
+  });
+  const grouped = addPanel(root, 'Bars side by side, no description');
+  grouped.append(drawCalls.cmp.elem);
+  addButton(grouped, 'Only the large scenes', () =>
+    drawCalls.setSeries(
+      [
+        { label: 'Drawn', values: [980, 610] },
+        { label: 'Culled', values: [2100, 1400] },
+      ],
+      { categories: ['Large world', 'LOD showcase'] }
+    )
+  );
+
+  addPanel(root, 'Lines over a numeric x, a gap where a sample was dropped').append(
+    createChart({
+      id: GRAPH_ID('RunChart'),
+      type: 'line',
+      title: 'Frame time over a run',
+      description: 'Loading the second area at 6 s doubled the frame time for one sample.',
+      x: RUN_SECONDS,
+      xLabel: 'Time',
+      xFormat: (seconds) => `${seconds} s`,
+      series: [
+        { label: 'Frame', values: RUN_FRAME },
+        { label: 'Physics', values: RUN_PHYSICS },
+      ],
+      yMin: 0,
+      yFormat: milliseconds,
+    }).cmp.elem
+  );
+};
+
 /** The graphs' demos by their box's key (`data-hub-demo`) */
 export const GRAPHS_DEMOS: Record<string, Demo> = {
   sparkline: initSparklineDemo,
   donut: initDonutDemo,
   stackedBar: initStackedBarDemo,
   statTile: initStatTileDemo,
+  chart: initChartDemo,
 };

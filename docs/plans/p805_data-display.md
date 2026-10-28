@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented, Phase 5 section 1
+Status: in progress | Phases 0-4 implemented, Phase 5 sections 1-2
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1390,6 +1390,52 @@ As built (section 1):
   the docs at 100 %).
 - **Found on the way:** a library box whose demo throws (two demos taking the same id) stops the
   whole page's boxes: `verify:ui` showed it on every box after it.
+
+As built (section 2):
+
+- **`createChart`** (`data/graphs/Chart.ts`, `Chart.scss`, public with `ChartProps`,
+  `ChartSeries`, `ChartAxis`, `Chart`): D9's props plus `xLabel` (the table's first header),
+  `yMin` / `yMax`, `legend` (default with more than one series), `class`, `attr`, `id`; the
+  handle `{ cmp, setSeries(series, { categories?, x? }?), setTableShown, isTableShown }` (D9's
+  `setSeries`, the axis beside the series since a new series often has new categories). Decided
+  on the way:
+  - **SVG for the plot, HTML for the labels:** the plot is a 100 × 100 `viewBox` stretched to its
+    grid cell with non-scaling strokes (the sparkline's way), so the chart follows its width with
+    no `ResizeObserver` and no measuring; text in a stretched SVG would stretch, so the ticks are
+    HTML: the y axis a flex column of ticks of no height spaced `space-between` (nice ticks are
+    even, so each sits on its line), the x axis' placed at their percent. Dots are segments of no
+    length (round caps), as the sparkline's.
+  - **Bars** are categorical (a band each, 70 % of it for its bars, side by side or `stacked` with
+    positives up and negatives down) and always include 0; **lines** take categories or a numeric
+    `x` with its own nice ticks (the ends aligned inside the plot), gaps at `null` / `NaN`, a dot
+    per point up to 40. Every k-th category label past 12 (bars) or 8 (lines): no layout read.
+  - **The figure is the `role="img"`** (named by the title, described by `description`), not the
+    chart's root: the table and the toggle are outside it, so they stay readable and operable. The
+    table is always in the accessibility tree (visually hidden until "Show as table"), captioned
+    by the title (the caption visually hidden: the title shows above), a `row` header per category.
+    The toggle is a plain `<button>` styled as a link (a CMP child, so its listener goes with the
+    chart), not `createButton` (a chart carrying the button and its tooltip, D8's lesson).
+  - **No hover, no tooltips on points:** the table has the values. **No scatter** (Phase 0's
+    colour check), **no stacked lines** (`stacked` is bars only).
+  - **`setSeries` redraws whole** (the SVG, the axes and the table rebuilt): a static chart's
+    update, as D9 said; a per-frame line is section 3's time series. `type`, `stacked`, the
+    formats and the title are fixed at creation.
+- **`ChartScale.ts`** (`@internal`, pure): `getNiceStep` (1, 2, 2.5, 5 × 10^n), `getNiceTicks`
+  (the range widened to the step, the values rounded to its decimals, so `0.1 + 0.2` never shows;
+  an empty range `[0, 1]`, a single value a step around it, `includeZero` for bars),
+  `getNiceCeiling` (for section 3's auto range) and `formatTick`; tested alone.
+- **The legend** reuses `GraphParts.ts`' with no amounts (`.aekGraphLegend__value:empty` hidden).
+- **The library:** the `chart` box in `graphs.ts` / `graphsChecks.ts`: frame time by scene in
+  stacked bars with a description (**Show the table**), draw calls side by side (**Only the large
+  scenes**: `setSeries` with new categories) and a run's frame and physics time over seconds with
+  a gap; a keyboard script (Enter on the toggle shows and hides the table).
+- **The Hub:** the data page's `### Charts` (under `## Graphs`) with its reference table, the
+  intro, tags, key APIs and the UI kit overview's row; both library pages' texts;
+  `COMPONENT_USES`.
+- **Size:** `Chart.ts` 2.5 kB minified and gzipped alone, `ChartScale.ts` 0.5 (plus
+  `GraphParts.ts`' 0.7, shared). D13's "module lines" are the `'_engine/ui/data/': 0` lines
+  already in `sbp.config.ts` (they cover `data/graphs/`): nothing in a first download imports a
+  graph, and no build's bundle moved (`verify:baselines`: only the API's new names).
 
 ### Phase 6: the command palette
 

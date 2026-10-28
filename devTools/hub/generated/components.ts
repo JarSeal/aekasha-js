@@ -92,6 +92,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-donut', calls: ['createDonut'] },
   { slot: 'generated-components-stacked-bar', calls: ['createStackedBar'] },
   { slot: 'generated-components-stat-tile', calls: ['createStatTile'] },
+  { slot: 'generated-components-chart', calls: ['createChart'] },
   { slot: 'generated-components-badge', calls: ['createBadge'] },
   { slot: 'generated-components-tag', calls: ['createTag'] },
   { slot: 'generated-components-spinner', calls: ['createSpinner'] },

@@ -35,4 +35,9 @@
     color: var(--aek-text-muted);
     font-variant-numeric: var(--aek-numeric-tabular);
   }
+
+  // A chart's series have no amount
+  :where(.aekGraphLegend__value:empty) {
+    display: none;
+  }
 }

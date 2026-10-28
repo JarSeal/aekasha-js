@@ -3037,6 +3037,20 @@
       "getQueryWords": "Function",
       "matchesWords": "Function"
     },
+    "src/_engine/ui/data/graphs/Chart.ts": {
+      "Chart": "TypeAlias",
+      "ChartAxis": "TypeAlias",
+      "ChartProps": "TypeAlias",
+      "ChartSeries": "TypeAlias",
+      "createChart": "Function"
+    },
+    "src/_engine/ui/data/graphs/ChartScale.ts": {
+      "ChartTicks": "TypeAlias",
+      "formatTick": "Function",
+      "getNiceCeiling": "Function",
+      "getNiceStep": "Function",
+      "getNiceTicks": "Function"
+    },
     "src/_engine/ui/data/graphs/Donut.ts": {
       "createDonut": "Function",
       "Donut": "TypeAlias",
@@ -4754,6 +4768,10 @@
       "CMPProps",
       "CMPSettings",
       "CMPStyle",
+      "Chart",
+      "ChartAxis",
+      "ChartProps",
+      "ChartSeries",
       "Checkbox",
       "CheckboxProps",
       "ColorField",
@@ -4969,6 +4987,7 @@
       "createBindingScheduler",
       "createButton",
       "createButtonGroup",
+      "createChart",
       "createCheckbox",
       "createColorField",
       "createContextMenu",

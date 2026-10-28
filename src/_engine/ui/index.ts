@@ -293,6 +293,8 @@ export { createTooltip } from './overlays/Tooltip';
 export type { Tooltip, TooltipProps } from './overlays/Tooltip';
 export { createTree } from './data/Tree';
 export type { Tree, TreeFilter, TreeProps } from './data/TreeTypes';
+export { createChart } from './data/graphs/Chart';
+export type { Chart, ChartAxis, ChartProps, ChartSeries } from './data/graphs/Chart';
 export { createDonut } from './data/graphs/Donut';
 export type { Donut, DonutProps } from './data/graphs/Donut';
 export type { GraphPart, GraphPartFormat } from './data/graphs/GraphParts';

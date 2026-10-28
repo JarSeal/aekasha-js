@@ -449,3 +449,8 @@
 
   width: 10rem;
 }
+
+// A chart takes the panel's width (the row is a wrapping flex box)
+.hubComponentDemoGroup.hubDemoGraphs > .aekChart {
+  width: min(100%, 36rem);
+}

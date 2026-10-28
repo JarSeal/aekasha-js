@@ -90,4 +90,32 @@ export const GRAPHS_CHECKS: Record<string, UiDemoChecks> = {
       },
     ],
   },
+  chart: {
+    keyboard: [
+      {
+        name: 'the toggle: Enter shows the table, again hides it; the chart an image, its rows named',
+        steps: [
+          { expectAttr: `${GRAPH('StagesChart')} .aekChart__figure`, name: 'role', value: 'img' },
+          {
+            expectText: `${GRAPH('StagesChart')} .aekChart__table tbody tr:nth-child(2) th`,
+            text: 'Gym',
+          },
+          { focusInBox: `${GRAPH('StagesChart')} .aekChart__toggle` },
+          { press: 'Enter' },
+          {
+            expectAttr: `${GRAPH('StagesChart')} .aekChart__toggle`,
+            name: 'aria-expanded',
+            value: 'true',
+          },
+          { expectText: `${GRAPH('StagesChart')} .aekChart__toggle`, text: 'Hide the table' },
+          { press: 'Enter' },
+          {
+            expectAttr: `${GRAPH('StagesChart')} .aekChart__toggle`,
+            name: 'aria-expanded',
+            value: 'false',
+          },
+        ],
+      },
+    ],
+  },
 };
