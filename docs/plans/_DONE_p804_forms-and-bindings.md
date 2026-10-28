@@ -2,7 +2,7 @@ Status: implemented (Phases 0-8)
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
-Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, popover and drop-down this builds on; its open items: D13), \_DONE_p801_design-foundation.md (the tokens, densities and motion), \_DONE_p618_review-debug-public-api.md (the pane types' Tweakpane fields, P7), p805_data-display.md (the label's context menu and the monitor's graph view: D1), p355_save-menu-and-file-server-settings.md (its settings on this plan's form), p426_sequencer-splines-and-cutscenes.md (the curve editor), p622_engine-6-major.md (the button's string `kbd`, deprecated here: D13), `docs/issues/ui-kit-review-items.md` (D13; closed in Phase 1)
+Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, popover and drop-down this builds on; its open items: D13), \_DONE_p801_design-foundation.md (the tokens, densities and motion), \_DONE_p618_review-debug-public-api.md (the pane types' Tweakpane fields, P7), \_DONE_p805_data-display.md (the label's context menu and the monitor's graph view: D1), p355_save-menu-and-file-server-settings.md (its settings on this plan's form), p426_sequencer-splines-and-cutscenes.md (the curve editor), p622_engine-6-major.md (the button's string `kbd`, deprecated here: D13), `docs/issues/ui-kit-review-items.md` (D13; closed in Phase 1)
 
 # Forms and Bindings
 

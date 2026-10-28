@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803 and p804 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804 and p805 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -652,8 +652,8 @@ D1). What follows is the sketch as written.
 
 ### p805 — Data display
 
-Implemented: `p805_data-display.md` (Phases 0-7, 2026-10-28; its Phase 8 sets the engine's and
-the app's minors and renames it `_DONE_`). What the later plans build on, each written there:
+Done: `_DONE_p805_data-display.md` (2026-10-28, engine 5.14.0, app 1.18.0). What the later
+plans build on, each written there:
 
 - **The collections' model** (its D3, D4, D8): rows are the app's objects kept by key, so
   `setRows` / `setItems` / `setRoots` keep a row's element, focus and selection and write only the

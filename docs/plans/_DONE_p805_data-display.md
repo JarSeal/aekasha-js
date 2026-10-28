@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1829,11 +1829,26 @@ As built (section 4):
   the render; and the open items (virtual rows on a density switch, the scheduler's `isShown`, the
   collections' scheduler import).
 
-### Phase 8: versions and done
+### Phase 8: versions and done — done
 
 Engine minor, app minor, the Project entry (D16); `yarn checkVersions --against main`; the plan
 marked done and renamed, with the references to its old name (p800's `Blocks`, p806's and p807's
 when written, p804's and p803's `Related` / `Blocks`).
+
+As built (2026-10-28, from `1d1b79c0`: Phase 7 committed):
+
+- **Versions:** engine 5.14.0 (Golden Hour; `main` was still at 5.13.0, so D16's first choice) and
+  app 1.18.0 (Preschooler); the toolkit unchanged at 2.2.1 (nothing in `src/toolkit/`).
+  `CHANGELOG.md`'s entry: Engine (the pieces, the tokens, the menu's growth, the ray cast tab's
+  donut; no restyle, D16), App (the inspector, the palette, the embed's data window), Project (the
+  Hub's pages and boxes, the search on the palette with its size, the library's split, the SBP
+  lines, the `verify:ui` steps, and the Hub search's link fix, which predates this plan).
+- **Marked done:** `git mv` to `_DONE_p805_data-display.md`; the references: p800's Blocks line
+  and §5 entry (done, with the versions), `_DONE_p803`'s Blocks line, `_DONE_p804`'s Related line.
+  p806 and p807 aren't written yet, so they have no line to update; no `CLAUDE.md` names the
+  plan's file (they name it as p805, which stays). The root `CLAUDE.md`, the nested ones and
+  `readme.md` were Phase 7 section 4's.
+- **Time for the PR:** `p805-data-display` → `main` (p800 §6), the whole branch: Phases 0-8.
 
 ---
 
