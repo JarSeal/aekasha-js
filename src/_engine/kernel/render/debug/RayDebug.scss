@@ -27,6 +27,12 @@
     width: 50%;
   }
 
+  // The window's progress (the UI kit's donut, p805 D9: the old pie's size)
+  .rayStatProgress {
+    --aek-donut-size: calc(1.2 * var(--aek-rem));
+    --aek-donut-thickness: 45%;
+  }
+
   .inactive {
     opacity: 0.5;
   }

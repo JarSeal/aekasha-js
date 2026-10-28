@@ -293,6 +293,15 @@ export { createTooltip } from './overlays/Tooltip';
 export type { Tooltip, TooltipProps } from './overlays/Tooltip';
 export { createTree } from './data/Tree';
 export type { Tree, TreeFilter, TreeProps } from './data/TreeTypes';
+export { createDonut } from './data/graphs/Donut';
+export type { Donut, DonutProps } from './data/graphs/Donut';
+export type { GraphPart, GraphPartFormat } from './data/graphs/GraphParts';
+export { createSparkline } from './data/graphs/Sparkline';
+export type { Sparkline, SparklineProps } from './data/graphs/Sparkline';
+export { createStackedBar } from './data/graphs/StackedBar';
+export type { StackedBar, StackedBarProps } from './data/graphs/StackedBar';
+export { createStatTile } from './data/StatTile';
+export type { StatTile, StatTileProps } from './data/StatTile';
 export { createTable } from './data/Table';
 export type {
   Table,

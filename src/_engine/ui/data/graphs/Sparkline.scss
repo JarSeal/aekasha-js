@@ -1,0 +1,43 @@
+// The sparkline's default styles (Sparkline.ts), on the design tokens and layered (p803 D5). The
+// drawing is a 100 by 100 box stretched to the element: the stroke and the dot keep their width
+// (vector-effect), and the svg doesn't clip them at its edges.
+@layer aek.components {
+  :where(.aekSparkline) {
+    display: inline-block;
+    flex: none;
+    width: var(--aek-sparkline-width, calc(var(--aek-space-7) * 2));
+    height: var(--aek-sparkline-height, var(--aek-space-5));
+    color: var(--aek-sparkline-color, var(--aek-text));
+    vertical-align: middle;
+  }
+
+  :where(.aekSparkline__svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  :where(.aekSparkline__line) {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--aek-sparkline-stroke, 1.5px);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  :where(.aekSparkline__area) {
+    fill: currentColor;
+    fill-opacity: var(--aek-sparkline-area-opacity, 0.16);
+    stroke: none;
+  }
+
+  // A line of no length: its round cap is a circle
+  :where(.aekSparkline__dot) {
+    stroke: currentColor;
+    stroke-width: calc(var(--aek-sparkline-stroke, 1.5px) * 3);
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+}

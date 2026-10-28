@@ -305,6 +305,186 @@ is one tab stop, as the APG data grid:
 | Keys              | A sortable header's button (Enter, Space). A plain table has no others; while it overflows, its box is a tab stop the arrows scroll. A grid's are [above](#keys-in-a-grid)                                                                                                                                                                                                                                                                                                                                                  |
 | Assistive tech    | A native `<table>` named by its caption, `scope` on its headers (`col`, `row` for a row header, `rowgroup` for a group's), `aria-sort` on the sorted column's header; a grid is `role="grid"` (`aria-multiselectable`) with `aria-selected` on its rows; virtual rows' `aria-rowcount` and `aria-rowindex`; while it overflows, its box is a `role="region"` named by the caption; with `stackBelow` every part has its table role as an attribute; a tone's mark and a bar are said as nothing; a user's sort is announced |
 
+## Graphs
+
+Small graphs that sit beside a figure or in a panel. Each takes its colours from the theme: a
+line in the text colour unless you give one, a whole's parts in the chart series, `--aek-chart-1`
+to `--aek-chart-6` (blue, orange, violet, aqua, yellow, magenta), in an order that keeps
+neighbours apart for readers with the common colour vision deficiencies. A series is never a
+status: a budget's over part or a warning takes `var(--aek-warning)` or `var(--aek-danger)`, and
+every graph has its words, its label or a figure beside it, so colour is never the only signal.
+
+### Sparklines
+
+[`createSparkline`](api:createSparkline) draws recent values as a small line: an "over time"
+beside a figure.
+
+```ts
+const drawCalls = createSparkline({ capacity: 60, min: 0, area: true });
+const figure = CMP({ tag: 'span', text: '0' });
+statsRow.add(figure);
+statsRow.add(drawCalls.cmp);
+setInterval(() => {
+  const calls = getDrawCallCount();
+  drawCalls.push(calls); // at a panel's rate: the points are a string per update
+  figure.updateText(String(calls));
+}, 250);
+```
+
+::: demo sparkline
+:::
+
+- **Values.** `push(value)` adds one at the right, the oldest dropped past `capacity` (default
+  `values`' length, else 60); fewer values sit at the right, the newest at the edge. `setValues`
+  replaces them all, `clear` empties it. A `NaN` is a gap (a frame not measured), and the last
+  value has a dot unless it's a gap.
+- **Scale.** From the smallest value shown to the largest; `min` or `max` fixes that end (0 for a
+  count, so a dip doesn't look like a drop to nothing). One value repeated is a line across the
+  middle.
+- **Looks.** `area` fills under the line, faintly; `color` is any CSS colour (a series,
+  `var(--aek-chart-2)`), else `--aek-sparkline-color`, else the text colour.
+- **Live.** It's SVG (the stroke stays sharp and follows the theme), and each update builds its
+  points as a string: update it at a panel's rate, a few times a second. A figure set every frame
+  belongs on a time series.
+- **Assistive tech.** Without a `label` it's hidden: the figure beside it says what it shows. With
+  one it's an image named by it ("Frame time over the last minute, 16 to 33 ms").
+
+| Sparkline         |                                                                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`SparklineProps`](api:SparklineProps)                                                                                                                           |
+| Parts             | `.aekSparkline` holding `svg.aekSparkline__svg`: `__area`, `__line`, `__dot`                                                                                     |
+| States            | `data-area`; the dot's `display="none"` on a gap                                                                                                                 |
+| Custom properties | `--aek-sparkline-color`, `--aek-sparkline-width`, `--aek-sparkline-height`, `--aek-sparkline-stroke` (the line's width), `--aek-sparkline-area-opacity`         |
+| Keys              | None                                                                                                                                                             |
+| Assistive tech    | `aria-hidden` without a `label`; with one `role="img"` named by it                                                                                               |
+
+### Donuts
+
+[`createDonut`](api:createDonut) is a ring that fills to one value from 0 to 1, or shows the parts
+of a whole.
+
+```ts
+// How far a measuring window has run, beside its figure: decorative
+const progress = createDonut({ size: 14 });
+row.add(progress.cmp);
+progress.setValue(elapsedMs / windowMs); // one custom property, only when it changed
+
+const memory = createDonut({
+  label: 'GPU memory',
+  parts: [
+    { label: 'Textures', value: 182 },
+    { label: 'Geometry', value: 64 },
+  ],
+  total: 512, // the rest of the ring is the track
+  centre: '48 %',
+  format: (megabytes) => `${megabytes} MB`,
+});
+```
+
+::: demo donut
+:::
+
+- **One value.** `setValue(0.62)` writes one custom property, and only when the value to a
+  thousandth changed: set it every frame if you like. With a `label` it's a meter, its value
+  read as `format` says (default "62 %").
+- **Parts.** `parts` (`{ label, value, color? }`) go round clockwise from the top, each its share
+  of their sum or of `total`, in the chart series unless a part has its `color`. With a `label`
+  it's an image whose label lists them ("GPU memory: Textures 182 MB, Geometry 64 MB"), and the
+  legend (`legend: false` leaves it out) shows the same. `setParts(parts, total?)` changes them.
+- **Looks.** `size` (px or a length), `centre` (a short text in the middle, `setCentre`), and
+  `--aek-donut-thickness` (the ring's share of the radius; 100 % is a pie).
+- **Decorative.** Without a `label` it's hidden from assistive tech, for a figure beside it that
+  says the same.
+
+| Donut             |                                                                                                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`DonutProps`](api:DonutProps), a part's [`GraphPart`](api:GraphPart)                                                                                                                   |
+| Parts             | `.aekDonut` holding `__ring` (`__disc`, `__centre`) and, with parts, `.aekGraphLegend` (`__item`: `__swatch`, `__label`, `__value`)                                                     |
+| States            | `data-mode` (`value`, `parts`)                                                                                                                                                          |
+| Custom properties | `--aek-donut-size`, `--aek-donut-thickness`, `--aek-donut-color` (one value's fill), `--aek-donut-track`                                                                                |
+| Keys              | None                                                                                                                                                                                    |
+| Assistive tech    | With a `label`: one value a `role="meter"` (`aria-valuenow` in percent, `aria-valuetext`), parts a `role="img"` whose label lists them; the legend and centre `aria-hidden`. Without: `aria-hidden` |
+
+### Stacked bars
+
+[`createStackedBar`](api:createStackedBar) shows the parts of a whole in one bar, or one part
+against a budget.
+
+```ts
+const memory = createStackedBar({
+  label: 'GPU memory against its budget',
+  parts: [{ label: 'Used', value: 318 }],
+  total: 512, // a budget: the rest is the empty track
+  format: (megabytes) => `${megabytes} MB`,
+});
+memoryPanel.add(memory.cmp);
+memory.setParts([{ label: 'Used', value: getUsedMegabytes() }]); // the total is kept
+```
+
+::: demo stackedBar
+:::
+
+- **Parts.** Each part's width is its share of their sum (a full bar) or of `total` (a budget),
+  in the chart series unless it has its `color`; a part of nothing isn't drawn. Each segment's
+  tooltip gives its part, and `legend` puts the swatches under the bar.
+- **Over the budget.** Parts past `total` are cut at the bar's end and the bar gets `data-over`
+  and a danger outline. Say it in the figure beside it too ("117 % of the budget"): the outline
+  isn't the only signal.
+- **Updates.** `setParts(parts, total?)` writes a segment's width only when its share to a
+  thousandth changed, eased over the fast motion token (none under reduced motion).
+- **Not a table's bar.** A table column's `kind: 'bar'` draws its own bars (a measure in the
+  text's shades), so a table carries none of this module.
+
+| Stacked bar       |                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`StackedBarProps`](api:StackedBarProps), a part's [`GraphPart`](api:GraphPart)                                                                         |
+| Parts             | `.aekStackedBar` holding `__track` (a `__segment` per part) and, with `legend`, `.aekGraphLegend`                                                       |
+| States            | `data-over`; a segment's `hidden` when it's nothing                                                                                                     |
+| Custom properties | `--aek-stacked-bar-height`, `--aek-stacked-bar-track`, `--aek-stacked-bar-over-color`                                                                   |
+| Keys              | None                                                                                                                                                    |
+| Assistive tech    | `role="img"` named by `label` and every part's amount; the legend `aria-hidden`                                                                         |
+
+## Stat tiles
+
+[`createStatTile`](api:createStatTile) shows one figure that matters, large, with its unit, its
+change since the last period and, if you give it one, a sparkline.
+
+```ts
+const frameTime = createStatTile({
+  label: 'Frame time',
+  unit: 'ms',
+  format: (ms) => ms.toFixed(1),
+  goodDirection: 'down', // a drop is good: the success colour
+  sparkline: createSparkline({ capacity: 60, min: 0 }),
+});
+hudPanel.add(frameTime.cmp);
+frameTime.setValue(16.6); // one text node, written when the text changed
+frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
+```
+
+::: demo statTile
+:::
+
+- **The figure.** `setValue` takes a number (through `format`, default `String`), a text, or
+  `null` for none yet (a dash). It formats only when the value changed and writes one text node
+  only when the text did: a figure set every frame is fine. The tile isn't a live region, so it
+  isn't read out on every change.
+- **The change.** `setDelta(delta)` shows its sign, an arrow and the size (`formatDelta`, default
+  a percent to a tenth); a screen reader hears "up 12 %" or "no change". With `goodDirection`
+  (`'up'` or `'down'`) a change that way is in the success colour and the other way in the danger
+  colour; without it, neutral. `null` hides it.
+- **A sparkline.** `sparkline` takes one you made with `createSparkline`, so a tile without one
+  carries none of its code; it goes under the figure and is removed with the tile.
+
+| Stat tile         |                                                                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`StatTileProps`](api:StatTileProps)                                                                                             |
+| Parts             | `.aekStatTile` holding `__label`, `__figure` (`__value`, `__unit`), `__delta` (`__arrow`, `__deltaText`) and `__spark`           |
+| States            | `data-trend` (`up`, `down`, `flat`), `data-tone` (`success`, `danger`); `__delta`'s `hidden`                                      |
+| Custom properties | `--aek-stat-tile-bg`, `--aek-stat-tile-padding`, `--aek-stat-tile-value-size`                                                    |
+| Keys              | None                                                                                                                             |
+| Assistive tech    | Plain text in reading order, the change in words; the arrow and the signed text `aria-hidden`; not live                          |
+
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),
@@ -317,6 +497,11 @@ is one tab stop, as the APG data grid:
 - [`createTable`](api:createTable) ([`Table`](api:Table), [`TableProps`](api:TableProps),
   [`TableColumn`](api:TableColumn), [`TableGroup`](api:TableGroup), [`TableSort`](api:TableSort),
   [`TableTone`](api:TableTone)).
+- [`createSparkline`](api:createSparkline) ([`Sparkline`](api:Sparkline)),
+  [`createDonut`](api:createDonut) ([`Donut`](api:Donut)),
+  [`createStackedBar`](api:createStackedBar) ([`StackedBar`](api:StackedBar)), their parts'
+  [`GraphPart`](api:GraphPart) and [`GraphPartFormat`](api:GraphPartFormat), and
+  [`createStatTile`](api:createStatTile) ([`StatTile`](api:StatTile)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and
   [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists and trees.
 

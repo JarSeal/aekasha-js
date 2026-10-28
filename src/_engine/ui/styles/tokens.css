@@ -202,6 +202,12 @@
     --aek-success-soft: rgb(95 216 154 / 12%);
     --aek-info: #7cb4ff;
     --aek-info-soft: rgb(124 180 255 / 12%);
+    --aek-chart-1: #3987e5;
+    --aek-chart-2: #d95926;
+    --aek-chart-3: #9085e9;
+    --aek-chart-4: #199e70;
+    --aek-chart-5: #c98500;
+    --aek-chart-6: #d55181;
     --aek-backdrop: rgb(3 6 12 / 60%);
     --aek-shadow-sm: 0 1px 3px rgb(0 0 0 / 40%);
     --aek-shadow-lg: 0 12px 32px rgb(0 0 0 / 45%);
@@ -233,6 +239,12 @@
       --aek-success-soft: rgb(28 122 70 / 10%);
       --aek-info: #2459c4;
       --aek-info-soft: rgb(36 89 196 / 10%);
+      --aek-chart-1: #2a78d6;
+      --aek-chart-2: #eb6834;
+      --aek-chart-3: #4a3aa7;
+      --aek-chart-4: #16956a;
+      --aek-chart-5: #b07c00;
+      --aek-chart-6: #d4508a;
       --aek-backdrop: rgb(15 23 38 / 40%);
       --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
       --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
@@ -264,6 +276,12 @@
     --aek-success-soft: rgb(28 122 70 / 10%);
     --aek-info: #2459c4;
     --aek-info-soft: rgb(36 89 196 / 10%);
+    --aek-chart-1: #2a78d6;
+    --aek-chart-2: #eb6834;
+    --aek-chart-3: #4a3aa7;
+    --aek-chart-4: #16956a;
+    --aek-chart-5: #b07c00;
+    --aek-chart-6: #d4508a;
     --aek-backdrop: rgb(15 23 38 / 40%);
     --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
     --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);

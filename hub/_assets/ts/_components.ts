@@ -17,7 +17,7 @@
  *
  * The demos are in `_library/`, a module per group of the UI kit section's pages (p805 D15):
  * the core page's `core.ts` and `layout.ts`, `overlays.ts`, the forms pages' `fields.ts`,
- * `editors.ts` and `containers.ts`, the data page's `data.ts`, the dev page's `stress.ts`, and `page.ts`, the parts they
+ * `editors.ts` and `containers.ts`, the data page's `data.ts` and `graphs.ts`, the dev page's `stress.ts`, and `page.ts`, the parts they
  * share. Each exports its demos by box key, and this merges them; their checks are
  * `_componentChecks.ts`' (`_library/*Checks.ts`).
  */
@@ -27,6 +27,7 @@ import { CORE_DEMOS } from './_library/core';
 import { DATA_DEMOS } from './_library/data';
 import { EDITORS_DEMOS } from './_library/editors';
 import { FIELDS_DEMOS } from './_library/fields';
+import { GRAPHS_DEMOS } from './_library/graphs';
 import { OVERLAYS_DEMOS } from './_library/overlays';
 import { LAYOUT_DEMOS } from './_library/layout';
 import { kitRoots, type Demo } from './_library/page';
@@ -40,6 +41,7 @@ const DEMOS: Record<string, Demo> = {
   ...EDITORS_DEMOS,
   ...CONTAINERS_DEMOS,
   ...DATA_DEMOS,
+  ...GRAPHS_DEMOS,
   ...STRESS_DEMOS,
 };
 

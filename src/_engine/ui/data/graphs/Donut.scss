@@ -1,0 +1,57 @@
+// The donut's default styles (Donut.ts), on the design tokens and layered (p803 D5): a conic
+// gradient (one value's fill on --aek-donut-value, or the parts' stops in --aek-donut-parts) over
+// the track, its hole a radial mask, so a change is one custom property and no layout.
+@layer aek.components {
+  :where(.aekDonut) {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--aek-space-3) var(--aek-space-4);
+    align-items: center;
+    vertical-align: middle;
+  }
+
+  :where(.aekDonut__ring) {
+    position: relative;
+    flex: none;
+    width: var(--aek-donut-size, var(--aek-space-7));
+    height: var(--aek-donut-size, var(--aek-space-7));
+  }
+
+  :where(.aekDonut__disc) {
+    --aek-donut-hole: calc(100% - var(--aek-donut-thickness, 35%));
+
+    position: absolute;
+    inset: 0;
+    border-radius: var(--aek-radius-full);
+    background: conic-gradient(
+        var(--aek-donut-color, var(--aek-text)) calc(var(--aek-donut-value, 0) * 1%),
+        transparent 0
+      ),
+      var(--aek-donut-track, color-mix(in srgb, var(--aek-text) 10%, transparent));
+    mask: radial-gradient(
+      circle closest-side,
+      transparent var(--aek-donut-hole),
+      #000 calc(var(--aek-donut-hole) + 0.5px)
+    );
+  }
+
+  :where(.aekDonut[data-mode='parts']) :where(.aekDonut__disc) {
+    background: conic-gradient(var(--aek-donut-parts, transparent 0% 100%)),
+      var(--aek-donut-track, color-mix(in srgb, var(--aek-text) 10%, transparent));
+  }
+
+  :where(.aekDonut__centre) {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    line-height: 1;
+  }
+
+  :where(.aekDonut__centre:empty) {
+    display: none;
+  }
+}

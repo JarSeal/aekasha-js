@@ -3037,6 +3037,32 @@
       "getQueryWords": "Function",
       "matchesWords": "Function"
     },
+    "src/_engine/ui/data/graphs/Donut.ts": {
+      "createDonut": "Function",
+      "Donut": "TypeAlias",
+      "DonutProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/GraphParts.ts": {
+      "createLegend": "Function",
+      "describeParts": "Function",
+      "formatShare": "Variable",
+      "getPartColor": "Function",
+      "getPartsWhole": "Function",
+      "GraphPart": "TypeAlias",
+      "GraphPartFormat": "TypeAlias",
+      "readPartValue": "Function",
+      "writeLegend": "Function"
+    },
+    "src/_engine/ui/data/graphs/Sparkline.ts": {
+      "createSparkline": "Function",
+      "Sparkline": "TypeAlias",
+      "SparklineProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/StackedBar.ts": {
+      "createStackedBar": "Function",
+      "StackedBar": "TypeAlias",
+      "StackedBarProps": "TypeAlias"
+    },
     "src/_engine/ui/data/List.ts": {
       "createList": "Function"
     },
@@ -3073,6 +3099,11 @@
       "SelectionGesture": "TypeAlias",
       "SelectionMode": "TypeAlias",
       "SelectionProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/StatTile.ts": {
+      "createStatTile": "Function",
+      "StatTile": "TypeAlias",
+      "StatTileProps": "TypeAlias"
     },
     "src/_engine/ui/data/Table.ts": {
       "createTable": "Function"
@@ -3639,6 +3670,8 @@
     "src/_engine/ui/styles/TokenSheet.ts": {
       "CONTRAST_CHECKED": "Variable",
       "CONTRAST_CONTROLS": "Variable",
+      "CONTRAST_SERIES": "Variable",
+      "CONTRAST_SERIES_SURFACES": "Variable",
       "CONTRAST_SOFTS": "Variable",
       "CONTRAST_SURFACES": "Variable",
       "CONTRAST_TEXTS": "Variable",
@@ -4740,6 +4773,8 @@
       "DialogProps",
       "Divider",
       "DividerProps",
+      "Donut",
+      "DonutProps",
       "DraggableWindow",
       "DraggableWindowConfig",
       "DraggableWindowContent",
@@ -4772,6 +4807,8 @@
       "GradientEditorProps",
       "GradientStop",
       "GradientValue",
+      "GraphPart",
+      "GraphPartFormat",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4851,12 +4888,18 @@
       "Slider",
       "SliderProps",
       "SliderTick",
+      "Sparkline",
+      "SparklineProps",
       "Spinner",
       "SpinnerProps",
       "SplitButton",
       "SplitButtonProps",
       "Splitter",
       "SplitterProps",
+      "StackedBar",
+      "StackedBarProps",
+      "StatTile",
+      "StatTileProps",
       "SvgIconKey",
       "SvgIconSize",
       "Switch",
@@ -4931,6 +4974,7 @@
       "createContextMenu",
       "createCurveEditor",
       "createDivider",
+      "createDonut",
       "createDropDown",
       "createEmptyState",
       "createFieldContextMenu",
@@ -4960,9 +5004,12 @@
       "createSelectField",
       "createSkeleton",
       "createSlider",
+      "createSparkline",
       "createSpinner",
       "createSplitButton",
       "createSplitter",
+      "createStackedBar",
+      "createStatTile",
       "createSwitch",
       "createTable",
       "createTabs",

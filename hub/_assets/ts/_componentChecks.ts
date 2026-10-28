@@ -19,6 +19,7 @@ import { CORE_CHECKS } from './_library/coreChecks';
 import { DATA_CHECKS } from './_library/dataChecks';
 import { EDITORS_CHECKS } from './_library/editorsChecks';
 import { FIELDS_CHECKS } from './_library/fieldsChecks';
+import { GRAPHS_CHECKS } from './_library/graphsChecks';
 import { LAYOUT_CHECKS } from './_library/layoutChecks';
 import { OVERLAYS_CHECKS } from './_library/overlaysChecks';
 
@@ -101,4 +102,5 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   ...EDITORS_CHECKS,
   ...CONTAINERS_CHECKS,
   ...DATA_CHECKS,
+  ...GRAPHS_CHECKS,
 };

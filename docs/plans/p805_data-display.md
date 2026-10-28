@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-4 implemented, Phase 5 section 1
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1327,6 +1327,69 @@ As built (section 3):
 2. The static charts and their scale (D9).
 3. The time series and `ThemeWatch.ts`, the graph monitor and the grid's `view: 'graph'` item; the
    perf-auditor's pass (D9, D14).
+
+As built (section 1):
+
+- **`data/graphs/`** holds `Sparkline.ts`, `Donut.ts`, `StackedBar.ts` and `GraphParts.ts` (each
+  with its stylesheet); `StatTile.ts` is in `data/` (D2). Public on `aekasha/ui`: the four
+  `create*` with their props and handles, and `GraphPart` (`{ label, value, color? }`) and
+  `GraphPartFormat` (`(value, share) => text`), which the donut, the stacked bar and section 2's
+  chart share. `GraphParts.ts`' `@internal` rest: the part's colour (its own, else
+  `var(--aek-chart-n)` by place), the whole (`total`, else the sum), the default format (the
+  rounded percent), the label's text ("GPU memory: Textures 40 %, …") and the legend
+  (`.aekGraphLegend`, `aria-hidden`: the graph's label says the same). None of the four has a
+  listener or a timer.
+- **`color`, not D9's `tone`:** the sparkline takes any CSS colour (a series,
+  `var(--aek-chart-2)`, or a status role for a status), as a part does; one prop shape for every
+  graph, no new tone type.
+- **The sparkline:** a `Float64Array` ring (`capacity`, default the values' length, else 60), fewer
+  values at the right; one path per line broken at each `NaN` (a lone point a segment of no
+  length, which the round cap draws), the area a path per run, the dot a `<line>` of no length
+  (its round cap stays a circle under `preserveAspectRatio="none"`, which a `<circle>` wouldn't),
+  the strokes `non-scaling-stroke`. Every `push` draws (D9's "at the scheduler's rate": the JSDoc
+  and the guide say so).
+- **The donut:** one value writes `--aek-donut-value` only when it changed to a thousandth (a
+  value set every frame is fine); parts write their stops into `--aek-donut-parts` (allocates: a
+  parts change is rare). **Its track is the text at 10 %, not D9's `surface-hover`**: that's near
+  invisible on the light surface (1.1:1) and darker than a window's in dark (Phase 0's finding for
+  the table), so it takes the table bar track's mix. `size`, `centre`, `--aek-donut-thickness`
+  (100 % a pie). `total` is kept across `setParts` until another is given (0: the sum), the
+  stacked bar's too.
+- **The stacked bar doesn't share the table's bar styles** (Phase 4 section 2 left it here): the
+  table keeps its own `kind: 'bar'` (a table importing the graph module would carry it, D8), and
+  its bars are a measure in the text's shades (in view, culled) where the stacked bar's are
+  categories in the series. Over the `total`, the parts are cut at the end and the bar gets
+  `data-over` with a danger outline (an inset shadow would sit under the segments); the amounts in
+  its label say it in words.
+- **The stat tile** takes a `Sparkline` handle (`sparkline`), not props: the tile imports the type
+  only, so a tile without one carries none of its code (D8's lesson). The change: an arrow (a CSS
+  triangle), '+12 %' / '−12 %' (`aria-hidden`) and visually hidden words ("up 12 %", "no
+  change"); `data-tone` only with `goodDirection`. Not live.
+- **The chart tokens** in the three theme blocks (Phase 0's values). `TokenSheet.ts`'
+  `CONTRAST_SERIES` checks each at 3:1 on `CONTRAST_SERIES_SURFACES`, `surface` and
+  `surface-raised` (not `bg`: the light orange is 2.98 there; nor `surface-hover`); the design
+  document's colour section gets a "Chart series" table (`design.ts`' `renderSeriesTable`, each
+  series' bar on both surfaces in both themes) and its rule line, and `colours-text.md` a bullet.
+- **The ray cast tab** shows a decorative donut per window (`.rayStatProgress` in `RayDebug.scss`
+  sets its size and thickness); `debug/_dbg__PercentagePie.ts` and `PercentagePie.scss` are gone,
+  `debug/CLAUDE.md` says so.
+- **The library:** a group module of their own, `_library/graphs.ts` and `graphsChecks.ts`
+  (`GRAPHS_DEMOS`, `GRAPHS_CHECKS`; `data.ts` is at 789 lines), four boxes (`sparkline`, `donut`,
+  `stackedBar`, `statTile`), each on a `surface` panel (`hubDemoGraphs`: the page's `bg` isn't a
+  surface the series are checked on), fixed data, a button each and a keyboard script each (no
+  keys: the ARIA before and after the button).
+- **The Hub:** the data page's `## Graphs` (`### Sparklines`, `### Donuts`, `### Stacked bars`)
+  and `## Stat tiles`, each with its demo and reference table, the key APIs, intro, tags; the UI
+  kit overview's pieces table; both library pages' boxes and texts; `COMPONENT_USES`.
+- **Size:** each module minified and gzipped alone: `Sparkline.ts` 1.1 kB, `Donut.ts` 1.0,
+  `StackedBar.ts` 0.8, `GraphParts.ts` 0.7 (the donut's and the stacked bar's), `StatTile.ts`
+  0.9. Nothing in the app's or the embeds' first download uses them (the ray cast tab is debug).
+  The chart tokens are in `tokens.css`, so every build's stylesheet grew by their 18 declarations
+  (414 B raw, about 0.1 kB gzip: `verify:baselines`' `index.css`, `banner.css`, `uiKit.css`); no
+  script moved. The baselines are recorded (`verify:baselines --update`: the API's 14 new names,
+  the docs at 100 %).
+- **Found on the way:** a library box whose demo throws (two demos taking the same id) stops the
+  whole page's boxes: `verify:ui` showed it on every box after it.
 
 ### Phase 6: the command palette
 

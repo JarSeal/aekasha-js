@@ -1,0 +1,95 @@
+// The stat tile's default styles (StatTile.ts), on the design tokens and layered (p803 D5): the
+// figure large in tabular figures, the change's arrow a CSS triangle (a shape: the direction isn't
+// only a colour), its colour a status role only with goodDirection.
+@layer aek.components {
+  :where(.aekStatTile) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    min-width: 0;
+    padding: var(--aek-stat-tile-padding, var(--aek-space-4));
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-stat-tile-bg, transparent);
+  }
+
+  :where(.aekStatTile__label),
+  :where(.aekStatTile__figure),
+  :where(.aekStatTile__delta) {
+    margin: 0;
+  }
+
+  :where(.aekStatTile__label) {
+    overflow: hidden;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekStatTile__figure) {
+    color: var(--aek-text);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekStatTile__value) {
+    font-size: var(--aek-stat-tile-value-size, var(--aek-font-size-2xl));
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekStatTile__unit) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekStatTile__delta) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekStatTile__delta[hidden]) {
+    display: none;
+  }
+
+  :where(.aekStatTile[data-tone='success']) :where(.aekStatTile__delta) {
+    color: var(--aek-success);
+  }
+
+  :where(.aekStatTile[data-tone='danger']) :where(.aekStatTile__delta) {
+    color: var(--aek-danger);
+  }
+
+  // A triangle pointing the change's way; a flat change has none
+  :where(.aekStatTile__arrow) {
+    width: 0;
+    height: 0;
+    border-inline: 0.35em solid transparent;
+  }
+
+  :where(.aekStatTile[data-trend='up']) :where(.aekStatTile__arrow) {
+    border-bottom: 0.5em solid currentColor;
+  }
+
+  :where(.aekStatTile[data-trend='down']) :where(.aekStatTile__arrow) {
+    border-top: 0.5em solid currentColor;
+  }
+
+  :where(.aekStatTile[data-trend='flat']) :where(.aekStatTile__arrow) {
+    display: none;
+  }
+
+  :where(.aekStatTile__spark) {
+    display: flex;
+    margin-top: var(--aek-space-2);
+  }
+
+  :where(.aekStatTile__spark) :where(.aekSparkline) {
+    --aek-sparkline-width: 100%;
+  }
+}
