@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -272,7 +272,7 @@ below:
 | 5.x                                                                          | 6.0                                                                                                         |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | A binding's other fields go to Tweakpane's `addBinding` (an index signature) | The kit's field props only: an unknown field is a type error, and at run time the tab's error line names it |
-| `view: 'color'`, `color: { type: 'float' }`                                  | `kind: 'color'`, `format: 'float'`                                                                          |
+| `view: 'color'`, or a `color` param, on a number                             | `kind: 'color'` (the kit has no `format: 'float'`: an object colour is floats; §4.1)                        |
 | `onChange(value, { prev, last, api })` (`api` a `BindingApi`)                | `onChange(value, { prev, last, source, field })` (`field` the field's handle)                               |
 | `onCreate(api: BindingApi)`                                                  | `onCreate(field)`                                                                                           |
 | `custom.build(parent: Pane \| FolderApi)`                                    | `build(container: CMPHandle)`; a returned function still runs on every refresh                              |
@@ -301,6 +301,11 @@ prop }` for `'root.prop'`, or `{ target: state, key }`. On a change with `last: 
   - The `as` casts to Tweakpane.
 - **Labels:** a binding without `label` gets its key (Tweakpane's default), since the kit needs
   one.
+- **Refresh-only monitors** (decided 2026-10-29, §4.1's first finding): Tweakpane's
+  `interval: 0` reads only on a refresh, the kit's every frame. The kit gains
+  `interval: 'refresh'` (a field read by its scheduler's `refresh()` and a reveal, never by the
+  tick; a monitor's 200 ms default stays), with its test and its demo box, and the builder maps
+  `interval: 0` to it. An app's grid can use it too. Phase 1's builder section.
 - **Unknown fields:** the builder checks each field item's keys against the kit's field props (one
   list, next to `PropertyGridFieldItem`) and throws naming the item and the key. The tab host's
   error line shows it (D3). This catches a JS app or an `as` cast that TS didn't.
@@ -334,8 +339,8 @@ prop }` for `'root.prop'`, or `{ target: state, key }`. On a change with `last: 
     captured data behind a getter later.
 - **The menu changes in place:** creating or removing a tab adds or removes its button. The open
   tab, its scroll and the focus stay; today the whole drawer is rebuilt, so a scene tab appearing
-  resets the drawer. This needs the tabs handle to add and remove a tab: Phase 0 checks
-  `createTabs` and adds `addTab` / `removeTab` if missing (a kit addition, with its test and demo).
+  resets the drawer. The tabs handle's `setTabs` does it: it diffs by key and keeps a kept tab's
+  button, panel and content (Phase 0; no `addTab` / `removeTab`).
 
 ### D6. The shell
 
@@ -347,7 +352,8 @@ prop }` for `'root.prop'`, or `{ target: state, key }`. On a change with `last: 
   `orientation: 'vertical'`, `iconOnly` (the title as the tooltip and the name),
   `activation: 'manual'` (Enter or Space opens; the arrows only move, since a tab's build isn't
   free).
-  - 16 tabs at 32 px are 512 px, so a short window scrolls the rail with faded edges.
+  - 16 tabs are 384 px in the compact density (24 px each; Phase 0), so the rail fits 720 px and
+    scrolls with faded edges only in a window under about 400 px.
   - The scene's tabs come last, after a divider (a per-tab `separatorBefore`, a kit addition if
     Phase 0 finds no form), each with "(scene tab)" in its name. The scene tab's green goes (p801
     §4.2: a category, not a status).
@@ -587,9 +593,10 @@ stylesheet (D9), updates their tests, and takes the `debugger` configuration's n
 purpose, shown before and after for review. Then: `yarn test`, `tsc`, ESLint, the configuration's
 undo / redo scripts. Each phase stops after each section for review.
 
-### Phase 0: baselines and checks
+### Phase 0: baselines and checks — done
 
 1. **Branches and baselines:**
+
    - `engine-6` from `main`, then `p806-debugger-migration` from it.
    - On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
      `yarn sbp --profile all`.
@@ -623,10 +630,59 @@ undo / redo scripts. Each phase stops after each section for review.
        13.7, `_dbg__SkyBox` 13.0, `_dbg__Stats` 10.6, `_dbg__Assets` 10.2.
 
 2. **Before shots and axe** (a scratchpad Playwright script, not committed):
+
    - Every drawer tab, profiler tab, edit window kind and debug dialog, in `testDebugScene` and the
      scene-tab scenes.
    - At 1280 × 720 and an 800 px wide window.
    - Kept in `.cache/p806/before/` for the reviews; axe's counts per root noted here.
+
+   As run (2026-10-29, WebGPU in the Windows Chrome 155, dark colour scheme, a fresh profile per
+   scene):
+
+   - The script is `.cache/p806/shots.mts` (gitignored, kept for Phase 6:
+     `npx tsx .cache/p806/shots.mts --out after`; it empties its `--out` folder first, `after` by
+     default). It loads each scene with `?isDebug=true&aekTest=true&startScene=…`, clicks the
+     drawer's toggler and each menu button, opens the edit windows from a list tab's first row
+     (the light list's first three), and calls the rest through the dev server's module URLs
+     (`toggleProfilerWindow`, `openProfilerTab`, `_toggleRayTesterWindow`, `openAboutDialog`,
+     `openDebugKeyShortcutsDialog`, `setActiveView('materialEditor')`). The selectors are the CSS
+     module class prefixes (`[class*="_debuggerGUI_"]`, `_debugDrawerTabsMenu_`, `_editorDrawer_`,
+     `button[class*="_card_"]`) and the global `.debugDrawerToggler`, `.debugCurrentSceneTitle`,
+     `.debuggerList`, `.aekWindow`: a CMP's `id` isn't the element's id, and a tab button is the
+     menu's child itself.
+   - 168 shots: each drawer tab at 1280 × 720, 800 × 720 and 1280 × 2000 (the whole content),
+     each window and profiler tab at the first two, the pages at 1280 and 800.
+     - `testDebugScene`: the 15 engine tabs, the on-screen tools, the stats panels, the camera,
+       ambient light, sun, ECS world and assets info windows, the four profiler tabs, both ray
+       testers, About, both key shortcut tabs, and the material editor (the page; its drawer with
+       no material selected and with the first one).
+     - `thirdPersonGymScene`: the 15 engine tabs with a scene's content (its sky box tab is the
+       largest), and the physics entity, PostFX pass, character and character state windows.
+     - `lodShowcase` (its LOD demo and Hub tabs, the LOD entity window), `assetCompare`, `space`,
+       `exampleDebugTab` (Boxes and Hub): the scene tabs.
+   - axe (`UI_AXE_TAGS`, each root alone at 1280 × 720): 68 roots, 15 clean, 660 nodes. A drawer
+     tab's count includes the drawer's own parts (heading, menu).
+
+     | Roots                                          | Roots | Nodes | Rules (nodes)                                                                                     |
+     | ---------------------------------------------- | ----- | ----- | ------------------------------------------------------------------------------------------------- |
+     | On-screen tools, stats panels, toaster         | 8     | 0     | -                                                                                                 |
+     | Drawer tabs, `testDebugScene`                  | 15    | 142   | label 99, color-contrast 25, select-name 12, button-name 6                                        |
+     | Drawer tabs, `thirdPersonGymScene`             | 15    | 224   | label 159, color-contrast 35, select-name 20, button-name 10                                      |
+     | Scene tabs                                     | 6     | 38    | label 20, color-contrast 12, select-name 5, button-name 1                                         |
+     | Edit and debug windows (incl. the ray testers) | 12    | 100   | label 88, select-name 5, button-name 3, color-contrast 2, label-title-only 1, target-size 1       |
+     | Profiler tabs                                  | 4     | 90    | target-size 49 (Settings' ▲ / ▼), color-contrast 29, label 6, empty-table-header 5, select-name 1 |
+     | Dialogs (About, key shortcuts ×2)              | 3     | 1     | scrollable-region-focusable 1                                                                     |
+     | Material editor (its drawer, the page's HUD)   | 5     | 65    | label 48, button-name 8, color-contrast 6, select-name 3                                          |
+
+     Nearly all of `label` and `select-name` are Tweakpane's inputs (no `<label>` tied to them);
+     the per-root list is `.cache/p806/before/summary.md`.
+
+   - Found on the way:
+     - The material editor's drawer has two tabs, Params and Settings; Camera is a folder in
+       Settings (§1.1 said three tabs).
+     - The LOD demo scene tab's list rows open no window (its LOD tab's rows do).
+     - The on-screen tools and the stats panels have no axe violation today.
+
 3. **The port census, refreshed** (a scratchpad script and reading by hand):
    - Every declarative item with its params (p804's 280 bindings recounted).
    - Every imperative binding with its handler, mapped to its grid item.
@@ -635,7 +691,51 @@ undo / redo scripts. Each phase stops after each section for review.
 4. **Measures** (D13): the frame cost with the Lights edit window, the physics tab and the
    character state window open; each tab's build time; the drawer's open time. All from the
    profiler's frame probe, in Chromium.
+
+   As run (2026-10-29, WebGPU in the Windows Chrome 155 at 144 Hz, the dev server's debug env,
+   1280 × 720, no test bridge):
+
+   - The script is `.cache/p806/measure.mts` (gitignored; Phase 6:
+     `npx tsx .cache/p806/measure.mts --out after [--scene testDebugScene] --seconds 10 --runs 3`),
+     its figures `.cache/p806/measures-before.json` (`thirdPersonGymScene`) and
+     `measures-before-quiet.json` (`testDebugScene`). Each scenario on a fresh browser context, three
+     windows of 10 s.
+   - Next to the frame probe (the main loop's own time) it reads Chrome's
+     `Performance.getMetrics` over each window (task, script, style and layout ms per second):
+     Tweakpane's monitors tick on their own `setInterval`, outside the frame, so the probe alone
+     wouldn't see them.
+   - Frame cost (main-thread ms per second, the three windows; the loop's CPU per frame):
+
+     | Scenario                           | `testDebugScene`                     | `thirdPersonGymScene`                        |
+     | ---------------------------------- | ------------------------------------ | -------------------------------------------- |
+     | Idle (drawer closed, nothing open) | 57, 51, 56 (0.24-0.25 ms)            | 160, 144, 144 (0.85-0.93 ms)                 |
+     | The sun's Lights edit window       | 48, 46, 60 (0.21-0.24 ms)            | 148, 155, 141 (0.84-0.88 ms)                 |
+     | The Physics API tab open           | 57, 63, 58 (0.25-0.26 ms; style 0.6) | 167, 147, 148 (0.88-0.91 ms; style 0.6)      |
+     | The character state window live    | (no character)                       | 167, 156, 171 (0.90-0.94 ms; layout 0.2-0.8) |
+
+     Every scenario ran at 144 fps. Today's UI costs are inside the windows' noise (±6 ms/s in the
+     quiet scene, ±15 in the gym): the physics tab adds about 3 ms/s, the character state window
+     about 15. So Phase 6 compares in `testDebugScene` (the character window in the gym), and a
+     regression has to pass the noise to count.
+
+   - Each tab's build (the menu button's click; median of three, the gym scene):
+
+     | Tab                  | The click (ms) | To the next frame (ms) |
+     | -------------------- | -------------- | ---------------------- |
+     | Sky box controls     | 25.3           | 42.8                   |
+     | Physics API controls | 11.0           | 23.0                   |
+     | Debug tools controls | 5.9            | 9.5                    |
+     | Ray cast controls    | 5.4            | 13.9                   |
+     | Spatial index        | 4.5            | 10.8                   |
+     | LOD                  | 3.4            | 8.5                    |
+     | Assets               | 3.0            | 10.4                   |
+     | The other eight      | 0.8-1.7        | 5.0-8.4                |
+
+   - The drawer's open (closed, then open on its saved tab; median of five): the click 1.0-1.2
+     ms, to the next frame 3.5-6.0 ms.
+
 5. **Checks that decide details:**
+
    - `createTabs`' handle: adding or removing a tab (D5), a separator (D6), and the vertical rail
      with 16 tabs at 720 px high.
    - The compact scale against Tweakpane's 11 px rows (D8).
@@ -645,6 +745,82 @@ undo / redo scripts. Each phase stops after each section for review.
    - Container queries on the HUD root against the Sass partial (D9).
    - Every tab's LS format (D3's compatibility fixtures).
    - linkedom's gaps for the builder's test.
+
+   As run (2026-10-29; the browser checks are `.cache/p806/checks.mts`, their figures
+   `.cache/p806/checks.json`, WebGPU in the Windows Chrome 155 at 1280 × 720):
+
+   - **`createTabs`' handle:** `setTabs` diffs by key (a kept tab keeps its button, panel and
+     content; new ones added, gone ones removed), so the drawer's menu changes in place with no
+     `addTab` / `removeTab` (D5 changed). A divider between tabs has no form: `separatorBefore` on
+     `TabDef` is a kit addition (D6), with its test and its demo box.
+   - **The vertical rail:** 16 icon-only tabs are 24 × 24 px each in the compact density (384 px)
+     and 32 × 32 in the default one (512 px), so the rail fits 720 px without scrolling; it scrolls
+     with its faded edges below about 400 px of height (compact).
+   - **The compact scale against Tweakpane's rows** (the Physics API tab, its pane 361 px wide,
+     against a grid of seven fields as wide):
+
+     |                | Tweakpane                                                 | Kit, compact                 | Kit, default        |
+     | -------------- | --------------------------------------------------------- | ---------------------------- | ------------------- |
+     | Label text     | 11 px Roboto Mono                                         | 11 px IBM Plex Sans          | 12 px IBM Plex Sans |
+     | Control height | 20 px                                                     | 24 px                        | 24.4 px             |
+     | Row pitch      | 24 px a one-line row (32.6 the tab's median: labels wrap) | 27 px                        | 28.4 px             |
+     | Label column   | 193 px (53 %), 29 characters                              | 144 px (the grid's 40 %), 26 | 144 px, 23          |
+
+     The kit's row is set by the 24 px target floor (D12; Tweakpane's 20 px controls fail it), not
+     by its type scale: a retune of `tokens.css`' compact block wouldn't give the rows back.
+     **Recommended: no compact retune** (no kit restyle in the changelog, D2), and the debugger's
+     grids start at a 50 % label column (about 32 characters, more than Tweakpane's 29), which
+     `uiLsKey`'s `labelWidth` keeps per tab. About 12 % fewer one-line rows per screen than
+     Tweakpane is the targets' cost.
+
+   - **Today's target sizes** (D12; under 24 × 24 px):
+     - Under: the list's toggles (22 × 22), the tab heading's buttons (the clear-LS one, 22 × 22),
+       Tweakpane's text inputs, checkboxes and selects (20 px high), the profiler Settings tab's ▲ /
+       ▼ (22.6 × 18.5, 42 of them: axe's 49 `target-size` nodes).
+     - At or over: the on-screen tools (32 × 32), the drawer's toggler (30 × 86) and tab buttons (42
+       × 30.5), its close button (24 × 24), Tweakpane's folder headings (24 high), the list rows,
+       the windows' header buttons (32 × 31) and the profiler's tab buttons (42 × 32.5).
+   - **Each tab across a scene change, kept:** the drawer served with its scene-change rebuild
+     switched off (a route patch of `_dbg__DebuggerGUI.ts`, so the open tab got `onRefresh` and
+     `pane.refresh()` only, as `keepOnSceneChange` will), each of the 15 engine tabs taken across
+     `testDebugScene` ↔ `thirdPersonGymScene`, its text (rows, Tweakpane labels and values,
+     sections; digits normalised) compared with the same tab rebuilt.
+     - 13 read the same as rebuilt, with no error: Statistics, Loop, Sky box, Physics API,
+       Renderer, Assets, PostFX, Ray cast, Cameras, Characters, ECS, Spatial index, LOD.
+     - **Debug tools:** its "Change scene" select keeps the old scene (state captured at build):
+       it keeps the rebuild, as D5 has it.
+     - **Lights:** the kept list draws its row's icon as `??` where the rebuilt one draws "DL": a
+       glitch for its port (Phase 3), after which it opts in.
+     - D5's list stands. The sky box, ray cast, spatial and LOD tabs read the same too, but text
+       doesn't show what their handlers hold (the scene's objects captured at build): they keep
+       the rebuild until each moves its data behind a getter.
+   - **The profiler window across a scene change:** it stays open, with no error; Objects and GPU
+     memory follow the new scene, Overview and Settings don't depend on it. Its tabs can keep (§4).
+   - **Container queries on the HUD root: no.** The HUD root is fixed and 0 × 0 (its children
+     place themselves), so a size container there would read 0. The breakpoints go to the Sass
+     partial (D9's first option), media queries as today; an embed's debugger still reads the
+     browser window. If that matters later, the drawer can set an attribute from the kit's
+     `onBoundsResize` instead.
+   - **The saved formats** (for D3's fixtures; a session that opened every tab, folded a folder
+     in each and opened a light window):
+     - `AEK_debugDrawerState`: `{ isOpen, currentTabId, currentScrollPos }`.
+     - `uiLsKey`'s `{ folders: { [id]: boolean } }`: `AEK_debugToolsUI`, `AEK_debugStatsUI`,
+       `AEK_debugSkyBoxUI`, `AEK_debugPhysicsApiUI`, `AEK_debugAssetsUI`,
+       `AEK_debugSpatialGridUI` and `debugRayCastUI` (no `AEK_` prefix: kept as it is). The ids are
+       an item's `id` (`scenes`, `bodies`) or a title path (`Visualizer`).
+     - `lsKey`'s flat objects of `persistKeys` (written on a finished change): the Debug tools,
+       stats, physics, loop, renderer, ray cast, spatial grid and GPU memory tabs, the profiler
+       (`AEK_debugProfiler`) and the app's three.
+     - Module-owned, outside the contract but read by the ported windows: `AEK_debugCams`
+       (`{ [sceneId]: { cams, debugCam } }`), the lights', `AEK_popupWindows` (the saved
+       windows) and `AEK_debugProfilerUI`.
+   - **linkedom for the builder's test:** no gap. A throwaway test (deleted) built a grid from
+     items under `KitDom`'s `stubKitDomAsync` with a `localStorage` stub: state-key bindings, a
+     slider stepped by a key (`last: false`, then `last: true`, `prev` the value before), a
+     refresh firing nothing but the custom item's function, a folder's
+     `onFolderExpandedChange` writing the UI key, `createFieldContextMenu` (its `container` is an
+     element) and a vertical `createTabs` taking a tab added and removed by `setTabs`. The
+     existing debugger tests stub linkedom per file; the builder's test uses `KitDom`.
 
 ### Phase 1: the framework on the kit
 
@@ -749,6 +925,71 @@ Filled in by Phase 0's census and the later phases.
   - The `debugger` configuration's shots of every profiler tab.
 
 ### 4.1 The port census (Phase 0)
+
+Run 2026-10-29 on `a0d3ced2` (`main`'s `src/`). The script is `.cache/p806/census.mts`
+(gitignored: the TypeScript AST of the 109 files that are `_dbg__` or name the tab API or
+Tweakpane), its output `.cache/p806/census.md` and `census.json`, then read by hand where a count
+looked off.
+
+**§1.1's counts, checked:** 26 sections, 20 `createDebuggerTab` calls (15 engine, 5 app), 7
+`new Pane` in 6 files outside the builder. Two differ: 53 imperative `addBinding`s, not 54 (the
+camera's ninth, `_dbg__CameraGUI.ts:275`, is commented out), and §1.1's "Params, Settings, Camera"
+are the material editor's two tabs and a folder (§3's Phase 0, step 2).
+
+**Declarative** (the builder's items, all 26 sections):
+
+- 287 bindings (p804's 280 recounted): 115 on the tab's `state`, 172 with a `target`, every one
+  labelled. 65 folders (16 with `expanded`, 16 with a `hidden` function), 76 buttons (22 labelled,
+  29 with `disabled`, 7 `hidden`), 19 separators, 1 custom (the day-night speed buttons).
+- 32 definition rows that a builder turns into bindings: the material editor's `MATERIAL_PARAMS`
+  (24) and its Settings rows (8), with `view: 'color'` and the ranges added by conditional spreads.
+  They port by changing their two builders (`_dbg__MaterialEditorParams.ts:314`,
+  `_dbg__MaterialEditorSettings.ts:174`), not row by row.
+- The params: `label` 287, `onChange` 174, `target` 172, `readonly` 79, `min` 63, `step` 63,
+  `max` 37, `options` 35, `disabled` 34, `interval` 30 (`0` ×15, `250` ×4, `500` ×11), `format`
+  22, `hidden` 22, `multiline` and `rows` 12, `view` 8 (all `'color'`), `color` 2, a spread 5 (the
+  shared monitor params). Every one is a kit field prop but `color` (below).
+- None uses `type: 'binding'`, `onCreate`, `persistExpanded` or `onChange`'s `api`: D3's
+  compatibility rows for them are for apps.
+- The handlers: most of the 174 pass a named function; inline, 12 read `last`, 12 `prev` and 2
+  record undo. The rest of §1.4's `last` users are in the functions called.
+
+**Imperative** (53 `addBinding`s, 19 `addButton`s, 5 `addFolder`s, 7 `addBlade`s, 7 `refresh()`s,
+7 `dispose()`s), each window's bindings as grid items:
+
+| Window (its `new Pane`)                    | Grid items                                                                                                                                                                                                                                                                                                                                                                                       | Beyond a rename                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Camera (`_dbg__CameraGUI.ts:215`)          | Helper (checkbox), position (vector; undo on `last`), responsive aspect (checkbox), reference aspect, fov (a slider: `min` and `max`), frustum size; a lens folder with near and far (unlabelled: their key); 2 buttons with `disabled`                                                                                                                                                          | The lens folder's `.on('fold')` → `folderExpanded` / `onFolderExpandedChange` on `uiState._lensSettingsOpen`                                            |
+| Light readout (`_dbg__LightGUI.ts:480`)    | 6 monitors (`readonly`, `interval: 250` through a spread) on a getter object; position is a formatted string                                                                                                                                                                                                                                                                                     | -                                                                                                                                                       |
+| Light editor (`_dbg__LightGUI.ts:558`)     | Visible, helper, symbol (checkboxes); sky, ground and colour (`view: 'color'` on hex numbers → `kind: 'color'`); intensity, distance, decay; two culling checkboxes; position and target (vectors; undo on `last`); cast shadow; the shadow folder (bias, normal bias, intensity and blur samples as sliders, radius); the shadow camera folder (near, far, left, right, top, bottom); 3 buttons | The two `view: 'list'` blades → unbound selects (`{ value }`, D4) and their `ListBladeApi` casts go; two `.on('fold')`; `disabled` is computed at build |
+| Physics entity (`_dbg__PhysicsAPI.ts:484`) | The wireframe folder (visible, a session note monitor, the state's colour `view: 'color'`); position (vector); rotation (a `THREE.Euler`, `step: π / 8` → a rotation field in degrees); 7 buttons, 2 separators                                                                                                                                                                                  | The folder's `.on('fold')` (persisted); `folder.refresh()` ×2 and the inputs' `refresh()` ×2 → `grid.refresh()`                                         |
+| Character (`_dbg__Character.ts:125`)       | Position (vector), rotation (a `THREE.Euler` → degrees); 5 buttons, a separator                                                                                                                                                                                                                                                                                                                  | The inputs' `refresh()` ×2 → `grid.refresh()`                                                                                                           |
+| PostFX pass (`_dbg__PostFX.ts:398`)        | Enabled (checkbox), the JSON params as monitors, each param from `getParamBindingParams` (number, boolean, string, point, colour; `options` a select); a separator                                                                                                                                                                                                                               | A point's per-axis params (`{ x: { min, max, step } }`) → `axes`; a colour object's `color: { type }` (below)                                           |
+| ECS world (`_dbg__ECS.ts:85`)              | Entities (a monitor with `format`); the storage folder (storage mode select, max entities); 2 buttons (one `disabled`)                                                                                                                                                                                                                                                                           | `pane.refresh()` → `grid.refresh()`                                                                                                                     |
+
+**Outside D3's map:**
+
+1. **`interval: 0` is refresh-only in Tweakpane** (`createTicker`: `interval === 0` makes a
+   `ManualTicker`), and every frame in the kit (p804 D4). 15 declarative monitors use it (the sky
+   box's base folder, LOD ×5, the spatial grid ×2, Debug tools' dev files status ×2, …): they
+   change only when their tab refreshes (`refreshIntervalMs`, `onRefresh`, `updateDebuggerTab`).
+   p804 §4's census counted them as every-frame monitors. Ported as they are, they'd read every
+   frame. The kit has no refresh-only monitor (one without `interval` reads every 200 ms), so the
+   builder needs one. Decided: the kit's `interval: 'refresh'`, which the builder maps
+   `interval: 0` to (D4).
+2. **`color: { type: 'float' }` on a number** (`_dbg__DebugTools.ts:682`, `:688`, the grid
+   colours, `0x888888`): any `color` param makes a number a colour field in Tweakpane
+   (`isForColor`), so they are colour fields today and become `kind: 'color'`. D3's row said
+   `format: 'float'`, which the kit doesn't have (an object colour is floats, and `format` is the
+   text function); the row is corrected.
+3. **PostFX's colour objects:** `getParamBindingParams` passes `color: { type: 'float' }` when
+   every channel is at most 1, else `'int'` (0-255). The kit's object colour is floats only, so
+   the PostFX window (Phase 3) binds an int colour through `{ get, set }` scaling it. Today an HDR
+   float colour (a channel over 1) is read as an int one; the port can fix that by knowing the
+   pass's colour space rather than guessing from the value.
+4. **Behaviour changes that aren't type breaks** (the migration page's): a boolean monitor reads
+   "On" / "Off" where Tweakpane wrote "true" / "false" (`BooleanFormatter`); a monitor with
+   `options` reads the option's label, where Tweakpane wrote the value.
 
 ---
 
