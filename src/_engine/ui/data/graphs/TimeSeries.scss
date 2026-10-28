@@ -1,0 +1,127 @@
+// The time series' default styles (TimeSeries.ts), on the design tokens and layered (p803 D5).
+// The canvas fills the plot; the grid lines and thresholds are HTML over it, placed by
+// `--aek-time-series-at` (their share from the top) inside the same 2 px inset the canvas leaves
+// above and below its lines (TimeSeries.ts' `PAD`).
+@layer aek.components {
+  :where(.aekTimeSeries) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekTimeSeries__plot) {
+    --_pad: 2px;
+
+    position: relative;
+    height: var(--aek-time-series-height, calc(var(--aek-space-7) * 3));
+    overflow: hidden;
+  }
+
+  :where(.aekTimeSeries__canvas) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  :where(.aekTimeSeries__gridLine),
+  :where(.aekTimeSeries__threshold) {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(var(--_pad) + (100% - 2 * var(--_pad)) * var(--aek-time-series-at, 0));
+    height: 0;
+  }
+
+  :where(.aekTimeSeries__gridLine) {
+    border-top: 1px solid var(--aek-time-series-grid-color, var(--aek-border));
+  }
+
+  // The value sits above its line, at the start; the top one (the last: the ticks go up) below
+  // it, inside the plot
+  :where(.aekTimeSeries__tick) {
+    position: absolute;
+    inset-inline-start: 0;
+    bottom: 1px;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  :where(.aekTimeSeries__gridLine:last-child) :where(.aekTimeSeries__tick) {
+    top: 2px;
+    bottom: auto;
+  }
+
+  :where(.aekTimeSeries__threshold) {
+    --_tone: var(--aek-warning);
+
+    border-top: 1px dashed var(--_tone);
+  }
+
+  :where(.aekTimeSeries__threshold[data-tone='info']) {
+    --_tone: var(--aek-info);
+  }
+
+  :where(.aekTimeSeries__threshold[data-tone='success']) {
+    --_tone: var(--aek-success);
+  }
+
+  :where(.aekTimeSeries__threshold[data-tone='danger']) {
+    --_tone: var(--aek-danger);
+  }
+
+  :where(.aekTimeSeries__thresholdLabel) {
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: 1px;
+    color: var(--_tone);
+    font-size: var(--aek-font-size-xs);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  :where(.aekTimeSeries__summary) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--aek-space-1) var(--aek-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(.aekTimeSeries__item) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekTimeSeries__swatch) {
+    flex: none;
+    align-self: center;
+    width: var(--aek-space-3);
+    height: 2px;
+    border-radius: 1px;
+    background-color: var(--aek-time-series-swatch, var(--aek-text));
+  }
+
+  :where(.aekTimeSeries__value) {
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekTimeSeries__range) {
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekTimeSeries__threshold[hidden]) {
+    display: none;
+  }
+}

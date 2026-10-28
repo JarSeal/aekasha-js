@@ -116,6 +116,8 @@ addPropertyGridItems(
         { target: light, key: 'position', label: 'Position', step: 0.1 },
         // readonly: a monitor
         { get: () => light.castShadow, label: 'Shadows', readonly: true },
+        // view: 'graph': a graph monitor, its graph loaded on first use
+        { get: () => light.shadow.map?.width ?? 0, label: 'Shadow map', view: 'graph' },
       ],
     },
     { type: 'separator' },
@@ -131,7 +133,9 @@ addPropertyGridItems(
 - **Inferred:** `options` make a select; a number a number field, or a slider with both `min` and
   `max`; a boolean a checkbox; a hex colour string or an `{ r, g, b, a? }` object a colour field;
   an `{ x, y, … }` object or 2 to 4 numbers a vector field, an Euler (a string `order`) a rotation
-  field; another string a text field. `readonly: true` makes any of them a monitor in its text.
+  field; another string a text field. `readonly: true` makes any of them a monitor in its text,
+  and `view: 'graph'` a number's [graph monitor](#graph-monitors) (`bufferSize` its capacity),
+  whose graph the grid loads the first time it makes one.
 - **Said with `kind`:** what a value's shape can't tell: `'color'` for a 24-bit number,
   `'switch'`, `'radio'`, `'segmented'`, `'range'`, `'search'`, `'quaternion'`, `'angle'`,
   `'pad2d'`, `'gradient'` and `'curve'`, or `'text'` for a string that looks like a colour.

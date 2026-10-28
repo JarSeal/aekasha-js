@@ -1,6 +1,7 @@
 // The property grid's declarative items (p804 D10): a panel described as data, with Tweakpane's
 // names, so the debugger's panes (p806) port by renaming. Its own module: making any field from
-// a value's shape brings every field's code, which a grid built from handles shouldn't carry.
+// a value's shape brings every field's code, which a grid built from handles shouldn't carry. The
+// graph monitor is the exception: an `import()` (p805 D9), so every grid doesn't carry a canvas.
 import type { CMPHandle } from '../core/CMPTypes';
 import { CMP } from '../core/CMP';
 import { createButton, type ButtonProps } from '../components/Button';
@@ -17,7 +18,8 @@ import { createFolder } from './Folder';
 import { createCurveEditor } from './curve/CurveEditor';
 import type { CurvePresetName } from './curve/Curve';
 import { createGradientEditor } from './gradient/GradientEditor';
-import { createMonitor, getVectorKeys } from './Monitor';
+import type { GraphMonitorProps } from './GraphMonitor';
+import { buildGraphMonitor, createMonitor, getVectorKeys } from './Monitor';
 import { createNumberField } from './NumberField';
 import { createPad2D } from './Pad2D';
 import type { PropertyGrid } from './PropertyGrid';
@@ -182,6 +184,11 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     offText?: string;
     /** The value's text (Tweakpane's `format`): a number's, or a monitor's. */
     format?(value: unknown): string;
+    /** `'graph'`: a number shown as a graph monitor (Tweakpane's `view: 'graph'`), read-only with
+     * or without `readonly`; its module loads on first use, the text shown until then. */
+    view?: 'graph';
+    /** How many reads a graph monitor holds (Tweakpane's `bufferSize`, default 64). */
+    bufferSize?: number;
     /** Each keystroke's text in a typed field. */
     onInput?(text: string): void;
     /** Every write of the value, as the field's `onChange` (p804 D3). */
@@ -322,17 +329,43 @@ const toRadioOptions = (options: PropertyGridFieldItem['options']) => {
   })) as SegmentOption<SelectValue>[];
 };
 
+/**
+ * A `view: 'graph'` item's graph monitor (p805 D9): its text at once, its time series after the
+ * `import()` of `GraphMonitor.ts` (D13: a grid without one carries none of it); a failed load
+ * leaves the text
+ */
+const createGraphItem = (props: GraphMonitorProps) => {
+  const build = buildGraphMonitor(props);
+  void import('./GraphMonitor').then(
+    ({ attachMonitorGraph }) => attachMonitorGraph(build, props),
+    (error: unknown) => lwarn(`Property grid item "${props.label}": its graph didn't load.`, error)
+  );
+  return build.field;
+};
+
 /** Makes an item's field with the grid's scheduler */
 const createItemField = (
   item: PropertyGridFieldItem,
   scheduler: BindingScheduler
 ): Field<unknown> => {
-  const { type: _type, kind: _kind, onCreate, ...rest } = item;
+  const { type: _type, kind: _kind, onCreate, view, bufferSize, ...rest } = item;
   const props = { ...rest, scheduler };
   // The item's props are the union of the creators': each reads its own
   const make = (create: (p: never) => unknown, extra?: object) =>
     (create as (p: object) => unknown)({ ...props, ...extra }) as Field<unknown>;
-  let kind = inferFieldKind(item, readItemValue(item));
+  const value = readItemValue(item);
+  if (view === 'graph') {
+    if (typeof value === 'number') {
+      const field = createGraphItem({
+        ...(props as GraphMonitorProps),
+        capacity: bufferSize,
+      }) as Field<unknown>;
+      onCreate?.(field);
+      return field;
+    }
+    lwarn(`Property grid item "${item.label}": a graph shows a number; it's a monitor.`);
+  }
+  let kind = view === 'graph' ? 'monitor' : inferFieldKind(item, value);
   if (kind === null) {
     // No field edits it (an object of another shape): its text, read-only
     if (!item.readonly) {
@@ -529,8 +562,10 @@ const buildItems = (
  *   `{ r, g, b, a? }` object a colour field (a 24-bit number says `kind: 'color'`), an
  *   `{ x, y, z?, w? }` object or 2 to 4 numbers a vector field, an Euler (a string `order`) a
  *   rotation field in degrees, another string a text field (a quaternion says
- *   `kind: 'quaternion'`, an angle dial `'angle'`, a 2D pad `'pad2d'`, a gradient `'gradient'`, a curve `'curve'`); `readonly: true` makes it a monitor in that field's text. A value no
- *   field edits is shown as a monitor, with a warning unless it's `readonly`.
+ *   `kind: 'quaternion'`, an angle dial `'angle'`, a 2D pad `'pad2d'`, a gradient `'gradient'`, a curve `'curve'`); `readonly: true` makes it a monitor in that field's text, and
+ *   `view: 'graph'` a number's graph monitor (`createGraphMonitor`, `bufferSize` its capacity:
+ *   Tweakpane's names), its time series loaded on first use with the text shown until then. A
+ *   value no field edits is shown as a monitor, with a warning unless it's `readonly`.
  *   `onChange` is the field's (D3: every write, `last` on the gesture's end, never a refresh's),
  *   `onCreate` gets the field's handle.
  * - A folder item's id is its title path (`'Parent/Child'`, after `path`) or its `id`; its open

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented, Phase 5 sections 1-2
+Status: in progress | Phases 0-5 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1114,7 +1114,7 @@ As built (section 3):
     `writeAttr`, `useCollectionKey`. `block` names each piece's classes (`aekList__search`,
     `aekTree__search`, unchanged for the list), the stylesheet styles both; `List.ts` went from
     804 to 700 lines. `VirtualRowsImpl.attach` takes `{ spacerTag, spacerClass,
-    rowHeightProperty }` (`VirtualRowsParts`) for the tree's names.
+rowHeightProperty }` (`VirtualRowsParts`) for the tree's names.
   - **VoiceOver** (Phase 0 left the flat tree's pass by hand to this section): not run (Linux);
     still open for §5's by-hand pass on a Mac. axe in `verify:ui` checks the flat form.
 - **The library:** the tree box in `data.ts` / `dataChecks.ts`: a scene outline (single
@@ -1155,7 +1155,7 @@ As built (section 1):
     cell's text one kept `Text` node written only when it changed, the elements moved only where
     out of place (`CollectionParts.ts`' `placeElems`).
   - **Groups after the rows:** `rows` are the first `<tbody>` (no header), `groups` (`{ key, label,
-    rows }`) a `<tbody>` each after them with a `<th scope="rowgroup" colspan>` header row, the
+rows }`) a `<tbody>` each after them with a `<th scope="rowgroup" colspan>` header row, the
     census' Overview shape; a group without rows is hidden. `setGroups` and `setFooter` beside
     `setRows`.
   - **Alignment:** a column's `align`, else `end` once its first non-null value is a number (kept
@@ -1238,7 +1238,7 @@ As built (section 2):
   census' in view and culled), each its share of the column's `barMax`, else of the column's
   largest total over the rows, groups and footer (so a total in the footer makes them shares, the
   census' breakdown), `aria-hidden`, the text (`format`; an array's default its numbers joined by
-  ` / `, hidden when empty) beside it. Colours `--aek-table-bar-1` to `-4` (the text, the text at
+  `/`, hidden when empty) beside it. Colours `--aek-table-bar-1` to `-4` (the text, the text at
   35 %, muted, `border-strong`: p801 §4's in view and culled). Phase 5 section 1 decides whether
   the stacked bar shares its styles.
 - **`headerTooltip`** is a `createTooltip` on the sort button, or on a `<th>` that isn't sortable
@@ -1310,6 +1310,7 @@ As built (section 3):
   array may change in place), a group's rows placed from one array, the selection's order built
   only with a selection, the released attributes a constant. Not taken: one small object per
   scroll event in `VirtualRows.ts` (shared with the list and the tree; negligible).
+
 - **The library:** the table box gained 2,000 draw calls in a virtual grid (a single selection,
   sortable by triangles, a sticky header) and a keyboard script (Ctrl+End to the last row with
   its index, ArrowUp, Space, Ctrl+Home). Found on the way: `verify:ui` sets each setting by
@@ -1320,7 +1321,7 @@ As built (section 3):
   library texts, the dev page's stress box and its text; `createVirtualRows`' JSDoc and key APIs
   name the table.
 
-### Phase 5: graphs and figures
+### Phase 5: graphs and figures — done
 
 1. The sparkline, the donut (the ray cast tab moved onto it, the pie removed), the stacked bar,
    the stat tile; the chart tokens and the design document's colours (D9).
@@ -1436,6 +1437,108 @@ As built (section 2):
   `GraphParts.ts`' 0.7, shared). D13's "module lines" are the `'_engine/ui/data/': 0` lines
   already in `sbp.config.ts` (they cover `data/graphs/`): nothing in a first download imports a
   graph, and no build's bundle moved (`verify:baselines`: only the API's new names).
+
+As built (section 3):
+
+- **`createTimeSeries`** (`data/graphs/TimeSeries.ts`, `TimeSeries.scss`, public with
+  `TimeSeriesProps`, `TimeSeriesSeries` (`{ label, color? }`), `TimeSeriesThreshold`
+  (`{ value, label, tone? }`) and `TimeSeries`): D9's props plus `ticks`, `summary`, `class`,
+  `attr`, `id`; the handle D9's plus `isPaused`, `setRange({ min?, max? })` (an options object:
+  the coding standards' rule for optional parameters). Decided on the way:
+  - **One clock, not D9's `push(seriesIndex, value)`:** the shifted bitmap moves every series by
+    the same samples, so a sample is one value per series: `push(value)` is a one-series sample
+    (the others a gap), `pushAll(values)` every series' from an array it reads and doesn't keep
+    (an app reuses one: nothing allocated per frame). `capacity` defaults to 300 (D9 had none).
+  - **The renderer** is Phase 0's shifted bitmap, by **whole device pixels**: a fractional
+    `drawImage` offset resamples the image every frame and blurs the lines, so the shift is
+    rounded and the newest sample's x tracked on the bitmap (at most half a pixel from the edge;
+    the test pins the drift: 10, 10, 9, 10 px for a step of 9.8). A run's start gets a small dot
+    (a lone sample shows).
+  - **Every frame, after the app's loop:** a draw asked for in a push runs a frame later, so an
+    app pushing from its own frame callback (registered first) got a draw every other frame. After
+    a frame that drew, the time series asks for the next one too, which then runs after the app's
+    loop in the same frame; an empty frame stops it (a test pins the order).
+  - **HTML over the canvas** for the grid lines, their values and the thresholds (a shift would
+    cut anything static on the canvas), placed only on a rescale. The thresholds count in the auto
+    range (a budget is meant to be seen); a fixed end clamps the line. With ticks the auto range
+    ends at the first of 3, 2 or 4 ticks that end at the nice ceiling (0 to 50 is three ticks at
+    25, not four at 20 up to 60: the first screenshots showed a graph monitor's reads of 25 in
+    the lower third); without ticks it's the ceiling as it is.
+  - **The colours** are each series' colour written to the canvas' own `color` and read back
+    computed (a token, a `color-mix()`, any CSS colour), at the first draw and after a theme change;
+    never a style read per frame.
+  - **The summary** is a list (`__item` per series: swatch, label, latest value, min and max),
+    written by a 250 ms timer a push starts (the last values always written; in view or not:
+    `verify:ui` found it stale off screen when a draw started it), held while paused, not a live
+    region:
+    D9's "text summary beside it", in the piece, which `summary: false` leaves out (the graph
+    monitor does).
+  - **Visibility** is an `IntersectionObserver` on the root (a hidden panel or a closed tab is out
+    of view too); the page's own hiding stops `requestAnimationFrame` anyway. A ratio change alone
+    (a window dragged to another screen) isn't seen until a resize.
+- **`ThemeWatch.ts`** (`core/`, `@internal`): as D9, `onKitThemeChange(elem, fn)` with one
+  `MutationObserver` on `<html>` (`subtree`, the two attributes) and one `matchMedia` listener.
+  linkedom's observer reports only the observed node's own attributes, so its test writes on
+  `<html>`; the library's switches (on kit roots) are the browser check.
+- **The graph monitor** (`forms/GraphMonitor.ts`, public with `GraphMonitorProps`):
+  `createGraphMonitor` is `Monitor.ts`' `buildGraphMonitor` (the number's text and an empty
+  `.aekMonitor__graph` line at `--aek-graph-monitor-height`) and `attachMonitorGraph` (a time
+  series with no ticks and no summary, `capacity` default 64, Tweakpane's `bufferSize`). The field
+  shell gained `FieldSpec.onSample(value)`, run after every read, changed or not: every read is a
+  sample, the tick's and a refresh's (Tweakpane's graph pushes on each read; the library box fills
+  its buffer with refreshes, so its shots hold).
+- **The grid's `view: 'graph'`** (with `bufferSize`, Tweakpane's names; `readonly` or not) on a
+  number: `buildGraphMonitor`'s field at once, the time series after `import('./GraphMonitor')`
+  (re-checked: a grid removed first gets none; a failed load warns and keeps the text). **Measured
+  both ways (Phase 0's open question):** a declarative grid's bundle (esbuild, minified, the
+  colour picker and Kbd left lazy either way) is 46.6 kB gzip with the `import()` and 49.7 kB
+  static: **+3.1 kB**, over Phase 0's 0.5 kB bar, so the `import()` stays. In a bundle that also
+  imports `createGraphMonitor` statically (the Hub's library) Vite keeps it in that chunk and
+  warns, as it does for `Kbd.ts`.
+- **KitDom:** `stubIntersectionObserver`, `stubMatchMedia`, `stubCanvas2d` (D14's recording 2D
+  context, with a `getComputedStyle` stub), and linkedom's `MutationObserver` as the global.
+- **The perf pass** (D14, "8 time series of 600 samples pushed every frame"): the dev page's
+  "Time series under load" box (8 panels, one or eight series each, a loop pushing every frame;
+  the readout is the script time from the loop's start to a frame callback that runs after the
+  panels' draws), headless under WSL2 (software raster) on the dev server, every panel in view
+  and drawing every frame (960 `drawImage` calls a second: 8 × 2 × 60):
+
+  | Case                        | Chromium, median / p95       | Firefox, median / p95        | Frames |
+  | --------------------------- | ---------------------------- | ---------------------------- | ------ |
+  | 1 series a panel, DPR 1 / 2 | 0.13 / 0.19 · 0.25 / 0.36 ms | 0.30 / 0.40 · 0.32 / 0.40 ms | 60 fps |
+  | 8 series a panel, DPR 1 / 2 | 0.18 / 0.23 · 0.26 / 0.33 ms | 0.54 / 0.66 · 0.58 / 0.74 ms | 60 fps |
+  | Paused (the pushes only)    | 0.00 / 0.02 ms               | 0.02 / 0.02 ms               | 60 fps |
+
+  Phase 0's bitmap probe had 1.7 / 2.4 ms (Chromium) and 3 / 5 (Firefox) for 64 lines at DPR 2.
+  The perf-auditor read the push, frame and draw paths: no allocation, no layout or style read, no
+  redundant canvas state (each series' stroke and fill colour differ; the line's width, cap and
+  join set only on a whole draw), the steady draw O(new samples), not O(capacity). Its two notes
+  are outside the time series and older than it: a live monitor makes its text's string when the
+  text changes, and the scheduler's `isShown` walks the DOM (`closest('[hidden]')`) for each due
+  live field.
+
+- **The library:** `timeSeries` (a frame's three stages over 300 fixed samples with a budget line,
+  **A long frame**, **Fix the range at 0 to 10 ms**; a draw call count with a gap and no ticks) and
+  `graphMonitor` (a frame time filled by 63 refreshes, a 60 fps line; a grid's `view: 'graph'`
+  item beside a text monitor) in `graphs.ts`, each with a keyboard script (no keys: the ARIA, the
+  summary's text, the range's top tick before and after the button; the grid's graph loaded). A
+  live run is a kit switch in the box (off at the start: not a `.hubButton`, so not a state, and
+  the shots hold).
+- **The Hub:** the data page's `### Time series` (with "which graph for what"), its reference
+  table, key APIs, intro and tags; the forms page's `### Graph monitors` under Monitors, the
+  grid's `view: 'graph'` in "Panels as data", key APIs, intro and tags; the UI kit overview's two
+  rows; both library pages' boxes and texts; the dev page's stress box and its text;
+  `COMPONENT_USES`.
+- **Size:** each module minified and gzipped alone: `TimeSeries.ts` 2.8 kB, `ThemeWatch.ts` 0.4,
+  `GraphMonitor.ts` 0.3 (plus `ChartScale.ts`' 0.5, the chart's). D13's module lines are the
+  `'_engine/ui/data/': 0` lines already in `sbp.config.ts` (they cover `data/graphs/`;
+  `GraphMonitor.ts` is in `forms/`, whose line is 0 too); no build's bundle moved
+  (`verify:baselines`: the app's and both embeds' unchanged; the API's 7 new names and KitDom's
+  recorded).
+- **Not done:** Phase 3's and Phase 4's note (virtual rows measure their row height once, so a
+  density switch keeps the old one): `ThemeWatch.ts` is ready for it, but it's the list's, the
+  tree's and the table's change, not the graphs'; left for the user's call (§4's p806 list, or a
+  section of its own).
 
 ### Phase 6: the command palette
 

@@ -1,16 +1,17 @@
 /**
  * The component library's stress boxes (the dev page's: p804 D14's and p805 D14's perf passes):
- * many number fields or monitors on one scheduler, a table of live figures and a virtual one, a
- * frame time readout.
+ * many number fields or monitors on one scheduler, a table of live figures and a virtual one, time
+ * series pushed every frame, a frame time readout.
  */
 import {
   createBindingScheduler,
   createMonitor,
   createNumberField,
   createTable,
+  createTimeSeries,
   createVirtualRows,
 } from 'aekasha/ui';
-import type { BindingScheduler, Field, TableColumn } from 'aekasha/ui';
+import type { BindingScheduler, Field, TableColumn, TimeSeries } from 'aekasha/ui';
 import { ID_PREFIX, addGroup, addButton, addKitRoot } from './page';
 import type { Demo } from './page';
 
@@ -312,10 +313,137 @@ const initVirtualTableStressDemo = createTableStressDemo(
   }
 );
 
+// --- Time series stress (the dev page's: p805 D14's perf pass) ---
+
+const SERIES_PANELS = 8;
+const SERIES_CAPACITY = 600;
+/** The frames a readout's script times are from: 2 s at 60 Hz */
+const SERIES_SAMPLES = 120;
+
+/** A time series stress mode: the series per panel */
+type SeriesStressMode = { label: string; seriesPerPanel: number };
+
+/** Eight time series of 600 samples, each pushed every frame (one series each, or eight: Phase 0's
+ * probe's two cases); the readout is each frame's script time from the push loop's start to the
+ * end of the panels' draws (a frame callback asked for after theirs, so it runs after them in
+ * the frame), and the frame times */
+const initSeriesStressDemo: Demo = (box) => {
+  const controls = addGroup(box, 'Run');
+  const root = addKitRoot(box);
+  const readout = document.createElement('p');
+  readout.id = `${ID_PREFIX}SeriesStressReadout`;
+  readout.className = 'hubDemoLine';
+  readout.textContent = 'Stopped';
+  root.append(readout);
+  const panels = document.createElement('div');
+  panels.className = 'hubDemoStressSeries';
+  root.append(panels);
+
+  let series: TimeSeries[] = [];
+  let sample = new Float64Array(1);
+  const scriptTimes = new Float64Array(SERIES_SAMPLES);
+  const deltas = new Float64Array(SERIES_SAMPLES);
+  let frames = 0;
+  let pushes = 0;
+  let start = 0;
+  let last = 0;
+  let lastReadout = 0;
+  let mode: SeriesStressMode | null = null;
+  let loopFrame: number | null = null;
+  let endFrame: number | null = null;
+
+  const build = (seriesPerPanel: number) => {
+    for (const panel of series) panel.cmp.remove();
+    series = Array.from({ length: SERIES_PANELS }, (_, p) => {
+      const panel = createTimeSeries({
+        series: Array.from({ length: seriesPerPanel }, (_, i) => ({ label: `S${p + 1}.${i + 1}` })),
+        capacity: SERIES_CAPACITY,
+        unit: 'ms',
+        height: 64,
+      });
+      panels.append(panel.cmp.elem);
+      return panel;
+    });
+    sample = new Float64Array(seriesPerPanel);
+  };
+
+  const writeReadout = (now: number) => {
+    if (!mode || now - lastReadout < 500 || frames < SERIES_SAMPLES) return;
+    lastReadout = now;
+    let sum = 0;
+    let worst = 0;
+    for (let i = 0; i < SERIES_SAMPLES; i++) {
+      sum += deltas[i];
+      worst = Math.max(worst, deltas[i]);
+    }
+    const sorted = Array.from(scriptTimes).sort((x, y) => x - y);
+    const median = sorted[Math.floor(SERIES_SAMPLES / 2)];
+    const p95 = sorted[Math.floor(SERIES_SAMPLES * 0.95)];
+    readout.textContent = `${mode.label}: pushes and draws ${median.toFixed(2)} ms median, ${p95.toFixed(2)} ms p95 a frame (last ${SERIES_SAMPLES}); frames ${(sum / SERIES_SAMPLES).toFixed(1)} ms on average, ${worst.toFixed(1)} ms at worst`;
+  };
+
+  const loop = (now: number) => {
+    loopFrame = requestAnimationFrame(loop);
+    start = performance.now();
+    pushes++;
+    for (let p = 0; p < series.length; p++) {
+      for (let i = 0; i < sample.length; i++) {
+        sample[i] = 8 + Math.sin(pushes / (20 + i * 7) + p) * 4 + ((pushes * (i + 3)) % 17) / 10;
+      }
+      series[p].pushAll(sample);
+    }
+    if (last) deltas[frames % SERIES_SAMPLES] = now - last;
+    last = now;
+  };
+
+  // Asked for after the panels' own callbacks each frame, so it runs after their draws
+  const end = (now: number) => {
+    endFrame = requestAnimationFrame(end);
+    if (!start) return;
+    scriptTimes[frames++ % SERIES_SAMPLES] = performance.now() - start;
+    writeReadout(now);
+  };
+
+  const stop = () => {
+    if (loopFrame !== null) cancelAnimationFrame(loopFrame);
+    if (endFrame !== null) cancelAnimationFrame(endFrame);
+    loopFrame = null;
+    endFrame = null;
+    mode = null;
+    readout.textContent = 'Stopped';
+  };
+
+  const run = (next: SeriesStressMode) => {
+    stop();
+    build(next.seriesPerPanel);
+    mode = next;
+    frames = 0;
+    pushes = 0;
+    start = 0;
+    last = 0;
+    loopFrame = requestAnimationFrame((now) => {
+      loop(now);
+      endFrame = requestAnimationFrame(end);
+    });
+  };
+
+  for (const next of [
+    { label: '8 series of 600, one a panel', seriesPerPanel: 1 },
+    { label: '8 panels of 8 series (64)', seriesPerPanel: 8 },
+  ]) {
+    addButton(controls, next.label, () => run(next));
+  }
+  addButton(controls, 'Pause the panels', () => {
+    for (const panel of series) panel.pause();
+  });
+  addButton(controls, 'Stop', stop);
+};
+
 /** The stress group's demos by their box's key (`data-hub-demo`) */
 export const STRESS_DEMOS: Record<string, Demo> = {
   numberFieldStress: initNumberFieldStressDemo,
   monitorStress: initMonitorStressDemo,
   tableStress: initTableStressDemo,
   virtualTableStress: initVirtualTableStressDemo,
+  seriesStress: initSeriesStressDemo,
 };

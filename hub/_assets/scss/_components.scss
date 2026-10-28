@@ -398,6 +398,13 @@
   width: min(100%, 40rem);
 }
 
+// The dev page's time series stress box: the eight panels two a row
+.hubDemoStressSeries {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
 // A cell renderer's two lines: the object, its entity and owner dimmed under it
 .hubDemoTwoLines {
   display: flex;
@@ -450,7 +457,12 @@
   width: 10rem;
 }
 
-// A chart takes the panel's width (the row is a wrapping flex box)
-.hubComponentDemoGroup.hubDemoGraphs > .aekChart {
+// A chart, a time series, a graph monitor and a grid take the panel's width (the row is a
+// wrapping flex box); a live switch goes on a line of its own under them
+.hubComponentDemoGroup.hubDemoGraphs > :is(.aekChart, .aekTimeSeries, .aekField, .aekPropertyGrid) {
   width: min(100%, 36rem);
+}
+
+.hubComponentDemoGroup.hubDemoGraphs > .aekField[data-kind='switch'] {
+  flex-basis: 100%;
 }

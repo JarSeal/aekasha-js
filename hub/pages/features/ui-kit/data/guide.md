@@ -349,14 +349,14 @@ setInterval(() => {
 - **Assistive tech.** Without a `label` it's hidden: the figure beside it says what it shows. With
   one it's an image named by it ("Frame time over the last minute, 16 to 33 ms").
 
-| Sparkline         |                                                                                                                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`SparklineProps`](api:SparklineProps)                                                                                                                           |
-| Parts             | `.aekSparkline` holding `svg.aekSparkline__svg`: `__area`, `__line`, `__dot`                                                                                     |
-| States            | `data-area`; the dot's `display="none"` on a gap                                                                                                                 |
-| Custom properties | `--aek-sparkline-color`, `--aek-sparkline-width`, `--aek-sparkline-height`, `--aek-sparkline-stroke` (the line's width), `--aek-sparkline-area-opacity`         |
-| Keys              | None                                                                                                                                                             |
-| Assistive tech    | `aria-hidden` without a `label`; with one `role="img"` named by it                                                                                               |
+| Sparkline         |                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`SparklineProps`](api:SparklineProps)                                                                                                                  |
+| Parts             | `.aekSparkline` holding `svg.aekSparkline__svg`: `__area`, `__line`, `__dot`                                                                            |
+| States            | `data-area`; the dot's `display="none"` on a gap                                                                                                        |
+| Custom properties | `--aek-sparkline-color`, `--aek-sparkline-width`, `--aek-sparkline-height`, `--aek-sparkline-stroke` (the line's width), `--aek-sparkline-area-opacity` |
+| Keys              | None                                                                                                                                                    |
+| Assistive tech    | `aria-hidden` without a `label`; with one `role="img"` named by it                                                                                      |
 
 ### Donuts
 
@@ -396,13 +396,13 @@ const memory = createDonut({
 - **Decorative.** Without a `label` it's hidden from assistive tech, for a figure beside it that
   says the same.
 
-| Donut             |                                                                                                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`DonutProps`](api:DonutProps), a part's [`GraphPart`](api:GraphPart)                                                                                                                   |
-| Parts             | `.aekDonut` holding `__ring` (`__disc`, `__centre`) and, with parts, `.aekGraphLegend` (`__item`: `__swatch`, `__label`, `__value`)                                                     |
-| States            | `data-mode` (`value`, `parts`)                                                                                                                                                          |
-| Custom properties | `--aek-donut-size`, `--aek-donut-thickness`, `--aek-donut-color` (one value's fill), `--aek-donut-track`                                                                                |
-| Keys              | None                                                                                                                                                                                    |
+| Donut             |                                                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`DonutProps`](api:DonutProps), a part's [`GraphPart`](api:GraphPart)                                                                                                                               |
+| Parts             | `.aekDonut` holding `__ring` (`__disc`, `__centre`) and, with parts, `.aekGraphLegend` (`__item`: `__swatch`, `__label`, `__value`)                                                                 |
+| States            | `data-mode` (`value`, `parts`)                                                                                                                                                                      |
+| Custom properties | `--aek-donut-size`, `--aek-donut-thickness`, `--aek-donut-color` (one value's fill), `--aek-donut-track`                                                                                            |
+| Keys              | None                                                                                                                                                                                                |
 | Assistive tech    | With a `label`: one value a `role="meter"` (`aria-valuenow` in percent, `aria-valuetext`), parts a `role="img"` whose label lists them; the legend and centre `aria-hidden`. Without: `aria-hidden` |
 
 ### Stacked bars
@@ -435,14 +435,14 @@ memory.setParts([{ label: 'Used', value: getUsedMegabytes() }]); // the total is
 - **Not a table's bar.** A table column's `kind: 'bar'` draws its own bars (a measure in the
   text's shades), so a table carries none of this module.
 
-| Stacked bar       |                                                                                                                                                         |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`StackedBarProps`](api:StackedBarProps), a part's [`GraphPart`](api:GraphPart)                                                                         |
-| Parts             | `.aekStackedBar` holding `__track` (a `__segment` per part) and, with `legend`, `.aekGraphLegend`                                                       |
-| States            | `data-over`; a segment's `hidden` when it's nothing                                                                                                     |
-| Custom properties | `--aek-stacked-bar-height`, `--aek-stacked-bar-track`, `--aek-stacked-bar-over-color`                                                                   |
-| Keys              | None                                                                                                                                                    |
-| Assistive tech    | `role="img"` named by `label` and every part's amount; the legend `aria-hidden`                                                                         |
+| Stacked bar       |                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| Props             | [`StackedBarProps`](api:StackedBarProps), a part's [`GraphPart`](api:GraphPart)                   |
+| Parts             | `.aekStackedBar` holding `__track` (a `__segment` per part) and, with `legend`, `.aekGraphLegend` |
+| States            | `data-over`; a segment's `hidden` when it's nothing                                               |
+| Custom properties | `--aek-stacked-bar-height`, `--aek-stacked-bar-track`, `--aek-stacked-bar-over-color`             |
+| Keys              | None                                                                                              |
+| Assistive tech    | `role="img"` named by `label` and every part's amount; the legend `aria-hidden`                   |
 
 ### Charts
 
@@ -486,14 +486,74 @@ benchmarkPanel.add(results.cmp);
   figures that change now and then (a benchmark's results, a level's history). A line drawn every
   frame is a time series.
 
-| Chart             |                                                                                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`ChartProps`](api:ChartProps), a series' [`ChartSeries`](api:ChartSeries), the axis' [`ChartAxis`](api:ChartAxis)                                                                                  |
+| Chart             |                                                                                                                                                                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`ChartProps`](api:ChartProps), a series' [`ChartSeries`](api:ChartSeries), the axis' [`ChartAxis`](api:ChartAxis)                                                                                                                                                    |
 | Parts             | `.aekChart` holding `__title`, `__description`, `__figure` (`__yAxis` and `__xAxis` with their `__tick`s, `__plot` with `__svg`: `__grid`s, a `__series` group each with `__bar`s or `__line` and `__points`), the legend, `__toggle` and `__tableBox` with `__table` |
-| States            | `data-type` (`line`, `bar`); a grid line's `data-zero`; an x tick's `data-edge`; `__tableBox`'s `data-shown`                                                                                       |
-| Custom properties | `--aek-chart-height` (the plot's), `--aek-chart-grid-color`, `--aek-chart-line-width`, `--aek-chart-color` (a series' group's, written by the chart)                                                |
-| Keys              | The toggle is a button (Enter, Space)                                                                                                                                                               |
-| Assistive tech    | The figure `role="img"`, `aria-labelledby` the title and `aria-describedby` the description; the values' table always read, visually hidden until the toggle (`aria-expanded`, `aria-controls`) shows it; the legend `aria-hidden` |
+| States            | `data-type` (`line`, `bar`); a grid line's `data-zero`; an x tick's `data-edge`; `__tableBox`'s `data-shown`                                                                                                                                                          |
+| Custom properties | `--aek-chart-height` (the plot's), `--aek-chart-grid-color`, `--aek-chart-line-width`, `--aek-chart-color` (a series' group's, written by the chart)                                                                                                                  |
+| Keys              | The toggle is a button (Enter, Space)                                                                                                                                                                                                                                 |
+| Assistive tech    | The figure `role="img"`, `aria-labelledby` the title and `aria-describedby` the description; the values' table always read, visually hidden until the toggle (`aria-expanded`, `aria-controls`) shows it; the legend `aria-hidden`                                    |
+
+### Time series
+
+[`createTimeSeries`](api:createTimeSeries) draws figures that change every frame (a frame's
+stages, draw calls, memory) as lines over their last samples, on a canvas.
+
+```ts
+const frame = createTimeSeries({
+  series: [{ label: 'Physics' }, { label: 'Render' }],
+  capacity: 600, // 10 s at 60 Hz
+  unit: 'ms',
+  thresholds: [{ value: 16.7, label: 'Budget 16.7 ms' }],
+});
+statsPanel.add(frame.cmp);
+
+const sample = new Float64Array(2); // reused: nothing allocated per frame
+const tick = () => {
+  sample[0] = getPhysicsMs();
+  sample[1] = getRenderMs();
+  frame.pushAll(sample);
+  requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
+```
+
+::: demo timeSeries
+:::
+
+- **Samples.** `push(value)` adds one to a single series, `pushAll(values)` one to each, in
+  `series`' order (a missing value or a `NaN` is a gap): as often as every frame, with no
+  allocation. Past `capacity` (default 300) the oldest go. `clear` empties it.
+- **Drawing.** At most once per animation frame, and only while it shows: scrolled into view, in a
+  shown panel, not `pause`d (the samples are kept meanwhile, and `resume` draws them). A frame
+  draws only the new samples, moving the last image left by their width; it draws whole after a
+  resize, a rescale, a theme change or a show.
+- **Range.** From `min` (default 0) to `max` (default a nice ceiling over the values and the
+  thresholds, with some room). An automatic top grows when a value passes it and shrinks only
+  after a whole buffer under a lower one, so a spike doesn't make it jump back and forth.
+  `setRange({ min, max })` fixes an end, or frees it with `undefined`.
+- **Thresholds** are lines at a value in a status colour (`tone`, default warning), each with its
+  text: a budget, a limit. A series is never a status, so its colours are the chart series'.
+- **Colours.** A canvas can't follow the theme by itself as CSS does: the time series reads the
+  tokens when it first draws and again when the theme or the density changes (the system's
+  colour scheme, or `data-aek-theme` / `data-aek-density` written on an element around it).
+- **Assistive tech.** The plot is hidden; the summary under it (each series' latest value, min and
+  max, `format`'s text with `unit`) is what a screen reader reads. It's written at most four
+  times a second while samples come, in view or not, held while paused, and isn't a live region. `summary: false` leaves it out, for a figure beside it
+  that says what it shows; `ticks: false` leaves out the grid's values.
+- **Which graph.** A [sparkline](#sparklines) for a few values a second beside a figure, a
+  [chart](#charts) for figures that change now and then, a time series for a figure every frame.
+  A field's value as a graph is a [graph monitor](hub:features/ui-kit/forms#graph-monitors).
+
+| Time series       |                                                                                                                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TimeSeriesProps`](api:TimeSeriesProps), a series' [`TimeSeriesSeries`](api:TimeSeriesSeries), a threshold's [`TimeSeriesThreshold`](api:TimeSeriesThreshold)                                                                               |
+| Parts             | `.aekTimeSeries` holding `__plot` (the `__grid`'s `__gridLine`s with their `__tick`, the `__canvas`, the `__threshold`s with their `__thresholdLabel`) and `__summary` (an `__item` per series: `__swatch`, `__label`, `__value`, `__range`) |
+| States            | `data-paused`; a threshold's `data-tone` and, out of the range, `hidden`                                                                                                                                                                     |
+| Custom properties | `--aek-time-series-height` (the plot's), `--aek-time-series-line-width` (read with the colours), `--aek-time-series-grid-color`, `--aek-time-series-swatch` (a summary line's, written by it)                                                |
+| Keys              | None                                                                                                                                                                                                                                         |
+| Assistive tech    | The plot `aria-hidden`; the summary plain text in reading order, not live                                                                                                                                                                    |
 
 ## Stat tiles
 
@@ -527,14 +587,14 @@ frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
 - **A sparkline.** `sparkline` takes one you made with `createSparkline`, so a tile without one
   carries none of its code; it goes under the figure and is removed with the tile.
 
-| Stat tile         |                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`StatTileProps`](api:StatTileProps)                                                                                             |
-| Parts             | `.aekStatTile` holding `__label`, `__figure` (`__value`, `__unit`), `__delta` (`__arrow`, `__deltaText`) and `__spark`           |
-| States            | `data-trend` (`up`, `down`, `flat`), `data-tone` (`success`, `danger`); `__delta`'s `hidden`                                      |
-| Custom properties | `--aek-stat-tile-bg`, `--aek-stat-tile-padding`, `--aek-stat-tile-value-size`                                                    |
-| Keys              | None                                                                                                                             |
-| Assistive tech    | Plain text in reading order, the change in words; the arrow and the signed text `aria-hidden`; not live                          |
+| Stat tile         |                                                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`StatTileProps`](api:StatTileProps)                                                                                   |
+| Parts             | `.aekStatTile` holding `__label`, `__figure` (`__value`, `__unit`), `__delta` (`__arrow`, `__deltaText`) and `__spark` |
+| States            | `data-trend` (`up`, `down`, `flat`), `data-tone` (`success`, `danger`); `__delta`'s `hidden`                           |
+| Custom properties | `--aek-stat-tile-bg`, `--aek-stat-tile-padding`, `--aek-stat-tile-value-size`                                          |
+| Keys              | None                                                                                                                   |
+| Assistive tech    | Plain text in reading order, the change in words; the arrow and the signed text `aria-hidden`; not live                |
 
 ## Key APIs
 
@@ -551,7 +611,9 @@ frameTime.setDelta(-4.2); // "−4.2 %", read as "down 4.2 %"
 - [`createSparkline`](api:createSparkline) ([`Sparkline`](api:Sparkline)),
   [`createDonut`](api:createDonut) ([`Donut`](api:Donut)),
   [`createStackedBar`](api:createStackedBar) ([`StackedBar`](api:StackedBar)),
-  [`createChart`](api:createChart) ([`Chart`](api:Chart), [`ChartSeries`](api:ChartSeries)), the parts'
+  [`createChart`](api:createChart) ([`Chart`](api:Chart), [`ChartSeries`](api:ChartSeries)),
+  [`createTimeSeries`](api:createTimeSeries) ([`TimeSeries`](api:TimeSeries),
+  [`TimeSeriesThreshold`](api:TimeSeriesThreshold)), the parts'
   [`GraphPart`](api:GraphPart) and [`GraphPartFormat`](api:GraphPartFormat), and
   [`createStatTile`](api:createStatTile) ([`StatTile`](api:StatTile)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and

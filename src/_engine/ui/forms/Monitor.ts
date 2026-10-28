@@ -1,5 +1,7 @@
 // The monitor (p804 D7): a bound value shown as text, read on the scheduler's tick. Each field's
-// `readonly: true` is one too, built here with that field's own text (`buildMonitor`).
+// `readonly: true` is one too, built here with that field's own text (`buildMonitor`), and so is
+// the graph monitor's field (`buildGraphMonitor`, p805 D9), whose time series `GraphMonitor.ts`
+// adds.
 import {
   createObjectValueKind,
   getPrimitiveValueKind,
@@ -15,6 +17,8 @@ import {
   type FieldOptions,
   type FieldShell,
 } from './Field';
+import type { CMPHandle } from '../core/CMPTypes';
+import type { GraphMonitorProps } from './GraphMonitor';
 import './Monitor.scss';
 import '../styles/kit.scss';
 
@@ -60,6 +64,10 @@ export type MonitorSpec<T> = {
   getText: (value: T) => string;
   /** Makes the text again on every refresh, the value changed or not (a getter's option labels) */
   redrawOnRefresh?: boolean;
+  /** Runs after every read, changed or not, with the value (a graph monitor's sample) */
+  onSample?: (value: T) => void;
+  /** Runs when the field is removed (a graph monitor's time series) */
+  onRemove?: () => void;
 };
 
 /**
@@ -70,6 +78,8 @@ export type MonitorSpec<T> = {
 export type MonitorBuild<T> = {
   shell: FieldShell<T>;
   redraw: () => void;
+  /** With `graph`: the empty line under the text a graph goes into */
+  graphSlot: HTMLElement | null;
 };
 
 /** A monitor's tick when its props give no `interval`: Tweakpane's */
@@ -84,7 +94,11 @@ const VECTOR_KEYS = ['x', 'y', 'z', 'w'] as const;
  * @internal
  */
 export const buildMonitor = <T>(
-  props: AnyFieldProps<T> & Pick<MonitorProps<T>, 'unit' | 'multiline' | 'rows'>,
+  props: AnyFieldProps<T> &
+    Pick<MonitorProps<T>, 'unit' | 'multiline' | 'rows'> & {
+      /** A line under the text for a graph (`data-graph`; not with `multiline`) */
+      graph?: boolean;
+    },
   spec: MonitorSpec<T>
 ): MonitorBuild<T> => {
   /** The text last drawn: a draw that makes the same writes nothing */
@@ -93,6 +107,7 @@ export const buildMonitor = <T>(
   let area: HTMLTextAreaElement | null = null;
   /** The line's one text node: its `data` written, so no node is replaced (a style recalc) */
   let valueText: Text | null = null;
+  let graphSlot: HTMLElement | null = null;
   if (props.multiline) {
     area = document.createElement('textarea');
     area.className = 'aekMonitor aekMonitor__text';
@@ -101,7 +116,8 @@ export const buildMonitor = <T>(
     area.setAttribute('spellcheck', 'false');
     control = area;
   } else {
-    control = document.createElement('span');
+    // A graph's line is a block: the control a `<div>` then
+    control = document.createElement(props.graph ? 'div' : 'span');
     control.className = 'aekMonitor';
     const valueElem = document.createElement('span');
     valueElem.className = 'aekMonitor__value';
@@ -113,6 +129,12 @@ export const buildMonitor = <T>(
       unit.className = 'aekMonitor__unit';
       unit.textContent = props.unit;
       control.append(unit);
+    }
+    if (props.graph) {
+      control.setAttribute('data-graph', '');
+      graphSlot = document.createElement('div');
+      graphSlot.className = 'aekMonitor__graph';
+      control.append(graphSlot);
     }
   }
 
@@ -149,11 +171,67 @@ export const buildMonitor = <T>(
         else area.removeAttribute('disabled');
       },
       onRefresh: spec.redrawOnRefresh ? redraw : undefined,
+      onSample: spec.onSample,
+      onRemove: spec.onRemove,
       // The fields' context menu copies the text it shows
       clipboard: { getText: spec.getText },
     }
   );
-  return { shell, redraw };
+  return { shell, redraw, graphSlot };
+};
+
+/**
+ * What `buildGraphMonitor` gives back: the field, and how its graph joins it (once).
+ * @internal
+ */
+export type GraphMonitorBuild = {
+  field: Field<number>;
+  /** Puts the graph in the field's line under the text and gives it every read's value from
+   * then on, the current one first; false (the graph removed) when the field is gone */
+  attach: (graph: { cmp: CMPHandle; push: (value: number) => void }) => boolean;
+};
+
+/**
+ * A graph monitor's field without its graph (p805 D9): the number's text and an empty line under
+ * it, which `GraphMonitor.ts`' time series joins. The property grid's `view: 'graph'` item shows
+ * this at once and loads the graph with `import()`; `createGraphMonitor` attaches it at once.
+ * @internal
+ */
+export const buildGraphMonitor = (props: GraphMonitorProps): GraphMonitorBuild => {
+  const numberText = createValueFormatter({ precision: props.precision });
+  const { format } = props;
+  let graph: CMPHandle | null = null;
+  let push: ((value: number) => void) | null = null;
+  let isRemoved = false;
+  const { shell, graphSlot } = buildMonitor<number>(
+    { ...props, graph: true },
+    {
+      valueKind: getPrimitiveValueKind<number>(),
+      getText: (value) => (format ? format(value) : numberText.getText(value)),
+      onSample: (value) => push?.(typeof value === 'number' ? value : NaN),
+      onRemove: () => {
+        isRemoved = true;
+        graph?.remove();
+        graph = null;
+        push = null;
+      },
+    }
+  );
+  return {
+    field: shell.field,
+    attach: (next) => {
+      if (isRemoved || graph || !graphSlot) {
+        next.cmp.remove();
+        return false;
+      }
+      graph = next.cmp;
+      graphSlot.append(next.cmp.elem);
+      push = next.push;
+      const value = shell.binding.peek();
+      push(typeof value === 'number' ? value : NaN);
+      return true;
+    },
+  };
 };
 
 /**

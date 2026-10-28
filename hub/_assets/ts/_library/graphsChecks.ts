@@ -1,12 +1,17 @@
 /**
  * The graphs' checks (`graphs.ts`' demos): no keys of their own, so a script each reads the ARIA
- * a screen reader gets, before and after the box's button.
+ * a screen reader gets, before and after the box's button (a live switch isn't run: its frames
+ * would make the shots and the texts differ).
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
 /** A graph demo's element by its id's name (`graphs.ts`' `GRAPH_ID`) */
 const GRAPH = (name: string) => `#hubDemoGraph${name}`;
 const TILE = (name: string, part: string) => `${GRAPH(name)} .aekStatTile__${part}`;
+/** The frame time series' third series' summary line */
+const RENDER_ITEM = `${GRAPH('StagesSeries')} .aekTimeSeries__item:nth-child(3)`;
+/** The frame time series' top grid line's value: its range's end */
+const SERIES_TOP_TICK = `${GRAPH('StagesSeries')} .aekTimeSeries__gridLine:last-child .aekTimeSeries__tick`;
 
 /** The graphs' checks by their demo's key (`data-hub-demo`) */
 export const GRAPHS_CHECKS: Record<string, UiDemoChecks> = {
@@ -113,6 +118,51 @@ export const GRAPHS_CHECKS: Record<string, UiDemoChecks> = {
             expectAttr: `${GRAPH('StagesChart')} .aekChart__toggle`,
             name: 'aria-expanded',
             value: 'false',
+          },
+        ],
+      },
+    ],
+  },
+  timeSeries: {
+    keyboard: [
+      {
+        name: 'no keys; the plot hidden, the summary its text; a long frame grows the range',
+        steps: [
+          {
+            expectAttr: `${GRAPH('StagesSeries')} .aekTimeSeries__plot`,
+            name: 'aria-hidden',
+            value: 'true',
+          },
+          { expectText: `${RENDER_ITEM} .aekTimeSeries__label`, text: 'Render' },
+          { expectText: `${RENDER_ITEM} .aekTimeSeries__value`, text: '6.5 ms' },
+          { expectText: `${RENDER_ITEM} .aekTimeSeries__range`, text: 'min 4.5, max 11.3' },
+          { expectText: SERIES_TOP_TICK, text: '20' },
+          { click: 'A long frame' },
+          { expectText: SERIES_TOP_TICK, text: '50' },
+          {
+            expectAttr: `${GRAPH('DrawCallsSeries')} .aekTimeSeries__plot`,
+            name: 'aria-hidden',
+            value: 'true',
+          },
+          { expectCount: `${GRAPH('DrawCallsSeries')} .aekTimeSeries__gridLine`, count: 0 },
+        ],
+      },
+    ],
+  },
+  graphMonitor: {
+    keyboard: [
+      {
+        name: 'no keys; the value is the text, the graph hidden; the grid’s graph loaded',
+        steps: [
+          { expectText: `${GRAPH('FrameMonitor')} .aekMonitor__value`, text: '15.0' },
+          {
+            expectAttr: `${GRAPH('FrameMonitor')} .aekTimeSeries__plot`,
+            name: 'aria-hidden',
+            value: 'true',
+          },
+          {
+            expectCount: '[data-hub-demo="graphMonitor"] .aekPropertyGrid .aekTimeSeries',
+            count: 1,
           },
         ],
       },

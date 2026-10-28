@@ -27,7 +27,8 @@ and button. None of it is in the first download. Three pieces load or carry more
   [`createSegmentedControl`](api:createSegmentedControl),
   [`createSelectField`](api:createSelectField), [`createDropDown`](api:createDropDown),
   [`createTextField`](api:createTextField), [`createCheckbox`](api:createCheckbox),
-  [`createSwitch`](api:createSwitch) and [`createMonitor`](api:createMonitor).
+  [`createSwitch`](api:createSwitch), [`createMonitor`](api:createMonitor) and
+  [`createGraphMonitor`](api:createGraphMonitor).
 - The value editors: [`createColorField`](api:createColorField),
   [`createVectorField`](api:createVectorField), [`createRotationField`](api:createRotationField),
   [`createQuaternionField`](api:createQuaternionField), [`createAngleDial`](api:createAngleDial),

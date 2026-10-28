@@ -1,7 +1,7 @@
 The fields a settings menu, an inspector or an editor panel is built from, each bound to a value
 of yours: [numbers and sliders](#number-fields), [choices](#radio-groups-and-segmented-controls)
 and [selects](#selects-and-drop-downs), [text](#text-fields), [checkboxes and switches](#checkboxes-and-switches)
-and read-only [monitors](#monitors); value editors for [colours](#colour-fields),
+and read-only [monitors](#monitors) (as text or [a graph](#graph-monitors)); value editors for [colours](#colour-fields),
 [vectors and rotations](#vectors-rotations-and-quaternions), [angles and 2D points](#angle-dials-and-2d-pads),
 [gradients](#gradient-editors) and [curves](#curve-editors); and the containers that hold them:
 [folders and fieldsets](#folders-and-fieldsets), the [property grid](#property-grids) and a

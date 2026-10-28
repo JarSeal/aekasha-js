@@ -183,6 +183,9 @@ export type FieldSpec<T> = {
   /** Runs on every read of the bound value (a refresh's, the tick's, a show's), before it: a part
    * with a binding of its own reads it too (a colour's intensity) */
   onRead?: (fromRefresh: boolean) => void;
+  /** Runs after every read of the bound value, changed or not, with it: a graph monitor's sample
+   * (Tweakpane's graph takes one per read, a refresh's too) */
+  onSample?: (value: T) => void;
   /** A monitor: never flashes, and has no reset button (nothing the user writes) */
   isMonitor?: boolean;
   /** The control is text with no part to label (a monitor's single line): the label is a
@@ -623,9 +626,11 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
 
   const read = (fromRefresh: boolean) => {
     spec.onRead?.(fromRefresh);
-    if (!binding.sync()) return;
-    draw();
-    if (fromRefresh && !spec.isMonitor) flash.flash();
+    if (binding.sync()) {
+      draw();
+      if (fromRefresh && !spec.isMonitor) flash.flash();
+    }
+    spec.onSample?.(binding.peek());
   };
 
   const field: Field<T> = {

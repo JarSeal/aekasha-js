@@ -1,16 +1,23 @@
 /**
  * The component library's graphs and figures (the Hub's `features/ui-kit/data/` page, p805 D9):
- * the sparkline, the donut, the stacked bar, the stat tile and the static chart; the time series
- * joins them. Out of `data.ts` for its size. Every figure is fixed (no clock, no random), so
- * the screenshots hold; each sits on a `surface` panel, the surface the chart series are checked
- * on.
+ * the sparkline, the donut, the stacked bar, the stat tile, the static chart, the time series and
+ * the graph monitor (on the forms page). Out of `data.ts` for its size. Every figure is fixed (no
+ * clock, no random), so the screenshots hold: a live run is a kit switch in the box (off at the
+ * start, so no state of its own); each sits on a `surface` panel, the surface the chart series
+ * are checked on.
  */
 import {
+  addPropertyGridItems,
+  createBindingScheduler,
   createChart,
   createDonut,
+  createGraphMonitor,
+  createPropertyGrid,
   createSparkline,
   createStackedBar,
   createStatTile,
+  createSwitch,
+  createTimeSeries,
 } from 'aekasha/ui';
 import type { CMPHandle, GraphPart } from 'aekasha/ui';
 import { ID_PREFIX, addButton, addGroup, addKitRoot } from './page';
@@ -347,6 +354,141 @@ const initChartDemo: Demo = (box) => {
   );
 };
 
+// --- Time series ---
+
+/** A frame's stages at sample `i`: fixed figures, a slow wave each and a hitch every 97 */
+const writeStages = (out: Float64Array, i: number) => {
+  out[0] = 2 + Math.sin(i / 20) * 0.6;
+  out[1] = 1.2 + ((i * 7) % 11) / 20;
+  out[2] = 6 + Math.sin(i / 45) * 1.5 + (i % 97 === 50 ? 4 : 0);
+};
+
+/** A kit switch for a live run (no state of its own: the box's buttons are its states, and it's
+ * off at the start, so the shots hold) */
+const addLiveSwitch = (parent: HTMLElement, label: string, onToggle: (on: boolean) => void) => {
+  const live = createSwitch({ label, value: false, onChange: (on) => onToggle(on) });
+  parent.append(live.cmp.elem);
+};
+
+/** Runs `step` once per animation frame while `on` */
+const createFrameLoop = (step: () => void) => {
+  let frame: number | null = null;
+  const loop = () => {
+    frame = requestAnimationFrame(loop);
+    step();
+  };
+  return (on: boolean) => {
+    if (on && frame === null) frame = requestAnimationFrame(loop);
+    if (!on && frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+  };
+};
+
+const initTimeSeriesDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const stages = addPanel(root, 'Three series over 300 frames, a budget line and the summary');
+  const frame = createTimeSeries({
+    id: GRAPH_ID('StagesSeries'),
+    series: [{ label: 'Physics' }, { label: 'Logic' }, { label: 'Render' }],
+    capacity: 300,
+    unit: 'ms',
+    format: (ms) => ms.toFixed(1),
+    thresholds: [{ value: 16.7, label: 'Budget 16.7 ms' }],
+  });
+  stages.append(frame.cmp.elem);
+  const sample = new Float64Array(3);
+  let next = 0;
+  const pushNext = () => {
+    writeStages(sample, next++);
+    frame.pushAll(sample);
+  };
+  for (let i = 0; i < 300; i++) pushNext();
+  addLiveSwitch(stages, 'Live: a sample each frame', createFrameLoop(pushNext));
+  addButton(stages, 'A long frame', () => {
+    sample[0] = 9;
+    sample[1] = 3.4;
+    sample[2] = 30;
+    frame.pushAll(sample);
+    for (let i = 0; i < 8; i++) pushNext();
+  });
+  addButton(stages, 'Fix the range at 0 to 10 ms', () => frame.setRange({ min: 0, max: 10 }));
+
+  const calls = addPanel(root, 'One series, no ticks, a gap where it wasn’t measured');
+  const drawCalls = createTimeSeries({
+    id: GRAPH_ID('DrawCallsSeries'),
+    series: [{ label: 'Draw calls', color: 'var(--aek-chart-4)' }],
+    capacity: 120,
+    ticks: false,
+    format: (count) => count.toFixed(0),
+  });
+  calls.append(drawCalls.cmp.elem);
+  for (let i = 0; i < 120; i++) {
+    drawCalls.push(i >= 70 && i < 76 ? NaN : 240 + Math.round(Math.sin(i / 9) * 60) + (i % 5) * 4);
+  }
+};
+
+// --- Graph monitor ---
+
+/** A graph monitor's reads: a fixed run of frame times, a hitch in it */
+const FRAME_READS = Array.from(
+  { length: 64 },
+  (_, i) => 14 + Math.round((Math.sin(i / 5) * 2 + (i % 4) * 0.3 + (i === 40 ? 9 : 0)) * 10) / 10
+);
+
+const initGraphMonitorDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const panel = addPanel(root, 'A number read every 100 ms, its reads as a graph under its text');
+  // Each read takes the next figure: the creation's, then the refreshes', then the tick's
+  let reads = 0;
+  const scheduler = createBindingScheduler({ visible: false });
+  const monitor = createGraphMonitor({
+    id: GRAPH_ID('FrameMonitor'),
+    label: 'Frame time',
+    get: () => FRAME_READS[reads++ % FRAME_READS.length],
+    unit: 'ms',
+    precision: 1,
+    interval: 100,
+    min: 0,
+    thresholds: [{ value: 16.7, label: '60 fps' }],
+    scheduler,
+  });
+  panel.append(monitor.cmp.elem);
+  // Its buffer filled from the fixed reads: a refresh is a read, so a sample
+  for (let i = 1; i < FRAME_READS.length; i++) scheduler.refresh();
+
+  const items = addPanel(
+    root,
+    'A property grid item with view: "graph", loaded on first use: one read until Live'
+  );
+  const stats = { drawCalls: 240 };
+  const grid = createPropertyGrid({ visible: false });
+  addPropertyGridItems(grid, [
+    {
+      target: stats,
+      key: 'drawCalls',
+      label: 'Draw calls',
+      view: 'graph',
+      readonly: true,
+      precision: 0,
+    },
+    { target: stats, key: 'drawCalls', label: 'As text', readonly: true, precision: 0 },
+  ]);
+  items.append(grid.cmp.elem);
+
+  let frames = 0;
+  const run = createFrameLoop(() => {
+    frames++;
+    stats.drawCalls = 240 + Math.round(Math.sin(frames / 40) * 60);
+  });
+  addLiveSwitch(panel, 'Live: both read on their tick', (on) => {
+    scheduler.setVisible(on);
+    grid.scheduler.setVisible(on);
+    run(on);
+  });
+};
+
 /** The graphs' demos by their box's key (`data-hub-demo`) */
 export const GRAPHS_DEMOS: Record<string, Demo> = {
   sparkline: initSparklineDemo,
@@ -354,4 +496,6 @@ export const GRAPHS_DEMOS: Record<string, Demo> = {
   stackedBar: initStackedBarDemo,
   statTile: initStatTileDemo,
   chart: initChartDemo,
+  timeSeries: initTimeSeriesDemo,
+  graphMonitor: initGraphMonitorDemo,
 };

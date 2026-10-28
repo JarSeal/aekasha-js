@@ -103,6 +103,8 @@ export { createCheckbox, createSwitch } from './forms/Checkbox';
 export type { Checkbox, CheckboxProps, Switch, SwitchProps } from './forms/Checkbox';
 export { createMonitor } from './forms/Monitor';
 export type { Monitor, MonitorProps } from './forms/Monitor';
+export { createGraphMonitor } from './forms/GraphMonitor';
+export type { GraphMonitorProps } from './forms/GraphMonitor';
 export { createNumberField } from './forms/NumberField';
 export { createTextField } from './forms/TextField';
 export type { TextField, TextFieldProps } from './forms/TextField';
@@ -302,6 +304,13 @@ export { createSparkline } from './data/graphs/Sparkline';
 export type { Sparkline, SparklineProps } from './data/graphs/Sparkline';
 export { createStackedBar } from './data/graphs/StackedBar';
 export type { StackedBar, StackedBarProps } from './data/graphs/StackedBar';
+export { createTimeSeries } from './data/graphs/TimeSeries';
+export type {
+  TimeSeries,
+  TimeSeriesProps,
+  TimeSeriesSeries,
+  TimeSeriesThreshold,
+} from './data/graphs/TimeSeries';
 export { createStatTile } from './data/StatTile';
 export type { StatTile, StatTileProps } from './data/StatTile';
 export { createTable } from './data/Table';

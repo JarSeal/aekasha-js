@@ -442,6 +442,45 @@ and never flashes.
 | Custom properties | `--aek-monitor-bg`, `--aek-monitor-color`, `--aek-monitor-font` (the multiline block's)                 |
 | Assistive tech    | Text read after its label, not announced; the multiline block a read-only text area and a tab stop      |
 
+### Graph monitors
+
+[`createGraphMonitor`](api:createGraphMonitor) is a number monitor with a graph of its reads under
+its text (Tweakpane's `view: 'graph'`).
+
+```ts
+const frameTime = createGraphMonitor({
+  label: 'Frame time',
+  get: () => stats.frameMs,
+  unit: 'ms',
+  precision: 1,
+  interval: 100,
+  capacity: 100, // 10 s of reads
+  thresholds: [{ value: 16.7, label: '60 fps' }],
+});
+statsPanel.add(frameTime.cmp);
+```
+
+::: demo graphMonitor
+:::
+
+- **Samples.** Every read is one: the tick's every `interval` ms, and a refresh's. The graph holds
+  the last `capacity` (default 64, Tweakpane's `bufferSize`); a value that isn't a number is a gap.
+- **Range.** `min` and `max`, or a nice range over the reads and the `thresholds` that grows when
+  a read passes it and shrinks after a whole buffer under a lower one.
+- **In a property grid.** An item with `view: 'graph'` (and `bufferSize`, Tweakpane's names) is a
+  graph monitor. A grid loads its graph the first time it makes one, showing the text until then,
+  so a grid without one carries none of it.
+- **The graph** is a [time series](hub:features/ui-kit/data#time-series) with no ticks and no
+  summary: the monitor's text is its value.
+
+| Graph monitor     |                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| Props             | [`GraphMonitorProps`](api:GraphMonitorProps), a threshold's [`TimeSeriesThreshold`](api:TimeSeriesThreshold)   |
+| Parts             | The monitor's, `.aekMonitor` with `data-graph`, `__value`, `__unit` and `__graph` holding the `.aekTimeSeries` |
+| States            | `data-kind="monitor"`, `data-disabled`                                                                         |
+| Custom properties | The monitor's, `--aek-graph-monitor-height` (the graph's) and the time series'                                 |
+| Assistive tech    | The monitor's: text read after its label, not announced; the graph hidden                                      |
+
 ## The fields' context menu
 
 [`createFieldContextMenu`](api:createFieldContextMenu) gives every field in a container (a property

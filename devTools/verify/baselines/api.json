@@ -3013,6 +3013,9 @@
     "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
     },
+    "src/_engine/ui/core/ThemeWatch.ts": {
+      "onKitThemeChange": "Function"
+    },
     "src/_engine/ui/core/Window.ts": {
       "getWindowSize": "Function",
       "onBoundsResize": "Function",
@@ -3076,6 +3079,13 @@
       "createStackedBar": "Function",
       "StackedBar": "TypeAlias",
       "StackedBarProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/TimeSeries.ts": {
+      "createTimeSeries": "Function",
+      "TimeSeries": "TypeAlias",
+      "TimeSeriesProps": "TypeAlias",
+      "TimeSeriesSeries": "TypeAlias",
+      "TimeSeriesThreshold": "TypeAlias"
     },
     "src/_engine/ui/data/List.ts": {
       "createList": "Function"
@@ -3369,10 +3379,17 @@
       "GradientEditor": "TypeAlias",
       "GradientEditorProps": "TypeAlias"
     },
+    "src/_engine/ui/forms/GraphMonitor.ts": {
+      "attachMonitorGraph": "Function",
+      "createGraphMonitor": "Function",
+      "GraphMonitorProps": "TypeAlias"
+    },
     "src/_engine/ui/forms/Monitor.ts": {
+      "buildGraphMonitor": "Function",
       "buildMonitor": "Function",
       "createMonitor": "Function",
       "getVectorKeys": "Function",
+      "GraphMonitorBuild": "TypeAlias",
       "Monitor": "TypeAlias",
       "MonitorBuild": "TypeAlias",
       "MonitorProps": "TypeAlias",
@@ -3706,8 +3723,12 @@
       "dispatchPointer": "Function",
       "KitKeyInit": "TypeAlias",
       "KitPointerInit": "TypeAlias",
+      "Recorded2dCall": "TypeAlias",
+      "stubCanvas2d": "Function",
       "stubClipboard": "Function",
+      "stubIntersectionObserver": "Function",
       "stubKitDomAsync": "Function",
+      "stubMatchMedia": "Function",
       "stubResizeObserver": "Function"
     },
     "src/_engine/utils/Assert.ts": {
@@ -4825,6 +4846,7 @@
       "GradientEditorProps",
       "GradientStop",
       "GradientValue",
+      "GraphMonitorProps",
       "GraphPart",
       "GraphPartFormat",
       "HudRootProps",
@@ -4948,6 +4970,10 @@
       "TagProps",
       "TextField",
       "TextFieldProps",
+      "TimeSeries",
+      "TimeSeriesProps",
+      "TimeSeriesSeries",
+      "TimeSeriesThreshold",
       "ToastDirection",
       "ToastProps",
       "ToastType",
@@ -5001,6 +5027,7 @@
       "createFolder",
       "createForm",
       "createGradientEditor",
+      "createGraphMonitor",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",
@@ -5034,6 +5061,7 @@
       "createTabs",
       "createTag",
       "createTextField",
+      "createTimeSeries",
       "createToaster",
       "createTooltip",
       "createTree",
