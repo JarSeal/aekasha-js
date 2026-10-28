@@ -594,6 +594,34 @@ undo / redo scripts. Each phase stops after each section for review.
    - On `main`: `yarn verify:scenes --update`, `yarn verify:embed`, `yarn verify:ui`,
      `yarn sbp --profile all`.
    - A `yarn build:test` with the debugger's chunks and Tweakpane's share noted here (D13).
+
+   As run (2026-10-28):
+
+   - `engine-6` and `p806-debugger-migration` cut from `main` at `3adfac2b` (the plan's commit,
+     on `main` already, so nothing to commit). The branch's first commit, `a0d3ced2`, speeds up
+     `yarn verify:scenes` on WSL2 (the Windows Chrome on the GPU); it changes only
+     `devTools/verify/`, so the baselines below, taken on it, are `main`'s app.
+   - `yarn sbp --profile all`: 29 budgets within, every diff unchanged. First downloads (gzip):
+     app 384.3 kB, banner 287.4 kB, uiKit 286.7 kB.
+   - `yarn verify:baselines`: unchanged; no debug code in production or either embed.
+   - `yarn verify:embed`: 7 scenarios pass (WebGPU, Windows Chrome 155, AMD RDNA 3).
+   - `yarn verify:ui`: every state and script passes (284 s, local Chromium).
+   - `yarn verify:scenes --update`: 26 scenes × 4 configurations, 104 recorded, no errors, on
+     WebGPU (Windows Chrome 155, AMD RDNA 3), in 592 s; the baselines in
+     `.cache/verify/scenes/webgpu/`.
+   - `yarn build:test`, the debugger's share (`dist-stats/module-sizes.json`; a debug module is a
+     `_dbg__` file or one under an engine `debug/` folder):
+     - 49 lazy JS chunks hold debug, Tweakpane or stats-gl code: 638.7 kB, 221.5 kB gzip; their
+       CSS 12 files, 51.3 kB, 12.6 kB gzip.
+     - Tweakpane is one chunk of its own (`tweakpane-*.js`): 148.6 kB, 30.5 kB gzip, about 14 %
+       of the debugger's JS gzip. stats-gl (p807's) is in `_dbg__Stats-*.js`: 37.6 kB, 10.6 kB
+       gzip.
+     - The modules: debug 484.2 kB minified (16.7 kB of it the thin wrappers in the entry
+       chunk), Tweakpane 148.6, stats-gl 33.2; the kit inside the debug chunks only 2.8 kB (the
+       rest of what the debugger uses is in the entry chunk, shared with the app).
+     - The largest: `_dbg__Character` 16.2 kB gzip, `_dbg__Profiler` 14.9, `_dbg__MaterialEditor`
+       13.7, `_dbg__SkyBox` 13.0, `_dbg__Stats` 10.6, `_dbg__Assets` 10.2.
+
 2. **Before shots and axe** (a scratchpad Playwright script, not committed):
    - Every drawer tab, profiler tab, edit window kind and debug dialog, in `testDebugScene` and the
      scene-tab scenes.
