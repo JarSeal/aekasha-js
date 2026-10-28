@@ -32,8 +32,8 @@
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
- * at `/aekasha/`), and runs headless on WebGPU (WebGL2 through SwiftShader with `--webgl`, and on
- * WSL2 without `--headed`). Every line also goes to `.cache/verify/progress.log`. Exits 1 on a
+ * at `/aekasha/`), and runs headless on WebGPU (on WSL2 the Windows Chrome's, `browser.ts`'
+ * `launchVerifyChromiumAsync`; WebGL2 through SwiftShader with `--webgl`). Every line also goes to `.cache/verify/progress.log`. Exits 1 on a
  * failed check, 2 on an error.
  */
 import fs from 'fs';
@@ -45,7 +45,7 @@ import { ROOT } from '../paths';
 import { getEmbedProfiles } from '../gather/output';
 import { buildBundles } from '../sbp/appBuild';
 import { getEmbedEntryFileName, getEmbedOutDir } from '../sbp/embedPaths';
-import { isWSL, launchChromium } from './browser';
+import { launchVerifyChromiumAsync } from './browser';
 import {
   type Box,
   type Rect,
@@ -634,11 +634,14 @@ const main = async () => {
   const started = Date.now();
   if (args.build) await buildBundles({ isApp: false, embedIds: profiles.map((p) => p.id) });
 
-  const useWebGL = args.webgl || (isWSL() && !args.headed);
-  const browser = await launchChromium({ useWebGL, headed: args.headed });
-  out(
-    `${DIM}Chromium, ${useWebGL ? 'WebGL2 (SwiftShader)' : 'WebGPU'}, ${VIEWPORT.width} × ${VIEWPORT.height}${RESET}`
-  );
+  // The profiles' servers start per profile, so the Windows Chrome is checked by their first page
+  const launched = await launchVerifyChromiumAsync({
+    webgl: args.webgl,
+    headed: args.headed,
+    onNote: (note) => out(`${DIM}${note}${RESET}`),
+  });
+  const { browser } = launched;
+  out(`${DIM}${launched.label}, ${VIEWPORT.width} × ${VIEWPORT.height}${RESET}`);
   let failed = 0;
   try {
     for (const profile of profiles) {
@@ -659,7 +662,7 @@ const main = async () => {
       }
     }
   } finally {
-    await browser.close();
+    await launched.closeAsync();
   }
   const took = `${((Date.now() - started) / 1000).toFixed(1)} s`;
   if (failed) {

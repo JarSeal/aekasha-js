@@ -15,9 +15,11 @@
  * order breaks ties between systems, so it moves when a registration moves.
  *
  * It starts its own dev server (port 8092 or the next free one) unless `--url` points at one.
- * Headless WebGPU can't render on WSL2, so there (and with `--webgl`) the page gets no
- * `navigator.gpu` and the engine renders on WebGL2 (SwiftShader): WebGPU-only regressions need a
- * `--headed` run on a real GPU.
+ * On WSL2 it drives the Windows Chrome over its debugging port (`browser.ts`'
+ * `launchVerifyChromiumAsync`): headless WebGPU on the real GPU, many times faster than WSL2's own
+ * Chromium, where headless WebGPU can't render. With `--webgl`, `AEK_VERIFY_WINDOWS_CHROME=false`,
+ * or a Windows Chrome that doesn't start (a note), the page gets no `navigator.gpu` and the engine
+ * renders on WebGL2 (SwiftShader).
  *
  * `--browser firefox` (Playwright's Firefox, `npx playwright-core install firefox`) is the
  * cross-browser determinism run: the debug configurations only, always on WebGL2, and only their
@@ -34,7 +36,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { firefox } from 'playwright-core';
-import { isWSL, launchChromium } from './browser';
+import { launchVerifyChromiumAsync, type VerifyChromium } from './browser';
 import { startVerifyServerAsync } from './devServer';
 import { ROOT } from '../paths';
 import { readGit } from '../git';
@@ -89,11 +91,20 @@ const getCommit = () => {
   return readGit(['status', '--porcelain']) ? `${sha}+dirty` : sha;
 };
 
-const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: boolean) => {
+const launchBrowserAsync = async (
+  browser: VerifyBrowser,
+  opts: { webgl: boolean; headed: boolean; probeUrl: string; onNote: (note: string) => void }
+): Promise<VerifyChromium> => {
   if (browser === 'firefox') {
     try {
       // Playwright's own build: a system Firefox has no remote protocol Playwright can drive
-      return await firefox.launch({ headless: !headed });
+      const ff = await firefox.launch({ headless: !opts.headed });
+      return {
+        browser: ff,
+        useWebGL: true,
+        label: `Firefox ${ff.version()}, WebGL2, hashes against Chromium's baseline`,
+        closeAsync: () => ff.close(),
+      };
     } catch (err) {
       return fail(
         `Firefox didn't launch: ${(err as Error).message}\n` +
@@ -102,7 +113,7 @@ const launchBrowser = async (browser: VerifyBrowser, useWebGL: boolean, headed: 
     }
   }
   try {
-    return await launchChromium({ useWebGL, headed });
+    return await launchVerifyChromiumAsync(opts);
   } catch (err) {
     return fail((err as Error).message);
   }
@@ -178,8 +189,6 @@ const main = async () => {
   }
 
   const isFirefox = args.browser === 'firefox';
-  const useWebGL = isFirefox || args.webgl || (isWSL() && !args.headed);
-  const requested: Backend = useWebGL ? 'webgl' : 'webgpu';
   const baselines = new Map<Backend, BaselineFile>();
   const onProblem = (problem: string) => out(`${YELLOW}${problem}${RESET}`);
   if (isFirefox) checkChromiumBaselines({ baselines, isRecording: false, onProblem });
@@ -187,25 +196,34 @@ const main = async () => {
     ? null
     : await startVerifyServerAsync().catch((err: Error) => fail(err.message));
   const baseUrl = own ? own.url : args.url!;
-  const browser = await launchBrowser(args.browser, useWebGL, args.headed);
+  const launched = await launchBrowserAsync(args.browser, {
+    webgl: args.webgl,
+    headed: args.headed,
+    probeUrl: baseUrl,
+    onNote: onProblem,
+  });
+  const { browser, useWebGL } = launched;
+  const requested: Backend = useWebGL ? 'webgl' : 'webgpu';
   const commit = getCommit();
 
-  const close = async () => {
-    await browser.close().catch(() => undefined);
-    await own?.server.close();
-  };
+  let closing: Promise<void> | null = null;
+  const close = () =>
+    (closing ??= (async () => {
+      await launched.closeAsync().catch(() => undefined);
+      await own?.server.close();
+    })());
+  // A Ctrl-C ends the run without a summary or a recording: the loop stops at the next page
+  // instead of failing every page left while the browser closes (a Windows Chrome takes seconds)
+  let isStopping = false;
   process.once('SIGINT', () => {
+    isStopping = true;
+    out(`${YELLOW}Stopping (Ctrl-C)…${RESET}`);
     void close().then(() => process.exit(130));
   });
 
-  const renderer = isFirefox
-    ? `Firefox ${browser.version()}, WebGL2, hashes against Chromium's baseline`
-    : requested === 'webgl'
-      ? `WebGL2 (SwiftShader${args.webgl ? '' : ', WSL2'})`
-      : 'WebGPU';
   out(
     `Scene runner against ${baseUrl}: ${sceneIds.length} scene(s) × ${args.configs.join(', ')}, ` +
-      `${renderer}${args.update ? ', recording baselines' : ''}`
+      `${launched.label}${args.update ? ', recording baselines' : ''}`
   );
   out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}\n`);
 
@@ -228,6 +246,8 @@ const main = async () => {
       for (const config of args.configs) {
         const isFirstPage = !ctx.backend;
         const r = await runOne(ctx, sceneId, config);
+        // The SIGINT handler exits once the browser is closed
+        if (isStopping) return;
         if (isFirstPage && ctx.backend && ctx.backend !== requested) {
           out(
             `${YELLOW}No WebGPU here: the engine fell back to WebGL2 (the webgl baseline)${RESET}`
