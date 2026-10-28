@@ -695,6 +695,12 @@ What follows is the sketch as written.
 
 ### p806 — Debugger migration (engine 6.0.0)
 
+Written: `p806_debugger-migration.md` (2026-10-28, its decisions proposed for review). From its
+grounding: 26 declarative sections (not 30), 20 `createDebuggerTab` calls, no `onCreate` or
+`e.api` user and one `custom` (engine), so its breaks are type-level for an app; the drawer's tab
+menu becomes a vertical icon rail (its D6), the debugger keeps unlayered CSS modules (its D9), and
+`engine-6` is cut in its Phase 0. What follows is the sketch as written.
+
 - The drawer, the tab host, the pane builder, the profiler window, the editor drawer and the
   on-screen tools on the components; the compact density; the debugger's styles on the tokens.
 - The port: the 30 declarative sections mechanically (D9's names), the 8 imperative panes
