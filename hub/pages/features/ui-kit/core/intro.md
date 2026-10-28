@@ -3,7 +3,8 @@ toolbars, [links](#links), [badges and tags](#badges-and-tags),
 [key hints and input glyphs](#key-hints-and-input-glyphs) and [icons](#icons), and the pieces that
 show a wait: [spinners and progress bars](#spinners-and-progress-bars),
 [skeletons, dividers and empty states](#skeletons-dividers-and-empty-states) and
-[loading overlays](#loading-overlays).
+[loading overlays](#loading-overlays); and the pieces that lay out a panel's parts: [tabs](#tabs), [accordions](#accordions) and
+[splitters](#splitters).
 
 Each is a `createX(props)` that returns its handle: `{ cmp, …setters }`. Add its `cmp` where it
 goes (under the HUD root, or a panel of yours), and remove it with `cmp.remove()`, which clears

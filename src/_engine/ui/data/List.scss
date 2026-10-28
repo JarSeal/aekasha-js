@@ -1,0 +1,259 @@
+// The list's default styles (List.ts, p805 D6), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Rows on the surface they're on,
+// each at least 24 px tall (WCAG 2.5.8): the title in the text colour, the sub title, description
+// and suffix muted (4.5 on the surfaces, Tokens.test.ts), numbers in tabular figures. An
+// interactive row has the hover's surface; a selected one the accent's soft background and a bar
+// at its start (a shape, not only a colour); the focus ring is inset (the rows' box may scroll).
+// The heading, the search field and the empty lines are CollectionParts.scss'.
+@layer aek.components {
+  :where(.aekList) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekList__rows) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--aek-list-max-height, none);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  :where(.aekList__rows[hidden], .aekList__row[hidden]) {
+    display: none;
+  }
+
+  // Virtual rows (D8): every row one height, the box 12 rows tall unless the app says, the
+  // spacers standing in for the rows not rendered, the focused row kept at its offset
+  :where(.aekList__rows[data-virtual]) {
+    max-height: var(--aek-list-max-height, calc(12 * var(--aek-list-row-height, 28px)));
+  }
+
+  :where(.aekList__rows[data-virtual] > .aekList__row) {
+    flex: none;
+    height: var(--aek-list-row-height);
+    overflow: hidden;
+  }
+
+  :where(.aekList__spacer) {
+    flex: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(.aekList__row[data-pinned]) {
+    position: absolute;
+    inset-inline: 0;
+  }
+
+  :where(.aekList__row) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: stretch;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+  }
+
+  // The part that holds the content: the row itself, or a grid row's first cell
+  :where(.aekList__rows[data-mode='static'] > .aekList__row, .aekList__rows[data-mode='listbox']
+      > .aekList__row, .aekList__main) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+    padding: var(--aek-space-1) var(--aek-space-3);
+  }
+
+  :where(.aekList__rows[data-mode='listbox'] > .aekList__row, .aekList__main) {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekList__rows[data-mode='listbox'] > .aekList__row:hover, .aekList__row:hover
+      > .aekList__main) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekList__row[aria-selected='true']) {
+    background-color: var(--aek-accent-soft);
+    box-shadow: inset 3px 0 0 var(--aek-list-selected-color, var(--aek-accent));
+  }
+
+  :where(.aekList__row[aria-disabled='true'], .aekList__row[data-disabled]) {
+    color: var(--aek-text-disabled);
+  }
+
+  :where(.aekList__row[aria-disabled='true']),
+  :where(.aekList__row[aria-disabled='true']) :where(.aekList__main) {
+    cursor: not-allowed;
+  }
+
+  // Inside the rows' scroll box: a ring outside the row would be cut
+  :where(.aekList__row:focus-visible, .aekList__main:focus-visible, .aekList__action:focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  // A reorder's (D8): a grip the drag starts from on a touch screen, at least 24 px wide
+  :where(.aekList__handle) {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    min-width: 24px;
+    margin-inline: calc(-1 * var(--aek-space-2)) var(--aek-space-1);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-icon-size-sm);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  :where(.aekList__handle svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  // The dragged row: lifted over the others (it follows the pointer by a transform the script
+  // writes, none under reduced motion), its outline the sign that holds without movement
+  :where(.aekList__row[data-dragging]) {
+    z-index: 1;
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    outline: var(--aek-focus-ring-width) dashed var(--aek-accent);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+    cursor: grabbing;
+    // Lifted at once: the hover's fade would leave the rows under it showing through
+    transition: none;
+  }
+
+  // Where it drops: a line across the box at the gap
+  :where(.aekList__dropLine) {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 2;
+    height: 2px;
+    margin-top: -1px;
+    background-color: var(--aek-accent);
+    pointer-events: none;
+  }
+
+  :where(.aekList__content) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  // The size is its font size: getSvgIcon's icon is 1em
+  :where(.aekList__icon) {
+    display: inline-flex;
+    flex: none;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekList__icon svg, .aekList__actionIcon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekList__badge) {
+    flex: none;
+  }
+
+  :where(.aekList__text) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.aekList__subTitle) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__title[data-placeholder]) {
+    color: var(--aek-text-muted);
+    font-style: italic;
+  }
+
+  :where(.aekList__description) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekList__suffix) {
+    flex: none;
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__subTitle[hidden], .aekList__description[hidden], .aekList__suffix[hidden], .aekList__icon[hidden]) {
+    display: none;
+  }
+
+  :where(.aekList__actionCell) {
+    display: flex;
+    flex: none;
+    align-items: center;
+    padding-inline-end: var(--aek-space-1);
+  }
+
+  :where(.aekList__action) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: max(24px, var(--aek-space-7));
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-sm);
+    background-color: transparent;
+    color: var(--aek-text);
+    font-size: var(--aek-icon-size-sm);
+    cursor: pointer;
+    appearance: none;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  // A hidden action keeps its cell's width, so the other actions stay aligned
+  :where(.aekList__action[hidden]) {
+    display: inline-flex;
+    visibility: hidden;
+  }
+
+  :where(.aekList__action[aria-pressed='false']) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekList__action:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+    color: var(--aek-text);
+  }
+
+  :where(.aekList__action:disabled) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+}

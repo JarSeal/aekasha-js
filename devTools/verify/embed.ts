@@ -102,7 +102,7 @@ const UI_KIT_FONTS = ['window', 'toast', 'listItem', 'tooltip'] as const;
 const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
-/** The drag, which keeps the 220 × 190 window inside the 640 × 360 container */
+/** The drag, which keeps the 220 × 230 window inside the 640 × 360 container */
 const UI_KIT_DRAG = { x: 120, y: 60 };
 /** The shrunk target, which the dragged window no longer fits at its place */
 const UI_KIT_SHRUNK = { width: 320, height: 200 };

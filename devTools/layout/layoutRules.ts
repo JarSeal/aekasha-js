@@ -28,10 +28,20 @@ const A = 'src/app/';
  * The UI kit's groups (p803 D2): `core/` (CMP, the HUD root, the bounds, motion, icons),
  * `components/` (one module per component), `overlays/` (the windows, the toaster, the overlay
  * layer), `forms/` (p804's fields, value editors and containers, the drop-down among them, with
- * their binding and scheduler in `binding/`), `styles/`, `fonts/` and `testing/` (the tests'
- * shared helpers). p805 adds `data/`, p808 `game/`.
+ * their binding and scheduler in `binding/`), `data/` (p805's data display: the table, list, tree,
+ * graphs and stat tile, with their shared filter and opt-in behaviours), `styles/`, `fonts/` and
+ * `testing/` (the tests' shared helpers). p808 adds `game/`.
  */
-const UI_KIT_FOLDERS = ['core', 'components', 'overlays', 'forms', 'styles', 'fonts', 'testing'];
+const UI_KIT_FOLDERS = [
+  'core',
+  'components',
+  'overlays',
+  'forms',
+  'data',
+  'styles',
+  'fonts',
+  'testing',
+];
 
 /**
  * The engine's layout since p608's move (D9): a file outside these folders (a new top-level

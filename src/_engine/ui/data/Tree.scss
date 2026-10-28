@@ -1,0 +1,257 @@
+// The tree's default styles (Tree.ts, p805 D7), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). One line per row, at least 24 px
+// tall (WCAG 2.5.8), indented by its level (`--aek-tree-level`, written by the tree) times
+// `--aek-tree-indent`; the open mark a chevron turning a quarter as the node opens (a 24 px target).
+// A selected row has the accent's soft background and a bar at its start (a shape, not only a
+// colour); the focus ring is inset (the rows' box may scroll). The heading, the search field and
+// the empty lines are CollectionParts.scss'.
+@layer aek.components {
+  :where(.aekTree) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekTree__rows) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--aek-tree-max-height, none);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+  }
+
+  :where(.aekTree__rows[hidden], .aekTree__row[hidden]) {
+    display: none;
+  }
+
+  // Virtual rows (D8): every row one height, the box 12 rows tall unless the app says, the
+  // spacers standing in for the rows not rendered, the focused row kept at its offset
+  :where(.aekTree__rows[data-virtual]) {
+    max-height: var(--aek-tree-max-height, calc(12 * var(--aek-tree-row-height, 28px)));
+  }
+
+  :where(
+      .aekTree__rows[data-virtual] > .aekTree__row,
+      .aekTree__rows[data-virtual] > .aekTree__status
+    ) {
+    flex: none;
+    height: var(--aek-tree-row-height);
+    overflow: hidden;
+  }
+
+  :where(.aekTree__spacer) {
+    flex: none;
+  }
+
+  :where(.aekTree__row[data-pinned], .aekTree__status[data-pinned]) {
+    position: absolute;
+    inset-inline: 0;
+  }
+
+  :where(.aekTree__row, .aekTree__status) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex: none;
+    align-items: center;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding-block: var(--aek-space-1);
+    padding-inline: calc(
+        (var(--aek-tree-level, 1) - 1) * var(--aek-tree-indent, var(--aek-space-5))
+      )
+      var(--aek-space-3);
+  }
+
+  :where(.aekTree__row) {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekTree__row:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekTree__row[aria-selected='true']) {
+    background-color: var(--aek-accent-soft);
+    box-shadow: inset 3px 0 0 var(--aek-tree-selected-color, var(--aek-accent));
+  }
+
+  :where(.aekTree__row[aria-disabled='true']) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  // Inside the rows' scroll box: a ring outside the row would be cut
+  :where(.aekTree__row:focus-visible, .aekTree__status:focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  // The open mark's column, a 24 px target over the row's padding; empty on a leaf (it keeps
+  // the titles of one level aligned) and on a status row
+  :where(.aekTree__twisty) {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    width: max(24px, var(--aek-space-6));
+    margin-block: calc(-1 * var(--aek-space-1));
+    color: var(--aek-text-muted);
+    cursor: pointer;
+  }
+
+  :where(.aekTree__twisty)::before {
+    width: 0.4em;
+    height: 0.4em;
+    border-inline-end: 1.5px solid currentColor;
+    border-block-end: 1.5px solid currentColor;
+    content: '';
+    visibility: hidden;
+    transform: translateX(-0.1em) rotate(-45deg);
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekTree__row[aria-expanded] > .aekTree__twisty)::before {
+    visibility: visible;
+  }
+
+  :where(.aekTree__row[aria-expanded='true'] > .aekTree__twisty)::before {
+    transform: translateY(-0.1em) rotate(45deg);
+  }
+
+  :where(.aekTree__content) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  // The size is its font size: getSvgIcon's icon is 1em
+  :where(.aekTree__icon) {
+    display: inline-flex;
+    flex: none;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekTree__icon svg) {
+    display: block;
+    width: 1em;
+    height: auto;
+  }
+
+  :where(.aekTree__badge) {
+    flex: none;
+  }
+
+  // One line: a long title is cut (the row's tooltip can carry it whole)
+  :where(.aekTree__title) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekTree__title[data-placeholder]) {
+    color: var(--aek-text-muted);
+    font-style: italic;
+  }
+
+  :where(.aekTree__suffix) {
+    flex: none;
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekTree__suffix[hidden], .aekTree__icon[hidden]) {
+    display: none;
+  }
+
+  // A lazy node's status: a spinner and the loading text, or the error's mark, text and Retry
+  :where(.aekTree__status) {
+    gap: var(--aek-space-2);
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekTree__status[data-status='error']) {
+    cursor: pointer;
+  }
+
+  :where(.aekTree__status[data-status='error']:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekTree__status) :where(.aekTree__twisty) {
+    margin-inline-end: calc(-1 * var(--aek-space-2));
+  }
+
+  :where(.aekTree__statusMark) {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+  }
+
+  // Loading: a ring turning on kit.scss' aekSpin (the spinner's look), pulsing under reduced motion
+  :where(.aekTree__status[data-status='loading'] .aekTree__statusMark)::before {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    content: '';
+    animation: aekSpin calc(800ms * var(--aek-motion, 1)) linear infinite;
+  }
+
+  // Failed: a round mark with an exclamation mark, in the danger role (not the colour alone)
+  :where(.aekTree__status[data-status='error'] .aekTree__statusMark) {
+    border-radius: 50%;
+    background-color: var(--aek-danger);
+    color: var(--aek-bg);
+    font-size: var(--aek-font-size-xs);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekTree__status[data-status='error'] .aekTree__statusMark)::before {
+    content: '!';
+  }
+
+  :where(.aekTree__statusText) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekTree__retry) {
+    flex: none;
+    color: var(--aek-accent);
+    text-decoration: underline;
+  }
+
+  :where(.aekTree__status[data-status='loading'] .aekTree__retry) {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.aekTree__status[data-status='loading'] .aekTree__statusMark)::before {
+      border-right-color: currentColor;
+      animation: aekPulse 1.6s ease-in-out infinite;
+    }
+  }
+}

@@ -92,8 +92,8 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  // The search dialog closes itself
-  if (e.key !== 'Escape' || (e.target as Element).closest?.('dialog')) return;
+  // The search palette's Escape never gets here: the kit's overlay stack takes it in the HUD root
+  if (e.key !== 'Escape') return;
   const openItem = dropdownItems.find((item) => item.classList.contains('hubNavItem_open'));
   if (openItem) {
     setDropdownOpen(openItem, false);
@@ -224,15 +224,14 @@ document.addEventListener('click', (e) => {
 // --- Search ---
 
 /**
- * The dialog and its payload load on first use (`_search.ts`, a chunk of its own): the first focus
- * or hover of the search button preloads them, a click, ⌘K / Ctrl+K or `/` opens the dialog
+ * The search (the UI kit's command palette) and its payload load on first use (`_search.ts`, a
+ * chunk of its own): the first focus or hover of the search button preloads them, a click, ⌘K /
+ * Ctrl+K or `/` opens it
  */
 const searchButton = document.querySelector<HTMLButtonElement>('[data-hub-search]');
 const searchKey = document.querySelector<HTMLElement>('[data-hub-search-key]');
 if (searchKey && !/Mac|iPhone|iPad/.test(navigator.userAgent)) searchKey.textContent = 'Ctrl K';
 
-/** `_assets/hub.js`: the search results' links resolve against it (the site root is its parent) */
-const hubJsUrl = import.meta.url;
 let searchModule: Promise<typeof import('./_search')> | null = null;
 
 const loadSearch = () =>
@@ -244,14 +243,14 @@ const loadSearch = () =>
 const openSearch = () => {
   setMenuOpen(false);
   loadSearch()
-    .then((search) => search.openSearch(hubJsUrl))
+    .then((search) => search.openSearch())
     // eslint-disable-next-line no-console -- a failed chunk load's error: the page has nowhere to show it
     .catch((err: unknown) => console.error('[Hub] The search failed to load:', err));
 };
 
 const preloadSearch = () => {
   loadSearch()
-    .then((search) => search.preloadSearch(hubJsUrl))
+    .then((search) => search.preloadSearch())
     .catch(() => {
       // Reported when the search opens
     });
@@ -261,11 +260,10 @@ searchButton?.addEventListener('click', openSearch);
 searchButton?.addEventListener('focus', preloadSearch, { once: true });
 searchButton?.addEventListener('pointerenter', preloadSearch, { once: true });
 
-/** A field the reader types in; the search's own input once its dialog is closed isn't one */
+/** A field the reader types in (the search's own input is in the page only while it's open) */
 const isEditable = (target: EventTarget | null) =>
   target instanceof Element &&
-  !!target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') &&
-  !target.closest('dialog:not([open])');
+  !!target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
 
 document.addEventListener('keydown', (e) => {
   const isModK =

@@ -1,0 +1,43 @@
+// The graphs' legend (GraphParts.ts): a swatch, a name and an amount per part, on the design
+// tokens and layered (p803 D5). The swatch's colour is the part's, written per line.
+@layer aek.components {
+  :where(.aekGraphLegend) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--aek-space-1) var(--aek-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekGraphLegend__item) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekGraphLegend__swatch) {
+    flex: none;
+    width: var(--aek-space-3);
+    height: var(--aek-space-3);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-graph-swatch, var(--aek-text));
+  }
+
+  :where(.aekGraphLegend__label) {
+    color: var(--aek-text);
+  }
+
+  :where(.aekGraphLegend__value) {
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  // A chart's series have no amount
+  :where(.aekGraphLegend__value:empty) {
+    display: none;
+  }
+}

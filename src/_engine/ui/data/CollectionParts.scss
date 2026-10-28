@@ -1,0 +1,73 @@
+// What the collections share around their rows (CollectionParts.ts, p805 D3, D6): the heading with
+// its count, the search field, the empty and no match lines, for each piece's classes (the list's,
+// the tree's). On the design tokens and layered (p803 D5): an app's unlayered rule wins, and every
+// selector is in :where().
+@layer aek.components {
+  :where(.aekList__heading, .aekTree__heading) {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekList__count, .aekTree__count) {
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-regular);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekList__search, .aekTree__search) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface);
+    color: var(--aek-text);
+    font: inherit;
+
+    &::placeholder {
+      color: var(--aek-text-muted);
+      opacity: 1;
+    }
+  }
+
+  :where(.aekList__empty, .aekList__noMatch, .aekTree__empty, .aekTree__noMatch) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2);
+    color: var(--aek-text-muted);
+  }
+
+  :where(
+      .aekList__empty[hidden],
+      .aekList__noMatch[hidden],
+      .aekTree__empty[hidden],
+      .aekTree__noMatch[hidden]
+    ) {
+    display: none;
+  }
+
+  :where(.aekList__emptyText, .aekList__noMatchText, .aekTree__emptyText, .aekTree__noMatchText) {
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-3);
+  }
+
+  :where(.aekList__clear, .aekTree__clear) {
+    min-height: 24px;
+    margin: 0;
+    padding: 0 var(--aek-space-1);
+    border: 0;
+    background: none;
+    color: var(--aek-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  :where(.aekList__clear:hover, .aekTree__clear:hover) {
+    color: var(--aek-accent-hover);
+  }
+}

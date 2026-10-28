@@ -13,6 +13,13 @@ import { getHUDRootCMP, hasHudRoot } from '../core/HUD';
 export const DEBUGGER_ROOT_ATTR = 'data-aek-debugger';
 
 /**
+ * The attribute on a HUD root child no inert entry covers: the announcer's live region (p805 D4),
+ * which holds nothing focusable and must be read under a modal too.
+ * @internal
+ */
+export const KEEP_LIVE_ATTR = 'data-aek-keep-live';
+
+/**
  * An overlay stack entry.
  * @internal
  */
@@ -104,6 +111,7 @@ const applyInert = () => {
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
       if (live.some((entry) => ownsElem(entry, child))) continue;
+      if (child.hasAttribute(KEEP_LIVE_ATTR)) continue;
       if (!top.isDebug && child.hasAttribute(DEBUGGER_ROOT_ATTR)) continue;
       // The app's own inert: neither set nor removed here
       if (child.hasAttribute('inert') && !inertElems.has(child)) continue;

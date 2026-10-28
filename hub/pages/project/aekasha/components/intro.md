@@ -17,8 +17,8 @@ The page runs no engine (p800 D1: every component works without it):
 
 `yarn verify:ui` checks the public page, as the public Hub builds it: each demo's states in both
 themes and both densities with axe-core and against its last good screenshot, and each piece's
-keyboard script ([`_componentChecks.ts`](repo:hub/_assets/ts/_componentChecks.ts), next to the
-demos). A violation the kit still has goes on its allow list
+keyboard script ([`_componentChecks.ts`](repo:hub/_assets/ts/_componentChecks.ts), which merges a
+module per group next to its demos in `hub/_assets/ts/_library/`). A violation the kit still has goes on its allow list
 ([`ui.config.ts`](repo:devTools/verify/ui.config.ts)) with the plan that fixes it; it's empty.
 
 The design these follow is the [design document](hub:project/aekasha/design)'s.

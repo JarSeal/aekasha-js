@@ -3,6 +3,8 @@ import path from 'node:path';
 import type MarkdownIt from 'markdown-it';
 import {
   CONTRAST_CONTROLS,
+  CONTRAST_SERIES,
+  CONTRAST_SERIES_SURFACES,
   CONTRAST_SOFTS,
   CONTRAST_SURFACES,
   CONTRAST_TEXTS,
@@ -195,6 +197,9 @@ const describeRule = (role: string) => {
   if (CONTRAST_SURFACES.includes(role)) return 'A surface';
   if (CONTRAST_TEXTS.includes(role)) return 'Text, 4.5:1 on every surface';
   if (CONTRAST_CONTROLS.includes(role)) return 'A control’s edge, 3:1 on every surface';
+  if (CONTRAST_SERIES.includes(role)) {
+    return `A chart series, 3:1 on ${CONTRAST_SERIES_SURFACES.map(code).join(' and ')}`;
+  }
   if (role === 'on-accent') return 'Text on the accent, 4.5:1';
   const soft = role.match(/^(.+)-soft$/)?.[1];
   if (soft && CONTRAST_SOFTS.includes(soft)) {
@@ -213,14 +218,21 @@ const renderSwatch = (value: string, decls: Decls) => {
   return `<span class="hubSwatchCell">${swatch}${code(value)}</span>`;
 };
 
+/** A pair's sample: text in its colour, a control's edge, or a series' bar */
+const getSampleKind = (role: string) =>
+  CONTRAST_CONTROLS.includes(role) ? 'control' : CONTRAST_SERIES.includes(role) ? 'series' : null;
+
 const renderContrastCell = (pair: ContrastPair | undefined, fg: string, bg: string) => {
   if (!pair) return '—';
-  const isControl = CONTRAST_CONTROLS.includes(pair.fg);
-  const style = isControl
-    ? `border-color: ${fg}; background: ${bg}`
-    : `color: ${fg}; background: ${bg}`;
+  const kind = getSampleKind(pair.fg);
+  const style =
+    kind === 'control'
+      ? `border-color: ${fg}; background: ${bg}`
+      : kind === 'series'
+        ? `--hub-series: ${fg}; background: ${bg}`
+        : `color: ${fg}; background: ${bg}`;
   const isLow = pair.ratio < pair.min;
-  return `<span class="hubContrast${isLow ? ' hubContrast_low' : ''}"><span class="hubContrastSample${isControl ? ' hubContrastSample_control' : ''}" style="${escapeHtml(style)}" aria-hidden="true">${isControl ? '' : 'Aa'}</span>${pair.ratio.toFixed(2)}${isLow ? ` <span class="hubStatus hubStatus_open">under ${pair.min}</span>` : ''}</span>`;
+  return `<span class="hubContrast${isLow ? ' hubContrast_low' : ''}"><span class="hubContrastSample${kind ? ` hubContrastSample_${kind}` : ''}" style="${escapeHtml(style)}" aria-hidden="true">${kind ? '' : 'Aa'}</span>${pair.ratio.toFixed(2)}${isLow ? ` <span class="hubStatus hubStatus_open">under ${pair.min}</span>` : ''}</span>`;
 };
 
 /** The pair's minimum ratio, under its name */
@@ -271,6 +283,38 @@ const renderTintTable = (tokens: DesignTokens) => {
   });
 };
 
+/** Each chart series on the surfaces it's checked on, in both themes, in the series' order */
+const renderSeriesTable = (tokens: DesignTokens) => {
+  const themes = [tokens.dark, tokens.light].map((decls) => ({
+    decls,
+    pairs: listContrastPairs(decls).filter((pair) => CONTRAST_SERIES.includes(pair.fg)),
+  }));
+  const color = (decls: Decls, role: string) =>
+    toCssColor(decls.get(`--aek-${role}`) ?? '', decls) ?? '';
+  const rows = CONTRAST_SERIES.map((fg) => [
+    `${code(fg)}${renderMinimum(3)}`,
+    ...themes.flatMap(({ decls, pairs }) =>
+      CONTRAST_SERIES_SURFACES.map((bg) =>
+        renderContrastCell(
+          pairs.find((pair) => pair.fg === fg && pair.bg === bg),
+          color(decls, fg),
+          color(decls, bg)
+        )
+      )
+    ),
+  ]);
+  return renderTable({
+    className: 'hubContrastTable',
+    head: [
+      'Series',
+      ...['Dark', 'Light'].flatMap((theme) =>
+        CONTRAST_SERIES_SURFACES.map((bg) => `${theme}, ${code(bg)}`)
+      ),
+    ],
+    rows,
+  });
+};
+
 const renderColours = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdownEnv) => {
   env.file = TOKENS_FILE;
   if (!tokens) return UNREAD;
@@ -289,6 +333,8 @@ const renderColours = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMark
     renderContrastTable('Light', tokens.light),
     heading(md, env, 'On the accent and the tints'),
     renderTintTable(tokens),
+    heading(md, env, 'Chart series'),
+    renderSeriesTable(tokens),
   ].join('');
 };
 

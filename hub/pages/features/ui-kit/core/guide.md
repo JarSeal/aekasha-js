@@ -341,6 +341,141 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
 | Custom properties | `--aek-loading-overlay-bg`, `--aek-loading-overlay-z`, `--aek-loading-overlay-spinner-size` |
 | Assistive tech    | The text is a `role="status"`, so a `setText` is read; the spinner is decorative            |
 
+## Tabs
+
+[`createTabs`](api:createTabs) puts a tab list over panels and shows one panel at a time. A
+panel's `content` is a CMP, or a function that builds it the first time its tab is selected:
+use a function for a panel that costs something to build (a table of the scene's meshes), and it
+stays built after (`keepMounted: false` removes it when another tab is selected, and builds it
+again on its next selection).
+
+```ts
+const inspector = createTabs({
+  label: 'Inspector',
+  tabs: [
+    { key: 'props', label: 'Properties', content: propertiesPanel },
+    // Built on its first selection
+    { key: 'stats', label: 'Stats', content: () => buildStatsPanel() },
+    { key: 'log', label: 'Log', badge: 0, content: logPanel },
+  ],
+  onSelect: (key) => saveInspectorTab(key), // the user's selections; keeping it is yours
+});
+inspectorWindow.add(inspector.cmp);
+
+inspector.setBadge('log', { label: 3, tone: 'warning', spokenLabel: '3 warnings' });
+inspector.select('log'); // from code: onSelect isn't called
+```
+
+::: demo tabs
+:::
+
+- **Automatic or manual.** With automatic activation (the default) the arrows select as they
+  move, which suits panels that show at once. With `activation: 'manual'` the arrows only move
+  the focus and Enter or Space selects, so passing over a tab doesn't build its panel.
+- **Icon-only tabs** (`iconOnly`, with an `icon`) keep the label for assistive tech (visually
+  hidden text, with the badge their name) and show it as a tooltip, as a debugger's tab menu does.
+  `orientation: 'vertical'` puts the tab list at the start of the panels; Up and Down move then.
+- **Many tabs** scroll: the tab list scrolls along its orientation, its cut edges faded, and a tab
+  the keys or `select` reach is scrolled into view (the list, never the page).
+- `setTabs` replaces the tabs: a tab whose key stays keeps its button, its panel and its built
+  content (built again when its `content` changed), so a scene's own tab can come and go. When
+  the selected tab goes, the first enabled one is selected and reported to `onSelect`.
+
+| Tabs              |                                                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                       |
+| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                               |
+| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden`                 |
+| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                               |
+| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel |
+| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable          |
+
+## Accordions
+
+[`createAccordion`](api:createAccordion) stacks sections, each a heading with a button over a
+panel that opens and shuts with its height animated: one open at a time, or several with
+`multiple`. Give it the heading `level` that fits where it sits in your page or panel. A panel's
+`content` is a CMP, or a function that builds it the first time its section opens.
+
+```ts
+const help = createAccordion({
+  level: 3,
+  items: [
+    { key: 'move', title: 'How do I move?', content: moveHelp },
+    { key: 'save', title: 'How do I save?', content: () => buildSaveHelp() },
+  ],
+  expanded: ['move'],
+  onExpandedChange: (keys) => saveSetting('helpOpen', keys), // keeping it is yours
+});
+helpWindow.add(help.cmp);
+help.expand('save'); // from code: onExpandedChange isn't called
+```
+
+::: demo accordion
+:::
+
+- **An accordion or a folder?** A [folder](hub:features/ui-kit/forms#folders-and-fieldsets)
+  groups fields in a settings panel, joins their scheduler and has no heading. An accordion is a
+  page's or a panel's sections (a settings menu's groups, a help page's questions), each a real
+  heading in the document's outline.
+- Each panel is a landmark (`role="region"`, named by its header) while there are at most six:
+  more would crowd a screen reader's landmark list, so past six they're plain.
+- Shutting a section that holds the focus moves the focus to its header. Under reduced motion the
+  sections open and shut at once.
+
+| Accordion         |                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Props             | [`AccordionProps`](api:AccordionProps), a section's [`AccordionItem`](api:AccordionItem)                                                                                 |
+| Parts             | `.aekAccordion` with an `__item` per section, its `__heading` (the `<hN>`) holding `__trigger` (`__title`, `__chevron`), and `__region` holding `__clip` and `__content` |
+| States            | An item's `data-key`, `data-expanded`, `data-animating`; a trigger's `disabled`; a region's `hidden`                                                                     |
+| Custom properties | `--aek-accordion-padding` (the headers' and panels' inline padding)                                                                                                      |
+| Keys              | Each header a tab stop; Enter and Space open or shut its section; Up and Down move between the headers (wrapping), Home and End go to the first and last                 |
+| Assistive tech    | Headings of `level`, each holding a button with `aria-expanded` and `aria-controls`; each panel a `region` named by its header while there are at most six               |
+
+## Splitters
+
+[`createSplitter`](api:createSplitter) puts two panes side by side (or one above the other with
+`orientation: 'vertical'`) with a separator between them that the pointer drags and the keys
+move. Its `size` is the first pane's, a percent of the splitter (the default) or px
+(`unit: 'px'`), kept between `min` and `max`; the second pane takes the rest. With `collapsible`,
+Enter on the separator collapses the first pane and restores it.
+
+```ts
+const split = createSplitter({
+  label: 'Outline width', // the separator's name
+  first: outlinePanel,
+  second: propertiesPanel,
+  size: settings.outlineWidth ?? 35,
+  min: 15,
+  max: 70,
+  collapsible: true,
+  onSizeChange: (size) => saveSetting('outlineWidth', size), // after a drag or a key: yours to keep
+});
+inspectorWindow.add(split.cmp);
+split.collapse(); // from code: onCollapsedChange isn't called
+```
+
+::: demo splitter
+:::
+
+- **Give it room:** the splitter fills the box you put it in, so give that box a height (a
+  window's content, a flex child that grows). Each pane scrolls its own content.
+- The separator's gutter is narrow (`--aek-splitter-gutter`), but its pointer target is 24 px
+  across, reaching over the panes' edges: keep a pane's controls a little way from it (a padding).
+- In px without a `max`, the first pane can grow to the splitter's size less the separator's,
+  measured as the splitter resizes.
+- The [property grid](hub:features/ui-kit/forms#property-grids)'s label column moves with
+  the same keys and drag.
+
+| Splitter          |                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`SplitterProps`](api:SplitterProps)                                                                                                                            |
+| Parts             | `.aekSplitter` with two `__pane`s (`data-pane="first"` and `"second"`) and `__separator`                                                                        |
+| States            | `data-orientation`, `data-collapsed`, `--aek-splitter-size` (set by the splitter); the first pane's `hidden` while collapsed; the separator's `data-dragging`   |
+| Custom properties | `--aek-splitter-gutter` (the separator's width)                                                                                                                 |
+| Keys              | On the separator: the arrows along it move it by `step` (Shift ×10, Alt ×0.1), Home and End go to `min` and `max`; Enter collapses and restores (`collapsible`) |
+| Assistive tech    | A focusable `separator` named by `label`, with `aria-valuenow`, `-min`, `-max`, `-valuetext` ("35 %", "Collapsed") and `aria-controls` the first pane           |
+
 ## Key APIs
 
 - [`createButton`](api:createButton) ([`Button`](api:Button), [`ButtonProps`](api:ButtonProps)),
@@ -355,6 +490,11 @@ The debug scene loader (the Debug tools' start scene) is the same overlay with a
   [`createEmptyState`](api:createEmptyState) ([`EmptyState`](api:EmptyState)).
 - [`createLoadingOverlay`](api:createLoadingOverlay) ([`LoadingOverlay`](api:LoadingOverlay)), with
   [`createSceneLoader`](api:createSceneLoader).
+- [`createTabs`](api:createTabs) ([`Tabs`](api:Tabs), [`TabDef`](api:TabDef),
+  [`TabBadge`](api:TabBadge)).
+- [`createAccordion`](api:createAccordion) ([`Accordion`](api:Accordion),
+  [`AccordionItem`](api:AccordionItem)).
+- [`createSplitter`](api:createSplitter) ([`Splitter`](api:Splitter)).
 
 ## Read more
 

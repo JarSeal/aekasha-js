@@ -3,10 +3,11 @@ import { countListeners, stubKitDomAsync } from '../../testing/KitDom';
 import { createBinding, getPrimitiveValueKind } from './Binding';
 import {
   addScheduledBinding,
+  addScheduledRefresh,
   createBindingScheduler,
   createFlash,
   revealScheduledBindings,
-  type ScheduledBinding,
+  type ScheduledEntry,
 } from './BindingScheduler';
 
 beforeAll(async () => {
@@ -52,11 +53,11 @@ afterEach(() => {
 });
 
 /** A scheduled entry that logs its reads */
-const createEntry = (props: Partial<ScheduledBinding> = {}) => {
+const createEntry = (props: Partial<ScheduledEntry> = {}) => {
   const reads: boolean[] = [];
   let shown = true;
   let stateReads = 0;
-  const entry: ScheduledBinding = {
+  const entry: ScheduledEntry = {
     read: (fromRefresh) => reads.push(fromRefresh),
     readState: () => stateReads++,
     isShown: () => shown,
@@ -212,6 +213,32 @@ describe('the scheduler’s tick (p804 D4)', () => {
   });
 });
 
+describe('a collection’s entry (p805 D3)', () => {
+  it('refreshes on the scheduler’s refresh, its tick and a reveal, as a field reads', () => {
+    const scheduler = createBindingScheduler();
+    const refreshes: boolean[] = [];
+    let shown = true;
+    const remove = addScheduledRefresh(scheduler, (fromRefresh) => refreshes.push(fromRefresh), {
+      interval: 100,
+      isShown: () => shown,
+    });
+    scheduler.refresh();
+    runFrame(1000);
+    runFrame(1050);
+    expect(refreshes).toEqual([true, false]);
+    shown = false;
+    runFrame(1200);
+    shown = true;
+    revealScheduledBindings(scheduler);
+    expect(refreshes).toEqual([true, false, false]);
+    remove();
+    scheduler.refresh();
+    expect(refreshes).toHaveLength(3);
+    expect(pendingFrames()).toBe(0);
+    scheduler.dispose();
+  });
+});
+
 describe('reads through a binding (p804 D4: no write on an unchanged value, no monitor flash)', () => {
   /** A field-like entry: a binding, a draw count, a flash count */
   const createBoundEntry = (target: { value: number }, interval?: number) => {
@@ -222,7 +249,7 @@ describe('reads through a binding (p804 D4: no write on an unchanged value, no m
     });
     const counts = { draws: 0, flashes: 0 };
     const isMonitor = interval !== undefined;
-    const entry: ScheduledBinding = {
+    const entry: ScheduledEntry = {
       interval,
       isShown: () => true,
       read: (fromRefresh) => {

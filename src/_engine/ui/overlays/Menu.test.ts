@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
+import { countListeners, dispatchKey, dispatchPointer, stubKitDomAsync } from '../testing/KitDom';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
 import { createKbd } from '../components/Kbd';
 import { createMenu, type MenuItem, type MenuProps } from './Menu';
@@ -295,6 +295,264 @@ describe('menu (p803 D10)', () => {
     expect(countListeners(document, 'pointerdown')).toBe(0);
     expect(trigger.hasAttribute('aria-haspopup')).toBe(false);
     expect(trigger.hasAttribute('aria-expanded')).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('submenus (p805 D11)', () => {
+  const getMenus = () => [...getHUDRootCMP().elem.querySelectorAll<HTMLElement>('.aekMenu')];
+  const getItemsOf = (menu: HTMLElement | undefined) => [
+    ...(menu?.querySelectorAll<HTMLElement>(
+      ':scope > .aekMenu__item, :scope > [role="group"] > .aekMenu__item'
+    ) ?? []),
+  ];
+  const move = (target: HTMLElement, clientX = 0, clientY = 0) =>
+    dispatchPointer(target, 'pointermove', { clientX, clientY });
+  const viewItems = (onSelect = vi.fn()): MenuItem[] => [
+    {
+      type: 'submenu',
+      label: 'Zoom',
+      items: [
+        { label: 'In', onSelect },
+        { label: 'Out', onSelect },
+      ],
+    },
+    {
+      type: 'submenu',
+      label: 'Panels',
+      items: [
+        { type: 'checkbox', label: 'Outline', checked: false },
+        { type: 'submenu', label: 'Layout', items: [{ label: 'Default' }, { label: 'Compact' }] },
+      ],
+    },
+    { type: 'submenu', label: 'Locked', disabled: true, items: [{ label: 'Never' }] },
+    { label: 'Full screen' },
+  ];
+
+  it('ArrowRight opens a submenu on its first item; ArrowLeft closes it back to its item', () => {
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    menu.open();
+    const zoom = getItems()[0];
+    expect(zoom.getAttribute('role')).toBe('menuitem');
+    expect(zoom.getAttribute('aria-haspopup')).toBe('menu');
+    expect(zoom.getAttribute('aria-expanded')).toBe('false');
+    expect(zoom.querySelector('.aekMenu__submenuMark')?.getAttribute('aria-hidden')).toBe('true');
+    expect(key('ArrowRight').defaultPrevented).toBe(true);
+    const [, sub] = getMenus();
+    expect(sub.getAttribute('role')).toBe('menu');
+    expect(sub.hasAttribute('data-submenu')).toBe(true);
+    expect(sub.getAttribute('aria-label')).toBe('Zoom');
+    expect(zoom.getAttribute('aria-expanded')).toBe('true');
+    expect(zoom.getAttribute('aria-controls')).toBe(sub.id);
+    expect(getFocusedLabel()).toBe('In');
+    key('ArrowDown');
+    expect(getFocusedLabel()).toBe('Out');
+    expect(key('ArrowLeft').defaultPrevented).toBe(true);
+    expect(getMenus()).toHaveLength(1);
+    expect(document.activeElement).toBe(zoom);
+    expect(zoom.getAttribute('aria-expanded')).toBe('false');
+    expect(zoom.hasAttribute('aria-controls')).toBe(false);
+    // ArrowRight on an item without a submenu, ArrowLeft in the root: not the menu's keys
+    key('End');
+    expect(key('ArrowRight').defaultPrevented).toBe(false);
+    expect(key('ArrowLeft').defaultPrevented).toBe(false);
+    menu.cmp.remove();
+  });
+
+  it('Enter and Space open it too; Escape closes one level at a time, the last to the trigger', () => {
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    menu.open();
+    key('ArrowDown');
+    key('Enter');
+    expect(getFocusedLabel()).toBe('Outline');
+    key('End');
+    key(' ');
+    expect(getMenus()).toHaveLength(3);
+    expect(getFocusedLabel()).toBe('Default');
+    key('Escape');
+    expect(getMenus()).toHaveLength(2);
+    expect(getFocusedLabel()).toBe('Layout');
+    key('Escape');
+    expect(getFocusedLabel()).toBe('Panels');
+    key('Escape');
+    expect(menu.isOpen()).toBe(false);
+    expect(getMenus()).toHaveLength(0);
+    expect(document.activeElement).toBe(trigger);
+    menu.cmp.remove();
+  });
+
+  it('a pick in a submenu closes every level first; Tab there closes them all', () => {
+    const states: number[] = [];
+    const onClose = vi.fn();
+    const menu = addMenu(viewItems(vi.fn(() => states.push(getMenus().length))), { onClose });
+    trigger.focus();
+    menu.open();
+    key('ArrowRight');
+    key('Enter');
+    expect(states).toEqual([0]);
+    expect(document.activeElement).toBe(trigger);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    menu.open();
+    key('ArrowRight');
+    expect(key('Tab').defaultPrevented).toBe(true);
+    expect(getMenus()).toHaveLength(0);
+    expect(document.activeElement).toBe(trigger);
+    menu.cmp.remove();
+  });
+
+  it('a click opens a submenu on its first item; a disabled one opens nothing', () => {
+    const menu = addMenu(viewItems());
+    menu.open();
+    const [, panels, locked] = getItems();
+    click(panels);
+    expect(getMenus()).toHaveLength(2);
+    expect(getFocusedLabel()).toBe('Outline');
+    locked.focus();
+    key('ArrowRight');
+    click(locked);
+    expect(getMenus()).toHaveLength(1);
+    expect(locked.getAttribute('aria-disabled')).toBe('true');
+    menu.cmp.remove();
+  });
+
+  it('the typeahead and the arrows stay in the level the focus is in', () => {
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    menu.open();
+    key('ArrowDown');
+    key('ArrowRight');
+    key('l');
+    expect(getFocusedLabel()).toBe('Layout');
+    key('ArrowDown');
+    expect(getFocusedLabel()).toBe('Outline');
+    menu.cmp.remove();
+  });
+
+  it('a hover opens a submenu after the delay, the focus staying on its item', () => {
+    const menu = addMenu(viewItems());
+    menu.open();
+    const [zoom, panels] = getItems();
+    move(zoom, 50, 10);
+    expect(document.activeElement).toBe(zoom);
+    vi.advanceTimersByTime(149);
+    expect(getMenus()).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(getMenus()).toHaveLength(2);
+    expect(document.activeElement).toBe(zoom);
+    // ArrowRight on its item enters the open submenu
+    key('ArrowRight');
+    expect(getFocusedLabel()).toBe('In');
+    // Hovering another item, not toward the submenu: it closes, and that item's opens later
+    move(panels, 40, 30);
+    expect(getMenus()).toHaveLength(1);
+    expect(document.activeElement).toBe(panels);
+    vi.advanceTimersByTime(150);
+    expect(getMenus()[1]?.getAttribute('aria-label')).toBe('Panels');
+    menu.cmp.remove();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('stays open while the pointer heads for it across its level’s other items', () => {
+    const menu = addMenu(viewItems());
+    menu.open();
+    const [zoom, panels] = getItems();
+    move(zoom, 100, 10);
+    vi.advanceTimersByTime(150);
+    const sub = getMenus()[1];
+    sub.getBoundingClientRect = () => ({ left: 200, right: 300, top: 0, bottom: 100 }) as DOMRect;
+    // Toward the submenu: the focus stays, and the item under the pointer acts after the delay
+    move(panels, 150, 30);
+    expect(getMenus()).toHaveLength(2);
+    expect(document.activeElement).toBe(zoom);
+    // Reaching the submenu keeps it
+    move(getItemsOf(sub)[0], 210, 20);
+    vi.advanceTimersByTime(150);
+    expect(getMenus()).toHaveLength(2);
+    expect(getFocusedLabel()).toBe('In');
+    // Back across the parent: away from the submenu, so it closes at once
+    move(panels, 150, 40);
+    expect(getMenus()).toHaveLength(1);
+    expect(document.activeElement).toBe(panels);
+    menu.cmp.remove();
+  });
+
+  it('a stop on the way to the submenu acts on the item under the pointer after the delay', () => {
+    const menu = addMenu(viewItems());
+    menu.open();
+    const [zoom, panels] = getItems();
+    move(zoom, 100, 10);
+    vi.advanceTimersByTime(150);
+    getMenus()[1].getBoundingClientRect = () =>
+      ({ left: 200, right: 300, top: 0, bottom: 100 }) as DOMRect;
+    move(panels, 150, 30);
+    vi.advanceTimersByTime(150);
+    expect(document.activeElement).toBe(panels);
+    expect(getMenus()[1]?.getAttribute('aria-label')).not.toBe('Zoom');
+    menu.cmp.remove();
+  });
+
+  it('a press or the focus in a submenu keeps the menu; a press outside closes every level', () => {
+    const outside = document.createElement('button');
+    getHUDRootCMP().elem.appendChild(outside);
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    menu.open();
+    key('ArrowRight');
+    const sub = getMenus()[1];
+    getItemsOf(sub)[0].dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+    expect(getMenus()).toHaveLength(2);
+    outside.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+    expect(getMenus()).toHaveLength(0);
+    expect(menu.isOpen()).toBe(false);
+    outside.remove();
+    menu.cmp.remove();
+  });
+
+  it('a submenu’s hints: an array’s kept for the next open, a getter’s removed at the close, drawn or not', () => {
+    const kept = createKbd({ keys: 'Ctrl+Plus' });
+    const removeKept = vi.spyOn(kept.cmp, 'remove');
+    const menu = addMenu([{ type: 'submenu', label: 'Zoom', items: [{ label: 'In', kbd: kept }] }]);
+    trigger.focus();
+    menu.open();
+    key('ArrowRight');
+    expect(getItemsOf(getMenus()[1])[0].getAttribute('aria-keyshortcuts')).toBe('Control+Plus');
+    key('ArrowLeft');
+    key('ArrowRight');
+    expect(kept.cmp.elem.parentElement).toBe(getItemsOf(getMenus()[1])[0]);
+    menu.close();
+    expect(removeKept).not.toHaveBeenCalled();
+    menu.cmp.remove();
+    expect(removeKept).toHaveBeenCalledTimes(1);
+
+    const removes: (() => void)[] = [];
+    const fromGetter = addMenu(() => {
+      const kbd = createKbd({ keys: 'F2' });
+      removes.push(vi.spyOn(kbd.cmp, 'remove'));
+      return [{ type: 'submenu', label: 'Edit', items: [{ label: 'Rename', kbd }] }];
+    });
+    fromGetter.open();
+    fromGetter.close();
+    expect(removes[0]).toHaveBeenCalledTimes(1);
+    fromGetter.cmp.remove();
+  });
+
+  it('leaves no listener, timer or element after its removal with submenus open', () => {
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    menu.open();
+    key('ArrowDown');
+    key('ArrowRight');
+    key('End');
+    key('ArrowRight');
+    const subs = getMenus().slice(1);
+    expect(subs).toHaveLength(2);
+    move(getItemsOf(subs[1])[1], 5, 5);
+    menu.cmp.remove();
+    expect(getMenus()).toHaveLength(0);
+    for (const sub of subs) expect(countListeners(sub)).toBe(0);
+    expect(countListeners(document, 'pointerdown')).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
   });
 });

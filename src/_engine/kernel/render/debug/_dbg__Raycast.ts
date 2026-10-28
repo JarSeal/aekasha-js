@@ -8,7 +8,7 @@ import {
   type DebuggerPaneItem,
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-import { createPercentagePie, type PercentagePie } from '../../../debug/_dbg__PercentagePie';
+import { createDonut, type Donut } from '../../../ui/data/graphs/Donut';
 import type {
   IntervalCounterSnapshot,
   IntervalWindowSnapshot,
@@ -244,7 +244,7 @@ const createDebugControls = () => {
 };
 
 type StatsValue = { elem: HTMLElement; text: string };
-type StatsWindowRow = { win: IntervalWindowSnapshot; pie: PercentagePie; value: StatsValue };
+type StatsWindowRow = { win: IntervalWindowSnapshot; donut: Donut; value: StatsValue };
 /** One counter's cached stats elements */
 type StatsBlock = {
   list: CMPHandle;
@@ -263,10 +263,10 @@ let pendingQueriesView: { list: CMPHandle; isActive: boolean | null; value: Stat
 
 const INACTIVE_VALUE = '-';
 
-const addStatsRow = (list: CMPHandle, label: string, pie?: PercentagePie): StatsValue => {
+const addStatsRow = (list: CMPHandle, label: string, donut?: Donut): StatsValue => {
   const row = list.add({ tag: 'li' });
   const labelCmp = row.add({ tag: 'span', class: 'rayStatLabel', text: label });
-  if (pie) labelCmp.add(pie.cmp);
+  if (donut) labelCmp.add(donut.cmp);
   return { elem: row.add({ tag: 'span', text: INACTIVE_VALUE }).elem, text: INACTIVE_VALUE };
 };
 
@@ -289,9 +289,10 @@ const buildStatsBlock = (
     for (let i = 0; i < windows.length; i++) {
       const win = windows[i];
       if (win.kind !== kind) continue;
-      const pie = createPercentagePie();
-      const value = addStatsRow(list, `Last ${win.intervalMs / 1000}s: `, pie);
-      rows.push({ win, pie, value });
+      // How far the window has run, beside its figure: decorative (p805 D9)
+      const donut = createDonut({ class: 'rayStatProgress' });
+      const value = addStatsRow(list, `Last ${win.intervalMs / 1000}s: `, donut);
+      rows.push({ win, donut, value });
     }
   }
   statsBlocks.push({ list, getStats, isEnabled, isActive: null, lastFrame, maxEver, rows });
@@ -367,8 +368,8 @@ const refreshStatsBlock = (block: StatsBlock) => {
   writeStatsValue(block.lastFrame, isActive ? String(s.lastFrame) : INACTIVE_VALUE);
   writeStatsValue(block.maxEver, isActive ? String(s.maxEver) : INACTIVE_VALUE);
   for (let i = 0; i < block.rows.length; i++) {
-    const { win, pie, value } = block.rows[i];
-    pie.set(isActive ? win.progress * 100 : 0);
+    const { win, donut, value } = block.rows[i];
+    donut.setValue(isActive ? win.progress : 0);
     if (!isActive) {
       writeStatsValue(value, INACTIVE_VALUE);
     } else if (win.kind === 'AVERAGE') {
@@ -379,7 +380,7 @@ const refreshStatsBlock = (block: StatsBlock) => {
   }
 };
 
-/** Writes the stats into the cached views: only changed texts and pie values, no html. */
+/** Writes the stats into the cached views: only changed texts and donut values, no html. */
 const refreshStatsView = () => {
   for (let i = 0; i < statsBlocks.length; i++) refreshStatsBlock(statsBlocks[i]);
   const pending = pendingQueriesView;

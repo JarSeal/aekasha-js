@@ -5,7 +5,12 @@
 import { getPrimitiveValueKind, type Binding } from './binding/Binding';
 import { createValueFormatter } from './binding/ValueText';
 import { createField, type Field } from './Field';
-import { buildNumberField, buildNumberMonitor, type NumberFieldProps } from './NumberField';
+import {
+  buildNumberField,
+  buildNumberMonitor,
+  getNumberClipboard,
+  type NumberFieldProps,
+} from './NumberField';
 import { createNumberSteps, listenStepKeys, type NumberSteps } from './NumberSteps';
 import { createPointerDrag, type PointerDrag } from './PointerDrag';
 import { createSliderTrack, type SliderTick } from './SliderTrack';
@@ -136,6 +141,7 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
 
   const shell = createField<number>(props, {
     kind: 'slider',
+    clipboard: getNumberClipboard(steps, props.expressionUnits),
     valueKind: getPrimitiveValueKind<number>(),
     control: track.track,
     labelFor: thumb,

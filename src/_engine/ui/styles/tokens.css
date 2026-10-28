@@ -108,6 +108,7 @@
     --aek-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
     /* Delays: not motion, so reduced motion keeps them (a tooltip shown on hover) */
     --aek-tooltip-delay: 500ms;
+    --aek-submenu-delay: 150ms;
 
     /* The focus ring's colour is the theme's accent (in the theme blocks below) */
     --aek-focus-ring-width: 2px;
@@ -117,11 +118,13 @@
      * Z-layers: the windows' stacks (each window 2 above the last, its backdrop 1 below). A
      * loading overlay over the HUD's bounds (a scene loader's) covers the app's windows. An app's
      * modal dialogs stack above them both but below the debugger (10000 and up), whose roots an
-     * app's modal leaves live; a debug modal above the debug windows (p803 D7)
+     * app's modal leaves live; the command palette above an app's dialogs, opened over one too
+     * (p805 D12); a debug modal above the debug windows (p803 D7)
      */
     --aek-z-window: 100;
     --aek-z-loading: 1000;
     --aek-z-dialog: 5000;
+    --aek-z-palette: 9000;
     --aek-z-debug-window: 20000;
     --aek-z-debug-dialog: 30000;
     --aek-z-toast: 31000;
@@ -201,6 +204,12 @@
     --aek-success-soft: rgb(95 216 154 / 12%);
     --aek-info: #7cb4ff;
     --aek-info-soft: rgb(124 180 255 / 12%);
+    --aek-chart-1: #3987e5;
+    --aek-chart-2: #d95926;
+    --aek-chart-3: #9085e9;
+    --aek-chart-4: #199e70;
+    --aek-chart-5: #c98500;
+    --aek-chart-6: #d55181;
     --aek-backdrop: rgb(3 6 12 / 60%);
     --aek-shadow-sm: 0 1px 3px rgb(0 0 0 / 40%);
     --aek-shadow-lg: 0 12px 32px rgb(0 0 0 / 45%);
@@ -232,6 +241,12 @@
       --aek-success-soft: rgb(28 122 70 / 10%);
       --aek-info: #2459c4;
       --aek-info-soft: rgb(36 89 196 / 10%);
+      --aek-chart-1: #2a78d6;
+      --aek-chart-2: #eb6834;
+      --aek-chart-3: #4a3aa7;
+      --aek-chart-4: #16956a;
+      --aek-chart-5: #b07c00;
+      --aek-chart-6: #d4508a;
       --aek-backdrop: rgb(15 23 38 / 40%);
       --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
       --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);
@@ -263,6 +278,12 @@
     --aek-success-soft: rgb(28 122 70 / 10%);
     --aek-info: #2459c4;
     --aek-info-soft: rgb(36 89 196 / 10%);
+    --aek-chart-1: #2a78d6;
+    --aek-chart-2: #eb6834;
+    --aek-chart-3: #4a3aa7;
+    --aek-chart-4: #16956a;
+    --aek-chart-5: #b07c00;
+    --aek-chart-6: #d4508a;
     --aek-backdrop: rgb(15 23 38 / 40%);
     --aek-shadow-sm: 0 1px 3px rgb(15 23 38 / 10%);
     --aek-shadow-lg: 0 12px 32px rgb(15 23 38 / 12%);

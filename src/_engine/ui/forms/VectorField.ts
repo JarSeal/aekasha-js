@@ -6,7 +6,7 @@ import { createButton } from '../components/Button';
 import { lwarn } from '../../utils/Logger';
 import { createObjectValueKind, type BindingValueKind } from './binding/Binding';
 import { createValueFormatter, type NumberRules } from './binding/ValueText';
-import { createField, type Field, type FieldProps } from './Field';
+import { createField, type Field, type FieldProps, type FieldShell } from './Field';
 import { buildMonitor, getVectorKeys, readFirstValue } from './Monitor';
 import { createNumberInput, type NumberInput, type NumberTarget } from './NumberInput';
 import './VectorField.scss';
@@ -235,6 +235,22 @@ export const createVectorField = <T extends VectorValue>(
     extras: link ? [link.cmp.elem] : [],
     applyDisabled: (on) => link?.setDisabled(on),
     onRemove: () => link?.cmp.remove(),
+    // The fields' context menu's Copy as (p805 D11): code's forms of it
+    copyAs: [
+      {
+        label: 'Array',
+        getText: (value) => `[${keys.map((key) => Number(axes(value)[key])).join(', ')}]`,
+      },
+      ...(create
+        ? []
+        : [
+            {
+              label: 'Object',
+              getText: (value: T) =>
+                `{ ${keys.map((key) => `${key}: ${Number(axes(value)[key])}`).join(', ')} }`,
+            },
+          ]),
+    ],
   });
 
   return Object.assign(shell.field, {
@@ -290,6 +306,8 @@ export type PartsFieldSpec<T> = {
   draw?: (value: T) => void;
   applyDisabled?: (disabled: boolean) => void;
   onRemove?: () => void;
+  /** More forms the fields' context menu copies the value as (p805 D11: a vector's array) */
+  copyAs?: { label: string; getText: (value: T) => string }[];
 };
 
 /**
@@ -342,7 +360,7 @@ export const buildPartsField = <T>(
   row.append(...(spec.extras ?? []));
   const constrain = (index: number, value: number) => spins[index].steps.constrain(value);
 
-  const shell = createField<T>(props, {
+  const shell: FieldShell<T> = createField<T>(props, {
     kind: spec.kind,
     valueKind: spec.valueKind,
     control: row,
@@ -361,6 +379,19 @@ export const buildPartsField = <T>(
     onRemove: () => {
       for (const spin of spins) spin.dispose();
       spec.onRemove?.();
+    },
+    // The fields' context menu: the whole value, as the parts' own clipboard has it
+    clipboard: {
+      getText: (value) => parts.map((_, index) => spec.readPart(value, index)).join(', '),
+      parse: (text) => {
+        const numbers = parseNumberList(text);
+        if (!numbers || numbers.length !== parts.length) {
+          return { error: `Paste ${parts.length} numbers: “${text}” isn’t` };
+        }
+        const values = numbers.map((value, index) => constrain(index, value));
+        return { value: spec.writeAll(binding.peek(), values) };
+      },
+      copyAs: spec.copyAs,
     },
   });
   const { binding } = shell;

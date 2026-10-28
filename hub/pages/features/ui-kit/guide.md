@@ -26,6 +26,7 @@
 | [Text field](hub:features/ui-kit/forms#text-fields)                                             | [`createTextField`](api:createTextField)                                                                                                             | A string, a multiline text, a search                                         |
 | [Checkbox, switch](hub:features/ui-kit/forms#checkboxes-and-switches)                           | [`createCheckbox`](api:createCheckbox), [`createSwitch`](api:createSwitch)                                                                           | On or off; a setting that acts at once                                       |
 | [Monitor](hub:features/ui-kit/forms#monitors)                                                   | [`createMonitor`](api:createMonitor)                                                                                                                 | A value shown as text, read on a tick                                        |
+| [Graph monitor](hub:features/ui-kit/forms#graph-monitors)                                       | [`createGraphMonitor`](api:createGraphMonitor)                                                                                                       | A number’s reads as a graph under its text                                   |
 | [Colour field](hub:features/ui-kit/forms#colour-fields)                                         | [`createColorField`](api:createColorField)                                                                                                           | A colour, with a picker, a palette and the recent colours                    |
 | [Vector, rotation, quaternion](hub:features/ui-kit/forms#vectors-rotations-and-quaternions)     | [`createVectorField`](api:createVectorField), [`createRotationField`](api:createRotationField), [`createQuaternionField`](api:createQuaternionField) | A position or a scale; a rotation in degrees                                 |
 | [Angle dial, 2D pad](hub:features/ui-kit/forms#angle-dials-and-2d-pads)                         | [`createAngleDial`](api:createAngleDial), [`createPad2D`](api:createPad2D)                                                                           | An angle on a dial; an offset on a pad                                       |
@@ -42,8 +43,19 @@
 | [Popover](hub:features/ui-kit/overlays#popovers)                                                | [`createPopover`](api:createPopover)                                                                                                                 | Interactive content next to its trigger: filters, a detail                   |
 | [Menu](hub:features/ui-kit/overlays#menus-and-split-buttons)                                    | [`createMenu`](api:createMenu)                                                                                                                       | A button's list of actions, on / off items and choices                       |
 | [Split button](hub:features/ui-kit/overlays#menus-and-split-buttons)                            | [`createSplitButton`](api:createSplitButton)                                                                                                         | An action, with its variants in a menu                                       |
+| [Context menu](hub:features/ui-kit/overlays#context-menus)                                      | [`createContextMenu`](api:createContextMenu)                                                                                                         | A right click’s actions on a row, an object, a field                         |
+| [Command palette](hub:features/ui-kit/overlays#command-palettes)                                | [`createCommandPalette`](api:createCommandPalette)                                                                                                   | Every command a key away, ranked as you type; a search                       |
+| [List](hub:features/ui-kit/data#lists)                                                          | [`createList`](api:createList)                                                                                                                       | Rows of the app's objects to select, act on and filter                       |
+| [Tree](hub:features/ui-kit/data#trees)                                                          | [`createTree`](api:createTree)                                                                                                                       | Nested nodes to open, load, select and filter                                |
+| [Table](hub:features/ui-kit/data#tables)                                                        | [`createTable`](api:createTable)                                                                                                                     | Figures in columns: sort, select, groups, a total, bars, a stacked layout    |
+| [Sparkline](hub:features/ui-kit/data#sparklines)                                                | [`createSparkline`](api:createSparkline)                                                                                                             | Recent values as a small line beside a figure                                |
+| [Donut](hub:features/ui-kit/data#donuts)                                                        | [`createDonut`](api:createDonut)                                                                                                                     | A ring filled to one value, or a whole’s parts                               |
+| [Stacked bar](hub:features/ui-kit/data#stacked-bars)                                            | [`createStackedBar`](api:createStackedBar)                                                                                                           | A whole’s parts in one bar, or one against a budget                          |
+| [Chart](hub:features/ui-kit/data#charts)                                                        | [`createChart`](api:createChart)                                                                                                                     | Lines or bars of a few series, with the values as a table                    |
+| [Time series](hub:features/ui-kit/data#time-series)                                             | [`createTimeSeries`](api:createTimeSeries)                                                                                                           | Figures that change every frame as lines, on a canvas                        |
+| [Stat tile](hub:features/ui-kit/data#stat-tiles)                                                | [`createStatTile`](api:createStatTile)                                                                                                               | One figure, its unit, its change and a sparkline                             |
 
-The kit is in four pages, with a [component library](hub:features/ui-kit/library) that shows
+The kit is in five pages, with a [component library](hub:features/ui-kit/library) that shows
 every piece in every state:
 
 ::: cards features/ui-kit
@@ -129,8 +141,8 @@ has each way, the tokens, the themes, the fonts and a worked example.
 
 A build carries only the pieces the app imports, with their styles, and loads them with the code
 that uses them. From the last `yarn sbp` report (gzip), for the `uiKit` embed profile, a scene
-with a window, a dialog, a toast, a button and a tooltip over one box, and a small form in the
-dialog:
+with a window, a dialog, a toast, a button and a tooltip over one box, a small form in the dialog
+and a data window:
 
 - **The kit in the first download:** {{sbp:uiKit.group:_engine/ui}}: the HUD root and CMP, which
   the engine's boot needs.
@@ -142,6 +154,12 @@ dialog:
   {{sbp:uiKit.chunk:assets/uiKitEmbedForm.css}} of styles for a property grid of five
   [fields](hub:features/ui-kit/forms#in-a-build), and {{sbp:uiKit.chunk:assets/hsva.js}} for the
   colour picker the first time its panel opens.
+- **What a few data pieces add,** loaded on the data window's first open:
+  {{sbp:uiKit.chunk:assets/uiKitEmbedData.js}} of code and
+  {{sbp:uiKit.chunk:assets/uiKitEmbedData.css}} of styles for a table, a list with an action per
+  row, tabs, a stat tile and a sparkline ([data display](hub:features/ui-kit/data#in-a-build)),
+  and {{sbp:uiKit.chunk:assets/BindingScheduler.js}} for the scheduler the form and the
+  collections share.
 
 The [smallest build](hub:features/smallest-build) page shows how the numbers are measured and
 kept under their budgets.

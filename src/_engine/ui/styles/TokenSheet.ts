@@ -170,6 +170,19 @@ export const CONTRAST_CONTROLS = ['border-control', 'focus-ring-color'];
  */
 export const CONTRAST_SOFTS = ['accent', 'danger', 'warning', 'success', 'info'];
 /**
+ * The chart series (p805 D9), in their order: each at 3:1 (a graphical object, WCAG 1.4.11) on
+ * the surfaces a chart sits on, `CONTRAST_SERIES_SURFACES`. Their order keeps neighbours apart
+ * under the common colour vision deficiencies (p805 Phase 0), which no pair here checks.
+ * @internal
+ */
+export const CONTRAST_SERIES = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6'];
+/**
+ * The surfaces the chart series are checked on: a panel's and a window's (not `bg` or
+ * `surface-hover`, which a chart doesn't sit on: the light orange is under 3 there)
+ * @internal
+ */
+export const CONTRAST_SERIES_SURFACES = ['surface', 'surface-raised'];
+/**
  * The theme tokens no pair checks, each with its reason
  * @internal
  */
@@ -191,6 +204,7 @@ export const CONTRAST_CHECKED = new Set([
   ...CONTRAST_SURFACES,
   ...CONTRAST_TEXTS,
   ...CONTRAST_CONTROLS,
+  ...CONTRAST_SERIES,
   'on-accent',
   ...CONTRAST_SOFTS.map((role) => `${role}-soft`),
 ]);
@@ -246,8 +260,8 @@ export const getContrastRatio = (a: TokenColor, b: TokenColor) => {
 
 /**
  * Every pair of a theme's declarations the contrast rule checks, with its ratio and minimum:
- * the texts at 4.5 and the controls at 3 on each surface, `on-accent` on `accent`, and `text` and
- * each status colour on its `-soft` over `surface`. Throws when a token is missing or unreadable.
+ * the texts at 4.5 and the controls at 3 on each surface, the chart series at 3 on theirs,
+ * `on-accent` on `accent`, and `text` and each status colour on its `-soft` over `surface`. Throws when a token is missing or unreadable.
  * @internal
  */
 export const listContrastPairs = (decls: Map<string, string>): ContrastPair[] => {
@@ -258,6 +272,9 @@ export const listContrastPairs = (decls: Map<string, string>): ContrastPair[] =>
   for (const bg of CONTRAST_SURFACES) {
     for (const fg of CONTRAST_TEXTS) add(fg, color(fg), bg, color(bg), 4.5);
     for (const fg of CONTRAST_CONTROLS) add(fg, color(fg), bg, color(bg), 3);
+  }
+  for (const bg of CONTRAST_SERIES_SURFACES) {
+    for (const fg of CONTRAST_SERIES) add(fg, color(fg), bg, color(bg), 3);
   }
   add('on-accent', color('on-accent'), 'accent', color('accent'), 4.5);
   for (const role of CONTRAST_SOFTS) {

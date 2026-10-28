@@ -539,7 +539,7 @@ The UI kit's pieces working, without the engine, on two pages with the same demo
 - **`/hub/features/ui-kit/library/`** (public): every piece in every state, for an app's developer. `yarn verify:ui` checks this page, as the public Hub builds it.
 - **`/hub/project/aekasha/components/`** (a dev page): the same boxes with what developing the kit needs: which files use each piece, notes for the plans that change it, and what the kit adds to a build.
 
-The script is `hub/_assets/ts/_components.ts`. `hub.ts` loads it on any page with a demo box, in both modes. Each piece has its text slot and its box in both pages' `index.html`, inside the `data-hub-components` element, and the dev page adds its "Used by" slot:
+The script is `hub/_assets/ts/_components.ts`, with a module per group of the UI kit section's pages in `hub/_assets/ts/_library/` (`core.ts`, `overlays.ts`, `fields.ts`, `editors.ts`, `containers.ts`) and their checks beside them (`coreChecks.ts`). `hub.ts` loads it on any page with a demo box, in both modes. Each piece has its text slot and its box in both pages' `index.html`, inside the `data-hub-components` element, and the dev page adds its "Used by" slot:
 
 ```html
 <div id="dialog-text"></div>
@@ -548,11 +548,11 @@ The script is `hub/_assets/ts/_components.ts`. `hub.ts` loads it on any page wit
 ```
 
 - **`dialog-text.md`**, one per page: the public one says what the piece is, what its states show and what the page can't show (what needs the engine's boot); the dev one links it and holds the notes for later plans.
-- **The demo box**: `_components.ts`' `DEMOS` maps `dialog` to the function that fills it with the buttons.
+- **The demo box**: the group module's map (`overlays.ts`' `OVERLAYS_DEMOS`, which `_components.ts`' `DEMOS` merges) maps `dialog` to the function that fills it with the buttons.
 - **"Used by"** (dev page): the generator (`devTools/hub/generated/components.ts`) lists the files outside the kit that call the piece's functions, grouped by where they are, each linked. List a new piece's functions in `COMPONENT_USES`.
-- **Its checks**: the states its buttons don't open and its keyboard scripts, in `hub/_assets/ts/_componentChecks.ts` (`devTools/verify/CLAUDE.md`).
+- **Its checks**: the states its buttons don't open and its keyboard scripts, in the group's checks module (`overlaysChecks.ts`, which `hub/_assets/ts/_componentChecks.ts` merges; `devTools/verify/CLAUDE.md`).
 
-To add a component, add the elements to both pages, its two `.md` files, a demo in `DEMOS`, its entry in `COMPONENT_USES` and its checks.
+To add a component, add the elements to both pages, its two `.md` files, a demo in its group module's map, its entry in `COMPONENT_USES` and its checks in the group's checks module.
 
 Any other page shows a piece's live demo with `::: demo <key>` (no content), the box of that key: the UI kit section's pages do, next to each component's text. The key must be a box of the public library page, so the build fails on one `yarn verify:ui` doesn't check.
 

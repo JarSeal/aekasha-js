@@ -241,10 +241,84 @@
   width: min(100%, 24rem);
 }
 
+// Tabs in a row take a panel's width; the narrow one overflows (its faded edges)
+.hubComponentDemoGroup.hubDemoTabs > .aekTabs {
+  width: min(100%, 28rem);
+}
+
+.hubComponentDemoGroup.hubDemoTabs > .aekTabs.hubDemoTabsNarrow {
+  width: min(100%, 16rem);
+}
+
+// A tab's or a section's content: a line; in a tab panel, in a padding (a section has its own)
+.hubDemoTextPanel p {
+  margin: 0;
+}
+
+.aekTabs__panel > .hubDemoTextPanel {
+  padding: var(--aek-space-4) var(--aek-space-3);
+}
+
+// An accordion in a row takes a panel's width
+.hubComponentDemoGroup.hubDemoAccordions > .aekAccordion {
+  width: min(100%, 28rem);
+}
+
+// A splitter in a row: a panel's size, framed, its panes' text in a padding
+.hubComponentDemoGroup.hubDemoSplitters > .aekSplitter {
+  width: min(100%, 28rem);
+  height: 10rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+}
+
+.aekSplitter__pane > .hubDemoPaneText {
+  display: grid;
+  gap: var(--aek-space-1);
+  padding: var(--aek-space-3);
+}
+
 // The parity box's custom item: a row of kit buttons (the day-night speed buttons)
 .hubDemoParityCustom {
   display: flex;
   gap: 0.25rem;
+}
+
+// The debugger parity box (`_library/parity.ts`): its sections' rows one under another; a row's
+// label is the census's source line and its note, a page's text, not a heading
+.hubDemoParitySection {
+  display: grid;
+  gap: 1rem;
+  padding-block: var(--aek-space-3);
+
+  > .hubComponentDemoGroup > p:first-child {
+    font-weight: 400;
+  }
+}
+
+// The assets tab's own heading above its list: the count and its scope switch
+.hubDemoParityHeader {
+  display: flex;
+  gap: var(--aek-space-3);
+  align-items: center;
+  margin-block-end: var(--aek-space-2);
+
+  h4 {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+  }
+}
+
+// A cell holding text and a piece (the Overview's action, the owner's badge); the by owner table's
+// second level indented
+.hubDemoParityCell {
+  display: flex;
+  gap: var(--aek-space-2);
+  align-items: center;
+
+  &[data-level='1'] {
+    padding-inline-start: var(--aek-space-4);
+  }
 }
 
 // The fieldsets one under another, a form's sections apart, with "Done" under them
@@ -312,4 +386,143 @@
   border: 1px solid var(--aek-border);
   border-radius: var(--aek-radius-md);
   overflow: hidden;
+}
+
+// A list or a tree in a row takes a panel's width, its rows framed; the scene objects' and the
+// scene outline's boxes scroll
+.hubComponentDemoGroup.hubDemoLists > :is(.aekList, .aekTree) {
+  width: min(100%, 24rem);
+
+  :is(.aekList__rows, .aekTree__rows) {
+    border: 1px solid var(--aek-border);
+    border-radius: var(--aek-radius-md);
+  }
+}
+
+.aekList.hubDemoListScroll {
+  --aek-list-max-height: 12rem;
+}
+
+.aekTree.hubDemoListScroll {
+  --aek-tree-max-height: 12rem;
+}
+
+// The tables sit on the page's background (their sticky parts too); the overview takes a wide
+// panel, the memory by owner a box that scrolls both ways, the assets a narrow one that stacks
+.hubComponentDemoGroup.hubDemoTables > .aekTable {
+  --aek-table-bg: var(--aek-bg);
+}
+
+.hubDemoTableWide > .aekTable {
+  width: min(100%, 36rem);
+}
+
+.hubDemoTableScroll > .aekTable {
+  --aek-table-max-height: 12rem;
+
+  width: min(100%, 28rem);
+}
+
+.hubDemoTableNarrow > .aekTable {
+  width: min(100%, 18rem);
+}
+
+// The dev page's table stress boxes: a box that scrolls
+.hubDemoStressTable > .aekTable {
+  --aek-table-max-height: 20rem;
+  --aek-table-bg: var(--aek-bg);
+
+  width: min(100%, 40rem);
+}
+
+// The dev page's time series stress box: the eight panels two a row
+.hubDemoStressSeries {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+// A cell renderer's two lines: the object, its entity and owner dimmed under it
+.hubDemoTwoLines {
+  display: flex;
+  flex-direction: column;
+}
+
+.hubDemoTwoLines__sub {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+}
+
+// The graphs (`_library/graphs.ts`) sit on a panel's surface, which the chart series are checked
+// on (the page's background isn't one: the light orange is under 3:1 there)
+.hubComponentDemoGroup.hubDemoGraphs {
+  gap: 0.75rem 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--aek-radius-md);
+  background-color: var(--aek-surface);
+}
+
+// A figure's line: its name, its value and its graph
+.hubDemoFigure {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 16rem;
+}
+
+.hubDemoFigureValue {
+  min-width: 3rem;
+  font-variant-numeric: var(--aek-numeric-tabular);
+  text-align: end;
+}
+
+.aekDonut.hubDemoPie {
+  --aek-donut-thickness: 100%;
+}
+
+.aekStackedBar.hubDemoBar {
+  width: min(100%, 24rem);
+}
+
+.hubComponentDemoGroup.hubDemoTiles {
+  align-items: start;
+}
+
+.hubComponentDemoGroup.hubDemoTiles > .aekStatTile {
+  --aek-stat-tile-bg: var(--aek-surface-raised);
+
+  width: 10rem;
+}
+
+// A chart, a time series, a graph monitor and a grid take the panel's width (the row is a
+// wrapping flex box); a live switch goes on a line of its own under them
+.hubComponentDemoGroup.hubDemoGraphs > :is(.aekChart, .aekTimeSeries, .aekField, .aekPropertyGrid) {
+  width: min(100%, 36rem);
+}
+
+.hubComponentDemoGroup.hubDemoGraphs > .aekField[data-kind='switch'] {
+  flex-basis: 100%;
+}
+
+// The palette demo's search rows (`palette.ts`' `renderRow`, in the HUD root): the Hub's own
+// search's shape, a breadcrumb over the title and a line of text
+.hubDemoPaletteRow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--aek-space-1);
+}
+
+.hubDemoPaletteCrumbs {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+}
+
+.hubDemoPaletteTitle {
+  font-weight: var(--aek-font-weight-medium);
+}
+
+.hubDemoPaletteText {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
 }

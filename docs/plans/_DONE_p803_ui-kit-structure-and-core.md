@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-9)
 Category: UI, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
-Blocks: \_DONE_p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
+Blocks: \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, p806_debugger-migration.md, p808_game-ui-components.md (p800 §5; written when each starts)
 Related: \_DONE_p801_design-foundation.md (the tokens, units, themes, motion and ring this restyles onto; its §4 inventory is the restyle table; the embed issues it left: Phase 3's As built), \_DONE_p802_hub-project-section.md (the component library page and its stand-ins, which this plan's kit root and resize source remove; the findings it left), \_DONE_p617_review-input-ui-hud.md (the kit as it is; D7: the kernel hooks), p622_engine-6-major.md (the `T`-prefixed names' aliases go there: D3), \_DONE_p613_review-rendering-scene-assets.md (`createSceneLoader`, the loading overlay's host), p355_save-menu-and-file-server-settings.md (its menu on this plan's button, menu and dialog)
 
 # UI Kit Structure and Core Components

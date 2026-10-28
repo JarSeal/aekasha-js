@@ -20,10 +20,12 @@ import 'aekasha/ui/fonts';
 const SCENE_ID = 'uiKitEmbed';
 const WINDOW_ID = 'uiKitEmbedWindow';
 const DIALOG_ID = 'uiKitEmbedDialog';
+const DATA_WINDOW_ID = 'uiKitEmbedData';
 const TOASTER_ID = 'uiKitEmbedToasts';
 const BACKDROP_CLASS = 'uiKitEmbedBackdrop';
 const TOOLTIP_CLASS = 'uiKitEmbedTooltip';
 const OPEN_DIALOG_CLASS = 'uiKitEmbedOpenDialog';
+const OPEN_DATA_CLASS = 'uiKitEmbedOpenData';
 
 const BOX_MATERIAL_ID = 'uiKitEmbedBox';
 const RAD_TO_DEG = 180 / Math.PI;
@@ -45,9 +47,10 @@ const PANEL_STYLE = {
 
 /**
  * The uiKit embed's scene (p801 D9): a box made in code, and the UI kit's pieces over it: a
- * window with a button and its tooltip shown, a toast, and a dialog with a small form bound to the
- * box (p804 D12), which the window's second button opens (p803 Phase 8: opened at load, the dialog
- * took the focus of a page the embed mounts into as it scrolled in, the Hub's UI kit page).
+ * window with a button and its tooltip shown, a toast, a dialog with a small form bound to the box
+ * (p804 D12), which the window's second button opens (p803 Phase 8: opened at load, the dialog
+ * took the focus of a page the embed mounts into as it scrolled in, the Hub's UI kit page), and a
+ * data window the third opens (p805 D13).
  * Mounted into a page it doesn't own (`uiKit.embed.ts`), they size from the browser's font size,
  * not the host's root, and stay inside the mount's container; `yarn verify:embed` checks both,
  * after clicking the button and the form's select.
@@ -91,10 +94,18 @@ export const scene = async () => {
           onClick: () => void openBoxDialog(),
         }).cmp
       );
+      panel.add(
+        createButton({
+          label: 'Open the data',
+          size: 'sm',
+          class: OPEN_DATA_CLASS,
+          onClick: () => void openDataWindow(),
+        }).cmp
+      );
       return panel;
     },
     position: { x: 16, y: 16 },
-    size: { w: 220, h: 190 },
+    size: { w: 220, h: 230 },
     // The focus would show the tooltip, and the dialog's taking it (a blur) hide it again
     focusFirstElement: false,
     closeOnSceneChange: true,
@@ -146,5 +157,30 @@ const openBoxDialog = async () => {
     // `yarn verify:embed` checks Escape: the host page's leaves it open, its own closes it
     closeOnEscape: true,
     removeOnSceneChange: true,
+  });
+};
+
+/**
+ * The data window, from the window's third button: a table, a list and a figure bound to the box,
+ * in tabs. A module of its own, imported on the first press (a lazy chunk in a build:
+ * `sbp.config.ts` budgets it apart from the HUD's and the form's), so the window opens once it's
+ * loaded, if the scene is still this one.
+ */
+const openDataWindow = async () => {
+  const { createDataTabs } = await import('./uiKitEmbedData');
+  if (getCurrentSceneId() !== SCENE_ID) return;
+  hint.tooltip?.hide();
+  openDraggableWindow({
+    id: DATA_WINDOW_ID,
+    title: 'Data',
+    content: () => {
+      const panel = CMP({ style: PANEL_STYLE });
+      panel.add(createDataTabs(SCENE_ID, boxId, BOX_MATERIAL_ID).cmp);
+      return panel;
+    },
+    // Right of the first window, inside the 640 × 360 container `yarn verify:embed` mounts
+    position: { x: 252, y: 16 },
+    size: { w: 360, h: 300 },
+    closeOnSceneChange: true,
   });
 };

@@ -94,6 +94,15 @@
   border-width: 2px;
 }
 
+// A chart series: a bar of its colour on the surface
+.hubContrastSample_series::before {
+  content: '';
+  width: 1.25rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: var(--hub-series);
+}
+
 .hubTypeSample {
   white-space: nowrap;
 }

@@ -1,39 +1,34 @@
-import MiniSearch from 'minisearch';
+import { CMP, createCommandPalette, createLink } from 'aekasha/ui';
+import type { CommandPalette } from 'aekasha/ui';
+import { HUB_SEARCH_META, type HubSearchPayload } from '../../../devTools/hub/searchProtocol';
 import {
-  apiSearchName,
-  createHubSearchReader,
-  HUB_SEARCH_META,
-  HUB_SEARCH_OPTIONS,
-  type HubSearchIndexedDoc,
-  type HubSearchPayload,
-  type HubSearchStored,
-} from '../../../devTools/hub/searchProtocol';
-import type { HubDataPage, HubNavItem } from '../../../devTools/hub/types';
+  createHubSearchResults,
+  type HubSearchCommand,
+  type HubSearchResults,
+} from '../../../devTools/hub/searchResults';
+import { getKitRoot } from './_kitRoot';
 
 /**
- * The Hub's search dialog: a chunk `hub.ts` imports on first use (the first focus of the search
- * button, ⌘K / Ctrl+K or `/`), which then loads the payload (`hub-search.js`, its URL in the page's
- * `<meta name="aek-hub-search">`): the index, and the menu and pages for the results' groups and
- * breadcrumbs. Both are cached by the browser from then on: the chunk's name has its hash, and the
- * payload's URL its `?v=`.
+ * The Hub's search: the UI kit's command palette (p805 D12, Phase 7 section 2) over the Hub's
+ * index, a chunk `hub.ts` imports on first use (the first focus or hover of the search button,
+ * a click, ⌘K / Ctrl+K or `/`), which then loads the payload (`hub-search.js`, its URL in the
+ * page's `<meta name="aek-hub-search">`): the index, and the menu and pages for the results'
+ * groups and breadcrumbs. Both are cached by the browser from then on: the chunk's name has its
+ * hash, and the payload's URL its `?v=`.
  *
- * Results are grouped by top-level section (Examples, Features, …) in the order of each group's
- * best result, each with its breadcrumb (pages, then the headings above it) and a snippet with
- * the match marked. An API entry, name or member shows its kind and name instead of a heading; the
- * API pages aren't in the payload's `pages`, so its breadcrumb comes from its path. The input is a
- * combobox over the results' listbox: the arrow keys move, Enter opens, Escape closes (the native
- * `<dialog>`).
+ * The palette's `source` answers each query with the best results as commands
+ * (`devTools/hub/searchResults.ts`: MiniSearch's order, grouped by top-level section, the count
+ * of all), a promise of them until the payload is in (its loading status), a rejection when it
+ * fails (tried again on the next query). A row is a link (the palette's `href`): its breadcrumb,
+ * its title (an API result's kind badge and name as code) and a snippet, marked with MiniSearch's
+ * matched terms. The page around the HUD root is the Hub's: made inert and kept from scrolling
+ * while the palette is open. The last query is kept for the session and opened selected.
  */
-
-type HubSearchResult = HubSearchStored & { terms: string[] };
 
 /** The last query, kept for the session */
 const QUERY_STORAGE_KEY = 'aekHubSearch';
-const MAX_RESULTS = 50;
-const MAX_SUGGESTIONS = 3;
-/** The snippet: this much text before the first match, and this long in all */
-const SNIPPET_BEFORE = 40;
-const SNIPPET_LENGTH = 180;
+/** Set on `<html>` while the palette is open: the page doesn't scroll (`_search.scss`) */
+const OPEN_CLASS = 'hubSearchOpen';
 
 const readStoredQuery = () => {
   try {
@@ -53,18 +48,13 @@ const storeQuery = (query: string) => {
 
 // --- The payload ---
 
-type LoadedSearch = {
-  index: MiniSearch<HubSearchIndexedDoc>;
-  nav: HubNavItem[];
-  pages: HubDataPage[];
-  read: ReturnType<typeof createHubSearchReader>;
-};
+let resultsPromise: Promise<HubSearchResults> | null = null;
+/** The results once loaded, for synchronous answers while typing */
+let loaded: HubSearchResults | null = null;
 
-let searchPromise: Promise<LoadedSearch> | null = null;
-
-/** Loads the payload once; a failed load is tried again on the next open */
-const loadPayload = () =>
-  (searchPromise ??= (async () => {
+/** Loads the payload once; a failed load is tried again on the next query */
+const loadResultsAsync = () =>
+  (resultsPromise ??= (async () => {
     const href = document.querySelector<HTMLMetaElement>(
       `meta[name="${HUB_SEARCH_META}"]`
     )?.content;
@@ -72,402 +62,112 @@ const loadPayload = () =>
     // The 404 page's links resolve against its `<base>`, the others against the page
     const url = new URL(href, document.baseURI).href;
     const module = (await import(/* @vite-ignore */ url)) as { default: HubSearchPayload };
-    const payload = module.default;
-    return {
-      index: MiniSearch.loadJS<HubSearchIndexedDoc>(payload.index, HUB_SEARCH_OPTIONS),
-      nav: payload.nav,
-      pages: payload.pages,
-      read: createHubSearchReader(payload),
-    };
+    // The results' links resolve against the site root: `_assets/hub-search.js`' folder's parent.
+    // Not `hub.js`' `import.meta.url`: the build may move its code into a chunk (it did, and every
+    // result linked into `_assets/`)
+    loaded = createHubSearchResults({ payload: module.default, rootUrl: new URL('../', url).href });
+    return loaded;
   })().catch((err: unknown) => {
-    searchPromise = null;
+    resultsPromise = null;
+    // eslint-disable-next-line no-console -- a failed load's error, for the console (the status says it failed)
+    console.error('[Hub] The search index failed to load:', err);
     throw err;
   }));
 
-type PageInfo = { page: HubDataPage; label: string };
+// --- The palette ---
 
-let pageInfos: Map<string, PageInfo> | null = null;
-let menuLabels: Map<string, string> | null = null;
-
-/** Every menu entry's label by path */
-const getMenuLabels = () => {
-  if (menuLabels) return menuLabels;
-  const labels = new Map<string, string>();
-  const walk = (items: HubNavItem[]) => {
-    for (const item of items) {
-      labels.set(item.path, item.title);
-      walk(item.children);
-    }
-  };
-  walk(loaded?.nav ?? []);
-  return (menuLabels = labels);
-};
-
-/** Every page by path, labelled by its menu entry where it has one (else its title) */
-const getPageInfos = () => {
-  if (pageInfos) return pageInfos;
-  const menuLabels = getMenuLabels();
-  pageInfos = new Map(
-    (loaded?.pages ?? []).map((page) => [
-      page.path,
-      { page, label: menuLabels.get(page.path) ?? page.title },
-    ])
-  );
-  return pageInfos;
-};
-
-/** `examples/physics/` → `examples/`, `examples/physics/` */
-const pagePathTrail = (pagePath: string) => {
-  const parts = pagePath.split('/').filter(Boolean);
-  return parts.map((_part, i) => `${parts.slice(0, i + 1).join('/')}/`);
-};
-
-/**
- * A page's breadcrumb label: its menu entry or title, else its folder's name (an API page:
- * `documentation/aekasha/physics/` → `physics`)
- */
-const pathLabel = (pagePath: string) => {
-  const parts = pagePath.split('/').filter(Boolean);
-  return (
-    getPageInfos().get(pagePath)?.label ??
-    getMenuLabels().get(pagePath) ??
-    parts[parts.length - 1] ??
-    pagePath
-  );
-};
-
-/** The top-level section's path: the group a result goes in */
-const sectionOf = (pagePath: string) =>
-  getPageInfos().get(pagePath)?.page.section ?? pagePathTrail(pagePath)[0] ?? '';
-
-/** The headings above the result's heading on its page, outermost first */
-const parentHeadings = (page: HubDataPage, anchor: string) => {
-  const at = page.headings.findIndex((heading) => heading.id === anchor);
-  if (at < 0) return [];
-  const parents: string[] = [];
-  let level = page.headings[at].level;
-  for (let i = at - 1; i >= 0 && level > 2; i--) {
-    const heading = page.headings[i];
-    if (heading.level < level) {
-      parents.unshift(heading.text);
-      level = heading.level;
-    }
+/** A result's row: its breadcrumb, its title (or an API result's kind and name) and snippet */
+const renderRow = (
+  command: HubSearchCommand,
+  { appendMarked }: { appendMarked: (parent: Node, text: string) => void }
+) => {
+  const row = CMP({ class: 'hubSearchRow' });
+  if (command.crumbs.length) {
+    row.add({ tag: 'span', class: 'hubSearchCrumbs', text: command.crumbs.join(' › ') });
   }
-  return parents;
-};
-
-// --- Text ---
-
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** The matched index terms, longest first so `meshes` is marked before `mesh` */
-const termsRegExp = (terms: string[]) => {
-  const usable = [...new Set(terms)].filter((term) => term.length > 1);
-  if (!usable.length) return null;
-  usable.sort((a, b) => b.length - a.length);
-  return new RegExp(usable.map(escapeRegExp).join('|'), 'gi');
-};
-
-/** The text with every match of `regex` in a `<mark>` */
-const appendMarked = (parent: HTMLElement, text: string, regex: RegExp | null) => {
-  if (!regex) {
-    parent.append(text);
-    return;
-  }
-  let cursor = 0;
-  for (const match of text.matchAll(regex)) {
-    parent.append(text.slice(cursor, match.index));
-    const mark = document.createElement('mark');
-    mark.textContent = match[0];
-    parent.append(mark);
-    cursor = match.index + match[0].length;
-  }
-  parent.append(text.slice(cursor));
-};
-
-/** A window of the text around its first match, cut at word edges */
-const snippetOf = (text: string, regex: RegExp | null) => {
-  if (text.length <= SNIPPET_LENGTH) return text;
-  // -1 without a match in the text (it matched the heading or the code): the text's start
-  const first = regex ? text.search(regex) : -1;
-  let start = Math.max(0, first - SNIPPET_BEFORE);
-  if (start > 0) start = text.indexOf(' ', start) + 1 || start;
-  let end = Math.min(text.length, start + SNIPPET_LENGTH);
-  const lastSpace = text.lastIndexOf(' ', end);
-  if (end < text.length && lastSpace > start) end = lastSpace;
-  return `${start > 0 ? '… ' : ''}${text.slice(start, end)}${end < text.length ? ' …' : ''}`;
-};
-
-// --- The dialog ---
-
-type SearchUi = {
-  dialog: HTMLDialogElement;
-  input: HTMLInputElement;
-  results: HTMLElement;
-  status: HTMLElement;
-};
-
-let ui: SearchUi | null = null;
-let hubJsUrl = '';
-let options: HTMLAnchorElement[] = [];
-let activeIndex = -1;
-/** The payload once loaded, for synchronous searches while typing */
-let loaded: LoadedSearch | null = null;
-
-/** The best results, decoded */
-const search = (query: string, opts?: Parameters<MiniSearch['search']>[1]): HubSearchResult[] => {
-  if (!loaded) return [];
-  const { index, read } = loaded;
-  return index
-    .search(query, opts)
-    .slice(0, MAX_RESULTS)
-    .map((result) => ({ ...read(result as unknown as HubSearchIndexedDoc), terms: result.terms }));
-};
-
-const rootUrl = () => new URL('../', hubJsUrl);
-
-const resultHref = (result: HubSearchResult) =>
-  new URL(`${result.path}${result.anchor ? `#${result.anchor}` : ''}`, rootUrl()).href;
-
-const setActive = (next: number, shouldScroll = true) => {
-  if (!ui) return;
-  options[activeIndex]?.setAttribute('aria-selected', 'false');
-  activeIndex = options.length ? (next + options.length) % options.length : -1;
-  const option = options[activeIndex];
-  if (option) {
-    option.setAttribute('aria-selected', 'true');
-    ui.input.setAttribute('aria-activedescendant', option.id);
-    if (shouldScroll) option.scrollIntoView({ block: 'nearest' });
-  } else {
-    ui.input.removeAttribute('aria-activedescendant');
-  }
-};
-
-const renderResult = (result: HubSearchResult, info: PageInfo | undefined, n: number) => {
-  const regex = termsRegExp(result.terms);
-  const option = document.createElement('a');
-  option.className = 'hubSearchResult';
-  option.id = `hubSearchResult_${n}`;
-  option.href = resultHref(result);
-  option.setAttribute('role', 'option');
-  option.setAttribute('aria-selected', 'false');
-
-  // An API name's page is in the breadcrumb; an entry's is itself
-  const crumbs = [
-    // The section is the group's label
-    ...pagePathTrail(result.path)
-      .slice(1, result.anchor ? undefined : -1)
-      .map(pathLabel),
-    ...(info && result.anchor && !result.kind ? parentHeadings(info.page, result.anchor) : []),
-  ];
-  if (crumbs.length) {
-    const crumb = document.createElement('span');
-    crumb.className = 'hubSearchCrumbs';
-    crumb.textContent = crumbs.join(' › ');
-    option.append(crumb);
-  }
-  const title = document.createElement('span');
-  title.className = 'hubSearchTitle';
-  if (result.kind) {
-    const kind = document.createElement('span');
+  const title = row.add({ tag: 'span', class: 'hubSearchTitle' });
+  if (command.kind) {
     // The API pages' kind badge and colours (`_api.scss`)
-    kind.className = `hubSearchKind hubApiKind hubApiKind_${result.kind.replace(/\W/g, '')}`;
-    kind.textContent = result.kind;
-    const name = document.createElement('code');
-    appendMarked(name, apiSearchName(result), regex);
-    title.append(kind, name);
+    title.add({
+      tag: 'span',
+      class: ['hubSearchKind', 'hubApiKind', `hubApiKind_${command.kind.replace(/\W/g, '')}`],
+      text: command.kind,
+    });
+    appendMarked(title.add({ tag: 'code' }).elem, command.label);
   } else {
-    const text = result.anchor ? result.heading ?? '' : info?.page.title ?? result.path;
-    appendMarked(title, text, regex);
+    appendMarked(title.elem, command.label);
   }
-  option.append(title);
-  const snippetText = result.text || result.summary;
-  if (snippetText) {
-    const snippet = document.createElement('span');
-    snippet.className = 'hubSearchSnippet';
-    appendMarked(snippet, snippetOf(snippetText, regex), regex);
-    option.append(snippet);
+  if (command.snippet) {
+    appendMarked(row.add({ tag: 'span', class: 'hubSearchSnippet' }).elem, command.snippet);
   }
-  return option;
+  return row;
 };
 
-/** The closest page titles, for a query without results */
-const suggestPages = (query: string) =>
-  search(query, { fields: ['title'], fuzzy: 0.4, prefix: true, combineWith: 'OR' })
-    .map((result) => getPageInfos().get(result.path))
-    .filter((info): info is PageInfo => !!info)
-    .slice(0, MAX_SUGGESTIONS);
+/** No results: the closest page titles as links to try */
+const renderEmpty = (query: string) => {
+  const text = `No results for “${query.trim()}”.`;
+  const suggestions = loaded?.suggest(query) ?? [];
+  if (!suggestions.length) return text;
+  const status = CMP({ tag: 'span', text: `${text} Did you mean ` });
+  suggestions.forEach(({ title, href }, i) => {
+    status.add(createLink({ href, label: title }).cmp);
+    const after = i < suggestions.length - 2 ? ', ' : i === suggestions.length - 2 ? ' or ' : '?';
+    status.elem.append(after);
+  });
+  return status;
+};
 
-const showStatus = (text: string, suggestions: PageInfo[] = []) => {
-  if (!ui) return;
-  ui.status.textContent = text;
-  if (!suggestions.length) return;
-  ui.status.append(' Did you mean ');
-  suggestions.forEach((info, i) => {
-    const link = document.createElement('a');
-    link.href = new URL(info.page.path, rootUrl()).href;
-    link.textContent = info.page.title;
-    ui?.status.append(
-      link,
-      i < suggestions.length - 2 ? ', ' : i === suggestions.length - 2 ? ' or ' : '?'
-    );
+/** The page's elements the open palette made inert (not one that was already) */
+const madeInert: Element[] = [];
+
+/** While open, the page around the HUD root is inert and doesn't scroll (the kit's modal makes
+ * only the HUD root's other children inert: it doesn't own a host page) */
+const onOpen = () => {
+  const hudRoot = getKitRoot().elem;
+  for (const child of document.body.children) {
+    if (child === hudRoot || child.contains(hudRoot) || child.hasAttribute('inert')) continue;
+    child.setAttribute('inert', '');
+    madeInert.push(child);
+  }
+  document.documentElement.classList.add(OPEN_CLASS);
+};
+
+const onClose = () => {
+  for (const elem of madeInert.splice(0)) elem.removeAttribute('inert');
+  document.documentElement.classList.remove(OPEN_CLASS);
+};
+
+let palette: CommandPalette<HubSearchCommand> | null = null;
+
+const createPalette = () =>
+  createCommandPalette<HubSearchCommand>({
+    id: 'hubSearch',
+    label: 'Search the Hub',
+    hint: 'Search the pages, their sections and code.',
+    loadingText: 'Loading the search…',
+    errorText: 'The search could not load. Check the connection and try again.',
+    emptyText: renderEmpty,
+    hints: { select: 'to open' },
+    source: (query) => {
+      if (!query.trim()) return [];
+      return loaded ? loaded.search(query) : loadResultsAsync().then((r) => r.search(query));
+    },
+    renderRow,
+    onQueryChange: storeQuery,
+    onOpen,
+    onClose,
+  });
+
+/** Starts loading the payload (the first focus or hover of the search button) */
+export const preloadSearch = () => {
+  loadResultsAsync().catch(() => {
+    // Reported, and tried again, when a query asks for it
   });
 };
 
-const runSearch = () => {
-  if (!ui) return;
-  const query = ui.input.value.trim();
-  storeQuery(ui.input.value);
-  ui.results.replaceChildren();
-  options = [];
-  activeIndex = -1;
-  ui.input.removeAttribute('aria-activedescendant');
-  ui.input.setAttribute('aria-expanded', 'false');
-  if (!query) return showStatus('Search the pages, their sections and code.');
-  if (!loaded) return showStatus('Loading the search…');
-
-  const results = search(query);
-  if (!results.length) {
-    return showStatus(`No results for “${query}”.`, suggestPages(query));
-  }
-
-  const pageInfos = getPageInfos();
-  const groups = new Map<string, HubSearchResult[]>();
-  for (const result of results) {
-    const section = sectionOf(result.path);
-    groups.set(section, [...(groups.get(section) ?? []), result]);
-  }
-  let n = 0;
-  for (const [section, sectionResults] of groups) {
-    const group = document.createElement('div');
-    group.className = 'hubSearchGroup';
-    group.setAttribute('role', 'group');
-    const label = document.createElement('div');
-    label.className = 'hubSearchGroupLabel';
-    label.id = `hubSearchGroup_${n}`;
-    label.setAttribute('role', 'presentation');
-    label.textContent = pageInfos.get(section)?.label ?? 'Home';
-    group.setAttribute('aria-labelledby', label.id);
-    group.append(label);
-    for (const result of sectionResults) {
-      const option = renderResult(result, pageInfos.get(result.path), n++);
-      options.push(option);
-      group.append(option);
-    }
-    ui.results.append(group);
-  }
-  ui.input.setAttribute('aria-expanded', 'true');
-  setActive(0, false);
-  ui.results.scrollTop = 0;
-  showStatus(
-    `${results.length}${results.length === MAX_RESULTS ? '+' : ''} result${results.length === 1 ? '' : 's'}`
-  );
-};
-
-const createUi = (): SearchUi => {
-  const dialog = document.createElement('dialog');
-  dialog.className = 'hubSearch';
-  dialog.setAttribute('aria-label', 'Search the Hub');
-  dialog.innerHTML = `<div class="hubSearchPanel">
-  <div class="hubSearchField">
-    <input class="hubSearchInput" type="search" placeholder="Search the Hub" autocomplete="off"
-      autocapitalize="off" spellcheck="false" enterkeyhint="go" role="combobox"
-      aria-label="Search the Hub" aria-autocomplete="list" aria-expanded="false"
-      aria-controls="hubSearchResults" />
-    <button type="button" class="hubSearchClose" data-hub-search-close>Close</button>
-  </div>
-  <div class="hubSearchResults" id="hubSearchResults" role="listbox" aria-label="Results"></div>
-  <p class="hubSearchStatus" role="status"></p>
-  <p class="hubSearchHints" aria-hidden="true">
-    <span><kbd>↑</kbd><kbd>↓</kbd> to move</span><span><kbd>↵</kbd> to open</span><span><kbd>esc</kbd> to close</span>
-  </p>
-</div>`;
-  // The header button's icon, so the dialog has no icons of its own to keep in sync
-  const icon = document.querySelector('.hubSearchButton .hubIcon')?.cloneNode(true);
-  if (icon) dialog.querySelector('.hubSearchField')?.prepend(icon);
-  document.body.append(dialog);
-
-  const input = dialog.querySelector<HTMLInputElement>('.hubSearchInput')!;
-  const results = dialog.querySelector<HTMLElement>('.hubSearchResults')!;
-  const status = dialog.querySelector<HTMLElement>('.hubSearchStatus')!;
-
-  /**
-   * Blurs before it closes: the native close gives the focus back to what had it before, but
-   * with nothing focused then, Chrome leaves it on the hidden input (`/` would type into it)
-   */
-  const close = () => {
-    if (document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)) {
-      document.activeElement.blur();
-    }
-    dialog.close();
-  };
-
-  input.addEventListener('input', runSearch);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActive(activeIndex + (e.key === 'ArrowDown' ? 1 : -1));
-    } else if (e.key === 'Enter' && !e.isComposing) {
-      e.preventDefault();
-      options[activeIndex]?.click();
-    } else if (e.key === 'Escape') {
-      // A search input's first Escape would only clear it: the query is kept for the next open
-      e.preventDefault();
-      close();
-    }
-  });
-  results.addEventListener('mousemove', (e) => {
-    const option = (e.target as Element).closest<HTMLAnchorElement>('.hubSearchResult');
-    const at = option ? options.indexOf(option) : -1;
-    if (at >= 0 && at !== activeIndex) setActive(at, false);
-  });
-  // Escape with the focus elsewhere in the dialog (a result)
-  dialog.addEventListener('cancel', (e) => {
-    e.preventDefault();
-    close();
-  });
-  dialog.addEventListener('click', (e) => {
-    const target = e.target as Element;
-    const isPlainClick = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey);
-    // The backdrop is the dialog itself; its panel fills it
-    if (target === dialog || target.closest('[data-hub-search-close]')) close();
-    // A link on this page only scrolls: the dialog closes for it
-    else if (target.closest('a') && isPlainClick) close();
-  });
-  return { dialog, input, results, status };
-};
-
-/** Starts loading the payload (the first focus of the search button) */
-export const preloadSearch = (url: string) => {
-  hubJsUrl = url;
-  loadPayload()
-    .then((result) => (loaded = result))
-    .catch(() => {
-      // Tried again, and reported, when the search opens
-    });
-};
-
-/** Opens the dialog with the last query of the session */
-export const openSearch = (url: string) => {
-  hubJsUrl = url;
-  ui ??= createUi();
-  const { dialog, input } = ui;
-  if (!dialog.open) {
-    if (!input.value) input.value = readStoredQuery();
-    dialog.showModal();
-  }
-  input.focus();
-  input.select();
-  runSearch();
-  if (loaded) return;
-  loadPayload()
-    .then((result) => {
-      loaded = result;
-      if (dialog.open) runSearch();
-    })
-    .catch((err: unknown) => {
-      // eslint-disable-next-line no-console -- a failed load's error, for the console (the page says it failed)
-      console.error('[Hub] The search index failed to load:', err);
-      showStatus('The search could not load. Check the connection and try again.');
-    });
+/** Opens the palette with the last query of the session, selected */
+export const openSearch = () => {
+  getKitRoot();
+  palette ??= createPalette();
+  palette.open(palette.isOpen() ? undefined : { query: readStoredQuery() });
 };

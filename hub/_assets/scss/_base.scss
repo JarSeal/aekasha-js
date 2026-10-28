@@ -100,6 +100,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+// The UI kit's HUD root (`_kitRoot.ts`: the search's palette, the component library's windows and
+// dialogs) above the sticky header (50) and its dropdowns (60), below the skip link (100): its
+// pieces' own layers order them inside it (p805 Phase 7 section 2)
+#hudRoot {
+  z-index: 70;
+}
+
 // The kit's pieces in the page (the component library's HUD root and its demos' kit roots, p803):
 // the Hub's unlayered element rules leave them to the kit's layered styles, which they'd beat (a
 // kit button's or link's colour, its corners while focused). In :where(), so the rules keep their specificity

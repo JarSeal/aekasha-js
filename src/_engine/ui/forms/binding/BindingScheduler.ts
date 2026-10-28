@@ -21,10 +21,10 @@ export type BindingScheduler = {
 };
 
 /**
- * A field as its scheduler reads it.
+ * A field (or a collection, `addScheduledRefresh`) as its scheduler reads it.
  * @internal
  */
-export type ScheduledBinding = {
+export type ScheduledEntry = {
   /** Reads the bound value and draws a change. `fromRefresh` is true for `refresh()` (an edit
    * field flashes a change then) and false for the tick and a reveal (never a flash) */
   read: (fromRefresh: boolean) => void;
@@ -37,7 +37,7 @@ export type ScheduledBinding = {
 };
 
 type Entry = {
-  binding: ScheduledBinding;
+  binding: ScheduledEntry;
   /** The frame time of its last tick read */
   lastRead: number;
   /** It was hidden at a read: read when it shows again */
@@ -45,7 +45,7 @@ type Entry = {
 };
 
 type SchedulerState = {
-  add: (binding: ScheduledBinding) => () => void;
+  add: (binding: ScheduledEntry) => () => void;
   reveal: () => void;
 };
 
@@ -195,8 +195,22 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
  * @internal
  * @returns the remover
  */
-export const addScheduledBinding = (scheduler: BindingScheduler, binding: ScheduledBinding) =>
+export const addScheduledBinding = (scheduler: BindingScheduler, binding: ScheduledEntry) =>
   states.get(scheduler)?.add(binding) ?? (() => {});
+
+/**
+ * Adds a collection (a table, a list, a tree; p805 D3) to a scheduler: its `refresh` runs on the
+ * scheduler's `refresh()`, on the tick every `interval` ms while `isShown`, and once when it
+ * shows again (`revealScheduledBindings`), as a field's read does. The collection calls the
+ * remover when it's removed.
+ * @internal
+ * @returns the remover
+ */
+export const addScheduledRefresh = (
+  scheduler: BindingScheduler,
+  refresh: (fromRefresh: boolean) => void,
+  { interval, isShown }: Pick<ScheduledEntry, 'interval' | 'isShown'>
+) => addScheduledBinding(scheduler, { read: refresh, isShown, interval });
 
 /** The page's scheduler, made on first use */
 let pageScheduler: BindingScheduler | null = null;

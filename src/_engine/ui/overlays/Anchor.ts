@@ -23,6 +23,13 @@ export type AnchorAlign = 'start' | 'center' | 'end';
 export type AnchorBox = { left: number; top: number; width: number; height: number };
 
 /**
+ * A point in viewport px an overlay is anchored to (a context menu at the pointer): a box of no
+ * size there.
+ * @internal
+ */
+export type AnchorPoint = { x: number; y: number };
+
+/**
  * What `computeAnchorPlacement` places.
  * @internal
  */
@@ -136,8 +143,11 @@ export type ShowAnchoredProps = {
   /** The overlay, in the document already (the top layer keeps its place in the DOM, so it
    * inherits the tokens and the theme from there) */
   elem: HTMLElement;
-  /** What it's anchored to */
-  anchor: HTMLElement;
+  /** What it's anchored to: an element, or a point (p805 D11), which doesn't move with a scroll */
+  anchor: HTMLElement | AnchorPoint;
+  /** The element whose forced theme and density the overlay takes along (default the anchor
+   * element; a point's overlay takes none without it) */
+  themeFrom?: HTMLElement;
   /** The preferred side (default 'bottom') */
   side?: AnchorSide;
   /** Where along the side (default 'start') */
@@ -180,7 +190,8 @@ const copyInheritedAttrs = (elem: HTMLElement, anchor: HTMLElement) => {
 };
 
 /**
- * Shows `elem` anchored to `anchor` (p803 D7) and keeps it there while the page scrolls (any
+ * Shows `elem` anchored to `anchor` (p803 D7; or at a point, p805 D11: a context menu at the
+ * pointer, which stays put) and keeps it there while the page scrolls (any
  * ancestor: a capture listener on the document) or the window or the HUD's bounds resize, each
  * read in one animation frame (and written only when the anchor, the bounds or its size moved). In the top layer (`popover="manual"`, so the browser closes it on
  * nothing: the overlay stack does) neither a window's `overflow` nor an embed's container clips
@@ -203,8 +214,13 @@ export const showAnchored = ({
   gap = 4,
   matchAnchorWidth,
   onAnchorRemoved,
+  themeFrom,
 }: ShowAnchoredProps) => {
   const isTopLayer = hasTopLayer();
+  // An element by its `nodeType` (a test's DOM has its own `HTMLElement`)
+  const anchorElem = 'nodeType' in anchor ? anchor : null;
+  const pointBox =
+    'nodeType' in anchor ? null : { left: anchor.x, top: anchor.y, width: 0, height: 0 };
   if (isTopLayer) {
     elem.setAttribute('popover', 'manual');
     elem.showPopover();
@@ -212,7 +228,8 @@ export const showAnchored = ({
     elem.style.zIndex = 'var(--aek-z-tooltip)';
     getHUDRootCMP().elem.appendChild(elem);
   }
-  copyInheritedAttrs(elem, anchor);
+  const themeSource = themeFrom ?? anchorElem;
+  if (themeSource) copyInheritedAttrs(elem, themeSource);
   elem.style.position = 'fixed';
 
   /** What the last `place()` read (the anchor's box, the bounds', the overlay's size): it writes
@@ -226,7 +243,7 @@ export const showAnchored = ({
   };
 
   const place = () => {
-    const anchorRect = anchor.getBoundingClientRect();
+    const anchorRect = pointBox ?? (anchorElem as HTMLElement).getBoundingClientRect();
     const bounds = getWindowSize();
     // The content's height even while a max height clips it. The width is the rendered one, under
     // the last max width: after the space grows, a centre or end alignment uses the old width until
@@ -262,7 +279,9 @@ export const showAnchored = ({
     // Custom properties, not max-width / max-height: the overlay's stylesheet caps them further
     style.setProperty(MAX_WIDTH_PROP, `${placement.maxWidth}px`);
     style.setProperty(MAX_HEIGHT_PROP, `${placement.maxHeight}px`);
-    if (matchAnchorWidth) style.minWidth = `${Math.min(anchorRect.width, placement.maxWidth)}px`;
+    if (matchAnchorWidth && anchorElem) {
+      style.minWidth = `${Math.min(anchorRect.width, placement.maxWidth)}px`;
+    }
     if (elem.getAttribute(SIDE_ATTR) !== placement.side)
       elem.setAttribute(SIDE_ATTR, placement.side);
   };
@@ -270,7 +289,7 @@ export const showAnchored = ({
   let frame = 0;
   const onFrame = () => {
     frame = 0;
-    if (elem.isConnected && anchor.isConnected) place();
+    if (elem.isConnected && (anchorElem?.isConnected ?? true)) place();
   };
   const schedule = () => {
     if (!frame) frame = requestAnimationFrame(onFrame);
@@ -279,7 +298,9 @@ export const showAnchored = ({
   const onScroll = (e: Event) => {
     if (!elem.contains(e.target as Node)) schedule();
   };
-  if (matchAnchorWidth) elem.style.minWidth = `${anchor.getBoundingClientRect().width}px`;
+  if (matchAnchorWidth && anchorElem) {
+    elem.style.minWidth = `${anchorElem.getBoundingClientRect().width}px`;
+  }
   place();
   document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   window.addEventListener('resize', schedule);
@@ -289,10 +310,10 @@ export const showAnchored = ({
   let watchFrame = 0;
   const watchAnchor = () => {
     watchFrame = 0;
-    if (anchor.isConnected) watchFrame = requestAnimationFrame(watchAnchor);
+    if (anchorElem?.isConnected) watchFrame = requestAnimationFrame(watchAnchor);
     else onAnchorRemoved?.();
   };
-  if (onAnchorRemoved) watchFrame = requestAnimationFrame(watchAnchor);
+  if (onAnchorRemoved && anchorElem) watchFrame = requestAnimationFrame(watchAnchor);
 
   return () => {
     if (watchFrame) cancelAnimationFrame(watchFrame);

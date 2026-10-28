@@ -2,8 +2,8 @@
 // unlayered rule wins, and every selector is in :where(). A line of text sits where a typed
 // field's text would (the same height and inset, no border to click), in tabular figures; the
 // multiline block is a read-only text area in the mono font, quieter than a control (`border`, not
-// `border-control`). Its custom properties: `--aek-monitor-bg`, `--aek-monitor-color` and
-// `--aek-monitor-font`.
+// `border-control`). Its custom properties: `--aek-monitor-bg`, `--aek-monitor-color`,
+// `--aek-monitor-font` and a graph monitor's `--aek-graph-monitor-height`.
 @layer aek.components {
   :where(.aekMonitor) {
     // The page's unlayered box-sizing reset would beat a layered one: set here, heights as such
@@ -46,6 +46,20 @@
     font-family: var(--aek-monitor-font, var(--aek-font-mono));
     font-size: inherit;
     line-height: var(--aek-line-height-base);
+  }
+
+  // A graph monitor (GraphMonitor.ts): the graph on a line of its own under the text, its height
+  // kept before its time series joins (the property grid loads it)
+  :where(.aekMonitor[data-graph]) {
+    flex-wrap: wrap;
+  }
+
+  :where(.aekMonitor__graph) {
+    --aek-time-series-height: var(--aek-graph-monitor-height, calc(var(--aek-space-7) * 2));
+
+    flex-basis: 100%;
+    min-width: 0;
+    min-height: var(--aek-time-series-height);
   }
 
   // Disabled, a line of text and its label are muted, not the disabled colour: neither is a

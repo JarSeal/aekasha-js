@@ -441,3 +441,75 @@ and never flashes.
 | States            | `data-kind="monitor"`, `data-disabled`                                                                  |
 | Custom properties | `--aek-monitor-bg`, `--aek-monitor-color`, `--aek-monitor-font` (the multiline block's)                 |
 | Assistive tech    | Text read after its label, not announced; the multiline block a read-only text area and a tab stop      |
+
+### Graph monitors
+
+[`createGraphMonitor`](api:createGraphMonitor) is a number monitor with a graph of its reads under
+its text (Tweakpane's `view: 'graph'`).
+
+```ts
+const frameTime = createGraphMonitor({
+  label: 'Frame time',
+  get: () => stats.frameMs,
+  unit: 'ms',
+  precision: 1,
+  interval: 100,
+  capacity: 100, // 10 s of reads
+  thresholds: [{ value: 16.7, label: '60 fps' }],
+});
+statsPanel.add(frameTime.cmp);
+```
+
+::: demo graphMonitor
+:::
+
+- **Samples.** Every read is one: the tick's every `interval` ms, and a refresh's. The graph holds
+  the last `capacity` (default 64, Tweakpane's `bufferSize`); a value that isn't a number is a gap.
+- **Range.** `min` and `max`, or a nice range over the reads and the `thresholds` that grows when
+  a read passes it and shrinks after a whole buffer under a lower one.
+- **In a property grid.** An item with `view: 'graph'` (and `bufferSize`, Tweakpane's names) is a
+  graph monitor. A grid loads its graph the first time it makes one, showing the text until then,
+  so a grid without one carries none of it.
+- **The graph** is a [time series](hub:features/ui-kit/data#time-series) with no ticks and no
+  summary: the monitor's text is its value.
+
+| Graph monitor     |                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| Props             | [`GraphMonitorProps`](api:GraphMonitorProps), a threshold's [`TimeSeriesThreshold`](api:TimeSeriesThreshold)   |
+| Parts             | The monitor's, `.aekMonitor` with `data-graph`, `__value`, `__unit` and `__graph` holding the `.aekTimeSeries` |
+| States            | `data-kind="monitor"`, `data-disabled`                                                                         |
+| Custom properties | The monitor's, `--aek-graph-monitor-height` (the graph's) and the time series'                                 |
+| Assistive tech    | The monitor's: text read after its label, not announced; the graph hidden                                      |
+
+## The fields' context menu
+
+[`createFieldContextMenu`](api:createFieldContextMenu) gives every field in a container (a property
+grid, a form, any panel) one context menu: **Reset** to the field's default, **Copy** the value as
+text, **Paste** a value and **Copy as**, other forms of a colour (hex, `rgb()`, sRGB floats) or a
+vector (an array, an object). A right click on a field's label opens it; on the control the
+browser's own menu stays, with a text's Cut, Copy and Paste. With the focus in a field, the
+ContextMenu key or Shift+F10 opens it too. Fields added to the container later have it as well.
+
+```ts
+const grid = createPropertyGrid({ children: [speedField, tintField, offsetField] });
+settingsPanel.add(grid.cmp);
+const fieldsMenu = createFieldContextMenu({ container: grid.cmp.elem });
+// With the panel: fieldsMenu.cmp.remove()
+```
+
+::: demo fieldContextMenu
+:::
+
+What Copy writes is the field's own text: a number as it is, a colour's hex, a vector's
+`1, 2.5, -3`, an option's label, a monitor's text. A paste goes through the same checks as typing:
+a number field takes an expression and keeps it to its `min`, `max` and `step`, a colour field
+reads any colour text it reads typed, a choice takes an option's label or value. A text that isn't
+a value is the field's message, as a typed one is. The browser may ask the user before the page
+reads the clipboard, so a paste can wait for that.
+
+| Fields' context menu |                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props                | [`FieldContextMenuProps`](api:FieldContextMenuProps)                                                                                                              |
+| Items                | Reset (off at the default, for a monitor and a disabled field), Copy, Paste (off for a monitor, a disabled field, and where the clipboard can't be read), Copy as |
+| Keys                 | The ContextMenu key and Shift+F10 in a field; the menu's keys in it                                                                                               |
+| Assistive tech       | The menu's, named by the field's label                                                                                                                            |

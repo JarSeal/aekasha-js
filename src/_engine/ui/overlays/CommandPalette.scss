@@ -1,0 +1,275 @@
+// The command palette's default styles (CommandPalette.ts, p805 D12), on the design tokens and
+// layered (p803 D5): an app's unlayered rule wins, and every selector is in :where(). The root
+// covers the HUD's bounds (the viewport, or a mounted engine's container) as the dialogs' backdrop
+// does, and is the panel's size container (its size is the bounds', never its content's): the
+// panel's place is in its units, and below 640 px of it the panel takes the whole bounds.
+@layer aek.components {
+  :where(.aekCommandPalette) {
+    position: fixed;
+    z-index: var(--aek-z-palette);
+    top: 0;
+    left: 0;
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    background: var(--aek-backdrop);
+    container: aekCommandPalette / size;
+  }
+
+  :where(.aekCommandPalette__panel) {
+    display: flex;
+    box-sizing: border-box;
+    width: min(
+      var(--aek-command-palette-width, calc(var(--aek-base) * 42)),
+      100% - 2 * var(--aek-space-4)
+    );
+    max-height: min(
+      var(--aek-command-palette-max-height, calc(var(--aek-base) * 34)),
+      100cqh - var(--aek-command-palette-top, 12cqh) - var(--aek-space-4)
+    );
+    min-height: 0;
+    margin-top: var(--aek-command-palette-top, 12cqh);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--aek-border-strong);
+    border-radius: var(--aek-radius-lg);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekCommandPalette__field) {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--aek-space-1);
+    padding: var(--aek-space-1) var(--aek-space-3) var(--aek-space-1) var(--aek-space-4);
+    border-bottom: 1px solid var(--aek-border);
+  }
+
+  :where(.aekCommandPalette__icon) {
+    display: inline-flex;
+    color: var(--aek-accent);
+  }
+
+  :where(.aekCommandPalette__icon svg) {
+    display: block;
+    width: var(--aek-icon-size-md);
+    height: var(--aek-icon-size-md);
+  }
+
+  :where(.aekCommandPalette__input) {
+    min-width: 0;
+    height: calc(var(--aek-space-7) * 1.25);
+    flex: 1;
+    padding: 0 var(--aek-space-2);
+    border: 0;
+    border-radius: var(--aek-radius-sm);
+    background: none;
+    color: var(--aek-text);
+    font: inherit;
+    font-size: var(--aek-font-size-lg);
+  }
+
+  // The kit's ring while no row is active, inside the input (the panel's edge would clip it);
+  // with one, the row shows it in the input's place (below), as the drop-down's list gives its
+  // ring to its active option
+  :where(.aekCommandPalette__input:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekCommandPalette__input[aria-activedescendant]:focus-visible) {
+    outline: none;
+  }
+
+  :where(.aekCommandPalette__input::placeholder) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekCommandPalette__close) {
+    min-height: 24px;
+    padding: 0 var(--aek-space-2);
+    border: 1px solid var(--aek-border);
+    border-radius: var(--aek-radius-sm);
+    background: none;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    cursor: pointer;
+  }
+
+  :where(.aekCommandPalette__close:hover) {
+    border-color: var(--aek-border-strong);
+    color: var(--aek-text);
+  }
+
+  // The rows' box: the option's offsets are from it (`scrollToRow`)
+  :where(.aekCommandPalette__results) {
+    position: relative;
+    min-height: 0;
+    flex: 1;
+    padding: 0 var(--aek-space-2) var(--aek-space-2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  :where(.aekCommandPalette__results[aria-busy='true']) {
+    opacity: 0.6;
+  }
+
+  :where(.aekCommandPalette__group + .aekCommandPalette__group) {
+    border-top: 1px solid var(--aek-border);
+  }
+
+  :where(.aekCommandPalette__groupLabel) {
+    position: sticky;
+    z-index: 1;
+    top: 0;
+    padding: var(--aek-space-3) var(--aek-space-3) var(--aek-space-1);
+    background-color: var(--aek-surface-raised);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-weight: var(--aek-font-weight-medium);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  // The first rows have no group's label above them: the box's top padding in its place
+  :where(.aekCommandPalette__results > .aekCommandPalette__option:first-child) {
+    margin-top: var(--aek-space-2);
+  }
+
+  :where(.aekCommandPalette__option) {
+    display: flex;
+    box-sizing: border-box;
+    min-height: 24px;
+    align-items: center;
+    gap: var(--aek-space-3);
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border-left: 2px solid transparent;
+    border-radius: 0 var(--aek-radius-sm) var(--aek-radius-sm) 0;
+    color: var(--aek-text);
+    text-decoration: none;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.aekCommandPalette__option[aria-selected='true']) {
+    border-left-color: var(--aek-command-palette-active-color, var(--aek-accent));
+    background-color: var(--aek-accent-soft);
+  }
+
+  // The input keeps the focus (aria-activedescendant), so the active row shows the ring in its
+  // place, inset (the rows' box clips around them), as the drop-down's active option does
+  :where(.aekCommandPalette__field:focus-within + .aekCommandPalette__results)
+    :where(.aekCommandPalette__option[aria-selected='true']) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekCommandPalette__option[aria-disabled='true']) {
+    color: var(--aek-text-disabled);
+    cursor: default;
+  }
+
+  :where(.aekCommandPalette__optionIcon) {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekCommandPalette__optionIcon svg) {
+    display: block;
+    width: var(--aek-icon-size-md);
+    height: var(--aek-icon-size-md);
+  }
+
+  :where(.aekCommandPalette__optionText) {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  :where(.aekCommandPalette__optionDescription) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekCommandPalette__option[aria-disabled='true'] .aekCommandPalette__optionDescription) {
+    color: inherit;
+  }
+
+  :where(.aekCommandPalette__optionKbd) {
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekCommandPalette__status) {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--aek-space-2);
+    margin: 0;
+    padding: var(--aek-space-3) var(--aek-space-4);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekCommandPalette__status:empty) {
+    display: none;
+  }
+
+  :where(.aekCommandPalette__results:not([hidden]) + .aekCommandPalette__status) {
+    padding-block: var(--aek-space-2);
+    border-top: 1px solid var(--aek-border);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekCommandPalette__hints) {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2) var(--aek-space-5);
+    margin: 0;
+    padding: var(--aek-space-2) var(--aek-space-4);
+    border-top: 1px solid var(--aek-border);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekCommandPalette__hint) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-1);
+  }
+
+  // A touch screen has no keys to hint at
+  @media (hover: none) {
+    :where(.aekCommandPalette__hints) {
+      display: none;
+    }
+  }
+
+  // A phone, or a small embed: the whole bounds, the field at the top
+  @container aekCommandPalette (max-width: 640px) {
+    :where(.aekCommandPalette__panel) {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+    }
+  }
+
+  :where(.aekCommandPalette__panel [hidden]) {
+    display: none;
+  }
+}

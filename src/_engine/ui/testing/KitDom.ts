@@ -449,6 +449,8 @@ export const stubKitDomAsync = async (
   vi.stubGlobal('HTMLInputElement', window.HTMLInputElement);
   // Node's own has a read-only `target`, which the dispatch above sets (a library's events)
   vi.stubGlobal('CustomEvent', window.CustomEvent);
+  // linkedom's, on its window only (`ThemeWatch.ts`' attribute watch)
+  vi.stubGlobal('MutationObserver', window.MutationObserver);
   // A frame is a 16 ms timer, so a test's fake timers run it (`vi.advanceTimersByTime`)
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) =>
     setTimeout(() => fn(Date.now()), 16)
@@ -497,6 +499,8 @@ export type KitPointerInit = KitKeyInit & {
   pointerId?: number;
   /** The button pressed (0 primary) */
   button?: number;
+  /** 'mouse' (default), 'touch' or 'pen' */
+  pointerType?: string;
   clientX?: number;
   clientY?: number;
 };
@@ -564,4 +568,229 @@ export const countListeners = (target: EventTarget, type?: string) => {
   let count = 0;
   for (const list of byType.values()) count += list.length;
   return count;
+};
+
+/**
+ * A clipboard for a test (p805 D14; Node's `navigator` has none): `navigator.clipboard`'s
+ * `readText` and `writeText` over a text the test reads (`getText`) and fills (`setText`).
+ * `readable: false` makes `readText` reject, as a denied permission does. `restore()` takes it
+ * away again.
+ * @internal
+ */
+export const stubClipboard = (props: { text?: string; readable?: boolean } = {}) => {
+  let text = props.text ?? '';
+  const clipboard = {
+    readText: () =>
+      props.readable === false
+        ? Promise.reject(new Error('Read permission denied'))
+        : Promise.resolve(text),
+    writeText: (value: string) => {
+      text = value;
+      return Promise.resolve();
+    },
+  };
+  Object.defineProperty(globalThis.navigator, 'clipboard', {
+    configurable: true,
+    value: clipboard,
+  });
+  return {
+    getText: () => text,
+    setText: (value: string) => {
+      text = value;
+    },
+    restore: () => {
+      Reflect.deleteProperty(globalThis.navigator, 'clipboard');
+    },
+  };
+};
+
+/**
+ * A `ResizeObserver` for a test (p805 D14; linkedom has none): the observers a piece makes, which
+ * the test fires with a content box's size (`resize(elem, { width?, height })`, the observers
+ * watching `elem` called as a browser would after a layout). `observerCount()` says how many still
+ * watch something (none after the piece's removal); `restore()` takes it away again.
+ * @internal
+ */
+export const stubResizeObserver = () => {
+  const observers = new Set<{ callback: ResizeObserverCallback; elems: Set<Element> }>();
+  class StubResizeObserver {
+    private readonly entry: { callback: ResizeObserverCallback; elems: Set<Element> };
+    constructor(callback: ResizeObserverCallback) {
+      this.entry = { callback, elems: new Set() };
+      observers.add(this.entry);
+    }
+    observe(elem: Element) {
+      this.entry.elems.add(elem);
+    }
+    unobserve(elem: Element) {
+      this.entry.elems.delete(elem);
+    }
+    disconnect() {
+      this.entry.elems.clear();
+      observers.delete(this.entry);
+    }
+  }
+  vi.stubGlobal('ResizeObserver', StubResizeObserver);
+  return {
+    resize: (elem: Element, size: { width?: number; height: number }) => {
+      const contentRect = { width: size.width ?? 0, height: size.height } as DOMRectReadOnly;
+      for (const observer of observers) {
+        if (!observer.elems.has(elem)) continue;
+        const entry = { target: elem, contentRect } as ResizeObserverEntry;
+        observer.callback([entry], observer as unknown as ResizeObserver);
+      }
+    },
+    observerCount: () => [...observers].filter((observer) => observer.elems.size > 0).length,
+    restore: () => {
+      observers.clear();
+      Reflect.deleteProperty(globalThis, 'ResizeObserver');
+    },
+  };
+};
+
+/**
+ * An `IntersectionObserver` for a test (p805 D14; linkedom has none): the observers a piece makes,
+ * which the test fires (`intersect(elem, isIntersecting)`, the observers watching `elem` called as
+ * a browser would after a scroll or a show). `observerCount()` says how many still watch something
+ * (none after the piece's removal); `restore()` takes it away again.
+ * @internal
+ */
+export const stubIntersectionObserver = () => {
+  const observers = new Set<{ callback: IntersectionObserverCallback; elems: Set<Element> }>();
+  class StubIntersectionObserver {
+    private readonly entry: { callback: IntersectionObserverCallback; elems: Set<Element> };
+    constructor(callback: IntersectionObserverCallback) {
+      this.entry = { callback, elems: new Set() };
+      observers.add(this.entry);
+    }
+    observe(elem: Element) {
+      this.entry.elems.add(elem);
+    }
+    unobserve(elem: Element) {
+      this.entry.elems.delete(elem);
+    }
+    disconnect() {
+      this.entry.elems.clear();
+      observers.delete(this.entry);
+    }
+  }
+  vi.stubGlobal('IntersectionObserver', StubIntersectionObserver);
+  return {
+    intersect: (elem: Element, isIntersecting: boolean) => {
+      for (const observer of observers) {
+        if (!observer.elems.has(elem)) continue;
+        const entry = { target: elem, isIntersecting } as IntersectionObserverEntry;
+        observer.callback([entry], observer as unknown as IntersectionObserver);
+      }
+    },
+    observerCount: () => [...observers].filter((observer) => observer.elems.size > 0).length,
+    restore: () => {
+      observers.clear();
+      Reflect.deleteProperty(globalThis, 'IntersectionObserver');
+    },
+  };
+};
+
+/**
+ * `window.matchMedia` for a test (p805 D14; linkedom has none): every query a dark-scheme one
+ * (`prefers-color-scheme: dark`), which the test flips (`setDark(on)`, the lists' `change`
+ * listeners called). `listenerCount()` says how many listen (none after the last subscriber left);
+ * `restore()` takes it away again.
+ * @internal
+ */
+export const stubMatchMedia = (props: { dark?: boolean } = {}) => {
+  let dark = props.dark ?? false;
+  const changeListeners = new Set<(event: MediaQueryListEvent) => void>();
+  const createList = (query: string) =>
+    ({
+      media: query,
+      get matches() {
+        return dark;
+      },
+      addEventListener: (type: string, fn: (event: MediaQueryListEvent) => void) => {
+        if (type === 'change') changeListeners.add(fn);
+      },
+      removeEventListener: (type: string, fn: (event: MediaQueryListEvent) => void) => {
+        if (type === 'change') changeListeners.delete(fn);
+      },
+    }) as unknown as MediaQueryList;
+  Object.assign(window, { matchMedia: createList });
+  return {
+    setDark: (on: boolean) => {
+      if (on === dark) return;
+      dark = on;
+      for (const fn of [...changeListeners]) fn({ matches: on } as MediaQueryListEvent);
+    },
+    listenerCount: () => changeListeners.size,
+    restore: () => {
+      changeListeners.clear();
+      Reflect.deleteProperty(window, 'matchMedia');
+    },
+  };
+};
+
+/** A recorded 2D context call: its name and arguments, or `['set', property, value]` */
+export type Recorded2dCall = [string, ...unknown[]];
+
+/**
+ * A canvas 2D context for a test (p805 D14; linkedom's `getContext` returns null): every
+ * `<canvas>`'s `getContext('2d')` gives a context that records each method call and property
+ * write in order (`calls(canvas)`; `clear(canvas)` empties its list), the same one per canvas.
+ * Reads of a property return the last value written. `computedStyle` stubs `getComputedStyle` too
+ * (linkedom has none): each element's `color` is its inline `style.color`, a custom property the
+ * map's value. `restore()` takes both away again.
+ * @internal
+ */
+export const stubCanvas2d = (props: { computedStyle?: Record<string, string> } = {}) => {
+  const proto = (window as unknown as { HTMLCanvasElement: { prototype: object } })
+    .HTMLCanvasElement.prototype as { getContext?: unknown };
+  const original = proto.getContext;
+  const records = new WeakMap<object, { ctx: object; calls: Recorded2dCall[] }>();
+  const getRecord = (canvas: HTMLCanvasElement) => {
+    let record = records.get(canvas);
+    if (record) return record;
+    const calls: Recorded2dCall[] = [];
+    const state: Record<string, unknown> = {};
+    const ctx = new Proxy(state, {
+      get: (target, key) => {
+        if (typeof key === 'symbol') return undefined;
+        if (key === 'canvas') return canvas;
+        if (key in target) return target[key];
+        return (...args: unknown[]) => {
+          calls.push([key, ...args]);
+        };
+      },
+      set: (target, key, value) => {
+        if (typeof key === 'symbol') return false;
+        target[key] = value;
+        calls.push(['set', key, value]);
+        return true;
+      },
+    });
+    record = { ctx, calls };
+    records.set(canvas, record);
+    return record;
+  };
+  proto.getContext = function (this: HTMLCanvasElement, type: string) {
+    return type === '2d' ? getRecord(this).ctx : null;
+  };
+  const computed = props.computedStyle;
+  if (computed) {
+    Object.assign(window, {
+      getComputedStyle: (elem: HTMLElement) => ({
+        color: elem.style?.color ?? '',
+        getPropertyValue: (name: string) => computed[name] ?? '',
+      }),
+    });
+  }
+  return {
+    calls: (canvas: HTMLCanvasElement) => getRecord(canvas).calls,
+    clear: (canvas: HTMLCanvasElement) => {
+      getRecord(canvas).calls.length = 0;
+    },
+    restore: () => {
+      proto.getContext = original;
+      if (computed) Reflect.deleteProperty(window, 'getComputedStyle');
+    },
+  };
 };

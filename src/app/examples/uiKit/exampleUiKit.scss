@@ -75,3 +75,41 @@
 .exampleUiKitPanel > .aekButton {
   align-self: flex-start;
 }
+
+// The inspector (exampleUiKitInspector.ts): the splitter fills the window, each pane scrolls
+.exampleUiKitInspectorPanel,
+.exampleUiKitInspector,
+.exampleUiKitInspector > .aekSplitter {
+  height: 100%;
+}
+
+.exampleUiKitInspectorPanel {
+  box-sizing: border-box;
+  padding: var(--aek-space-3) var(--aek-space-4);
+}
+
+.exampleUiKitProperties,
+.exampleUiKitStats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-3);
+  padding-top: var(--aek-space-3);
+
+  h3 {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+}
+
+.exampleUiKitNote {
+  margin: 0;
+  color: var(--aek-text-muted);
+}
+
+// The tiles side by side, as many as the pane's width takes
+.exampleUiKitTiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
+  gap: var(--aek-space-2);
+}

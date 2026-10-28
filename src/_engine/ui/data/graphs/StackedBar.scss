@@ -1,0 +1,40 @@
+// The stacked bar's default styles (StackedBar.ts), on the design tokens and layered (p803 D5): a
+// track with a segment per part, each its share's width in its own colour
+// (--aek-stacked-bar-color, written per segment). Not the table's bar cell (Table.scss): a table
+// carries no graph module (p805 D8), and its bars show a measure in the text's shades where these
+// show categories in the chart series.
+@layer aek.components {
+  :where(.aekStackedBar) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekStackedBar__track) {
+    display: flex;
+    overflow: hidden;
+    height: var(--aek-stacked-bar-height, var(--aek-space-3));
+    border-radius: var(--aek-radius-sm);
+    background-color: var(
+      --aek-stacked-bar-track,
+      color-mix(in srgb, var(--aek-text) 10%, transparent)
+    );
+  }
+
+  :where(.aekStackedBar[data-over]) :where(.aekStackedBar__track) {
+    outline: 1px solid var(--aek-stacked-bar-over-color, var(--aek-danger));
+    outline-offset: 1px;
+  }
+
+  :where(.aekStackedBar__segment) {
+    flex: none;
+    height: 100%;
+    background-color: var(--aek-stacked-bar-color, var(--aek-text));
+    transition: width var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekStackedBar__segment[hidden]) {
+    display: none;
+  }
+}

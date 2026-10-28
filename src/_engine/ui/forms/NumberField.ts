@@ -1,6 +1,13 @@
 import { getPrimitiveValueKind } from './binding/Binding';
+import { evaluateValueExpression } from './binding/ValueExpression';
 import { createValueFormatter, type NumberRules } from './binding/ValueText';
-import { createField, type Field, type FieldProps, type FieldShell } from './Field';
+import {
+  createField,
+  type Field,
+  type FieldClipboard,
+  type FieldProps,
+  type FieldShell,
+} from './Field';
 import { buildMonitor } from './Monitor';
 import { createNumberInput, type NumberInput } from './NumberInput';
 import { getStepModifier, type NumberSteps } from './NumberSteps';
@@ -135,6 +142,22 @@ export const buildNumberMonitor = (props: NumberFieldProps): NumberField =>
   }).shell.field;
 
 /**
+ * A number field's value as text for the fields' context menu (p805 D11): copied as it is, pasted
+ * as a typed text is (an expression with the field's units), then kept to its rules.
+ * @internal
+ */
+export const getNumberClipboard = (
+  steps: Pick<NumberSteps, 'constrain'>,
+  expressionUnits?: Readonly<Record<string, number>>
+): FieldClipboard<number> => ({
+  getText: (value) => String(value),
+  parse: (text) => {
+    const result = evaluateValueExpression(text, expressionUnits);
+    return result.value === undefined ? result : { value: steps.constrain(result.value) };
+  },
+});
+
+/**
  * Builds a field on the number field's spin button (its typed text, keys, clipboard and, with
  * `scrub`, the label's drag), with `parts` around it: the number field, and the slider with its
  * track.
@@ -179,6 +202,7 @@ export const buildNumberField = (
       for (const [type, fn] of listeners) labelElem.removeEventListener(type, fn as EventListener);
       parts.onRemove?.();
     },
+    clipboard: getNumberClipboard(spin.steps, props.expressionUnits),
   });
   const { binding, labelElem } = shell;
   spin.attach(binding, shell.setOwnError);

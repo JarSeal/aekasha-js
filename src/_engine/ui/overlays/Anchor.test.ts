@@ -176,6 +176,30 @@ describe('showAnchored', () => {
     }
   });
 
+  it('at a point (p805 D11): placed there with no size, the theme from `themeFrom` alone', () => {
+    const list = document.createElement('ul');
+    // linkedom lays nothing out: a 50 px square list
+    for (const name of ['offsetWidth', 'offsetHeight', 'scrollHeight', 'clientHeight']) {
+      Object.defineProperty(list, name, { value: 50 });
+    }
+    getHUDRootCMP().elem.appendChild(list);
+    const hide = showAnchored({ elem: list, anchor: { x: 120, y: 80 }, matchAnchorWidth: true });
+    expect(list.style.position).toBe('fixed');
+    expect(list.style.left).toBe('120px');
+    expect(list.style.top).toBe('84px');
+    expect(list.hasAttribute('data-aek-theme')).toBe(false);
+    expect(list.style.minWidth).toBe('');
+    hide();
+    const themed = document.createElement('ul');
+    getHUDRootCMP().elem.appendChild(themed);
+    const hideThemed = showAnchored({ elem: themed, anchor: { x: 0, y: 0 }, themeFrom: anchor });
+    expect(themed.getAttribute('data-aek-theme')).toBe('dark');
+    expect(themed.getAttribute('data-aek-density')).toBe('compact');
+    hideThemed();
+    list.remove();
+    themed.remove();
+  });
+
   it('follows scrolls and resizes while shown, and leaves no listener after', () => {
     const list = createList();
     const hide = showAnchored({ elem: list, anchor });

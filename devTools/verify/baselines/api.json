@@ -2788,11 +2788,22 @@
       "TextureAssetSchema": "Variable"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
+    "src/_engine/ui/components/Accordion.ts": {
+      "Accordion": "TypeAlias",
+      "AccordionItem": "TypeAlias",
+      "AccordionProps": "TypeAlias",
+      "createAccordion": "Function"
+    },
+    "src/_engine/ui/components/Announcer.ts": {
+      "announce": "Function"
+    },
     "src/_engine/ui/components/Badge.ts": {
       "Badge": "TypeAlias",
       "BadgeProps": "TypeAlias",
       "BadgeTone": "TypeAlias",
-      "createBadge": "Function"
+      "BadgeValue": "TypeAlias",
+      "createBadge": "Function",
+      "updateBadge": "Function"
     },
     "src/_engine/ui/components/Button.ts": {
       "Button": "TypeAlias",
@@ -2848,6 +2859,19 @@
       "ProgressBar": "TypeAlias",
       "ProgressBarProps": "TypeAlias"
     },
+    "src/_engine/ui/components/RovingFocus.ts": {
+      "createRovingTabStop": "Function",
+      "createTypeahead": "Function",
+      "getMoveTarget": "Function",
+      "isTypeaheadKey": "Function",
+      "MoveOptions": "TypeAlias",
+      "RovingTabStopProps": "TypeAlias",
+      "TypeaheadProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/SeparatorInput.ts": {
+      "createSeparatorInput": "Function",
+      "SeparatorInputProps": "TypeAlias"
+    },
     "src/_engine/ui/components/ShortcutHint.ts": {
       "addShortcutHint": "Function",
       "ShortcutHintProps": "TypeAlias"
@@ -2866,6 +2890,18 @@
       "createSplitButton": "Function",
       "SplitButton": "TypeAlias",
       "SplitButtonProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Splitter.ts": {
+      "createSplitter": "Function",
+      "Splitter": "TypeAlias",
+      "SplitterProps": "TypeAlias"
+    },
+    "src/_engine/ui/components/Tabs.ts": {
+      "createTabs": "Function",
+      "TabBadge": "TypeAlias",
+      "TabDef": "TypeAlias",
+      "Tabs": "TypeAlias",
+      "TabsProps": "TypeAlias"
     },
     "src/_engine/ui/components/Tag.ts": {
       "createTag": "Function",
@@ -2977,10 +3013,196 @@
     "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
     },
+    "src/_engine/ui/core/ThemeWatch.ts": {
+      "onKitThemeChange": "Function"
+    },
     "src/_engine/ui/core/Window.ts": {
       "getWindowSize": "Function",
       "onBoundsResize": "Function",
       "setWindowBoundsElement": "Function"
+    },
+    "src/_engine/ui/data/CollectionParts.ts": {
+      "addCollectionEmpty": "Function",
+      "addCollectionHeader": "Function",
+      "addCollectionSearch": "Function",
+      "CollectionHeaderProps": "TypeAlias",
+      "CollectionSearchProps": "TypeAlias",
+      "createElem": "Function",
+      "placeElems": "Function",
+      "useCollectionKey": "Function",
+      "writeAttr": "Function",
+      "writeCollectionCount": "Function"
+    },
+    "src/_engine/ui/data/Filter.ts": {
+      "appendMarked": "Function",
+      "appendRanges": "Function",
+      "findMatchRanges": "Function",
+      "foldText": "Function",
+      "getQueryWords": "Function",
+      "matchesWords": "Function",
+      "prepareScoredText": "Function",
+      "ScoredText": "TypeAlias",
+      "scoreText": "Function"
+    },
+    "src/_engine/ui/data/graphs/Chart.ts": {
+      "Chart": "TypeAlias",
+      "ChartAxis": "TypeAlias",
+      "ChartProps": "TypeAlias",
+      "ChartSeries": "TypeAlias",
+      "createChart": "Function"
+    },
+    "src/_engine/ui/data/graphs/ChartScale.ts": {
+      "ChartTicks": "TypeAlias",
+      "formatTick": "Function",
+      "getNiceCeiling": "Function",
+      "getNiceStep": "Function",
+      "getNiceTicks": "Function"
+    },
+    "src/_engine/ui/data/graphs/Donut.ts": {
+      "createDonut": "Function",
+      "Donut": "TypeAlias",
+      "DonutProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/GraphParts.ts": {
+      "createLegend": "Function",
+      "describeParts": "Function",
+      "formatShare": "Variable",
+      "getPartColor": "Function",
+      "getPartsWhole": "Function",
+      "GraphPart": "TypeAlias",
+      "GraphPartFormat": "TypeAlias",
+      "readPartValue": "Function",
+      "writeLegend": "Function"
+    },
+    "src/_engine/ui/data/graphs/Sparkline.ts": {
+      "createSparkline": "Function",
+      "Sparkline": "TypeAlias",
+      "SparklineProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/StackedBar.ts": {
+      "createStackedBar": "Function",
+      "StackedBar": "TypeAlias",
+      "StackedBarProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/graphs/TimeSeries.ts": {
+      "createTimeSeries": "Function",
+      "TimeSeries": "TypeAlias",
+      "TimeSeriesProps": "TypeAlias",
+      "TimeSeriesSeries": "TypeAlias",
+      "TimeSeriesThreshold": "TypeAlias"
+    },
+    "src/_engine/ui/data/List.ts": {
+      "createList": "Function"
+    },
+    "src/_engine/ui/data/ListRow.ts": {
+      "createListRows": "Function",
+      "ListActionCell": "TypeAlias",
+      "ListEntry": "TypeAlias",
+      "ListEntryText": "TypeAlias",
+      "ListMarks": "TypeAlias",
+      "ListRow": "TypeAlias",
+      "ListRowsConfig": "TypeAlias",
+      "ListRowWritten": "TypeAlias",
+      "ROW_CLASS": "Variable"
+    },
+    "src/_engine/ui/data/ListTypes.ts": {
+      "List": "TypeAlias",
+      "ListAction": "TypeAlias",
+      "ListFilter": "TypeAlias",
+      "ListProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/Reorder.ts": {
+      "createListReorder": "Function",
+      "ListReorder": "TypeAlias",
+      "ListReorderChange": "TypeAlias",
+      "ListReorderHost": "TypeAlias",
+      "ListReorderImpl": "TypeAlias",
+      "ListReorderProps": "TypeAlias",
+      "ListReorderView": "TypeAlias",
+      "useListReorder": "Function"
+    },
+    "src/_engine/ui/data/Selection.ts": {
+      "createSelection": "Function",
+      "getSelectionGesture": "Function",
+      "SelectionGesture": "TypeAlias",
+      "SelectionMode": "TypeAlias",
+      "SelectionProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/StatTile.ts": {
+      "createStatTile": "Function",
+      "StatTile": "TypeAlias",
+      "StatTileProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/Table.ts": {
+      "createTable": "Function"
+    },
+    "src/_engine/ui/data/TableGrid.ts": {
+      "createTableGrid": "Function",
+      "TableGridProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/TableRows.ts": {
+      "compareTableValues": "Function",
+      "createTableColumn": "Function",
+      "createTableSorter": "Function",
+      "createTableView": "Function",
+      "disposeTableView": "Function",
+      "findCellControl": "Function",
+      "isInCellControl": "Function",
+      "listenColumnHighlight": "Function",
+      "measureTableBar": "Function",
+      "readTableRow": "Function",
+      "TableCell": "TypeAlias",
+      "TableColumnState": "TypeAlias",
+      "TableNavRow": "TypeAlias",
+      "TableRowRecord": "TypeAlias",
+      "TableRowView": "TypeAlias",
+      "writeTableBars": "Function",
+      "writeTableCell": "Function",
+      "writeTableView": "Function"
+    },
+    "src/_engine/ui/data/TableTypes.ts": {
+      "Table": "TypeAlias",
+      "TableColumn": "TypeAlias",
+      "TableGroup": "TypeAlias",
+      "TableProps": "TypeAlias",
+      "TableSort": "TypeAlias",
+      "TableTone": "TypeAlias"
+    },
+    "src/_engine/ui/data/Tree.ts": {
+      "createTree": "Function"
+    },
+    "src/_engine/ui/data/TreeNodes.ts": {
+      "createTreeNodes": "Function",
+      "STATUS_KEY_PREFIX": "Variable",
+      "TreeEntry": "TypeAlias",
+      "TreeEntryText": "TypeAlias",
+      "TreeLine": "TypeAlias",
+      "TreeLoad": "TypeAlias",
+      "TreeStatus": "TypeAlias"
+    },
+    "src/_engine/ui/data/TreeRow.ts": {
+      "createTreeRows": "Function",
+      "TREE_ROW_CLASS": "Variable",
+      "TREE_STATUS_CLASS": "Variable",
+      "TreeMarks": "TypeAlias",
+      "TreeRow": "TypeAlias",
+      "TreeRowWritten": "TypeAlias",
+      "writeStatusRow": "Function"
+    },
+    "src/_engine/ui/data/TreeTypes.ts": {
+      "Tree": "TypeAlias",
+      "TreeFilter": "TypeAlias",
+      "TreeProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/VirtualRows.ts": {
+      "createVirtualRows": "Function",
+      "getVirtualWindow": "Function",
+      "useVirtualRows": "Function",
+      "VirtualRows": "TypeAlias",
+      "VirtualRowsImpl": "TypeAlias",
+      "VirtualRowsParts": "TypeAlias",
+      "VirtualRowsProps": "TypeAlias",
+      "VirtualRowsView": "TypeAlias"
     },
     "src/_engine/ui/forms/AngleDial.ts": {
       "AngleDial": "TypeAlias",
@@ -2999,13 +3221,14 @@
     },
     "src/_engine/ui/forms/binding/BindingScheduler.ts": {
       "addScheduledBinding": "Function",
+      "addScheduledRefresh": "Function",
       "BindingScheduler": "TypeAlias",
       "BindingSchedulerProps": "TypeAlias",
       "createBindingScheduler": "Function",
       "createFlash": "Function",
       "getPageScheduler": "Function",
       "revealScheduledBindings": "Function",
-      "ScheduledBinding": "TypeAlias"
+      "ScheduledEntry": "TypeAlias"
     },
     "src/_engine/ui/forms/binding/ValueExpression.ts": {
       "evaluateValueExpression": "Function",
@@ -3111,18 +3334,26 @@
       "createField": "Function",
       "Field": "TypeAlias",
       "FieldChange": "TypeAlias",
+      "FieldClipboard": "TypeAlias",
       "FieldDyn": "TypeAlias",
+      "FieldMenuEntry": "TypeAlias",
       "FieldOptions": "TypeAlias",
       "FieldProps": "TypeAlias",
       "FieldShell": "TypeAlias",
       "FieldSpec": "TypeAlias",
       "FormChild": "TypeAlias",
       "FormFieldEntry": "TypeAlias",
+      "getChoiceClipboard": "Function",
+      "getFieldMenuEntry": "Function",
       "getFormField": "Function",
       "readFieldsetDisabled": "Function",
       "revealFormChild": "Function",
       "setFormRevealer": "Function",
       "setSchedulerAdopter": "Function"
+    },
+    "src/_engine/ui/forms/FieldContextMenu.ts": {
+      "createFieldContextMenu": "Function",
+      "FieldContextMenuProps": "TypeAlias"
     },
     "src/_engine/ui/forms/Fieldset.ts": {
       "createFieldset": "Function",
@@ -3152,10 +3383,17 @@
       "GradientEditor": "TypeAlias",
       "GradientEditorProps": "TypeAlias"
     },
+    "src/_engine/ui/forms/GraphMonitor.ts": {
+      "attachMonitorGraph": "Function",
+      "createGraphMonitor": "Function",
+      "GraphMonitorProps": "TypeAlias"
+    },
     "src/_engine/ui/forms/Monitor.ts": {
+      "buildGraphMonitor": "Function",
       "buildMonitor": "Function",
       "createMonitor": "Function",
       "getVectorKeys": "Function",
+      "GraphMonitorBuild": "TypeAlias",
       "Monitor": "TypeAlias",
       "MonitorBuild": "TypeAlias",
       "MonitorProps": "TypeAlias",
@@ -3166,6 +3404,7 @@
       "buildNumberField": "Function",
       "buildNumberMonitor": "Function",
       "createNumberField": "Function",
+      "getNumberClipboard": "Function",
       "NumberField": "TypeAlias",
       "NumberFieldBuild": "TypeAlias",
       "NumberFieldParts": "TypeAlias",
@@ -3302,11 +3541,30 @@
       "AnchorBox": "TypeAlias",
       "AnchorPlacement": "TypeAlias",
       "AnchorPlacementInput": "TypeAlias",
+      "AnchorPoint": "TypeAlias",
       "AnchorSide": "TypeAlias",
       "computeAnchorPlacement": "Function",
       "hasTopLayer": "Function",
       "showAnchored": "Function",
       "ShowAnchoredProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/CommandPalette.ts": {
+      "createCommandPalette": "Function"
+    },
+    "src/_engine/ui/overlays/CommandPaletteTypes.ts": {
+      "CommandPalette": "TypeAlias",
+      "CommandPaletteHints": "TypeAlias",
+      "CommandPaletteProps": "TypeAlias",
+      "PaletteCommand": "TypeAlias",
+      "PaletteRowParts": "TypeAlias",
+      "PaletteSource": "TypeAlias",
+      "PaletteSourceResult": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/ContextMenu.ts": {
+      "ContextMenu": "TypeAlias",
+      "ContextMenuProps": "TypeAlias",
+      "ContextMenuSource": "TypeAlias",
+      "createContextMenu": "Function"
     },
     "src/_engine/ui/overlays/FocusTrap.ts": {
       "getFirstFocusable": "Function",
@@ -3315,17 +3573,31 @@
     },
     "src/_engine/ui/overlays/Menu.ts": {
       "createMenu": "Function",
+      "createMenuSurface": "Function",
       "Menu": "TypeAlias",
       "MenuActionItem": "TypeAlias",
       "MenuCheckboxItem": "TypeAlias",
       "MenuGroup": "TypeAlias",
       "MenuItem": "TypeAlias",
+      "MenuOpenOptions": "TypeAlias",
       "MenuProps": "TypeAlias",
       "MenuRadioGroup": "TypeAlias",
-      "MenuSeparator": "TypeAlias"
+      "MenuSeparator": "TypeAlias",
+      "MenuSubmenuItem": "TypeAlias",
+      "MenuSurface": "TypeAlias",
+      "MenuSurfaceProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/MenuItems.ts": {
+      "buildMenuItems": "Function",
+      "findMenuHintHandles": "Function",
+      "isInPointerPath": "Function",
+      "MenuEntry": "TypeAlias",
+      "MenuPoint": "TypeAlias",
+      "StopHint": "TypeAlias"
     },
     "src/_engine/ui/overlays/OverlayStack.ts": {
       "DEBUGGER_ROOT_ATTR": "Variable",
+      "KEEP_LIVE_ATTR": "Variable",
       "OverlayProps": "TypeAlias",
       "pushOverlay": "Function",
       "swallowNextKeyUp": "Function"
@@ -3445,6 +3717,8 @@
     "src/_engine/ui/styles/TokenSheet.ts": {
       "CONTRAST_CHECKED": "Variable",
       "CONTRAST_CONTROLS": "Variable",
+      "CONTRAST_SERIES": "Variable",
+      "CONTRAST_SERIES_SURFACES": "Variable",
       "CONTRAST_SOFTS": "Variable",
       "CONTRAST_SURFACES": "Variable",
       "CONTRAST_TEXTS": "Variable",
@@ -3465,7 +3739,13 @@
       "dispatchPointer": "Function",
       "KitKeyInit": "TypeAlias",
       "KitPointerInit": "TypeAlias",
-      "stubKitDomAsync": "Function"
+      "Recorded2dCall": "TypeAlias",
+      "stubCanvas2d": "Function",
+      "stubClipboard": "Function",
+      "stubIntersectionObserver": "Function",
+      "stubKitDomAsync": "Function",
+      "stubMatchMedia": "Function",
+      "stubResizeObserver": "Function"
     },
     "src/_engine/utils/Assert.ts": {
       "existsOrThrow": "Function",
@@ -4494,12 +4774,16 @@
       "triplanarProjection"
     ],
     "aekasha/ui": [
+      "Accordion",
+      "AccordionItem",
+      "AccordionProps",
       "AddToastResponse",
       "AngleDial",
       "AngleDialProps",
       "Badge",
       "BadgeProps",
       "BadgeTone",
+      "BadgeValue",
       "BindingChange",
       "BindingScheduler",
       "BindingSchedulerProps",
@@ -4521,12 +4805,22 @@
       "CMPProps",
       "CMPSettings",
       "CMPStyle",
+      "Chart",
+      "ChartAxis",
+      "ChartProps",
+      "ChartSeries",
       "Checkbox",
       "CheckboxProps",
       "ColorField",
       "ColorFieldProps",
       "ColorFieldValue",
       "ColorIntensityProps",
+      "CommandPalette",
+      "CommandPaletteHints",
+      "CommandPaletteProps",
+      "ContextMenu",
+      "ContextMenuProps",
+      "ContextMenuSource",
       "CurveBezier",
       "CurveEditor",
       "CurveEditorProps",
@@ -4537,6 +4831,8 @@
       "DialogProps",
       "Divider",
       "DividerProps",
+      "Donut",
+      "DonutProps",
       "DraggableWindow",
       "DraggableWindowConfig",
       "DraggableWindowContent",
@@ -4553,6 +4849,7 @@
       "EulerValue",
       "Field",
       "FieldChange",
+      "FieldContextMenuProps",
       "FieldDyn",
       "FieldOptions",
       "FieldProps",
@@ -4568,6 +4865,9 @@
       "GradientEditorProps",
       "GradientStop",
       "GradientValue",
+      "GraphMonitorProps",
+      "GraphPart",
+      "GraphPartFormat",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphInput",
@@ -4578,6 +4878,13 @@
       "KbdProps",
       "Link",
       "LinkProps",
+      "List",
+      "ListAction",
+      "ListFilter",
+      "ListProps",
+      "ListReorder",
+      "ListReorderChange",
+      "ListReorderProps",
       "LoadingOverlay",
       "LoadingOverlayProps",
       "Menu",
@@ -4588,6 +4895,7 @@
       "MenuProps",
       "MenuRadioGroup",
       "MenuSeparator",
+      "MenuSubmenuItem",
       "Monitor",
       "MonitorProps",
       "NumberField",
@@ -4597,6 +4905,10 @@
       "Pad2D",
       "Pad2DProps",
       "Pad2DValue",
+      "PaletteCommand",
+      "PaletteRowParts",
+      "PaletteSource",
+      "PaletteSourceResult",
       "Popover",
       "PopoverProps",
       "ProgressBar",
@@ -4633,15 +4945,24 @@
       "SelectOption",
       "SelectOptions",
       "SelectValue",
+      "SelectionMode",
       "Skeleton",
       "SkeletonProps",
       "Slider",
       "SliderProps",
       "SliderTick",
+      "Sparkline",
+      "SparklineProps",
       "Spinner",
       "SpinnerProps",
       "SplitButton",
       "SplitButtonProps",
+      "Splitter",
+      "SplitterProps",
+      "StackedBar",
+      "StackedBarProps",
+      "StatTile",
+      "StatTileProps",
       "SvgIconKey",
       "SvgIconSize",
       "Switch",
@@ -4658,10 +4979,24 @@
       "TProps",
       "TSettings",
       "TStyle",
+      "TabBadge",
+      "TabDef",
+      "Table",
+      "TableColumn",
+      "TableGroup",
+      "TableProps",
+      "TableSort",
+      "TableTone",
+      "Tabs",
+      "TabsProps",
       "Tag",
       "TagProps",
       "TextField",
       "TextFieldProps",
+      "TimeSeries",
+      "TimeSeriesProps",
+      "TimeSeriesSeries",
+      "TimeSeriesThreshold",
       "ToastDirection",
       "ToastProps",
       "ToastType",
@@ -4669,11 +5004,16 @@
       "ToasterSettings",
       "Tooltip",
       "TooltipProps",
+      "Tree",
+      "TreeFilter",
+      "TreeProps",
       "VectorAxisName",
       "VectorAxisProps",
       "VectorField",
       "VectorFieldProps",
       "VectorValue",
+      "VirtualRows",
+      "VirtualRowsProps",
       "WindowCycleKeys",
       "addPropertyGridItems",
       "addToast",
@@ -4690,25 +5030,34 @@
       "classes",
       "closeDraggableWindow",
       "cloudSunIcon",
+      "createAccordion",
       "createAngleDial",
       "createBadge",
       "createBindingScheduler",
       "createButton",
       "createButtonGroup",
+      "createChart",
       "createCheckbox",
       "createColorField",
+      "createCommandPalette",
+      "createContextMenu",
       "createCurveEditor",
       "createDivider",
+      "createDonut",
       "createDropDown",
       "createEmptyState",
+      "createFieldContextMenu",
       "createFieldset",
       "createFolder",
       "createForm",
       "createGradientEditor",
+      "createGraphMonitor",
       "createHudRoot",
       "createInputGlyph",
       "createKbd",
       "createLink",
+      "createList",
+      "createListReorder",
       "createLoadingOverlay",
       "createMenu",
       "createMonitor",
@@ -4725,14 +5074,23 @@
       "createSelectField",
       "createSkeleton",
       "createSlider",
+      "createSparkline",
       "createSpinner",
       "createSplitButton",
+      "createSplitter",
+      "createStackedBar",
+      "createStatTile",
       "createSwitch",
+      "createTable",
+      "createTabs",
       "createTag",
       "createTextField",
+      "createTimeSeries",
       "createToaster",
       "createTooltip",
+      "createTree",
       "createVectorField",
+      "createVirtualRows",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",

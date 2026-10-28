@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803 and p804 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804 and p805 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -652,13 +652,42 @@ D1). What follows is the sketch as written.
 
 ### p805 — Data display
 
-Written: `p805_data-display.md` (2026-10-27, draft). Beyond this sketch: `ui/data/` for the table,
-list, tree, graphs and stat tile, the tabs, accordion and splitter in `components/`, the context
-menu (with the menu's submenus) and the palette in `overlays/` (its D2); p803's and p804's moves
-(the donut in place of the pie, the fields' context menu, the monitor's graph view); virtual rows
-and reorder passed in by the app, not imported by the list (its D8, p804 D13's pattern); chart
-colour tokens (its D9); the Hub's ⌘K search proposed onto the palette (its D12). The debugger's
-lists, tab menus and tables stay for p806 / p807 (its §4). What follows is the sketch as written.
+Done: `_DONE_p805_data-display.md` (2026-10-28, engine 5.14.0, app 1.18.0). What the later
+plans build on, each written there:
+
+- **The collections' model** (its D3, D4, D8): rows are the app's objects kept by key, so
+  `setRows` / `setItems` / `setRoots` keep a row's element, focus and selection and write only the
+  changed text, and `setCell` / `setItem` / `setNode` write one text node with nothing allocated;
+  `rows` as a function on a scheduler's tick (`addScheduledRefresh`, `@internal`, the binding
+  scheduler's generic entry); one tab stop per collection (`components/RovingFocus.ts`, which the
+  menu and the button group moved onto), the selection models (`data/Selection.ts`), one polite
+  announcer per kit root (`components/Announcer.ts`); virtual rows and reorder as values the app
+  passes, not imports. A context menu on a collection is the app's `createContextMenu` with the
+  collection's `getKeyAt` (no `contextMenu` prop).
+- **The pieces:** `createList` (with `actions`: the debugger list's toggles, as an APG grid),
+  `createTree` (a flat `role="tree"`, lazy children, a filter), `createTable` (sort, groups, a
+  footer, bar cells, `stackBelow`, a grid mode with a selection or `onRowActivate`, virtual rows),
+  `createTabs`, `createAccordion`, `createSplitter` (the property grid's label column is on it),
+  the menu's submenus, `createContextMenu`, `createFieldContextMenu` (Reset, Copy, Paste, "Copy
+  as"), `createCommandPalette` (the Hub's ⌘K search is on it), and the graphs: `createSparkline`
+  (with `area`), `createDonut` (the ray cast tab's, the pie gone), `createStackedBar`,
+  `createChart` (SVG, its values a table), `createTimeSeries` (a canvas shifted by whole pixels,
+  no allocation per push or draw: the perf-auditor's pass and the figures are its Phase 5
+  section 3), `createStatTile`, `createGraphMonitor` and the property grid's `view: 'graph'`
+  (an `import()`); `core/ThemeWatch.ts` (`@internal`) for a canvas's colours.
+- **Tokens:** `--aek-chart-1` … `-6` (checked at 3:1 on `surface` and `surface-raised`, told
+  apart under the common colour vision deficiencies), the table's stripe and highlight (the text
+  at 3 % and 8 %), `--aek-z-palette` (9000: above an app's dialogs, below the debugger).
+- **For p806 and p807:** its §4 lists what each port rewrites by hand, from the census of every
+  debugger table, list, tab menu, bar, sparkline and the pie, and the dev component library's
+  "Debugger parity" box shows each shape built from the new pieces. Left open there: whether the
+  drawer's tab menu wraps (`createTabs` scrolls), virtual rows measuring their row height again
+  on a density switch, and the scheduler's `isShown` walking the DOM per due entry.
+- **Size:** `_engine/ui/data/` is 0 in the first download of the `app` and `uiKit` profiles; the
+  `uiKit` profile's data window (a table, a list, tabs, a stat tile, a sparkline) is its own
+  budgeted chunk.
+
+What follows is the sketch as written.
 
 - The table, list, tree, graphs, stat tile, tabs, accordion, splitter, context menu and command
   palette (§4.4). The running graph's renderer measured with the perf-auditor agent before p807
