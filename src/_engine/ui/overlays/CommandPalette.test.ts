@@ -232,6 +232,25 @@ describe('command palette (p805 D12)', () => {
     palette.cmp.remove();
   });
 
+  it('runs onClose before the focus goes back: a page outside the HUD made inert in onOpen gets it', () => {
+    // The Hub's case: the opener is in the page, which the app makes inert while it's open
+    const page = document.createElement('div');
+    const pageButton = document.createElement('button');
+    page.append(pageButton);
+    document.body.append(page);
+    pageButton.focus();
+    const palette = addPalette({
+      onOpen: () => page.setAttribute('inert', ''),
+      onClose: () => page.removeAttribute('inert'),
+    });
+    palette.open();
+    expect(page.hasAttribute('inert')).toBe(true);
+    press('Escape');
+    expect(page.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(pageButton);
+    page.remove();
+  });
+
   it('Escape closes it through the overlay stack and keeps the query, selected on the next open', () => {
     const palette = addPalette();
     palette.open();

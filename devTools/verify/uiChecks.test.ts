@@ -107,6 +107,10 @@ describe('describeStep', () => {
     expect(describeStep({ keyDown: 'Enter' })).toBe('keyDown Enter');
     expect(describeStep({ keyUp: 'Enter' })).toBe('keyUp Enter');
     expect(describeStep({ focusInBox: '.aekButton' })).toBe('focusInBox .aekButton');
+    expect(describeStep({ focusPage: '[data-hub-search]' })).toBe('focusPage [data-hub-search]');
+    expect(describeStep({ type: 'mesh' })).toBe('type "mesh"');
+    expect(describeStep({ pressToNavigate: 'Enter' })).toBe('pressToNavigate Enter');
+    expect(describeStep({ expectUrl: '/core/#tabs' })).toBe('expectUrl …/core/#tabs');
     expect(describeStep({ expectFocusBox: 'Default' })).toBe('expectFocusBox "Default"');
     expect(describeStep({ expectStyle: '#t', name: 'left', value: '16px' })).toBe(
       'expectStyle #t left="16px"'

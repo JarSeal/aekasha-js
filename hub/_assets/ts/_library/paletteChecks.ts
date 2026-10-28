@@ -1,6 +1,7 @@
 /**
  * The command palette's checks (`yarn verify:ui`), next to its demo (`palette.ts`): plain data.
- * Its four Hub buttons are its states; the scripts type, move, choose and close.
+ * Its four Hub buttons are its states; the scripts type, move, choose and close, and one drives
+ * the Hub's header search, which is this palette (p805 Phase 7 section 2).
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
@@ -8,6 +9,11 @@ const PALETTE = '#hudRoot .aekCommandPalette';
 const INPUT = `${PALETTE} .aekCommandPalette__input`;
 const STATUS = `${PALETTE} .aekCommandPalette__status`;
 const ACTIVE = `${PALETTE} .aekCommandPalette__option[aria-selected='true']`;
+/** The Hub's header search (`_search.ts`: the palette with the id `hubSearch`) */
+const HUB_SEARCH = '#hudRoot #hubSearch';
+const HUB_INPUT = `${HUB_SEARCH} .aekCommandPalette__input`;
+const HUB_STATUS = `${HUB_SEARCH} .aekCommandPalette__status`;
+const HUB_ACTIVE = `${HUB_SEARCH} .aekCommandPalette__option[aria-selected='true']`;
 /** The demo box's own status line, under its buttons */
 const DEMO_STATUS = '[data-hub-demo="commandPalette"] .hubDemoLine';
 
@@ -74,6 +80,35 @@ export const PALETTE_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'Enter' },
           { expectCount: PALETTE, count: 0 },
           { expectText: DEMO_STATUS, text: 'Opened: Tabs' },
+        ],
+      },
+      {
+        // p805 Phase 7 section 2: the Hub's own search is this palette (`_search.ts`); the
+        // library page has the header like every page
+        name: 'the Hub’s header search: ⌘K / Ctrl+K opens it over an inert page, its index loads, Escape gives the focus back, the query is kept, Enter opens the result’s section',
+        steps: [
+          { focusPage: '[data-hub-search]' },
+          { press: 'Control+k' },
+          { expectFocus: HUB_INPUT },
+          { expectText: HUB_STATUS, text: 'Search the pages, their sections and code.' },
+          { expectCount: 'body > .hubHeader[inert], body > .hubLayout[inert]', count: 2 },
+          { expectCount: 'html.hubSearchOpen', count: 1 },
+          { type: 'showing live data' },
+          { expectText: `${HUB_SEARCH} .aekCommandPalette__groupLabel`, text: 'Features' },
+          { expectText: `${HUB_ACTIVE} .hubSearchTitle`, text: 'Showing live data' },
+          { expectText: `${HUB_ACTIVE} .hubSearchCrumbs`, text: 'UI kit › Data display' },
+          { press: 'ArrowDown' },
+          { press: 'ArrowUp' },
+          { expectText: `${HUB_ACTIVE} .hubSearchTitle`, text: 'Showing live data' },
+          { press: 'Escape' },
+          { expectCount: HUB_SEARCH, count: 0 },
+          { expectFocus: '[data-hub-search]' },
+          { expectCount: '[inert]', count: 0 },
+          { press: 'Control+k' },
+          { expectValue: HUB_INPUT, value: 'showing live data' },
+          { expectText: `${HUB_ACTIVE} .hubSearchTitle`, text: 'Showing live data' },
+          { pressToNavigate: 'Enter' },
+          { expectUrl: '/features/ui-kit/data/#showing-live-data' },
         ],
       },
     ],

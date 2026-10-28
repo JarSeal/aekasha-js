@@ -53,6 +53,13 @@ export type UiKeyStep =
   /** Focuses the first element in the demo box matching this selector, as a script would (a kit
    * piece drawn in the page) */
   | { focusInBox: string }
+  /** Focuses the first element on the page matching this selector, outside the demo box (the
+   * Hub's header search button, p805 Phase 7 section 2) */
+  | { focusPage: string }
+  /** Types this text into the focused element, a key at a time */
+  | { type: string }
+  /** Presses a key that loads another page (Enter on a link) and waits for that page */
+  | { pressToNavigate: string }
   /** Presses a key or a chord, in Playwright's names (`Tab`, `Shift+Tab`, `ArrowDown`, `Escape`) */
   | { press: string }
   /** Holds a key down until a `keyUp` of it (a hold to confirm), in Playwright's names */
@@ -77,7 +84,10 @@ export type UiKeyStep =
    * `left`, `border-top-width`) at `value` (a used length in px: `576px`) */
   | { expectStyle: string; name: string; value: string }
   /** The option the focused element's `aria-activedescendant` names has this text, trimmed */
-  | { expectActiveOption: string };
+  | { expectActiveOption: string }
+  /** The page's URL ends with this (its path from the site root and its hash: a search result's
+   * page and section) */
+  | { expectUrl: string };
 
 /** A state that needs more than a button: its name in the runner's output, and its steps */
 export type UiCheckState = { name: string; steps: UiCheckStep[] };

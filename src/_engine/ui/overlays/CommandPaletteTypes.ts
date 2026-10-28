@@ -109,7 +109,8 @@ export type CommandPaletteProps<C extends PaletteCommand = PaletteCommand> = {
   onSelect?: (command: C) => void;
   /** Runs when it opens (make a page outside the HUD inert, lock its scroll) */
   onOpen?: () => void;
-  /** Runs when it closes, however it closes */
+  /** Runs when it closes, however it closes: before the focus goes back, so a page `onOpen` made
+   * inert takes it */
   onClose?: () => void;
   /** Extra classes for the palette's root element. */
   class?: string | string[];

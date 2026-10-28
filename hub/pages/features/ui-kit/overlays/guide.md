@@ -404,7 +404,15 @@ const shortcuts = createActionMap({
   context: 'SHORTCUTS',
   actions: { palette: { type: 'BUTTON', name: 'Command palette' } },
   bindings: {
-    palette: [{ device: 'KEYBOARD', keys: [{ key: 'k', ctrl: true }, { key: 'k', meta: true }] }],
+    palette: [
+      {
+        device: 'KEYBOARD',
+        keys: [
+          { key: 'k', ctrl: true },
+          { key: 'k', meta: true },
+        ],
+      },
+    ],
   },
 });
 shortcuts.onPressed('palette', () => palette.open());
@@ -431,6 +439,9 @@ shortcuts.onPressed('palette', () => palette.open());
   `open({ query })` opens with another, and `onQueryChange` hears every change.
 
 ### A source
+
+This Hub's own search (⌘K) is one: its index answers through a `source`, and a `renderRow`
+draws each result's breadcrumb and snippet.
 
 A search index, a server or the scene's objects answer through `source(query)` in place of
 `commands`: an array of commands in its own order, or `{ commands, total }` for "50 of 214
@@ -462,13 +473,13 @@ const search = createCommandPalette<PageResult>({
 its `appendMarked` marks the terms in a text it appends, as text: never HTML. The option element
 around it, its ARIA and the active row's look stay the palette's.
 
-| Command palette |                                                                                                                                                                                                                                                                              |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props           | [`CommandPaletteProps`](api:CommandPaletteProps) (a command: [`PaletteCommand`](api:PaletteCommand); a source: [`PaletteSource`](api:PaletteSource))                                                                                                                         |
+| Command palette |                                                                                                                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props           | [`CommandPaletteProps`](api:CommandPaletteProps) (a command: [`PaletteCommand`](api:PaletteCommand); a source: [`PaletteSource`](api:PaletteSource))                                                                                                                                                  |
 | Parts           | `.aekCommandPalette` (over the HUD at `--aek-z-palette`, its background the backdrop) > `__panel` > `__field` (`__icon`, `__input`, `__close`), `__results` (`__group`, `__groupLabel`, `__option` with `__optionIcon`, `__optionLabel`, `__optionDescription`, `__optionKbd`), `__status`, `__hints` |
-| Custom props    | `--aek-command-palette-width`, `-max-height`, `-top` (the panel's), `--aek-command-palette-active-color` (the active row's bar)                                                                                                                                                |
-| Keys            | In the input, which keeps the focus: Up / Down move (wrapping), PageUp / PageDown by a box of rows, Enter chooses, Escape closes (it never clears first); Home / End are the input's. Tab moves between the input and Close only                                                |
-| Assistive tech  | A modal dialog named by `label`; the input a combobox over a listbox (`aria-activedescendant`), each group a named group; the count, hints and errors in a status line; the rest of the HUD inert while it's open                                                             |
+| Custom props    | `--aek-command-palette-width`, `-max-height`, `-top` (the panel's), `--aek-command-palette-active-color` (the active row's bar)                                                                                                                                                                       |
+| Keys            | In the input, which keeps the focus: Up / Down move (wrapping), PageUp / PageDown by a box of rows, Enter chooses, Escape closes (it never clears first); Home / End are the input's. Tab moves between the input and Close only                                                                      |
+| Assistive tech  | A modal dialog named by `label`; the input a combobox over a listbox (`aria-activedescendant`), each group a named group; the count, hints and errors in a status line; the rest of the HUD inert while it's open                                                                                     |
 
 On a narrow screen (below 640 px of the HUD: a phone, a small embed) the panel takes the whole HUD,
 and the key hints under it hide where there's no hover (a touch screen). It covers the HUD only: a

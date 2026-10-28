@@ -7,8 +7,9 @@ import { SRC_DIR } from '../paths';
 // The Hub on the UI kit's tokens (p801 Phase 5): every `--hub-*` in `_tokens.scss` is an alias of
 // a `--aek-*` that `tokens.css` defines, or one of the Hub's own (`HUB_ONLY`), and each resolves
 // in both themes to the Hub's colour at p801's Phase 0 (`f962bb3`) but for the changes p801 D2
-// made on purpose (`EXPECTED_CHANGES`). The search dialog's backdrop, a literal at Phase 0, is the
-// kit's `--aek-backdrop` now: the same in the dark theme, the kit's lighter one in the light.
+// made on purpose (`EXPECTED_CHANGES`). The search's backdrop, a literal at Phase 0, is the kit's
+// `--aek-backdrop` now: the same in the dark theme, the kit's lighter one in the light. Since p805
+// Phase 7 section 2 the search is the kit's command palette, whose root draws it.
 
 const stripComments = (text: string) =>
   text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -18,8 +19,8 @@ const tokensCss = stripComments(
 const hubTokens = stripComments(
   fs.readFileSync(path.join(HUB_ASSETS_DIR, 'scss', '_tokens.scss'), 'utf8')
 );
-const hubSearch = stripComments(
-  fs.readFileSync(path.join(HUB_ASSETS_DIR, 'scss', '_search.scss'), 'utf8')
+const paletteCss = stripComments(
+  fs.readFileSync(path.join(SRC_DIR, '_engine', 'ui', 'overlays', 'CommandPalette.scss'), 'utf8')
 );
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').trim();
@@ -120,7 +121,7 @@ const EXPECTED_CHANGES: Record<string, Partial<Themed>> = {
   warning: { light: '#8f6300' },
 };
 
-/** `_search.scss`' `::backdrop` at Phase 0, in both themes; the kit's light one since Phase 5 */
+/** The search dialog's `::backdrop` at Phase 0, in both themes; the kit's light one since Phase 5 */
 const PHASE_0_BACKDROP = 'rgb(3 6 12 / 60%)';
 const LIGHT_BACKDROP = 'rgb(15 23 38 / 40%)';
 
@@ -189,9 +190,11 @@ describe("the Hub's tokens", () => {
     }
   );
 
-  it("give the search dialog the kit's backdrop, Phase 0's as the fallback", () => {
-    const backdrop = /&::backdrop\s*\{[^}]*?background:([^;]+);/.exec(hubSearch)?.[1];
-    expect(squash(backdrop ?? '')).toBe(`var(--aek-backdrop, ${PHASE_0_BACKDROP})`);
+  it("give the search (the kit's command palette) the kit's backdrop, Phase 0's in the dark theme", () => {
+    const backdrop = /:where\(\.aekCommandPalette\)\s*\{[^}]*?background:([^;]+);/.exec(
+      paletteCss
+    )?.[1];
+    expect(squash(backdrop ?? '')).toBe('var(--aek-backdrop)');
     expect(kit.dark.get('--aek-backdrop')).toBe(PHASE_0_BACKDROP);
     expect(kit.light.get('--aek-backdrop')).toBe(LIGHT_BACKDROP);
   });

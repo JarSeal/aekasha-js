@@ -59,6 +59,14 @@ const actAsync = async (page: Page, piece: string, step: UiRunStep | UiKeyStep) 
       .locator(`${boxSelector(piece)} ${step.focusInBox}`)
       .first()
       .focus();
+  } else if ('focusPage' in step) {
+    await page.locator(step.focusPage).first().focus();
+  } else if ('type' in step) {
+    await page.keyboard.type(step.type);
+  } else if ('pressToNavigate' in step) {
+    const from = page.url();
+    await page.keyboard.press(step.pressToNavigate);
+    await page.waitForURL((url) => url.href !== from, { waitUntil: 'load' });
   } else if ('press' in step) {
     await page.keyboard.press(step.press);
   } else if ('keyDown' in step) {
@@ -128,6 +136,10 @@ const readExpectation = (page: Page, piece: string, step: UiKeyStep) =>
           actual: el ? `${s.name}: "${value}"` : 'no element',
         };
       }
+      if ('expectUrl' in s) {
+        const url = `${location.pathname}${location.hash}`;
+        return { ok: url.endsWith(s.expectUrl), actual: `at ${url}` };
+      }
       if ('expectActiveOption' in s) {
         const id = active?.getAttribute('aria-activedescendant');
         const option = id ? document.getElementById(id) : null;
@@ -187,7 +199,8 @@ export const runKeyStepsAsync = async (page: Page, piece: string, steps: UiKeySt
     const step = steps[i];
     const where = `step ${i + 1} (${describeStep(step)})`;
     if (await actAsync(page, piece, step)) {
-      if (!('press' in step || 'keyDown' in step || 'keyUp' in step)) continue;
+      // Each key typed shows the ring, as a key pressed does; a new page has nothing focused
+      if (!('press' in step || 'type' in step || 'keyDown' in step || 'keyUp' in step)) continue;
       const missing = await pollAsync(
         () => readMissingOutline(page),
         (m) => m === null,

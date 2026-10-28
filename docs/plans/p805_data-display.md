@@ -1666,6 +1666,69 @@ As built (section 1, from `46094479`: Phase 6 committed):
 - `graphs.ts` exports `addFigureLine` and `addLiveSwitch` (the box uses both); `_components.ts`,
   `hub/CLAUDE.md` name the new modules.
 
+As built (section 2):
+
+- **The search is on the palette** (D12, Phase 0 step 5's mapping held): `_search.ts` makes
+  `createCommandPalette<HubSearchCommand>` (id `hubSearch`) with the Hub's `source` (`[]` for an
+  empty query, the results at once once loaded, a promise of them until then: the palette's
+  loading status and its debounce, a rejection its `errorText`, tried again on the next query),
+  `renderRow` (the breadcrumb, an API result's kind badge and name as `<code>`, the snippet; the
+  marks the palette's `appendMarked`), `emptyText` as a function (the "Did you mean" titles as
+  `createLink`s), `hints: { select: 'to open' }`, `onQueryChange` into `sessionStorage` and
+  `open({ query })` with it. Its `<dialog>` code went.
+- **The results are `devTools/hub/searchResults.ts`** (`createHubSearchResults({ payload,
+rootUrl })` → `{ search, suggest }`, `getSnippet`; no Node imports, beside `searchProtocol.ts`),
+  so `searchResults.test.ts` runs them against a payload built as `hub:build` builds it: the
+  groups (the section's menu label, 'Home' for none), the crumbs, the matched terms, the API rows
+  (kind, name, crumbs), the links, the 50 kept and the count of all, the snippet window, the
+  suggestions (now once per page: the old ones could repeat a page). A one-letter term isn't
+  marked (the old regex's rule), and the status now says "50 of 142 results" where it said "50+".
+- **`_kitRoot.ts`** (`getKitRoot`): the one HUD root, made in a slot at the end of `<body>` by
+  whichever chunk runs first; `_components.ts` is on it too and keeps `registerBuiltInIcons` (in
+  the shared module it would put about 10 kB of icons into the search's chunk). Both chunks import
+  it, so the build makes a `_kitRoot` chunk with the kit modules they share.
+- **`#hudRoot { z-index: 70 }`** (`_base.scss`: above the header's 50 and its dropdowns' 60, below
+  the skip link's 100): needed, as Phase 0 said. The first check said otherwise, wrongly: an inert
+  header isn't hit-tested, so `elementFromPoint` skipped it; the phone shot showed the header over
+  the palette's field.
+- **The page while open:** `onOpen` makes every `<body>` child but the HUD root's inert (not one
+  that already was) and sets `html.hubSearchOpen` (`overflow: hidden`), `onClose` undoes both.
+- **Fixed on the way (the engine):** the palette called `onClose` after giving the focus back, so
+  a page `onOpen` made inert (its JSDoc's own use, the Hub's) refused it. `onClose` now runs
+  before the overlay entry's removal; a test pins it (fails without the fix).
+- **Fixed on the way (the Hub, older than this plan's change):** the build emits `hub.js` as a
+  facade over `chunks/hub-….js`, so `hub.js`' `import.meta.url` pointed into `chunks/` and every
+  search result linked to `_assets/<page>` (a 404; seen on this branch's section 1 build, before
+  this change). The links now resolve against the payload's URL from the page's `<meta>` (its
+  folder's parent), whatever the chunking; `hub.ts` passes no URL any more.
+- **`hub.ts`' two `<dialog>` workarounds went** (the Escape listener's `closest('dialog')`: the
+  overlay stack stops the palette's Escape in the HUD root; `isEditable`'s `dialog:not([open])`:
+  the palette's input is in the page only while it's open).
+- **`_search.scss`** is the scroll lock and the rows' parts on the kit's tokens; the chrome, the
+  backdrop and the narrow form are the palette's. `tokens.test.ts`' backdrop check moved to the
+  palette's root (`var(--aek-backdrop)`, no fallback needed: it's an element, not `::backdrop`).
+- **`yarn verify:ui`** gained `focusPage`, `type`, `pressToNavigate` and `expectUrl` steps
+  (`uiPage.ts`, `uiChecks.ts`' `describeStep` and its test), and the palette's box a fourth
+  keyboard script on the library page's header search: ⌘K over an inert page and the scroll
+  lock, the hint, a query's group, title and crumbs, the arrows, Escape with the focus back on
+  the button and nothing inert, the query kept on reopening, Enter landing on
+  `features/ui-kit/data/#showing-live-data`.
+- **The look is the kit's** (before and after shots for review): the panel 42 × `--aek-base`
+  (588 px; was 42 rem, 672), the kit's type scale, the active row an inset ring on
+  `accent-soft` (was a left accent bar), the marks the kit's `.aekMark` (a soft background; was
+  bold accent text), `Kbd` key hints ("Enter", "Esc"; were ↵ and esc), and no blur behind the
+  backdrop (the old `::backdrop` had `blur(3px)`).
+- **Size** (gzip, `dist-hub/`): a first search loads `_search` 8.4 kB (MiniSearch, the protocol,
+  the results, the palette's use) and the shared `_kitRoot` chunk 12.9 kB with its CSS 4.4 kB
+  (the HUD root, `kit.scss` with `tokens.css` again, the palette, Kbd, the overlay stack, the
+  focus trap, the spinner, `Filter.ts`, the link): 25.6 kB where it was 9.2 (and the old styles,
+  now out of `hub.css`). Phase 0 estimated 9-12 kB more script; it's about 12 kB more and the
+  CSS. Against the 416 KiB payload a first search loads anyway, about 4 %. On the library pages
+  the `_kitRoot` chunk is shared with `_components`.
+- The overlays page's "A source" says the Hub's own search is a palette; `devTools/hub/CLAUDE.md`
+  (Search), `hub/CLAUDE.md` (the library's root) and `devTools/verify/CLAUDE.md` (the steps)
+  say what changed.
+
 ### Phase 8: versions and done
 
 Engine minor, app minor, the Project entry (D16); `yarn checkVersions --against main`; the plan

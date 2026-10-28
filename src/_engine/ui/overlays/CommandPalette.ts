@@ -639,10 +639,11 @@ export const createCommandPalette = <C extends PaletteCommand = PaletteCommand>(
     sourceTimer = undefined;
     removeTrap?.();
     removeTrap = null;
+    // Before the focus goes back: a page `onOpen` made inert would refuse it
+    props.onClose?.();
     removeOverlay?.(returnFocus);
     removeOverlay = null;
     root.remove();
-    props.onClose?.();
   }
 
   const open = (options: { query?: string } = {}) => {

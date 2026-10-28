@@ -5,7 +5,8 @@
  * the notes for developing Ækasha) and the UI kit section's `::: demo` boxes. It uses
  * `aekasha/ui` without the engine: the Hub's script build resolves the kit's storage to its own
  * stand-in (`_kit/`, `devTools/hub/kitStandIns.ts`), and this makes the HUD root
- * (`createHudRoot`, which brings the kit's global styles), as the boot would.
+ * (`createHudRoot` through `_kitRoot.ts`, shared with the search; it brings the kit's global
+ * styles), as the boot would.
  *
  * The root sits over the viewport, as in an app: each `[data-hub-demo]` box gets buttons that
  * open its piece's states there, and a library page's theme and density switches set its
@@ -22,7 +23,7 @@
  * `page.ts`, the parts they share. Each exports its demos by box key, and this merges them; their checks are
  * `_componentChecks.ts`' (`_library/*Checks.ts`).
  */
-import { createHudRoot, registerBuiltInIcons } from 'aekasha/ui';
+import { registerBuiltInIcons } from 'aekasha/ui';
 import { CONTAINERS_DEMOS } from './_library/containers';
 import { CORE_DEMOS } from './_library/core';
 import { DATA_DEMOS } from './_library/data';
@@ -32,6 +33,7 @@ import { GRAPHS_DEMOS } from './_library/graphs';
 import { OVERLAYS_DEMOS } from './_library/overlays';
 import { PALETTE_DEMOS } from './_library/palette';
 import { LAYOUT_DEMOS } from './_library/layout';
+import { getKitRoot } from './_kitRoot';
 import { kitRoots, type Demo } from './_library/page';
 import { PARITY_DEMOS } from './_library/parity';
 import { STRESS_DEMOS } from './_library/stress';
@@ -75,10 +77,8 @@ const initSettings = (hud: HTMLElement) => {
 export const initComponents = () => {
   // The windows' buttons and the toasts are icons; the boot registers them in the debug env
   registerBuiltInIcons();
-  // The root takes the place of its slot (as of the page's `#hudRoot` in an app)
-  const slot = document.createElement('div');
-  document.body.append(slot);
-  initSettings(createHudRoot({ slot }).elem);
+  // The Hub's one root, which the search may have made first (`_kitRoot.ts`)
+  initSettings(getKitRoot().elem);
   for (const box of document.querySelectorAll<HTMLElement>('[data-hub-demo]')) {
     DEMOS[box.dataset.hubDemo ?? '']?.(box);
   }
