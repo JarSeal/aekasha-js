@@ -1,6 +1,15 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { stubKitDomAsync } from '../testing/KitDom';
-import { appendMarked, findMatchRanges, foldText, getQueryWords, matchesWords } from './Filter';
+import {
+  appendMarked,
+  appendRanges,
+  findMatchRanges,
+  foldText,
+  getQueryWords,
+  matchesWords,
+  prepareScoredText,
+  scoreText,
+} from './Filter';
 
 /** A parent's children as `text` and `[mark]` pieces */
 const readPieces = (parent: Node) =>
@@ -72,5 +81,46 @@ describe('finding and marking matches (p805 D6)', () => {
     const empty = document.createElement('span');
     appendMarked(empty, '', ['a']);
     expect(empty.childNodes).toHaveLength(0);
+  });
+});
+
+describe('the palette’s scorer (p805 D12)', () => {
+  const score = (text: string, query: string) =>
+    scoreText(prepareScoredText(text), getQueryWords(query));
+  const marked = (text: string, query: string) => {
+    const parent = document.createElement('span');
+    appendRanges(parent, text, score(text, query)?.ranges ?? []);
+    return readPieces(parent);
+  };
+
+  it('finds a word whole or as its letters in order; every word must be there', () => {
+    expect(score('Toggle drawer', 'draw')).not.toBeNull();
+    expect(score('Toggle drawer', 'tgdr')).not.toBeNull();
+    expect(score('Toggle drawer', 'tg dr')).not.toBeNull();
+    expect(score('Toggle drawer', 'rd')).toBeNull();
+    expect(score('Toggle drawer', 'draw grid')).toBeNull();
+  });
+
+  it('marks the letters it took, a word’s starts before the scattered ones', () => {
+    expect(marked('Toggle drawer', 'tgdr')).toEqual(['[T]', 'o', '[g]', 'gle ', '[dr]', 'awer']);
+    expect(marked('Reset the camera', 'cam')).toEqual(['Reset the ', '[cam]', 'era']);
+    expect(marked('Reset the camera', 'the cam')).toEqual(['Reset ', '[the]', ' ', '[cam]', 'era']);
+  });
+
+  it('ranks a word’s start over the middle, a run over scattered letters, earlier over later', () => {
+    const at = (text: string, query: string) => score(text, query)?.score ?? -Infinity;
+    expect(at('Camera', 'cam')).toBeGreaterThan(at('Clear all marks', 'cam'));
+    expect(at('Draw calls', 'dra')).toBeGreaterThan(at('Redraw', 'dra'));
+    expect(at('Grid', 'g')).toBeGreaterThan(at('Toggle', 'g'));
+    expect(at('Show grid', 'grid')).toBeGreaterThan(at('Show the grid', 'grid'));
+  });
+
+  it('counts a capital after a small letter as a word’s start', () => {
+    expect(marked('setValue', 'sv')).toEqual(['[s]', 'et', '[V]', 'alue']);
+  });
+
+  it('ignores accents and maps the marks back past them', () => {
+    expect(marked('Café crème', 'creme')).toEqual(['Café ', '[crème]']);
+    expect(marked('Café crème', 'cc')).toEqual(['[C]', 'afé ', '[c]', 'rème']);
   });
 });

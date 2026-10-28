@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Accessibility, Debug
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p806_debugger-migration.md, p807_stats-and-profiler-graphs.md (p800 §5; written when each starts)
@@ -1540,9 +1540,79 @@ As built (section 3):
   tree's and the table's change, not the graphs'; left for the user's call (§4's p806 list, or a
   section of its own).
 
-### Phase 6: the command palette
+### Phase 6: the command palette — done
 
 1. The palette (D12).
+
+As built:
+
+- **`createCommandPalette<C>`** (`overlays/CommandPalette.ts`, `CommandPalette.scss`, its public
+  types in `overlays/CommandPaletteTypes.ts`: `CommandPaletteProps`, `CommandPalette`,
+  `PaletteCommand`, `PaletteSource`, `PaletteSourceResult`, `PaletteRowParts`,
+  `CommandPaletteHints`): D12's props plus `class`, `attr`, `id`; the handle D12's plus `getQuery`
+  and `setRecent` (an app restoring its stored list). D12's command type is `PaletteCommand`.
+  Decided on the way:
+  - **`kbd` is the keys' text** (`'Ctrl+S'`, `createKbd`'s form), not D12's Kbd handle: the rows
+    are made again on every query and a source makes new command objects, so nothing would own a
+    handle to remove it; and the palette imports Kbd anyway for its hints footer. A Kbd per shown
+    row, removed with it; the row's `aria-keyshortcuts` is its `getAriaKeyShortcuts()`.
+  - **The empty query** lists the `recent` commands (a "Recent" group) and then every other
+    command (or, with a `source`, its answer for `''`), with `hint` as the status: D12's "the
+    recent commands first, else `hint`" read as both, so an app's few commands are all one key
+    away and the Hub's source (empty for `''`) shows its hint alone. The recent list keeps 5;
+    with a source, a recent id resolves to the command chosen while the palette lived.
+  - **The scorer** (`Filter.ts`, `@internal`: `prepareScoredText`, `scoreText`, `appendRanges`):
+    each query word must be in the label whole or as its letters in order (`tgdr`); a letter
+    scores 1, +3 at a word's start (after a non-letter, or a capital after a small letter), +5
+    right after the previous one, −0.01 per character before the first; the best of the whole
+    match and two letter-by-letter walks. A word not in the label may be in `keywords` at half its
+    score (not marked); `description` isn't searched. Ties keep the given order. Its marks are the
+    letters it took (`appendRanges`), so `tgdr` marks four letters, not nothing.
+  - **A source's promise:** the source is asked on every input until it answers with a promise;
+    from then on the next query waits for 150 ms of no typing (D12's "debounced"), and a
+    synchronous answer makes it immediate again (the Hub's case: a promise while the payload
+    loads, then answers at once). An answer to an older query is dropped; the old rows stay
+    (`aria-busy`, dimmed) under the loading status until the new ones come.
+  - **Groups:** commands with no group go straight into the listbox, unlabelled, where their first
+    one comes.
+  - **The layer:** a new token, `--aek-z-palette` (9000: above an app's dialogs, so it opens over a
+    pause menu; below the debugger at 10000), shown by the design document's z-layer table (its
+    `z-` prefix). Every build's stylesheet grew by its 22 bytes.
+  - **The narrow form** is a container query on the palette's root (`container: … / size`, the
+    root being the HUD's bounds), so an embed's container decides it, not the viewport; the
+    panel's top is `12cqh`.
+  - **The focus ring** (found by `verify:ui`): the input keeps the kit's ring (inset) while no row
+    is active, and gives it to the active row while one is (`aria-activedescendant`), as the
+    drop-down's list gives its ring to its active option. The Hub search's accent bottom border in
+    its place would have removed the input's outline.
+  - **Modal:** the overlay stack's `inert` entry (the debugger stays live for an app's palette), a
+    focus trap over the panel (Tab between the input and Close), the focus back to the opener; a
+    command runs after the close (the menu's rule). `open()` needs the HUD root (Phase 7
+    section 2's `_kitRoot.ts` makes it before the Hub's first open).
+- **Found on the way:** an action map takes keys typed into a text field (`Actions.ts` skips only
+  its `preventDefault` there), so typing `w` in the palette would move a player. The overlays
+  page's example turns `GAMEPLAY` off in `onOpen` and on in `onClose`, with the Ctrl / ⌘ + K map
+  in a context of its own; Phase 7 section 3's example binding does the same.
+- **The library:** a group module of its own, `_library/palette.ts` and `paletteChecks.ts`
+  (`overlays.ts` is at 622 lines): an editor's commands (groups, icons, key hints, a disabled one,
+  keywords, a recent command) and a page search through a `source` (the Hub's shape: a first
+  answer that waits 1.5 s for its "index", `renderRow` with a breadcrumb, title and snippet, link
+  rows to the library's sections, `hints: { select: 'to open' }`). Four states (the commands, "tog",
+  "zz", the search's hint) and three keyboard scripts (the keys and Enter's run with the focus
+  back, Tab and Escape, the source's loading and grouped results).
+- **The Hub:** the overlays page's `## Command palettes` (the action map binding, ranking, groups,
+  the empty query, choosing, the query; `### A source`; the reference table), its intro, tags,
+  description and key APIs, the layers line; the UI kit overview's rows for the palette and the
+  context menu (Phase 1 section 4 hadn't added one); both library pages' box and texts;
+  `COMPONENT_USES`; `hub/CLAUDE.md`'s group modules.
+- **Size:** `CommandPalette.ts` 3.7 kB minified and gzipped alone, its stylesheet 1.3 kB; the
+  scorer took `Filter.ts` from 0.8 to 1.4 kB, carried only where the palette is (the list and
+  the tree import the filter's other names). Nothing in a first download imports the palette.
+  `verify:baselines --update` recorded the API's 12 new names (8 public), the docs at 100 %, and
+  the bundles: besides the stylesheets' token, the forms' lazy chunks (`Slider`, the embed's
+  `uiKitEmbedForm`) by about 230 bytes of script and of CSS that were Phase 5 section 3's
+  (`Monitor.ts`' graph slot, the shell's `onSample`), within the check's tolerance and not
+  recorded then.
 
 ### Phase 7: the Hub, the example, `CLAUDE.md`, readme
 

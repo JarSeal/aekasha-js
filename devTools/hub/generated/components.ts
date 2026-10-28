@@ -83,6 +83,7 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-link', calls: ['createLink'] },
   { slot: 'generated-components-menu', calls: ['createMenu', 'createSplitButton'] },
   { slot: 'generated-components-context-menu', calls: ['createContextMenu'] },
+  { slot: 'generated-components-command-palette', calls: ['createCommandPalette'] },
   {
     slot: 'generated-components-list',
     calls: ['createList', 'createVirtualRows', 'createListReorder'],

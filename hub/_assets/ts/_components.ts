@@ -29,6 +29,7 @@ import { EDITORS_DEMOS } from './_library/editors';
 import { FIELDS_DEMOS } from './_library/fields';
 import { GRAPHS_DEMOS } from './_library/graphs';
 import { OVERLAYS_DEMOS } from './_library/overlays';
+import { PALETTE_DEMOS } from './_library/palette';
 import { LAYOUT_DEMOS } from './_library/layout';
 import { kitRoots, type Demo } from './_library/page';
 import { STRESS_DEMOS } from './_library/stress';
@@ -37,6 +38,7 @@ const DEMOS: Record<string, Demo> = {
   ...CORE_DEMOS,
   ...LAYOUT_DEMOS,
   ...OVERLAYS_DEMOS,
+  ...PALETTE_DEMOS,
   ...FIELDS_DEMOS,
   ...EDITORS_DEMOS,
   ...CONTAINERS_DEMOS,

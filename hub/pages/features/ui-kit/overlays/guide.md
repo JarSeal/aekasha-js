@@ -364,6 +364,116 @@ kit's menu is already open then, and that event is dropped.
 | Keys           | On an element inside the target: the ContextMenu key and Shift+F10 open it; in it, the menu's keys  |
 | Assistive tech | The menu's, named by `label` (default "Context menu"); nothing on the target, which isn't a trigger |
 
+## Command palettes
+
+[`createCommandPalette`](api:createCommandPalette) is a modal search over your app's commands: an
+input over the commands, ranked and grouped as the player types, the matched letters marked. A
+command ([`PaletteCommand`](api:PaletteCommand)) has an `id`, a `label` and a `run`, and may have a
+`group`, `keywords` (more words it's found by: an old name, a synonym), a `description` line, an
+`icon`, the `kbd` of its shortcut (shown, not bound), `disabled` or an `href` (its row a link).
+
+The kit reads no key of its own, so the palette opens when you call `open()`: bind Ctrl / ⌘ + K
+in an action map. An action map still takes the keys typed into a text field, so turn the game's
+context off while the palette is open, and keep the shortcut in a context of its own:
+
+```ts
+import { createActionMap, setActionContextEnabled } from 'aekasha';
+import { createCommandPalette, getSvgIcon } from 'aekasha/ui';
+
+const palette = createCommandPalette({
+  label: 'Commands',
+  commands: [
+    { id: 'reset', label: 'Reset the camera', group: 'View', run: resetCamera },
+    { id: 'grid', label: 'Toggle the grid', group: 'View', kbd: 'G', run: toggleGrid },
+    {
+      id: 'light',
+      label: 'Add a light',
+      group: 'Scene',
+      icon: getSvgIcon('lightBulb'),
+      keywords: ['lamp'],
+      run: addLight,
+    },
+  ],
+  // The game's keys wait while the player types
+  onOpen: () => setActionContextEnabled('GAMEPLAY', false),
+  onClose: () => setActionContextEnabled('GAMEPLAY', true),
+});
+
+const shortcuts = createActionMap({
+  id: 'shortcuts',
+  context: 'SHORTCUTS',
+  actions: { palette: { type: 'BUTTON', name: 'Command palette' } },
+  bindings: {
+    palette: [{ device: 'KEYBOARD', keys: [{ key: 'k', ctrl: true }, { key: 'k', meta: true }] }],
+  },
+});
+shortcuts.onPressed('palette', () => palette.open());
+```
+
+::: demo commandPalette
+:::
+
+- **Ranking:** each word of the query must be in a command's label, whole or as its letters in
+  order (`tgdr` finds "Toggle the grid"), or else in its `keywords`, which rank below the label.
+  A letter at a word's start and one right after the last count more, so "Camera" comes before
+  "Clear all marks" for `cam`. Ties keep the order you gave.
+- **Groups:** in the order of their first row, or `groups` fixes the order; a command with no
+  group comes where its first one is, without a label.
+- **An empty query** lists the `recent` commands first, in a "Recent" group, then every command,
+  and shows the `hint`. The palette keeps the recent list (five at most) and reports each change
+  through `onRecentChange`: storing it between sessions is yours. `setRecent` restores it.
+- **Choosing** a command closes the palette, gives the focus back to what had it, and then calls
+  its `run` and `onSelect`, so a dialog the command opens returns the focus to the same place. A
+  disabled command stays in the list and does nothing. An `href` command's row is a link: Enter
+  and a plain click follow it, a click with a modifier is the browser's (a new tab) and keeps the
+  palette open.
+- **The query** stays in the input between opens and is selected on each, so typing replaces it;
+  `open({ query })` opens with another, and `onQueryChange` hears every change.
+
+### A source
+
+A search index, a server or the scene's objects answer through `source(query)` in place of
+`commands`: an array of commands in its own order, or `{ commands, total }` for "50 of 214
+results". The palette doesn't rank them: a command's `matchTerms` say what its row marks (else the
+query's words). An answer can be a promise: the status shows `loadingText` with a spinner until it
+settles, an answer to an older query is dropped, and while the answers are promises the next
+query waits until the typing pauses for 150 ms. A rejected one shows `errorText`, and the next
+query asks again.
+
+```ts
+const search = createCommandPalette<PageResult>({
+  label: 'Search the docs',
+  hint: 'Search the pages and their sections.',
+  hints: { select: 'to open' },
+  source: async (query) => {
+    const hits = await searchIndex(query); // Your search
+    return { commands: hits.slice(0, 50), total: hits.length };
+  },
+  renderRow: (page, { appendMarked }) => {
+    const row = CMP({ class: 'docsResult' });
+    row.add({ tag: 'span', class: 'docsResult__crumbs', text: page.crumbs });
+    appendMarked(row.add({ tag: 'span', class: 'docsResult__title' }).elem, page.label);
+    return row;
+  },
+});
+```
+
+`renderRow` draws a row's content from your own command type (the palette is generic over it), and
+its `appendMarked` marks the terms in a text it appends, as text: never HTML. The option element
+around it, its ARIA and the active row's look stay the palette's.
+
+| Command palette |                                                                                                                                                                                                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props           | [`CommandPaletteProps`](api:CommandPaletteProps) (a command: [`PaletteCommand`](api:PaletteCommand); a source: [`PaletteSource`](api:PaletteSource))                                                                                                                         |
+| Parts           | `.aekCommandPalette` (over the HUD at `--aek-z-palette`, its background the backdrop) > `__panel` > `__field` (`__icon`, `__input`, `__close`), `__results` (`__group`, `__groupLabel`, `__option` with `__optionIcon`, `__optionLabel`, `__optionDescription`, `__optionKbd`), `__status`, `__hints` |
+| Custom props    | `--aek-command-palette-width`, `-max-height`, `-top` (the panel's), `--aek-command-palette-active-color` (the active row's bar)                                                                                                                                                |
+| Keys            | In the input, which keeps the focus: Up / Down move (wrapping), PageUp / PageDown by a box of rows, Enter chooses, Escape closes (it never clears first); Home / End are the input's. Tab moves between the input and Close only                                                |
+| Assistive tech  | A modal dialog named by `label`; the input a combobox over a listbox (`aria-activedescendant`), each group a named group; the count, hints and errors in a status line; the rest of the HUD inert while it's open                                                             |
+
+On a narrow screen (below 640 px of the HUD: a phone, a small embed) the panel takes the whole HUD,
+and the key hints under it hide where there's no hover (a touch screen). It covers the HUD only: a
+page around an embed is yours to make `inert` in `onOpen` and live again in `onClose`.
+
 ## Escape, focus and stacking
 
 Every open overlay (a dialog, a drop-down's list, a tooltip, a popover, a menu, a toast holding
@@ -381,7 +491,7 @@ the focus) is on one stack, and the kit keeps the same rules for all of them:
   browser's top layer, on their side when they fit there and else the other, kept inside the page
   or an embed's container. Where the browser has no top layer they open at the HUD root's top.
 - **The layers:** the app's windows, then a loading overlay over the HUD, then the app's dialogs,
-  the debug tools' windows and dialogs, the toasts and the tooltips (`--aek-z-*`, in the
+  the command palette, the debug tools' windows and dialogs, the toasts and the tooltips (`--aek-z-*`, in the
   [styling tokens](hub:features/ui-kit/styling#the-tokens-the-whole-look)). An app's modal dialog leaves
   the debug tools usable, so a pause menu can still be debugged.
 
@@ -400,6 +510,8 @@ the focus) is on one stack, and the kit keeps the same rules for all of them:
   [`createPopover`](api:createPopover) ([`Popover`](api:Popover)).
 - [`createMenu`](api:createMenu) ([`MenuItem`](api:MenuItem)),
   [`createSplitButton`](api:createSplitButton) and [`createContextMenu`](api:createContextMenu).
+- [`createCommandPalette`](api:createCommandPalette) ([`PaletteCommand`](api:PaletteCommand),
+  [`PaletteSource`](api:PaletteSource), [`CommandPalette`](api:CommandPalette)).
 
 ## Read more
 

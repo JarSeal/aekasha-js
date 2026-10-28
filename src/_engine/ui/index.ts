@@ -203,6 +203,16 @@ export type {
 } from './overlays/Menu';
 export { createContextMenu } from './overlays/ContextMenu';
 export type { ContextMenu, ContextMenuProps, ContextMenuSource } from './overlays/ContextMenu';
+export { createCommandPalette } from './overlays/CommandPalette';
+export type {
+  CommandPalette,
+  CommandPaletteHints,
+  CommandPaletteProps,
+  PaletteCommand,
+  PaletteRowParts,
+  PaletteSource,
+  PaletteSourceResult,
+} from './overlays/CommandPaletteTypes';
 export { createFieldContextMenu } from './forms/FieldContextMenu';
 export type { FieldContextMenuProps } from './forms/FieldContextMenu';
 export { getMotionFactor } from './core/Motion';

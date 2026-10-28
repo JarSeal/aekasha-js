@@ -466,3 +466,26 @@
 .hubComponentDemoGroup.hubDemoGraphs > .aekField[data-kind='switch'] {
   flex-basis: 100%;
 }
+
+// The palette demo's search rows (`palette.ts`' `renderRow`, in the HUD root): the Hub's own
+// search's shape, a breadcrumb over the title and a line of text
+.hubDemoPaletteRow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--aek-space-1);
+}
+
+.hubDemoPaletteCrumbs {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+}
+
+.hubDemoPaletteTitle {
+  font-weight: var(--aek-font-weight-medium);
+}
+
+.hubDemoPaletteText {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
+}

@@ -3035,10 +3035,14 @@
     },
     "src/_engine/ui/data/Filter.ts": {
       "appendMarked": "Function",
+      "appendRanges": "Function",
       "findMatchRanges": "Function",
       "foldText": "Function",
       "getQueryWords": "Function",
-      "matchesWords": "Function"
+      "matchesWords": "Function",
+      "prepareScoredText": "Function",
+      "ScoredText": "TypeAlias",
+      "scoreText": "Function"
     },
     "src/_engine/ui/data/graphs/Chart.ts": {
       "Chart": "TypeAlias",
@@ -3543,6 +3547,18 @@
       "hasTopLayer": "Function",
       "showAnchored": "Function",
       "ShowAnchoredProps": "TypeAlias"
+    },
+    "src/_engine/ui/overlays/CommandPalette.ts": {
+      "createCommandPalette": "Function"
+    },
+    "src/_engine/ui/overlays/CommandPaletteTypes.ts": {
+      "CommandPalette": "TypeAlias",
+      "CommandPaletteHints": "TypeAlias",
+      "CommandPaletteProps": "TypeAlias",
+      "PaletteCommand": "TypeAlias",
+      "PaletteRowParts": "TypeAlias",
+      "PaletteSource": "TypeAlias",
+      "PaletteSourceResult": "TypeAlias"
     },
     "src/_engine/ui/overlays/ContextMenu.ts": {
       "ContextMenu": "TypeAlias",
@@ -4799,6 +4815,9 @@
       "ColorFieldProps",
       "ColorFieldValue",
       "ColorIntensityProps",
+      "CommandPalette",
+      "CommandPaletteHints",
+      "CommandPaletteProps",
       "ContextMenu",
       "ContextMenuProps",
       "ContextMenuSource",
@@ -4886,6 +4905,10 @@
       "Pad2D",
       "Pad2DProps",
       "Pad2DValue",
+      "PaletteCommand",
+      "PaletteRowParts",
+      "PaletteSource",
+      "PaletteSourceResult",
       "Popover",
       "PopoverProps",
       "ProgressBar",
@@ -5016,6 +5039,7 @@
       "createChart",
       "createCheckbox",
       "createColorField",
+      "createCommandPalette",
       "createContextMenu",
       "createCurveEditor",
       "createDivider",

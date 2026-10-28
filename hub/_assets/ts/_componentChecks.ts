@@ -22,6 +22,7 @@ import { FIELDS_CHECKS } from './_library/fieldsChecks';
 import { GRAPHS_CHECKS } from './_library/graphsChecks';
 import { LAYOUT_CHECKS } from './_library/layoutChecks';
 import { OVERLAYS_CHECKS } from './_library/overlaysChecks';
+import { PALETTE_CHECKS } from './_library/paletteChecks';
 
 /** A step that opens a state: a Hub button in the demo box by its text, an element in the HUD
  * root, or a kit element drawn in the box */
@@ -98,6 +99,7 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   ...CORE_CHECKS,
   ...LAYOUT_CHECKS,
   ...OVERLAYS_CHECKS,
+  ...PALETTE_CHECKS,
   ...FIELDS_CHECKS,
   ...EDITORS_CHECKS,
   ...CONTAINERS_CHECKS,

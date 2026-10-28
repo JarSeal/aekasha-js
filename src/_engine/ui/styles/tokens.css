@@ -118,11 +118,13 @@
      * Z-layers: the windows' stacks (each window 2 above the last, its backdrop 1 below). A
      * loading overlay over the HUD's bounds (a scene loader's) covers the app's windows. An app's
      * modal dialogs stack above them both but below the debugger (10000 and up), whose roots an
-     * app's modal leaves live; a debug modal above the debug windows (p803 D7)
+     * app's modal leaves live; the command palette above an app's dialogs, opened over one too
+     * (p805 D12); a debug modal above the debug windows (p803 D7)
      */
     --aek-z-window: 100;
     --aek-z-loading: 1000;
     --aek-z-dialog: 5000;
+    --aek-z-palette: 9000;
     --aek-z-debug-window: 20000;
     --aek-z-debug-dialog: 30000;
     --aek-z-toast: 31000;
