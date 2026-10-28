@@ -294,4 +294,11 @@ export type { Tooltip, TooltipProps } from './overlays/Tooltip';
 export { createTree } from './data/Tree';
 export type { Tree, TreeFilter, TreeProps } from './data/TreeTypes';
 export { createTable } from './data/Table';
-export type { Table, TableColumn, TableGroup, TableProps, TableTone } from './data/TableTypes';
+export type {
+  Table,
+  TableColumn,
+  TableGroup,
+  TableProps,
+  TableSort,
+  TableTone,
+} from './data/TableTypes';

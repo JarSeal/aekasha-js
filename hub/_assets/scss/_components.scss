@@ -389,3 +389,14 @@
 .hubDemoTableNarrow > .aekTable {
   width: min(100%, 18rem);
 }
+
+// A cell renderer's two lines: the object, its entity and owner dimmed under it
+.hubDemoTwoLines {
+  display: flex;
+  flex-direction: column;
+}
+
+.hubDemoTwoLines__sub {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+}

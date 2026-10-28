@@ -44,7 +44,7 @@
 | [Split button](hub:features/ui-kit/overlays#menus-and-split-buttons)                            | [`createSplitButton`](api:createSplitButton)                                                                                                         | An action, with its variants in a menu                                       |
 | [List](hub:features/ui-kit/data#lists)                                                          | [`createList`](api:createList)                                                                                                                       | Rows of the app's objects to select, act on and filter                       |
 | [Tree](hub:features/ui-kit/data#trees)                                                          | [`createTree`](api:createTree)                                                                                                                       | Nested nodes to open, load, select and filter                                |
-| [Table](hub:features/ui-kit/data#tables)                                                        | [`createTable`](api:createTable)                                                                                                                     | Figures in columns: groups, a total, sticky parts, a stacked layout          |
+| [Table](hub:features/ui-kit/data#tables)                                                        | [`createTable`](api:createTable)                                                                                                                     | Figures in columns: sort, select, groups, a total, bars, a stacked layout    |
 
 The kit is in five pages, with a [component library](hub:features/ui-kit/library) that shows
 every piece in every state:

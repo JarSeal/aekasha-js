@@ -3077,11 +3077,31 @@
     "src/_engine/ui/data/Table.ts": {
       "createTable": "Function"
     },
+    "src/_engine/ui/data/TableGrid.ts": {
+      "createTableGrid": "Function",
+      "TableGridProps": "TypeAlias"
+    },
+    "src/_engine/ui/data/TableRows.ts": {
+      "compareTableValues": "Function",
+      "createTableCell": "Function",
+      "createTableColumn": "Function",
+      "createTableSorter": "Function",
+      "disposeTableRow": "Function",
+      "findCellControl": "Function",
+      "isInCellControl": "Function",
+      "TableCell": "TypeAlias",
+      "TableColumnState": "TypeAlias",
+      "TableNavRow": "TypeAlias",
+      "TableRowRecord": "TypeAlias",
+      "writeTableBars": "Function",
+      "writeTableRow": "Function"
+    },
     "src/_engine/ui/data/TableTypes.ts": {
       "Table": "TypeAlias",
       "TableColumn": "TypeAlias",
       "TableGroup": "TypeAlias",
       "TableProps": "TypeAlias",
+      "TableSort": "TypeAlias",
       "TableTone": "TypeAlias"
     },
     "src/_engine/ui/data/Tree.ts": {
@@ -4854,6 +4874,7 @@
       "TableColumn",
       "TableGroup",
       "TableProps",
+      "TableSort",
       "TableTone",
       "Tabs",
       "TabsProps",

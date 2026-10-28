@@ -1189,6 +1189,77 @@ As built (section 1):
 - **Size:** no first download moved (`verify:baselines`' bundles unchanged). `Table.ts` alone is
   2.5 kB minified and gzipped (the parts it shares with the list besides).
 
+As built (section 2):
+
+- **Three modules, not one** (`Table.ts` would pass 800 lines): `data/TableRows.ts` (`@internal`:
+  a column's header with its sort button and tooltip, a cell's text, CMP or bar written where it
+  changed, `writeTableBars`, `compareTableValues`, `createTableSorter`) and `data/TableGrid.ts`
+  (`@internal`: the grid's tab stop, keys and clicks, the way into and out of a cell's control);
+  `Table.ts` keeps the render, the sort's state, the selection and the handle (576 lines).
+- **Sort** as D5, with these decisions:
+  - **`manualSort`, not "`sort` given makes it controlled":** the kit's pieces take a start value,
+    a setter and a user's `on*` (the tabs' `selected`, `select`, `onSelect`), so `sort` is the sort
+    at the start, `setSort` / `getSort` code's (unreported), `onSortChange` the user's, and the
+    table sorts its copy of the order on every render. `manualSort: true` is D5's controlled case
+    (a server's or a paged source's order): the sort shown (`aria-sort`, the mark) and reported,
+    the rows kept as given.
+  - **What sorts:** the rows and each group's rows apart, never the footer; a tie in the order
+    given (stable); empty values (`null`, `undefined`, `''`, `NaN`) last in either direction;
+    numbers as numbers, text by an `Intl.Collator` with `numeric` (made on the first sort, none at
+    load), a bar's array by its total; a column's `compare(a, b)` over that (negated descending).
+    The values come from the cells (`writeTableRow` keeps each), so a sort reads no value again.
+  - **The header:** `<th data-sortable aria-sort>` holding `button.aekTable__sort` (the label and
+    `__sortMark`, two CSS triangles, `aria-hidden`: the direction is a shape, not only a colour).
+    `aria-sort` only on the sorted column (the APG sortable table). The cycle: ascending,
+    descending, then ascending again, or the rows' own order with `sortUnset`. Every new column
+    starts ascending. The change announced: "Sorted by Size, descending" or "Not sorted".
+- **The grid** (D4's "table with selection or active cells") is the table with a `selection` or
+  `onRowActivate`; a table with only cell controls stays native (Tab reaches them). The arrows
+  reach the header row (a sortable header's button takes the focus in its cell's place, its Enter
+  and Space its own click) and a group's header row (one cell: Up / Down keep the column it
+  doesn't have). D4's keys, plus Shift + a vertical move (a range), Ctrl / ⌘ + A and the clicks as
+  the list's (Phase 3 section 1: selection doesn't follow the focus; Space picks, Enter or a
+  plain click activates and, in a single selection, selects). The tab stop starts on the first
+  selected row, else the first data row. **The footer's rows** are cells the arrows reach but are
+  never selected or activated (a total isn't an item). Enter or F2 on a cell holding a control
+  (`cell`'s CMP) focus its first control; Escape or F2 there go back to the cell, Escape through
+  an overlay stack entry while the focus is in a cell's control (so a dialog around the table
+  doesn't close first). A `cell` CMP's controls get `tabindex="-1"` when made (one tab stop). In
+  a grid the overflowing box is a region but not a tab stop: its cells scroll it. A Shift press on
+  a row prevents its default and focuses the cell by hand, so a range click selects no text (found
+  in the browser's shots; the list and tree use `user-select: none`, but a table's figures stay
+  copyable).
+- **`cell(row)`** is a CMP in place of the text, made again when the row is another object (the
+  list's `render` rule), removed with its row and the table; the value still sorts the column. The
+  census' two-line cells use it (the library's heaviest objects).
+- **Bar cells: the table's own, not D9's stacked bar.** `createStackedBar` comes in Phase 5, and a
+  table importing it would carry it whether a column has a bar or not (D8's lesson). A
+  `kind: 'bar'` cell is a track with a segment per number (the value a number or an array, as the
+  census' in view and culled), each its share of the column's `barMax`, else of the column's
+  largest total over the rows, groups and footer (so a total in the footer makes them shares, the
+  census' breakdown), `aria-hidden`, the text (`format`; an array's default its numbers joined by
+  ` / `, hidden when empty) beside it. Colours `--aek-table-bar-1` to `-4` (the text, the text at
+  35 %, muted, `border-strong`: p801 §4's in view and culled). Phase 5 section 1 decides whether
+  the stacked bar shares its styles.
+- **`headerTooltip`** is a `createTooltip` on the sort button, or on a `<th>` that isn't sortable
+  (its description; the keyboard reaches it only in a grid). The table imports the tooltip, as the
+  list does.
+- **The context menu** needs nothing new: `getKeyAt` (section 1) finds a cell's row, and the
+  ContextMenu key or Shift+F10 on a grid's focused cell opens a `createContextMenu` on
+  `cmp.elem` anchored to it (the library's heaviest objects).
+- **Stacked with sortable columns:** a visually hidden header would hide a focusable button, so
+  the stacked head shows the sortable headers as chips above the cards (the others stay hidden but
+  read).
+- **The library:** two new tables in the table box, the objects by kind (sorted by triangles,
+  descending; a bar of in view and culled against the footer's total; a header tooltip) and the
+  heaviest objects (a grid: a multiple selection, an object and its owner on two lines, an Edit
+  button cell, a context menu); the stacked assets sortable; a status line. States: a row clicked,
+  a row's context menu; three keyboard scripts (a header's sort, the grid's keys and selection,
+  Enter into a cell's button and Shift+F10).
+- **The Hub:** the data page's Tables section (sorting, cells, bars, selecting and opening, the
+  context menu, a "Keys in a grid" table) and key APIs (`TableSort`), its intro and tags, the UI
+  kit overview's row, both library pages' texts.
+
 ### Phase 5: graphs and figures
 
 1. The sparkline, the donut (the ray cast tab moved onto it, the pie removed), the stacked bar,

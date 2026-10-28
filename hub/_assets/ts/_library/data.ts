@@ -4,6 +4,9 @@
  * join them.
  */
 import {
+  CMP,
+  createButton,
+  createContextMenu,
   createList,
   createListReorder,
   createTable,
@@ -492,19 +495,71 @@ const OWNER_TOTAL: Owner = {
 
 const megabytes = (value: unknown) => `${value as number} MB`;
 
-type DemoAsset = { id: string; name: string; kind: string; size: string; ok: boolean };
+type DemoAsset = {
+  id: string;
+  name: string;
+  kind: string;
+  size: string;
+  bytes: number;
+  ok: boolean;
+};
 
 const DEMO_ASSETS: DemoAsset[] = [
-  { id: 'terrain', name: 'terrain.ktx2', kind: 'Texture', size: '4.2 MB', ok: true },
-  { id: 'crate', name: 'crate.glb', kind: 'Model', size: '86 kB', ok: true },
-  { id: 'sky', name: 'sky.hdr', kind: 'Sky box', size: '12.8 MB', ok: false },
+  { id: 'terrain', name: 'terrain.ktx2', kind: 'Texture', size: '4.2 MB', bytes: 4.2e6, ok: true },
+  { id: 'crate', name: 'crate.glb', kind: 'Model', size: '86 kB', bytes: 86e3, ok: true },
+  { id: 'sky', name: 'sky.hdr', kind: 'Sky box', size: '12.8 MB', bytes: 12.8e6, ok: false },
 ];
 
+/** The objects by kind (the profiler's breakdown): in view and culled */
+type ObjectKind = { id: string; name: string; inView: number; culled: number; triangles: number };
+
+const OBJECT_KINDS: ObjectKind[] = [
+  { id: 'mesh', name: 'Meshes', inView: 412, culled: 180, triangles: 1284000 },
+  { id: 'instanced', name: 'Instanced', inView: 96, culled: 22, triangles: 410000 },
+  { id: 'lines', name: 'Lines', inView: 14, culled: 3, triangles: 0 },
+  { id: 'sprite', name: 'Sprites', inView: 38, culled: 61, triangles: 76 },
+  { id: 'impostor', name: 'Impostors', inView: 220, culled: 40, triangles: 520 },
+];
+
+const sumKinds = (key: 'inView' | 'culled' | 'triangles') =>
+  OBJECT_KINDS.reduce((total, kind) => total + kind[key], 0);
+
+const OBJECT_KINDS_TOTAL: ObjectKind = {
+  id: 'total',
+  name: 'Total',
+  inView: sumKinds('inView'),
+  culled: sumKinds('culled'),
+  triangles: sumKinds('triangles'),
+};
+
+/** The heaviest objects: an object, its entity and owner, its kind and triangles */
+type HeavyObject = { id: string; name: string; owner: string; kind: string; triangles: number };
+
+const HEAVY_OBJECTS: HeavyObject[] = OBJECTS.filter((object) => object.triangles)
+  .map((object) => ({
+    id: object.id,
+    name: object.name,
+    owner: `Entity ${object.entity} · scene01`,
+    kind: object.kind,
+    triangles: object.triangles ?? 0,
+  }))
+  .sort((a, b) => b.triangles - a.triangles)
+  .slice(0, 6);
+
+const formatCount = (value: unknown) => (value as number).toLocaleString('en');
+
 /** In the page: a profiler's overview (a group, stripes, a row's highlight, tones), the memory by
- * owner (sticky parts in a box that scrolls both ways, a total, the cross highlight) and assets
- * stacked in a narrow box */
+ * owner (sticky parts in a box that scrolls both ways, a total, the cross highlight), the objects
+ * by kind (sortable, bars, a total), the heaviest objects (a grid: a multiple selection, a
+ * two-line cell, an Edit button, a context menu) and assets stacked in a narrow box (sortable:
+ * its headers as chips); what the user sorts, selects, opens and presses shows in the status line */
 const initTableDemo: Demo = (box) => {
   const root = addKitRoot(box);
+  const status = document.createElement('p');
+  status.id = TABLE_ID('Status');
+  status.className = 'hubDemoLine';
+  status.setAttribute('role', 'status');
+  const report = (text: string) => (status.textContent = text);
   const states = addGroup(root, 'From code: no rows');
   const row = (label: string, cmp: CMPHandle, className: string) => {
     const group = addGroup(root, label);
@@ -574,14 +629,112 @@ const initTableDemo: Demo = (box) => {
   );
 
   row(
-    'Stacked below 480 px of its own width: each row a card of “label: value” lines',
+    'Objects by kind: sortable (the triangles, descending), a bar of in view and culled against the total, its figures as text',
+    createTable<ObjectKind>({
+      id: TABLE_ID('Kinds'),
+      caption: 'Objects by kind',
+      columns: [
+        { key: 'name', label: 'Kind', rowHeader: true, sortable: true },
+        {
+          key: 'objects',
+          label: 'Objects',
+          value: (kind) => kind.inView + kind.culled,
+          format: (total, kind) => `${kind.inView} / ${total as number}`,
+          sortable: true,
+          headerTooltip: 'In view / all',
+        },
+        { key: 'triangles', label: 'Triangles', format: formatCount, sortable: true },
+        {
+          key: 'share',
+          label: 'In view and culled',
+          kind: 'bar',
+          value: (kind) => [kind.inView, kind.culled],
+          format: () => '',
+          minWidth: 120,
+        },
+      ],
+      rows: OBJECT_KINDS,
+      footer: [OBJECT_KINDS_TOTAL],
+      sort: { key: 'triangles', direction: 'descending' },
+      onSortChange: (sort) =>
+        report(sort ? `Sorted: ${sort.key}, ${sort.direction}` : 'Sorted: none'),
+      striped: true,
+    }).cmp,
+    'hubDemoTableWide'
+  );
+
+  const heaviest = createTable<HeavyObject>({
+    id: TABLE_ID('Heaviest'),
+    caption: 'Heaviest objects',
+    columns: [
+      {
+        key: 'name',
+        label: 'Object',
+        rowHeader: true,
+        sortable: true,
+        cell: (object) => {
+          const lines = CMP({ class: 'hubDemoTwoLines' });
+          lines.add({ tag: 'span', text: object.name });
+          lines.add({ tag: 'span', class: 'hubDemoTwoLines__sub', text: object.owner });
+          return lines;
+        },
+      },
+      { key: 'kind', label: 'Kind', sortable: true },
+      { key: 'triangles', label: 'Triangles', format: formatCount, sortable: true },
+      {
+        key: 'edit',
+        label: 'Edit',
+        cell: (object) =>
+          createButton({
+            label: `Edit ${object.name}`,
+            iconOnly: true,
+            icon: getSvgIcon('tools'),
+            variant: 'ghost',
+            size: 'sm',
+            onClick: () => report(`Edit: ${object.name}`),
+          }).cmp,
+      },
+    ],
+    rows: HEAVY_OBJECTS,
+    selection: 'multiple',
+    onSelectionChange: (keys) => report(`Selected: ${keys.join(', ') || 'none'}`),
+    onRowActivate: (object) => report(`Opened: ${object.name}`),
+    highlight: 'row',
+  });
+  createContextMenu({
+    target: heaviest.cmp.elem,
+    label: 'Object',
+    items: (elem) => {
+      const key = heaviest.getKeyAt(elem);
+      return key
+        ? [
+            { label: 'Focus', onSelect: () => report(`Focus: ${key}`) },
+            { label: 'Copy the name', onSelect: () => report(`Copied: ${key}`) },
+          ]
+        : [];
+    },
+  });
+  row(
+    'A grid: arrows over the cells, a multiple selection, Enter opens, Enter or F2 into the Edit button, a context menu (Shift+F10)',
+    heaviest.cmp,
+    'hubDemoTableWide'
+  );
+
+  row(
+    'Stacked below 480 px of its own width: each row a card of “label: value” lines, the sortable headers as chips',
     createTable<DemoAsset>({
       id: TABLE_ID('Assets'),
       caption: 'Assets',
       columns: [
-        { key: 'name', label: 'Asset', rowHeader: true },
+        { key: 'name', label: 'Asset', rowHeader: true, sortable: true },
         { key: 'kind', label: 'Kind' },
-        { key: 'size', label: 'Size', align: 'end' },
+        {
+          key: 'size',
+          label: 'Size',
+          align: 'end',
+          sortable: true,
+          compare: (a, b) => a.bytes - b.bytes,
+        },
         {
           key: 'ok',
           label: 'Status',
@@ -594,6 +747,7 @@ const initTableDemo: Demo = (box) => {
     }).cmp,
     'hubDemoTableNarrow'
   );
+  root.append(status);
 };
 
 /** The data group's demos by their box's key (`data-hub-demo`) */

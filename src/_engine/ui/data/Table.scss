@@ -6,7 +6,9 @@
 // painted on the row through `--aek-table-row-tint` (the table's own), so a sticky cell, which
 // needs an opaque background (`--aek-table-bg`), paints the same tint over it. A column's
 // highlight is its `<col>`'s background, under the rows'. A tone is its status colour and a mark
-// (never the colour alone; the mark is said as nothing: the text says the status).
+// (never the colour alone; the mark is said as nothing: the text says the status). A sorted
+// column's mark is a shape (one triangle of two), a selected row the accent's soft tint and a bar
+// at its start; a grid's cells draw their ring inside (the scroll box would cut it).
 
 @use 'sass:list';
 @use 'sass:string';
@@ -37,6 +39,11 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
     max-height: var(--aek-table-max-height, none);
     overflow: auto;
     background-color: var(--aek-table-bg, transparent);
+  }
+
+  // A focused cell scrolled into view clears the sticky header
+  :where(.aekTable[data-sticky-header] .aekTable__scroll) {
+    scroll-padding-top: max(24px, var(--aek-space-7));
   }
 
   // Inside the page's flow a ring outside the box could be cut by a scrolling parent
@@ -118,6 +125,135 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
     display: none;
   }
 
+  // --- Sort: the header's button and its mark (both triangles faint until sorted, then the one
+  // pointing the sort's way) ---
+
+  :where(.aekTable__header[data-sortable]) {
+    padding-block: 0;
+  }
+
+  :where(.aekTable__sort) {
+    display: inline-flex;
+    gap: var(--aek-space-1);
+    align-items: center;
+    width: 100%;
+    min-height: max(24px, var(--aek-space-7));
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  :where(.aekTable__header[data-align='end'] .aekTable__sort) {
+    justify-content: flex-end;
+  }
+
+  :where(.aekTable__header[data-align='center'] .aekTable__sort) {
+    justify-content: center;
+  }
+
+  :where(.aekTable__sort:hover, .aekTable__header[aria-sort] .aekTable__sort) {
+    color: var(--aek-text);
+  }
+
+  :where(.aekTable__sort:focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekTable__sortMark) {
+    display: inline-flex;
+    flex: none;
+    flex-direction: column;
+    gap: 0.15em;
+    justify-content: center;
+  }
+
+  :where(.aekTable__sortMark)::before,
+  :where(.aekTable__sortMark)::after {
+    content: '';
+    border-inline: 0.3em solid transparent;
+    opacity: 0.35;
+  }
+
+  :where(.aekTable__sortMark)::before {
+    border-bottom: 0.35em solid currentcolor;
+  }
+
+  :where(.aekTable__sortMark)::after {
+    border-top: 0.35em solid currentcolor;
+  }
+
+  :where(.aekTable__header[aria-sort='ascending'] .aekTable__sortMark)::before,
+  :where(.aekTable__header[aria-sort='descending'] .aekTable__sortMark)::after {
+    opacity: 1;
+  }
+
+  :where(.aekTable__header[aria-sort='ascending'] .aekTable__sortMark)::after,
+  :where(.aekTable__header[aria-sort='descending'] .aekTable__sortMark)::before {
+    visibility: hidden;
+  }
+
+  // --- The grid: its cells take the focus, drawing the ring inside ---
+
+  :where(
+      .aekTable[data-grid]
+        :is(.aekTable__header, .aekTable__cell, .aekTable__groupHeader, .aekTable__empty):focus-visible
+    ) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  // --- Bars: a track with a segment per part, the text after it ---
+
+  :where(.aekTable__barBox) {
+    display: flex;
+    gap: var(--aek-space-2);
+    align-items: center;
+    min-width: calc(var(--aek-space-7) * 2);
+  }
+
+  :where(.aekTable__bar) {
+    display: flex;
+    flex: 1 1 auto;
+    height: var(--aek-table-bar-height, var(--aek-space-2));
+    overflow: hidden;
+    border-radius: var(--aek-radius-sm);
+    background-color: var(
+      --aek-table-bar-track,
+      color-mix(in srgb, var(--aek-text) 8%, transparent)
+    );
+  }
+
+  :where(.aekTable__barPart) {
+    flex: none;
+    height: 100%;
+    background-color: var(--aek-table-bar-1, var(--aek-text));
+  }
+
+  :where(.aekTable__barPart[data-part='2']) {
+    background-color: var(
+      --aek-table-bar-2,
+      color-mix(in srgb, var(--aek-text) 35%, transparent)
+    );
+  }
+
+  :where(.aekTable__barPart[data-part='3']) {
+    background-color: var(--aek-table-bar-3, var(--aek-text-muted));
+  }
+
+  :where(.aekTable__barPart[data-part='4']) {
+    background-color: var(--aek-table-bar-4, var(--aek-border-strong));
+  }
+
+  :where(.aekTable__barText) {
+    flex: none;
+  }
+
   // --- Stripes and highlights: the row's tint, the cell's, the column's ---
 
   :where(.aekTable__row) {
@@ -142,6 +278,15 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
 
   :where(.aekTable__col[data-highlight]) {
     background-color: $highlight;
+  }
+
+  // Selected: over the stripe and the highlight, a bar at the row's start besides the tint
+  :where(.aekTable__row[aria-selected='true']) {
+    --aek-table-row-tint: var(--aek-accent-soft);
+  }
+
+  :where(.aekTable__row[aria-selected='true'] > :first-child) {
+    box-shadow: inset 3px 0 0 var(--aek-table-selected-color, var(--aek-accent));
   }
 
   // --- Sticky parts: opaque, the row's tint painted over the background ---
@@ -205,13 +350,47 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
       display: block;
     }
 
+    // The header is hidden but read; a sortable column's header stays, its button a chip to sort
+    // the cards by (a focusable control can't be hidden)
     :where(.aekTable__head) {
+      display: block;
+    }
+
+    :where(.aekTable__head:has(.aekTable__header[data-sortable])) {
+      margin-bottom: var(--aek-space-2);
+    }
+
+    :where(.aekTable__headRow) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--aek-space-1);
+    }
+
+    :where(.aekTable__header:not([data-sortable])) {
       position: absolute;
       width: 1px;
       height: 1px;
+      padding: 0;
       overflow: hidden;
       clip-path: inset(50%);
       white-space: nowrap;
+    }
+
+    :where(.aekTable__header[data-sortable]) {
+      display: block;
+      height: auto;
+      padding: 0 var(--aek-space-2);
+      border: 1px solid var(--aek-border);
+      border-radius: var(--aek-radius-full);
+    }
+
+    :where(.aekTable__header[aria-sort]) {
+      border-color: var(--aek-accent);
+    }
+
+    :where(.aekTable__sort) {
+      width: auto;
+      min-height: 24px;
     }
 
     :where(.aekTable__row) {
@@ -229,6 +408,10 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
       min-height: max(24px, var(--aek-space-7));
       border-bottom: 0;
       text-align: start;
+    }
+
+    :where(.aekTable__barBox) {
+      flex: 1 1 auto;
     }
 
     :where(.aekTable__cellLabel) {

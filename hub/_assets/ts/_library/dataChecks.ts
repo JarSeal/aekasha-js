@@ -24,6 +24,12 @@ const TREE_STATUS = '#hubDemoTreeStatus';
 const TABLE = (name: string) => `#hubDemoTable${name}`;
 const TABLE_BOX = (name: string) => `${TABLE(name)} .aekTable__scroll`;
 const TABLE_ROW = (name: string, key: string) => `${TABLE(name)} .aekTable__row[data-key="${key}"]`;
+/** A table row's cell by its place (1: the first) */
+const TABLE_CELL = (name: string, key: string, place: number) =>
+  `${TABLE_ROW(name, key)} > :nth-child(${place})`;
+const TABLE_HEADER = (name: string, key: string) => `${TABLE(name)} th[data-key="${key}"]`;
+const TABLE_SORT = (name: string, key: string) => `${TABLE_HEADER(name, key)} .aekTable__sort`;
+const TABLE_STATUS = '#hubDemoTableStatus';
 
 /** The data group's checks by their demo's key (`data-hub-demo`) */
 export const DATA_CHECKS: Record<string, UiDemoChecks> = {
@@ -285,7 +291,86 @@ export const DATA_CHECKS: Record<string, UiDemoChecks> = {
     ],
   },
   table: {
+    states: [
+      {
+        name: 'Heaviest: a row clicked',
+        steps: [{ clickInBox: TABLE_CELL('Heaviest', 'tree', 2) }],
+      },
+      {
+        name: 'Heaviest: a row’s context menu',
+        steps: [{ contextClickInBox: TABLE_CELL('Heaviest', 'rock', 3) }],
+      },
+    ],
     keyboard: [
+      {
+        name: 'a sortable header’s button: Enter sorts ascending, then descending, its mark and the report',
+        steps: [
+          { focusInBox: TABLE_SORT('Kinds', 'name') },
+          { press: 'Enter' },
+          { expectAttr: TABLE_HEADER('Kinds', 'name'), name: 'aria-sort', value: 'ascending' },
+          { expectAttr: TABLE_HEADER('Kinds', 'triangles'), name: 'aria-sort', value: null },
+          { expectText: TABLE_STATUS, text: 'Sorted: name, ascending' },
+          {
+            expectText: `${TABLE('Kinds')} tbody .aekTable__row:first-child th`,
+            text: 'Impostors',
+          },
+          { press: 'Enter' },
+          { expectAttr: TABLE_HEADER('Kinds', 'name'), name: 'aria-sort', value: 'descending' },
+          { expectText: `${TABLE('Kinds')} tbody .aekTable__row:first-child th`, text: 'Sprites' },
+          { expectFocus: TABLE_SORT('Kinds', 'name') },
+        ],
+      },
+      {
+        name: 'the grid: one tab stop, the arrows over the cells and into the headers, Space and Shift select, Enter opens',
+        steps: [
+          { focusInBox: TABLE_CELL('Heaviest', 'terrain', 1) },
+          { press: 'ArrowDown' },
+          { expectFocus: TABLE_CELL('Heaviest', 'tree', 1) },
+          { press: 'ArrowRight' },
+          { expectFocus: TABLE_CELL('Heaviest', 'tree', 2) },
+          { press: 'Space' },
+          { expectAttr: TABLE_ROW('Heaviest', 'tree'), name: 'aria-selected', value: 'true' },
+          { press: 'Shift+ArrowDown' },
+          { expectAttr: TABLE_ROW('Heaviest', 'rock'), name: 'aria-selected', value: 'true' },
+          { expectText: TABLE_STATUS, text: 'Selected: tree, rock' },
+          { expectFocus: TABLE_CELL('Heaviest', 'rock', 2) },
+          { press: 'Enter' },
+          { expectText: TABLE_STATUS, text: 'Opened: Rock' },
+          { press: 'Control+Home' },
+          { expectFocus: TABLE_SORT('Heaviest', 'name') },
+          { press: 'ArrowRight' },
+          { press: 'ArrowRight' },
+          { press: 'ArrowRight' },
+          { expectFocus: TABLE_HEADER('Heaviest', 'edit') },
+          { press: 'Tab' },
+          { expectCount: `${TABLE('Heaviest')} [tabindex="0"]`, count: 1 },
+          { press: 'Shift+Tab' },
+          { expectFocus: TABLE_HEADER('Heaviest', 'edit') },
+        ],
+      },
+      {
+        name: 'the grid: Enter into a cell’s button and Escape back; Shift+F10 opens the row’s context menu, Escape returns',
+        steps: [
+          { focusInBox: TABLE_CELL('Heaviest', 'water', 1) },
+          { press: 'End' },
+          { expectFocus: TABLE_CELL('Heaviest', 'water', 4) },
+          { press: 'Enter' },
+          { expectFocus: `${TABLE_CELL('Heaviest', 'water', 4)} button` },
+          // The button's tooltip (a keyboard focus shows it) takes the first Escape, the kit's rule
+          { press: 'Escape' },
+          { press: 'Escape' },
+          { expectFocus: TABLE_CELL('Heaviest', 'water', 4) },
+          { press: 'F2' },
+          { press: 'Enter' },
+          { expectText: TABLE_STATUS, text: 'Edit: Water' },
+          { press: 'F2' },
+          { press: 'ArrowLeft' },
+          { press: 'Shift+F10' },
+          { expectFocus: '#hudRoot .aekMenu [role="menuitem"]' },
+          { press: 'Escape' },
+          { expectFocus: TABLE_CELL('Heaviest', 'water', 3) },
+        ],
+      },
       {
         name: 'the box that overflows is a tab stop named by the caption; the others aren’t; the narrow one stacks',
         steps: [

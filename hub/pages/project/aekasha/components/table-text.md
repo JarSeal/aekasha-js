@@ -3,11 +3,13 @@
 [What it is and its states](hub:features/ui-kit/library#table), on the public page.
 
 ::: note For a later plan
-p805 Phase 4 section 1: `data/Table.ts` (its public types in `TableTypes.ts`): columns, formats,
+p805 Phase 4 sections 1 and 2: `data/Table.ts` (its public types in `TableTypes.ts`, its columns,
+cells, bars and sort in `TableRows.ts`, the grid's keys in `TableGrid.ts`): columns, formats,
 alignment, groups, the footer, the caption, sticky parts, stripes, the highlight, the empty row,
-the scroll box and the stacked layout. Section 2 adds sort, selection, the grid mode, cell
-renderers and bar cells; section 3 `setCell`, the scheduler and virtual rows. p807 moves the
-profiler's and GPU memory's tables onto it (§4.1's census: 14 templates in 4 files), `setCell`
-for the live figures; a two-line cell (a name and a dimmed owner line, five of them) waits for
-section 2's cell renderer.
+the scroll box and the stacked layout; sort, selection, the grid mode, cell renderers and bar
+cells. Section 3 adds `setCell`, the scheduler and virtual rows. p807 moves the profiler's and GPU
+memory's tables onto it (§4.1's census: 14 templates in 4 files): `setCell` for the live figures,
+the two-line cells (a name and a dimmed owner line, five of them) a `cell` renderer, the
+breakdown's bars `kind: 'bar'` against the footer's total, the Overview's and heaviest objects'
+row buttons `onRowActivate` or a `cell` button.
 :::
