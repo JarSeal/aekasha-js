@@ -1142,6 +1142,53 @@ As built (section 3):
 3. Live data: `setRows`' diff, `setCell`, the scheduler, virtual rows (D3, D8); the perf-auditor's
    pass (D14).
 
+As built (section 1):
+
+- **`createTable<T>`** (`data/Table.ts`, `Table.scss`, public with `TableProps`, `TableColumn`,
+  `TableGroup`, `TableTone`, `Table`; the types in `data/TableTypes.ts`): section 1's part of D5,
+  `{ cmp, setRows, setGroups, setFooter, scrollToKey, getKeyAt, refresh }`. Section 2 adds `sort`,
+  `selection`, the grid mode, `cell`, `kind: 'bar'`, `headerTooltip` (on the sort button: a
+  tooltip on a header that isn't focusable reaches no keyboard) and `onRowActivate`; section 3
+  `setCell`, `scheduler`, `interval` and `virtual`. Decided on the way:
+  - **Rows by key from the start** (D3), so section 3 adds `setCell` and the scheduler on them: a
+    row's element and cells kept across the rows, groups and footer (a key's first place wins), each
+    cell's text one kept `Text` node written only when it changed, the elements moved only where
+    out of place (`CollectionParts.ts`' `placeElems`).
+  - **Groups after the rows:** `rows` are the first `<tbody>` (no header), `groups` (`{ key, label,
+    rows }`) a `<tbody>` each after them with a `<th scope="rowgroup" colspan>` header row, the
+    census' Overview shape; a group without rows is hidden. `setGroups` and `setFooter` beside
+    `setRows`.
+  - **Alignment:** a column's `align`, else `end` once its first non-null value is a number (kept
+    from then on, so a column doesn't flip); every figure is in tabular figures (the census' tables
+    all are). `rowHeader` columns are `<th scope="row">`.
+  - **The stripe and the highlight aren't tokens:** `--aek-table-stripe` and
+    `--aek-table-highlight` are the table's custom properties with Phase 0's values as fallbacks
+    (`color-mix(in srgb, var(--aek-text) 3% / 8%, transparent)`), resolved on the cell, so they
+    follow the theme with no copy per theme in `tokens.css` and need no `Tokens.test.ts` reason.
+    They paint through a row's `--aek-table-row-tint`, which a sticky cell paints over its opaque
+    `--aek-table-bg` (default the surface; the table's box is transparent).
+  - **The column highlight is the `<col>`'s background** (`data-highlight`, under the rows'), set
+    from `pointerover` / `focusin` on the `<table>`: one attribute per change, not one per cell.
+  - **`stackBelow` is a `ResizeObserver`, not a container query:** a container query's condition
+    can't read a per-table width. The observer measures the table's own box, as D5 wanted. With
+    `stackBelow` every part carries its table role and each cell an `aria-hidden` label, shown
+    stacked.
+  - **The box is a region only while it overflows** (the same observer on the `<table>`): a
+    `role="region"` named by the caption with `tabindex="0"`, so a table that fits adds no
+    landmark.
+  - **Tones** (`TableTone`: `info`, `success`, `warning`, `danger`): the role's colour and a mark
+    (a CSS escape, said as nothing through `content: … / ''`); the text says the status.
+  - **The empty state** is a row across every column (`empty`'s text or CMP).
+- **The library:** the table box in `data.ts` / `dataChecks.ts`: a profiler's overview (a group,
+  stripes, the row highlight, tones), the GPU memory by owner (sticky header and first column in a
+  box that scrolls both ways, a total, the cross highlight) and assets stacked in a narrow box;
+  "Empty the overview"; a keyboard script (the overflowing box is a named tab stop, the narrow one
+  stacks).
+- **The Hub:** the data page's `## Tables` section and key APIs, its intro and tags, the UI kit
+  overview's table, both library pages' box and texts, `COMPONENT_USES`.
+- **Size:** no first download moved (`verify:baselines`' bundles unchanged). `Table.ts` alone is
+  2.5 kB minified and gzipped (the parts it shares with the list besides).
+
 ### Phase 5: graphs and figures
 
 1. The sparkline, the donut (the ray cast tab moved onto it, the pie removed), the stacked bar,

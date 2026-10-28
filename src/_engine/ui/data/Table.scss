@@ -1,0 +1,256 @@
+// The table's default styles (Table.ts, p805 D5), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Cells at least 24 px tall (WCAG
+// 2.5.8) in tabular figures, a line under each row; the header muted and semibold. The stripe and
+// the highlight are the text colour at 3 % and 8 % over whatever surface the table is on (p805
+// Phase 0 step 4: the old debugger's stripe made theme-aware, the highlight apart from both),
+// painted on the row through `--aek-table-row-tint` (the table's own), so a sticky cell, which
+// needs an opaque background (`--aek-table-bg`), paints the same tint over it. A column's
+// highlight is its `<col>`'s background, under the rows'. A tone is its status colour and a mark
+// (never the colour alone; the mark is said as nothing: the text says the status).
+
+@use 'sass:list';
+@use 'sass:string';
+
+// Each tone's status colour and mark, as CSS escapes in the output (a non-ASCII character would
+// make Sass write @charset): a check mark, an exclamation mark, a multiplication sign, an i
+$tones: (
+  'success': ('success', '"\\2713"'),
+  'warning': ('warning', '"!"'),
+  'danger': ('danger', '"\\00d7"'),
+  'info': ('info', '"i"'),
+);
+
+$stripe: var(--aek-table-stripe, color-mix(in srgb, var(--aek-text) 3%, transparent));
+$highlight: var(--aek-table-highlight, color-mix(in srgb, var(--aek-text) 8%, transparent));
+$sticky-bg: var(--aek-table-bg, var(--aek-surface));
+
+@layer aek.components {
+  :where(.aekTable) {
+    display: block;
+    min-width: 0;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekTable__scroll) {
+    max-height: var(--aek-table-max-height, none);
+    overflow: auto;
+    background-color: var(--aek-table-bg, transparent);
+  }
+
+  // Inside the page's flow a ring outside the box could be cut by a scrolling parent
+  :where(.aekTable__scroll:focus-visible) {
+    outline: var(--aek-focus-ring-width) solid var(--aek-focus-ring-color);
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+
+  :where(.aekTable__table) {
+    width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  :where(.aekTable__table[data-fixed]) {
+    table-layout: fixed;
+  }
+
+  :where(.aekTable__caption) {
+    padding: 0 0 var(--aek-space-2);
+    caption-side: top;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+    text-align: start;
+  }
+
+  :where(.aekTable__header, .aekTable__cell, .aekTable__groupHeader, .aekTable__empty) {
+    box-sizing: border-box;
+    height: max(24px, var(--aek-space-7));
+    padding: var(--aek-table-cell-padding, var(--aek-space-1) var(--aek-space-3));
+    border-bottom: 1px solid var(--aek-border);
+    font-weight: var(--aek-font-weight-regular);
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  :where(.aekTable__table[data-fixed] .aekTable__cell) {
+    overflow-wrap: anywhere;
+  }
+
+  :where(.aekTable__header) {
+    border-bottom-color: var(--aek-border-strong);
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-semibold);
+    white-space: nowrap;
+  }
+
+  :where(.aekTable__header[data-align='end'], .aekTable__cell[data-align='end']) {
+    text-align: end;
+  }
+
+  :where(.aekTable__header[data-align='center'], .aekTable__cell[data-align='center']) {
+    text-align: center;
+  }
+
+  :where(.aekTable__groupHeader) {
+    padding-top: var(--aek-space-3);
+    border-bottom-color: var(--aek-border-strong);
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekTable__foot .aekTable__cell) {
+    border-bottom: 0;
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekTable__foot .aekTable__row:first-child > .aekTable__cell) {
+    border-top: 1px solid var(--aek-border-strong);
+  }
+
+  :where(.aekTable__empty) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekTable__table [hidden]) {
+    display: none;
+  }
+
+  // --- Stripes and highlights: the row's tint, the cell's, the column's ---
+
+  :where(.aekTable__row) {
+    background-color: var(--aek-table-row-tint, transparent);
+  }
+
+  :where(.aekTable[data-striped] tbody > .aekTable__row:nth-child(even of .aekTable__row)) {
+    --aek-table-row-tint: #{$stripe};
+  }
+
+  :where(
+      .aekTable:is([data-highlight='row'], [data-highlight='cross'])
+        tbody
+        > .aekTable__row:is(:hover, :focus-within)
+    ) {
+    --aek-table-row-tint: #{$highlight};
+  }
+
+  :where(.aekTable[data-highlight='cell'] tbody .aekTable__cell:is(:hover, :focus-within)) {
+    background-color: $highlight;
+  }
+
+  :where(.aekTable__col[data-highlight]) {
+    background-color: $highlight;
+  }
+
+  // --- Sticky parts: opaque, the row's tint painted over the background ---
+
+  :where(.aekTable[data-sticky-header] .aekTable__header) {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: $sticky-bg;
+  }
+
+  :where(
+      .aekTable[data-sticky-column] :is(.aekTable__header, .aekTable__cell, .aekTable__empty):first-child
+    ) {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background-color: $sticky-bg;
+    background-image: linear-gradient(
+      var(--aek-table-row-tint, transparent),
+      var(--aek-table-row-tint, transparent)
+    );
+  }
+
+  :where(.aekTable[data-sticky-column][data-sticky-header] .aekTable__header:first-child) {
+    z-index: 3;
+  }
+
+  // --- Tones ---
+
+  @each $tone, $parts in $tones {
+    :where(.aekTable__cell[data-tone='#{$tone}']) {
+      color: var(--aek-#{list.nth($parts, 1)});
+    }
+
+    // The mark is said as nothing (the text says the status); a browser without the alt syntax
+    // keeps the first declaration
+    :where(.aekTable__cell[data-tone='#{$tone}'])::before {
+      content: string.unquote(list.nth($parts, 2));
+      content: string.unquote(list.nth($parts, 2)) / '';
+    }
+  }
+
+  :where(.aekTable__cell[data-tone])::before {
+    display: inline-block;
+    min-width: 1em;
+    margin-inline-end: var(--aek-space-1);
+    font-weight: var(--aek-font-weight-bold);
+    text-align: center;
+  }
+
+  // --- The stacked layout (`stackBelow`): each row a card of "label: value" lines, the header
+  // hidden but read (the parts keep their table roles as attributes) ---
+
+  :where(.aekTable__cellLabel) {
+    display: none;
+  }
+
+  :where(.aekTable[data-stacked]) {
+    :where(.aekTable__table, .aekTable__body, .aekTable__group, .aekTable__foot, .aekTable__row) {
+      display: block;
+    }
+
+    :where(.aekTable__head) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    :where(.aekTable__row) {
+      margin-bottom: var(--aek-space-2);
+      padding: var(--aek-space-1) 0;
+      border: 1px solid var(--aek-border);
+      border-radius: var(--aek-radius-md);
+    }
+
+    // A line: the label first (its order), then the tone's mark and the value
+    :where(.aekTable__cell) {
+      display: flex;
+      align-items: baseline;
+      height: auto;
+      min-height: max(24px, var(--aek-space-7));
+      border-bottom: 0;
+      text-align: start;
+    }
+
+    :where(.aekTable__cellLabel) {
+      display: block;
+      flex: 0 0 40%;
+      order: -1;
+      min-width: 0;
+      padding-inline-end: var(--aek-space-3);
+      color: var(--aek-text-muted);
+    }
+
+    :where(.aekTable__groupRow, .aekTable__emptyRow) {
+      display: block;
+    }
+
+    :where(.aekTable__groupHeader, .aekTable__empty) {
+      display: block;
+      height: auto;
+    }
+
+    :where(.aekTable__header, .aekTable__cell):first-child {
+      position: static;
+    }
+  }
+}

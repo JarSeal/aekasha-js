@@ -1,5 +1,5 @@
 /**
- * The data display's checks (`data.ts`' demos): the list and the tree so far.
+ * The data display's checks (`data.ts`' demos): the list, the tree and the table so far.
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
@@ -19,6 +19,11 @@ const TREE_SEARCH = (name: string) => `#hubDemoTree${name} .aekTree__search`;
 const TREE_COUNT = (name: string) => `#hubDemoTree${name} .aekTree__count`;
 const TREE_STATUS_ROW = (name: string) => `#hubDemoTree${name} .aekTree__status`;
 const TREE_STATUS = '#hubDemoTreeStatus';
+
+/** A table demo by its id's name (`data.ts`' `TABLE_ID`), its scroll box and a row by its key */
+const TABLE = (name: string) => `#hubDemoTable${name}`;
+const TABLE_BOX = (name: string) => `${TABLE(name)} .aekTable__scroll`;
+const TABLE_ROW = (name: string, key: string) => `${TABLE(name)} .aekTable__row[data-key="${key}"]`;
 
 /** The data group's checks by their demo's key (`data-hub-demo`) */
 export const DATA_CHECKS: Record<string, UiDemoChecks> = {
@@ -275,6 +280,27 @@ export const DATA_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'ArrowDown' },
           { press: 'ArrowDown' },
           { expectFocus: NODE('Tiles', 'c39t124') },
+        ],
+      },
+    ],
+  },
+  table: {
+    keyboard: [
+      {
+        name: 'the box that overflows is a tab stop named by the caption; the others aren’t; the narrow one stacks',
+        steps: [
+          { focusInBox: TABLE_BOX('Owners') },
+          { expectFocus: TABLE_BOX('Owners') },
+          { expectAttr: TABLE_BOX('Owners'), name: 'role', value: 'region' },
+          {
+            expectAttr: TABLE_BOX('Owners'),
+            name: 'aria-labelledby',
+            value: 'hubDemoTableOwners-caption',
+          },
+          { expectAttr: TABLE_BOX('Overview'), name: 'tabindex', value: null },
+          { expectAttr: TABLE_ROW('Owners', 'total'), name: 'data-key', value: 'total' },
+          { expectAttr: TABLE('Assets'), name: 'data-stacked', value: '' },
+          { expectAttr: TABLE('Overview'), name: 'data-stacked', value: null },
         ],
       },
     ],

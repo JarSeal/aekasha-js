@@ -178,6 +178,67 @@ outline.focusKey(pickedNodeId); // opens its ancestors, scrolls it into the box,
 | Keys              | One tab stop; Up and Down between the shown rows (no wrapping), Home, End, PageUp, PageDown; Right opens or enters, Left closes or leaves, `*` opens the siblings, a letter to the next title starting with it; Enter activates (or opens and closes), Space selects; Shift + a move, Ctrl / ⌘ + A (multiple); Enter or Space on an error row retries      |
 | Assistive tech    | One flat `role="tree"` (`aria-multiselectable`) of `treeitem`s named by the heading or `label`, each with `aria-level`, `aria-setsize` and `aria-posinset` among its shown siblings, `aria-expanded`, `aria-selected`, `aria-disabled`, `aria-busy`; an error row is a tree item; the filter's count and a load's end read politely                        |
 
+## Tables
+
+[`createTable`](api:createTable) shows rows under columns. A column has a `key` and a `label`, and
+reads a row's value (`value`, by default the row's own key of that name) and writes it as text
+(`format`). A number is aligned to the end; every figure is in tabular figures, so digits line up.
+
+```ts
+type Category = { id: string; name: string; bytes: number; count: number };
+
+const memory = createTable<Category>({
+  caption: 'GPU memory by category', // names the table (captionHidden: a heading above says it)
+  columns: [
+    { key: 'name', label: 'Category', rowHeader: true },
+    { key: 'bytes', label: 'Size', format: (bytes) => formatBytes(bytes as number) },
+    { key: 'count', label: 'Count' },
+  ],
+  rows: () => getMemoryCategories(), // a function: read again on refresh
+  footer: () => [getMemoryTotal()], // a <tfoot>
+  striped: true,
+  sticky: { header: true },
+});
+memoryPanel.add(memory.cmp);
+memory.refresh(); // the figures again: only the cells whose text changed are written
+```
+
+::: demo table
+:::
+
+- **Rows by key.** Each row is kept by its key (`getKey`, by default the row's `id`), across the
+  rows, the groups and the footer: `setRows`, `setGroups`, `setFooter` and `refresh` move a kept
+  row's element, and write a cell's text node only when its text changed.
+- **Groups and a total.** `groups` (`{ key, label, rows }`) come after the rows, a `<tbody>` each
+  under a header row (an empty one isn't shown); `footer` rows are a `<tfoot>`, the total.
+- **Columns.** `rowHeader` makes a column's cells the rows' headers (a name column, what a screen
+  reader says with each cell); `align` overrides the alignment; `width` and `minWidth` size it (when
+  every shown column has a `width`, the table's layout is fixed, which lays out faster); `hidden`
+  leaves it out. `tone` gives a cell a status (`'info'`, `'success'`, `'warning'`, `'danger'`): its
+  colour and a mark before the text, never the colour alone, so let the text say it too.
+- **Looks.** `striped` tints every other row; `highlight` tints the `'row'`, the `'column'`, the
+  `'cell'` or both row and column (`'cross'`) under the pointer and the focus. Both are the text
+  colour, at 3 % and 8 %, over whatever the table sits on.
+- **The box.** The table sits in a box that scrolls past `--aek-table-max-height` (and sideways
+  when the columns don't fit). While it overflows, the box is a tab stop named by the caption, so a
+  keyboard can scroll it. `sticky: { header, firstColumn }` keeps those in view as it scrolls: they
+  need an opaque background, `--aek-table-bg` (by default the surface): set it to the surface the
+  table is on.
+- **Narrow boxes.** `stackBelow: 480` turns each row into a card of "label: value" lines whenever
+  the table's own box is narrower than 480 px (a window's, an embed's): the header is hidden but
+  still read, and every part keeps its table role.
+- **Empty.** `empty` (a text, or a CMP such as `createEmptyState`'s) shows in a row across every
+  column when there are no rows.
+
+| Table             |                                                                                                                                                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TableProps`](api:TableProps), a column's [`TableColumn`](api:TableColumn), a group's [`TableGroup`](api:TableGroup)                                                                                                                                                                               |
+| Parts             | `.aekTable` with `__scroll` (the box) and `table.aekTable__table`: `__caption`, `__col`s, `__head` with `__header`s, `__body`, a `__group` per group with its `__groupRow` (`__groupHeader`), `__foot`; each `__row` of `__cell`s (a stacked layout's `__cellLabel`); `__emptyRow` with `__empty`   |
+| States            | the table's `data-striped`, `data-highlight`, `data-sticky-header`, `data-sticky-column`, `data-stacked`; `data-fixed` on the `<table>`; a cell's or header's `data-align`, a cell's `data-tone`; a `<col>`'s `data-highlight`; a row's `data-key`                                                  |
+| Custom properties | `--aek-table-max-height` (the box scrolls past it), `--aek-table-bg` (the box's and the sticky parts' background), `--aek-table-stripe`, `--aek-table-highlight`, `--aek-table-cell-padding`, `--aek-table-row-tint` (a row's tint, the table's own)                                                |
+| Keys              | None of its own: a native table. While it overflows, its box is a tab stop the arrows scroll                                                                                                                                                                                                        |
+| Assistive tech    | A native `<table>` named by its caption, `scope` on its headers (`col`, `row` for a row header, `rowgroup` for a group's); while it overflows, its box is a `role="region"` named by the caption; with `stackBelow` every part has its table role as an attribute; a tone's mark is said as nothing |
+
 ## Key APIs
 
 - [`createList`](api:createList) ([`List`](api:List), [`ListProps`](api:ListProps),
@@ -187,6 +248,8 @@ outline.focusKey(pickedNodeId); // opens its ancestors, scrolls it into the box,
   [`ListReorderChange`](api:ListReorderChange)).
 - [`createTree`](api:createTree) ([`Tree`](api:Tree), [`TreeProps`](api:TreeProps),
   [`TreeFilter`](api:TreeFilter)).
+- [`createTable`](api:createTable) ([`Table`](api:Table), [`TableProps`](api:TableProps),
+  [`TableColumn`](api:TableColumn), [`TableGroup`](api:TableGroup), [`TableTone`](api:TableTone)).
 - [`createContextMenu`](api:createContextMenu) for a menu over the rows, and
   [`createBindingScheduler`](api:createBindingScheduler) for a panel's live lists and trees.
 

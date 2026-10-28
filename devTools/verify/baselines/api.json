@@ -3074,6 +3074,16 @@
       "SelectionMode": "TypeAlias",
       "SelectionProps": "TypeAlias"
     },
+    "src/_engine/ui/data/Table.ts": {
+      "createTable": "Function"
+    },
+    "src/_engine/ui/data/TableTypes.ts": {
+      "Table": "TypeAlias",
+      "TableColumn": "TypeAlias",
+      "TableGroup": "TypeAlias",
+      "TableProps": "TypeAlias",
+      "TableTone": "TypeAlias"
+    },
     "src/_engine/ui/data/Tree.ts": {
       "createTree": "Function"
     },
@@ -4840,6 +4850,11 @@
       "TStyle",
       "TabBadge",
       "TabDef",
+      "Table",
+      "TableColumn",
+      "TableGroup",
+      "TableProps",
+      "TableTone",
       "Tabs",
       "TabsProps",
       "Tag",
@@ -4923,6 +4938,7 @@
       "createSplitButton",
       "createSplitter",
       "createSwitch",
+      "createTable",
       "createTabs",
       "createTag",
       "createTextField",

@@ -1,6 +1,6 @@
 The pieces that show an app's data: [lists](#lists) of its objects, which the player selects,
-acts on and filters, and [trees](#trees) of nested ones (a scene's outline, folders that load
-their files when opened). Each keeps its rows by key, so when the data changes (every frame, or at a
+acts on and filters, [trees](#trees) of nested ones (a scene's outline, folders that load their
+files when opened), and [tables](#tables) of figures in columns. Each keeps its rows by key, so when the data changes (every frame, or at a
 scheduler's rate) a row stays the same element, keeping its focus and selection, and only the text
 that changed is written.
 

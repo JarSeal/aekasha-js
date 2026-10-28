@@ -369,3 +369,23 @@
 .aekTree.hubDemoListScroll {
   --aek-tree-max-height: 12rem;
 }
+
+// The tables sit on the page's background (their sticky parts too); the overview takes a wide
+// panel, the memory by owner a box that scrolls both ways, the assets a narrow one that stacks
+.hubComponentDemoGroup.hubDemoTables > .aekTable {
+  --aek-table-bg: var(--aek-bg);
+}
+
+.hubDemoTableWide > .aekTable {
+  width: min(100%, 36rem);
+}
+
+.hubDemoTableScroll > .aekTable {
+  --aek-table-max-height: 12rem;
+
+  width: min(100%, 28rem);
+}
+
+.hubDemoTableNarrow > .aekTable {
+  width: min(100%, 18rem);
+}

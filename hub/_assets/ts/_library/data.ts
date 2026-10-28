@@ -1,11 +1,12 @@
 /**
  * The component library's data display (the Hub's `features/ui-kit/data/` page, p805): the list
- * (with virtual rows and reorder) and the tree so far; the table, the graphs and the stat tile join
- * them.
+ * (with virtual rows and reorder), the tree and the table so far; the graphs and the stat tile
+ * join them.
  */
 import {
   createList,
   createListReorder,
+  createTable,
   createTree,
   createVirtualRows,
   getSvgIcon,
@@ -417,8 +418,187 @@ const initTreeDemo: Demo = (box) => {
   root.append(status);
 };
 
+// --- Table ---
+
+const TABLE_ID = (name: string) => `${ID_PREFIX}Table${name}`;
+
+type Metric = { id: string; name: string; value: number; unit: string; budget?: number };
+
+const FRAME_METRICS: Metric[] = [
+  { id: 'frame', name: 'Frame time', value: 14.2, unit: 'ms', budget: 16.7 },
+  { id: 'cpu', name: 'CPU', value: 6.8, unit: 'ms', budget: 8 },
+  { id: 'gpu', name: 'GPU', value: 11.9, unit: 'ms', budget: 10 },
+  { id: 'draws', name: 'Draw calls', value: 412, unit: '', budget: 600 },
+  { id: 'tris', name: 'Triangles', value: 1284000, unit: '', budget: 2000000 },
+];
+
+const APP_METRICS: Metric[] = [
+  { id: 'entities', name: 'Entities', value: 2318, unit: '' },
+  { id: 'bodies', name: 'Physics bodies', value: 86, unit: '', budget: 64 },
+];
+
+const isOver = (metric: Metric) => metric.budget !== undefined && metric.value > metric.budget;
+
+const formatFigure = (value: number, unit: string) =>
+  `${value.toLocaleString('en', { maximumFractionDigits: 1 })}${unit ? ` ${unit}` : ''}`;
+
+type Owner = {
+  id: string;
+  name: string;
+  textures: number;
+  geometry: number;
+  targets: number;
+  buffers: number;
+  items: number;
+};
+
+const OWNER_NAMES = [
+  'Terrain',
+  'Sky box',
+  'Water',
+  'Player',
+  'Props',
+  'Vegetation',
+  'PostFX',
+  'Shadows',
+  'UI',
+  'Particles',
+  'Decals',
+  'Impostors',
+];
+
+const OWNERS: Owner[] = OWNER_NAMES.map((name, i) => ({
+  id: name.toLowerCase().replace(/\s/g, ''),
+  name,
+  textures: ((i * 37) % 90) + 4,
+  geometry: ((i * 23) % 40) + 1,
+  targets: i % 3 === 0 ? ((i * 11) % 30) + 8 : 0,
+  buffers: (i * 7) % 12,
+  items: ((i * 13) % 50) + 2,
+}));
+
+const sumOwners = (key: Exclude<keyof Owner, 'id' | 'name'>) =>
+  OWNERS.reduce((total, owner) => total + owner[key], 0);
+
+const OWNER_TOTAL: Owner = {
+  id: 'total',
+  name: 'Total',
+  textures: sumOwners('textures'),
+  geometry: sumOwners('geometry'),
+  targets: sumOwners('targets'),
+  buffers: sumOwners('buffers'),
+  items: sumOwners('items'),
+};
+
+const megabytes = (value: unknown) => `${value as number} MB`;
+
+type DemoAsset = { id: string; name: string; kind: string; size: string; ok: boolean };
+
+const DEMO_ASSETS: DemoAsset[] = [
+  { id: 'terrain', name: 'terrain.ktx2', kind: 'Texture', size: '4.2 MB', ok: true },
+  { id: 'crate', name: 'crate.glb', kind: 'Model', size: '86 kB', ok: true },
+  { id: 'sky', name: 'sky.hdr', kind: 'Sky box', size: '12.8 MB', ok: false },
+];
+
+/** In the page: a profiler's overview (a group, stripes, a row's highlight, tones), the memory by
+ * owner (sticky parts in a box that scrolls both ways, a total, the cross highlight) and assets
+ * stacked in a narrow box */
+const initTableDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const states = addGroup(root, 'From code: no rows');
+  const row = (label: string, cmp: CMPHandle, className: string) => {
+    const group = addGroup(root, label);
+    group.classList.add('hubDemoTables', className);
+    group.append(cmp.elem);
+  };
+
+  const overview = createTable<Metric>({
+    id: TABLE_ID('Overview'),
+    caption: 'Overview',
+    columns: [
+      { key: 'name', label: 'Metric', rowHeader: true },
+      {
+        key: 'value',
+        label: 'Value',
+        format: (value, metric) => formatFigure(value as number, metric.unit),
+      },
+      {
+        key: 'budget',
+        label: 'Budget',
+        format: (budget, metric) =>
+          budget === undefined ? '–' : formatFigure(budget as number, metric.unit),
+      },
+      {
+        key: 'state',
+        label: 'State',
+        value: (metric) => (metric.budget === undefined ? '' : isOver(metric) ? 'Over' : 'Within'),
+        tone: (metric) =>
+          metric.budget === undefined ? null : isOver(metric) ? 'warning' : 'success',
+      },
+    ],
+    rows: FRAME_METRICS,
+    groups: [{ key: 'app', label: 'App', rows: APP_METRICS }],
+    striped: true,
+    highlight: 'row',
+    empty: 'No metrics measured yet',
+  });
+  row(
+    'A profiler’s overview: a row header, a group, stripes, a row’s highlight, tones with a mark and a word',
+    overview.cmp,
+    'hubDemoTableWide'
+  );
+  addButton(states, 'Empty the overview', () => {
+    overview.setRows([]);
+    overview.setGroups([]);
+  });
+
+  row(
+    'Memory by owner: sticky header and first column in a box that scrolls both ways, a total, the cross highlight',
+    createTable<Owner>({
+      id: TABLE_ID('Owners'),
+      caption: 'GPU memory by owner',
+      columns: [
+        { key: 'name', label: 'Owner', rowHeader: true, minWidth: 112 },
+        { key: 'textures', label: 'Textures', format: megabytes, minWidth: 96 },
+        { key: 'geometry', label: 'Geometry', format: megabytes, minWidth: 96 },
+        { key: 'targets', label: 'Render targets', format: megabytes, minWidth: 128 },
+        { key: 'buffers', label: 'Buffers', format: megabytes, minWidth: 96 },
+        { key: 'items', label: 'Items', minWidth: 72 },
+      ],
+      rows: OWNERS,
+      footer: [OWNER_TOTAL],
+      sticky: { header: true, firstColumn: true },
+      highlight: 'cross',
+    }).cmp,
+    'hubDemoTableScroll'
+  );
+
+  row(
+    'Stacked below 480 px of its own width: each row a card of “label: value” lines',
+    createTable<DemoAsset>({
+      id: TABLE_ID('Assets'),
+      caption: 'Assets',
+      columns: [
+        { key: 'name', label: 'Asset', rowHeader: true },
+        { key: 'kind', label: 'Kind' },
+        { key: 'size', label: 'Size', align: 'end' },
+        {
+          key: 'ok',
+          label: 'Status',
+          value: (asset) => (asset.ok ? 'Loaded' : 'Failed'),
+          tone: (asset) => (asset.ok ? null : 'danger'),
+        },
+      ],
+      rows: DEMO_ASSETS,
+      stackBelow: 480,
+    }).cmp,
+    'hubDemoTableNarrow'
+  );
+};
+
 /** The data group's demos by their box's key (`data-hub-demo`) */
 export const DATA_DEMOS: Record<string, Demo> = {
   list: initListDemo,
   tree: initTreeDemo,
+  table: initTableDemo,
 };
