@@ -1077,6 +1077,79 @@ Phase 1 verified (2026-10-29):
    - The menu changing in place (the kit's tab additions with their boxes).
    - The debugger list on `createList`.
    - `DebuggerGUI.module.scss` restyled; `_debugTabButtons.scss` deleted.
+
+   As built (2026-10-29):
+
+   - **One shell for both drawers:** `debug/_dbg__DrawerShell.ts`, the scene drawer's and each
+     editor drawer's (`createDrawerShell`: the toggler, the width handle, the `<aside>` with the
+     heading row and the rail; each tab's container). The editor drawer moved onto it here, not
+     in section 3, so it didn't break between the sections; section 3 keeps the editor drawer's
+     selector splitter and the material editor's selector and HUD.
+   - **The rail:** `createTabs` vertical, `iconOnly`, manual activation, on the outer edge (the
+     tabs' list after its panels by `row-reverse`, its indicator on the panel's side). Each tab's
+     `content` is a function making the tab's container (its scroller, `keepMounted`); the tab
+     host mounts into the selected one and the drawer empties the others after the mount (so a
+     tab's `onOpen` cleanup still runs before its DOM goes). The menu changes in place by
+     `setTabs`; a selection the rail reports while the drawer syncs it (the open tab removed)
+     isn't saved as the user's.
+   - **Scene tabs** come last, all of them (5.x put one with a smaller `orderNr` among the
+     others; no scene tab sets one, so the recorded tab order is unchanged), after a divider:
+     `separatorBefore` on `TabDef` (`data-separator-before`, a line the stylesheet draws, no
+     element: a `tablist` owns tabs alone), with its test, its row in the vertical tabs' demo box
+     and its keyboard check. "(scene tab)" is in the name; the green went.
+   - **The toggler:** a kit `sm` button with `aria-expanded`, `aria-controls` and a `createKbd`
+     hint of the drawer key with CONFIG.ts' rebinding (`getDebugKeyChordLabel`,
+     `DefaultDebugKeyBindings.ts`), turned to read upwards on the outer edge. It keeps the global
+     `debugDrawerToggler` and place classes, which the axes gizmo and the on-screen tools read.
+     `drawerBtnPlace` still works (`setTogglerPlace`).
+   - **The width handle is `SeparatorInput.ts`, not `createSplitter`** (D6 named the splitter,
+     which lays out two panes; the drawer is one fixed pane): `role="separator"`, a 24 px target
+     over the inner edge, ArrowLeft widens, Home the narrowest; 280 px to 70 % of the bounds,
+     default 400 px; saved as `width`. Hidden while closed and below 479 px (the drawer is full
+     width there).
+   - **The width on `<body>`:** the open drawer writes `--aek-debug-drawer-width` beside the
+     `debugDrawerOpen` class (`setBodyDrawerWidth`), and the on-screen rows, the viewport stack's
+     offset (`AxesGizmo.module.scss`) and the material selector read it in place of
+     `$drawerWidth`, which no stylesheet uses now.
+   - **The state:** `{ isOpen, currentTabId, scrollPos: { [tabId] }, width? }`, read once at the
+     build; 5.x's `currentScrollPos` becomes the saved tab's `scrollPos` and isn't written again
+     (`_readSavedDrawerState`). Every tab keeps its position; the editor drawer's state gains
+     `width` (`AEK_debugMatEditorUI`'s `drawer`).
+   - **Disabled:** `inert`, `aria-busy`, `data-disabled` at opacity 0.5. D6 named a disabled
+     opacity token, which doesn't exist; the kit's own disabled parts use literals, so this is
+     one too. The striped PNG went with the old stylesheet.
+   - **Focus (D12):** the toggler's click focuses the rail's open tab; the key leaves the focus;
+     a close with the focus inside gives it to the toggler (before the `<aside>` goes `inert`).
+   - **The debugger list** is `createList` (p805 §4): a `multiple` selection that always shows the
+     open windows (every site's `selectedItemId` returns them all), a user's selection change put
+     back; the toggles are actions (`hidden` without a value keeps the cell). `DebuggerListDef`
+     gains `label` (additive, on `aekasha/debug`): the five lists under a tab's own heading
+     (cameras, lights, ECS worlds, assets, characters) name their listbox with it.
+   - **The clear-LS button** is a kit ghost icon button (24 px; it was 22) in a wrapper holding
+     its LS subscription.
+   - **Found on the way:** section 1's editor drawer root was appended to a plain element, so
+     its mount hook never ran and a theme change didn't reach it. `appendDebuggerRoot` (kit,
+     `@internal`) runs the hook; its test is in `DebuggerRoot.test.ts`.
+   - **Left:** `_debugTabButtons.scss` stays for the profiler window's menu until section 3, the
+     only user left.
+   - **For section 3:** a debug window with an `icon` (the profiler's) draws it as wide as the
+     window behind its title: the debugger roots' `.aekIcon` reset (`kit.scss`) leaves the SVG at
+     `.uiIcon`'s 100 %. It's on `main` already (Phase 0's shots have it).
+   - **The `debugger` configuration:** every drawer shot changed, recorded on purpose; the tab
+     order and the four undo / redo scripts pass unchanged (the Lights toggle is a list action
+     now, found by its name). Axe, summed over the six scenes: `color-contrast` 232 → 38 (the
+     lists' and the drawer's old greys). Two counts grew, both in the profiler's Settings tab,
+     whose smaller tab heading brings more of its ▲ / ▼ rows into the window: `target-size`
+     47 → 50 and `color-contrast` 1 → 2, for section 3's reorder list.
+   - **Checks:** `yarn test` (2152), both `tsc`, ESLint, `yarn hub:build`,
+     `yarn verify:ui --only tabs` (re-recorded, then passing), `yarn verify:baselines` (the
+     production and embed bundles unchanged, no debug code; `api.json` records the `@internal`
+     exports of this phase and section 1).
+   - **Tests:** `_dbg__DebuggerGUI.test.ts` on `KitDom`, 13 tests (the 5.x fixture, the aside and
+     toggler, the theme, the toggler's and the key's focus, the title in place, the menu in place
+     with the content and focus kept, the scene tabs, a rail pick, the editor view, the disabled
+     state, a throwing tab); `_dbg__DebuggerList.test.ts`, 5 (the parts, the listbox and its
+     selection, the toggles, a static list's copy, the empty text); `Tabs.test.ts`' divider.
 3. **The profiler window and the editor drawer:**
    - The profiler's tab menu and its Settings tab (D10).
    - The editor drawer's tabs and splitter, and the material editor's selector and HUD.

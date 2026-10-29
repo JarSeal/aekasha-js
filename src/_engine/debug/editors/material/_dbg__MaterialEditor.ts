@@ -966,7 +966,7 @@ const createUI = (): EditorUI => {
     id: MATERIAL_EDITOR_VIEW_ID,
     parent: hud,
     togglerText: 'Material',
-    headingLabel: 'MATERIAL',
+    headingLabel: 'Material',
     initialState: drawerState,
     onStateChange: (state) => {
       drawerState = state;

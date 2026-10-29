@@ -67,7 +67,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1632
+      "gzip": 1633
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -99,7 +99,7 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16534,
-      "gzip": 6651
+      "gzip": 6655
     },
     "assets/Kbd.css": {
       "bytes": 700,
@@ -107,7 +107,7 @@
     },
     "assets/Kbd.js": {
       "bytes": 2768,
-      "gzip": 1228
+      "gzip": 1229
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -147,23 +147,23 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 1039598,
-      "gzip": 291323
+      "gzip": 291322
     },
     "assets/uiKitEmbed.css": {
-      "bytes": 19264,
-      "gzip": 3643
+      "bytes": 19295,
+      "gzip": 3659
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 45835,
-      "gzip": 16671
+      "bytes": 46076,
+      "gzip": 16725
     },
     "assets/uiKitEmbedData.css": {
-      "bytes": 23529,
-      "gzip": 3982
+      "bytes": 24243,
+      "gzip": 4067
     },
     "assets/uiKitEmbedData.js": {
-      "bytes": 52875,
-      "gzip": 19776
+      "bytes": 52979,
+      "gzip": 19803
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 23505,
@@ -171,11 +171,11 @@
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 47390,
-      "gzip": 17998
+      "gzip": 17997
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 211
+      "gzip": 212
     }
   },
   "main": {

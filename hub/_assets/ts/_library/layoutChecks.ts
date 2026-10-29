@@ -70,7 +70,7 @@ export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
-        name: 'vertical: Up and Down move and select, Left and Right don’t',
+        name: 'vertical: Up and Down move and select, Left and Right don’t; across the divider',
         steps: [
           { focusInBox: TAB('Drawer', 'scene') },
           { press: 'ArrowDown' },
@@ -79,6 +79,8 @@ export const LAYOUT_CHECKS: Record<string, UiDemoChecks> = {
           { press: 'ArrowRight' },
           { expectFocus: TAB('Drawer', 'info') },
           { press: 'ArrowUp' },
+          { press: 'ArrowUp' },
+          { expectFocus: TAB('Drawer', 'boxes') },
           { press: 'ArrowUp' },
           { expectFocus: TAB('Drawer', 'history') },
         ],

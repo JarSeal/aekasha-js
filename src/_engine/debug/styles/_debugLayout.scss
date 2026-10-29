@@ -1,0 +1,5 @@
+// The debugger's layout constants (p806 D9), a debug-only Sass partial: a media query can't read
+// a custom property. Phase 5 moves the rest of `ui/styles/variables.scss`' breakpoints here.
+
+/// Below it the drawer takes the HUD's whole width and loses its width handle
+$breakpointSmall: 479px;

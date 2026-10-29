@@ -25,6 +25,10 @@ export type TabDef = {
   badge?: TabBadge;
   /** Disables it: the arrows pass over it and a click does nothing. Default false. */
   disabled?: boolean;
+  /** Draws a divider before it (`data-separator-before`), setting a group of tabs apart (the
+   * debugger's scene tabs). Only a line: the tab list holds tabs alone, and the arrows go on
+   * across it. Default false. */
+  separatorBefore?: boolean;
   /** The panel's content: a CMP, or a function that builds it, called the first time the tab is
    * selected (a panel that costs something to build). */
   content: CMPHandle | (() => CMPHandle);
@@ -99,8 +103,9 @@ const createPart = (className: string, text?: string) => {
  * is selected; an overflowing tab list scrolls, its cut edges faded.
  * - Parts: `.aekTabs` (`data-orientation`), `.aekTabs__list` (`data-overflow="start" | "end" |
  *   "both"` while its tabs are cut there), `.aekTabs__tab` (`data-tab-key`, `aria-selected`,
- *   `disabled`, `data-icon-only`) with `__icon`, `__label` and `__badge` (a badge), `.aekTabs__panels`
- *   and a `.aekTabs__panel` per tab (`hidden` but the selected one's).
+ *   `disabled`, `data-icon-only`, `data-separator-before`: a line drawn before it) with `__icon`,
+ *   `__label` and `__badge` (a badge), `.aekTabs__panels` and a `.aekTabs__panel` per tab (`hidden`
+ *   but the selected one's).
  * - Custom properties (read on any ancestor, the token as the fallback): `--aek-tabs-indicator-color`
  *   (the selected tab's line, default the accent), `--aek-tabs-fade-size` (the cut edges' fade).
  * - Keys (the APG tabs): the tab list is one tab stop (the selected tab); the arrows along it
@@ -260,6 +265,8 @@ export const createTabs = (props: TabsProps): Tabs => {
     elem.setAttribute('data-tab-key', def.key);
     if (def.disabled) elem.setAttribute('disabled', '');
     else elem.removeAttribute('disabled');
+    if (def.separatorBefore) elem.setAttribute('data-separator-before', '');
+    else elem.removeAttribute('data-separator-before');
   };
 
   const createEntry = (def: TabDef): TabEntry => {

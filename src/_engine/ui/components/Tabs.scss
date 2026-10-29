@@ -103,6 +103,33 @@
     justify-content: flex-start;
   }
 
+  // A divider before a tab (`separatorBefore`): a line in the gap it opens, across the tabs' run
+  :where(.aekTabs__tab[data-separator-before]) {
+    margin-inline-start: var(--aek-space-3);
+  }
+
+  :where(.aekTabs__tab[data-separator-before])::before {
+    position: absolute;
+    inset-block: var(--aek-space-2);
+    inset-inline-start: calc(-1 * var(--aek-space-2) - 0.5px);
+    border-inline-start: 1px solid var(--aek-border-strong);
+    content: '';
+    pointer-events: none;
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] .aekTabs__tab[data-separator-before]) {
+    margin-inline-start: 0;
+    margin-block-start: var(--aek-space-3);
+  }
+
+  :where(.aekTabs[data-orientation='vertical'] .aekTabs__tab[data-separator-before])::before {
+    inset-block: auto;
+    inset-inline: var(--aek-space-2);
+    top: calc(-1 * var(--aek-space-2) - 0.5px);
+    border-inline-start: 0;
+    border-top: 1px solid var(--aek-border-strong);
+  }
+
   :where(.aekTabs__tab[data-icon-only]) {
     justify-content: center;
     min-width: max(24px, var(--aek-space-7));

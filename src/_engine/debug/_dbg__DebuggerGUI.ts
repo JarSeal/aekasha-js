@@ -1,28 +1,29 @@
-import type { CMPHandle } from '../ui/core/CMPTypes';
-import { CMP } from '../ui/core/CMP';
-import styles from './DebuggerGUI.module.scss';
+// The scene's debug drawer (p806 D6): its tabs on the drawer shell (`_dbg__DrawerShell.ts`: the
+// toggler, the heading, the vertical rail, the width handle), mounted by a tab host, its state in
+// `AEK_debugDrawerState`. The menu changes in place when a tab is created or removed.
 import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
-import { getWindowSize } from '../ui/core/Window';
 import { getHUDRootCMP } from '../ui/core/HUD';
-import { getDebuggerRootProps } from '../ui/overlays/DebuggerRoot';
 import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
 import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
 import { createDebuggerSceneLoader } from '../kernel/scene/debug/_dbg__DebuggerSceneLoader';
-import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
+import {
+  createDrawerShell,
+  setBodyDrawerWidth,
+  type DrawerShell,
+  type DrawerShellTab,
+} from './_dbg__DrawerShell';
+import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
 // The kit's fonts (p801 D8): the full page has them already (InitEngine), a debug embed gets them here
 import '../ui/fonts/fonts.css';
 
 export { _debuggerListCMP } from './_dbg__DebuggerList';
 
-let drawerCMP: CMPHandle | null = null;
-let currentSceneTitleCMP: CMPHandle | null = null;
-let currentSceneTitleTextCMP: CMPHandle | null = null;
+let shell: DrawerShell | null = null;
 let currentSceneTitleText: string = '';
-let tabsContainerWrapper: null | CMPHandle = null;
 let debugSceneLoaderCreated = false;
 let debuggerDisabled = false;
 /** An editor view is active (see _setDrawerSuspendedByView). */
@@ -33,28 +34,49 @@ const DRAWER_OPEN_BODY_CLASS = 'debugDrawerOpen';
 const LS_KEY = 'AEK_debugDrawerState';
 const SCENE_EXIT_HOOK_ID = 'debuggerSceneTabs';
 
+/** Sets the `debugDrawerOpen` body class with the drawer's width beside it (Runtime view) */
+const addBodyClass = () => {
+  document.body.classList.add(DRAWER_OPEN_BODY_CLASS);
+  if (shell) setBodyDrawerWidth(shell.getWidth());
+};
+const TOGGLE_KEY_ID = 'sc-toggle-debug-drawer';
+
+/** The saved drawer state. 5.x saved one `currentScrollPos` (the open tab's), read once into
+ * `scrollPos` and not written again (D6). */
 type DrawerState = {
   isOpen: boolean;
+  /** Empty = the first tab in order */
   currentTabId: string;
-  currentScrollPos: number;
+  /** Each tab's scroll position, by tab id */
+  scrollPos: Record<string, number>;
+  /** The width the handle set, in px (none: the default) */
+  width?: number;
 };
 
-let drawerState: DrawerState = {
-  isOpen: false,
-  // Empty = the first tab in order
-  currentTabId: '',
-  currentScrollPos: 0,
-};
+let drawerState: DrawerState = { isOpen: false, currentTabId: '', scrollPos: {} };
 
 const saveDrawerState = (newState?: Partial<DrawerState>) => {
-  const updatedState = { ...drawerState, ...newState };
-  drawerState = updatedState;
-  lsSetItem(LS_KEY, updatedState);
+  drawerState = { ...drawerState, ...newState };
+  lsSetItem(LS_KEY, drawerState);
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+/** The saved scroll positions' valid entries */
+const readScrollPos = (saved: unknown) => {
+  const result: Record<string, number> = {};
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return result;
+  for (const [id, pos] of Object.entries(saved)) {
+    if (isFiniteNumber(pos)) result[id] = pos;
+  }
+  return result;
 };
 
 /** The saved drawer state's valid fields; anything malformed falls back to the defaults. The
- * stored text is JSON either way (older versions wrote it as a string, the same text). */
-const readSavedDrawerState = (): Partial<DrawerState> => {
+ * stored text is JSON either way (older versions wrote it as a string, the same text). Exported
+ * for its test (the 5.x fixture, D14). */
+export const _readSavedDrawerState = (): Partial<DrawerState> => {
   let saved: unknown;
   try {
     saved = lsGetItem(LS_KEY, {});
@@ -63,13 +85,19 @@ const readSavedDrawerState = (): Partial<DrawerState> => {
     return {};
   }
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
-  const { isOpen, currentTabId, currentScrollPos } = saved as Partial<Record<string, unknown>>;
-  const result: Partial<DrawerState> = {};
-  if (typeof isOpen === 'boolean') result.isOpen = isOpen;
-  if (typeof currentTabId === 'string') result.currentTabId = currentTabId;
-  if (typeof currentScrollPos === 'number' && Number.isFinite(currentScrollPos)) {
-    result.currentScrollPos = currentScrollPos;
+  const fields = saved as Partial<Record<string, unknown>>;
+  const scrollPos = readScrollPos(fields.scrollPos);
+  const result: Partial<DrawerState> = { scrollPos };
+  if (typeof fields.isOpen === 'boolean') result.isOpen = fields.isOpen;
+  const { currentTabId, currentScrollPos } = fields;
+  if (typeof currentTabId === 'string') {
+    result.currentTabId = currentTabId;
+    // 5.x's one position was the saved tab's
+    if (currentTabId && isFiniteNumber(currentScrollPos) && !(currentTabId in scrollPos)) {
+      scrollPos[currentTabId] = currentScrollPos;
+    }
   }
+  if (isFiniteNumber(fields.width)) result.width = fields.width;
   return result;
 };
 
@@ -83,34 +111,18 @@ export const _ensureDebuggerSceneLoader = () => {
   debugSceneLoaderCreated = true;
 };
 
-const initDrawerState = () => {
-  _ensureDebuggerSceneLoader();
-
-  drawerState = { ...drawerState, ...readSavedDrawerState() };
-  if (drawerState.isOpen && !isSuspendedByView) {
-    document.body.classList.add(DRAWER_OPEN_BODY_CLASS);
-  }
-  return drawerState;
-};
-
-type TabEntry = { def: AnyDebuggerTabDef; button: CMPHandle | null };
-
 // Keyed by tab id. A Map keeps insertion order, so a re-registered (replaced) tab keeps its
 // registration position for the ordering tie-break.
-const tabs = new Map<string, TabEntry>();
+const tabs = new Map<string, AnyDebuggerTabDef>();
+
+const isVisible = () => Boolean(shell) && drawerState.isOpen && !isSuspendedByView;
 
 /** The mounted tab's lifecycle (drawerState.currentTabId is only the saved preference, and it can
  * point to a tab that is not registered yet). */
 const host = createTabHost({
-  getContainer: () => tabsContainerWrapper,
+  getContainer: () => shell?.getContainer() ?? null,
   // Hidden in editor views too (_setDrawerSuspendedByView)
-  isVisible: () => Boolean(drawerCMP) && drawerState.isOpen && !isSuspendedByView,
-  onMount: (def) => {
-    for (const other of tabs.values()) {
-      other.button?.updateClass(styles.debugDrawerTabButton_selected, 'remove');
-    }
-    tabs.get(def.id)?.button?.updateClass(styles.debugDrawerTabButton_selected, 'add');
-  },
+  isVisible,
 });
 
 const getTabSortValue = (def: AnyDebuggerTabDef, tabOrder: string[]) => {
@@ -119,192 +131,142 @@ const getTabSortValue = (def: AnyDebuggerTabDef, tabOrder: string[]) => {
   return index === -1 ? Infinity : index;
 };
 
-/** All tabs in menu order: `orderNr ?? tabOrder index`, ties (and unlisted tabs) in registration
- * order, except that scene tabs come after the other tabs of the same value (unlisted scene tabs
- * go last). */
+/** All tabs in menu order (p806 D6): the engine's and the app's by `orderNr ?? tabOrder index`,
+ * then the scene tabs by the same; ties (and unlisted tabs) in registration order. */
 const getOrderedTabs = () => {
   const tabOrder = getConfig().debugDrawer?.tabOrder || DEFAULT_DEBUG_DRAWER_TAB_ORDER;
   // Array.sort is stable, so equal values keep the Map's registration order
   return [...tabs.values()].sort((a, b) => {
-    const aValue = getTabSortValue(a.def, tabOrder);
-    const bValue = getTabSortValue(b.def, tabOrder);
-    if (aValue < bValue) return -1;
-    if (aValue > bValue) return 1;
-    return Number(Boolean(a.def.sceneId)) - Number(Boolean(b.def.sceneId));
+    const scene = Number(Boolean(a.sceneId)) - Number(Boolean(b.sceneId));
+    if (scene) return scene;
+    const aValue = getTabSortValue(a, tabOrder);
+    const bValue = getTabSortValue(b, tabOrder);
+    return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
   });
 };
 
-/** Whether the saved open tab is registered (or none is saved). When it isn't, the drawer shows
- * the first tab as a fallback, and the saved id (and scroll position) is kept for the saved tab. */
-const isSavedTabShown = () => !drawerState.currentTabId || tabs.has(drawerState.currentTabId);
+/** The rail's tabs: a scene tab says so in its name, and the first one has a divider before it */
+const getShellTabs = (): DrawerShellTab[] =>
+  getOrderedTabs().map((def, i, all) => ({
+    id: def.id,
+    title: def.sceneId ? `${def.title} (scene tab)` : def.title,
+    icon: def.icon,
+    separatorBefore: Boolean(def.sceneId) && i > 0 && !all[i - 1].sceneId,
+  }));
 
-const createTabMenuButtons = () => {
-  for (const entry of tabs.values()) {
-    const def = entry.def;
-    if (entry.button) entry.button.remove();
-    const buttonIcon = getSvgIcon(def.icon);
-    const tooltip = def.sceneId ? `${def.title} (scene tab: ${def.sceneId})` : def.title;
-    entry.button = CMP({
-      id: `debugTabsMenuButton-${def.id}`,
-      class: def.sceneId
-        ? [styles.debugDrawerTabButton, styles.debugDrawerTabButton_scene]
-        : styles.debugDrawerTabButton,
-      html: () => `<button>${buttonIcon}</button>`,
-      attr: tooltip ? { title: tooltip } : undefined,
-      onClick: (_, cmp) => {
-        if (cmp.elem.classList.contains(styles.debugDrawerTabButton_selected)) return;
-        host.mount(entry.def);
-        saveDrawerState({ currentTabId: def.id, currentScrollPos: 0 });
-      },
-    });
+/** The tab's saved scroll position, into its container (a closed drawer is only moved, so it
+ * keeps it; an editor view's `display: none` doesn't) */
+const restoreScroll = () => {
+  const id = host.mountedId;
+  const container = shell?.getContainer();
+  if (!id || !container) return;
+  container.elem.scrollTop = drawerState.scrollPos[id] || 0;
+};
+
+/** Shows a tab in the rail and mounts it in its container; the others are emptied */
+const mountTab = (def: AnyDebuggerTabDef) => {
+  if (!shell) return;
+  shell.select(def.id);
+  host.mount(def);
+  shell.clearOtherContainers();
+  restoreScroll();
+};
+
+/** Set while the drawer changes the rail itself: a selection the rail reports then (the selected
+ * tab removed) mounts the next tab without saving it as the user's */
+let isSyncingTabs = false;
+
+const onRailSelect = (id: string) => {
+  const def = tabs.get(id);
+  if (!def) return;
+  mountTab(def);
+  if (!isSyncingTabs) saveDrawerState({ currentTabId: id });
+};
+
+/** The menu after a tab was created, replaced or removed (D5: in place). The saved tab is shown
+ * when it's registered (a scene tab created on the scene's entry), else the shown one stays, else
+ * the first; a replaced tab that's shown is mounted again. */
+const syncTabs = (replacedId?: string) => {
+  if (!shell) return;
+  isSyncingTabs = true;
+  try {
+    shell.setTabs(getShellTabs());
+  } finally {
+    isSyncingTabs = false;
   }
+  const target =
+    tabs.get(drawerState.currentTabId) ??
+    (host.mountedId ? tabs.get(host.mountedId) : undefined) ??
+    getOrderedTabs()[0];
+  if (!target) return;
+  if (target.id !== host.mountedId || target.id === replacedId) mountTab(target);
 };
 
 let guiOpts: DebugGUIOpts | undefined = undefined;
 
-export const _createDebugGui = (opts?: DebugGUIOpts) => {
-  if (!IS_DEBUG_ENV) return;
-
-  guiOpts = opts;
-  initDrawerState();
-  createTabMenuButtons();
-
-  // Drawer (the lifecycle cleanup of the mounted tab runs before its CMPs are removed)
-  host.unmount();
-  if (drawerCMP) drawerCMP.remove();
-  drawerCMP = getHUDRootCMP().add({
-    id: 'debugDrawer',
-    class: [
-      styles.debuggerGUI,
-      drawerState.isOpen ? styles.debuggerGUI_open : styles.debuggerGUI_closed,
-      debuggerDisabled ? styles.debuggerDisabled : '',
-    ],
-    // The debugger's theme and the compact density (p806 D8); an app's modal dialog leaves it live
-    ...getDebuggerRootProps(),
-    settings: { replaceRootDom: false },
-  });
-
-  // Drawer toggle button
-  drawerCMP.add({
-    id: 'debugDrawerToggler',
-    tag: 'button',
-    text: 'Debug',
-    // The global class lets other debug SCSS find it (eg. the axes gizmo clears the TOP one)
-    class: [styles.debugDrawerToggler, 'debugDrawerToggler', opts?.drawerBtnPlace || 'MIDDLE'],
-    onClick: () => _toggleDrawer(),
-  });
-
-  // Current scene title
-  currentSceneTitleCMP = CMP({
-    class: [styles.debugCurrentSceneTitle, 'debugCurrentSceneTitle'],
-  });
-  currentSceneTitleCMP.add({
-    text: 'SCENE',
-    tag: 'span',
-    class: [styles.debugCurrentSceneTitleHeading, 'debugCurrentSceneTitleHeading'],
-  });
-  currentSceneTitleTextCMP = currentSceneTitleCMP.add({
-    id: 'debugCurrentSceneTitleText',
-    text: currentSceneTitleText,
-    tag: 'span',
-    class: [styles.debugCurrentSceneTitleText, 'debugCurrentSceneTitleText'],
-  });
-  currentSceneTitleCMP.add({
-    id: 'debugCloseBtn',
-    tag: 'button',
-    class: styles.closeBtn,
-    attr: { title: 'Close' },
-    onClick: () => _toggleDrawer('CLOSE'),
-  });
-
-  // Tabs container wrapper
-  tabsContainerWrapper = CMP({
-    id: 'debugDrawerTabsContainerWrapper',
-    class: [styles.debugDrawerTabsContainer, 'debugDrawerTabsContainer'],
-  });
-
-  // Tabs menu container
-  const tabsMenuContainer = CMP({
-    id: 'debugDrawerTabsMenu',
-    class: styles.debugDrawerTabsMenu,
-  });
-  const orderedTabs = getOrderedTabs();
-  for (let i = 0; i < orderedTabs.length; i++) {
-    const button = orderedTabs[i].button;
-    if (button) tabsMenuContainer.add(button);
-  }
-
-  drawerCMP.add(currentSceneTitleCMP);
-  drawerCMP.add(tabsMenuContainer);
-  drawerCMP.add(tabsContainerWrapper);
-  const getWrapperHeight = () =>
-    getWindowSize().height -
-    (currentSceneTitleCMP?.elem.offsetHeight || 0) -
-    tabsMenuContainer.elem.offsetHeight -
-    30; // 30 is padding
-
-  tabsContainerWrapper.update({
-    attr: { style: `height: ${getWrapperHeight()}px` },
-    listeners: [
-      {
-        type: 'scroll',
-        fn: () => {
-          // The fallback tab's scroll position is not the saved tab's
-          if (!isSavedTabShown()) return;
-          const scrollPos = tabsContainerWrapper?.elem.scrollTop;
-          saveDrawerState({ currentScrollPos: scrollPos || 0 });
-        },
-      },
-    ],
-  });
-
-  const setWrapperHeightOnResize = () => {
-    tabsContainerWrapper?.updateAttr({ style: `height: ${getWrapperHeight()}px` });
-  };
-  window.removeEventListener('resize', setWrapperHeightOnResize, true);
-  window.addEventListener('resize', setWrapperHeightOnResize, true);
-  tabsContainerWrapper.update({
-    onRemoveCmp: () => {
-      window.removeEventListener('resize', setWrapperHeightOnResize, true);
+const createShell = () => {
+  shell = createDrawerShell({
+    id: 'debugger',
+    label: 'Debugger',
+    togglerText: 'Debug',
+    togglerPlace: guiOpts?.drawerBtnPlace,
+    keys: getDebugKeyChordLabel(TOGGLE_KEY_ID),
+    headingLabel: 'Scene',
+    title: currentSceneTitleText,
+    railLabel: 'Debugger tabs',
+    isOpen: drawerState.isOpen,
+    width: drawerState.width,
+    onToggle: () => _toggleDrawer(undefined, { focusTab: true }),
+    onClose: () => _toggleDrawer('CLOSE'),
+    onSelect: onRailSelect,
+    onWidthInput: (width) => {
+      if (isVisible()) setBodyDrawerWidth(width);
+    },
+    onWidthChange: (width) => saveDrawerState({ width }),
+    onScroll: (id, scrollTop) => {
+      // Not a tab being emptied or rebuilt, nor while an editor view's display: none resets it
+      if (id !== host.mountedId || !isVisible()) return;
+      saveDrawerState({ scrollPos: { ...drawerState.scrollPos, [id]: scrollTop } });
     },
   });
-
-  // Show current tab (the saved one, or the first in order)
-  const savedTab = tabs.get(drawerState.currentTabId);
-  const entry = savedTab || orderedTabs[0];
-  if (!entry) return drawerCMP;
-
-  host.mount(entry.def);
-  tabsContainerWrapper.elem.scrollTop = savedTab ? drawerState.currentScrollPos || 0 : 0;
-
-  return drawerCMP;
+  if (debuggerDisabled) shell.setDisabled(true);
+  getHUDRootCMP().add(shell.cmp);
 };
 
-export const _toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
-  if (!drawerCMP) return;
-  let newState: boolean = false;
-  if (openOrClose === 'CLOSE') {
-    newState = false;
-  } else if (openOrClose === 'OPEN') {
-    newState = true;
-  } else {
-    newState = !drawerState.isOpen;
-  }
+/** Builds the drawer on its first call (the first scene title); later calls change nothing. */
+export const _createDebugGui = (opts?: DebugGUIOpts) => {
+  if (!IS_DEBUG_ENV || shell) return;
+  guiOpts = opts;
+  _ensureDebuggerSceneLoader();
+  drawerState = { ...drawerState, ..._readSavedDrawerState() };
+  createShell();
+  if (drawerState.isOpen && !isSuspendedByView) addBodyClass();
+  syncTabs();
+};
+
+/**
+ * Opens or closes the drawer (no argument toggles it). The debug key keeps the focus where it is
+ * (D12: the user may be playing); the toggler's click puts it on the open tab in the rail. A close
+ * with the focus inside gives it to the toggler.
+ * @param openOrClose the next state
+ * @param opts.focusTab focuses the rail's open tab when it opens
+ */
+export const _toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE', opts?: { focusTab?: boolean }) => {
+  if (!shell) return;
+  const isOpen =
+    openOrClose === 'OPEN' ? true : openOrClose === 'CLOSE' ? false : !drawerState.isOpen;
   const wasOpen = drawerState.isOpen;
-  saveDrawerState({ isOpen: newState });
-  if (drawerState.isOpen) {
-    drawerCMP.updateClass(styles.debuggerGUI_open, 'add');
-    drawerCMP.updateClass(styles.debuggerGUI_closed, 'remove');
+  if (isOpen !== wasOpen) saveDrawerState({ isOpen });
+  shell.setOpen(isOpen, { focusTab: opts?.focusTab });
+  if (isOpen) {
     // Hidden in an editor view: _setDrawerSuspendedByView shows it on the way back
     if (isSuspendedByView) return;
-    document.body.classList.add(DRAWER_OPEN_BODY_CLASS);
+    addBodyClass();
     // The tab was not refreshed while hidden
     if (!wasOpen) host.resume();
     return;
   }
   host.pause();
-  drawerCMP.updateClass(styles.debuggerGUI_open, 'remove');
-  drawerCMP.updateClass(styles.debuggerGUI_closed, 'add');
   if (!isSuspendedByView) document.body.classList.remove(DRAWER_OPEN_BODY_CLASS);
 };
 
@@ -318,13 +280,15 @@ export const _toggleDrawer = (openOrClose?: 'OPEN' | 'CLOSE') => {
 export const _setDrawerSuspendedByView = (suspended: boolean) => {
   if (isSuspendedByView === suspended) return;
   isSuspendedByView = suspended;
+  // The view's display: none lost the scroll position
+  if (!suspended) restoreScroll();
   if (!drawerState.isOpen) return;
   if (suspended) {
     host.pause();
     document.body.classList.remove(DRAWER_OPEN_BODY_CLASS);
     return;
   }
-  document.body.classList.add(DRAWER_OPEN_BODY_CLASS);
+  addBodyClass();
   host.resume();
 };
 
@@ -334,93 +298,75 @@ export const _createDebuggerTab = (def: AnyDebuggerTabDef, opts?: DebugGUIOpts) 
       `Debugger tab "${def.id}" has a sceneId "${def.sceneId}" that is not a scene, so it is never removed on a scene exit (in createDebuggerTab)`
     );
   }
-  const existing = tabs.get(def.id);
-  if (existing) {
-    // Replace (keeps the registration position)
-    existing.button?.remove();
-    existing.button = null;
-    existing.def = def;
-  } else {
-    tabs.set(def.id, { def, button: null });
-  }
-  createTabMenuButtons();
-  if (!drawerCMP) return;
-  const options = { ...guiOpts, ...opts };
-  _createDebugGui(options);
+  // A replaced tab keeps its registration position
+  const isReplaced = tabs.has(def.id);
+  tabs.set(def.id, def);
+  if (opts) guiOpts = { ...guiOpts, ...opts };
+  if (opts?.drawerBtnPlace) shell?.setTogglerPlace(opts.drawerBtnPlace);
+  syncTabs(isReplaced ? def.id : undefined);
 };
 
 export const _openDebuggerTab = (id: string) => {
-  const entry = tabs.get(id);
-  if (!entry) {
+  const def = tabs.get(id);
+  if (!def) {
     lwarn(`Could not find a debugger tab to open with id "${id}" in openDebuggerTab`);
     return;
   }
-  saveDrawerState({ currentTabId: id, currentScrollPos: 0 });
-  if (tabsContainerWrapper && host.mountedId !== id) {
-    host.mount(entry.def);
-    tabsContainerWrapper.elem.scrollTop = 0;
-  }
+  saveDrawerState({ currentTabId: id });
+  if (shell && host.mountedId !== id) mountTab(def);
   _toggleDrawer('OPEN');
 };
 
-/** Removes a tab entry, without rebuilding the drawer. */
-const deleteTabEntry = (entry: TabEntry) => {
-  if (host.mountedId === entry.def.id) host.unmount();
-  entry.button?.remove();
-  tabs.delete(entry.def.id);
+/** Removes a tab, without changing the menu. */
+const deleteTab = (id: string) => {
+  if (host.mountedId === id) host.unmount();
+  tabs.delete(id);
 };
 
 export const _removeDebuggerTab = (id: string) => {
-  const entry = tabs.get(id);
-  if (!entry) {
+  if (!tabs.has(id)) {
     lwarn(`Could not find a debugger tab to remove with id "${id}" in removeDebuggerTab`);
     return;
   }
-  deleteTabEntry(entry);
-  createTabMenuButtons();
-  if (!drawerCMP) return;
-  _createDebugGui(guiOpts);
+  deleteTab(id);
+  syncTabs();
 };
 
 /** Removes the scene tabs of the scene being exited (registered on all scene exits), with one
- * drawer rebuild. The saved open tab id is kept, so a re-entry shows the tab again. */
+ * menu change. The saved open tab id is kept, so a re-entry shows the tab again. */
 const removeSceneTabs = () => {
   const sceneId = getCurrentSceneId();
   if (!sceneId) return;
   let removed = false;
-  for (const entry of [...tabs.values()]) {
-    if (entry.def.sceneId !== sceneId) continue;
-    deleteTabEntry(entry);
+  for (const def of [...tabs.values()]) {
+    if (def.sceneId !== sceneId) continue;
+    deleteTab(def.id);
     removed = true;
   }
-  if (!removed) return;
-  createTabMenuButtons();
-  if (!drawerCMP) return;
-  _createDebugGui(guiOpts);
+  if (removed) syncTabs();
 };
 
 registerOnAllSceneExits(SCENE_EXIT_HOOK_ID, removeSceneTabs);
 
 export const _persistDebuggerTabValue = (id: string, key: string) => {
-  const entry = tabs.get(id);
-  if (!entry) {
+  const def = tabs.get(id);
+  if (!def) {
     lwarn(`Could not find a debugger tab with id "${id}" in persistDebuggerTabValue`);
     return;
   }
-  persistDebuggerTabStateValue(entry.def, key);
+  persistDebuggerTabStateValue(def, key);
 };
 
 /** Hidden in an editor view too (_setDrawerSuspendedByView), so updateDebuggerTab skips the tab. */
-export const _isDebuggerTabOpen = (id: string) =>
-  Boolean(drawerCMP) && drawerState.isOpen && !isSuspendedByView && host.mountedId === id;
+export const _isDebuggerTabOpen = (id: string) => isVisible() && host.mountedId === id;
 
 /** The drawer for the test bridge (p806 D14): its element, the mounted tab's container and the
  * tab ids in menu order. */
 export const _getDrawerTestInfo = () => ({
-  element: drawerCMP?.elem ?? null,
-  contentElement: tabsContainerWrapper?.elem ?? null,
+  element: shell?.cmp.elem ?? null,
+  contentElement: shell?.getContainer()?.elem ?? null,
   mountedId: host.mountedId,
-  tabIds: getOrderedTabs().map((entry) => entry.def.id),
+  tabIds: getOrderedTabs().map((def) => def.id),
 });
 
 export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => {
@@ -434,21 +380,19 @@ export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
  * and refreshed with `keepOnSceneChange`. */
 export const _updateDebuggerSceneTitle = (title: string) => {
   currentSceneTitleText = title;
-  if (drawerCMP && currentSceneTitleTextCMP) {
-    currentSceneTitleTextCMP.updateText(title);
+  if (shell) {
+    shell.setTitle(title);
     host.sceneChanged();
     return;
   }
   _createDebugGui(guiOpts);
 };
 
+/** During a scene load (p806 D6): the drawer is `inert`, `aria-busy` and dimmed; the scene
+ * loader's overlay is the loading signal. */
 export const _disableDebugger = (disable: boolean) => {
   if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
   // TODO: the on-screen tools stay clickable (docs/issues/on-screen-tools-during-scene-load.md)
-  if (disable) {
-    drawerCMP?.updateClass(styles.debuggerDisabled, 'add');
-    return;
-  }
-  drawerCMP?.updateClass(styles.debuggerDisabled, 'remove');
+  shell?.setDisabled(disable);
 };

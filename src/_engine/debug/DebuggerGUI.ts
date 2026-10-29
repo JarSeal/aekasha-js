@@ -335,6 +335,9 @@ export type DebuggerListDef = {
   id?: string;
   /** Rendered above the list, with the item count. */
   heading?: string;
+  /** The list's accessible name without a `heading` (default 'Items'): a list under a heading of
+   * the tab's own (p806 D6) */
+  label?: string;
   /** Shown instead of the rows when there are none */
   emptyText?: string;
   /** What every row has */

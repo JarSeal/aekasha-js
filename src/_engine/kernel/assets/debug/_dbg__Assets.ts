@@ -1112,6 +1112,7 @@ export const _createAssetsDebugGUI = () => {
       }),
       debuggerListCMP({
         id: 'assets',
+        label: 'Assets',
         emptyText: 'No loaded assets..',
         data: getAssetsListData,
         selectedItemId: () =>

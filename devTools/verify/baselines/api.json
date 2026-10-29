@@ -64,6 +64,7 @@
       "DebugKeyBindingConfig": "TypeAlias",
       "DebugKeyCategory": "TypeAlias",
       "DefaultDebugKeyBinding": "TypeAlias",
+      "getDebugKeyChordLabel": "Function",
       "getDefaultDebugKeyBindings": "Function",
       "PROD_TEST_KEYS_ACTION_MAP_ID": "Variable",
       "registerDefaultDebugKeyBindings": "Function",
@@ -3574,6 +3575,15 @@
       "ContextMenuSource": "TypeAlias",
       "createContextMenu": "Function"
     },
+    "src/_engine/ui/overlays/DebuggerRoot.ts": {
+      "appendDebuggerRoot": "Function",
+      "DEBUGGER_THEMES": "Variable",
+      "DebuggerTheme": "TypeAlias",
+      "getDebuggerRootAttr": "Function",
+      "getDebuggerRootProps": "Function",
+      "getDebuggerTheme": "Function",
+      "setDebuggerTheme": "Function"
+    },
     "src/_engine/ui/overlays/FocusTrap.ts": {
       "getFirstFocusable": "Function",
       "getFocusableElements": "Function",
@@ -3661,8 +3671,8 @@
     },
     "src/_engine/ui/overlays/windows/DraggableWindowDom.ts": {
       "buildHeader": "Function",
+      "getDebugRootProps": "Function",
       "getPartId": "Function",
-      "getThemeAttr": "Function",
       "getWindowAttr": "Function",
       "HeaderActions": "TypeAlias",
       "renderTitle": "Function",

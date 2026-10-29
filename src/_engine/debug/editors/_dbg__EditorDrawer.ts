@@ -1,7 +1,8 @@
 /**
  * An editor view's right drawer (docs/plans/_DONE_p084_material-editor-stage-and-selector.md DD6),
- * written for every editor: it looks like the scene debug drawer (same widths, toggler, heading
- * row with a title and a close button, tab menu, scrolling tab container) and mounts ordinary
+ * written for every editor: the scene debug drawer's shell (p806 D6, `_dbg__DrawerShell.ts`: the
+ * toggler, the width handle, the heading row with a title and a close button, the tab rail, a
+ * scrolling container per tab) mounting ordinary
  * debugger tab definitions ({@link AnyDebuggerTabDef}) through a tab host of its own, so panes,
  * lists, clear-LS buttons, `onRefresh` / `onOpen` / `refreshIntervalMs` and folder persistence
  * work as in the scene drawer.
@@ -11,14 +12,11 @@
  * (`setActive`). While active and open, it sets the `debugDrawerOpen` body class, so the top
  * on-screen row, the viewport stack and the editor's own UI shift with it.
  */
-import { CMP } from '../../ui/core/CMP';
 import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
-import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
-import { getDebuggerRootProps } from '../../ui/overlays/DebuggerRoot';
+import { appendDebuggerRoot } from '../../ui/overlays/DebuggerRoot';
 import { createTabHost } from '../_dbg__TabHost';
-import debuggerStyles from '../DebuggerGUI.module.scss';
-import styles from './EditorDrawer.module.scss';
+import { createDrawerShell, setBodyDrawerWidth } from '../_dbg__DrawerShell';
 
 /** Set on <body> while a right-side debug drawer is open (_dbg__DebuggerGUI.ts). */
 const DRAWER_OPEN_BODY_CLASS = 'debugDrawerOpen';
@@ -30,16 +28,18 @@ export type EditorDrawerState = {
   currentTabId: string;
   /** Each tab's scroll position, by tab id. */
   scrollPos: Record<string, number>;
+  /** The width its handle set, in px (none: the default) */
+  width?: number;
 };
 
 export type EditorDrawerOpts = {
-  /** Unique among the drawers (the CMP ids are prefixed with it). */
+  /** Unique among the drawers (the element ids are prefixed with it). */
   id: string;
   /** The parent element (the editor's HUD, which must have KEEP_IN_VIEWS_CLASS). */
   parent: HTMLElement;
-  /** The toggler button's text (eg. 'Material'). */
+  /** The toggler button's text (eg. 'Material'), also the drawer's accessible name. */
   togglerText: string;
-  /** The small label above the title (eg. 'MATERIAL'). */
+  /** The small label above the title (eg. 'Material'). */
   headingLabel: string;
   /** The title (eg. the material's name), re-read on every refresh and rebuild. */
   getTitle: () => string;
@@ -47,7 +47,7 @@ export type EditorDrawerOpts = {
    * subject, eg. per material). */
   getTabs: () => AnyDebuggerTabDef[];
   initialState?: Partial<EditorDrawerState>;
-  /** After any state change (open, tab, scroll). */
+  /** After any state change (open, tab, scroll, width). */
   onStateChange?: (state: EditorDrawerState) => void;
 };
 
@@ -68,79 +68,6 @@ export type EditorDrawer = {
   dispose: () => void;
 };
 
-/** The drawer's elements: its root (open or closed), the toggler, the title row with its close
- * button, the tab menu and the tabs' container. `toggle` gets `false` from the close button. */
-const createDrawerElements = (
-  opts: EditorDrawerOpts,
-  isOpen: boolean,
-  toggle: (open?: boolean) => void
-) => {
-  const root = CMP({
-    id: `${opts.id}-editorDrawer`,
-    class: [
-      debuggerStyles.debuggerGUI,
-      styles.editorDrawer,
-      isOpen ? debuggerStyles.debuggerGUI_open : debuggerStyles.debuggerGUI_closed,
-    ],
-    // The debugger's theme and the compact density (p806 D8); an app's modal dialog leaves it live
-    ...getDebuggerRootProps(),
-  });
-
-  // The global classes let other debug SCSS find it (eg. aekOnScreenToolsDisabled)
-  root.add({
-    tag: 'button',
-    text: opts.togglerText,
-    class: [debuggerStyles.debugDrawerToggler, 'debugDrawerToggler', 'MIDDLE'],
-    onClick: () => toggle(),
-  });
-
-  const titleRow = root.add({ class: debuggerStyles.debugCurrentSceneTitle });
-  titleRow.add({
-    tag: 'span',
-    text: opts.headingLabel,
-    class: debuggerStyles.debugCurrentSceneTitleHeading,
-  });
-  const titleText = titleRow.add({
-    tag: 'span',
-    text: opts.getTitle(),
-    class: [debuggerStyles.debugCurrentSceneTitleText, styles.title],
-  });
-  titleRow.add({
-    tag: 'button',
-    class: debuggerStyles.closeBtn,
-    attr: { title: 'Close' },
-    onClick: () => toggle(false),
-  });
-
-  const menu = root.add({ class: [debuggerStyles.debugDrawerTabsMenu, styles.tabsMenu] });
-  const tabsContainer = root.add({
-    class: [debuggerStyles.debugDrawerTabsContainer, styles.tabsContainer],
-  });
-  return { root, titleText, menu, tabsContainer };
-};
-
-/** Replaces the menu's buttons with one per tab (`menuButtons` by tab id). */
-const buildTabMenu = (
-  menu: CMPHandle,
-  menuButtons: Map<string, CMPHandle>,
-  tabs: AnyDebuggerTabDef[],
-  onSelect: (def: AnyDebuggerTabDef) => void
-) => {
-  for (const button of menuButtons.values()) button.remove();
-  menuButtons.clear();
-  for (const def of tabs) {
-    const icon = getSvgIcon(def.icon);
-    const button = CMP({
-      class: debuggerStyles.debugDrawerTabButton,
-      html: () => `<button>${icon}</button>`,
-      attr: { title: def.title },
-      onClick: () => onSelect(def),
-    });
-    menuButtons.set(def.id, button);
-    menu.add(button);
-  }
-};
-
 /**
  * Creates an editor view's right drawer in `opts.parent` (see the file comment).
  * @param opts ({@link EditorDrawerOpts})
@@ -152,47 +79,65 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     isOpen: opts.initialState?.isOpen ?? false,
     currentTabId: opts.initialState?.currentTabId ?? '',
     scrollPos: { ...opts.initialState?.scrollPos },
+    ...(opts.initialState?.width === undefined ? {} : { width: opts.initialState.width }),
   };
   const notify = () => opts.onStateChange?.({ ...state, scrollPos: { ...state.scrollPos } });
 
   let isActive = false;
   let tabs: AnyDebuggerTabDef[] = [];
-  const menuButtons = new Map<string, CMPHandle>();
-
-  const { root, titleText, menu, tabsContainer } = createDrawerElements(
-    opts,
-    state.isOpen,
-    (open) => toggle(open)
-  );
 
   const isVisible = () => isActive && state.isOpen;
 
-  const host = createTabHost({
-    getContainer: () => tabsContainer,
-    isVisible,
-    onMount: (def) => {
-      for (const [tabId, button] of menuButtons) {
-        button.updateClass(
-          debuggerStyles.debugDrawerTabButton_selected,
-          tabId === def.id ? 'add' : 'remove'
-        );
-      }
+  const shell = createDrawerShell({
+    id,
+    label: opts.togglerText,
+    togglerText: opts.togglerText,
+    headingLabel: opts.headingLabel,
+    title: opts.getTitle(),
+    railLabel: `${opts.togglerText} tabs`,
+    isOpen: state.isOpen,
+    width: state.width,
+    onToggle: () => toggle(undefined, true),
+    onClose: () => toggle(false),
+    onSelect: (tabId) => {
+      const def = tabs.find((tab) => tab.id === tabId);
+      if (def) selectTab(def);
     },
+    onWidthInput: (width) => {
+      if (isVisible()) setBodyDrawerWidth(width);
+    },
+    onWidthChange: (width) => {
+      state.width = width;
+      notify();
+    },
+    onScroll: (tabId, scrollTop) => {
+      // Not a tab being emptied or rebuilt, nor while a display: none ancestor resets it
+      if (tabId !== host.mountedId || !isVisible()) return;
+      state.scrollPos[tabId] = scrollTop;
+      notify();
+    },
+  });
+
+  const host = createTabHost({
+    getContainer: () => shell.getContainer(),
+    isVisible,
     label: `Editor drawer "${id}" tab`,
   });
 
   /** The saved tab, or the first one. */
   const getCurrentTab = () => tabs.find((tab) => tab.id === state.currentTabId) || tabs[0];
 
-  /** A display: none ancestor (the editor's HUD outside its view, the closed drawer is only
-   * moved) loses the scroll position. */
+  /** A display: none ancestor (the editor's HUD outside its view) loses the scroll position. */
   const restoreScroll = () => {
     const tabId = host.mountedId;
-    tabsContainer.elem.scrollTop = tabId ? state.scrollPos[tabId] || 0 : 0;
+    const container = shell.getContainer();
+    if (container) container.elem.scrollTop = tabId ? state.scrollPos[tabId] || 0 : 0;
   };
 
   const mountTab = (def: AnyDebuggerTabDef) => {
+    shell.select(def.id);
     host.mount(def);
+    shell.clearOtherContainers();
     restoreScroll();
   };
 
@@ -204,33 +149,31 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
   };
 
   const rebuild = () => {
-    titleText.updateText(opts.getTitle());
+    shell.setTitle(opts.getTitle());
     tabs = opts.getTabs();
-    buildTabMenu(menu, menuButtons, tabs, selectTab);
+    host.unmount();
+    shell.setTabs(tabs.map((tab) => ({ id: tab.id, title: tab.title, icon: tab.icon })));
     const def = getCurrentTab();
     if (def) mountTab(def);
-    else {
-      host.unmount();
-      tabsContainer.removeChildren();
-    }
   };
 
   const refresh = () => {
-    titleText.updateText(opts.getTitle());
+    shell.setTitle(opts.getTitle());
     host.refresh();
   };
 
   const applyBodyClass = () => {
     if (!isActive) return;
     document.body.classList.toggle(DRAWER_OPEN_BODY_CLASS, state.isOpen);
+    if (state.isOpen) setBodyDrawerWidth(shell.getWidth());
   };
 
-  const toggle = (open?: boolean) => {
+  /** The toggler's click puts the focus on the open tab in the rail (p806 D12) */
+  const toggle = (open?: boolean, focusTab?: boolean) => {
     const nextOpen = open ?? !state.isOpen;
     if (nextOpen === state.isOpen) return;
     state.isOpen = nextOpen;
-    root.updateClass(debuggerStyles.debuggerGUI_open, nextOpen ? 'add' : 'remove');
-    root.updateClass(debuggerStyles.debuggerGUI_closed, nextOpen ? 'remove' : 'add');
+    shell.setOpen(nextOpen, { focusTab });
     applyBodyClass();
     // The tab was not refreshed while closed
     if (isVisible()) host.resume();
@@ -252,27 +195,12 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     if (state.isOpen) host.resume();
   };
 
-  tabsContainer.update({
-    listeners: [
-      {
-        type: 'scroll',
-        fn: () => {
-          // Not while hidden: a display: none ancestor resets it
-          const tabId = host.mountedId;
-          if (!tabId || !isVisible()) return;
-          state.scrollPos[tabId] = tabsContainer.elem.scrollTop;
-          notify();
-        },
-      },
-    ],
-  });
-
-  opts.parent.append(root.elem);
+  appendDebuggerRoot(opts.parent, shell.cmp);
   rebuild();
 
   return {
-    cmp: root,
-    toggle,
+    cmp: shell.cmp,
+    toggle: (open) => toggle(open),
     isOpen: () => state.isOpen,
     setActive,
     rebuild,
@@ -281,7 +209,7 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     dispose: () => {
       setActive(false);
       host.dispose();
-      root.remove();
+      shell.dispose();
     },
   };
 };

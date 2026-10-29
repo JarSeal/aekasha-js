@@ -46,6 +46,6 @@ $fitsNextToOpenDrawer: 650px;
   }
 
   :global(.debugDrawerOpen) & {
-    right: calc(variables.$drawerWidth + $drawerTogglerWidth + $stackInset);
+    right: calc(var(--aek-debug-drawer-width, 400px) + $drawerTogglerWidth + $stackInset);
   }
 }

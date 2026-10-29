@@ -55,15 +55,13 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
   font-size: calc(1.2 * var(--aek-rem));
   transition: right var(--aek-motion-base) ease-in-out;
 
-  // Its right edge follows the open right drawer (plan DD5), with the drawer's own breakpoints:
-  // the grid reflows to the rest of the width. Under the full-width drawer it stays full width.
+  // Its right edge follows the open right drawer (plan DD5) at the width its handle set (p806 D6,
+  // on <body>): the grid reflows to the rest of the width. Under the full-width drawer (below its
+  // breakpoint) it stays full width.
   :global(body.debugDrawerOpen) & {
-    right: variables.$drawerWidth;
+    right: var(--aek-debug-drawer-width, 400px);
 
     @media screen and (max-width: variables.$breakpointSmall) {
-      right: variables.$drawerWidthSmall;
-    }
-    @media screen and (max-width: variables.$breakpointXSmall) {
       right: 0;
     }
   }

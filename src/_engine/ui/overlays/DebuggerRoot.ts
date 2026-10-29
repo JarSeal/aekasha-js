@@ -87,3 +87,13 @@ export const setDebuggerTheme = (theme: DebuggerTheme) => {
  * @internal
  */
 export const getDebuggerTheme = () => currentTheme;
+
+/**
+ * Puts a root made with `getDebuggerRootProps` in an element that isn't a CMP's (an editor view's
+ * HUD), running its mount hook as an add would, so a theme change reaches it.
+ * @internal
+ */
+export const appendDebuggerRoot = (parent: HTMLElement, cmp: CMPHandle) => {
+  parent.append(cmp.elem);
+  cmp.props?.onCreateCmp?.(cmp);
+};

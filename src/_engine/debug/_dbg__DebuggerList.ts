@@ -1,6 +1,11 @@
+// The debugger list (p806 D6): `debuggerListCMP`'s definition on the kit's list (`createList`, p805
+// §4's mapping). A row click opens the item's window; the selection shows the open windows; a
+// row's icon toggles are the list's actions.
 import { CMP } from '../ui/core/CMP';
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { getSvgIcon } from '../ui/core/icons/SvgIcon';
+import { createList } from '../ui/data/List';
+import type { List, ListAction } from '../ui/data/ListTypes';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 
 type MountedList = {
@@ -14,157 +19,117 @@ type MountedList = {
 const mountedLists = new Set<MountedList>();
 let autoIdCounter = 0;
 
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
-const esc = (text: string) => text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+const toIds = (selected: string | string[] | null | undefined) =>
+  selected === null || selected === undefined ? [] : [selected].flat();
 
-const toIdSet = (selected: string | string[] | null | undefined) =>
-  new Set(selected === null || selected === undefined ? [] : [selected].flat());
+/** A row's toggles as the list's actions: a row without a value for one has it hidden (its cell
+ * kept, so the other toggles stay aligned) */
+const toActions = (
+  def: DebuggerListDef,
+  onToggled: (item: DebuggerListItem, index: number) => void
+): ListAction<DebuggerListItem>[] =>
+  (def.perItemConfig?.toggles || []).map((toggle, i) => ({
+    key: `toggle${i}`,
+    label: toggle.title,
+    icon: getSvgIcon(toggle.icon, 'sm'),
+    ...(toggle.iconOff ? { iconOff: getSvgIcon(toggle.iconOff, 'sm') } : {}),
+    pressed: (item) => item.toggleValues?.[i] === true,
+    hidden: (item) => typeof item.toggleValues?.[i] !== 'boolean',
+    onPress: (item) => {
+      toggle.fn(item.itemId, !item.toggleValues?.[i]);
+      onToggled(item, i);
+    },
+  }));
 
 /**
- * Creates the shared debugger list: rows with an optional sub title line, icon, badge and
- * title, plus optional per-row icon toggles (siblings of the row button, so a toggle click
- * never triggers the row click).
+ * Creates the shared debugger list on the kit's list: rows with an optional sub title line, icon,
+ * badge, title, description and suffix, and optional per-row icon toggles. A list with a row click
+ * or toggles is one tab stop with the arrows inside (p805 D4); without either it's a static list.
  */
 export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
   const id = def.id ?? `auto${++autoIdCounter}`;
-  const toggles = def.perItemConfig?.toggles || [];
   // A static array is copied, its toggle values are flipped locally
   const localData = Array.isArray(def.data)
     ? def.data.map((item) => ({ ...item, toggleValues: item.toggleValues?.slice() }))
     : null;
   const getData = () => localData || (def.data as () => DebuggerListItem[])();
-  const getSelected = () => toIdSet(def.selectedItemId?.());
+  const onClick = def.perItemConfig?.onClick;
+  const getSelected = () => toIds(def.selectedItemId?.());
 
-  let lastDataSignature = '';
-  let lastSelectedSignature = '';
-  let itemCount = 0;
-  let rows = new Map<string, CMPHandle>();
+  // The handlers below run only once the list exists
+  const actions = toActions(def, (item, i) => {
+    const local = localData?.find((d) => d.itemId === item.itemId);
+    if (local?.toggleValues) local.toggleValues[i] = !local.toggleValues[i];
+    list.refresh();
+  });
+
+  const list: List<DebuggerListItem> = createList<DebuggerListItem>({
+    items: localData ?? getData,
+    getKey: (item) => item.itemId,
+    title: (item) => item.title,
+    subTitle: (item) => item.subTitle,
+    description: (item) => item.description,
+    suffix: (item) => item.suffix,
+    icon: (item) => (item.icon ? getSvgIcon(item.icon, 'sm') : null),
+    badge: (item) => item.badge,
+    tooltip: (item) => item.tooltip,
+    isPlaceholder: (item) => Boolean(item.titlePlaceholder),
+    disabled: (item) => Boolean(item.disabled),
+    heading: def.heading,
+    headingLevel: 4,
+    label: def.label ?? def.heading ?? 'Items',
+    ...(def.selectedItemId
+      ? {
+          selection: 'multiple' as const,
+          selected: getSelected(),
+          onSelectionChange: syncSelected,
+        }
+      : {}),
+    ...(actions.length ? { actions } : {}),
+    ...(onClick
+      ? {
+          onActivate: (item: DebuggerListItem) => {
+            onClick(item.itemId);
+            syncSelected();
+          },
+        }
+      : {}),
+    empty: def.emptyText,
+    class: 'debuggerList',
+  });
+
+  /** The selection is the open windows': read again after anything that may change them */
+  function syncSelected() {
+    if (def.selectedItemId) list.setSelected(getSelected());
+  }
 
   const wrapper = CMP({
     id: `debuggerList-${id}`,
-    class: 'debuggerList',
+    class: 'debuggerListWrapper',
     onRemoveCmp: () => mountedLists.delete(mounted),
   });
-  const headingCmp = def.heading
-    ? wrapper.add({
-        html: () =>
-          `<h4 class="debuggerListHeading">${esc(def.heading || '')} <span class="debuggerListCount">(${itemCount})</span></h4>`,
-      })
-    : null;
-  const ul = wrapper.add({ tag: 'ul', class: 'ulList' });
-
-  const applySelected = (selected: Set<string>) => {
-    for (const [itemId, li] of rows) {
-      li.updateClass('selected', selected.has(itemId) ? 'add' : 'remove');
-    }
-  };
-
-  const addRow = (item: DebuggerListItem, selected: Set<string>) => {
-    const values = item.toggleValues || [];
-    const hasToggles = toggles.some((_, i) => typeof values[i] === 'boolean');
-    const li = ul.add({
-      tag: 'li',
-      attr: { 'data-id': item.itemId },
-      class: [
-        selected.has(item.itemId) ? 'selected' : '',
-        item.disabled ? 'disabledItem' : '',
-        hasToggles ? 'hasToggles' : '',
-      ].filter(Boolean),
-    });
-    rows.set(item.itemId, li);
-
-    const onClick = def.perItemConfig?.onClick;
-    const titleHtml = `<h4${item.titlePlaceholder ? ' style="font-style:italic"' : ''}>${esc(item.title)}</h4>`;
-    li.add({
-      html: `<button class="listItemWithId"${item.tooltip ? ` title="${esc(item.tooltip)}"` : ''}>
-        ${item.subTitle ? `<span class="itemId">${esc(item.subTitle)}</span>` : ''}
-        ${item.icon ? getSvgIcon(item.icon, 'sm') : ''}
-        ${item.badge ? `<span>${esc(item.badge)}</span>` : ''}
-        ${item.description ? `<span>${titleHtml}<span style="opacity:0.7">${esc(item.description)}</span></span>` : titleHtml}
-        ${item.suffix ? `<span>${esc(item.suffix)}</span>` : ''}
-      </button>`,
-      ...(onClick ? { onClick: () => onClick(item.itemId) } : {}),
-    });
-
-    if (!hasToggles) return;
-    const group = li.add({ class: 'debuggerListToggles' });
-    for (let i = 0; i < toggles.length; i++) {
-      const toggle = toggles[i];
-      const value = values[i];
-      if (typeof value !== 'boolean') {
-        // Keeps the other toggles aligned with the rows that have this one
-        group.add({ tag: 'span', class: 'debuggerListToggleSpacer' });
-        continue;
-      }
-      const icon = value ? toggle.icon : toggle.iconOff || toggle.icon;
-      group.add({
-        html: `<button class="debuggerListToggle${value ? ' isOn' : ''}" data-toggle="${i}" aria-pressed="${value}" title="${esc(toggle.title)}">${getSvgIcon(icon, 'sm')}</button>`,
-        onClick: (_, cmp) => {
-          const hadFocus = document.activeElement === cmp.elem;
-          toggle.fn(item.itemId, !value);
-          if (localData) {
-            const localItem = localData.find((d) => d.itemId === item.itemId);
-            if (localItem?.toggleValues) localItem.toggleValues[i] = !value;
-          }
-          render(true);
-          // The re-render replaced the button: keep the keyboard focus on the same toggle
-          if (hadFocus) {
-            rows.get(item.itemId)?.elem.querySelector<HTMLElement>(`[data-toggle="${i}"]`)?.focus();
-          }
-        },
-      });
-    }
-  };
-
-  /** Re-renders the rows when they changed (or `force`), otherwise only the selection. */
-  const render = (force?: boolean) => {
-    const items = getData();
-    const selected = getSelected();
-    const dataSignature = JSON.stringify(items);
-    const selectedSignature = [...selected].join('\n');
-    if (!force && dataSignature === lastDataSignature) {
-      if (selectedSignature !== lastSelectedSignature) applySelected(selected);
-      lastSelectedSignature = selectedSignature;
-      return;
-    }
-    lastDataSignature = dataSignature;
-    lastSelectedSignature = selectedSignature;
-
-    ul.removeChildren();
-    rows = new Map();
-    for (let i = 0; i < items.length; i++) addRow(items[i], selected);
-    if (!items.length && def.emptyText) {
-      ul.add({ tag: 'li', class: 'emptyState', text: def.emptyText });
-    }
-    if (headingCmp && itemCount !== items.length) {
-      itemCount = items.length;
-      headingCmp.update();
-    }
-  };
+  wrapper.add(list.cmp);
 
   const mounted: MountedList = {
     cmp: wrapper,
-    refresh: () => render(),
+    refresh: () => {
+      list.refresh();
+      syncSelected();
+    },
     clickRow: (index) => {
-      const onClick = def.perItemConfig?.onClick;
       const item = getData()[index];
       if (!onClick || !item) return null;
       onClick(item.itemId);
+      syncSelected();
       return item.itemId;
     },
   };
   mountedLists.add(mounted);
-  render(true);
   return wrapper;
 };
 
-/** Refreshes the lists inside `root` (re-render only when their rows or selection changed). */
+/** Refreshes the lists inside `root`: each re-reads its rows (writing only what changed) and the
+ * selection. */
 export const _refreshDebuggerLists = (root: HTMLElement) => {
   for (const list of mountedLists) {
     if (root.contains(list.cmp.elem)) list.refresh();

@@ -84,9 +84,10 @@ const initTabsDemo: Demo = (box) => {
     ['scene', 'Scene', 'gear'],
     ['info', 'About', 'info'],
     ['history', 'History', 'undo'],
+    ['boxes', 'Boxes (scene tab)', 'objectsCubes'],
   ];
   row(
-    'Vertical and icon only: Up and Down move; the label is the tooltip',
+    'Vertical and icon only: Up and Down move; the label is the tooltip; a divider before the last',
     createTabs({
       id: TABS_ID('Drawer'),
       label: 'Debugger',
@@ -96,6 +97,7 @@ const initTabsDemo: Demo = (box) => {
         label,
         icon: getSvgIcon(icon),
         iconOnly: true,
+        separatorBefore: key === 'boxes',
         content: createTextPanel(`The ${label.toLowerCase()} tab.`),
       })),
     })

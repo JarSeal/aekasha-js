@@ -224,6 +224,7 @@ export const _initECSDebugGUI = () => {
     content: () => [
       debuggerListCMP({
         id: 'ecsWorlds',
+        label: 'ECS worlds',
         emptyText: 'No ECS worlds found.',
         data: getECSWorldsListData,
         selectedItemId: () =>

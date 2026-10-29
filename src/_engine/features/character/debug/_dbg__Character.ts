@@ -341,6 +341,7 @@ export const _createCharactersDebuggerGUI = () => {
     content: () => [
       debuggerListCMP({
         id: 'characters',
+        label: 'Characters',
         emptyText: 'No characters registered to this scene..',
         data: getCharactersListData,
         selectedItemId: () =>

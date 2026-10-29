@@ -42,10 +42,10 @@
   }
 
   :global(.debugDrawerOpen) & {
-    transform: translateX(calc(-50% - (variables.$drawerWidth / 2)));
+    transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 2)));
 
     @media screen and (max-width: variables.$breakpointXLarge) {
-      transform: translateX(calc(-50% - (variables.$drawerWidth / 4)));
+      transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 4)));
     }
     @media screen and (max-width: variables.$breakpointLarge) {
       transform: translateX(-50%);
@@ -77,7 +77,7 @@
   }
 
   :global(.debugDrawerOpen) & {
-    transform: translateX(calc(-50% - (variables.$drawerWidth / 2)));
+    transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 2)));
 
     @media screen and (max-width: variables.$breakpointMedium) {
       transform: translateX(-50%);

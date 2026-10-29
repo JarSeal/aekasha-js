@@ -375,20 +375,23 @@ inspector.select('log'); // from code: onSelect isn't called
 - **Icon-only tabs** (`iconOnly`, with an `icon`) keep the label for assistive tech (visually
   hidden text, with the badge their name) and show it as a tooltip, as a debugger's tab menu does.
   `orientation: 'vertical'` puts the tab list at the start of the panels; Up and Down move then.
+- **A divider** before a tab (`separatorBefore`) sets a group apart, as the debug drawer's scene
+  tabs: a line in a gap, not an element (the tab list holds tabs alone), and the arrows go on
+  across it.
 - **Many tabs** scroll: the tab list scrolls along its orientation, its cut edges faded, and a tab
   the keys or `select` reach is scrolled into view (the list, never the page).
 - `setTabs` replaces the tabs: a tab whose key stays keeps its button, its panel and its built
   content (built again when its `content` changed), so a scene's own tab can come and go. When
   the selected tab goes, the first enabled one is selected and reported to `onSelect`.
 
-| Tabs              |                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                       |
-| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                               |
-| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden`                 |
-| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                               |
-| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel |
-| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable          |
+| Tabs              |                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                                |
+| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                                        |
+| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-separator-before`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden` |
+| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                                        |
+| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel          |
+| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable                   |
 
 ## Accordions
 

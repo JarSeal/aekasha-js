@@ -617,6 +617,7 @@ export const initCameraDebuggerGUI = () => {
     content: () => [
       debuggerListCMP({
         id: 'cameras',
+        label: 'Cameras',
         data: () => getCamerasListData(getECSWorld()),
         selectedItemId: () =>
           getDraggableWindowsOfKind(EDIT_CAMERA_WIN_ID).map((win) => String(win.data?.id)),

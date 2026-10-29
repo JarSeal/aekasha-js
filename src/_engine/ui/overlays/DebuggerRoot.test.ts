@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { stubKitDomAsync } from '../testing/KitDom';
 import { CMP } from '../core/CMP';
 import {
+  appendDebuggerRoot,
   getDebuggerRootAttr,
   getDebuggerRootProps,
   getDebuggerTheme,
@@ -72,6 +73,17 @@ describe('the debugger roots (p806 D8)', () => {
     setDebuggerTheme('light');
     parent.add(root);
     expect(root.elem.getAttribute('data-aek-theme')).toBe('light');
+  });
+
+  it('keeps a root put in a plain element live (an editor view’s HUD)', () => {
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const root = CMP({ ...getDebuggerRootProps() });
+    appendDebuggerRoot(parent, root);
+    expect(root.elem.parentElement).toBe(parent);
+    setDebuggerTheme('light');
+    expect(root.elem.getAttribute('data-aek-theme')).toBe('light');
+    root.remove();
   });
 
   it('lets a removed root go, and ignores a theme it does not know', () => {

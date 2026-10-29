@@ -27,15 +27,15 @@
     },
     "assets/banner.embed.js": {
       "bytes": 1041345,
-      "gzip": 292080
+      "gzip": 292085
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 339
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 284
+      "gzip": 286
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -79,11 +79,11 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1629
+      "gzip": 1628
     },
     "assets/ImportRegistry.js": {
       "bytes": 16551,
-      "gzip": 6659
+      "gzip": 6657
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -119,7 +119,7 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 212
     }
   },
   "main": {

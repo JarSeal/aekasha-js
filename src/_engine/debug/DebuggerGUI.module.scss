@@ -1,134 +1,240 @@
-@use 'sass:color';
-@use '../ui/styles/variables.scss';
-@use './debugTabButtons' as tabButtons;
+@use './styles/debugLayout' as layout;
 
-.debuggerGUI {
+// The debugger's right drawer (p806 D6, _dbg__DrawerShell.ts: the scene drawer's and each editor
+// drawer's) and the tab host's parts, on the tokens (D9): unlayered, so an app's element rules
+// don't reach it, while the kit's pieces inside take the tokens and the compact density.
+
+// --- The shell ---
+
+.drawer {
   position: fixed;
   top: 0;
-  right: calc(-1 * variables.$drawerWidth);
+  right: 0;
   z-index: 10200;
-  background-color: variables.$debugGuiBackground;
-  width: variables.$drawerWidth;
+  box-sizing: border-box;
+  // The width handle's (the owner's saved width), kept inside the HUD's bounds
+  width: min(var(--aek-debug-drawer-width, 400px), 100%);
   height: 100%;
-  padding: calc(1.2 * var(--aek-rem));
-  transition: right var(--aek-motion-base) ease-in-out;
+  transition: transform var(--aek-motion-slow) var(--aek-ease-standard);
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    width: variables.$drawerWidthSmall;
-  }
-  @media screen and (max-width: variables.$breakpointXSmall) {
+  @media screen and (max-width: layout.$breakpointSmall) {
     width: 100%;
   }
 }
 
-.debuggerGUI_open {
-  right: 0;
+.drawer[data-state='closed'] {
+  transform: translateX(100%);
 }
 
-.debuggerGUI_closed {
-  right: calc(-1 * variables.$drawerWidth);
+// Dimmed during a scene load (`inert` and `aria-busy` with it); the loader's overlay is the signal
+.drawer[data-disabled] {
+  opacity: 0.5;
+}
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    right: calc(-1 * variables.$drawerWidthSmall);
+.aside {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  border-inline-start: 1px solid var(--aek-border);
+  background-color: var(--aek-surface);
+  box-shadow: var(--aek-shadow-lg);
+  color: var(--aek-text);
+}
+
+.drawer[data-state='closed'] .aside {
+  box-shadow: none;
+}
+
+// Reduced motion (p800 D7): the drawer doesn't slide; it fades, then moves away once faded
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    transition: none;
   }
-  @media screen and (max-width: variables.$breakpointXSmall) {
-    right: -100%;
+
+  .drawer[data-state='closed'] {
+    transition: transform 0s 200ms;
+  }
+
+  .aside {
+    transition: opacity 200ms var(--aek-ease-standard);
+  }
+
+  .drawer[data-state='closed'] .aside {
+    opacity: 0;
   }
 }
 
-.debugDrawerToggler,
-.debugDrawerToggler:global(.MIDDLE) {
-  @include variables.nakedButton;
+// The toggler: a tab on the drawer's outer edge, turned to read upwards. Its top-right corner is
+// put on the edge and the button turned round it, so it hangs centred on its place whatever its
+// text and key hint make its length.
+.toggler {
   position: absolute;
-  right: 100%;
   top: 50%;
-  transform: translate3d(calc(3.6 * var(--aek-rem)), -50%, 0) rotate(-90deg);
-  height: calc(3 * var(--aek-rem));
-  padding: 0 calc(2 * var(--aek-rem));
-  border-radius: calc(0.4 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) 0 0;
-  background: variables.$debugGuiBackground;
-  color: variables.$debugTextColor;
+  right: 100%;
+  border-bottom: 0;
+  border-radius: var(--aek-radius-md) var(--aek-radius-md) 0 0;
+  background-color: var(--aek-surface);
+  white-space: nowrap;
+  transform-origin: top right;
+  transform: rotate(-90deg) translate(50%, -100%);
   user-select: none;
-  transition:
-    background var(--aek-motion-base) ease-in-out,
-    opacity var(--aek-motion-base) ease-in-out;
 
-  &:hover {
-    background: variables.$debugGuiBackgroundLighter;
+  &:global(.TOP) {
+    top: 10%;
+  }
+
+  &:global(.BOTTOM) {
+    top: 90%;
   }
 }
-.debugDrawerToggler:global(.TOP) {
-  top: 10%;
-}
-.debugDrawerToggler:global(.BOTTOM) {
-  top: auto;
-  bottom: 10%;
-}
 
-.debugDrawerTabsMenu {
-  position: relative;
-  margin-bottom: calc(1.2 * var(--aek-rem));
-}
+// The width handle on the inner edge: a 24 px target over the edge (WCAG 2.5.8), its line in the
+// accent while it's hovered, focused or dragged
+.widthHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  z-index: 1;
+  width: 24px;
+  cursor: ew-resize;
+  touch-action: none;
 
-.debugDrawerTabButton {
-  @include tabButtons.tabButton(debugDrawerTabButton_selected);
-}
-
-.debugDrawerTabButton_selected {
-  @include tabButtons.tabButtonSelected;
-}
-
-// Scene tabs (`sceneId`, removed on their scene's exit): a tinted, dashed button with a corner dot
-.debugDrawerTabButton_scene {
-  position: relative;
-  border-style: dashed;
-  border-color: color.adjust(variables.$info, $lightness: 25%);
-  background-color: rgba(variables.$info, 0.22);
-
-  &:after {
-    content: '';
+  &::after {
     position: absolute;
-    top: calc(0.2 * var(--aek-rem));
-    right: calc(0.2 * var(--aek-rem));
-    width: calc(0.5 * var(--aek-rem));
-    height: calc(0.5 * var(--aek-rem));
-    border-radius: 50%;
-    background-color: color.adjust(variables.$info, $lightness: 30%);
+    inset-block: 0;
+    left: 11px;
+    width: 2px;
+    background-color: transparent;
+    content: '';
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
   }
 
-  &.debugDrawerTabButton_selected {
-    background-color: color.adjust(variables.$info, $lightness: 40%);
-    border-color: transparent;
+  &:hover::after,
+  &:focus-visible::after,
+  &[data-dragging]::after {
+    background-color: var(--aek-accent);
+  }
 
-    &:after {
-      background-color: variables.$info;
-    }
+  &:focus-visible {
+    outline-offset: -8px;
+  }
+
+  .drawer[data-state='closed'] & {
+    display: none;
+  }
+
+  @media screen and (max-width: layout.$breakpointSmall) {
+    display: none;
   }
 }
 
-.debugDrawerTabsContainer {
-  color: variables.$debugTextColor;
+.heading {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4) var(--aek-space-4) var(--aek-space-3);
+  border-bottom: 1px solid var(--aek-border);
+}
+
+.headingText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.headingLabel {
+  display: block;
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.headingTitle {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--aek-font-size-lg);
+  font-weight: var(--aek-font-weight-semibold);
+  line-height: var(--aek-line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeButton {
+  flex: none;
+}
+
+// The rail on the outer (right) edge: the tabs' list after its panels, its line and the selected
+// tab's indicator on the side the panel is
+.rail {
+  flex: 1 1 auto;
+  flex-direction: row-reverse;
+  min-height: 0;
+
+  > :global(.aekTabs__list) {
+    padding-block: var(--aek-space-2);
+    box-shadow: inset 1px 0 0 var(--aek-border);
+  }
+
+  :global(.aekTabs__tab[aria-selected='true']) {
+    box-shadow: inset 2px 0 0 var(--aek-tabs-indicator-color, var(--aek-accent));
+  }
+
+  > :global(.aekTabs__panels) {
+    display: flex;
+  }
+
+  :global(.aekTabs__panel:not([hidden])) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  // The panel's ring inside: the drawer's edge would cut one outside
+  :global(.aekTabs__panel:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+}
+
+// A tab's container and scroller (the tab host mounts the tab in it)
+.tabContent {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--aek-space-4);
   overflow: auto;
-  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackground;
+  scrollbar-width: thin;
 }
+
+// --- The tab host's parts (_dbg__TabHost.ts) ---
 
 .childContainer {
   :global(.debuggerTabHeadingRow) {
     display: flex;
     align-items: center;
-    gap: calc(0.8 * var(--aek-rem));
-    margin-top: calc(1 * var(--aek-rem));
-    margin-bottom: calc(1 * var(--aek-rem));
+    gap: var(--aek-space-3);
+    margin-bottom: var(--aek-space-4);
   }
 
+  // The heading itself (an h3: the CMP its html makes)
   :global(.debuggerTabHeading) {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--aek-space-3);
+    min-width: 0;
     margin: 0;
-    font-size: calc(1.8 * var(--aek-rem));
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-semibold);
+    line-height: var(--aek-line-height-tight);
 
-    :global(.uiIcon) {
-      display: inline-block;
-      width: calc(1.4 * var(--aek-rem));
-      margin-right: calc(0.2 * var(--aek-rem));
+    :global(.aekIcon) {
+      flex: none;
+      width: 1em;
+      color: var(--aek-text-muted);
     }
   }
 
@@ -139,358 +245,69 @@
       color: var(--aek-danger);
     }
   }
-
-  &:first-of-type {
-    :global(.debuggerHeading) {
-      margin-top: 0 !important;
-    }
-  }
 }
 
-:global(.debuggerClearLSButton) {
-  @include variables.nakedButton;
-  position: relative;
-  vertical-align: top;
-  overflow: hidden;
-  flex-shrink: 0;
-  border-radius: calc(0.4 * var(--aek-rem));
-  padding: calc(0.4 * var(--aek-rem));
-  background-color: transparent;
-  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
-  transition:
-    background-color var(--aek-motion-base) ease-in-out,
-    border-color var(--aek-motion-base) ease-in-out;
-  width: calc(2.2 * var(--aek-rem));
-  height: calc(2.2 * var(--aek-rem));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+// --- Shared by the debug modules until their phases (D9: on the tokens here) ---
 
-  &:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: variables.$debugTextColor;
-  }
-
-  // An inline icon would sit on the text baseline, at the bottom of the button
-  :global(.uiIcon) {
-    display: block;
-    width: 100%;
-
-    svg {
-      display: block;
-    }
-  }
-
-  svg path {
-    fill: variables.$debugTextColor;
-  }
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.35;
-  }
-}
-
+// The clear-LS dialogs' buttons (_dbg__ClearLSButtons.ts, the About and key shortcuts dialogs)
 :global(.debuggerClearLSDialogButtonRow) {
   display: flex;
   justify-content: center;
-  margin-top: calc(1.6 * var(--aek-rem));
+  gap: var(--aek-space-3);
+  margin-top: var(--aek-space-5);
 }
 
 :global(.debuggerClearLSDialogButton) {
-  @include variables.nakedButton;
-  padding: calc(0.8 * var(--aek-rem)) calc(1.6 * var(--aek-rem));
-  margin: 0 calc(0.4 * var(--aek-rem));
-  border-radius: calc(0.4 * var(--aek-rem));
-  background-color: variables.$debugTabButton;
-  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColor;
-  color: variables.$debugTextColor;
-  transition: background-color var(--aek-motion-base) ease-in-out;
+  min-height: 24px;
+  margin: 0;
+  padding: var(--aek-space-2) var(--aek-space-5);
+  border: 1px solid var(--aek-border-control);
+  border-radius: var(--aek-radius-sm);
+  background-color: var(--aek-surface-raised);
+  color: var(--aek-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: var(--aek-surface-hover);
   }
 
   &:global(.dangerColor) {
-    border-color: variables.$errorDark;
-    color: variables.$errorDark;
+    border-color: var(--aek-danger);
+    color: var(--aek-danger);
   }
 }
 
+// The assets tab's and its preview's small buttons and warnings
 :global(.debuggerSmallButton) {
-  @include variables.nakedButton;
-  padding: calc(0.3 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
-  border-radius: calc(0.3 * var(--aek-rem));
-  background-color: variables.$debugTabButton;
-  border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColor;
-  color: variables.$debugTextColor;
-  font-size: calc(1.1 * var(--aek-rem));
-  transition: background-color var(--aek-motion-base) ease-in-out;
+  min-height: 24px;
+  margin: 0;
+  padding: var(--aek-space-1) var(--aek-space-3);
+  border: 1px solid var(--aek-border-control);
+  border-radius: var(--aek-radius-sm);
+  background-color: var(--aek-surface-raised);
+  color: var(--aek-text);
+  font: inherit;
+  font-size: var(--aek-font-size-sm);
+  cursor: pointer;
+  transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+    background-color: var(--aek-surface-hover);
   }
 }
 
 :global(.debuggerWarningText) {
-  color: variables.$errorDark;
-}
-
-.debugCurrentSceneTitle {
-  width: 100%;
-  height: calc(3 * var(--aek-rem));
-  padding: calc(0.4 * var(--aek-rem)) 0 calc(0.8 * var(--aek-rem));
-  padding-right: calc(3 * var(--aek-rem));
-  position: relative;
-  color: variables.$debugTextColor;
-
-  .closeBtn {
-    @include variables.nakedButton;
-    background-color: transparent;
-    width: calc(2.4 * var(--aek-rem));
-    height: calc(2.4 * var(--aek-rem));
-    margin: 0;
-    position: absolute;
-    top: 0;
-    right: 0;
-    border-radius: calc(0.4 * var(--aek-rem));
-    transition: background-color var(--aek-motion-base) ease-in-out;
-
-    &:hover {
-      background-color: rgba(variables.$debugTextColor, 0.2);
-    }
-
-    &:before,
-    &:after {
-      display: block;
-      content: '';
-      width: calc(2 * var(--aek-rem));
-      height: calc(0.1 * var(--aek-rem));
-      background: variables.$white;
-      position: absolute;
-      top: 50%;
-      left: calc(0.2 * var(--aek-rem));
-    }
-    &:before {
-      transform: rotate(45deg);
-    }
-    &:after {
-      transform: rotate(-45deg);
-    }
-  }
-}
-
-.debugCurrentSceneTitleHeading {
-  position: absolute;
-  top: calc(-0.8 * var(--aek-rem));
-  left: 0;
-  font-size: calc(0.8 * var(--aek-rem));
-}
-
-.debugCurrentSceneTitleText {
-  font-size: calc(1.4 * var(--aek-rem));
-}
-
-.debuggerDisabled {
-  pointer-events: none !important;
-
-  &:after {
-    display: block;
-    content: '';
-    transition: background var(--aek-motion-base) ease-in-out;
-    background: repeat url('/debugger/assets/images/stripe-pattern-24x24.png') rgba(75, 59, 59, 0.2);
-    background-size: 8px 8px;
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
+  color: var(--aek-danger);
 }
 
 :global(.listItemCount) {
-  margin: calc(2.4 * var(--aek-rem)) 0 calc(1.6 * var(--aek-rem));
-  font-size: calc(1.4 * var(--aek-rem));
+  margin: var(--aek-space-6) 0 var(--aek-space-5);
+  font-size: var(--aek-font-size-lg);
 }
 
-:global(ul li.emptyState) {
-  padding: calc(2.4 * var(--aek-rem));
-  color: color.adjust(variables.$debugTextColorDark, $lightness: -20%);
-  font-size: calc(1.2 * var(--aek-rem));
-  font-weight: 700;
-}
-
-:global(.ulList) {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  background-color: color.adjust(#28292e, $lightness: -2%);
-  border-radius: calc(0.4 * var(--aek-rem));
-  overflow: hidden;
-
-  li {
-    display: block;
-    position: relative;
-    width: 100%;
-    color: variables.$debugTextColor;
-    font-size: calc(1.2 * var(--aek-rem));
-
-    &:nth-child(odd) {
-      background-color: #28292e;
-    }
-
-    > button {
-      @include variables.nakedButton;
-      background: none;
-      display: block;
-      width: 100%;
-      text-align: left;
-      color: variables.$debugTextColor;
-      transition: background-color var(--aek-motion-fast) ease-in-out;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-
-      &:focus {
-        &:before {
-          display: block;
-          content: '';
-          width: calc(0.2 * var(--aek-rem));
-          height: 100%;
-          position: absolute;
-          left: 0;
-          top: 0;
-          background-color: rgba(255, 255, 255, 0.9);
-        }
-      }
-    }
-
-    &:global(.disabledItem) > button {
-      opacity: 0.45;
-    }
-
-    &:global(.selected) {
-      &:before {
-        display: block;
-        content: '';
-        width: calc(0.4 * var(--aek-rem));
-        height: 100%;
-        position: absolute;
-        left: 0;
-        top: 0;
-        background-color: variables.$debugTextColor;
-      }
-    }
-  }
-}
-
-ul li :global(.listItemWithId) {
-  display: flex;
-  gap: calc(0.8 * var(--aek-rem));
-  padding: calc(2 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
-  position: relative;
-
-  :global(.itemId) {
-    position: absolute;
-    top: 0;
-    font-size: calc(1 * var(--aek-rem));
-    padding-top: calc(0.5 * var(--aek-rem));
-    color: variables.$debugTextColorDark;
-  }
-
-  :global(.additionalInfo) {
-    display: inline-block;
-    font-size: calc(0.8 * var(--aek-rem));
-    color: variables.$debugGuiBackgroundLighter;
-    background-color: variables.$debugTextColorDark;
-    position: absolute;
-    top: calc(0.4 * var(--aek-rem));
-    left: 100%;
-    margin-left: calc(0.8 * var(--aek-rem));
-    padding: calc(0.2 * var(--aek-rem)) calc(0.2 * var(--aek-rem)) 0 calc(0.2 * var(--aek-rem));
-    border-radius: calc(0.2 * var(--aek-rem));
-  }
-
-  span,
-  h4 {
-    display: block;
-    margin: 0;
-  }
-}
-
-// Shared debugger list (_dbg__DebuggerList.ts)
-:global(.debuggerListHeading) {
-  margin: calc(1.2 * var(--aek-rem)) 0 calc(0.6 * var(--aek-rem));
-  font-size: calc(1.3 * var(--aek-rem));
-  color: variables.$debugTextColor;
-
-  :global(.debuggerListCount) {
-    color: variables.$debugTextColorDark;
-    font-weight: 400;
-  }
-}
-
-:global(.ulList) li:global(.hasToggles) {
-  display: flex;
-  align-items: center;
-
-  > button {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-}
-
-ul li :global(.listItemWithId) > :global(.uiIcon) {
-  display: inline-block;
-  flex-shrink: 0;
-  width: calc(1.4 * var(--aek-rem));
-}
-
-:global(.debuggerListToggles) {
-  display: flex;
-  flex-shrink: 0;
-  gap: calc(0.4 * var(--aek-rem));
-  padding: 0 calc(0.8 * var(--aek-rem));
-}
-
-:global(.debuggerListToggle),
-:global(.debuggerListToggleSpacer) {
-  width: calc(2.2 * var(--aek-rem));
-  height: calc(2.2 * var(--aek-rem));
-}
-
-:global(.debuggerListToggle) {
-  @include variables.nakedButton;
-  display: block;
-  border-radius: calc(0.4 * var(--aek-rem));
-  padding: calc(0.4 * var(--aek-rem));
-  background-color: transparent;
-  border: calc(0.1 * var(--aek-rem)) solid transparent;
-  opacity: 0.4;
-  transition:
-    background-color var(--aek-motion-base) ease-in-out,
-    opacity var(--aek-motion-base) ease-in-out;
-
-  &:global(.isOn) {
-    opacity: 1;
-  }
-
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    opacity: 1;
-  }
-
-  &:focus-visible {
-    border-color: variables.$debugTextColor;
-    opacity: 1;
-  }
-
-  :global(.uiIcon) {
-    display: block;
-  }
-
-  svg path {
-    fill: variables.$debugTextColor;
-  }
+// The debugger list (_dbg__DebuggerList.ts, the kit's list): a list after a grid's fields
+:global(.debuggerList) {
+  margin-block: var(--aek-space-4);
 }

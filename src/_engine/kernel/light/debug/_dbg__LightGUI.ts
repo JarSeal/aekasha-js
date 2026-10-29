@@ -1123,6 +1123,7 @@ export const initLightDebuggerGUI = () => {
     content: () => [
       debuggerListCMP({
         id: 'lights',
+        label: 'Lights',
         emptyText: 'No ECS lights found.',
         data: () => getLightsListData(getECSWorld()),
         selectedItemId: () =>
