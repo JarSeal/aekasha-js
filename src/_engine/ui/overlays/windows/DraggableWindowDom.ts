@@ -5,7 +5,7 @@
 import type { CMPHandle } from '../../core/CMPTypes';
 import { getSvgIcon } from '../../core/icons/SvgIcon';
 import { getFirstFocusable } from '../FocusTrap';
-import { DEBUGGER_ROOT_ATTR } from '../OverlayStack';
+import { getDebuggerRootProps } from '../DebuggerRoot';
 import { createTooltip } from '../Tooltip';
 import { addDragHandle } from './DraggableWindowDrag';
 import { STATE_ATTR } from './DraggableWindowGeometry';
@@ -26,17 +26,15 @@ const COLLAPSE_TEXT = 'Collapse';
 const EXPAND_TEXT = 'Expand';
 const CLOSE_TEXT = 'Close';
 
-/** A debug window and its backdrop force the dark theme (p803 D6): the debugger's own panels are
- * dark whatever the system's theme until p806 gives it a theme setting. And they're a debugger
- * root, which an app's modal dialog leaves live (p803 D7). CMP copies it. */
-const DEBUG_THEME_ATTR = { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' };
-
 /**
- * A debug window's backdrop's CMP props for the forced dark theme (p803 D6), else none.
+ * A debug window's and its backdrop's CMP props as a debugger root (p806 D8: the debugger's theme,
+ * kept live, and the compact density; an app's modal dialog leaves it live, p803 D7), else none.
  * @internal
  */
-export const getThemeAttr = (config: DraggableWindowConfig) =>
-  config.isDebugWindow ? { attr: DEBUG_THEME_ATTR } : {};
+export const getDebugRootProps = (
+  config: DraggableWindowConfig
+): Partial<ReturnType<typeof getDebuggerRootProps>> =>
+  config.isDebugWindow ? getDebuggerRootProps() : {};
 
 const getResizableAttr = ({ disableHoriResize, disableVertResize }: DraggableWindowConfig) =>
   disableHoriResize
@@ -49,7 +47,8 @@ const getResizableAttr = ({ disableHoriResize, disableVertResize }: DraggableWin
 
 /**
  * The window element's attributes that its structure fixes (a change remounts it): its role,
- * whether it moves and resizes (p803 D5: states are attributes), the debug theme.
+ * whether it moves and resizes (p803 D5: states are attributes). A debug window adds
+ * `getDebugRootProps`' own.
  * @internal
  */
 export const getWindowAttr = (config: DraggableWindowConfig) => {
@@ -58,7 +57,6 @@ export const getWindowAttr = (config: DraggableWindowConfig) => {
     role: 'dialog',
     ...(config.disableDragging ? {} : { 'data-draggable': '' }),
     ...(resizable ? { 'data-resizable': resizable } : {}),
-    ...(config.isDebugWindow ? DEBUG_THEME_ATTR : {}),
   };
 };
 

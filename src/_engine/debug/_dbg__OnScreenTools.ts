@@ -18,7 +18,7 @@ import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { createDropDown, type DropDownProps, type DropDown } from '../ui/forms/DropDown';
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
-import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
+import { getDebuggerRootProps } from '../ui/overlays/DebuggerRoot';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
 import type { SceneAsset } from '../schemas/SceneSchema';
@@ -148,16 +148,13 @@ const createOnScreenDropDown = (
   return dropDown.cmp;
 };
 
-/** On each of the tools' roots: the debugger is dark until p806 gives it a theme setting (p803
- * D6), and an app's modal dialog leaves it live (p803 D7). CMP copies it. */
-const DEBUGGER_THEME_ATTR = { 'data-aek-theme': 'dark', [DEBUGGER_ROOT_ATTR]: '' };
-
 /** The top row (created on first use). Kept in editor views, like its groups. */
 const getTopRow = () => {
   if (!topRowCMP) {
     topRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopRow, 'onScreenTopRow', KEEP_IN_VIEWS_CLASS],
-      attr: DEBUGGER_THEME_ATTR,
+      // On each of the tools' roots: the debugger's theme and density (p806 D8)
+      ...getDebuggerRootProps(),
     });
   }
   return topRowCMP;
@@ -168,7 +165,7 @@ const getTopLeftRow = () => {
   if (!topLeftRowCMP) {
     topLeftRowCMP = getHUDRootCMP().add({
       class: [styles.onScreenTopLeftRow, 'onScreenTopLeftRow', KEEP_IN_VIEWS_CLASS],
-      attr: DEBUGGER_THEME_ATTR,
+      ...getDebuggerRootProps(),
     });
   }
   return topLeftRowCMP;
@@ -337,7 +334,7 @@ const switchTools = () => {
 
   switchToolsCMP = CMP({
     class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'],
-    attr: DEBUGGER_THEME_ATTR,
+    ...getDebuggerRootProps(),
   });
 
   const isDebugActive = isDebugCameraActive();

@@ -299,6 +299,9 @@ $collapseTime: var(--aek-motion-base);
     box-sizing: border-box;
     width: calc(var(--aek-space-6) + var(--aek-space-1));
     height: calc(var(--aek-space-6) + var(--aek-space-1));
+    // The target floor (p806 D12): the compact density's space scale would take it under 24 px
+    min-width: 24px;
+    min-height: 24px;
     margin-bottom: var(--aek-space-2);
     margin-left: var(--aek-space-2);
     padding: var(--aek-space-2);

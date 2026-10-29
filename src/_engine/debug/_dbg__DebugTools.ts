@@ -16,6 +16,7 @@ import { getConfig, getCurrentEnvironment, getEnvs, IS_DEBUG_ENV } from '../kern
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
 import { lerror, llog } from '../utils/Logger';
 import { fitAllDraggableWindowsToScreen } from '../ui/overlays/windows/DraggableWindow';
+import { DEBUGGER_THEMES, setDebuggerTheme, type DebuggerTheme } from '../ui/overlays/DebuggerRoot';
 import {
   createAxesHelper,
   createGridHelper,
@@ -133,6 +134,10 @@ let debugToolsState: DebugToolsState = {
   devFiles: {
     saveHistorySize: getConfig().devFiles?.saveHistorySize ?? DEFAULT_SAVE_HISTORY_SIZE,
   },
+  // Saved only once changed here, as devFiles
+  appearance: {
+    theme: getConfig().debugDrawer?.theme ?? 'dark',
+  },
   helpers: {
     helpersFolderExpanded: false,
     showAxesHelper: false,
@@ -174,7 +179,15 @@ const createDebugToolsDebugGUI = () => {
     state: debugToolsState,
     // The nested objects are persisted whole (the same LS shape as before). The *FolderExpanded
     // fields in them are no longer used: folder states are in `${LS_KEY}UI`.
-    persistKeys: ['scenesListing', 'onScreenTools', 'helpers', 'axesGizmo', 'envBall', 'devFiles'],
+    persistKeys: [
+      'scenesListing',
+      'onScreenTools',
+      'helpers',
+      'axesGizmo',
+      'envBall',
+      'devFiles',
+      'appearance',
+    ],
     // Live-refresh the Debug Camera folder from the viewport (dragging the debug camera with
     // OrbitControls): debugCameraSystem calls this only on frames where OrbitControls reported
     // a change. Unregistered on unmount, so a stale callback never runs against a disposed pane.
@@ -195,6 +208,18 @@ const createDebugToolsDebugGUI = () => {
   initAxesGizmo(debugToolsState.axesGizmo);
   initEnvBall(debugToolsState.envBall);
 };
+
+const DEBUGGER_THEME_TEXTS: Record<DebuggerTheme, string> = {
+  dark: 'Dark',
+  light: 'Light',
+  app: "The app's",
+};
+
+/**
+ * Applies the "Debugger theme" setting (p806 D8) to the debugger's roots: the saved one, else
+ * `AppConfig.debugDrawer.theme`. The boot's, once the state is read (debug env and prod test mode).
+ */
+export const _applyDebuggerTheme = () => setDebuggerTheme(debugToolsState.appearance.theme);
 
 const ON_SCREEN_TOOLS_DISABLED_BODY_CLASS = 'aekOnScreenToolsDisabled';
 const ON_SCREEN_TOOLS_OPACITY_CSS_VAR = '--aek-disabled-on-screen-tools-opacity';
@@ -470,6 +495,12 @@ const buildDebugToolsItems = (): DebuggerPaneItem<DebugToolsState>[] => {
       onClick: () => {
         if (!fitAllDraggableWindowsToScreen()) addDebugToast({ title: 'No open windows' });
       },
+    },
+    {
+      key: 'appearance.theme',
+      label: 'Debugger theme',
+      options: DEBUGGER_THEMES.map((value) => ({ value, text: DEBUGGER_THEME_TEXTS[value] })),
+      onChange: (value) => setDebuggerTheme(value as DebuggerTheme),
     },
     { type: 'separator' },
 

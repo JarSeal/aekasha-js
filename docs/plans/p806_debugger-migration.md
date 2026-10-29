@@ -1036,6 +1036,42 @@ Phase 1 verified (2026-10-29):
 
 1. **Theme and density** (D8): the roots' attributes from one function, the setting, the compact
    retune if Phase 0 asks for one.
+
+   As built (2026-10-29):
+
+   - **The function** is the kit's, `ui/overlays/DebuggerRoot.ts` (`@internal`), since a debug
+     window is the kit's. `getDebuggerRootProps()` gives a root `DEBUGGER_ROOT_ATTR`,
+     `data-aek-theme` (none for `'app'`) and `data-aek-density="compact"`, plus `onCreateCmp` /
+     `onRemoveCmp` hooks that keep the mounted roots in a set. `setDebuggerTheme(theme)` rewrites
+     them live through each CMP's `updateAttr` / `removeAttr`, so a later `update()` keeps it.
+     `getDebuggerRootAttr()` and `getDebuggerTheme()` are beside it.
+   - **The roots:** the drawer, the editor drawer, the on-screen tools' two rows and switch
+     tools, and a debug window with its backdrop (`DraggableWindowDom.ts`' `getDebugRootProps`,
+     which replaced `getThemeAttr`; the window merges its own `attr`). The four constants went.
+     The stats panels (p807's) and the debug toaster keep `DEBUGGER_ROOT_ATTR` only: the toaster
+     follows the system at the default density.
+   - **The setting:** `AppConfig.debugDrawer.theme` (`'dark' | 'light' | 'app'`, written out in
+     `Config.ts`: a public type takes no internal one), default dark. The Debug tools tab's
+     "Debugger theme" select, under its three buttons, is `appearance.theme`, a new top-level
+     persisted key in `AEK_debugTools` (saved once changed, as `devFiles`). The boot applies it
+     in `registerDebugToolsModule`, before the first scene load, in the debug env and prod test
+     mode (`_applyDebuggerTheme`).
+   - **No compact retune**, as Phase 0 recommended: `tokens.css` is unchanged.
+   - **A target floor:** the compact space scale took `DraggableWindow.scss`'
+     `winSmallIconButton` under 24 px (axe's `target-size` in the physics entity, character and
+     character state windows), so it has `min-width` / `min-height: 24px` until Phase 5 moves it.
+   - **Tests:** `DebuggerRoot.test.ts` (the attributes, a live change, `'app'`, a CMP's
+     `update()`, a root mounted after a change, a removed root, an unknown theme); the debug
+     dialog's and its backdrop's attributes in `DialogWindow.test.ts`; the drawer's in
+     `_dbg__DebuggerGUI.test.ts`.
+   - **The `debugger` configuration:** every shot changed (the compact kit fields, the windows'
+     headers), recorded on purpose; the tab order and the four undo / redo scripts pass
+     unchanged. Axe, summed over the six scenes, against section 3 of Phase 1:
+     `color-contrast` 231 → 232 (the compact rows bring two more debugger list rows into the
+     gym's Physics tab's 2000 px page: the list's muted ids, section 2's port) and
+     `target-size` 47 → 50: the character state window's own header controls (its gizmo row
+     reflowed in the compact type) now fail it, 3 nodes, for Phase 4 section 3's rewrite. The
+     Physics tab's Gravity boxes read "-9.81" in full now (Phase 1's note).
 2. **The drawer** (D6):
    - The rail, the toggler, the heading, the width splitter, the scroll, the disabled state.
    - The menu changing in place (the kit's tab additions with their boxes).

@@ -46,6 +46,7 @@ vi.mock(import('../utils/Logger'), async (importOriginal) => ({
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
 import { initEnvironment } from '../kernel/config/Config';
+import { setDebuggerTheme } from '../ui/overlays/DebuggerRoot';
 import type { AnyDebuggerTabDef } from './DebuggerGUI';
 import {
   _createDebuggerTab,
@@ -92,6 +93,16 @@ describe('debug drawer (p618 §1.4)', () => {
     expect(() => _updateDebuggerSceneTitle('Scene A')).not.toThrow();
     expect(getDrawerElem()).not.toBeNull();
     expect(_isDebuggerTabOpen('working')).toBe(false);
+  });
+
+  it('is a debugger root in its theme and the compact density, changed live (p806 D8)', () => {
+    const drawer = getDrawerElem();
+    expect(drawer?.hasAttribute('data-aek-debugger')).toBe(true);
+    expect(drawer?.getAttribute('data-aek-theme')).toBe('dark');
+    expect(drawer?.getAttribute('data-aek-density')).toBe('compact');
+    setDebuggerTheme('light');
+    expect(drawer?.getAttribute('data-aek-theme')).toBe('light');
+    setDebuggerTheme('dark');
   });
 
   it('saves its state as an object, read back by the next build (F4)', () => {
