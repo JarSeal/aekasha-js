@@ -926,6 +926,8 @@ export const _createPhysicsAPIDebugGUI = () => {
     id: TAB_ID,
     title: 'Physics API controls',
     icon: 'rocketTakeoff',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     lsKey: LS_KEY,
     state,
     persistKeys: LIVE_PERSIST_KEYS,

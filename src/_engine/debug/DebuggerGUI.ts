@@ -1,4 +1,5 @@
 import type { CMPHandle } from '../ui/core/CMPTypes';
+import type { BindingScheduler } from '../ui/forms/binding/BindingScheduler';
 import type { BindingSource, ReadonlyBindingSource } from '../ui/forms/binding/Binding';
 import type { FieldChange } from '../ui/forms/Field';
 import type {
@@ -215,6 +216,16 @@ export type DebuggerPaneSection<S extends object = object> = {
 export type DebuggerTabSection<S extends object = object> = CMPHandle | DebuggerPaneSection<S>;
 
 /**
+ * What a tab's `content` gets (p806 D3): its host's refresh scheduler, shared by its declarative
+ * sections, which a CMP section's own UI kit fields join too, so they refresh with the tab
+ * (`refreshIntervalMs`, {@link updateDebuggerTab}) and their monitors pause with it.
+ */
+export type DebuggerTabContext = {
+  /** The tab host's scheduler: give it to a kit field (`scheduler`) or a property grid */
+  scheduler: BindingScheduler;
+};
+
+/**
  * A debugger tab, for {@link createDebuggerTab} (and `createProfilerTab`, without `sceneId`). The
  * call builds the menu button, the heading row (icon, title, clear-LS button, header buttons) and
  * the content.
@@ -264,11 +275,19 @@ export type DebuggerTabDef<S extends object = object> = {
   /** Runs every time the tab content is mounted. The returned function runs on unmount (tab
    * switch, rebuild or drawer rebuild). */
   onOpen?: () => void | (() => void);
+  /** Keeps the open tab on a scene change (default false: it's rebuilt from `content`): its DOM,
+   * scroll position, open folders and focus stay, and `onSceneChange`, `onRefresh` and a refresh
+   * of its fields run instead. For a tab whose content reads the scene through getters a refresh
+   * re-reads, not one that captures the scene's data when `content` runs. */
+  keepOnSceneChange?: boolean;
+  /** Runs on a scene change while the tab is kept open (`keepOnSceneChange`), before `onRefresh`:
+   * eg. to point the objects its fields bind to at the new scene's. A throw is logged. */
+  onSceneChange?: () => void;
   /** Content factory. Runs on every mount and rebuild, because a removed CMP can't be mounted
-   * again: the open tab is rebuilt on every scene change (so a tab that lists the scene's
-   * cameras or lights shows the new scene's), and a closed tab is built fresh on its next mount.
-   * A throw is logged and shows an error line in the tab's place. */
-  content: () => DebuggerTabSection<S>[];
+   * again: the open tab is rebuilt on every scene change (unless `keepOnSceneChange`), and a
+   * closed tab is built fresh on its next mount. `ctx.scheduler` is the tab's refresh scheduler
+   * ({@link DebuggerTabContext}). A throw is logged and shows an error line in the tab's place. */
+  content: (ctx: DebuggerTabContext) => DebuggerTabSection<S>[];
 };
 
 /** A small icon toggle on the right side of each list row. */

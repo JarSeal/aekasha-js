@@ -560,6 +560,8 @@ export const _createPostFXDebugGUI = async () => {
     id: TAB_ID,
     title: 'PostFX controls',
     icon: 'postFx',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     // Both LS keys are scene-scoped / deviation-only (module-owned), so both buttons are custom
     clearLSButton: false,
     headerButtons: () => {

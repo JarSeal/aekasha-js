@@ -205,6 +205,8 @@ export const _initECSDebugGUI = () => {
     id: TAB_ID,
     title: 'ECS',
     icon: 'ecs',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     // The whole 'AEK_ecs' key IS the per-world-id list (see ECSComponentStorage.ts) - there is
     // no separate tab-only field, so the tab button stays disabled (kept for consistency)
     clearLSButton: true,

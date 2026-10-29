@@ -13,6 +13,8 @@ export const createLoopDebugControls = (loopState: LoopState) => {
     id: LOOP_DEBUGGER_TAB_ID,
     title: 'Loop controls',
     icon: 'infinity',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     lsKey: LS_KEY,
     state: loopState,
     persistKeys: ['masterPlay', 'appPlay', 'maxFPS', 'playSpeedMultiplier'],

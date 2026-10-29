@@ -119,10 +119,10 @@ export const GLOBAL_ALLOWED_ERRORS: AllowedError[] = [];
 export const DEBUGGER_VIEWPORT = { width: 1280, height: 2000 };
 
 /**
- * What a debugger shot masks (Playwright's `mask`): the figures that change run to run with the
- * loops frozen (timings, memory, clocks), by selector: the UI kit's monitors, Tweakpane's in the
- * windows still on it (p806 Phase 3 ports them), and the profiler Overview's figures (p807
- * rewrites that tab)
+ * What a debugger shot masks (Playwright's `mask`, Playwright's selectors): the figures that change
+ * run to run with the loops frozen (timings, memory, clocks, a build's time): the UI kit's
+ * monitors, Tweakpane's in the windows still on it (p806 Phase 3 ports them), the profiler
+ * Overview's figures (p807 rewrites that tab) and the About dialog's build line
  */
 export const DEBUGGER_LIVE_MASKS: string[] = [
   '.aekMonitor',
@@ -131,6 +131,8 @@ export const DEBUGGER_LIVE_MASKS: string[] = [
   '.tp-grlv',
   '.profilerValue',
   '.profilerSub',
+  // The About dialog's build: the commit, local changes and the time (Playwright's selector)
+  'dt:text-is("Build") + dd',
 ];
 
 /**

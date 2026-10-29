@@ -332,6 +332,8 @@ export const _createCharactersDebuggerGUI = () => {
     id: CHARACTERS_TAB_ID,
     title: 'Character controls',
     icon: 'personArmsUp',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     // The tab has no data of its own (its button stays disabled, kept for consistency); the
     // list's button clears the characters' saved config values (scene-scoped, module-owned)
     clearLSButton: true,

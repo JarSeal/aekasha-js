@@ -281,7 +281,7 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     getState: () => ({ ...state, scrollPos: { ...state.scrollPos } }),
     dispose: () => {
       setActive(false);
-      host.unmount();
+      host.dispose();
       root.remove();
     },
   };

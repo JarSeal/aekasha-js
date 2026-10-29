@@ -545,6 +545,8 @@ export const initCameraDebuggerGUI = () => {
     id: CAMERAS_TAB_ID,
     title: 'Camera Controls',
     icon: 'camera',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     // The tab's LS data is scene-scoped (module-owned), so both clear buttons are custom
     clearLSButton: false,
     headerButtons: () => {

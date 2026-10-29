@@ -1083,6 +1083,8 @@ export const _createAssetsDebugGUI = () => {
     id: TAB_ID,
     title: 'Assets',
     icon: 'assets',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     uiLsKey: UI_LS_KEY,
     // The tab's own LS data is its UI key (the scope and the folder states)
     clearLSButton: false,

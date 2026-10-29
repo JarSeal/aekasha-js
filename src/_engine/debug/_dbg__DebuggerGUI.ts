@@ -430,13 +430,14 @@ export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
 };
 
 /** Builds the drawer on the first call (the first `setCurrentScene`). Later calls change the title
- * in place and rebuild only the open tab: tabs built from the current scene's data (lists, the
- * Ray cast tab's physics section) were always rebuilt on a scene change, and still are. */
+ * in place and pass the scene change to the open tab (p806 D5): it's rebuilt from `content`
+ * (a tab built from the current scene's data: the Ray cast tab's physics section, LOD), or kept
+ * and refreshed with `keepOnSceneChange`. */
 export const _updateDebuggerSceneTitle = (title: string) => {
   currentSceneTitleText = title;
   if (drawerCMP && currentSceneTitleTextCMP) {
     currentSceneTitleTextCMP.updateText(title);
-    host.refresh(true);
+    host.sceneChanged();
     return;
   }
   _createDebugGui(guiOpts);

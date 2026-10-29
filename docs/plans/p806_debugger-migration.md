@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -822,7 +822,7 @@ undo / redo scripts. Each phase stops after each section for review.
      element) and a vertical `createTabs` taking a tab added and removed by `setTabs`. The
      existing debugger tests stub linkedom per file; the builder's test uses `KitDom`.
 
-### Phase 1: the framework on the kit
+### Phase 1: the framework on the kit — done
 
 1. **The scene runner's `debugger` configuration** (D14), with the test bridge's methods. It is
    recorded on the branch before any change: its shots are Tweakpane's, and the later sections
@@ -856,6 +856,7 @@ undo / redo scripts. Each phase stops after each section for review.
      its two scene tabs and the LOD entity window; `assetCompare`, `space` and `exampleDebugTab`
      get their scene tabs. In all, 55 shots: 36 drawer tabs, 4 profiler tabs and 15 windows.
    - **Undo / redo scripts**, all passing on Tweakpane:
+
      - the debug tab example's Boxes slider (declarative; ArrowRight);
      - the camera window's Position x (imperative; ArrowUp);
      - the Lights list's Enabled toggle (Enter);
@@ -865,6 +866,7 @@ undo / redo scripts. Each phase stops after each section for review.
      run with the focus on the page, since a focused field keeps Ctrl+Z for its text. Each
      script's `ls` key and path must follow the bound value through the change, the undo and the
      redo.
+
    - **The axe check is a ratchet:** a rule's count on a root may not grow (Phase 6 allows none).
      The recorded counts match Phase 0's per root.
    - **Masks:** `DEBUGGER_LIVE_MASKS` masks Tweakpane's monitors (`.tp-sglv`, `.tp-mllv`,
@@ -885,7 +887,9 @@ undo / redo scripts. Each phase stops after each section for review.
      section closes it, and the opener's `clickReason` goes.
    - Not covered yet: the editor drawer and the material editor (Phase 2 section 3 adds them when
      it ports them).
+
 2. **The builder on the property grid and the tab types** (D3, D4):
+
    - The 26 declarative sections renamed where they use Tweakpane's names (`view: 'color'` and the
      rest; the app's five and the material editor's included).
    - The day-night `custom` on a button group (D10).
@@ -956,6 +960,7 @@ undo / redo scripts. Each phase stops after each section for review.
      `setValue` (`source: 'api'`), which no debugger code calls. In the default density a
      vector's boxes are narrow in a 400 px drawer (the Physics tab's Gravity shows "-9.8"). Phase
      2's compact density and drawer width are where that's judged.
+
 3. **The tab host** (D5):
 
    - The scheduler, `ctx`, `refreshIntervalMs`, the fields' context menu, the error line.
@@ -963,6 +968,69 @@ undo / redo scripts. Each phase stops after each section for review.
    - The tests.
 
    The six imperative files still import Tweakpane until Phase 3.
+
+   As built (2026-10-29):
+
+   - **The types:** `DebuggerTabDef` gains `keepOnSceneChange`, `onSceneChange` and
+     `content(ctx: DebuggerTabContext)` (`{ scheduler }`).
+     - A definition may ignore `ctx`, but a caller of `content` passes it (the profiler
+       Overview's test does).
+     - `DebuggerTabContext` and section 2's `DebuggerPaneBindingProps` are on `aekasha/debug`:
+       section 2 had left the second off the entry.
+   - **The host** (`_dbg__TabHost.ts`):
+     - One `createBindingScheduler({ visible: false })` per host, set visible on mount (by
+       `isVisible()`) and `resume`, invisible on `pause` and `unmount`.
+     - The pane sections share it and add no refresher. A refresh is `onRefresh`, the CMP
+       sections, the lists, then one `scheduler.refresh()`, so two sections no longer mean two
+       refreshes.
+     - The fields' context menu is made on the first mount into a container element, and made
+       again when the owner gives a new one (the drawer and the profiler window rebuild theirs).
+     - `sceneChanged()` rebuilds, or keeps the tab (`onSceneChange`, its throw logged, then the
+       refresh).
+     - `dispose()` unmounts and removes the menu and the scheduler; the editor drawer's
+       `dispose` calls it.
+     - `scheduler` is on the handle.
+     - The error line is a `createEmptyState` with the title "This tab failed to build", the
+       text "<message> (see the console)." and the `alert` icon, with `role="alert"`. The
+       drawer's stylesheet colours its icon and title with `--aek-danger` (the old `$errorDark`
+       rule went).
+   - **The drawer:** `_updateDebuggerSceneTitle` calls `host.sceneChanged()`. The profiler window
+     doesn't react to scene changes (Phase 0: it needn't), so its tabs don't use the flag yet.
+   - **Opted in:** Statistics, Loop, Renderer, Physics API, PostFX, ECS, Characters, Cameras and
+     Assets.
+     - Lights waits for its Phase 3 port (Phase 0's `??` icons in its kept list).
+     - Checked again on the kit, with a scratch probe through the bridge
+       (`scratchpad/keep.mts`, not kept): each tab taken `testDebugScene` ↔
+       `thirdPersonGymScene`. Each kept its DOM (the heading row's element the same), read the
+       same as the tab rebuilt (field labels and values, list rows, folder titles; digits
+       normalised) and logged no error.
+   - **Tests:** `_dbg__TabHost.test.ts`, now on `KitDom`, 13 tests. Beyond the four failing-tab
+     and the html-once ones, they cover: `ctx.scheduler` being the host's; one refresh reading
+     each field of two sections once, after `onRefresh`; a CMP section's kit monitor on
+     `ctx.scheduler`; the tick only while shown (mount hidden, resume, pause);
+     `refreshIntervalMs` only while visible; the default rebuild on a scene change; a kept tab's
+     DOM and its order (`onSceneChange`, `onRefresh`, the fields); a throwing `onSceneChange`;
+     and the menu, one listener across mounts and none after `dispose`.
+   - **The `debugger` configuration:** unchanged by this section, but a run after it showed the
+     About dialog's Build row moving (its commit, "local changes" and time). It's masked now
+     (`'dt:text-is("Build") + dd'`, a Playwright selector in `DEBUGGER_LIVE_MASKS`), and
+     `testDebugScene` was recorded again. `api.json` records the two entry types.
+   - Not here (Phase 2): D14's `_dbg__DebuggerGUI.test.ts` growth (the menu changing in place,
+     the roots' attributes, the disabled state) and the drawer state's 5.x fixture, which go
+     with the shell.
+
+Phase 1 verified (2026-10-29):
+
+- `yarn test` (2133), `tsc` (both projects), ESLint and `yarn verify:baselines` (`api.json` and
+  `docs.json` recorded; the bundle changed only by section 2's 28 B in the field shell's chunk;
+  no debug code in any build) all pass.
+- `yarn sbp --profile all`: every budget within; first downloads app 384.4, banner 287.4 and
+  uiKit 286.7 kB gzip.
+- `yarn verify:embed`: 7 scenarios pass. `yarn verify:ui`: every box, state and script in all
+  four settings, 270 s.
+- `yarn verify:scenes`: 110 runs (26 scenes × 4 configurations, and the 6 `debugger` runs),
+  none failed, in 662 s. The warnings are `space`'s known worker hash (`unstableHash`) and the
+  asset compare shot's `unstableShots`.
 
 ### Phase 2: the shell, the theme and the density
 

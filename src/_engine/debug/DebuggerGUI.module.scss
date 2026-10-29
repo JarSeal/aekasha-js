@@ -132,9 +132,12 @@
     }
   }
 
+  // The kit's empty state in the danger role (p806 D5)
   :global(.debuggerTabError) {
-    color: variables.$errorDark;
-    line-height: 1.4;
+    :global(.aekEmptyState__icon),
+    :global(.aekEmptyState__title) {
+      color: var(--aek-danger);
+    }
   }
 
   &:first-of-type {

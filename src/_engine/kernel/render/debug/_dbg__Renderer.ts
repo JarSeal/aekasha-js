@@ -97,6 +97,8 @@ export const _createRendererDebugGUI = async (
     id: TAB_ID,
     title: 'Renderer controls',
     icon: 'gpuCard',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     lsKey: LS_KEY,
     state: options,
     persistKeys: [
