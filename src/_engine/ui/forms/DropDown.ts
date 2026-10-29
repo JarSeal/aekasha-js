@@ -35,6 +35,10 @@ export type DropDownProps = {
   placement?: 'top' | 'bottom';
   /** Disables the trigger (default false). */
   disabled?: boolean;
+  /** Keeps the trigger focusable while disabled (default false): `aria-disabled` instead of
+   * `disabled`, so the keys still reach it and its title (the reason `setDisabled` gives) can be
+   * read, while its clicks are ignored. A toolbar's drop-down (`createButtonGroup`'s `toolbar`). */
+  focusableWhenDisabled?: boolean;
   /** A filter field over the list (p803 D9, the APG combobox with a list): typing filters the
    * options by their labels and marks the matching text, the arrows move through what's left, and
    * Enter picks. Default false. */
@@ -74,6 +78,9 @@ export type DropDown = {
   /** Re-reads the value (and options) into the trigger's label: for a change made elsewhere (a
    * pick refreshes it itself). */
   refresh: () => void;
+  /** Disables or enables the trigger; disabling closes an open list. A `reason` (eg. 'Loading the
+   * scene…') is the trigger's title while it's disabled, `title` again when it's enabled. */
+  setDisabled: (isDisabled: boolean, reason?: string) => void;
 };
 
 /**
@@ -145,7 +152,8 @@ const writeLabel = (item: HTMLElement, label: string, query: string) => {
  *   `.aekDropDownLabel` and `.aekDropDownCaret`; open, `.aekDropDownList` of `.aekDropDownItem`s
  *   (`isHighlighted`, `isCurrent`, `[data-active]`), or with `searchable` the `.aekDropDownPopup`
  *   with `.aekDropDownSearch`, the list and `.aekDropDownEmpty`; a match is `.aekDropDownMatch`.
- * - ARIA: the trigger `aria-haspopup="listbox"` and `aria-expanded`; the list a `listbox` named by
+ * - ARIA: the trigger `aria-haspopup="listbox"` and `aria-expanded` (`aria-disabled` while
+ *   disabled with `focusableWhenDisabled`); the list a `listbox` named by
  *   `title`, its options' `aria-selected` the current one; the focus holder's
  *   `aria-activedescendant` the highlighted option.
  *
@@ -166,6 +174,8 @@ const writeLabel = (item: HTMLElement, label: string, query: string) => {
  */
 export const createDropDown = (props: DropDownProps): DropDown => {
   const placement = props.placement || 'bottom';
+  const disabledAttr = props.focusableWhenDisabled ? 'aria-disabled="true"' : 'disabled';
+  let isDisabled = Boolean(props.disabled);
   let list: CMPHandle | null = null;
   /** Removes the open list's overlay stack entry */
   let removeOverlay: ((returnFocus?: boolean) => void) | null = null;
@@ -188,7 +198,7 @@ export const createDropDown = (props: DropDownProps): DropDown => {
   });
 
   const trigger = CMP({
-    html: () => `<button type="button" class="${classes(TRIGGER_CLASS, props.triggerClass).join(' ')}"${props.disabled ? ' disabled' : ''}>
+    html: () => `<button type="button" class="${classes(TRIGGER_CLASS, props.triggerClass).join(' ')}"${isDisabled ? ` ${disabledAttr}` : ''}>
   ${props.icon || ''}
   <span class="${classes(LABEL_CLASS, props.labelClass).join(' ')}"></span>
   <span class="${CARET_CLASS}"></span>
@@ -234,7 +244,7 @@ export const createDropDown = (props: DropDownProps): DropDown => {
   };
 
   const open = () => {
-    if (list || props.disabled) return;
+    if (list || isDisabled) return;
     const options = getOptions();
     if (!options.length) return;
     const currentValue = getValue();
@@ -416,7 +426,33 @@ export const createDropDown = (props: DropDownProps): DropDown => {
 
   const toggle = () => (list ? close() : open());
 
+  const setDisabled = (isOn: boolean, reason?: string) => {
+    isDisabled = isOn;
+    if (isOn) close();
+    const attr = props.focusableWhenDisabled ? 'aria-disabled' : 'disabled';
+    if (isOn) trigger.updateAttr({ [attr]: props.focusableWhenDisabled ? 'true' : '' });
+    else trigger.removeAttr(attr);
+    const title = isOn && reason !== undefined ? reason : props.title;
+    if (title === undefined) trigger.removeAttr('title');
+    else trigger.updateAttr({ title });
+  };
+
   refresh();
 
-  return { cmp: root, open, close: () => close(), toggle, isOpen: () => Boolean(list), refresh };
+  return {
+    cmp: root,
+    open,
+    close: () => close(),
+    toggle,
+    isOpen: () => Boolean(list),
+    refresh,
+    setDisabled,
+  };
 };
+
+/**
+ * A drop-down's trigger: the element that takes the focus (a button group's toolbar moves it).
+ * @internal
+ */
+export const getDropDownTrigger = (dropDown: DropDown): HTMLElement =>
+  dropDown.cmp.elem.querySelector<HTMLElement>(`.${TRIGGER_CLASS}`) ?? dropDown.cmp.elem;

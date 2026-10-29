@@ -493,13 +493,15 @@ export const getDefaultDebugKeyBindings = (): {
 } => ({ debug: DEFAULT_DEBUG_KEY_BINDINGS, prodTest: DEFAULT_PROD_TEST_KEY_BINDINGS });
 
 /**
- * A default debug key's chord as `getKeyChordLabel` writes it, with `AppConfig.debugKeys`' rebinding
- * ('' when it has none). The drawer toggler's key hint (p806 D6).
+ * A default debug key's (or prod test key's) chord as `getKeyChordLabel` writes it, with
+ * `AppConfig.debugKeys`' rebinding ('' when it has none). The drawer toggler's key hint (p806 D6)
+ * and the on-screen tools' tooltips (D7).
  * @internal
  */
 export const getDebugKeyChordLabel = (id: string) => {
   const chord =
     getConfig().debugKeys?.find((key) => key.id === id)?.chord ??
-    DEFAULT_DEBUG_KEY_BINDINGS.find((key) => key.id === id)?.chord;
+    DEFAULT_DEBUG_KEY_BINDINGS.find((key) => key.id === id)?.chord ??
+    DEFAULT_PROD_TEST_KEY_BINDINGS.find((key) => key.id === id)?.chord;
   return chord ? getKeyChordLabel(chord) : '';
 };

@@ -266,11 +266,7 @@ const runOpenerAsync = async (run: DebuggerRun, opener: DebuggerWindowOpener) =>
       fail(missingControl(name, focused));
       return;
     }
-    if (opener.clickReason) {
-      await run.page.evaluate(() => (document.activeElement as HTMLElement | null)?.click());
-    } else {
-      await run.page.keyboard.press('Enter');
-    }
+    await run.page.keyboard.press('Enter');
     windows = await markNewWindowsAsync(run.page);
     const top = windows[windows.length - 1];
     if (top) root = top.root;

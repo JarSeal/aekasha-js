@@ -1,3 +1,7 @@
+// The on-screen tools (p806 D7): four kit toolbars in three debugger roots. The top left row holds
+// the About and undo / redo tools, then the view switch; the centred top row the play tools; the
+// bottom row the scene's switch tools (Runtime view only). Each group is refreshed in place
+// (`_dbg__OnScreenToolbar.ts`), and during a scene load every control is `aria-disabled`.
 import {
   getAllCamerasAsArray,
   getMainAppCameraId,
@@ -14,10 +18,9 @@ import { getReadOnlyLoopState, toggleMainPlay } from '../kernel/loop/MainLoop';
 import { getPhysicsState } from '../features/physics/PhysicsState';
 import { getCurrentSceneId, getGeneratedAppData } from '../kernel/scene/Scene';
 import { isCurrentlyLoading, loadScene } from '../kernel/scene/SceneLoader';
-import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
-import { createDropDown, type DropDownProps, type DropDown } from '../ui/forms/DropDown';
+import { getSvgIcon } from '../ui/core/icons/SvgIcon';
+import { createDropDown, type DropDownProps } from '../ui/forms/DropDown';
 import type { CMPHandle } from '../ui/core/CMPTypes';
-import { CMP } from '../ui/core/CMP';
 import { getDebuggerRootProps } from '../ui/overlays/DebuggerRoot';
 import styles from './OnScreenTools.module.scss';
 import { getECSWorld } from '../kernel/ecs/ECS';
@@ -31,6 +34,13 @@ import { canRedo, canUndo, redoLastAction, undoLastAction } from './UndoRedo';
 import { openAboutDialog } from './_dbg__About';
 import { isProfilerAvailable, isProfilerWindowOpen, toggleProfilerWindow } from './Profiler';
 import {
+  createOnScreenToolbar,
+  getOnScreenToolsSignature,
+  keepFocusOnPress,
+  type OnScreenToolbar,
+  type OnScreenToolItem,
+} from './_dbg__OnScreenToolbar';
+import {
   getActiveView,
   getActiveViewId,
   getViews,
@@ -41,15 +51,6 @@ import {
   setActiveView,
   toggleViewPlay,
 } from '../kernel/render/Views';
-
-/** The fixed, centred row at the top: the play tools. */
-let topRowCMP: CMPHandle | null = null;
-/** The fixed row in the top left corner: the About and undo / redo tools, then the view tools. */
-let topLeftRowCMP: CMPHandle | null = null;
-let viewToolsCMP: CMPHandle | null = null;
-let playToolsCMP: CMPHandle | null = null;
-let switchToolsCMP: CMPHandle | null = null;
-let undoRedoToolsCMP: CMPHandle | null = null;
 
 // This file (a lazily-loaded _dbg__ module) also loads in IS_PROD_TEST_MODE (see
 // debug/OnScreenTools.ts's registerOnScreenTools), but the physics wireframe system is
@@ -112,10 +113,339 @@ const loadSceneFromTools = (sceneId: string) => {
   loadScene({ sceneId, loaderId: DEBUGGER_SCENE_LOADER_ID });
 };
 
-// DROPDOWNS (the camera and scene selectors, the o and p shortcuts)
+// THE ROWS
+// Each is a debugger root (the theme and density, p806 D8), kept in editor views. A press on a tool
+// leaves the focus where it was (keepFocusOnPress).
 
-/** The dropdowns of the current switch tools group (rebuilt with it). */
-const dropDowns = new Map<OnScreenDropDownKey, DropDown>();
+/** The fixed, centred top row: the play tools */
+let topRowCMP: CMPHandle | null = null;
+/** The fixed row in the top left corner: the About and undo / redo tools, then the view tools */
+let topLeftRowCMP: CMPHandle | null = null;
+/** The fixed, centred bottom row: the switch tools */
+let bottomRowCMP: CMPHandle | null = null;
+
+const createRow = (className: string, globalClass: string) =>
+  getHUDRootCMP().add({
+    class: [className, globalClass, KEEP_IN_VIEWS_CLASS],
+    listeners: [{ type: 'mousedown', fn: keepFocusOnPress }],
+    ...getDebuggerRootProps(),
+  });
+
+const getTopRow = () => (topRowCMP ??= createRow(styles.onScreenTopRow, 'onScreenTopRow'));
+
+const getTopLeftRow = () =>
+  (topLeftRowCMP ??= createRow(styles.onScreenTopLeftRow, 'onScreenTopLeftRow'));
+
+const getBottomRow = () =>
+  (bottomRowCMP ??= createRow(styles.onScreenBottomRow, 'onScreenBottomRow'));
+
+// THE GROUPS' TOOLS
+// Each returns the group's tools now, or null when it isn't shown. Their state is read through
+// getters, so a group whose tools are the same is refreshed, not rebuilt.
+
+/** Switches to a view and shows a toast of it (a view tools button). */
+const switchViewWithToast = async (id: string) => {
+  if (id === getActiveViewId()) return;
+  if (!(await setActiveView(id))) {
+    // Not switched: the pressed button goes back
+    _updateOnScreenTools('VIEW');
+    return;
+  }
+  const view = id === RUNTIME_VIEW_ID ? RUNTIME_VIEW_BUTTON : getViews().find((v) => v.id === id);
+  if (view) addDebugToast({ title: view.title, icon: getSvgIcon(view.icon) });
+};
+
+/** One button per view (Views.ts): the Runtime view first, then the editor views. Debug environment
+ * only (never prod test mode), and only when an editor view is registered. */
+const getViewTools = (): OnScreenToolItem[] | null => {
+  if (!IS_DEBUG_ENV || IS_PROD_TEST_MODE) return null;
+  const editorViews = getViews();
+  if (!editorViews.length) return null;
+  return [RUNTIME_VIEW_BUTTON, ...editorViews].map((view) => ({
+    key: view.id,
+    label: view.title,
+    icon: view.icon,
+    isIconSmall: 'iconSize' in view && view.iconSize === 'small',
+    isPressed: () => getActiveViewId() === view.id,
+    onClick: () => switchViewWithToast(view.id),
+  }));
+};
+
+const getPlayTools = (): OnScreenToolItem[] | null => {
+  // Toggled in the Debug Tools Controls tab ("On-screen tools" folder); read from LS
+  // here because that tab (and its state loading) never runs in prodTest mode itself.
+  if (IS_PROD_TEST_MODE && !getDebugToolsState(true).onScreenTools.showOnScreenToolsInProdTest) {
+    return null;
+  }
+  const tools: OnScreenToolItem[] = [];
+  if (IS_PROD_TEST_MODE) {
+    tools.push({
+      key: 'prodTest',
+      label: 'Stop production test mode',
+      icon: 'stop',
+      keyId: 'sc-prod-test-stop',
+      onClick: _stopProdTestMode,
+    });
+  } else if (isRuntimeViewActive()) {
+    // Runtime view only: an editor view keeps the master loop and pause
+    tools.push({
+      key: 'prodTest',
+      label: 'Play in production test mode',
+      icon: 'playFill',
+      keyId: 'sc-play-prod-test',
+      onClick: _playInProdTestMode,
+    });
+  }
+  tools.push(
+    {
+      key: 'mainLoop',
+      label: 'Play the main loop',
+      icon: 'infinity',
+      keyId: IS_PROD_TEST_MODE ? 'sc-prod-test-toggle-main-loop' : 'sc-toggle-main-loop',
+      isPressed: () => getReadOnlyLoopState().masterPlay,
+      onClick: () => {
+        toggleMainPlay();
+        _updateOnScreenTools('PLAY');
+      },
+    },
+    {
+      // Pauses the active view: the app loop in the Runtime view, an editor view's own play flag
+      // (its `update`) in an editor view
+      key: 'pause',
+      label: getActiveView() ? 'Pause the view' : 'Pause the app loop',
+      icon: 'pause',
+      keyId: IS_PROD_TEST_MODE ? 'sc-prod-test-toggle-app-pause' : 'sc-toggle-app-pause',
+      isPressed: () => !isViewPlaying(),
+      onClick: () => {
+        toggleViewPlay();
+        _updateOnScreenTools('PLAY');
+      },
+    }
+  );
+  // Loaded in prodTest only when it is enabled there. The window's open and close refresh these
+  // tools.
+  if (isProfilerAvailable()) {
+    tools.push({
+      key: 'profiler',
+      label: 'Profiler',
+      icon: 'speedometer',
+      isIconSmall: true,
+      keyId: IS_PROD_TEST_MODE ? 'sc-prod-test-toggle-profiler' : 'sc-toggle-profiler',
+      isPressed: isProfilerWindowOpen,
+      onClick: toggleProfilerWindow,
+    });
+  }
+  return tools;
+};
+
+/** An on-screen drop-down: it opens upwards (the tools sit at the bottom), and stays focusable
+ * while disabled (its toolbar's arrows stop on it) */
+const createOnScreenDropDown = (props: Omit<DropDownProps, 'placement' | 'triggerClass'>) =>
+  createDropDown({
+    ...props,
+    placement: 'top',
+    focusableWhenDisabled: true,
+    className: styles.onScreenDropDown,
+    triggerClass: [styles.onScreenDropDownTrigger, 'onScreenDropDown'],
+  });
+
+/** The switch tools: they act on the scene, so the Runtime view only (an editor view hides its
+ * HUD, and the o / p drop-down shortcuts do nothing there). */
+const getSwitchTools = (): OnScreenToolItem[] | null => {
+  if (!isRuntimeViewActive()) return null;
+  const tools: OnScreenToolItem[] = [
+    {
+      key: 'debugCamera',
+      label: 'Debug camera',
+      icon: 'aspectRatio',
+      isIconSmall: true,
+      keyId: 'sc-toggle-debug-camera',
+      isPressed: isDebugCameraActive,
+      onClick: _toggleDebugCameraWithToast,
+    },
+    {
+      // The o shortcut
+      key: 'CAMERA',
+      create: () =>
+        createOnScreenDropDown({
+          icon: getSvgIcon('camera'),
+          title: 'Change camera (O)',
+          placeholder: 'No App Camera',
+          options: () => getAllCamerasAsArray().map((c) => ({ value: c.appId, label: c.name })),
+          value: getMainAppCameraId,
+          onChange: (appId) => {
+            if (appId === getMainAppCameraId() && !isDebugCameraActive()) return;
+            setCurrentCamera(appId);
+            if (isDebugCameraActive()) toggleDebugCamera(getECSWorld(), false);
+            _updateOnScreenTools('SWITCH');
+            showActiveCameraToast();
+          },
+        }),
+      // The app camera isn't the one rendering while the debug camera is: its name struck
+      onRefresh: (dropDown) =>
+        dropDown.cmp.elem.toggleAttribute('data-debug-camera', isDebugCameraActive()),
+    },
+    {
+      // The p shortcut
+      key: 'SCENE',
+      create: () =>
+        createOnScreenDropDown({
+          icon: getSvgIcon('easel'),
+          title: 'Change scene (P)',
+          placeholder: 'No scene',
+          options: getSceneOptions,
+          value: getCurrentSceneId,
+          onChange: loadSceneFromTools,
+        }),
+    },
+    {
+      key: 'lightHelpers',
+      label: 'Light helpers',
+      icon: 'lamp',
+      isIconSmall: true,
+      isPressed: isAnyLightHelperVisible,
+      onClick: () => {
+        toggleAllLightHelpers();
+        _updateOnScreenTools('SWITCH');
+      },
+    },
+    {
+      key: 'cameraHelpers',
+      label: 'Camera helpers',
+      icon: 'cameraReels',
+      isIconSmall: true,
+      isPressed: isAnyCameraHelperVisible,
+      onClick: () => {
+        toggleAllCameraHelpers();
+        _updateOnScreenTools('SWITCH');
+      },
+    },
+  ];
+  // Physics wireframes master visibility toggle. A display-only filter over whatever per-entity
+  // wireframes are already switched on (see _dbg__PhysicsDebugDraw.ts) — it never adds/removes
+  // any entity's own DEBUG_PHYSICS_WIREFRAME toggle.
+  if (getPhysicsState().enabled) {
+    tools.push({
+      key: 'physicsWireframes',
+      label: 'Physics wireframes',
+      icon: 'rocket',
+      isIconSmall: true,
+      isPressed: () => useDebug(physicsDebugDrawRef)?.isWireframeMasterVisible() ?? true,
+      onClick: () => {
+        useDebug(physicsDebugDrawRef)?.toggleWireframeMasterVisible();
+        _updateOnScreenTools('SWITCH');
+      },
+    });
+  }
+  return tools;
+};
+
+/** The About Ækasha button, then undo and redo (`aria-disabled` while there's nothing to undo or
+ * redo). Debug environment only: prod test mode has no debugger to make edits with. The undo /
+ * redo module refreshes this group itself (`updateOnScreenTools('UNDO')`) when the history
+ * changes. */
+const getUndoTools = (): OnScreenToolItem[] => [
+  {
+    key: 'about',
+    label: 'About Ækasha',
+    icon: 'aekasha',
+    // A gap sets it apart from the undo / redo buttons after it
+    class: styles.aboutTool,
+    onClick: openAboutDialog,
+  },
+  {
+    key: 'undo',
+    label: 'Undo',
+    icon: 'undo',
+    isIconSmall: true,
+    keyId: 'sc-undo',
+    isEnabled: canUndo,
+    onClick: undoLastAction,
+  },
+  {
+    key: 'redo',
+    label: 'Redo',
+    icon: 'redo',
+    isIconSmall: true,
+    keyId: 'sc-redo',
+    isEnabled: canRedo,
+    onClick: redoLastAction,
+  },
+];
+
+// THE GROUPS
+
+type GroupDef = {
+  /** The toolbar's accessible name */
+  label: string;
+  /** Its global class (the old group classes) */
+  globalClass: string;
+  getRow: () => CMPHandle;
+  /** First in its row (the undo tools, before the view tools) */
+  isFirst?: boolean;
+  exclusive?: boolean;
+  getTools: () => OnScreenToolItem[] | null;
+};
+
+const GROUPS: Record<ToolTypes, GroupDef> = {
+  UNDO: {
+    label: 'Debugger',
+    globalClass: 'undoRedoTools',
+    getRow: getTopLeftRow,
+    isFirst: true,
+    getTools: getUndoTools,
+  },
+  VIEW: {
+    label: 'Views',
+    globalClass: 'viewTools',
+    getRow: getTopLeftRow,
+    exclusive: true,
+    getTools: getViewTools,
+  },
+  PLAY: { label: 'Play', globalClass: 'playTools', getRow: getTopRow, getTools: getPlayTools },
+  SWITCH: {
+    label: 'Scene and camera',
+    globalClass: 'switchTools',
+    getRow: getBottomRow,
+    getTools: getSwitchTools,
+  },
+};
+
+const toolbars = new Map<ToolTypes, OnScreenToolbar>();
+/** During a scene load (p806 D7): every control `aria-disabled`, its tooltip saying why */
+let isLoading = false;
+
+/** Shows a group's tools now: refreshed in place when they're the same tools, else rebuilt where
+ * the group was, with the focus on the same tool; removed when it isn't shown. */
+const syncGroup = (type: ToolTypes) => {
+  const def = GROUPS[type];
+  const tools = def.getTools();
+  const current = toolbars.get(type) ?? null;
+  if (!tools?.length) {
+    current?.cmp.remove();
+    toolbars.delete(type);
+    return;
+  }
+  if (current?.signature === getOnScreenToolsSignature(tools)) {
+    current.refresh(isLoading);
+    return;
+  }
+  const focusedKey = current?.getFocusedKey() ?? null;
+  const toolbar = createOnScreenToolbar({
+    label: def.label,
+    items: tools,
+    exclusive: def.exclusive,
+    class: [def.globalClass],
+  });
+  const row = def.getRow();
+  row.add(toolbar.cmp);
+  if (current) current.cmp.elem.before(toolbar.cmp.elem);
+  else if (def.isFirst) row.elem.prepend(toolbar.cmp.elem);
+  current?.cmp.remove();
+  toolbars.set(type, toolbar);
+  toolbar.refresh(isLoading);
+  if (focusedKey) toolbar.focusKey(focusedKey);
+};
 
 /**
  * Opens an on-screen dropdown's list on its current option (the o and p shortcuts), or closes it
@@ -123,432 +453,54 @@ const dropDowns = new Map<OnScreenDropDownKey, DropDown>();
  * @param key ('CAMERA' | 'SCENE') the dropdown
  */
 export const _toggleOnScreenDropDown = (key: OnScreenDropDownKey) => {
-  dropDowns.get(key)?.toggle();
+  toolbars.get('SWITCH')?.getDropDown(key)?.toggle();
 };
 
-/** An on-screen tool styled dropdown, registered for its shortcut. */
-const createOnScreenDropDown = (
-  key: OnScreenDropDownKey,
-  props: Omit<DropDownProps, 'placement' | 'triggerClass'> & { isActive?: boolean }
-) => {
-  const { isActive, ...dropDownProps } = props;
-  const dropDown = createDropDown({
-    ...dropDownProps,
-    // The tools sit at the bottom of the screen
-    placement: 'top',
-    triggerClass: [
-      styles.onScreenTool,
-      styles.onScreenToolDropDown,
-      'onScreenTool',
-      'onScreenDropDown',
-      ...(isActive ? [styles.active, 'onScreenToolActive'] : []),
-    ],
-  });
-  dropDowns.set(key, dropDown);
-  return dropDown.cmp;
-};
-
-/** The top row (created on first use). Kept in editor views, like its groups. */
-const getTopRow = () => {
-  if (!topRowCMP) {
-    topRowCMP = getHUDRootCMP().add({
-      class: [styles.onScreenTopRow, 'onScreenTopRow', KEEP_IN_VIEWS_CLASS],
-      // On each of the tools' roots: the debugger's theme and density (p806 D8)
-      ...getDebuggerRootProps(),
-    });
-  }
-  return topRowCMP;
-};
-
-/** The top left row (created on first use). Kept in editor views, like its groups. */
-const getTopLeftRow = () => {
-  if (!topLeftRowCMP) {
-    topLeftRowCMP = getHUDRootCMP().add({
-      class: [styles.onScreenTopLeftRow, 'onScreenTopLeftRow', KEEP_IN_VIEWS_CLASS],
-      ...getDebuggerRootProps(),
-    });
-  }
-  return topLeftRowCMP;
-};
-
-// VIEW TOOLS
-// One button per view (Views.ts): the Runtime view first, then the editor views. Debug
-// environment only (never prod test mode), and only when an editor view is registered.
-
-/** Switches to a view and shows a toast of it (a view tools button). */
-const switchViewWithToast = async (id: string) => {
-  if (id === getActiveViewId()) return;
-  if (!(await setActiveView(id))) return;
-  const view = id === RUNTIME_VIEW_ID ? RUNTIME_VIEW_BUTTON : getViews().find((v) => v.id === id);
-  if (view) addDebugToast({ title: view.title, icon: getSvgIcon(view.icon) });
-};
-
-const viewTools = () => {
-  if (viewToolsCMP) viewToolsCMP.remove();
-  viewToolsCMP = null;
-
-  if (!IS_DEBUG_ENV || IS_PROD_TEST_MODE) return;
-  const editorViews = getViews();
-  if (!editorViews.length) return;
-
-  // After the undo / redo tools in the top left row
-  viewToolsCMP = CMP({ class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'viewTools'] });
-
-  const activeId = getActiveViewId();
-  const buttons: { id: string; title: string; icon: SvgIconKey; iconSize?: 'small' }[] = [
-    RUNTIME_VIEW_BUTTON,
-    ...editorViews,
-  ];
-  for (let i = 0; i < buttons.length; i++) {
-    const { id, title, icon, iconSize } = buttons[i];
-    viewToolsCMP.add(
-      CMP({
-        class: [
-          styles.onScreenTool,
-          'onScreenTool',
-          ...(id === activeId ? [styles.active, 'onScreenToolActive'] : []),
-        ],
-        html: () => `<button>${getSvgIcon(icon, iconSize)}</button>`,
-        attr: { title, 'aria-label': title },
-        onClick: (e) => {
-          e.stopPropagation();
-          switchViewWithToast(id);
-        },
-      })
-    );
-  }
-
-  getTopLeftRow().add(viewToolsCMP);
-};
-
-// PLAY TOOLS
-const playTools = () => {
-  if (playToolsCMP) playToolsCMP.remove();
-  playToolsCMP = null;
-
-  // Toggled in the Debug Tools Controls tab ("On-screen tools" folder); read from LS
-  // here because that tab (and its state loading) never runs in prodTest mode itself.
-  if (IS_PROD_TEST_MODE && !getDebugToolsState(true).onScreenTools.showOnScreenToolsInProdTest) {
-    return;
-  }
-
-  playToolsCMP = CMP({ class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'playTools'] });
-
-  const buttonBaseClasses = [styles.onScreenTool, 'onScreenTool'];
-
-  if (IS_PROD_TEST_MODE) {
-    // Stop prod test
-    const stopProdTestBtn = CMP({
-      class: buttonBaseClasses,
-      html: () => `<button>${getSvgIcon('stop')}</button>`,
-      attr: { title: 'Stop production test mode (F5)' },
-      onClick: (e) => {
-        e.stopPropagation();
-        _stopProdTestMode();
-      },
-    });
-    playToolsCMP.add(stopProdTestBtn);
-  } else if (isRuntimeViewActive()) {
-    // Play prod test (Runtime view only: an editor view keeps the master loop and pause)
-    const playProdTestBtn = CMP({
-      class: buttonBaseClasses,
-      html: () => `<button>${getSvgIcon('playFill')}</button>`,
-      attr: { title: 'Play in production test mode (F5)' },
-      onClick: (e) => {
-        e.stopPropagation();
-        _playInProdTestMode();
-      },
-    });
-    playToolsCMP.add(playProdTestBtn);
-  }
-
-  // App loop button
-  const loopState = getReadOnlyLoopState();
-  const mainLoopBtn = CMP({
-    class: [
-      ...buttonBaseClasses,
-      ...(loopState.masterPlay ? [styles.active, 'onScreenToolActive'] : []),
-    ],
-    html: () => `<button>${getSvgIcon('infinity')}</button>`,
-    attr: {
-      title: `Play main loop (Shift+F7, currently ${loopState.masterPlay ? 'playing' : 'not playing'})`,
-    },
-    onClick: (e) => {
-      e.stopPropagation();
-      toggleMainPlay();
-      _updateOnScreenTools('PLAY');
-    },
-  });
-  playToolsCMP.add(mainLoopBtn);
-
-  // Pauses the active view: the app loop in the Runtime view, an editor view's own play flag
-  // (its `update`) in an editor view
-  const isPlaying = isViewPlaying();
-  const pausedTarget = getActiveView() ? 'view' : 'app loop';
-  const pauseBtn = CMP({
-    class: [...buttonBaseClasses, ...(!isPlaying ? [styles.active, 'onScreenToolActive'] : [])],
-    html: () => `<button>${getSvgIcon('pause')}</button>`,
-    attr: {
-      title: `Pause ${pausedTarget} (F7, currently ${isPlaying ? 'playing' : 'not playing'})`,
-    },
-    onClick: (e) => {
-      e.stopPropagation();
-      toggleViewPlay();
-      _updateOnScreenTools('PLAY');
-    },
-  });
-  playToolsCMP.add(pauseBtn);
-
-  // Profiler window (loaded in prodTest only when it is enabled there)
-  if (isProfilerAvailable()) {
-    const profilerBtn = CMP({
-      class: [
-        ...buttonBaseClasses,
-        ...(isProfilerWindowOpen() ? [styles.active, 'onScreenToolActive'] : []),
-      ],
-      html: () => `<button>${getSvgIcon('speedometer', 'sm')}</button>`,
-      attr: { title: 'Profiler (F8, open / close)' },
-      onClick: (e) => {
-        e.stopPropagation();
-        // The window's open and close refresh these tools
-        toggleProfilerWindow();
-      },
-    });
-    playToolsCMP.add(profilerBtn);
-  }
-
-  getTopRow().add(playToolsCMP);
-};
-
-// SWITCH TOOLS
-const switchTools = () => {
-  const hudRootCMP = getHUDRootCMP();
-  if (!hudRootCMP) return;
-
-  if (switchToolsCMP) switchToolsCMP.remove();
-  switchToolsCMP = null;
-  dropDowns.clear();
-  // Runtime view only: they act on the scene (an editor view hides its HUD, and the o / p
-  // dropdown shortcuts do nothing there)
-  if (!isRuntimeViewActive()) return;
-
-  switchToolsCMP = CMP({
-    class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'switchTools'],
-    ...getDebuggerRootProps(),
-  });
-
-  const isDebugActive = isDebugCameraActive();
-
-  // Use debug cam button
-  const useDebugCamBtnClasses = [styles.onScreenTool, 'onScreenTool'];
-  if (isDebugActive) useDebugCamBtnClasses.push(styles.active, 'onScreenToolActive');
-
-  const useDebugCamBtn = CMP({
-    class: useDebugCamBtnClasses,
-    html: () => `<button>${getSvgIcon('aspectRatio', 'sm')}</button>`,
-    attr: { title: 'Toggle between debug camera and app camera' },
-    onClick: (e) => {
-      e.stopPropagation();
-      _toggleDebugCameraWithToast();
-    },
-  });
-
-  // Camera dropdown (the o shortcut)
-  const selectCamDropDown = createOnScreenDropDown('CAMERA', {
-    icon: getSvgIcon('camera', 'sm'),
-    title: 'Change camera (O)',
-    placeholder: 'No App Camera',
-    // The app camera is not the one rendering while the debug camera is active
-    labelClass: isDebugActive ? styles.dropDownLabelStruck : undefined,
-    isActive: !isDebugActive,
-    options: () => getAllCamerasAsArray().map((c) => ({ value: c.appId, label: c.name })),
-    value: getMainAppCameraId,
-    onChange: (appId) => {
-      if (appId === getMainAppCameraId() && !isDebugCameraActive()) return;
-      setCurrentCamera(appId);
-      if (isDebugCameraActive()) toggleDebugCamera(getECSWorld(), false);
-      _updateOnScreenTools('SWITCH');
-      showActiveCameraToast();
-    },
-  });
-
-  // Scene dropdown (the p shortcut)
-  const selectSceneDropDown = createOnScreenDropDown('SCENE', {
-    icon: getSvgIcon('easel', 'sm'),
-    title: 'Change scene (P)',
-    placeholder: 'No scene',
-    options: getSceneOptions,
-    value: getCurrentSceneId,
-    onChange: loadSceneFromTools,
-  });
-
-  // Light helpers toggle
-  const toggleLightHelpersBtnClasses = [styles.onScreenTool, 'onScreenTool'];
-  if (isAnyLightHelperVisible()) {
-    toggleLightHelpersBtnClasses.push(styles.active, 'onScreenToolActive');
-  }
-  const toggleLightHelpersBtn = CMP({
-    class: toggleLightHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('lamp', 'sm')}</button>`,
-    attr: { title: 'Hide / show all light helpers' },
-    onClick: (e) => {
-      e.stopPropagation();
-      toggleAllLightHelpers();
-      _updateOnScreenTools('SWITCH');
-    },
-  });
-
-  // Camera helpers toggle
-  const toggleCameraHelpersBtnClasses = [styles.onScreenTool, 'onScreenTool'];
-  if (isAnyCameraHelperVisible()) {
-    toggleCameraHelpersBtnClasses.push(styles.active, 'onScreenToolActive');
-  }
-  const toggleCameraHelpersBtn = CMP({
-    class: toggleCameraHelpersBtnClasses,
-    html: () => `<button>${getSvgIcon('cameraReels', 'sm')}</button>`,
-    attr: { title: 'Hide / show all camera helpers' },
-    onClick: (e) => {
-      e.stopPropagation();
-      toggleAllCameraHelpers();
-      _updateOnScreenTools('SWITCH');
-    },
-  });
-
-  // Physics wireframes master visibility toggle. A display-only filter over whatever
-  // per-entity wireframes are already switched on (see _dbg__PhysicsDebugDraw.ts) — it
-  // never adds/removes any entity's own DEBUG_PHYSICS_WIREFRAME toggle.
-  const physicsState = getPhysicsState();
-  const togglePhysicsHelpersBtn = CMP({
-    class: [
-      styles.onScreenTool,
-      'onScreenTool',
-      ...(useDebug(physicsDebugDrawRef)?.isWireframeMasterVisible() ?? true
-        ? [styles.active, 'onScreenToolActive']
-        : []),
-    ],
-    html: () => `<button>${getSvgIcon('rocket', 'sm')}</button>`,
-    attr: { title: 'Hide / show all physics wireframes' },
-    onClick: (e) => {
-      e.stopPropagation();
-      useDebug(physicsDebugDrawRef)?.toggleWireframeMasterVisible();
-      _updateOnScreenTools('SWITCH');
-    },
-  });
-
-  switchToolsCMP.add(useDebugCamBtn);
-  switchToolsCMP.add(selectCamDropDown);
-  switchToolsCMP.add(selectSceneDropDown);
-  switchToolsCMP.add(toggleLightHelpersBtn);
-  switchToolsCMP.add(toggleCameraHelpersBtn);
-  if (physicsState.enabled) switchToolsCMP.add(togglePhysicsHelpersBtn);
-
-  hudRootCMP.add(switchToolsCMP);
-};
-
-// ABOUT AND UNDO / REDO TOOLS
-// The About Ækasha button, then undo and redo. Debug environment only (never prod test mode, which has no debugger to make edits with) —
-// the IS_PROD_TEST_MODE early returns in _InitOnScreenTools/_updateOnScreenTools keep it out.
-// The undo/redo module refreshes this group itself (updateOnScreenTools('UNDO')) whenever
-// the history changes.
-const undoRedoTools = () => {
-  if (!getHUDRootCMP()) return;
-
-  if (undoRedoToolsCMP) undoRedoToolsCMP.remove();
-  // First in the top left row, also when rebuilt after the view tools
-  undoRedoToolsCMP = CMP({
-    class: [styles.onScreenToolGroup, 'onScreenToolGroup', 'undoRedoTools'],
-    prepend: true,
-  });
-
-  const aboutBtn = CMP({
-    class: [styles.onScreenTool, styles.aboutTool, 'onScreenTool'],
-    html: () => `<button>${getSvgIcon('aekasha')}</button>`,
-    attr: { title: 'About Ækasha' },
-    onClick: (e) => {
-      e.stopPropagation();
-      openAboutDialog();
-    },
-  });
-  undoRedoToolsCMP.add(aboutBtn);
-
-  const undoBtn = CMP({
-    class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canUndo() ? ' disabled' : ''}>${getSvgIcon('undo', 'sm')}</button>`,
-    attr: { title: 'Undo (Ctrl+Z / ⌘Z)' },
-    onClick: (e) => {
-      e.stopPropagation();
-      undoLastAction();
-    },
-  });
-  undoRedoToolsCMP.add(undoBtn);
-
-  const redoBtn = CMP({
-    class: [styles.onScreenTool, 'onScreenTool'],
-    html: () => `<button${!canRedo() ? ' disabled' : ''}>${getSvgIcon('redo', 'sm')}</button>`,
-    attr: { title: 'Redo (Ctrl+Shift+Z / ⇧⌘Z)' },
-    onClick: (e) => {
-      e.stopPropagation();
-      redoLastAction();
-    },
-  });
-  undoRedoToolsCMP.add(redoBtn);
-
-  getTopLeftRow().add(undoRedoToolsCMP);
-};
-
+/** Builds (or refreshes) every on-screen tools group: the main loop's debug start. */
 export const _InitOnScreenTools = () => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
-
   if (IS_PROD_TEST_MODE) {
-    playTools();
+    syncGroup('PLAY');
     return;
   }
-
-  viewTools();
-  playTools();
-  switchTools();
-  undoRedoTools();
+  syncGroup('UNDO');
+  syncGroup('VIEW');
+  syncGroup('PLAY');
+  syncGroup('SWITCH');
 };
 
-const updateTool = (toolType: ToolTypes) => {
-  switch (toolType) {
-    case 'PLAY':
-      playTools();
-      break;
-    case 'SWITCH':
-      switchTools();
-      break;
-    case 'UNDO':
-      undoRedoTools();
-      break;
-    case 'VIEW':
-      viewTools();
-      break;
-  }
-};
-
+/** Refreshes the given groups (all of them by default) after a state they show changed. */
 export const _updateOnScreenTools = (tools?: ToolTypes[] | ToolTypes) => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
-
-  if (IS_PROD_TEST_MODE) {
-    playTools();
-    return;
-  }
-
-  // Updates all tools
-  if (!tools) {
+  if (IS_PROD_TEST_MODE || !tools) {
     _InitOnScreenTools();
     return;
   }
-
   if (Array.isArray(tools)) {
-    // Update an array of selected tools
-    for (let i = 0; i < tools.length; i++) {
-      updateTool(tools[i]);
-    }
+    for (let i = 0; i < tools.length; i++) syncGroup(tools[i]);
     return;
   }
-
-  // Update one tool
-  updateTool(tools);
+  syncGroup(tools);
 };
+
+/**
+ * Disables every on-screen tool during a scene load, or enables them again (p806 D7, closing
+ * `docs/issues/on-screen-tools-during-scene-load.md`): each control is `aria-disabled` (still
+ * focusable, so the focus stays where it is) with the tooltip "Loading the scene…", its clicks are
+ * ignored, and an open drop-down closes. The debug keys stop by themselves (their maps' context).
+ * `_disableDebugger`'s.
+ */
+export const _setOnScreenToolsDisabled = (disable: boolean) => {
+  if (!IS_DEBUG_ENV || isLoading === disable) return;
+  isLoading = disable;
+  for (const toolbar of toolbars.values()) toolbar.refresh(disable);
+};
+
+/**
+ * The on-screen tools' groups and rows, for the tests.
+ * @internal
+ */
+export const _getOnScreenToolsTestInfo = () => ({
+  rows: [topLeftRowCMP, topRowCMP, bottomRowCMP].filter((row): row is CMPHandle => row !== null),
+  isDisabled: isLoading,
+});

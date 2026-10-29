@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { initEnvironment } from '../config/Config';
 import { lwarn } from '../../utils/Logger';
 import { playActionRecording, recordActions } from './ActionRecording';
 import {
@@ -42,11 +43,17 @@ vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
 
 const held = new Set<string>();
 
-const keyEvent = (
-  type: 'keydown' | 'keyup',
-  key: string,
-  mods: { ctrl?: boolean; meta?: boolean; repeat?: boolean } = {}
-) => {
+type KeyMods = {
+  ctrl?: boolean;
+  meta?: boolean;
+  repeat?: boolean;
+  /** The focus is on a control in a debugger root (p806 D12): the target's `closest` finds one */
+  onDebugger?: boolean;
+};
+
+const DEBUGGER_CONTROL = { closest: (selector: string) => (selector ? {} : null) };
+
+const keyEvent = (type: 'keydown' | 'keyup', key: string, mods: KeyMods = {}) => {
   if (type === 'keydown') held.add(key);
   else held.delete(key);
   const e = Object.assign(new Event(type, { cancelable: true }), {
@@ -57,12 +64,12 @@ const keyEvent = (
     altKey: false,
     metaKey: !!mods.meta || held.has('Meta'),
   });
+  if (mods.onDebugger) Object.defineProperty(e, 'target', { value: DEBUGGER_CONTROL });
   dom.win.dispatchEvent(e);
   return e;
 };
-const down = (key: string, mods?: { ctrl?: boolean; meta?: boolean; repeat?: boolean }) =>
-  keyEvent('keydown', key, mods);
-const up = (key: string) => keyEvent('keyup', key);
+const down = (key: string, mods?: KeyMods) => keyEvent('keydown', key, mods);
+const up = (key: string, mods?: KeyMods) => keyEvent('keyup', key, mods);
 
 /** A mouse event whose target is the canvas (dispatched on window, where the listeners are). */
 const mouseEvent = (type: string, fields: object) => {
@@ -370,6 +377,77 @@ describe('keyboard bindings', () => {
     pollActionsFrame();
     sampleActions(0);
     expect(map.read('jump').isDown).toBe(false);
+  });
+});
+
+describe("a debugger control's keys (p806 D12)", () => {
+  const createHelpMap = () =>
+    track(
+      createActionMap({
+        id: 'debug',
+        context: 'DEBUG',
+        actions: { help: { type: 'BUTTON' } },
+        bindings: { help: [{ device: 'KEYBOARD', keys: ['h'] }] },
+      })
+    );
+
+  beforeEach(() =>
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } })
+  );
+  afterEach(() => initEnvironment({ search: '', env: {} }));
+
+  it('are left alone by an app map: not counted, not prevented, not called back', () => {
+    const map = createPlayerMap();
+    const pressed = vi.fn();
+    map.onPressed('jump', pressed);
+    const e = down('Enter', { onDebugger: true });
+    expect(e.defaultPrevented).toBe(false);
+    expect(isKeyEventInActiveMaps(e as unknown as KeyboardEvent, 'other')).toBe(false);
+    sampleActions(0);
+    expect(map.read('jump')).toMatchObject({ isDown: false, pressedCount: 0 });
+    up('Enter', { onDebugger: true });
+    sampleActions(1);
+    expect(map.read('jump')).toMatchObject({ isDown: false, releasedCount: 0 });
+    expect(pressed).not.toHaveBeenCalled();
+  });
+
+  it('reach a DEBUG map (the debug keys work from a focused control)', () => {
+    const debug = createHelpMap();
+    const help = vi.fn();
+    debug.onPressed('help', help);
+    down('h', { onDebugger: true });
+    expect(help).toHaveBeenCalledTimes(1);
+  });
+
+  it('stay the debugger’s until their keyup, the other keys the app’s', () => {
+    const map = createPlayerMap();
+    down('Enter', { onDebugger: true });
+    // Another device event re-reads the maps: Enter still isn't down for them
+    down('w');
+    sampleActions(0);
+    expect(map.read('jump')).toMatchObject({ isDown: false, pressedCount: 0 });
+    expect(map.read('move').y).toBe(1);
+    // Released after the focus left the control: no release, and the next press is the app's
+    up('Enter');
+    down('Enter');
+    sampleActions(1);
+    expect(map.read('jump')).toMatchObject({ isDown: true, pressedCount: 1, releasedCount: 0 });
+  });
+
+  it('keep a key the app holds when its repeats go to a control (clicked meanwhile)', () => {
+    const map = createPlayerMap();
+    down('w');
+    down('w', { repeat: true, onDebugger: true });
+    sampleActions(0);
+    expect(map.read('move').y).toBe(1);
+  });
+
+  it('are the app’s like any other outside the debug env', () => {
+    initEnvironment({ search: '', env: {} });
+    const map = createPlayerMap();
+    expect(down('Enter', { onDebugger: true }).defaultPrevented).toBe(true);
+    sampleActions(0);
+    expect(map.read('jump').pressedCount).toBe(1);
   });
 });
 

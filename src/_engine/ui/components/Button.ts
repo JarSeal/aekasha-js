@@ -45,6 +45,11 @@ export type ButtonProps = {
   onUnheldClick?: (e: Event) => void;
   /** Disables it (default false). */
   disabled?: boolean;
+  /** Keeps it focusable while disabled (default false): `aria-disabled` instead of `disabled`, so
+   * the keys still reach it and its tooltip (the reason `setDisabled` gives) can be read, while its
+   * clicks and holds are ignored. A toolbar's buttons: the arrows still stop on a disabled one (the
+   * APG's toolbar), and one disabled with the focus on it keeps it. */
+  focusableWhenDisabled?: boolean;
   /** Its `type` in a form (default 'button'). */
   type?: 'button' | 'submit' | 'reset';
   /** Its action: the click, or the press that was held long enough with `holdToConfirmMs`. Not
@@ -65,8 +70,11 @@ export type Button = {
   cmp: CMPHandle;
   /** Changes its text (with `iconOnly`, its `aria-label` and tooltip). */
   setLabel: (label: string) => void;
-  /** Disables or enables it. */
-  setDisabled: (isDisabled: boolean) => void;
+  /** Disables or enables it. A `reason` (eg. 'Loading the scene…') is its tooltip while it's
+   * disabled; the tooltip it had comes back when it's enabled. */
+  setDisabled: (isDisabled: boolean, reason?: string) => void;
+  /** Whether it's disabled */
+  isDisabled: () => boolean;
   /** Shows it loading (its width kept, the text faded into a spinner, `aria-busy`, clicks
    * ignored), or done. */
   setLoading: (isLoading: boolean) => void;
@@ -222,8 +230,9 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
 /**
  * Creates a button (p803 D10): a native `<button>` (`type="button"`) with a label, and optionally
  * an icon, a shortcut's hint, a tooltip, a toggle state, a loading state or a hold to confirm.
- * - Parts: `.aekButton` (`data-variant`, `data-size`, `data-icon-only`; the states `disabled`,
- *   `aria-pressed`, `aria-busy`, `data-holding="filling" | "confirmed"`), `.aekButton__icon`,
+ * - Parts: `.aekButton` (`data-variant`, `data-size`, `data-icon-only`; the states `disabled` or
+ *   `aria-disabled`, `aria-pressed`, `aria-busy`, `data-holding="filling" | "confirmed"`),
+ *   `.aekButton__icon`,
  *   `.aekButton__label`, `.aekButton__kbd`, `.aekButton__hold` (the hold's fill). The loading
  *   spinner is the button's `::after`.
  * - Custom properties (read on any ancestor, the token as the fallback): `--aek-button-radius`,
@@ -234,7 +243,8 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
  *   act on it: it calls `onUnheldClick`, where the app confirms another way.
  * - ARIA: a toggle has `aria-pressed`; `iconOnly` names it by `aria-label`; `kbd` sets
  *   `aria-keyshortcuts` from the hint's keys (the hint is hidden from assistive tech); loading
- *   sets `aria-busy`; a hold to confirm is described "Hold to confirm".
+ *   sets `aria-busy`; a hold to confirm is described "Hold to confirm"; `focusableWhenDisabled`
+ *   disables it with `aria-disabled`, its tooltip the reason why.
  * @example
  * ```ts
  * const save = createButton({
@@ -251,12 +261,17 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
  * ```
  */
 export const createButton = (props: ButtonProps): Button => {
-  const { iconOnly = false, holdToConfirmMs: holdMs = 0 } = props;
+  const { iconOnly = false, holdToConfirmMs: holdMs = 0, focusableWhenDisabled = false } = props;
   const isToggle = props.pressed !== undefined;
   let pressed = Boolean(props.pressed);
   let isLoading = false;
+  let isDisabled = Boolean(props.disabled);
+  /** Its tooltip while it's disabled */
+  let disabledReason: string | undefined;
   let label = props.label;
   let tooltip: Tooltip | null = null;
+  /** Whether it acts on a press (a natively disabled button gets no click) */
+  const canAct = () => !isLoading && !isDisabled;
 
   const act = (e: Event) => {
     if (isToggle) {
@@ -267,24 +282,17 @@ export const createButton = (props: ButtonProps): Button => {
     props.onClick?.(e);
   };
 
-  const hold = holdMs
-    ? createHoldToConfirm(
-        () => elem,
-        holdMs,
-        () => !isLoading && !elem.hasAttribute('disabled'),
-        act
-      )
-    : null;
+  const hold = holdMs ? createHoldToConfirm(() => elem, holdMs, canAct, act) : null;
   const clearHold = () => hold?.clear();
 
   const onClick = (e: Event) => {
     // A hold acts from its timer: the click after the release does nothing, and one with no press
     // (assistive tech's) is the app's to confirm
     if (hold) {
-      if (!hold.takePress() && !isLoading) props.onUnheldClick?.(e);
+      if (!hold.takePress() && canAct()) props.onUnheldClick?.(e);
       return;
     }
-    if (!isLoading) act(e);
+    if (canAct()) act(e);
   };
   let stopHint: ((removeHint: boolean) => void) | null = null;
 
@@ -300,7 +308,11 @@ export const createButton = (props: ButtonProps): Button => {
       'data-size': props.size ?? 'md',
       ...(iconOnly ? { 'data-icon-only': '', 'aria-label': label } : {}),
       ...(isToggle ? { 'aria-pressed': String(pressed) } : {}),
-      ...(props.disabled ? { disabled: '' } : {}),
+      ...(isDisabled
+        ? focusableWhenDisabled
+          ? { 'aria-disabled': 'true' }
+          : { disabled: '' }
+        : {}),
     },
     listeners: [{ type: 'click', fn: onClick }, ...(hold?.listeners ?? [])],
     onRemoveCmp: () => {
@@ -325,8 +337,21 @@ export const createButton = (props: ButtonProps): Button => {
     });
   }
 
-  const tooltipText = props.tooltip ?? (iconOnly ? label : undefined);
-  if (tooltipText !== undefined) tooltip = createTooltip({ anchor: elem, text: tooltipText });
+  /** Shows the tooltip its state asks for: the disabled reason, else `tooltip`, else the label of
+   * an icon-only button; removed when there's none */
+  const syncTooltip = () => {
+    const text =
+      (isDisabled ? disabledReason : undefined) ?? props.tooltip ?? (iconOnly ? label : undefined);
+    if (text === undefined) {
+      tooltip?.cmp.remove();
+      tooltip = null;
+    } else if (tooltip) {
+      tooltip.setText(text);
+    } else {
+      tooltip = createTooltip({ anchor: elem, text });
+    }
+  };
+  syncTooltip();
 
   return {
     cmp,
@@ -335,16 +360,21 @@ export const createButton = (props: ButtonProps): Button => {
       labelElem.textContent = text;
       if (!iconOnly) return;
       elem.setAttribute('aria-label', text);
-      if (props.tooltip === undefined) tooltip?.setText(text);
+      syncTooltip();
     },
-    setDisabled: (isDisabled) => {
-      if (isDisabled) {
-        elem.setAttribute('disabled', '');
+    setDisabled: (isOn, reason) => {
+      isDisabled = isOn;
+      disabledReason = isOn ? reason : undefined;
+      const attr = focusableWhenDisabled ? 'aria-disabled' : 'disabled';
+      if (isOn) {
+        elem.setAttribute(attr, focusableWhenDisabled ? 'true' : '');
         clearHold();
       } else {
-        elem.removeAttribute('disabled');
+        elem.removeAttribute(attr);
       }
+      syncTooltip();
     },
+    isDisabled: () => isDisabled,
     setLoading: (isOn) => {
       isLoading = isOn;
       if (isOn) {

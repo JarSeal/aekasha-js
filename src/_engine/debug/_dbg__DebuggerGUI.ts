@@ -16,6 +16,7 @@ import {
   type DrawerShellTab,
 } from './_dbg__DrawerShell';
 import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
+import { setOnScreenToolsDisabled } from './OnScreenTools';
 import { doesSceneExist, getCurrentSceneId, registerOnAllSceneExits } from '../kernel/scene/Scene';
 // The kit's fonts (p801 D8): the full page has them already (InitEngine), a debug embed gets them here
 import '../ui/fonts/fonts.css';
@@ -388,11 +389,11 @@ export const _updateDebuggerSceneTitle = (title: string) => {
   _createDebugGui(guiOpts);
 };
 
-/** During a scene load (p806 D6): the drawer is `inert`, `aria-busy` and dimmed; the scene
- * loader's overlay is the loading signal. */
+/** During a scene load (p806 D6, D7): the drawer is `inert`, `aria-busy` and dimmed, and every
+ * on-screen tool `aria-disabled`; the scene loader's overlay is the loading signal. */
 export const _disableDebugger = (disable: boolean) => {
   if (!IS_DEBUG_ENV) return;
   debuggerDisabled = disable;
-  // TODO: the on-screen tools stay clickable (docs/issues/on-screen-tools-during-scene-load.md)
   shell?.setDisabled(disable);
+  setOnScreenToolsDisabled(disable);
 };

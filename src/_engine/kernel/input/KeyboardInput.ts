@@ -1,8 +1,9 @@
-import { IS_DEBUG_ENV } from '../config/Config';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import { onVisibilityChange, onWindowBlur, setHeldKeyPoller } from '../loop/MainLoop';
 import { onRendererCreated } from '../render/Renderer';
 import { getCurrentSceneId } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
+import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
 import {
   areAllInputsEnabled,
   areAppInputsEnabled,
@@ -111,6 +112,9 @@ const heldRawKeys = new Set<string>();
 const heldLowerKeys = new Set<string>();
 /** Written in place on each key event */
 const heldModifiers: Modifiers = {};
+/** The held keys (lowercased) whose keydown went to a debugger control (p806 D12): the app's
+ * input doesn't see them until their keyup */
+const debuggerHeldLowerKeys = new Set<string>();
 
 let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 let keyupListener: ((e: KeyboardEvent) => void) | null = null;
@@ -187,6 +191,30 @@ const readKeyEvent = (e: KeyboardEvent) => {
   readEventModifiers.meta = e.metaKey;
 };
 
+// The last key event tested for a debugger control, once per event however many maps ask
+let debuggerTestedEvent: KeyboardEvent | null = null;
+let isDebuggerTestedEventOnControl = false;
+
+/**
+ * Whether a key event belongs to a debugger control (p806 D12): its keydown went to an element in
+ * a debugger root (`DEBUGGER_ROOT_ATTR`: the focus was on the drawer, a debug window, the on-screen
+ * tools), or, for a keyup, the keydown of its key did. The app's input (the action maps outside
+ * the `DEBUG` context, the key bindings that aren't debug keys) leaves such a key alone: it
+ * neither counts it nor prevents its default, so Enter and Space click the focused button. Always
+ * false outside the debug env and prod test mode (no debugger there; a production build folds it).
+ * @internal
+ */
+export const isKeyEventOnDebugger = (e: KeyboardEvent): boolean => {
+  if (!(IS_DEBUG_ENV || IS_PROD_TEST_MODE)) return false;
+  if (e === debuggerTestedEvent) return isDebuggerTestedEventOnControl;
+  debuggerTestedEvent = e;
+  const target = e.target as Partial<Element> | null;
+  isDebuggerTestedEventOnControl =
+    (typeof target?.closest === 'function' && target.closest(`[${DEBUGGER_ROOT_ATTR}]`) !== null) ||
+    (e.type === 'keyup' && debuggerHeldLowerKeys.has(e.key.toLowerCase()));
+  return isDebuggerTestedEventOnControl;
+};
+
 /** Chord match against a live DOM event: key (case rule per binding) plus an exact modifier
  * match (a plain `{ key: 'h' }` requires no modifiers held) unless ignoreModifiers is set. */
 const eventMatchesChord = (
@@ -205,10 +233,12 @@ const eventMatchesChord = (
 const chordIsHeld = (
   c: CompiledKeyChord,
   caseInsensitive: boolean,
-  ignoreModifiers?: boolean
+  ignoreModifiers?: boolean,
+  isAppRead = false
 ): boolean => {
   const keyHeld = caseInsensitive ? heldLowerKeys.has(c.lowerKey) : heldRawKeys.has(c.chord.key);
-  return keyHeld && (!!ignoreModifiers || modifiersMatch(c, heldModifiers));
+  if (!keyHeld || (isAppRead && debuggerHeldLowerKeys.has(c.lowerKey))) return false;
+  return !!ignoreModifiers || modifiersMatch(c, heldModifiers);
 };
 
 /**
@@ -247,6 +277,7 @@ const updateHeldModifiers = (e: KeyboardEvent) => {
 const clearHeldKeys = () => {
   heldRawKeys.clear();
   heldLowerKeys.clear();
+  debuggerHeldLowerKeys.clear();
   heldModifiers.ctrl = false;
   heldModifiers.shift = false;
   heldModifiers.alt = false;
@@ -291,13 +322,15 @@ const isEventTakenByOther = (
   return false;
 };
 
-const dispatchKeyEvent = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN') => {
+const dispatchKeyEvent = (e: KeyboardEvent, type: 'KEY_UP' | 'KEY_DOWN', isOnDebugger: boolean) => {
   if (!areAllInputsEnabled()) return;
   const timeNow = performance.now();
   // A binding's callback may create or delete bindings: walk this event's list
   const list = entries;
   for (let i = 0; i < list.length; i++) {
     const entry = list[i];
+    // A debugger control's key is the debug keys' only
+    if (isOnDebugger && !entry.binding.isDebugKey) continue;
     if (!bindingMatchesEvent(entry, type, e)) continue;
     const binding = entry.binding as KeyUpDownBinding;
     if (binding.yieldToOtherBindings && isEventTakenByOther(entry, type, e)) continue;
@@ -309,26 +342,33 @@ const initKeyListeners = () => {
   if (keydownListener) return;
 
   keydownListener = (e: KeyboardEvent) => {
+    const isOnDebugger = isKeyEventOnDebugger(e);
     if (!e.repeat) {
+      const lowerKey = e.key.toLowerCase();
       heldRawKeys.add(e.key);
-      heldLowerKeys.add(e.key.toLowerCase());
+      heldLowerKeys.add(lowerKey);
+      if (isOnDebugger) debuggerHeldLowerKeys.add(lowerKey);
+      else debuggerHeldLowerKeys.delete(lowerKey);
     }
     updateHeldModifiers(e);
     keyActionListener?.(e);
-    dispatchKeyEvent(e, 'KEY_DOWN');
+    dispatchKeyEvent(e, 'KEY_DOWN', isOnDebugger);
   };
 
   keyupListener = (e: KeyboardEvent) => {
     // A letter's e.key follows the Shift state at the time of each event, so one pressed with
     // Shift down ('W') and released after Shift ('w') must be cleared in either case.
     const lowerKey = e.key.toLowerCase();
+    // Read before the key is let go: a keyup is a debugger control's when its keydown was
+    const isOnDebugger = isKeyEventOnDebugger(e);
     heldRawKeys.delete(e.key);
     heldRawKeys.delete(lowerKey);
     heldRawKeys.delete(e.key.toUpperCase());
     heldLowerKeys.delete(lowerKey);
     updateHeldModifiers(e);
     keyActionListener?.(e);
-    dispatchKeyEvent(e, 'KEY_UP');
+    debuggerHeldLowerKeys.delete(lowerKey);
+    dispatchKeyEvent(e, 'KEY_UP', isOnDebugger);
   };
 
   addInputListenerRemover(removeKeyListeners);
@@ -496,7 +536,8 @@ export const pollHeldKeyBindings = (delta: number): void => {
     if (isBindingDisabled(binding) || !isSceneMatch(binding.sceneId)) continue;
     const caseInsensitive = binding.caseInsensitive ?? true;
     for (let j = 0; j < chords.length; j++) {
-      if (chordIsHeld(chords[j], caseInsensitive, binding.ignoreModifiers)) {
+      // The app's: a key held on a debugger control isn't
+      if (chordIsHeld(chords[j], caseInsensitive, binding.ignoreModifiers, true)) {
         binding.fn(delta);
         break;
       }
@@ -518,12 +559,15 @@ export const setKeyActionListener = (fn: ((e: KeyboardEvent | null) => void) | n
 /**
  * Whether a chord is held now, by the bindings' rules (the action layer's keyboard reads).
  * @internal
+ * @param isAppRead the app's read (a map outside the `DEBUG` context): a key whose keydown went to
+ * a debugger control isn't held for it ({@link isKeyEventOnDebugger})
  */
 export const isKeyChordHeld = (
   chord: CompiledKeyChord,
   caseInsensitive: boolean,
-  ignoreModifiers: boolean
-): boolean => chordIsHeld(chord, caseInsensitive, ignoreModifiers);
+  ignoreModifiers: boolean,
+  isAppRead: boolean
+): boolean => chordIsHeld(chord, caseInsensitive, ignoreModifiers, isAppRead);
 
 /**
  * Whether a key event matches a chord, by the bindings' rules.

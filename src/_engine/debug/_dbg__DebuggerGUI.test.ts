@@ -29,6 +29,12 @@ vi.mock(import('../ui/core/HUD'), async (importOriginal) => ({
 vi.mock(import('../kernel/scene/debug/_dbg__DebuggerSceneLoader'), () => ({
   createDebuggerSceneLoader: vi.fn(),
 }));
+// The on-screen tools' own test is _dbg__OnScreenTools.test.ts: here, that a load reaches them
+const onScreen = vi.hoisted(() => ({ setDisabled: vi.fn() }));
+vi.mock(import('./OnScreenTools'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  setOnScreenToolsDisabled: onScreen.setDisabled,
+}));
 vi.mock(import('../utils/Logger'), async (importOriginal) => ({
   ...(await importOriginal()),
   lerror: vi.fn(),
@@ -257,15 +263,17 @@ describe('debug drawer (p618 §1.4, p806 D6)', () => {
     expect(_isDebuggerTabOpen('working')).toBe(true);
   });
 
-  it('is inert, busy and dimmed during a scene load (D6)', () => {
+  it('is inert, busy and dimmed during a scene load, with the on-screen tools disabled (D6, D7)', () => {
     _disableDebugger(true);
     const drawer = getDrawerElem();
     expect(drawer?.hasAttribute('inert')).toBe(true);
     expect(drawer?.getAttribute('aria-busy')).toBe('true');
     expect(drawer?.hasAttribute('data-disabled')).toBe(true);
+    expect(onScreen.setDisabled).toHaveBeenLastCalledWith(true);
     _disableDebugger(false);
     expect(drawer?.hasAttribute('inert')).toBe(false);
     expect(drawer?.hasAttribute('aria-busy')).toBe(false);
+    expect(onScreen.setDisabled).toHaveBeenLastCalledWith(false);
   });
 
   // B3: a throwing tab made every drawer build, and with it setCurrentScene, throw

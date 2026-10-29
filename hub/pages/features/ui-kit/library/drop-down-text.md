@@ -1,6 +1,6 @@
 ## Drop-down
 
-`createDropDown` returns `{ cmp, open, close, toggle, isOpen, refresh }`; its `cmp` goes where the
+`createDropDown` returns `{ cmp, open, close, toggle, isOpen, refresh, setDisabled }`; its `cmp` goes where the
 drop-down goes, under a CMP that's in the page (here, a window). The keyboard, the focus and the
 ARIA roles are its own: the arrows and Home / End move, Enter or Space picks, Escape, Tab or a
 click outside closes it without a change, and none of its keys reaches a key binding. A pick,
@@ -13,7 +13,8 @@ and the next the dialog.
   match, the arrows move through what's left, Enter picks, and Home, End and Space are the
   field's), and a value changed elsewhere, which the trigger shows after `refresh()`. The trigger
   re-reads `value` after `onChange` returns, so a pick shows at once; each pick here also adds a
-  toast.
+  toast. The last one is disabled but focusable (`focusableWhenDisabled`, a toolbar's): its
+  trigger `aria-disabled`, still a tab stop, its reason (`setDisabled(true, reason)`) the title.
 
 The list opens in the browser's top layer, so the window doesn't clip it: on its side when it fits
 there (else the other), inside the HUD's bounds, and as tall as the space left. It's at least as

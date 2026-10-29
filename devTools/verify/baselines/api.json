@@ -139,6 +139,7 @@
       "OnScreenDropDownKey": "TypeAlias",
       "playInProdTestMode": "Function",
       "registerOnScreenTools": "Function",
+      "setOnScreenToolsDisabled": "Function",
       "stopProdTestMode": "Function",
       "toggleDebugCameraWithToast": "Function",
       "toggleOnScreenDropDown": "Function",
@@ -2350,6 +2351,7 @@
       "getKeyChordLabel": "Function",
       "isChordHeld": "Function",
       "isKeyChordHeld": "Function",
+      "isKeyEventOnDebugger": "Function",
       "isKeyEventTakenByBindings": "Function",
       "KeyBinding": "TypeAlias",
       "KeyBindingBase": "TypeAlias",
@@ -2820,6 +2822,7 @@
     },
     "src/_engine/ui/components/ButtonGroup.ts": {
       "ButtonGroup": "TypeAlias",
+      "ButtonGroupItem": "TypeAlias",
       "ButtonGroupProps": "TypeAlias",
       "createButtonGroup": "Function"
     },
@@ -3333,6 +3336,7 @@
       "DropDown": "TypeAlias",
       "DropDownOption": "TypeAlias",
       "DropDownProps": "TypeAlias",
+      "getDropDownTrigger": "Function",
       "TDropDown": "TypeAlias"
     },
     "src/_engine/ui/forms/Field.ts": {
@@ -4812,6 +4816,7 @@
       "BuiltInIconName",
       "Button",
       "ButtonGroup",
+      "ButtonGroupItem",
       "ButtonGroupProps",
       "ButtonProps",
       "CMP",

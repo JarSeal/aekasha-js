@@ -1250,6 +1250,85 @@ Phase 1 verified (2026-10-29):
    key alone on a focused debugger control), closed with the scene runner's character state
    opener pressing Enter again.
 
+   As built (2026-10-29):
+
+   - **The kit:**
+     - `createButtonGroup` gains `toolbar`: the exclusive group's toolbar (one tab stop, the
+       arrows, Home / End) for items that act alone. Its items may be `createDropDown`s
+       (`ButtonGroupItem`, `Button | DropDown`, a type parameter defaulting to `Button`); the
+       trigger takes the focus (`getDropDownTrigger`, `@internal`), and the arrows act only on an
+       item's own element, so an open list keeps its keys.
+     - `createButton` and `createDropDown` gain `focusableWhenDisabled` (`aria-disabled` instead
+       of `disabled`: still a tab stop, the clicks ignored) and a reason on `setDisabled` (the
+       button's tooltip, the trigger's title, while disabled). The button gains `isDisabled`, the
+       drop-down `setDisabled`. A `disabled` toolbar item is skipped by the arrows, an
+       `aria-disabled` one is a stop (the APG's toolbar).
+     - Tests in `Button.test.ts`, `ButtonGroup.test.ts` and `DropDown.test.ts`. The library's
+       boxes: a disabled but focusable button, a viewport toolbar in the button group box (a
+       button, a toggle, a disabled but focusable button, a drop-down) with its keyboard check,
+       and a disabled but focusable drop-down. The core and fields guides and the library texts
+       describe them.
+   - **The tools** (`_dbg__OnScreenTools.ts`, its groups on `_dbg__OnScreenToolbar.ts`):
+     - Four kit toolbars (the view switch `exclusive`) in three debugger roots: the top left row
+       ("Debugger": About, Undo, Redo; then "Views"), the top row ("Play") and a new bottom row
+       (`onScreenBottomRow`, "Scene and camera"), which the switch tools were a root of their
+       own before.
+     - Each tool is a kit ghost icon button (`size: 'lg'`, 30 px in the compact density; the
+       32 px boxes were the old tools'), its label the name, its tooltip the label and the debug
+       key's chord (`getDebugKeyChordLabel`, which now knows the prod test keys). Toggles are
+       `aria-pressed`: the main loop, pause, the profiler, the debug camera, the light and camera
+       helpers, the physics wireframes and the views. Undo and redo are `aria-disabled` while
+       there's nothing to do. The `.active` diamond went: the pressed state is the kit's accent.
+     - A group reads its tools' state through getters, so `updateOnScreenTools(type)` refreshes
+       it in place. Before, every update rebuilt the group, so a key press on a tool dropped the
+       focus. A group is rebuilt only when its tools' keys or labels change (a view switch), and
+       the focus goes to the same tool. A switch `setActiveView` refuses puts the pressed view
+       back.
+     - The camera drop-down's "active" mark went (a drop-down isn't pressed); its label is still
+       struck while the debug camera renders (`data-debug-camera`).
+   - **During a scene load:** `_disableDebugger` calls `setOnScreenToolsDisabled`. Every control
+     is `aria-disabled` with the tooltip (or the drop-down's title) "Loading the scene…", its
+     clicks are ignored, an open drop-down closes, and a refresh meanwhile keeps them so.
+     `docs/issues/on-screen-tools-during-scene-load.md` is fixed.
+   - **A debugger control's keys** (D12): a key whose keydown goes to an element in a debugger
+     root is the debugger's until its keyup (`KeyboardInput.ts`' `isKeyEventOnDebugger`, folded
+     in production).
+     - An action map outside `DEBUG` neither counts it, calls back, prevents its default, reads
+       it held nor makes a debug key yield to it. An app key binding (not `isDebugKey`) doesn't
+       fire, and a `KEY_HELD` one doesn't read it held. The `DEBUG` maps see it as before.
+     - So Enter and Space click a focused debugger button, and the gym's player doesn't jump.
+       The settled question: the action doesn't run either, as the issue proposed.
+     - A press on an on-screen tool doesn't move the focus (the rows prevent the default of a
+       primary `mousedown`), so the app's keys keep working after a click on one; Tab reaches
+       the tools.
+     - Tests in `Actions.test.ts` and `KeyboardInput.test.ts`.
+     - `docs/issues/action-map-keys-on-focused-debugger-controls.md` is fixed. The opener's
+       `clickReason` (and the field) went: it presses Enter.
+     - Found on the way: the issue's premise that typing in a text field doesn't move a player
+       was wrong. A map leaves a text field's key its default but counts it. That's an app's
+       text field, left as it is (the issue file says so).
+   - **The group's background** is `surface` at 80 % (`color-mix`), with a `border` line. By the
+     tokens, the icons are about 8:1 over a white scene in the dark theme and 11:1 over a black
+     one in the light theme. Checked in a scratch script's shots (`.cache/p806/onscreen.mts`,
+     not kept: `testDebugScene` and `lodShowcase`, as they are and over a white and a black
+     backdrop, both themes, the loading state and the keyboard).
+   - **Styles:** `OnScreenTools.module.scss`, `AxesGizmo.module.scss` and `EnvBall.module.scss`
+     are on the tokens. They no longer use `variables.scss` or `--aek-rem`. Their breakpoints
+     moved to `debug/styles/_debugLayout.scss` (`$breakpointXLarge`, `Large`, `Medium`). The
+     gizmo and the ball keep their sizes (`space-1` multiples: 100 / 80 px and 70 / 60 px at the
+     defaults). The viewport stack's offset uses the toggler's real width (24 px, the kit `sm`
+     button's floor, not 30 px).
+   - **The `debugger` configuration:** recorded on purpose (the About opener now presses the
+     on-screen kit button, the character state opener presses Enter), then a plain run: 6 of 6
+     pass, the tab order and the four undo / redo scripts unchanged. Axe, summed over the six
+     scenes, is as section 3 left it (`color-contrast` 10, `target-size` 3: Phases 3-4's).
+   - **Checks:** `yarn test` (2181), both `tsc`, ESLint, `yarn hub:build`, `yarn verify:ui
+     --only button,buttonGroup,dropDown` (re-recorded, then passing), `yarn verify:embed` (7
+     scenarios), `yarn sbp --profile all` (every budget within; first downloads app 384.5, banner
+     287.4 kB gzip). `yarn verify:baselines`: `api.json` records the five additions, and the
+     production bundle's `kernel/input` group grew 0.1 kB gzip. That's the held-keys set and the
+     branches, which the folded debug flag doesn't remove. No debug code in any build.
+
 ### Phase 3: the edit windows
 
 1. **Camera and lights:** `_dbg__CameraGUI.ts` and `_dbg__LightGUI.ts` on grids, and split.

@@ -1,18 +1,19 @@
-@use '../ui/styles/variables.scss';
+@use './styles/debugLayout' as layout;
 
 // AxesGizmo.module.scss's $fitsNextToOpenDrawer plus the ball and the stack gap (78 px at the
-// default UI size; a media query can't read --aek-rem, so this is in px)
+// default UI size; a media query can't read a custom property, so this is in px)
 $fitsNextToOpenDrawer: 730px;
 
-// Order 1 in the top-right viewport stack (left of the axes gizmo), centred on its height
+// Order 1 in the top-right viewport stack (left of the axes gizmo), centred on its height: 70 px
+// at the defaults (60 px on a small screen), on the tokens (p806 D9) at the stack's default density
 .envBallSlot {
   align-self: center;
-  width: calc(7 * var(--aek-rem));
-  height: calc(7 * var(--aek-rem));
+  width: calc(var(--aek-space-1) * 35);
+  height: calc(var(--aek-space-1) * 35);
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    width: calc(6 * var(--aek-rem));
-    height: calc(6 * var(--aek-rem));
+  @media screen and (max-width: layout.$breakpointSmall) {
+    width: calc(var(--aek-space-1) * 30);
+    height: calc(var(--aek-space-1) * 30);
   }
 
   // No room next to the open drawer (the gizmo hides itself below a narrower width)

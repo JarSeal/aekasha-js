@@ -1,7 +1,8 @@
 ## Button
 
 `createButton({ label, … })` makes a native `<button>` (`type="button"`) and returns its handle,
-whose setters write it in place: `setLabel`, `setDisabled`, `setLoading` (the width kept, the text
+whose setters write it in place: `setLabel`, `setDisabled` (with a reason, its tooltip while it's
+disabled), `setLoading` (the width kept, the text
 faded into a spinner, `aria-busy`, clicks ignored) and a toggle's `setPressed`. Its variants are
 `primary` (a group's one main action), `secondary` (the default), `ghost`, `danger` and `link`
 (an action that looks like a link; a navigation is a link), at `sm`, `md` or `lg`. It takes an
@@ -13,7 +14,8 @@ acts only after the pointer, Space or Enter is held that long, a fill across it 
 
 - **States:** drawn in the page, in a kit root of its own: the variants, the sizes, the icons, a
   shortcut's hint on a button that loads on a click, disabled and loading, two toggles and a hold
-  to confirm. The status line under them says what each did.
+  to confirm, and one disabled but focusable (`focusableWhenDisabled`: `aria-disabled`, still a tab
+  stop, its reason the tooltip). The status line under them says what each did.
 - A hold to confirm can't be held through a click with no press, which is how some screen readers
   activate a button in their browse mode: it calls `onUnheldClick`, where the app confirms
   another way (a confirmation dialog), and does nothing without it. In focus mode such a user can

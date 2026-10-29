@@ -321,6 +321,11 @@ const level = createDropDown({
 });
 ```
 
+`setDisabled(isDisabled, reason?)` disables the trigger and closes an open list; the reason is
+its title while it's disabled. With `focusableWhenDisabled` the trigger is `aria-disabled` instead
+of `disabled`, so it stays a tab stop: a [toolbar](hub:features/ui-kit/core#groups-and-toolbars)'s
+drop-down, which `createButtonGroup` takes beside its buttons.
+
 ::: demo dropDown
 :::
 

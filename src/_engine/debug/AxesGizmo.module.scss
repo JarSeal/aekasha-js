@@ -1,20 +1,24 @@
-@use '../ui/styles/variables.scss';
+@use './styles/debugLayout' as layout;
 
-// The drawer toggler tab hangs 30 px (at the default UI size) off the drawer's left edge
-$drawerTogglerWidth: calc(3 * var(--aek-rem));
-$stackInset: calc(1.6 * var(--aek-rem));
-// Narrowest window where the gizmo fits left of the open drawer without covering the top-left
-// on-screen tools (drawer + toggler + insets + gizmo + undo/redo tools) at the default UI size.
-// A media query can't read --aek-rem, so this is in px.
+// On the tokens (p806 D9), outside the debugger's roots: the viewport stack has the default
+// density. The drawer toggler (a kit `sm` button, turned) hangs off the drawer's left edge as thick
+// as the compact density's `space-6` (the default's `space-5`), at least the 24 px target.
+$drawerTogglerWidth: max(24px, var(--aek-space-5));
+// The viewport stack's inset (Viewports.module.scss)
+$stackInset: var(--aek-space-5);
+// Narrowest window where the gizmo fits left of the open drawer (at its default width) without
+// covering the top-left on-screen tools (drawer + toggler + insets + gizmo + undo/redo tools) at
+// the default UI size. A media query can't read a custom property, so this is in px.
 $fitsNextToOpenDrawer: 650px;
 
+// 100 px at the defaults (80 px on a small screen)
 .axesGizmoSlot {
-  width: calc(10 * var(--aek-rem));
-  height: calc(10 * var(--aek-rem));
+  width: calc(var(--aek-space-1) * 50);
+  height: calc(var(--aek-space-1) * 50);
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    width: calc(8 * var(--aek-rem));
-    height: calc(8 * var(--aek-rem));
+  @media screen and (max-width: layout.$breakpointSmall) {
+    width: calc(var(--aek-space-1) * 40);
+    height: calc(var(--aek-space-1) * 40);
   }
 
   // Interactive only while the debug camera is active (see _dbg__AxesGizmo.ts)

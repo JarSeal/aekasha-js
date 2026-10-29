@@ -96,6 +96,10 @@ const createDropDownPanel = () => {
     index = (index + 1) % COLOURS.length;
     changed.refresh();
   });
+  // Still a tab stop (a toolbar's drop-down): its reason is its title, and it doesn't open
+  const waiting = createDemoDropDown({ title: 'Colour', focusableWhenDisabled: true });
+  waiting.setDisabled(true, 'Loading the colours…');
+  row('Disabled but focusable (aria-disabled), its reason the title', waiting);
   return panel;
 };
 

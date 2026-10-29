@@ -147,11 +147,9 @@ export type DebuggerWindowOpener = {
   /** A row of the tab's first list with row clicks (0-based), clicked first */
   row?: number;
   /** Controls pressed with Enter, in order, each found by its name (its label, title or text): in
-   * the window the step before opened, else in the tab, else in any debugger root */
+   * the window the step before opened, else in the tab, else in any debugger root. A scene's action
+   * map leaves Enter to a focused debugger control (p806 D12). */
   press?: string[];
-  /** Why the controls are clicked instead (a DOM click on the focused control), eg. a scene whose
-   * action map takes Enter */
-  clickReason?: string;
 };
 
 /**
@@ -346,9 +344,8 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
           name: 'characterState',
           tab: 'charactersControls',
           row: 0,
+          // The gym's action map binds Enter (jump): it leaves it to the focused button (p806 D12)
           press: ['Open character state window'],
-          clickReason:
-            "the gym's action map binds Enter (jump) and prevents its default, so Enter on a focused debugger button does nothing (p806 D12's finding)",
         },
       ],
     },

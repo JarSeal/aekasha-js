@@ -57,6 +57,42 @@ describe('drop-down', () => {
     expect(dropDown.cmp.elem.querySelector('.aekDropDownLabel')?.textContent).toBe('High');
   });
 
+  it('setDisabled closes the list and ignores clicks; focusable, aria-disabled with its reason (p806 D7)', () => {
+    const dropDown = createDropDown({
+      options: OPTIONS,
+      value: 'mid',
+      onChange: vi.fn(),
+      title: 'Quality',
+      focusableWhenDisabled: true,
+    });
+    document.body.appendChild(dropDown.cmp.elem);
+    const trigger = triggerOf(dropDown);
+    dropDown.open();
+    dropDown.setDisabled(true, 'Loading the scene…');
+    expect(dropDown.isOpen()).toBe(false);
+    expect(trigger.getAttribute('aria-disabled')).toBe('true');
+    expect(trigger.hasAttribute('disabled')).toBe(false);
+    expect(trigger.getAttribute('title')).toBe('Loading the scene…');
+    trigger.dispatchEvent(new window.Event('click'));
+    expect(dropDown.isOpen()).toBe(false);
+    dropDown.open();
+    expect(dropDown.isOpen()).toBe(false);
+    dropDown.setDisabled(false);
+    expect(trigger.hasAttribute('aria-disabled')).toBe(false);
+    expect(trigger.getAttribute('title')).toBe('Quality');
+    trigger.dispatchEvent(new window.Event('click'));
+    expect(dropDown.isOpen()).toBe(true);
+    dropDown.close();
+
+    // Without the option: the native disabled
+    const native = createDropDown({ options: OPTIONS, onChange: vi.fn() });
+    native.setDisabled(true);
+    expect(triggerOf(native).hasAttribute('disabled')).toBe(true);
+    expect(triggerOf(native).hasAttribute('title')).toBe(false);
+    native.setDisabled(false);
+    expect(triggerOf(native).hasAttribute('disabled')).toBe(false);
+  });
+
   it('refresh() shows a change made elsewhere', () => {
     let value = 'mid';
     const dropDown = createDropDown({ options: OPTIONS, value: () => value, onChange: () => {} });

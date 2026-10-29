@@ -110,21 +110,21 @@
   }
 
   :where(.aekButton[data-variant='secondary'], .aekButton[data-variant='ghost']):where(
-      :hover:not(:disabled)
+      :hover:not(:disabled, [aria-disabled='true'])
     ) {
     background-color: var(--aek-surface-hover);
   }
 
-  :where(.aekButton[data-variant='primary']:hover:not(:disabled)) {
+  :where(.aekButton[data-variant='primary']:hover:not(:disabled, [aria-disabled='true'])) {
     border-color: var(--aek-accent-hover);
     background-color: var(--aek-accent-hover);
   }
 
-  :where(.aekButton[data-variant='danger']:hover:not(:disabled)) {
+  :where(.aekButton[data-variant='danger']:hover:not(:disabled, [aria-disabled='true'])) {
     background-color: var(--aek-danger-soft);
   }
 
-  :where(.aekButton[data-variant='link']:hover:not(:disabled)) {
+  :where(.aekButton[data-variant='link']:hover:not(:disabled, [aria-disabled='true'])) {
     color: var(--aek-accent-hover);
   }
 
@@ -135,14 +135,18 @@
     color: var(--aek-text);
   }
 
-  :where(.aekButton:disabled) {
+  // Disabled, natively or focusable (`focusableWhenDisabled`)
+  :where(.aekButton:disabled, .aekButton[aria-disabled='true']) {
     border-color: var(--aek-border);
     background-color: var(--aek-surface);
     color: var(--aek-text-disabled);
     cursor: default;
   }
 
-  :where(.aekButton[data-variant='ghost']:disabled, .aekButton[data-variant='link']:disabled) {
+  :where(
+      .aekButton[data-variant='ghost']:is(:disabled, [aria-disabled='true']),
+      .aekButton[data-variant='link']:is(:disabled, [aria-disabled='true'])
+    ) {
     border-color: transparent;
     background-color: transparent;
   }

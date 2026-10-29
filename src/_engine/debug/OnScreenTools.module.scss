@@ -1,85 +1,95 @@
-@use '../ui/styles/variables.scss';
+@use './styles/debugLayout' as layout;
 
+// The on-screen tools (p806 D7, D9): three debugger roots (the rows, compact) of kit toolbars, on
+// the tokens. Unlayered: these classes beat the kit's layered button group and drop-down rules (a
+// group's buttons apart, not joined) and an app's element rules.
+
+// A group: a translucent `surface`, 80 % opaque, so its icons (`text`) keep at least 3:1 against
+// it over a white or a black scene, in either theme (p806 D7)
 .onScreenToolGroup {
   display: flex;
-  gap: calc(0.1 * var(--aek-rem));
-  position: fixed;
-  z-index: 10000;
-  padding: calc(0.4 * var(--aek-rem));
-  background-color: variables.$debugOnScreenAlphaBack;
-  border-radius: calc(0.2 * var(--aek-rem));
+  gap: var(--aek-space-1);
+  padding: var(--aek-space-2);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  background-color: color-mix(in srgb, var(--aek-surface) 80%, transparent);
+  pointer-events: auto;
   transition: opacity var(--aek-motion-base) ease-in-out;
+}
 
-  // The tool button centres it (an inline-block svg would leave a baseline gap under it)
-  :global(.uiIcon) {
+// A tool: a kit ghost icon button (`size: 'lg'`, 30 px in the compact density), its icon at the
+// icon scale. The pressed state (the accent) and the disabled one are the kit's.
+.onScreenTool {
+  margin: 0;
+  border-radius: var(--aek-radius-sm);
+
+  :global(.aekIcon) {
     display: block;
-    width: calc(2.2 * var(--aek-rem));
+    width: var(--aek-icon-size-lg);
+  }
 
-    &:global(.smallIcon) {
-      width: calc(1.7 * var(--aek-rem));
-    }
-
-    svg {
-      display: block;
-    }
+  // An icon whose artwork fills its box
+  &.smallIcon :global(.aekIcon) {
+    width: var(--aek-icon-size-md);
   }
 }
 
-:global(.switchTools) {
-  bottom: calc(1.6 * var(--aek-rem));
-  left: 50%;
-  transform: translateX(-50%);
-  transition:
-    transform var(--aek-motion-base) ease-in-out,
-    opacity var(--aek-motion-base) ease-in-out;
+// The About Ækasha button: a gap sets it apart from the undo / redo buttons after it
+.aboutTool {
+  margin-inline-end: var(--aek-space-3);
+}
 
-  @media screen and (max-width: variables.$breakpointMedium) {
-    left: 100%;
-    transform: translateX(calc(-100% - 1.6 * var(--aek-rem)));
+// An on-screen drop-down (ui/forms/DropDown.ts): the tools' look, with room for a name
+.onScreenDropDown {
+  font-size: var(--aek-font-size-md);
+}
+
+.onScreenDropDownTrigger {
+  width: 13em;
+  min-height: calc(var(--aek-space-7) + var(--aek-space-3));
+  border-color: transparent;
+  border-radius: var(--aek-radius-sm);
+  background-color: transparent;
+
+  :global(.aekIcon) {
+    display: block;
+    width: var(--aek-icon-size-md);
   }
-  @media screen and (max-width: variables.$breakpointSmall) {
-    display: none;
-  }
 
-  :global(.debugDrawerOpen) & {
-    transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 2)));
-
-    @media screen and (max-width: variables.$breakpointXLarge) {
-      transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 4)));
-    }
-    @media screen and (max-width: variables.$breakpointLarge) {
-      transform: translateX(-50%);
-    }
-    @media screen and (max-width: variables.$breakpointMedium) {
-      left: 100%;
-      transform: translateX(calc(-100% - 1.6 * var(--aek-rem)));
-    }
+  &[aria-disabled='true'] {
+    cursor: default;
   }
 }
 
-// The top row: the play tools. Only its groups take clicks, not the gap between them.
-// debugDrawerOpen is set by whichever right-side drawer is open: the debug drawer, or an editor
-// view's own one.
-.onScreenTopRow {
+// The app camera isn't the one rendering while the debug camera is
+.onScreenDropDown[data-debug-camera] :global(.aekDropDownLabel) {
+  color: var(--aek-text-muted);
+  text-decoration: line-through;
+}
+
+// The rows: only their groups take clicks, not the gap between them. debugDrawerOpen is set by
+// whichever right-side drawer is open (the debug drawer, or an editor view's own one), with its
+// width (--aek-debug-drawer-width).
+%onScreenRow {
   display: flex;
-  gap: calc(0.6 * var(--aek-rem));
+  gap: var(--aek-space-4);
   position: fixed;
   z-index: 10000;
-  top: calc(1.6 * var(--aek-rem));
+  pointer-events: none;
+}
+
+// The top row: the play tools
+.onScreenTopRow {
+  @extend %onScreenRow;
+  top: var(--aek-space-6);
   left: 50%;
   transform: translateX(-50%);
   transition: transform var(--aek-motion-base) ease-in-out;
-  pointer-events: none;
-
-  .onScreenToolGroup {
-    position: static;
-    pointer-events: auto;
-  }
 
   :global(.debugDrawerOpen) & {
     transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 2)));
 
-    @media screen and (max-width: variables.$breakpointMedium) {
+    @media screen and (max-width: layout.$breakpointMedium) {
       transform: translateX(-50%);
     }
   }
@@ -87,19 +97,44 @@
 
 // The top left row: the About and undo / redo tools, then the view tools (debug env, with an
 // editor view registered). The debug drawer opens from the right and the stats panel sits
-// bottom-left, so this corner stays free. Only its groups take clicks, not the gap between them.
+// bottom-left, so this corner stays free.
 .onScreenTopLeftRow {
-  display: flex;
-  gap: calc(0.6 * var(--aek-rem));
-  position: fixed;
-  z-index: 10000;
-  top: calc(1.6 * var(--aek-rem));
-  left: calc(1.6 * var(--aek-rem));
-  pointer-events: none;
+  @extend %onScreenRow;
+  top: var(--aek-space-6);
+  left: var(--aek-space-6);
+}
 
-  .onScreenToolGroup {
-    position: static;
-    pointer-events: auto;
+// The bottom row: the switch tools (the Runtime view only)
+.onScreenBottomRow {
+  @extend %onScreenRow;
+  bottom: var(--aek-space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  transition:
+    transform var(--aek-motion-base) ease-in-out,
+    opacity var(--aek-motion-base) ease-in-out;
+
+  @media screen and (max-width: layout.$breakpointMedium) {
+    left: 100%;
+    transform: translateX(calc(-100% - var(--aek-space-6)));
+  }
+  @media screen and (max-width: layout.$breakpointSmall) {
+    display: none;
+  }
+
+  :global(.debugDrawerOpen) & {
+    transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 2)));
+
+    @media screen and (max-width: layout.$breakpointXLarge) {
+      transform: translateX(calc(-50% - (var(--aek-debug-drawer-width, 400px) / 4)));
+    }
+    @media screen and (max-width: layout.$breakpointLarge) {
+      transform: translateX(-50%);
+    }
+    @media screen and (max-width: layout.$breakpointMedium) {
+      left: 100%;
+      transform: translateX(calc(-100% - var(--aek-space-6)));
+    }
   }
 }
 
@@ -125,73 +160,4 @@
       pointer-events: none !important;
     }
   }
-}
-
-.onScreenTool {
-  @include variables.nakedButton;
-  position: relative;
-  vertical-align: top;
-  overflow: hidden;
-  border-radius: calc(0.2 * var(--aek-rem));
-  padding: calc(0.5 * var(--aek-rem));
-  background-color: variables.$debugGuiBackgroundLighter2;
-  transition: background-color var(--aek-motion-base) ease-in-out;
-  width: calc(3.2 * var(--aek-rem));
-  height: calc(3.2 * var(--aek-rem));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &.active {
-    &:before {
-      display: block;
-      content: '';
-      position: absolute;
-      left: calc(-0.6 * var(--aek-rem));
-      top: calc(-0.6 * var(--aek-rem));
-      background-color: variables.$debugTextColor;
-      width: calc(1 * var(--aek-rem));
-      height: calc(1.2 * var(--aek-rem));
-      transform: rotate(45deg);
-    }
-  }
-
-  &:hover {
-    background-color: variables.$debugGuiBackgroundLighter;
-  }
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.35;
-
-    &:hover {
-      background-color: variables.$debugGuiBackgroundLighter2;
-    }
-  }
-
-  svg path {
-    fill: variables.$debugTextColor;
-  }
-}
-
-// An on-screen dropdown's trigger (ui/forms/DropDown.ts, its default styles in DropDown.scss):
-// the on-screen tool look, wider
-.onScreenToolDropDown {
-  justify-content: flex-start;
-  width: calc(16 * var(--aek-rem));
-
-  :global(.uiIcon):global(.smallIcon) {
-    flex-shrink: 0;
-    margin-left: calc(0.3 * var(--aek-rem));
-  }
-}
-
-.dropDownLabelStruck {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-// The About Ækasha button: a gap sets it apart from the undo / redo buttons after it
-.aboutTool {
-  margin-right: calc(0.4 * var(--aek-rem));
 }
