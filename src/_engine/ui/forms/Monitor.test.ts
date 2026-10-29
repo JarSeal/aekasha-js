@@ -126,6 +126,33 @@ describe('the monitor (p804 D7)', () => {
     scheduler.dispose();
   });
 
+  it("with interval 'refresh', is read by its scheduler's refresh() and a reveal, never the tick", () => {
+    vi.useFakeTimers();
+    const stats = { ms: 1 };
+    const scheduler = createBindingScheduler();
+    const monitor = makeMonitor({ target: stats, key: 'ms', interval: 'refresh', scheduler });
+    stats.ms = 2;
+    vi.advanceTimersByTime(1000);
+    expect(textOf(monitor)).toBe('1.00');
+    scheduler.refresh();
+    expect(textOf(monitor)).toBe('2.00');
+    // Hidden at a refresh, it's read when it shows again
+    monitor.setHidden(true);
+    stats.ms = 3;
+    scheduler.refresh();
+    monitor.setHidden(false);
+    expect(textOf(monitor)).toBe('3.00');
+    scheduler.dispose();
+    // Without a scheduler it joins no tick: no page listener
+    const own = makeMonitor({ target: stats, key: 'ms', interval: 'refresh' });
+    expect(countListeners(document, 'visibilitychange')).toBe(0);
+    stats.ms = 4;
+    vi.advanceTimersByTime(1000);
+    expect(textOf(own)).toBe('3.00');
+    own.refresh();
+    expect(textOf(own)).toBe('4.00');
+  });
+
   it('without a scheduler, ticks on the page’s shared one until it’s removed', () => {
     vi.useFakeTimers();
     const stats = { ms: 1 };

@@ -3,7 +3,12 @@ import type { CMPHandle } from '../ui/core/CMPTypes';
 import { getSvgIcon } from '../ui/core/icons/SvgIcon';
 import type { DebuggerListDef, DebuggerListItem } from './DebuggerGUI';
 
-type MountedList = { cmp: CMPHandle; refresh: () => void };
+type MountedList = {
+  cmp: CMPHandle;
+  refresh: () => void;
+  /** Runs a row's click by its index (the test bridge's) */
+  clickRow: (index: number) => string | null;
+};
 
 /** Lists that exist (created and not yet removed), for the tab refresh. */
 const mountedLists = new Set<MountedList>();
@@ -143,7 +148,17 @@ export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
     }
   };
 
-  const mounted: MountedList = { cmp: wrapper, refresh: () => render() };
+  const mounted: MountedList = {
+    cmp: wrapper,
+    refresh: () => render(),
+    clickRow: (index) => {
+      const onClick = def.perItemConfig?.onClick;
+      const item = getData()[index];
+      if (!onClick || !item) return null;
+      onClick(item.itemId);
+      return item.itemId;
+    },
+  };
   mountedLists.add(mounted);
   render(true);
   return wrapper;
@@ -154,4 +169,15 @@ export const _refreshDebuggerLists = (root: HTMLElement) => {
   for (const list of mountedLists) {
     if (root.contains(list.cmp.elem)) list.refresh();
   }
+};
+
+/** Runs the click of row `index` (0-based) of the first list inside `root` that has row clicks,
+ * as a click on it does: the test bridge's (p806 D14). The row's id, or null when there's none. */
+export const _clickDebuggerListRow = (root: HTMLElement, index: number) => {
+  for (const list of mountedLists) {
+    if (!root.contains(list.cmp.elem)) continue;
+    const itemId = list.clickRow(index);
+    if (itemId !== null) return itemId;
+  }
+  return null;
 };

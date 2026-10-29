@@ -2,7 +2,7 @@ Status: in progress | Phase 0 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
-Related: \_DONE_p804_forms-and-bindings.md (the binding, the scheduler, the declarative grid; its §4: what this port rewrites by hand), \_DONE_p805_data-display.md (the list, the tabs, the table, the splitter; its §4: the debugger's lists and tab menus), \_DONE_p803_ui-kit-structure-and-core.md (D6: the debugger until p806; the window helper classes and `uiIcon` it left), \_DONE_p801_design-foundation.md (§4: every debugger colour mapped to a role; D2: the compact density's sizes left for this plan; D4: `--aek-rem`), \_DONE_p618_review-debug-public-api.md (P7: the Tweakpane fields in the tab types; D8: the header lines; the "Write your own tab" guide), p622_engine-6-major.md (the major this ships in; its migration page lists D3's breaks), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (edit windows built on this plan's), `docs/issues/on-screen-tools-during-scene-load.md` (closed here: D7)
+Related: \_DONE_p804_forms-and-bindings.md (the binding, the scheduler, the declarative grid; its §4: what this port rewrites by hand), \_DONE_p805_data-display.md (the list, the tabs, the table, the splitter; its §4: the debugger's lists and tab menus), \_DONE_p803_ui-kit-structure-and-core.md (D6: the debugger until p806; the window helper classes and `uiIcon` it left), \_DONE_p801_design-foundation.md (§4: every debugger colour mapped to a role; D2: the compact density's sizes left for this plan; D4: `--aek-rem`), \_DONE_p618_review-debug-public-api.md (P7: the Tweakpane fields in the tab types; D8: the header lines; the "Write your own tab" guide), p622_engine-6-major.md (the major this ships in; its migration page lists D3's breaks), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (edit windows built on this plan's), `docs/issues/on-screen-tools-during-scene-load.md` (closed here: D7), `docs/issues/action-map-keys-on-focused-debugger-controls.md` (closed here: D12, Phase 2)
 
 # Debugger Migration
 
@@ -827,12 +827,135 @@ undo / redo scripts. Each phase stops after each section for review.
 1. **The scene runner's `debugger` configuration** (D14), with the test bridge's methods. It is
    recorded on the branch before any change: its shots are Tweakpane's, and the later sections
    update them on purpose, while its tab order and undo / redo scripts must keep passing.
+
+   As built (2026-10-29):
+
+   - **The bridge** (`TEST_BRIDGE_VERSION` 5, `debug/_dbg__TestBridgeDebugger.ts`):
+     `getDebuggerTabOrder`, `openDebuggerTab({ host: 'DRAWER' | 'PROFILER', id })`,
+     `openDebuggerListRow({ index })`, `focusDebuggerControl({ root?, name, nth? })`,
+     `markDebuggerWindows` and `closeDebuggerWindows`. Things are named by tab id, list row and
+     control name, never the debugger's classes, so the settings outlive the port (Phase 0's
+     scratch script used CSS module prefixes). A control's name is its accessible name: ARIA,
+     `<label>`, text, then title. When nothing has the name, the bridge takes the first control
+     after a label or titled element in its row, which is how Tweakpane's unlabelled inputs are
+     found. Behind it are four `@internal` accessors that Phases 2-4 must keep:
+     `_getDrawerTestInfo` (`_dbg__DebuggerGUI.ts`), `_getProfilerTestInfo` (`_dbg__Profiler.ts`),
+     `_clickDebuggerListRow` (`_dbg__DebuggerList.ts`: `createList` keeps it in Phase 2) and the
+     kit's `getOpenDraggableWindowIds` (`DraggableWindow.ts`; `api.json` records the five types
+     and the function).
+   - **The runner** (`devTools/verify/sceneDebugger.ts`, pure parts `debuggerChecks.ts`, tested):
+     a `debugger` configuration in `all`. It runs `mainThread`'s run, then the debugger on the
+     frozen page at 1280 × 2000, only on the scenes with `debugger` settings (`getSceneConfigs`)
+     and never in Firefox. Baseline entries gain `tabOrder`, `debuggerShots`
+     (`debugger/<scene>/<drawer|profiler|window>.<name>.png`) and `axe` (counts per rule per
+     shot). The format version is unchanged: the fields are optional.
+   - **What it covers:** `testDebugScene` gets every engine tab, the four profiler tabs, the
+     camera, two lights, ECS world and asset windows, both ray testers, About and both key
+     shortcut dialogs. `thirdPersonGymScene` gets every engine tab with a scene's content, plus
+     the physics entity, PostFX pass, character and character state windows. `lodShowcase` gets
+     its two scene tabs and the LOD entity window; `assetCompare`, `space` and `exampleDebugTab`
+     get their scene tabs. In all, 55 shots: 36 drawer tabs, 4 profiler tabs and 15 windows.
+   - **Undo / redo scripts**, all passing on Tweakpane:
+     - the debug tab example's Boxes slider (declarative; ArrowRight);
+     - the camera window's Position x (imperative; ArrowUp);
+     - the Lights list's Enabled toggle (Enter);
+     - the day-night ▶▶ ×10 button (the custom row; Enter).
+
+     The custom row has no undo (`undoable: false`: the change is checked only). The undo keys
+     run with the focus on the page, since a focused field keeps Ctrl+Z for its text. Each
+     script's `ls` key and path must follow the bound value through the change, the undo and the
+     redo.
+   - **The axe check is a ratchet:** a rule's count on a root may not grow (Phase 6 allows none).
+     The recorded counts match Phase 0's per root.
+   - **Masks:** `DEBUGGER_LIVE_MASKS` masks Tweakpane's monitors (`.tp-sglv`, `.tp-mllv`,
+     `.tp-grlv`) and the profiler Overview's figures (`.profilerValue`, `.profilerSub`, p807's).
+     The builder section replaces Tweakpane's with the kit monitor's selector. Two
+     recordings in a row then differed only in the asset compare report, whose rows come in load
+     order, so that shot only warns (`unstableShots`, with the reason). A third run showed long
+     Tweakpane labels wrapping differently, because Tweakpane's labels have `hyphens: auto`. Chrome
+     fetches its hyphenation dictionary on demand into each run's fresh profile, so a run may or
+     may not hyphenate. The runner adds `hyphens: manual` on the debugger's roots before its shots
+     (`STABLE_SHOT_CSS`). It goes with Tweakpane in Phase 3: the kit doesn't hyphenate.
+   - **Found:** in `thirdPersonGymScene`, Enter on a focused debugger button does nothing. The
+     scene's action map binds Enter to jump, and action maps prevent the default of their keys
+     outside a text field (debug `CLAUDE.md`). The character state opener clicks instead, with
+     `clickReason` saying why. It is D12's to settle: an action map should leave a key alone when
+     the focus is on a control in a debugger root. Filed as
+     `docs/issues/action-map-keys-on-focused-debugger-controls.md`; Phase 2's on-screen tools
+     section closes it, and the opener's `clickReason` goes.
+   - Not covered yet: the editor drawer and the material editor (Phase 2 section 3 adds them when
+     it ports them).
 2. **The builder on the property grid and the tab types** (D3, D4):
    - The 26 declarative sections renamed where they use Tweakpane's names (`view: 'color'` and the
      rest; the app's five and the material editor's included).
    - The day-night `custom` on a button group (D10).
    - The builder's test.
    - `DebuggerGUI.ts` no longer imports Tweakpane.
+
+   As built (2026-10-29):
+
+   - **The kit:**
+     - `interval: 'refresh'` is on every field (`FieldOptions.interval`). The shell gives the
+       scheduler no tick interval for it and joins no page scheduler, so only `refresh()` and a
+       reveal read it.
+     - Its test is in `Monitor.test.ts`. Its demo is a row of the monitor's box: "Bodies on
+       refresh" with a Refresh button, plus a keyboard check in `fieldsChecks.ts`.
+     - The forms guide, the binding guide (its Tweakpane table: `interval: 0` is `'refresh'`) and
+       the library text describe it.
+     - `PROPERTY_GRID_FIELD_ITEM_KEYS` (`@internal`, `PropertyGridItems.ts`) is D4's one list. Its
+       test keeps it complete with `expectTypeOf`, because a module-level check would be a side
+       effect.
+   - **The types** (`DebuggerGUI.ts`, no Tweakpane import):
+     - `DebuggerPaneBinding` is the new `DebuggerPaneBindingProps` (the kit field item's props,
+       minus the binding, `label` and `onChange`), plus `type?: 'binding' | 'field'`, an optional
+       `label`, the kit's `onChange(value, FieldChange)`, and either the state key or any of the
+       kit's bindings.
+     - Accepting `{ get, set }`, `{ get }` and `{ value }` is an addition: the Phase 3 windows'
+       unbound selects use it.
+     - `DebuggerPaneButton`, `…Separator` and `…Custom` are the kit's item types. With no index
+       signature left, an unknown field is a type error.
+   - **The builder** (`_dbg__DebuggerPaneBuilder.ts`): a grid per section
+     (`createPropertyGrid`, `class: 'debuggerPaneSection'`), with a titled section as a folder
+     item.
+     - Folder ids are worked out as before and passed explicitly, so a `persistExpanded: false`
+       folder (or a tab with no UI key) stays out of `folderExpanded` and its changes aren't
+       saved.
+     - It takes `opts.scheduler`; until section 3 each grid has its own.
+     - The label column starts at 50 % (Phase 0's recommendation), saved as `labelWidth` beside
+       5.x's `folders`.
+     - Unknown fields throw with the binding's name, with a hint for Tweakpane's `color` and
+       `view: 'color'`.
+     - A state key with no object still warns and skips, as before.
+   - **Renames:** every declarative colour, 13 sites, became `kind: 'color'`: the example, Debug
+     tools' two grid colours (`color: { type: 'float' }`), the material editor's three
+     conditional spreads, the physics wireframe colours, the spatial grid's two, the ray tester's
+     two and the ray cast tab's two. The light window's three and the physics entity window's
+     wireframe folder are imperative Tweakpane, left for Phase 3.
+   - **The day-night speeds:** `createButtonGroup({ exclusive: true })` of small kit buttons. The
+     pressed button is the speed the cycle plays at, none while it's paused; each button's
+     tooltip is "Play at ×N". `.debuggerSkyTransportRow` and its `tp-btnv_b` rule are gone.
+   - **Tests:** `_dbg__DebuggerPaneBuilder.test.ts`, 9 tests on `KitDom` with a `localStorage`
+     whose items are own properties (`lsGetItem` checks them so). They cover: the state paths,
+     persistence on `last` only before the handler, no `onChange` on a refresh, `type: 'binding'`,
+     `interval: 0`, the unknown-field errors, the custom item's container and refresh,
+     `onCreate`'s handle, a 5.x `uiLsKey` read and written back merged, `persistExpanded: false`,
+     and `labelWidth`.
+   - **The `debugger` configuration:**
+     - The drawer tabs, the profiler's Settings tab and both ray testers changed, recorded on
+       purpose.
+     - The Boxes script's key is ArrowUp now: the kit slider's spin button steps on Up and Down,
+       where Tweakpane's knob took ArrowRight. The other three scripts pass unchanged, the
+       day-night one on the button group.
+     - Axe, summed over the six scenes: `label` 372 → 71, `color-contrast` 268 → 231,
+       `select-name` 43 → 1, `button-name` 20 → 3, `target-size` 50 → 47.
+     - The gym's Physics tab gained two `color-contrast` nodes. Both are rows of the debugger
+       list (Phase 2's): the shorter grid brought two more rows into the 2000 px page, where axe
+       measures them. Recorded.
+     - `DEBUGGER_LIVE_MASKS` adds `.aekMonitor`.
+   - **Behaviour, for p622's page** (beyond D3's table): `onChange` also fires on a field's
+     `setValue` (`source: 'api'`), which no debugger code calls. In the default density a
+     vector's boxes are narrow in a 400 px drawer (the Physics tab's Gravity shows "-9.8"). Phase
+     2's compact density and drawer width are where that's judged.
 3. **The tab host** (D5):
 
    - The scheduler, `ctx`, `refreshIntervalMs`, the fields' context menu, the error line.
@@ -855,7 +978,10 @@ undo / redo scripts. Each phase stops after each section for review.
    - The editor drawer's tabs and splitter, and the material editor's selector and HUD.
    - Their styles, with `Profiler.module.scss` and `GPUMemory.module.scss` restyled only (D1).
 4. **The on-screen tools** (D7): the toolbars, the disabled state during a load (the issue file
-   closed), and the axes gizmo's and environment ball's styles.
+   closed), and the axes gizmo's and environment ball's styles. Also
+   `docs/issues/action-map-keys-on-focused-debugger-controls.md` (D12: an action map leaves a
+   key alone on a focused debugger control), closed with the scene runner's character state
+   opener pressing Enter again.
 
 ### Phase 3: the edit windows
 

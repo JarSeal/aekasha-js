@@ -489,8 +489,8 @@ const helperFolder = (): DebuggerPaneItem<{ helper: RayTesterHelperParams }> => 
   title: 'Helper',
   expanded: false,
   content: [
-    { key: 'helper.color', label: 'Color', view: 'color' },
-    { key: 'helper.inactiveColor', label: 'Inactive color', view: 'color' },
+    { key: 'helper.color', label: 'Color', kind: 'color' },
+    { key: 'helper.inactiveColor', label: 'Inactive color', kind: 'color' },
     { key: 'helper.width', label: 'Width (px)', min: 1, max: 20, step: 0.5 },
     { key: 'helper.holdMs', label: 'Hold (ms)', min: 0, max: 10000, step: 50 },
     { key: 'helper.depthTest', label: 'Respect depth', options: DEPTH_TEST_OPTIONS },

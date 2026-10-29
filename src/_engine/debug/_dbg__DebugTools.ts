@@ -682,13 +682,13 @@ const buildDebugToolsItems = (): DebuggerPaneItem<DebugToolsState>[] => {
         {
           key: 'helpers.gridColorCenterLine',
           label: "Grid's center line color",
-          color: { type: 'float' },
+          kind: 'color',
           onChange: recreateGridHelper,
         },
         {
           key: 'helpers.gridColorGrid',
           label: "Grid's color",
-          color: { type: 'float' },
+          kind: 'color',
           onChange: recreateGridHelper,
         },
         { type: 'separator' },

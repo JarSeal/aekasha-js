@@ -14,6 +14,9 @@ export type VerifyConfigDef = {
   /** The probe's config string must start with this, or the configuration didn't apply (eg. the
    * dev server sent no COOP/COEP headers and SAB fell back to messages) */
   expectProbeConfig?: string;
+  /** The debugger checks too (p806 D14), after the probe: in Chromium, on the scenes with
+   * `debugger` settings only (`SceneVerifyConfig.debugger`) */
+  debugger?: boolean;
 };
 
 /** The configurations a scene runs in: the three physics targets in the debug env, and prod test */
@@ -34,6 +37,14 @@ export const VERIFY_CONFIGS = {
     expectProbeConfig: 'MAIN_THREAD/',
   },
   prodTest: { mode: 'PROD_TEST' },
+  /** `mainThread` (its hash and snapshot too), then the debugger: its tab order, each tab's,
+   * window's and dialog's shot and axe counts, and the undo / redo scripts */
+  debugger: {
+    mode: 'DEBUG',
+    physicsBoot: { workerTarget: 'MAIN_THREAD' },
+    expectProbeConfig: 'MAIN_THREAD/',
+    debugger: true,
+  },
 } satisfies Record<string, VerifyConfigDef>;
 
 /** A configuration's name (`--config workerSab`) */
@@ -41,7 +52,7 @@ export type VerifyConfigName = keyof typeof VERIFY_CONFIGS;
 
 /** Named sets for `--config`; a single configuration's name works too */
 export const VERIFY_CONFIG_SETS: Record<string, VerifyConfigName[]> = {
-  all: ['workerSab', 'workerMsg', 'mainThread', 'prodTest'],
+  all: ['workerSab', 'workerMsg', 'mainThread', 'prodTest', 'debugger'],
   /** The inner loop: one physics target, debug only */
   quick: ['workerSab'],
 };
@@ -101,6 +112,87 @@ export type AllowedError = { pattern: RegExp; reason: string; browsers?: VerifyB
 /** Allowed in every scene and configuration */
 export const GLOBAL_ALLOWED_ERRORS: AllowedError[] = [];
 
+/**
+ * The `debugger` configuration's page size: tall, so a drawer tab's shot holds its whole content
+ * (the drawer is the viewport's height)
+ */
+export const DEBUGGER_VIEWPORT = { width: 1280, height: 2000 };
+
+/**
+ * What a debugger shot masks (Playwright's `mask`): the figures that change run to run with the
+ * loops frozen (timings, memory, clocks), by selector: the UI kit's monitors, Tweakpane's in the
+ * windows still on it (p806 Phase 3 ports them), and the profiler Overview's figures (p807
+ * rewrites that tab)
+ */
+export const DEBUGGER_LIVE_MASKS: string[] = [
+  '.aekMonitor',
+  '.tp-sglv',
+  '.tp-mllv',
+  '.tp-grlv',
+  '.profilerValue',
+  '.profilerSub',
+];
+
+/**
+ * A window or dialog the `debugger` configuration opens, shoots (`window.<name>`) and checks with
+ * axe. Its steps start with every window closed; the shot is of the windows its last step opened.
+ */
+export type DebuggerWindowOpener = {
+  /** The shot's name */
+  name: string;
+  /** The drawer tab the steps start on; none: the drawer stays as it is (the on-screen tools) */
+  tab?: string;
+  /** A row of the tab's first list with row clicks (0-based), clicked first */
+  row?: number;
+  /** Controls pressed with Enter, in order, each found by its name (its label, title or text): in
+   * the window the step before opened, else in the tab, else in any debugger root */
+  press?: string[];
+  /** Why the controls are clicked instead (a DOM click on the focused control), eg. a scene whose
+   * action map takes Enter */
+  clickReason?: string;
+};
+
+/**
+ * An undo / redo script (p806 D14): a control changed by keys, then (when `undoable`) Ctrl+Z and
+ * Ctrl+Shift+Z with the focus on the page. The bound value must change, go back on the undo and
+ * forward on the redo, and the saved value (`ls`) follow it at each of the three. It says what's
+ * true today: a phase that changes a control's keys changes its script.
+ */
+export type DebuggerUndoScript = {
+  /** The script's name in a failure */
+  name: string;
+  /** The drawer tab it starts on */
+  tab: string;
+  /** A row of the tab's list whose click opens the window the control is in */
+  row?: number;
+  /** The control, by its name (as {@link DebuggerWindowOpener.press}); `nth` among several */
+  control: string;
+  nth?: number;
+  /** Pressed on the control (Playwright's key names) */
+  keys: string[];
+  /** A page expression, awaited, giving the bound value as JSON (it may `await import()` a module
+   * by its dev server URL, `/_engine/…` or `/app/…`) */
+  read: string;
+  /** Where localStorage keeps the bound value: the key, and the path into its JSON */
+  ls?: { key: string; path: string[] };
+  /** false: the change isn't recorded for undo (the day-night speed buttons), so only the change is
+   * checked */
+  undoable: boolean;
+};
+
+/** A scene's `debugger` settings: what the `debugger` configuration opens in it */
+export type SceneDebuggerConfig = {
+  /** The drawer tabs it shoots and checks: every tab, or these (a scene's own tabs) */
+  tabs: 'ALL' | string[];
+  /** The profiler window's tabs too */
+  profiler?: boolean;
+  windows?: DebuggerWindowOpener[];
+  undoScripts?: DebuggerUndoScript[];
+  /** Shots (`drawer.<id>`, `window.<name>`) whose difference only warns, with the reason (eg. rows
+   * in the order their loads finished) */
+  unstableShots?: { shots: string[]; reason: string };
+};
+
 /** A scene's own settings, `SCENE_VERIFY_CONFIG[sceneId]` */
 export type SceneVerifyConfig = {
   /** Fixed steps before the probe freezes physics (default {@link DEFAULT_PROBE_STEPS}) */
@@ -122,14 +214,109 @@ export type SceneVerifyConfig = {
   snapshot?:
     | { skip: true; reason: string }
     | { tolerance: Partial<SnapshotTolerance>; reason: string };
+  /** The `debugger` configuration runs only on the scenes that have these */
+  debugger?: SceneDebuggerConfig;
 };
 
 /** By scene id. A scene that isn't listed runs with the defaults */
 export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
+  // The engine's tabs, the profiler, and the windows and dialogs that need no scene of their own
+  testDebugScene: {
+    debugger: {
+      tabs: 'ALL',
+      profiler: true,
+      windows: [
+        { name: 'camera', tab: 'camerasControls', row: 0 },
+        { name: 'light0', tab: 'lightsControls', row: 0 },
+        { name: 'light1', tab: 'lightsControls', row: 1 },
+        { name: 'ecsWorld', tab: 'ecsControls', row: 0 },
+        { name: 'asset', tab: 'assetsControls', row: 0 },
+        { name: 'rayTesterThree', tab: 'rayCastControls', press: ['Three.js ray tester'] },
+        { name: 'rayTesterPhysics', tab: 'rayCastControls', press: ['Physics ray tester'] },
+        { name: 'about', press: ['About Ækasha'] },
+        { name: 'keysAekasha', tab: 'debugToolsControls', press: ['Debug key shortcuts [I]'] },
+        {
+          name: 'keysApp',
+          tab: 'debugToolsControls',
+          press: ['App key shortcuts (current scene) [U]'],
+        },
+      ],
+      undoScripts: [
+        {
+          name: 'camera window position',
+          tab: 'camerasControls',
+          row: 0,
+          control: 'Position',
+          keys: ['ArrowUp'],
+          read: "(async () => { const ecs = await import('/_engine/kernel/ecs/ECS.ts'); return ecs.getECSWorld().getComponent(ecs.getEntityIdByAppId('p300Camera'), 'CORE_TRANSFORM').position.x; })()",
+          ls: {
+            key: 'AEK_debugCams',
+            path: ['testDebugScene', 'cams', 'p300Camera', 'position', 'x'],
+          },
+          undoable: true,
+        },
+        {
+          name: 'light list toggle',
+          tab: 'lightsControls',
+          control: 'Enabled',
+          keys: ['Enter'],
+          read: "(async () => { const ecs = await import('/_engine/kernel/ecs/ECS.ts'); return ecs.getECSWorld().getComponent(ecs.getEntityIdByAppId('p300Ambient'), 'CORE_OBJECT3D').value.visible; })()",
+          ls: {
+            key: 'AEK_debugLights',
+            path: ['testDebugScene', 'lights', 'p300Ambient', 'enabled'],
+          },
+          undoable: true,
+        },
+      ],
+    },
+  },
+  assetCompare: {
+    debugger: {
+      tabs: ['assetCompare'],
+      unstableShots: {
+        shots: ['drawer.assetCompare'],
+        reason: "the report lists each slot's textures in the order their loads finished",
+      },
+    },
+  },
+  exampleDebugTab: {
+    debugger: {
+      tabs: ['exampleBoxes', 'exampleHub'],
+      undoScripts: [
+        {
+          name: 'declarative slider',
+          tab: 'exampleBoxes',
+          control: 'Boxes',
+          // The slider's spin button (Tweakpane's knob took ArrowRight)
+          keys: ['ArrowUp'],
+          read: "(async () => (await import('/app/examples/debugTab/exampleDebugTab.ts')).boxSettings.count)()",
+          ls: { key: 'AEK_debugExampleBoxes', path: ['count'] },
+          undoable: true,
+        },
+      ],
+    },
+  },
   // No physics bodies (an empty hash): the steps only set the frames before the snapshot, and
   // its frames take about 1 s each on SwiftShader
   largeWorld: { probeSteps: 30 },
+  lodShowcase: {
+    debugger: {
+      tabs: ['lodShowcaseDemo', 'exampleHub'],
+      windows: [{ name: 'lodEntity', tab: 'lodControls', row: 0 }],
+      undoScripts: [
+        {
+          name: 'day-night speed buttons (custom)',
+          tab: 'skyBoxControls',
+          control: '▶▶ ×10',
+          keys: ['Enter'],
+          read: "(async () => (await import('/_engine/features/skybox/SkyDayNight.ts')).getDayNightSpeed())()",
+          undoable: false,
+        },
+      ],
+    },
+  },
   space: {
+    debugger: { tabs: ['spaceDemo'] },
     unstableHash: {
       reason:
         "MutualGravity reads the worker's last synced poses, up to a frame stale, so the worker targets aren't deterministic (its JSDoc); MAIN_THREAD is",
@@ -140,6 +327,23 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
     // 10 s of the input script: the two players walk, turn, run, crouch and jump, the dummy loops
     probeSteps: 600,
     inputScript: 'thirdPersonGymScene',
+    // Every engine tab with a scene's content, and the windows testDebugScene has no entity for
+    debugger: {
+      tabs: 'ALL',
+      windows: [
+        { name: 'physicsEntity', tab: 'physicsApiControls', row: 0 },
+        { name: 'postFxPass', tab: 'postFxControls', row: 0 },
+        { name: 'character', tab: 'charactersControls', row: 0 },
+        {
+          name: 'characterState',
+          tab: 'charactersControls',
+          row: 0,
+          press: ['Open character state window'],
+          clickReason:
+            "the gym's action map binds Enter (jump) and prevents its default, so Enter on a focused debugger button does nothing (p806 D12's finding)",
+        },
+      ],
+    },
     unstableHash: {
       reason:
         "in the worker targets its characters aren't deterministic (they tick on the main thread against the latched snapshot and async casts: p428) and push the hashed bodies around",

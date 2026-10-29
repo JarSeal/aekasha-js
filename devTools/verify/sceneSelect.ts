@@ -9,10 +9,15 @@ import {
   VERIFY_BROWSERS,
   VERIFY_CONFIG_SETS,
   VERIFY_CONFIGS,
+  type SceneVerifyConfig,
   type VerifyBrowser,
   type VerifyConfigDef,
   type VerifyConfigName,
 } from './scenes.config';
+
+/** Whether a configuration runs the debugger checks (p806 D14) */
+const isDebuggerConfig = (name: VerifyConfigName) =>
+  Boolean((VERIFY_CONFIGS[name] as VerifyConfigDef).debugger);
 
 /** `yarn verify:scenes`' arguments */
 export type SceneRunArgs = {
@@ -72,11 +77,14 @@ export const parseSceneRunArgs = (argv: string[]): { args: SceneRunArgs } | { er
           "--browser firefox has no baseline of its own: it compares with Chromium's (no --update)",
       };
     }
-    const skipped = args.configs.filter((name) => VERIFY_CONFIGS[name].mode !== 'DEBUG');
-    args.configs = args.configs.filter((name) => VERIFY_CONFIGS[name].mode === 'DEBUG');
+    // The debugger configuration's hash is mainThread's, and its checks are Chromium's
+    const isHashRun = (name: VerifyConfigName) =>
+      VERIFY_CONFIGS[name].mode === 'DEBUG' && !isDebuggerConfig(name);
+    const skipped = args.configs.filter((name) => !isHashRun(name));
+    args.configs = args.configs.filter(isHashRun);
     if (!args.configs.length) {
       return {
-        error: `--browser firefox runs the debug configurations only (not ${skipped.join(', ')})`,
+        error: `--browser firefox runs the debug configurations' hashes only (not ${skipped.join(', ')})`,
       };
     }
   }
@@ -114,6 +122,13 @@ export const selectScenes = (
   }
   return { ids: allIds.filter((id) => selected.has(id)) };
 };
+
+/** The configurations a scene runs in: the `debugger` ones only on a scene with `debugger`
+ * settings (p806 D14), so the others don't print a skipped line each */
+export const getSceneConfigs = (
+  configs: VerifyConfigName[],
+  sceneConfig: SceneVerifyConfig | undefined
+) => configs.filter((name) => !isDebuggerConfig(name) || Boolean(sceneConfig?.debugger));
 
 /** A scene's page: the configuration's mode, the test bridge, the start scene and, in the debug
  * mode, the probe's steps */

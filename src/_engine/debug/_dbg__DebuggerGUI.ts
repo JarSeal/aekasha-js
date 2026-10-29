@@ -415,6 +415,15 @@ export const _persistDebuggerTabValue = (id: string, key: string) => {
 export const _isDebuggerTabOpen = (id: string) =>
   Boolean(drawerCMP) && drawerState.isOpen && !isSuspendedByView && host.mountedId === id;
 
+/** The drawer for the test bridge (p806 D14): its element, the mounted tab's container and the
+ * tab ids in menu order. */
+export const _getDrawerTestInfo = () => ({
+  element: drawerCMP?.elem ?? null,
+  contentElement: tabsContainerWrapper?.elem ?? null,
+  mountedId: host.mountedId,
+  tabIds: getOrderedTabs().map((entry) => entry.def.id),
+});
+
 export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => {
   if (!_isDebuggerTabOpen(id)) return;
   host.refresh(opts?.rebuild);

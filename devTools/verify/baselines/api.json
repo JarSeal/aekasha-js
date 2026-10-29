@@ -20,6 +20,7 @@
       "DebuggerListItem": "TypeAlias",
       "DebuggerListToggle": "TypeAlias",
       "DebuggerPaneBinding": "TypeAlias",
+      "DebuggerPaneBindingProps": "TypeAlias",
       "DebuggerPaneButton": "TypeAlias",
       "DebuggerPaneCustom": "TypeAlias",
       "DebuggerPaneFolder": "TypeAlias",
@@ -197,11 +198,16 @@
       "registerTestBridge": "Function",
       "TEST_BRIDGE_VERSION": "Variable",
       "TestBridgeCharacterPaths": "TypeAlias",
+      "TestBridgeDebuggerRoot": "TypeAlias",
+      "TestBridgeFocusResult": "TypeAlias",
       "TestBridgeInputScript": "TypeAlias",
+      "TestBridgeListRowResult": "TypeAlias",
       "TestBridgeProbeResult": "TypeAlias",
       "TestBridgeSceneReady": "TypeAlias",
       "TestBridgeSnapshot": "TypeAlias",
-      "TestBridgeSystemOrder": "TypeAlias"
+      "TestBridgeSystemOrder": "TypeAlias",
+      "TestBridgeTabHost": "TypeAlias",
+      "TestBridgeTabOrder": "TypeAlias"
     },
     "src/_engine/debug/UndoRedo.ts": {
       "_getUndoRedoActionHandler": "Function",
@@ -3441,6 +3447,7 @@
     "src/_engine/ui/forms/PropertyGridItems.ts": {
       "addPropertyGridItems": "Function",
       "inferFieldKind": "Function",
+      "PROPERTY_GRID_FIELD_ITEM_KEYS": "Variable",
       "PropertyGridButtonItem": "TypeAlias",
       "PropertyGridCustomItem": "TypeAlias",
       "PropertyGridFieldItem": "TypeAlias",
@@ -3638,6 +3645,7 @@
       "getDraggableWindow": "Function",
       "getDraggableWindowsOfKind": "Function",
       "getKindWindowId": "Function",
+      "getOpenDraggableWindowIds": "Function",
       "isDraggableWindowOnTop": "Function",
       "onDraggableWindowUnmount": "Function",
       "openDraggableWindow": "Function",

@@ -1,6 +1,12 @@
 import type { CMPHandle } from '../ui/core/CMPTypes';
-import type { FolderApi, Pane } from 'tweakpane';
-import type { BindingApi } from '@tweakpane/core';
+import type { BindingSource, ReadonlyBindingSource } from '../ui/forms/binding/Binding';
+import type { FieldChange } from '../ui/forms/Field';
+import type {
+  PropertyGridButtonItem,
+  PropertyGridCustomItem,
+  PropertyGridFieldItem,
+  PropertyGridSeparatorItem,
+} from '../ui/forms/PropertyGridItems';
 import type { SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { lsGetItem } from '../utils/LocalAndSessionStorage';
@@ -94,43 +100,47 @@ export type DebuggerStateKey<S> = {
 export type DebuggerDyn<T> = T | (() => T);
 
 /**
- * A pane item that binds an input (or a read-only monitor) to a property: of the tab's `state` by
- * default, or of a `target`. Any other field (`label`, `min`, `max`, `step`, `options`,
- * `readonly`, `view`, `format`, …) is passed as is to Tweakpane's `addBinding`.
- * @template S the tab's state
- * @remarks The fields passed to Tweakpane, and `onCreate`'s and `onChange`'s `BindingApi`, are
- * Tweakpane's own: p800 replaces Tweakpane, and they change with it (a major).
+ * The kit field item's props a {@link DebuggerPaneBinding} takes, besides its binding, `label` and
+ * `onChange`: `kind`, `min`, `max`, `step`, `options`, `readonly`, `interval`, `format`, … (the
+ * kit's names, which are Tweakpane's where it had them).
  */
-export type DebuggerPaneBinding<S extends object = object> = {
+export type DebuggerPaneBindingProps = Omit<
+  PropertyGridFieldItem,
+  'type' | 'target' | 'key' | 'get' | 'set' | 'value' | 'label' | 'onChange'
+>;
+
+/**
+ * A pane item that binds a field (or a read-only monitor, `readonly: true`) to a property of the
+ * tab's `state` by default, or to any of the kit's bindings: `{ target, key }`, `{ get, set }`,
+ * `{ get }` or `{ value }`. Its other fields are the kit's field item's
+ * ({@link DebuggerPaneBindingProps}): a field the kit doesn't take is a type error, and the tab's
+ * error line at run time. Without `kind` the field is inferred from the value (a colour number
+ * says `kind: 'color'`); `interval: 0` reads a monitor only when the tab refreshes.
+ * @template S the tab's state
+ */
+export type DebuggerPaneBinding<S extends object = object> = DebuggerPaneBindingProps & {
   /** The item's kind; a binding may leave it out */
-  type?: 'binding';
-  /** Hides the input, re-read on every refresh */
-  hidden?: DebuggerDyn<boolean>;
-  /** Disables the input, re-read on every refresh */
-  disabled?: DebuggerDyn<boolean>;
-  /** Called on user input only (never on hydration, refresh or rebuild). `e.prev` is the value
-   * before this change, `e.last` is false for the intermediate ticks of a drag. The value is
-   * persisted (see `DebuggerTabDef.persistKeys`) before this is called. */
-  onChange?: (value: unknown, e: { prev: unknown; last: boolean; api: BindingApi }) => void;
-  /** Called with the created binding (escape hatch for anything else). */
-  onCreate?: (api: BindingApi) => void;
-  /** Tweakpane's `addBinding` params (`label`, `min`, `max`, `step`, `options`, `view`, …) */
-  [tweakpaneParam: string]: unknown;
+  type?: 'binding' | 'field';
+  /** The field's name (default: its `key`) */
+  label?: string;
+  /** Called on every write of the value, never on a refresh or rebuild (the kit's order: each
+   * step of a drag with `last: false`, then `last: true` with `prev` the value before the
+   * gesture). A state key in `persistKeys` is persisted on `last` before this is called. */
+  onChange?(value: unknown, change: FieldChange<unknown>): void;
 } & (
-  | {
-      /** Property of the tab's `state`, or a path one level into it (eg. 'helpers.showGrid').
-       * It is persisted when its top-level key is one of the tab's persistKeys. */
-      key: DebuggerStateKey<S>;
-      /** None: the binding binds to the tab's `state` */
-      target?: undefined;
-    }
-  | {
-      /** Property of `target`. */
-      key: string;
-      /** A foreign object to bind to (never persisted). */
-      target: object;
-    }
-);
+    | {
+        /** Property of the tab's `state`, or a path one level into it (eg. 'helpers.showGrid').
+         * It is persisted when its top-level key is one of the tab's persistKeys. */
+        key: DebuggerStateKey<S>;
+        /** None: the binding binds to the tab's `state` */
+        target?: undefined;
+        get?: never;
+        set?: never;
+        value?: never;
+      }
+    | BindingSource<unknown>
+    | ReadonlyBindingSource<unknown>
+  );
 
 /**
  * A foldable group of pane items. Its open / closed state is persisted to the tab's UI key (see
@@ -154,43 +164,18 @@ export type DebuggerPaneFolder<S extends object = object> = {
   content: DebuggerPaneItem<S>[];
 };
 
-/** A pane item that runs a function when clicked. */
-export type DebuggerPaneButton = {
-  /** The item's kind */
-  type: 'button';
-  /** The button's text */
-  title: string;
-  /** A label left of the button, as a binding's */
-  label?: string;
-  /** Hides the button, re-read on every refresh */
-  hidden?: DebuggerDyn<boolean>;
-  /** Disables the button, re-read on every refresh */
-  disabled?: DebuggerDyn<boolean>;
-  /** Called on a click */
-  onClick: () => void;
-};
+/** A pane item that runs a function when clicked: the kit's button item. */
+export type DebuggerPaneButton = PropertyGridButtonItem;
 
-/** A pane item that draws a line between the items around it. */
-export type DebuggerPaneSeparator = {
-  /** The item's kind */
-  type: 'separator';
-  /** Hides the line, re-read on every refresh */
-  hidden?: DebuggerDyn<boolean>;
-};
+/** A pane item that draws a line between the items around it: the kit's separator item. */
+export type DebuggerPaneSeparator = PropertyGridSeparatorItem;
 
 /**
- * Escape hatch for anything the format doesn't cover (plugins, special blades): `build` adds it
- * to the pane or folder itself. The function `build` returns (if any) is called on every tab
- * refresh.
- * @remarks `build` gets Tweakpane's `Pane` or `FolderApi`: p800 replaces Tweakpane, and this
- * changes with it (a major).
+ * Escape hatch for anything the items don't cover: `build` adds it to its container, a CMP across
+ * the grid's two columns. The function `build` returns (if any) is called on every tab refresh.
+ * The kit's custom item.
  */
-export type DebuggerPaneCustom = {
-  /** The item's kind */
-  type: 'custom';
-  /** Adds the item to `parent`; the function it returns runs on every refresh */
-  build: (parent: Pane | FolderApi) => void | (() => void);
-};
+export type DebuggerPaneCustom = PropertyGridCustomItem;
 
 /**
  * One item of a declarative pane: a binding, a folder, a button, a separator or a custom item.
@@ -204,8 +189,8 @@ export type DebuggerPaneItem<S extends object = object> =
   | DebuggerPaneCustom;
 
 /**
- * A tab section built from a declarative item list (a Tweakpane pane). Disposed when the tab
- * unmounts.
+ * A tab section built from a declarative item list: a property grid of the UI kit's fields.
+ * Disposed when the tab unmounts.
  * @template S the tab's state
  */
 export type DebuggerPaneSection<S extends object = object> = {

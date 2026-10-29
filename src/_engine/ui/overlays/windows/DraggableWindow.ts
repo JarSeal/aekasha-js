@@ -749,6 +749,18 @@ const loadDraggableWindowStatesFromLS = () => {
   saveDraggableWindowStatesToLS();
 };
 
+/**
+ * The open windows' ids, each layer bottom to top: the app's windows, the app's dialogs, the debug
+ * windows, the debug dialogs. The test bridge's (p806 D14).
+ * @internal
+ */
+export const getOpenDraggableWindowIds = () => [
+  ...stacks.APP,
+  ...stacks.DIALOG,
+  ...stacks.DEBUG,
+  ...stacks.DEBUG_DIALOG,
+];
+
 /** A window: a copy of its config, with its live CMPs; undefined for an unknown id. */
 export const getDraggableWindow = (id: string): DraggableWindow | undefined => {
   const entry = getWindows().get(id);

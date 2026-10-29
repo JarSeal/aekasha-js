@@ -1,4 +1,6 @@
-import type { FolderApi, Pane } from 'tweakpane';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
+import { createButton } from '../../../ui/components/Button';
+import { createButtonGroup } from '../../../ui/components/ButtonGroup';
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getActiveSkyBox } from '../SkyBox';
 import {
@@ -86,28 +88,32 @@ const SPEED_BUTTONS: [string, number][] = [
   ['×100', 100],
 ];
 
-/** One row of Tweakpane-styled speed buttons (a set speed also plays). It lives in a blade, so
- * it's disposed with the pane. */
-const buildSpeedButtons = (parent: Pane | FolderApi) => {
-  const blade = parent.addBlade({ view: 'separator' });
-  const row = document.createElement('div');
-  row.className = 'debuggerSkyTransportRow';
-  for (const [title, speed] of SPEED_BUTTONS) {
-    const button = document.createElement('button');
-    button.className = 'tp-btnv_b';
-    button.textContent = title;
-    button.title = `Play at ×${speed}`;
-    button.addEventListener('click', () => {
-      setDayNightSpeed(speed);
+/**
+ * The speed buttons (a press sets the speed and plays): an exclusive button group (p806 D10), its
+ * pressed button the speed the cycle plays at, none while it's paused. The function it returns is
+ * the custom item's refresh.
+ */
+const buildSpeedButtons = (container: CMPHandle) => {
+  const buttons = SPEED_BUTTONS.map(([label, speed]) =>
+    createButton({ label, size: 'sm', pressed: false, tooltip: `Play at ×${speed}` })
+  );
+  const group = createButtonGroup({
+    label: 'Day-night speed',
+    buttons,
+    exclusive: true,
+    onChange: (index) => {
+      setDayNightSpeed(SPEED_BUTTONS[index][1]);
       playDayNight();
       syncDayNightTransport();
-      refresh();
-    });
-    row.appendChild(button);
-  }
-  blade.element.replaceChildren(row);
+    },
+  });
+  container.add(group.cmp);
   const refresh = () => {
-    row.classList.toggle('isDisabled', isOff());
+    const speed = getDayNightSpeed();
+    const index = isDayNightPlaying() ? SPEED_BUTTONS.findIndex(([, s]) => s === speed) : -1;
+    if (index !== group.getPressedIndex()) group.setPressedIndex(index);
+    const isDisabled = isOff();
+    for (let i = 0; i < buttons.length; i++) buttons[i].setDisabled(isDisabled);
   };
   refresh();
   return refresh;

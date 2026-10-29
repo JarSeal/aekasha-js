@@ -306,7 +306,7 @@ export const getMaterialParamPaneItems = (
         key: def.key,
         target,
         label: def.label,
-        ...(def.kind === 'COLOR' ? { view: 'color' } : {}),
+        ...(def.kind === 'COLOR' ? { kind: 'color' } : {}),
         ...(def.kind === 'SIDE' ? { options: SIDE_OPTIONS } : {}),
         ...(def.min !== undefined ? { min: def.min } : {}),
         ...(def.max !== undefined ? { max: def.max } : {}),
@@ -694,7 +694,7 @@ export const getNodeInputPaneItems = (
           key: input,
           target,
           label: input,
-          ...(editable.kind === 'COLOR' ? { view: 'color' } : {}),
+          ...(editable.kind === 'COLOR' ? { kind: 'color' } : {}),
           onChange: (next, e) => onChange(socket, input, next, e.last),
         });
       } else {

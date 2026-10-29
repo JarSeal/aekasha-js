@@ -115,7 +115,7 @@ export const createBoxesTab = () => {
           {
             key: 'color',
             label: 'Colour',
-            view: 'color',
+            kind: 'color',
             onChange: (value, e) => {
               setBoxColor(String(value));
               recordBoxSetting('color', value, e.prev);

@@ -166,7 +166,7 @@ export const getSettingsPaneItems = (
       key: def.key,
       target,
       label: def.label,
-      ...(def.kind === 'COLOR' ? { view: 'color' } : {}),
+      ...(def.kind === 'COLOR' ? { kind: 'color' } : {}),
       ...(def.options ? { options: def.options } : {}),
       ...(def.min !== undefined ? { min: def.min } : {}),
       ...(def.max !== undefined ? { max: def.max } : {}),

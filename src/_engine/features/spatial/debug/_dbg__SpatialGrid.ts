@@ -587,7 +587,7 @@ export const _createSpatialGridDebugGUI = () => {
                   key: 'cellsColor',
                   target: selected,
                   label: 'Wireframe color',
-                  view: 'color',
+                  kind: 'color',
                   onChange: setOverlaySetting('cellsColor'),
                 },
                 {
@@ -600,7 +600,7 @@ export const _createSpatialGridDebugGUI = () => {
                   key: 'oversizedColor',
                   target: selected,
                   label: 'Oversized color',
-                  view: 'color',
+                  kind: 'color',
                   onChange: setOverlaySetting('oversizedColor'),
                 },
               ],

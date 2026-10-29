@@ -57,7 +57,12 @@ import {
   type RunStatus,
 } from './sceneBaseline';
 import { isAllowed, type LoadContext, runOne } from './sceneRun';
-import { checkCrossTargetHashes, parseSceneRunArgs, selectScenes } from './sceneSelect';
+import {
+  checkCrossTargetHashes,
+  getSceneConfigs,
+  parseSceneRunArgs,
+  selectScenes,
+} from './sceneSelect';
 
 const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
 
@@ -243,7 +248,7 @@ const main = async () => {
   try {
     for (const sceneId of sceneIds) {
       const sceneResults: RunResult[] = [];
-      for (const config of args.configs) {
+      for (const config of getSceneConfigs(args.configs, SCENE_VERIFY_CONFIG[sceneId])) {
         const isFirstPage = !ctx.backend;
         const r = await runOne(ctx, sceneId, config);
         // The SIGINT handler exits once the browser is closed

@@ -188,24 +188,6 @@
   }
 }
 
-:global(.debuggerSkyTransportRow) {
-  display: flex;
-  gap: calc(0.2 * var(--aek-rem));
-  padding: calc(0.2 * var(--aek-rem)) 0;
-
-  :global(.tp-btnv_b) {
-    flex: 1;
-    min-width: 0;
-    padding: 0 calc(0.2 * var(--aek-rem));
-    white-space: nowrap;
-  }
-
-  &:global(.isDisabled) {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-}
-
 :global(.debuggerClearLSDialogButtonRow) {
   display: flex;
   justify-content: center;

@@ -332,3 +332,15 @@ export const launchVerifyChromiumAsync = async (opts: {
     closeAsync: () => browser.close(),
   };
 };
+
+/** A page call's limit beyond the bridge's own (its `timeoutMs`), and for the calls without one */
+export const EVALUATE_MARGIN_MS = 60_000;
+
+/** A page call that can hang (a stuck GPU readback): rejected after `ms`, so the run goes on */
+export const withTimeout = <T>(promise: Promise<T>, ms: number, what: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: no answer in ${ms / 1000} s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};

@@ -4,6 +4,7 @@ import {
   appliesTo,
   buildSceneUrl,
   checkCrossTargetHashes,
+  getSceneConfigs,
   parseSceneRunArgs,
   selectScenes,
 } from './sceneSelect';
@@ -22,7 +23,7 @@ describe('parseSceneRunArgs', () => {
   it('defaults to every configuration on Chromium', () => {
     expect(args()).toEqual({
       only: [],
-      configs: ['workerSab', 'workerMsg', 'mainThread', 'prodTest'],
+      configs: ['workerSab', 'workerMsg', 'mainThread', 'prodTest', 'debugger'],
       update: false,
       url: null,
       webgl: false,
@@ -59,8 +60,9 @@ describe('parseSceneRunArgs', () => {
 
   it('runs Firefox on the debug configurations only, never recording', () => {
     expect(args('--browser', 'firefox').configs).toEqual(['workerSab', 'workerMsg', 'mainThread']);
-    expect(parse('--browser', 'firefox', '--config', 'prodTest')).toEqual({
-      error: '--browser firefox runs the debug configurations only (not prodTest)',
+    expect(parse('--browser', 'firefox', '--config', 'prodTest,debugger')).toEqual({
+      error:
+        "--browser firefox runs the debug configurations' hashes only (not prodTest, debugger)",
     });
     expect(parse('--browser', 'firefox', '--update')).toMatchObject({
       error: expect.stringContaining('no --update'),
@@ -102,6 +104,19 @@ describe('appliesTo', () => {
   it('matches a configuration filter never without a configuration', () => {
     expect(appliesTo({ configs: ['workerSab'] }, null, 'chromium')).toBe(false);
     expect(appliesTo({ browsers: ['chromium'] }, null, 'chromium')).toBe(true);
+  });
+});
+
+describe('getSceneConfigs', () => {
+  it('runs the debugger configuration only on a scene with debugger settings', () => {
+    const all = args().configs;
+    expect(getSceneConfigs(all, undefined)).toEqual([
+      'workerSab',
+      'workerMsg',
+      'mainThread',
+      'prodTest',
+    ]);
+    expect(getSceneConfigs(all, { debugger: { tabs: 'ALL' } })).toEqual(all);
   });
 });
 

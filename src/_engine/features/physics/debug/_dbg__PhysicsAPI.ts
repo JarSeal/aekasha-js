@@ -646,7 +646,7 @@ const getWireframeFolder = (proxies: WireframeProxies): DebuggerPaneItem<Physics
         key: state,
         target: colors,
         label: WIREFRAME_STATE_LABELS[state],
-        view: 'color',
+        kind: 'color',
         onChange: (value) => {
           setGlobalWireframeColor(state, Number(value));
           persistWireframeState();

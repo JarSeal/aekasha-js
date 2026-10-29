@@ -289,6 +289,14 @@ export const _openProfilerTab = (id: string) => {
 
 export const _isProfilerTabOpen = (id: string) => Boolean(windowRoot) && host.mountedId === id;
 
+/** The profiler window for the test bridge (p806 D14): its content root, the mounted tab and the
+ * tab ids in menu order. */
+export const _getProfilerTestInfo = () => ({
+  element: windowRoot?.elem ?? null,
+  mountedId: host.mountedId,
+  tabIds: getOrderedTabs().map((def) => def.id),
+});
+
 export const _updateProfilerTab = (id: string, opts?: UpdateDebuggerTabOpts) => {
   if (!_isProfilerTabOpen(id)) return;
   host.refresh(opts?.rebuild);
