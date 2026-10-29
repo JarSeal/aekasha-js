@@ -1,5 +1,6 @@
 import { CMP } from '../../ui/core/CMP';
 import type { CMPHandle } from '../../ui/core/CMPTypes';
+import { createTabs, type TabDef, type Tabs } from '../../ui/components/Tabs';
 import styles from './Profiler.module.scss';
 import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
@@ -8,7 +9,6 @@ import {
   openDraggableWindow,
   registerDraggableWindow,
   toggleDraggableWindow,
-  updateDraggableWindow,
 } from '../../ui/overlays/windows/DraggableWindow';
 import type { OpenDraggableWindowProps } from '../../ui/overlays/windows/DraggableWindowTypes';
 import {
@@ -28,6 +28,7 @@ import {
 import { updateOnScreenTools } from '../OnScreenTools';
 import { updateStatsProfilerEntryPoint } from '../Stats';
 import { createTabHost } from '../_dbg__TabHost';
+import { createTabContainers } from '../_dbg__TabContainers';
 import { persistDebuggerTabStateValue } from '../_dbg__DebuggerPaneBuilder';
 import { _acquireFrameProbe, _releaseFrameProbe } from './_dbg__FrameProbe';
 import {
@@ -167,18 +168,14 @@ const getOrderedTabs = () =>
 
 /** The window content's root, while the window is open (its content is mounted). */
 let windowRoot: CMPHandle | null = null;
-/** The mounted tab's scroller. */
-let tabContentCMP: CMPHandle | null = null;
-const menuButtons = new Map<string, CMPHandle>();
+/** The tab menu (p806 D6: horizontal, icon only, manual activation), while the window is open */
+let menu: Tabs | null = null;
+/** Each tab's container, its scroller (the menu's panel content) */
+const containers = createTabContainers({ class: styles.tabContent });
 
 const host = createTabHost({
-  getContainer: () => tabContentCMP,
+  getContainer: () => containers.get(menu?.getSelected() ?? null),
   isVisible: () => Boolean(windowRoot),
-  onMount: (def) => {
-    for (const [id, button] of menuButtons) {
-      button.updateClass(styles.tabButton_selected, id === def.id ? 'add' : 'remove');
-    }
-  },
   label: 'Profiler tab',
 });
 
@@ -193,21 +190,55 @@ const getWindowProps = (): OpenDraggableWindowProps => ({
   minSize: { w: 380, h: 320 },
 });
 
-const selectTab = (def: AnyDebuggerTabDef) => {
-  saveTabId(def.id);
-  if (host.mountedId === def.id) return;
+const getMenuTabs = (): TabDef[] =>
+  getOrderedTabs().map((def) => ({
+    key: def.id,
+    label: def.title,
+    icon: getSvgIcon(def.icon),
+    iconOnly: true,
+    content: containers.getContentFn(def.id),
+  }));
+
+/** Shows a tab in the menu and mounts it in its container (scrolled to the top); the others are
+ * emptied */
+const mountTab = (def: AnyDebuggerTabDef) => {
+  if (!menu) return;
+  menu.select(def.id);
   host.mount(def);
-  if (tabContentCMP) tabContentCMP.elem.scrollTop = 0;
+  containers.clearOthers(def.id);
+  const container = containers.get(def.id);
+  if (container) container.elem.scrollTop = 0;
 };
 
-const createMenuButton = (def: AnyDebuggerTabDef) => {
-  const icon = getSvgIcon(def.icon);
-  return CMP({
-    class: styles.tabButton,
-    html: () => `<button>${icon}</button>`,
-    attr: { title: def.title },
-    onClick: () => selectTab(def),
-  });
+/** Set while the window changes the menu itself: a selection the menu reports then (the selected
+ * tab removed) mounts the next tab without saving it as the user's */
+let isSyncingTabs = false;
+
+const onMenuSelect = (id: string) => {
+  const def = tabs.get(id);
+  if (!def) return;
+  if (!isSyncingTabs) saveTabId(id);
+  if (host.mountedId !== id) mountTab(def);
+};
+
+/** The menu after a tab was created, replaced or removed (in place, as the drawer's rail): the
+ * saved tab is shown when it's registered, else the shown one stays, else the first; a replaced
+ * tab that's shown is mounted again. */
+const syncTabs = (replacedId?: string) => {
+  if (!menu) return;
+  containers.retain(new Set(tabs.keys()));
+  isSyncingTabs = true;
+  try {
+    menu.setTabs(getMenuTabs());
+  } finally {
+    isSyncingTabs = false;
+  }
+  const target =
+    tabs.get(getSavedTabId()) ??
+    (host.mountedId ? tabs.get(host.mountedId) : undefined) ??
+    getOrderedTabs()[0];
+  if (!target) return;
+  if (target.id !== host.mountedId || target.id === replacedId) mountTab(target);
 };
 
 /** Releases what the open window holds. Runs after the content's CMPs are removed (a close, or a
@@ -215,29 +246,29 @@ const createMenuButton = (def: AnyDebuggerTabDef) => {
 const onWindowContentRemoved = () => {
   host.unmount();
   windowRoot = null;
-  tabContentCMP = null;
-  menuButtons.clear();
+  menu = null;
+  containers.retain(new Set());
   _releaseFrameProbe();
   updateOnScreenTools('PLAY');
 };
 
-/** The window content: the tab menu and the mounted tab. Built on every open and rebuild. */
+/** The window content: the tab menu over the mounted tab. Built on every open and rebuild. */
 const buildWindowContent = () => {
   const root = CMP({ class: styles.profiler, onRemoveCmp: onWindowContentRemoved });
   windowRoot = root;
   _acquireFrameProbe();
 
-  const orderedTabs = getOrderedTabs();
-  const menu = root.add({ class: styles.tabMenu });
-  for (let i = 0; i < orderedTabs.length; i++) {
-    const button = createMenuButton(orderedTabs[i]);
-    menuButtons.set(orderedTabs[i].id, button);
-    menu.add(button);
-  }
-  tabContentCMP = root.add({ class: styles.tabContent });
-
-  const def = tabs.get(getSavedTabId()) || orderedTabs[0];
-  if (def) host.mount(def);
+  const def = tabs.get(getSavedTabId()) || getOrderedTabs()[0];
+  menu = createTabs({
+    label: 'Profiler tabs',
+    activation: 'manual',
+    tabs: getMenuTabs(),
+    ...(def ? { selected: def.id } : {}),
+    class: styles.tabs,
+    onSelect: onMenuSelect,
+  });
+  root.add(menu.cmp);
+  if (def) mountTab(def);
 
   updateOnScreenTools('PLAY');
   return root;
@@ -254,25 +285,21 @@ export const _createProfilerTab = (def: AnyDebuggerTabDef) => {
   if (def.sceneId) {
     lwarn(`Profiler tab "${def.id}" has a sceneId, which profiler tabs don't support (ignored).`);
   }
+  // A replaced tab keeps its registration position
+  const isReplaced = tabs.has(def.id);
   tabs.set(def.id, def);
-  if (!windowRoot) return;
-  // The menu is part of the window content: rebuild it, keeping the scroll position
-  const scrollPos = tabContentCMP?.elem.scrollTop || 0;
-  updateDraggableWindow(PROFILER_WINDOW_ID);
-  if (tabContentCMP) tabContentCMP.elem.scrollTop = scrollPos;
+  syncTabs(isReplaced ? def.id : undefined);
 };
 
 export const _removeProfilerTab = (id: string) => {
-  if (!tabs.delete(id)) {
+  if (!tabs.has(id)) {
     lwarn(`Could not find a profiler tab to remove with id "${id}" in removeProfilerTab`);
     return;
   }
-  if (!windowRoot) return;
-  // The menu is part of the window content: the rebuild unmounts the tab (its cleanup runs) and
-  // mounts the saved tab, or the first one when the removed tab was the saved one
-  const scrollPos = host.mountedId === id ? 0 : tabContentCMP?.elem.scrollTop || 0;
-  updateDraggableWindow(PROFILER_WINDOW_ID);
-  if (tabContentCMP) tabContentCMP.elem.scrollTop = scrollPos;
+  // Its cleanup runs before its container goes with its panel
+  if (host.mountedId === id) host.unmount();
+  tabs.delete(id);
+  syncTabs();
 };
 
 export const _openProfilerTab = (id: string) => {
@@ -282,9 +309,10 @@ export const _openProfilerTab = (id: string) => {
     return;
   }
   saveTabId(id);
+  // An open window shows the tab first, so its focus on the front goes to the tab's button
+  if (menu && host.mountedId !== id) mountTab(def);
   // Opens the window on the saved tab, or brings an open one to the front
   openDraggableWindow(getWindowProps());
-  selectTab(def);
 };
 
 export const _isProfilerTabOpen = (id: string) => Boolean(windowRoot) && host.mountedId === id;

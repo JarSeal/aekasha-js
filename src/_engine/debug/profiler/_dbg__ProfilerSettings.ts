@@ -1,5 +1,10 @@
 import { CMP } from '../../ui/core/CMP';
-import type { DebuggerTabDef } from '../DebuggerGUI';
+import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
+import { createButton } from '../../ui/components/Button';
+import { createList } from '../../ui/data/List';
+import { createListReorder } from '../../ui/data/Reorder';
+import { addScheduledRefresh } from '../../ui/forms/binding/BindingScheduler';
+import type { DebuggerTabContext, DebuggerTabDef } from '../DebuggerGUI';
 import {
   PROFILER_LS_KEY,
   PROFILER_UI_LS_KEY,
@@ -8,7 +13,6 @@ import {
   type ProfilerSettings,
 } from '../Profiler';
 import {
-  escapeProfilerHtml as esc,
   getDefaultOverviewMetrics,
   getOverviewMetricEntries,
   getOverviewMetricLabel,
@@ -46,73 +50,111 @@ const isDefaultMetricList = (list: ProfilerOverviewMetricEntry[]) =>
   JSON.stringify(list) === JSON.stringify(getDefaultOverviewMetrics());
 
 /**
- * The Overview rows editor: a visibility checkbox and ▲ / ▼ per row, and "Reset to default". The
- * app stats sources' rows are a group of their own after the engine's (the Overview shows them
- * there), so a row moves only within its group. A plain CMP list (the debugger list has no
- * reordering). Re-rendered by the tab refresh that every change triggers; its click handler
- * survives the re-render.
+ * The Overview's rows with `id` moved to `to`, an index among its own group's rows (the engine's
+ * or the app sources'), the others closing the gap: a row moves only within its group, since the
+ * Overview shows the app rows after the engine's.
  */
-const createMetricListEditor = (opts: SettingsTabOpts) => {
-  const renderRow = (list: ProfilerOverviewMetricEntry[], i: number) => {
-    const { id, visible } = list[i];
-    const isApp = isAppMetricId(id);
-    const isFirst = i === 0 || isAppMetricId(list[i - 1].id) !== isApp;
-    const isLast = i === list.length - 1 || isAppMetricId(list[i + 1].id) !== isApp;
-    return (
-      `<li${visible ? '' : ' class="isHidden"'}>` +
-      `<label><input type="checkbox" data-action="toggle" data-index="${i}"` +
-      `${visible ? ' checked' : ''}> ${esc(getOverviewMetricLabel(id))}</label>` +
-      `<button data-action="up" data-index="${i}" title="Move up"${isFirst ? ' disabled' : ''}>▲</button>` +
-      `<button data-action="down" data-index="${i}" title="Move down"` +
-      `${isLast ? ' disabled' : ''}>▼</button></li>`
-    );
-  };
+export const moveOverviewMetric = (
+  entries: readonly ProfilerOverviewMetricEntry[],
+  id: string,
+  to: number
+): ProfilerOverviewMetricEntry[] => {
+  const next = entries.map((entry) => ({ ...entry }));
+  const from = next.findIndex((entry) => entry.id === id);
+  if (from === -1) return next;
+  const isApp = isAppMetricId(id);
+  const [row] = next.splice(from, 1);
+  const groupIndices: number[] = [];
+  for (let i = 0; i < next.length; i++) {
+    if (isAppMetricId(next[i].id) === isApp) groupIndices.push(i);
+  }
+  const at =
+    to < groupIndices.length
+      ? groupIndices[Math.max(0, to)]
+      : groupIndices.length
+        ? groupIndices[groupIndices.length - 1] + 1
+        : from;
+  next.splice(at, 0, row);
+  return next;
+};
 
-  const renderList = () => {
-    const list = getOverviewMetricEntries(opts.settings);
-    let engineRows = '';
-    let appRows = '';
-    for (let i = 0; i < list.length; i++) {
-      if (isAppMetricId(list[i].id)) {
-        appRows += renderRow(list, i);
-      } else {
-        engineRows += renderRow(list, i);
-      }
-    }
-    const resetDisabled = isDefaultMetricList(list) ? ' disabled' : '';
-    const appGroup = appRows
-      ? `<h5 class="profilerMetricGroupHead">App</h5><ol>${appRows}</ol>`
-      : '';
-    return (
-      `<div class="profilerMetricList"><div class="profilerMetricListHead">` +
-      `<h4>Overview rows</h4>` +
-      `<button data-action="reset" title="Default rows and order"${resetDisabled}>Reset to default</button>` +
-      `</div><ol>${engineRows}</ol>${appGroup}</div>`
-    );
-  };
-
-  const onClick = (e: Event) => {
-    const target = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-action]');
-    if (!target || (target as HTMLButtonElement).disabled) return;
-    const { action, index: indexAttr } = target.dataset;
-    if (action === 'reset') {
-      opts.setSettings({ overviewMetrics: getDefaultOverviewMetrics() });
-      return;
-    }
-    const index = Number(indexAttr);
-    const next = getOverviewMetricEntries(opts.settings).map((entry) => ({ ...entry }));
-    if (!next[index]) return;
-    if (action === 'toggle') {
-      next[index].visible = !next[index].visible;
-    } else {
-      const other = action === 'up' ? index - 1 : index + 1;
-      if (!next[other] || isAppMetricId(next[other].id) !== isAppMetricId(next[index].id)) return;
-      [next[index], next[other]] = [next[other], next[index]];
-    }
+/** One group's rows (the engine's or the app sources') as a kit list: a visibility toggle per row,
+ * moved by Alt + ArrowUp / ArrowDown or a drag (p806 D10) */
+const createMetricList = (opts: SettingsTabOpts, ctx: DebuggerTabContext, isApp: boolean) => {
+  const getRows = () =>
+    getOverviewMetricEntries(opts.settings).filter((entry) => isAppMetricId(entry.id) === isApp);
+  const setRows = (next: ProfilerOverviewMetricEntry[]) =>
     opts.setSettings({ overviewMetrics: next });
-  };
+  return createList<ProfilerOverviewMetricEntry>({
+    items: getRows,
+    getKey: (entry) => entry.id,
+    title: (entry) => getOverviewMetricLabel(entry.id),
+    // Not the colour alone
+    suffix: (entry) => (entry.visible ? '' : 'Hidden'),
+    ...(isApp ? { heading: 'App', headingLevel: 5 } : { label: 'Overview rows' }),
+    actions: [
+      {
+        key: 'visible',
+        label: 'Show in the Overview',
+        icon: getSvgIcon('circleCheckCutout', 'sm'),
+        pressed: (entry) => entry.visible,
+        onPress: (entry) =>
+          setRows(
+            getOverviewMetricEntries(opts.settings).map((row) =>
+              row.id === entry.id ? { ...row, visible: !row.visible } : { ...row }
+            )
+          ),
+      },
+    ],
+    reorder: createListReorder({
+      onReorder: ({ key, to }) =>
+        setRows(moveOverviewMetric(getOverviewMetricEntries(opts.settings), key, to)),
+    }),
+    scheduler: ctx.scheduler,
+    class: 'profilerMetricList',
+  });
+};
 
-  return CMP({ html: renderList, onClick });
+/**
+ * The Overview rows editor (p806 D10): the engine's rows and the app sources' (a group of their
+ * own after the engine's, shown once there is one) as two kit lists, and "Reset to default". Every
+ * change goes through `setSettings`, whose tab refresh reads the lists and the button again on the
+ * tab's scheduler.
+ */
+const createMetricListEditor = (opts: SettingsTabOpts, ctx: DebuggerTabContext) => {
+  let removeRefresh: (() => void) | null = null;
+  const root = CMP({
+    class: 'profilerMetricEditor',
+    onRemoveCmp: () => {
+      removeRefresh?.();
+      removeRefresh = null;
+    },
+  });
+  const head = root.add({ class: 'profilerMetricEditorHead' });
+  head.add({ tag: 'h4', text: 'Overview rows' });
+  const reset = createButton({
+    label: 'Reset to default',
+    size: 'sm',
+    tooltip: 'The default rows and order',
+    onClick: () => opts.setSettings({ overviewMetrics: getDefaultOverviewMetrics() }),
+  });
+  head.add(reset.cmp);
+  root.add(createMetricList(opts, ctx, false).cmp);
+  const appGroup = root.add({ class: 'profilerMetricAppGroup' });
+  appGroup.add(createMetricList(opts, ctx, true).cmp);
+
+  const read = () => {
+    const entries = getOverviewMetricEntries(opts.settings);
+    reset.setDisabled(isDefaultMetricList(entries));
+    const hasApp = entries.some((entry) => isAppMetricId(entry.id));
+    if (hasApp) appGroup.elem.removeAttribute('hidden');
+    else appGroup.elem.setAttribute('hidden', '');
+  };
+  read();
+  removeRefresh = addScheduledRefresh(ctx.scheduler, read, {
+    isShown: () => root.elem.isConnected,
+  });
+  return root;
 };
 
 /**
@@ -132,7 +174,7 @@ export const createProfilerSettingsTabDef = (
   state: opts.settings,
   persistKeys: PROFILER_SETTINGS_PERSIST_KEYS,
   onClearLS: opts.onClearLS,
-  content: () => [
+  content: (ctx) => [
     {
       pane: true,
       content: [
@@ -168,7 +210,7 @@ export const createProfilerSettingsTabDef = (
         },
       ],
     },
-    createMetricListEditor(opts),
+    createMetricListEditor(opts, ctx),
     {
       pane: true,
       content: [

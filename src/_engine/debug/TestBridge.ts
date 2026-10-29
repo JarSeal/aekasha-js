@@ -10,7 +10,7 @@ const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
  * bridge's and the scene runner's.
  * @internal
  */
-export const TEST_BRIDGE_VERSION = 5;
+export const TEST_BRIDGE_VERSION = 6;
 
 /**
  * Key events the bridge dispatches right before fixed physics steps of the first scene's world
@@ -88,18 +88,20 @@ export type TestBridgeSnapshot = {
 export type TestBridgeSystemOrder = Record<string, Record<string, string[]>>;
 
 /**
- * A debugger tab host the scene runner's `debugger` configuration drives: the drawer or the
- * profiler window (p806 D14). The test bridge's and the scene runner's.
+ * A debugger tab host the scene runner's `debugger` configuration drives: the drawer, the
+ * profiler window or the material editor's drawer (p806 D14). The test bridge's and the scene
+ * runner's.
  * @internal
  */
-export type TestBridgeTabHost = 'DRAWER' | 'PROFILER';
+export type TestBridgeTabHost = 'DRAWER' | 'PROFILER' | 'MATERIAL_EDITOR';
 
 /**
  * Each tab host's tab ids in menu order: what the runner records beside the system order. The
- * test bridge's and the scene runner's.
+ * bridge gives every host; a baseline recorded before a host was added has none for it. The test
+ * bridge's and the scene runner's.
  * @internal
  */
-export type TestBridgeTabOrder = Record<TestBridgeTabHost, string[]>;
+export type TestBridgeTabOrder = Partial<Record<TestBridgeTabHost, string[]>>;
 
 /**
  * A debugger element the bridge opened or found, marked for the runner's shot and axe as
@@ -162,8 +164,9 @@ export type AekTestBridge = {
   /** The debugger's tab hosts' tab ids in menu order (the debug env only; empty lists without
    * the debugger) */
   getDebuggerTabOrder: () => Promise<TestBridgeTabOrder>;
-  /** Opens the drawer, or the profiler window, on a tab, and marks the drawer or the window as
-   * root `drawer` / `profiler` once the tab is mounted (two frames later) */
+  /** Opens the drawer, the profiler window or the material editor's drawer (its view entered
+   * first: {@link AekTestBridge.openMaterialEditor}) on a tab, and marks the drawer or the window
+   * as root `drawer` / `profiler` / `materialEditor` once the tab is mounted (two frames later) */
   openDebuggerTab: (opts: {
     host: TestBridgeTabHost;
     id: string;
@@ -187,6 +190,11 @@ export type AekTestBridge = {
   markDebuggerWindows: () => TestBridgeDebuggerRoot[];
   /** Closes every open window (a kind's window is removed, as its close button does) */
   closeDebuggerWindows: () => Promise<void>;
+  /** Enters the material editor's view and loads `material` (a material asset's id) in it, then
+   * marks its selector as root `materialSelector`; MISSING when the view or the load failed */
+  openMaterialEditor: (opts: { material?: string }) => Promise<TestBridgeDebuggerRoot>;
+  /** Goes back to the Runtime view */
+  closeMaterialEditor: () => Promise<void>;
 };
 
 declare global {

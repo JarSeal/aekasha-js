@@ -1,8 +1,8 @@
-@use 'sass:color';
-@use '../../../ui/styles/variables.scss';
+@use '../../styles/debugLayout' as layout;
 
-$selectorBodyHeight: calc(15 * var(--aek-rem));
-$cardSlotSize: calc(5.6 * var(--aek-rem));
+// The material editor's HUD (p806 D9: on the tokens, unlayered, so an app's element rules don't
+// reach it): the notice over the canvas, the selector (the bottom drawer) and the right drawer's
+// info sections. The HUD is a debugger root, so it has the debugger's theme and density.
 
 // The editor's HUD: a direct child of the HUD root (with KEEP_IN_VIEWS_CLASS), shown only while
 // the material editor view is active (Views.ts' `aekView_<id>` body class)
@@ -25,14 +25,15 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
   max-width: 80%;
-  padding: calc(1.2 * var(--aek-rem)) calc(1.6 * var(--aek-rem));
-  border-radius: variables.$borderRadiusSmall;
-  background: rgba(variables.$debugGuiBackground, 0.85);
-  color: variables.$debugTextColor;
-  font-size: calc(1.4 * var(--aek-rem));
+  padding: var(--aek-space-4) var(--aek-space-5);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  background-color: color-mix(in srgb, var(--aek-surface) 90%, transparent);
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-md);
   text-align: center;
+  transform: translate(-50%, -50%);
   pointer-events: none;
 
   &:empty {
@@ -44,16 +45,18 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
 // drawer (10200)
 .selector {
   position: fixed;
-  left: 0;
   right: 0;
   bottom: 0;
+  left: 0;
   z-index: 10100;
   display: flex;
   flex-direction: column;
-  background-color: variables.$debugGuiBackground;
-  color: variables.$debugTextColor;
-  font-size: calc(1.2 * var(--aek-rem));
-  transition: right var(--aek-motion-base) ease-in-out;
+  border-top: 1px solid var(--aek-border);
+  background-color: var(--aek-surface);
+  box-shadow: var(--aek-shadow-lg);
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-sm);
+  transition: right var(--aek-motion-base) var(--aek-ease-standard);
 
   // Its right edge follows the open right drawer (plan DD5) at the width its handle set (p806 D6,
   // on <body>): the grid reflows to the rest of the width. Under the full-width drawer (below its
@@ -61,9 +64,42 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
   :global(body.debugDrawerOpen) & {
     right: var(--aek-debug-drawer-width, 400px);
 
-    @media screen and (max-width: variables.$breakpointSmall) {
+    @media screen and (max-width: layout.$breakpointSmall) {
       right: 0;
     }
+  }
+}
+
+// The height handle on the top edge: a 24 px target over the edge (WCAG 2.5.8), its line in the
+// accent while it's hovered, focused or dragged
+.heightHandle {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 24px;
+  cursor: ns-resize;
+  touch-action: none;
+
+  &::after {
+    position: absolute;
+    inset-inline: 0;
+    top: 11px;
+    height: 2px;
+    background-color: transparent;
+    content: '';
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  &[data-dragging]::after {
+    background-color: var(--aek-accent);
+  }
+
+  &:focus-visible {
+    outline-offset: -8px;
   }
 }
 
@@ -71,85 +107,58 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(1 * var(--aek-rem));
-  padding: calc(0.6 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
-  border-bottom: 1px solid variables.$debugGuiBackgroundLighter2;
+  gap: var(--aek-space-3) var(--aek-space-4);
+  padding: var(--aek-space-3) var(--aek-space-4);
+  border-bottom: 1px solid var(--aek-border);
+
+  .selector[data-state='collapsed'] & {
+    border-bottom: 0;
+  }
 }
 
 .selectorTitle {
   margin: 0;
-  font-size: calc(1.3 * var(--aek-rem));
-  font-weight: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: var(--aek-font-size-md);
+  font-weight: var(--aek-font-weight-semibold);
 }
 
 .selectorCount {
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.filterInput {
-  flex: 0 1 calc(24 * var(--aek-rem));
-  min-width: calc(8 * var(--aek-rem));
-  padding: calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
-  border: 1px solid variables.$debugGuiBackgroundLighter2;
-  border-radius: variables.$borderRadiusSmall;
-  background: variables.$debugGuiBackgroundDarker;
-  color: variables.$debugTextColor;
-  font: inherit;
+.filterField {
+  flex: 0 1 calc(var(--aek-space-7) * 8);
+  min-width: calc(var(--aek-space-7) * 4);
+  gap: 0;
 
-  &:focus {
-    border-color: variables.$debugTextColorDark;
+  // Its label is visually hidden and it has no reset button: the head row takes no room
+  :global(.aekField__head) {
+    min-height: 0;
   }
 }
 
 .collapseButton {
-  @include variables.nakedButton;
   margin-left: auto;
-  width: calc(2.4 * var(--aek-rem));
-  height: calc(2.4 * var(--aek-rem));
-  border-radius: variables.$borderRadiusSmall;
-  background: transparent;
-  color: variables.$debugTextColor;
 
-  // A caret: down while open (collapses), up while collapsed
-  &:before {
-    content: '';
-    display: block;
-    width: calc(0.7 * var(--aek-rem));
-    height: calc(0.7 * var(--aek-rem));
-    margin: calc(-0.3 * var(--aek-rem)) auto 0;
-    border-right: 2px solid currentColor;
-    border-bottom: 2px solid currentColor;
-    transform: rotate(45deg);
+  :global(.aekButton__icon) {
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
   }
 
-  &:hover {
-    background: variables.$debugGuiBackgroundLighter2;
+  &[aria-expanded='false'] :global(.aekButton__icon) {
+    transform: rotate(180deg);
   }
 }
 
 .selectorBody {
-  height: $selectorBodyHeight;
+  height: var(--aek-mat-selector-height, 150px);
+  padding: var(--aek-space-4);
   overflow-y: auto;
-  padding: calc(1 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
-  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackground;
-}
+  scrollbar-width: thin;
 
-.selector_collapsed {
-  .selectorHeader {
-    border-bottom: 0;
-  }
-
-  .selectorBody {
+  &[hidden] {
     display: none;
-  }
-
-  .collapseButton:before {
-    margin-top: calc(0.3 * var(--aek-rem));
-    transform: rotate(-135deg);
   }
 }
 
@@ -157,73 +166,62 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
 // minimum takes the whole row
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(18 * var(--aek-rem), 100%), 1fr));
-  gap: calc(0.8 * var(--aek-rem));
+  grid-template-columns: repeat(auto-fill, minmax(min(calc(var(--aek-space-7) * 7), 100%), 1fr));
+  gap: var(--aek-space-3);
 }
 
 .emptyNotice {
-  margin: calc(0.4 * var(--aek-rem)) 0 0;
-  color: variables.$debugTextColorDark;
+  margin: var(--aek-space-2) 0 0;
+  color: var(--aek-text-muted);
 
   &:empty {
     display: none;
   }
 }
 
+// A card: a kit button laid out as the preview slot beside its name over its id and badges
 .card {
-  @include variables.nakedButton;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--aek-space-3);
   align-items: center;
-  gap: calc(0.8 * var(--aek-rem));
+  justify-items: start;
+  height: auto;
   min-width: 0;
-  padding: calc(0.6 * var(--aek-rem));
-  border: 1px solid transparent;
-  border-radius: variables.$borderRadiusSmall;
-  background: variables.$debugGuiBackgroundLighter2;
-  color: variables.$debugTextColor;
+  padding: var(--aek-space-3);
+  font-size: var(--aek-font-size-sm);
   text-align: left;
-  font: inherit;
-  transition:
-    background var(--aek-motion-base) ease-in-out,
-    border-color var(--aek-motion-base) ease-in-out;
 
-  &:hover {
-    background: color.adjust(variables.$debugGuiBackgroundLighter2, $lightness: 6%);
+  &[hidden] {
+    display: none;
   }
 
-  &:focus-visible {
-    outline: 1px solid variables.$debugTextColor;
+  :global(.aekButton__label) {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--aek-font-size-md);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  &:global(.selected) {
-    border-color: variables.$debugBoolTrue;
-    background: rgba(variables.$debugBoolTrue, 0.15);
+  // The shown material: the accent (p800 D6's selected)
+  &[aria-current='true'] {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
   }
 
-  &:global(.loading) .previewSlot {
+  &[aria-busy='true'] .previewSlot {
     animation: matEditorLoading calc(0.8s * var(--aek-motion, 1)) ease-in-out infinite alternate;
   }
 
-  &:global(.failed) {
-    border-color: variables.$debugAlertLight;
-
-    .cardName {
-      color: variables.$debugAlertLight;
-    }
+  &[data-failed] {
+    border-color: var(--aek-danger);
   }
 
-  &:global(.unavailable) {
-    opacity: 0.45;
+  &[aria-disabled='true'] {
+    color: var(--aek-text-disabled);
     cursor: not-allowed;
-
-    &:hover {
-      background: variables.$debugGuiBackgroundLighter2;
-    }
   }
-}
-
-.card_filteredOut {
-  display: none;
 }
 
 @keyframes matEditorLoading {
@@ -234,77 +232,73 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
 
 // Reserved for the preview thumbnails (later); a colour swatch or the type's initials for now
 .previewSlot {
-  flex: 0 0 auto;
+  grid-row: span 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: $cardSlotSize;
-  height: $cardSlotSize;
-  border-radius: variables.$borderRadiusSmall;
-  background: variables.$debugGuiBackgroundDarker;
-  color: variables.$debugTextColorDark;
-  font-size: calc(1.6 * var(--aek-rem));
-  font-weight: bold;
+  width: calc(var(--aek-space-7) * 1.75);
+  aspect-ratio: 1;
+  border-radius: var(--aek-radius-sm);
+  background-color: var(--aek-bg);
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-lg);
+  font-weight: var(--aek-font-weight-semibold);
 }
 
-.cardInfo {
+.cardMeta {
   display: flex;
   flex-direction: column;
-  gap: calc(0.3 * var(--aek-rem));
+  align-items: flex-start;
+  gap: var(--aek-space-1);
+  max-width: 100%;
   min-width: 0;
 }
 
-.cardName,
 .cardId {
+  max-width: 100%;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.cardName {
-  font-size: calc(1.3 * var(--aek-rem));
-}
-
-.cardId {
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
   font-family: var(--aek-font-mono);
-  font-size: calc(1.1 * var(--aek-rem));
+  font-size: var(--aek-font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cardBadges {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(0.4 * var(--aek-rem));
+  gap: var(--aek-space-2);
+  font-size: var(--aek-font-size-xs);
 }
 
-.badge {
-  padding: calc(0.1 * var(--aek-rem)) calc(0.4 * var(--aek-rem));
-  border-radius: calc(0.3 * var(--aek-rem));
-  background: variables.$debugGuiBackgroundDarker;
-  color: variables.$debugTextColorDark;
-  font-size: calc(1 * var(--aek-rem));
-  letter-spacing: 0.03em;
+.cardFailed {
+  display: none;
+
+  .card[data-failed] & {
+    display: inline-flex;
+  }
 }
 
 // The right drawer's read-only info sections (_dbg__MaterialEditorTabs.ts)
 .infoSection {
-  margin-bottom: calc(1.2 * var(--aek-rem));
-  font-size: calc(1.2 * var(--aek-rem));
+  margin-bottom: var(--aek-space-5);
+  font-size: var(--aek-font-size-sm);
 }
 
 .infoHeading {
-  margin: 0 0 calc(0.6 * var(--aek-rem));
-  font-size: calc(1.3 * var(--aek-rem));
+  margin: 0 0 var(--aek-space-3);
+  font-size: var(--aek-font-size-md);
+  font-weight: var(--aek-font-weight-semibold);
 }
 
 .infoList {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: calc(0.4 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
+  gap: var(--aek-space-2) var(--aek-space-4);
   margin: 0;
 
   dt {
-    color: variables.$debugTextColorDark;
+    color: var(--aek-text-muted);
   }
 
   dd {
@@ -316,10 +310,10 @@ $cardSlotSize: calc(5.6 * var(--aek-rem));
 
 .mono {
   font-family: var(--aek-font-mono);
-  font-size: calc(1.1 * var(--aek-rem));
+  font-size: var(--aek-font-size-xs);
 }
 
 .infoEmpty {
   margin: 0;
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
 }

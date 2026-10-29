@@ -190,6 +190,10 @@ export type SceneDebuggerConfig = {
   profiler?: boolean;
   windows?: DebuggerWindowOpener[];
   undoScripts?: DebuggerUndoScript[];
+  /** The material editor (p806 Phase 2 section 3): its view entered with `material` (a material
+   * asset's id) loaded, its selector and each tab of its drawer shot and checked
+   * (`materialEditor.selector`, `materialEditor.<tabId>`), then the Runtime view again */
+  materialEditor?: { material: string };
   /** Shots (`drawer.<id>`, `window.<name>`) whose difference only warns, with the reason (eg. rows
    * in the order their loads finished) */
   unstableShots?: { shots: string[]; reason: string };
@@ -243,6 +247,8 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
           press: ['App key shortcuts (current scene) [U]'],
         },
       ],
+      // A TSL material without textures: its Params tab has numbers and colours
+      materialEditor: { material: 'triplanarCheckerboard' },
       undoScripts: [
         {
           name: 'camera window position',

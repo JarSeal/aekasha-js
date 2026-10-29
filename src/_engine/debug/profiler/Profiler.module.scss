@@ -1,6 +1,6 @@
-@use 'sass:color';
-@use '../../ui/styles/variables.scss';
-@use '../debugTabButtons' as tabButtons;
+// The profiler window (p806 D6, D9: on the tokens, unlayered, so an app's element rules don't
+// reach it): its tab menu (`createTabs`) over each tab's container. The Overview's and Objects'
+// HTML strings are p807's to rewrite on the kit's tables and graphs; their classes stay global.
 
 .profiler {
   display: flex;
@@ -8,63 +8,77 @@
   height: 100%;
 }
 
-.tabMenu {
-  display: flex;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  padding: calc(0.8 * var(--aek-rem)) calc(1 * var(--aek-rem)) 0;
-}
-
-.tabButton {
-  @include tabButtons.tabButton(tabButton_selected);
-}
-
-.tabButton_selected {
-  @include tabButtons.tabButtonSelected;
-}
-
-.tabContent {
+// The tab menu over the panels; the selected panel is a column its container fills
+.tabs {
   flex: 1 1 auto;
   min-height: 0;
+
+  > :global(.aekTabs__list) {
+    padding-inline: var(--aek-space-3);
+  }
+
+  > :global(.aekTabs__panels) {
+    display: flex;
+  }
+
+  :global(.aekTabs__panel:not([hidden])) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  // The panel's ring inside: the window's edge would cut one outside
+  :global(.aekTabs__panel:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+}
+
+// A tab's container and scroller (the tab host mounts the tab in it)
+.tabContent {
+  --profiler-stripe: color-mix(in srgb, var(--aek-text) 4%, transparent);
+
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--aek-space-3) var(--aek-space-4) var(--aek-space-4);
   overflow: auto;
-  padding: 0 calc(1 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
-  color: variables.$debugTextColor;
-  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-sm);
   scrollbar-width: thin;
 
   :global(.profilerTable) {
     width: 100%;
     border-collapse: collapse;
-    font-size: calc(1.2 * var(--aek-rem));
     font-variant-numeric: tabular-nums;
 
     tr:nth-child(odd) {
-      background-color: rgba(255, 255, 255, 0.04);
+      background-color: var(--profiler-stripe);
     }
 
     th,
     td {
-      padding: calc(0.4 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
+      padding: var(--aek-space-2) var(--aek-space-3);
       vertical-align: baseline;
     }
 
     th {
+      font-weight: var(--aek-font-weight-regular);
       text-align: left;
-      font-weight: 400;
       white-space: nowrap;
     }
 
     :global(.profilerValue) {
+      color: var(--aek-text);
+      font-weight: var(--aek-font-weight-semibold);
       text-align: right;
-      font-weight: 700;
-      color: variables.$white;
       white-space: nowrap;
     }
 
     :global(.profilerSub) {
       width: 100%;
-      font-size: calc(1 * var(--aek-rem));
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+      color: var(--aek-text-muted);
+      font-size: var(--aek-font-size-xs);
     }
 
     :global(.profilerGroup) tr:first-child {
@@ -72,181 +86,149 @@
     }
 
     :global(.profilerGroupHead) {
-      padding-top: calc(1 * var(--aek-rem));
-      font-size: calc(1 * var(--aek-rem));
-      font-weight: 700;
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+      padding-top: var(--aek-space-4);
+      color: var(--aek-text-muted);
+      font-size: var(--aek-font-size-xs);
+      font-weight: var(--aek-font-weight-semibold);
     }
 
     :global(.isNA) :global(.profilerValue) {
-      color: variables.$debugTextColorDark;
+      color: var(--aek-text-muted);
+      font-weight: var(--aek-font-weight-regular);
     }
 
     :global(.isWarn) {
       th,
       :global(.profilerValue),
       :global(.profilerSub) {
-        color: variables.$debugValueWarn;
+        color: var(--aek-warning);
       }
     }
   }
 
+  // The Objects tab's small buttons: the kit's small secondary button's look (p807 makes them kit
+  // buttons), a 24 px target
   :global(.profilerAction),
-  :global(.profilerMetricList) button {
-    @include variables.nakedButton;
-    padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: variables.$borderRadiusSmall;
-    background-color: variables.$debugGuiBackgroundLighter2;
-    color: variables.$debugTextColor;
-    font-size: calc(1 * var(--aek-rem));
+  :global(.profilerSegmented) button {
+    box-sizing: border-box;
+    min-height: 24px;
+    margin: 0;
+    padding: 0 var(--aek-space-3);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-surface-raised);
+    color: var(--aek-text);
+    font: inherit;
+    font-size: var(--aek-font-size-xs);
     cursor: pointer;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
 
     &:hover:not(:disabled) {
-      background-color: rgba(255, 255, 255, 0.12);
+      background-color: var(--aek-surface-hover);
     }
 
     &:disabled {
-      opacity: 0.35;
+      color: var(--aek-text-disabled);
       cursor: default;
     }
   }
 
   :global(.profilerAction) {
-    margin-left: calc(0.4 * var(--aek-rem));
+    margin-left: var(--aek-space-2);
   }
 
-  :global(.profilerMetricList) {
-    margin: calc(0.8 * var(--aek-rem)) 0;
-    font-size: calc(1.2 * var(--aek-rem));
+  // The Settings tab's Overview rows (_dbg__ProfilerSettings.ts: two kit lists)
+  :global(.profilerMetricEditor) {
+    margin: var(--aek-space-4) 0;
+  }
 
-    :global(.profilerMetricListHead) {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: calc(0.4 * var(--aek-rem));
+  :global(.profilerMetricEditorHead) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--aek-space-3);
+    margin-bottom: var(--aek-space-2);
 
-      h4 {
-        margin: 0;
-        font-size: calc(1.2 * var(--aek-rem));
-        font-weight: 700;
-      }
-    }
-
-    ol {
+    h4 {
       margin: 0;
-      padding: 0;
-      list-style: none;
+      font-size: var(--aek-font-size-md);
+      font-weight: var(--aek-font-weight-semibold);
     }
+  }
 
-    :global(.profilerMetricGroupHead) {
-      margin: calc(0.8 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem));
-      font-size: calc(1 * var(--aek-rem));
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
-    }
+  :global(.profilerMetricAppGroup) {
+    margin-top: var(--aek-space-4);
+  }
 
-    li {
-      display: flex;
-      align-items: center;
-      gap: calc(0.4 * var(--aek-rem));
-      padding: calc(0.2 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
-
-      &:nth-child(odd) {
-        background-color: rgba(255, 255, 255, 0.04);
-      }
-
-      &:global(.isHidden) label {
-        color: variables.$debugTextColorDark;
-      }
-    }
-
-    label {
-      display: flex;
-      flex: 1 1 auto;
-      align-items: center;
-      gap: calc(0.6 * var(--aek-rem));
-      cursor: pointer;
-    }
+  :global(.profilerMetricAppGroup[hidden]) {
+    display: none;
   }
 
   :global(.profilerNote) {
-    margin: calc(0.8 * var(--aek-rem)) 0;
-    font-size: calc(1 * var(--aek-rem));
-    line-height: 1.5;
-    color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+    margin: var(--aek-space-4) 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-relaxed);
   }
 
   // OBJECTS TAB
 
   :global(.profilerSection) {
-    margin: calc(1.2 * var(--aek-rem)) 0;
+    margin: var(--aek-space-5) 0;
 
     h4 {
-      margin: 0 0 calc(0.4 * var(--aek-rem));
-      font-size: calc(1.2 * var(--aek-rem));
-      font-weight: 700;
+      margin: 0 0 var(--aek-space-2);
+      font-size: var(--aek-font-size-md);
+      font-weight: var(--aek-font-weight-semibold);
     }
 
     h5 {
-      margin: calc(0.8 * var(--aek-rem)) 0 calc(0.4 * var(--aek-rem));
-      font-size: calc(1.1 * var(--aek-rem));
-      font-weight: 400;
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+      margin: var(--aek-space-3) 0 var(--aek-space-2);
+      color: var(--aek-text-muted);
+      font-size: var(--aek-font-size-sm);
+      font-weight: var(--aek-font-weight-regular);
     }
   }
 
   :global(.profilerObjectsHead) {
     :global(.profilerNote) {
-      margin: calc(0.4 * var(--aek-rem)) 0 0;
+      margin: var(--aek-space-2) 0 0;
     }
   }
 
   :global(.profilerSegmented) {
     display: flex;
     align-items: center;
-    gap: calc(0.2 * var(--aek-rem));
-    margin-top: calc(0.4 * var(--aek-rem));
-    font-size: calc(1 * var(--aek-rem));
+    gap: var(--aek-space-1);
+    margin-top: var(--aek-space-2);
+    font-size: var(--aek-font-size-xs);
 
     span {
-      margin-right: calc(0.4 * var(--aek-rem));
+      margin-right: var(--aek-space-2);
     }
 
-    button {
-      @include variables.nakedButton;
-      padding: calc(0.2 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: variables.$borderRadiusSmall;
-      background-color: variables.$debugGuiBackgroundLighter2;
-      color: variables.$debugTextColor;
-      font-size: calc(1 * var(--aek-rem));
-      cursor: pointer;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.12);
-      }
-
-      &:global(.isSelected),
-      &:global(.isSelected):hover {
-        background-color: variables.$debugTextColor;
-        color: variables.$debugGuiBackground;
-      }
+    // The picked measure: a pressed tool (p800 D6's accent)
+    button:global(.isSelected),
+    button:global(.isSelected):hover {
+      border-color: var(--aek-accent);
+      background-color: var(--aek-accent);
+      color: var(--aek-on-accent);
     }
   }
 
   :global(.profilerTable) {
     thead th {
       padding-top: 0;
-      font-size: calc(1 * var(--aek-rem));
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+      color: var(--aek-text-muted);
+      font-size: var(--aek-font-size-xs);
       white-space: nowrap;
     }
 
     th :global(.profilerSub) {
       display: block;
-      font-size: calc(1 * var(--aek-rem));
+      color: var(--aek-text-muted);
+      font-size: var(--aek-font-size-xs);
       white-space: normal;
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
     }
 
     :global(.profilerNum) {
@@ -254,20 +236,21 @@
       white-space: nowrap;
 
       b {
-        color: variables.$white;
+        color: var(--aek-text);
+        font-weight: var(--aek-font-weight-semibold);
       }
 
       span {
-        font-size: calc(1 * var(--aek-rem));
-        color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+        color: var(--aek-text-muted);
+        font-size: var(--aek-font-size-xs);
       }
     }
 
     :global(.isTotal) {
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      border-top: 1px solid var(--aek-border-strong);
 
       th {
-        font-weight: 700;
+        font-weight: var(--aek-font-weight-semibold);
       }
     }
   }
@@ -283,24 +266,25 @@
 
     :global(.profilerBarCell) {
       width: 35%;
-      min-width: calc(6 * var(--aek-rem));
+      min-width: var(--aek-space-7);
       vertical-align: middle;
     }
   }
 
+  // A measure in the text's shades, as the kit table's bar cells (not categories)
   :global(.profilerBar) {
     display: flex;
-    height: calc(0.8 * var(--aek-rem));
-    border-radius: calc(0.2 * var(--aek-rem));
-    background-color: rgba(255, 255, 255, 0.05);
+    height: var(--aek-space-3);
+    border-radius: var(--aek-radius-sm);
+    background-color: color-mix(in srgb, var(--aek-text) 8%, transparent);
     overflow: hidden;
 
     :global(.profilerBarInView) {
-      background-color: variables.$debugTextColor;
+      background-color: var(--aek-text-muted);
     }
 
     :global(.profilerBarCulled) {
-      background-color: rgba(variables.$debugTextColor, 0.3);
+      background-color: color-mix(in srgb, var(--aek-text-muted) 35%, transparent);
     }
   }
 
@@ -315,7 +299,7 @@
     }
 
     :global(.profilerRank) {
-      color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+      color: var(--aek-text-muted);
       text-align: right;
     }
 
@@ -331,17 +315,16 @@
 
   :global(.profilerComponentGrid) {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(calc(17 * var(--aek-rem)), 1fr));
-    column-gap: calc(1.2 * var(--aek-rem));
-    font-size: calc(1.1 * var(--aek-rem));
+    grid-template-columns: repeat(auto-fill, minmax(calc(var(--aek-space-7) * 5), 1fr));
+    column-gap: var(--aek-space-4);
     font-variant-numeric: tabular-nums;
 
     div {
       display: flex;
       justify-content: space-between;
-      gap: calc(0.6 * var(--aek-rem));
-      padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      gap: var(--aek-space-3);
+      padding: var(--aek-space-1) var(--aek-space-3);
+      border-bottom: 1px solid var(--aek-border);
     }
 
     span {
@@ -351,28 +334,29 @@
     }
 
     b {
-      color: variables.$white;
+      color: var(--aek-text);
+      font-weight: var(--aek-font-weight-semibold);
     }
   }
 
   :global(.profilerSpark) {
-    margin: calc(0.6 * var(--aek-rem)) 0;
+    margin: var(--aek-space-3) 0;
 
     :global(.profilerSparkHead) {
       display: flex;
       align-items: baseline;
-      gap: calc(0.8 * var(--aek-rem));
-      font-size: calc(1.2 * var(--aek-rem));
+      gap: var(--aek-space-3);
 
       b {
-        color: variables.$white;
+        color: var(--aek-text);
         font-variant-numeric: tabular-nums;
+        font-weight: var(--aek-font-weight-semibold);
       }
 
       :global(.profilerSub) {
         margin-left: auto;
-        font-size: calc(1 * var(--aek-rem));
-        color: color.adjust(variables.$debugTextColor, $lightness: -20%);
+        color: var(--aek-text-muted);
+        font-size: var(--aek-font-size-xs);
       }
     }
   }
@@ -380,10 +364,10 @@
   :global(.profilerSparkline) {
     display: block;
     width: 100%;
-    height: calc(3.6 * var(--aek-rem));
-    margin-top: calc(0.2 * var(--aek-rem));
-    background-color: rgba(255, 255, 255, 0.04);
-    color: variables.$debugTextColor;
+    height: calc(var(--aek-space-7) * 1.5);
+    margin-top: var(--aek-space-1);
+    background-color: var(--profiler-stripe);
+    color: var(--aek-text-muted);
 
     polygon {
       fill: currentColor;

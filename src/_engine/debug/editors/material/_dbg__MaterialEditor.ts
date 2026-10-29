@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { registerView } from '../../../kernel/render/Views';
+import { getActiveViewId, registerView } from '../../../kernel/render/Views';
 import { getRenderer } from '../../../kernel/render/Renderer';
 import { getGeneratedAppData } from '../../../kernel/scene/Scene';
 import {
@@ -25,6 +25,8 @@ import {
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../kernel/assets/Texture';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../ui/core/HUD';
+import type { CMPHandle } from '../../../ui/core/CMPTypes';
+import { getDebuggerRootProps } from '../../../ui/overlays/DebuggerRoot';
 import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import { textureMapKeys } from '../../../utils/Constants';
@@ -149,8 +151,8 @@ type Stage = {
 /** The editor's DOM (created on the first enter): the HUD with the selector, the right drawer and
  * the notice. */
 type EditorUI = {
-  hud: HTMLElement;
-  notice: HTMLElement;
+  hud: CMPHandle;
+  notice: CMPHandle;
   selector: MaterialSelector;
   drawer: EditorDrawer;
 };
@@ -792,7 +794,7 @@ const deleteCurrentCopy = () => {
 };
 
 const setNotice = (text: string) => {
-  if (ui) ui.notice.textContent = text;
+  ui?.notice.updateText(text);
 };
 
 /** Re-reads the selected, loading and failed material into the selector and the right drawer. */
@@ -940,12 +942,36 @@ const onSelect = (materialId: string) => {
   void loadEditorMaterial(materialId);
 };
 
+/** The drawer's tabs (`createUI`'s, and the test bridge's tab ids before the first enter) */
+const getDrawerTabs = () =>
+  createMaterialEditorTabs({
+    getAsset: () => (selectedMaterialId && getMaterialAssets()[selectedMaterialId]) || null,
+    getTextureIds: getMaterialTextureIds,
+    isTextureLoaded: (id) => Boolean(getTexture(id)),
+    getStatus: getSelectedStatus,
+    getViewCamera: () => viewCam,
+    getCopy: getSelectedCopy,
+    setParam: editCopyParam,
+    setNodeInput: editCopyNodeInput,
+    resetParams: resetMaterialParams,
+    onRecordCleared: onMaterialRecordCleared,
+    getSettings: getSelectedSettings,
+    setSetting: editStageSetting,
+    setFov: editCameraFov,
+    clearAllRecords: clearAllMaterialEditorData,
+    refresh: () => ui?.drawer.refresh(),
+  });
+
+/** The HUD: a debugger root (p806 D8: the debugger's theme and density, spared by an app modal's
+ * `inert`) kept in views, shown only in this one; the notice, the selector and the drawer in it */
 const createUI = (): EditorUI => {
-  const hud = document.createElement('div');
-  hud.className = `${styles.materialEditorHud} ${KEEP_IN_VIEWS_CLASS}`;
-  const notice = document.createElement('div');
-  notice.className = styles.notice;
-  hud.append(notice);
+  const rootProps = getDebuggerRootProps();
+  const hud = getHUDRootCMP().add({
+    ...rootProps,
+    class: [styles.materialEditorHud, KEEP_IN_VIEWS_CLASS],
+  });
+  // "Preview not supported" over the canvas, read when it's set
+  const notice = hud.add({ class: styles.notice, text: '', attr: { role: 'status' } });
   const selector = createMaterialSelector({
     parent: hud,
     entries: getSelectorEntries(),
@@ -964,7 +990,7 @@ const createUI = (): EditorUI => {
   drawerHasSettings = Boolean(getSelectedSettings());
   const drawer = createEditorDrawer({
     id: MATERIAL_EDITOR_VIEW_ID,
-    parent: hud,
+    parent: hud.elem,
     togglerText: 'Material',
     headingLabel: 'Material',
     initialState: drawerState,
@@ -976,26 +1002,8 @@ const createUI = (): EditorUI => {
       const asset = selectedMaterialId ? getMaterialAssets()[selectedMaterialId] : undefined;
       return asset ? asset.debugData?.name || asset.id : 'No material selected';
     },
-    getTabs: () =>
-      createMaterialEditorTabs({
-        getAsset: () => (selectedMaterialId && getMaterialAssets()[selectedMaterialId]) || null,
-        getTextureIds: getMaterialTextureIds,
-        isTextureLoaded: (id) => Boolean(getTexture(id)),
-        getStatus: getSelectedStatus,
-        getViewCamera: () => viewCam,
-        getCopy: getSelectedCopy,
-        setParam: editCopyParam,
-        setNodeInput: editCopyNodeInput,
-        resetParams: resetMaterialParams,
-        onRecordCleared: onMaterialRecordCleared,
-        getSettings: getSelectedSettings,
-        setSetting: editStageSetting,
-        setFov: editCameraFov,
-        clearAllRecords: clearAllMaterialEditorData,
-        refresh: () => ui?.drawer.refresh(),
-      }),
+    getTabs: getDrawerTabs,
   });
-  getHUDRootCMP().elem.append(hud);
   return { hud, notice, selector, drawer };
 };
 
@@ -1035,6 +1043,24 @@ const onExit = () => {
   }
   loadedTextureIds.clear();
 };
+
+/**
+ * The material editor for the test bridge (p806 D14): whether its view is active, its drawer's
+ * root (the shell's) and the selector's, the drawer's mounted tab and its tab ids in menu order
+ * (read from the tab definitions, so known before the first enter).
+ */
+export const _getMaterialEditorTestInfo = () => ({
+  isActive: getActiveViewId() === MATERIAL_EDITOR_VIEW_ID,
+  drawerElement: ui?.drawer.cmp.elem ?? null,
+  selectorElement: ui?.selector.elem ?? null,
+  mountedId: ui?.drawer.getMountedId() ?? null,
+  tabIds: getDrawerTabs().map((def) => def.id),
+  selectedId: selectedMaterialId,
+  failure: selectedMaterialId ? failures.get(selectedMaterialId) ?? null : null,
+});
+
+/** Opens the editor drawer on a tab (the view entered): the test bridge's. False without it. */
+export const _openMaterialEditorTab = (id: string) => ui?.drawer.openTab(id) ?? false;
 
 /** Registers the material editor view (once). */
 export const _registerMaterialEditorView = () => {

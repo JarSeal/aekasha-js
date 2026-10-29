@@ -3,7 +3,8 @@
  * froze the scene: through the test bridge's debugger methods
  * (`src/_engine/debug/_dbg__TestBridgeDebugger.ts`, by tab id, list row and control name, never
  * the debugger's classes) it records each tab host's tab order, opens every drawer tab, profiler
- * tab, window and dialog the scene's `debugger` settings name, shoots each element against its
+ * tab, window and dialog the scene's `debugger` settings name and the material editor's selector
+ * and drawer tabs, shoots each element against its
  * baseline (`verify:ui`'s tolerance, the live figures masked), counts axe's violations on it (a
  * ratchet: a rule's count may not grow), then runs the undo / redo scripts.
  */
@@ -175,13 +176,51 @@ const shootAsync = async (run: DebuggerRun, root: string, name: string) => {
   if (counts) run.axe[name] = counts;
 };
 
+/** A tab host's shot prefix */
+const HOST_SHOT_PREFIX: Record<TestBridgeTabHost, string> = {
+  DRAWER: 'drawer',
+  PROFILER: 'profiler',
+  MATERIAL_EDITOR: 'materialEditor',
+};
+
 const shootTabAsync = async (run: DebuggerRun, host: TestBridgeTabHost, id: string) => {
   const opened = await openTabAsync(run.page, host, id);
   if (opened.status === 'MISSING') {
-    run.result.failures.push(`${host === 'DRAWER' ? 'drawer' : 'profiler'} tab: ${opened.reason}`);
+    run.result.failures.push(`${HOST_SHOT_PREFIX[host]} tab: ${opened.reason}`);
     return;
   }
-  await shootAsync(run, opened.root, `${host === 'DRAWER' ? 'drawer' : 'profiler'}.${id}`);
+  await shootAsync(run, opened.root, `${HOST_SHOT_PREFIX[host]}.${id}`);
+};
+
+/** Enters the material editor with its material loaded, shoots its selector and each tab of its
+ * drawer, and goes back to the Runtime view */
+const runMaterialEditorAsync = async (
+  run: DebuggerRun,
+  settings: NonNullable<SceneDebuggerConfig['materialEditor']>,
+  tabIds: string[]
+) => {
+  const { page } = run;
+  await closeWindowsAsync(page);
+  await markNewWindowsAsync(page);
+  const opened = await callBridge(
+    'openMaterialEditor',
+    page.evaluate((opts) => window.__AEK_TEST__!.openMaterialEditor(opts), {
+      material: settings.material,
+    })
+  );
+  try {
+    if (opened.status === 'MISSING') {
+      run.result.failures.push(`material editor: ${opened.reason}`);
+      return;
+    }
+    await shootAsync(run, opened.root, 'materialEditor.selector');
+    for (const id of tabIds) await shootTabAsync(run, 'MATERIAL_EDITOR', id);
+  } finally {
+    await callBridge(
+      'closeMaterialEditor',
+      page.evaluate(() => window.__AEK_TEST__!.closeMaterialEditor())
+    );
+  }
 };
 
 /** Opens a drawer tab, and the window its list row opens: the root its controls are in, or null
@@ -356,12 +395,15 @@ export const runDebuggerChecksAsync = async (opts: {
     }
   }
 
-  const drawerTabs = settings.tabs === 'ALL' ? tabOrder.DRAWER : settings.tabs;
+  const drawerTabs = settings.tabs === 'ALL' ? tabOrder.DRAWER ?? [] : settings.tabs;
   for (const id of drawerTabs) await shootTabAsync(run, 'DRAWER', id);
   if (settings.profiler) {
-    for (const id of tabOrder.PROFILER) await shootTabAsync(run, 'PROFILER', id);
+    for (const id of tabOrder.PROFILER ?? []) await shootTabAsync(run, 'PROFILER', id);
   }
   for (const opener of settings.windows ?? []) await runOpenerAsync(run, opener);
+  if (settings.materialEditor) {
+    await runMaterialEditorAsync(run, settings.materialEditor, tabOrder.MATERIAL_EDITOR ?? []);
+  }
   // Last: they change what the shots show
   for (const script of settings.undoScripts ?? []) await runUndoScriptAsync(run, script);
   await closeWindowsAsync(page);

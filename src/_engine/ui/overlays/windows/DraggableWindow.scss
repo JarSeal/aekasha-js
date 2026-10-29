@@ -111,9 +111,14 @@ $collapseTime: var(--aek-motion-base);
     text-overflow: ellipsis;
   }
 
-  // The title's icon (getSvgIcon: 1em, following the title)
+  // The title's icon (getSvgIcon: 1em, following the title). Its box is set here too: in a debug
+  // window the base layer's debugger reset (kit.scss, until p806 Phase 5) left it as wide as the
+  // title, its SVG at `.uiIcon`'s 100 % (p806 Phase 2 section 3)
   :where(.aekWindow__title .aekIcon) {
+    display: inline-block;
+    width: 1em;
     margin-right: var(--aek-space-2);
+    vertical-align: -0.125em;
   }
 
   :where(.aekWindow__button) {

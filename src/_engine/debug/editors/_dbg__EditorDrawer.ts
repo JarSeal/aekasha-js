@@ -64,6 +64,10 @@ export type EditorDrawer = {
   rebuild: () => void;
   /** Refreshes the title and the mounted tab. */
   refresh: () => void;
+  /** Opens the drawer on a tab (as the user's pick: saved); false when there's no such tab. */
+  openTab: (tabId: string) => boolean;
+  /** The mounted tab's id */
+  getMountedId: () => string | null;
   getState: () => EditorDrawerState;
   dispose: () => void;
 };
@@ -205,6 +209,14 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     setActive,
     rebuild,
     refresh,
+    openTab: (tabId) => {
+      const def = tabs.find((tab) => tab.id === tabId);
+      if (!def) return false;
+      selectTab(def);
+      toggle(true);
+      return true;
+    },
+    getMountedId: () => host.mountedId,
     getState: () => ({ ...state, scrollPos: { ...state.scrollPos } }),
     dispose: () => {
       setActive(false);

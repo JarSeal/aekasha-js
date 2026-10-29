@@ -13,6 +13,7 @@ import { createTabs, type TabDef } from '../ui/components/Tabs';
 import { createSeparatorInput } from '../ui/components/SeparatorInput';
 import { getWindowSize } from '../ui/core/Window';
 import { getDebuggerRootProps } from '../ui/overlays/DebuggerRoot';
+import { createTabContainers } from './_dbg__TabContainers';
 import styles from './DebuggerGUI.module.scss';
 
 /** The narrowest the width handle takes the drawer (D6) */
@@ -205,10 +206,10 @@ export const createDrawerShell = (opts: DrawerShellOpts): DrawerShell => {
   const asideId = `${opts.id}-drawer`;
   let isOpen = opts.isOpen;
   const state = { width: opts.width ?? DRAWER_DEFAULT_WIDTH };
-  /** Each tab's container and its content function (the same function for a kept tab, so
-   * `setTabs` keeps its panel's content) */
-  const containers = new Map<string, CMPHandle>();
-  const contentFns = new Map<string, () => CMPHandle>();
+  const containers = createTabContainers({
+    class: [styles.tabContent, 'debugDrawerTabsContainer'],
+    onScroll: opts.onScroll,
+  });
 
   const rootProps = getDebuggerRootProps();
   const root = CMP({
@@ -228,23 +229,6 @@ export const createDrawerShell = (opts: DrawerShellOpts): DrawerShell => {
   const heading = createHeading(opts);
   aside.add(heading.row);
 
-  const getContentFn = (id: string) => {
-    let fn = contentFns.get(id);
-    if (fn) return fn;
-    fn = () => {
-      const container = CMP({ class: [styles.tabContent, 'debugDrawerTabsContainer'] });
-      container.elem.addEventListener(
-        'scroll',
-        () => opts.onScroll?.(id, container.elem.scrollTop),
-        { passive: true }
-      );
-      containers.set(id, container);
-      return container;
-    };
-    contentFns.set(id, fn);
-    return fn;
-  };
-
   const toTabDefs = (tabs: DrawerShellTab[]): TabDef[] =>
     tabs.map((tab) => ({
       key: tab.id,
@@ -252,7 +236,7 @@ export const createDrawerShell = (opts: DrawerShellOpts): DrawerShell => {
       icon: getSvgIcon(tab.icon),
       iconOnly: true,
       separatorBefore: tab.separatorBefore,
-      content: getContentFn(tab.id),
+      content: containers.getContentFn(tab.id),
     }));
 
   const rail = createTabs({
@@ -289,26 +273,13 @@ export const createDrawerShell = (opts: DrawerShellOpts): DrawerShell => {
     setOpen,
     setTitle: (title) => heading.title.updateText(title),
     setTabs: (tabs) => {
-      const ids = new Set(tabs.map((tab) => tab.id));
-      for (const id of [...contentFns.keys()]) {
-        if (ids.has(id)) continue;
-        contentFns.delete(id);
-        containers.delete(id);
-      }
+      containers.retain(new Set(tabs.map((tab) => tab.id)));
       rail.setTabs(toTabDefs(tabs));
     },
     select: (tabId) => rail.select(tabId),
     getSelected: () => rail.getSelected(),
-    getContainer: () => {
-      const id = rail.getSelected();
-      return id === null ? null : containers.get(id) ?? null;
-    },
-    clearOtherContainers: () => {
-      const selected = rail.getSelected();
-      for (const [id, container] of containers) {
-        if (id !== selected) container.removeChildren();
-      }
-    },
+    getContainer: () => containers.get(rail.getSelected()),
+    clearOtherContainers: () => containers.clearOthers(rail.getSelected()),
     setDisabled: (disabled) => {
       if (disabled) root.updateAttr({ inert: '', 'aria-busy': 'true', 'data-disabled': '' });
       else root.removeAttr(['inert', 'aria-busy', 'data-disabled']);

@@ -1,5 +1,5 @@
 // The test bridge's debugger methods (p806 D14): what the scene runner's `debugger` configuration
-// drives the drawer, the profiler window and the debug windows through. It names things by tab
+// drives the drawer, the profiler window, the debug windows and the material editor through. It names things by tab
 // id, list row and control name, never by the debugger's classes, so its scripts outlive the port
 // from Tweakpane to the UI kit. Debug env only (the drawer and the profiler are lazy imports: the
 // bridge also loads in prod test mode, where neither may exist).
@@ -11,6 +11,7 @@ import {
   getOpenDraggableWindowIds,
 } from '../ui/overlays/windows/DraggableWindow';
 import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
+import { RUNTIME_VIEW_ID, setActiveView } from '../kernel/render/Views';
 import { PROFILER_WINDOW_ID } from './Profiler';
 import type { AekTestBridge, TestBridgeDebuggerRoot } from './TestBridge';
 
@@ -47,6 +48,7 @@ const missing = (reason: string) => ({ status: 'MISSING' as const, reason });
 
 const loadDrawer = () => import('./_dbg__DebuggerGUI');
 const loadProfiler = () => import('./profiler/_dbg__Profiler');
+const loadMaterialEditor = () => import('./editors/material/_dbg__MaterialEditor');
 
 /** Marks `element` as `root`, the only element with that mark */
 const markRoot = (element: Element, root: string) => {
@@ -117,11 +119,16 @@ const findLabelledControls = (root: Element, name: string) => {
 };
 
 const getDebuggerTabOrder: AekTestBridge['getDebuggerTabOrder'] = async () => {
-  if (!IS_DEBUG_ENV) return { DRAWER: [], PROFILER: [] };
-  const [drawer, profiler] = await Promise.all([loadDrawer(), loadProfiler()]);
+  if (!IS_DEBUG_ENV) return { DRAWER: [], PROFILER: [], MATERIAL_EDITOR: [] };
+  const [drawer, profiler, materialEditor] = await Promise.all([
+    loadDrawer(),
+    loadProfiler(),
+    loadMaterialEditor(),
+  ]);
   return {
     DRAWER: drawer._getDrawerTestInfo().tabIds,
     PROFILER: profiler._getProfilerTestInfo().tabIds,
+    MATERIAL_EDITOR: materialEditor._getMaterialEditorTestInfo().tabIds,
   };
 };
 
@@ -152,9 +159,48 @@ const openProfilerTab = async (id: string): Promise<TestBridgeDebuggerRoot> => {
   return { status: 'OPEN', root: 'profiler', title: id };
 };
 
+const openMaterialEditorTab = async (id: string): Promise<TestBridgeDebuggerRoot> => {
+  const editor = await loadMaterialEditor();
+  const before = editor._getMaterialEditorTestInfo();
+  if (!before.isActive) return missing('the material editor view is not active');
+  if (!before.tabIds.includes(id)) return missing(`no material editor tab "${id}"`);
+  editor._openMaterialEditorTab(id);
+  await afterTwoFrames();
+  const info = editor._getMaterialEditorTestInfo();
+  if (!info.drawerElement || info.mountedId !== id) {
+    return missing(`the material editor's drawer didn't mount the tab "${id}"`);
+  }
+  markRoot(info.drawerElement, 'materialEditor');
+  return { status: 'OPEN', root: 'materialEditor', title: id };
+};
+
 const openDebuggerTab: AekTestBridge['openDebuggerTab'] = async ({ host, id }) => {
   if (!IS_DEBUG_ENV) return missing('the debugger runs in the debug env only');
+  if (host === 'MATERIAL_EDITOR') return openMaterialEditorTab(id);
   return host === 'DRAWER' ? openDrawerTab(id) : openProfilerTab(id);
+};
+
+const openMaterialEditor: AekTestBridge['openMaterialEditor'] = async ({ material }) => {
+  if (!IS_DEBUG_ENV) return missing('the debugger runs in the debug env only');
+  const editor = await loadMaterialEditor();
+  if (!(await setActiveView(editor.MATERIAL_EDITOR_VIEW_ID))) {
+    return missing('the material editor view did not open');
+  }
+  if (material) await editor.loadEditorMaterial(material);
+  await afterTwoFrames();
+  const info = editor._getMaterialEditorTestInfo();
+  if (material && info.selectedId !== material) {
+    return missing(`no material "${material}" in the material editor`);
+  }
+  if (info.failure) return missing(`the material "${material}" failed to load: ${info.failure}`);
+  if (!info.selectorElement) return missing("the material editor's selector is missing");
+  markRoot(info.selectorElement, 'materialSelector');
+  return { status: 'OPEN', root: 'materialSelector', title: material ?? 'none' };
+};
+
+const closeMaterialEditor: AekTestBridge['closeMaterialEditor'] = async () => {
+  await setActiveView(RUNTIME_VIEW_ID);
+  await afterTwoFrames();
 };
 
 const openDebuggerListRow: AekTestBridge['openDebuggerListRow'] = async ({ index }) => {
@@ -218,4 +264,6 @@ export const testBridgeDebugger = {
   focusDebuggerControl,
   markDebuggerWindows,
   closeDebuggerWindows,
+  openMaterialEditor,
+  closeMaterialEditor,
 } satisfies Partial<AekTestBridge>;

@@ -1072,7 +1072,9 @@ Phase 1 verified (2026-10-29):
      `target-size` 47 → 50: the character state window's own header controls (its gizmo row
      reflowed in the compact type) now fail it, 3 nodes, for Phase 4 section 3's rewrite. The
      Physics tab's Gravity boxes read "-9.81" in full now (Phase 1's note).
+
 2. **The drawer** (D6):
+
    - The rail, the toggler, the heading, the width splitter, the scroll, the disabled state.
    - The menu changing in place (the kit's tab additions with their boxes).
    - The debugger list on `createList`.
@@ -1150,10 +1152,98 @@ Phase 1 verified (2026-10-29):
      with the content and focus kept, the scene tabs, a rail pick, the editor view, the disabled
      state, a throwing tab); `_dbg__DebuggerList.test.ts`, 5 (the parts, the listbox and its
      selection, the toggles, a static list's copy, the empty text); `Tabs.test.ts`' divider.
+
 3. **The profiler window and the editor drawer:**
+
    - The profiler's tab menu and its Settings tab (D10).
    - The editor drawer's tabs and splitter, and the material editor's selector and HUD.
    - Their styles, with `Profiler.module.scss` and `GPUMemory.module.scss` restyled only (D1).
+
+   As built (2026-10-29):
+
+   - **The profiler window's menu** is `createTabs` (horizontal, `iconOnly`, manual activation,
+     as the rail). Each tab gets a container of its own: `debug/_dbg__TabContainers.ts`, moved
+     out of the drawer shell, which uses it too. The menu changes in place as the rail's does
+     (`setTabs`, the same `isSyncingTabs` guard): creating or removing a profiler tab no longer
+     rebuilds the window. `_openProfilerTab` mounts the tab before `openDraggableWindow` brings
+     an open window to the front, so the front's focus goes to the selected tab.
+     `_debugTabButtons.scss` is deleted.
+   - **The Settings tab's Overview rows** are two kit lists (D10), engine and app. Each row has a
+     visibility toggle (an action, `circleCheckCutout`: the built-ins have no eye icon), "Hidden"
+     as its suffix (not the colour alone), and `createListReorder` (Alt + arrows or a drag,
+     announced). The two lists keep 5.x's rule that a row moves only within its group
+     (`moveOverviewMetric`). The app list is hidden until an app source exists.
+   - **The Overview rows' parts:** "Reset to default" is a kit button. The lists and the button
+     read the settings on the tab's scheduler (`content(ctx)`, `addScheduledRefresh`), which
+     `_setProfilerSettings`' tab refresh runs. The ▲ / ▼ buttons went, and with them axe's 50
+     `target-size` and 2 `color-contrast` nodes.
+   - **`Profiler.module.scss` and `GPUMemory.module.scss`** are on the tokens (roles, space and
+     type tokens, no `variables.scss`, `color.adjust` or `--aek-rem`). Their HTML-string classes
+     are kept for p807. The Objects tab's small buttons look like the kit's small secondary
+     button (24 px), the picked bar measure is in the accent (a pressed tool), and the bars are
+     the text's shades (a measure, as the kit table's bar cells).
+   - **The window title's icon** (section 2's finding) has its own `1em` box in
+     `DraggableWindow.scss` (`aek.components`, which beats the base layer's debugger reset). The
+     About dialog's shot changed with it: its giant Æ behind the title is gone.
+   - **Found on the way, a kit fix:** `FocusTrap.ts`' focusable selector counted a
+     `tabindex="-1"` button as Tab-reachable, contrary to its comment. A window's first focus
+     could then land on a roving composite's unselected item (the profiler's Overview tab), its
+     tooltip showing. No native control with `tabindex="-1"` counts now; the focus trap's Tab
+     wrap gains the same fix.
+   - **The editor drawer's splitter:** the boundary between the selector and the drawer's tabs
+     is the drawer's width handle (section 2). This section adds the selector's height handle on
+     its top edge. It is `SeparatorInput.ts`, not `createSplitter`: as with the drawer, the
+     selector is one fixed pane. ArrowUp heightens; Home is the lowest (80 px) and End 70 % of
+     the bounds. Enter collapses and restores, and a move restores a collapsed body. The height
+     is saved as the selector state's `height` (`AEK_debugMatEditorUI`), default 150 px (the old
+     `15rem`).
+   - **The selector** (`_dbg__MaterialEditorSelector.ts`, D10) is a `<section>` named by its
+     heading:
+     - The filter is a kit search field (`live`). Escape puts back the text from before the
+       typing and the clear button empties it; 5.x's "first Escape clears, second blurs" went
+       with the raw input.
+     - The cards are kit buttons in a `role="toolbar"` with one tab stop: Left / Right, Up / Down
+       by the grid's laid-out columns (the shown cards at the first one's `offsetTop`), Home /
+       End. The shown material is `aria-current` (the accent), a loading one `aria-busy` (its
+       slot pulses), a failed one `data-failed` with a "Failed" badge, and an unavailable one
+       `aria-disabled` (focusable). The type and TSL marks are kit badges.
+     - Each card's tooltip (`createTooltip`) is its source path, description and failure joined
+       on one line. The collapse button is a ghost icon button with `aria-expanded` and
+       `aria-controls`.
+     - A filter change is announced ("3 of 6 materials").
+   - **The material editor's HUD** is a CMP debugger root (`getDebuggerRootProps`) under the
+     HUD root, so the selector and the notice take the debugger's theme and density, and an app
+     modal's `inert` spares the whole HUD. Before, only the drawer inside it was a root. The
+     notice is `role="status"`.
+   - **`MaterialEditor.module.scss`** is on the tokens, its breakpoint from
+     `debug/styles/_debugLayout.scss`. The info sections set their own text size: the tab's
+     container has none, so they would take the kit root's 16 px.
+   - **The scene runner** (D14): a third tab host, `MATERIAL_EDITOR`, and two bridge methods,
+     `openMaterialEditor({ material })` and `closeMaterialEditor()` (`TEST_BRIDGE_VERSION` 6).
+     - `testDebugScene`'s `materialEditor: { material: 'triplanarCheckerboard' }` (a TSL
+       material without textures) enters the view and loads the material. It shoots
+       `materialEditor.selector` and each drawer tab (`materialEditor.matEditorParams`,
+       `.matEditorSettings`), then goes back to the Runtime view, before the undo scripts.
+     - `getDebuggerTabOrder` gives the editor drawer's ids too, read from its tab definitions,
+       so they are known before the first enter (`_getMaterialEditorTestInfo`,
+       `_openMaterialEditorTab`; the editor drawer gains `openTab` and `getMountedId`).
+     - `TestBridgeTabOrder` is `Partial` now: a baseline recorded before a host existed lacks it,
+       and reads as its ids added.
+   - **Tests:**
+     - `_dbg__MaterialEditorSelector.test.ts`, 9 tests: the region and toolbar, the search and
+       the count, a saved filter, the keys over two laid-out columns, a pick and an unavailable
+       card, refresh's marks, collapse by the button and by Enter, the height handle's keys and
+       saved height, and disposal.
+     - `_dbg__ProfilerSettings.test.ts`, 5 tests: `moveOverviewMetric` within and past a group,
+       and the editor's lists. They cover a reorder by Alt + ArrowDown, the toggle, the reset,
+       and the app group.
+   - **The `debugger` configuration:** the four profiler tabs and the About dialog changed, and
+     the material editor's three shots and its tab order are new; all recorded on purpose. The
+     other shots, the tab order and the four undo / redo scripts pass unchanged. Axe, summed over
+     the six scenes: `color-contrast` 38 → 10 (the profiler's 28) and `target-size` 50 → 3 (the
+     character state window's, Phase 4's). The material editor's three roots have none. The
+     profiler's 5 `empty-table-header` nodes are p807's tables.
+
 4. **The on-screen tools** (D7): the toolbars, the disabled state during a load (the issue file
    closed), and the axes gizmo's and environment ball's styles. Also
    `docs/issues/action-map-keys-on-focused-debugger-controls.md` (D12: an action map leaves a
