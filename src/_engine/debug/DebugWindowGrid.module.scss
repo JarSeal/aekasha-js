@@ -9,3 +9,10 @@
 .rowButton {
   width: 100%;
 }
+
+// A note across both columns (getNoteItem): the window's muted small text
+.note {
+  margin: 0 0 var(--aek-space-2);
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
+}

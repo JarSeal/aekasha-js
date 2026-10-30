@@ -73,7 +73,8 @@ export type DebugEntityInfo = {
   description?: string;
 };
 
-const infoRow = (label: string, value: string): PropertyGridFieldItem => ({
+/** An info row: a fixed text as a monitor (set as text, never HTML), read on a refresh only. */
+export const getInfoRowItem = (label: string, value: string): PropertyGridFieldItem => ({
   label,
   value,
   readonly: true,
@@ -86,11 +87,11 @@ const infoRow = (label: string, value: string): PropertyGridFieldItem => ({
  */
 export const getEntityInfoItems = (info: DebugEntityInfo): PropertyGridItem[] => [
   { type: 'separator' },
-  infoRow('Entity ID', String(info.entityId)),
-  infoRow('App ID', info.appId || 'None'),
-  infoRow('Type', info.type),
-  ...(info.name ? [infoRow('Name', info.name)] : []),
-  ...(info.description ? [infoRow('Description', info.description)] : []),
+  getInfoRowItem('Entity ID', String(info.entityId)),
+  getInfoRowItem('App ID', info.appId || 'None'),
+  getInfoRowItem('Type', info.type),
+  ...(info.name ? [getInfoRowItem('Name', info.name)] : []),
+  ...(info.description ? [getInfoRowItem('Description', info.description)] : []),
 ];
 
 /** What {@link getReasonedButtonItem} makes a button from. */
@@ -124,5 +125,14 @@ export const getReasonedButtonItem = (props: ReasonedButtonProps): PropertyGridC
     };
     readReason();
     return readReason;
+  },
+});
+
+/** A note across both columns: a paragraph of text (set as text) that says how the window's
+ * fields behave. */
+export const getNoteItem = (text: string): PropertyGridCustomItem => ({
+  type: 'custom',
+  build: (container) => {
+    container.add({ tag: 'p', class: styles.note, text });
   },
 });

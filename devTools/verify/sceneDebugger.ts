@@ -36,12 +36,6 @@ import { UI_AXE_TAGS, UI_SNAPSHOT_TOLERANCE } from './ui.config';
 
 /** How long a step's DOM gets before it's read or shot: a tab's first refresh, a window's open */
 const SETTLE_MS = 300;
-/**
- * Tweakpane's labels hyphenate (`hyphens: auto`), and Chrome fetches its hyphenation dictionary on
- * demand into each run's fresh profile, so a label wraps one way or the other run to run. The kit
- * doesn't hyphenate: this goes with Tweakpane (p806 Phase 3)
- */
-const STABLE_SHOT_CSS = '[data-aek-debugger] * { hyphens: manual !important; }';
 const UNDO_KEY = 'Control+z';
 const REDO_KEY = 'Control+Shift+z';
 
@@ -375,7 +369,6 @@ export const runDebuggerChecksAsync = async (opts: {
   };
   await page.setViewportSize(DEBUGGER_VIEWPORT);
   await page.addScriptTag({ content: getAxeSource() });
-  await page.addStyleTag({ content: STABLE_SHOT_CSS });
 
   const tabOrder = await callBridge(
     'getDebuggerTabOrder',

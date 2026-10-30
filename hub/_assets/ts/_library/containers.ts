@@ -339,7 +339,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
             { value: 'players', text: 'Players' },
           ],
         }),
-        field('_dbg__ECS.ts:120', {
+        field('_dbg__ECS.ts:84', {
           target: state,
           key: 'storageMode',
           label: 'Storage mode',
@@ -388,7 +388,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           key: 'cameraPosition',
           label: 'Position',
         }),
-        field('_dbg__Character.ts:213', {
+        field('_dbg__BodyPoseItems.ts:76', {
           target: state,
           key: 'bodyRotation',
           label: 'Rotation',

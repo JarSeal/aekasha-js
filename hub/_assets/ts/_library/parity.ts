@@ -156,7 +156,7 @@ const buildLists = (parent: HTMLElement) => {
     }
   );
 
-  row('_dbg__ECS.ts:223', 'ECS worlds: a suffix', {
+  row('_dbg__ECS.ts:226', 'ECS worlds: a suffix', {
     label: 'ECS worlds',
     items: [{ id: 'main', subTitle: 'World 0', title: 'main', suffix: '2,318 entities' }],
     empty: 'No ECS worlds.',
@@ -214,7 +214,7 @@ const buildLists = (parent: HTMLElement) => {
     true
   );
 
-  row('_dbg__Character.ts:340', 'characters: two toggles (the state window, the gizmos’ pin)', {
+  row('_dbg__Character.ts:294', 'characters: two toggles (the state window, the gizmos’ pin)', {
     label: 'Characters',
     items: ['player', 'dummy1', 'dummy2'].map((id, i) => ({
       id,
@@ -229,7 +229,7 @@ const buildLists = (parent: HTMLElement) => {
     ]),
   });
 
-  row('_dbg__PostFX.ts:628', 'PostFX: a heading, a badge, a tooltip, a disabled row', {
+  row('_dbg__PostFX.ts:662', 'PostFX: a heading, a badge, a tooltip, a disabled row', {
     heading: 'PostFX',
     headingLevel: 4,
     items: [

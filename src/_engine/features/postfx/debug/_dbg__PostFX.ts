@@ -2,7 +2,6 @@
  * PostFX debugger tab (docs/plans/_DONE_p071_post-fx-debugger-ui.md). Debug-only, lazily loaded
  * through PostFX.ts's createPostFXDebugGUI().
  */
-import { Pane, type BindingParams } from 'tweakpane';
 import {
   createDebuggerTab,
   debuggerListCMP,
@@ -50,6 +49,12 @@ import {
 } from '../../../debug/_dbg__UndoRedo';
 import { lwarn } from '../../../utils/Logger';
 import type { PostFxParamMeta } from '../../../schemas/PostFxSchema';
+import type { PropertyGridFieldItem, PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
+import {
+  createDebugWindowGrid,
+  getInfoRowItem,
+  getNoteItem,
+} from '../../../debug/_dbg__DebugWindowGrid';
 
 /** The structure of 'AEK_debugPostFxSettings' in LocalStorage. Only deviations are stored:
  * a scene missing from postFxEnabled means "as authored" (the scene's postFxEnabled), a
@@ -82,8 +87,8 @@ type PostFxEnabledPayload = { prev: boolean; next: boolean };
 type PostFxPassEnabledPayload = { postFxPassId: string; prev: boolean; next: boolean };
 type PostFxPassParamPayload = { postFxPassId: string; key: string; prev: unknown; next: unknown };
 
-/** Tweakpane binds to object properties, so the live values are mirrored here (synced on every
- * tab refresh). */
+/** The fields bind object properties, so the live values are mirrored here (synced on every tab
+ * refresh). */
 const settingsProxy = { postFxEnabled: false, measureEnabled: false };
 /** The current scene's PostFX passes as authored, taken on scene enter before the persisted
  * overrides are applied (the chain has just been set up from the scene data then). */
@@ -319,45 +324,82 @@ const inferParamKind = (value: unknown): ParamKind => {
   return 'json';
 };
 
-/** Tweakpane binding options for a param: inferred from its value, upgraded by its paramsMeta. */
-const getParamBindingParams = (
-  kind: ParamKind,
-  value: unknown,
-  meta: PostFxParamMeta,
-  label: string
-): BindingParams => {
-  const params: Record<string, unknown> = { label };
-  if (meta.options && kind !== 'json') {
-    params.options = meta.options;
-    return params as BindingParams;
-  }
-  const range: Record<string, number> = {};
-  if (meta.min !== undefined) range.min = meta.min;
-  if (meta.max !== undefined) range.max = meta.max;
-  if (meta.step !== undefined) range.step = meta.step;
-  if (kind === 'number') Object.assign(params, range);
-  if (kind === 'point') {
-    for (const axis of POINT_AXES) {
-      if ((value as Record<string, unknown>)[axis] !== undefined) params[axis] = range;
-    }
-  }
-  if (kind === 'color') {
-    // Components in 0..1 are linear floats (as TSL colors usually are), otherwise 0..255
-    const isFloat = Object.values(value as Record<string, number>).every((c) => c <= 1);
-    params.color = { type: isFloat ? 'float' : 'int' };
-  }
-  return params as BindingParams;
-};
+/** A param's field: its grid item, and its value as the pass takes it from the field's */
+type ParamField = { item: PropertyGridFieldItem; toParam: (fieldValue: unknown) => unknown };
 
-/** A fresh plain copy of an edited value, shaped like the original (never the proxy's object,
- * which Tweakpane keeps writing into). */
-const toParamValue = (kind: ParamKind, value: unknown, original: unknown) => {
-  if (kind !== 'point' && kind !== 'color') return value;
+/** A fresh plain copy of an edited point or colour, with the original's keys (the field writes
+ * the proxy's object in place). */
+const copyKeys = (value: unknown, original: unknown) => {
   const copy: Record<string, number> = {};
   for (const k of Object.keys(original as Record<string, unknown>)) {
     copy[k] = (value as Record<string, number>)[k];
   }
   return copy;
+};
+
+/**
+ * A param's field: inferred from its value, upgraded by its paramsMeta (`options` a select, the
+ * range a number's or each point axis'). A colour object with every channel in 0..1 is a colour
+ * field's floats (as TSL colours usually are); one with a channel over 1 is read as 0..255 and
+ * scaled through `{ get, set }` (an HDR float colour reads so too: the params don't say).
+ */
+const getParamField = (
+  kind: Exclude<ParamKind, 'json'>,
+  proxy: Record<string, unknown>,
+  key: string,
+  meta: PostFxParamMeta,
+  label: string
+): ParamField => {
+  const original = proxy[key];
+  const identity = (value: unknown) => value;
+  if (meta.options) {
+    return { item: { target: proxy, key, label, options: meta.options }, toParam: identity };
+  }
+  const range: { min?: number; max?: number; step?: number } = {};
+  if (meta.min !== undefined) range.min = meta.min;
+  if (meta.max !== undefined) range.max = meta.max;
+  if (meta.step !== undefined) range.step = meta.step;
+  if (kind === 'number')
+    return { item: { target: proxy, key, label, ...range }, toParam: identity };
+  if (kind === 'point') {
+    const axes: Partial<Record<(typeof POINT_AXES)[number], typeof range>> = {};
+    for (const axis of POINT_AXES) {
+      if ((original as Record<string, unknown>)[axis] !== undefined) axes[axis] = range;
+    }
+    return {
+      item: { target: proxy, key, label, axes },
+      toParam: (value) => copyKeys(value, original),
+    };
+  }
+  if (kind === 'color') {
+    const alpha = 'a' in (original as object);
+    if (Object.values(original as Record<string, number>).every((c) => c <= 1)) {
+      return {
+        item: { target: proxy, key, label, kind: 'color', alpha },
+        toParam: (value) => copyKeys(value, original),
+      };
+    }
+    const scale = (value: unknown, factor: number, round: boolean) => {
+      const scaled = copyKeys(value, original);
+      for (const k of Object.keys(scaled)) {
+        // The alpha stays 0..1
+        if (k === 'a') continue;
+        scaled[k] = round ? Math.round(scaled[k] * factor) : scaled[k] * factor;
+      }
+      return scaled;
+    };
+    return {
+      item: {
+        label,
+        kind: 'color',
+        alpha,
+        get: () => scale(proxy[key], 1 / 255, false),
+        set: (value) => (proxy[key] = scale(value, 255, true)),
+      },
+      toParam: (value) => scale(value, 255, true),
+    };
+  }
+  return { item: { target: proxy, key, label }, toParam: identity };
 };
 
 const LIVE_PARAMS_TEXT: Record<PostFxLiveParams, string> = {
@@ -366,7 +408,56 @@ const LIVE_PARAMS_TEXT: Record<PostFxLiveParams, string> = {
   unknown: 'Not built yet (edits apply when the PostFX pass is next built)',
 };
 
-const createEditPostFxPassContent = (data?: { [key: string]: unknown }) => {
+/** The note of a pass without live params: when its edits apply */
+const NOT_LIVE_NOTE: Record<Exclude<PostFxLiveParams, 'setParam'>, string> = {
+  rebuild:
+    'This PostFX pass has no live param updates (no setParam): each edit is applied when released, and rebuilds the PostFX chain (a shader recompile).',
+  unknown:
+    'This PostFX pass has not been built yet (disabled, or not rendered): edits are applied when released, and take effect when it is next built.',
+};
+
+/**
+ * The params' fields, in the pass JSON's order (a `hidden` one left out). An edit follows the drag
+ * in a live pass; at the gesture's end it's applied, saved and recorded with the gesture's `prev`
+ * (p804 D3). A param no field fits (`json`) is a monitor of its JSON, never left out silently.
+ */
+const getParamItems = (info: PostFxPassInfo, isLive: boolean): PropertyGridItem[] => {
+  const paramsProxy = structuredClone(info.params);
+  const passName = info.debugData?.name || info.id;
+  const items: PropertyGridItem[] = [];
+  for (const key of Object.keys(info.params)) {
+    const meta = info.paramsMeta?.[key] || {};
+    if (meta.hidden) continue;
+    const kind = inferParamKind(info.params[key]);
+    const label = meta.label || key;
+    if (kind === 'json') {
+      items.push(getInfoRowItem(`${label} (JSON, readonly)`, JSON.stringify(info.params[key])));
+      continue;
+    }
+    const { item, toParam } = getParamField(kind, paramsProxy, key, meta, label);
+    items.push({
+      ...item,
+      onChange: (value, change) => {
+        const next = toParam(value);
+        // A live PostFX pass follows the drag, the others only get the released value
+        if (isLive) setPostFxPassParam(info.id, key, next);
+        if (!change.last) return;
+        applyPostFxPassParam(info.id, key, next);
+        const prev = toParam(change.prev);
+        if (isSameValue(prev, next)) return;
+        _recordUndoRedoAction<PostFxPassParamPayload>(
+          UNDO_POSTFX_PASS_PARAM,
+          `PostFX ${passName}: ${label}`,
+          { postFxPassId: info.id, key, prev, next }
+        );
+      },
+    });
+  }
+  return items;
+};
+
+/** Content for a PostFX pass's edit window (p806 D10: the UI kit's property grid) */
+export const createEditPostFxPassContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };
   const info = findPostFxPass(d.id);
   if (!info) {
@@ -381,102 +472,43 @@ const createEditPostFxPassContent = (data?: { [key: string]: unknown }) => {
   const builtFor = { liveParams: info.liveParams };
   windowsBuiltFor.set(info.id, builtFor);
 
-  const container = CMP({
-    onRemoveCmp: () => {
-      pane.dispose();
+  const isLive = info.liveParams === 'setParam';
+  const enabledProxy = { enabled: info.enabled };
+  const paramItems = getParamItems(info, isLive);
+  const items: PropertyGridItem[] = [
+    ...(info.liveParams === 'setParam' ? [] : [getNoteItem(NOT_LIVE_NOTE[info.liveParams])]),
+    {
+      target: enabledProxy,
+      key: 'enabled',
+      label: 'Enabled (rebuilds the PostFX chain)',
+      onChange: (value) => {
+        applyPostFxPassEnabled(info.id, Boolean(value));
+        _recordUndoRedoAction<PostFxPassEnabledPayload>(
+          UNDO_POSTFX_PASS_ENABLED,
+          `PostFX ${info.debugData?.name || info.id}: ${value ? 'enable' : 'disable'}`,
+          { postFxPassId: info.id, prev: !value, next: Boolean(value) }
+        );
+      },
+    },
+    ...(paramItems.length ? [{ type: 'separator' } as const] : []),
+    ...paramItems,
+    { type: 'separator' },
+    getInfoRowItem('PostFX pass ID', info.id),
+    getInfoRowItem('Chain position', `#${info.index + 1}`),
+    getInfoRowItem('Param edits', LIVE_PARAMS_TEXT[info.liveParams]),
+    ...(info.debugData?.name ? [getInfoRowItem('Name', info.debugData.name)] : []),
+    ...(info.debugData?.description
+      ? [getInfoRowItem('Description', info.debugData.description)]
+      : []),
+  ];
+
+  const { cmp } = createDebugWindowGrid({
+    items,
+    onRemove: () => {
       if (windowsBuiltFor.get(info.id) === builtFor) windowsBuiltFor.delete(info.id);
     },
   });
-  const isLive = info.liveParams === 'setParam';
-  if (!isLive) {
-    container.add({
-      class: 'winNotRightPaddedContent',
-      html: () =>
-        `<p>${info.liveParams === 'rebuild' ? 'This PostFX pass has no live param updates (no setParam): each edit is applied when released, and rebuilds the PostFX chain (a shader recompile).' : 'This PostFX pass has not been built yet (disabled, or not rendered): edits are applied when released, and take effect when it is next built.'}</p>`,
-    });
-  }
-  const pane = new Pane({ container: container.elem });
-
-  const enabledProxy = { enabled: info.enabled };
-  pane
-    .addBinding(enabledProxy, 'enabled', { label: 'Enabled (rebuilds the PostFX chain)' })
-    .on('change', (e) => {
-      applyPostFxPassEnabled(info.id, e.value);
-      _recordUndoRedoAction<PostFxPassEnabledPayload>(
-        UNDO_POSTFX_PASS_ENABLED,
-        `PostFX ${info.debugData?.name || info.id}: ${e.value ? 'enable' : 'disable'}`,
-        { postFxPassId: info.id, prev: !e.value, next: e.value }
-      );
-    });
-
-  const paramKeys = Object.keys(info.params);
-  if (paramKeys.length) pane.addBlade({ view: 'separator' });
-  addParamBindings(pane, info, isLive);
-
-  // Footer info
-  container.add({
-    class: ['winNotRightPaddedContent', 'winFlexContent'],
-    html: () => `<div>
-      <div><span class="winSmallLabel">PostFX pass ID:</span> ${info.id}</div>
-      <div><span class="winSmallLabel">Chain position:</span> #${info.index + 1}</div>
-      <div><span class="winSmallLabel">Param edits:</span> ${LIVE_PARAMS_TEXT[info.liveParams]}</div>
-    </div>`,
-  });
-  container.add({
-    class: ['winNotRightPaddedContent', 'winFlexContent'],
-    html: () => `<div>
-      <div><span class="winSmallLabel">Name:</span> ${info.debugData?.name || ''}</div>
-    </div>`,
-  });
-  container.add({
-    class: ['winNotRightPaddedContent', 'winFlexContent'],
-    html: () => `<div>
-      <div><span class="winSmallLabel">Description:</span> ${info.debugData?.description || ''}</div>
-    </div>`,
-  });
-
-  return container;
-};
-
-const addParamBindings = (pane: Pane, info: PostFxPassInfo, isLive: boolean) => {
-  // Tweakpane writes into the proxy, and has already done so when 'change' fires, so the
-  // committed (last recorded) values are kept apart for the undo/redo `prev`
-  const paramsProxy = structuredClone(info.params);
-  const committed = structuredClone(info.params);
-  const passName = info.debugData?.name || info.id;
-
-  for (const key of Object.keys(info.params)) {
-    const meta = info.paramsMeta?.[key] || {};
-    if (meta.hidden) continue;
-    const value = info.params[key];
-    const kind = inferParamKind(value);
-    const label = meta.label || key;
-
-    if (kind === 'json') {
-      // Can't be edited with a control, but never silently left out either
-      const jsonProxy = { [key]: JSON.stringify(value) };
-      pane.addBinding(jsonProxy, key, { label: `${label} (JSON, readonly)`, readonly: true });
-      continue;
-    }
-
-    pane
-      .addBinding(paramsProxy, key, getParamBindingParams(kind, value, meta, label))
-      .on('change', (e) => {
-        const next = toParamValue(kind, e.value, value);
-        // A live PostFX pass follows the drag, the others only get the released value
-        if (isLive) setPostFxPassParam(info.id, key, next);
-        if (!e.last) return;
-        applyPostFxPassParam(info.id, key, next);
-        const prev = committed[key];
-        committed[key] = structuredClone(next);
-        if (isSameValue(prev, next)) return;
-        _recordUndoRedoAction<PostFxPassParamPayload>(
-          UNDO_POSTFX_PASS_PARAM,
-          `PostFX ${passName}: ${label}`,
-          { postFxPassId: info.id, key, prev, next }
-        );
-      });
-  }
+  return cmp;
 };
 
 registerDraggableWindowKind(EDIT_POSTFX_PASS_WIN_ID, {

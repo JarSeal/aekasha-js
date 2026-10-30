@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -1326,7 +1326,7 @@ Phase 1 verified (2026-10-29):
      pass, the tab order and the four undo / redo scripts unchanged. Axe, summed over the six
      scenes, is as section 3 left it (`color-contrast` 10, `target-size` 3: Phases 3-4's).
    - **Checks:** `yarn test` (2181), both `tsc`, ESLint, `yarn hub:build`, `yarn verify:ui
-     --only button,buttonGroup,dropDown` (re-recorded, then passing), `yarn verify:embed` (7
+--only button,buttonGroup,dropDown` (re-recorded, then passing), `yarn verify:embed` (7
      scenarios), `yarn sbp --profile all` (every budget within; first downloads app 384.5, banner
      287.4 kB gzip). `yarn verify:baselines`: `api.json` records the five additions, and the
      production bundle's `kernel/input` group grew 0.1 kB gzip. That's the held-keys set and the
@@ -1350,7 +1350,7 @@ grid stacking fix after it):
 - `yarn test` under the run's load timed out once (`FeatureFactories.test.ts`) and failed
   `buildGuard.test.ts` while `verify:baselines` rebuilt `dist-embed/`; both pass on their own.
 
-### Phase 3: the edit windows
+### Phase 3: the edit windows — done
 
 1. **Camera and lights:** `_dbg__CameraGUI.ts` and `_dbg__LightGUI.ts` on grids, and split.
 
@@ -1489,9 +1489,82 @@ grid stacking fix after it):
    - **Hub:** the dev library's parity box names the list's new line (`_dbg__PhysicsAPI.ts:306`).
 
 3. **Character, PostFX, ECS:**
+
    - The three windows.
    - After it, nothing imports Tweakpane: `tweakpane` and `@tweakpane/core` leave
      `package.json`, and D3's table is final (p622 can be written, D2).
+
+   As built (2026-10-30):
+
+   - **Shared pieces:**
+     - `features/physics/debug/_dbg__BodyPoseItems.ts`: the physics window's pose rows
+       (section 2) moved out, so the character window shares them: `getBodyPoseItems`, whose `onSet`
+       gets `{ field, prev, next }`, which the window records under its own undo type (`physicsObject.*`, `character.*`: unchanged). The character's 5.x code
+       read `pos` / `rot`; the rows read `translation()` / `rotation()`, the same values.
+     - `_dbg__DebugWindowGrid.ts` gained `getInfoRowItem(label, value)` (the info rows'
+       monitor, exported) and `getNoteItem(text)` (a muted paragraph across both columns, set as
+       text; `.note` in its stylesheet, on the tokens).
+   - **The character window** (`_dbg__Character.ts`, 336 lines, no split: no p800 header): the
+     pose rows, then "Open character state window", "Log to the console" and "Remove character
+     (this page load only)" (`variant: 'danger'`; 5.x said "this browser load" in the icon's
+     title) as rows, then `getEntityInfoItems` (Type "Character", Name the character's or the
+     debug name) and the character's rows (Character ID, Body kind, Controller, Brain, Control
+     mode, Visual ID; the deprecated key and mouse binding ids only when it has some, as 5.x).
+     The HTML header and its three `winSmallIconButton`s went. A file header was added.
+   - **The ECS world window** (`_dbg__ECS.ts`):
+     - The entity count is a refresh-only monitor on `getEntityCount()`, refreshed by the same
+       `onECSEntityCountChange` listener through the grid's `refresh()` (5.x's
+       `pane.refresh()`; `openWorldEditRefreshes` keeps the grid's, removed by `onRemove`).
+     - The storage folder (open, not saved, as 5.x): the mode a select (Tweakpane's object form
+       of options), each pick saving the override and reloading. Max entities reloads at the
+       gesture's end only (5.x reloaded on Tweakpane's first `change`, the first key step), and
+       its `min` is 1000, not 1: the kit's step grid starts at `min` (p804 D6), so `min: 1` with
+       `step: 1000` stepped 100000 to 101001.
+     - "Clear local storage" a button item with `disabled` as a function; "Delete world"
+       `variant: 'danger'`, the default world's left out as before.
+     - The header (World ID, Name, Description) became info rows at the end.
+   - **The PostFX pass window** (`_dbg__PostFX.ts`, 677 lines, no split: no p800 header):
+     - `getParamBindingParams` became `getParamField(kind, proxy, key, meta, label)`, returning
+       the item and `toParam` (the field's value as the pass takes it): `options` a select
+       (the meta's record is Tweakpane's object form), a number with the range, a point with the
+       range per axis in `axes`, a boolean and a string inferred.
+     - **Colour objects** (§4.1's third finding): every channel in 0..1 is the colour field's
+       floats (sRGB, as Tweakpane showed them); a channel over 1 is read as 0..255 and bound
+       through `{ get, set }` scaling the channels (the alpha left 0..1). The params say nothing
+       of a colour space, so an HDR float colour still reads as 0..255; no pass in the repo has a
+       colour param.
+     - The changes: a live pass follows each write, a gesture's end applies, saves and records
+       with the field's `prev` through `toParam`. The `committed` copies went.
+     - The JSON params are info rows (5.x's readonly binding); the "not live" paragraph is a
+       `getNoteItem` first; the footer and the name and description (5.x showed them empty) are
+       info rows, the last two only when set.
+   - **Tweakpane is gone:** no import of it anywhere; `yarn remove tweakpane @tweakpane/core`
+     (`package.json`, `yarn.lock`). The scene runner's `.tp-*` live masks and its
+     `STABLE_SHOT_CSS` (Tweakpane's labels hyphenated; nothing in `src/` does) went. Prose that
+     names Tweakpane (the kit's "Tweakpane's names" notes, the Hub's guides, the root
+     `CLAUDE.md`'s Debug system, `readme.md`'s credits, `TestBridge.ts`' control lookup's
+     comment) is Phase 7's (D15). D3's table is final: p622 can be written (D2).
+   - **Tests:** `_dbg__Character.test.ts` 3 (the info rows, a set position recorded and undone,
+     Remove), `_dbg__ECS.test.ts` 3 (the count refreshed by the listener, max entities saved
+     and reloaded at the gesture's end only, Delete world only for another world),
+     `_dbg__PostFX.test.ts` 3 (each param's field from its value and meta, a 0..255 colour
+     shown scaled, a live drag followed and recorded once with its `prev`, a rebuild pass's note
+     and its edit applied only at the end).
+   - **The position row shows two decimals** (`precision: 2`; the copy keeps them all, so a Set
+     doesn't round the body): the gym's character showed "11.3256" cut in its box, the kit
+     showing a value's own decimals.
+   - **The `debugger` configuration** (`testDebugScene`, `thirdPersonGymScene`): the ECS world,
+     PostFX pass and character windows' shots changed, and About's (its Packages list without
+     `tweakpane`), all recorded on purpose; the tabs' shots, the tab order and the undo / redo
+     scripts pass unchanged. Axe: the PostFX window's `label` 9 → 0, the character's 6 → 0, the
+     ECS world's `label` 2 → 0 and `select-name` 1 → 0. Long PostFX labels ("Enabled (rebuilds
+     the PostFX chain)") are cut at the window's 40 % label column, with the whole text in the
+     label's tooltip (the kit's `onlyWhenTruncated`); 5.x's Tweakpane wrapped them.
+   - **`yarn verify:baselines`:** every baseline unchanged (Tweakpane was never in a production
+     chunk), no debug code in the production build or either embed.
+   - **Hub:** the dev library's parity boxes name the new lines (`_dbg__ECS.ts:84`, `:226`,
+     `_dbg__Character.ts:294`, `_dbg__PostFX.ts:662`, and the rotation row's source
+     `_dbg__BodyPoseItems.ts:76`).
 
 ### Phase 4: the big panels
 

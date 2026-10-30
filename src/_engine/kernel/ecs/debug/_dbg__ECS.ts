@@ -1,4 +1,5 @@
-import { Pane } from 'tweakpane';
+// The ECS tab: the worlds' list (a row opens the world's edit window, on the UI kit's property
+// grid, p806 D10) and the stress test benchmark.
 import {
   createDebuggerTab,
   debuggerListCMP,
@@ -19,6 +20,7 @@ import {
   ECS_LS_KEY,
   getECSStorageLSOverride,
   setECSStorageLSOverride,
+  type ECSStorageLSOverride,
 } from '../ECSComponentStorage';
 import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
 import { createClearListLSButton, lsKeyHasData } from '../../../debug/_dbg__ClearLSButtons';
@@ -33,6 +35,8 @@ import {
   toggleDraggableWindow,
 } from '../../../ui/overlays/windows/DraggableWindow';
 import { isCurrentlyLoading } from '../../scene/SceneLoader';
+import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
+import { createDebugWindowGrid, getInfoRowItem } from '../../../debug/_dbg__DebugWindowGrid';
 
 /** The edit windows' kind: one window per world, keyed by its id */
 export const EDIT_ECS_WORLD_WIN_ID = 'ecsWorldEditorWindow';
@@ -55,113 +59,110 @@ const scheduleListRefresh = () => {
   });
 };
 
-// Each open edit window's cheap entity-count refresh, by world id — set by
-// createEditECSWorldContent, removed when its container is torn down.
-// Deliberately NOT routed through updateDraggableWindow (that disposes and
-// rebuilds the entire Tweakpane pane), since this can also fire at
-// stress-test frequency.
+/** Each open edit window's grid refresh, by world id: set by createEditECSWorldContent, removed
+ * with its content. An entity added or removed refreshes it (the count's monitor reads on a
+ * refresh only), not a window rebuild, since that can fire at stress-test frequency. */
 const openWorldEditRefreshes = new Map<string, () => void>();
 
-/** Logic for the Edit ECS World Draggable Window */
+/** Applies a storage setting: saved as the world's override, then the app reloads (the storage is
+ * made at the world's creation) */
+const applyStorageConfig = (worldId: string, config: ECSStorageLSOverride) => {
+  setECSStorageLSOverride(worldId, config);
+  location.reload();
+};
+
+/** The world's storage folder: its mode and max entities, each change reloading the app */
+const getStorageFolder = (world: ECSWorld): PropertyGridItem => {
+  const storageConfig = { storageMode: world.storageMode, maxEntities: world.maxEntities };
+  return {
+    type: 'folder',
+    id: 'storage',
+    title: 'Storage (reloads the app)',
+    items: [
+      {
+        target: storageConfig,
+        key: 'storageMode',
+        label: 'Storage mode',
+        options: { Map: 'MAP', 'Typed Array': 'TYPED_ARRAY' },
+        onChange: () => applyStorageConfig(world.id, storageConfig),
+      },
+      // Both MAP and TYPED_ARRAY enforce maxEntities as a real cap, so it's always editable. A
+      // gesture's end reloads (a key step's keyup, a typed value's Enter), not each step. The
+      // kit's step grid starts at `min`: 1000 keeps the steps on thousands
+      {
+        target: storageConfig,
+        key: 'maxEntities',
+        label: 'Max entities',
+        step: 1000,
+        min: 1000,
+        onChange: (_value, change) => {
+          if (change.last) applyStorageConfig(world.id, storageConfig);
+        },
+      },
+      {
+        type: 'button',
+        title: 'Clear local storage',
+        disabled: () => !getECSStorageLSOverride(world.id),
+        onClick: () => {
+          clearECSStorageLSOverride(world.id);
+          location.reload();
+        },
+      },
+    ],
+  };
+};
+
+/** Logic for the Edit ECS World Draggable Window (p806 D10: the UI kit's property grid) */
 export const createEditECSWorldContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };
   const world = ECSWorld.getWorld(d.id);
-  if (!world)
-    return CMP({
-      style: { padding: '10px' },
-      text: 'ECS World no longer exists',
-    });
+  if (!world) return CMP({ style: { padding: '10px' }, text: 'ECS World no longer exists' });
 
   // The content is built before the window state is open: refresh the list selection after it
   queueMicrotask(refreshECSTab);
 
-  const isDefault = world.id === DEFAULT_ECS_WORLD_ID;
-  const container = CMP({
-    onRemoveCmp: () => {
-      pane.dispose();
+  const items: PropertyGridItem[] = [
+    {
+      label: 'Entity count',
+      get: () => world.getEntityCount(),
+      readonly: true,
+      interval: 'refresh',
+      format: (v) => (v as number).toFixed(0),
+    },
+    getStorageFolder(world),
+  ];
+  if (world.id !== DEFAULT_ECS_WORLD_ID) {
+    items.push({
+      type: 'button',
+      title: 'Delete world',
+      variant: 'danger',
+      onClick: () => {
+        // Close first so the registry-change notification (fired from inside
+        // deleteECSWorld) doesn't try to refresh a window whose world is
+        // already gone.
+        closeDraggableWindow(getKindWindowId(EDIT_ECS_WORLD_WIN_ID, world.id));
+        deleteECSWorld(world.id);
+      },
+    });
+  }
+  items.push(
+    { type: 'separator' },
+    getInfoRowItem('World ID', world.id),
+    getInfoRowItem('Name', world.name),
+    ...(world.description ? [getInfoRowItem('Description', world.description)] : [])
+  );
+
+  // Kept live by the onECSEntityCountChange listener registered in _initECSDebugGUI
+  let refresh = () => {};
+  const { cmp, grid } = createDebugWindowGrid({
+    items,
+    onRemove: () => {
       if (openWorldEditRefreshes.get(world.id) === refresh) openWorldEditRefreshes.delete(world.id);
     },
   });
-  const pane = new Pane({ container: container.elem });
-
-  // Header info
-  container.add({
-    class: ['winNotRightPaddedContent', 'winFlexContent'],
-    html: () => `<div>
-      <div><span class="winSmallLabel">Id:</span> ${world.id}</div>
-      <div><span class="winSmallLabel">Name:</span> ${world.name}</div>
-      ${world.description ? `<div><span class="winSmallLabel">Description:</span> ${world.description}</div>` : ''}
-    </div>`,
-  });
-
-  const readout = { entities: world.getEntityCount() };
-  pane.addBinding(readout, 'entities', {
-    label: 'Entity count',
-    readonly: true,
-    format: (v) => v.toFixed(0),
-  });
-
-  // Kept live by the onECSEntityCountChange listener registered in
-  // _initECSDebugGUI — a cheap pane.refresh() rather than tearing down and
-  // rebuilding this whole window on every entity add/remove.
-  const refresh = () => {
-    readout.entities = world.getEntityCount();
-    pane.refresh();
-  };
+  refresh = grid.refresh;
   openWorldEditRefreshes.set(world.id, refresh);
-
-  // --- Storage (moved here from the tab-level list so it's per world) ---
-  const storageFolder = pane.addFolder({
-    title: 'Storage (reloads the app)',
-    expanded: true,
-  });
-  const storageConfig = { storageMode: world.storageMode, maxEntities: world.maxEntities };
-
-  storageFolder
-    .addBinding(storageConfig, 'storageMode', {
-      label: 'Storage mode',
-      options: { Map: 'MAP', 'Typed Array': 'TYPED_ARRAY' },
-    })
-    .on('change', () => {
-      setECSStorageLSOverride(world.id, storageConfig);
-      location.reload();
-    });
-
-  // Both MAP and TYPED_ARRAY now enforce maxEntities as a real cap, so this is always
-  // editable — it used to be disabled exactly when TYPED_ARRAY (its one
-  // working mode at the time) was selected, which was backwards.
-  storageFolder
-    .addBinding(storageConfig, 'maxEntities', {
-      label: 'Max entities',
-      step: 1000,
-      min: 1,
-    })
-    .on('change', () => {
-      setECSStorageLSOverride(world.id, storageConfig);
-      location.reload();
-    });
-
-  storageFolder
-    .addButton({
-      title: 'Clear local storage',
-      disabled: !getECSStorageLSOverride(world.id),
-    })
-    .on('click', () => {
-      clearECSStorageLSOverride(world.id);
-      location.reload();
-    });
-
-  if (!isDefault) {
-    pane.addButton({ title: 'Delete world' }).on('click', () => {
-      // Close first so the registry-change notification (fired from inside
-      // deleteECSWorld) doesn't try to refresh a window whose world is
-      // already gone.
-      closeDraggableWindow(getKindWindowId(EDIT_ECS_WORLD_WIN_ID, world.id));
-      deleteECSWorld(world.id);
-    });
-  }
-
-  return container;
+  return cmp;
 };
 
 registerDraggableWindowKind(EDIT_ECS_WORLD_WIN_ID, {

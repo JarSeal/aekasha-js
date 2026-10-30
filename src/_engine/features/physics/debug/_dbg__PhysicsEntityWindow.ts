@@ -1,9 +1,8 @@
 // The physics entity edit window (p806 D10): a debug window per physics entity on the UI kit's
-// property grid. Its pose fields edit a copy, which the Set buttons apply to the body (it keeps
-// simulating, so the copy isn't live), recorded per scene for undo; the "Debug wireframe" folder
-// shows the entity's collider wireframe and overrides the global palette for it alone. The window's
-// kind, its undo handlers and the profiler's opener register at this module's load.
-import * as THREE from 'three/webgpu';
+// property grid. Its pose rows (_dbg__BodyPoseItems.ts) edit a copy, which the Set buttons apply
+// to the body, recorded per scene for undo; the "Debug wireframe" folder shows the entity's
+// collider wireframe and overrides the global palette for it alone. The window's kind, its undo
+// handlers and the profiler's opener register at this module's load.
 import { CMP } from '../../../ui/core/CMP';
 import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
 import {
@@ -52,6 +51,7 @@ import {
   setEntityWireframeFolderExpanded,
   type PhysEntityWinData,
 } from './_dbg__PhysicsDebugState';
+import { getBodyPoseItems } from './_dbg__BodyPoseItems';
 
 // Undo/redo
 
@@ -99,81 +99,20 @@ const BODY_TYPE_LABELS: Record<RigidBodyTypeAPI, string> = {
   [RigidBodyTypeAPI.KinematicVelocityBased]: 'Kinematic body (velocity based)',
 };
 
-const scratchQuat = new THREE.Quaternion();
-
-/**
- * The position and rotation fields with their buttons. The fields hold a copy of the body's pose
- * read at the build (the rotation as Euler angles, shown in degrees): "Set …" applies it, "Update
- * … input" reads the body's again.
- */
-const getPoseItems = (ctx: PhysWindowContext): PropertyGridItem[] => {
-  const { rigidBody } = ctx;
-  const readRotation = (euler: THREE.Euler) => {
-    const { x, y, z, w } = rigidBody.rotation();
-    return euler.setFromQuaternion(scratchQuat.set(x, y, z, w));
-  };
-  const pose = { position: rigidBody.translation(), rotation: readRotation(new THREE.Euler()) };
-
-  const recordPose = <T extends PhysVec3 | PhysQuat>(
-    field: 'position' | 'rotation',
-    prev: T,
-    next: T
-  ) => {
-    if (!ctx.stableAppId || JSON.stringify(prev) === JSON.stringify(next)) return;
-    _recordUndoRedoAction<PhysicsObjectUndoPayload<T>>(
-      `physicsObject.${field}`,
-      `Physics entity ${ctx.stableAppId}: ${field}`,
-      { appId: ctx.stableAppId, prev, next }
-    );
-  };
-  const setPosition = () => {
-    const { x, y, z } = rigidBody.translation();
-    const next = { x: pose.position.x, y: pose.position.y, z: pose.position.z };
-    rigidBody.setTranslation(next, true);
-    recordPose('position', { x, y, z }, next);
-  };
-  const setRotation = () => {
-    const quat = new THREE.Quaternion().setFromEuler(pose.rotation);
-    const { x, y, z, w } = rigidBody.rotation();
-    const next = { x: quat.x, y: quat.y, z: quat.z, w: quat.w };
-    rigidBody.setRotation(next, true);
-    recordPose('rotation', { x, y, z, w }, next);
-  };
-
-  return [
-    { target: pose, key: 'position', label: 'Position' },
-    { type: 'button', title: 'Set position', onClick: setPosition },
-    {
-      type: 'button',
-      title: 'Set position and cancel velocities',
-      // Undo restores the position only, not the cancelled velocities
-      onClick: () => {
-        setPosition();
-        rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      },
+/** The pose rows, each Set recorded to the scene's history (an entity with a stable app id only) */
+const getPoseItems = (ctx: PhysWindowContext): PropertyGridItem[] =>
+  getBodyPoseItems({
+    rigidBody: ctx.rigidBody,
+    refresh: ctx.refresh,
+    onSet: ({ field, prev, next }) => {
+      if (!ctx.stableAppId || JSON.stringify(prev) === JSON.stringify(next)) return;
+      _recordUndoRedoAction<PhysicsObjectUndoPayload<typeof next>>(
+        `physicsObject.${field}`,
+        `Physics entity ${ctx.stableAppId}: ${field}`,
+        { appId: ctx.stableAppId, prev, next }
+      );
     },
-    {
-      type: 'button',
-      title: 'Update position input',
-      onClick: () => {
-        Object.assign(pose.position, rigidBody.translation());
-        ctx.refresh();
-      },
-    },
-    { type: 'separator' },
-    { target: pose, key: 'rotation', label: 'Rotation', kind: 'rotation', step: Math.PI / 8 },
-    { type: 'button', title: 'Set rotation', onClick: setRotation },
-    {
-      type: 'button',
-      title: 'Update rotation input',
-      onClick: () => {
-        readRotation(pose.rotation);
-        ctx.refresh();
-      },
-    },
-  ];
-};
+  });
 
 /**
  * The "Debug wireframe" folder's items: the visibility toggle, and a colour per state that

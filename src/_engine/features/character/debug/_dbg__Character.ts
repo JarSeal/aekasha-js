@@ -1,4 +1,6 @@
-import * as THREE from 'three/webgpu';
+// The Characters tab and its tools: the list (its rows open the edit window, toggle the state
+// window and pin the gizmos), the character edit window on the UI kit's property grid (p806 D10) and
+// the saved config's clear button.
 import {
   addDebugToast,
   createDebuggerTab,
@@ -7,6 +9,13 @@ import {
   type DebuggerListItem,
 } from '../../../debug/DebuggerGUI';
 import { CMP } from '../../../ui/core/CMP';
+import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
+import {
+  createDebugWindowGrid,
+  getEntityInfoItems,
+  getInfoRowItem,
+} from '../../../debug/_dbg__DebugWindowGrid';
+import { getBodyPoseItems } from '../../physics/debug/_dbg__BodyPoseItems';
 import { IS_DEBUG_ENV } from '../../../kernel/config/Config';
 import {
   closeDraggableWindow,
@@ -16,8 +25,6 @@ import {
   toggleDraggableWindow,
   updateDraggableWindowsOfKind,
 } from '../../../ui/overlays/windows/DraggableWindow';
-import { getSvgIcon } from '../../../ui/core/icons/SvgIcon';
-import { Pane } from 'tweakpane';
 import { llog, lwarn } from '../../../utils/Logger';
 import { deleteCharacter, getCharacterById, getCharacters } from '../Character';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
@@ -92,21 +99,38 @@ _registerUndoRedoActionHandler<CharacterUndoPayload<CharQuat>>('character.rotati
   redo: ({ characterId, next }) => resolveCharacterRigidBody(characterId)?.setRotation(next, true),
 });
 
-const recordCharacterPose = <T extends CharVec3 | CharQuat>(
-  characterId: string,
-  field: 'position' | 'rotation',
-  prev: T,
-  next: T
-) => {
-  if (JSON.stringify(prev) === JSON.stringify(next)) return;
-  _recordUndoRedoAction<CharacterUndoPayload<T>>(
-    `character.${field}`,
-    `Character ${characterId}: ${field}`,
-    { characterId, prev, next }
-  );
+type CharacterObject = NonNullable<ReturnType<typeof getCharacterById>>;
+
+/** The character's info rows: its ids, kinds and (deprecated) binding ids, as text */
+const getCharacterInfoItems = (character: CharacterObject): PropertyGridItem[] => {
+  const world = getECSWorld();
+  const debugData = world.getComponent(character.entityId, ComponentType.DEBUG_DATA);
+  return [
+    ...getEntityInfoItems({
+      entityId: character.entityId,
+      appId: world.getComponent(character.entityId, ComponentType.APP_ID)?.id,
+      type: 'Character',
+      name: character.name || debugData?.name,
+      description: debugData?.description,
+    }),
+    getInfoRowItem('Character ID', character.id),
+    getInfoRowItem('Body kind', character.bodyKind),
+    getInfoRowItem('Controller', character.controller?.kind ?? '-'),
+    getInfoRowItem('Brain', character.brain?.kind ?? '- (code)'),
+    getInfoRowItem('Control mode', character.controlMode),
+    getInfoRowItem('Visual ID', String(character.visualId)),
+    ...(character.keyBindingIds.length
+      ? [getInfoRowItem('Key binding IDs', character.keyBindingIds.join(', '))]
+      : []),
+    ...(character.mouseBindingIds.length
+      ? [getInfoRowItem('Mouse binding IDs', character.mouseBindingIds.join(', '))]
+      : []),
+  ];
 };
 
-const createEditCharacterContent = (data?: { [key: string]: unknown }) => {
+/** Content for the character's edit window (p806 D10): its pose rows when it has a body (a copy
+ * the Set buttons apply, recorded for undo), its buttons and its info rows */
+export const createEditCharacterContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };
   const character = getCharacterById(d.id);
   if (!character) {
@@ -121,126 +145,54 @@ const createEditCharacterContent = (data?: { [key: string]: unknown }) => {
   // The content is built before the window state is open: refresh the list selection after it
   queueMicrotask(refreshCharactersList);
 
-  const windowCmp = CMP({ onRemoveCmp: () => pane.dispose() });
-  const pane = new Pane({ container: windowCmp.elem });
-
-  // @NOTE: The copy code button is not that easy to implement here
-  // because the character object only has references to the mesh and phys objects,
-  // and also controls (especially these would be hard to print).
-  const openCharacterStateButton = CMP({
-    class: 'winSmallIconButton',
-    html: () =>
-      `<button title="Open character state window">${getSvgIcon('personArmsUp')}</button>`,
-    onClick: () => _openCharacterStateWindow(character),
-  });
-  const logButton = CMP({
-    class: 'winSmallIconButton',
-    html: () =>
-      `<button title="Console.log / print this camera to browser console">${getSvgIcon('fileAsterix')}</button>`,
-    onClick: () => {
-      llog('CHARACTER:***************', character, '**********************');
+  let refreshGrid = () => {};
+  const rigidBody = getECSWorld().getRigidBody(character.entityId);
+  const items: PropertyGridItem[] = rigidBody
+    ? [
+        ...getBodyPoseItems({
+          rigidBody,
+          refresh: () => refreshGrid(),
+          onSet: ({ field, prev, next }) => {
+            if (JSON.stringify(prev) === JSON.stringify(next)) return;
+            _recordUndoRedoAction<CharacterUndoPayload<typeof next>>(
+              `character.${field}`,
+              `Character ${character.id}: ${field}`,
+              { characterId: character.id, prev, next }
+            );
+          },
+        }),
+        { type: 'separator' },
+      ]
+    : [];
+  items.push(
+    {
+      type: 'button',
+      title: 'Open character state window',
+      onClick: () => _openCharacterStateWindow(character),
     },
-  });
-  const deleteButton = CMP({
-    class: ['winSmallIconButton', 'dangerColor'],
-    html: () =>
-      `<button title="Remove character (only for this browser load, does not delete character permanently)">${getSvgIcon('thrash')}</button>`,
-    onClick: () => {
-      closeDraggableWindow(getEditWindowId(d.id));
-      closeDraggableWindow(getCharacterStateWindowId(d.id));
-      deleteCharacter(character.id);
+    // The character holds references to its mesh, body and controls: logged, not copied
+    {
+      type: 'button',
+      title: 'Log to the console',
+      onClick: () => llog('CHARACTER:***************', character, '**********************'),
     },
-  });
+    {
+      type: 'button',
+      // Only for this page load: the scene creates it again
+      title: 'Remove character (this page load only)',
+      variant: 'danger',
+      onClick: () => {
+        closeDraggableWindow(getEditWindowId(d.id));
+        closeDraggableWindow(getCharacterStateWindowId(d.id));
+        deleteCharacter(character.id);
+      },
+    },
+    ...getCharacterInfoItems(character)
+  );
 
-  windowCmp.add({
-    prepend: true,
-    class: ['winNotRightPaddedContent', 'winFlexContent'],
-    html: () => `<div>
-<div>
-  <div><span class="winSmallLabel">Name:</span> ${character.name || ''}</div>
-  <div><span class="winSmallLabel">Id:</span> ${character.id}</div>
-  <div><span class="winSmallLabel">Body kind:</span> ${character.bodyKind}</div>
-  <div><span class="winSmallLabel">Controller:</span> ${character.controller?.kind ?? '-'}</div>
-  <div><span class="winSmallLabel">Brain:</span> ${character.brain?.kind ?? '- (code)'}</div>
-  <div><span class="winSmallLabel">Control mode:</span> ${character.controlMode}</div>
-  <div><span class="winSmallLabel">Entity id:</span> ${character.entityId}</div>
-  <div><span class="winSmallLabel">Visual id:</span> ${character.visualId}</div>
-  ${character.keyBindingIds.length ? `<div><span class="winSmallLabel">Key binding ids:</span> ${character.keyBindingIds.join(', ')}</div>` : ''}
-  ${character.mouseBindingIds.length ? `<div><span class="winSmallLabel">Mouse binding ids:</span> ${character.mouseBindingIds.join(', ')}</div>` : ''}
-</div>
-<div style="text-align:right">${openCharacterStateButton}${logButton}${deleteButton}</div>
-</div>`,
-  });
-
-  const physRigidBody = getECSWorld().getRigidBody(character.entityId);
-  if (!physRigidBody) return windowCmp;
-
-  {
-    const rigidBody = {
-      position: physRigidBody.pos,
-      rotation: new THREE.Euler().setFromQuaternion(
-        new THREE.Quaternion(
-          physRigidBody.rot.x,
-          physRigidBody.rot.y,
-          physRigidBody.rot.z,
-          physRigidBody.rot.w
-        )
-      ),
-    };
-    // Position
-    const positionInput = pane.addBinding(rigidBody, 'position', {
-      label: 'Position',
-    });
-    const setPosition = () => {
-      const { x, y, z } = physRigidBody.pos;
-      const next = { x: rigidBody.position.x, y: rigidBody.position.y, z: rigidBody.position.z };
-      physRigidBody.setTranslation(new THREE.Vector3(next.x, next.y, next.z), true);
-      recordCharacterPose(character.id, 'position', { x, y, z }, next);
-    };
-    pane.addButton({ title: 'Set position' }).on('click', setPosition);
-    // Undo restores the position only, not the cancelled velocities
-    pane.addButton({ title: 'Set position and cancel velocities' }).on('click', () => {
-      setPosition();
-      physRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      physRigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    });
-    pane.addButton({ title: 'Update position input' }).on('click', () => {
-      rigidBody.position = physRigidBody.pos;
-      positionInput.refresh();
-    });
-    pane.addBlade({ view: 'separator' });
-    // Rotation
-    const rotationInput = pane.addBinding(rigidBody, 'rotation', {
-      label: 'Rotation',
-      step: Math.PI / 8,
-    });
-    pane.addButton({ title: 'Set rotation' }).on('click', () => {
-      const { x, y, z, w } = physRigidBody.rot;
-      const quat = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(rigidBody.rotation.x, rigidBody.rotation.y, rigidBody.rotation.z)
-      );
-      physRigidBody.setRotation(quat, true);
-      recordCharacterPose(
-        character.id,
-        'rotation',
-        { x, y, z, w },
-        { x: quat.x, y: quat.y, z: quat.z, w: quat.w }
-      );
-    });
-    pane.addButton({ title: 'Update rotation input' }).on('click', () => {
-      rigidBody.rotation = new THREE.Euler().setFromQuaternion(
-        new THREE.Quaternion(
-          physRigidBody.rot.x,
-          physRigidBody.rot.y,
-          physRigidBody.rot.z,
-          physRigidBody.rot.w
-        )
-      );
-      rotationInput.refresh();
-    });
-  }
-
-  return windowCmp;
+  const { cmp, grid } = createDebugWindowGrid({ items });
+  refreshGrid = grid.refresh;
+  return cmp;
 };
 
 const getCharactersListData = (): DebuggerListItem[] =>
