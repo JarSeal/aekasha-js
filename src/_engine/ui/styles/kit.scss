@@ -93,3 +93,10 @@
     height: auto;
   }
 }
+
+// In a kit part's icon slot (a button's, a tab's, a drop-down trigger's) the SVG is a block, as the
+// kit's layered rules say: inline, the rule above sat it on a line's baseline, about 2 px above the
+// slot's centre in the debugger's roots. The same specificity as the rule above, after it.
+:where(.aekButton__icon, .aekTabs__icon, .aekDropDownTrigger) > .uiIcon svg {
+  display: block;
+}

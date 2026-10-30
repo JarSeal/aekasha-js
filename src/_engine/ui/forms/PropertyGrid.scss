@@ -11,8 +11,10 @@
 // labels' column only. Its custom properties: `--aek-property-grid-label-width` (the grid sets it)
 // and `--aek-property-grid-row-gap`.
 @layer aek.components {
+  // Isolated: the rows across both columns stack over the separator inside it only
   :where(.aekPropertyGrid) {
     position: relative;
+    isolation: isolate;
     min-width: 0;
     font-size: var(--aek-font-size-sm);
   }
@@ -114,6 +116,30 @@
     color: var(--aek-text-muted);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // A row across both columns that acts there (an unlabelled button, a custom item) is over the
+  // separator, so the pointer reaches it and drags no column, and so is the gap between two of them
+  // (its ::after): a run of full-width buttons has no drag target anywhere
+  .aekPropertyGrid
+    :where(.aekPropertyGrid__buttonRow:not([data-labelled]), .aekPropertyGrid__customRow) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .aekPropertyGrid
+    :where(.aekPropertyGrid__buttonRow:not([data-labelled]), .aekPropertyGrid__customRow):has(
+      + :where(
+          .aekPropertyGrid__buttonRow:not([data-labelled], [hidden]),
+          .aekPropertyGrid__customRow:not([hidden])
+        )
+    )::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    height: var(--aek-property-grid-row-gap, var(--aek-space-2));
   }
 
   // The column's edge, over the gap: a line under the pointer, while dragged and with the focus
