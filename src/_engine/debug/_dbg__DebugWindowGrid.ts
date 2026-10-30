@@ -27,6 +27,9 @@ export type DebugWindowGridProps = {
   folderExpanded?: Readonly<Record<string, boolean>>;
   /** A folder opened or shut: what the window saves. */
   onFolderExpandedChange?: (id: string, expanded: boolean) => void;
+  /** The content removed (the window closed or rebuilt): what an `await` started by the window
+   * checks before it touches the grid. */
+  onRemove?: () => void;
 };
 
 /** A debug window's content {@link createDebugWindowGrid} made. */
@@ -49,7 +52,13 @@ export const createDebugWindowGrid = (props: DebugWindowGridProps): DebugWindowG
     onFolderExpandedChange: props.onFolderExpandedChange,
   });
   const menu = createFieldContextMenu({ container: grid.cmp.elem });
-  const cmp = CMP({ class: styles.windowGrid, onRemoveCmp: () => menu.cmp.remove() });
+  const cmp = CMP({
+    class: styles.windowGrid,
+    onRemoveCmp: () => {
+      menu.cmp.remove();
+      props.onRemove?.();
+    },
+  });
   cmp.add(grid.cmp);
   return { cmp, grid };
 };

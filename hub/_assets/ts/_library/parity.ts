@@ -197,7 +197,7 @@ const buildLists = (parent: HTMLElement) => {
   });
 
   row(
-    '_dbg__PhysicsAPI.ts:1163',
+    '_dbg__PhysicsAPI.ts:306',
     'physics entities (86 in physicsTiers): a heading with the count, a wireframe toggle; the largest list, still under the ~200 where virtual rows pay',
     {
       heading: 'Physics entities',

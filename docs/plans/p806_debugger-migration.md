@@ -1434,6 +1434,60 @@ grid stacking fix after it):
 
 2. **Physics:** the entity window and the wireframe folder; `_dbg__PhysicsAPI.ts`' tab content
    split.
+
+   As built (2026-10-30):
+
+   - **The split** (D11; the p800 header gone, every file under 400 lines and every function
+     under 150). The kernel still loads `_dbg__PhysicsAPI.ts` (`PhysicsWorld.ts`' loader
+     unchanged), now the tab alone (the boot, world, timing and interpolation items as builders,
+     the list, the registration):
+     - `_dbg__PhysicsDebugState.ts`: the LS keys, the window's folder state, the global
+       wireframe palette's restore and persist, the physics entities' lookups and labels, the
+       window ids, `refreshPhysicsTab`.
+     - `_dbg__PhysicsSettingsUndo.ts`: gravity's and the solver's global undo (handlers at its
+       load).
+     - `_dbg__PhysicsTabFolders.ts`: the Bodies, Simulation tiers and Interpolation clock
+       folders with their readouts (`refreshPhysicsReadouts`, the tab's `onRefresh`), the
+       determinism probe, the global Wireframe folder. Their items are Phase 1's, moved as they
+       were.
+     - `_dbg__PhysicsEntityWindow.ts`: the window, its pose undo, the window kind and the
+       profiler's opener (all at its load, which the tab's import runs, as before).
+     - The clear-LS button's four keys are one list.
+   - **The window** on `createDebugWindowGrid`:
+     - **The pose keeps 5.x's model:** the position (a vector field) and the rotation (a rotation
+       field in degrees, `step: π / 8` → 22.5°) edit a copy read at the build; "Set position",
+       "Set position and cancel velocities" and "Set rotation" apply and record it (undo as
+       before), "Update … input" reads the body again and refreshes the grid (5.x replaced the
+       objects and refreshed the inputs). Not live `{ get, set }` as the camera's: a body
+       simulates, so a live field would move under the user's typing, and a set on each step
+       would fight the solver.
+     - **The wireframe folder:** "Show wireframe" and each state's colour are `{ get, set }` on
+       the draw module (no proxies; `kind: 'color'`), each colour with its "Reset to default"
+       and a "Reset all to default", each refreshing the grid (5.x's `folder.refresh()` after
+       re-seeding the proxy). The "Persistence" note is a monitor (`interval: 'refresh'`). The
+       folder's open state keeps 5.x's key (`entityWireframeFolderExpanded` in
+       `AEK_debugPhysicsApiUI`). The draw module still saves a colour on every write of a drag,
+       as 5.x did (D1 leaves the draw module alone).
+     - **The header went:** its HTML string (`winSmallLabel`, the two `winSmallIconButton`s)
+       became grid rows, ordered as the camera's and the lights' windows: the pose, the folder,
+       "Log to the console" and "Delete physics entity" (`variant: 'danger'`), then
+       `getEntityInfoItems` (Entity ID, App ID, Type: the body's type from `bodyTypeSync`, which
+       both targets answer; Name: the object's or the debug name; Description) and the collider
+       shapes, a monitor reading "Loading…" until `shapeType()` resolves, then the grid's
+       refresh unless the window closed (5.x showed the label, the id and the shapes only).
+     - `createDebugWindowGrid` gained `onRemove` (the content removed: what an `await` started
+       by the window checks).
+   - **Tests:** `_dbg__PhysicsEntityWindow.test.ts`, 5 (the info rows and the shapes once
+     resolved, a rotation step applied only by "Set rotation" with its record and undo, the
+     position set with the velocities cancelled and "Update" reading the body again, the
+     wireframe toggle saved with the folder state and the colour resets, Delete), on `KitDom`
+     with a real `ECSWorld` and a stand-in body.
+   - **The `debugger` configuration** (`testDebugScene`, `thirdPersonGymScene`): only the physics
+     entity window's shot changed, recorded on purpose; the Physics API tab's shot, the tab order
+     and the undo / redo scripts pass unchanged. Axe on the window: `label` 6 → 0. At its 400 px
+     the info rows are below the fold (the grid scrolls), as the camera's.
+   - **Hub:** the dev library's parity box names the list's new line (`_dbg__PhysicsAPI.ts:306`).
+
 3. **Character, PostFX, ECS:**
    - The three windows.
    - After it, nothing imports Tweakpane: `tweakpane` and `@tweakpane/core` leave
