@@ -29,7 +29,7 @@
   }
 
   // An icon whose artwork fills its box
-  &.smallIcon :global(.aekIcon) {
+  &.smallToolIcon :global(.aekIcon) {
     width: var(--aek-icon-size-md);
   }
 }

@@ -100,7 +100,7 @@ const createToolButton = (tool: OnScreenTool) =>
     class: [
       styles.onScreenTool,
       'onScreenTool',
-      ...(tool.isIconSmall ? [styles.smallIcon] : []),
+      ...(tool.isIconSmall ? [styles.smallToolIcon] : []),
       ...(tool.class ? [tool.class] : []),
     ],
     // Not stopped: an exclusive group releases the other buttons after the click

@@ -1311,7 +1311,10 @@ Phase 1 verified (2026-10-29):
      tokens, the icons are about 8:1 over a white scene in the dark theme and 11:1 over a black
      one in the light theme. Checked in a scratch script's shots (`.cache/p806/onscreen.mts`,
      not kept: `testDebugScene` and `lodShowcase`, as they are and over a white and a black
-     backdrop, both themes, the loading state and the keyboard).
+     backdrop, both themes, the loading state and the keyboard). Axe (`UI_AXE_TAGS`) finds no
+     violation on the three rows in either theme or the loading state, as in Phase 0. The
+     scene runner's `debugger` configuration doesn't shoot the rows: Phase 6's check covers
+     them.
    - **Styles:** `OnScreenTools.module.scss`, `AxesGizmo.module.scss` and `EnvBall.module.scss`
      are on the tokens. They no longer use `variables.scss` or `--aek-rem`. Their breakpoints
      moved to `debug/styles/_debugLayout.scss` (`$breakpointXLarge`, `Large`, `Medium`). The
