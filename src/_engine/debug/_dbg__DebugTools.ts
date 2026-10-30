@@ -35,7 +35,7 @@ import {
   getDebugCamProps,
   saveDebugCameraToLS,
   type DebugCamLSProps,
-} from '../kernel/camera/debug/_dbg__CameraGUI';
+} from '../kernel/camera/debug/_dbg__CameraDebugState';
 import {
   DEFAULT_DEBUG_CAM_PROPS,
   setDebugCameraPanelRefresh,

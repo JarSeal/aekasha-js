@@ -97,7 +97,7 @@ const buildLists = (parent: HTMLElement) => {
   };
 
   row(
-    '_dbg__CameraGUI.ts:616',
+    '_dbg__CameraGUI.ts:171',
     'cameras: a click, the selection and a helper toggle; an unnamed camera’s placeholder',
     {
       label: 'Cameras',
@@ -122,7 +122,7 @@ const buildLists = (parent: HTMLElement) => {
   );
 
   row(
-    '_dbg__LightGUI.ts:1124',
+    '_dbg__LightGUI.ts:126',
     'lights: an icon, a badge, two toggles; a toggle the row hasn’t (`null`) hidden, its cell kept',
     {
       label: 'Lights',

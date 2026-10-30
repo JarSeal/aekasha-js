@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -1032,7 +1032,7 @@ Phase 1 verified (2026-10-29):
   none failed, in 662 s. The warnings are `space`'s known worker hash (`unstableHash`) and the
   asset compare shot's `unstableShots`.
 
-### Phase 2: the shell, the theme and the density
+### Phase 2: the shell, the theme and the density — done
 
 1. **Theme and density** (D8): the roots' attributes from one function, the setting, the compact
    retune if Phase 0 asks for one.
@@ -1332,9 +1332,106 @@ Phase 1 verified (2026-10-29):
      production bundle's `kernel/input` group grew 0.1 kB gzip. That's the held-keys set and the
      branches, which the folded debug flag doesn't remove. No debug code in any build.
 
+Phase 2 verified (2026-10-30, on `39eadf62`: section 4's finalization and the kit's icon slot and
+grid stacking fix after it):
+
+- `yarn verify:scenes`: 110 runs. The 105 runs of the four configurations pass (`space`'s known
+  worker hash and the asset compare shot only warn). The six `debugger` runs pass their tab order,
+  undo / redo scripts and axe ratchet, and fail only on shots: every drawer tab, the profiler's
+  tabs and both ray testers moved by about a pixel. That's `39eadf62`'s icon slot rule (`kit.scss`:
+  a button's, a tab's or a drop-down trigger's SVG a block) and the grid's rows across both
+  columns. Recorded on purpose (`--config debugger --update`).
+- `yarn verify:ui`: every box, state and script passes but the drop-down's three open states (its
+  trigger 3-5 px shorter: the same icon slot rule) and the tabs box (0.1 %). Recorded
+  (`--only dropDown,tabs --update`), then a plain run passes.
+- `yarn verify:baselines` (unchanged; no debug code in any build), `yarn verify:embed` (7
+  scenarios) and `yarn sbp --profile all` (every budget within; first downloads app 384.5, banner
+  287.5 kB gzip) pass.
+- `yarn test` under the run's load timed out once (`FeatureFactories.test.ts`) and failed
+  `buildGuard.test.ts` while `verify:baselines` rebuilt `dist-embed/`; both pass on their own.
+
 ### Phase 3: the edit windows
 
 1. **Camera and lights:** `_dbg__CameraGUI.ts` and `_dbg__LightGUI.ts` on grids, and split.
+
+   As built (2026-10-30):
+
+   - **The windows' grid** (`debug/_dbg__DebugWindowGrid.ts`, for this phase's other windows too):
+     - `createDebugWindowGrid({ items, folderExpanded?, onFolderExpandedChange? })`: a property
+       grid with its own scheduler (a window shows while it's open), the fields' context menu over
+       it (Reset, Copy, Paste: D4's, per window as per tab host), removed with it, and the window's
+       padding (`DebugWindowGrid.module.scss`, the module's own stylesheet; Phase 5 moves the other
+       window helpers next to it).
+     - The label column is the kit's 40 %, not the drawer's 50 %: a window is 320 px by default,
+       and at 50 % a vector's three boxes cut their values ("1.0" for 1.00). Not persisted: a
+       window has no `uiLsKey`.
+     - `getEntityInfoItems({ entityId, appId, type, name?, description? })`: the info rows as
+       monitors (`{ value }`, `interval: 'refresh'`) after a separator, set as text: 5.x's
+       `winSmallLabel` HTML strings put a debug name into `innerHTML` (D10). A row without a
+       value (no name) is left out. The scene runner's live masks (`.aekMonitor`) cover them in
+       the shots: fixed text, masked all the same.
+     - `getReasonedButtonItem({ title, getDisabledReason, onClick })`: a custom item of a kit
+       button across both columns, `focusableWhenDisabled` with the reason as its tooltip, read on
+       every refresh. The grid's button item has no tooltip; the camera's Delete needed one (5.x
+       set the Tweakpane button's `title`).
+   - **The split** (D11; both p800 headers gone, every file under 400 lines and every function
+     under 150). The kernel still loads `_dbg__CameraGUI.ts` and `_dbg__LightGUI.ts` (D11's
+     example named `_dbg__LightTab.ts`; keeping the names leaves `Camera.ts` and `Light.ts`'
+     loaders as they were), now the tabs alone, re-exporting what the kernel reads:
+     - Camera: `_dbg__CameraDebugState.ts` (the `AEK_debugCams` types, ids, LS functions, the
+       helper toggle, the refresh; the debug camera, its rig and helpers and the Debug tools tab
+       import it now), `_dbg__CameraEditWindow.ts` (the window and its undo).
+     - Lights: `_dbg__LightDebugState.ts` (the `AEK_debugLights` types and LS, the helper and
+       symbol preferences and their 3D visuals, the refresh, the global helper toggle, the shadow
+       map rebuild), `_dbg__LightUndo.ts` (the undo, and `onLightChange`, the fields' shared
+       handler), `_dbg__LightEditWindow.ts` (the editor and a managed light's readout),
+       `_dbg__LightShadowItems.ts` (the cast shadow toggle and both shadow folders).
+     - The state modules exist so no module imports the one that imports it (the tab registers
+       the window's kind at its load). The tabs' two clear-LS buttons share one `clearScenes`.
+   - **Changes** apply on every write and are saved and recorded at the gesture's end with the
+     field's `prev` (p804 D3). The `committed` copies Tweakpane needed went, and so did LS writes
+     on every tick of a drag. The number and colour fields still coalesce (two key presses within
+     800 ms are one entry). A tuple saved from several fields (shadow map size, the shadow
+     camera's near / far and frustum) takes the field's `prev` into its own slot
+     (`onLightChange`'s `toSaved`).
+   - **The fields:**
+     - Position and target position are `{ get, set }` on the transform, `set` through
+       `setTransform` on every step: 5.x moved the entity on `last` only.
+     - The colours are `kind: 'color'` on `getHex` / `setHex` (24-bit numbers, as saved).
+     - The shadow map's `view: 'list'` blades are unbound selects (`{ value }`, the options as
+       before), and the `ListBladeApi` casts went.
+     - The shadow fields' `disabled` is a function of `castShadow`, re-read when it changes: 5.x
+       rebuilt the window a timeout later.
+     - The fov (or frustum size) label follows the responsive aspect through two items, one
+       hidden: 5.x rebuilt the window, which dropped the focus from the checkbox.
+     - The folders' open states keep 5.x's keys (`_lensSettingsOpen`, `_shadowFolderOpen`,
+       `_shadowCameraFolderOpen`) through `folderExpanded` / `onFolderExpandedChange`.
+     - The clear button's `disabled` reads the LS on each refresh, which a saved change runs.
+     - The labels are in sentence case ("Show helper", "Lens settings"); "Position" and
+       "Enabled", which the undo scripts find, are unchanged. Near and far, unlabelled in 5.x
+       (Tweakpane showed the key), are "Near" and "Far".
+     - The managed light's readout: monitors on getters at 250 ms, its position a vector monitor
+       (5.x formatted a string), "Managed by" a monitor with the "read-only" line as its hint.
+   - **Lights keeps on a scene change** (D5's list complete): Phase 0's `??` was the data, not the
+     list. `OBJECT3D`'s add hook gives a light `TAG_IS_LIGHT` before its type tag, and `Light.ts`
+     refreshed the tab from that tag's hook, so the last light of a load read no type (a rebuild
+     read it later). The hook now refreshes a microtask later, once per task (debug env only).
+     Checked with a scratch probe (`scratchpad/keep.mts`, not kept): `testDebugScene` ↔
+     `thirdPersonGymScene`, the kept tab's rows the same as rebuilt, no error.
+   - **Tests:** `_dbg__LightEditWindow.test.ts`, 5 (the grid's fields and info rows, the shadow
+     fields enabled by the toggle with its save and record, a key step saved and recorded on its
+     keyup and undone, the folders' saved states, the clear button) and
+     `_dbg__CameraEditWindow.test.ts`, 4 (Delete disabled with its reason as a tab stop, the fov's
+     label without a rebuild, a position step moving the camera and recorded at the end, the lens
+     folder's state), on `KitDom` with a real `ECSWorld`.
+   - **The `debugger` configuration:** the camera and both light windows' shots changed, recorded
+     on purpose; the tab order and the four undo / redo scripts pass unchanged (the camera
+     window's Position by ArrowUp, the Lights toggle). Axe on the three windows: `label` 19 → 0,
+     `button-name` 2 → 0. A scratch script (`scratchpad/windows.mts`, not kept) shot each light
+     and camera window with its folders open, and `space`'s managed sky light, with no error.
+   - **Hub:** the dev library's parity boxes name the new files' lines, and the select field's
+     dev note says the blades are selects now.
+
 2. **Physics:** the entity window and the wireframe folder; `_dbg__PhysicsAPI.ts`' tab content
    split.
 3. **Character, PostFX, ECS:**

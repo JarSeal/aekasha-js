@@ -45,11 +45,23 @@ export const registerLightDebugGUI = async (world: ECSWorld) => {
 
     useDebug(lightDebugGUI)?.initLightDebuggerGUI();
   });
-  // After the 3D symbols' and the helpers' hooks on the tag, which attach what the list shows
+  // After the 3D symbols' and the helpers' hooks on the tag, which attach what the list shows, and
+  // a microtask later: OBJECT3D's add hook gives the light its type tag (the list's badge) after
+  // this one, so a refresh at once read the last light of a load without it (p806 Phase 3)
   ECSWorld.registerComponentHooks(ComponentType.TAG_IS_LIGHT, {
-    onAddComponent: () => useDebug(lightDebugGUI)?.updateLightsDebuggerGUI(),
+    onAddComponent: () => {
+      if (isLightsRefreshQueued) return;
+      isLightsRefreshQueued = true;
+      queueMicrotask(() => {
+        isLightsRefreshQueued = false;
+        useDebug(lightDebugGUI)?.updateLightsDebuggerGUI();
+      });
+    },
   });
 };
+
+/** A Lights tab refresh is queued for the lights added in this task (one for a scene's lights) */
+let isLightsRefreshQueued = false;
 
 /**
  * A shadow quality preset's values: what `createLightEntity` applies before a light's own

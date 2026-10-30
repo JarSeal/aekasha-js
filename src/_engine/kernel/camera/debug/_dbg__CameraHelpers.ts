@@ -5,14 +5,14 @@ import { ECSSystemStage } from '../../loop/SystemStages';
 import { markDebugHelper } from '../../../debug/Profiler';
 import { getCurrentSceneId } from '../../scene/Scene';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
-// Loaded before this module (the boot's kernel debug step loads the GUI first), so this static
-// import changes no load order
+// Loaded before this module (the boot's kernel debug step loads the GUI first, which imports the
+// state), so this static import changes no load order
 import {
   LS_KEY,
   getDebugCamProps,
   updateCamerasDebuggerGUI,
   type CamDebugLSData,
-} from './_dbg__CameraGUI';
+} from './_dbg__CameraDebugState';
 
 // Register hook to clean up the helper when the camera entity dies
 ECSWorld.registerComponentHooks(ComponentType.DEBUG_CAMERA_HELPER, {

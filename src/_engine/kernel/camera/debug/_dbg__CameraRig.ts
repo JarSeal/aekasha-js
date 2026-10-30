@@ -17,7 +17,7 @@ import {
   type ViewCameraRig,
 } from '../../render/Views';
 import { DEBUG_CAMERA_ID } from '../../../debug/DebugTools';
-import { saveDebugCameraToLS } from './_dbg__CameraGUI';
+import { saveDebugCameraToLS } from './_dbg__CameraDebugState';
 import { setDebugCameraControlsSuspended } from './_dbg__DebugCamera';
 
 /** The scene debug camera's rig, rebuilt only when its OrbitControls change. */

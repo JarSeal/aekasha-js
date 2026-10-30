@@ -1,0 +1,11 @@
+// A debug edit window's grid (_dbg__DebugWindowGrid.ts, p806 D10), on the tokens, unlayered (D9)
+
+// The window's content holds the grid alone: the window's edges would touch its rows
+.windowGrid {
+  padding: var(--aek-space-3) var(--aek-space-4);
+}
+
+// A custom row's button across both columns, as a button item's
+.rowButton {
+  width: 100%;
+}

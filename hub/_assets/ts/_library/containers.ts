@@ -322,7 +322,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           key: 'oracle',
           label: 'Brute-force oracle',
         }),
-        field('_dbg__LightGUI.ts:838', {
+        field('_dbg__LightShadowItems.ts:148', {
           target: state,
           key: 'shadowIntensity',
           label: 'Shadow Intensity',
@@ -352,13 +352,13 @@ const initPropertyGridParityDemo: Demo = (box) => {
           min: 0.1,
           step: 0.5,
         }),
-        field('_dbg__LightGUI.ts:816', {
+        field('_dbg__LightShadowItems.ts:132', {
           target: state,
           key: 'bias',
           label: 'Shadow Bias',
           step: 0.00001,
         }),
-        field('_dbg__LightGUI.ts:865', {
+        field('_dbg__LightShadowItems.ts:168', {
           target: state,
           key: 'radius',
           label: 'Shadow Radius',
@@ -394,7 +394,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           label: 'Rotation',
           step: Math.PI / 8,
         }),
-        field('the view: list blade (_dbg__LightGUI.ts)', {
+        field('the view: list blade (_dbg__LightShadowItems.ts)', {
           kind: 'select',
           label: 'Shadow map width',
           value: 1024,
@@ -412,7 +412,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           label: 'Scope',
           readonly: true,
         }),
-        field('_dbg__LightGUI.ts:506', {
+        field('_dbg__LightEditWindow.ts:85', {
           get: () => Math.floor(performance.now() / 250) % 100,
           label: 'Intensity',
           readonly: true,
