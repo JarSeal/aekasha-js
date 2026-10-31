@@ -111,9 +111,7 @@ $collapseTime: var(--aek-motion-base);
     text-overflow: ellipsis;
   }
 
-  // The title's icon (getSvgIcon: 1em, following the title). Its box is set here too: in a debug
-  // window the base layer's debugger reset (kit.scss, until p806 Phase 5) left it as wide as the
-  // title, its SVG at `.uiIcon`'s 100 % (p806 Phase 2 section 3)
+  // The title's icon (getSvgIcon: 1em, following the title), set off from it and on its line
   :where(.aekWindow__title .aekIcon) {
     display: inline-block;
     width: 1em;
@@ -274,79 +272,5 @@ $collapseTime: var(--aek-motion-base);
     width: 100%;
     height: 100%;
     background: var(--aek-backdrop);
-  }
-
-  // The debugger's content helpers in its windows (until p806 restyles the debugger)
-  :where(.winPaddedContent) {
-    padding: var(--aek-space-3) var(--aek-space-4);
-  }
-
-  :where(.winNotRightPaddedContent) {
-    padding: var(--aek-space-3) 0 var(--aek-space-3) var(--aek-space-4);
-  }
-
-  :where(.winFlexContent) {
-    display: flex;
-    gap: var(--aek-space-3);
-    justify-content: space-between;
-  }
-
-  :where(.winSmallLabel) {
-    display: inline-block;
-    color: var(--aek-text-muted);
-    font-size: var(--aek-font-size-xs);
-    line-height: var(--aek-line-height-relaxed);
-  }
-
-  :where(.winSmallIconButton) {
-    @include nakedButton;
-    position: relative;
-    box-sizing: border-box;
-    width: calc(var(--aek-space-6) + var(--aek-space-1));
-    height: calc(var(--aek-space-6) + var(--aek-space-1));
-    // The target floor (p806 D12): the compact density's space scale would take it under 24 px
-    min-width: 24px;
-    min-height: 24px;
-    margin-bottom: var(--aek-space-2);
-    margin-left: var(--aek-space-2);
-    padding: var(--aek-space-2);
-    overflow: hidden;
-    border-radius: var(--aek-radius-sm);
-    background-color: var(--aek-surface-hover);
-    vertical-align: top;
-    transition: background-color var(--aek-motion-base) var(--aek-ease-standard);
-
-    &:hover {
-      background-color: var(--aek-border-strong);
-    }
-
-    svg path {
-      fill: var(--aek-text);
-    }
-
-    &:disabled svg path {
-      fill: var(--aek-text-disabled);
-    }
-  }
-
-  :where(.winSmallIconButton.dangerColor) svg path {
-    fill: var(--aek-danger);
-  }
-
-  // The current window's mark
-  :where(.winSmallIconButton.current)::before {
-    display: block;
-    position: absolute;
-    top: calc(-1 * var(--aek-space-3));
-    left: calc(-1 * var(--aek-space-3));
-    width: var(--aek-space-4);
-    height: var(--aek-space-4);
-    background-color: var(--aek-accent);
-    content: '';
-    transform: rotate(45deg);
-  }
-
-  :where(.winSmallIconButton.current:disabled)::before {
-    background-color: var(--aek-text-disabled);
   }
 }

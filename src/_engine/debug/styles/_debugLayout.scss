@@ -1,5 +1,5 @@
 // The debugger's layout constants (p806 D9), a debug-only Sass partial: a media query can't read
-// a custom property. Phase 5 moves the rest of `ui/styles/variables.scss`' breakpoints here.
+// a custom property (the old shared Sass variables' breakpoints, which p806 Phase 5 deleted).
 
 /// Below it the on-screen switch tools centre under the open drawer's half-width offset only
 $breakpointXLarge: 1199px;

@@ -18,19 +18,19 @@
 }
 
 // A tool: a kit ghost icon button (`size: 'lg'`, 30 px in the compact density), its icon at the
-// icon scale. The pressed state (the accent) and the disabled one are the kit's.
+// icon scale (the kit draws a button's icon at 1em of its slot). The pressed state (the accent) and
+// the disabled one are the kit's.
 .onScreenTool {
   margin: 0;
   border-radius: var(--aek-radius-sm);
 
-  :global(.aekIcon) {
-    display: block;
-    width: var(--aek-icon-size-lg);
+  :global(.aekButton__icon) {
+    font-size: var(--aek-icon-size-lg);
   }
 
   // An icon whose artwork fills its box
-  &.smallToolIcon :global(.aekIcon) {
-    width: var(--aek-icon-size-md);
+  &.smallToolIcon :global(.aekButton__icon) {
+    font-size: var(--aek-icon-size-md);
   }
 }
 
@@ -51,9 +51,14 @@
   border-radius: var(--aek-radius-sm);
   background-color: transparent;
 
+  // The icon at the icon scale (the kit's trigger draws its SVG at 1.25em of the text)
   :global(.aekIcon) {
     display: block;
     width: var(--aek-icon-size-md);
+  }
+
+  :global(.aekIcon svg) {
+    width: 100%;
   }
 
   &[aria-disabled='true'] {

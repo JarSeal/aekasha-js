@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -1841,7 +1841,7 @@ grid stacking fix after it):
      still say what the window does; the dev library's parity row is the Characters tab's toggle.
    - **Checks:** `yarn test` (2232), both `tsc`, ESLint, the docs ratchet (unchanged).
 
-### Phase 5: dialogs and the last styles
+### Phase 5: dialogs and the last styles — done
 
 1. **The About and key shortcuts dialogs** (D10).
 
@@ -1894,6 +1894,72 @@ grid stacking fix after it):
    - `--aek-rem` gone from every stylesheet (`Viewports.module.scss` included), then from
      `tokens.css`.
    - D14's greps pass.
+
+   As built (2026-10-31):
+
+   - **The material editor split** (D11; no phase named it, and D14's greps needed its p800 header
+     gone; the user's call to do it here). `_dbg__MaterialEditor.ts` 1097 → 426 lines (the load,
+     the UI, the view and its registration), beside `_dbg__MaterialEditorAssets.ts` 188 (the
+     project materials and textures from the generated data, a copy's props, the textures' load
+     and `retagLoadedTextures` for the exit, the selector's entries), `_dbg__MaterialEditorStage.ts`
+     234 (the private scene, the settings on it, the view camera and each material's pose; the view
+     id is defined here and re-exported) and `_dbg__MaterialEditorEdits.ts` 396 (the selection, the
+     copy, a binding's edit with its save, undo and redo, the clears). The edits reach the load,
+     the drawer's refresh and `isEntered` through `setMaterialEditorHooks`, which the registration
+     sets (no import cycle); its undo handler still registers at its module's load, which the
+     editor's module imports, so as before. The bodies moved unchanged but for the shared state's
+     getters. `grep -rln "which p800 replaces" src` is empty.
+   - **`variables.scss` deleted** (no importer was left). `DraggableWindow.scss`' debugger helpers
+     went: `winSmallLabel`, `winSmallIconButton`, `winNotRightPaddedContent` and `winFlexContent`
+     had no user; `winPaddedContent`'s one, the LOD entity window, has its own
+     `features/lod/debug/LodEntityWindow.module.scss` (its padding and its `pre` on the tokens, its
+     inline 11 px the compact `font-size-sm`), not D9's shared `DebugWindow.module.scss`.
+   - **`kit.scss`' debugger icon rules went:** the base layer's `[data-aek-debugger] .aekIcon`
+     reset (inline, auto width) and the unlayered `.uiIcon svg` rules (`width: 100%`, and the slot
+     rule). A debugger icon is the kit's now: `1em`, and in a button's or tab's slot the slot's
+     `1em`. So the icon-only menus keep their 16 px through their slot's font size, on
+     `--aek-icon-size-lg` (the rail, shared by the editor drawer, and the profiler's menu), the
+     on-screen tools through theirs (`lg`, an icon that fills its box `md`), and the on-screen
+     drop-down's SVG is 100 % of its 13 px icon (the trigger draws it at `1.25em`). Measured with
+     a scratch probe (`.cache/p806/iconSizes.mts`) against the last commit: the on-screen tools 13
+     px, their drop-downs 13, the rail and the profiler menu 16, a window title's 11, all as
+     before; the three on-screen rows' shots are byte-identical. The kit lists' row and action
+     icons go 16 → 11 px (`1em` of the compact small text): the kit's compact list, as D9 says
+     (the kit's pieces take the density, not overrides), and kit buttons' icons in the debugger
+     (a clear button's eraser, a close) the same.
+   - **`--aek-rem` gone:** `Viewports.module.scss` (0.8 → `space-3`, 1.6 → `space-5`) and
+     `Stats.scss` (0.4 → `space-2`), the same pixels at the defaults (neither is a compact root):
+     `largeWorld` (its minimap viewport) passes `mainThread` unchanged. Then `tokens.css` (its
+     `@property`, the kit root's two declarations) and `Tokens.test.ts`' registered list; the Hub's
+     design generator drops its row ("internal") and the type page's note, `embedChecks.test.ts`
+     uses other names.
+   - **D14's greps** in `src/`: no Tweakpane import, `tp-` class, `variables.scss`, `--aek-rem`,
+     `uiIcon` / `smallIcon` selector or p800 header. `getSvgIcon` still writes `uiIcon` /
+     `smallIcon` (no style reads them; p622 stops it: `ui/CLAUDE.md`'s 6.0.0 list).
+   - **Docs:** `ui/CLAUDE.md` (the icons, the styles, the units, the themes and layers lines that
+     waited for p806; `--aek-rem` described as gone), `debug/CLAUDE.md` (only the two 3D files keep
+     a size header), `editors/CLAUDE.md` (the material editor's modules), the dev library's icons
+     note, `SvgIcon.ts`' summary.
+   - **`yarn verify:ui`:** 16 states changed, all from the unlayered `.uiIcon svg` rule going: it
+     reached the Hub's demos too, making every kit SVG `inline-block` on its text's baseline where
+     the kit's own rule says `block`. The icons box (19 px shorter: the sized gears share a line and
+     centre), the empty state (3-5 px), the button's, window title's, drop-down's, menu's, list's,
+     tree's and divider's icons by 0.1-0.3 %. That's the kit's intended look; recorded on purpose
+     (`--only window,dropDown,menu,list,tree,divider,emptyState,icons --update`), then every box,
+     state and script passes.
+   - **The `debugger` configuration** (all six scenes): the tab order, the undo / redo scripts and
+     axe pass unchanged. The first run, before the slot sizes, moved 45 shots (the rail's and the
+     profiler menu's icons at 12 px); after, 14: the Assets lists' icons and the shifts of a pixel
+     under a kit button's or a heading's icon (a ray tester's toolbar, the profiler tabs' headings,
+     the space and Hub tabs), the About dialog's and the character state window's title by 0.1 %.
+     Recorded on purpose (`--config debugger --update`). Shots of the largest in
+     `.cache/p806/phase5-s2/before/` and `after/`, the probe's sizes and the on-screen rows in
+     `icons-before/` and `icons-after/`.
+   - **Checks:** `yarn test` (2241), both `tsc`, ESLint, the docs ratchet (unchanged, 100 %),
+     `yarn hub:build`, `yarn verify:embed` (all scenarios), `yarn sbp --profile all` (every budget
+     within; first downloads app 384.4, banner 287.4, uiKit 286.6 kB gzip), `yarn verify:baselines`
+     (no debug code; the production `DialogWindow.css` and the uiKit embed's CSS 0.2 kB gzip
+     smaller, the banner's 62 B: recorded with `--update`), `largeWorld` under `mainThread`.
 
 ### Phase 6: verification
 

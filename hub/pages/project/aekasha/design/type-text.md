@@ -24,5 +24,5 @@ frame-time readout.
 
 ::: dont
 `font-size: 12px` or `1.2rem`: a pixel size ignores the UI scale, and a `rem` follows the host
-page's root. (`--aek-rem` is the old styles' internal unit, on its way out: don't add one.)
+page's root.
 :::

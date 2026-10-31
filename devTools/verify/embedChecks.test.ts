@@ -26,8 +26,8 @@ describe('diffComputedStyles', () => {
     expect(
       diffComputedStyles(
         { body: { color: 'red' } },
-        { body: { color: 'red', '--aek-rem': '10px', '--aek-accent': '#0ff' } },
-        ['--aek-rem']
+        { body: { color: 'red', '--aek-base': '14px', '--aek-accent': '#0ff' } },
+        ['--aek-base']
       )
     ).toEqual(['body --aek-accent: (none) → #0ff']);
   });
@@ -83,7 +83,7 @@ describe('checkPosition', () => {
 
 describe('readRegisteredProperties', () => {
   it("reads each @property's name", () => {
-    const css = `@layer a, b;\n@property --aek-base {\n  syntax: '<length>';\n}\n@property --x-y{}\n.aekUi { --aek-rem: 1px; }`;
+    const css = `@layer a, b;\n@property --aek-base {\n  syntax: '<length>';\n}\n@property --x-y{}\n.aekUi { --aek-x: 1px; }`;
     expect(readRegisteredProperties(css)).toEqual(['--aek-base', '--x-y']);
   });
 });

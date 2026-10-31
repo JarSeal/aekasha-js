@@ -17,6 +17,12 @@
     padding-inline: var(--aek-space-3);
   }
 
+  // The menu's icons at the icon scale's largest, as the drawer's rail (a tab's icon is 1em of its
+  // slot)
+  :global(.aekTabs__icon) {
+    font-size: var(--aek-icon-size-lg);
+  }
+
   > :global(.aekTabs__panels) {
     display: flex;
   }

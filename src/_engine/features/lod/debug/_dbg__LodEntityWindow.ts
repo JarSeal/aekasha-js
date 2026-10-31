@@ -19,6 +19,7 @@ import {
   registerDraggableWindowKind,
   toggleDraggableWindow,
 } from '../../../ui/overlays/windows/DraggableWindow';
+import styles from './LodEntityWindow.module.scss';
 
 // The LOD window (docs/plans/_DONE_p348_ecs-lod-selection.md §6, per mesh): one `LOD` entity's live
 // screen size, what it shows and why, and each level's threshold as the distance it switches at
@@ -224,23 +225,13 @@ const getLodEntityText = (entityId: number, world: ECSWorld) => {
 const createLodEntityWindowContent = (data?: { [key: string]: unknown }) => {
   const entityId = Number(data?.entityId);
   const world = getECSWorld();
-  const text = CMP({
-    tag: 'pre',
-    style: {
-      margin: '0',
-      fontFamily: 'var(--aek-font-mono)',
-      fontSize: '11px',
-      lineHeight: '1.45',
-      whiteSpace: 'pre-wrap',
-    },
-    text: getLodEntityText(entityId, world),
-  });
+  const text = CMP({ tag: 'pre', class: styles.text, text: getLodEntityText(entityId, world) });
   const interval = window.setInterval(
     () => text.updateText(getLodEntityText(entityId, world)),
     REFRESH_MS
   );
   const container = CMP({
-    class: 'winPaddedContent',
+    class: styles.content,
     onRemoveCmp: () => window.clearInterval(interval),
   });
   container.add(text);

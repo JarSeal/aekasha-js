@@ -15,34 +15,34 @@
 .viewportStack {
   position: absolute;
   display: flex;
-  gap: calc(0.8 * var(--aek-rem));
+  gap: var(--aek-space-3);
   pointer-events: none;
 }
 
 :global(.aekViewportStack_TOP_RIGHT) {
-  top: calc(1.6 * var(--aek-rem));
-  right: calc(1.6 * var(--aek-rem));
+  top: var(--aek-space-5);
+  right: var(--aek-space-5);
   flex-direction: row-reverse;
   align-items: flex-start;
 }
 
 :global(.aekViewportStack_TOP_LEFT) {
-  top: calc(1.6 * var(--aek-rem));
-  left: calc(1.6 * var(--aek-rem));
+  top: var(--aek-space-5);
+  left: var(--aek-space-5);
   flex-direction: row;
   align-items: flex-start;
 }
 
 :global(.aekViewportStack_BOTTOM_RIGHT) {
-  bottom: calc(1.6 * var(--aek-rem));
-  right: calc(1.6 * var(--aek-rem));
+  bottom: var(--aek-space-5);
+  right: var(--aek-space-5);
   flex-direction: row-reverse;
   align-items: flex-end;
 }
 
 :global(.aekViewportStack_BOTTOM_LEFT) {
-  bottom: calc(1.6 * var(--aek-rem));
-  left: calc(1.6 * var(--aek-rem));
+  bottom: var(--aek-space-5);
+  left: var(--aek-space-5);
   flex-direction: row;
   align-items: flex-end;
 }

@@ -60,14 +60,6 @@
     width: 100%;
     height: auto;
   }
-  // In the debugger's roots (data-aek-debugger, p803 D7) the icon is the old inline box its own
-  // .uiIcon styles size (an SVG's intrinsic size where they set none) until p806 restyles them
-  :where([data-aek-debugger] .aekIcon, [data-aek-debugger].aekIcon) {
-    display: inline;
-    flex-shrink: 1;
-    width: auto;
-    vertical-align: baseline;
-  }
 }
 
 // A spinner's turn and, under reduced motion, its slow pulse (p803 D10: the button's loading mark;
@@ -82,21 +74,4 @@
   50% {
     opacity: 0.35;
   }
-}
-
-// The debugger's icon class (getSvgIcon writes it too), unlayered as its styles are: they size
-// .uiIcon themselves until p806 restyles them
-.uiIcon {
-  svg {
-    display: inline-block;
-    width: 100%;
-    height: auto;
-  }
-}
-
-// In a kit part's icon slot (a button's, a tab's, a drop-down trigger's) the SVG is a block, as the
-// kit's layered rules say: inline, the rule above sat it on a line's baseline, about 2 px above the
-// slot's centre in the debugger's roots. The same specificity as the rule above, after it.
-:where(.aekButton__icon, .aekTabs__icon, .aekDropDownTrigger) > .uiIcon svg {
-  display: block;
 }

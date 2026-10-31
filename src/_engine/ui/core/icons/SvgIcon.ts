@@ -161,9 +161,9 @@ export type SvgIconSize = 'sm' | 'md' | 'lg';
 
 /**
  * A registered icon as HTML: `<span class="aekIcon">` around the SVG (also `uiIcon`, and with
- * `'sm'` `smallIcon`: the debugger's classes until p806), `1em` square so it follows its text, or
- * at a `size` from the type scale (`data-size`). An unregistered name renders `??` and warns
- * once.
+ * `'sm'` `smallIcon`: the debugger's old classes, which no style reads; they go in engine 6.0.0),
+ * `1em` square so it follows its text, or at a `size` from the type scale (`data-size`). An
+ * unregistered name renders `??` and warns once.
  * - Parts: `.aekIcon` (`data-size`) and its SVG, which takes the text colour when it's drawn with
  *   `currentColor` (the built-ins are).
  * - Custom properties: `--aek-icon-size-sm`, `-md`, `-lg`.

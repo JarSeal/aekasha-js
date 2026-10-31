@@ -1,0 +1,14 @@
+// The LOD entity window (_dbg__LodEntityWindow.ts, p806 D9): its padding and its text, a monospace
+// block on the tokens, unlayered. Loaded with the window's module (p617 S1).
+
+.content {
+  padding: var(--aek-space-3) var(--aek-space-4);
+}
+
+.text {
+  margin: 0;
+  font-family: var(--aek-font-mono);
+  font-size: var(--aek-font-size-sm);
+  line-height: var(--aek-line-height-base);
+  white-space: pre-wrap;
+}

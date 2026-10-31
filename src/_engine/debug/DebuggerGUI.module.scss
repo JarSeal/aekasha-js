@@ -182,6 +182,12 @@
     box-shadow: inset 2px 0 0 var(--aek-tabs-indicator-color, var(--aek-accent));
   }
 
+  // The rail's icons at the icon scale's largest (the kit draws a tab's icon at 1em of its slot):
+  // icon-only, they're the drawer's navigation
+  :global(.aekTabs__icon) {
+    font-size: var(--aek-icon-size-lg);
+  }
+
   > :global(.aekTabs__panels) {
     display: flex;
   }
