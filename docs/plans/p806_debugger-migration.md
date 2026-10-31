@@ -2062,6 +2062,36 @@ grid stacking fix after it):
     `devTools/hub/buildGuard.test.ts` failed once while `yarn sbp` built beside it (both write
     the build folders) and passes alone.
 - The before and after shots side by side for the changelog and a last review.
+
+  As built (2026-10-31):
+
+  - **The after shots:** Phase 0's script (`.cache/p806/shots.mts`; its Phase 0 copy
+    `shots-phase0.mts`) with its selectors moved to the kit: each drawer a `.debugDrawer` with
+    an `<aside>` named "Debugger" (the editor drawer's by its label), the rail's `role="tab"`
+    buttons by their hidden names ("(scene tab)" dropped), a list's clickable rows (a listbox's
+    options, a grid's main cells), "Close the debugger", the state window's button by its name.
+    `npx tsx .cache/p806/shots.mts --out after`: 170 shots in `.cache/p806/after/`, 69 axe roots.
+  - **Side by side:** `.cache/p806/compare.mts` (scratch) writes
+    `.cache/p806/compare/index.html` (open it in a browser: the images by relative path, a
+    section per scene, filters for the 800 px and the tall shots, axe per root) and
+    `pairs.json`. 167 of Phase 0's 168 shots pair by scene, size and name (Phase 0's "(scene
+    tab) <id>" suffix and the roots' CSS module hashes dropped); 5.x's on-screen tool group
+    root is the bottom row now, and the closed drawer's own root is a debugger root of its own.
+  - **axe under Phase 0's script** (each root alone at 1280 × 720, `UI_AXE_TAGS`): 660 nodes on
+    68 roots → 0 on 69, an independent check of section 1's figure. Its notes: the debug
+    toaster has no shot while empty (0 × 0, as in Phase 0), and the LOD demo tab's list rows
+    open no window (Phase 0's finding).
+  - **The review** (the page is for the user's; spot checks here of the 800 px shots, which the
+    `debugger` configuration doesn't take: the gym's Physics tab, the character state window,
+    the material editor page; nothing found to fix): at 800 px a grid's
+    long labels are cut with their tooltip at the 50 % column (Phase 0's decision; Tweakpane
+    wrapped them), the rail and the on-screen rows fit, the material editor's selector sits
+    under the toolbars. The character state window's own readout says "Update 0.058 ms"
+    (section 2's fix; Phase 4: 0.12, 5.x 0.016).
+  - **For the changelog** (Phase 8): the pairs that show the change best are the gym's Physics
+    API tab and Sky box tab (the compact grid against Tweakpane's rows), the Lights edit window
+    (the colour fields, the shadow folders), the profiler's Settings tab (the reorder lists),
+    the key shortcuts dialog (the key caps) and the material editor's drawer.
 - Every scene runner baseline updated on purpose.
 
 ### Phase 7: the Hub, the example, `CLAUDE.md`, readme
