@@ -1844,6 +1844,50 @@ grid stacking fix after it):
 ### Phase 5: dialogs and the last styles
 
 1. **The About and key shortcuts dialogs** (D10).
+
+   As built (2026-10-31):
+
+   - **The About dialog** (`_dbg__About.ts`, 333 lines): its HTML strings (`escapeHtml`, the header's
+     and the sections') went; every value is set as text. The symbol is a decorative box
+     (`aria-hidden`) holding `getSvgIcon('aekasha')` (a CMP with `html` *is* that HTML's element,
+     so the box is its parent: the first shot's symbol was text-sized), the name a paragraph (the
+     window's title is the `h3`), the links `createLink`s (`external`: the mark and "(opens in a new
+     tab)"), each section an `h4` and its `<dl>` (D10: it stays). "Copy info" and "Close" are kit
+     buttons; the copy's result ("Copied", "Copy failed", also without `navigator.clipboard`) is the
+     button's label for 2 s and is announced (`announce`: a label change isn't read). The label
+     column is 40 % in every section (5.x: 160 px, a package name wrapping; `fit-content` made each
+     section's column its own width). `About.module.scss` on the tokens, its breakpoint the
+     partial's.
+   - **The key shortcuts dialog** (`_dbg__DebugKeyShortcuts.ts`, 638 lines): `createTabs` (App,
+     Ækasha; automatic activation, `keepMounted: false`, so a tab is built again on each selection,
+     as 5.x's `showTab` did: the scene's bindings change), each panel the scroller. A row's keys are
+     data now (`ShortcutInput`: `{ keys }` or `{ text }`): each chord a `createKbd` of its own (one
+     Kbd for `'Ctrl+Z / Meta+Z'` couldn't wrap and ran under the name in the first shot), "or"
+     between, a mouse, touch or gamepad input (and the pointer rows' drags and clicks) as text, an
+     action without bindings "Unbound". Each section is an `h4`, its description and a static kit
+     list (`render`, `label` the title, `empty` "No key bindings.") with a line between rows; a row's
+     name, id, description and notes are text, its states `createBadge`s (muted → `neutral`). An
+     inactive row (off, removed, unbound, disabled) is struck and muted, not at 50 % opacity (below
+     AA); its badge says why. `DebugKeyShortcuts.module.scss` on the tokens; the notes' info and
+     warning colours mark them, the text says it. The keys show the kit's names (`H`, `Esc`, `Ctrl`;
+     ⌘ and the arrows on macOS).
+   - **Tests:** `_dbg__About.test.ts` 3 (the sections set as text, the build line the runner masks,
+     no second heading, the decorative symbol, external kit links; the copy's text, label and
+     announcement and the label back; a copy resolving after the close), `_dbg__DebugKeyShortcuts.test.ts`
+     6 (the tabs and the close; an engine key's hint, badge and the app's sharing note; an unbound
+     key inactive; pointer input as text and Escape as a key, one hint per chord; the app's keys by
+     scope with an action's keys and mouse, a disabled binding, other scenes' count and an empty
+     section; a tab built again on its selection by the arrows), on `KitDom` with `openDialog`
+     mocked.
+   - **Hub:** the dev library's notes (`kbd-text.md`, `tabs-text.md`, `debugger-parity-text.md`) and
+     the parity row (`_dbg__DebugKeyShortcuts.ts:599`) say the dialog is on the kit.
+     `debug/CLAUDE.md`'s About and shortcuts lines, `ui/CLAUDE.md`'s Kbd line.
+   - **Shots:** the `debugger` configuration's own (`window.about`, `window.keysAekasha`,
+     `window.keysApp` in `testDebugScene`), copied to `.cache/p806/phase5-s1/before/` and `after/`.
+     Only those three changed; recorded on purpose (`--only testDebugScene --config debugger
+     --update`). Axe: the Aekasha tab's 1 `scrollable-region-focusable` (5.x's panel) went (the kit
+     panel is a tab stop); the three dialogs have none.
+   - **Checks:** `yarn test` (2241), both `tsc`, ESLint, `yarn hub:build`.
 2. **The leftovers** (D9):
    - `variables.scss` deleted.
    - The kit's debugger helpers moved; `kit.scss`' `.uiIcon` rules gone.

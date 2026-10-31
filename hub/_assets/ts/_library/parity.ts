@@ -386,8 +386,8 @@ const buildTabMenus = (parent: HTMLElement) => {
     }).cmp
   );
   row(
-    '_dbg__DebugKeyShortcuts.ts:542',
-    'the key shortcuts dialog: a `tablist` already, two text tabs; the arrows and `aria-controls` are new (every tab a tab stop today)',
+    '_dbg__DebugKeyShortcuts.ts:599',
+    'the key shortcuts dialog’s two text tabs (p806 Phase 5): one tab stop with the arrows, each tab built again on its selection',
     createTabs({
       label: 'Key shortcuts',
       tabs: ['App (current scene)', 'Ækasha'].map((label) => ({

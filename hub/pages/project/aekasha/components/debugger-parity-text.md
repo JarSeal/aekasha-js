@@ -25,7 +25,7 @@ table read on the box's scheduler every 500 ms, the budget bar, the sparklines a
   cap).
 - **Tab menus:** the drawer's 16 tabs wrap to two rows in its width today and scroll with faded
   edges here (no `wrap` option: p806 decides); a scene tab's class has no per-tab form, its name
-  says it. The key shortcuts dialog's tab list gains the arrows and `aria-controls`.
+  says it. The key shortcuts dialog's tab list has the arrows and `aria-controls` (p806 Phase 5).
 - **Bars, sparklines, the pie:** the breakdown's bar is the Objects table's `kind: 'bar'`; the GPU
   memory budget a stacked bar of one part against a `total` (`data-over` past it); the “Over time”
   sparklines `area` ones from 0; the pie moved onto the donut in Phase 5; the component types'

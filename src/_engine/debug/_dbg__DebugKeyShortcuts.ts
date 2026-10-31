@@ -1,5 +1,13 @@
+// The Debug key shortcuts dialog (p806 D10): the app's and the engine's keys for the current
+// scene, a tab each (`createTabs`), each section a kit list of rows with their keys as key hints
+// (`createKbd`) and their states as badges.
 import { CMP } from '../ui/core/CMP';
 import type { CMPHandle } from '../ui/core/CMPTypes';
+import { createBadge, type BadgeTone } from '../ui/components/Badge';
+import { createButton } from '../ui/components/Button';
+import { createKbd } from '../ui/components/Kbd';
+import { createTabs } from '../ui/components/Tabs';
+import { createList } from '../ui/data/List';
 import { getConfig } from '../kernel/config/Config';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { openDialog } from '../ui/overlays/windows/DialogWindow';
@@ -34,8 +42,13 @@ const TABS: { id: DebugKeyShortcutsTab; title: string }[] = [
 
 type Tone = 'muted' | 'info' | 'warning';
 type Badge = { text: string; tone: Tone };
+/** A row's input: keys (drawn with `createKbd`, a chord or several joined with `' / '`) or another
+ * device's input as text ('Left drag', 'Pad A'). */
+type ShortcutInput = { keys: string } | { text: string };
 type ShortcutRow = {
-  keys: string;
+  /** Unique in its section (the list's key) */
+  key: string;
+  inputs: ShortcutInput[];
   name: string;
   id?: string;
   description?: string;
@@ -59,18 +72,18 @@ const CATEGORIES: { id: DebugKeyCategory; title: string; description: string }[]
 ];
 
 /** Engine pointer and context shortcuts that are not key bindings (not rebindable). */
-const CONTEXT_SHORTCUTS: { keys: string; name: string; context: string }[] = [
-  { keys: 'Left drag', name: 'Orbit the debug camera', context: 'Debug camera' },
-  { keys: 'Right drag', name: 'Pan the debug camera', context: 'Debug camera' },
-  { keys: 'Wheel', name: 'Zoom the debug camera', context: 'Debug camera' },
+const CONTEXT_SHORTCUTS: { input: ShortcutInput; name: string; context: string }[] = [
+  { input: { text: 'Left drag' }, name: 'Orbit the debug camera', context: 'Debug camera' },
+  { input: { text: 'Right drag' }, name: 'Pan the debug camera', context: 'Debug camera' },
+  { input: { text: 'Wheel' }, name: 'Zoom the debug camera', context: 'Debug camera' },
   {
-    keys: 'Click',
+    input: { text: 'Click' },
     name: 'Align the debug camera to an axis (again: the opposite axis)',
     context: 'Axes gizmo, debug camera',
   },
-  { keys: 'Drag', name: 'Orbit the debug camera', context: 'Axes gizmo, debug camera' },
-  { keys: 'Click', name: 'Pick a point', context: 'Ray tester, pick armed' },
-  { keys: 'Escape', name: 'Cancel the pick', context: 'Ray tester, pick armed' },
+  { input: { text: 'Drag' }, name: 'Orbit the debug camera', context: 'Axes gizmo, debug camera' },
+  { input: { text: 'Click' }, name: 'Pick a point', context: 'Ray tester, pick armed' },
+  { input: { keys: 'Escape' }, name: 'Cancel the pick', context: 'Ray tester, pick armed' },
 ];
 
 const KEY_TYPE_LABELS: { [type in KeyBinding['type']]: string } = {
@@ -85,8 +98,6 @@ const ACTION_TYPE_LABELS: { [type in ActionType]: string } = {
   AXIS_2D: '2D axis',
   DELTA_2D: 'Movement',
 };
-
-const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const getChordArray = (chord: KeyChord | KeyChord[]) => (Array.isArray(chord) ? chord : [chord]);
 
@@ -115,11 +126,16 @@ const getBindingChords = (binding: ActionBinding): KeyChord[] => {
   ];
 };
 
-/** An action binding as readable keys or device input (' / ' between alternatives). */
-const getBindingLabel = (binding: ActionBinding): string => {
+/** An action binding as keys, or another device's input as text. */
+const getBindingInput = (binding: ActionBinding): ShortcutInput => {
+  if (binding.device !== 'KEYBOARD') return { text: getBindingText(binding) };
+  const keys = getKeyChordLabel(getBindingChords(binding));
+  return keys ? { keys } : { text: '–' };
+};
+
+/** A mouse, touch or gamepad binding as readable text. */
+const getBindingText = (binding: ActionBinding): string => {
   switch (binding.device) {
-    case 'KEYBOARD':
-      return getKeyChordLabel(getBindingChords(binding));
     case 'MOUSE':
       if ('button' in binding) return `Mouse ${binding.button.toLowerCase()}`;
       return binding.delta === 'MOVE' ? 'Mouse move' : 'Wheel';
@@ -272,7 +288,8 @@ const getEngineRow = (
   }
 
   return {
-    keys: getKeyChordLabel(chord),
+    key: def.id,
+    inputs: [{ keys: getKeyChordLabel(chord) }],
     name: def.name || def.id,
     id: def.id,
     badges: [status],
@@ -299,8 +316,9 @@ const getAekashaSections = (): ShortcutSection[] => {
   sections.push({
     title: 'Pointer and context',
     description: 'Debug mode. Mouse and context keys, not rebindable.',
-    rows: CONTEXT_SHORTCUTS.map(({ keys, name, context }) => ({
-      keys,
+    rows: CONTEXT_SHORTCUTS.map(({ input, name, context }, i) => ({
+      key: String(i),
+      inputs: [input],
       name,
       badges: [{ text: context, tone: 'muted' }],
       notes: [],
@@ -374,7 +392,8 @@ const getKeyBindingRow = (binding: Readonly<KeyBinding>, engineKeys: EngineKey[]
     isDebugOnly: false,
   };
   return {
-    keys: getKeyChordLabel(binding.chord),
+    key: `binding:${binding.id}`,
+    inputs: [{ keys: getKeyChordLabel(binding.chord) }],
     name: binding.name || binding.id,
     id: binding.name ? binding.id : undefined,
     description: binding.description,
@@ -422,7 +441,8 @@ const getActionRow = (map: ActionMap, actionId: string, engineKeys: EngineKey[])
   }
 
   return {
-    keys: bindings.map(getBindingLabel).join(' / ') || '–',
+    key: `action:${map.id}:${actionId}`,
+    inputs: bindings.map(getBindingInput),
     name: def.name || actionId,
     id: actionId,
     description: def.description,
@@ -493,92 +513,104 @@ const getAppSections = (): ShortcutSection[] => {
 
 // RENDERING
 
-const getKeysHtml = (keys: string) =>
-  keys
-    .split(' / ')
-    .map((chord) =>
-      chord
-        .split(/\+(?=.)/)
-        .map((key) => `<kbd>${escapeHtml(key)}</kbd>`)
-        .join(`<span class="${styles.keyJoin}">+</span>`)
-    )
-    .join(`<span class="${styles.keyOr}">or</span>`);
-
-const getRowHtml = (row: ShortcutRow) => {
-  const badges = row.badges
-    .map((b) => `<span class="${styles.badge} ${styles[b.tone]}">${escapeHtml(b.text)}</span>`)
-    .join('');
-  const notes = row.notes
-    .map((n) => `<div class="${styles.note} ${styles[n.tone]}">${escapeHtml(n.text)}</div>`)
-    .join('');
-  return `<li class="${styles.row}${row.isInactive ? ` ${styles.inactive}` : ''}">
-  <div class="${styles.keys}">${getKeysHtml(row.keys)}</div>
-  <div class="${styles.info}">
-    <div class="${styles.name}">${escapeHtml(row.name)}${row.id ? ` <span class="${styles.id}">${escapeHtml(row.id)}</span>` : ''}</div>
-    ${row.description ? `<div class="${styles.description}">${escapeHtml(row.description)}</div>` : ''}
-    ${notes}
-    <div class="${styles.badges}">${badges}</div>
-  </div>
-</li>`;
+const BADGE_TONES: { [tone in Tone]: BadgeTone } = {
+  muted: 'neutral',
+  info: 'info',
+  warning: 'warning',
 };
 
-const getSectionsHtml = (sections: ShortcutSection[]) =>
-  sections
-    .map(
-      (section) => `<section class="${styles.section}">
-  <h4>${escapeHtml(section.title)}</h4>
-  ${section.description ? `<p class="${styles.sectionDescription}">${escapeHtml(section.description)}</p>` : ''}
-  ${
-    section.rows.length
-      ? `<ul class="${styles.rows}">${section.rows.map(getRowHtml).join('')}</ul>`
-      : `<p class="${styles.empty}">No key bindings.</p>`
+/** A row's inputs: each chord a key hint of its own (so the column wraps between them), another
+ * device's input as text, "or" between. */
+const createInputs = (row: ShortcutRow) => {
+  const cmp = CMP({ class: styles.inputs });
+  if (!row.inputs.length) {
+    cmp.add({ tag: 'span', class: styles.unbound, text: 'Unbound' });
+    return cmp;
   }
-</section>`
-    )
-    .join('');
+  let isFirst = true;
+  const addOr = () => {
+    if (!isFirst) cmp.add({ tag: 'span', class: styles.or, text: 'or' });
+    isFirst = false;
+  };
+  for (const input of row.inputs) {
+    if (!('keys' in input)) {
+      addOr();
+      cmp.add({ tag: 'span', class: styles.inputText, text: input.text });
+      continue;
+    }
+    for (const chord of input.keys.split(' / ')) {
+      addOr();
+      cmp.add(createKbd({ keys: chord }).cmp);
+    }
+  }
+  return cmp;
+};
+
+/** A shortcut's row: its inputs, then its name and id, description, notes and badges, set as text
+ * (the names and descriptions are the app's). An inactive one says why in its badges. */
+const renderRow = (row: ShortcutRow) => {
+  const cmp = CMP({ class: styles.row, attr: row.isInactive ? { 'data-inactive': '' } : {} });
+  cmp.add(createInputs(row));
+  const info = cmp.add({ class: styles.info });
+  const name = info.add({ tag: 'p', class: styles.name, text: row.name });
+  if (row.id) name.add({ tag: 'span', class: styles.id, text: row.id });
+  if (row.description) info.add({ tag: 'p', class: styles.description, text: row.description });
+  for (const note of row.notes) {
+    info.add({ tag: 'p', class: styles.note, attr: { 'data-tone': note.tone }, text: note.text });
+  }
+  const badges = info.add({ class: styles.badges });
+  for (const badge of row.badges) {
+    badges.add(createBadge({ label: badge.text, tone: BADGE_TONES[badge.tone] }).cmp);
+  }
+  return cmp;
+};
+
+const createSection = (section: ShortcutSection) => {
+  const cmp = CMP({ tag: 'section', class: styles.section });
+  cmp.add({ tag: 'h4', text: section.title });
+  if (section.description) {
+    cmp.add({ tag: 'p', class: styles.sectionDescription, text: section.description });
+  }
+  cmp.add(
+    createList<ShortcutRow>({
+      items: section.rows,
+      getKey: (row) => row.key,
+      title: (row) => row.name,
+      render: renderRow,
+      label: section.title,
+      empty: 'No key bindings.',
+      class: styles.list,
+    }).cmp
+  );
+  return cmp;
+};
+
+/** A tab's sections, read when the tab is selected (the bindings change with the scene). */
+const createTabContent = (tab: DebugKeyShortcutsTab) => {
+  const cmp = CMP({ class: styles.tabContent });
+  const sections = tab === 'APP' ? getAppSections() : getAekashaSections();
+  for (const section of sections) cmp.add(createSection(section));
+  return cmp;
+};
 
 const createDialogContent = (initialTab: DebugKeyShortcutsTab): CMPHandle => {
   const root = CMP({ class: styles.dialogContent });
-  const tabBar = root.add({ class: styles.tabBar, attr: { role: 'tablist' } });
-  const panel = root.add({ class: styles.panel, attr: { role: 'tabpanel' } });
-  const tabButtons = new Map<DebugKeyShortcutsTab, CMPHandle>();
-
-  const showTab = (tab: DebugKeyShortcutsTab) => {
-    for (const [id, button] of tabButtons) {
-      button.updateClass(styles.tabButtonSelected, id === tab ? 'add' : 'remove');
-      button.updateAttr({ 'aria-selected': String(id === tab) });
-    }
-    panel.removeChildren();
-    panel.add({
-      html: () =>
-        `<div>${getSectionsHtml(tab === 'APP' ? getAppSections() : getAekashaSections())}</div>`,
-    });
-    panel.elem.scrollTop = 0;
-  };
-
-  for (const tab of TABS) {
-    tabButtons.set(
-      tab.id,
-      tabBar.add({
-        tag: 'button',
-        text: tab.title,
-        class: styles.tabButton,
-        attr: { role: 'tab', type: 'button' },
-        onClick: () => showTab(tab.id),
-      })
-    );
-  }
-
+  root.add(
+    createTabs({
+      label: 'Key shortcuts',
+      selected: initialTab,
+      // Built again on every selection: the scene's bindings can change between them
+      keepMounted: false,
+      tabs: TABS.map((tab) => ({
+        key: tab.id,
+        label: tab.title,
+        content: () => createTabContent(tab.id),
+      })),
+      class: styles.tabs,
+    }).cmp
+  );
   const footer = root.add({ class: styles.footer });
-  footer.add({
-    tag: 'button',
-    text: 'Close',
-    class: 'debuggerClearLSDialogButton',
-    attr: { type: 'button' },
-    onClick: () => closeDraggableWindow(DIALOG_ID),
-  });
-
-  showTab(initialTab);
+  footer.add(createButton({ label: 'Close', onClick: () => closeDraggableWindow(DIALOG_ID) }).cmp);
   return root;
 };
 
