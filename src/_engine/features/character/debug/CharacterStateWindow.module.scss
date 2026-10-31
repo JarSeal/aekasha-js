@@ -1,406 +1,55 @@
-@use 'sass:color';
-@use '../../../ui/styles/variables.scss';
+// The Character state window (_dbg__CharacterStateWindow.ts and its item builders, p806 D10), on
+// the tokens, unlayered (D9). The grids' padding is DebugWindowGrid.module.scss'.
 
-$dimText: variables.$debugTextColorDark;
-// A configuration value that differs from the character's creation-time one
-$changedColor: #e3b341;
-// A configuration value saved for the character's next creation (AEK_debugCharConfig)
-$savedColor: #58a6ff;
-
+// The header's grid, then the groups' grid
 .root {
-  padding: calc(0.6 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem))
-    calc(1 * var(--aek-rem));
-  font-size: calc(1.1 * var(--aek-rem));
-  line-height: 1.6;
-  color: variables.$debugTextColor;
-}
-
-.headerRows {
   display: flex;
   flex-direction: column;
-  gap: calc(0.4 * var(--aek-rem));
-  padding-bottom: calc(0.6 * var(--aek-rem));
-  margin-bottom: calc(0.4 * var(--aek-rem));
-  border-bottom: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: calc(0.6 * var(--aek-rem));
-}
-
-@mixin numberInput {
-  padding: calc(0.1 * var(--aek-rem)) calc(0.4 * var(--aek-rem));
-  border: calc(0.1 * var(--aek-rem)) solid variables.$debugGuiBackgroundLighter2;
-  border-radius: calc(0.2 * var(--aek-rem));
-  background: variables.$debugGuiBackgroundDarker;
-  color: variables.$debugTextColor;
-  font-family: var(--aek-font-mono);
-  font-size: calc(1.1 * var(--aek-rem));
-  text-align: right;
-}
-
-.intervalInput {
-  @include numberInput;
-  width: calc(6.4 * var(--aek-rem));
-}
-
-.scaleInput {
-  @include numberInput;
-  width: calc(5.6 * var(--aek-rem));
-}
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: calc(0.3 * var(--aek-rem));
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-
-  input {
-    margin: 0;
-  }
-
-  &.isDisabled {
-    cursor: default;
-    opacity: 0.45;
-  }
-}
-
-.flashToggle {
-  margin-left: calc(0.6 * var(--aek-rem));
-}
-
-.gizmoRow {
+// The header grid's first row: the tools, the badges and the update's cost
+.toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(0.2 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
+  gap: var(--aek-space-2) var(--aek-space-3);
+
+  > [hidden] {
+    display: none;
+  }
 }
 
-.rowSeparator {
-  align-self: stretch;
-  width: calc(0.1 * var(--aek-rem));
-  background-color: variables.$debugGuiBackgroundLighter2;
-}
-
-// Beats the global class's margins (both are one class), which are for a button row
-.header .headerButton,
-.gizmoRow .headerButton {
-  flex-shrink: 0;
-  margin: 0;
-}
-
-.frozenBadge {
-  padding: 0 calc(0.4 * var(--aek-rem));
-  border-radius: calc(0.2 * var(--aek-rem));
-  background-color: variables.$debugValueFlash;
-  color: variables.$white;
-  font-size: calc(1 * var(--aek-rem));
-  font-weight: bold;
-  letter-spacing: 0.05em;
-}
-
-.costReadout {
+.cost {
   margin-left: auto;
-  color: $dimText;
+  color: var(--aek-text-muted);
   font-family: var(--aek-font-mono);
+  font-size: var(--aek-font-size-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.group {
-  margin-top: calc(0.4 * var(--aek-rem));
+// A read-only row's change: the kit's `data-flash` (createFlash) in the edit fields' flash colour,
+// fading out over the base motion (with `--aek-motion: 0`, a tint while it's set)
+.flashRow {
+  border-radius: var(--aek-radius-sm);
+  transition: background-color var(--aek-motion-base) ease-out;
 
-  > summary {
-    position: relative;
-    cursor: pointer;
-    padding: calc(0.2 * var(--aek-rem)) 0;
-    font-weight: bold;
-    user-select: none;
+  &[data-flash] {
+    background-color: var(--aek-field-flash-color, var(--aek-accent-soft));
+    transition: none;
   }
 }
 
-.groupCount {
-  color: $dimText;
-  font-weight: normal;
-}
-
-.row {
-  position: relative;
-  // The flash layer goes behind the row's content but above its (hover) background
-  isolation: isolate;
+// The Properties group's first row: its changed count and its two buttons
+.configActions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: calc(0.8 * var(--aek-rem));
-  min-height: calc(1.8 * var(--aek-rem));
-  padding: 0 calc(0.4 * var(--aek-rem));
-  border-radius: calc(0.2 * var(--aek-rem));
-
-  &:hover {
-    background-color: rgba(variables.$debugTextColor, 0.06);
-  }
-
-  // The change flash: its opacity is animated (Web Animations API), so the colour stays here
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    background-color: variables.$debugValueFlash;
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-
-.label {
-  // Shrinks before the value does (the full key is in the row's title)
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.value {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: calc(0.6 * var(--aek-rem));
-  overflow: hidden;
-  font-family: var(--aek-font-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-// Fixed width, so a changing number never re-flows its neighbours
-.num {
-  display: inline-block;
-  min-width: 7ch;
-  text-align: right;
-}
-
-// Known keys' readable values: wide enough for "-3.142 rad (-180.0°)" and "999999 ms ago"
-.numRad,
-.numAgo {
-  display: inline-block;
-  text-align: right;
-}
-
-.numRad {
-  min-width: 20ch;
-}
-
-.numAgo {
-  min-width: 13ch;
-}
-
-.vecComp {
-  display: inline-flex;
-  gap: calc(0.2 * var(--aek-rem));
-}
-
-.vecLabel {
-  color: $dimText;
-}
-
-.boolIcon {
-  display: inline-flex;
-  flex-shrink: 0;
-  width: calc(1.4 * var(--aek-rem));
-  height: calc(1.4 * var(--aek-rem));
-  color: variables.$debugBoolFalse;
-
-  :global(.uiIcon) {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  :global(.uiIcon) + :global(.uiIcon) {
-    display: none;
-  }
-}
-
-// Both icons are in the row: the class picks one, so a change never rebuilds markup
-.isTrue .boolIcon {
-  color: variables.$debugBoolTrue;
-
-  :global(.uiIcon) {
-    display: none;
-  }
-
-  :global(.uiIcon) + :global(.uiIcon) {
-    display: block;
-  }
-}
-
-// Configuration editors (Properties rows)
-
-.row.isChanged {
-  box-shadow: inset calc(0.2 * var(--aek-rem)) 0 0 $changedColor;
-}
-
-// A fixed slot, so the values line up whether a row is changed or not
-.resetButton {
-  display: inline-flex;
-  flex-shrink: 0;
-  width: calc(1.4 * var(--aek-rem));
-  height: calc(1.4 * var(--aek-rem));
-  padding: calc(0.1 * var(--aek-rem));
-  border: 0;
-  background: none;
-  color: $changedColor;
-  cursor: pointer;
-  visibility: hidden;
-
-  &:hover {
-    filter: brightness(1.3);
-  }
-
-  :global(.uiIcon),
-  svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.isChanged .resetButton {
-  visibility: visible;
-}
-
-// A fixed slot too: the row's value is saved (applied again on the character's next creation)
-.savedDot {
-  flex-shrink: 0;
-  width: calc(0.6 * var(--aek-rem));
-  height: calc(0.6 * var(--aek-rem));
-  border-radius: 50%;
-  background-color: $savedColor;
-  cursor: help;
-  visibility: hidden;
-}
-
-.isSaved .savedDot {
-  visibility: visible;
-}
-
-.savedActions {
-  display: inline-flex;
-  align-items: center;
-  gap: calc(0.4 * var(--aek-rem));
-
-  &[hidden] {
-    display: none;
-  }
-}
-
-.savedCount {
-  color: $savedColor;
-  font-size: calc(1 * var(--aek-rem));
-  white-space: nowrap;
-  cursor: help;
-}
-
-// Out of the flow, so the summary's line height (and the first row) stay as they are
-.groupActions {
-  position: absolute;
-  top: 50%;
-  right: calc(0.4 * var(--aek-rem));
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: calc(0.6 * var(--aek-rem));
-  font-weight: normal;
-}
-
-// The markers are only up to date while the group is open
-.group:not([open]) .groupActions {
-  display: none;
+  gap: var(--aek-space-2);
 }
 
 .changedCount {
-  color: $changedColor;
-  font-size: calc(1 * var(--aek-rem));
-}
-
-// Beats the global class's size and margins (both are one class)
-.groupActions .groupActionButton {
-  width: calc(1.8 * var(--aek-rem));
-  height: calc(1.8 * var(--aek-rem));
-  padding: calc(0.3 * var(--aek-rem));
-  margin: 0;
-}
-
-.configInput {
-  @include numberInput;
-  width: 9ch;
-  padding: 0 calc(0.4 * var(--aek-rem));
-  line-height: 1.4;
-  font-variant-numeric: tabular-nums;
-
-  &:hover {
-    border-color: rgba(variables.$debugTextColor, 0.35);
-  }
-
-  &:focus {
-    border-color: variables.$debugTextColor;
-  }
-}
-
-// The radians beside a degree editor: "-3.142 rad"
-.numRadShort {
-  display: inline-block;
-  min-width: 10ch;
-  text-align: right;
-}
-
-.unit {
-  display: inline-block;
-  min-width: 5ch;
-  color: $dimText;
-  text-align: left;
-}
-
-.boolButton {
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-
-  &:hover {
-    filter: brightness(1.3);
-  }
-}
-
-.lockIcon {
-  display: inline-flex;
-  align-self: center;
-  width: calc(1.1 * var(--aek-rem));
-  height: calc(1.1 * var(--aek-rem));
-  color: $dimText;
-  cursor: help;
-
-  :global(.uiIcon),
-  svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.emptyState {
-  padding: calc(1 * var(--aek-rem)) 0;
-  color: $dimText;
-  font-style: italic;
+  margin-right: auto;
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
 }

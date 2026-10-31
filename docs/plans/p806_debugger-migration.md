@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -1566,7 +1566,7 @@ grid stacking fix after it):
      `_dbg__Character.ts:294`, `_dbg__PostFX.ts:662`, and the rotation row's source
      `_dbg__BodyPoseItems.ts:76`).
 
-### Phase 4: the big panels
+### Phase 4: the big panels — done
 
 1. **Debug tools, LOD, spatial grid:** `buildDebugToolsItems`, `_createLodDebugGUI` and
    `_createSpatialGridDebugGUI` split into item builders.
@@ -1752,6 +1752,94 @@ grid stacking fix after it):
    - **Checks:** `yarn test` (2226), both `tsc`, ESLint, the docs ratchet (unchanged),
      `yarn hub:build`.
 3. **The character state window** (D10; D1's escape hatch if it runs long).
+
+   As built (2026-10-31; D1's escape hatch not taken):
+
+   - **The split** (D11; the p800 header gone, every file under 440 lines and every function
+     under 150; `grep -rln "which p800 replaces" src` leaves the material editor). `_dbg__Character.ts`
+     still imports `_dbg__CharacterStateWindow.ts` (the window kind, registered at its load):
+     - `_dbg__CharacterStateWindow.ts`: the build, the update (a scene looper, as 5.x), the freeze,
+       the window kind and the Characters tab's openers.
+     - `_dbg__CharacterStateWindowState.ts`: the settings (`AEK_charStateWin`), the instance type,
+       the instances, the groups' sources and the freeze's copy.
+     - `_dbg__CharacterStateRows.ts`: the read-only rows (classifying, formatting, the flash).
+     - `_dbg__CharacterConfigItems.ts`: the Properties group (the editors, their undo, Copy changes,
+       Reset all, the baked keys' note).
+     - `_dbg__CharacterStateHeader.ts`: the toolbar, the settings' fields, the Gizmos folder.
+   - **Two grids** (`createDebugWindowGrid`): the header's, built once (the toolbar, "Update
+     interval", "Flash changes", "Show notes"), and the groups', rebuilt when a key comes or goes or
+     an open group's value changes its shape (5.x's rule): the Gizmos folder, then State,
+     Properties and Internal memory as folders titled with their counts ("State (21)"), their open
+     states in the settings' `groupsOpen` (`gizmos` a new key). The update, at the window's
+     interval (skipped while frozen or collapsed), checks the shapes, then calls the grid's
+     `refresh()`: every row is `interval: 'refresh'`, so the kit reads only the shown fields and a
+     shut folder's on its open (5.x's "open groups only"). Nothing ticks.
+   - **The read-only rows** are monitors: booleans "true" / "false" (5.x's red and green icons went:
+     a colour isn't a status, D8), numbers to 3 decimals, a vector one line ("x 1.000  y 0.000  z
+     0.000  len 1.000": the getter fills a scratch of the axes with the length as `w`, so the
+     monitor compares them all without an allocation), radians and step stamps as 5.x, number
+     arrays and other values as text made only when they changed. **The flash:** monitors never
+     flash (p804 D7), so a row that flashes (5.x's `rowFlashes`) sets the kit's `data-flash` on its
+     field (`createFlash`, the edit fields' flash colour in the window's stylesheet) when its read
+     finds a change during the update's refresh (`isRefreshing`), with "Flash changes" on; a
+     folder's reveal, a rebuild and the unfreeze read without one. The edit fields flash as the
+     kit's always do (a change from outside: an undo), whatever the setting (its hint says it's
+     the read-only rows').
+   - **The freeze** copies the three objects one level deep (a vector's components, an array's
+     items) and the read-only rows read the copy, so a shut folder opened while frozen shows that
+     moment (5.x filled every group at the freeze). The editors keep reading the live values.
+   - **The Properties rows:** number fields (a `deg` hint's in degrees with "°"; 5.x's radians text
+     beside it went) and checkboxes, `{ get, set }` on `config.values` through `writeConfig`, so a
+     key step or drag applies live; the gesture's end saves and records it with the raw value its
+     first write replaced (not the degrees converted back). Number edits coalesce as before; a
+     single write back to the creation-time value (the reset button, or the value typed) records
+     "reset {key}". The kit's reset button (`default`: the creation-time value) replaces 5.x's
+     reset icon and its changed edge. The text is `format`'s (up to 4 decimals, no trailing zeros:
+     a value from the code keeps its decimals whatever the step's); a step lands on the kit's step
+     grid from `min` (p804 D6), 5.x added the step to the value. The baked keys are monitors, named
+     by one note at the top of the group ("height, radius, … are sized into the colliders at
+     creation: …"; 5.x's lock icons with a tooltip each), then a row with the changed count
+     ("2 changed" / "No changes"), "Copy changes" and "Reset all" (kit buttons, disabled with a
+     reason while nothing changed), written on every write and never per frame.
+   - **The saved values:** the toolbar's "N saved" badge (`info`, hidden at 0) and its clear button.
+     The per-row saved dot went, not into a per-row badge as D10 said: every committed edit is
+     saved, so a saved row is a changed one (the reset button shows it), and they differ only after
+     a clear.
+   - **Notes:** 5.x's row tooltips (the raw value, the key's note, the late-value and baked notes)
+     went. "Show notes" (the settings' new `notes`, default off) builds the groups again with each
+     configuration key's note, the late values' and each gizmo's description as the field's hint;
+     the raw value is the fields' context menu's Copy and the toolbar's JSON copy.
+   - **The header:** a toolbar (`createButtonGroup`, one tab stop: "Freeze updates" and "Pin the
+     gizmos" icon toggles, "Copy the data as JSON"), the "Frozen" badge (`warning`), the saved
+     badge and clear button, and "Update 0.016 ms" at the end. The settings' fields reset to the
+     settings' defaults. The gizmo labels are words now (`CHARACTER_GIZMOS`: "Velocity", "Floor
+     sensor", …), and the scale is "Arrow length per m/s" (`min` 0.05 for the step grid).
+   - **Keys:** 5.x's `isolateEditorKeys` and its unfocusable buttons went: a debugger control's keys
+     are the debugger's (p806 D12, `isKeyEventOnDebugger`), so Enter and Space reach the focused
+     field, not the player's jump.
+   - **The window** is 480 × 560 (5.x 460 × 520): the compact density's rows are 24 px.
+   - **The update's cost** (its own readout, the gym's first character, every frame, every folder open):
+     about 0.12 ms, 5.x 0.016 ms. The grid's `refresh()` reads every shown field, the 30 edit fields
+     too, and their `hidden` / `disabled` state. D13's perf-auditor pass (Phase 6) looks at it.
+   - **Tests:** `_dbg__CharacterStateWindow.test.ts` 6 (a 5.x settings object's folders and the
+     rows' text, a baked key's monitor and note, a degree key; a flash on the update's refresh and
+     the setting; the freeze with a shut folder opened while frozen and the unfreeze; a key step
+     live, saved and recorded at its keyup, undone and redone; a checkbox, the reset button's
+     "reset" and Reset all as one step; a key added and the character gone), on `KitDom` with a
+     stand-in character and the looper captured.
+   - **Shots** (`.cache/p806/phase4s3.mts`, scratch: the window with every folder open in
+     `thirdPersonGymScene` (both characters) and `topDownTestScene`, frozen, and with the notes on;
+     `.cache/p806/phase4-s3/before/` and `after/`).
+   - **The `debugger` configuration** (`testDebugScene`, `thirdPersonGymScene`): only the character
+     state window's shot changed (480 × 560; it opens with the focus on the Freeze toggle, whose
+     tooltip shows, as the other windows' first controls' do); the tab order and the undo / redo
+     scripts pass. Recorded on purpose (`--only thirdPersonGymScene --update`), then a plain run
+     passes. Axe on the window: `label` 29 → 0, `button-name` 1 → 0, `label-title-only` 1 → 0,
+     `target-size` 3 → 0.
+   - **Hub:** unchanged: the characters guide's and the debug suite's lines (grouped and formatted
+     data, freeze and copy, edits with undo kept over reloads, pinnable gizmos) and the readme's
+     still say what the window does; the dev library's parity row is the Characters tab's toggle.
+   - **Checks:** `yarn test` (2232), both `tsc`, ESLint, the docs ratchet (unchanged).
 
 ### Phase 5: dialogs and the last styles
 
