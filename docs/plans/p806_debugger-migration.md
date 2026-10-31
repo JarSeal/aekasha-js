@@ -1964,6 +1964,40 @@ grid stacking fix after it):
 ### Phase 6: verification
 
 - The `debugger` configuration with axe failing on any violation; every undo / redo script.
+
+  As built (2026-10-31):
+
+  - **What was left** (the baseline's axe counts after Phase 5): the profiler's 5
+    `empty-table-header` (Objects' two breakdown tables' and the heaviest table's rank and action
+    columns, GPU memory's frame table's label column), which section 3 of Phase 2 had left to p807,
+    and the `assetCompare` tab's 8 `color-contrast` (a scratch probe, `.cache/p806/axeNodes.mts`,
+    named the nodes).
+  - **The headers:** each empty `<th>` holds its name as `aekVisuallyHidden` text ("Kind",
+    "Owner", "Rank", "Actions", "Metric"): no change to the look. `renderBreakdown` takes an
+    options object (five parameters with the column's name).
+  - **The contrast was the kit's:** the 8 nodes are the hidden slot's rows (`disabled: !isShown`)
+    in a static list, which the kit drew in `--aek-text-disabled` (3.28:1 in the dark theme). A
+    static list's row is text, not a control, so WCAG 1.4.3's exception for inactive controls
+    doesn't cover it. `List.scss` draws a static list's disabled row (`data-disabled`) in
+    `--aek-text-muted`, as p804 did for a disabled monitor; an interactive list's
+    (`aria-disabled`) keeps the disabled colour. `ListTypes.ts`' `disabled` and `ui/CLAUDE.md`
+    say so. Only `assetCompare` has such rows in the debugger; the public component library has
+    none (the dev library's parity box has, which `verify:ui` doesn't check).
+  - **The check:** `debuggerChecks.ts`' `compareAxeCounts` (a ratchet against the baseline)
+    became `findAxeFailures`: any violation on any root fails, a recording run too. The baseline
+    still records the counts. Its test, `sceneDebugger.ts`' header and `devTools/verify/CLAUDE.md`
+    follow.
+  - **The run** (`--config debugger`, all six scenes): 58 roots, 0 axe nodes (Phase 0: 68
+    roots, 660 nodes); the tab order and the four undo / redo scripts pass unchanged. One shot
+    changed: `drawer.assetCompare`, the hidden slot's titles muted (#939eb0 against the shown
+    slot's #dde2ea; 5.x's #596474), recorded on purpose (`--only assetCompare --config debugger
+    --update`); before and after in `.cache/p806/phase6-s1/`. The profiler's tables, with their
+    hidden names, pass their shots.
+  - **Checks:** `yarn test` (2241), both `tsc`, ESLint, the docs ratchet (unchanged),
+    `yarn verify:ui --only list` (every state and script).
+  - **For Phase 7:** D14's `verify:ui` lines (the "Tweakpane parity" box goes, the "Debugger
+    parity" box keeps p807's rows only) are Hub content, done with D15.
+
 - The perf-auditor agent's pass against Phase 0's figures (D13); the debug chunks measured again.
 - The before and after shots side by side for the changelog and a last review.
 - Every scene runner baseline updated on purpose.

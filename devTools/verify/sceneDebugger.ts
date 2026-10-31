@@ -5,8 +5,8 @@
  * the debugger's classes) it records each tab host's tab order, opens every drawer tab, profiler
  * tab, window and dialog the scene's `debugger` settings name and the material editor's selector
  * and drawer tabs, shoots each element against its
- * baseline (`verify:ui`'s tolerance, the live figures masked), counts axe's violations on it (a
- * ratchet: a rule's count may not grow), then runs the undo / redo scripts.
+ * baseline (`verify:ui`'s tolerance, the live figures masked), counts axe's violations on it (any
+ * fails, p806 D12), then runs the undo / redo scripts.
  */
 import fs from 'fs';
 import path from 'path';
@@ -16,7 +16,7 @@ import { ROOT } from '../paths';
 import type { TestBridgeDebuggerRoot, TestBridgeTabHost } from '../../src/_engine/debug/TestBridge';
 import { EVALUATE_MARGIN_MS, withTimeout } from './browser';
 import {
-  compareAxeCounts,
+  findAxeFailures,
   type DebuggerAxeCounts,
   debuggerShotFile,
   diffTabOrders,
@@ -399,15 +399,10 @@ export const runDebuggerChecksAsync = async (opts: {
 
   result.debuggerShots = run.shots;
   result.axe = run.axe;
+  // Not against the baseline: a recording run fails on one too
+  result.failures.push(...findAxeFailures(run.axe));
   if (isRecording) return;
   if (run.newShots.length) {
     result.notes.push(`no baseline shot for ${run.newShots.join(', ')}`);
   }
-  if (!entry?.axe) {
-    result.notes.push('no baseline axe counts');
-    return;
-  }
-  const axe = compareAxeCounts(entry.axe, run.axe);
-  result.failures.push(...axe.failures);
-  result.notes.push(...axe.notes);
 };

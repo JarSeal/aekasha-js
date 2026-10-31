@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  compareAxeCounts,
+  findAxeFailures,
   debuggerShotFile,
   diffTabOrders,
   formatValue,
@@ -27,24 +27,18 @@ describe('diffTabOrders', () => {
   });
 });
 
-describe('compareAxeCounts', () => {
-  it('fails a rule that grew on a root, and notes one that shrank', () => {
-    const { failures, notes } = compareAxeCounts(
-      { 'drawer.stats': { label: 10, 'color-contrast': 2 } },
-      { 'drawer.stats': { label: 4, 'button-name': 1 } }
-    );
-    expect(failures).toEqual(['axe drawer.stats: button-name ×1, baseline ×0']);
-    expect(notes).toEqual([
-      'axe drawer.stats: label ×4, baseline ×10',
-      'axe drawer.stats: color-contrast ×0, baseline ×2',
-    ]);
+describe('findAxeFailures', () => {
+  it('fails every violation, a line per rule on a root', () => {
+    expect(
+      findAxeFailures({
+        'drawer.stats': { label: 2, 'color-contrast': 1 },
+        'window.about': {},
+      })
+    ).toEqual(['axe drawer.stats: label ×2', 'axe drawer.stats: color-contrast ×1']);
   });
 
-  it("notes a root without a baseline as `no baseline` (the run's NEW status)", () => {
-    const { failures, notes } = compareAxeCounts({}, { 'window.about': {} });
-    expect(failures).toEqual([]);
-    expect(notes).toEqual(['no baseline axe counts for window.about (none)']);
-    expect(compareAxeCounts(undefined, { x: { label: 1 } }).notes[0]).toMatch(/^no baseline/);
+  it('passes roots without violations', () => {
+    expect(findAxeFailures({ 'window.about': {}, 'drawer.loop': { label: 0 } })).toEqual([]);
   });
 });
 

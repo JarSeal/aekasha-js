@@ -1,6 +1,6 @@
 /**
  * The `debugger` configuration's pure parts (p806 D14, `sceneDebugger.ts`): the tab order's diff,
- * the axe counts' ratchet, a shot's file and a script's value comparison. No browser, no file
+ * the axe failures, a shot's file and a script's value comparison. No browser, no file
  * system: `debuggerChecks.test.ts` covers them.
  */
 import type { TestBridgeTabOrder } from '../../src/_engine/debug/TestBridge';
@@ -28,40 +28,18 @@ export const diffTabOrders = (base: TestBridgeTabOrder, current: TestBridgeTabOr
   return diffs;
 };
 
-const formatRules = (rules: Record<string, number>) =>
-  Object.entries(rules)
-    .map(([rule, nodes]) => `${rule} ×${nodes}`)
-    .join(', ') || 'none';
-
 /**
- * The axe counts against the baseline's, as a ratchet (p806 D12; Phase 6 allows none): a rule
- * with more nodes on a root fails; fewer is a note, and so is a root without a baseline (`no
- * baseline …`, which makes the run NEW)
+ * axe's violations as failures, a line per rule on a root (p806 D12, Phase 6: no root may have
+ * any; Phases 1-5 ratcheted against the baseline's counts, which the baseline still records)
  */
-export const compareAxeCounts = (
-  base: DebuggerAxeCounts | undefined,
-  current: DebuggerAxeCounts
-) => {
+export const findAxeFailures = (current: DebuggerAxeCounts) => {
   const failures: string[] = [];
-  const notes: string[] = [];
   for (const [root, rules] of Object.entries(current)) {
-    const was = base?.[root];
-    if (!was) {
-      notes.push(`no baseline axe counts for ${root} (${formatRules(rules)})`);
-      continue;
-    }
     for (const [rule, nodes] of Object.entries(rules)) {
-      if (nodes > (was[rule] ?? 0)) {
-        failures.push(`axe ${root}: ${rule} ×${nodes}, baseline ×${was[rule] ?? 0}`);
-      }
-    }
-    for (const [rule, nodes] of Object.entries(was)) {
-      if ((rules[rule] ?? 0) < nodes) {
-        notes.push(`axe ${root}: ${rule} ×${rules[rule] ?? 0}, baseline ×${nodes}`);
-      }
+      if (nodes > 0) failures.push(`axe ${root}: ${rule} ×${nodes}`);
     }
   }
-  return { failures, notes };
+  return failures;
 };
 
 /** A debugger shot's file under a result folder's `last-run/` and `baseline/` */

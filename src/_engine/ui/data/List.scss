@@ -90,8 +90,14 @@
     box-shadow: inset 3px 0 0 var(--aek-list-selected-color, var(--aek-accent));
   }
 
-  :where(.aekList__row[aria-disabled='true'], .aekList__row[data-disabled]) {
+  :where(.aekList__row[aria-disabled='true']) {
     color: var(--aek-text-disabled);
+  }
+
+  // A static list's disabled row is text, not a control: WCAG 1.4.3's exception for inactive
+  // controls doesn't cover it, so it's muted (p806 Phase 6, as a disabled monitor)
+  :where(.aekList__row[data-disabled]) {
+    color: var(--aek-text-muted);
   }
 
   :where(.aekList__row[aria-disabled='true']),
