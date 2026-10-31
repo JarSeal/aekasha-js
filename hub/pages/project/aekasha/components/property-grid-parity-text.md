@@ -7,11 +7,11 @@ from a page that shows every feature it ports. The status line says each field's
 
 - **Edit fields:** a checkbox; a slider (`min`, `max`, `step`); selects with the array and the
   object `options`; numbers with `min` and `step`, `step` alone and `min` alone; a text field; the
-  four colours (`_dbg__SpatialGrid.ts:586`'s hex number with `kind: 'color'`, Tweakpane's
+  four colours (`_dbg__SpatialGridItems.ts:258`'s hex number with `kind: 'color'`, Tweakpane's
   `view: 'color'`; `_dbg__BaseFolder.ts:26`'s inferred `'#rrggbb'`; `_dbg__RayTester.ts:492`'s
-  string with `view: 'color'`; `_dbg__DebugTools.ts:682`'s float object, its
+  string with `view: 'color'`; `_dbg__DebugToolsFolders.ts:208`'s float object, its
   `color: { type: 'float' }` dropped: an object is floats here); the vector
-  (`_dbg__DebugTools.ts:549`, inferred from its `{ x, y, z }`); the rotation
+  (`_dbg__DebugCameraFolder.ts:101`, inferred from its `{ x, y, z }`); the rotation
   (`_dbg__Character.ts:213`, an Euler with `step: Math.PI / 8`, inferred from its `order` and
   shown in degrees where Tweakpane showed radians); the `view: 'list'` blade as an unbound
   select.

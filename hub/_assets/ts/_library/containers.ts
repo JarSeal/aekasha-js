@@ -286,7 +286,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
     radius: 1,
     scope: 'Scene',
     maxMembers: 1234,
-    summary: 'default: 128 members in 42 cells\nplayers: 2 members in 2 cells',
+    summary: '  1 ########## 17\n  2 #####      8\n  4 #          1',
     labelText: 'Ray 1',
     castShadow: true,
     shadowMapSize: 1024,
@@ -317,7 +317,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
       type: 'folder',
       title: 'Edit fields',
       items: [
-        field('_dbg__SpatialGrid.ts:568', {
+        field('_dbg__SpatialGridItems.ts:221', {
           target: state,
           key: 'oracle',
           label: 'Brute-force oracle',
@@ -330,7 +330,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           max: 10,
           step: 0.001,
         }),
-        field('_dbg__SpatialGrid.ts:508', {
+        field('_dbg__SpatialGridItems.ts:170', {
           target: state,
           key: 'domain',
           label: 'Domain',
@@ -345,11 +345,11 @@ const initPropertyGridParityDemo: Demo = (box) => {
           label: 'Storage mode',
           options: { Map: 'MAP', 'Typed Array': 'TYPED_ARRAY' },
         }),
-        field('_dbg__SpatialGrid.ts:522', {
+        field('_dbg__SpatialGridItems.ts:183', {
           target: state,
           key: 'cellSize',
           label: 'Cell size',
-          min: 0.1,
+          min: 0.5,
           step: 0.5,
         }),
         field('_dbg__LightShadowItems.ts:132', {
@@ -365,7 +365,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           min: 0,
         }),
         field('_dbg__RayTester.ts:557', { target: state, key: 'labelText', label: 'Label' }),
-        field('_dbg__SpatialGrid.ts:586', {
+        field('_dbg__SpatialGridItems.ts:258', {
           target: state,
           key: 'cellsColor',
           label: 'Wireframe color',
@@ -378,12 +378,12 @@ const initPropertyGridParityDemo: Demo = (box) => {
           label: 'Helper color',
           kind: 'color',
         }),
-        field('_dbg__DebugTools.ts:682', {
+        field('_dbg__DebugToolsFolders.ts:208', {
           target: state,
           key: 'gridCenterColor',
           label: "Grid's center line color",
         }),
-        field('_dbg__DebugTools.ts:549', {
+        field('_dbg__DebugCameraFolder.ts:101', {
           target: state,
           key: 'cameraPosition',
           label: 'Position',
@@ -406,7 +406,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
       type: 'folder',
       title: 'Monitors',
       items: [
-        field('_dbg__SpatialGrid.ts:521', {
+        field('_dbg__SpatialGridItems.ts:181', {
           target: state,
           key: 'scope',
           label: 'Scope',
@@ -418,17 +418,17 @@ const initPropertyGridParityDemo: Demo = (box) => {
           readonly: true,
           interval: 250,
         }),
-        field('_dbg__SpatialGrid.ts:560', {
+        field('_dbg__SpatialGridItems.ts:218', {
           target: state,
           key: 'maxMembers',
           label: 'Max members',
           readonly: true,
           format: (value) => (value as number).toLocaleString('en'),
         }),
-        field('_dbg__SpatialGrid.ts:674', {
+        field('_dbg__SpatialGridReadouts.ts:157', {
           target: state,
           key: 'summary',
-          label: 'All domains',
+          label: 'Members per cell',
           readonly: true,
           multiline: true,
           rows: 4,

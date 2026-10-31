@@ -248,7 +248,7 @@ const buildLists = (parent: HTMLElement) => {
   });
 
   row(
-    '_dbg__LOD.ts:625',
+    '_dbg__LOD.ts:245',
     'LOD entities: a suffix; the cap’s “…and N more” a disabled row (or virtual rows in place of the cap)',
     {
       heading: 'LOD entities',

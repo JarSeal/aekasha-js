@@ -1570,6 +1570,88 @@ grid stacking fix after it):
 
 1. **Debug tools, LOD, spatial grid:** `buildDebugToolsItems`, `_createLodDebugGUI` and
    `_createSpatialGridDebugGUI` split into item builders.
+
+   As built (2026-10-31):
+
+   - **The split** (D11; the three p800 headers gone, every file under 420 lines and every
+     function under 150: the longest, the Helpers folder's builder, 132). The loaders still load
+     `_dbg__DebugTools.ts`, `_dbg__LOD.ts` and `_dbg__SpatialGrid.ts`, now the tabs (registration,
+     `onRefresh`, the content's order), each re-exporting what its thin module calls. Folders are
+     `get…Folder()` builders, as the physics tab's (Phase 3 section 2):
+     - Debug tools: `_dbg__DebugToolsState.ts` (the ids, the state with its 5.x `prodTestMode`
+       migration, the theme and click-through applies, a shortcut's save before and after the
+       tab exists; the tab and its folders both import it), `_dbg__DebugToolsFolders.ts` (the
+       scenes, on-screen tools, helpers, undo / redo, file server and logging folders),
+       `_dbg__DebugCameraFolder.ts` (the folder, its camera writes and the viewport sync).
+     - LOD: `_dbg__LodTabItems.ts` (the last frame, selection, fades, overlay, impostors and
+       inspect folders). The tab keeps the counts and the mesh list (`formatLodCounts`,
+       `getLodMeshListData`, both of a world now).
+     - Spatial index: `_dbg__SpatialGridSettings.ts` (the saved per-domain settings, the cell size
+       per scope, the single-grid LS migration), `_dbg__SpatialGridOverlays.ts` (the visualizer,
+       moved as it was), `_dbg__SpatialGridItems.ts` (`createSpatialDomainView`: which domains are
+       listed and shown, and where a cell size edit goes; the domain's rows and the Visualizer
+       folder), `_dbg__SpatialGridReadouts.ts` (the live figures and their folders).
+   - **What the kit's value column needed** (Phase 1's port kept Tweakpane's text layouts; this
+     section's before shots, every folder open, showed them wrapping in the narrower column):
+     - LOD's impostor rows were 3-line text areas of text wrapped at 24 characters, which scrolled
+       at 5 lines. Each impostor is a folder now: Kind, Source, Export, Atlas and Bake as
+       one-line monitors (`{ get }`, `interval: 'refresh'`), then its Export. "Export all" and its
+       separator show only with impostors; without, a note says there are none (5.x: a monitor
+       with an empty label). The dev files text is a note (`getNoteItem` takes a function now,
+       read on every refresh), and `wrapText` went.
+     - The spatial "All domains" text area is a folder with a monitor per domain (its policy and
+       members, then its rebuilds and the last one's cost). The occupancy histogram is an
+       "Occupancy" folder: "Occupied cells" (count, spread, average) and "Members per cell", lines
+       of at most 17 characters (the bar 10, not 20) with a hint saying how to read a line.
+     - Readouts synced in `onRefresh` (LOD's last frame, the spatial scope, size, policy and live
+       stats) are `interval: 'refresh'`: they ticked every 200 ms reading proxies that change
+       every 500 ms.
+   - **Labels:** the key hints are the bindings' (`withDebugKeyHint`: `getDebugKeyChordLabel`, so
+     CONFIG.ts' rebinding shows; "[I]" and the others unchanged by default, so the scene runner's
+     "Debug key shortcuts [I]" press stands). Three labels cut at the 50 % column are shorter
+     ("Load with debugger loader", "Show top tools in prod test", "Show gizmo in main camera"),
+     sentence case ("Debug camera", "Undo / redo"), trailing spaces gone, the log buttons say what
+     they log ("Log all", "Log the renderer", …). Folder ids are explicit in Debug tools, so the
+     saved open states stand; the spatial tab's "Visualizer" and "Live stats" titles (their ids)
+     are unchanged.
+   - **The spatial cell size's `min` is 0.5** (5.x: 0.1): the kit's step grid starts at `min`
+     (p804 D6, as the ECS window's max entities in Phase 3), so 10 stepped to 10.6.
+   - **Found on the way, a kit fix:** a folder's heading spans both columns, but the label
+     column's separator (24 px at the column's edge) was above it, so a click on a heading's
+     middle started a column drag (the scratch shot script's click on a nested folder hit it).
+     `.aekFolder__toggle` joins `39eadf62`'s rule for full-width rows (`PropertyGrid.scss`;
+     `ui/CLAUDE.md`, the containers guide and the library's text say so). Checked in the browser
+     (a scratch probe, `.cache/p806/folderHit.mts`): every heading's centre hits the heading.
+   - **Not here:** Debug tools, LOD and spatial still rebuild on a scene change (D5). LOD's and
+     the spatial tab's `onRefresh` already rebuild when their structure changes, so
+     `keepOnSceneChange` would be a small step for them later; Debug tools' scene select and
+     debug camera folder are built for the scene. The impostor button's "Export" / "Re-export"
+     title is still read at the build (its Export row says the state live).
+   - **Tests:** `_dbg__DebugTools.test.ts` 4 (the 5.x `prodTestMode` migrated and written back, a
+     shortcut saved to LS before registration and through the tab after, the key hints with a
+     CONFIG.ts rebinding, the file server's refresh-only row), `_dbg__LOD.test.ts` 5 (the counts
+     by level and reason, the list's cap, the dev files note and "no impostors", an impostor's
+     rows and buttons, the rebuild on a new level count), `_dbg__SpatialGrid.test.ts` 3 (the
+     legacy LS migration, a cell size stepped in a scene's scope and reset in that scope only,
+     the domains' rows and `formatOccupancy`), on `KitDom` with real `ECSWorld`s and the tab's
+     definition captured from a mocked `createDebuggerTab`.
+   - **Shots** (`.cache/p806/phase4s1.mts`, scratch: each tab with every folder open, unmasked,
+     in `testDebugScene`, `lodShowcase` and `largeWorld`; `.cache/p806/phase4-s1/before/` and
+     `after/`).
+   - **Hub:** the dev library's parity boxes name the new lines (`_dbg__SpatialGridItems.ts`,
+     `_dbg__SpatialGridReadouts.ts:157`, the histogram in place of the summary,
+     `_dbg__DebugToolsFolders.ts:208`, `_dbg__DebugCameraFolder.ts:101`, `_dbg__LOD.ts:245`).
+   - **The `debugger` configuration** (all six scenes): the tab order, the four undo / redo
+     scripts and the axe ratchet pass. The LOD and Spatial index tabs' shots changed in
+     `testDebugScene` and `thirdPersonGymScene` (the Debug tools tab's didn't: its changed labels
+     are in shut folders), as did the ECS world window's (its focused folder heading's ring drawn
+     whole above the separator: the kit fix) and once the GPU memory tab's peak rows (p807's live
+     figures; a plain run after the recording passed them). Recorded on purpose
+     (`--only testDebugScene,thirdPersonGymScene --update`), then a plain run passes. Axe: 0 on
+     the three tabs.
+   - **Checks:** `yarn test` (2216), both `tsc`, ESLint, the docs ratchet (unchanged, 100 %),
+     `yarn hub:build`, `yarn verify:ui --only folder,propertyGrid` (every state and script, the
+     screenshots unchanged).
 2. **Ray tester and ray cast, assets:** the ray tester's UI and `RayDebug.scss`; the assets tab
    and its info window (the tables on `createTable`).
 3. **The character state window** (D10; D1's escape hatch if it runs long).

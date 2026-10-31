@@ -87,8 +87,8 @@ settingsWindow.add(grid.cmp);
 The label column's edge is a separator: drag it, or focus it and use ArrowLeft / ArrowRight. The
 grid writes no storage: `onLabelWidthChange` reports the width at a drag's release or a key's
 keyup. The separator is the columns' 24 px gap, so it covers no control: a row across both
-columns (a button without a label, a custom item) is over it, and so is the gap between two such
-rows, so a run of full-width buttons can't be dragged through.
+columns (a button without a label, a custom item, a folder's heading) is over it, and so is the gap
+between two buttons or custom items, so a run of full-width buttons can't be dragged through.
 
 ### Panels as data
 

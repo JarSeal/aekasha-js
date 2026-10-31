@@ -43,7 +43,7 @@ export type DebugToolsState = {
     /** The folder is open */
     undoRedoFolderExpanded: boolean;
   };
-  /** Replaces the old `prodTestMode` key (migrated on LS load, see _dbg__DebugTools.ts). */
+  /** Replaces the old `prodTestMode` key (migrated on LS load, see _dbg__DebugToolsState.ts). */
   onScreenTools: {
     showOnScreenToolsInProdTest: boolean;
     /** Makes the on-screen tools, the drawer handle, the stats panel and the axes gizmo

@@ -128,11 +128,22 @@ export const getReasonedButtonItem = (props: ReasonedButtonProps): PropertyGridC
   },
 });
 
-/** A note across both columns: a paragraph of text (set as text) that says how the window's
- * fields behave. */
-export const getNoteItem = (text: string): PropertyGridCustomItem => ({
+/** A note across both columns: a paragraph of text (set as text) that says how the window's (or a
+ * tab's) fields behave. A function's text is read at the build and on every refresh. */
+export const getNoteItem = (text: string | (() => string)): PropertyGridCustomItem => ({
   type: 'custom',
   build: (container) => {
-    container.add({ tag: 'p', class: styles.note, text });
+    if (typeof text === 'string') {
+      container.add({ tag: 'p', class: styles.note, text });
+      return;
+    }
+    let shown = text();
+    const note = container.add({ tag: 'p', class: styles.note, text: shown });
+    return () => {
+      const next = text();
+      if (next === shown) return;
+      shown = next;
+      note.updateText(next);
+    };
   },
 });
