@@ -129,7 +129,8 @@ export const getReasonedButtonItem = (props: ReasonedButtonProps): PropertyGridC
 });
 
 /** A note across both columns: a paragraph of text (set as text) that says how the window's (or a
- * tab's) fields behave. A function's text is read at the build and on every refresh. */
+ * tab's) fields behave. A function's text is read at the build and on every refresh; an empty
+ * text hides the note. */
 export const getNoteItem = (text: string | (() => string)): PropertyGridCustomItem => ({
   type: 'custom',
   build: (container) => {
@@ -139,11 +140,17 @@ export const getNoteItem = (text: string | (() => string)): PropertyGridCustomIt
     }
     let shown = text();
     const note = container.add({ tag: 'p', class: styles.note, text: shown });
+    const syncHidden = () => {
+      if (shown) note.removeAttr('hidden');
+      else note.updateAttr({ hidden: '' });
+    };
+    syncHidden();
     return () => {
       const next = text();
       if (next === shown) return;
       shown = next;
       note.updateText(next);
+      syncHidden();
     };
   },
 });

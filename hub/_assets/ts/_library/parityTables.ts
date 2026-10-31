@@ -677,7 +677,7 @@ export const buildGpuMemoryTables = (parent: HTMLElement, live: ParityLive) => {
 export const buildAssetTables = (parent: HTMLElement) => {
   addTableRow(
     parent,
-    '_dbg__Assets.ts:582 (:646)',
+    '_dbg__TextureInfoItems.ts:130',
     'a texture array’s layers: a rename, built with the window',
     createTable<{ id: string; layer: string; source: string }>({
       caption: 'Layers',
@@ -697,7 +697,7 @@ export const buildAssetTables = (parent: HTMLElement) => {
 
   addTableRow(
     parent,
-    ':582 (:703)',
+    ':209',
     'an atlas’s cells: a rename',
     createTable<{ id: string; at: string; size: string; uv: string }>({
       caption: 'Cells',

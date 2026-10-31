@@ -8,7 +8,7 @@ from a page that shows every feature it ports. The status line says each field's
 - **Edit fields:** a checkbox; a slider (`min`, `max`, `step`); selects with the array and the
   object `options`; numbers with `min` and `step`, `step` alone and `min` alone; a text field; the
   four colours (`_dbg__SpatialGridItems.ts:258`'s hex number with `kind: 'color'`, Tweakpane's
-  `view: 'color'`; `_dbg__BaseFolder.ts:26`'s inferred `'#rrggbb'`; `_dbg__RayTester.ts:492`'s
+  `view: 'color'`; `_dbg__BaseFolder.ts:26`'s inferred `'#rrggbb'`; `_dbg__RayTesterItems.ts:116`'s
   string with `view: 'color'`; `_dbg__DebugToolsFolders.ts:208`'s float object, its
   `color: { type: 'float' }` dropped: an object is floats here); the vector
   (`_dbg__DebugCameraFolder.ts:101`, inferred from its `{ x, y, z }`); the rotation

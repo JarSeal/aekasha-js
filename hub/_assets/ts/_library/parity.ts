@@ -190,8 +190,8 @@ const buildLists = (parent: HTMLElement) => {
     }).cmp
   );
   addParityRow(parent, {
-    source: '_dbg__Assets.ts:1111',
-    note: 'assets (57 in the gym): the tab’s own heading with its count and scope switch stays above the list (`heading` is a text); a description, a tooltip; the filter field is new',
+    source: '_dbg__Assets.ts:278',
+    note: 'assets (57 in the gym): the list’s heading “Assets” with its count, the scope a segmented control in the pane above it (p806 Phase 4); a description, a tooltip; the filter field is new',
     cmp: assets,
     layout: ['hubDemoLists'],
   });
@@ -461,8 +461,8 @@ const buildGraphs = (parent: HTMLElement, live: ParityLive) => {
   live.onStep(() => series.forEach((push) => push(live.getStep())));
 
   const pies = panel(
-    '_dbg__Raycast.ts:292',
-    'the pie: moved onto the donut in Phase 5 (each window’s progress, decorative beside its figure; 12 in the tab)'
+    '_dbg__Raycast.ts:266',
+    'the pie: moved onto the donut in Phase 5 (each window’s progress, decorative beside its name in the counter’s table since p806 Phase 4; 12 in the tab)'
   );
   const windows = ['1 s', '5 s', '30 s', '60 s'].map((name, i) => {
     const donut = createDonut({ value: (0.2 + i * 0.25) % 1, size: '1.25rem' });

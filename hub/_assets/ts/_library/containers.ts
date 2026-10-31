@@ -364,7 +364,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           label: 'Shadow Radius',
           min: 0,
         }),
-        field('_dbg__RayTester.ts:557', { target: state, key: 'labelText', label: 'Label' }),
+        field('_dbg__RayTesterItems.ts:141', { target: state, key: 'labelText', label: 'Label' }),
         field('_dbg__SpatialGridItems.ts:258', {
           target: state,
           key: 'cellsColor',
@@ -372,7 +372,7 @@ const initPropertyGridParityDemo: Demo = (box) => {
           kind: 'color',
         }),
         field('_dbg__BaseFolder.ts:26', { target: state, key: 'skyColor', label: 'Color' }),
-        field('_dbg__RayTester.ts:492', {
+        field('_dbg__RayTesterItems.ts:116', {
           target: state,
           key: 'helperColor',
           label: 'Helper color',

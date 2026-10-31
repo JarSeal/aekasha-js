@@ -1,86 +1,33 @@
-@use '../../../ui/styles/variables.scss';
+// The Assets tab's info window (_dbg__TextureInfoItems.ts, _dbg__AssetsPreview.ts), on the tokens,
+// unlayered (p806 D9)
 
-/** The info window's layer and cell tables (texture arrays and atlases, p299 D6) */
-.assetsTable {
-  width: 100%;
-  margin-top: calc(0.4 * var(--aek-rem));
-  border-collapse: collapse;
-  font-size: calc(1 * var(--aek-rem));
-  font-variant-numeric: tabular-nums;
-
-  th {
-    color: variables.$debugTextColorDark;
-    font-weight: normal;
-    text-align: left;
-    vertical-align: bottom;
-  }
-
-  td {
-    padding: calc(0.15 * var(--aek-rem)) 0;
-    vertical-align: top;
-    word-break: break-word;
-  }
-
-  th + th,
-  td + td {
-    padding-left: calc(0.8 * var(--aek-rem));
-  }
-
-  td.assetsTableNumber {
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  tbody tr:hover {
-    background-color: variables.$debugGuiBackgroundLighter2;
-  }
-}
-
-.assetsTableSub {
-  color: variables.$debugTextColorDark;
+/** The info window's layer and cell tables (texture arrays and atlases, p299 D6: `createTable`) */
+.infoTable {
+  margin: var(--aek-space-2) 0;
 }
 
 /** The info window's previews (an array's layers, an atlas slot's image, p299 D6) */
 .assetsPreview {
-  font-size: calc(1 * var(--aek-rem));
-}
-
-.assetsPreviewToolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(0.3 * var(--aek-rem));
-  margin-bottom: calc(0.4 * var(--aek-rem));
+  flex-direction: column;
+  gap: var(--aek-space-2);
+  font-size: var(--aek-font-size-sm);
 }
 
-.assetsPreviewLevel {
-  min-width: calc(2.4 * var(--aek-rem));
-  padding: calc(0.1 * var(--aek-rem)) calc(0.4 * var(--aek-rem));
-}
+// The level's size, the hovered cell, or why the preview failed
+.assetsPreviewStatus {
+  margin: 0;
+  color: var(--aek-text-muted);
 
-.assetsPreviewLevelActive {
-  background-color: variables.$debugTextColor;
-  color: variables.$debugGuiBackground;
-
-  &:hover {
-    background-color: variables.$debugTextColor;
+  &[data-error] {
+    color: var(--aek-danger);
   }
 }
 
-.assetsPreviewToggle {
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-/** Transparent texels show as a checkerboard */
+/** Transparent texels show as a checkerboard (the colour field's squares) */
 @mixin checkerboard {
-  background-color: #777;
-  background-image: linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%),
-    linear-gradient(45deg, #555 25%, transparent 25%, transparent 75%, #555 75%);
-  background-size: calc(1.6 * var(--aek-rem)) calc(1.6 * var(--aek-rem));
-  background-position:
-    0 0,
-    calc(0.8 * var(--aek-rem)) calc(0.8 * var(--aek-rem));
+  background: repeating-conic-gradient(var(--aek-border-strong) 0 25%, var(--aek-surface) 0 50%)
+    0 0 / 16px 16px;
 }
 
 .assetsPreviewCanvas {
@@ -94,9 +41,8 @@
 
 .assetsPreviewThumbs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(calc(9.6 * var(--aek-rem)), 1fr));
-  gap: calc(0.6 * var(--aek-rem));
-  margin: calc(0.4 * var(--aek-rem)) 0;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--aek-space-7) * 3), 1fr));
+  gap: var(--aek-space-3);
 
   figure {
     margin: 0;
@@ -104,17 +50,16 @@
   }
 
   figcaption {
-    margin-top: calc(0.2 * var(--aek-rem));
+    margin-top: var(--aek-space-1);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: variables.$debugTextColorDark;
+    color: var(--aek-text-muted);
   }
 }
 
 .assetsPreviewFrame {
   position: relative;
-  margin: calc(0.4 * var(--aek-rem)) 0;
 }
 
 .assetsPreviewOverlay {
@@ -129,6 +74,8 @@
   display: none;
 }
 
+// The cells' rects in the colours the scene draws them in (p806 D1: the 3D scene's colours, not
+// the UI's roles)
 .assetsPreviewCell {
   rect {
     // Painted (transparent), so the whole rect takes the hover
@@ -137,7 +84,7 @@
   }
 
   &:hover .assetsPreviewContent {
-    fill: rgba(255, 0, 255, 0.25);
+    fill: rgb(255 0 255 / 25%);
   }
 }
 

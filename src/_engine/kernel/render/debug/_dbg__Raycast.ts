@@ -1,5 +1,6 @@
+// The Ray cast controls tab: the ray testers' buttons, each kind's helper settings and its
+// statistics, a table per counter (p806 D10).
 import { CMP } from '../../../ui/core/CMP';
-import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { IS_DEBUG_ENV } from '../../config/Config';
 import {
   createDebuggerTab,
@@ -9,6 +10,8 @@ import {
 } from '../../../debug/DebuggerGUI';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { createDonut, type Donut } from '../../../ui/data/graphs/Donut';
+import { createTable } from '../../../ui/data/Table';
+import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
 import type {
   IntervalCounterSnapshot,
   IntervalWindowSnapshot,
@@ -32,11 +35,11 @@ import {
   _refreshRayTesterHelperNotices,
   _toggleRayTesterWindow,
 } from './_dbg__RayTester';
-import './RayDebug.scss';
+import styles from './RayDebug.module.scss';
 
 const LS_KEY = 'debugRayCast';
 const TAB_ID = 'rayCastControls';
-/** How often the open tab writes the stats values into its view */
+/** How often the open tab writes the stats tables' figures */
 const STATS_VIEW_REFRESH_MS = 200;
 /** The pre-p141 single helper toggle, migrated to `threeShow` */
 const LEGACY_SHOW_HELPERS_KEY = 'showAllRayDebugHelpers';
@@ -174,22 +177,15 @@ const createDebugControls = () => {
       'physicsEnableRayStatistics',
       ...helperStateKeys('physics'),
     ],
-    // Only while the tab is visible
+    // Only while the tab is visible: the stats tables' figures are written by the refresh
     refreshIntervalMs: STATS_VIEW_REFRESH_MS,
-    onRefresh: () => {
-      rebuildIfPhysicsWorldChanged();
-      refreshStatsView();
-    },
+    onRefresh: rebuildIfPhysicsWorldChanged,
     onOpen: () => () => {
-      statsBlocks = [];
-      pendingQueriesView = null;
       physicsViewHasWorld = null;
     },
     content: () => {
-      // Re-run on every mount and rebuild: the views below re-register themselves
-      statsBlocks = [];
-      pendingQueriesView = null;
-      physicsViewHasWorld = null;
+      // Re-run on every mount and rebuild
+      physicsViewHasWorld = isPhysicsWorldEnabled();
       return [
         {
           pane: true,
@@ -206,11 +202,6 @@ const createDebugControls = () => {
               disabled: () => !isPhysicsWorldEnabled(),
               onClick: () => _toggleRayTesterWindow('PHYSICS'),
             },
-          ],
-        },
-        {
-          pane: true,
-          content: [
             helperSettingsFolder('three', 'THREE', 'Three.js rays'),
             {
               key: 'enableRayStatistics',
@@ -220,12 +211,19 @@ const createDebugControls = () => {
                 updateDebuggerTab(TAB_ID);
               },
             },
-          ],
-        },
-        buildThreeStatsView(),
-        {
-          pane: true,
-          content: [
+            {
+              type: 'folder',
+              id: 'threeRayStats',
+              title: 'Three.js ray stats',
+              content: [
+                getStatsTableItem(
+                  'Three.js ray stats',
+                  getRayCastStats,
+                  isRayCastStatsEnabled,
+                  true
+                ),
+              ],
+            },
             helperSettingsFolder('physics', 'PHYSICS', 'Physics rays'),
             {
               key: 'physicsEnableRayStatistics',
@@ -235,80 +233,110 @@ const createDebugControls = () => {
                 updateDebuggerTab(TAB_ID);
               },
             },
+            getPhysicsStatsFolder(physicsViewHasWorld),
           ],
         },
-        buildPhysicsStatsView(),
       ];
     },
   });
 };
 
-type StatsValue = { elem: HTMLElement; text: string };
-type StatsWindowRow = { win: IntervalWindowSnapshot; donut: Donut; value: StatsValue };
-/** One counter's cached stats elements */
-type StatsBlock = {
-  list: CMPHandle;
-  getStats: () => Readonly<IntervalCounterSnapshot>;
-  isEnabled: () => boolean;
-  isActive: boolean | null;
-  lastFrame: StatsValue;
-  maxEver: StatsValue;
-  rows: StatsWindowRow[];
-};
-/** The mounted stats blocks (empty while the tab isn't mounted) */
-let statsBlocks: StatsBlock[] = [];
-/** The mounted pending physics queries row (WORKER_THREAD only) */
-let pendingQueriesView: { list: CMPHandle; isActive: boolean | null; value: StatsValue } | null =
-  null;
-
 const INACTIVE_VALUE = '-';
 
-const addStatsRow = (list: CMPHandle, label: string, donut?: Donut): StatsValue => {
-  const row = list.add({ tag: 'li' });
-  const labelCmp = row.add({ tag: 'span', class: 'rayStatLabel', text: label });
-  if (donut) labelCmp.add(donut.cmp);
-  return { elem: row.add({ tag: 'span', text: INACTIVE_VALUE }).elem, text: INACTIVE_VALUE };
+/** A stats table's row: the last frame, the max ever, or a measuring window with its donut */
+type StatsRow = {
+  id: string;
+  label: string;
+  win?: IntervalWindowSnapshot;
+  donut?: Donut;
 };
 
-/** Builds one counter's stats markup once per mount (static, the value elements are cached). */
-const buildStatsBlock = (
-  root: CMPHandle,
-  title: string,
-  getStats: () => Readonly<IntervalCounterSnapshot>,
-  isEnabled: () => boolean
-) => {
-  root.add({ tag: 'h3', text: title });
-  const list = root.add({ tag: 'ul' });
-  const lastFrame = addStatsRow(list, 'Last frame:');
-  const maxEver = addStatsRow(list, 'Max ever:');
-  const rows: StatsWindowRow[] = [];
+const getStatsRows = (getStats: () => Readonly<IntervalCounterSnapshot>): StatsRow[] => {
+  const rows: StatsRow[] = [
+    { id: 'lastFrame', label: 'Last frame' },
+    { id: 'maxEver', label: 'Max ever' },
+  ];
   const windows = getStats().windows;
   for (const kind of ['AVERAGE', 'MIN_MAX'] as const) {
-    const heading = kind === 'AVERAGE' ? 'Average per frame' : 'Max / min per frame';
-    list.add({ tag: 'li', class: 'rayStatHeading', text: heading });
+    const name = kind === 'AVERAGE' ? 'Average' : 'Max / min';
     for (let i = 0; i < windows.length; i++) {
       const win = windows[i];
       if (win.kind !== kind) continue;
       // How far the window has run, beside its figure: decorative (p805 D9)
-      const donut = createDonut({ class: 'rayStatProgress' });
-      const value = addStatsRow(list, `Last ${win.intervalMs / 1000}s: `, donut);
-      rows.push({ win, donut, value });
+      const donut = createDonut({ class: styles.statProgress });
+      rows.push({ id: `w${i}`, label: `${name}, last ${win.intervalMs / 1000} s`, win, donut });
     }
   }
-  statsBlocks.push({ list, getStats, isEnabled, isActive: null, lastFrame, maxEver, rows });
+  return rows;
 };
 
-const buildThreeStatsView = () => {
-  const root = CMP({ class: 'rayCastStats' });
-  buildStatsBlock(root, 'Three.js ray stats:', getRayCastStats, isRayCastStatsEnabled);
-  refreshStatsView();
-  return root;
-};
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** A window's figure: its average, or its max / min per frame */
+const formatWindow = (win: IntervalWindowSnapshot) =>
+  win.kind === 'AVERAGE' ? String(round2(win.average)) : `${win.max} / ${win.min}`;
+
+/**
+ * One counter's stats as a table (a row per figure, its value written in place on every refresh
+ * of the tab: `setCell` writes a text node only when its text changed), dimmed with "-" while its
+ * statistics are off. A custom item: the grid's refresh runs its writer.
+ */
+const getStatsTableItem = (
+  caption: string,
+  getStats: () => Readonly<IntervalCounterSnapshot>,
+  isEnabled: () => boolean,
+  captionHidden = false
+): DebuggerPaneItem<RayCastState> => ({
+  type: 'custom',
+  build: (container) => {
+    const rows = getStatsRows(getStats);
+    const table = createTable<StatsRow>({
+      caption,
+      captionHidden,
+      columns: [
+        {
+          key: 'label',
+          label: 'Figure',
+          rowHeader: true,
+          cell: (row) => {
+            const cell = CMP({ tag: 'span', class: styles.statLabel });
+            if (row.donut) cell.add(row.donut.cmp);
+            cell.add({ tag: 'span', text: row.label });
+            return cell;
+          },
+        },
+        { key: 'value', label: 'Value', value: () => INACTIVE_VALUE, align: 'end' },
+      ],
+      rows,
+      class: styles.statsTable,
+    });
+    container.add(table.cmp);
+    let isActive: boolean | null = null;
+    const write = () => {
+      const active = isEnabled();
+      if (active !== isActive) {
+        isActive = active;
+        if (active) table.cmp.removeAttr('data-inactive');
+        else table.cmp.updateAttr({ 'data-inactive': '' });
+      }
+      const s = getStats();
+      table.setCell('lastFrame', 'value', active ? String(s.lastFrame) : INACTIVE_VALUE);
+      table.setCell('maxEver', 'value', active ? String(s.maxEver) : INACTIVE_VALUE);
+      for (let i = 2; i < rows.length; i++) {
+        const { id, win, donut } = rows[i];
+        donut?.setValue(active && win ? win.progress : 0);
+        table.setCell(id, 'value', active && win ? formatWindow(win) : INACTIVE_VALUE);
+      }
+    };
+    write();
+    return write;
+  },
+});
 
 const getPhysicsRaysSnapshot = () => getPhysicsRayStats().rays;
 const getPhysicsShapeCastsSnapshot = () => getPhysicsRayStats().shapeCasts;
 
-/** Whether the mounted physics stats view was built with a physics world (null: not built). */
+/** Whether the mounted physics stats were built with a physics world (null: not built). */
 let physicsViewHasWorld: boolean | null = null;
 
 /** A physics world created or deleted while the tab is open (no scene change, which rebuilds the
@@ -319,75 +347,26 @@ const rebuildIfPhysicsWorldChanged = () => {
   queueMicrotask(() => updateDebuggerTab(TAB_ID, { rebuild: true }));
 };
 
-/** The physics stats, or a note when there is no physics world (the settings above stay). */
-const buildPhysicsStatsView = () => {
-  const root = CMP({ class: 'rayCastStats' });
-  physicsViewHasWorld = isPhysicsWorldEnabled();
-  if (!physicsViewHasWorld) {
-    root.add({ tag: 'p', class: 'rayStatNote', text: 'No physics world' });
-    return root;
-  }
-  buildStatsBlock(root, 'Physics ray stats:', getPhysicsRaysSnapshot, isPhysicsRayStatsEnabled);
-  buildStatsBlock(
-    root,
-    'Physics shape cast stats:',
-    getPhysicsShapeCastsSnapshot,
-    isPhysicsRayStatsEnabled
-  );
-  if (getPhysicsState().workerTarget === 'WORKER_THREAD') {
-    const list = root.add({ tag: 'ul' });
-    list.add({ tag: 'li', class: 'rayStatHeading', text: 'Worker' });
-    const value = addStatsRow(list, 'Pending queries:');
-    pendingQueriesView = { list, isActive: null, value };
-  }
-  refreshStatsView();
-  return root;
-};
-
-const writeStatsValue = (value: StatsValue, text: string) => {
-  if (value.text === text) return;
-  value.text = text;
-  value.elem.textContent = text;
-};
-
-const writeListActive = (
-  view: { list: CMPHandle; isActive: boolean | null },
-  isActive: boolean
-) => {
-  if (isActive === view.isActive) return;
-  view.isActive = isActive;
-  view.list.updateClass('inactive', isActive ? 'remove' : 'add');
-};
-
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
-const refreshStatsBlock = (block: StatsBlock) => {
-  const isActive = block.isEnabled();
-  writeListActive(block, isActive);
-  const s = block.getStats();
-  writeStatsValue(block.lastFrame, isActive ? String(s.lastFrame) : INACTIVE_VALUE);
-  writeStatsValue(block.maxEver, isActive ? String(s.maxEver) : INACTIVE_VALUE);
-  for (let i = 0; i < block.rows.length; i++) {
-    const { win, donut, value } = block.rows[i];
-    donut.setValue(isActive ? win.progress : 0);
-    if (!isActive) {
-      writeStatsValue(value, INACTIVE_VALUE);
-    } else if (win.kind === 'AVERAGE') {
-      writeStatsValue(value, String(round2(win.average)));
-    } else {
-      writeStatsValue(value, `${win.max} / ${win.min}`);
-    }
-  }
-};
-
-/** Writes the stats into the cached views: only changed texts and donut values, no html. */
-const refreshStatsView = () => {
-  for (let i = 0; i < statsBlocks.length; i++) refreshStatsBlock(statsBlocks[i]);
-  const pending = pendingQueriesView;
-  if (pending) {
-    const isActive = isPhysicsRayStatsEnabled();
-    writeListActive(pending, isActive);
-    const pendingQueries = getPhysicsRayStats().pendingQueries;
-    writeStatsValue(pending.value, isActive ? String(pendingQueries) : INACTIVE_VALUE);
-  }
-};
+/** The physics stats (rays, shape casts, and the worker's pending queries), or a note when there
+ * is no physics world (the settings above stay). */
+const getPhysicsStatsFolder = (hasWorld: boolean): DebuggerPaneItem<RayCastState> => ({
+  type: 'folder',
+  id: 'physicsRayStats',
+  title: 'Physics ray stats',
+  content: hasWorld
+    ? [
+        getStatsTableItem('Rays', getPhysicsRaysSnapshot, isPhysicsRayStatsEnabled),
+        getStatsTableItem('Shape casts', getPhysicsShapeCastsSnapshot, isPhysicsRayStatsEnabled),
+        {
+          label: 'Pending worker queries',
+          get: () =>
+            isPhysicsRayStatsEnabled()
+              ? String(getPhysicsRayStats().pendingQueries)
+              : INACTIVE_VALUE,
+          readonly: true,
+          interval: 'refresh',
+          hidden: () => getPhysicsState().workerTarget !== 'WORKER_THREAD',
+        },
+      ]
+    : [getNoteItem('No physics world')],
+});

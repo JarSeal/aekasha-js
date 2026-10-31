@@ -1,0 +1,135 @@
+// The Ray cast controls tab's stats (_dbg__Raycast.ts) and the ray tester windows
+// (_dbg__RayTester.ts), on the tokens, unlayered (p806 D9). Loaded with them, so no build without
+// the debug tools carries them (p617 S1).
+
+// _dbg__Raycast.ts: a counter's table, its cells muted while its statistics are off (the "-"
+// values say so; an opacity took the text below AA)
+.statsTable {
+  margin-bottom: var(--aek-space-3);
+
+  &[data-inactive] :is(th, td) {
+    color: var(--aek-text-muted);
+  }
+}
+
+// A figure's name, with its window's progress before it (decorative: p805 D9)
+.statLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aek-space-2);
+}
+
+.statProgress {
+  --aek-donut-size: 1em;
+  --aek-donut-thickness: 45%;
+}
+
+// _dbg__RayTester.ts: the window's content, its parts one under another
+.window {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-3) var(--aek-space-4);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aek-space-3);
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
+}
+
+// Fired rays aren't drawn: the text says so, the warning's colour only marks it
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-2) var(--aek-space-3);
+  border-left: 3px solid var(--aek-warning);
+  border-radius: var(--aek-radius-md);
+  background: var(--aek-warning-soft);
+  font-size: var(--aek-font-size-sm);
+
+  p {
+    margin: 0;
+  }
+
+  button {
+    flex-shrink: 0;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// Empty without a pick, and still rendered (a live region `display: none` took out of the tree
+// may not be read when its text comes): its height 0 and the gap before it cancelled
+.pickStatus {
+  margin: 0;
+  font-size: var(--aek-font-size-sm);
+  font-weight: var(--aek-font-weight-semibold);
+  color: var(--aek-info);
+
+  &:empty {
+    margin-top: calc(-1 * var(--aek-space-3));
+  }
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-2);
+  font-size: var(--aek-font-size-sm);
+}
+
+.rayHeading {
+  margin: var(--aek-space-3) 0 0;
+  font-size: var(--aek-font-size-md);
+}
+
+.hits {
+  margin-top: var(--aek-space-2);
+}
+
+.hit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-1);
+  min-width: 0;
+}
+
+.hitTitle {
+  font-weight: var(--aek-font-weight-semibold);
+}
+
+// Label and value pairs: the label column as wide as its longest, the values wrapping
+.fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0 var(--aek-space-3);
+  margin: 0;
+
+  dt {
+    color: var(--aek-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.muted {
+  margin: 0;
+  color: var(--aek-text-muted);
+}
+
+// The text says what failed, the danger colour only marks it
+.error {
+  margin: 0;
+  color: var(--aek-danger);
+}

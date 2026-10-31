@@ -20,8 +20,8 @@ table read on the box's scheduler every 500 ms, the budget bar, the sparklines a
 - **Debugger lists** (13 sites, 11 shapes): every `DebuggerListDef` and item field has its prop
   (the plan's §4 maps them). What changes: one tab stop with the arrows in place of a Tab per
   button; a toggle the row hasn't (`null`) is a hidden action, its cell kept; the assets tab's
-  heading with its count and scope switch stays the tab's own, above the list (`heading` is a
-  text); the LOD tab's capped “…and N more” is a disabled row (or virtual rows in place of the
+  heading is the list's (“Assets” and its count) and its scope switch a segmented control above
+  it (p806 Phase 4); the LOD tab's capped “…and N more” is a disabled row (or virtual rows in place of the
   cap).
 - **Tab menus:** the drawer's 16 tabs wrap to two rows in its width today and scroll with faded
   edges here (no `wrap` option: p806 decides); a scene tab's class has no per-tab form, its name

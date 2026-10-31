@@ -1654,6 +1654,103 @@ grid stacking fix after it):
      screenshots unchanged).
 2. **Ray tester and ray cast, assets:** the ray tester's UI and `RayDebug.scss`; the assets tab
    and its info window (the tables on `createTable`).
+
+   As built (2026-10-31):
+
+   - **The split** (D11; both p800 headers gone, every file under 440 lines and every function
+     under 150; `grep -rln "which p800 replaces" src` leaves the material editor and the
+     character state window). The loaders are unchanged (`AssetsAPI.ts` loads `_dbg__Assets.ts`,
+     the Ray cast tab imports `_dbg__RayTester.ts`).
+     - Ray tester: `_dbg__RayTester.ts` (the windows, their content, the results, the
+       registration), `_dbg__RayTesterState.ts` (the params' types and defaults, each kind's state
+       per scene, the last fire's `testerResults`, the per-scene LS and its clear),
+       `_dbg__RayTesterFire.ts` (the aim, both kinds' casts, the hits as data, the scene targets,
+       `dropPhysicsFiresInFlight` for the scene enter), `_dbg__RayTesterPick.ts` (the mouse pick,
+       its status through a listener the window sets), `_dbg__RayTesterItems.ts` (the pane's
+       items). The unused `getEntityIdForObject3D` export is module-private now.
+     - Assets: `_dbg__Assets.ts` (the tab), `_dbg__AssetsState.ts` (the ids, the scope, the info
+       windows' folder states), `_dbg__AssetsData.ts` (the declarations, the rows and scope, the
+       load report's and the pipeline's descriptions as text), `_dbg__AssetInfoWindow.ts` (the
+       window, its kind registered at its load as before), `_dbg__AssetInfoParts.ts` (the items
+       both kinds share), `_dbg__TextureInfoItems.ts`, `_dbg__GeometryInfoItems.ts`.
+   - **The ray tester window** (D10): the toolbar's text muted beside its (kit) clear button; the
+     notice a box in the warning's soft tint with a 3 px edge (the text says it) and a kit "Show
+     helpers" button (`hidden` while the helpers show); the pick status a `role="status"`
+     paragraph kept rendered while empty (its gap cancelled: `display: none` would take it out of
+     the tree, and the armed pick might not be read). The pane is still the builder's (D4), now
+     with the fields' context menu over it, as the windows' grids. Results: per ray a "Ray" line,
+     its error in the danger colour, its hits a kit list ("Hits" and its count; each row a title
+     and a `<dl>` of its fields, set as text; a "Copy this hit as JSON" action, so one tab stop
+     with the arrows), at most 20 with "+N more hits not listed" after it. Fire isn't `primary`
+     (D8: the accent marks the current tab, the selection, a pressed tool and the focus).
+   - **The Ray cast tab:** one pane (the testers' buttons, then each kind's helper folder, its
+     statistics' toggle and a stats folder: "Three.js ray stats" / "Physics ray stats", ids
+     `threeRayStats` / `physicsRayStats`). A counter is a `createTable` (a custom item): "Figure"
+     (the row header, a window's decorative donut before its name: "Average, last 3 s") and
+     "Value", written with `setCell` by the custom item's refresh (the tab's `onRefresh` at 200
+     ms), dimmed with "-" while its statistics are off (`data-inactive`). The physics folder holds
+     "Rays" and "Shape casts" (captions shown) and "Pending worker queries" (a refresh-only
+     monitor, hidden off `WORKER_THREAD`), or a note without a world. The module-level
+     `statsBlocks` / `pendingQueriesView` went. `RayDebug.scss` → `RayDebug.module.scss` on the
+     tokens.
+   - **The Assets tab:** the heading's HTML (its count and scope button, `--aek-rem` inline) went:
+     the scope is a "List" segmented control ("This scene" / "All loaded") in the pane, with a
+     note of what "This scene" leaves out ("3 loaded assets not in this scene …"; `getNoteItem`'s
+     empty text hides it now), and the list's heading is "Assets" with its count. The Asset
+     loading folder's text areas are folders of one-line monitors (p806 Phase 4 section 1's
+     reason): "Resolved (this page load)" (GLTF, Textures, LOD chains, Files) and "Assets worker"
+     (Status, Requests, Fallbacks, Last fallback, Capabilities joined by commas), read at the
+     build too (5.x showed them empty until the first refresh).
+   - **The info window** (`createDebugWindowGrid`): "Log to the console" first (5.x's icon at the
+     top right), the info rows, then a folder per 5.x section (`texture`, `textureArray`,
+     `textureAtlas`, `preview`, `pipeline`, `import`, `geometry`, `lodChain`, `customProps`), their
+     open states shared by every info window in `AEK_debugAssetsUI`'s new `infoFolders`, beside
+     the tab's `folders` and `scope`.
+     - The tables: `createTable`, static, captioned "Layers" (#, the layer or member as the row
+       header, "Source (JSON)" hidden without sources) and "Cells" (the cell as the row header,
+       At, Size, UV rect, "Data" hidden when no cell has data: 5.x's sub-row under the cell).
+     - The file size and the unique edges: a button item in the row ("Measure (HEAD request)",
+       "Compute") until pressed, then a monitor in its place. The LOD chain: its rows and
+       Generate / Generate (permissive) / Release chain (`danger`) button items, disabled while
+       pending, the window rebuilt at the start and the end as 5.x did. The raw custom props a
+       multiline monitor (6 rows); the warnings an info row (5.x's warning colour went). Labels
+       cut at the window's 40 % column are shorter ("Load time (import)", "Loaded import size",
+       "Edge instances" with "(3 × triangles)" in the value, "Welded vertices"). An unloaded
+       asset's window is a note.
+     - The preview: "Level" a select item in the Preview folder, each option the level's size
+       (5.x's buttons' tooltips; 9 segments didn't fit the control column), "Cell rects" a
+       checkbox item, the images a custom item; a readback after the window closed writes
+       nothing. **Found:** a kit field made inside a custom item takes the grid's subgrid rules
+       (`.aekPropertyGrid :where(.aekField)`) and loses its label, so a field goes in as an item
+       (`ui/CLAUDE.md`'s grid items say so).
+     - `Assets.module.scss` on the tokens: the table styles went; the checkerboard is the colour
+       field's (`border-strong` over `surface`); the cell rects keep their cyan and magenta
+       (the scene draws them so: D1's 3D colours, not a role).
+   - **Tests:** `_dbg__RayTester.test.ts` 4 (the saved params merged over the defaults, the
+     scene and the notice with its button, a fire's list capped at 20 with a row's fields and its
+     copy, a pick's status, its click saved and Escape), `_dbg__Raycast.test.ts` 2 (a counter's
+     table dimmed and written by the refresh, its donut; no physics world), `_dbg__Assets.test.ts`
+     4 (the 5.x UI key's scope read and written beside its folders with the note, a geometry's
+     rows with its unique edges and Generate, an array's layers table and the Level select, an
+     unloaded asset), on `KitDom`.
+   - **Shots** (`.cache/p806/phase4s2.mts`, scratch: the Ray cast and Assets tabs with every
+     folder open, both testers fired, asset windows in `testDebugScene`, `textureAtlases`,
+     `textureArrays` and `lodShowcase`, an atlas slot and an array among them;
+     `.cache/p806/phase4-s2/before/` and `after/`).
+   - **Hub:** the dev library's parity boxes name the new lines (`_dbg__Assets.ts:278`,
+     `_dbg__Raycast.ts:266`, `_dbg__RayTesterItems.ts:116` and `:141`,
+     `_dbg__TextureInfoItems.ts:130` and `:209`), and its debugger lists and donut notes say
+     what the tab shows now.
+   - **The `debugger` configuration** (`testDebugScene`, `thirdPersonGymScene`): the Assets and
+     Ray cast tabs' shots changed in both, and the asset window's and both ray testers' in
+     `testDebugScene`, as did the GPU memory tab's peak rows (p807's live figures, as in section
+     1). The first run found 6 `color-contrast` on the Ray cast tab: its tables were dimmed with
+     `opacity: 0.5` while their statistics are off (the default); their cells take the muted text
+     instead (5.x's `.inactive` opacity). Recorded on purpose (`--only
+     testDebugScene,thirdPersonGymScene --update`), then a plain run passes. Axe: 0 on the two tabs
+     and the three windows (each ray tester's 1 `color-contrast`, 5.x's notice text, went).
+   - **Checks:** `yarn test` (2226), both `tsc`, ESLint, the docs ratchet (unchanged),
+     `yarn hub:build`.
 3. **The character state window** (D10; D1's escape hatch if it runs long).
 
 ### Phase 5: dialogs and the last styles
