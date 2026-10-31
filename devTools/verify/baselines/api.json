@@ -3220,6 +3220,13 @@
       "AngleDialProps": "TypeAlias",
       "createAngleDial": "Function"
     },
+    "src/_engine/ui/forms/binding/AncestorReads.ts": {
+      "beginAncestorPass": "Function",
+      "clearAncestorReads": "Function",
+      "endAncestorPass": "Function",
+      "isInDisabledFieldset": "Function",
+      "isInHiddenAncestor": "Function"
+    },
     "src/_engine/ui/forms/binding/Binding.ts": {
       "Binding": "TypeAlias",
       "BindingChange": "TypeAlias",

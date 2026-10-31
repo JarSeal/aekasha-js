@@ -15,6 +15,11 @@ import {
   type ReadonlyBindingSource,
 } from './binding/Binding';
 import {
+  clearAncestorReads,
+  isInDisabledFieldset,
+  isInHiddenAncestor,
+} from './binding/AncestorReads';
+import {
   addScheduledBinding,
   createFlash,
   getPageScheduler,
@@ -401,6 +406,8 @@ const fieldsetReads = new WeakMap<Element, () => void>();
  * @internal
  */
 export const readFieldsetDisabled = (root: Element) => {
+  // Its `disabled` changed, or its fields did: a pass's kept answer may be stale
+  clearAncestorReads();
   for (const elem of root.querySelectorAll('.aekField')) fieldsetReads.get(elem)?.();
 };
 
@@ -595,12 +602,9 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     setAttrIf(resetButton.cmp.elem, 'hidden', isDefault);
   };
 
-  /** The browser's `:disabled` of a fieldset: its `disabled` attribute */
-  const isInDisabledFieldset = () => Boolean(root.parentElement?.closest('fieldset[disabled]'));
-
   const applyDisabled = (own: boolean) => {
     isOwnDisabled = own;
-    const on = own || isInDisabledFieldset();
+    const on = own || isInDisabledFieldset(root);
     if (on === isDisabled) return;
     isDisabled = on;
     setAttrIf(root, 'data-disabled', on);
@@ -615,6 +619,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     if (on === isHidden) return;
     isHidden = on;
     setAttrIf(root, 'hidden', on);
+    clearAncestorReads();
     // Read once when it shows: it wasn't read while hidden
     if (!on) read(false);
   };
@@ -719,7 +724,8 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   const entry = {
     read,
     readState,
-    isShown: () => root.isConnected && !root.closest('[hidden]'),
+    // The pass's ancestor read: the fields of one folder share it
+    isShown: () => root.isConnected && !root.hasAttribute('hidden') && !isInHiddenAncestor(root),
     interval: tickInterval,
   };
   // A live field with nothing to read it shares the page's tick; a held value has nothing to read

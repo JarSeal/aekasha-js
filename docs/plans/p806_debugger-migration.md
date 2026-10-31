@@ -1999,6 +1999,68 @@ grid stacking fix after it):
     parity" box keeps p807's rows only) are Hub content, done with D15.
 
 - The perf-auditor agent's pass against Phase 0's figures (D13); the debug chunks measured again.
+
+  As built (2026-10-31):
+
+  - **The measures** (`.cache/p806/measure.mts`, its selectors moved to the kit's drawer: the
+    rail's `role="tab"` buttons by their hidden names, the list rows' main cells, "Close the
+    debugger"; Phase 0's copy is `measure-phase0.mts`; figures in `measures-after-quiet.json`,
+    `measures-after.json`, `measures-after-fix.json`). Main-thread ms per second, three 10 s
+    windows each, Phase 0 (Tweakpane) → Phase 6 (kit):
+    - Quiet idle: 57, 51, 56 → 62, 59, 52.
+    - Quiet, the sun's Lights window: 48, 46, 60 → 53, 54, 66. Its fields have no interval, so
+      no tick runs: nothing per frame.
+    - Quiet, the Physics API tab: 57, 63, 58 (style 0.6) → 55, 65, 57 (style 0: Tweakpane's
+      monitors ran their own `setInterval`).
+    - Gym idle: 160, 144, 144 → 146, 147, 144.
+    - Gym, the character state window: 167, 156, 171 (+15 over idle; loop CPU +0.03 ms) → 200,
+      169, 210 (+46; loop CPU +0.2 ms), a regression; after the fix below 165, 180, 143 against
+      idle's 146, 177, 138 in the same run (loop CPU +0.03 ms), within the noise. That run was
+      at 132 Hz (the display); each comparison is within its run.
+  - **The character state window's regression** (Phase 4 section 3's 0.12 ms against 5.x's
+    0.016): a CPU profile (`.cache/p806/charProfile.mts`, scratch) put the window at 15 ms/s, of
+    it `closest()` 7.8: every field walked to the document root twice a refresh, `isShown`'s
+    `[hidden]` and `readState`'s `fieldset[disabled]`; the reads themselves 2. **The fix is the
+    kit's** (`ui/forms/binding/AncestorReads.ts`, `@internal`): each loop of the scheduler (a
+    `refresh()`, a tick, a reveal) is an ancestor pass, in which the last parent's two answers
+    are kept, so the fields of one folder share one walk; a kit write of a `hidden` (a field's,
+    a folder's) or a fieldset's `disabled` (`readFieldsetDisabled`) clears them, and outside a
+    pass every read walks as before. `closest()` went 7.8 → 1.1 ms/s, the window 15.2 → 12.5 in
+    the profile. It also takes care of the auditor's first finding: a stale entry's `isShown` in
+    the tick (walked every frame so it's read on the first frame it shows, which stays) is one
+    walk per folder. `AncestorReads.test.ts` (5); `ui/CLAUDE.md`'s scheduler line and test list.
+  - **The perf-auditor's other findings, not changed:** the character window's default interval
+    (0, every frame) is 5.x's; the Physics tab's 500 ms poll allocates per body
+    (`getPhysicsEntitiesListData`, `refreshTiersReadout` with its folder shut) as 5.x's did; a
+    monitor builds its text only when the value changed (p805 §4's second note: no change
+    needed); the character window's `OTHER` rows' `JSON.stringify` and vector text, and the
+    light window's managed colour string, are a few strings a frame. Candidates for p807's
+    pass, which reworks the live figures.
+  - **Each tab's build** (median of three, the gym; ms: the click, to the next frame), Phase 0 →
+    Phase 6: Sky box 25.3 / 42.8 → 35.9 / 45.2, Physics API 11.0 / 23.0 → 12.7 / 16.6, Ray cast
+    5.4 / 13.9 → 11.7 / 14.9, LOD 3.4 / 8.5 → 7.5 / 10.5, Assets 3.0 / 10.4 → 8.8 / 11.6, Spatial
+    index 4.5 / 10.8 → 6.5 / 8.6, Debug tools 5.9 / 9.5 → 6.4 / 8.1, the other eight 0.8-1.7 /
+    5.0-8.4 → 2.9-4.3 / 5.0-6.9. The kit builds its DOM in the click, where Tweakpane left more
+    to the frame: the click is longer, to the frame (what a user waits) about the same, the sky
+    box tab 2.4 ms longer. The drawer's open: the click 1.0-1.2 → 2.6-3.1 ms, to the frame
+    3.5-6.0 → 5.7.
+  - **The debug chunks** (`yarn build:test`, `.cache/p806/debugChunks.mts`, scratch; figures in
+    `debugChunks-after.json`), Phase 0 → Phase 6: the lazy JS chunks with debug code 49, 638.7
+    kB, 221.5 kB gzip → 53, 510.3 kB, **204.2 kB gzip** (17.3 kB gzip less, about 8 %); their CSS
+    12 files, 51.3 kB, 12.6 kB gzip → 14, 38.0, 10.9; Tweakpane's chunk (148.6 kB, 30.5 gzip)
+    gone; the debug modules 484.2 → 503.4 kB minified, the thin wrappers in the first download
+    16.7 → 17.5; stats-gl 33.2 → 34.0 (p807's); the kit inside the debug chunks 2.8 → 4.0. The
+    largest, gzip: `_dbg__Profiler` 15.8, `_dbg__MaterialEditor` 15.5, `_dbg__Character` 14.9,
+    `_dbg__SkyBox` 13.3, `_dbg__Stats` 10.9, `_dbg__Assets` 10.3.
+  - **Production** (D13): `yarn sbp --profile all` every budget within, first downloads app
+    384.4, banner 287.4, uiKit 286.6 kB gzip (Phase 5's). `yarn verify:baselines`: no debug code;
+    the `BindingScheduler` chunk 0.2 kB gzip larger in the app and the uiKit embed (the pass), and
+    the new module's five `@internal` functions in `api.json`: recorded with `--update`.
+  - **Checks:** `yarn test` (2246), both `tsc`, ESLint, the docs ratchet (the new module 100 %
+    documented, recorded), `yarn verify:ui` (every state and script), the `debugger`
+    configuration (all six scenes: shots, axe, the tab order, the undo / redo scripts).
+    `devTools/hub/buildGuard.test.ts` failed once while `yarn sbp` built beside it (both write
+    the build folders) and passes alone.
 - The before and after shots side by side for the changelog and a last review.
 - Every scene runner baseline updated on purpose.
 
