@@ -1,7 +1,8 @@
 /**
  * The dev page's "Debugger parity" box's tables (p805 D14): one `createTable` per table of p805
- * §4.1's census (the profiler's, GPU memory's and the assets info window's), each with the census
- * row's source line and what its port takes that isn't a rename. Out of `parity.ts` for its size.
+ * §4.1's census that p807 ports (the profiler's and GPU memory's; p806 ported the assets info
+ * window's), each with the census row's source line and what its port takes that isn't a rename.
+ * Out of `parity.ts` for its size.
  */
 import {
   CMP,
@@ -667,52 +668,6 @@ export const buildGpuMemoryTables = (parent: HTMLElement, live: ParityLive) => {
         },
       ],
       rows: ASSET_DIFF,
-    }).cmp
-  );
-};
-
-// --- The assets info window ---
-
-/** The assets info window's `table()` helper, twice: a texture array's layers, an atlas's cells */
-export const buildAssetTables = (parent: HTMLElement) => {
-  addTableRow(
-    parent,
-    '_dbg__TextureInfoItems.ts:130',
-    'a texture array’s layers: a rename, built with the window',
-    createTable<{ id: string; layer: string; source: string }>({
-      caption: 'Layers',
-      columns: [
-        { key: 'id', label: '#', width: 32 },
-        { key: 'layer', label: 'Layer', rowHeader: true },
-        { key: 'source', label: 'Source' },
-      ],
-      rows: ['grass', 'dirt', 'rock', 'snow'].map((layer, i) => ({
-        id: String(i),
-        layer,
-        source: `textures/terrain/${layer}.ktx2`,
-      })),
-      getKey: (row) => row.id,
-    }).cmp
-  );
-
-  addTableRow(
-    parent,
-    ':209',
-    'an atlas’s cells: a rename',
-    createTable<{ id: string; at: string; size: string; uv: string }>({
-      caption: 'Cells',
-      columns: [
-        { key: 'id', label: 'Cell', rowHeader: true },
-        { key: 'at', label: 'At' },
-        { key: 'size', label: 'Size' },
-        { key: 'uv', label: 'UV rect' },
-      ],
-      rows: ['pine', 'oak', 'birch'].map((id, i) => ({
-        id,
-        at: `${i * 256}, 0`,
-        size: '256 × 512',
-        uv: `${(i / 4).toFixed(2)}, 0, ${((i + 1) / 4).toFixed(2)}, 1`,
-      })),
     }).cmp
   );
 };

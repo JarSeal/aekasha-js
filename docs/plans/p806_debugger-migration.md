@@ -2152,6 +2152,37 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
    degrees), and **the dev library** (D14's `verify:ui` lines, moved here from Phase 6 section
    1): the "Tweakpane parity" box goes (`_library/containers.ts`), the "Debugger parity" box
    (`_library/parity.ts`) keeps p807's rows only; `yarn verify:ui`.
+
+   As built (2026-11-01):
+
+   - **The migration page** is the migration guide's new slot `engine-6` (the guide is one page
+     with a section per major, `engine-6.md` before `engine-5.md`), titled "Engine 5 → 6" under an
+     "In progress" note (p622 adds the deprecations' removals). "The debugger on the UI kit": what
+     stays (the functions, `DebuggerTabDef`'s fields, the sections and the item types' names, the
+     5.x LS loading), D3's table (the list keys' row moved to the next part; `view: 'color'`'s row
+     says `color: { type: 'float' }` goes, §4.1's second note), a before / after example
+     (`kind: 'color'`, `onCreate(field)`, `e.prev` on `last`, `custom.build(container)`), and that
+     `interval: 0` and `view: 'graph'` keep working. "What reads differently": §4.1's monitors (On
+     / Off, an option's label), rotations in degrees, a list's one tab stop, the debugger's keys
+     (D12), disabled during a scene load (D7), the look and the theme setting, restyling through
+     the tokens on `[data-aek-debugger]`. "New in a tab": `ctx.scheduler`, `keepOnSceneChange`,
+     the label width. The intro's "next section" paragraph and the page's tags follow.
+   - **The Tweakpane parity box** went: its demo in `_library/containers.ts` (and the two imports
+     only it used), its slot and box in the dev library's `index.html`,
+     `property-grid-parity-text.md`, its `.hubDemoParityCustom` rule. The property grid's dev
+     note says it went.
+   - **The Debugger parity box** keeps the profiler's 4 tables, GPU memory's 9, the budget bar,
+     the "over time" sparklines and the component types' list (the Objects tab's, p807's). Gone:
+     the debugger lists, the tab menus, the ray cast pie (the drawer's, ported) and the assets
+     info window's two tables (`buildAssetTables`, ported in Phase 4), with the lists' `Item`
+     type and helpers (the component types' list builds its parts itself) and the assets
+     heading's `.hubDemoParityHeader` rule. Its text is rewritten for p807 (13 tables in 3
+     files).
+   - **Checks:** both modules lint and `tsc -p hub` clean; `yarn hub:build` in both modes (101 /
+     108 pages, no warnings); `yarn verify:ui` (every box, 285 s: neither parity box is on the
+     public page); the dev page in Chromium (scratch `.cache/p806/parityBox.mts`: three
+     sections, 13 tables, the live run on, no console errors, no `propertyGridParity` box; the
+     shot in `.cache/p806/phase7-s2/`).
 3. **`CLAUDE.md` files and the readme** (D15): the root's Debug system ("Tweakpane-based", "The
    actual Tweakpane implementations"), `debug/CLAUDE.md`, `ui/CLAUDE.md`'s remaining "until
    p806" lines, `devTools/verify/CLAUDE.md`, an `aek:covers` for any new `##` section; the
