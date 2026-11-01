@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -1961,7 +1961,7 @@ grid stacking fix after it):
      (no debug code; the production `DialogWindow.css` and the uiKit embed's CSS 0.2 kB gzip
      smaller, the banner's 62 B: recorded with `--update`), `largeWorld` under `mainThread`.
 
-### Phase 6: verification
+### Phase 6: verification — done
 
 - The `debugger` configuration with axe failing on any violation; every undo / redo script.
 
@@ -2094,9 +2094,40 @@ grid stacking fix after it):
     the key shortcuts dialog (the key caps) and the material editor's drawer.
 - Every scene runner baseline updated on purpose.
 
+  As built (2026-10-31):
+
+  - **Before:** a plain `yarn verify:scenes --config all` (26 scenes × `workerSab`, `workerMsg`,
+    `mainThread`, `prodTest`, and `debugger` on its six): 110 passed against the baselines as
+    they were, the four simulation configurations' from Phase 0 (`a0d3ced2`, `main`'s app), the
+    `debugger` configuration's from Phase 5's working trees (`b4f57be3+dirty`,
+    `d156ca46+dirty`, with the old axe counts). Two warnings, both allowed: `assetCompare`'s
+    unstable shot (its rows in load order) and `space`'s worker hashes (`unstableHash`).
+  - **Recorded:** `--config all --update`, 110 runs on `7569c8d4` (the branch, clean); the
+    baseline's axe counts are 0 everywhere.
+  - **After:** a plain run, 110 passed, the same two allowed warnings (this time `space`'s
+    `workerSab` hash differed, its `workerMsg` didn't: the worker targets' race, as the reason
+    says). 687 s, WebGPU in the Windows Chrome 155.
+
 ### Phase 7: the Hub, the example, `CLAUDE.md`, readme
 
-D15. `yarn hub:build` in both modes.
+D15. `yarn hub:build` in both modes. Its parts, for a section each:
+
+1. **The debug suite's guide and the example** (D15's Hub lines): the guide rewritten ("Write
+   your own tab" with the kit's names, `ctx.scheduler`, "Kit components in a tab"; the Tweakpane
+   note and the `tweakpane` tags gone), the debug tab example on `kind: 'color'` with a CMP
+   section of kit fields on `ctx.scheduler` (its regions keep their names), the forms guide's
+   "the debugger still uses Tweakpane" lines gone, the design document's debugger density and
+   theme.
+2. **The migration page** `documentation/migration/engine-6.md` with D3's table and §4.1's
+   behaviour changes (a boolean monitor's "On" / "Off", an option's label, rotations in
+   degrees), and **the dev library** (D14's `verify:ui` lines, moved here from Phase 6 section
+   1): the "Tweakpane parity" box goes (`_library/containers.ts`), the "Debugger parity" box
+   (`_library/parity.ts`) keeps p807's rows only; `yarn verify:ui`.
+3. **`CLAUDE.md` files and the readme** (D15): the root's Debug system ("Tweakpane-based", "The
+   actual Tweakpane implementations"), `debug/CLAUDE.md`, `ui/CLAUDE.md`'s remaining "until
+   p806" lines, `devTools/verify/CLAUDE.md`, an `aek:covers` for any new `##` section; the
+   readme's :71 (the drawer on the UI kit) and :479's credits (Tweakpane out; stats-gl stays).
+   Phase 6's figures for Phase 8's changelog are in its "As built".
 
 ### Phase 8: done
 
