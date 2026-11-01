@@ -2,7 +2,7 @@ Status: draft | not-implemented
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Blocked by: p372_mesh-merge-groups.md
-Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), \_DONE_p094_refactor-draggable-windows-and-dialogs.md, p800_debugger-ui-overhaul.md (its p806 rebuilds the debug panels on the UI kit)
+Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), \_DONE_p094_refactor-draggable-windows-and-dialogs.md, p800_debugger-ui-overhaul.md and \_DONE_p806_debugger-migration.md (the debug panels are on the UI kit: a tab's pane is a property grid, an edit window a `createDebugWindowGrid`)
 
 # Merge Debugging & Member Editing
 

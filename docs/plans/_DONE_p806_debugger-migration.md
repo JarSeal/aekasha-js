@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: implemented (Phases 0-8)
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -2212,7 +2212,7 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
    - **Checks:** `yarn hub:build` in both modes (101 / 108 pages, no warnings; the coverage check
      reads the CLAUDE.md files), Prettier on the readme.
 
-### Phase 8: done
+### Phase 8: done — done
 
 - `CHANGELOG.md`'s unreleased `engine-6` entry: p806's Engine (the breaks with D3's table, the new
   fields, the look, the sizes), App (the ported debug modules) and Project (the scene runner's
@@ -2243,6 +2243,36 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
   - p800's Blocks line and §5 entry;
   - `_DONE_p805`'s, `_DONE_p804`'s, `_DONE_p803`'s and `_DONE_p801`'s Blocks / Related lines;
   - p622's Related line, p150's and p373's.
+
+  As built (2026-11-01):
+
+  - **This plan:** `implemented (Phases 0-8)`, Phase 8's heading `— done`, `git mv` to
+    `_DONE_p806_debugger-migration.md`.
+  - **p800:** its Blocks line (and "p801 … p806 done"); §5's p806 entry is "Done:" with what the
+    later plans build on (the tab contract, the pieces, the checks, p807's pointers, the size),
+    the sketch kept under it as p805's is; §6's table row and its last paragraph say `engine-6`
+    was cut in this plan's Phase 0 and p622 is still a stub; §7's p622, p150 / p373 and issue
+    lines are in the past tense, the second issue file named.
+  - **The `_DONE_` plans:** p801's, p803's, p804's and p805's Blocks lines (none named it in
+    Related).
+  - **p622:** its Related line names this plan (D3, the migration guide's section and the
+    changelog entry it extends); its body's p800-break item says what p806 did and what the
+    major adds (its removals in both, the note dropped, the entry dated with the bumps), and the
+    `uiIcon` / `smallIcon` item that no style reads them.
+  - **p150 and p373:** their Related lines name this plan and the pieces they build on (p150:
+    `createDebugWindowGrid`, `getInfoRowItem`, the camera and light window and state modules).
+    p150's body is older than p608 (`core/Debug/…` paths, "Tweakpane-based"), left for its own
+    Phase 0.
+  - **The `CLAUDE.md` files** named the plan by number only, and none as future work: unchanged.
+  - **`yarn checkVersions --against main`** fails as D2 expects (engine 184 and app 2 files
+    changed, versions 5.14.0 and 1.18.0): this PR goes into `engine-6`, and the bump is the
+    `engine-6` → `main` merge's.
+  - **Checks:** no file names `p806_debugger-migration.md` but this one's new name; Prettier on
+    p800 (its §6 table realigned), p622, p373 (p150, the `_DONE_` plans and this one were off
+    before, in lines not touched here); `yarn hub:build` (101 pages) and the dev mode
+    (`.cache/p806/hubDev.mts`, 108), no Hub warnings (Vite's dynamic import note on
+    `GraphMonitor.ts` in the dev build's script is p805's `view: 'graph'` loader, beside the
+    entry's static export).
 - **Time for the PR:** `p806-debugger-migration` → `engine-6` (p800 §6).
 
 ---
