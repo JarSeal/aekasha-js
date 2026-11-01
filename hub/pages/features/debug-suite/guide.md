@@ -13,8 +13,14 @@ Next to either, `?startScene=<scene id>` picks the first scene.
 
 `h` opens the drawer. Its tabs cover the engine: stats, the main loop, the sky box, the debug
 tools, physics, the renderer, assets, PostFX, ray casting, lights, cameras, characters, the ECS,
-the spatial index and levels of detail. The drawer remembers its tab and each tab's settings in
-localStorage.
+the spatial index and levels of detail. The drawer remembers its tab, its width and each tab's
+settings in localStorage.
+
+The debugger is built from the [UI kit](hub:features/ui-kit) in its compact density, and is dark
+by default. `AppConfig.debugDrawer.theme` in `src/CONFIG.ts` sets `'light'`, or `'app'` to follow
+your app's theme (its kit root's, else the system's); the Debug tools tab's "Debugger theme"
+changes it for your browser. Its keys are its own: a key pressed on a debugger control never
+reaches your app's action maps or key bindings.
 
 From the drawer, an entity opens in an edit window: lights, cameras, ECS worlds, PostFX passes,
 physics entities, assets and characters. Several can be open at once, and they're kept over
@@ -29,8 +35,7 @@ of them in one scene.
 ### Load it only in debug builds
 
 Put your debug code in a module whose name starts with `_dbg__`, and load it only in the debug
-env. A production build then never loads the module, so neither your tab nor the Tweakpane it
-uses ships:
+env. A production build then never loads the module, so none of your tab's code ships:
 
 ```ts
 import { IS_DEBUG_ENV } from 'aekasha';
@@ -53,19 +58,52 @@ load.
 sections. A section is a pane of controls (`{ pane: true, content: [...] }`), a list, or any CMP
 from the [UI kit](hub:features/ui-kit).
 
-A pane's items are bindings (an input bound to a property), folders, buttons, separators and a
-`custom` item for anything else. A binding's `hidden` and `disabled` can be functions, read again
-on every refresh. Creating a tab with an id that's already taken replaces the tab.
+A pane is a [property grid](hub:features/ui-kit/forms#property-grids) described as data. Its
+items are the UI kit's [property grid items](hub:features/ui-kit/forms/binding#panels-as-data):
+bindings (a field bound to a property), folders, buttons, separators and a `custom` item for
+anything else.
 
-You can create a tab at any time: one created before the drawer has loaded (in a feature's
-`install`) is added when it loads.
+```ts
+createDebuggerTab({
+  id: 'enemies',
+  title: 'Enemies',
+  icon: 'personArmsUp',
+  state: enemySettings,
+  content: () => [
+    {
+      pane: true,
+      content: [
+        { key: 'speed', label: 'Speed', min: 0, max: 10, step: 0.1 },
+        { key: 'tint', label: 'Tint', kind: 'color' },
+        {
+          type: 'folder',
+          title: 'Spawning',
+          content: [
+            { key: 'spawnOn', label: 'Spawn' },
+            { type: 'button', title: 'Spawn one now', onClick: spawnEnemy },
+          ],
+        },
+      ],
+    },
+  ],
+});
+```
 
-::: note Tweakpane
-The panes are built with [Tweakpane](https://tweakpane.github.io/docs/): a binding passes its
-other fields (`min`, `max`, `step`, `options`, `view`, …) to Tweakpane's `addBinding`, and
-`onCreate` and `custom` items get Tweakpane's own objects. A later engine major replaces
-Tweakpane, and these fields change with it.
-:::
+- A binding takes the kit field's props: `min`, `max`, `step`, `options`, `readonly`, `format`,
+  `interval`, `kind`, … ([`DebuggerPaneBindingProps`](api:DebuggerPaneBindingProps)). One the kit
+  doesn't take is a type error, and at run time the tab's error line names it.
+- Without `kind`, the field is inferred from the value: a number with `min` and `max` is a
+  slider, a boolean a checkbox, a `THREE.Euler` a rotation field in degrees. A 24-bit colour
+  number says `kind: 'color'`.
+- `readonly: true` makes a monitor, read every `interval` ms (default 200) while the tab shows.
+  In a pane `interval: 0` reads it only when the tab refreshes (the kit's `'refresh'`).
+- A binding without a `label` is named by its key.
+- `hidden` and `disabled` can be functions, read again on every refresh.
+- `onCreate(field)` gets the field's handle, and a `custom` item's `build(container)` a CMP across
+  both columns; the function `build` returns runs on every refresh.
+
+Creating a tab with an id that's already taken replaces the tab. You can create a tab at any
+time: one created before the drawer has loaded (in a feature's `install`) is added when it loads.
 
 ### State and persistence
 
@@ -79,10 +117,11 @@ say), which is never saved.
   is ever saved.
 - `lsKey` also gives the heading a button that clears the saved values; `onClearLS` then puts
   your state back to its defaults.
-- Folder open states are saved under `uiLsKey` (by default `lsKey` + `UI`).
+- Folder open states and the label column's width are saved under `uiLsKey` (by default
+  `lsKey` + `UI`).
 - A binding's `onChange` runs on user input only, never when a saved value is loaded or the tab
-  refreshes, with the value before the change (`e.prev`) and whether a drag has ended
-  (`e.last`).
+  refreshes. It runs on each step of a drag with `e.last` false, then once with `e.last` true
+  and `e.prev` the value before the drag.
 - A value you change from code (an undo, a reset) isn't saved by itself:
   [`persistDebuggerTabValue`](api:persistDebuggerTabValue) saves one key.
 
@@ -101,8 +140,36 @@ say), which is never saved.
   needs there. Closing the drawer only pauses the refreshes.
 
 The open tab is built again on every scene change, so a tab that lists the scene's objects
-always shows the current scene's. A `content` or `onRefresh` that throws is logged and shows an
-error line in the tab; the drawer and the scene load go on.
+always shows the current scene's. With `keepOnSceneChange: true` it stays as it is (its scroll,
+open folders and focus) and refreshes instead, after `onSceneChange`: for a tab that reads the
+scene through functions. A `content` or `onRefresh` that throws is logged and shows an error line
+in the tab; the drawer and the scene load go on.
+
+### Kit components in a tab
+
+A section can be any CMP, so a tab can hold the UI kit's own pieces: a folder of fields, a
+[segmented control](hub:features/ui-kit/forms#radio-groups-and-segmented-controls), a
+[table](hub:features/ui-kit/data#tables). `content` gets the tab's refresh scheduler,
+`ctx.scheduler`: give it to your fields (and lists and tables), and they refresh with the tab's
+panes, on `refreshIntervalMs` and `updateDebuggerTab`, and stop while the tab isn't visible.
+
+```ts
+content: (ctx) => [
+  { pane: true, content: [{ key: 'speed', label: 'Speed', min: 0, max: 10 }] },
+  createFolder({
+    title: 'Wave',
+    scheduler: ctx.scheduler,
+    children: [
+      createSlider({ target: wave, key: 'size', label: 'Size', min: 1, max: 50, step: 1 }),
+      createMonitor({ get: getAliveCount, label: 'Alive', interval: 'refresh' }),
+    ],
+  }).cmp,
+],
+```
+
+A kit field isn't one of the tab's bindings, so `persistKeys` doesn't save it: save its key with
+[`persistDebuggerTabValue`](api:persistDebuggerTabValue) when `e.last` is true. The
+[debug tab example](hub:examples/debug-tab#kit-components-in-the-tab) does it.
 
 ### Lists
 

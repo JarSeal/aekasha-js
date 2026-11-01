@@ -2118,6 +2118,35 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
    section of kit fields on `ctx.scheduler` (its regions keep their names), the forms guide's
    "the debugger still uses Tweakpane" lines gone, the design document's debugger density and
    theme.
+
+   As built (2026-11-01):
+
+   - **The example** already used `kind: 'color'` (Phase 1's port). Its CMP section is a new
+     region, `debug-tab-kit`: a kit `createFolder` "Ring" on `ctx.scheduler` with a `createSlider`
+     (the ring's radius, a new `boxSettings.radius`, default 4, so the scene's snapshot is
+     unchanged) and a `createMonitor` of the boxes' spacing with `interval: 'refresh'`. The
+     slider persists (`persistDebuggerTabValue`, `radius` in `persistKeys`) and records undo at
+     `e.last` with the kit's `prev`; the undo handler takes the third key. The other regions keep
+     their names. Its fields stand alone (label over control), not in the pane's label column.
+   - **The walkthrough** gets "Kit components in the tab" (the region and three notes) and a note
+     that the pane's items are the kit's property grid items; the Tweakpane line goes.
+   - **The guide:** the drawer's paragraph gains the kit, the compact density, the theme setting
+     and the debugger's keys; "A tab" describes a pane as a property grid with an example and the
+     binding rules (the kit's props, an unknown one's type error and error line, inference,
+     `kind: 'color'`, monitors and `interval: 0` as `'refresh'`, a label from the key, `onCreate`,
+     `custom.build`); `onChange`'s `last` / `prev`, `uiLsKey`'s label width, `keepOnSceneChange`;
+     a new "Kit components in a tab" with `ctx.scheduler` and saving a kit field's key. The
+     Tweakpane note and both pages' `tweakpane` tags go.
+   - **The binding guide's** last lines point at the debug tabs' items and the new section.
+   - **The design document:** colours (the debugger dark by default, its theme setting, the
+     toaster following the system), type (compact on every debugger root but the toaster), space
+     (the 24 px target sets a compact row's pitch, Phase 0's 27 / 28.4 px), and the intro's "keep
+     their look until then".
+   - **Checks:** `yarn hub:build` in both modes (public 101 pages, dev 108 through a scratch
+     `.cache/p806/hubDev.mts`, `buildHub({ mode: 'dev' })`), no warnings; `yarn test` (2246); the
+     `debugger` configuration on `exampleDebugTab`: `drawer.exampleBoxes` changed on purpose (the
+     folder; before and after in `.cache/p806/phase7-s1/`) and recorded, axe, the tab order and
+     its undo script passing; `--config all` on it passes.
 2. **The migration page** `documentation/migration/engine-6.md` with D3's table and §4.1's
    behaviour changes (a boolean monitor's "On" / "Off", an option's label, rotations in
    degrees), and **the dev library** (D14's `verify:ui` lines, moved here from Phase 6 section

@@ -5,7 +5,7 @@ The scene owns its settings, and builds the boxes from them:
 <<< src/app/examples/debugTab/exampleDebugTab.ts#debug-tab-scene
 
 - The tab is created only in the debug env, through a dynamic `import()`. A production build
-  never loads the module, so neither the tab nor the Tweakpane it uses is in it.
+  never loads the module, so none of the tab's code is in it.
 - Debug-only modules start with `_dbg__`, as the engine's do. The prefix marks them as debug
   code, and the API documentation leaves them out.
 - The tab is created before `buildBoxes`, because creating it loads the saved settings into
@@ -27,15 +27,35 @@ The scene owns its settings, and builds the boxes from them:
   scene back to its defaults.
 - `refreshIntervalMs` and `onRefresh` run only while the tab is visible: a closed drawer
   doesn't refresh it.
-- `content` is built again every time the tab is shown. Besides controls, buttons and
-  separators, a pane can have folders, and a tab can have lists (`debuggerListCMP`).
+- The pane's items are the UI kit's
+  [property grid items](hub:features/ui-kit/forms/binding#panels-as-data): a number with `min`
+  and `max` is a slider, `kind: 'color'` a colour field, `readonly: true` a monitor. Besides controls, buttons and separators, a pane can have folders, and a tab can have
+  lists (`debuggerListCMP`).
+- `content` is built again every time the tab is shown, and gets the tab's refresh scheduler
+  (`ctx.scheduler`, below).
 
 [`openDebuggerTab`](api:openDebuggerTab) opens the drawer on a tab, and
 [`updateDebuggerTab`](api:updateDebuggerTab) refreshes one from code.
 
+## Kit components in the tab
+
+A section can be any CMP, so the tab's last section is a folder of the UI kit's own fields:
+
+<<< src/app/examples/debugTab/_dbg__exampleDebugTab.ts#debug-tab-kit
+
+- `scheduler` is the tab's (`ctx.scheduler`): the pane's fields and these refresh together, on
+  `refreshIntervalMs` and [`updateDebuggerTab`](api:updateDebuggerTab), and stop while the tab
+  isn't visible.
+- `interval: 'refresh'` reads the monitor only on those refreshes, so the spacing follows a new
+  box count within the tab's half second.
+- The slider isn't one of the pane's bindings, so nothing saves it for the tab: at the drag's end
+  (`e.last`) it saves its key with [`persistDebuggerTabValue`](api:persistDebuggerTabValue) and
+  records the change, `e.prev` being the value before the drag. `radius` is in `persistKeys`, so
+  it loads back with the others.
+
 ## Undo
 
-The tab registers one undo handler for both settings, and each control records its changes:
+The tab registers one undo handler for its settings, and each control records its changes:
 
 <<< src/app/examples/debugTab/_dbg__exampleDebugTab.ts#debug-tab-undo
 

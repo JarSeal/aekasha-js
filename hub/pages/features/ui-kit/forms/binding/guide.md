@@ -291,8 +291,9 @@ What works differently, on purpose:
 - **An Euler is a rotation field in degrees** (Tweakpane shows it as a point in radians), and an
   `{ x, y }` value is a vector field (Tweakpane's point has a pad: say `kind: 'pad2d'`).
 
-The engine's [debug tabs](hub:features/debug-suite#a-tab) still build their panes with Tweakpane;
-a later engine major moves them onto these fields, with the same names.
+The engine's [debug tabs](hub:features/debug-suite#a-tab) build their panes from these items,
+and a tab's own fields share its scheduler
+([kit components in a tab](hub:features/debug-suite#kit-components-in-a-tab)).
 
 ## Read more
 
