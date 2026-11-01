@@ -68,7 +68,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 
 ### Debug suite (debug builds only)
 
-- A tabbed **debug drawer** (`h`) built on Tweakpane, with tabs for stats, main loop, renderer, cameras, lights, physics, ECS, assets, PostFX (with a per-pass CPU and GPU profiler), sky box, spatial index, LOD, ray casting, characters and the debug tools. Its state is saved to localStorage. An app adds its own tabs, profiler figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (the Hub's Debug suite page has the guide, and an example scene does each).
+- A tabbed **debug drawer** (`h`) built on the UI kit (its property grid's fields, lists and tabs, in the compact density, dark or light), with tabs for stats, main loop, renderer, cameras, lights, physics, ECS, assets, PostFX (with a per-pass CPU and GPU profiler), sky box, spatial index, LOD, ray casting, characters and the debug tools. Its state is saved to localStorage. An app adds its own tabs, profiler figures and tabs, GPU memory sources and undoable actions through `aekasha/debug` (the Hub's Debug suite page has the guide, and an example scene does each).
 - A **profiler window**, opened from the on-screen stats panels, the stats tab, the top on-screen tools or `F8`. Its tabs: an overview of frame, GPU, physics and memory figures; an objects breakdown (in view and total, with bars and short history); GPU memory (memory by category and owner, draw calls, a budget and leak-hunting snapshots); and settings. It measures only while it is open, and it can be enabled in production test mode.
 - A **debug fly camera** (`F1`), an axes gizmo (`F10`), an environment ball (`F9`) and a debug scene loader.
 - **Editor views**, switched from the top on-screen tools: an editor takes over the whole canvas with its own scene, orbit camera and drawers, while the game scene is suspended and resumes exactly where it was. The first is the **material editor**: every project material on a preview ball in a studio stage, picked from a filterable list. Its params and TSL inputs are edited live with undo/redo, and each material's edits, stage settings and camera pose, and the editor's layout, are kept over reloads.
@@ -415,6 +415,7 @@ const config: AppConfig = {
     interpolationMode: 'RENDERER',
   },
   debugKeys: [{ id: 'sc-toggle-debug-drawer', chord: { key: 'j' } }], // the drawer on j, not h
+  debugDrawer: { theme: 'light' }, // the debugger light, not dark ('app': your app's theme)
 };
 ```
 
@@ -476,7 +477,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 
 ## Built with
 
-[Three.js](https://threejs.org/) (WebGPU + TSL) · [Rapier](https://rapier.rs/) · [Vite](https://vitejs.dev/) · [TypeScript](https://www.typescriptlang.org/) · [Zod](https://zod.dev/) · [glTF Transform](https://gltf-transform.dev/) · [KTX-Software](https://github.com/KhronosGroup/KTX-Software) · [Tweakpane](https://tweakpane.github.io/docs/) · [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful) · [stats-gl](https://github.com/RenaudRohlinger/stats-gl)
+[Three.js](https://threejs.org/) (WebGPU + TSL) · [Rapier](https://rapier.rs/) · [Vite](https://vitejs.dev/) · [TypeScript](https://www.typescriptlang.org/) · [Zod](https://zod.dev/) · [glTF Transform](https://gltf-transform.dev/) · [KTX-Software](https://github.com/KhronosGroup/KTX-Software) · [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful) · [stats-gl](https://github.com/RenaudRohlinger/stats-gl)
 
 ## License
 

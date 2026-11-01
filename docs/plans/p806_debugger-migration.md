@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: UI, Debug, Refactoring, Accessibility
 Epic: p800_debugger-ui-overhaul.md
 Blocks: p807_stats-and-profiler-graphs.md (p800 §5; written when it starts)
@@ -2108,7 +2108,7 @@ grid stacking fix after it):
     `workerSab` hash differed, its `workerMsg` didn't: the worker targets' race, as the reason
     says). 687 s, WebGPU in the Windows Chrome 155.
 
-### Phase 7: the Hub, the example, `CLAUDE.md`, readme
+### Phase 7: the Hub, the example, `CLAUDE.md`, readme — done
 
 D15. `yarn hub:build` in both modes. Its parts, for a section each:
 
@@ -2188,6 +2188,29 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
    p806" lines, `devTools/verify/CLAUDE.md`, an `aek:covers` for any new `##` section; the
    readme's :71 (the drawer on the UI kit) and :479's credits (Tweakpane out; stats-gl stays).
    Phase 6's figures for Phase 8's changelog are in its "As built".
+
+   As built (2026-11-01):
+
+   - **The root's Debug system:** "Tweakpane-based" became the kit (a tab's pane a property grid
+     of its fields, the menus, lists and windows the kit's, the compact density); "The actual
+     Tweakpane implementations" became "The actual implementations".
+   - **`debug/CLAUDE.md`** already had the builder, the host's scheduler, `keepOnSceneChange`, the
+     theme and the density (written by Phases 1-6); it gains a Styles line (D9: unlayered CSS
+     modules on the tokens, no hex or `color.adjust`, the kit's pieces take the density, an app
+     restyles through the tokens on the roots, `_debugLayout.scss`, what went, `Stats.scss` left
+     for p807).
+   - **`ui/CLAUDE.md`:** of the nine "until p806" lines, Phases 2-6 had resolved eight; the
+     forms' intro ("the debugger moves onto them in p806") is the last.
+   - **`devTools/verify/CLAUDE.md`:** the `debugger` configuration was current (Phases 1 and 6);
+     its "Tweakpane's unlabelled inputs" and "outlive the port" wordings go.
+   - **`aek:covers`:** no `##` or `###` section was added or renamed on the branch (diffed against
+     `main`), so none.
+   - **The readme:** :71's drawer is built on the UI kit; :479's credits drop Tweakpane (stats-gl
+     and vanilla-colorful stay); example 6's `AppConfig` shows `debugDrawer: { theme }` (an
+     example API that gained a field). The Project pages, which paraphrase the root, had no
+     Tweakpane line.
+   - **Checks:** `yarn hub:build` in both modes (101 / 108 pages, no warnings; the coverage check
+     reads the CLAUDE.md files), Prettier on the readme.
 
 ### Phase 8: done
 
