@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -194,14 +194,16 @@ cost in Phase 2 section 1 against part A's stats-gl figures, before section 3 re
     (`_dbg__FrameProbe.ts`). Pass: within 1 FPS of stats-gl's at a steady rate.
   - **CPU:** stats-gl's span is read from its source first (§1.2). Ours is the main loop's CPU
     time per rendered frame (the frame probe's `cpuTimes`: the Overview's "Main loop CPU" row),
-    labelled so. When the two spans differ by definition, the gate compares ours with a
+    labelled so (Phase 0: the panel's label is "CPU", its tooltip "Main loop CPU per frame, the
+    render's submission included"). When the two spans differ by definition, the gate compares ours with a
     `performance.now()` pair around the same span and records stats-gl's as measuring something
     else; the panel's label and tooltip say what it spans.
   - **GPU:** ours through `_dbg__GPUTimer` (every render context of the frame summed, the
     profiler's GPU row) against stats-gl's render timestamps. Pass: within 10 % or 0.1 ms
     (whichever is larger) on WebGPU. On WebGL, where three's pool times one context at a time
-    (`_getGpuTimerSupport`), the gate records what each shows; ours may read n/a there with its
-    reason.
+    (`_getGpuTimerSupport`), the gate records what each shows. (Phase 0: stats-gl shows a figure
+    there and ours none, so Phase 1 adds a WebGL path, checked against stats-gl's in part B; n/a
+    with its reason only where a frame's contexts nest.)
   - **CPT** (part B, Phase 1): compute timestamps (D5) against stats-gl's, on a scratch compute
     pass dispatched each frame (no scene dispatches compute, §1.2).
   - **Hz:** the display's refresh rate from the frame intervals (the nearest common rate to the
@@ -231,8 +233,12 @@ cost in Phase 2 section 1 against part A's stats-gl figures, before section 3 re
   on-screen tools' (so it reads over any scene, p806 D7).
 - **A panel per figure**, in `PANEL_ORDER` (vertical, the default, or a row with Horizontal): its
   label (`FPS`, `CPU ms`, …, the unit said), its figure (one text node written at 4 Hz, tabular
-  figures), the window's min and max as small text, and a `createTimeSeries({ summary: false,
-ticks: false })` of the figure pushed every frame (`push`, nothing allocated). The line is the
+  figures), the window's min and max as small text, and a time series of the figure
+  (`createTimeSeries` with `summary: false` and `ticks: false`; `push`, nothing allocated).
+  Phase 0's cost bar (stats-gl's, about 0.08 ms a frame for three panels) is under p805's figure
+  for its time series (8 panels at DPR 2 about 0.3 ms a frame), so the graphs push at stats-gl's
+  30 Hz (each sample the worst frame since the last, so a spike still shows) unless Phase 2's
+  measure says every frame costs no more. The line is the
   muted text colour: no accent (p800 D6), the status colours only for a threshold that says so in
   text (eg. TFPS under the target).
 - **Accessibility:** the graphs are `aria-hidden` (the time series' own deviation, p800 D8); the
@@ -354,7 +360,7 @@ configuration), `yarn verify:baselines`, `yarn verify:ui` where the kit changed 
 `yarn sbp --profile all`, plus the phase's own checks. Each phase stops after each section for
 review.
 
-### Phase 0: grounding and the gate
+### Phase 0: grounding and the gate — done
 
 1. **Baselines:** `yarn verify:scenes --config all --update` on `main` (`dc2b28ad`), then the
    branch; `yarn sbp --profile all` and the debug chunks' sizes (p806's script copied to
@@ -366,10 +372,68 @@ review.
    verdict written into this plan.
 4. p800 §5 / §6 updated with D2's outcome.
 
+As built (2026-11-01, `p807-stats-and-profiler-graphs` at `d5ab9bc4`, its `src/` `main`'s `dc2b28ad`):
+
+- **Baselines:** the scene runner's 110 runs recorded on `main` (`--config all --update`,
+  687 s, WebGPU in the Windows Chrome); `yarn sbp --profile all` and the debug chunks
+  (`.cache/p807/debugChunks.mts`, p806's script copied, after `yarn build:test`) in
+  `.cache/p807/debugChunks-phase0.json` and `.cache/sbp/`: first downloads app 384.4, banner
+  287.4, uiKit 286.6 kB gzip, every budget within (the app group's "well under" note was there
+  before); the debug chunks 53 files, 512.5 kB, 205.1 kB gzip, stats-gl 34.0 kB minified,
+  `_dbg__Stats` 10.9 kB gzip (38.5 kB).
+- **stats-gl read:** §1.2's "What stats-gl measures".
+- **p800:** §5's p806 entry says it merged into `main`; §5's p807 entry and §6's table row and
+  last paragraph say p807 branches from `main` and joins the unreleased `engine-6` entry.
+- **The gate's part A** (`.cache/p807/gate.mts`; `gate-<scene>-<backend>-dpr<n>.json`,
+  `summary.mts` prints them): `exampleQuickStart` (quiet), `thirdPersonGymScene` (DPR 1 and 2)
+  and `lodShowcase` (heavy), WebGPU and WebGL 2 in the Windows Chrome on the real GPU (the
+  display at 132 Hz), 10 s per measure, stats-gl's figures read from its averages beside ours
+  every 250 ms. No page error anywhere. The CPT check is part B (Phase 1): no scene dispatches
+  compute, so both read 0.
+
+  | Scene, backend       | FPS ours / sgl | CPU ours / sgl (its span) | GPU ours / sgl | Cost none / 3 / 6 panels (ms/s) | Loop CPU +3 / +6 | sgl allocates |
+  | -------------------- | -------------- | ------------------------- | -------------- | ------------------------------- | ---------------- | ------------- |
+  | quickStart, WebGPU   | 132.1 / 132.6  | 0.37 / 0.04 (0.03)        | 0.11 / 0.11    | 58.2 / 65.0 / 75.6              | 0.03 / 0.06      | 1.11 MB/s     |
+  | gym, WebGPU          | 132.8 / 133.3  | 0.94 / 0.12 (0.12)        | 0.94 / 0.94    | 130.3 / 143.6 / 149.9           | 0.07 / 0.08      | 1.05 MB/s     |
+  | gym, WebGPU, DPR 2   | 131.8 / 132.3  | 0.95 / 0.12 (0.12)        | 2.22 / 2.22    | 129.2 / 141.6 / 155.3           | 0.08 / 0.12      | 1.20 MB/s     |
+  | lodShowcase, WebGPU  | 136.0 / 134.8  | 1.00 / 0.07 (0.07)        | 0.29 / 0.29    | 129.4 / 145.3 / 152.1           | 0.08 / 0.14      | 0.94 MB/s     |
+  | quickStart, WebGL 2  | 131.9 / 132.4  | 0.28 / 0.03 (0.03)        | n/a / 0.47     | 40.3 / 47.1 / 58.1              | 0.03 / 0.06      | 1.19 MB/s     |
+  | gym, WebGL 2         | 132.4 / 132.8  | 0.91 / 0.11 (0.11)        | n/a / 0.85     | 114.1 / 125.4 / 135.6           | 0.06 / 0.09      | 1.05 MB/s     |
+  | lodShowcase, WebGL 2 | 132.5 / 132.9  | 0.94 / 0.06 (0.06)        | n/a / 2.81     | 123.1 / 131.0 / 140.1           | 0.02 / 0.09      | 1.03 MB/s     |
+
+  Cost is main-thread task ms per second, the mean of three windows; 3 panels is stats-gl's
+  default set (TFPS, FPS, CPU), 6 adds GPU, CPT and Hz. Loop CPU is the frame probe's ms a frame
+  over none. Allocation is the sampling heap profiler with the collected objects, stats-gl's code
+  only, all panels on (the page allocates 5-24 MB/s in all).
+
+  **Verdict: part A passes, with findings that change the plan.**
+
+  1. **FPS** agrees within 0.5 everywhere but `lodShowcase` on WebGPU (1.3, 1 %: its LODs still
+     settling, the two averaging over different windows). Pass.
+  2. **CPU:** stats-gl's figure is exactly the span §1.2 read (its value and the span measured
+     beside it agree to 0.01 ms), 7-15 % of the main loop's CPU: it leaves the render's
+     submission out. Not a mismatch to fix but a figure that misleads; ours shows the main loop's
+     CPU with D3's label.
+  3. **GPU on WebGPU:** identical to 0.01 ms in every scene and at DPR 2. **On WebGL 2, stats-gl
+     shows a figure and ours reads n/a** (the profiler's GPU source is WebGPU only,
+     `_getGpuTimerSupport`): as it is, the GPU panel would lose WebGL. So Phase 1 (part B) gives
+     D5's frame times a WebGL path and checks it against stats-gl's figures above.
+  4. **The timestamp budget:** our GPU records resolved for 99-100 % of the rendered frames with
+     stats-gl's resolves on and off: in these scenes stats-gl's resolves don't take our batches
+     (three's pool shares a resolve in flight). One resolver (D5) is a cleanup, and what makes
+     compute and WebGL timing one module's, not a fix of dropped figures.
+  5. **Hz:** stats-gl detected nothing on this 132 Hz display (not in its list of rates), so its
+     readout stayed empty; ours reads the rate from the frame intervals.
+  6. **Cost, part B's bar:** stats-gl's three panels cost 7-16 ms/s of main-thread time (about
+     0.08 ms a frame at 132 Hz) and its six 15-26 ms/s, with 1 MB/s allocated (about 8 KB a
+     frame). Ours must stay within that and allocate nothing per frame (D4's 30 Hz graphs).
+
 ### Phase 1: one owner for GPU timing
 
 D5, with stats-gl still in place (its resolves still steal batches until Phase 2; the retries
-cover it): `_dbg__GPUFrameTimes.ts`, the compute side, the Overview's GPU row on it, the tests.
+cover it): `_dbg__GPUFrameTimes.ts`, the compute side, a WebGL path (Phase 0's finding 3: the
+timestamps' uids summed per frame as on WebGPU when no context nests, else the pool's frame
+totals; the Overview's GPU row gains WebGL with it), the Overview's GPU row on it, the tests.
 Non-breaking: the Overview's GPU figure unchanged (checked against Phase 0's run). The gate's CPT
 check (part B) on a scratch compute pass.
 
