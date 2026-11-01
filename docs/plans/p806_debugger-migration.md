@@ -2217,6 +2217,28 @@ D15. `yarn hub:build` in both modes. Its parts, for a section each:
 - `CHANGELOG.md`'s unreleased `engine-6` entry: p806's Engine (the breaks with D3's table, the new
   fields, the look, the sizes), App (the ported debug modules) and Project (the scene runner's
   configuration, the Hub) sections. No version bump (D2).
+
+  As built (2026-11-01):
+
+  - **The entry** is `## Unreleased — engine-6` at the top: an intro saying the `engine-6` →
+    `main` merge dates it and makes the bumps (engine 6.0.0 with p622's codename, the app a
+    minor, the toolkit if p622 changes it), then p806's paragraph. Its sections are
+    `### Engine 6.0.0 (unreleased)`, `### App (unreleased: a minor at the engine-6 merge)` and
+    `### Project`; p622 adds its own to the same entry.
+  - **Engine:** **Breaking** (what stays, then the migration page's form of D3's table, with
+    `interval: 0`, `view: 'graph'` and `setValue`'s `source: 'api'`), **Added** (the tab fields,
+    the bindings, `labelWidth`, the list's `label`, the theme setting, the kit's additions, the
+    test bridge's methods), **Changed** (the restyle note p800 D12 asks for: no restore, the
+    tokens on `[data-aek-debugger]`; the drawer, the lists, monitors, keys, on-screen tools,
+    windows, panels, the character state window, the dialogs; axe 660 → 0; Phase 6's sizes and
+    measures; the kit's ancestor reads, icon slots and static list rows; the splits),
+    **Removed** (Tweakpane, `--aek-rem`, `variables.scss`, the window helper classes) and
+    **Fixed** (the focus trap, the folder heading's drag, the title icon, the Lights tab's `??`,
+    the action map issue).
+  - **App:** only the debug tab example changed in `src/app/` (its other scene tabs needed no
+    rename), so the section is that, and that the other scene tabs run on the kit unchanged.
+  - **Project:** the `debugger` configuration, `a0d3ced2`'s Windows Chrome runner (on the branch,
+    not on `main`), the Hub pages, the baselines and the `CLAUDE.md` files and readme.
 - The plan marked done and renamed, with the references to its old name:
   - p800's Blocks line and §5 entry;
   - `_DONE_p805`'s, `_DONE_p804`'s, `_DONE_p803`'s and `_DONE_p801`'s Blocks / Related lines;
