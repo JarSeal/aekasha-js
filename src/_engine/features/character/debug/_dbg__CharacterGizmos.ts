@@ -63,16 +63,16 @@ export const CHARACTER_GIZMOS: {
   title: string;
   isLate?: boolean;
 }[] = [
-  { id: 'velocity', label: 'Vel', title: 'Velocity (length = speed × scale)' },
+  { id: 'velocity', label: 'Velocity', title: 'Velocity (length = speed × scale)' },
   {
     id: 'relVelocity',
-    label: 'Rel',
+    label: 'Relative velocity',
     title: 'Velocity relative to the moving platform (only while on one)',
   },
-  { id: 'facing', label: 'Face', title: 'Facing (charRotation)' },
+  { id: 'facing', label: 'Facing', title: 'Facing (charRotation)' },
   {
     id: 'groundNormal',
-    label: 'Normal',
+    label: 'Ground normal',
     title: 'Ground normal at the floor ray hit: green walkable, red too steep',
     isLate: true,
   },
@@ -85,12 +85,12 @@ export const CHARACTER_GIZMOS: {
   },
   {
     id: 'floorSensor',
-    label: 'Sensor',
+    label: 'Floor sensor',
     title: 'Floor sensor (isGrounded): lit while grounded, grey in the air',
   },
   {
     id: 'wallCast',
-    label: 'Wall',
+    label: 'Wall cast',
     title:
       'The last wall cast (its cylinder and sweep): solid on a hit, dashed on a miss, gone 300 ms after it. ' +
       'Hit normal: green used as a wall, red rejected (|y| > _wallNormalMaxY)',

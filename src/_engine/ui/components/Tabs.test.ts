@@ -249,6 +249,22 @@ describe('tabs (p805 D10)', () => {
     tabs.cmp.remove();
   });
 
+  it('marks a tab with a divider before it, which the arrows cross (p806 D6)', () => {
+    const { tabs, getTabs } = addTabs([], { orientation: 'vertical' });
+    tabs.setTabs([tab('a'), tab('b', { separatorBefore: true })]);
+    const elems = getTabs();
+    expect(elems.map((e) => e.hasAttribute('data-separator-before'))).toEqual([false, true]);
+    // The list holds the tabs alone
+    expect(elems[0].parentElement?.children.length).toBe(2);
+    elems[0].focus();
+    dispatchKey(elems[0], 'keydown', 'ArrowDown');
+    expect(document.activeElement).toBe(elems[1]);
+    // setTabs writes it in place
+    tabs.setTabs([tab('a'), tab('b')]);
+    expect(elems[1].hasAttribute('data-separator-before')).toBe(false);
+    tabs.cmp.remove();
+  });
+
   it('removes its listeners, panels and tooltips with itself', () => {
     const { tabs, list, getTabs } = addTabs(['a', 'b'], { activation: 'manual' });
     expect(countListeners(list)).toBe(5);

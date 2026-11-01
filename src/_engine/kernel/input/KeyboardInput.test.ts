@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { initEnvironment } from '../config/Config';
 import { setHeldKeyPoller } from '../loop/MainLoop';
 import { setAllInputsEnabled, setAppInputsSuspended } from './InputState';
 import {
@@ -31,19 +32,30 @@ vi.mock(import('../loop/MainLoop'), async (importOriginal) => ({
   setHeldKeyPoller: vi.fn(),
 }));
 
-type Mods = { shift?: boolean; ctrl?: boolean; alt?: boolean; meta?: boolean; repeat?: boolean };
+type Mods = {
+  shift?: boolean;
+  ctrl?: boolean;
+  alt?: boolean;
+  meta?: boolean;
+  repeat?: boolean;
+  /** The focus is on a control in a debugger root (p806 D12): the target's `closest` finds one */
+  onDebugger?: boolean;
+};
 
-const keyEvent = (type: 'keydown' | 'keyup', key: string, mods: Mods = {}) =>
-  dom.win.dispatchEvent(
-    Object.assign(new Event(type), {
-      key,
-      repeat: !!mods.repeat,
-      shiftKey: !!mods.shift,
-      ctrlKey: !!mods.ctrl,
-      altKey: !!mods.alt,
-      metaKey: !!mods.meta,
-    })
-  );
+const DEBUGGER_CONTROL = { closest: (selector: string) => (selector ? {} : null) };
+
+const keyEvent = (type: 'keydown' | 'keyup', key: string, mods: Mods = {}) => {
+  const e = Object.assign(new Event(type), {
+    key,
+    repeat: !!mods.repeat,
+    shiftKey: !!mods.shift,
+    ctrlKey: !!mods.ctrl,
+    altKey: !!mods.alt,
+    metaKey: !!mods.meta,
+  });
+  if (mods.onDebugger) Object.defineProperty(e, 'target', { value: DEBUGGER_CONTROL });
+  dom.win.dispatchEvent(e);
+};
 const down = (key: string, mods?: Mods) => keyEvent('keydown', key, mods);
 const up = (key: string, mods?: Mods) => keyEvent('keyup', key, mods);
 
@@ -218,6 +230,40 @@ describe('held keys', () => {
     setAllInputsEnabled(false);
     pollHeldKeyBindings(0.016);
     expect(fn).not.toHaveBeenCalled();
+  });
+});
+
+describe("a debugger control's keys (p806 D12)", () => {
+  afterEach(() => initEnvironment({ search: '', env: {} }));
+
+  it('reach the debug keys only, in the debug env', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const app = onDown('app', { key: 'Enter' });
+    const debugKey = onDown('debug', { key: 'Enter' }, { isDebugKey: true });
+    down('Enter', { onDebugger: true });
+    up('Enter', { onDebugger: true });
+    expect(app).not.toHaveBeenCalled();
+    expect(debugKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('are not held for a KEY_HELD binding until their keyup, wherever it goes', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const fn = vi.fn();
+    bind({ id: 'held', type: 'KEY_HELD', chord: { key: 'w' }, fn });
+    down('w', { onDebugger: true });
+    pollHeldKeyBindings(16);
+    expect(fn).not.toHaveBeenCalled();
+    // The focus left the control while the key was held: still the debugger's, then released
+    up('w');
+    down('w');
+    pollHeldKeyBindings(16);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('are the app’s like any other outside the debug env', () => {
+    const app = onDown('app', { key: 'Enter' });
+    down('Enter', { onDebugger: true });
+    expect(app).toHaveBeenCalledTimes(1);
   });
 });
 

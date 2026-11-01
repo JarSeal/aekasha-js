@@ -1,6 +1,7 @@
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
 import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
+import { createButton } from '../ui/components/Button';
 import { openDialog } from '../ui/overlays/windows/DialogWindow';
 import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { lsGetItem, lsSubscribe } from '../utils/LocalAndSessionStorage';
@@ -24,31 +25,37 @@ type ClearLSButtonOpts = {
   watchKey?: string;
 };
 
-/** A clear-LS icon button, disabled while `hasData` is false. The tab and list variants below
- * preset the icon and the title; another icon fits a button that clears a part of a key. */
+/** A clear-LS icon button (a kit ghost icon button, p806 D12's 24 px target), disabled while
+ * `hasData` is false. The tab and list variants below preset the icon and the title; another icon
+ * fits a button that clears a part of a key. */
 export const createClearLSButton = (
   opts: ClearLSButtonOpts & { icon: SvgIconKey; title: string }
 ): CMPHandle => {
-  let lastHasData = opts.hasData();
-  const btn: CMPHandle = CMP({
-    class: 'debuggerClearLSButton',
-    html: () => {
-      lastHasData = opts.hasData();
-      return `<button title="${opts.title}"${!lastHasData ? ' disabled' : ''}>${getSvgIcon(opts.icon)}</button>`;
-    },
+  const button = createButton({
+    label: opts.title,
+    icon: getSvgIcon(opts.icon),
+    iconOnly: true,
+    variant: 'ghost',
+    size: 'sm',
+    disabled: !opts.hasData(),
     onClick: () => {
       if (!opts.hasData()) return;
       opts.onClear();
+      // A clear without a watched key (or one that clears elsewhere) is read again here
+      button.setDisabled(!opts.hasData());
     },
-    onRemoveCmp: () => unsubscribe?.(),
   });
   const unsubscribe = opts.watchKey
-    ? lsSubscribe(opts.watchKey, () => {
-        if (opts.hasData() === lastHasData) return;
-        btn.update();
-      })
+    ? lsSubscribe(opts.watchKey, () => button.setDisabled(!opts.hasData()))
     : undefined;
-  return btn;
+  // A wrapper, whose removal (with the button) ends the LS subscription
+  const wrapper = CMP({
+    tag: 'span',
+    class: 'debuggerClearLSButton',
+    onRemoveCmp: () => unsubscribe?.(),
+  });
+  wrapper.add(button.cmp);
+  return wrapper;
 };
 
 export const createClearTabLSButton = (opts: ClearLSButtonOpts): CMPHandle =>

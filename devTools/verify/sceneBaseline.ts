@@ -7,8 +7,9 @@ import fs from 'fs';
 import path from 'path';
 import { ROOT } from '../paths';
 import { writeFileAtomic } from '../files';
-import type { TestBridgeSystemOrder } from '../../src/_engine/debug/TestBridge';
+import type { TestBridgeSystemOrder, TestBridgeTabOrder } from '../../src/_engine/debug/TestBridge';
 import type { VerifyConfigName } from './scenes.config';
+import type { DebuggerAxeCounts } from './debuggerChecks';
 
 /** Bump when the baseline file's shape changes: an old one then stops a run (`readBaseline`) */
 export const BASELINE_FORMAT_VERSION = 1;
@@ -32,6 +33,12 @@ export type BaselineEntry = {
   snapshot?: string;
   /** Every world's systems per stage once the scene ran (p607) */
   systemOrder?: TestBridgeSystemOrder;
+  /** The `debugger` configuration's (p806 D14): each tab host's tab ids in menu order, */
+  tabOrder?: TestBridgeTabOrder;
+  /** its shots' files in the baseline folder (`debuggerShotFile`), */
+  debuggerShots?: string[];
+  /** and axe's violations per shot */
+  axe?: DebuggerAxeCounts;
   recordedAt: string;
   commit: string;
 };
@@ -60,6 +67,9 @@ export type RunResult = {
   probeConfig?: string;
   snapshotFile?: string;
   systemOrder?: TestBridgeSystemOrder;
+  tabOrder?: TestBridgeTabOrder;
+  debuggerShots?: string[];
+  axe?: DebuggerAxeCounts;
   durationMs: number;
 };
 
@@ -178,8 +188,8 @@ export const findBackendHashMismatches = (ctx: BaselineContext) => {
 
 /**
  * Records the runs that passed or were new into the baseline (merged: the other entries stay),
- * each snapshot copied from the last run's folder, and marks them `UPDATED`; writes the file
- * atomically.
+ * each snapshot and debugger shot copied from the last run's folder, and marks them `UPDATED`;
+ * writes the file atomically.
  * @param now the entries' `recordedAt`
  */
 export const recordBaseline = (opts: {
@@ -197,6 +207,15 @@ export const recordBaseline = (opts: {
     if (r.hash) Object.assign(entry, { hash: r.hash, steps: r.steps, probeConfig: r.probeConfig });
     if (r.pathHash) Object.assign(entry, { pathHash: r.pathHash, pathSteps: r.pathSteps });
     if (r.systemOrder) entry.systemOrder = r.systemOrder;
+    if (r.tabOrder) entry.tabOrder = r.tabOrder;
+    if (r.axe) entry.axe = r.axe;
+    if (r.debuggerShots) {
+      for (const file of r.debuggerShots) {
+        fs.mkdirSync(path.dirname(path.join(paths.baselineDir, file)), { recursive: true });
+        fs.copyFileSync(path.join(paths.lastRunDir, file), path.join(paths.baselineDir, file));
+      }
+      entry.debuggerShots = r.debuggerShots;
+    }
     if (r.snapshotFile) {
       fs.copyFileSync(
         path.join(paths.lastRunDir, r.snapshotFile),

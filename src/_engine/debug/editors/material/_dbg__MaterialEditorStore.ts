@@ -287,11 +287,13 @@ export const readMaterialEditorUIState = (): MaterialEditorUIState => {
       isOpen: pickBoolean(selector.isOpen),
       filterText: pickString(selector.filterText),
       scrollTop: pickNumber(selector.scrollTop),
+      height: pickNumber(selector.height),
     }),
     drawer: withoutUndefined({
       isOpen: pickBoolean(drawer.isOpen),
       currentTabId: pickString(drawer.currentTabId),
       scrollPos,
+      width: pickNumber(drawer.width),
     }),
   };
 };

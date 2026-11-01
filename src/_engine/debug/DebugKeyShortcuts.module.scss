@@ -1,219 +1,174 @@
-@use 'sass:color';
-@use '../ui/styles/variables.scss';
+@use './styles/debugLayout' as layout;
+
+// The Debug key shortcuts dialog (_dbg__DebugKeyShortcuts.ts, p806 D9, D10): on the tokens,
+// unlayered. The tab menu (`createTabs`) over the selected tab's panel, which scrolls, over the
+// footer. The rows are a kit list's; their keys `createKbd`'s and their states `createBadge`'s.
 
 .dialogContent {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: calc(1 * var(--aek-rem)) calc(1.2 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
+  font-size: var(--aek-font-size-md);
 }
 
-.tabBar {
+// The tab menu over the panels; the selected panel is the scroller
+.tabs {
   display: flex;
-  flex-shrink: 0;
-  border-bottom: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
-}
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 
-.tabButton {
-  @include variables.nakedButton;
-  margin-bottom: calc(-0.1 * var(--aek-rem));
-  margin-right: calc(0.4 * var(--aek-rem));
-  padding: calc(0.6 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
-  background-color: rgba(0, 0, 0, 0.25);
-  border: calc(0.1 * var(--aek-rem)) solid transparent;
-  border-radius: variables.$borderRadiusSmall variables.$borderRadiusSmall 0 0;
-  color: variables.$debugTextColorDark;
-  font-size: calc(1.2 * var(--aek-rem));
-  transition:
-    background-color var(--aek-motion-base) ease-in-out,
-    color var(--aek-motion-base) ease-in-out;
+  > :global(.aekTabs__list) {
+    flex-shrink: 0;
+    padding-inline: var(--aek-space-5);
+  }
 
-  &:hover:not(.tabButtonSelected) {
-    background-color: rgba(0, 0, 0, 0.1);
-    color: variables.$debugTextColor;
+  > :global(.aekTabs__panels) {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  :global(.aekTabs__panel:not([hidden])) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+
+  // The panel's ring inside: the window's edge would cut one outside
+  :global(.aekTabs__panel:focus-visible) {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
   }
 }
 
-// The window's own background, so the selected tab joins the panel below it
-.tabButtonSelected {
-  background-color: variables.$debugGuiBackgroundLighter2;
-  border-color: variables.$debugTextColorDark;
-  border-bottom-color: variables.$debugGuiBackgroundLighter2;
-  color: variables.$white;
-  cursor: default;
-}
-
-.panel {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) 0 0;
-  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
-  scrollbar-width: thin;
+.tabContent {
+  padding: 0 var(--aek-space-5) var(--aek-space-5);
 }
 
 .section {
-  margin-top: calc(1.6 * var(--aek-rem));
+  margin-top: var(--aek-space-6);
 
   h4 {
-    margin: 0 0 calc(0.2 * var(--aek-rem));
-    font-size: calc(1.3 * var(--aek-rem));
-    color: variables.$white;
+    margin: 0 0 var(--aek-space-1);
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-semibold);
   }
 }
 
-.sectionDescription,
-.empty {
-  margin: 0 0 calc(0.6 * var(--aek-rem));
-  font-size: calc(1.1 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
+.sectionDescription {
+  margin: 0 0 var(--aek-space-3);
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
+  line-height: var(--aek-line-height-base);
 }
 
-.empty {
-  font-style: italic;
-}
-
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+// A line between the rows: each holds several lines of its own
+.list :global(.aekList__row + .aekList__row) {
+  border-top: 1px solid var(--aek-border);
 }
 
 .row {
   display: grid;
-  grid-template-columns: calc(12 * var(--aek-rem)) 1fr;
-  gap: calc(1 * var(--aek-rem));
-  padding: calc(0.6 * var(--aek-rem)) 0;
-  border-top: calc(0.1 * var(--aek-rem)) solid rgba(variables.$debugTextColor, 0.12);
+  flex: 1 1 auto;
+  grid-template-columns: calc(var(--aek-space-7) * 5) minmax(0, 1fr);
+  gap: var(--aek-space-4);
+  min-width: 0;
+  padding-block: var(--aek-space-2);
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    grid-template-columns: 1fr;
-    gap: calc(0.4 * var(--aek-rem));
+  @media screen and (max-width: layout.$breakpointSmall) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--aek-space-2);
   }
 }
 
-.inactive {
-  .keys,
-  .name {
-    opacity: 0.5;
-  }
-
-  .keys kbd {
-    text-decoration: line-through;
-  }
-}
-
-.keys {
+.inputs {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(0.2 * var(--aek-rem));
   align-self: start;
+  gap: var(--aek-space-2);
+}
 
-  kbd {
-    display: inline-block;
-    min-width: calc(2 * var(--aek-rem));
-    padding: calc(0.2 * var(--aek-rem)) calc(0.5 * var(--aek-rem));
-    border: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
-    border-bottom-width: calc(0.2 * var(--aek-rem));
-    border-radius: calc(0.3 * var(--aek-rem));
-    background-color: variables.$debugGuiBackground;
-    color: variables.$white;
-    font-family: inherit;
-    font-size: calc(1.1 * var(--aek-rem));
-    text-align: center;
-    white-space: nowrap;
+.or,
+.unbound {
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
+}
+
+.inputText {
+  font-weight: var(--aek-font-weight-medium);
+}
+
+// Off, removed, unbound or disabled: the badge says which; the keys struck and the name muted
+// (not an opacity: the text would fall below AA)
+.row[data-inactive] {
+  :global(.aekKbd__key),
+  .inputText {
+    text-decoration: line-through;
   }
-}
 
-.keyJoin,
-.keyOr {
-  font-size: calc(1 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
-}
-
-.keyOr {
-  margin: 0 calc(0.2 * var(--aek-rem));
+  .name {
+    color: var(--aek-text-muted);
+  }
 }
 
 .info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-1);
   min-width: 0;
+
+  p {
+    margin: 0;
+  }
 }
 
 .name {
-  color: variables.$debugTextColor;
+  font-weight: var(--aek-font-weight-medium);
 }
 
 .id {
-  margin-left: calc(0.4 * var(--aek-rem));
+  margin-left: var(--aek-space-3);
+  color: var(--aek-text-muted);
   font-family: var(--aek-font-mono);
-  font-size: calc(1 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
+  font-size: var(--aek-font-size-sm);
+  font-weight: var(--aek-font-weight-regular);
 }
 
-.description {
-  margin-top: calc(0.2 * var(--aek-rem));
-  font-size: calc(1.1 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
-}
-
+.description,
 .note {
-  margin-top: calc(0.2 * var(--aek-rem));
-  font-size: calc(1.1 * var(--aek-rem));
+  font-size: var(--aek-font-size-sm);
+  line-height: var(--aek-line-height-base);
+}
 
-  &.info {
-    color: color.adjust(variables.$info, $lightness: 30%);
-  }
+.description,
+.note[data-tone='muted'] {
+  color: var(--aek-text-muted);
+}
 
-  &.warning {
-    color: color.adjust(variables.$warning, $lightness: 35%);
-  }
+// The note says what happened; its colour only marks it
+.note[data-tone='info'] {
+  color: var(--aek-info);
+}
 
-  &.muted {
-    color: variables.$debugTextColorDark;
-  }
+.note[data-tone='warning'] {
+  color: var(--aek-warning);
 }
 
 .badges {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(0.4 * var(--aek-rem));
-  margin-top: calc(0.4 * var(--aek-rem));
-}
-
-.badge {
-  padding: calc(0.1 * var(--aek-rem)) calc(0.6 * var(--aek-rem));
-  border: calc(0.1 * var(--aek-rem)) solid transparent;
-  border-radius: calc(1 * var(--aek-rem));
-  font-size: calc(1 * var(--aek-rem));
-  white-space: nowrap;
-
-  &.muted {
-    border-color: rgba(variables.$debugTextColor, 0.3);
-    color: variables.$debugTextColorDark;
-  }
-
-  &.info {
-    background-color: rgba(variables.$info, 0.35);
-    border-color: variables.$info;
-    color: variables.$white;
-  }
-
-  &.warning {
-    background-color: rgba(variables.$warning, 0.35);
-    border-color: variables.$warning;
-    color: variables.$white;
-  }
+  gap: var(--aek-space-2);
+  margin-top: var(--aek-space-1);
+  font-size: var(--aek-font-size-sm);
 }
 
 .footer {
   display: flex;
   flex-shrink: 0;
   justify-content: flex-end;
-  padding-top: calc(1 * var(--aek-rem));
-  border-top: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
-
-  :global(.debuggerClearLSDialogButton) {
-    margin: 0;
-  }
+  padding: var(--aek-space-4) var(--aek-space-5);
+  border-top: 1px solid var(--aek-border);
 }

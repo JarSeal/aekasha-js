@@ -9,6 +9,7 @@ import {
   createButton,
   createButtonGroup,
   createDivider,
+  createDropDown,
   createEmptyState,
   createInputGlyph,
   createKbd,
@@ -138,6 +139,10 @@ const initButtonDemo: Demo = (box) => {
   const uploading = make('Uploading', { label: 'Uploading' });
   uploading.setLoading(true);
   row('Disabled, and loading', make('Disabled', { label: 'Disabled', disabled: true }), uploading);
+  // Still a tab stop: its reason is its tooltip, and its clicks do nothing
+  const exportButton = make('Export', { label: 'Export', focusableWhenDisabled: true });
+  exportButton.setDisabled(true, 'Nothing to export yet');
+  row('Disabled but focusable (aria-disabled), its reason the tooltip', exportButton);
   row(
     'Toggles (aria-pressed)',
     make('Mute', { label: 'Mute', pressed: false, onPressedChange: toggled('Mute') }),
@@ -214,6 +219,38 @@ const initButtonGroupDemo: Demo = (box) => {
       exclusive: true,
       orientation: 'vertical',
       onChange: (index) => (status.textContent = `Tool: ${tools[index]}`),
+    })
+  );
+  // A toolbar of independent buttons: a toggle, an action disabled with its reason, a drop-down
+  const snap = createButton({
+    id: GROUP_ID('ButtonSnap'),
+    label: 'Snap',
+    icon: getSvgIcon('spatialGrid'),
+    iconOnly: true,
+    pressed: false,
+    onPressedChange: (on) => (status.textContent = `Snap: ${on ? 'on' : 'off'}`),
+  });
+  const duplicate = createButton({
+    id: GROUP_ID('ButtonDuplicate'),
+    label: 'Duplicate',
+    focusableWhenDisabled: true,
+  });
+  duplicate.setDisabled(true, 'Nothing selected');
+  const cameras = ['Main', 'Top', 'Side'];
+  const camera = createDropDown({
+    options: cameras.map((label) => ({ value: label, label })),
+    value: 'Main',
+    title: 'Camera',
+    onChange: (picked) => (status.textContent = `Camera: ${picked}`),
+  });
+  camera.cmp.elem.querySelector('button')?.setAttribute('id', GROUP_ID('ButtonCamera'));
+  row(
+    'A toolbar (toolbar): toggles, buttons and a drop-down acting alone; one tab stop, the arrows stop on a disabled but focusable one',
+    createButtonGroup({
+      id: GROUP_ID('Viewport'),
+      label: 'Viewport',
+      toolbar: true,
+      buttons: [...makeButtons(['Frame']), snap, duplicate, camera],
     })
   );
   root.append(status);

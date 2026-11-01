@@ -1,72 +1,75 @@
-@use '../../ui/styles/variables.scss';
+// The profiler window's GPU memory tab (p806 D9: on the tokens, unlayered). Its HTML strings are
+// p807's to rewrite on the kit's tables and bars.
 
 .gpuMemorySummary {
-  padding: calc(0.4 * var(--aek-rem)) calc(0.4 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
-  color: variables.$debugTextColor;
-  font-size: calc(1.1 * var(--aek-rem));
+  padding: var(--aek-space-2) var(--aek-space-2) var(--aek-space-4);
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-sm);
 }
 
 .gpuMemoryTotalRow {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: calc(0.6 * var(--aek-rem));
+  margin-bottom: var(--aek-space-3);
 
   strong {
-    font-size: calc(1.6 * var(--aek-rem));
+    font-size: var(--aek-font-size-xl);
+    font-weight: var(--aek-font-weight-semibold);
   }
 }
 
 .gpuMemoryBar {
-  height: calc(0.8 * var(--aek-rem));
-  border-radius: variables.$borderRadiusSmall;
-  background-color: variables.$debugGuiBackgroundLighter2;
+  height: var(--aek-space-3);
+  border-radius: var(--aek-radius-sm);
+  background-color: color-mix(in srgb, var(--aek-text) 8%, transparent);
   overflow: hidden;
 }
 
 .gpuMemoryBarFill {
   height: 100%;
-  background-color: variables.$debugBoolTrue;
-  transition: width var(--aek-motion-base) ease-in-out;
+  background-color: var(--aek-success);
+  transition: width var(--aek-motion-base) var(--aek-ease-standard);
 
   .gpuMemoryOverBudget & {
-    background-color: variables.$debugAlertLight;
+    background-color: var(--aek-danger);
   }
 }
 
 .gpuMemoryBarLabel {
-  margin-top: calc(0.4 * var(--aek-rem));
+  margin-top: var(--aek-space-2);
 
   .gpuMemoryOverBudget & {
-    color: variables.$debugAlertLight;
+    color: var(--aek-danger);
   }
 }
 
 .gpuMemoryNote {
-  margin-top: calc(0.6 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
+  margin-top: var(--aek-space-3);
+  color: var(--aek-text-muted);
 }
 
 .gpuMemoryHeading {
-  margin: 0 0 calc(0.6 * var(--aek-rem));
-  font-size: calc(1.2 * var(--aek-rem));
-  font-weight: bold;
+  margin: 0 0 var(--aek-space-3);
+  font-size: var(--aek-font-size-md);
+  font-weight: var(--aek-font-weight-semibold);
 }
 
 .gpuMemoryTable {
   width: 100%;
-  margin-top: calc(1 * var(--aek-rem));
+  margin-top: var(--aek-space-4);
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 
   th {
-    color: variables.$debugTextColorDark;
-    font-weight: normal;
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-regular);
     text-align: right;
+    vertical-align: bottom;
   }
 
   td {
-    padding: calc(0.15 * var(--aek-rem)) 0;
+    padding: var(--aek-space-1) 0;
     text-align: right;
     white-space: nowrap;
   }
@@ -78,38 +81,34 @@
 
   th + th,
   td + td {
-    padding-left: calc(0.8 * var(--aek-rem));
-  }
-
-  th {
-    vertical-align: bottom;
+    padding-left: var(--aek-space-3);
   }
 
   tfoot td {
-    border-top: 1px solid variables.$debugGuiBackgroundLighter2;
-    font-weight: bold;
+    border-top: 1px solid var(--aek-border-strong);
+    font-weight: var(--aek-font-weight-semibold);
   }
 
   tbody tr:hover {
-    background-color: variables.$debugGuiBackgroundLighter2;
+    background-color: var(--aek-surface-hover);
   }
 }
 
 .gpuMemoryCurrent td:first-child {
-  font-weight: bold;
+  font-weight: var(--aek-font-weight-semibold);
 }
 
 .gpuMemoryCell td:first-child {
-  padding-left: calc(1.2 * var(--aek-rem));
+  padding-left: var(--aek-space-4);
 }
 
 .gpuMemoryUntracked td {
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
   font-style: italic;
 }
 
 .gpuMemoryDim {
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
 }
 
 .gpuMemoryTable td.gpuMemoryWrap {

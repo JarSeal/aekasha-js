@@ -123,7 +123,7 @@ const onPanelRemoved = () => scheduler.dispose();
   that follows a value changing on its own. It's one `requestAnimationFrame` loop per scheduler,
   running only while the host shows (`setVisible`), the page isn't hidden and a live field
   exists; each field is read at its own `interval` (in ms, 0 every frame), against the frame's
-  time.
+  time. `interval: 'refresh'` keeps a field off the tick: only `refresh()` reads it.
 - **A field that doesn't show isn't read:** one hidden, or in a shut folder, is read once when it
   shows again, without a flash.
 - **Without a scheduler** an edit field is read by its own `refresh()` only, and a live field
@@ -248,7 +248,7 @@ them, so a pane described as items ports by renaming. Its calls map like this:
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `new Pane({ container })`                          | `createPropertyGrid()`, its `cmp` added where it goes (a window for a floating pane)         |
 | `pane.addBinding(obj, 'key', params)`              | An item `{ target: obj, key: 'key', ...params }`, or the field's own `createX`               |
-| `addBinding(…, { readonly: true, interval })`      | The same item (a monitor), or `createMonitor`                                                |
+| `addBinding(…, { readonly: true, interval })`      | The same item (a monitor), or `createMonitor`; Tweakpane's `interval: 0` is `'refresh'`      |
 | `pane.addFolder({ title, expanded })`              | `{ type: 'folder', title, expanded, items }`, or `createFolder`                              |
 | `pane.addButton({ title, label })`, `.on('click')` | `{ type: 'button', title, label, onClick }`                                                  |
 | `pane.addBlade({ view: 'separator' })`             | `{ type: 'separator' }`                                                                      |
@@ -291,8 +291,9 @@ What works differently, on purpose:
 - **An Euler is a rotation field in degrees** (Tweakpane shows it as a point in radians), and an
   `{ x, y }` value is a vector field (Tweakpane's point has a pad: say `kind: 'pad2d'`).
 
-The engine's [debug tabs](hub:features/debug-suite#a-tab) still build their panes with Tweakpane;
-a later engine major moves them onto these fields, with the same names.
+The engine's [debug tabs](hub:features/debug-suite#a-tab) build their panes from these items,
+and a tab's own fields share its scheduler
+([kit components in a tab](hub:features/debug-suite#kit-components-in-a-tab)).
 
 ## Read more
 

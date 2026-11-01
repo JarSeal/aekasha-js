@@ -8,7 +8,9 @@ page alone.
 
 - Space comes from the scale: about `space-2` to `space-3` inside a control (an icon and its
   label), `space-3` to `space-4` between controls in a group, `space-5` to `space-6` between
-  groups. The compact density tightens the same steps.
+  groups. The compact density tightens the same steps, but not a control below the 24 px
+  target: a debugger grid's row is 27 px compact and 28.4 default, so the targets, not the type
+  scale, set how many rows a panel shows.
 - The UI's bounds are the HUD's container, not the browser window: in an embed that's the mount's
   container. A window or a dialog sizes in `%` of it; `vw` and `vh` are the browser window's.
 - Media queries are in px and don't follow the UI scale: lay out with the container's size

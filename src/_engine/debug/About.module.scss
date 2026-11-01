@@ -1,123 +1,122 @@
-@use '../ui/styles/variables.scss';
+@use './styles/debugLayout' as layout;
+
+// The About Ækasha dialog (_dbg__About.ts, p806 D9, D10): on the tokens, unlayered. The scrolling
+// panel (the symbol, the name and the sections) over the footer's buttons. Headings and figures
+// are kept apart by weight, not a third grey (p801 §4.2).
 
 .dialogContent {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: calc(1 * var(--aek-rem)) calc(1.2 * var(--aek-rem)) calc(1.2 * var(--aek-rem));
+  font-size: var(--aek-font-size-md);
 }
 
 .panel {
   flex: 1;
   min-height: 0;
+  padding: var(--aek-space-4) var(--aek-space-5) var(--aek-space-5);
   overflow: auto;
-  padding: calc(0.4 * var(--aek-rem)) calc(0.8 * var(--aek-rem)) 0 0;
-  scrollbar-color: variables.$debugTextColor variables.$debugGuiBackgroundLighter2;
   scrollbar-width: thin;
 }
 
 .header {
   display: flex;
-  gap: calc(1.6 * var(--aek-rem));
+  gap: var(--aek-space-6);
   align-items: flex-start;
-  padding: calc(0.6 * var(--aek-rem)) 0 calc(1.4 * var(--aek-rem));
+  padding-bottom: var(--aek-space-5);
 }
 
+// The symbol is the name's picture: decorative (aria-hidden), in the text's colour
 .symbol {
   flex-shrink: 0;
-  color: variables.$white;
-  margin-top: calc(-0.8 * var(--aek-rem));
+  color: var(--aek-text);
+  font-size: calc(var(--aek-space-7) * 2.5);
+  line-height: 0;
 
-  :global(.uiIcon) {
+  :global(.aekIcon) {
     display: block;
-    width: calc(6.4 * var(--aek-rem));
-    height: calc(6.4 * var(--aek-rem));
+    width: 1em;
+    height: 1em;
+  }
 
-    svg {
-      width: 100%;
-      height: 100%;
-    }
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-2);
+  min-width: 0;
+
+  p {
+    margin: 0;
   }
 }
 
 .name {
-  margin: 0;
-  font-size: calc(1.8 * var(--aek-rem));
-  color: variables.$white;
+  font-size: var(--aek-font-size-2xl);
+  font-weight: var(--aek-font-weight-semibold);
+  line-height: var(--aek-line-height-tight);
 }
 
-.version {
-  margin-top: calc(0.2 * var(--aek-rem));
-  font-size: calc(1.2 * var(--aek-rem));
-  color: variables.$debugTextColor;
-}
-
+.version,
 .description {
-  margin: calc(0.8 * var(--aek-rem)) 0 0;
-  font-size: calc(1.2 * var(--aek-rem));
-  line-height: 1.4;
-  color: variables.$debugTextColor;
+  line-height: var(--aek-line-height-base);
 }
 
 .credits {
-  margin-top: calc(0.6 * var(--aek-rem));
-  font-size: calc(1.1 * var(--aek-rem));
-  color: variables.$debugTextColorDark;
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-sm);
 }
 
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(1.2 * var(--aek-rem));
-  margin-top: calc(0.8 * var(--aek-rem));
-  font-size: calc(1.2 * var(--aek-rem));
-
-  a {
-    color: variables.$debugTextColor;
-
-    &:hover {
-      color: variables.$white;
-    }
-  }
+  gap: var(--aek-space-2) var(--aek-space-5);
+  margin-top: var(--aek-space-2);
 }
 
 .section {
-  margin-top: calc(1.6 * var(--aek-rem));
+  margin-top: var(--aek-space-6);
 
   h4 {
-    margin: 0 0 calc(0.4 * var(--aek-rem));
-    font-size: calc(1.3 * var(--aek-rem));
-    color: variables.$white;
+    margin: 0 0 var(--aek-space-2);
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-semibold);
   }
 }
 
+// The label column 40 % in every section (a package name wraps), the values wrapping anywhere (a
+// user agent string, a commit) and selectable
 .rows {
   display: grid;
-  grid-template-columns: calc(16 * var(--aek-rem)) 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   margin: 0;
 
   dt,
   dd {
     margin: 0;
-    padding: calc(0.5 * var(--aek-rem)) 0;
-    border-top: calc(0.1 * var(--aek-rem)) solid rgba(variables.$debugTextColor, 0.12);
-    font-size: calc(1.2 * var(--aek-rem));
+    padding: var(--aek-space-2) 0;
+    border-top: 1px solid var(--aek-border);
   }
 
   dt {
-    padding-right: calc(1 * var(--aek-rem));
-    color: variables.$debugTextColorDark;
+    padding-right: var(--aek-space-4);
+    overflow-wrap: anywhere;
+    color: var(--aek-text-muted);
   }
 
   dd {
     min-width: 0;
     overflow-wrap: anywhere;
-    color: variables.$debugTextColor;
     user-select: text;
   }
 
-  @media screen and (max-width: variables.$breakpointSmall) {
-    grid-template-columns: 1fr;
+  @media screen and (max-width: layout.$breakpointSmall) {
+    grid-template-columns: minmax(0, 1fr);
 
     dd {
       padding-top: 0;
@@ -130,11 +129,7 @@
   display: flex;
   flex-shrink: 0;
   justify-content: flex-end;
-  gap: calc(0.8 * var(--aek-rem));
-  padding-top: calc(1 * var(--aek-rem));
-  border-top: calc(0.1 * var(--aek-rem)) solid variables.$debugTextColorDark;
-
-  :global(.debuggerClearLSDialogButton) {
-    margin: 0;
-  }
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4) var(--aek-space-5);
+  border-top: 1px solid var(--aek-border);
 }

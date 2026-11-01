@@ -30,8 +30,8 @@
       "gzip": 247535
     },
     "assets/BindingScheduler.js": {
-      "bytes": 1645,
-      "gzip": 855
+      "bytes": 2172,
+      "gzip": 1052
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -63,7 +63,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45868,
-      "gzip": 13863
+      "gzip": 13862
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
@@ -107,11 +107,11 @@
     },
     "assets/Kbd.js": {
       "bytes": 2768,
-      "gzip": 1228
+      "gzip": 1225
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24364
+      "gzip": 24362
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -135,54 +135,54 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 182
+      "gzip": 181
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
       "gzip": 179
     },
     "assets/uiKit.css": {
-      "bytes": 7560,
-      "gzip": 2049
+      "bytes": 7212,
+      "gzip": 1987
     },
     "assets/uiKit.embed.js": {
       "bytes": 1039598,
-      "gzip": 291324
+      "gzip": 291322
     },
     "assets/uiKitEmbed.css": {
-      "bytes": 19264,
-      "gzip": 3643
+      "bytes": 17898,
+      "gzip": 3452
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 45835,
-      "gzip": 16675
+      "bytes": 46262,
+      "gzip": 16823
     },
     "assets/uiKitEmbedData.css": {
-      "bytes": 23529,
-      "gzip": 3982
+      "bytes": 24279,
+      "gzip": 4079
     },
     "assets/uiKitEmbedData.js": {
-      "bytes": 52875,
-      "gzip": 19775
+      "bytes": 52979,
+      "gzip": 19791
     },
     "assets/uiKitEmbedForm.css": {
-      "bytes": 23505,
-      "gzip": 3971
+      "bytes": 24068,
+      "gzip": 4046
     },
     "assets/uiKitEmbedForm.js": {
-      "bytes": 47362,
-      "gzip": 17953
+      "bytes": 47667,
+      "gzip": 18050
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 210
+      "gzip": 209
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
     "minified": 1058638,
-    "gzip": 296825
+    "gzip": 296826
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -198,7 +198,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2384,
-      "gzip": 1076
+      "gzip": 1077
     },
     "_engine/kernel/ecs": {
       "modules": 7,

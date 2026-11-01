@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Refactoring, API
-Related: p800_debugger-ui-overhaul.md (D12: its p806 ships here on the `engine-6` branch), \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p803_ui-kit-structure-and-core.md (D3, D5: the UI kit's type aliases and `'small'` below), \_DONE_p618_review-debug-public-api.md (D3: the debug items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
+Related: p800_debugger-ui-overhaul.md (D12: its p806 ships here on the `engine-6` branch), \_DONE_p806_debugger-migration.md (D3: the tab types' breaks, on the migration guide's "Engine 5 → 6" section and `CHANGELOG.md`'s unreleased `engine-6` entry, which this major extends), \_DONE_p600_whole-codebase-refactoring-and-documentation.md (Stage C bumps are minor or patch, so its deprecations wait here), \_DONE_p614_review-physics.md (D3: the physics items below), \_DONE_p615_review-sky-box.md (D3: the sky box items below), \_DONE_p616_review-lod-spatial-instancing-lines.md (D3: the LOD, spatial, instancing and lines items below), \_DONE_p617_review-input-ui-hud.md (D3: the UI kit items below), \_DONE_p803_ui-kit-structure-and-core.md (D3, D5: the UI kit's type aliases and `'small'` below), \_DONE_p618_review-debug-public-api.md (D3: the debug items below), \_DONE_p610_character-and-input-action-architecture.md, \_DONE_p612_review-ecs-loop-config-init.md, \_DONE_p613_review-rendering-scene-assets.md (their deprecations), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the tiers' measurement)
 
 # Engine 6.0.0 — Stub
 
@@ -89,8 +89,8 @@ ecsWorld?)`: optional positional parameters, where the coding standard asks for 
     `ui/core/CMPTypes.ts`, and `TDropDown` (→ `DropDown`) in `ui/forms/DropDown.ts`. Removed
     here, with their rows in the migration page (a rename, the codemod's job).
   - `getSvgIcon`'s `size` value `'small'` (p803 D5, deprecated in engine 5.12.0: `'sm'`), and the
-    `uiIcon` / `smallIcon` classes it writes next to `aekIcon` for the debugger's styles (p806's
-    restyle drops them).
+    `uiIcon` / `smallIcon` classes it writes next to `aekIcon` for the debugger's styles (no style
+    reads them since p806's restyle, which removed their rules; `ui/CLAUDE.md`'s 6.0.0 list).
   - the string form of `kbd` (p804 D13, deprecated in engine 5.13.0: a `Kbd` handle from
     `createKbd`) on `ButtonProps`, `SplitButtonProps`, `MenuActionItem` and `MenuCheckboxItem`:
     `ui/components/ShortcutHint.ts`' string path (its `import('./Kbd')`) goes with it, and the
@@ -112,9 +112,12 @@ ecsWorld?)`: optional positional parameters, where the coding standard asks for 
   - not deprecated, p800's break: the tab types' Tweakpane fields (`DebuggerPaneBinding` passes its
     other fields to Tweakpane's `addBinding` and its `onCreate` gets a `BindingApi`;
     `DebuggerPaneCustom.build` gets a Tweakpane `Pane | FolderApi`). Decided in p800 (D12): its
-    debugger migration, p806, replaces them on the `engine-6` integration branch and ships with
-    this major (p800 §6); this major's migration page lists p806's tab type changes (p800 §5,
-    p806);
+    debugger migration, p806, replaced them on the `engine-6` integration branch and ships with
+    this major (p800 §6). Done (`_DONE_p806_debugger-migration.md`, D3): Tweakpane is gone, the
+    Hub's migration guide has an "Engine 5 → 6" section with p806's breaks, under an "In
+    progress" note (`hub/pages/documentation/migration/engine-6.md`), and `CHANGELOG.md` has an
+    unreleased `engine-6` entry with p806's sections. This major adds its removals to both, drops
+    the note, and dates the entry with the bumps;
 - **The deprecations without a version:** none left. (`ui/overlays/windows/DraggableWindow.ts`' six were removed in
   p617, `debug/Stats.ts`' two and `debug/_dbg__PercentagePie.ts`' one in p618: on no entry, no
   caller.)

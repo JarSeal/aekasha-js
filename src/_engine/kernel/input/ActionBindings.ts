@@ -66,9 +66,13 @@ const _stick = { x: 0, y: 0 };
 const toChords = (keys: readonly (string | KeyChord)[]): CompiledKeyChord[] =>
   keys.map((k) => compileKeyChord(typeof k === 'string' ? { key: k } : k));
 
+// Whether the read in progress is the app's (a map outside the `DEBUG` context): a key held on a
+// debugger control isn't held for it (KeyboardInput.ts' isKeyEventOnDebugger, p806 D12)
+let isAppRead = false;
+
 const isAnyHeld = (chords: CompiledKeyChord[], ignoreModifiers: boolean) => {
   for (let i = 0; i < chords.length; i++) {
-    if (isKeyChordHeld(chords[i], true, ignoreModifiers)) return true;
+    if (isKeyChordHeld(chords[i], true, ignoreModifiers, isAppRead)) return true;
   }
   return false;
 };
@@ -103,14 +107,18 @@ const clampDeadzone = (deadzone: number | undefined) =>
  * Reads a button or axis action's devices through its bindings into `out`: a button is down
  * while any binding is, an axis takes the binding pushed furthest.
  * @internal
+ * @param isApp the app's map (outside the `DEBUG` context): a key held on a debugger control isn't
+ * down for it
  * @returns whether the action is down (an axis: not 0)
  */
 export const readActionDevices = (
   compiled: CompiledBinding[],
   type: ActionType,
   gamepadIndex: number | undefined,
-  out: LiveActionValue
+  out: LiveActionValue,
+  isApp: boolean
 ): boolean => {
+  isAppRead = isApp;
   let isDown = false;
   let value = 0;
   let x = 0;

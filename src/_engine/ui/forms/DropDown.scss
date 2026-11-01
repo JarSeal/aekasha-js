@@ -32,11 +32,11 @@
     transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
   }
 
-  :where(.aekDropDownTrigger:hover:not(:disabled)) {
+  :where(.aekDropDownTrigger:hover:not(:disabled, [aria-disabled='true'])) {
     background-color: var(--aek-surface-hover);
   }
 
-  :where(.aekDropDownTrigger:disabled) {
+  :where(.aekDropDownTrigger:disabled, .aekDropDownTrigger[aria-disabled='true']) {
     border-color: var(--aek-border);
     color: var(--aek-text-disabled);
     cursor: default;

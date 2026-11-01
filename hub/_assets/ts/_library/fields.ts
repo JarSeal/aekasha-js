@@ -96,6 +96,10 @@ const createDropDownPanel = () => {
     index = (index + 1) % COLOURS.length;
     changed.refresh();
   });
+  // Still a tab stop (a toolbar's drop-down): its reason is its title, and it doesn't open
+  const waiting = createDemoDropDown({ title: 'Colour', focusableWhenDisabled: true });
+  waiting.setDisabled(true, 'Loading the colours…');
+  row('Disabled but focusable (aria-disabled), its reason the title', waiting);
   return panel;
 };
 
@@ -743,8 +747,9 @@ const initCheckboxDemo: Demo = (box) => {
 const MONITOR_ID = (name: string) => `${ID_PREFIX}Monitor${name}`;
 
 /** In the page: monitors of a small simulation's values on one scheduler, which a kit button
- * steps (the tick draws them, no flash); `readonly: true` on each field; a multiline block, a
- * hint and a disabled one */
+ * steps (the tick draws them, no flash); one read only by the scheduler's refresh (`interval:
+ * 'refresh'`, p806 D4) with its Refresh button; `readonly: true` on each field; a multiline
+ * block, a hint and a disabled one */
 const initMonitorDemo: Demo = (box) => {
   const root = addKitRoot(box);
   const scheduler = createBindingScheduler();
@@ -762,9 +767,9 @@ const initMonitorDemo: Demo = (box) => {
     group.classList.add('hubDemoFields');
     group.append(...elems);
   };
-  const monitor = (name: string, props: Partial<MonitorProps<unknown>>) =>
+  const monitor = (name: string, props: Partial<MonitorProps<unknown>>, idName = name) =>
     createMonitor({
-      id: MONITOR_ID(name),
+      id: MONITOR_ID(idName),
       label: name,
       scheduler,
       ...props,
@@ -791,6 +796,20 @@ const initMonitorDemo: Demo = (box) => {
     monitor('State', { target: sim, key: 'state' }),
     monitor('Position', { target: sim, key: 'position', precision: 2 }),
     step.cmp.elem
+  );
+  const refresh = createButton({
+    id: MONITOR_ID('Refresh'),
+    label: 'Refresh',
+    onClick: () => scheduler.refresh(),
+  });
+  row(
+    "interval: 'refresh': read only by its host's refresh, never the tick",
+    monitor(
+      'Bodies on refresh',
+      { target: sim, key: 'bodies', precision: 0, interval: 'refresh' },
+      'BodiesOnRefresh'
+    ),
+    refresh.cmp.elem
   );
   row(
     'Multiline: a block of lines, a tab stop',

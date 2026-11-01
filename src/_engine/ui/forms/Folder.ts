@@ -4,6 +4,7 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
 import { getMotionFactor } from '../core/Motion';
+import { clearAncestorReads } from './binding/AncestorReads';
 import {
   addScheduledBinding,
   revealScheduledBindings,
@@ -165,6 +166,8 @@ export const createFolder = (props: FolderProps): Folder => {
   const setAttrIf = (elem: Element, name: string, on: boolean) => {
     if (on) elem.setAttribute(name, '');
     else elem.removeAttribute(name);
+    // Its fields' kept visibility, mid-pass (a `hidden` function's)
+    if (name === 'hidden') clearAncestorReads();
   };
 
   const clearTimer = () => {
@@ -186,7 +189,7 @@ export const createFolder = (props: FolderProps): Folder => {
     toggleButton.setAttribute('aria-expanded', String(open));
     const duration = MOTION_MS * getMotionFactor(root);
     if (open) {
-      region.elem.removeAttribute('hidden');
+      setAttrIf(region.elem, 'hidden', false);
       // Its fields show again: those it hid since a refresh are read once
       if (scheduler) revealScheduledBindings(scheduler);
     } else if (region.elem.contains(document.activeElement)) {

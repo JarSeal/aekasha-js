@@ -23,4 +23,6 @@ columns.
   bodies and refreshes: the speed flashes, the monitor doesn't. The status line says the label
   column's width after a move.
 
-The separator is the columns' 24 px gap, so it covers no control.
+The separator is the columns' 24 px gap, so it covers no control: a row across both columns (a
+button without a label, a custom item, a folder's heading) and the gap between two buttons or custom
+items are over it.

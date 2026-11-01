@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804 and p805 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805 and p806 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -695,11 +695,34 @@ What follows is the sketch as written.
 
 ### p806 — Debugger migration (engine 6.0.0)
 
-Written: `p806_debugger-migration.md` (2026-10-28, its decisions proposed for review). From its
-grounding: 26 declarative sections (not 30), 20 `createDebuggerTab` calls, no `onCreate` or
-`e.api` user and one `custom` (engine), so its breaks are type-level for an app; the drawer's tab
-menu becomes a vertical icon rail (its D6), the debugger keeps unlayered CSS modules (its D9), and
-`engine-6` is cut in its Phase 0. What follows is the sketch as written.
+Done: `_DONE_p806_debugger-migration.md` (2026-11-01, on the `engine-6` branch: engine 6.0.0
+when `engine-6` merges to `main`, `CHANGELOG.md`'s unreleased `engine-6` entry). What the later
+plans build on, each written there:
+
+- **The tab contract** (its D3): every 5.x function, `DebuggerTabDef` field, section and item
+  type name stays, and 5.x's LS state loads; the breaks are a binding's Tweakpane side (its D3
+  table, on the Hub's migration guide, "Engine 5 → 6", which p622 extends). New: `content(ctx)`
+  with `ctx.scheduler`, `keepOnSceneChange` / `onSceneChange`, `uiLsKey`'s `labelWidth`,
+  `DebuggerListDef`'s `label`, `AppConfig.debugDrawer.theme`.
+- **The pieces:** the panes are property grids (`_dbg__DebuggerPaneBuilder.ts`), the tab host
+  one binding scheduler per host with the fields' context menu (`_dbg__TabHost.ts`), the drawer
+  and the editor drawer one shell (`_dbg__DrawerShell.ts`: the rail on `createTabs`, a width
+  handle), the edit windows `createDebugWindowGrid` (`_dbg__DebugWindowGrid.ts`: info rows, notes,
+  reasoned buttons), the debugger roots' theme and density from one function
+  (`ui/overlays/DebuggerRoot.ts`), and a debugger control's keys the debugger's
+  (`isKeyEventOnDebugger`). The kit gained `interval: 'refresh'`, `separatorBefore`, the button
+  group's `toolbar` with drop-down items and `focusableWhenDisabled`.
+- **The checks:** the scene runner's `debugger` configuration (shots of every tab, window and
+  dialog, the tab order, axe failing on any violation, four undo / redo scripts) through the test
+  bridge's debugger methods (`TEST_BRIDGE_VERSION` 6).
+- **For p807:** its §4 (what p806 leaves: the profiler's Overview, Objects and GPU memory content
+  as HTML strings on the tokens, the stats panels, the "Debugger parity" box's 13 tables, bar,
+  sparklines and list; what p807 can count on) and Phase 6's "As built" (the perf-auditor's
+  findings left to p807's pass, the debug chunks' sizes).
+- **Size:** the debugger's lazy chunks 221.5 → 204.2 kB gzip (Tweakpane's 30.5 gone); production's
+  first downloads unchanged.
+
+What follows is the sketch as written.
 
 - The drawer, the tab host, the pane builder, the profiler window, the editor drawer and the
   on-screen tools on the components; the compact density; the debugger's styles on the tokens.
@@ -763,18 +786,20 @@ Every PR into `main` runs `yarn checkVersions --against main` and bumps what it 
 per merge). The children are written and started one or two at a time; p804 and p805 can run in
 parallel branches.
 
-| Plans                                    | Branch                    | Merges into                                         | PR                                                                                                                                          |
-| ---------------------------------------- | ------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| p801, p802, p803, p804, p805, p808, p809 | each its own, from `main` | `main`                                              | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                 |
-| p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` when p622 is scheduled) | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
-| p807                                     | its own                   | `main`, or `engine-6` if it changes a public type   | one when its last phase is done                                                                                                             |
+| Plans                                    | Branch                    | Merges into                                       | PR                                                                                                                                          |
+| ---------------------------------------- | ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| p801, p802, p803, p804, p805, p808, p809 | each its own, from `main` | `main`                                            | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                 |
+| p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` in p806 Phase 0)      | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
+| p807                                     | its own                   | `main`, or `engine-6` if it changes a public type | one when its last phase is done                                                                                                             |
 
 One exception to "one PR per plan": p802's Phase 1 (the dev-only pages) is its own PR into `main`
 (`p802-dev-pages`), merged before p801 starts, since p801's font study needs a dev-only page
 (p801 D11, p802 D10). p802's other phases follow on `p802-hub-project-section`.
 
 If p806 is ready long before p622 is scheduled, `engine-6` is cut then and kept rebased on `main`;
-p622 is expanded into a full plan at that point (its stub says so).
+p622 is expanded into a full plan at that point (its stub says so). That's how it went: `engine-6`
+was cut from `main` in p806's Phase 0 (2026-10-28, at `3adfac2b`), p806 merges into it, and p622
+is still a stub, expanded when the major is scheduled.
 
 ---
 
@@ -785,10 +810,11 @@ p622 is expanded into a full plan at that point (its stub says so).
 - **p618** (done, engine 5.9.0): it blocked p806 only. Its "Write your own tab" guide and `examples/debugTab/` are what p806
   rewrites; its D1 / D8 header lines are what p806 removes.
 - **p622**: p806's breaks (D12) and the kit's `T` renames ship in it; its migration page lists
-  p806's tab type changes.
-- **p150** (origin info on the camera and light edit windows) and **p373** (merge debugging): if
-  they land before p806, they use the current panels and p806 ports them with the rest; after, they
-  use the components.
+  p806's tab type changes (done: the migration guide's "Engine 5 → 6" section, which p622
+  extends).
+- **p150** (origin info on the camera and light edit windows) and **p373** (merge debugging): they
+  use the components (p806 done: the edit windows on `createDebugWindowGrid`, the tabs' panes on
+  the property grid).
 - **p355** (save menu): its menu and settings use p803's and p804's components (done: p804's
   form, property grid and fields).
 - **p426** (sequencer): its curve and timeline editing reuses p804's curve editor (done:
@@ -796,7 +822,8 @@ p622 is expanded into a full plan at that point (its stub says so).
 - **p770** (the key binding refactoring prompt): its rebinding UI is p808's settings menu's
   controls page.
 - **`docs/issues/ui-kit-in-an-embed.md`**: fixed and closed by p801 (D4).
-- **`docs/issues/on-screen-tools-during-scene-load.md`**: fixed and closed by p806.
+- **`docs/issues/on-screen-tools-during-scene-load.md`**: fixed and closed by p806 (D7), as is
+  `docs/issues/action-map-keys-on-focused-debugger-controls.md`, which p806 found (D12).
 
 ---
 

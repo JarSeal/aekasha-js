@@ -1,7 +1,16 @@
-/** What Tab reaches: an enabled control, a link, or an element with a `tabindex` other than -1 */
-const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), ' +
-  'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/** What Tab reaches: an enabled control, a link, or an element with a `tabindex`, none with
+ * `tabindex="-1"` (a roving composite's items but its tab stop: p806 Phase 2 section 3 found a
+ * window's first focus on a tab list's unselected tab) */
+const FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  'a[href]',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]',
+]
+  .map((selector) => `${selector}:not([tabindex="-1"])`)
+  .join(', ');
 
 /**
  * The rendered elements Tab reaches in `root`, in document order (not `tabindex` order: the kit

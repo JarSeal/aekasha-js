@@ -49,23 +49,49 @@ createButton({
   (`kbd: 'Ctrl+S'`) still works, deprecated until engine 6.0.0: the button loads the hint's code
   for it, so the hint appears a frame later.
 - `tooltip` adds a tooltip; an `iconOnly` button gets its label as one.
+- `setDisabled(true)` disables it natively (`disabled`: out of the tab order). With
+  `focusableWhenDisabled` it's `aria-disabled` instead: still a tab stop, so the focus stays on it
+  and assistive tech finds it, its clicks and holds ignored. `setDisabled(true, reason)` makes the
+  reason its tooltip while it's disabled ("Loading the scene…", "Nothing to undo"). A toolbar's
+  buttons want it: the arrows still stop on a disabled one.
 - An action with variants is a split button: see
   [menus and split buttons](hub:features/ui-kit/overlays#menus-and-split-buttons).
 
-| Button            |                                                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------------------------------- |
-| Props             | [`ButtonProps`](api:ButtonProps)                                                                               |
-| Parts             | `.aekButton` with `__icon`, `__label`, `__kbd`, `__hold` (the hold's fill)                                     |
-| States            | `data-variant`, `data-size`, `disabled`, `aria-pressed`, `aria-busy` (loading), `data-holding`                 |
-| Custom properties | `--aek-button-radius`, `--aek-button-hold-color`                                                               |
-| Keys              | Enter and Space click it; a hold to confirm acts after Space or Enter is held for `holdToConfirmMs`            |
-| Assistive tech    | An icon-only button's label is its `aria-label`; `kbd` sets `aria-keyshortcuts`; a hold says "Hold to confirm" |
+| Button            |                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Props             | [`ButtonProps`](api:ButtonProps)                                                                                  |
+| Parts             | `.aekButton` with `__icon`, `__label`, `__kbd`, `__hold` (the hold's fill)                                        |
+| States            | `data-variant`, `data-size`, `disabled` or `aria-disabled`, `aria-pressed`, `aria-busy` (loading), `data-holding` |
+| Custom properties | `--aek-button-radius`, `--aek-button-hold-color`                                                                  |
+| Keys              | Enter and Space click it; a hold to confirm acts after Space or Enter is held for `holdToConfirmMs`               |
+| Assistive tech    | An icon-only button's label is its `aria-label`; `kbd` sets `aria-keyshortcuts`; a hold says "Hold to confirm"    |
 
 ### Groups and toolbars
 
 [`createButtonGroup`](api:createButtonGroup) joins buttons into a named group. With `exclusive`
 its toggles are a toolbar with one pressed at a time and one tab stop: the arrows move between
-the buttons, Space or Enter presses one.
+the buttons, Space or Enter presses one. With `toolbar` the buttons, toggles and
+[drop-downs](hub:features/ui-kit/forms#drop-downs) act on their own, in one toolbar with one
+tab stop (a viewport's tools):
+
+```ts
+const tools = createButtonGroup({
+  label: 'Viewport',
+  toolbar: true,
+  buttons: [
+    createButton({ label: 'Frame all', icon: getSvgIcon('aspectRatio'), iconOnly: true }),
+    createButton({ label: 'Grid', icon: getSvgIcon('spatialGrid'), iconOnly: true, pressed: true }),
+    createDropDown({
+      options: cameraOptions,
+      value: getCameraId,
+      onChange: setCamera,
+      title: 'Camera',
+    }),
+  ],
+});
+```
+
+And an exclusive one:
 
 ```ts
 const modes = ['Lit', 'Wireframe', 'Normals'];
@@ -81,12 +107,12 @@ toolbarPanel.add(viewMode.cmp);
 ::: demo buttonGroup
 :::
 
-| Button group   |                                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| Props          | [`ButtonGroupProps`](api:ButtonGroupProps)                                                              |
-| Parts          | `.aekButtonGroup` around the buttons                                                                    |
-| Keys           | A toolbar (`exclusive`): one tab stop; the arrows along it move (wrapping), Home and End go to the ends |
-| Assistive tech | `role="group"` named by `label`; `exclusive` makes it a `toolbar` (`aria-orientation` when vertical)    |
+| Button group   |                                                                                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props          | [`ButtonGroupProps`](api:ButtonGroupProps)                                                                                                                                       |
+| Parts          | `.aekButtonGroup` around the buttons                                                                                                                                             |
+| Keys           | A toolbar (`exclusive` or `toolbar`): one tab stop; the arrows along it move (wrapping, past a `disabled` item, stopping on an `aria-disabled` one), Home and End go to the ends |
+| Assistive tech | `role="group"` named by `label`; `exclusive` or `toolbar` makes it a `toolbar` (`aria-orientation` when vertical)                                                                |
 
 ## Links
 
@@ -375,20 +401,23 @@ inspector.select('log'); // from code: onSelect isn't called
 - **Icon-only tabs** (`iconOnly`, with an `icon`) keep the label for assistive tech (visually
   hidden text, with the badge their name) and show it as a tooltip, as a debugger's tab menu does.
   `orientation: 'vertical'` puts the tab list at the start of the panels; Up and Down move then.
+- **A divider** before a tab (`separatorBefore`) sets a group apart, as the debug drawer's scene
+  tabs: a line in a gap, not an element (the tab list holds tabs alone), and the arrows go on
+  across it.
 - **Many tabs** scroll: the tab list scrolls along its orientation, its cut edges faded, and a tab
   the keys or `select` reach is scrolled into view (the list, never the page).
 - `setTabs` replaces the tabs: a tab whose key stays keeps its button, its panel and its built
   content (built again when its `content` changed), so a scene's own tab can come and go. When
   the selected tab goes, the first enabled one is selected and reported to `onSelect`.
 
-| Tabs              |                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                       |
-| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                               |
-| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden`                 |
-| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                               |
-| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel |
-| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable          |
+| Tabs              |                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`TabsProps`](api:TabsProps), a tab's [`TabDef`](api:TabDef)                                                                                                                                |
+| Parts             | `.aekTabs` with `__list`, `__tab` (and its `__icon`, `__label`, `__badge`), `__panels` and `__panel`                                                                                        |
+| States            | `data-orientation`; a tab's `aria-selected`, `disabled`, `data-icon-only`, `data-separator-before`, `data-tab-key`; the list's `data-overflow` (`start`, `end`, `both`); a panel's `hidden` |
+| Custom properties | `--aek-tabs-indicator-color` (the selected tab's line), `--aek-tabs-fade-size` (the cut edges' fade)                                                                                        |
+| Keys              | One tab stop, the selected tab; the arrows along the list move (wrapping), Home and End go to the ends; Enter and Space select (manual activation); Tab goes on to the shown panel          |
+| Assistive tech    | `role="tablist"` named by `label` (`aria-orientation` when vertical); each `tab` with `aria-selected` and `aria-controls`; each `tabpanel` named by its tab and focusable                   |
 
 ## Accordions
 

@@ -2,7 +2,8 @@
  * One page load of the scene runner (`yarn verify:scenes`, `scenes.ts`): a scene in a
  * configuration, through the dev-only test bridge (`window.__AEK_TEST__`,
  * `src/_engine/debug/TestBridge.ts`), compared with its baseline (`sceneBaseline.ts`): the errors,
- * the probe and character path hashes, the snapshot and the system order.
+ * the probe and character path hashes, the snapshot and the system order, and in the `debugger`
+ * configuration the debugger's (`sceneDebugger.ts`).
  */
 import fs from 'fs';
 import path from 'path';
@@ -45,6 +46,8 @@ import {
   snapshotFileName,
 } from './sceneBaseline';
 import { appliesTo, buildSceneUrl } from './sceneSelect';
+import { EVALUATE_MARGIN_MS, withTimeout } from './browser';
+import { runDebuggerChecksAsync } from './sceneDebugger';
 import { compareSnapshots } from './snapshotDiff';
 import { diffSystemOrders } from './systemOrder';
 
@@ -54,8 +57,6 @@ const INPUTS_DIR = path.join(ROOT, 'devTools/verify/inputs');
 const PHYSICS_BOOT_LS_KEY = 'AEK_debugPhysicsApiBoot';
 const VIEWPORT = { width: 1024, height: 576 };
 const BRIDGE_INSTALL_TIMEOUT_MS = 120_000;
-/** A page call's limit beyond the bridge's own (its `timeoutMs`), and for the calls without one */
-const EVALUATE_MARGIN_MS = 60_000;
 
 /** What every page load of a run shares */
 export type LoadContext = BaselineContext & {
@@ -72,15 +73,6 @@ export const isAllowed = (sceneId: string, message: string, browser: VerifyBrows
   [...GLOBAL_ALLOWED_ERRORS, ...(SCENE_VERIFY_CONFIG[sceneId]?.allowedErrors ?? [])].some(
     (a) => appliesTo(a, null, browser) && a.pattern.test(message)
   );
-
-/** A page call that can hang (a stuck GPU readback): rejected after `ms`, so the run goes on */
-const withTimeout = <T>(promise: Promise<T>, ms: number, what: string): Promise<T> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${what}: no answer in ${ms / 1000} s`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-};
 
 /**
  * A scene's input script, `devTools/verify/inputs/<name>.json`. A missing or invalid one throws:
@@ -431,6 +423,18 @@ const runAttempt = async (
 
     if (def.mode === 'PROD_TEST') await page.waitForTimeout(PROD_TEST_SETTLE_MS);
     else await runProbe(ctx, page, backend, baseline, def, sceneConfig, steps, result);
+    // On the frozen page (p806 D14); Firefox's runs are hashes only
+    if (def.debugger && sceneConfig.debugger && ctx.browserName === 'chromium') {
+      await runDebuggerChecksAsync({
+        page,
+        backend,
+        entry: baseline.entries[runKey(sceneId, config)],
+        isRecording: ctx.isRecording,
+        cacheDir: ctx.cacheDir,
+        settings: sceneConfig.debugger,
+        result,
+      });
+    }
 
     // Last: after the probe's steps (or the prod test settle), so the debug modules that register
     // systems from a lazy chunk have loaded

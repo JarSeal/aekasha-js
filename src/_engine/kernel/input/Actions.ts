@@ -35,7 +35,11 @@ import { pollGamepads } from './GamepadInput';
 import { isDebugCamRuleMet } from './InputRules';
 import type { EnabledInDebugCam } from './InputSharedTypes';
 import { addInputListenerRemover, areAllInputsEnabled, areAppInputsEnabled } from './InputState';
-import { setKeyActionListener, warnIfKeyChordReserved } from './KeyboardInput';
+import {
+  isKeyEventOnDebugger,
+  setKeyActionListener,
+  warnIfKeyChordReserved,
+} from './KeyboardInput';
 import { setMouseActionSource } from './MouseInput';
 import { setTouchActionSource } from './TouchInput';
 
@@ -159,13 +163,22 @@ const fire = (fns: ActionEventFn[], e: Event | null) => {
 const isNewKeyDown = (e: Event | null): e is KeyboardEvent =>
   e !== null && e.type === 'keydown' && !(e as KeyboardEvent).repeat;
 
+const isKeyEvent = (e: Event | null): e is KeyboardEvent =>
+  e !== null && (e.type === 'keydown' || e.type === 'keyup');
+
+/** Whether the map leaves a key event alone: an app's map (outside `DEBUG`) and a key a debugger
+ * control took (p806 D12). It neither counts it nor prevents its default. */
+const isLeftToDebugger = (map: MapRuntime, e: Event | null) =>
+  map.context !== 'DEBUG' && isKeyEvent(e) && isKeyEventOnDebugger(e);
+
 /** Re-reads a map's button and axis actions. On a change of down, an active map counts the edge
- * and calls its callbacks. */
+ * and calls its callbacks. An app's map doesn't see a key held on a debugger control. */
 const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
+  const isApp = map.context !== 'DEBUG';
   for (let i = 0; i < map.actions.length; i++) {
     const a = map.actions[i];
     if (a.type === 'DELTA_2D') continue;
-    const isDown = readActionDevices(a.compiled, a.type, map.gamepadIndex, a.live);
+    const isDown = readActionDevices(a.compiled, a.type, map.gamepadIndex, a.live, isApp);
     if (isDown === a.isLiveDown) {
       // A key of a held button pressed again is a press too: another of its keys, or a key whose
       // keyup the browser never sent (macOS sends none while ⌘ is held: ⌘Z, Z again)
@@ -174,6 +187,7 @@ const updateMap = (map: MapRuntime, e: Event | null, active: boolean) => {
         active &&
         a.type === 'BUTTON' &&
         isNewKeyDown(e) &&
+        !isLeftToDebugger(map, e) &&
         isKeyEventInBindings(a.compiled, e)
       ) {
         a.pressedCount++;
@@ -223,8 +237,10 @@ const onKeyEvent = (e: KeyboardEvent | null) => {
   const list = maps;
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    // The maps that took the event (a map made by its callbacks hasn't counted one yet)
+    // The maps that took the event (a map made by its callbacks hasn't counted one yet), and not
+    // an app's map on a debugger control's key: Enter and Space click the focused button
     if (!map.preventDefault || map.isDeleted || !map.isActiveAtEvent) continue;
+    if (isLeftToDebugger(map, e)) continue;
     for (let j = 0; j < map.actions.length; j++) {
       if (isKeyEventInBindings(map.actions[j].compiled, e, true)) {
         e.preventDefault();
@@ -243,7 +259,7 @@ export const isKeyEventInActiveMaps = (e: KeyboardEvent, exceptMapId: string): b
   const list = maps;
   for (let i = 0; i < list.length; i++) {
     const map = list[i];
-    if (map.id === exceptMapId || !isCountingEvents(map)) continue;
+    if (map.id === exceptMapId || !isCountingEvents(map) || isLeftToDebugger(map, e)) continue;
     for (let j = 0; j < map.actions.length; j++) {
       if (isKeyEventInBindings(map.actions[j].compiled, e)) return true;
     }

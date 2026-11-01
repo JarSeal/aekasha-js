@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createDropDown } from '../forms/DropDown';
 import { createButton } from './Button';
 import { createButtonGroup, type ButtonGroupProps } from './ButtonGroup';
 
@@ -113,5 +114,61 @@ describe('button group (p803 D10)', () => {
     elems[2].focus();
     expect(getTabIndices(elems)).toEqual(['-1', '-1', '0']);
     group.cmp.remove();
+  });
+
+  it('a toolbar (p806 D7): its buttons, toggles and drop-downs act alone, one tab stop', () => {
+    const onUndo = vi.fn();
+    const undo = createButton({ label: 'Undo', onClick: onUndo, focusableWhenDisabled: true });
+    const grid = createButton({ label: 'Grid', pressed: true });
+    const hidden = createButton({ label: 'Hidden', disabled: true });
+    const camera = createDropDown({
+      options: [
+        { value: 'a', label: 'Camera A' },
+        { value: 'b', label: 'Camera B' },
+      ],
+      value: 'a',
+      onChange: vi.fn(),
+    });
+    const lights = createButton({ label: 'Lights', pressed: false });
+    const group = createButtonGroup({
+      label: 'Tools',
+      toolbar: true,
+      buttons: [undo, grid, hidden, camera, lights],
+    });
+    getHUDRootCMP().add(group.cmp);
+    const trigger = camera.cmp.elem.querySelector('button') as HTMLElement;
+    const elems = [undo.cmp.elem, grid.cmp.elem, hidden.cmp.elem, trigger, lights.cmp.elem];
+    expect(group.cmp.elem.getAttribute('role')).toBe('toolbar');
+    // The first item is the tab stop (no pressed button decides it)
+    expect(getTabIndices(elems)).toEqual(['0', '-1', '-1', '-1', '-1']);
+    expect(group.getPressedIndex()).toBe(1);
+
+    // A press of a toggle releases no other
+    click(lights.cmp.elem);
+    expect(lights.isPressed()).toBe(true);
+    expect(grid.isPressed()).toBe(true);
+    click(grid.cmp.elem);
+    expect(grid.isPressed()).toBe(false);
+
+    // The arrows pass over a disabled item, and stop on an aria-disabled one
+    undo.setDisabled(true, 'Nothing to undo');
+    elems[1].focus();
+    dispatchKey(elems[1], 'keydown', 'ArrowRight');
+    expect(document.activeElement).toBe(trigger);
+    expect(getTabIndices(elems)).toEqual(['-1', '-1', '-1', '0', '-1']);
+    dispatchKey(trigger, 'keydown', 'ArrowRight');
+    dispatchKey(elems[4], 'keydown', 'ArrowRight');
+    expect(document.activeElement).toBe(elems[0]);
+    click(elems[0]);
+    expect(onUndo).not.toHaveBeenCalled();
+
+    // An open drop-down's list keeps its keys
+    camera.open();
+    const list = document.querySelector('[role="listbox"]') as HTMLElement;
+    expect(dispatchKey(list, 'keydown', 'ArrowRight').defaultPrevented).toBe(false);
+    expect(camera.isOpen()).toBe(true);
+    camera.close();
+    group.cmp.remove();
+    expect(countListeners(group.cmp.elem)).toBe(0);
   });
 });

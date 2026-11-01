@@ -4,8 +4,8 @@ import { IS_DEBUG_ENV, getECSWorld, getMaterial, createMeshEntity } from 'aekash
 export const DEBUG_TAB_SCENE_ID = 'exampleDebugTab';
 
 // #region debug-tab-scene (shown in the Hub: hub/pages/examples/debug-tab/)
-/** The scene's settings. The debug tab binds to this object and saves its two keys. */
-export const BOX_DEFAULTS = { count: 12, color: '#e8833a' };
+/** The scene's settings. The debug tab binds to this object and saves its keys. */
+export const BOX_DEFAULTS = { count: 12, color: '#e8833a', radius: 4 };
 export const boxSettings = { ...BOX_DEFAULTS };
 
 let boxIds: number[] = [];
@@ -19,7 +19,11 @@ export const buildBoxes = () => {
     return createMeshEntity({
       geo: { id: 'debugTabBox', type: 'BOX' },
       mat: { id: 'debugTabBox', type: 'STANDARD', params: { color: boxSettings.color } },
-      position: { x: Math.cos(angle) * 4, y: 0.5, z: Math.sin(angle) * 4 },
+      position: {
+        x: Math.cos(angle) * boxSettings.radius,
+        y: 0.5,
+        z: Math.sin(angle) * boxSettings.radius,
+      },
       castShadow: true,
     });
   });
@@ -51,8 +55,8 @@ export const scene = async () => {
     receiveShadow: true,
   });
 
-  // Debug env only: a dynamic import, so the tab's code (and Tweakpane) isn't in a production
-  // build. Creating the tab loads the saved settings into boxSettings, before the boxes are built.
+  // Debug env only: a dynamic import, so the tab's code isn't in a production build. Creating the
+  // tab loads the saved settings into boxSettings, before the boxes are built.
   if (IS_DEBUG_ENV) {
     const { createBoxesTab } = await import('./_dbg__exampleDebugTab');
     createBoxesTab();

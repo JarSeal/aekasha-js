@@ -84,7 +84,9 @@ export type ListProps<T> = {
   tooltip?: (item: T) => string | null | undefined;
   /** Whether the title is a stand-in (an unnamed object's): italic and muted. */
   isPlaceholder?: (item: T) => boolean;
-  /** Disables a row: dimmed, not selected or activated, its actions disabled. */
+  /** Disables a row: dimmed, not selected or activated, its actions disabled. In a static list
+   * (no `onActivate`, actions, selection or reorder) the row is text, so it's muted, not the
+   * disabled colour. */
   disabled?: (item: T) => boolean;
   /** A row's content as a CMP in place of the parts above, called again when the item changes
    * (another object for its key), the old one removed. */

@@ -1,6 +1,7 @@
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import type { DebugModuleRef } from '../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
+import type { DebuggerTheme } from '../ui/overlays/DebuggerRoot';
 
 type LightGUIModule = typeof import('./_dbg__DebugTools');
 let debugGUI: DebugModuleRef<LightGUIModule> | null = null;
@@ -42,7 +43,7 @@ export type DebugToolsState = {
     /** The folder is open */
     undoRedoFolderExpanded: boolean;
   };
-  /** Replaces the old `prodTestMode` key (migrated on LS load, see _dbg__DebugTools.ts). */
+  /** Replaces the old `prodTestMode` key (migrated on LS load, see _dbg__DebugToolsState.ts). */
   onScreenTools: {
     showOnScreenToolsInProdTest: boolean;
     /** Makes the on-screen tools, the drawer handle, the stats panel and the axes gizmo
@@ -75,6 +76,12 @@ export type DebugToolsState = {
   devFiles: {
     /** See `AppConfig.devFiles.saveHistorySize` (-1 = all, 0 = saving off) */
     saveHistorySize: number;
+  };
+  /** The debugger's look (p806 D8). Top-level, as axesGizmo. Its default is
+   * `AppConfig.debugDrawer.theme`, and it's saved only once changed in the tab. */
+  appearance: {
+    /** The debugger's roots' theme (`ui/overlays/DebuggerRoot.ts`) */
+    theme: DebuggerTheme;
   };
   /** The "Helpers" folder: three's axes, grid and polar grid helpers in the root scene */
   helpers: {
@@ -139,6 +146,9 @@ const defaultDebugToolsState: DebugToolsState = {
   devFiles: {
     saveHistorySize: 0,
   },
+  appearance: {
+    theme: 'dark',
+  },
   helpers: {
     helpersFolderExpanded: false,
     showAxesHelper: false,
@@ -169,11 +179,10 @@ export const registerDebugToolsModule = async () => {
   // (initDebugTools()/_initDebugTools) stays IS_DEBUG_ENV-only and never renders here.
   debugGUI = await loadDebugModuleAsync(() => import('./_dbg__DebugTools'), true);
   // Applied here (before the first scene load), not when the tab is built, so the on-screen
-  // tools never start out fully visible and clickable
-  if (IS_DEBUG_ENV) {
-    getDebugToolsState(true);
-    useDebug(debugGUI)?._applyOnScreenToolsDisabled();
-  }
+  // tools never start out fully visible and clickable, nor in another theme first
+  getDebugToolsState(true);
+  useDebug(debugGUI, true)?._applyDebuggerTheme();
+  if (IS_DEBUG_ENV) useDebug(debugGUI)?._applyOnScreenToolsDisabled();
 };
 
 /**

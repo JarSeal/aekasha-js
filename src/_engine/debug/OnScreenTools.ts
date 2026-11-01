@@ -36,6 +36,16 @@ export const updateOnScreenTools = (tools?: ToolTypes[] | ToolTypes) => {
 };
 
 /**
+ * Disables every on-screen tool during a scene load, or enables them again (p806 D7): each
+ * control `aria-disabled` with the tooltip "Loading the scene…", an open drop-down closed. Debug
+ * environment only. `disableDebugger`'s.
+ * @internal
+ */
+export const setOnScreenToolsDisabled = (disable: boolean) => {
+  useDebug(debugGUI)?._setOnScreenToolsDisabled(disable);
+};
+
+/**
  * Toggles between the debug camera and the app camera (F1, the on-screen debug camera button)
  * and shows a toast of the camera that is now active. Debug environment only. The debug keys'.
  * @internal

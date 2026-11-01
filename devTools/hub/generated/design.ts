@@ -61,7 +61,7 @@ type Decls = Map<string, string>;
 /** The tokens read once per build, or the reason they couldn't be */
 export type DesignTokens = {
   root: Decls;
-  /** `@supports`' computed units (`--aek-base`, `--aek-rem`) */
+  /** `@supports`' computed unit (`--aek-base`) */
   computed: Decls;
   compact: Decls;
   dark: Decls;
@@ -131,7 +131,7 @@ const isDelay = (role: string) => role.endsWith('-delay');
 const isFocusSize = (role: string) => role === 'focus-ring-width' || role === 'focus-ring-offset';
 const ROOT_GROUPS: [string, (role: string) => boolean][] = [
   ['type', (role) => TYPE_PREFIXES.some((prefix) => role.startsWith(prefix))],
-  ['space', (role) => role.startsWith('space-') || role === 'base' || role === 'rem'],
+  ['space', (role) => role.startsWith('space-') || role === 'base'],
   ['elevation', (role) => role.startsWith('radius-') || role.startsWith('z-')],
   ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-') || isDelay(role)],
   ['focus', isFocusSize],
@@ -418,7 +418,7 @@ const renderType = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdow
 const renderSpace = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdownEnv) => {
   env.file = TOKENS_FILE;
   if (!tokens) return UNREAD;
-  const units = rootTokens(tokens, (role) => role === 'base' || role === 'rem');
+  const units = rootTokens(tokens, (role) => role === 'base');
   const space = rootTokens(tokens, (role) => role.startsWith('space-'));
   const bar = (n: number | null) =>
     n === null ? '' : `<span class="hubSpaceBar" style="width: ${n}px"></span>`;
@@ -428,10 +428,10 @@ const renderSpace = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdo
       className: 'hubWrapTable',
       head: ['Token', 'Without <code>@property</code>', 'Computed', 'Default'],
       rows: units.map((name) => [
-        `${code(name)}${roleOf(name) === 'rem' ? ' <span class="hubStatus hubStatus_other">internal</span>' : ''}`,
+        code(name),
         code(tokens.root.get(name) ?? ''),
         code(tokens.computed.get(name) ?? '—'),
-        roleOf(name) === 'base' ? '14 px' : '10 px',
+        '14 px',
       ]),
     }),
     heading(md, env, 'Space'),

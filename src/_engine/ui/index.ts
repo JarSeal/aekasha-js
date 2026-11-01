@@ -5,7 +5,7 @@ export type { Badge, BadgeProps, BadgeTone, BadgeValue } from './components/Badg
 export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
 export { createButtonGroup } from './components/ButtonGroup';
-export type { ButtonGroup, ButtonGroupProps } from './components/ButtonGroup';
+export type { ButtonGroup, ButtonGroupItem, ButtonGroupProps } from './components/ButtonGroup';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,

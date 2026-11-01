@@ -40,7 +40,8 @@ describe('tokens.css', () => {
 
   it('registers each @property once, with a fixed fallback on the kit root', () => {
     expect(sheet.properties).toEqual([...new Set(sheet.properties)]);
-    expect([...sheet.properties].sort()).toEqual(['--aek-base', '--aek-rem']);
+    // The debugger's old rem token went with p806 D9
+    expect([...sheet.properties].sort()).toEqual(['--aek-base']);
     // Without @property an em would resolve again in every descendant: the default is pixels, and
     // the computed value is only where @property is (tokens.css says why)
     for (const name of sheet.properties) {

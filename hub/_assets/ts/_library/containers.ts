@@ -1,10 +1,9 @@
 /**
  * The component library's containers (the Hub's `features/ui-kit/forms/` containers guide): the
- * folder, the fieldset, the property grid (and the dev page's Tweakpane parity box), the form, and
- * the fields' context menu (a container's opt-in, on the fields guide).
+ * folder, the fieldset, the property grid, the form, and the fields' context menu (a container's
+ * opt-in, on the fields guide).
  */
 import {
-  addPropertyGridItems,
   createBindingScheduler,
   createButton,
   createCheckbox,
@@ -22,7 +21,6 @@ import {
   createTextField,
   createVectorField,
 } from 'aekasha/ui';
-import type { PropertyGridItem } from 'aekasha/ui';
 import { ID_PREFIX, addGroup, addButton, addKitRoot } from './page';
 import type { Demo } from './page';
 
@@ -267,256 +265,6 @@ const initPropertyGridDemo: Demo = (box) => {
   root.append(status);
 };
 
-// --- Tweakpane parity (the dev page's: p804 D14) ---
-
-/** One property grid of declarative items, a row per row of p804 Phase 0's census whose field
- * exists, each hinted with the census's source line; the last write in the status line */
-const initPropertyGridParityDemo: Demo = (box) => {
-  const root = addKitRoot(box);
-  const status = document.createElement('p');
-  status.className = 'hubDemoLine';
-  status.setAttribute('role', 'status');
-  const state = {
-    oracle: false,
-    shadowIntensity: 1,
-    domain: 'default',
-    storageMode: 'MAP',
-    cellSize: 4,
-    bias: -0.00005,
-    radius: 1,
-    scope: 'Scene',
-    maxMembers: 1234,
-    summary: 'default: 128 members in 42 cells\nplayers: 2 members in 2 cells',
-    labelText: 'Ray 1',
-    castShadow: true,
-    shadowMapSize: 1024,
-    cellsColor: 0x44aaff,
-    skyColor: '#87ceeb',
-    helperColor: '#ff00ff',
-    gridCenterColor: { r: 0.27, g: 0.27, b: 0.27 },
-    cameraPosition: { x: 0, y: 5, z: 10 },
-    bodyRotation: { x: 0, y: Math.PI / 4, z: 0, order: 'XYZ' },
-  };
-  const note = {
-    text: 'The env bake already lights PBR materials, and this adds to it. For Lambert/Phong materials (no environment) and stylized looks.',
-  };
-  const report =
-    (label: string) =>
-    (value: unknown, { last }: { last: boolean }) => {
-      status.textContent = `${label}: ${String(value)} (${last ? 'last' : 'step'})`;
-    };
-  const field = (source: string, item: PropertyGridItem): PropertyGridItem =>
-    ({
-      hint: source,
-      ...item,
-      ...('label' in item && item.type === undefined ? { onChange: report(item.label) } : {}),
-    }) as PropertyGridItem;
-  const grid = createPropertyGrid();
-  addPropertyGridItems(grid, [
-    {
-      type: 'folder',
-      title: 'Edit fields',
-      items: [
-        field('_dbg__SpatialGrid.ts:568', {
-          target: state,
-          key: 'oracle',
-          label: 'Brute-force oracle',
-        }),
-        field('_dbg__LightGUI.ts:838', {
-          target: state,
-          key: 'shadowIntensity',
-          label: 'Shadow Intensity',
-          min: 0,
-          max: 10,
-          step: 0.001,
-        }),
-        field('_dbg__SpatialGrid.ts:508', {
-          target: state,
-          key: 'domain',
-          label: 'Domain',
-          options: [
-            { value: 'default', text: 'Default' },
-            { value: 'players', text: 'Players' },
-          ],
-        }),
-        field('_dbg__ECS.ts:120', {
-          target: state,
-          key: 'storageMode',
-          label: 'Storage mode',
-          options: { Map: 'MAP', 'Typed Array': 'TYPED_ARRAY' },
-        }),
-        field('_dbg__SpatialGrid.ts:522', {
-          target: state,
-          key: 'cellSize',
-          label: 'Cell size',
-          min: 0.1,
-          step: 0.5,
-        }),
-        field('_dbg__LightGUI.ts:816', {
-          target: state,
-          key: 'bias',
-          label: 'Shadow Bias',
-          step: 0.00001,
-        }),
-        field('_dbg__LightGUI.ts:865', {
-          target: state,
-          key: 'radius',
-          label: 'Shadow Radius',
-          min: 0,
-        }),
-        field('_dbg__RayTester.ts:557', { target: state, key: 'labelText', label: 'Label' }),
-        field('_dbg__SpatialGrid.ts:586', {
-          target: state,
-          key: 'cellsColor',
-          label: 'Wireframe color',
-          kind: 'color',
-        }),
-        field('_dbg__BaseFolder.ts:26', { target: state, key: 'skyColor', label: 'Color' }),
-        field('_dbg__RayTester.ts:492', {
-          target: state,
-          key: 'helperColor',
-          label: 'Helper color',
-          kind: 'color',
-        }),
-        field('_dbg__DebugTools.ts:682', {
-          target: state,
-          key: 'gridCenterColor',
-          label: "Grid's center line color",
-        }),
-        field('_dbg__DebugTools.ts:549', {
-          target: state,
-          key: 'cameraPosition',
-          label: 'Position',
-        }),
-        field('_dbg__Character.ts:213', {
-          target: state,
-          key: 'bodyRotation',
-          label: 'Rotation',
-          step: Math.PI / 8,
-        }),
-        field('the view: list blade (_dbg__LightGUI.ts)', {
-          kind: 'select',
-          label: 'Shadow map width',
-          value: 1024,
-          options: { '512': 512, '1024': 1024, '2048': 2048 },
-        }),
-      ],
-    },
-    {
-      type: 'folder',
-      title: 'Monitors',
-      items: [
-        field('_dbg__SpatialGrid.ts:521', {
-          target: state,
-          key: 'scope',
-          label: 'Scope',
-          readonly: true,
-        }),
-        field('_dbg__LightGUI.ts:506', {
-          get: () => Math.floor(performance.now() / 250) % 100,
-          label: 'Intensity',
-          readonly: true,
-          interval: 250,
-        }),
-        field('_dbg__SpatialGrid.ts:560', {
-          target: state,
-          key: 'maxMembers',
-          label: 'Max members',
-          readonly: true,
-          format: (value) => (value as number).toLocaleString('en'),
-        }),
-        field('_dbg__SpatialGrid.ts:674', {
-          target: state,
-          key: 'summary',
-          label: 'All domains',
-          readonly: true,
-          multiline: true,
-          rows: 4,
-          interval: 0,
-        }),
-        field('_dbg__AmbientLightFolder.ts:21', {
-          target: note,
-          key: 'text',
-          label: 'Note',
-          readonly: true,
-          multiline: true,
-          rows: 3,
-        }),
-      ],
-    },
-    {
-      type: 'folder',
-      title: 'Hidden and disabled functions',
-      items: [
-        field('the checkbox the two below read', {
-          target: state,
-          key: 'castShadow',
-          label: 'Cast shadow',
-        }),
-        field('a disabled function', {
-          target: state,
-          key: 'bias',
-          label: 'Bias',
-          step: 0.00001,
-          disabled: () => !state.castShadow,
-        }),
-        field('a hidden function', {
-          target: state,
-          key: 'shadowMapSize',
-          label: 'Map size',
-          options: { '512': 512, '1024': 1024 },
-          hidden: () => !state.castShadow,
-        }),
-        { type: 'button', title: 'Refresh (the tab’s refresh)', onClick: () => grid.refresh() },
-      ],
-    },
-    {
-      type: 'folder',
-      title: 'Structure',
-      expanded: false,
-      items: [
-        {
-          type: 'folder',
-          title: 'A nested folder',
-          items: [{ target: state, key: 'cellSize', label: 'Cell size', step: 0.5 }],
-        },
-        { type: 'separator' },
-        {
-          type: 'button',
-          title: 'A button',
-          onClick: () => (status.textContent = 'A button: clicked'),
-        },
-        {
-          type: 'button',
-          title: 'Rebuild',
-          label: 'With a label',
-          onClick: () => (status.textContent = 'With a label: clicked'),
-        },
-        {
-          type: 'custom',
-          build: (container) => {
-            // _dbg__DayNightFolder.ts' speed buttons, as kit buttons in the custom item's CMP
-            const row = container.add({ class: 'hubDemoParityCustom' });
-            for (const speed of [1, 10, 100]) {
-              row.add(
-                createButton({
-                  label: `×${speed}`,
-                  size: 'sm',
-                  onClick: () => (status.textContent = `Speed: ×${speed}`),
-                }).cmp
-              );
-            }
-          },
-        },
-      ],
-    },
-  ]);
-  const group = addGroup(root, 'The census’s rows, each hinted with its source');
-  group.classList.add('hubDemoFields', 'hubDemoGrids');
-  group.append(grid.cmp.elem);
-  root.append(status);
-};
-
 // --- Form ---
 
 const FORM_ID = (name: string) => `${ID_PREFIX}Form${name}`;
@@ -689,7 +437,6 @@ export const CONTAINERS_DEMOS: Record<string, Demo> = {
   folder: initFolderDemo,
   fieldset: initFieldsetDemo,
   propertyGrid: initPropertyGridDemo,
-  propertyGridParity: initPropertyGridParityDemo,
   form: initFormDemo,
   fieldContextMenu: initFieldContextMenuDemo,
 };

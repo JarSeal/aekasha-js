@@ -1,3 +1,5 @@
+// The About Ækasha dialog (p806 D10): the versions, packages, runtime and physics as description
+// lists, set as text, with the kit's links and buttons.
 import * as THREE from 'three/webgpu';
 import { CMP } from '../ui/core/CMP';
 import type { CMPHandle } from '../ui/core/CMPTypes';
@@ -15,14 +17,15 @@ import { ENGINES } from '../features/physics/backends/Engines';
 import { openDialog } from '../ui/overlays/windows/DialogWindow';
 import { closeDraggableWindow } from '../ui/overlays/windows/DraggableWindow';
 import { getSvgIcon } from '../ui/core/icons/SvgIcon';
+import { createButton } from '../ui/components/Button';
+import { createLink } from '../ui/components/Link';
+import { announce } from '../ui/components/Announcer';
 import styles from './About.module.scss';
 
 const DIALOG_ID = 'aekAboutDialog';
 
 type InfoRow = { label: string; value: string };
 type InfoSection = { title: string; rows: InfoRow[] };
-
-const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** A "git+https://…/repo.git" package.json repository as a browsable https URL ('' if it isn't one). */
 const getRepoUrl = () => {
@@ -214,41 +217,57 @@ const getInfoText = (sections: InfoSection[]) => {
   return lines.join('\n');
 };
 
-const getHeaderHtml = () => {
+/** The engine's symbol, name, version, description, credits and links (set as text: the metadata
+ * is package.json's, not HTML). The window's title is the heading, so the name is a paragraph. */
+const createHeader = () => {
   const { engine, license } = PROJECT_METADATA;
-  const repoUrl = getRepoUrl();
-  const links = [
-    repoUrl && `<a href="${escapeHtml(repoUrl)}" target="_blank" rel="noopener">Repository</a>`,
-    repoUrl &&
-      `<a href="${escapeHtml(repoUrl)}/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>`,
-    engine.url && `<a href="${escapeHtml(engine.url)}" target="_blank" rel="noopener">Website</a>`,
-  ].filter(Boolean);
+  const header = CMP({ class: styles.header });
+  // A CMP with `html` is that HTML's element: the symbol's box holds it
+  header
+    .add({ class: styles.symbol, attr: { 'aria-hidden': 'true' } })
+    .add({ html: getSvgIcon('aekasha') });
+  const text = header.add({ class: styles.headerText });
+  text.add({ tag: 'p', class: styles.name, text: engine.fullName || engine.name });
+  text.add({
+    tag: 'p',
+    class: styles.version,
+    text: `Version ${getVersionText(engine.version, engine.codename)}`,
+  });
+  if (engine.description) {
+    text.add({ tag: 'p', class: styles.description, text: engine.description });
+  }
   const credits = [license && `${license} license`, engine.author && `by ${engine.author}`]
     .filter(Boolean)
     .join(' · ');
-  return `<header class="${styles.header}">
-  <div class="${styles.symbol}">${getSvgIcon('aekasha')}</div>
-  <div>
-    <h3 class="${styles.name}">${escapeHtml(engine.fullName || engine.name)}</h3>
-    <div class="${styles.version}">Version ${escapeHtml(getVersionText(engine.version, engine.codename))}</div>
-    ${engine.description ? `<p class="${styles.description}">${escapeHtml(engine.description)}</p>` : ''}
-    ${credits ? `<div class="${styles.credits}">${escapeHtml(credits)}</div>` : ''}
-    ${links.length ? `<div class="${styles.links}">${links.join('')}</div>` : ''}
-  </div>
-</header>`;
+  if (credits) text.add({ tag: 'p', class: styles.credits, text: credits });
+
+  const repoUrl = getRepoUrl();
+  const links: { href: string; label: string }[] = [];
+  if (repoUrl) {
+    links.push({ href: repoUrl, label: 'Repository' });
+    links.push({ href: `${repoUrl}/blob/main/CHANGELOG.md`, label: 'Changelog' });
+  }
+  if (engine.url) links.push({ href: engine.url, label: 'Website' });
+  if (links.length) {
+    const row = text.add({ class: styles.links });
+    for (const link of links) row.add(createLink({ ...link, external: true }).cmp);
+  }
+  return header;
 };
 
-const getSectionsHtml = (sections: InfoSection[]) =>
-  sections
-    .map(
-      (section) => `<section class="${styles.section}">
-  <h4>${escapeHtml(section.title)}</h4>
-  <dl class="${styles.rows}">${section.rows
-    .map((row) => `<dt>${escapeHtml(row.label)}</dt><dd>${escapeHtml(row.value)}</dd>`)
-    .join('')}</dl>
-</section>`
-    )
-    .join('');
+/** A section's heading and its rows as a description list, set as text. */
+const createSection = (section: InfoSection) => {
+  const cmp = CMP({ tag: 'section', class: styles.section });
+  cmp.add({ tag: 'h4', text: section.title });
+  const rows = cmp.add({ tag: 'dl', class: styles.rows });
+  for (const row of section.rows) {
+    rows.add({ tag: 'dt', text: row.label });
+    rows.add({ tag: 'dd', text: row.value });
+  }
+  return cmp;
+};
+
+const COPY_LABEL = 'Copy info';
 
 const createDialogContent = (): CMPHandle => {
   // Read on every open: the renderer, physics state and viewport can change
@@ -262,37 +281,35 @@ const createDialogContent = (): CMPHandle => {
     copiedTimer = null;
   };
   const root = CMP({ class: styles.dialogContent, onRemoveCmp });
-  root.add({
-    class: styles.panel,
-    html: () => `<div>${getHeaderHtml()}${getSectionsHtml(sections)}</div>`,
-  });
+  const panel = root.add({ class: styles.panel });
+  panel.add(createHeader());
+  for (const section of sections) panel.add(createSection(section));
 
   const footer = root.add({ class: styles.footer });
-  const copyBtn = footer.add({
-    tag: 'button',
-    text: 'Copy info',
-    class: 'debuggerClearLSDialogButton',
-    attr: { type: 'button', title: 'Copy this information as text, eg. for a bug report' },
+  // The result is the button's label for a moment, and said: a label change isn't read
+  const showResult = (text: string) => {
+    if (isRemoved) return;
+    copyBtn.setLabel(text);
+    announce(copyBtn.cmp.elem, text);
+    if (copiedTimer) clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => copyBtn.setLabel(COPY_LABEL), 2000);
+  };
+  const copyBtn = createButton({
+    label: COPY_LABEL,
+    tooltip: 'Copy this information as text, eg. for a bug report',
     onClick: () => {
-      const showResult = (text: string) => {
-        if (isRemoved) return;
-        copyBtn.updateText(text);
-        if (copiedTimer) clearTimeout(copiedTimer);
-        copiedTimer = setTimeout(() => copyBtn.updateText('Copy info'), 2000);
-      };
+      if (!navigator.clipboard) {
+        showResult('Copy failed');
+        return;
+      }
       navigator.clipboard
-        ?.writeText(getInfoText(sections))
+        .writeText(getInfoText(sections))
         .then(() => showResult('Copied'))
         .catch(() => showResult('Copy failed'));
     },
   });
-  footer.add({
-    tag: 'button',
-    text: 'Close',
-    class: 'debuggerClearLSDialogButton',
-    attr: { type: 'button' },
-    onClick: () => closeDraggableWindow(DIALOG_ID),
-  });
+  footer.add(copyBtn.cmp);
+  footer.add(createButton({ label: 'Close', onClick: () => closeDraggableWindow(DIALOG_ID) }).cmp);
 
   return root;
 };

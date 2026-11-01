@@ -70,6 +70,17 @@ export const CORE_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
+        name: 'disabled but focusable: a tab stop, aria-disabled, described by its reason',
+        steps: [
+          { focusInBox: BUTTON('Export') },
+          { expectFocus: BUTTON('Export') },
+          { expectAttr: BUTTON('Export'), name: 'aria-disabled', value: 'true' },
+          { expectCount: `${BUTTON('Export')}[aria-describedby]`, count: 1 },
+          { press: 'Enter' },
+          { expectFocus: BUTTON('Export') },
+        ],
+      },
+      {
         name: 'hold to confirm: a short Enter does nothing, a held one acts',
         steps: [
           { focusInBox: BUTTON('Delete') },
@@ -118,6 +129,28 @@ export const CORE_CHECKS: Record<string, UiDemoChecks> = {
           // Back in at the last button focused there, as the APG toolbar
           { press: 'Shift+Tab' },
           { expectFocus: GROUP_BUTTON('Lit') },
+        ],
+      },
+      {
+        name: 'a toolbar that isn’t exclusive: its items act alone, the arrows stop on an aria-disabled one and the drop-down',
+        steps: [
+          { focusInBox: GROUP_BUTTON('Frame') },
+          { expectAttr: '#hubDemoGroupViewport', name: 'role', value: 'toolbar' },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Snap') },
+          { press: 'Space' },
+          { expectAttr: GROUP_BUTTON('Snap'), name: 'aria-pressed', value: 'true' },
+          { expectText: GROUP_STATUS, text: 'Snap: on' },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Duplicate') },
+          { expectAttr: GROUP_BUTTON('Duplicate'), name: 'aria-disabled', value: 'true' },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Camera') },
+          { press: 'ArrowRight' },
+          { expectFocus: GROUP_BUTTON('Frame') },
+          { press: 'Tab' },
+          { press: 'Shift+Tab' },
+          { expectFocus: GROUP_BUTTON('Frame') },
         ],
       },
       {

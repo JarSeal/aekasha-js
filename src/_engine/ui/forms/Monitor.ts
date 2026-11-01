@@ -264,8 +264,9 @@ export const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
 /**
  * Creates a monitor (p804 D7, Tweakpane's monitor binding): a value shown as text, read from its
  * binding (`{ target, key }`, `{ get, set }` or `{ value }`) on its scheduler's tick every
- * `interval` ms (default 200; 0 every frame), or on a tick the page's monitors share when it has no
- * scheduler. A read that finds the value unchanged writes nothing; a change writes the text only.
+ * `interval` ms (default 200; 0 every frame; `'refresh'` never on the tick, only by its
+ * scheduler's `refresh()`: a figure its host refreshes), or on a tick the page's monitors share
+ * when it has no scheduler. A read that finds the value unchanged writes nothing; a change writes the text only.
  * A refresh never fires `onChange` (`setValue` does). Any field's `readonly: true` is a monitor in
  * that field's own text.
  * - Text: `format`'s, else a number's decimals (`precision`, else the value's own and at least

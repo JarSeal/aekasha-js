@@ -222,13 +222,19 @@ const sumInto = (target: InViewTotal, source: InViewTotal) => {
   target.total += source.total;
 };
 
-/** The breakdown table: objects, triangles, vertices and a bar per row, then the total row. */
-const renderBreakdown = (
-  heading: string,
-  rows: BreakdownRow[],
-  measure: ProfilerBarMeasure,
-  emptyText: string
-) => {
+/** A column header with no visible text: its name for assistive tech (axe's `empty-table-header`) */
+const hiddenHeader = (name: string) => `<th><span class="aekVisuallyHidden">${name}</span></th>`;
+
+/** The breakdown table: objects, triangles, vertices and a bar per row, then the total row.
+ * `rowsName` names the row headers' column. */
+const renderBreakdown = (opts: {
+  heading: string;
+  rowsName: string;
+  rows: BreakdownRow[];
+  measure: ProfilerBarMeasure;
+  emptyText: string;
+}) => {
+  const { heading, rowsName, rows, measure, emptyText } = opts;
   const total = totalBucket;
   total.objects.inView = total.objects.total = 0;
   total.triangles.inView = total.triangles.total = 0;
@@ -258,7 +264,7 @@ const renderBreakdown = (
   return (
     `<div class="profilerSection"><h4>${esc(heading)}</h4>` +
     (rows.length
-      ? `<table class="profilerTable profilerBreakdown"><thead><tr><th></th>` +
+      ? `<table class="profilerTable profilerBreakdown"><thead><tr>${hiddenHeader(rowsName)}` +
         `<th>Objects</th><th>Triangles</th><th>Vertices</th>` +
         `<th>${MEASURE_LABELS[measure]}, in view / culled</th></tr></thead>` +
         `<tbody>${body}</tbody></table>`
@@ -293,7 +299,13 @@ const renderKinds = (settings: Readonly<ProfilerSettings>) => {
     if (!bucket.objects.total) continue;
     rows.push({ label: KIND_LABELS[kind], sub: getKindSub(kind, bucket), bucket });
   }
-  return renderBreakdown('By kind', rows, settings.objectsBarMeasure, 'The scene is empty.');
+  return renderBreakdown({
+    heading: 'By kind',
+    rowsName: 'Kind',
+    rows,
+    measure: settings.objectsBarMeasure,
+    emptyText: 'The scene is empty.',
+  });
 };
 
 const renderOwners = (settings: Readonly<ProfilerSettings>) => {
@@ -302,7 +314,13 @@ const renderOwners = (settings: Readonly<ProfilerSettings>) => {
     label: owner.label,
     bucket: owner.bucket,
   }));
-  return renderBreakdown('By owner', rows, settings.objectsBarMeasure, 'The scene is empty.');
+  return renderBreakdown({
+    heading: 'By owner',
+    rowsName: 'Owner',
+    rows,
+    measure: settings.objectsBarMeasure,
+    emptyText: 'The scene is empty.',
+  });
 };
 
 // ECS
@@ -383,8 +401,9 @@ const renderHeaviest = () => {
   return (
     `<div class="profilerSection"><h4>Heaviest objects in view</h4>` +
     (rows
-      ? `<table class="profilerTable profilerHeaviest"><thead><tr><th></th><th>Object / entity</th>` +
-        `<th>Kind</th><th>Triangles</th><th>Instances</th><th></th></tr></thead>` +
+      ? `<table class="profilerTable profilerHeaviest"><thead><tr>${hiddenHeader('Rank')}` +
+        `<th>Object / entity</th><th>Kind</th><th>Triangles</th><th>Instances</th>` +
+        `${hiddenHeader('Actions')}</tr></thead>` +
         `<tbody>${rows}</tbody></table>`
       : `<div class="profilerNote">No meshes in view.</div>`) +
     `</div>`

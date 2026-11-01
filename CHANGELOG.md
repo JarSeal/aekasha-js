@@ -4,6 +4,108 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## Unreleased — engine-6
+
+The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806.
+
+The debugger migration (p806, the debugger UI overhaul epic p800's sixth child) rebuilds the debugger on the UI kit. The drawer, the tab host, the panes, the edit windows, the profiler window's shell, the editor drawer, the material editor, the on-screen tools and the dialogs are on the kit's components and tokens, in the compact density, dark by default with a theme setting. Tweakpane leaves `package.json`. A tab keeps working unless it uses a binding's Tweakpane side, and what a 5.x debugger saved loads in 6.0. The Hub's migration guide gets an "Engine 5 → 6" section.
+
+### Engine 6.0.0 (unreleased)
+
+**Breaking** (the tab types on `aekasha/debug`; the Hub's migration guide, "Engine 5 → 6", has a before / after example)
+
+The functions keep their names and signatures (`createDebuggerTab`, `openDebuggerTab`, `updateDebuggerTab`, `removeDebuggerTab`, `isDebuggerTabOpen`, `persistDebuggerTabValue`, `debuggerListCMP`, the profiler's). So do every field of `DebuggerTabDef`, the sections and the item types' names (`DebuggerPaneBinding`, `DebuggerPaneFolder`, …, now defined over the kit's property grid items), `type: 'binding'`, a folder's `persistExpanded`, and `onChange` on user input only. A tab's `lsKey` values, its `uiLsKey` folder states and `AEK_debugDrawerState` from 5.x load. What breaks:
+
+| 5.x                                                                         | 6.0                                                                                                       |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| A binding's other fields go to Tweakpane's `addBinding` (anything is typed) | The kit's field props only: an unknown one is a type error, and at run time the tab's error line names it |
+| `view: 'color'`, or a `color` param, on a number                            | `kind: 'color'`; an `{ r, g, b }` object is always floats, so `color: { type: 'float' }` goes             |
+| `onChange(value, { prev, last, api })`, `api` a `BindingApi`                | `onChange(value, { prev, last, source, field })`, `field` the field's handle                              |
+| `onCreate(api: BindingApi)`                                                 | `onCreate(field)`                                                                                         |
+| `custom.build(parent: Pane \| FolderApi)`                                   | `build(container: CMPHandle)`; a returned function still runs on every refresh                            |
+| `prev` on the `last: true` call is the last step's value                    | The value before the gesture                                                                              |
+| A `THREE.Euler` is a point in radians                                       | A rotation field in degrees; the bound value stays in radians                                             |
+| A typed number reaches the target unrounded (`1.0999999999999999`)          | Rounded to the step's decimals (`1.1`)                                                                    |
+| `tweakpane` and `@tweakpane/core` are dependencies                          | Gone: an app that imports Tweakpane itself adds them to its `package.json`                                |
+
+`interval: 0` still reads a monitor only when its tab refreshes, and `view: 'graph'` with `bufferSize` is still a graph monitor. `onChange` also fires on a field's `setValue` (`source: 'api'`), which no debugger code calls.
+
+**Added**
+
+- `DebuggerTabDef`'s `content(ctx)`: `ctx.scheduler` (`DebuggerTabContext`) is the tab's binding scheduler, so kit fields in a CMP section refresh with the tab and pause while it's hidden. `content()` without the parameter still works.
+- `keepOnSceneChange` and `onSceneChange()` on a tab: the open tab is kept across a scene change and refreshed, after `onSceneChange`, instead of rebuilt. The engine's Statistics, Loop, Renderer, Physics API, PostFX, ECS, Characters, Cameras, Assets and Lights tabs keep.
+- A pane binding (`DebuggerPaneBindingProps`, the kit field item's props) takes any of the kit's bindings (`{ get, set }`, `{ get }`, `{ value }`) besides a state key or a `target`, and `type: 'field'`.
+- `uiLsKey` also keeps the label column's width (`labelWidth`, beside 5.x's `folders`). A pane's label column starts at 50 %.
+- `DebuggerListDef`'s `label`, the list's accessible name.
+- `AppConfig.debugDrawer.theme`: `'dark'` (the default), `'light'`, or `'app'` to follow the app's theme. The Debug tools tab's "Debugger theme" select changes it live and saves it in `AEK_debugTools` (`appearance.theme`).
+- On `aekasha/ui`:
+  - `interval: 'refresh'` on every field (`FieldOptions.interval`): the field reads only on its scheduler's `refresh()` and when it's revealed, never on a tick.
+  - `TabDef`'s `separatorBefore`: a line before a tab in the tab list (no element: a `tablist` owns only tabs).
+  - `createButtonGroup`'s `toolbar`: the APG toolbar (one tab stop, the arrows, Home / End) for items that act alone, which may be `createDropDown`s (`ButtonGroupItem`). An `aria-disabled` item is a stop, a `disabled` one is skipped.
+  - `focusableWhenDisabled` on `createButton` and `createDropDown` (`aria-disabled` instead of `disabled`: still a tab stop, its clicks ignored), and a reason on `setDisabled(isDisabled, reason?)` shown as the button's tooltip or the trigger's title while disabled. `Button`'s `isDisabled`, `DropDown`'s `setDisabled`.
+- The test bridge (`TEST_BRIDGE_VERSION` 6): `getDebuggerTabOrder`, `openDebuggerTab({ host, id })`, `openDebuggerListRow`, `focusDebuggerControl({ root?, name, nth? })`, `markDebuggerWindows`, `closeDebuggerWindows`, `openMaterialEditor({ material })` and `closeMaterialEditor()`, for the scene runner's `debugger` configuration. They name things by tab id, list row and control name, never by the debugger's classes.
+
+**Changed**
+
+- **The debugger's look** (a restyle, not a break): every drawer tab, profiler tab, edit window, dialog and on-screen tool takes the kit's components and tokens in the compact density, dark by default. Its old greys and Tweakpane's rows aren't tokens, so there's no restore. Restyle it by setting the kit's tokens on its roots (`[data-aek-debugger]`), not with its stylesheets' classes, which changed. The kit's own compact density is unchanged: a debugger row is 27 px (Tweakpane's 24), set by the 24 px target floor, so about 12 % fewer rows fit a screen.
+- **The drawer:** an icon-only vertical rail of tabs on its outer edge, the scene tabs last after a divider. The toggler shows the drawer key's hint with `CONFIG.ts`' rebinding. A width handle on the inner edge (`role="separator"`, the arrows, Home; 280 px to 70 % of the bounds, default 400) is saved with the drawer's state, which also keeps each tab's scroll position. The toggler's click focuses the open tab, and a close with the focus inside gives it back to the toggler. While a scene loads the drawer is `inert` and `aria-busy`. The editor drawer has the same shell, and the material selector a height handle (Enter collapses it).
+- **The debugger lists** are the kit's `createList`: one tab stop with the arrows inside, where every row and toggle was a Tab stop. The open windows show as the selection, and the toggles are row actions.
+- **Monitors:** a boolean reads "On" / "Off" ("true" / "false" before), a monitor with `options` the option's label (the value before).
+- **A debugger control's keys are the debugger's:** a key whose keydown goes to an element in a debugger root isn't seen by an app's action maps outside `DEBUG` or its key bindings until its keyup. Enter and Space click a focused debugger button, and the gym's player doesn't jump. A click on an on-screen tool doesn't take the focus, so the app's keys keep working after it. It costs the production `kernel/input` group 0.1 kB gzip.
+- **The on-screen tools** are four kit toolbars in three rows (the top left "Debugger" and "Views", the top "Play", and a new bottom "Scene and camera" row). Toggles are `aria-pressed` (the accent, where the diamond was), undo and redo `aria-disabled` while there's nothing to do, each tooltip the tool's name and its debug key, and a refresh no longer rebuilds a group, so the focus stays. During a scene load every tool is disabled with "Loading the scene…" (`docs/issues/on-screen-tools-during-scene-load.md`, fixed).
+- **The edit windows** (camera, light, physics entity, character, PostFX pass, ECS world, asset info) are property grids with the fields' context menu (Reset, Copy, Paste). A change applies on every write and is saved and recorded for undo at the gesture's end, with the value from before it. Their HTML headers and small icon buttons became rows: the actions, then the entity's info rows as text (5.x put a debug name into `innerHTML`). The camera's and a light's position follow each step. A physics body's or a character's pose is still edited as a copy that "Set position" or "Set rotation" applies, with the rotation in degrees. A light's shadow fields are enabled with "Cast shadow" without a rebuild. The ECS window's max entities and the spatial cell size step from their `min` (1000 and 0.5 now).
+- **The panels:** LOD's impostors, the spatial index's domains and occupancy, and the Assets tab's loading figures are folders of one-line monitors, where Tweakpane wrapped text areas. The Assets tab's scope is a segmented control. The asset info window's layers and cells are kit tables, its sections folders whose open state every info window shares. The ray tester's hits are a kit list (at most 20, each copyable as JSON). The Ray cast tab's counters are tables beside a donut. The profiler's Settings tab has two reorderable lists (Alt + arrows or a drag) where 42 ▲ / ▼ buttons were. The day-night speeds are an exclusive button group.
+- **The character state window** (480 × 560) has a toolbar (Freeze, Pin the gizmos, Copy as JSON), its groups as folders titled with their counts, and "Show notes" for the keys' notes as hints. Properties are number fields (degrees for an angle) and checkboxes with the kit's reset button, plus "Copy changes" and "Reset all". The freeze copies the values, so a folder opened while frozen shows that moment. Its update reads only the shown fields (about 0.06 ms a frame with every folder open).
+- **The dialogs:** About's values are set as text, with kit links and buttons, and "Copy info" announces its result. The key shortcuts dialog is on `createTabs`, each chord a `createKbd`, and an inactive row is struck with a badge saying why (it was at 50 % opacity, below AA).
+- **Accessibility:** axe found 660 violations on 68 debugger roots in 5.x (labels, contrast, names, target sizes), and 0 on 69 now.
+- **Sizes** (`yarn build:test`): the debugger's lazy JS chunks 221.5 → 204.2 kB gzip (about 8 %; Tweakpane's 30.5 kB chunk gone), their CSS 12.6 → 10.9 kB. Production's first downloads are unchanged (app 384.4, banner 287.4, uiKit 286.6 kB gzip); the kit's `BindingScheduler` chunk is 0.2 kB gzip larger. The frame cost with a window or tab open is within the noise of 5.x's. A tab's click takes longer, since the kit builds its DOM in it, but the time to the next frame is about the same (the sky box tab 2.4 ms longer).
+- **The kit's scheduler** keeps each parent's `hidden` and fieldset `disabled` answers for the length of one refresh or tick, so a folder's fields share one walk to the root. A kit write of either clears them. In the character state window `closest()` fell from 7.8 to 1.1 ms/s.
+- **The kit's icons:** a button's, tab's or drop-down trigger's SVG is a block in its `1em` slot, and the global `.uiIcon svg` rules (`width: 100%`, inline-block on the baseline) are gone from `kit.scss`, with the debugger's `.aekIcon` reset. The icons box in the Hub's component library is 19 px shorter, and the other pieces' icons moved a few pixels. A kit list's icons in the compact density are 11 px.
+- **A static list's disabled row** is drawn in `--aek-text-muted` (its text is content, not an inactive control). An interactive list's keeps `--aek-text-disabled`.
+- The big debug modules are split by what they do, so every file and function is within the coding standards' sizes and no p800 header is left: the camera, lights, physics, Debug tools, LOD, spatial index, ray tester, assets, character state window and material editor.
+
+**Removed**
+
+- `tweakpane` and `@tweakpane/core`.
+- The `--aek-rem` custom property (internal since p801) and `ui/styles/variables.scss`.
+- `DraggableWindow.scss`' debugger helper classes `winSmallLabel`, `winSmallIconButton`, `winNotRightPaddedContent`, `winFlexContent` and `winPaddedContent`.
+
+**Fixed**
+
+- The kit's focus trap counted a `tabindex="-1"` control as Tab-reachable, so a window's first focus could land on a roving composite's unselected item.
+- A click on the middle of a property grid's folder heading, or a full-width button row, started a drag of the label column's separator.
+- A debug window's title icon was drawn as wide as the window (the About dialog's giant Æ).
+- The Lights tab read no type for a load's last light (`??` in its row's icon). It refreshes a microtask after the light's tags, once per task.
+- An app's action map took Enter from a focused debugger control (`docs/issues/action-map-keys-on-focused-debugger-controls.md`, fixed).
+
+### App (unreleased: a minor at the `engine-6` merge)
+
+**Changed**
+
+- The debug tab example's tab gains a CMP section of kit fields on `ctx.scheduler` (the `debug-tab-kit` region the Hub shows): a "Ring" folder with a slider of the boxes' ring radius (persisted, with undo at the gesture's end) and a monitor of their spacing with `interval: 'refresh'`. Its colour binding is `kind: 'color'`.
+- The app's other scene tabs (`lodShowcase`'s, `assetCompare`'s, `space`'s) work on the kit unchanged.
+
+### Project
+
+**Added**
+
+- The scene runner's `debugger` configuration (in `all`; `devTools/verify/sceneDebugger.ts`, its pure parts `debuggerChecks.ts`). After `mainThread`'s run, on the scenes with `debugger` settings (`testDebugScene`, `thirdPersonGymScene`, `lodShowcase`, `assetCompare`, `space`, `exampleDebugTab`), it records and compares each tab host's tab order, a shot of every tab, profiler tab, window, dialog and the material editor, and axe on each. Any violation fails, a recording run too. It also runs four undo / redo scripts: a declarative slider, a window's field, a list toggle and the day-night row.
+
+**Changed**
+
+- On WSL2, `yarn verify:scenes` and `yarn verify:embed` drive the Windows Chrome (or Edge) headless on the machine's GPU, over CDP, instead of WSL2's Chromium on SwiftShader. They fall back to that with a reason, and `--webgl` or `AEK_VERIFY_WINDOWS_CHROME=false` asks for it.
+- The Hub:
+  - The debug suite's guide: a pane as a property grid and its binding rules, `onChange`'s `last` and `prev`, `keepOnSceneChange`, the label width, and a new "Kit components in a tab".
+  - The debug tab example's walkthrough ("Kit components in the tab").
+  - The migration guide's "Engine 5 → 6" section (in progress): what stays, the breaks, what reads differently, what's new.
+  - The forms binding guide's last lines point at the debug tabs.
+  - The design document: the debugger's theme and density.
+  - The component library: a viewport toolbar and a disabled but focusable button and drop-down, the vertical tabs' divider, and a monitor's "Bodies on refresh". The dev library's "Tweakpane parity" box is gone, and its "Debugger parity" box keeps p807's 13 tables, the budget bar, the sparklines and the component types' list.
+  - Both pages' `tweakpane` tags are gone.
+- `yarn verify:baselines`: `api.json` (the additions above and the `@internal` modules: `ui/overlays/DebuggerRoot.ts`, `ui/forms/binding/AncestorReads.ts`), the bundle baselines and `docs.json`. `yarn verify:ui`'s screenshots re-recorded for the icon slots.
+- The root `CLAUDE.md`'s Debug system (on the kit), `src/_engine/debug/CLAUDE.md` (the builder, the host's scheduler, `keepOnSceneChange`, the theme, the density, the styles), `src/_engine/ui/CLAUDE.md` (its "until p806" lines resolved), `src/_engine/debug/editors/CLAUDE.md`, `devTools/verify/CLAUDE.md`, and the readme: the drawer on the UI kit, Tweakpane out of the credits, example 6's `AppConfig` with `debugDrawer: { theme }`.
+- The plans: p806 is `_DONE_`; p800, p801, p803, p804, p805, p622, p150 and p373 follow.
+
 ## 2026-10-28 — p805-data-display
 
 Data display (p805, the debugger UI overhaul epic p800's fifth child): the components that show data, public on `aekasha/ui`. The table, the list, the tree, the graphs (the sparkline, the donut, the stacked bar, static charts, the running time series) and the stat tile, with tabs, the accordion, the splitter, the context menu with the menu's submenus, and the command palette. Each works with live data, a keyboard and a screen reader, in both themes and densities, in an embed. The Hub gets a data page with a guide to live data, a library box per piece, and its ⌘K search on the palette. The debugger keeps its own tables, lists and tab menus until p806 and p807, except the ray cast tab, whose percentage pie is now the donut. Nothing breaks.

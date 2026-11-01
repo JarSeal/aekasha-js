@@ -141,6 +141,50 @@ describe('button (p803 D10)', () => {
     button.cmp.remove();
   });
 
+  it('focusable when disabled: aria-disabled, its clicks ignored, its reason the tooltip (p806 D7)', () => {
+    const onClick = vi.fn();
+    const onPressedChange = vi.fn();
+    const button = addButton({
+      label: 'Pause',
+      icon: '<svg></svg>',
+      iconOnly: true,
+      pressed: false,
+      focusableWhenDisabled: true,
+      onClick,
+      onPressedChange,
+    });
+    const elem = button.cmp.elem;
+    button.setDisabled(true, 'Loading the scene…');
+    expect(button.isDisabled()).toBe(true);
+    expect(elem.getAttribute('aria-disabled')).toBe('true');
+    expect(elem.hasAttribute('disabled')).toBe(false);
+    // The reason isn't the name: it describes the button
+    expect(elem.getAttribute('aria-describedby')).toMatch(/\S/);
+    elem.focus();
+    expect(document.activeElement).toBe(elem);
+    click(elem);
+    expect(onClick).not.toHaveBeenCalled();
+    expect(onPressedChange).not.toHaveBeenCalled();
+    expect(elem.getAttribute('aria-pressed')).toBe('false');
+    button.setDisabled(false);
+    expect(elem.hasAttribute('aria-disabled')).toBe(false);
+    // The label is the tooltip again, which describes nothing
+    expect(elem.hasAttribute('aria-describedby')).toBe(false);
+    click(elem);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(elem.getAttribute('aria-pressed')).toBe('true');
+    button.cmp.remove();
+
+    const created = addButton({ label: 'Undo', disabled: true, focusableWhenDisabled: true });
+    expect(created.cmp.elem.getAttribute('aria-disabled')).toBe('true');
+    // A reason gives a button with no tooltip one, and enabling it takes it away
+    created.setDisabled(true, 'Nothing to undo');
+    expect(countListeners(created.cmp.elem, 'pointerenter')).toBe(1);
+    created.setDisabled(false);
+    expect(countListeners(created.cmp.elem, 'pointerenter')).toBe(0);
+    created.cmp.remove();
+  });
+
   it('as a toggle, a click flips aria-pressed and reports it; setPressed only writes it', () => {
     const onPressedChange = vi.fn();
     const onClick = vi.fn();

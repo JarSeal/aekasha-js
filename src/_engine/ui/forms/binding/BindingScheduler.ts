@@ -1,7 +1,9 @@
 // The refresh scheduler (p804 D4): one per host (a debugger tab, a window, an app panel). Its
 // `refresh()` reads every field of the host; its tick, one requestAnimationFrame loop, reads the
 // live ones (monitors) at their intervals. Not the main loop: the kit doesn't import it (p803 D4),
-// and a debugger's monitors keep running while the loop is paused.
+// and a debugger's monitors keep running while the loop is paused. Each loop over the entries is
+// an ancestor pass (`AncestorReads.ts`): the fields of one folder share their visibility walk.
+import { beginAncestorPass, endAncestorPass } from './AncestorReads';
 
 /** What {@link createBindingScheduler} makes a scheduler from. */
 export type BindingSchedulerProps = {
@@ -94,6 +96,18 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
 
   const tick = (now: number) => {
     frame = null;
+    const outer = beginAncestorPass();
+    try {
+      tickEntries(now);
+    } finally {
+      endAncestorPass(outer);
+    }
+    scheduleTick();
+  };
+
+  /** The tick's reads: each entry's visibility is an ancestor read the pass shares (a hidden one
+   * is walked every frame, to be read on the first frame it shows) */
+  const tickEntries = (now: number) => {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const interval = entry.binding.interval;
@@ -109,7 +123,6 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
       entry.stale = false;
       entry.binding.read(false);
     }
-    scheduleTick();
   };
 
   const scheduleTick = () => {
@@ -128,15 +141,20 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
 
   const scheduler: BindingScheduler = {
     refresh: () => {
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        entry.binding.readState?.();
-        if (!entry.binding.isShown()) {
-          entry.stale = true;
-          continue;
+      const outer = beginAncestorPass();
+      try {
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          entry.binding.readState?.();
+          if (!entry.binding.isShown()) {
+            entry.stale = true;
+            continue;
+          }
+          entry.stale = false;
+          entry.binding.read(true);
         }
-        entry.stale = false;
-        entry.binding.read(true);
+      } finally {
+        endAncestorPass(outer);
       }
     },
     setVisible: (isVisible) => {
@@ -177,11 +195,16 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
       };
     },
     reveal: () => {
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        if (!entry.stale || !entry.binding.isShown()) continue;
-        entry.stale = false;
-        entry.binding.read(false);
+      const outer = beginAncestorPass();
+      try {
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          if (!entry.stale || !entry.binding.isShown()) continue;
+          entry.stale = false;
+          entry.binding.read(false);
+        }
+      } finally {
+        endAncestorPass(outer);
       }
     },
   });

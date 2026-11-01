@@ -21,6 +21,7 @@ import {
 import type { PhysicsProbeReport } from '../features/physics/PhysicsProbeTypes';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
 import { getCharacterPaths, installTestInput } from './_dbg__TestBridgeInput';
+import { testBridgeDebugger } from './_dbg__TestBridgeDebugger';
 import { TEST_BRIDGE_VERSION, type AekTestBridge, type TestBridgeSystemOrder } from './TestBridge';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -168,5 +169,6 @@ export const _installTestBridge = () => {
     snapshot,
     getSystemOrder,
     getCharacterPaths,
+    ...testBridgeDebugger,
   };
 };

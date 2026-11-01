@@ -1,9 +1,10 @@
 **Title:** The on-screen debug tools stay clickable during a scene load, while the drawer and the debug keys don't
 
-Status: open
+Status: fixed | 2026-10-29, p806 (D7, Phase 2 section 4)
 Category: Debug, UI
 Found: 2026-10-21, p618 Phase 4 (H2: the `@TODO` in `_dbg__DebuggerGUI.ts`' `_disableDebugger`)
-Our workaround: none needed in practice; wait for a load to finish before using the on-screen tools
+Our workaround (until p806): none needed in practice; wait for a load to finish before using the
+on-screen tools
 
 ## What happens
 
@@ -29,3 +30,13 @@ Most of it is harmless: a scene picked from the drop-down queues behind the runn
 on-screen tools" option sets, `_applyOnScreenToolsDisabled`), or each button checks
 `isCurrentlyLoading()` (`SceneLoader.ts`) on click. Either is small; p800's p806 (the debugger
 migration) replaces the on-screen tools' UI, so it can also land there.
+
+## The fix (p806 Phase 2 section 4)
+
+`_disableDebugger` also disables the on-screen tools (`setOnScreenToolsDisabled`,
+`_dbg__OnScreenTools.ts`): every control is `aria-disabled` (still focusable, so the focus stays
+where it was) with the tooltip "Loading the scene…", its clicks are ignored, and an open drop-down
+closes. A refresh during the load keeps them so, and a failed load enables them again with the
+drawer. The kit gained what it needed: `focusableWhenDisabled` and a reason on `setDisabled` for
+`createButton` and `createDropDown`. Tests: `_dbg__OnScreenTools.test.ts`, and
+`_dbg__DebuggerGUI.test.ts`' disabled state.

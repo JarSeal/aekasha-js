@@ -252,6 +252,11 @@ export type AppConfig = {
      * whole, it is not merged. Tabs not listed go last, in registration order. A tab's own
      * `orderNr` overrides its place on this 0-based scale (eg. 1.5 = between the 2nd and 3rd tab). */
     tabOrder?: string[];
+    /** The debugger's theme (p806 D8): `'dark'` (the default) or `'light'` forces it on the
+     * drawer, the on-screen tools and the debug windows, `'app'` follows the app's UI (its forced
+     * theme, else the system's). The Debug tools tab's "Debugger theme" overrides it per browser,
+     * once changed there. */
+    theme?: 'dark' | 'light' | 'app';
   };
   /** Debugger undo/redo history (debug-only, see `debug/UndoRedo.ts`). */
   undoRedo?: {

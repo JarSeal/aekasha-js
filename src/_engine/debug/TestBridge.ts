@@ -10,7 +10,7 @@ const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
  * bridge's and the scene runner's.
  * @internal
  */
-export const TEST_BRIDGE_VERSION = 4;
+export const TEST_BRIDGE_VERSION = 6;
 
 /**
  * Key events the bridge dispatches right before fixed physics steps of the first scene's world
@@ -88,6 +88,50 @@ export type TestBridgeSnapshot = {
 export type TestBridgeSystemOrder = Record<string, Record<string, string[]>>;
 
 /**
+ * A debugger tab host the scene runner's `debugger` configuration drives: the drawer, the
+ * profiler window or the material editor's drawer (p806 D14). The test bridge's and the scene
+ * runner's.
+ * @internal
+ */
+export type TestBridgeTabHost = 'DRAWER' | 'PROFILER' | 'MATERIAL_EDITOR';
+
+/**
+ * Each tab host's tab ids in menu order: what the runner records beside the system order. The
+ * bridge gives every host; a baseline recorded before a host was added has none for it. The test
+ * bridge's and the scene runner's.
+ * @internal
+ */
+export type TestBridgeTabOrder = Partial<Record<TestBridgeTabHost, string[]>>;
+
+/**
+ * A debugger element the bridge opened or found, marked for the runner's shot and axe as
+ * `[data-aek-test-root="<root>"]`. The test bridge's and the scene runner's.
+ * @internal
+ */
+export type TestBridgeDebuggerRoot =
+  | { status: 'OPEN'; root: string; title: string }
+  /** Not there (an unknown tab id, a list without the row, the debug env missing) */
+  | { status: 'MISSING'; reason: string };
+
+/**
+ * `openDebuggerListRow`'s result: the row clicked, by its id. The test bridge's and the scene
+ * runner's.
+ * @internal
+ */
+export type TestBridgeListRowResult =
+  | { status: 'CLICKED'; itemId: string }
+  | { status: 'MISSING'; reason: string };
+
+/**
+ * `focusDebuggerControl`'s result: the control is focused, or the names of the controls it saw.
+ * The test bridge's and the scene runner's.
+ * @internal
+ */
+export type TestBridgeFocusResult =
+  | { status: 'FOCUSED'; tag: string }
+  | { status: 'MISSING'; seen: string[] };
+
+/**
  * `window.__AEK_TEST__`: what the scene runner (`devTools/verify/scenes.ts`, p601) drives a page
  * through. Every method is safe to call more than once.
  * @internal
@@ -117,6 +161,40 @@ export type AekTestBridge = {
   /** The current scene's character paths so far ({@link TestBridgeCharacterPaths}): read it after
    * whenProbeDone, when the probe's steps have all run */
   getCharacterPaths: () => TestBridgeCharacterPaths;
+  /** The debugger's tab hosts' tab ids in menu order (the debug env only; empty lists without
+   * the debugger) */
+  getDebuggerTabOrder: () => Promise<TestBridgeTabOrder>;
+  /** Opens the drawer, the profiler window or the material editor's drawer (its view entered
+   * first: {@link AekTestBridge.openMaterialEditor}) on a tab, and marks the drawer or the window
+   * as root `drawer` / `profiler` / `materialEditor` once the tab is mounted (two frames later) */
+  openDebuggerTab: (opts: {
+    host: TestBridgeTabHost;
+    id: string;
+  }) => Promise<TestBridgeDebuggerRoot>;
+  /** Runs the row click of the open drawer tab's first list with row clicks (`index` 0-based),
+   * which opens an edit window: see {@link AekTestBridge.markDebuggerWindows} */
+  openDebuggerListRow: (opts: { index: number }) => Promise<TestBridgeListRowResult>;
+  /**
+   * Focuses a control by its name, inside a marked root (`root`) or any debugger root: a control
+   * whose label, `aria-label`, title or text is `name`, else the first control after an element
+   * whose text or title is `name` in its row (Tweakpane's labels aren't tied to their inputs).
+   * `nth` picks among several (0-based).
+   */
+  focusDebuggerControl: (opts: {
+    root?: string;
+    name: string;
+    nth?: number;
+  }) => Promise<TestBridgeFocusResult>;
+  /** Marks the open windows that have no mark yet as roots `window-<n>`, and returns them, bottom
+   * to top in each layer: the windows the last step opened */
+  markDebuggerWindows: () => TestBridgeDebuggerRoot[];
+  /** Closes every open window (a kind's window is removed, as its close button does) */
+  closeDebuggerWindows: () => Promise<void>;
+  /** Enters the material editor's view and loads `material` (a material asset's id) in it, then
+   * marks its selector as root `materialSelector`; MISSING when the view or the load failed */
+  openMaterialEditor: (opts: { material?: string }) => Promise<TestBridgeDebuggerRoot>;
+  /** Goes back to the Runtime view */
+  closeMaterialEditor: () => Promise<void>;
 };
 
 declare global {

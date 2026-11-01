@@ -240,7 +240,7 @@ const frameHtml = () => {
   return `<div class="${styles.gpuMemorySummary}">
   <h4 class="${styles.gpuMemoryHeading}">Frame${isPaused ? ' (main loop paused)' : ''}</h4>
   <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th></th><th>Last</th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
+    <thead><tr><th><span class="aekVisuallyHidden">Metric</span></th><th>Last</th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div class="${styles.gpuMemoryNote}">Min / avg / max over the last ${FRAME_WINDOW_MS} ms (${shown.frames} frames). Includes every render of the frame: shadow maps, PostFX passes, sky bakes and viewports. The axes gizmo (F10) and the environment ball (F9) are viewports and add their own draw calls; the drawer itself is DOM and adds none.</div>

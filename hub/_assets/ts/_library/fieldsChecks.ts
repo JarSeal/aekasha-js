@@ -479,13 +479,19 @@ export const FIELDS_CHECKS: Record<string, UiDemoChecks> = {
   monitor: {
     keyboard: [
       {
-        name: 'a step shows on the tick; Tab passes the lines and stops at the multiline block',
+        name: 'a step shows on the tick, a refresh-only monitor on Refresh; Tab passes the lines and stops at the multiline block',
         steps: [
           { focusInBox: MONITOR('Step') },
           { press: 'Enter' },
           { expectText: `${MONITOR('Bodies')} .aekMonitor__value`, text: '132' },
           { expectText: `${MONITOR('Paused')} .aekMonitor__value`, text: 'On' },
           { expectText: `${MONITOR('Position')} .aekMonitor__value`, text: '1.25, 0.50, -3.50' },
+          // interval: 'refresh': the tick leaves it, the scheduler's refresh reads it
+          { expectText: `${MONITOR('BodiesOnRefresh')} .aekMonitor__value`, text: '128' },
+          { press: 'Tab' },
+          { expectFocus: MONITOR('Refresh') },
+          { press: 'Enter' },
+          { expectText: `${MONITOR('BodiesOnRefresh')} .aekMonitor__value`, text: '132' },
           { press: 'Tab' },
           { expectFocus: MONITOR('Log') },
           {

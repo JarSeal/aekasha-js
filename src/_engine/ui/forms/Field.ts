@@ -15,6 +15,11 @@ import {
   type ReadonlyBindingSource,
 } from './binding/Binding';
 import {
+  clearAncestorReads,
+  isInDisabledFieldset,
+  isInHiddenAncestor,
+} from './binding/AncestorReads';
+import {
   addScheduledBinding,
   createFlash,
   getPageScheduler,
@@ -95,8 +100,9 @@ export type FieldOptions<T> = {
   scheduler?: BindingScheduler;
   /** Reads the bound value on the scheduler's tick, every this many ms (0: every frame): an edit
    * field that follows a value changing on its own (default: none, read by `refresh()` only; a
-   * monitor's 200). */
-  interval?: number;
+   * monitor's 200). `'refresh'`: never on the tick, only by the scheduler's `refresh()` and when
+   * it shows again (a monitor of a figure its host refreshes, Tweakpane's `interval: 0`). */
+  interval?: number | 'refresh';
   /** Extra classes for the field's element. */
   class?: string | string[];
   /** Extra attributes for the field's element. */
@@ -400,6 +406,8 @@ const fieldsetReads = new WeakMap<Element, () => void>();
  * @internal
  */
 export const readFieldsetDisabled = (root: Element) => {
+  // Its `disabled` changed, or its fields did: a pass's kept answer may be stale
+  clearAncestorReads();
   for (const elem of root.querySelectorAll('.aekField')) fieldsetReads.get(elem)?.();
 };
 
@@ -594,12 +602,9 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     setAttrIf(resetButton.cmp.elem, 'hidden', isDefault);
   };
 
-  /** The browser's `:disabled` of a fieldset: its `disabled` attribute */
-  const isInDisabledFieldset = () => Boolean(root.parentElement?.closest('fieldset[disabled]'));
-
   const applyDisabled = (own: boolean) => {
     isOwnDisabled = own;
-    const on = own || isInDisabledFieldset();
+    const on = own || isInDisabledFieldset(root);
     if (on === isDisabled) return;
     isDisabled = on;
     setAttrIf(root, 'data-disabled', on);
@@ -614,6 +619,7 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
     if (on === isHidden) return;
     isHidden = on;
     setAttrIf(root, 'hidden', on);
+    clearAncestorReads();
     // Read once when it shows: it wasn't read while hidden
     if (!on) read(false);
   };
@@ -713,16 +719,19 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
   readState();
   drawMessage();
   draw();
+  // 'refresh': the scheduler's refresh() and a reveal read it, the tick never does
+  const tickInterval = props.interval === 'refresh' ? undefined : props.interval;
   const entry = {
     read,
     readState,
-    isShown: () => root.isConnected && !root.closest('[hidden]'),
-    interval: props.interval,
+    // The pass's ancestor read: the fields of one folder share it
+    isShown: () => root.isConnected && !root.hasAttribute('hidden') && !isInHiddenAncestor(root),
+    interval: tickInterval,
   };
   // A live field with nothing to read it shares the page's tick; a held value has nothing to read
   const isBound = props.target !== undefined || props.get !== undefined;
   const scheduler =
-    props.scheduler ?? (props.interval !== undefined && isBound ? getPageScheduler() : undefined);
+    props.scheduler ?? (tickInterval !== undefined && isBound ? getPageScheduler() : undefined);
   if (scheduler) removeEntry = addScheduledBinding(scheduler, entry);
   // Without one of its own, it joins the container's it's added to (the page's it leaves)
   if (!props.scheduler) {

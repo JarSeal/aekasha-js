@@ -204,6 +204,16 @@ describe('dialogs: modal (p803 D7)', () => {
     const debuggerRoot = getHUDRootCMP().add({ attr: { [DEBUGGER_ROOT_ATTR]: '' } }).elem;
     openDialog({ id: 'debugDialog', title: 'Keys', isDebugWindow: true });
     expect(Number(getElem('debugDialog').style.zIndex)).toBe(Z_INDEX_BASES.DEBUG_DIALOG);
+    // A debugger root in the debugger's theme and the compact density (p806 D8), its backdrop too
+    for (const elem of [
+      getElem('debugDialog'),
+      getDraggableWindow('debugDialog')!.backDropCMP!.elem,
+    ]) {
+      expect(elem.hasAttribute(DEBUGGER_ROOT_ATTR)).toBe(true);
+      expect(elem.getAttribute('data-aek-theme')).toBe('dark');
+      expect(elem.getAttribute('data-aek-density')).toBe('compact');
+    }
+    expect(getElem('appDialog').hasAttribute('data-aek-density')).toBe(false);
     expect(debuggerRoot.hasAttribute('inert')).toBe(true);
     expect(getElem('appDialog').hasAttribute('inert')).toBe(true);
     closeDraggableWindow('debugDialog');

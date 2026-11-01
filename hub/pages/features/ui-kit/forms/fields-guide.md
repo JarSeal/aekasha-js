@@ -45,7 +45,8 @@ field made with it as its `scheduler` is read by one `refresh()`, and a
 theirs to every field added without one. A refresh never calls `onChange`, so a handler that
 refreshes can't loop, and a value changed from outside flashes its field once. A field that
 follows a value changing on its own takes an `interval` (in ms, 0 every frame), read on the
-scheduler's tick while its host shows. [Binding values](hub:features/ui-kit/forms/binding) has the
+scheduler's tick while its host shows; `interval: 'refresh'` reads it only on the scheduler's
+refresh (a figure its host refreshes itself). [Binding values](hub:features/ui-kit/forms/binding) has the
 whole order of the writes, the scheduler and its tick.
 
 Around every control is the same shell:
@@ -320,6 +321,11 @@ const level = createDropDown({
 });
 ```
 
+`setDisabled(isDisabled, reason?)` disables the trigger and closes an open list; the reason is
+its title while it's disabled. With `focusableWhenDisabled` the trigger is `aria-disabled` instead
+of `disabled`, so it stays a tab stop: a [toolbar](hub:features/ui-kit/core#groups-and-toolbars)'s
+drop-down, which `createButtonGroup` takes beside its buttons.
+
 ::: demo dropDown
 :::
 
@@ -402,7 +408,9 @@ const vsync = createSwitch({
 
 [`createMonitor`](api:createMonitor) shows a bound value as text, read every `interval` ms (200
 by default, 0 every frame) on its scheduler's tick, which runs only while the host shows: a frame
-time, a body count, a state. A read that finds the value unchanged writes nothing. Its text is
+time, a body count, a state. With `interval: 'refresh'` the tick leaves it, and only the
+scheduler's `refresh()` reads it (and once when it shows again): a figure that changes when its
+host says so, Tweakpane's `interval: 0`. A read that finds the value unchanged writes nothing. Its text is
 `format`'s, a number in its decimals (`precision`) with its `unit`, a boolean as `onText` /
 `offText`, a vector's axes or a string as it is; `multiline` shows a block of lines that scrolls
 (a log). Any field with `readonly: true` is a monitor in that field's own text.

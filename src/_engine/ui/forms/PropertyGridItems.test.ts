@@ -1,10 +1,12 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { stubKitDomAsync } from '../testing/KitDom';
 import { createBindingScheduler } from './binding/BindingScheduler';
 import type { Field, FieldChange } from './Field';
 import { createPropertyGrid, type PropertyGridProps } from './PropertyGrid';
 import {
   addPropertyGridItems,
+  PROPERTY_GRID_FIELD_ITEM_KEYS,
+  type PropertyGridFieldItem,
   type PropertyGridItem,
   type PropertyGridItemsOptions,
 } from './PropertyGridItems';
@@ -360,5 +362,15 @@ describe('the property grid’s items (p804 D10)', () => {
     shared.refresh();
     expect(hidden).not.toHaveBeenCalled();
     shared.dispose();
+  });
+});
+
+describe('PROPERTY_GRID_FIELD_ITEM_KEYS (p806 D4)', () => {
+  it('lists every key a field item takes, once', () => {
+    // A key added to the item type and not to the list fails tsc here
+    expectTypeOf<
+      Exclude<keyof PropertyGridFieldItem, (typeof PROPERTY_GRID_FIELD_ITEM_KEYS)[number]>
+    >().toEqualTypeOf<never>();
+    expect(new Set(PROPERTY_GRID_FIELD_ITEM_KEYS).size).toBe(PROPERTY_GRID_FIELD_ITEM_KEYS.length);
   });
 });

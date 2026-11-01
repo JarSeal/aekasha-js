@@ -1,6 +1,7 @@
 import type * as THREE from 'three/webgpu';
 import { CMP } from '../../../ui/core/CMP';
 import type { CMPHandle } from '../../../ui/core/CMPTypes';
+import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
 import { getTextureArrayInfo } from '../TextureArray';
 import { getTextureAtlasInfo, type TextureAtlasInfo } from '../TextureAtlas';
 import { getTextureDepth } from './_dbg__AssetStats';
@@ -16,7 +17,8 @@ import styles from './Assets.module.scss';
  * The Assets tab info window's previews (p299 D6): an array texture's layers as thumbnails, an
  * atlas slot's image with its cells' content and padded rects (the cell's id on hover), at one mip
  * level picked in the window. Rendered on the GPU and read back (_dbg__TexturePreview.ts), since a
- * KTX2 texture can't be drawn into a 2D canvas.
+ * KTX2 texture can't be drawn into a 2D canvas. Its Level select and Cell rects checkbox are items of
+ * the window's grid (p806 D10), the images a custom item.
  */
 
 /** A layer thumbnail's largest side, in px */
@@ -87,18 +89,23 @@ const describePreview = (preview: TexturePreview, droppedLevels: number) => {
   return `Level ${level}${layout}: ${levelWidth} × ${levelHeight} px${shown}`;
 };
 
+/** Whether a texture has a preview: an array's layers, an atlas slot's image. */
+export const hasTexturePreview = (texture: THREE.Texture) =>
+  Boolean(getTextureAtlasInfo(texture)) ||
+  Boolean(getTextureArrayInfo(texture)) ||
+  getTextureDepth(texture) > 1;
+
 /**
- * The info window's preview of an array texture or an atlas slot, or undefined for other textures.
+ * The info window's preview items of an array texture or an atlas slot: the Level select (each
+ * level's size in its option), an atlas slot's Cell rects checkbox, and the images, rendered when
+ * the grid builds them and again on a level picked.
  * @param windowId the info window's id: its picked level and rects toggle are kept per window
  */
-export const createTexturePreviewCmp = (
+export const getTexturePreviewItems = (
   texture: THREE.Texture,
   windowId: string
-): CMPHandle | undefined => {
+): PropertyGridItem[] => {
   const atlas = getTextureAtlasInfo(texture);
-  const depth = getTextureDepth(texture);
-  const isArray = Boolean(getTextureArrayInfo(texture)) || depth > 1;
-  if (!atlas && !isArray) return undefined;
 
   const levelCount = getTextureLevelCount(texture);
   const state = previewStates.get(windowId) ?? { level: 0, showRects: true };
@@ -108,47 +115,29 @@ export const createTexturePreviewCmp = (
   const droppedLevels = atlas ? Math.round(Math.log2(atlas.size[0] / atlas.width)) : 0;
   const members = getTextureArrayInfo(texture)?.members;
 
-  const levelButtons = [...Array(levelCount).keys()]
-    .map((level) => {
-      const size = getTextureLevelSize(texture, level);
-      const title = size ? `Level ${level}: ${size.width} × ${size.height} px` : `Level ${level}`;
-      return `<button class="debuggerSmallButton ${styles.assetsPreviewLevel}" data-level="${level}" title="${title}">${level}</button>`;
-    })
-    .join('');
-  const rectsToggle = atlas
-    ? `<label class="${styles.assetsPreviewToggle}"><input type="checkbox" data-action="rects"${state.showRects ? ' checked' : ''} /> Cell rects</label>`
-    : '';
-
   let renderToken = 0;
-  const query = (role: string) =>
-    cmp.elem.querySelector(`[data-role="${role}"]`) as HTMLElement | null;
-
-  const markLevel = () =>
-    cmp.elem.querySelectorAll<HTMLButtonElement>('[data-level]').forEach((button) => {
-      button.classList.toggle(
-        styles.assetsPreviewLevelActive,
-        Number(button.dataset.level) === state.level
-      );
-    });
+  /** The window closed or rebuilt: a readback arriving after it writes nothing */
+  let isRemoved = false;
+  const status = CMP({ tag: 'p', class: styles.assetsPreviewStatus, text: '' });
+  const images = CMP({ class: atlas ? undefined : styles.assetsPreviewThumbs });
+  const hover = atlas
+    ? CMP({ tag: 'p', class: styles.assetsPreviewStatus, text: HOVER_HINT })
+    : null;
 
   const showPreview = (preview: TexturePreview) => {
-    const images = query('images');
-    if (!images) return;
-    images.replaceChildren();
+    images.elem.replaceChildren();
     if (atlas) {
       const frame = document.createElement('div');
       frame.className = styles.assetsPreviewFrame;
       frame.appendChild(toCanvas(preview.tiles[0].image));
       frame.insertAdjacentHTML('beforeend', getAtlasOverlaySvg(atlas));
-      const hover = query('hover');
+      // The frame goes with the images' next replace, and its listeners with it
       frame.addEventListener('mouseover', (e) => {
         const cellId = (e.target as Element).closest('[data-cell]')?.getAttribute('data-cell');
-        if (hover) hover.textContent = cellId ? describeHoveredCell(atlas, cellId) : HOVER_HINT;
+        hover?.updateText(cellId ? describeHoveredCell(atlas, cellId) : HOVER_HINT);
       });
-      frame.addEventListener('mouseleave', () => {
-        if (hover) hover.textContent = HOVER_HINT;
-      });
-      images.appendChild(frame);
+      frame.addEventListener('mouseleave', () => hover?.updateText(HOVER_HINT));
+      images.elem.appendChild(frame);
       return;
     }
     for (const tile of preview.tiles) {
@@ -160,59 +149,80 @@ export const createTexturePreviewCmp = (
       caption.textContent = name !== undefined ? `${tile.layer}: ${name}` : String(tile.layer);
       caption.title = caption.textContent;
       figure.appendChild(caption);
-      images.appendChild(figure);
+      images.elem.appendChild(figure);
     }
   };
 
   /** Renders the picked level; a later call wins over one still reading back. */
   const render = async () => {
     const token = ++renderToken;
-    const status = query('status');
-    if (status) status.textContent = `Rendering level ${state.level}…`;
+    status.updateText(`Rendering level ${state.level}…`);
+    status.removeAttr('data-error');
     try {
       const preview = await renderTexturePreviewAsync(texture, {
         level: state.level,
         maxSize: atlas ? IMAGE_MAX_SIZE : THUMB_MAX_SIZE,
       });
-      if (token !== renderToken) return;
+      if (token !== renderToken || isRemoved) return;
       showPreview(preview);
-      if (status) status.textContent = describePreview(preview, droppedLevels);
+      status.updateText(describePreview(preview, droppedLevels));
     } catch (err) {
-      if (token !== renderToken) return;
-      if (status) {
-        status.textContent = `The preview failed: ${err instanceof Error ? err.message : String(err)}`;
-        status.classList.add('debuggerWarningText');
-      }
+      if (token !== renderToken || isRemoved) return;
+      status.updateText(`The preview failed: ${err instanceof Error ? err.message : String(err)}`);
+      status.updateAttr({ 'data-error': '' });
     }
   };
 
-  const cmp: CMPHandle = CMP({
-    class: [styles.assetsPreview, ...(state.showRects ? [] : [styles.assetsPreviewHideRects])],
-    html: `<div>
-<div class="${styles.assetsPreviewToolbar}"><span class="winSmallLabel">Level:</span> ${levelButtons}${rectsToggle}</div>
-<div class="${styles.assetsTableSub}" data-role="status"></div>
-<div class="${atlas ? '' : styles.assetsPreviewThumbs}" data-role="images"></div>
-${atlas ? `<div class="${styles.assetsTableSub}" data-role="hover">${HOVER_HINT}</div>` : ''}
-</div>`,
-    onClick: (e) => {
-      const button = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-level]');
-      if (!button) return;
-      const level = Number(button.dataset.level);
-      if (level === state.level) return;
-      state.level = level;
-      markLevel();
-      render();
-    },
-    onChange: (e) => {
-      const input = e.target as HTMLInputElement;
-      if (input.dataset.action !== 'rects') return;
-      state.showRects = input.checked;
-      cmp.elem.classList.toggle(styles.assetsPreviewHideRects, !state.showRects);
-    },
+  const levelOptions = [...Array(levelCount).keys()].map((level) => {
+    const size = getTextureLevelSize(texture, level);
+    return {
+      value: level,
+      text: size ? `${level}: ${size.width} × ${size.height} px` : String(level),
+    };
   });
-  markLevel();
-  // The render starts now, not in onCreateCmp (which runs when a parent mounts it, and again on
-  // every update): it fills the element when the readback arrives (the window attaches it before)
-  render();
-  return cmp;
+  let view: CMPHandle | null = null;
+  return [
+    {
+      label: 'Level',
+      get: () => state.level,
+      set: (level: unknown) => {
+        if (level === state.level) return;
+        state.level = level as number;
+        if (view) void render();
+      },
+      options: levelOptions,
+    },
+    ...(atlas
+      ? [
+          {
+            label: 'Cell rects',
+            get: () => state.showRects,
+            set: (showRects: unknown) => {
+              state.showRects = Boolean(showRects);
+              view?.updateClass(styles.assetsPreviewHideRects, state.showRects ? 'remove' : 'add');
+            },
+          },
+        ]
+      : []),
+    {
+      type: 'custom',
+      build: (container) => {
+        const cmp = container.add({
+          class: [
+            styles.assetsPreview,
+            ...(state.showRects ? [] : [styles.assetsPreviewHideRects]),
+          ],
+          onRemoveCmp: () => {
+            isRemoved = true;
+          },
+        });
+        cmp.add(status);
+        cmp.add(images);
+        if (hover) cmp.add(hover);
+        view = cmp;
+        // It fills the images when the readback arrives (the window attaches them before)
+        void render();
+      },
+    },
+  ];
 };

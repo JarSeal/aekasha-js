@@ -197,6 +197,92 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     onCreate?(field: Field<unknown>): void;
   };
 
+/**
+ * Every key a field item takes (p806 D4): what the debugger's pane builder checks an item's keys
+ * against, so a JS app's or an `as` cast's unknown key is an error, not a key ignored. Its test
+ * keeps it complete.
+ * @internal
+ */
+export const PROPERTY_GRID_FIELD_ITEM_KEYS = [
+  // The binding
+  'target',
+  'key',
+  'get',
+  'set',
+  'value',
+  // The shell's (`FieldOptions`)
+  'label',
+  'labelHidden',
+  'hint',
+  'default',
+  'disabled',
+  'hidden',
+  'required',
+  'validate',
+  'readonly',
+  'interval',
+  'class',
+  'attr',
+  'id',
+  // The item's
+  'type',
+  'kind',
+  'min',
+  'max',
+  'step',
+  'precision',
+  'wrap',
+  'unit',
+  'expressionUnits',
+  'live',
+  'ticks',
+  'showInput',
+  'showInputs',
+  'minGap',
+  'histogram',
+  'options',
+  'placeholder',
+  'searchable',
+  'searchPlaceholder',
+  'orientation',
+  'fill',
+  'multiline',
+  'rows',
+  'maxLength',
+  'onSearch',
+  'axes',
+  'linkable',
+  'linked',
+  'onLinkedChange',
+  'showOrder',
+  'edit',
+  'order',
+  'showRaw',
+  'angleUnit',
+  'convention',
+  'invertY',
+  'minStops',
+  'maxStops',
+  'minKeys',
+  'maxKeys',
+  'presets',
+  'alpha',
+  'colorSpace',
+  'intensity',
+  'palette',
+  'recent',
+  'eyeDropper',
+  'indeterminate',
+  'onText',
+  'offText',
+  'format',
+  'view',
+  'bufferSize',
+  'onInput',
+  'onChange',
+  'onCreate',
+] as const satisfies readonly (keyof PropertyGridFieldItem)[];
+
 /** A folder item (p804 D10): a folder of items, its open state the grid's options' by its id. */
 export type PropertyGridFolderItem = {
   /** A folder. */

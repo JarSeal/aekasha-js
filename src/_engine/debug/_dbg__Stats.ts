@@ -312,6 +312,8 @@ const setDebuggerUI = () => {
     id: STATS_TAB_ID,
     title: 'Statistics',
     icon: 'speedometer',
+    // A refresh re-reads what it shows: kept open on a scene change (p806 D5)
+    keepOnSceneChange: true,
     lsKey: LS_KEY,
     state: statsConfig,
     persistKeys: [
