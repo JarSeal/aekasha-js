@@ -239,16 +239,63 @@ registerIcon('gear', gearIcon); // A built-in your production UI shows
 [action maps](hub:features/input#debug-keys) in the `DEBUG` context, so they work while the app
 is paused and in editor views.
 
+## Stats panels
+
+In the debug env, panels in the bottom-left corner show the frame's figures as they change: each
+its figure (written four times a second), a graph of the last three seconds, and the graph's
+lowest and highest sample under the figure. They measure what the profiler's Overview rows do,
+by the same definitions, and a panel's tooltip says what its figure spans:
+
+| Panel | Shows                                                                                                                  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| TFPS  | Theoretical frames per second: 1000 over the main loop's mean CPU time of the last 60 frames, what the CPU would allow |
+| FPS   | Rendered frames per second, over the last second; with Hz on, the display's refresh rate in its small text             |
+| CPU   | The main loop's CPU time per frame, the render's submission included                                                   |
+| PHY   | The physics step time of the last frame that stepped, its sub-steps summed                                             |
+| GPU   | The GPU time per frame over the last second, every render pass summed                                                  |
+| CPT   | The GPU time per frame of the compute dispatches, over the last second                                                 |
+
+- A graph takes a sample 30 times a second, each the worst frame since the last, so a short hitch
+  still shows. The lowest and highest are the graph's, so a load's hitch stays in them until it
+  scrolls out.
+- GPU and CPT need timestamp queries: WebGPU's `timestamp-query` feature, or WebGL 2's
+  `EXT_disjoint_timer_query_webgl2`. Without them their toggles are disabled. On WebGL fewer
+  frames get a figure (three's queries are lost while a read is pending), each still a whole
+  frame's.
+- The Statistics tab picks the panels (TFPS, FPS and CPU by default) and the Hz line, and lays
+  them out in a column or, with Horizontal, a row. Each change applies at once and is saved. PHY
+  applies after a reload, since physics sets up its step stats at boot
+  (`AppConfig.physics.stepStatsEnabled` is its default). "Enable measuring" off removes the
+  panels.
+- The panels measure only what they show: the GPU timer runs only while something reads it (a
+  GPU or CPT panel, the profiler's GPU row).
+- The panels are a button that opens the profiler: click them, or Tab to them and press Enter.
+  The profiler's Settings ("Open from stats panels") turn that off.
+
 ## Profiler and GPU memory
 
-`F8` (or the speedometer at the top of the screen) opens the profiler window:
+`F8` (or the speedometer at the top of the screen, or the stats panels) opens the profiler
+window:
 
-- **Overview**: frame, GPU, physics and memory figures, and your own.
-- **Objects**: what's in view and in total, with the heaviest objects.
+- **Overview**: frame, GPU, physics and memory figures, and your own. A figure that can't be
+  measured reads "n/a" with its reason, and a warning says why in words.
+- **Objects**: what's in view and in total, by kind and by owner, with a bar of the share in view
+  (objects, triangles or vertices), the ECS worlds and their component types, the heaviest
+  objects (each opening its entity's edit window), and three counts over time.
 - **GPU memory**: memory by category and by owner (each scene's assets), draw calls, a budget,
-  and snapshots whose difference names what a scene visit left behind.
+  and snapshots whose difference names what a scene visit left behind. Its tables sort by a
+  column header.
 - **Settings**: the update rate, which Overview rows show and in what order, and whether the
   profiler also loads in `?isProdTest=true`.
+
+The tabs are the [UI kit's](hub:features/ui-kit/data) tables, bars, lists and sparklines, and a
+refresh writes only the figures that changed: a sort you picked, the focus and the scroll stay
+while the figures update. The built-in tabs stay open across a scene change (the Objects tab's
+history starts again).
+
+GPU times are read from three's timestamp queries by one timer that the stats panels, the
+profiler, the PostFX profiler and the sky box's bake stats share, on WebGPU and WebGL 2, so they
+read the same frames.
 
 A closed profiler measures nothing. It loads in the debug env, and in prod test mode when its
 Settings say so: gate code that only feeds the profiler on
@@ -284,7 +331,8 @@ const removeEnemiesSource = registerStatsSource({
 
 [`createProfilerTab`](api:createProfilerTab) adds a tab to the profiler window. It takes the same
 definition as `createDebuggerTab` (without `sceneId`), so a tab moves between the drawer and the
-profiler by changing the call. [`removeProfilerTab`](api:removeProfilerTab) removes it,
+profiler by changing the call: it's built again on a scene change too, unless it has
+`keepOnSceneChange`. [`removeProfilerTab`](api:removeProfilerTab) removes it,
 [`openProfilerTab`](api:openProfilerTab) opens the window on a tab (the GPU memory tab is
 [`GPU_MEMORY_TAB_ID`](api:GPU_MEMORY_TAB_ID)), and
 [`updateProfilerTab`](api:updateProfilerTab) refreshes one.

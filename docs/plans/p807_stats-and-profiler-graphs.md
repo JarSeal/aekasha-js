@@ -1104,6 +1104,41 @@ As built, section 4 (2026-11-02, not committed; section 3 committed as `649dbcb2
 
 D11's docs. `yarn hub:build` in both modes.
 
+In sections (decided at the start, 2026-11-02):
+
+1. The Hub: the debug suite page (the stats panels, what each figure spans, the live settings; the
+   profiler's tabs as built), the UI kit's time series section (a frame graph in your HUD), the
+   component library's p807 notes (each "p807 moves …" said as built); `yarn hub:build` in both
+   modes.
+2. `src/_engine/debug/CLAUDE.md` (the stats panels, the GPU timer's one owner, the profiler's
+   tables, `Stats.scss`' line), `readme.md` (its credit went in Phase 2; the stats panels' line),
+   p800 §5's p807 entry; `yarn hub:build` in both modes again (the CLAUDE.md coverage).
+
+As built, section 1 (2026-11-02, not committed):
+
+- **The debug suite page:** a "Stats panels" section before the profiler's (where they are, the
+  figure at 4 Hz, the graph and its range, a table of what each panel spans from their tooltips,
+  the 30 Hz worst-frame samples, GPU and CPT's timestamp queries on both backends and WebGL's
+  fewer timed frames, the Statistics tab's live settings with PHY's reload, the button to the
+  profiler and its setting); the profiler's tabs as built (n/a and warnings in words, Objects'
+  sections, GPU memory's sortable tables), its tabs on the kit written in place and kept across a
+  scene change, the one GPU timer; "Your own profiler tabs" says an app's profiler tab is built
+  again on a scene change unless `keepOnSceneChange` (Phase 3 section 3). Its `aek:tags` gained
+  stats panels, fps, frame time, gpu timing.
+- **The UI kit's data page:** "A frame graph in your HUD" after the time series' table (D11: it
+  had none; the existing example is a stats panel's stages): a label, a figure written four times
+  a second and a time series with `summary: false` and `ticks: false` on `getHUDRootCMP()`, and
+  why the debugger's panels push at 30 Hz.
+- **The component library's dev notes** (each "p807 moves …" said as built): the table (the
+  Overview's `setCell`, the `'muted'` tone, the cells, bars, Edit button, sorts; the per-render
+  allocation left), the stacked bar (the budget bar; the frame by stage and memory by category not
+  built), the sparkline (Objects' "Over time", Phase 5's cheaper draw), the stat tile (not the
+  stats panels'), the chart (no p807 user: reports were out of D1) and the time series (the
+  panels made of it; the empty animation frame after a draw left).
+- **Verified:** `yarn hub:build` (public, 101 pages) and the dev mode (`buildHub({ mode: 'dev' })`
+  in `.cache/p807/hubDev.mts`, 108 pages), no warning or error in either; Prettier clean on the
+  Hub pages.
+
 ### Phase 7: done
 
 - `CHANGELOG.md` (D2's entry), the versions as D2 decides, `yarn checkVersions --against main`.
