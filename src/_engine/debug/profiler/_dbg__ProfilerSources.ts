@@ -36,15 +36,13 @@ import {
 } from '../../features/postfx/PostFX';
 import { registerStatsSource, type ProfilerSettings } from '../Profiler';
 import type { IntervalCounterSnapshot } from '../../utils/IntervalCounterStats';
+import { _getGpuTimerSupport } from '../_dbg__GPUTimer';
 import {
-  _acquireGpuTimer,
-  _getGpuTimerSupport,
-  _onRenderContext,
-  _onTimestampsResolved,
-  _releaseGpuTimer,
-  _requestTimestampResolve,
-  _sumGpuMs,
-} from '../_dbg__GPUTimer';
+  _acquireGpuFrameTimes,
+  _onGpuFrameTime,
+  _releaseGpuFrameTimes,
+  type GpuFrameTime,
+} from '../_dbg__GPUFrameTimes';
 import { getCensusAvailability, runSceneCensus, type SceneCensus } from './_dbg__Census';
 import { SampleWindow, type WindowStat } from './_dbg__SampleWindow';
 
@@ -81,7 +79,7 @@ const SAMPLER_SYSTEM_ID = 'aekProfilerFrameSampler';
 /** After every other LATE_MAIN system, so a late render pass still counts for the frame. */
 const SAMPLER_ORDER = -10000;
 
-const sampled = { draw: false, subSteps: false, gpu: false };
+const sampled = { draw: false, subSteps: false };
 let isSamplerAdded = false;
 let removeViewSampler: (() => void) | null = null;
 
@@ -89,12 +87,11 @@ const frameSamplerSystem = () => {
   const now = performance.now();
   if (sampled.draw) sampleDraw(now);
   if (sampled.subSteps) sampleSubSteps(now);
-  if (sampled.gpu) endGpuFrame();
 };
 
 /** Adds or removes the sampler system to match what is sampled. */
 const updateSampler = () => {
-  const isNeeded = sampled.draw || sampled.subSteps || sampled.gpu;
+  const isNeeded = sampled.draw || sampled.subSteps;
   if (isNeeded === isSamplerAdded) return;
   isSamplerAdded = isNeeded;
   const world = getECSWorld();
@@ -163,9 +160,8 @@ const sampleSubSteps = (now: number) => {
 };
 
 // --- GPU FRAME TIME ---
-// Every render context opened between two sampler runs belongs to that frame (MAIN-stage bakes
-// included). The sampler closes the frame's record and requests a resolve, and a record is
-// summed once a resolved batch has all of its contexts. Results arrive a few frames late.
+// The render side of the GPU frame times (_dbg__GPUFrameTimes.ts): every render context of a
+// frame summed, a few frames late.
 
 export type GpuFrameStats = {
   /** Frames with resolved timestamps in the window. */
@@ -174,93 +170,26 @@ export type GpuFrameStats = {
   ms: WindowStat;
 };
 
-type GpuFrameRecord = { uids: string[]; age: number };
-
-/** Frames a record waits for its timestamps before it is dropped. */
-const GPU_MAX_PENDING_FRAMES = 8;
-const GPU_RECORD_POOL_SIZE = GPU_MAX_PENDING_FRAMES + 2;
-
 const gpuWindow = new SampleWindow(1);
 const gpuStats: GpuFrameStats = { frames: 0, ms: gpuWindow.stats[0] };
-const freeGpuRecords: GpuFrameRecord[] = Array.from({ length: GPU_RECORD_POOL_SIZE }, () => ({
-  uids: [],
-  age: 0,
-}));
-const pendingGpuRecords: GpuFrameRecord[] = [];
-let currentGpuRecord: GpuFrameRecord | null = null;
-let removeRenderContextListener: (() => void) | null = null;
-let removeResolveListener: (() => void) | null = null;
+let removeGpuFrameListener: (() => void) | null = null;
 
-const recycleGpuRecord = (record: GpuFrameRecord) => {
-  record.uids.length = 0;
-  record.age = 0;
-  freeGpuRecords.push(record);
-};
-
-const takeGpuRecord = () => {
-  // Out of records: drop the oldest pending frame
-  if (!freeGpuRecords.length) {
-    const oldest = pendingGpuRecords.shift();
-    if (oldest) recycleGpuRecord(oldest);
-  }
-  return freeGpuRecords.pop() || null;
-};
-
-const endGpuFrame = () => {
-  const record = currentGpuRecord;
-  if (!record || !record.uids.length) return;
-  pendingGpuRecords.push(record);
-  currentGpuRecord = takeGpuRecord();
-  _requestTimestampResolve();
-};
-
-const collectGpuTimes = (timestamps: ReadonlyMap<string, number>) => {
-  const now = performance.now();
-  let kept = 0;
-  for (let i = 0; i < pendingGpuRecords.length; i++) {
-    const record = pendingGpuRecords[i];
-    const ms = _sumGpuMs(timestamps, record.uids);
-    if (ms !== null) {
-      gpuWindow.push(now, ms);
-      recycleGpuRecord(record);
-    } else if (++record.age >= GPU_MAX_PENDING_FRAMES) {
-      // Its batch went to another resolver (eg. the stats-gl GPU panel's): never reported wrong
-      recycleGpuRecord(record);
-    } else {
-      pendingGpuRecords[kept++] = record;
-    }
-  }
-  pendingGpuRecords.length = kept;
+const onGpuFrameTime = (time: Readonly<GpuFrameTime>) => {
+  if (time.renderMs !== null) gpuWindow.push(performance.now(), time.renderMs);
 };
 
 const acquireGpuFrames = () => {
-  const timer = _acquireGpuTimer();
-  if (!timer) return;
-  if (!timer.gpuAvailable) {
-    // Held but without timestamps (availability rules this out): give the hold back
-    _releaseGpuTimer();
-    return;
-  }
+  // Without a renderer or timestamps nothing is held (availability rules both out)
+  if (!_acquireGpuFrameTimes('RENDER')) return;
   gpuWindow.reset();
-  currentGpuRecord = takeGpuRecord();
-  removeRenderContextListener = _onRenderContext((uid) => currentGpuRecord?.uids.push(uid));
-  removeResolveListener = _onTimestampsResolved(collectGpuTimes);
-  sampled.gpu = true;
-  updateSampler();
+  removeGpuFrameListener = _onGpuFrameTime(onGpuFrameTime);
 };
 
 const releaseGpuFrames = () => {
-  if (!sampled.gpu) return;
-  sampled.gpu = false;
-  updateSampler();
-  removeRenderContextListener?.();
-  removeResolveListener?.();
-  removeRenderContextListener = null;
-  removeResolveListener = null;
-  if (currentGpuRecord) recycleGpuRecord(currentGpuRecord);
-  currentGpuRecord = null;
-  while (pendingGpuRecords.length) recycleGpuRecord(pendingGpuRecords.pop() as GpuFrameRecord);
-  _releaseGpuTimer();
+  if (!removeGpuFrameListener) return;
+  removeGpuFrameListener();
+  removeGpuFrameListener = null;
+  _releaseGpuFrameTimes('RENDER');
 };
 
 // --- OTHER SOURCE VALUES ---
@@ -378,7 +307,7 @@ const registerFrameSources = (settings: Readonly<ProfilerSettings>) => {
     availability: () => {
       if (!settings.measureGpu) return 'off in Settings';
       if (!getRenderer()) return NO_RENDERER;
-      return _getGpuTimerSupport() === 'WEBGPU' ? true : 'WebGPU with timestamp queries only';
+      return _getGpuTimerSupport() === 'NONE' ? 'no GPU timer queries' : true;
     },
     acquire: acquireGpuFrames,
     release: releaseGpuFrames,
