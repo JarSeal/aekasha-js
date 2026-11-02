@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: implemented (Phases 0-7)
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -1163,12 +1163,28 @@ As built, section 2 (2026-11-02, not committed; section 1 committed as `2e24a49c
 - **Verified:** `yarn hub:build` (public, 101 pages) and the dev mode (108 pages), no warning or
   error (the coverage check reads the new items); Prettier clean on every changed Markdown file.
 
-### Phase 7: done
+### Phase 7: done — done
 
 - `CHANGELOG.md` (D2's entry), the versions as D2 decides, `yarn checkVersions --against main`.
 - The plan marked done and renamed, with the references: p800's Blocks line and §5,
   `_DONE_p806`'s Blocks line.
 - **Time for the PR:** `p807-stats-and-profiler-graphs` → `main`.
+
+As built (2026-11-02, not committed; Phase 6 committed as `2e24a49c` and its section 2 after):
+
+- **`CHANGELOG.md`:** the "Unreleased — engine-6" entry holds p806 and p807: a paragraph for p807
+  under p806's, and p807's items in Engine 6.0.0 (Added: WebGL GPU timing and the Hz line, the
+  table's `'muted'` tone, `markStatsPanels`; Changed: the stats panels, the profiler's three tabs,
+  a profiler tab hearing a scene change, one GPU timer, the sparkline's cheaper draw, the sizes;
+  Removed: `stats-gl` with `getStats`, `getStatsCmp`, the stats-gl-only options and `Stats.scss`;
+  Fixed: Objects' history across a scene change) and in Project (the `stats.panels` shot, the
+  masks, the Hub, the baselines, the docs, the plans). No App or Toolkit section: neither changed.
+- **Versions:** none bumped (D2). `yarn checkVersions` passes (engine 5.14.0, toolkit 2.2.1, app
+  1.18.0); `yarn checkVersions --against main` fails on purpose, on the engine only ("42 file(s)
+  changed since main … still 5.14.0"), as p806's did: p622 makes the bump.
+- **Marked done:** this file renamed `_DONE_p807_…`; the references: p800's Blocks line (p807
+  done) and §5's entry ("Done:"), `_DONE_p805`'s and `_DONE_p806`'s Blocks lines. No CLAUDE.md,
+  Hub page or code named the file.
 
 ---
 

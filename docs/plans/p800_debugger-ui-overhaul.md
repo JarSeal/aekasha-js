@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805 and p806 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805, p806 and p807 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -754,10 +754,9 @@ What follows is the sketch as written.
 
 ### p807 — Stats and profiler graphs
 
-In progress: `p807_stats-and-profiler-graphs.md` (written 2026-11-01; Phases 0-6 done, Phase 7's
-changelog and done marking left). On its own branch from `main`, merging into `main`; no public
-type changes, and its changelog sections join the unreleased `engine-6` entry with no version
-bump (its D2). What the later plans build on, each written there:
+Done: `_DONE_p807_stats-and-profiler-graphs.md` (2026-11-02; Phases 0-7). On its own branch from
+`main`, merging into `main`; no public type changes, and its changelog sections join the
+unreleased `engine-6` entry with no version bump (its D2). What the later plans build on, each written there:
 
 - **The gate** (its D3, Phases 0-2, in the Windows Chrome on the real GPU, both backends): FPS
   and GPU agree with stats-gl's (GPU to 0.01 ms on WebGPU); stats-gl's "CPU" was 7-15 % of the
