@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented, Phase 4 section 1
+Status: in progress | Phases 0-3 implemented, Phase 4 sections 1-2
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -879,6 +879,50 @@ As built, section 1 (2026-11-02, not committed):
   (on purpose, not recorded), axe 0 on every shot, the gym's unchanged; full-height unmasked shots
   of the tab in both debugger themes in both scenes (`.cache/p807/gpuMemoryShots.mts`, in
   `.cache/p807/phase4/`), no page error.
+
+As built, section 2 (2026-11-02, not committed):
+
+- **`gpuMemory/_dbg__GPUMemorySnapshotView.ts`** (new, 349 lines, out of the live view for its
+  size): `createGPUMemorySnapshotView(opts, scheduler)`, the snapshot section built once per mount;
+  `update` reads the diff once (as the strings did, each refresh) and writes the rows and texts.
+  Its heading is written in place ("Snapshot", or "Since the snapshot in … at …"); with no snapshot
+  a note says how to take one and the rest is `hidden`. Under the heading: the total's change, then
+  three tables (`captionHidden`): `gpuMemorySnapshotCategories` (the categories that changed,
+  signed; "No category changed."), `gpuMemoryLeftBehind` (the allocation and its scene, visit,
+  site and collected count a two-line cell, rows kept by kind, scene, visit, label and site; at most
+  12, then "+N more (Log diff lists all)", muted, and the Total in the footer) and
+  `gpuMemoryAssetDiff` (the asset with its kind and owner, Then ("new"), Now ("gone"), Change; the
+  counts, "N new, N gone, net …", on a line above, since a column's label is fixed; "+N more" in the
+  footer), each with its kit empty text and headers when it has no rows; the closing note, its
+  "Call sites" hint read from the setting. `createRowPool` is the live view's, exported.
+- **An asset's key isn't on its second line** (a change from the decision at the start): the key
+  is its kind and its id (`texture:${id}`, a material's texture `texture:${material}.${slot}` with
+  the id `${material} › ${slot}`), so it repeated the line. The second line is "kind, owner", as
+  before. A source's id stays on its line (it's the `registerGPUMemorySource` id, not its label).
+- **`_dbg__GPUMemory.ts`** (304 lines) lost the snapshot's string, `esc`, `DIFF_MAX_ROWS` and the
+  diff's formats; its tab builds both views in `content` and updates both in `onRefresh`.
+- **`GPUMemory.module.scss` keeps only the layout** (D8): the sections' tables across the tab (the
+  row headers regular and broken anywhere, the figures tabular and on one line: a long asset name
+  had squeezed "480.5 KB" onto two), the hidden totals and snapshot, the total's row, the budget's
+  share, the owner's cell. Every string table's rule went (`gpuMemorySummary`, `gpuMemoryTable`,
+  `gpuMemoryHeading`, `gpuMemoryNote`, `gpuMemoryUntracked`, `gpuMemoryDim`, `gpuMemoryWrap`).
+  Nothing in the debugger writes table or SVG HTML now.
+- **The dev library's "Debugger parity" box went** (no rows left): `_library/parity.ts`,
+  `parityTables.ts`, `debugger-parity-text.md`, the dev components page's box and its keywords,
+  `_components.ts`' merge, `_components.scss`' `.hubDemoParitySection` and `.hubDemoParityCell`
+  (`hubDemoTableWide` and `hubDemoTwoLines` stay: the data page's), `graphs.ts`' mention and
+  `hub/CLAUDE.md`'s line.
+- **Tests:** `_dbg__GPUMemorySnapshotView.test.ts` (3; the snapshot and its diff mocked): the note
+  without a snapshot; the heading, the total, the changed categories, 12 left-behind rows with
+  "+1 more" and the Total, the assets' counts line, a new and a gone asset and their second line,
+  the "Call sites" hint; a row kept through a refresh with its new figures, an empty table's text
+  without a footer, the note again once the snapshot is cleared.
+- **Verified:** `yarn test` (269 files), `tsc`, `tsc -p hub`, lint, `yarn hub:build` (101 pages);
+  the `debugger` configuration on `testDebugScene` and `thirdPersonGymScene`: only
+  `profiler.gpuMemory` changed (as in section 1; the snapshot section is below the window's shot),
+  axe 0 on every shot; shots of the tab with a snapshot's diff (a snapshot in the gym, then
+  `testDebugScene` and the gym again: `.cache/p807/gpuMemorySnapshotShot.mts`, in
+  `.cache/p807/phase4/gpuMemory.snapshot.*.png`), both themes, no page error.
 
 ### Phase 5: verification
 

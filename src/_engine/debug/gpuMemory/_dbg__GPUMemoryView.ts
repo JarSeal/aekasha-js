@@ -101,9 +101,12 @@ const getBackendLabel = (renderer: Renderer) =>
     ? 'WebGPU'
     : 'WebGL2';
 
-/** A list of rows kept by key: `take` reuses a key's row (made by `create` the first time), `end`
- * forgets the rows not taken since `begin` */
-const createRowPool = <R extends { id: string }>(create: (id: string) => R) => {
+/**
+ * A list of rows kept by key: `take` reuses a key's row (made by `create` the first time), `end`
+ * forgets the rows not taken since `begin` and returns the taken ones in order.
+ * @internal
+ */
+export const createRowPool = <R extends { id: string }>(create: (id: string) => R) => {
   const byKey = new Map<string, R>();
   let next: R[] = [];
   return {

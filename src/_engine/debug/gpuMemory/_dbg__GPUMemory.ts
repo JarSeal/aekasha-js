@@ -2,7 +2,6 @@ import type { Renderer } from 'three/webgpu';
 import { addDebugToast, openDebuggerTab } from '../DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from '../GPUMemory';
 import { createProfilerTab, updateProfilerTab } from '../Profiler';
-import { CMP } from '../../ui/core/CMP';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { llog } from '../../utils/Logger';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
@@ -10,30 +9,23 @@ import { ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import { getRenderer, onRendererCreated } from '../../kernel/render/Renderer';
 import { getCurrentSceneId, registerOnAllSceneEnters } from '../../kernel/scene/Scene';
 import { addViewFrameListener } from '../../kernel/render/Views';
-import { formatBytes, formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
+import { formatBytes } from '../../kernel/assets/debug/_dbg__AssetStats';
 import { installCompressedTextureSizer } from './_dbg__GPUMemoryOwners';
 import { registerEngineGPUMemorySources } from './_dbg__GPUMemorySources';
-import {
-  ALLOCATION_KIND_LABELS,
-  installAllocationTracker,
-  setRecordAllocationSites,
-} from './_dbg__GPUMemoryAllocations';
+import { installAllocationTracker, setRecordAllocationSites } from './_dbg__GPUMemoryAllocations';
 import {
   clearGPUMemorySnapshot,
   getGPUMemoryDiff,
   getGPUMemorySnapshot,
   takeGPUMemorySnapshot,
-  type GPUMemoryDiff,
 } from './_dbg__GPUMemorySnapshots';
+import { createGPUMemorySnapshotView } from './_dbg__GPUMemorySnapshotView';
 import {
   createGPUMemoryView,
   FRAME_METRICS,
   formatTime,
-  getOwnerLabel,
-  MEMORY_CATEGORIES,
   type GPUMemoryPeak,
 } from './_dbg__GPUMemoryView';
-import styles from './GPUMemory.module.scss';
 
 /**
  * GPU memory and draw-call tab (docs/plans/_DONE_p345_gpu-memory-and-draw-call-debugger.md), a
@@ -52,8 +44,9 @@ import styles from './GPUMemory.module.scss';
  * limiter skipped the frame. The same system tracks the memory peaks and the budget, so they are
  * caught while the tab is closed too.
  *
- * The live sections are the UI kit's tables and stacked bar (p807 D8, `_dbg__GPUMemoryView.ts`),
- * built once per mount and written in place on each refresh (D9).
+ * The sections are the UI kit's tables and stacked bar (p807 D8: the live ones in
+ * `_dbg__GPUMemoryView.ts`, the snapshot's in `_dbg__GPUMemorySnapshotView.ts`), built once per
+ * mount and written in place on each refresh (D9).
  */
 
 const LS_KEY = 'AEK_debugGPUMemory';
@@ -63,9 +56,6 @@ const FRAME_WINDOW_MS = 500;
 /** No sampled frame for this long reads as a paused main loop. */
 const PAUSED_AFTER_MS = 1000;
 const MB = 1024 * 1024;
-
-/** Rows per diff table; "Log diff" prints them all. */
-const DIFF_MAX_ROWS = 12;
 
 const state = { budgetMB: DEFAULT_BUDGET_MB, recordSites: false };
 
@@ -160,14 +150,6 @@ const sampleGPUMemory = () => {
 
 // --- TAB CONTENT ---
 
-const esc = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
-  );
-
-const ownerLabel = (owner: string) => esc(getOwnerLabel(owner));
-
 /** What the live sections read (`_dbg__GPUMemoryView.ts`) */
 const viewOpts = {
   getRenderer: () => getRenderer(),
@@ -181,105 +163,13 @@ const viewOpts = {
   isPaused: () => performance.now() - lastSampledAt > PAUSED_AFTER_MS,
 };
 
+/** What the snapshot section reads (`_dbg__GPUMemorySnapshotView.ts`) */
+const snapshotViewOpts = {
+  getRenderer: () => getRenderer(),
+  isRecordingSites: () => state.recordSites,
+};
+
 // --- SNAPSHOTS ---
-
-const formatDelta = (delta: number, format: (n: number) => string) =>
-  delta === 0 ? '0' : `${delta > 0 ? '+' : '−'}${format(Math.abs(delta))}`;
-const formatBytesDelta = (delta: number) => formatDelta(delta, formatBytes);
-const formatCountDelta = (delta: number) => formatDelta(delta, formatNumber);
-
-const moreRow = (total: number, columns: number) =>
-  total > DIFF_MAX_ROWS
-    ? `<tr class="${styles.gpuMemoryUntracked}"><td colspan="${columns}">+${formatNumber(total - DIFF_MAX_ROWS)} more (Log diff lists all)</td></tr>`
-    : '';
-
-/** One row per info.memory category that changed, by its size and count keys. */
-const memoryChangeRows = (diff: GPUMemoryDiff) => {
-  const delta = (key: string) => {
-    const change = diff.memory.find((c) => c.key === key);
-    return change ? change.after - change.before : 0;
-  };
-  const rows = [
-    ...MEMORY_CATEGORIES.map((c) => ({
-      label: c.label,
-      size: delta(c.size),
-      count: delta(c.count),
-    })),
-    { label: 'Render targets', size: 0, count: delta('renderTargets') },
-    { label: 'Geometries', size: 0, count: delta('geometries') },
-  ].filter((row) => row.size !== 0 || row.count !== 0);
-  return { total: delta('total'), rows };
-};
-
-const snapshotHtml = () => {
-  const renderer = getRenderer();
-  const snapshot = getGPUMemorySnapshot();
-  if (!renderer || !snapshot) {
-    return `<div class="${styles.gpuMemorySummary}">
-  <h4 class="${styles.gpuMemoryHeading}">Snapshot</h4>
-  <div class="${styles.gpuMemoryNote}">No snapshot. For leak hunting: take one in scene A, go to scene B and back to A, and the diff lists what B left allocated.</div>
-</div>`;
-  }
-  const diff = getGPUMemoryDiff(renderer)!;
-  const { total, rows } = memoryChangeRows(diff);
-
-  const categoryRows = rows
-    .map(
-      (row) =>
-        `<tr><td>${row.label}</td><td>${row.size ? formatBytesDelta(row.size) : ''}</td><td>${formatCountDelta(row.count)}</td></tr>`
-    )
-    .join('');
-  const assetRows = diff.assets
-    .slice(0, DIFF_MAX_ROWS)
-    .map(
-      (change) =>
-        `<tr><td class="${styles.gpuMemoryWrap}" title="${esc(change.key)}">${esc(change.id)}<br><span class="${styles.gpuMemoryDim}">${change.kind}, ${ownerLabel(change.owner)}</span></td><td>${change.before ? formatBytes(change.before) : 'new'}</td><td>${change.after ? formatBytes(change.after) : 'gone'}</td><td>${formatBytesDelta(change.after - change.before)}</td></tr>`
-    )
-    .join('');
-  const leftRows = diff.leftBehind
-    .slice(0, DIFF_MAX_ROWS)
-    .map(
-      (group) =>
-        `<tr><td class="${styles.gpuMemoryWrap}">${ALLOCATION_KIND_LABELS[group.kind]}: ${esc(group.label)}<br><span class="${styles.gpuMemoryDim}">${ownerLabel(group.scene)}, visit ${group.visit}${group.site ? ` · ${esc(group.site)}` : ''}${group.collected ? ` · ${formatNumber(group.collected)} collected` : ''}</span></td><td>${formatNumber(group.count)}</td><td>${formatBytes(group.bytes)}</td></tr>`
-    )
-    .join('');
-  const assetsNew = diff.assets.filter((change) => !change.before).length;
-  const assetsGone = diff.assets.filter((change) => !change.after).length;
-  const assetsNet = diff.assets.reduce((sum, change) => sum + change.after - change.before, 0);
-  const leftBytes = diff.leftBehind.reduce((sum, group) => sum + group.bytes, 0);
-  const leftCount = diff.leftBehind.reduce((sum, group) => sum + group.count, 0);
-
-  return `<div class="${styles.gpuMemorySummary}">
-  <h4 class="${styles.gpuMemoryHeading}">Since the snapshot in ${ownerLabel(snapshot.sceneId)} at ${formatTime(snapshot.at)}</h4>
-  <div class="${styles.gpuMemoryTotalRow}"><span>Total</span><strong>${formatBytesDelta(total)}</strong></div>
-  ${
-    categoryRows
-      ? `<table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Category</th><th>Size</th><th>Count</th></tr></thead>
-    <tbody>${categoryRows}</tbody>
-  </table>`
-      : `<div class="${styles.gpuMemoryNote}">No category changed.</div>`
-  }
-  ${
-    leftRows
-      ? `<table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Left behind (scene, visit)</th><th>Count</th><th>Size</th></tr></thead>
-    <tbody>${leftRows}${moreRow(diff.leftBehind.length, 3)}</tbody>
-    <tfoot><tr><td>Total</td><td>${formatNumber(leftCount)}</td><td>${formatBytes(leftBytes)}</td></tr></tfoot>
-  </table>`
-      : `<div class="${styles.gpuMemoryNote}">No earlier scene visit since the snapshot left anything allocated.</div>`
-  }
-  ${
-    assetRows
-      ? `<table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Registered asset (${formatNumber(assetsNew)} new, ${formatNumber(assetsGone)} gone, net ${formatBytesDelta(assetsNet)})</th><th>Then</th><th>Now</th><th>Change</th></tr></thead>
-    <tbody>${assetRows}${moreRow(diff.assets.length, 4)}</tbody>
-  </table>`
-      : `<div class="${styles.gpuMemoryNote}">No registered asset changed.</div>`
-  }
-  <div class="${styles.gpuMemoryNote}">Since the snapshot: ${formatNumber(diff.currentVisit.count)} allocations (${formatBytes(diff.currentVisit.bytes)}) made in this scene visit are still live, and ${formatNumber(diff.freed.count)} that existed at the snapshot (${formatBytes(diff.freed.bytes)}) were freed. "Left behind" lists what the snapshot's scene visit and the visits after it, up to this one, created and is still counted: what a scene left behind, or something long-lived it created first (a new visit starts on every scene load, so the same scene twice is two visits). Collected ones were garbage collected without being destroyed, so three counts them for good.${state.recordSites ? '' : ' Turn on "Call sites" to see where each one was created (from the next allocation on).'}</div>
-</div>`;
-};
 
 const logDiff = () => {
   const renderer = getRenderer();
@@ -292,8 +182,9 @@ const logDiff = () => {
   );
 };
 
-/** The mounted tab's live sections (made again on each mount) */
+/** The mounted tab's sections (made again on each mount) */
 let view: ReturnType<typeof createGPUMemoryView> | null = null;
+let snapshotView: ReturnType<typeof createGPUMemorySnapshotView> | null = null;
 
 export const _createGPUMemoryDebugGUI = () => {
   createProfilerTab({
@@ -309,10 +200,14 @@ export const _createGPUMemoryDebugGUI = () => {
     refreshIntervalMs: 500,
     // Its figures span scenes (the peaks, a snapshot's diff): kept (p807 D9)
     keepOnSceneChange: true,
-    // The live sections read once; the tab's scheduler then writes their tables
-    onRefresh: () => view?.update(),
+    // The sections read once; the tab's scheduler then writes their tables
+    onRefresh: () => {
+      view?.update();
+      snapshotView?.update();
+    },
     content: ({ scheduler }) => {
       view = createGPUMemoryView(viewOpts, scheduler);
+      snapshotView = createGPUMemorySnapshotView(snapshotViewOpts, scheduler);
       return [
         ...view.cmps,
         {
@@ -345,7 +240,7 @@ export const _createGPUMemoryDebugGUI = () => {
             },
           ],
         },
-        CMP({ html: snapshotHtml }),
+        snapshotView.cmp,
         {
           pane: true,
           content: [
