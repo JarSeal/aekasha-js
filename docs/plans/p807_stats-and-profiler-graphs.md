@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -941,7 +941,7 @@ As built, section 3 (2026-11-02, not committed):
   `testDebugScene` and `thirdPersonGymScene` pass against it (the "Reached" mask holds from run to
   run), axe 0.
 
-### Phase 5: verification
+### Phase 5: verification — done
 
 - The `debugger` configuration (all its scenes): shots, axe 0, the tab order, the undo / redo
   scripts.
@@ -1085,6 +1085,20 @@ As built, section 3 (2026-11-02, not committed; sections 1 and 2 committed as `8
   the four settings pass; the Mac had no baselines for them (Phase 3's run was the desktop's), so
   the shots were recorded (`--update --no-build`, local). The sparkline's paths are byte for byte
   section 2's before (its unit tests).
+
+As built, section 4 (2026-11-02, not committed; section 3 committed as `649dbcb2`):
+
+- **`yarn verify:scenes --config all`** against the Mac's baselines (Phase 3's end plus Phase 4's
+  `testDebugScene` `debugger` shots): 109 of 110 passed, none failed, 486 s; the one new was
+  `testDebugScene`'s `debugger` run for its `stats.panels` shot (section 1). The only warning was
+  `assetCompare`'s `drawer.assetCompare`, its `unstableShots` (rows in their loads' order).
+  Section 2's kit changes moved no shot.
+- **Recorded:** `--config all --update` at `649dbcb2`, 110 recorded (484 s), `stats.panels`
+  among them. The desktop's baselines are still Phase 3's: there `profiler.gpuMemory` (Phase 4)
+  and `stats.panels` show until recorded.
+- The section 2 worktree (`main` at `dc2b28ad`) was removed (`git worktree remove`); the scratch
+  scripts stay in `.cache/p807/` (`perf.mts`, `debugChunks.mts`, their JSON in `perf/` and
+  `chunks/`).
 
 ### Phase 6: the Hub, `CLAUDE.md`, readme
 
