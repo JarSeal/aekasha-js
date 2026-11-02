@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented, Phase 4 sections 1-2
+Status: in progress | Phases 0-4 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -804,7 +804,7 @@ As built, section 3 (D9, 2026-11-02, not committed):
   --profile all` unchanged from Phase 0 (app 384.4, banner 287.4, uiKit 286.6 kB gzip; the app
   group's "well under" note as before).
 
-### Phase 4: GPU memory
+### Phase 4: GPU memory — done
 
 D8, D9; its shots changed on purpose. The peak table's "Reached" cells (a wall-clock time) join
 `DEBUGGER_LIVE_MASKS` (Phase 1's verification: the shot flips on them). In sections (decided at
@@ -924,6 +924,23 @@ As built, section 2 (2026-11-02, not committed):
   `testDebugScene` and the gym again: `.cache/p807/gpuMemorySnapshotShot.mts`, in
   `.cache/p807/phase4/gpuMemory.snapshot.*.png`), both themes, no page error.
 
+As built, section 3 (2026-11-02, not committed):
+
+- **D9 in the app** (`.cache/p807/gpuMemoryD9.mts`, the gym, macOS's Chromium on WebGPU): the
+  GPU memory tab open, the sources sorted by size from the keyboard (Enter twice on the Size
+  header's button: ascending, then descending), the focus left on that button and the tab
+  scrolled 600 px; after three of the tab's 500 ms refreshes the sort is still descending with the
+  rows in its order, the focus on the same button (Enter there goes on to the registration order,
+  `sortUnset`), the scroll at 600 and the rows (the sources', a category's) the same elements; no
+  page error. No code changed.
+- **Verified (Phase 4's):** `yarn verify:baselines`: every baseline unchanged (the three bundles,
+  `api.json`, `docs.json` 100 %), no debug code in production or the embeds; `yarn sbp --profile
+  all`: first downloads app 384.4, banner 287.4, uiKit 286.6 kB gzip, unchanged from Phase 0, every
+  budget within (the app group's "well under" note as before); the `debugger` configuration's
+  `testDebugScene` recorded with the new `profiler.gpuMemory` shot (`--update`, local), then
+  `testDebugScene` and `thirdPersonGymScene` pass against it (the "Reached" mask holds from run to
+  run), axe 0.
+
 ### Phase 5: verification
 
 - The `debugger` configuration (all its scenes): shots, axe 0, the tab order, the undo / redo
@@ -932,6 +949,21 @@ As built, section 2 (2026-11-02, not committed):
   against Phase 0's figures; the fixes it calls for.
 - The debug chunks and production's `yarn sbp` / `yarn verify:baselines`.
 - Every scene runner baseline updated on purpose.
+
+Notes from Phase 4 (on a Mac, where the desktop's scratch files aren't):
+
+- The scene runner's baselines here (`.cache/verify/scenes/webgpu/`) are Phase 3's end
+  (`37c1709c`, all 110 runs) plus Phase 4's `testDebugScene` `debugger` shots; on the desktop they
+  are as Phase 3 left them, so there `profiler.gpuMemory` fails until recorded.
+- `.cache/p806/` and `.cache/p807/`'s Phase 0-3 scripts (`gate.mts`, `measure.mts`,
+  `debugChunks.mts`, `allocDetail.mts`) are on the desktop only: on another machine the debug
+  chunks' and the cost measures' scripts are written again (`yarn build:test`, then the lazy JS
+  chunks' bytes and gzip by name; Phase 0's method for the cost) or the phase runs on the desktop.
+  Phase 4's scripts (`gpuMemoryShots.mts`, `gpuMemorySnapshotShot.mts`, `gpuMemoryD9.mts`) are on
+  the Mac, run with `npx tsx` from the repo root.
+- Phase 4's perf candidates: `_dbg__GPUMemoryView.ts`' `update` allocates at 2 Hz (the owner
+  groups, the asset and source walks, as the strings did), and the snapshot's diff is read on each
+  refresh while there's a snapshot (`getGPUMemoryDiff`, as before).
 
 ### Phase 6: the Hub, `CLAUDE.md`, readme
 
