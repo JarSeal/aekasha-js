@@ -176,8 +176,22 @@ export {
 export type { HudRootProps } from './core/HUD';
 export { createInputGlyph } from './components/InputGlyph';
 export type { InputGlyph, InputGlyphInput, InputGlyphProps } from './components/InputGlyph';
+export type {
+  InputGlyphFamily,
+  InputGlyphGamepadButton,
+  InputGlyphGamepadInput,
+} from './components/GamepadGlyphs';
+export { createInputPrompt, getPromptDevice, setPromptDevice } from './game/InputPrompt';
+export type {
+  InputPrompt,
+  InputPromptBinding,
+  InputPromptDevice,
+  InputPromptProps,
+} from './game/InputPrompt';
 export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
+export { getKitPreferences, setKitPreferences } from './core/KitPreferences';
+export type { KitPreferences, SetKitPreferencesProps } from './core/KitPreferences';
 export { createLink } from './components/Link';
 export type { Link, LinkProps } from './components/Link';
 export { createList } from './data/List';

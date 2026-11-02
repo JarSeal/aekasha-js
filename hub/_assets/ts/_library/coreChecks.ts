@@ -379,6 +379,11 @@ export const CORE_CHECKS: Record<string, UiDemoChecks> = {
             name: 'aria-label',
             value: 'Left mouse button',
           },
+          {
+            expectAttr: `${GLYPH}[data-family="playstation"][data-button="SOUTH"]`,
+            name: 'aria-label',
+            value: 'Cross button',
+          },
         ],
       },
     ],

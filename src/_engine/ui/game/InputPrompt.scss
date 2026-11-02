@@ -1,0 +1,20 @@
+// The input prompt's default styles (InputPrompt.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). The glyphs, then the action's
+// name, on one line.
+@layer aek.components {
+  :where(.aekInputPrompt) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-input-prompt-gap, var(--aek-space-2));
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+  }
+
+  :where(.aekInputPrompt__glyphs) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-1);
+  }
+}

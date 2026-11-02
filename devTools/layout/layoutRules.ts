@@ -29,8 +29,9 @@ const A = 'src/app/';
  * `components/` (one module per component), `overlays/` (the windows, the toaster, the overlay
  * layer), `forms/` (p804's fields, value editors and containers, the drop-down among them, with
  * their binding and scheduler in `binding/`), `data/` (p805's data display: the table, list, tree,
- * graphs and stat tile, with their shared filter and opt-in behaviours), `styles/`, `fonts/` and
- * `testing/` (the tests' shared helpers). p808 adds `game/`.
+ * graphs and stat tile, with their shared filter and opt-in behaviours), `game/` (p808's game UI:
+ * bars, prompts, menus, items, the world anchors' layer; DOM only, their engine side in the
+ * kernel or the toolkit), `styles/`, `fonts/` and `testing/` (the tests' shared helpers).
  */
 const UI_KIT_FOLDERS = [
   'core',
@@ -38,6 +39,7 @@ const UI_KIT_FOLDERS = [
   'overlays',
   'forms',
   'data',
+  'game',
   'styles',
   'fonts',
   'testing',

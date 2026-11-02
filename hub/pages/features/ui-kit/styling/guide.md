@@ -211,7 +211,7 @@ prefers light; `data-aek-theme="dark"` or `"light"` on any element forces its su
 The theme sets `color-scheme` too, so the browser's own scrollbars and form controls follow it:
 
 ```ts
-getHUDRootCMP().updateAttr({ 'data-aek-theme': 'light' }); // The whole HUD
+setKitPreferences({ theme: 'light' }); // The whole HUD (its root by default)
 settingsPanel.updateAttr({ 'data-aek-theme': 'dark' }); // One panel in it
 ```
 
@@ -228,12 +228,19 @@ the player sets, never from the page's root size, so it looks the same on any pa
 
 ```ts
 // 1.25 makes the kit's text and spacing, and every token size, 25 % larger
-getHUDRootCMP().updateStyle({ '--aek-ui-scale': uiScale });
+setKitPreferences({ uiScale });
 ```
 
 Set them on the kit root only: the sizes are computed there, and the elements under it inherit
 the results. A window's `size` and `position` are what you give it (px by default) and don't
 scale; its header and contents do.
+
+::: tip A settings menu
+[`setKitPreferences`](api:setKitPreferences) writes the player's theme, UI scale, reduced motion
+and density on the HUD root (or the `root` you give) in one call, each one you leave out as it
+is, and [`getKitPreferences`](api:getKitPreferences) reads them back, for the menu's first
+values. It writes and never saves: keep the player's choices where your game keeps its settings.
+:::
 
 ## Fonts
 
@@ -254,8 +261,9 @@ import 'aekasha/ui/fonts';
 ## Motion and focus
 
 - **Reduced motion:** the kit's transitions and animations take their durations from the motion
-  tokens, which are 0 when the player's system asks for reduced motion. Set `--aek-motion: 0` on
-  the kit root to turn them off from a setting of your own. Your own transitions follow too when
+  tokens, which are 0 when the player's system asks for reduced motion. Turn them off from a
+  setting of your own with `setKitPreferences({ reducedMotion: true })` (`--aek-motion: 0` on the
+  kit root; `false` keeps them on whatever the system asks, `'system'` follows it again). Your own transitions follow too when
   they use the tokens; for an animation timed in code, multiply its durations by
   [`getMotionFactor`](api:getMotionFactor). A component's `anim` phases don't scale on their own,
   since an animation can carry meaning: scale the ones that shouldn't play. A few things keep

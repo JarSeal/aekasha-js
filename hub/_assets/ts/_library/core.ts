@@ -26,6 +26,7 @@ import type {
   BuiltInIconName,
   Button,
   ButtonProps,
+  InputGlyphFamily,
   InputGlyphInput,
   ProgressBarProps,
   CMPHandle,
@@ -631,12 +632,33 @@ const GLYPH_ROWS: { label: string; inputs: InputGlyphInput[] }[] = [
   },
 ];
 
+/** A gamepad's inputs, drawn once per family: the same buttons, each family's labels (p808 D5) */
+const GAMEPAD_INPUTS: InputGlyphInput[] = [
+  { device: 'GAMEPAD', button: 'SOUTH' },
+  { device: 'GAMEPAD', button: 'EAST' },
+  { device: 'GAMEPAD', button: 'LEFT_SHOULDER' },
+  { device: 'GAMEPAD', button: 'RIGHT_TRIGGER' },
+  { device: 'GAMEPAD', button: 'START' },
+  { device: 'GAMEPAD', stick: 'LEFT' },
+  { device: 'GAMEPAD', button: 'DPAD_UP' },
+];
+const GAMEPAD_FAMILIES: { label: string; family: InputGlyphFamily }[] = [
+  { label: 'Gamepad: Xbox', family: 'XBOX' },
+  { label: 'Gamepad: PlayStation', family: 'PLAYSTATION' },
+  { label: 'Gamepad: Nintendo', family: 'NINTENDO' },
+  { label: 'Gamepad: generic', family: 'GENERIC' },
+];
+
 /** In the page: a glyph draws where its text is */
 const initInputGlyphDemo: Demo = (box) => {
   const root = addKitRoot(box);
   for (const { label, inputs } of GLYPH_ROWS) {
     const group = addGroup(root, label);
     for (const input of inputs) group.append(createInputGlyph({ input }).cmp.elem);
+  }
+  for (const { label, family } of GAMEPAD_FAMILIES) {
+    const group = addGroup(root, label);
+    for (const input of GAMEPAD_INPUTS) group.append(createInputGlyph({ input, family }).cmp.elem);
   }
   const prompt = addGroup(root, 'In a prompt, following its text');
   const line = document.createElement('p');

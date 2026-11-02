@@ -1,0 +1,525 @@
+Status: in progress | Phases 0-1 implemented
+Category: UI, Accessibility, Input
+Epic: p800_debugger-ui-overhaul.md
+Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
+
+# Game UI Components
+
+p800's eighth child: the pieces games build again and again (p800 §4.5), public on `aekasha/ui`
+in a new `ui/game/` folder, and the `gameHud` example scene that uses all of them, playable with a
+keyboard, a mouse or a gamepad without switching modes. Each piece is plain DOM through CMP and
+works without the engine (p800 D1); where the engine knows something the DOM doesn't (an entity's
+position, the camera, the device the player uses, the action maps), a small engine or toolkit
+module feeds the kit piece, and the piece takes plain data.
+
+Nothing breaks: new components, new engine and toolkit functions, one additive glyph change.
+
+---
+
+## 1. As found (2026-11-02, `main` at `b6be591a`, Engine 5.14.0 with the unreleased 6.0.0 work)
+
+### 1.1 p800's p808 sketch, checked
+
+p800 §4.5 and §5 hold, with these differences and additions:
+
+- **The kit can't import the input, camera, ECS or loop modules.** `devTools/layout/layout.ts`
+  allows `ui → kernel` only for `UI_KERNEL_HOOKS` (`Config.ts`, `SceneHooks.ts`, `BootHooks.ts`);
+  a type-only import is allowed. So every engine-aware piece is split: the kit's DOM piece takes
+  plain data (screen positions, a device, bindings in the kit's own shapes, as p803 D10's glyph
+  does), and its engine side lives in the kernel or the toolkit (D2).
+- **No "last used device" exists.** No active-device state or change event anywhere in `src`.
+  The closest: `onGamepadConnected` / `onGamepadDisconnected` (`GamepadInput.ts`), an
+  `ActionEventFn`'s DOM `Event` (`null` for the gamepad poll), and the `@internal`, single-slot
+  `setKeyActionListener` (taken by the action layer). The gamepad's family (Xbox, PlayStation,
+  Nintendo) isn't detected: `GamepadInfo.id` is passed through.
+- **Gamepads in an embed:** in the `CANVAS` input scope the pads are read only while the canvas
+  has focus (`GamepadInput.ts:127-133`), so once a HUD element takes focus (a menu's button) the
+  gamepad goes silent: HUD navigation by gamepad can't work in an embed as it is (D5).
+- **Action maps** (`kernel/input/Actions.ts`, p610): `createActionMap`, contexts with
+  `setActionContextEnabled` ("a menu turns `GAMEPLAY` off and its own context on"), bindings as
+  plain data, rebinding public on the handle (`map.getBindings(id)`, `map.setBindings(id, …)`),
+  `ActionDef`'s `name` / `icons` "metadata for UI (a shortcuts list, a rebinding screen)". No
+  persistence, no "capture the next input" helper; `getKeyChordLabel` and `GAMEPAD_BUTTON_NAMES`
+  (the W3C standard mapping by position: `SOUTH`, `EAST`, …, `DPAD_*`, `HOME`) are public, and
+  `doKeyChordsCollide` is exported but on no entry.
+- **Keys in text fields reach the maps** (`Actions.ts`' `isEditableTarget` only skips
+  `preventDefault`): a game action fires while a kit text field has focus. The settings menu's
+  key capture must keep its key from the maps (D9).
+- **The kit's runtime settings:** no setters for the theme, UI scale or motion. The styling guide
+  (`hub/pages/features/ui-kit/styling/guide.md`) tells an app to write `data-aek-theme`,
+  `--aek-ui-scale` and `--aek-motion` on the HUD root itself; the Hub's library page does so
+  (`_components.ts`' `initSettings`); only the debugger has a `@internal` writer
+  (`DebuggerRoot.ts`' `setDebuggerTheme`). The settings menu needs them (D10).
+- **The entry:** `aekasha/ui` has 149 value names and 238 type names; p803 D12 said "p808
+  revisits this if the entry passes about 150 names" (D3).
+
+### 1.2 The engine side the anchors and the minimap use
+
+- Per-frame hooks: `world.addSystem(stage, id, fn, order)` (`kernel/ecs/ECS.ts:410`); stages
+  `MAIN → APP_PRE_PHYSICS → [APP_PHYSICS_STEP ×N] → APP_POST_PHYSICS → APP_LOGIC →
+  APP_RENDER_SYNC → render → LATE_MAIN`. The `APP_*` stages stop while the app is paused, and a
+  frame the max-FPS cap holds back skips the render and `LATE_MAIN`. `LATE_MAIN` runs after the
+  render has updated every matrix, also while paused (a paused fly camera still moves the labels).
+  Toolkit precedent: `registerFollowToolEffect` (`toolkit/ecs/effects/FollowTool.ts:179`).
+- `getActiveCamera()` (`kernel/camera/Camera.ts:335`, on `aekasha`: the debug camera while it's
+  on), `getCanvasSize()` (CSS px, `kernel/render/CanvasSize.ts:47`, on `aekasha`).
+- The HUD root is a fixed, zero-size element at the canvas's origin (the full page, or a mount's
+  container with `contain: layout`), so `position: fixed; inset: 0` under it covers the canvas
+  exactly, as the viewports' layer does.
+- An entity's position: `ComponentType.OBJECT3D`'s `matrixWorld` (the interpolated render pose
+  after `POSE_PRODUCERS`) is the anchors' source; `TRANSFORM` is in parent space and its
+  `getComponent` copies in `TYPED_ARRAY` mode. `world.isAlive(id)` checks the generation.
+- Viewports (`aekasha/viewports`): `createViewport({ id, scene, camera, anchor, rect, size, … })`
+  places its slot element in `#aekViewportsLayer` under the HUD root and renders where the slot's
+  box is (`Viewport.slotElem` public; the JSDoc example is a minimap). A frame appended into the
+  slot lines up by construction. The viewport renders into the main canvas, so the DOM can't clip
+  it to a circle (D7).
+
+### 1.3 The kit this builds on
+
+- `components/InputGlyph.ts` (p803 D10): one key or a mouse input, `role="img"` with the spoken
+  name; `InputGlyphInput` mirrors the `KEYBOARD` and `MOUSE` bindings; "p808 adds `'GAMEPAD'`".
+- `components/ProgressBar.ts` (`role="progressbar"`, segments, a `scaleX` fill),
+  `components/LoadingOverlay.ts` (spinner or bar, `showAsync` / `hideAsync`, `setText`),
+  `components/RovingFocus.ts`, `components/Announcer.ts` (one polite announcer per kit root),
+  `overlays/` (the stack's Escape and focus return, the focus trap, `showAnchored`, the tooltip,
+  the popover, the menu, dialogs), `forms/` (the form, the property grid with
+  `addPropertyGridItems`, every field), `data/` (the tabs, the list and its reorder's
+  Alt+arrows and announcements).
+- `core/Motion.ts`' `getMotionFactor`, `core/ThemeWatch.ts` (`@internal`), `core/Window.ts`'
+  `getWindowSize` / `onBoundsResize` (`@internal`, the HUD's bounds).
+- The tokens have every role this needs (`danger`, `warning`, `success`, `info` with `-soft`, the
+  chart colours, motion, z-layers); D6's game tokens are component properties, not roles.
+
+### 1.4 Around it
+
+- Hub: the UI kit section's group pages (`core` 10, `forms` 15, `data` 18, `overlays` 20,
+  `styling` 30, `library` 40), each an `index.html` with `intro.md` and `guide.md`, `aek:covers`
+  naming a `##` of `src/_engine/ui/CLAUDE.md`; the library's demo modules and checks
+  (`hub/_assets/ts/_library/<group>.ts`, `<group>Checks.ts`, merged in `_components.ts` and
+  `_componentChecks.ts`), `COMPONENT_USES` (`devTools/hub/generated/components.ts`), the recipe in
+  `hub/CLAUDE.md`. Example pages at `aek:order` 10-80 (`ui-kit` 75, `embed` 80).
+- The example scenes in `src/app/examples/` (one folder each; registration generated by the
+  gather); `devTools/verify/scenes.config.ts` lists exceptions only, so a new scene runs in
+  `yarn verify:scenes` without an entry.
+- SBP: `_engine/ui/data/: 0` in the `app` and `uiKit` profiles' `modules` (p805 D13); the
+  `uiKit` profile's data window is a chunk of its own with a budget.
+- Versions: `main` holds the unreleased engine 6.0.0 work; p807 joined `CHANGELOG.md`'s
+  "Unreleased — engine-6" entry with no bump (p807 D2).
+
+---
+
+## 2. Decisions (proposed 2026-11-02, for review)
+
+### D1. Scope
+
+All of p800 §4.5, as these pieces (`ui/game/` unless said otherwise):
+
+| Group      | Pieces                                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| Input      | the glyph's gamepads (`components/InputGlyph.ts`), `createInputPrompt` and `setPromptDevice`; the kernel's device tracker |
+| Bars       | `createResourceBar` (health, stamina: segments, a damage trail, a heal flash, thresholds), `createCooldown`          |
+| Aim        | `createCrosshair` (shapes, spread, a target state), its `showHitMarker`                                              |
+| Text       | `createNotificationFeed`, `createObjectiveTracker`, `createSubtitles`, `createDialogueBox`                           |
+| Navigation | `createSpatialNavigation` (arrows, d-pad, focus groups, back), `createRadialMenu`, `createGameMenu` (pause and the like) |
+| Items      | `createItemSlot`, `createHotbar`, `createInventoryGrid` (moves by pointer, keys and gamepad), `createItemDetails` (a tooltip's stats with a comparison) |
+| Settings   | `createSettingsMenu` (pages of property grid items), `createControlsPage` (rebinding), `setKitPreferences`           |
+| World      | `createWorldAnchorLayer` and `createCompass` (kit), `createMinimapFrame` (kit), the toolkit's `registerWorldAnchorSync` |
+| Loading    | the loading overlay's `tips` (no new piece: `components/LoadingOverlay.ts` gains it)                                 |
+
+- **Moved or dropped:** the loading screen is the loading overlay with tips and an optional image,
+  not its own piece (the overlay is already the scene loader's, p803); a circular minimap is out
+  (the viewport renders into the main canvas, which the DOM can't clip: D7); a 3D in-world UI
+  stays out (p800).
+- **Out:** saving the player's settings (a piece reports, its owner persists: p804 D1; the
+  example saves to `localStorage`, the Hub guide shows it), audio (the settings menu's audio page
+  is an app's sliders on the property grid), a quest system (the tracker shows what it's given).
+
+### D2. Layout and the engine boundary
+
+- **`ui/game/`**: a layout rule in `UI_KIT_FOLDERS` (`devTools/layout/layoutRules.ts`, after
+  `data`). A piece with more than one module gets a folder (`game/inventory/`, `game/anchors/`).
+  Every module DOM-only (p800 D1); the input glyph stays in `components/` (it's p803's).
+- **The kernel** (`kernel/input/`): the device tracker (D5) and the gamepad family, public on
+  `aekasha` (they're input facts any app reads, not UI).
+- **The toolkit** (`toolkit/ecs/effects/WorldAnchorSync.ts`, on `aekasha/toolkit/ecs`): the one
+  system that feeds the anchor layer from entities and the active camera (D7). Not an engine
+  feature: it's an opt-in system an app registers, as `FollowTool` is, so it costs nothing until
+  used and needs no `FeatureContext`.
+- **The wiring between them** (a gamepad's d-pad to the spatial navigation, the device tracker to
+  the prompts, the action maps to the controls page) is a few lines of app code, in the example
+  and on the Hub guide, not a module: each is one call per event, and an app's menu map is its own.
+
+### D3. One entry
+
+`aekasha/ui` stays one entry (p803 D12's reasoning holds: `sideEffects` keeps only what's used,
+so a sub-entry saves no bytes). About 25 value names join it (≈175). Revisit at about 250, or if
+the dev server's load of the entry (every module it re-exports) is felt; recorded in
+`src/_engine/ui/CLAUDE.md`.
+
+### D4. The pieces' common rules (p800 D1-D8, for a game's HUD)
+
+- **Per-frame setters** (a bar's value, a cooldown, the crosshair's spread, an anchor's position,
+  the compass's heading) write in place, compare with the shown value first and write nothing when
+  it's unchanged, allocate nothing (p800 D7's per-frame rule): a game calls them every frame.
+  Their motion is a CSS transition or animation started by a state change, never a per-frame JS
+  animation, except the anchor layer's transform writes (D7).
+- **Colour is never the only signal** (p800 D6): a threshold sets a `data-state` and an icon or
+  text, a hit marker's kind changes its shape, a comparison has a sign and an arrow.
+- **Assistive tech:** a bar is a `role="meter"` (a value in a known range, not a task's progress)
+  with `aria-valuetext` ("72 of 100"); the crosshair, the hit marker, the anchors' arrows and the
+  compass's strip are `aria-hidden` decoration, with the deviation in their JSDoc (the game says
+  it in its sound and its feed); the feed, the subtitles, the dialogue line and the tracker's
+  changes announce through `aria-live` (polite) once, not per character or per frame.
+- **Reduced motion** (`getMotionFactor`, `--aek-motion`): the damage trail and the heal flash
+  jump instead of easing, the typewriter shows the whole line, the feed's items appear without
+  sliding, the cooldown's sweep steps once a second (the remaining time is information: it stays).
+- **Game tokens** are component properties with role fallbacks (`--aek-resource-bar-color`,
+  `--aek-crosshair-color`, `--aek-crosshair-size`, …), not new roles: the contrast test's pairs
+  stay as they are.
+- **Density:** the game pieces are for the default density; the compact one works but isn't
+  their target.
+
+### D5. The device tracker and the prompts (p800 §4.5's device-aware prompts)
+
+- **Kernel** (`kernel/input/InputDevice.ts`, on `aekasha`): `getLastInputDevice()` →
+  `{ device: 'KEYBOARD_MOUSE' | 'GAMEPAD' | 'TOUCH', family? }` and
+  `onLastInputDeviceChange(fn)` → remover. Its listeners (`keydown`, `pointerdown` with the
+  pointer type, `wheel`; a gamepad's button or a stick past the deadzone) are added on the first
+  `onLastInputDeviceChange` or the first read, by the input scope (`setInputScope`), and removed
+  with `removeAllInputListeners`. The gamepad side reads the pads in the action layer's poll when
+  it runs, else in its own `requestAnimationFrame` poll that runs only while a listener exists
+  and a pad is connected. A mouse move alone doesn't switch from the gamepad (a bumped desk), a
+  click or a key does.
+- **Family:** `getGamepadFamily(id)` → `'XBOX' | 'PLAYSTATION' | 'NINTENDO' | 'GENERIC'` from
+  `Gamepad.id` (vendor ids `045e` Microsoft, `054c` Sony, `057e` Nintendo, and the names browsers
+  give), on `GamepadInfo` as `family`.
+- **The embed's gamepads** (§1.1): in the `CANVAS` scope a pad is read while focus is inside the
+  mount's container (the canvas or the HUD), not only on the canvas.
+- **The kit:** `InputGlyphInput` gains `{ device: 'GAMEPAD', button }` and
+  `{ device: 'GAMEPAD', stick: 'LEFT' | 'RIGHT' | 'DPAD' }` (the action bindings' shapes) and the
+  glyph a `family` prop and `setFamily`. A face button is drawn by its family's label (Xbox
+  `A B X Y`, PlayStation's shapes `✕ ○ □ △` drawn as SVG, Nintendo `B A Y X` by position, generic
+  a diamond with the pressed one filled), neutral in colour (p800 D6: the brands' button colours
+  would be colour as decoration; an app restyles `.aekInputGlyph__face[data-button]`), spoken by
+  its name ("A button", "Cross button", "South face button").
+- **`createInputPrompt({ bindings, label? })`**: shows, from an action's bindings, the one for the
+  current prompt device (the first binding of that device; the keyboard's for touch, which has no
+  glyph), and the label ("Interact"). `setPromptDevice({ device, family })` (module state of the
+  kit, no listener at load) switches every prompt at once; a prompt subscribes on creation and
+  unsubscribes on `cmp.remove()`. The app wires it in one line:
+  `onLastInputDeviceChange(setPromptDevice)`.
+
+### D6. Bars, cooldowns, the crosshair
+
+- **`createResourceBar({ label, max, value, segments?, thresholds?, trail? })`**: a meter with a
+  fill, a damage trail (a second fill that holds the old value for `trailDelayMs`, then eases down
+  over `--aek-motion-slow`; a heal fills at once and flashes), segments as the progress bar's,
+  thresholds (`[{ below: 0.25, state: 'danger', icon? }]`: the bar's `data-state` and an icon at
+  its start), an optional value text (`showValue: 'fraction' | 'percent'`). `setValue`, `setMax`.
+- **`createCooldown({ for?, durationMs? })`**: an overlay for any element (an icon button, a
+  hotbar slot): a conic sweep from a registered `--aek-cooldown-progress` animated by CSS from
+  the start time (no JS per frame), the remaining seconds as text (tabular), a ready flash.
+  `start(durationMs, elapsedMs?)`, `cancel()`, `isRunning()`, `onReady`. The element it covers
+  gets `aria-disabled` and an `aria-describedby` "Ready in 3 s" text updated once a second while
+  running (D4: not per frame).
+- **`createCrosshair({ shape, gap, thickness, size })`**: `'cross' | 'dot' | 'circle' |
+  'chevron'`, drawn with CSS on tokens; `setSpread(px)` (a transform per arm, on change only),
+  `setState('default' | 'target' | 'blocked')` (a ring appears for a target, a slash for blocked:
+  not colour alone), `showHitMarker({ kind: 'hit' | 'critical' | 'kill' })` (an X whose size and
+  stroke differ per kind, restarting its CSS animation; under reduced motion it shows still for
+  the same time). Centred on its container (the HUD's bounds by default).
+
+### D7. World anchors, the compass, the minimap frame
+
+- **`createWorldAnchorLayer({ cullDistance?, edgePadding? })`** (kit, `game/anchors/`): a layer
+  over its container (`position: absolute; inset: 0`, `pointer-events: none`), and anchors in it:
+  `layer.addAnchor({ content, offset?, offScreen?: 'hide' | 'clamp', maxDistance? })` → an anchor
+  handle (`setContent`, `remove`). `layer.update(viewProjection, width, height, cameraPosition)`
+  takes the matrix as 16 numbers (a `THREE.Matrix4`'s `elements` as it is: no three import) and
+  each anchor's world position from `anchor.setPosition(x, y, z)` (written by its owner, or the
+  toolkit's sync); it projects, hides behind the camera, clamps to the edge with an arrow turned
+  to the target for `'clamp'` (a waypoint), culls by distance, and writes
+  `transform: translate3d(…)` only when the rounded pixel position changed (no allocation: a
+  kept `Float64Array` scratch). The layer sorts nothing per frame; a nearer anchor's `z-index` is
+  set only when the order changes (`depthSort`, off by default).
+- **The toolkit's `registerWorldAnchorSync(world, { layer })`** adds one `LATE_MAIN` system (after
+  the render's matrix updates, and it runs while paused) that, for every entity with the
+  `WORLD_ANCHOR` component (`{ anchor, offsetY? }`), reads its `OBJECT3D.matrixWorld` position
+  into the anchor, then calls `layer.update` with the active camera's
+  `projectionMatrix × matrixWorldInverse` and `getCanvasSize()`. A removed entity's anchor goes
+  with the component's removal hook. Measured with 200 anchors by the perf-auditor agent (p800
+  §5) in Phase 7.
+- **`createCompass({ markers?, fov? })`** (kit): a strip of the bearings (N, E, S, W and ticks)
+  scrolled by `setHeading(radians)` (a transform, on change only), markers at bearings
+  (`setMarker(id, { bearing, label, icon? })`, a waypoint's), `aria-hidden` with the heading as a
+  visually hidden text updated when its rounded cardinal changes ("Facing north-east"). The app
+  (or the toolkit's sync, `compass` option) gives it the camera's yaw.
+- **`createMinimapFrame({ title?, zoom? })`** (kit): a frame for a viewport's slot (an app appends
+  it into `viewport.slotElem`, which places it), with a north mark, the player's arrow at its
+  centre (`setPlayerHeading`), optional zoom buttons (`onZoom`), a label for assistive tech.
+  Square with the radius token; a circle would need the viewport to clip itself (out: D1).
+
+### D8. Navigation and menus
+
+- **`createSpatialNavigation({ root, onBack?, wrap? })`**: moves focus by position among the tab
+  stops under `root` (the focusable elements with `tabindex >= 0`, not `inert`, not hidden, one
+  per roving composite) with `move('up' | 'down' | 'left' | 'right')`, and reads the arrow keys
+  itself on `root` (`handleKeys`, default true). A composite that uses arrows (a tab list, a
+  radio group, a slider, a grid, a text field) keeps them; the gamepad's `move` still leaves it
+  from its edge (a composite's element at the edge in that direction). Focus groups:
+  `[data-aek-focus-group]` elements are tried first in the direction, then the nearest group's
+  remembered element; `nextGroup` / `previousGroup` (a shoulder button). `back()` calls `onBack`
+  (or the overlay stack's Escape). The scoring: the distance along the direction plus twice the
+  perpendicular offset, of the candidates whose box lies ahead (the usual spatial navigation
+  heuristic), on boxes read once per move.
+- **`createRadialMenu({ items, label })`**: items round a ring (`role="menu"`, `menuitem`s,
+  `aria-label`), opened with `open()` at its container's centre or a point; picked by the pointer's
+  angle from the centre, by `setDirection(x, y)` (a stick: past a dead zone it highlights, the
+  release picks: the app calls `select()`), or by arrow keys (round the ring) and Enter; Escape
+  or the centre closes. The centre shows the highlighted item's label and its description.
+- **`createGameMenu({ title, items, onBack })`**: a full-screen or panel menu of large buttons
+  (the pause menu, a title screen), a modal dialog on the overlay stack (its focus trap and
+  return), with a spatial navigation inside it and "back" on Escape, the gamepad's `EAST` (through
+  the app's map) and a visible "Back" button; `items` are buttons or pages (a page swaps the
+  panel's content, a settings menu, with a back stack). The pause menu is this with Resume first.
+
+### D9. The settings menu and the controls page
+
+- **`createSettingsMenu({ pages, onChange })`**: pages on the tabs (p805), each a property grid
+  from `PropertyGridItem`s (p804), so an app writes its graphics and audio settings as data; the
+  menu reports each change and its owner persists (p804 D1). Its "Reset page" and "Reset all"
+  set every field's default (the binding's `default`).
+- **`createControlsPage({ actions, onRebind })`**: one row per action (its `name`, its glyphs per
+  device), with a capture button per device column (keyboard and mouse, gamepad). Capturing waits
+  for the next key, mouse button or gamepad button (Escape cancels, the gamepad's capture polls
+  `navigator.getGamepads()` only while capturing: a DOM API, no engine), stops that event in the
+  capture phase on `window` so no action map sees it (§1.1), shows a conflict with another
+  action's binding (a warning, with "Swap" and "Keep both"), and reports
+  `onRebind(actionId, device, binding)` in the action bindings' shapes. "Reset to defaults". The
+  app applies it with `map.setBindings` and persists it; the example's 20 lines are the Hub's
+  snippet.
+- **`setKitPreferences(root, { theme?, uiScale?, reducedMotion?, density? })`** (`core/`): writes
+  `data-aek-theme`, `--aek-ui-scale`, `--aek-motion` and `data-aek-density` on a kit root (the HUD
+  root by default), the styling guide's three manual writes as one call, and
+  `getKitPreferences(root)`.
+
+### D10. Text
+
+- **`createNotificationFeed({ max, durationMs })`**: short lines in a corner ("+25 gold", "Quest
+  updated"), each with an optional icon and tone; the newest on top, merging a repeat into "×3"
+  (by `key`), fading after `durationMs` (held while hovered or focused), announced politely.
+  Not the toaster: no dismiss, no actions, game-styled, many at once.
+- **`createObjectiveTracker({ title })`**: objectives with optional counts ("Collect crystals 3 / 5")
+  and sub-steps, `setObjective(id, …)`, `complete(id)` (a check, struck through, then removed
+  after a moment), a list (`role="list"`); a completion is announced.
+- **`createSubtitles({ maxLines })`**: `show({ text, speaker?, durationMs })`, lines stacked at the
+  bottom, the speaker's name in its own colour property and bold (not colour alone), size and
+  background as custom properties (an app's subtitle size setting), `aria-live="polite"`.
+- **`createDialogueBox({ onAdvance })`**: a speaker, an optional portrait (an element the app
+  gives), a line revealed by a typewriter (`charsPerSecond`; the whole line at once under reduced
+  motion; the reveal is `aria-hidden`, the full line in a live region when it starts), Enter /
+  Space / click to skip the reveal and then to advance, `choices` as buttons in a group (arrow
+  keys, numbers 1-9), a "next" indicator.
+
+### D11. Items
+
+- **`createItemSlot({ item?, size?, keyHint? })`**: a square button with an item's icon (an
+  element or an image URL), a stack count (bottom right, tabular), a rarity or tone as a border
+  property and a `data-rarity` (with a text for assistive tech), an optional key hint (the glyph
+  or a `Kbd`) and a cooldown (`createCooldown` on it). `setItem`, `setCount`, `setSelected`.
+- **`createHotbar({ slots, onUse })`**: a row of slots (`role="toolbar"`, roving focus), a
+  selected slot (`aria-pressed`), `select(index)` / `selectNext(±1)` for the wheel and the
+  shoulder buttons, the number keys' hints.
+- **`createInventoryGrid({ columns, rows, items, onMove, canMove? })`**: an APG grid of slots.
+  Moves: pointer drag (pointer events, so touch works too: a lifted ghost, the target slot
+  highlighted, a swap or a merge of stacks), and the keys: Enter or Space picks the focused item up
+  (`aria-grabbed`'s successor: the row's state in text, announced), arrows move the focus, Enter
+  drops (a swap), Escape puts it back; the gamepad does the same through the spatial navigation's
+  keys and the app's `SOUTH`. `onMove(from, to)` reports, `canMove` vetoes (a slot type). Several
+  grids (a chest and the bag) move between each other through one `createItemDragGroup`.
+- **`createItemDetails({ item, compareTo? })`**: the content for a tooltip or a popover (the
+  kit's): the item's name, tone, description, and its stats as rows, each with a comparison
+  against `compareTo` (an up or down arrow, a sign and the difference, in the status roles:
+  better `success`, worse `danger`).
+
+### D12. Size
+
+- Every `ui/game/` module is 0 in the first download of the `app`, `banner` and `uiKit` profiles
+  (`modules: { '_engine/ui/game/': 0 }`, as p805 D13), and the device tracker is in no first
+  download either (a profile that doesn't call it doesn't bundle it).
+- The `uiKit` profile gets a game window (a resource bar, a hotbar with a cooldown, a feed, a
+  prompt) as its own chunk with a budget: what a game HUD costs, the number the Hub shows.
+- The example scene's chunk is the app's; it's not budgeted beyond the `app` profile's lazy
+  scenes.
+
+### D13. Tests and checks
+
+- Each piece's `*.test.ts` on `testing/KitDom.ts`: its keys, its ARIA after each action, its
+  disposal (`countListeners`: none after `cmp.remove()`), its per-frame setters writing nothing
+  when unchanged (a `MutationObserver` count or a write spy). The anchor layer's projection,
+  clamping and culling as maths tests; the spatial navigation's choice on fixed boxes (linkedom
+  has no layout: the module reads boxes through one function the test replaces).
+- The kernel's device tracker and family in `kernel/input/` tests.
+- `yarn verify:ui`: each piece's box on the library page, its states and its keyboard scripts.
+- `yarn verify:scenes`: the `exampleGameHud` scene, its baseline recorded.
+- `yarn verify:embed`: the `uiKit` profile's game window in its layouts.
+
+### D14. Documentation and the example
+
+- **`src/app/examples/gameHud/`** (`exampleGameHud`): a small arena (a floor, a few physics
+  crates, three "NPC" markers, a waypoint), the player a character (the character example's
+  setup) or a flying camera if that's simpler in Phase 8; nameplates and a waypoint anchor, a
+  health and a stamina bar, a hotbar with cooldowns, the feed, the tracker, a dialogue with an
+  NPC, subtitles, the radial menu on a key or the gamepad's `RIGHT_SHOULDER`, the pause menu and
+  the settings menu (UI scale, theme, reduced motion, subtitles' size, the controls page),
+  prompts that follow the device, the crosshair with hit markers on the crates, the compass and a
+  minimap viewport. One action map for play and one for menus (`MENU` context), switched by the
+  pause menu.
+- **Hub:** the UI kit section's `game/` page (`aek:covers "Game UI"`, a new `##` in
+  `src/_engine/ui/CLAUDE.md`), each piece's section with `::: demo`, reference table and keys;
+  both component library pages' boxes; `hub/pages/examples/game-hud/` with the walkthrough
+  (`#region`s in the example); the input page's device tracker (`aek:covers` of the input
+  `CLAUDE.md`'s sections as needed); the toolkit's anchor sync on its page.
+- `src/_engine/kernel/input/CLAUDE.md` (the tracker), `src/_engine/ui/CLAUDE.md` (Game UI),
+  `readme.md` (Features: the game UI pieces; Examples' list).
+
+### D15. Branch and versions
+
+- **Branch:** `p808-game-ui-components` from `main`, merging into `main` (p800 §6).
+- **Versions:** as p807 D2: `main` holds the unreleased engine 6.0.0, so this plan's changelog
+  sections join the "Unreleased — engine-6" entry (Engine, Toolkit, App) with no bump; the
+  toolkit's and the app's minors are made at the engine-6 merge, the note under their headings
+  says so. `yarn checkVersions --against main` fails at the PR on purpose, as p806's and p807's
+  did.
+
+---
+
+## 3. Phases
+
+Each phase is verified with `yarn test`, `yarn lint`, `tsc` (the Stop hook), and what it names.
+A phase that adds a piece adds its tests with it; the Hub boxes come in Phase 8 with the rest.
+
+### Phase 0: grounding and baselines — done
+
+1. §1 checked against `main` (done when this plan was written: §1).
+2. The scene baselines recorded on `main` (`yarn verify:scenes --update`), `yarn verify:baselines`
+   and `yarn sbp --profile all` run on `main` for the before figures (`uiKit`'s first download,
+   the `ui/` groups).
+3. p800's Blocks line and §5's p808 entry point here; this plan's status `in progress`.
+
+As built:
+
+- The scene baselines were recorded on the branch's first commit-less state (the plan file only,
+  so `main`'s code at `b6be591a`), on macOS (the local Chromium's WebGPU).
+- The before figures for the bundle, the API and the SBP profiles are the committed baselines
+  (`devTools/verify/baselines/`, `sbp`'s baseline): `main`'s, so no separate run was made.
+
+### Phase 1: groundwork — the folder, the device tracker, the glyph's gamepads, the prompts — done
+
+1. `ui/game/` in `UI_KIT_FOLDERS` with its doc line.
+2. `kernel/input/InputDevice.ts`: `getLastInputDevice`, `onLastInputDeviceChange`,
+   `getGamepadFamily` (D5); `GamepadInfo.family`; the `CANVAS` scope's gamepad focus rule (D5);
+   on `aekasha`; tests.
+3. The glyph's `GAMEPAD` inputs and `family` (D5), its tests; the Hub's glyph text names the
+   gamepads.
+4. `game/InputPrompt.ts`: `createInputPrompt`, `setPromptDevice` (D5), tests.
+5. `core/KitPreferences.ts`: `setKitPreferences`, `getKitPreferences` (D9), tests; the styling
+   guide's manual writes replaced by it.
+
+As built:
+
+- **The scope's root:** `setInputScope(scope, root?)` (`InputState.ts`, `@internal`) keeps the
+  `CANVAS` scope's root, which `mountAekasha` passes (its container); `getInputScopeRoot()`.
+  `GamepadInput.ts`' `isInScope` reads the pads while the focus is on the canvas or inside the
+  root (`InputScope.test.ts`' new case).
+- **The family** is its own module, `kernel/input/GamepadFamily.ts` (`getGamepadFamily`, the
+  `GamepadFamily` type), so the tracker doesn't import `GamepadInput.ts` and its renderer import.
+  `GamepadInfo.family` is set by `toInfo`. Vendor ids from Chrome's `Vendor: 054c` and Firefox's
+  `54c-9cc-` prefix (leading zeros dropped), else the names.
+- **The tracker** (`kernel/input/InputDevice.ts`) always polls the pads with its own
+  `requestAnimationFrame` loop, not the action layer's poll (D5 said "in the action layer's poll
+  when it runs"): the action layer polls only while a map has a gamepad binding, and sharing it
+  would have tied the two modules together for one `getGamepads()` call a frame while a pad is
+  connected. The loop runs only while the tracker listens and a pad is connected
+  (`gamepadconnected` starts it; it stops on the first frame with none). Its listeners are added
+  again by the next read or callback after `removeAllInputListeners`, as the devices' are.
+- **The glyph's parts:** the gamepad attributes are on the glyph's element (`data-family`
+  lowercased, `data-button`: a button's name, `STICK_LEFT`, `LEFT_X`; `data-shape`), not on a
+  `.aekInputGlyph__face` part as D5 wrote; the button's text is `.aekInputGlyph__label`. The
+  types are `InputGlyphFamily`, `InputGlyphGamepadButton` and `InputGlyphGamepadInput`
+  (`components/GamepadGlyphs.ts`, `@internal` drawing, its types on the entry). Shown labels:
+  Xbox `LB RB LT RT View Menu LS RS Xbox`, PlayStation `L1 R1 L2 R2 Share Options L3 R3 PS`,
+  Nintendo `L R ZL ZR − + LS RS Home`, generic `L1 R1 L2 R2 Select Start L3 R3 Home`.
+- **The prompt** also exports `getPromptDevice`. Its glyphs are child CMPs (the CMP registry),
+  kept and redrawn in place on a device change, the extra ones removed.
+- **Docs so far:** the input and kit `CLAUDE.md` lines, the core guide's key hints section, the
+  input glyph's library texts and demo (a row per family) with a check, and the styling guide
+  (`setKitPreferences` in place of the manual writes, a "settings menu" tip). The prompt's and
+  the preferences' library boxes and the `game/` page are Phase 8's.
+- The entry: 154 value names (149 + `createInputPrompt`, `getPromptDevice`, `setPromptDevice`,
+  `getKitPreferences`, `setKitPreferences`).
+
+### Phase 2: bars, the cooldown, the crosshair
+
+`createResourceBar`, `createCooldown`, `createCrosshair` with `showHitMarker` (D6), each with its
+stylesheet and tests.
+
+### Phase 3: text
+
+`createNotificationFeed`, `createObjectiveTracker`, `createSubtitles`, `createDialogueBox` (D10);
+the loading overlay's `tips` (D1).
+
+### Phase 4: navigation and menus
+
+`createSpatialNavigation`, `createRadialMenu`, `createGameMenu` (D8).
+
+### Phase 5: items
+
+`createItemSlot`, `createHotbar`, `createInventoryGrid` with `createItemDragGroup`,
+`createItemDetails` (D11).
+
+### Phase 6: settings
+
+`createSettingsMenu`, `createControlsPage` (D9).
+
+### Phase 7: the world
+
+`createWorldAnchorLayer`, `createCompass`, `createMinimapFrame` (D7); the toolkit's
+`registerWorldAnchorSync` and its `WORLD_ANCHOR` component; the perf-auditor's pass with 200
+anchors, its findings fixed or written down here.
+
+### Phase 8: the example, the Hub, the docs
+
+The `gameHud` example (D14) and its Hub page; the UI kit's `game/` page, both library pages'
+boxes, the checks, `COMPONENT_USES`; the `uiKit` profile's game window and its budgets (D12);
+`yarn verify:ui`, `yarn verify:embed`, `yarn verify:scenes --only exampleGameHud --update`;
+the nested `CLAUDE.md` files and `readme.md`.
+
+### Phase 9: versions and done
+
+The changelog's sections in the unreleased engine-6 entry (D15), p800's §5 p808 entry rewritten
+as done ("what the later plans build on"), the plan marked done, `_DONE_`.
+
+---
+
+## 4. Risks
+
+- **Size of the plan.** 25 pieces. Mitigation: the phases are independent after Phase 1; a phase
+  that runs long moves its last piece to a later phase and says so here.
+- **Spatial navigation's heuristic** picks a surprising neighbour in irregular layouts. Mitigation:
+  focus groups, an explicit `data-aek-nav-<direction>` override (an element id), the example's
+  menus as the test bed.
+- **Gamepad families** from `Gamepad.id` vary by browser and OS. Mitigation: `GENERIC` as the
+  fallback, an app's override (`setPromptDevice` takes the family it wants).
+- **The anchor layer's cost** with many anchors: D7's on-change writes, the perf-auditor's pass.
+- **Key capture** racing the action maps: the capture phase on `window` (D9), checked in the
+  example with a gameplay map active.
+
+## Done when
+
+- Every piece of D1 is on `aekasha/ui` (or the kernel or the toolkit as D2 says), documented with
+  its demo, keys and parts, tested, and passing `yarn verify:ui`.
+- `exampleGameHud` plays with a keyboard, a mouse or a gamepad, switches its prompts with the
+  device, and its menus work without a mouse; its scene baseline is recorded.
+- The game pieces cost the first downloads nothing; the `uiKit` profile's game window is budgeted.

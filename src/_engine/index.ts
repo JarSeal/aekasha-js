@@ -133,6 +133,10 @@ export type {
   GamepadInfo,
   GamepadStickName,
 } from './kernel/input/GamepadInput';
+export { getGamepadFamily } from './kernel/input/GamepadFamily';
+export type { GamepadFamily } from './kernel/input/GamepadFamily';
+export { getLastInputDevice, onLastInputDeviceChange } from './kernel/input/InputDevice';
+export type { InputDeviceKind, LastInputDevice } from './kernel/input/InputDevice';
 export type { PickOpts } from './kernel/input/InputPicking';
 export type {
   BindingMeta,

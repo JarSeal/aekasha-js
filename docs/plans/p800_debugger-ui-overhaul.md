@@ -791,6 +791,12 @@ What follows is the sketch as written.
 
 ### p808 — Game UI components
 
+Written: `p808_game-ui-components.md` (2026-11-02, in progress on `p808-game-ui-components`). Its
+D1 keeps all of §4.5 but the loading screen (the loading overlay gains tips) and a circular
+minimap (the viewport renders into the main canvas); its D2 splits each engine-aware piece into a
+DOM-only kit piece and a kernel (the device tracker) or toolkit (the anchor sync) side, since the
+kit can't import the input, camera or ECS modules. What follows is the sketch as written.
+
 - §4.5, and the `examples/gameHud/` scene with its Hub example page: a small arena where world
   anchors (nameplates, a waypoint), health and resource bars, a hotbar, a notification feed, a
   dialogue box, a pause and a settings menu (UI scale, theme, reduced motion, key rebinding) are

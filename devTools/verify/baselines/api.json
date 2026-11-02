@@ -2299,6 +2299,10 @@
       "TouchDragActionBinding": "TypeAlias",
       "TouchTapActionBinding": "TypeAlias"
     },
+    "src/_engine/kernel/input/GamepadFamily.ts": {
+      "GamepadFamily": "TypeAlias",
+      "getGamepadFamily": "Function"
+    },
     "src/_engine/kernel/input/GamepadInput.ts": {
       "GAMEPAD_BUTTON_NAMES": "Variable",
       "GamepadAxisName": "TypeAlias",
@@ -2313,6 +2317,12 @@
       "readGamepadAxis": "Function",
       "readGamepadButton": "Function",
       "readGamepadStickInto": "Function"
+    },
+    "src/_engine/kernel/input/InputDevice.ts": {
+      "getLastInputDevice": "Function",
+      "InputDeviceKind": "TypeAlias",
+      "LastInputDevice": "TypeAlias",
+      "onLastInputDeviceChange": "Function"
     },
     "src/_engine/kernel/input/InputPicking.ts": {
       "PickOpts": "TypeAlias",
@@ -2333,6 +2343,7 @@
       "areAppInputsEnabled": "Function",
       "areAppInputsSuspended": "Function",
       "getInputScope": "Function",
+      "getInputScopeRoot": "Function",
       "InputScope": "TypeAlias",
       "removeAllInputListeners": "Function",
       "setAllInputsEnabled": "Function",
@@ -2835,6 +2846,12 @@
       "EmptyState": "TypeAlias",
       "EmptyStateProps": "TypeAlias"
     },
+    "src/_engine/ui/components/GamepadGlyphs.ts": {
+      "InputGlyphFamily": "TypeAlias",
+      "InputGlyphGamepadButton": "TypeAlias",
+      "InputGlyphGamepadInput": "TypeAlias",
+      "writeGamepadGlyph": "Function"
+    },
     "src/_engine/ui/components/InputGlyph.ts": {
       "createInputGlyph": "Function",
       "InputGlyph": "TypeAlias",
@@ -3019,6 +3036,12 @@
       "registerIcon": "Function",
       "SvgIconKey": "TypeAlias",
       "SvgIconSize": "TypeAlias"
+    },
+    "src/_engine/ui/core/KitPreferences.ts": {
+      "getKitPreferences": "Function",
+      "KitPreferences": "TypeAlias",
+      "setKitPreferences": "Function",
+      "SetKitPreferencesProps": "TypeAlias"
     },
     "src/_engine/ui/core/Motion.ts": {
       "getMotionFactor": "Function"
@@ -3555,6 +3578,15 @@
       "VectorFieldProps": "TypeAlias",
       "VectorValue": "TypeAlias"
     },
+    "src/_engine/ui/game/InputPrompt.ts": {
+      "createInputPrompt": "Function",
+      "getPromptDevice": "Function",
+      "InputPrompt": "TypeAlias",
+      "InputPromptBinding": "TypeAlias",
+      "InputPromptDevice": "TypeAlias",
+      "InputPromptProps": "TypeAlias",
+      "setPromptDevice": "Function"
+    },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
       "AnchorBox": "TypeAlias",
@@ -4023,6 +4055,7 @@
       "GamepadAxisName",
       "GamepadButtonActionBinding",
       "GamepadButtonName",
+      "GamepadFamily",
       "GamepadInfo",
       "GamepadStickActionBinding",
       "GamepadStickName",
@@ -4041,6 +4074,7 @@
       "ImportedGeometryInfo",
       "InitEngine",
       "InitEngineOptions",
+      "InputDeviceKind",
       "KeyActionBinding",
       "KeyActionBindingBase",
       "KeyAxisActionBinding",
@@ -4051,6 +4085,7 @@
       "KeyCompositeActionBinding",
       "KeyHeldBinding",
       "KeyUpDownBinding",
+      "LastInputDevice",
       "LifetimeData",
       "LightProps",
       "LoadSceneProps",
@@ -4177,12 +4212,14 @@
       "getECSWorld",
       "getElapsedTime",
       "getEntityIdByAppId",
+      "getGamepadFamily",
       "getGeneratedAppData",
       "getGeneratedSceneData",
       "getGeometry",
       "getGeometryRegistry",
       "getGroupByAppId",
       "getKeyChordLabel",
+      "getLastInputDevice",
       "getLightByAppId",
       "getLightTargetId",
       "getLoaderStatusUpdater",
@@ -4224,6 +4261,7 @@
       "mountAekasha",
       "onGamepadConnected",
       "onGamepadDisconnected",
+      "onLastInputDeviceChange",
       "playActionRecording",
       "recordActions",
       "registerOnAllSceneEnterings",
@@ -4902,12 +4940,20 @@
       "GraphPartFormat",
       "HudRootProps",
       "InputGlyph",
+      "InputGlyphFamily",
+      "InputGlyphGamepadButton",
+      "InputGlyphGamepadInput",
       "InputGlyphInput",
       "InputGlyphProps",
+      "InputPrompt",
+      "InputPromptBinding",
+      "InputPromptDevice",
+      "InputPromptProps",
       "KEEP_IN_VIEWS_CLASS",
       "KIT_ROOT_CLASS",
       "Kbd",
       "KbdProps",
+      "KitPreferences",
       "Link",
       "LinkProps",
       "List",
@@ -4978,6 +5024,7 @@
       "SelectOptions",
       "SelectValue",
       "SelectionMode",
+      "SetKitPreferencesProps",
       "Skeleton",
       "SkeletonProps",
       "Slider",
@@ -5086,6 +5133,7 @@
       "createGraphMonitor",
       "createHudRoot",
       "createInputGlyph",
+      "createInputPrompt",
       "createKbd",
       "createLink",
       "createList",
@@ -5140,7 +5188,9 @@
       "getDraggableWindowsOfKind",
       "getHUDRootCMP",
       "getKindWindowId",
+      "getKitPreferences",
       "getMotionFactor",
+      "getPromptDevice",
       "getRecentColors",
       "getSvgIcon",
       "gpuCardIcon",
@@ -5177,6 +5227,8 @@
       "rocketIcon",
       "rocketTakeoffIcon",
       "runtimeIcon",
+      "setKitPreferences",
+      "setPromptDevice",
       "setRecentColors",
       "setWindowCycleKeys",
       "spatialGridIcon",

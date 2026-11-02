@@ -1,13 +1,18 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
+import {
+  writeGamepadGlyph,
+  type InputGlyphFamily,
+  type InputGlyphGamepadInput,
+} from './GamepadGlyphs';
 import { getKeyName, getKeyPlatform, type KeyPlatform } from './KeyNames';
 import './InputGlyph.scss';
 import '../styles/kit.scss';
 
 /**
- * The input an input glyph draws, in an action binding's shape (`createActionMap`'s `KEYBOARD`
- * and `MOUSE` bindings), so a map's binding can be passed as it is: one key, a mouse button, or
- * the mouse's movement or wheel.
+ * The input an input glyph draws, in an action binding's shape (`createActionMap`'s `KEYBOARD`,
+ * `MOUSE` and `GAMEPAD` bindings), so a map's binding can be passed as it is: one key, a mouse
+ * button, the mouse's movement or wheel, a gamepad's button, stick or axis.
  */
 export type InputGlyphInput =
   /** One key, a `KeyboardEvent.key` value (`'e'`, `'Shift'`, `' '`) */
@@ -15,7 +20,9 @@ export type InputGlyphInput =
   /** A mouse button */
   | { device: 'MOUSE'; button: 'LEFT' | 'MIDDLE' | 'RIGHT' }
   /** The mouse's movement or its wheel */
-  | { device: 'MOUSE'; delta: 'MOVE' | 'WHEEL' };
+  | { device: 'MOUSE'; delta: 'MOVE' | 'WHEEL' }
+  /** A gamepad's button, stick or axis, labelled by the pad's family (p808) */
+  | InputGlyphGamepadInput;
 
 /** What {@link createInputGlyph} draws. */
 export type InputGlyphProps = {
@@ -24,6 +31,9 @@ export type InputGlyphProps = {
   /** Whose key names it shows: `'mac'` draws the modifiers as symbols (⌘). Default: the platform
    * the page runs on. */
   platform?: 'mac' | 'other';
+  /** The gamepad's family, whose labels a gamepad input shows (Xbox's A, PlayStation's Cross,
+   * Nintendo's B for the same `SOUTH` button). Default `'GENERIC'`: the button's place. */
+  family?: InputGlyphFamily;
   /** Extra classes for its element. */
   class?: string | string[];
   /** Extra attributes for its element. */
@@ -38,6 +48,8 @@ export type InputGlyph = {
   cmp: CMPHandle;
   /** Draws another input in place (a binding changed). */
   setInput: (input: InputGlyphInput) => void;
+  /** Draws a gamepad input with another family's labels (the player picked up another pad). */
+  setFamily: (family: InputGlyphFamily) => void;
 };
 
 /** The mouse in a 24 × 24 box: the body and the buttons' line (broken around the wheel when the
@@ -65,7 +77,17 @@ const MOUSE_NAMES = {
 
 /** Writes the glyph: a key cap's text, or the mouse's SVG with its part in the accent; its name
  * is the element's `aria-label` (`role="img"`) */
-const writeGlyph = (elem: HTMLElement, input: InputGlyphInput, platform: KeyPlatform) => {
+const writeGlyph = (
+  elem: HTMLElement,
+  input: InputGlyphInput,
+  platform: KeyPlatform,
+  family: InputGlyphFamily
+) => {
+  for (const name of ['data-shape', 'data-button', 'data-family']) elem.removeAttribute(name);
+  if (input.device === 'GAMEPAD') {
+    writeGamepadGlyph(elem, input, family);
+    return;
+  }
   if (input.device === 'KEYBOARD') {
     const { shown, spoken } = getKeyName(input.key, platform);
     elem.setAttribute('data-device', 'keyboard');
@@ -81,23 +103,34 @@ const writeGlyph = (elem: HTMLElement, input: InputGlyphInput, platform: KeyPlat
 };
 
 /**
- * Creates an input glyph (p803 D10): one key as a key cap, or a mouse button, the wheel or the
- * mouse's movement as a mouse with that part in the accent, for a prompt ("Press [E] to open").
- * Static, keyboard and mouse: p808 makes it follow the device in use and adds the gamepads.
- * - Parts: `.aekInputGlyph` (`data-device="keyboard" | "mouse"`), `.aekInputGlyph__active` (the
- *   mouse's part, filled with the accent).
+ * Creates an input glyph (p803 D10, p808 D5): one key as a key cap, a mouse button, the wheel or
+ * the mouse's movement as a mouse with that part in the accent, or a gamepad's button, stick or
+ * axis labelled by the pad's family, for a prompt ("Press [E] to open"). One input; a prompt that
+ * follows the player's device is `createInputPrompt`.
+ * - Parts: `.aekInputGlyph` (`data-device="keyboard" | "mouse" | "gamepad"`; a gamepad's also
+ *   `data-family`, `data-button` (`SOUTH`, `STICK_LEFT`, `LEFT_X`) and `data-shape="circle" |
+ *   "pill" | "trigger" | "plain"`), `.aekInputGlyph__label` (a gamepad button's text),
+ *   `.aekInputGlyph__active` (the mouse's part, the d-pad's arm, a generic pad's face button, an
+ *   axis' arrows: filled with the accent).
  * - Custom properties: `--aek-input-glyph-size` (its height, default `1.6em`: it follows its text).
- * - Assistive tech: `role="img"` named by the input ("E", "Left mouse button").
+ * - Assistive tech: `role="img"` named by the input ("E", "Left mouse button", "Cross button").
+ * - Colour: a gamepad's buttons are neutral, never the brands' colours (p800 D6); restyle
+ *   `.aekInputGlyph[data-family='xbox'][data-button='SOUTH']` for them.
  * @example
  * ```ts
  * const prompt = panel.add({ tag: 'p', text: 'Press ' });
  * prompt.add(createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } }).cmp);
  * prompt.add({ tag: 'span', text: ' or ' });
  * prompt.add(createInputGlyph({ input: { device: 'MOUSE', button: 'LEFT' } }).cmp);
+ * prompt.add(
+ *   createInputGlyph({ input: { device: 'GAMEPAD', button: 'SOUTH' }, family: 'XBOX' }).cmp
+ * );
  * ```
  */
 export const createInputGlyph = (props: InputGlyphProps): InputGlyph => {
   const platform = props.platform ?? getKeyPlatform();
+  let input = props.input;
+  let family = props.family ?? 'GENERIC';
   const cmp = CMP({
     id: props.id,
     idAttr: props.id !== undefined,
@@ -105,6 +138,17 @@ export const createInputGlyph = (props: InputGlyphProps): InputGlyph => {
     class: classes('aekInputGlyph', props.class),
     attr: { ...props.attr, role: 'img' },
   });
-  writeGlyph(cmp.elem, props.input, platform);
-  return { cmp, setInput: (input) => writeGlyph(cmp.elem, input, platform) };
+  writeGlyph(cmp.elem, input, platform, family);
+  return {
+    cmp,
+    setInput: (next) => {
+      input = next;
+      writeGlyph(cmp.elem, input, platform, family);
+    },
+    setFamily: (next) => {
+      if (next === family) return;
+      family = next;
+      if (input.device === 'GAMEPAD') writeGlyph(cmp.elem, input, platform, family);
+    },
+  };
 };

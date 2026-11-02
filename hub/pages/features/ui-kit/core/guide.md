@@ -181,8 +181,11 @@ a change should be announced, say it in a live region of your own.
 the text [`getKeyChordLabel`](api:getKeyChordLabel) writes; several chords joined with `' / '`
 are shown with "or". On macOS the modifiers are symbols (⌘ ⇧ ⌥ ⌃), and assistive tech hears the
 words ("Command+Shift+P"). [`createInputGlyph`](api:createInputGlyph) draws one input for a
-prompt: a key cap, or a mouse with the button, the wheel or its movement in the accent. It takes
-an action map binding's shape, so a binding goes in as it is. Both are sized in `em`, so they
+prompt: a key cap, a mouse with the button, the wheel or its movement in the accent, or a
+gamepad's button, stick or axis with its `family`'s label (Xbox's A, PlayStation's Cross,
+Nintendo's B for the same `SOUTH` button). It takes an action map binding's shape, so a binding
+goes in as it is; [`createInputPrompt`](api:createInputPrompt) shows an action's binding for the
+device the player uses. Both are sized in `em`, so they
 follow their text, and both are display only: binding the key is the app's. A button's or a menu
 item's `kbd` takes the hint's handle, and names its keys in `aria-keyshortcuts`.
 
@@ -195,6 +198,8 @@ const glyph = createInputGlyph({ input: { device: 'KEYBOARD', key: 'e' } });
 prompt.add(glyph.cmp);
 prompt.add({ tag: 'span', text: ' to open the door' });
 glyph.setInput({ device: 'MOUSE', button: 'LEFT' }); // the player rebound it
+glyph.setInput({ device: 'GAMEPAD', button: 'SOUTH' });
+glyph.setFamily('PLAYSTATION'); // drawn as Cross
 ```
 
 ::: demo kbd
@@ -203,12 +208,12 @@ glyph.setInput({ device: 'MOUSE', button: 'LEFT' }); // the player rebound it
 ::: demo inputGlyph
 :::
 
-| Key hint, input glyph |                                                                                                    |
-| --------------------- | -------------------------------------------------------------------------------------------------- |
-| Props                 | [`KbdProps`](api:KbdProps), [`InputGlyphProps`](api:InputGlyphProps)                               |
-| Parts                 | `.aekKbd` with a `.aekKbd__key` per key; `.aekInputGlyph` with its `__active` part                 |
-| Custom properties     | `--aek-input-glyph-size` (default `1.6em`)                                                         |
-| Assistive tech        | Symbols are read as words; an input glyph is `role="img"` named by its input ("Left mouse button") |
+| Key hint, input glyph |                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props                 | [`KbdProps`](api:KbdProps), [`InputGlyphProps`](api:InputGlyphProps)                                                                                                      |
+| Parts                 | `.aekKbd` with a `.aekKbd__key` per key; `.aekInputGlyph` (`data-device`, a gamepad's `data-family`, `data-button`, `data-shape`) with its `__label` and `__active` parts |
+| Custom properties     | `--aek-input-glyph-size` (default `1.6em`)                                                                                                                                |
+| Assistive tech        | Symbols are read as words; an input glyph is `role="img"` named by its input ("Left mouse button", "Cross button")                                                        |
 
 ## Icons
 

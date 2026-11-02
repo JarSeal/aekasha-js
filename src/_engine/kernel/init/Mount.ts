@@ -205,7 +205,7 @@ export const mountAekasha = async (opts: MountAekashaOptions): Promise<AekashaMo
   // windows measure it and follow its size (the kit's own ResizeObserver, onBoundsResize)
   setCanvasSizeSource(createElementSizeSource(container));
   setWindowBoundsElement(container);
-  setInputScope(opts.input ?? 'NONE');
+  setInputScope(opts.input ?? 'NONE', container);
   if (opts.assetBaseUrl) setAssetBaseUrl(opts.assetBaseUrl);
 
   // The loop plays unless one of these holds it

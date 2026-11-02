@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3004,
-      "total": 3004
+      "documented": 3026,
+      "total": 3026
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2924,
-        "total": 2924
+        "documented": 2946,
+        "total": 2946
       },
       "members": {
         "documented": 890,
@@ -483,8 +483,8 @@
     },
     "engine/kernel/input": {
       "exports": {
-        "documented": 128,
-        "total": 128
+        "documented": 135,
+        "total": 135
       },
       "members": {
         "documented": 0,
@@ -595,8 +595,8 @@
     },
     "engine/ui/components": {
       "exports": {
-        "documented": 77,
-        "total": 77
+        "documented": 81,
+        "total": 81
       },
       "members": {
         "documented": 0,
@@ -609,8 +609,8 @@
     },
     "engine/ui/core": {
       "exports": {
-        "documented": 40,
-        "total": 40
+        "documented": 44,
+        "total": 44
       },
       "members": {
         "documented": 0,
@@ -737,6 +737,20 @@
       "exports": {
         "documented": 21,
         "total": 21
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game": {
+      "exports": {
+        "documented": 7,
+        "total": 7
       },
       "members": {
         "documented": 0,

@@ -25,6 +25,38 @@
     white-space: nowrap;
   }
 
+  // A gamepad's button (p808 D5): a circle for a face button, a pill for the shoulders, the menu
+  // buttons and the stick presses, a pill with a rounded top for the triggers; neutral, the label
+  // smaller than the text. The sticks and the d-pad are plain SVG.
+  :where(.aekInputGlyph[data-device='gamepad']:not([data-shape='plain'])) {
+    min-width: var(--aek-input-glyph-size, 1.6em);
+    padding: 0 0.4em;
+    border: 1.5px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-surface-raised);
+    color: var(--aek-text);
+    font-weight: var(--aek-font-weight-semibold);
+    white-space: nowrap;
+  }
+
+  :where(.aekInputGlyph[data-shape='circle']) {
+    width: var(--aek-input-glyph-size, 1.6em);
+    padding: 0;
+  }
+
+  :where(.aekInputGlyph[data-shape='trigger']) {
+    border-radius: 0.7em 0.7em var(--aek-radius-sm) var(--aek-radius-sm);
+  }
+
+  :where(.aekInputGlyph[data-shape='plain']) {
+    color: var(--aek-text);
+  }
+
+  :where(.aekInputGlyph__label) {
+    font-size: 0.75em;
+    letter-spacing: 0.02em;
+  }
+
   :where(.aekInputGlyph svg) {
     display: block;
     width: auto;
