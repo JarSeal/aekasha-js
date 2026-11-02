@@ -3591,6 +3591,16 @@
       "CrosshairState": "TypeAlias",
       "HitMarkerKind": "TypeAlias"
     },
+    "src/_engine/ui/game/DialogueBox.ts": {
+      "createDialogueBox": "Function",
+      "DialogueBox": "TypeAlias",
+      "DialogueBoxProps": "TypeAlias",
+      "DialogueChoice": "TypeAlias",
+      "DialogueLine": "TypeAlias"
+    },
+    "src/_engine/ui/game/HudPlacement.ts": {
+      "HudPlacement": "TypeAlias"
+    },
     "src/_engine/ui/game/InputPrompt.ts": {
       "createInputPrompt": "Function",
       "getPromptDevice": "Function",
@@ -3600,12 +3610,31 @@
       "InputPromptProps": "TypeAlias",
       "setPromptDevice": "Function"
     },
+    "src/_engine/ui/game/NotificationFeed.ts": {
+      "createNotificationFeed": "Function",
+      "NotificationFeed": "TypeAlias",
+      "NotificationFeedItem": "TypeAlias",
+      "NotificationFeedProps": "TypeAlias"
+    },
+    "src/_engine/ui/game/ObjectiveTracker.ts": {
+      "createObjectiveTracker": "Function",
+      "ObjectiveTracker": "TypeAlias",
+      "ObjectiveTrackerObjective": "TypeAlias",
+      "ObjectiveTrackerProps": "TypeAlias",
+      "ObjectiveTrackerStep": "TypeAlias"
+    },
     "src/_engine/ui/game/ResourceBar.ts": {
       "createResourceBar": "Function",
       "ResourceBar": "TypeAlias",
       "ResourceBarProps": "TypeAlias",
       "ResourceBarState": "TypeAlias",
       "ResourceBarThreshold": "TypeAlias"
+    },
+    "src/_engine/ui/game/Subtitles.ts": {
+      "createSubtitles": "Function",
+      "SubtitleLine": "TypeAlias",
+      "Subtitles": "TypeAlias",
+      "SubtitlesProps": "TypeAlias"
     },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
@@ -4925,6 +4954,10 @@
       "CurveValue",
       "DEFAULT_TOASTER_SETTINGS",
       "DialogProps",
+      "DialogueBox",
+      "DialogueBoxProps",
+      "DialogueChoice",
+      "DialogueLine",
       "Divider",
       "DividerProps",
       "Donut",
@@ -4965,6 +4998,7 @@
       "GraphPart",
       "GraphPartFormat",
       "HitMarkerKind",
+      "HudPlacement",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphFamily",
@@ -5003,9 +5037,16 @@
       "MenuSubmenuItem",
       "Monitor",
       "MonitorProps",
+      "NotificationFeed",
+      "NotificationFeedItem",
+      "NotificationFeedProps",
       "NumberField",
       "NumberFieldProps",
       "NumberRules",
+      "ObjectiveTracker",
+      "ObjectiveTrackerObjective",
+      "ObjectiveTrackerProps",
+      "ObjectiveTrackerStep",
       "OpenDraggableWindowProps",
       "Pad2D",
       "Pad2DProps",
@@ -5073,6 +5114,9 @@
       "StackedBarProps",
       "StatTile",
       "StatTileProps",
+      "SubtitleLine",
+      "Subtitles",
+      "SubtitlesProps",
       "SvgIconKey",
       "SvgIconSize",
       "Switch",
@@ -5154,6 +5198,7 @@
       "createCooldown",
       "createCrosshair",
       "createCurveEditor",
+      "createDialogueBox",
       "createDivider",
       "createDonut",
       "createDropDown",
@@ -5174,7 +5219,9 @@
       "createLoadingOverlay",
       "createMenu",
       "createMonitor",
+      "createNotificationFeed",
       "createNumberField",
+      "createObjectiveTracker",
       "createPad2D",
       "createPopover",
       "createProgressBar",
@@ -5194,6 +5241,7 @@
       "createSplitter",
       "createStackedBar",
       "createStatTile",
+      "createSubtitles",
       "createSwitch",
       "createTable",
       "createTabs",

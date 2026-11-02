@@ -2,7 +2,9 @@
 // (p803 D5): an app's unlayered rule wins, and every selector is in :where(). Over the HUD's bounds
 // it's fixed (a mount's container is the fixed elements' box: its `contain: layout`), at
 // --aek-z-loading: above the app's windows, below its dialogs and the debugger. The JS sets the
-// fade's duration on the element (times the motion factor) and the state it fades to.
+// fade's duration on the element (times the motion factor) and the state it fades to. A loading
+// screen's image covers it behind the content, which gets a panel so its text keeps its contrast
+// (p808 D1).
 @layer aek.components {
   :where(.aekLoadingOverlay) {
     --aek-spinner-size: var(--aek-loading-overlay-spinner-size, calc(var(--aek-space-7) * 1.5));
@@ -40,7 +42,18 @@
     pointer-events: none;
   }
 
+  // Decorative, under the content
+  :where(.aekLoadingOverlay__image) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   :where(.aekLoadingOverlay__content) {
+    position: relative;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -57,5 +70,52 @@
     margin: 0;
     font-size: var(--aek-font-size-md);
     line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekLoadingOverlay[data-image]) :where(.aekLoadingOverlay__content) {
+    padding: var(--aek-space-5) var(--aek-space-6);
+    border-radius: var(--aek-radius-lg);
+    background-color: var(
+      --aek-loading-overlay-panel-bg,
+      color-mix(in srgb, var(--aek-surface-raised) 92%, transparent)
+    );
+    box-shadow: var(--aek-shadow-lg);
+  }
+
+  :where(.aekLoadingOverlay__tip) {
+    margin: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekLoadingOverlay__tip[hidden]) {
+    display: none;
+  }
+
+  :where(.aekLoadingOverlay__tipLabel) {
+    color: var(--aek-text);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  // Two names, so setting the other one restarts the fade (no reflow)
+  :where(.aekLoadingOverlay__tip[data-run='1']) {
+    animation: aekLoadingOverlayTip1 var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekLoadingOverlay__tip[data-run='2']) {
+    animation: aekLoadingOverlayTip2 var(--aek-motion-base) var(--aek-ease-standard);
+  }
+}
+
+@keyframes aekLoadingOverlayTip1 {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes aekLoadingOverlayTip2 {
+  from {
+    opacity: 0;
   }
 }

@@ -1,0 +1,180 @@
+// The dialogue box's default styles (DialogueBox.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). Across the bottom of the HUD's
+// bounds, fixed there. The typewriter's unrevealed text stays in the flow, `visibility: hidden`, so
+// the box keeps its size and a word never jumps to the next line. Continue's mark bobs while the
+// line waits (--aek-motion, so still under reduced motion: p808 D4).
+@layer aek.components {
+  :where(.aekDialogueBox) {
+    --aek-dialogue-box-inset-resolved: var(--aek-dialogue-box-inset, var(--aek-space-6));
+
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--aek-space-4);
+    max-width: var(--aek-dialogue-box-width, calc(var(--aek-space-7) * 22));
+    min-height: calc(var(--aek-space-7) * 3.5);
+    padding: var(--aek-space-4) var(--aek-space-5);
+    border: 1px solid var(--aek-border);
+    border-radius: var(--aek-radius-lg);
+    background-color: var(
+      --aek-dialogue-box-bg,
+      color-mix(in srgb, var(--aek-surface-raised) 94%, transparent)
+    );
+    box-shadow: var(--aek-shadow-lg);
+    color: var(--aek-text);
+    font-size: var(--aek-dialogue-box-font-size, var(--aek-font-size-lg));
+    line-height: var(--aek-line-height-relaxed);
+    cursor: default;
+  }
+
+  :where(.aekDialogueBox[data-state='empty']) {
+    display: none;
+  }
+
+  :where(.aekDialogueBox:not([data-placement='inline'])) {
+    position: fixed;
+    right: var(--aek-dialogue-box-inset-resolved);
+    bottom: var(--aek-dialogue-box-inset-resolved);
+    left: var(--aek-dialogue-box-inset-resolved);
+    z-index: var(--aek-dialogue-box-z, var(--aek-z-window));
+    margin-inline: auto;
+  }
+
+  :where(.aekDialogueBox__portrait) {
+    display: flex;
+    flex-shrink: 0;
+    // Square: the row's stretch would beat its aspect ratio
+    align-self: flex-start;
+    align-items: center;
+    justify-content: center;
+    width: var(--aek-dialogue-box-portrait-size, calc(var(--aek-space-7) * 3));
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekDialogueBox__portrait[hidden]) {
+    display: none;
+  }
+
+  :where(.aekDialogueBox__body) {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    min-width: 0;
+  }
+
+  :where(.aekDialogueBox__speaker) {
+    margin: 0;
+    color: var(--aek-dialogue-box-speaker-color, var(--aek-accent));
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-bold);
+    letter-spacing: 0.02em;
+  }
+
+  :where(.aekDialogueBox__line) {
+    margin: 0;
+    padding-inline-end: var(--aek-space-6);
+  }
+
+  :where(.aekDialogueBox__rest) {
+    visibility: hidden;
+  }
+
+  :where(.aekDialogueBox__choices) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--aek-space-1);
+  }
+
+  :where(.aekDialogueBox__choices[hidden]) {
+    display: none;
+  }
+
+  :where(.aekDialogueBox__choice) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+    min-height: 24px;
+    padding: var(--aek-space-1) var(--aek-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--aek-radius-sm);
+    background: none;
+    color: var(--aek-text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  :where(.aekDialogueBox__choice:hover:not(:disabled)) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  // The focused choice: its border as well as the ring, so it's plain in a list of plain text
+  :where(.aekDialogueBox__choice:focus-visible) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+  }
+
+  :where(.aekDialogueBox__choice:disabled) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  :where(.aekDialogueBox__choiceKey) {
+    min-width: 1.4em;
+    padding: 0 0.3em;
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    color: var(--aek-text-muted);
+    font-size: 0.8em;
+    font-variant-numeric: var(--aek-numeric-tabular);
+    text-align: center;
+  }
+
+  // Continue: a 24 px target at the body's corner, its mark a chevron
+  :where(.aekDialogueBox__next) {
+    position: absolute;
+    right: calc(var(--aek-space-2) * -1);
+    bottom: calc(var(--aek-space-2) * -1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--aek-radius-full);
+    background: none;
+    color: var(--aek-accent);
+    cursor: pointer;
+  }
+
+  :where(.aekDialogueBox__next[hidden]) {
+    display: none;
+  }
+
+  :where(.aekDialogueBox__nextMark) {
+    width: 0.5em;
+    height: 0.5em;
+    border: solid currentColor;
+    border-width: 0 0.15em 0.15em 0;
+    transform: translateY(-0.1em) rotate(45deg);
+    opacity: 0;
+  }
+
+  :where(.aekDialogueBox[data-state='waiting']) :where(.aekDialogueBox__nextMark) {
+    opacity: 1;
+    animation: aekDialogueBoxBob calc(900ms * var(--aek-motion, 1)) var(--aek-ease-standard)
+      infinite alternate;
+  }
+}
+
+@keyframes aekDialogueBoxBob {
+  to {
+    transform: translateY(0.15em) rotate(45deg);
+  }
+}

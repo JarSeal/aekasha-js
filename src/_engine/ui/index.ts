@@ -16,6 +16,13 @@ export type {
   CrosshairState,
   HitMarkerKind,
 } from './game/Crosshair';
+export { createDialogueBox } from './game/DialogueBox';
+export type {
+  DialogueBox,
+  DialogueBoxProps,
+  DialogueChoice,
+  DialogueLine,
+} from './game/DialogueBox';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,
@@ -115,6 +122,20 @@ export { createMonitor } from './forms/Monitor';
 export type { Monitor, MonitorProps } from './forms/Monitor';
 export { createGraphMonitor } from './forms/GraphMonitor';
 export type { GraphMonitorProps } from './forms/GraphMonitor';
+export { createNotificationFeed } from './game/NotificationFeed';
+export type {
+  NotificationFeed,
+  NotificationFeedItem,
+  NotificationFeedProps,
+} from './game/NotificationFeed';
+export type { HudPlacement } from './game/HudPlacement';
+export { createObjectiveTracker } from './game/ObjectiveTracker';
+export type {
+  ObjectiveTracker,
+  ObjectiveTrackerObjective,
+  ObjectiveTrackerProps,
+  ObjectiveTrackerStep,
+} from './game/ObjectiveTracker';
 export { createNumberField } from './forms/NumberField';
 export { createTextField } from './forms/TextField';
 export type { TextField, TextFieldProps } from './forms/TextField';
@@ -122,6 +143,8 @@ export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export { createSlider } from './forms/Slider';
 export type { Slider, SliderProps } from './forms/Slider';
 export { createResourceBar } from './game/ResourceBar';
+export { createSubtitles } from './game/Subtitles';
+export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
 export type {
   ResourceBar,
   ResourceBarProps,

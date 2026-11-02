@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -498,10 +498,87 @@ As built:
 - **Size:** `yarn verify:baselines --update` recorded the names; the bundle baselines came out
   as `main`'s (nothing in a first download).
 
-### Phase 3: text
+### Phase 3: text — done
 
 `createNotificationFeed`, `createObjectiveTracker`, `createSubtitles`, `createDialogueBox` (D10);
 the loading overlay's `tips` (D1).
+
+As built:
+
+- **The feed** (`game/NotificationFeed.ts`): a `ul` (named, default 'Notifications') that places
+  itself, `placement` a corner of the HUD's bounds (fixed, default `'top-right'`) or `'inline'`
+  (a panel's flow, the library's box). `add({ text, spokenText?, key?, icon?, tone?, durationMs? })`
+  and `clear()`; `icon` is a registered icon's name (as a window's), `tone` the badge's
+  `BadgeTone` (a stripe and the icon's colour). Each line's shown text and count are
+  `aria-hidden`, a visually hidden `__spoken` says it ('25 gold, 3 times'). Held while hovered,
+  focused, or the page is hidden (`visibilitychange`, as the toaster). A merge restarts the
+  count's pop by alternating `data-run` 1 / 2 (Phase 2's pattern). Past `max` the oldest fades out
+  (`data-state="leaving"`, `--aek-motion-base`, removed after 200 ms × the motion factor).
+- **The announcer's `append`** (`components/Announcer.ts`): `announce(elem, text, { append: true })`
+  joins a pending text after a full stop instead of replacing it, so a feed's lines or a
+  tracker's changes that come together (an objective complete and the next one new) are all read.
+  The feed and the tracker announce with it. A test that ends with an announcement pending runs
+  its timers before `useRealTimers` (the region outlives the test, and a dropped fake timer would
+  leave its pending text for the next test's append).
+- **The shared placement:** `game/HudPlacement.ts`' `HudPlacement` type (the feed and the tracker;
+  each stylesheet has its own five placement rules: the kit has no Sass partials).
+- **The tracker** (`game/ObjectiveTracker.ts`): `{ title?, hideTitle?, headingLevel?, placement?,
+  completeHoldMs? }` (default `'top-left'`, 2500 ms); `setObjective(id, { text, count?: { value,
+  total }, steps?: [{ text, done? }] })` adds at the end or rewrites in place (steps by index), and
+  makes a completed one active again; `complete`, `removeObjective`, `hasObjective`, `setTitle`.
+  The title is a `p` or a heading, naming the `ul` (`role="list"`). Read: a new objective ('New
+  objective: Collect crystals, 0 of 5'), a changed count, a step newly done, a completion; a text
+  change alone isn't. The hold isn't times the motion factor (information); the fade is. The
+  check is drawn by CSS in `--aek-bg` on `--aek-success` (`--aek-on-accent` would be light on the
+  dark theme's light green). `hidden` while empty, with its own `[hidden]` rule.
+- **The subtitles** (`game/Subtitles.ts`): `{ maxLines?, placement?: 'bottom' | 'top' | 'inline' }`
+  (2, `'bottom'`), `show({ text, speaker?, speakerColor?, durationMs? })`, `clear()`. The element
+  is the live region (`aria-live="polite"`, `aria-relevant="additions"`), not the announcer: a line
+  is one appended `p`, read once, speaker first ('Mara: Over here!', the ': ' a
+  `__separator` span an app can hide). It carries `KEEP_LIVE_ATTR`, so as a direct child of the
+  HUD root it stays live under a modal's `inert`. A line's default time is from its length (1000 +
+  65 ms a character with the speaker's, at least 2000: about 15 characters a second). Newest last;
+  past `maxLines` the oldest goes at once; a line fades in over `--aek-motion-fast` and goes
+  without a fade. `speakerColor` is the line's `--aek-subtitles-speaker-color` on its name; the
+  size is `--aek-subtitles-font-size` (default `--aek-font-size-xl`), the background
+  `--aek-subtitles-bg` (the page's at 80 %: themed, like the rest of the kit).
+- **The dialogue box** (`game/DialogueBox.ts`): D10's `{ onAdvance }` with `onChoice(index)`,
+  `charsPerSecond` (40; 0 at once), `label`, `placement: 'bottom' | 'inline'`. The line and its
+  speaker, portrait and choices are one `setLine({ text, speaker?, speakerColor?, portrait?,
+  choices?: [{ label, disabled? }] })` (`null` empties: `data-state="empty"`, `display: none`);
+  `confirm()` (what Enter, Space and a click do: the whole line, then `onAdvance`; a gamepad's
+  `SOUTH` calls it), `choose(index)`, `isRevealing()`, `focus()` (the first enabled choice, else
+  Continue: an app calls it when a conversation starts, so Enter reaches the box).
+  - The "next" indicator is a real `<button>` (Continue, a CSS chevron that bobs while the line
+    waits, still at `--aek-motion: 0`), shown during the reveal too: Enter and Space click it
+    natively. One `click` listener on the box: a choice's click picks it, any other confirms.
+    Enter / Space on its own buttons are stopped (not prevented) before the action maps' bubble
+    listeners (the window, or the canvas), so a map's Enter wired to `confirm()` doesn't act
+    twice.
+  - The typewriter is a `setTimeout` chain (at most a frame apart) that reads the elapsed time and
+    writes two text nodes, `__shown` and `__rest` (`visibility: hidden`), by character offsets (a
+    surrogate pair one character): no per-frame JS, no reflow. Reduced motion (a factor of 0 at
+    the line's start) shows it at once.
+  - Choices show when the reveal ends, as native buttons in a `role="group"` ('Choices'), each
+    with its number (`__choiceKey`, `aria-hidden`; `aria-keyshortcuts`); the arrows (both axes,
+    round, past a disabled one), Home / End, and 1-9 on the box. A pick is reported once per line.
+    A disabled choice is the native `disabled` (read in browse mode, skipped by the arrows).
+  - The focus that was inside the box stays inside when its element goes (Continue hidden for
+    the choices, the choices replaced by the next line).
+  - The whole line ('Mara: Over here!') is in a visually hidden `__spoken` and announced (the
+    kit's announcer, `append`) when the line starts; the reveal and the speaker are `aria-hidden`.
+- **The loading overlay's tips and image** (`components/LoadingOverlay.ts`, D1): `tips`,
+  `tipIntervalMs` (7000, not times the motion factor: it's read), `tipLabel` ('Tip'), `setTips`;
+  the first tip a random one, then in order, an interval run only while the overlay is shown or
+  showing. The tip element is made with the first tips (the existing tests check the content's
+  children exactly). Not live: a tip every few seconds would talk over the status. `image` (a URL)
+  is a decorative `img` covering the overlay under the content, and `data-image` puts the content
+  on a panel (`--aek-loading-overlay-panel-bg`). The scene loader's own overlay is unchanged.
+- **The entry:** 158 value names (154 + `createNotificationFeed`, `createObjectiveTracker`,
+  `createSubtitles`, `createDialogueBox`; the overlay's are props), and the `HudPlacement` type.
+- **Looking at an entering animation headless:** Chromium renders no frame until the first
+  screenshot, so a CSS animation is pending (`startTime: null`) until then and the shot shows its
+  first keyframe; take one screenshot, wait, take the real one.
 
 ### Phase 4: navigation and menus
 

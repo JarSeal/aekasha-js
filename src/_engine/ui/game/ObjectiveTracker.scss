@@ -1,0 +1,162 @@
+// The objective tracker's default styles (ObjectiveTracker.ts), on the design tokens and layered
+// (p803 D5): an app's unlayered rule wins, and every selector is in :where(). In a corner it's
+// fixed in the HUD's bounds, as the notification feed. A row is a check column and its text; a
+// completed one shows a check (a shape, not only its colour) and is struck through, then fades
+// out over --aek-motion-base (0 under reduced motion, p808 D4).
+@layer aek.components {
+  :where(.aekObjectiveTracker) {
+    --aek-objective-tracker-inset-resolved: var(--aek-objective-tracker-inset, var(--aek-space-5));
+    --aek-objective-tracker-check-size: 0.9em;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+    max-width: var(--aek-objective-tracker-width, calc(var(--aek-space-7) * 10));
+    padding: var(--aek-space-3);
+    border-radius: var(--aek-radius-md);
+    background-color: var(
+      --aek-objective-tracker-bg,
+      color-mix(in srgb, var(--aek-surface-raised) 88%, transparent)
+    );
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  // The kit's layered display beats the browser's own [hidden] rule
+  :where(.aekObjectiveTracker[hidden]) {
+    display: none;
+  }
+
+  :where(.aekObjectiveTracker:not([data-placement='inline'])) {
+    position: fixed;
+    z-index: var(--aek-objective-tracker-z, var(--aek-z-window));
+  }
+
+  :where(.aekObjectiveTracker[data-placement^='top']) {
+    top: var(--aek-objective-tracker-inset-resolved);
+  }
+
+  :where(.aekObjectiveTracker[data-placement^='bottom']) {
+    bottom: var(--aek-objective-tracker-inset-resolved);
+  }
+
+  :where(.aekObjectiveTracker[data-placement$='left']) {
+    left: var(--aek-objective-tracker-inset-resolved);
+  }
+
+  :where(.aekObjectiveTracker[data-placement$='right']) {
+    right: var(--aek-objective-tracker-inset-resolved);
+  }
+
+  :where(.aekObjectiveTracker__title) {
+    margin: 0;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  :where(.aekObjectiveTracker__list, .aekObjectiveTracker__steps) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(.aekObjectiveTracker__steps) {
+    margin-top: var(--aek-space-1);
+    padding-inline-start: calc(var(--aek-objective-tracker-check-size) + var(--aek-space-2));
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekObjectiveTracker__head, .aekObjectiveTracker__step) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+  }
+
+  :where(.aekObjectiveTracker__text) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.aekObjectiveTracker__count) {
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    padding-inline-start: var(--aek-space-2);
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  // A box on the text's baseline; done, a check mark drawn by two borders
+  :where(.aekObjectiveTracker__check) {
+    position: relative;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: var(--aek-objective-tracker-check-size);
+    height: var(--aek-objective-tracker-check-size);
+    border: 1.5px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    transform: translateY(0.1em);
+  }
+
+  :where(.aekObjectiveTracker__step) :where(.aekObjectiveTracker__check) {
+    --aek-objective-tracker-check-size: 0.75em;
+  }
+
+  :where(
+    .aekObjectiveTracker__objective:not([data-state='active'])
+      > .aekObjectiveTracker__head
+      > .aekObjectiveTracker__check,
+    .aekObjectiveTracker__step[data-done] > .aekObjectiveTracker__check
+  ) {
+    border-color: var(--aek-objective-tracker-check-color, var(--aek-success));
+    background-color: var(--aek-objective-tracker-check-color, var(--aek-success));
+    animation: aekObjectiveTrackerCheck var(--aek-motion-base) var(--aek-ease-emphasized);
+  }
+
+  :where(
+      .aekObjectiveTracker__objective:not([data-state='active'])
+        > .aekObjectiveTracker__head
+        > .aekObjectiveTracker__check,
+      .aekObjectiveTracker__step[data-done] > .aekObjectiveTracker__check
+    )::after {
+    content: '';
+    position: absolute;
+    top: 8%;
+    left: 30%;
+    width: 30%;
+    height: 55%;
+    // The page's background: dark on the dark theme's light green, light on the light theme's
+    border: solid var(--aek-bg);
+    border-width: 0 0.15em 0.15em 0;
+    transform: rotate(45deg);
+  }
+
+  :where(
+    .aekObjectiveTracker__objective:not([data-state='active'])
+      > .aekObjectiveTracker__head
+      > .aekObjectiveTracker__text,
+    .aekObjectiveTracker__step[data-done] > .aekObjectiveTracker__text
+  ) {
+    color: var(--aek-text-muted);
+    text-decoration: line-through;
+  }
+
+  :where(.aekObjectiveTracker__objective[data-state='leaving']) {
+    opacity: 0;
+    transition: opacity var(--aek-motion-base) var(--aek-ease-standard);
+  }
+}
+
+@keyframes aekObjectiveTrackerCheck {
+  from {
+    transform: translateY(0.1em) scale(1.4);
+  }
+}

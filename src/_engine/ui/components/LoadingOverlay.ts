@@ -21,6 +21,16 @@ export type LoadingOverlayProps = {
   fadeInMs?: number;
   /** Its fade out, in ms (default 250), times the motion factor. */
   fadeOutMs?: number;
+  /** Tips shown under the text while it's shown, one at a time (a loading screen's 'Hold Shift to
+   * run'), the first a random one, then in order (p808 D1). */
+  tips?: readonly string[];
+  /** How long each tip shows, in ms (default 7000; not times the motion factor: it's read). */
+  tipIntervalMs?: number;
+  /** The word before a tip (default 'Tip'). */
+  tipLabel?: string;
+  /** An image covering the overlay behind its content (a URL: a loading screen's art),
+   * decorative; the content gets a panel over it (p808 D1). */
+  image?: string;
   /** Extra classes for its element. */
   class?: string | string[];
   /** Extra attributes for its element. */
@@ -49,26 +59,38 @@ export type LoadingOverlay = {
   /** Sets the progress bar's value from 0 to 100, or `null` for indeterminate; the first call on a
    * spinner overlay puts a bar in its place. */
   setProgress: (value: number | null) => void;
+  /** Changes its tips (a random one of them next; empty shows none). */
+  setTips: (tips: readonly string[]) => void;
 };
 
 /** The fades' defaults: the debug scene loader's */
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 250;
+const TIP_INTERVAL_MS = 7000;
 
 /**
  * Creates a loading overlay (p803 D10): it covers the HUD's bounds (a scene load) or a panel of
  * the app's while something loads, with a spinner or a progress bar and a text. It fades in and
- * out, and blocks the pointer while shown (a scene load turns the inputs off itself).
+ * out, and blocks the pointer while shown (a scene load turns the inputs off itself). With `tips`
+ * and an `image` it's a game's loading screen (p808 D1).
  * - Parts: `.aekLoadingOverlay` (`data-cover`, `data-state`: `hidden`, `showing`, `shown`,
- *   `hiding`), `.aekLoadingOverlay__content`, a decorative `createSpinner` or a
- *   `createProgressBar` (`.aekLoadingOverlay__progress`, named by the text), and
- *   `.aekLoadingOverlay__text`.
+ *   `hiding`; `data-image` with an image), `.aekLoadingOverlay__image` (an `img`),
+ *   `.aekLoadingOverlay__content`, a decorative `createSpinner` or a `createProgressBar`
+ *   (`.aekLoadingOverlay__progress`, named by the text), `.aekLoadingOverlay__text`, and with tips
+ *   `.aekLoadingOverlay__tip` (`data-run` 1 / 2 restarts its fade) with `__tipLabel` and
+ *   `__tipText`.
  * - Custom properties (read on any ancestor): `--aek-loading-overlay-bg` (default `--aek-bg`:
  *   opaque, so a scene's swap doesn't show), `--aek-loading-overlay-z` (default `--aek-z-loading`
- *   over the bounds, 1 in a parent), `--aek-loading-overlay-spinner-size`.
- * - ARIA: the text is a `role="status"`, so a `setText` is read; the spinner is decorative.
+ *   over the bounds, 1 in a parent), `--aek-loading-overlay-spinner-size`,
+ *   `--aek-loading-overlay-panel-bg` (the content's panel over an image, default the raised
+ *   surface at 92 %).
+ * - ARIA: the text is a `role="status"`, so a `setText` is read; the spinner and the image are
+ *   decorative. A tip isn't live (a change every few seconds would talk over the status); it's
+ *   read where it is.
  * - Motion: the fades are `fadeInMs` / `fadeOutMs` times `getMotionFactor`, so they're instant
- *   under reduced motion (or an app's `--aek-motion: 0`) and the promises resolve at once.
+ *   under reduced motion (or an app's `--aek-motion: 0`) and the promises resolve at once. A tip
+ *   fades in over `--aek-motion-base`; it changes every `tipIntervalMs` while the overlay is shown
+ *   or showing, under reduced motion too.
  * @example
  * ```ts
  * import { createSceneLoader } from 'aekasha';
@@ -97,6 +119,12 @@ export const createLoadingOverlay = (props: LoadingOverlayProps): LoadingOverlay
   let timer: ReturnType<typeof setTimeout> | null = null;
   // The fade in progress' resolve: a later call or the removal resolves it false
   let settle: ((isDone: boolean) => void) | null = null;
+  const tipIntervalMs = Math.max(0, props.tipIntervalMs ?? TIP_INTERVAL_MS);
+  let tips: readonly string[] = [];
+  let tipIndex = -1;
+  let tipTimer: ReturnType<typeof setInterval> | null = null;
+  let tipElem: HTMLElement | null = null;
+  let tipText: HTMLElement | null = null;
 
   const endFade = (isDone: boolean) => {
     if (timer) clearTimeout(timer);
@@ -110,10 +138,25 @@ export const createLoadingOverlay = (props: LoadingOverlayProps): LoadingOverlay
     id: props.id,
     idAttr: props.id !== undefined,
     class: classes('aekLoadingOverlay', props.class),
-    attr: { ...props.attr, 'data-cover': props.cover ?? 'bounds', 'data-state': 'hidden' },
-    onRemoveCmp: () => endFade(false),
+    attr: {
+      ...props.attr,
+      'data-cover': props.cover ?? 'bounds',
+      'data-state': 'hidden',
+      ...(props.image ? { 'data-image': '' } : {}),
+    },
+    onRemoveCmp: () => {
+      endFade(false);
+      stopTips();
+    },
   });
   const elem = cmp.elem;
+  if (props.image) {
+    const image = document.createElement('img');
+    image.className = 'aekLoadingOverlay__image';
+    image.alt = '';
+    image.src = props.image;
+    elem.append(image);
+  }
   const content = cmp.add({ class: 'aekLoadingOverlay__content' });
   const textElem = document.createElement('p');
   textElem.className = 'aekLoadingOverlay__text';
@@ -150,6 +193,58 @@ export const createLoadingOverlay = (props: LoadingOverlayProps): LoadingOverlay
     addAboveText(spinner.cmp);
   }
 
+  const isShown = () => {
+    const state = elem.getAttribute('data-state');
+    return state === 'showing' || state === 'shown';
+  };
+
+  // Tips: one shown, the next after `tipIntervalMs` while the overlay is shown or showing
+
+  const showTip = (index: number) => {
+    tipIndex = index;
+    if (!tipElem || !tipText) return;
+    tipText.textContent = tips[index];
+    tipElem.hidden = false;
+    // The other name restarts its fade
+    tipElem.setAttribute('data-run', tipElem.getAttribute('data-run') === '1' ? '2' : '1');
+  };
+
+  function stopTips() {
+    if (tipTimer) clearInterval(tipTimer);
+    tipTimer = null;
+  }
+
+  const runTips = () => {
+    stopTips();
+    if (tips.length < 2 || tipIntervalMs <= 0) return;
+    tipTimer = setInterval(() => showTip((tipIndex + 1) % tips.length), tipIntervalMs);
+  };
+
+  const setTips = (next: readonly string[]) => {
+    tips = [...next];
+    if (tips.length && !tipElem) {
+      tipElem = document.createElement('p');
+      tipElem.className = 'aekLoadingOverlay__tip';
+      const label = document.createElement('span');
+      label.className = 'aekLoadingOverlay__tipLabel';
+      label.textContent = `${props.tipLabel ?? 'Tip'}: `;
+      tipText = document.createElement('span');
+      tipText.className = 'aekLoadingOverlay__tipText';
+      tipElem.append(label, tipText);
+      content.elem.append(tipElem);
+    }
+    if (!tips.length) {
+      stopTips();
+      tipIndex = -1;
+      if (tipElem) tipElem.hidden = true;
+      return;
+    }
+    showTip(Math.floor(Math.random() * tips.length));
+    if (isShown()) runTips();
+  };
+
+  if (props.tips?.length) setTips(props.tips);
+
   /** Moves to `to` over `ms` (times the motion factor), through `via`, and resolves with it */
   const fade = (via: 'showing' | 'hiding', to: 'shown' | 'hidden', ms: number) => {
     endFade(false);
@@ -171,17 +266,21 @@ export const createLoadingOverlay = (props: LoadingOverlayProps): LoadingOverlay
 
   return {
     cmp,
-    showAsync: () => fade('showing', 'shown', fadeInMs),
-    hideAsync: () => fade('hiding', 'hidden', fadeOutMs),
-    isShown: () => {
-      const state = elem.getAttribute('data-state');
-      return state === 'showing' || state === 'shown';
+    showAsync: () => {
+      runTips();
+      return fade('showing', 'shown', fadeInMs);
     },
+    hideAsync: () => {
+      stopTips();
+      return fade('hiding', 'hidden', fadeOutMs);
+    },
+    isShown,
     setText: (next) => {
       text = next;
       textElem.textContent = next;
       bar?.setLabel(next);
     },
     setProgress,
+    setTips,
   };
 };
