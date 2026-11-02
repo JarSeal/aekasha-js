@@ -689,8 +689,12 @@ As built, section 1 (D6, 2026-11-02, not committed):
 - **n/a and warnings:** an n/a metric's value is the word "n/a", its reason the detail's first
   words (then its secondary text). A warning is the value's `tone: 'warning'` with its words first
   in the detail (`MetricValue.warn` is now a string: physics "sub-steps at the N ceiling", long
-  tasks "the main thread was blocked"). The n/a value isn't muted: the kit's table has no per-cell
-  hook but `tone` (open at the review).
+  tasks "the main thread was blocked"). **The kit's `TableTone` gained `'muted'`** (decided at the
+  review, 2026-11-02): the muted text at the regular weight, no mark, for a figure that isn't one;
+  the n/a value takes it. With it: `Table.scss`' rule (the marks' `::before` rule skips it), the
+  type's JSDoc, `Table.test.ts`' tone test, the UI kit data page's columns text, the library's
+  table text and its overview demo (a missing budget is a muted "none" in place of "–"), the kit's
+  `CLAUDE.md` line.
 - **No action column:** no metric has had a row action since the file was written (its
   `MetricAction` was never returned), so the type, the click handler by `data-metric` and the
   column went; a metric that needs one later adds a `cell` column.
@@ -703,7 +707,67 @@ As built, section 1 (D6, 2026-11-02, not committed):
 - **Tests:** `_dbg__ProfilerOverview.test.ts` (9, 5 new; the kit's `createTable` wrapped by
   `vi.mock` to record `setCell`): the caption, columns and rows by id; a refresh writing nothing
   when nothing changed, then only the changed value in the same row and text node, n/a's value and
-  detail; the reorder keeping the row elements, a hidden row going, the App group; the empty text.
+  detail (its value muted); the reorder keeping the row elements, a hidden row going, the App
+  group; the empty text.
+- **Verified:** `yarn test`, `tsc`, lint, the docs ratchet; `yarn verify:ui --only table` (the
+  overview demo's muted "none": its shots recorded, axe and the scripts clean); the `debugger`
+  configuration's `profiler.profilerOverview` shot changed on purpose (a header row, the kit's
+  rows), axe 0.
+
+As built, section 2 (D7, 2026-11-02, not committed):
+
+- **The sections** (`_dbg__ProfilerObjects.ts`, its small parts in `_dbg__ProfilerObjectsParts.ts`
+  so it stays under 800 lines: the formats, a text written in place, a section, a note, a table's
+  empty text, a row header's two lines): a factory per section returning `{ cmp, update }`, built
+  once in `content(ctx)` on `ctx.scheduler`. `onRefresh` reads the census once, then each
+  section's `update` writes its texts and the row objects its parts read (functions of the rows);
+  the host's `scheduler.refresh()` right after writes the kit's parts (D9's "the tables on
+  `ctx.scheduler`").
+- **The head:** "Bars" a `createSegmentedControl` bound to `settings.objectsBarMeasure`
+  (`{ get, set }`, `set` the profiler's `setSettings`, whose apply refreshes the tab), hint "What
+  the bars measure"; the census line a `p.profilerObjectsNote` written in place ("measuring…" or
+  the n/a reason before a census).
+- **By kind / by owner:** `createTable` each (caption hidden: the `h4` says it), columns Kind or
+  Owner (row header, a `cell` of the name and its dimmed line, the line's `Text` written in place),
+  Objects, Triangles, Vertices ("in view / total" in compact figures, no bold part: a cell is one
+  text; a measure the row lacks is a muted "—") and "In view / culled" (`kind: 'bar'` of the
+  measure's in view and culled, its text the share of the scene, "34.5 %", which the old bar's
+  `title` held; its header a fixed label with a tooltip, since a header can't follow the switch);
+  the Total the footer, so every bar is its share (the kit's default `barMax`). Rows kept by key
+  (the kind, the owner's key); the empty text a CMP written as the census comes ("measuring…", "The
+  scene is empty.").
+- **ECS:** the worlds a table (World, Entities: the column labels it lacked); the component types a
+  static `createList` (title the type, `suffix` the count) laid out in columns by CSS; "(all
+  worlds)" and the editor view's note written in place.
+- **The heaviest objects:** a table (#, Object with its entity line, Kind, Triangles, Instances,
+  Edit). Rows are kept by the object (world, entity, kind and name, numbered when two share one),
+  not by rank: the census reuses its entry objects, and a row (its focus, its button) stays with
+  its object as the ranks change. Edit is an icon-only ghost button (`tools`), named and tooltipped
+  by the opener's label and the object ("Edit physics entity: Crate"), made with the row; no
+  button without an opener.
+- **Over time:** three `createSparkline({ area: true, min: 0, capacity: 60 })` in the muted text
+  (`--aek-sparkline-color`, as the stats panels' graphs), each with its label, the latest (bold)
+  and "max …" on a line above it; a census walk pushes one sample, a reset (a view switch, the tab
+  closed) or missed samples set the kept history again (`historyPushes` / `historyResets`).
+- **Removed:** the HTML builders, `renderSparkline`, `escapeProfilerHtml` (nothing writes HTML in
+  the profiler now), the click handlers by `data-measure` / `data-heavy`, `Profiler.module.scss`'
+  string tables' rules (`.profilerTable`, `.profilerValue`, `.profilerSub`, `.profilerAction`,
+  `.profilerSegmented`, the bar, the component grid, the SVG sparkline).
+- **The scene runner's masks:** `.profilerValue` / `.profilerSub` went; `.profilerObjectsNote` (the
+  census time) and `.profilerSpark` (the samples kept depend on timing) came.
+- **The dev library's "Debugger parity" box** lost its ported rows (the profiler's tables section,
+  the sparklines and the component types' list, as p806 did for its ports); GPU memory's tables and
+  the budget bar stay for Phase 4, its text says so.
+- **Tests:** `_dbg__ProfilerObjects.test.ts` (4, new; fake census and draw sources): "measuring…"
+  until the first census, then the rows, the footer, the cells' texts and the bar's share, a muted
+  dash; the segmented control writing the setting and the bars following; a heaviest row kept (the
+  same `tr` and sub `Text`) through a rank change; a sample per walk in the sparklines with the
+  latest and the max, the sparkline hidden from assistive tech.
+- **Verified:** `yarn test` (267 files), `tsc`, `tsc -p hub`, lint, the docs ratchet; the
+  `debugger` configuration's `profiler.profilerObjects` shot changed on purpose (with the
+  Overview's), axe 0, the other shots unchanged; unmasked shots of both tabs in the gym
+  (`.cache/p807/phase3Shots.mts`, `.cache/p807/phase3/`), no page error. The changed shots aren't
+  recorded yet (`--only testDebugScene --config debugger --update` once reviewed).
 
 ### Phase 4: GPU memory
 

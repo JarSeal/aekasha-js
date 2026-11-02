@@ -560,7 +560,7 @@ const DRAW_CALLS: DrawCall[] = Array.from({ length: 2000 }, (_, i) => ({
   triangles: ((i * 7919) % 20000) + 12,
 }));
 
-/** In the page: a profiler's overview (a group, stripes, a row's highlight, tones), the memory by
+/** In the page: a profiler's overview (a group, stripes, a row's highlight, tones, a muted cell), the memory by
  * owner (sticky parts in a box that scrolls both ways, a total, the cross highlight), the objects
  * by kind (sortable, bars, a total), the heaviest objects (a grid: a multiple selection, a
  * two-line cell, an Edit button, a context menu), 2,000 draw calls (virtual rows) and assets stacked in a narrow box (sortable:
@@ -593,7 +593,8 @@ const initTableDemo: Demo = (box) => {
         key: 'budget',
         label: 'Budget',
         format: (budget, metric) =>
-          budget === undefined ? '–' : formatFigure(budget as number, metric.unit),
+          budget === undefined ? 'none' : formatFigure(budget as number, metric.unit),
+        tone: (metric) => (metric.budget === undefined ? 'muted' : null),
       },
       {
         key: 'state',
@@ -610,7 +611,7 @@ const initTableDemo: Demo = (box) => {
     empty: 'No metrics measured yet',
   });
   row(
-    'A profiler’s overview: a row header, a group, stripes, a row’s highlight, tones with a mark and a word',
+    'A profiler’s overview: a row header, a group, stripes, a row’s highlight, marked tones, a muted one',
     overview.cmp,
     'hubDemoTableWide'
   );

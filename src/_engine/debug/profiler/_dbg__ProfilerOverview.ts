@@ -1,5 +1,5 @@
 import { createTable } from '../../ui/data/Table';
-import type { TableColumn, TableGroup } from '../../ui/data/TableTypes';
+import type { TableColumn, TableGroup, TableTone } from '../../ui/data/TableTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import {
   _getStatsSources,
@@ -475,15 +475,23 @@ export const getOverviewMetricLabel = (id: string) => {
 
 // THE TABLE (p807 D6: built once per mount, its figures written by `setCell` where they changed)
 
-/** A shown row: its metric id, and its label and figures as last written to the table. */
-type OverviewRow = { id: string; label: string; value: string; detail: string; warn: boolean };
+/** A shown row: its metric id, and its label, figures and value's tone as last written to the
+ * table. */
+type OverviewRow = {
+  id: string;
+  label: string;
+  value: string;
+  detail: string;
+  tone: TableTone | null;
+};
 
 /** What a metric without a value shows in the Value column (its reason is the detail's text). */
 const NA_VALUE = 'n/a';
 
 const OVERVIEW_COLUMNS: TableColumn<OverviewRow>[] = [
   { key: 'label', label: 'Metric', rowHeader: true },
-  { key: 'value', label: 'Value', align: 'end', tone: (row) => (row.warn ? 'warning' : null) },
+  // A warning's tone, or n/a muted (the word, its reason the detail's)
+  { key: 'value', label: 'Value', align: 'end', tone: (row) => row.tone },
   { key: 'detail', label: 'Detail' },
 ];
 
@@ -564,7 +572,7 @@ const createOverviewTable = () => {
   const getRow = (id: string) => {
     let row = rowsById.get(id);
     if (!row) {
-      row = { id, label: '', value: '', detail: '', warn: false };
+      row = { id, label: '', value: '', detail: '', tone: null };
       rowsById.set(id, row);
     }
     return row;
@@ -580,15 +588,15 @@ const createOverviewTable = () => {
   ) => {
     const value = metricValue.na ? NA_VALUE : metricValue.value;
     const detail = getDetail(metricValue);
-    const warn = Boolean(metricValue.warn);
+    const tone = metricValue.warn ? 'warning' : metricValue.na ? 'muted' : null;
     if (row.label !== label) {
       row.label = label;
       if (isShown) table.setCell(row.id, 'label', label);
     }
     // The tone is read from the row when its cell is written
-    if (row.value !== value || row.warn !== warn) {
+    if (row.value !== value || row.tone !== tone) {
       row.value = value;
-      row.warn = warn;
+      row.tone = tone;
       if (isShown) table.setCell(row.id, 'value', value);
     }
     if (row.detail !== detail) {

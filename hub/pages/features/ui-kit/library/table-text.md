@@ -16,7 +16,8 @@ is narrower than it. While a plain table overflows its box, the box is a tab sto
 caption, so the arrows scroll it.
 
 - **States:** drawn in the page: a profiler's overview (five frame metrics and an "App" group,
-  striped, a row's highlight, each metric's state as a tone with a mark and a word), the GPU memory
+  striped, a row's highlight, each metric's state as a tone with a mark and a word, a missing
+  budget a muted "none"), the GPU memory
   by owner (twelve owners and their total in a box that scrolls both ways, the header and the first
   column sticky, the cross highlight), the objects by kind (sorted by triangles, descending; a bar
   of in view and culled against the total in the footer), the heaviest objects (a grid with a

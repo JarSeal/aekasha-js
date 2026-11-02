@@ -220,6 +220,7 @@ describe('profiler Overview: the table updated in place (p807 D6)', () => {
       [liveKey, 'value', 'n/a'],
       [liveKey, 'detail', 'no world loaded'],
     ]);
+    expect(overview.valueCell(liveKey).getAttribute('data-tone')).toBe('muted');
     overview.close();
     removeBoxes();
     removeStill();

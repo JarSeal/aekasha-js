@@ -238,7 +238,8 @@ memory.refresh(); // the figures again: only the cells whose text changed are wr
   every shown column has a `width`, the table's layout is fixed, which lays out faster); `hidden`
   leaves it out; `headerTooltip` says what it holds. `tone` gives a cell a status (`'info'`,
   `'success'`, `'warning'`, `'danger'`): its colour and a mark before the text, never the colour
-  alone, so let the text say it too.
+  alone, so let the text say it too. `'muted'` is a figure that isn't one ("n/a", "none"): the
+  muted text at the regular weight, no mark.
 - **Sorting.** A `sortable` column's header is a button: ascending, then descending (then the
   rows' own order with `sortUnset`), its mark the direction and `aria-sort` on the header, the
   change announced ("Sorted by Size, descending"). The rows and each group are sorted apart, the

@@ -1,4 +1,13 @@
 import { CMP } from '../../ui/core/CMP';
+import type { CMPHandle } from '../../ui/core/CMPTypes';
+import { getSvgIcon } from '../../ui/core/icons/SvgIcon';
+import { createButton } from '../../ui/components/Button';
+import { createList } from '../../ui/data/List';
+import { createTable } from '../../ui/data/Table';
+import type { TableColumn } from '../../ui/data/TableTypes';
+import { createSparkline, type Sparkline } from '../../ui/data/graphs/Sparkline';
+import type { BindingScheduler } from '../../ui/forms/binding/BindingScheduler';
+import { createSegmentedControl } from '../../ui/forms/RadioGroup';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { getAllECSWorlds } from '../../kernel/ecs/ECS';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
@@ -12,28 +21,33 @@ import { formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
 import {
   CENSUS_KINDS,
   type CensusBucket,
+  type CensusHeavyObject,
   type CensusKind,
   type InViewTotal,
   type SceneCensus,
 } from './_dbg__Census';
+import {
+  createEmpty,
+  createNameCell,
+  createNote,
+  createSection,
+  createTextWriter,
+  formatCompact,
+  formatInViewTotal,
+  writeSub,
+  type TwoLineRow,
+} from './_dbg__ProfilerObjectsParts';
 import { PROFILER_SOURCE, type DrawStats } from './_dbg__ProfilerSources';
 import { _readStatsSource, createStatsSourceHolder } from './_dbg__StatsSources';
-
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
-const esc = (text: string) => text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 
 /**
  * The Objects tab (§2.8): the in-view census broken down by kind and by owner (two-tone bars:
  * in view solid, culled faded, the length the share of the scene total), the ECS worlds and
  * component counts, the heaviest objects in view, and a short history of the in-view figures.
  * Refreshed at the update rate while visible; it holds the census and the draw counters while
- * it is mounted.
+ * it is mounted. Its sections are the UI kit's (p807 D7), built once per mount on the tab's
+ * scheduler: a refresh updates the rows they read (kept by key) and the scheduler's refresh
+ * writes what changed.
  */
 
 export const PROFILER_OBJECTS_TAB_ID = 'profilerObjects';
@@ -74,16 +88,6 @@ const getMeasure = (bucket: CensusBucket, measure: ProfilerBarMeasure): InViewTo
       ? bucket.vertices
       : bucket.objects;
 
-/** 1,234 · 12.3k · 123k · 1.23M */
-const formatCompact = (n: number) => {
-  if (n < 10_000) return formatNumber(Math.round(n));
-  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 100_000 ? 1 : 0)}k`;
-  return `${(n / 1_000_000).toFixed(n < 10_000_000 ? 2 : 1)}M`;
-};
-
-const formatInViewTotal = ({ inView, total }: InViewTotal) =>
-  `<b>${formatCompact(inView)}</b><span> / ${formatCompact(total)}</span>`;
-
 // SAMPLE (read once per refresh, in onRefresh)
 
 let census: Readonly<SceneCensus> | null = null;
@@ -121,6 +125,9 @@ const history: HistorySeries[] = [
 let historyHead = 0;
 let historyCount = 0;
 let lastHistorySampleAt = -Infinity;
+/** Counts the samples pushed and the resets, so a mounted tab's sparklines know what to draw. */
+let historyPushes = 0;
+let historyResets = 0;
 /** The editor view the kept samples were counted in (null: the root scene), so a view switch
  * starts a new history instead of mixing two scenes. */
 let historyViewId: string | null = null;
@@ -129,17 +136,26 @@ const pushHistory = () => {
   for (let i = 0; i < history.length; i++) history[i].values[historyHead] = history[i].read();
   historyHead = (historyHead + 1) % HISTORY_LENGTH;
   if (historyCount < HISTORY_LENGTH) historyCount++;
+  historyPushes++;
 };
 
 const resetHistory = () => {
   historyHead = 0;
   historyCount = 0;
   lastHistorySampleAt = -Infinity;
+  historyResets++;
 };
 
 /** The i-th kept sample, oldest first. */
 const getHistoryValue = (series: HistorySeries, i: number) =>
   series.values[(historyHead - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH];
+
+/** A series' kept samples, oldest first (a sparkline's values at a mount or a reset). */
+const getHistoryValues = (series: HistorySeries) => {
+  const values: number[] = [];
+  for (let i = 0; i < historyCount; i++) values.push(getHistoryValue(series, i));
+  return values;
+};
 
 const readSample = () => {
   const censusReading = _readStatsSource<SceneCensus>(PROFILER_SOURCE.CENSUS);
@@ -158,336 +174,533 @@ const readSample = () => {
   }
 };
 
-// RENDERING
-
-/** Without a census: why (or that it's coming). */
-const renderNA = () =>
-  `<div class="profilerNote">${esc(censusNa ? `n/a (${censusNa})` : 'measuring…')}</div>`;
-
-const renderHeader = (settings: Readonly<ProfilerSettings>) => {
-  let buttons = '';
-  for (let i = 0; i < PROFILER_BAR_MEASURES.length; i++) {
-    const measure = PROFILER_BAR_MEASURES[i];
-    const selected = measure === settings.objectsBarMeasure ? ' class="isSelected"' : '';
-    buttons += `<button data-measure="${measure}"${selected}>${MEASURE_LABELS[measure]}</button>`;
-  }
-  const notes: string[] = [];
-  if (census) {
-    if (census.view) notes.push(`Counted in ${census.view.title}'s view`);
-    else
-      notes.push(census.isDebugCamera ? "Counted in the debug camera's view" : 'Counted in view');
-    if (census.isApprox) notes.push('BatchedMesh approx. (counted whole)');
-    notes.push(
-      census.excludesDebugHelpers
-        ? 'debug helpers in their own row'
-        : 'debug helpers counted in their kinds'
-    );
-    notes.push(`census ${census.sampleMs.toFixed(2)} ms`);
-  }
-  return (
-    `<div class="profilerObjectsHead"><div class="profilerSegmented" title="What the bars measure">` +
-    `<span>Bars</span>${buttons}</div>` +
-    (census ? `<div class="profilerNote">${esc(notes.join(' · '))}</div>` : renderNA()) +
-    `</div>`
-  );
+/** What an empty census table says: why there's no census (or that it's coming), else `text`. */
+const getEmptyText = (text: string) => {
+  if (census) return text;
+  return censusNa ? `n/a (${censusNa})` : 'measuring…';
 };
 
-const onHeaderClick = (setSettings: (partial: Partial<ProfilerSettings>) => void) => (e: Event) => {
-  const button = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-measure]');
-  const measure = button?.dataset.measure as ProfilerBarMeasure | undefined;
-  if (measure && PROFILER_BAR_MEASURES.includes(measure)) {
-    setSettings({ objectsBarMeasure: measure });
-  }
-};
+// BREAKDOWNS (by kind, by owner)
 
-/** A two-tone bar: the in-view part solid, the culled part faded, both as shares of `of`. */
-const renderBar = ({ inView, total }: InViewTotal, of: number) => {
-  if (!of) return '<div class="profilerBar"></div>';
-  const inViewPct = (inView / of) * 100;
-  const culledPct = ((total - inView) / of) * 100;
-  const title =
-    `${formatNumber(inView)} in view, ${formatNumber(total - inView)} culled or hidden · ` +
-    `${((total / of) * 100).toFixed(1)}% of the scene`;
-  return (
-    `<div class="profilerBar" title="${esc(title)}">` +
-    `<span class="profilerBarInView" style="width:${inViewPct.toFixed(2)}%"></span>` +
-    `<span class="profilerBarCulled" style="width:${culledPct.toFixed(2)}%"></span></div>`
-  );
-};
+type BreakdownRow = TwoLineRow & { id: string; bucket: CensusBucket };
 
-type BreakdownRow = { label: string; sub?: string; bucket: CensusBucket };
-
-const totalBucket: CensusBucket = {
-  objects: { inView: 0, total: 0 },
-  instances: { inView: 0, total: 0 },
-  primitives: { inView: 0, total: 0 },
-  triangles: { inView: 0, total: 0 },
-  vertices: { inView: 0, total: 0 },
-};
-
-const sumInto = (target: InViewTotal, source: InViewTotal) => {
-  target.inView += source.inView;
-  target.total += source.total;
-};
-
-/** A column header with no visible text: its name for assistive tech (axe's `empty-table-header`) */
-const hiddenHeader = (name: string) => `<th><span class="aekVisuallyHidden">${name}</span></th>`;
-
-/** The breakdown table: objects, triangles, vertices and a bar per row, then the total row.
- * `rowsName` names the row headers' column. */
-const renderBreakdown = (opts: {
-  heading: string;
-  rowsName: string;
-  rows: BreakdownRow[];
-  measure: ProfilerBarMeasure;
-  emptyText: string;
-}) => {
-  const { heading, rowsName, rows, measure, emptyText } = opts;
-  const total = totalBucket;
-  total.objects.inView = total.objects.total = 0;
-  total.triangles.inView = total.triangles.total = 0;
-  total.vertices.inView = total.vertices.total = 0;
-  for (let i = 0; i < rows.length; i++) {
-    sumInto(total.objects, rows[i].bucket.objects);
-    sumInto(total.triangles, rows[i].bucket.triangles);
-    sumInto(total.vertices, rows[i].bucket.vertices);
-  }
-  const of = getMeasure(total, measure).total;
-
-  const renderRow = (row: BreakdownRow, className = '') => {
-    const { objects, triangles, vertices } = row.bucket;
-    const sub = row.sub ? `<span class="profilerSub">${esc(row.sub)}</span>` : '';
-    return (
-      `<tr${className ? ` class="${className}"` : ''}><th>${esc(row.label)}${sub}</th>` +
-      `<td class="profilerNum">${formatInViewTotal(objects)}</td>` +
-      `<td class="profilerNum">${triangles.total ? formatInViewTotal(triangles) : '—'}</td>` +
-      `<td class="profilerNum">${vertices.total ? formatInViewTotal(vertices) : '—'}</td>` +
-      `<td class="profilerBarCell">${renderBar(getMeasure(row.bucket, measure), of)}</td></tr>`
-    );
+/** A breakdown's rows, kept by key, and its total (the footer) */
+const createBreakdownModel = () => {
+  const rowsByKey = new Map<string, BreakdownRow>();
+  const total: BreakdownRow = {
+    id: 'total',
+    label: 'Total',
+    sub: '',
+    subNode: null,
+    bucket: {
+      objects: { inView: 0, total: 0 },
+      instances: { inView: 0, total: 0 },
+      primitives: { inView: 0, total: 0 },
+      triangles: { inView: 0, total: 0 },
+      vertices: { inView: 0, total: 0 },
+    },
   };
+  let rows: BreakdownRow[] = [];
+  let next: BreakdownRow[] = [];
+  const NO_FOOTER: BreakdownRow[] = [];
+  const FOOTER = [total];
+  const sumInto = (target: InViewTotal, source: InViewTotal) => {
+    target.inView += source.inView;
+    target.total += source.total;
+  };
+  return {
+    getRows: () => rows,
+    getFooter: () => (rows.length ? FOOTER : NO_FOOTER),
+    /** Starts the rows of a sample */
+    begin: () => {
+      next = [];
+    },
+    add: (key: string, label: string, sub: string, bucket: CensusBucket) => {
+      let row = rowsByKey.get(key);
+      if (!row) {
+        row = { id: key, label, sub, subNode: null, bucket };
+        rowsByKey.set(key, row);
+      }
+      row.bucket = bucket;
+      writeSub(row, sub);
+      next.push(row);
+    },
+    /** Ends the sample: the rows read, the total summed, the rows that went forgotten */
+    end: () => {
+      rows = next;
+      const t = total.bucket;
+      t.objects.inView = t.objects.total = 0;
+      t.triangles.inView = t.triangles.total = 0;
+      t.vertices.inView = t.vertices.total = 0;
+      for (let i = 0; i < rows.length; i++) {
+        sumInto(t.objects, rows[i].bucket.objects);
+        sumInto(t.triangles, rows[i].bucket.triangles);
+        sumInto(t.vertices, rows[i].bucket.vertices);
+      }
+      if (rowsByKey.size > rows.length) {
+        for (const key of rowsByKey.keys()) {
+          if (!rows.some((row) => row.id === key)) rowsByKey.delete(key);
+        }
+      }
+    },
+  };
+};
 
-  let body = '';
-  for (let i = 0; i < rows.length; i++) body += renderRow(rows[i]);
-  body += renderRow({ label: 'Total', bucket: total }, 'isTotal');
-  return (
-    `<div class="profilerSection"><h4>${esc(heading)}</h4>` +
-    (rows.length
-      ? `<table class="profilerTable profilerBreakdown"><thead><tr>${hiddenHeader(rowsName)}` +
-        `<th>Objects</th><th>Triangles</th><th>Vertices</th>` +
-        `<th>${MEASURE_LABELS[measure]}, in view / culled</th></tr></thead>` +
-        `<tbody>${body}</tbody></table>`
-      : `<div class="profilerNote">${esc(emptyText)}</div>`) +
-    `</div>`
-  );
+type BreakdownModel = ReturnType<typeof createBreakdownModel>;
+
+/** An "in view / total" figure column; `—`, muted, for a measure the rows don't have */
+const figureColumn = (
+  key: 'objects' | 'triangles' | 'vertices',
+  label: string
+): TableColumn<BreakdownRow> => ({
+  key,
+  label,
+  align: 'end',
+  value: (row) => row.bucket[key].total,
+  format: (_, row) => (row.bucket[key].total ? formatInViewTotal(row.bucket[key]) : '—'),
+  tone: (row) => (row.bucket[key].total ? null : 'muted'),
+});
+
+const createBreakdownTable = (opts: {
+  caption: string;
+  rowsName: string;
+  model: BreakdownModel;
+  settings: Readonly<ProfilerSettings>;
+  empty: CMPHandle;
+  scheduler: BindingScheduler;
+}) => {
+  const { settings, model } = opts;
+  const getPart = (row: BreakdownRow) => getMeasure(row.bucket, settings.objectsBarMeasure);
+  return createTable<BreakdownRow>({
+    caption: opts.caption,
+    captionHidden: true,
+    columns: [
+      {
+        key: 'name',
+        label: opts.rowsName,
+        rowHeader: true,
+        value: (row) => row.label,
+        cell: createNameCell,
+      },
+      figureColumn('objects', 'Objects'),
+      figureColumn('triangles', 'Triangles'),
+      figureColumn('vertices', 'Vertices'),
+      {
+        key: 'bar',
+        label: 'In view / culled',
+        headerTooltip:
+          'The measure the Bars switch picks: in view, then culled or hidden; the share of the scene',
+        kind: 'bar',
+        minWidth: 96,
+        value: (row) => {
+          const { inView, total } = getPart(row);
+          return [inView, total - inView];
+        },
+        // Each bar's length is its share of the total (the footer's), said as text
+        format: (_, row) => {
+          const of = getMeasure(
+            model.getFooter()[0]?.bucket ?? row.bucket,
+            settings.objectsBarMeasure
+          ).total;
+          return of ? `${((getPart(row).total / of) * 100).toFixed(1)} %` : '';
+        },
+      },
+    ],
+    rows: model.getRows,
+    footer: model.getFooter,
+    empty: opts.empty,
+    striped: true,
+    class: 'profilerBreakdown',
+    scheduler: opts.scheduler,
+  });
 };
 
 const getKindSub = (kind: CensusKind, bucket: CensusBucket) => {
   const parts: string[] = [];
   const unit = PRIMITIVE_UNITS[kind];
   if (unit && bucket.primitives.total) {
-    parts.push(
-      `${formatCompact(bucket.primitives.inView)} / ${formatCompact(bucket.primitives.total)} ${unit}`
-    );
+    parts.push(`${formatInViewTotal(bucket.primitives)} ${unit}`);
   }
   if ((kind === 'INSTANCED_MESH' || kind === 'BATCHED_MESH') && bucket.instances.total) {
-    parts.push(
-      `${formatCompact(bucket.instances.inView)} / ${formatCompact(bucket.instances.total)} instances`
-    );
+    parts.push(`${formatInViewTotal(bucket.instances)} instances`);
   }
   if (kind === 'LIGHTS' || kind === 'CAMERAS') parts.push('in view = shown');
   return parts.join(' · ');
 };
 
-const renderKinds = (settings: Readonly<ProfilerSettings>) => {
-  if (!census) return '<div></div>';
-  const rows: BreakdownRow[] = [];
-  for (let i = 0; i < CENSUS_KINDS.length; i++) {
-    const kind = CENSUS_KINDS[i];
-    const bucket = census.kinds[kind];
-    if (!bucket.objects.total) continue;
-    rows.push({ label: KIND_LABELS[kind], sub: getKindSub(kind, bucket), bucket });
-  }
-  return renderBreakdown({
-    heading: 'By kind',
-    rowsName: 'Kind',
-    rows,
-    measure: settings.objectsBarMeasure,
-    emptyText: 'The scene is empty.',
-  });
-};
-
-const renderOwners = (settings: Readonly<ProfilerSettings>) => {
-  if (!census) return '<div></div>';
-  const rows: BreakdownRow[] = census.owners.map((owner) => ({
-    label: owner.label,
-    bucket: owner.bucket,
-  }));
-  return renderBreakdown({
-    heading: 'By owner',
-    rowsName: 'Owner',
-    rows,
-    measure: settings.objectsBarMeasure,
-    emptyText: 'The scene is empty.',
-  });
-};
-
 // ECS
 
-const renderEcs = () => {
-  const worlds = getAllECSWorlds();
-  let worldRows = '';
-  const counts = new Map<string, number>();
-  for (let w = 0; w < worlds.length; w++) {
-    const world = worlds[w];
-    const name = world.name === world.id ? world.id : `${world.name} (${world.id})`;
-    worldRows +=
-      `<tr><th>${esc(name)}</th>` +
-      `<td class="profilerValue">${formatNumber(world.getEntityCount())}</td>` +
-      `<td class="profilerSub">entities</td></tr>`;
-    // By value (eg. 'CORE_MANAGED_BY', 'APP_SPIN'): app and toolkit types have no engine-side name
-    const types = world.getComponentTypes();
-    for (let i = 0; i < types.length; i++) {
-      const size = world.getStorage(types[i]).size;
-      if (size) counts.set(types[i], (counts.get(types[i]) || 0) + size);
-    }
-  }
-  const sorted = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  let types = '';
-  for (let i = 0; i < sorted.length; i++) {
-    types += `<div><span>${esc(sorted[i][0])}</span><b>${formatNumber(sorted[i][1])}</b></div>`;
-  }
-  const typesNote = worlds.length > 1 ? ' (all worlds)' : '';
-  // The census above counts the editor view, which has no entities of its own
-  const viewNote = census?.view
-    ? `<div class="profilerNote">${esc(`The suspended scene's worlds (${census.view.title} has no entities).`)}</div>`
-    : '';
-  return (
-    `<div class="profilerSection"><h4>ECS</h4>${viewNote}` +
-    `<table class="profilerTable"><tbody>${worldRows}</tbody></table>` +
-    `<h5>Component types by entity count${typesNote}</h5>` +
-    (types
-      ? `<div class="profilerComponentGrid">${types}</div>`
-      : `<div class="profilerNote">No components.</div>`) +
-    `</div>`
-  );
-};
+type WorldRow = { id: string; name: string; entities: number };
+type ComponentRow = { id: string; entities: number };
 
 // HEAVIEST OBJECTS
 
-/** The entities of the rendered heaviest rows (the census object is reused by the next walk). */
-const shownHeavyTargets: { worldId: string; entityId: number }[] = [];
+type HeavyRow = TwoLineRow & {
+  id: string;
+  rank: number;
+  kind: CensusKind;
+  triangles: number;
+  instances: number;
+  worldId: string;
+  entityId: number;
+};
 
 const findWorld = (worldId: string) => getAllECSWorlds().find((w) => w.id === worldId) || null;
 
-const renderHeaviest = () => {
-  if (!census) return '<div></div>';
-  shownHeavyTargets.length = 0;
-  const entries = census.heaviest;
-  let rows = '';
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    let action = '';
-    if (IS_DEBUG_ENV && entry.entityId !== -1) {
-      const world = findWorld(entry.worldId);
-      const opener = world ? _getEntityWindowOpener(world, entry.entityId) : null;
-      if (opener) {
-        shownHeavyTargets[i] = { worldId: entry.worldId, entityId: entry.entityId };
-        action = `<button class="profilerAction" data-heavy="${i}" title="${esc(opener.label)}">Edit</button>`;
+/** The Edit button of a heaviest row whose entity has a window, else nothing. */
+const createEditCell = (row: HeavyRow) => {
+  const world = IS_DEBUG_ENV && row.entityId !== -1 ? findWorld(row.worldId) : null;
+  const opener = world ? _getEntityWindowOpener(world, row.entityId) : null;
+  if (!opener) return CMP({ tag: 'span' });
+  return createButton({
+    label: `${opener.label}: ${row.label}`,
+    icon: getSvgIcon('tools'),
+    iconOnly: true,
+    variant: 'ghost',
+    size: 'sm',
+    onClick: () => {
+      const target = findWorld(row.worldId);
+      if (target) _getEntityWindowOpener(target, row.entityId)?.toggle(target, row.entityId);
+    },
+  }).cmp;
+};
+
+/** A heaviest entry's key: its entity and object, numbered when two share one (the row, its cells
+ * and its button stay with the object as the ranks change) */
+const getHeavyKey = (entry: CensusHeavyObject, seen: Map<string, number>) => {
+  const base = `${entry.worldId}:${entry.entityId}:${entry.kind}:${entry.name}`;
+  const n = seen.get(base) ?? 0;
+  seen.set(base, n + 1);
+  return n ? `${base}#${n}` : base;
+};
+
+const HEAVY_COLUMNS: TableColumn<HeavyRow>[] = [
+  { key: 'rank', label: '#', align: 'end' },
+  {
+    key: 'name',
+    label: 'Object',
+    rowHeader: true,
+    value: (row) => row.label,
+    cell: createNameCell,
+  },
+  { key: 'kind', label: 'Kind', format: (kind) => KIND_LABELS[kind as CensusKind] },
+  { key: 'triangles', label: 'Triangles', format: (n) => formatCompact(n as number) },
+  {
+    key: 'instances',
+    label: 'Instances',
+    align: 'end',
+    format: (n) => ((n as number) > 1 ? `× ${formatCompact(n as number)}` : ''),
+  },
+  { key: 'edit', label: 'Edit', cell: createEditCell },
+];
+
+// THE SECTIONS
+
+/** The head: the bars' measure (a segmented control on the setting) and what the census counted */
+const createHeadSection = (
+  { settings, setSettings }: ObjectsTabOpts,
+  scheduler: BindingScheduler
+) => {
+  const measures = createSegmentedControl<ProfilerBarMeasure>({
+    label: 'Bars',
+    hint: 'What the bars measure',
+    get: () => settings.objectsBarMeasure,
+    set: (measure) => setSettings({ objectsBarMeasure: measure }),
+    options: PROFILER_BAR_MEASURES.map((measure) => ({
+      value: measure,
+      label: MEASURE_LABELS[measure],
+    })),
+    scheduler,
+  });
+  const notes = createNote('profilerObjectsNote');
+  const cmp = CMP({ class: 'profilerObjectsHead' });
+  cmp.add(measures.cmp);
+  cmp.add(notes.cmp);
+  const update = () => {
+    if (!census) {
+      notes.write(getEmptyText(''));
+      return;
+    }
+    const parts: string[] = [];
+    if (census.view) parts.push(`Counted in ${census.view.title}'s view`);
+    else
+      parts.push(census.isDebugCamera ? "Counted in the debug camera's view" : 'Counted in view');
+    if (census.isApprox) parts.push('BatchedMesh approx. (counted whole)');
+    parts.push(
+      census.excludesDebugHelpers
+        ? 'debug helpers in their own row'
+        : 'debug helpers counted in their kinds'
+    );
+    parts.push(`census ${census.sampleMs.toFixed(2)} ms`);
+    notes.write(parts.join(' · '));
+  };
+  return { cmp, update };
+};
+
+/** A breakdown's section (by kind or by owner): its table on its model */
+const createBreakdownSection = (opts: {
+  heading: string;
+  rowsName: string;
+  settings: Readonly<ProfilerSettings>;
+  scheduler: BindingScheduler;
+  /** Adds the census' rows to the model */
+  addRows: (model: BreakdownModel, census: Readonly<SceneCensus>) => void;
+}) => {
+  const model = createBreakdownModel();
+  const empty = createEmpty();
+  const table = createBreakdownTable({
+    caption: `Objects ${opts.heading.toLowerCase()}`,
+    rowsName: opts.rowsName,
+    model,
+    settings: opts.settings,
+    empty: empty.cmp,
+    scheduler: opts.scheduler,
+  });
+  const update = () => {
+    model.begin();
+    if (census) opts.addRows(model, census);
+    model.end();
+    empty.write(getEmptyText('The scene is empty.'));
+  };
+  return { cmp: createSection(opts.heading, [table.cmp]), update };
+};
+
+const addKindRows = (model: BreakdownModel, c: Readonly<SceneCensus>) => {
+  for (let i = 0; i < CENSUS_KINDS.length; i++) {
+    const kind = CENSUS_KINDS[i];
+    const bucket = c.kinds[kind];
+    if (bucket.objects.total) model.add(kind, KIND_LABELS[kind], getKindSub(kind, bucket), bucket);
+  }
+};
+
+const addOwnerRows = (model: BreakdownModel, c: Readonly<SceneCensus>) => {
+  for (let i = 0; i < c.owners.length; i++) {
+    const owner = c.owners[i];
+    model.add(owner.key, owner.label, '', owner.bucket);
+  }
+};
+
+/** ECS: the worlds' entity counts and the component types by entity count (by type value, eg.
+ * 'CORE_MANAGED_BY', 'APP_SPIN': app and toolkit types have no engine-side name) */
+const createEcsSection = (scheduler: BindingScheduler) => {
+  const worldRows = new Map<string, WorldRow>();
+  let shownWorlds: WorldRow[] = [];
+  const componentRows = new Map<string, ComponentRow>();
+  let shownComponents: ComponentRow[] = [];
+  const viewNote = createNote();
+  const worldsTable = createTable<WorldRow>({
+    caption: 'ECS worlds',
+    captionHidden: true,
+    columns: [
+      { key: 'name', label: 'World', rowHeader: true },
+      { key: 'entities', label: 'Entities', format: (n) => formatNumber(n as number) },
+    ],
+    rows: () => shownWorlds,
+    scheduler,
+  });
+  const typesHeading = CMP({ tag: 'h5' });
+  const writeTypesHeading = createTextWriter(
+    typesHeading.elem.appendChild(document.createTextNode(''))
+  );
+  const typesList = createList<ComponentRow>({
+    label: 'Component types by entity count',
+    items: () => shownComponents,
+    title: (row) => row.id,
+    suffix: (row) => formatNumber(row.entities),
+    // The names are cut to the column: the whole one on hover
+    tooltip: (row) => row.id,
+    empty: 'No components.',
+    class: 'profilerComponentList',
+    scheduler,
+  });
+
+  const update = () => {
+    const worlds = getAllECSWorlds();
+    const counts = new Map<string, number>();
+    const nextWorlds: WorldRow[] = [];
+    for (let w = 0; w < worlds.length; w++) {
+      const world = worlds[w];
+      let row = worldRows.get(world.id);
+      if (!row) {
+        row = { id: world.id, name: '', entities: 0 };
+        worldRows.set(world.id, row);
+      }
+      row.name = world.name === world.id ? world.id : `${world.name} (${world.id})`;
+      row.entities = world.getEntityCount();
+      nextWorlds.push(row);
+      const types = world.getComponentTypes();
+      for (let i = 0; i < types.length; i++) {
+        const size = world.getStorage(types[i]).size;
+        if (size) counts.set(types[i], (counts.get(types[i]) || 0) + size);
       }
     }
-    const entity = entry.entityName
-      ? `<span class="profilerSub">${esc(entry.entityName)}</span>`
-      : '';
-    const instances = entry.instances > 1 ? `× ${formatCompact(entry.instances)}` : '';
-    rows +=
-      `<tr><td class="profilerRank">${i + 1}</td>` +
-      `<th>${esc(entry.name)}${entity}</th>` +
-      `<td class="profilerSub">${KIND_LABELS[entry.kind]}</td>` +
-      `<td class="profilerValue">${formatCompact(entry.triangles)}</td>` +
-      `<td class="profilerSub">${instances}</td><td>${action}</td></tr>`;
-  }
-  return (
-    `<div class="profilerSection"><h4>Heaviest objects in view</h4>` +
-    (rows
-      ? `<table class="profilerTable profilerHeaviest"><thead><tr>${hiddenHeader('Rank')}` +
-        `<th>Object / entity</th><th>Kind</th><th>Triangles</th><th>Instances</th>` +
-        `${hiddenHeader('Actions')}</tr></thead>` +
-        `<tbody>${rows}</tbody></table>`
-      : `<div class="profilerNote">No meshes in view.</div>`) +
-    `</div>`
-  );
-};
-
-const onHeaviestClick = (e: Event) => {
-  const button = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-heavy]');
-  const target = button ? shownHeavyTargets[Number(button.dataset.heavy)] : undefined;
-  if (!target) return;
-  const world = findWorld(target.worldId);
-  if (!world) return;
-  _getEntityWindowOpener(world, target.entityId)?.toggle(world, target.entityId);
-};
-
-// OVER TIME
-
-/** An auto-scaled sparkline of the kept samples (0 at the bottom), gaps where there is no value. */
-const renderSparkline = (series: HistorySeries, max: number) => {
-  const scale = max > 0 ? 100 / max : 0;
-  const offset = HISTORY_LENGTH - historyCount;
-  let shapes = '';
-  let points = '';
-  let firstX = -1;
-  let lastX = -1;
-  const flush = () => {
-    if (firstX === -1) return;
-    shapes +=
-      `<polygon points="${firstX},100 ${points}${lastX},100" />` +
-      `<polyline points="${points}" vector-effect="non-scaling-stroke" />`;
-    points = '';
-    firstX = lastX = -1;
+    shownWorlds = nextWorlds;
+    const nextComponents: ComponentRow[] = [];
+    for (const [type, entities] of counts) {
+      let row = componentRows.get(type);
+      if (!row) {
+        row = { id: type, entities };
+        componentRows.set(type, row);
+      }
+      row.entities = entities;
+      nextComponents.push(row);
+    }
+    nextComponents.sort((a, b) => b.entities - a.entities || a.id.localeCompare(b.id));
+    shownComponents = nextComponents;
+    writeTypesHeading(`Component types by entity count${worlds.length > 1 ? ' (all worlds)' : ''}`);
+    // The census counts the editor view, which has no entities of its own
+    viewNote.write(
+      census?.view ? `The suspended scene's worlds (${census.view.title} has no entities).` : ''
+    );
   };
-  for (let i = 0; i < historyCount; i++) {
-    const value = getHistoryValue(series, i);
-    if (Number.isNaN(value)) {
-      flush();
-      continue;
-    }
-    const x = offset + i;
-    if (firstX === -1) firstX = x;
-    lastX = x;
-    points += `${x},${(100 - value * scale).toFixed(1)} `;
-  }
-  flush();
-  return (
-    `<svg class="profilerSparkline" viewBox="0 0 ${HISTORY_LENGTH - 1} 100" ` +
-    `preserveAspectRatio="none" aria-hidden="true">${shapes}</svg>`
-  );
+  return {
+    cmp: createSection('ECS', [viewNote.cmp, worldsTable.cmp, typesHeading, typesList.cmp]),
+    update,
+  };
 };
 
-const renderHistory = (settings: Readonly<ProfilerSettings>) => {
-  let blocks = '';
-  for (let s = 0; s < history.length; s++) {
-    const series = history[s];
-    let max = 0;
-    let latest = NaN;
-    for (let i = 0; i < historyCount; i++) {
-      const value = getHistoryValue(series, i);
-      if (Number.isNaN(value)) continue;
-      if (value > max) max = value;
-      latest = value;
+/** The heaviest objects in view: a row per object, kept by its key as the ranks change */
+const createHeaviestSection = (scheduler: BindingScheduler) => {
+  const rowsByKey = new Map<string, HeavyRow>();
+  let shown: HeavyRow[] = [];
+  const empty = createEmpty();
+  const table = createTable<HeavyRow>({
+    caption: 'Heaviest objects in view',
+    captionHidden: true,
+    columns: HEAVY_COLUMNS,
+    rows: () => shown,
+    empty: empty.cmp,
+    striped: true,
+    class: 'profilerHeaviest',
+    scheduler,
+  });
+  const update = () => {
+    const next: HeavyRow[] = [];
+    if (census) {
+      const seen = new Map<string, number>();
+      for (let i = 0; i < census.heaviest.length; i++) {
+        const entry = census.heaviest[i];
+        const key = getHeavyKey(entry, seen);
+        let row = rowsByKey.get(key);
+        if (!row) {
+          row = {
+            id: key,
+            label: entry.name,
+            sub: entry.entityName,
+            subNode: null,
+            rank: 0,
+            kind: entry.kind,
+            triangles: 0,
+            instances: 0,
+            worldId: entry.worldId,
+            entityId: entry.entityId,
+          };
+          rowsByKey.set(key, row);
+        }
+        writeSub(row, entry.entityName);
+        row.rank = i + 1;
+        row.triangles = entry.triangles;
+        row.instances = entry.instances;
+        next.push(row);
+      }
     }
-    blocks +=
-      `<div class="profilerSpark"><div class="profilerSparkHead"><span>${esc(series.label)}</span>` +
-      `<b>${Number.isNaN(latest) ? '—' : formatCompact(latest)}</b>` +
-      `<span class="profilerSub">max ${formatCompact(max)}</span></div>` +
-      `${renderSparkline(series, max)}</div>`;
-  }
+    shown = next;
+    for (const key of rowsByKey.keys()) {
+      if (!shown.some((row) => row.id === key)) rowsByKey.delete(key);
+    }
+    empty.write(getEmptyText('No meshes in view.'));
+  };
+  return { cmp: createSection('Heaviest objects in view', [table.cmp]), update };
+};
+
+/** Over time: a sparkline per series with its latest figure and its max beside it */
+const createOverTimeSection = (settings: Readonly<ProfilerSettings>) => {
+  const note = createNote();
   const seconds = Math.round(HISTORY_LENGTH / settings.updateRateHz);
-  return (
-    `<div class="profilerSection"><h4>Over time</h4>` +
-    `<div class="profilerNote">The last ${HISTORY_LENGTH} samples (${seconds} s at ` +
-    `${settings.updateRateHz} Hz) while this tab is open. Draw calls per frame, 1 s average.</div>` +
-    `${blocks}</div>`
+  note.write(
+    `The last ${HISTORY_LENGTH} samples (${seconds} s at ${settings.updateRateHz} Hz) while ` +
+      'this tab is open. Draw calls per frame, 1 s average.'
   );
+  let seenPushes = historyPushes;
+  let seenResets = historyResets;
+  const lines = history.map((s) => {
+    const line = CMP({ class: 'profilerSpark' });
+    const head = line.add({ class: 'profilerSpark__head' });
+    head.add({ tag: 'span', text: s.label });
+    const latest = head.add({ tag: 'b', class: 'profilerSpark__latest' });
+    const max = head.add({ tag: 'span', class: 'profilerSpark__max' });
+    const sparkline: Sparkline = createSparkline({
+      values: getHistoryValues(s),
+      capacity: HISTORY_LENGTH,
+      min: 0,
+      area: true,
+      class: 'profilerSparkline',
+    });
+    line.add(sparkline.cmp);
+    return {
+      cmp: line,
+      sparkline,
+      writeLatest: createTextWriter(latest.elem.appendChild(document.createTextNode(''))),
+      writeMax: createTextWriter(max.elem.appendChild(document.createTextNode(''))),
+    };
+  });
+
+  /** The new sample pushed, or the history drawn again after a reset or missed samples */
+  const update = () => {
+    const isReset = seenResets !== historyResets;
+    const isOnePush = !isReset && historyPushes === seenPushes + 1;
+    for (let s = 0; s < history.length; s++) {
+      const { sparkline, writeLatest, writeMax } = lines[s];
+      if (isOnePush) sparkline.push(getHistoryValue(history[s], historyCount - 1));
+      else if (isReset || historyPushes !== seenPushes) {
+        sparkline.setValues(getHistoryValues(history[s]));
+      }
+      let max = 0;
+      let latest = NaN;
+      for (let i = 0; i < historyCount; i++) {
+        const value = getHistoryValue(history[s], i);
+        if (Number.isNaN(value)) continue;
+        if (value > max) max = value;
+        latest = value;
+      }
+      writeLatest(Number.isNaN(latest) ? '—' : formatCompact(latest));
+      writeMax(`max ${formatCompact(max)}`);
+    }
+    seenPushes = historyPushes;
+    seenResets = historyResets;
+  };
+  return { cmp: createSection('Over time', [note.cmp, ...lines.map((l) => l.cmp)]), update };
+};
+
+/** The tab's sections, built once per mount; `update` reads the sample into what their parts read
+ * and writes their texts (the tab's scheduler writes the kit's parts after it) */
+const createObjectsView = (opts: ObjectsTabOpts, scheduler: BindingScheduler) => {
+  const { settings } = opts;
+  const sections = [
+    createHeadSection(opts, scheduler),
+    createBreakdownSection({
+      heading: 'By kind',
+      rowsName: 'Kind',
+      settings,
+      scheduler,
+      addRows: addKindRows,
+    }),
+    createBreakdownSection({
+      heading: 'By owner',
+      rowsName: 'Owner',
+      settings,
+      scheduler,
+      addRows: addOwnerRows,
+    }),
+    createEcsSection(scheduler),
+    createHeaviestSection(scheduler),
+    createOverTimeSection(settings),
+  ];
+  const update = () => {
+    for (let i = 0; i < sections.length; i++) sections[i].update();
+  };
+  update();
+  return { update, cmps: sections.map((section) => section.cmp) };
 };
 
 // TAB
@@ -504,14 +717,14 @@ type ObjectsTabOpts = {
  * @param opts ({@link ObjectsTabOpts})
  */
 export const createProfilerObjectsTabDef = (opts: ObjectsTabOpts): AnyDebuggerTabDef => {
-  const { settings, setSettings } = opts;
+  const { settings } = opts;
   const sources = createStatsSourceHolder();
+  let view: ReturnType<typeof createObjectsView> | null = null;
   const onClose = () => {
     sources.releaseAll();
     resetHistory();
     census = null;
     draw = null;
-    shownHeavyTargets.length = 0;
   };
   return {
     id: PROFILER_OBJECTS_TAB_ID,
@@ -521,21 +734,20 @@ export const createProfilerObjectsTabDef = (opts: ObjectsTabOpts): AnyDebuggerTa
     get refreshIntervalMs() {
       return 1000 / settings.updateRateHz;
     },
-    // Runs before the build and every refresh: one census read for every section
-    onRefresh: readSample,
+    // One census read for every section; the tab's scheduler then writes the kit's parts
+    onRefresh: () => {
+      readSample();
+      view?.update();
+    },
     // The holds are taken here, not in onRefresh, which also runs for a build that can fail
     // before this cleanup exists
     onOpen: () => {
       sources.set(HELD_SOURCES);
       return onClose;
     },
-    content: () => [
-      CMP({ html: () => renderHeader(settings), onClick: onHeaderClick(setSettings) }),
-      CMP({ html: () => renderKinds(settings) }),
-      CMP({ html: () => renderOwners(settings) }),
-      CMP({ html: renderEcs }),
-      CMP({ html: renderHeaviest, onClick: onHeaviestClick }),
-      CMP({ html: () => renderHistory(settings) }),
-    ],
+    content: ({ scheduler }) => {
+      view = createObjectsView(opts, scheduler);
+      return view.cmps;
+    },
   };
 };
