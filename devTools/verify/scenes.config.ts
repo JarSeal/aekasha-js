@@ -121,13 +121,19 @@ export const DEBUGGER_VIEWPORT = { width: 1280, height: 2000 };
 /**
  * What a debugger shot masks (Playwright's `mask`, Playwright's selectors): the figures that change
  * run to run with the loops frozen (timings, memory, clocks, a build's time): the UI kit's
- * monitors, the profiler Overview's figures (p807 rewrites that tab) and the About dialog's build
- * line
+ * monitors, the profiler Overview's value and detail cells, the Objects tab's census line (its
+ * time) and "Over time" (its samples), the stats panels' figures, ranges and graphs, and the About
+ * dialog's build line
  */
 export const DEBUGGER_LIVE_MASKS: string[] = [
   '.aekMonitor',
-  '.profilerValue',
-  '.profilerSub',
+  '.profilerOverview td',
+  '.profilerObjectsNote',
+  '.profilerSpark',
+  // GPU memory's peaks: "Reached", a wall-clock time (p807 Phase 4)
+  '.gpuMemoryPeaks td:last-child',
+  // The stats panels' figures, ranges and graphs (p807 Phase 5)
+  '.statsLive',
   // The About dialog's build: the commit, local changes and the time (Playwright's selector)
   'dt:text-is("Build") + dd',
 ];
@@ -183,6 +189,9 @@ export type SceneDebuggerConfig = {
   tabs: 'ALL' | string[];
   /** The profiler window's tabs too */
   profiler?: boolean;
+  /** The on-screen stats panels too (`stats.panels`), shot first: the drawer opens over their
+   * corner */
+  statsPanels?: boolean;
   windows?: DebuggerWindowOpener[];
   undoScripts?: DebuggerUndoScript[];
   /** The material editor (p806 Phase 2 section 3): its view entered with `material` (a material
@@ -226,6 +235,7 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
     debugger: {
       tabs: 'ALL',
       profiler: true,
+      statsPanels: true,
       windows: [
         { name: 'camera', tab: 'camerasControls', row: 0 },
         { name: 'light0', tab: 'lightsControls', row: 0 },

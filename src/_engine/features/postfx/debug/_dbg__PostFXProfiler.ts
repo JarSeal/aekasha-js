@@ -150,8 +150,8 @@ const endFrame = () => {
   cpuSamples++;
   if (!gpuAvailable) return;
   pendingFrames.push(record);
-  // A batch another resolve consumed (eg. the stats-gl GPU panel's own) can be missed: that
-  // frame then ages out of pendingFrames, it is never reported wrong
+  // A batch another resolve consumed (an app's own) can be missed: that frame then ages out of
+  // pendingFrames, it is never reported wrong
   _requestTimestampResolve();
 };
 

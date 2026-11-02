@@ -4,8 +4,12 @@ import type { BindingScheduler } from '../forms/binding/BindingScheduler';
 import type { SelectionMode } from './Selection';
 import type { VirtualRows } from './VirtualRows';
 
-/** A cell's status (p800 D6): the status role's colour and a mark, never the colour alone. */
-export type TableTone = 'info' | 'success' | 'warning' | 'danger';
+/**
+ * A cell's status (p800 D6): the status role's colour and a mark, never the colour alone. `muted`
+ * is a figure that isn't one ("n/a", "none"): the muted text colour at the regular weight, no mark,
+ * its text saying it.
+ */
+export type TableTone = 'info' | 'success' | 'warning' | 'danger' | 'muted';
 
 /** A `createTable`'s sort: a column's key and its direction. */
 export type TableSort = {
@@ -39,7 +43,8 @@ export type TableColumn<T> = {
   width?: number | string;
   /** Its least width (px as a number, or a CSS length). */
   minWidth?: number | string;
-  /** A cell's status: the role's colour and a mark before the text. The text says it too. */
+  /** A cell's status: the role's colour and a mark before the text (`muted`: the muted colour, no
+   * mark). The text says it too. */
   tone?: (row: T) => TableTone | null | undefined;
   /** Makes its header a button that sorts the rows by it: ascending, then descending (then the
    * rows' own order with the table's `sortUnset`). */

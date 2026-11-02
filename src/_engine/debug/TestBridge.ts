@@ -10,7 +10,7 @@ const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
  * bridge's and the scene runner's.
  * @internal
  */
-export const TEST_BRIDGE_VERSION = 6;
+export const TEST_BRIDGE_VERSION = 7;
 
 /**
  * Key events the bridge dispatches right before fixed physics steps of the first scene's world
@@ -195,6 +195,9 @@ export type AekTestBridge = {
   openMaterialEditor: (opts: { material?: string }) => Promise<TestBridgeDebuggerRoot>;
   /** Goes back to the Runtime view */
   closeMaterialEditor: () => Promise<void>;
+  /** Marks the on-screen stats panels' root as root `statsPanels`; MISSING when they aren't
+   * shown (measuring off) */
+  markStatsPanels: () => Promise<TestBridgeDebuggerRoot>;
 };
 
 declare global {

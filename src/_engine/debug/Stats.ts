@@ -1,4 +1,3 @@
-import type { Renderer } from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../kernel/config/Config';
 import type { DebugModuleRef } from '../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
@@ -8,23 +7,21 @@ import { loadDebugModuleAsync, useDebug } from '../kernel/config/DebugModules';
  * @internal
  */
 export type StatsOptions = {
-  /** stats-gl builds its FPS and CPU panels together (only via its own trackFPS), so these two
-   * are applied by always building both and detaching the panel afterwards. */
+  /** Rendered frames per second (the frame probe's, as the profiler's FPS row). */
   trackFPS?: boolean;
+  /** The main loop's CPU time per frame (the profiler's CPU row). */
   trackCPU?: boolean;
-  /** Engine-side panel (not stats-gl's): time spent in app logic, as a theoretical FPS. */
+  /** Time spent in the main loop, as a theoretical FPS. */
   trackTFPS?: boolean;
+  /** GPU time per frame (render passes), where the renderer has timestamp queries. */
   trackGPU?: boolean;
+  /** GPU time per frame of the compute dispatches, where the renderer has timestamp queries. */
   trackCPT?: boolean;
-  /** Drawn as a small overlay inside the CPU panel, so it requires trackCPU. */
+  /** The display's refresh rate, a line of the FPS panel, so it requires trackFPS. */
   trackHz?: boolean;
-  logsPerSecond?: number;
-  graphsPerSecond?: number;
-  samplesLog?: number;
-  samplesGraph?: number;
-  precision?: number;
+  /** The panels in a row, not a column. */
   horizontal?: boolean;
-  mode?: number;
+  /** Shows the stats panels at all. */
   enabled?: boolean;
 };
 
@@ -59,18 +56,18 @@ export const registerStatsModule = async () => {
 };
 
 /**
- * Initializes statistics for debugging. The main loop's.
+ * Builds the on-screen stats panels from the Statistics tab's settings. The main loop's.
  * @internal
- * @returns the stats-gl `Stats` instance, or nothing while the debug module isn't loaded
  */
 export const initStats = (config?: StatsOptions) => useDebug(debugGUI)?._initStats(config);
 
 /**
- * Updates the stats panels after a frame's render: the main loop's.
+ * Updates the stats panels at a rendered frame's end (after the render and the late loopers): the
+ * main loop's.
  * @internal
  */
-export const updateRestOfStats = (renderer: Renderer) => {
-  useDebug(debugGUI)?._updateRestOfStats(renderer);
+export const updateRestOfStats = () => {
+  useDebug(debugGUI)?._updateRestOfStats();
 };
 
 /**
@@ -82,8 +79,8 @@ export const updatePhysicsPanel = (value: number) => {
 };
 
 /**
- * Applies the profiler's "open from stats panels" setting to the stats panels (their pointer and
- * title) and refreshes the Statistics tab's toggle of it. Debug env only. The profiler's.
+ * Applies the profiler's "open from stats panels" setting to the stats panels (its button, or a
+ * group) and refreshes the Statistics tab's toggle of it. Debug env only. The profiler's.
  * @internal
  */
 export const updateStatsProfilerEntryPoint = () => {
@@ -97,16 +94,3 @@ export const updateStatsProfilerEntryPoint = () => {
 export const startCustomMeasurements = () => {
   useDebug(debugGUI)?._startCustomMeasurements();
 };
-
-/**
- * Returns the stats-gl `Stats` instance. The main loop's, the ray casts' and the spatial grid's.
- * @internal
- * @returns it, or nothing while the debug module isn't loaded
- */
-export const getStats = () => useDebug(debugGUI)?._getStats();
-
-/**
- * The stats panels' container CMP: the boot's.
- * @internal
- */
-export const getStatsCmp = () => useDebug(debugGUI)?._getStatsCmp();

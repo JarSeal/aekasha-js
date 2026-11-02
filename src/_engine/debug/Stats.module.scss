@@ -1,0 +1,104 @@
+// The on-screen stats panels (p807 D4, _dbg__StatsPanels.ts): one debugger root (compact) in the
+// bottom-left corner, on the tokens. Unlayered (p806 D9). Its background is `surface` at 80 %, as
+// the on-screen tools' groups (p806 D7), so the figures read over a white or a black scene.
+.stats {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-2);
+  padding: var(--aek-space-2);
+  border: 1px solid var(--aek-border);
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0 var(--aek-radius-md) 0 0;
+  background-color: color-mix(in srgb, var(--aek-surface) 80%, transparent);
+  color: var(--aek-text);
+  pointer-events: auto;
+  transition: opacity var(--aek-motion-base) ease-in-out;
+
+  // A row's panels apart, so one's figure doesn't run into the next one's label
+  &[data-orientation='horizontal'] {
+    flex-direction: row;
+    gap: var(--aek-space-5);
+  }
+}
+
+// The root as the profiler's button ("open from stats panels"): the ring inside, since the
+// viewport's edges would cut an outside one
+button.stats {
+  margin: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--aek-surface-hover) 90%, transparent);
+  }
+
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+}
+
+// A panel: its graph's width at one sample per CSS px (GRAPH_CAPACITY, 96 at the compact
+// density's `--aek-space-7`)
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--aek-space-7) * 4);
+  font-size: var(--aek-font-size-xs);
+  line-height: var(--aek-line-height-tight);
+}
+
+.head,
+.foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aek-space-2);
+  min-width: 0;
+}
+
+.label {
+  color: var(--aek-text-muted);
+  font-weight: var(--aek-font-weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.figure {
+  font-size: var(--aek-font-size-md);
+  font-variant-numeric: var(--aek-numeric-tabular);
+  white-space: nowrap;
+}
+
+.unit {
+  margin-inline-start: var(--aek-space-1);
+  color: var(--aek-text-muted);
+  font-size: var(--aek-font-size-xs);
+}
+
+.foot {
+  color: var(--aek-text-muted);
+  font-variant-numeric: var(--aek-numeric-tabular);
+  white-space: nowrap;
+}
+
+.range {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hz {
+  flex: none;
+}
+
+.graph {
+  --aek-time-series-height: var(--aek-space-7);
+  --aek-time-series-line-width: 1;
+
+  margin-top: var(--aek-space-1);
+}

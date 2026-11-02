@@ -1,12 +1,5 @@
-import Stats from 'stats-gl';
-import { TimestampQuery, type Renderer } from 'three/webgpu';
-import { getRenderer } from '../kernel/render/Renderer';
 import { createDebuggerTab, updateDebuggerTab } from './DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from './GPUMemory';
-import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
-import { CMP } from '../ui/core/CMP';
-import { DEBUGGER_ROOT_ATTR } from '../ui/overlays/OverlayStack';
-import type { CMPHandle } from '../ui/core/CMPTypes';
 import { defaultStatsOptions, type StatsOptions } from './Stats';
 import { setBootOverride } from '../features/physics/debug/_dbg__PhysicsBootOverrides';
 import { getConfig } from '../kernel/config/Config';
@@ -18,42 +11,19 @@ import {
   toggleProfilerWindow,
   type ProfilerSettings,
 } from './Profiler';
-import './Stats.scss';
+import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
+import { _getGpuTimerSupport } from './_dbg__GPUTimer';
+import {
+  _onStatsFrameEnd,
+  _onStatsFrameStart,
+  _recordPhysicsStep,
+  _removeStatsPanels,
+  _setStatsPanels,
+} from './_dbg__StatsPanels';
 
-type StatsPanel = {
-  update: (value: number, maxValue: number, decimals: number) => void;
-  updateGraph: (value: number, maxValue: number) => void;
-  /** stats-gl's own position slot. Inert here (see applyPanelOrder), but kept in sync with
-   * the displayed order anyway so the two mechanisms never disagree. */
-  id: number;
-  name: string;
-  canvas: HTMLCanvasElement;
-};
-
-/** stats-gl keeps its own four panels and the Hz overlay in fields its .d.ts marks private,
- * though they are ordinary public properties at runtime. Reaching them needs this cast; it
- * is the only part of this file that depends on stats-gl internals, so if a future version
- * renames them the breakage is confined here. */
-type StatsInternals = {
-  fpsPanel: StatsPanel | null;
-  msPanel: StatsPanel | null;
-  gpuPanel: StatsPanel | null;
-  gpuPanelCompute: StatsPanel | null;
-  vsyncPanel: { canvas: HTMLCanvasElement } | null;
-};
-
-/** Top-to-bottom display order, independent of the order the panels get created in — which
- * we don't control: stats-gl builds FPS, CPU, GPU and CPT in its constructor, then we add PHY
- * and TFPS. GPU/CPT are built before init() has checked for timestamp-query support, so they
- * get detached again once it settles if the renderer turns out not to support it. */
-const PANEL_ORDER = ['TFPS', 'FPS', 'CPU', 'PHY', 'GPU', 'CPT'];
-
-let stats: Stats | null = null;
-let statsCmp: CMPHandle | null = null;
-let physicsPanel: StatsPanel | null = null;
-let tFpsPanel: StatsPanel | null = null;
 const LS_KEY = 'AEK_debugStats';
 const STATS_TAB_ID = 'statsControls';
+const PROFILER_KEY_ID = 'sc-toggle-profiler';
 
 const statsConfig: StatsOptions = {
   trackFPS: true,
@@ -62,252 +32,78 @@ const statsConfig: StatsOptions = {
   trackGPU: false,
   trackCPT: false,
   trackHz: false,
-  logsPerSecond: undefined,
-  graphsPerSecond: undefined,
-  samplesLog: undefined,
-  samplesGraph: undefined,
-  precision: undefined,
   horizontal: false,
-  mode: undefined,
   enabled: true,
 };
 
-/** Every change reloads the app: the panels are only built once, at boot. */
-const RELOAD_NOTE = '(reloads the app)';
+/** The profiler's name with its key (CONFIG.ts' rebinding): 'Open the profiler (F8)' */
+const getProfilerTooltip = () => {
+  const chord = getDebugKeyChordLabel(PROFILER_KEY_ID);
+  return chord ? `Open the profiler (${chord})` : 'Open the profiler';
+};
+
+/** Shows the stats panels as the settings say (p807 D4), live: every toggle but PHY's. */
+const applyStatsSettings = () => {
+  const cfg = statsConfig;
+  if (!cfg.enabled) {
+    _removeStatsPanels();
+    return;
+  }
+  const isProfilerEntry = Boolean(getProfilerSettings()?.openFromStatsPanels);
+  _setStatsPanels({
+    panels: {
+      TFPS: Boolean(cfg.trackTFPS),
+      FPS: Boolean(cfg.trackFPS),
+      CPU: Boolean(cfg.trackCPU),
+      // PHY only while physics step tracking is on (a boot setting): with it off nothing
+      // measures, so the panel would sit at nothing and misrepresent physics as free
+      PHY: Boolean(getConfig().physics?.stepStatsEnabled),
+      GPU: Boolean(cfg.trackGPU),
+      CPT: Boolean(cfg.trackCPT),
+    },
+    // Hz is a line of the FPS panel
+    showHz: Boolean(cfg.trackHz && cfg.trackFPS),
+    horizontal: Boolean(cfg.horizontal),
+    activate: isProfilerEntry
+      ? {
+          label: 'Open the profiler',
+          tooltip: getProfilerTooltip(),
+          onActivate: toggleProfilerWindow,
+        }
+      : null,
+  });
+};
+
+/** A setting changed: the panels, and the tab (the Hz toggle's state follows FPS) */
+const onSettingChange = () => {
+  applyStatsSettings();
+  updateDebuggerTab(STATS_TAB_ID);
+};
 
 /**
- * Initializes statistics for debugging
- * @param config ({@link StatsOptions}) optional configurations for stats
- * @returns ({@link Stats} | null)
+ * Builds the stats panels from the Statistics tab's settings (p807 D4).
+ * @param config optional configurations for stats
  */
 export const _initStats = (config?: StatsOptions) => {
   Object.assign(statsConfig, defaultStatsOptions, config);
   // Registered first: the registration hydrates the persisted values into statsConfig, which
-  // the panels below are built from
+  // the panels are built from
   setDebuggerUI();
-  const cfg = statsConfig;
-  if (cfg.enabled) {
-    if (stats) stats.update();
-    stats = new Stats({
-      ...(cfg as Omit<StatsOptions, 'enabled'>),
-      // stats-gl builds FPS and CPU together, and only when trackFPS is on, so CPU would
-      // vanish along with FPS. Always build both; a switched-off one is detached below.
-      trackFPS: true,
-      // Hz is drawn as a small overlay inside the CPU panel, so with CPU off it would have
-      // nothing to sit on. The debug tab disables the Hz toggle in that case; this is the
-      // matching guard for an already-persisted combination.
-      trackHz: Boolean(cfg.trackHz && cfg.trackCPU),
-      // Minimal look is no longer offered: it hides every panel behind a click-to-cycle
-      // mode, which defeats the point of showing several at once. Forced off rather than
-      // merely dropped from the options, so a stale persisted `minimal: true` can't
-      // resurrect it.
-      minimal: false,
-    });
-    const internals = stats as unknown as StatsInternals;
-    // FPS and CPU can't be opted out of separately (see trackFPS above), so switching either
-    // off means detaching its canvas after the fact. Detaching (rather than
-    // display:none) because stats-gl's own window-resize handler re-asserts display:block
-    // on every panel it knows about, which would undo a hide on the first resize.
-    if (!cfg.trackFPS) internals.fpsPanel?.canvas.remove();
-    if (!cfg.trackCPU) internals.msPanel?.canvas.remove();
-    // PHY is only created when physics step tracking is on — with it off nothing ever
-    // measures, so the panel would sit permanently at zero and misrepresent physics as free.
-    if (getConfig().physics?.stepStatsEnabled) {
-      physicsPanel = stats.addPanel(new Stats.Panel('PHY', '#fff', '#212121')) as StatsPanel;
-    }
-    if (cfg.trackTFPS) {
-      tFpsPanel = stats.addPanel(new Stats.Panel('TFPS', '#fff', '#212121')) as StatsPanel;
-    }
-    statsCmp = CMP({
-      id: '_statsContainer',
-      class: ['statsContainer', KEEP_IN_VIEWS_CLASS, ...(!cfg.horizontal ? ['vertical'] : [])],
-      // An app's modal dialog leaves it live (p803 D7)
-      attr: { [DEBUGGER_ROOT_ATTR]: '' },
-    });
-    statsCmp.elem.appendChild(stats.dom);
-    // stats-gl only listens to clicks in its minimal mode, which is forced off above
-    statsCmp.elem.addEventListener('click', (e) => {
-      if (!getProfilerSettings()?.openFromStatsPanels) return;
-      e.stopPropagation();
-      toggleProfilerWindow();
-    });
-    getHUDRootCMP().add(statsCmp);
-    _applyProfilerEntryPoint();
-    // Ordered once now so nothing flashes in creation order, and again once init() settles,
-    // because that is when the GPU/CPT panels may get detached (no timestamp-query support,
-    // which stats-gl only checks in init()). Reordering on settle rather than on success: a
-    // renderer that fails to init must still leave the rest in the right order.
-    applyPanelOrder();
-    const renderer = getRenderer();
-    stats
-      .init(renderer)
-      .catch(() => undefined)
-      .then(() => {
-        if (!renderer?.hasFeature('timestamp-query')) {
-          internals.gpuPanel?.canvas.remove();
-          internals.gpuPanelCompute?.canvas.remove();
-        }
-        applyPanelOrder();
-      });
-  }
-  return stats;
+  applyStatsSettings();
 };
 
-/**
- * Lays the visible panels out in PANEL_ORDER, top to bottom.
- *
- * Note that stats-gl's own positioning plays no part in this. It places panels absolutely
- * from `panel.id`, but `.statsContainer` (Stats.scss) overrides every panel canvas
- * with `position: static !important` and lays `stats.dom` out as a flexbox — so what
- * actually decides the on-screen order is DOM order, and in the vertical (default) case
- * `flex-direction: column-reverse` means the FIRST DOM child renders at the BOTTOM. Hence
- * the reversal below. Ids are still kept in step with the visual order so the two mechanisms
- * can't contradict each other if that CSS is ever relaxed.
- *
- * Panels that are switched off have had their canvas detached, so they drop out of the flex
- * flow entirely and leave no gap behind.
- */
-const applyPanelOrder = () => {
-  if (!stats) return;
-  const internals = stats as unknown as StatsInternals;
-  const visible = [
-    internals.fpsPanel,
-    internals.msPanel,
-    internals.gpuPanel,
-    internals.gpuPanelCompute,
-    physicsPanel,
-    tFpsPanel,
-  ].filter((panel): panel is StatsPanel => Boolean(panel?.canvas.isConnected));
-  visible.sort((a, b) => PANEL_ORDER.indexOf(a.name) - PANEL_ORDER.indexOf(b.name));
+/** A rendered frame's end: the panels' figures (the main loop's). */
+export const _updateRestOfStats = () => _onStatsFrameEnd();
 
-  // Vertical stacks bottom-up (column-reverse), horizontal is a plain left-to-right row.
-  const domOrder = statsConfig.horizontal ? visible : [...visible].reverse();
-  for (let i = 0; i < domOrder.length; i++) stats.dom.appendChild(domOrder[i].canvas);
+/** A measured physics step: the PHY panel's figure. */
+export const _updatePhysicsPanel = (value: number) => _recordPhysicsStep(value);
 
-  for (let i = 0; i < visible.length; i++) visible[i].id = i;
-
-  positionVSyncOverlay(internals.vsyncPanel?.canvas, visible);
-};
-
-/**
- * Parks the Hz readout on top of the CPU panel.
- *
- * It has no panel of its own — it is a 35x9 canvas that stats-gl appends next to CPU and
- * nudges inwards with its own `transform: translate(56px, 35px)`. Left in the flex flow it
- * claims a slot of its own (a 35px column when horizontal, a 9px row when vertical), which
- * both pushes every later panel along and carries the readout off CPU and onto its
- * neighbour. Taking it out of the flow fixes the gap and the misalignment together.
- *
- * Absolute positioning has to be forced inline with `!important`, because .statsContainer
- * declares `position: static !important` on every canvas it holds and only an inline
- * important declaration outranks that. Offsets are then read from the CPU canvas — after the
- * overlay has left the flow, so the reflow that read triggers already reflects its absence —
- * and stats-gl's own translate still applies on top, so its inset stays its own business.
- */
-const positionVSyncOverlay = (canvas: HTMLCanvasElement | undefined, visible: StatsPanel[]) => {
-  if (!canvas) return;
-  const cpuPanel = visible.find((panel) => panel.name === 'CPU');
-  if (!cpuPanel) {
-    // Shouldn't happen (_initStats forces trackHz off without CPU), but an orphaned readout
-    // floating over an unrelated panel would be worse than none.
-    canvas.style.display = 'none';
-    return;
-  }
-  canvas.style.setProperty('position', 'absolute', 'important');
-  canvas.style.left = `${cpuPanel.canvas.offsetLeft}px`;
-  canvas.style.top = `${cpuPanel.canvas.offsetTop}px`;
-};
-
-export const _updateRestOfStats = (renderer: Renderer) => {
-  logicEndTime = performance.now();
-  logicDuration = logicEndTime - logicStartTime;
-  // stats-gl only reads renderer.info's timestamps for a three.js WebGPURenderer (it resolves
-  // them itself only on its native GPUDevice path), so resolving them stays our job.
-  if (statsConfig.trackCPT) renderer.resolveTimestampsAsync(TimestampQuery.COMPUTE);
-  if (statsConfig.trackGPU) renderer.resolveTimestampsAsync(TimestampQuery.RENDER);
-  updateTFPSPanel(logicDuration);
-};
-
-let prevCurrentTime = 0;
-let prevCurrentGraphsTime = 0;
-let maxTime = 0;
-let maxTimeCheckCount = 0;
-let maxTimeGraphs = 0;
-let maxTimeGraphsCheckCount = 0;
-export const _updatePhysicsPanel = (value: number) => {
-  const currentTime = performance.now();
-  maxTime = Math.max(maxTime, value);
-  maxTimeGraphs = Math.max(maxTimeGraphs, value);
-  if (currentTime >= prevCurrentTime + 1000 / (stats?.logsPerSecond || 4)) {
-    physicsPanel?.update(value, maxTime, 1);
-    prevCurrentTime = currentTime;
-    maxTimeCheckCount++;
-    if (maxTimeCheckCount > 2 * (stats?.logsPerSecond || 4)) {
-      maxTime = 0;
-      maxTimeCheckCount = 0;
-    }
-  }
-  if (currentTime >= prevCurrentGraphsTime + 1000 / (stats?.graphsPerSecond || 30)) {
-    physicsPanel?.updateGraph(value, maxTimeGraphs * 1.5);
-    prevCurrentGraphsTime = currentTime;
-    maxTimeGraphsCheckCount++;
-    if (maxTimeGraphsCheckCount > 4 * (stats?.graphsPerSecond || 4)) {
-      maxTimeGraphs = 0;
-      maxTimeGraphsCheckCount = 0;
-    }
-  }
-};
-
-let logicStartTime = 0;
-let logicEndTime = 0;
-let logicDuration = 0;
-export const _startCustomMeasurements = () => {
-  logicStartTime = performance.now();
-};
-
-let tFpsPrevCurrentTime = 0;
-let tFpsPrevCurrentGraphsTime = 0;
-let tFpsMax = 0;
-// The last TFPS_SAMPLES logic durations in a ring, with their running sum (no allocation per frame)
-const TFPS_SAMPLES = 60;
-const tFpsSamples = new Float64Array(TFPS_SAMPLES);
-let tFpsSampleHead = 0;
-let tFpsSampleCount = 0;
-let tFpsSampleSum = 0;
-const updateTFPSPanel = (duration: number) => {
-  // Absent when TFPS tracking is off — skip the sampling work too, not just the draw.
-  if (!tFpsPanel) return;
-  const currentTime = performance.now();
-  if (tFpsSampleCount === TFPS_SAMPLES) {
-    tFpsSampleSum -= tFpsSamples[tFpsSampleHead];
-  } else {
-    tFpsSampleCount++;
-  }
-  tFpsSamples[tFpsSampleHead] = duration;
-  tFpsSampleSum += duration;
-  tFpsSampleHead = (tFpsSampleHead + 1) % TFPS_SAMPLES;
-  const avgDuration = tFpsSampleSum / tFpsSampleCount;
-  if (currentTime >= tFpsPrevCurrentTime + 1000 / (stats?.logsPerSecond || 4)) {
-    const tfps = 1000 / avgDuration;
-    tFpsPanel?.update(tfps, tFpsMax, 0);
-    tFpsPrevCurrentTime = currentTime;
-  }
-  if (currentTime >= tFpsPrevCurrentGraphsTime + 1000 / (stats?.graphsPerSecond || 30)) {
-    const tfps = 1000 / avgDuration;
-    tFpsMax = Math.max(10, tFpsMax, tfps);
-    tFpsPanel?.updateGraph(tfps, tFpsMax * 1.25);
-    tFpsPrevCurrentGraphsTime = currentTime;
-  }
-};
-
-/**
- * Returns the stats 'stats-gl' instance
- * @returns ({@link Stats} | null)
- */
-export const _getStats = () => stats;
+/** A main loop frame's start: the CPU span's start and the refresh rate's interval. */
+export const _startCustomMeasurements = () => _onStatsFrameStart();
 
 const setDebuggerUI = () => {
-  const reloadApp = () => location.reload();
+  // GPU and CPT need timestamp queries
+  const hasNoGpuTimer = () => _getGpuTimerSupport() === 'NONE';
   createDebuggerTab({
     id: STATS_TAB_ID,
     title: 'Statistics',
@@ -347,38 +143,49 @@ const setDebuggerUI = () => {
             {
               type: 'folder',
               id: 'performance',
-              title: `Performance Measuring ${RELOAD_NOTE}`,
+              title: 'Performance Measuring',
               content: [
-                { key: 'enabled', label: 'Enable measuring', onChange: reloadApp },
+                { key: 'enabled', label: 'Enable measuring', onChange: onSettingChange },
                 // Ordered to mirror the panels' own top-to-bottom order on screen
-                // (PANEL_ORDER), so the toggle list reads the same way the display does.
-                { key: 'trackTFPS', label: 'Track TFPS', onChange: reloadApp },
-                { key: 'trackFPS', label: 'Track FPS', onChange: reloadApp },
-                { key: 'trackCPU', label: 'Track CPU', onChange: reloadApp },
-                // Hz has no panel of its own — it is an overlay drawn inside the CPU panel —
-                // so it is only offered while CPU is on. _initStats forces it off for any
-                // already-persisted combination where CPU is off.
+                // (STATS_PANEL_ORDER), so the toggle list reads the same way the display does.
+                { key: 'trackTFPS', label: 'Track TFPS', onChange: onSettingChange },
+                { key: 'trackFPS', label: 'Track FPS', onChange: onSettingChange },
+                { key: 'trackCPU', label: 'Track CPU', onChange: onSettingChange },
+                // Hz has no panel of its own (a line of the FPS panel), so it is only offered
+                // while FPS is on; applyStatsSettings leaves it out of a persisted combination
+                // where FPS is off.
                 {
                   key: 'trackHz',
-                  label: 'Track Hz (showed in CPU panel)',
-                  disabled: () => !statsConfig.trackCPU,
-                  onChange: reloadApp,
+                  label: 'Track Hz (shown in the FPS panel)',
+                  disabled: () => !statsConfig.trackFPS,
+                  onChange: onSettingChange,
                 },
+                // A boot setting: physics' step stats are configured at boot
                 {
                   key: 'stepStatsEnabled',
                   target: physicsStepTrackingProxy,
-                  label: 'Track PHY',
+                  label: 'Track PHY (after a reload)',
                   onChange: (value) => setBootOverride({ stepStatsEnabled: Boolean(value) }),
                 },
-                { key: 'trackGPU', label: 'Track GPU', onChange: reloadApp },
-                { key: 'trackCPT', label: 'Track CPT', onChange: reloadApp },
+                {
+                  key: 'trackGPU',
+                  label: 'Track GPU',
+                  disabled: hasNoGpuTimer,
+                  onChange: onSettingChange,
+                },
+                {
+                  key: 'trackCPT',
+                  label: 'Track CPT',
+                  disabled: hasNoGpuTimer,
+                  onChange: onSettingChange,
+                },
               ],
             },
             {
               type: 'folder',
               id: 'outlook',
-              title: `Measuring Outlook ${RELOAD_NOTE}`,
-              content: [{ key: 'horizontal', label: 'Horizontal', onChange: reloadApp }],
+              title: 'Measuring Outlook',
+              content: [{ key: 'horizontal', label: 'Horizontal', onChange: onSettingChange }],
             },
             {
               type: 'button',
@@ -394,7 +201,7 @@ const setDebuggerUI = () => {
                 {
                   type: 'button',
                   label: 'Profiler',
-                  title: 'Open profiler (F8)',
+                  title: getProfilerTooltip(),
                   onClick: toggleProfilerWindow,
                 },
                 {
@@ -415,19 +222,9 @@ const setDebuggerUI = () => {
   // - texture count, texture sizes, list of textures (and type, sizes, dimensions)
 };
 
-export const _getStatsCmp = () => statsCmp;
-
-/** The stats panels show that a click opens the profiler (when its setting allows it), and the
- * Statistics tab's toggle of the setting is refreshed. */
+/** The profiler's "open from stats panels" setting changed: the panels become its button or a
+ * group, and the Statistics tab's toggle of it is refreshed. */
 export const _applyProfilerEntryPoint = () => {
-  if (statsCmp) {
-    const isOn = Boolean(getProfilerSettings()?.openFromStatsPanels);
-    statsCmp.elem.style.cursor = isOn ? 'pointer' : '';
-    if (isOn) {
-      statsCmp.elem.title = 'Open the profiler';
-    } else {
-      statsCmp.elem.removeAttribute('title');
-    }
-  }
+  applyStatsSettings();
   updateDebuggerTab(STATS_TAB_ID);
 };

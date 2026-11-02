@@ -238,7 +238,8 @@ memory.refresh(); // the figures again: only the cells whose text changed are wr
   every shown column has a `width`, the table's layout is fixed, which lays out faster); `hidden`
   leaves it out; `headerTooltip` says what it holds. `tone` gives a cell a status (`'info'`,
   `'success'`, `'warning'`, `'danger'`): its colour and a mark before the text, never the colour
-  alone, so let the text say it too.
+  alone, so let the text say it too. `'muted'` is a figure that isn't one ("n/a", "none"): the
+  muted text at the regular weight, no mark.
 - **Sorting.** A `sortable` column's header is a button: ascending, then descending (then the
   rows' own order with `sortUnset`), its mark the direction and `aria-sort` on the header, the
   change announced ("Sorted by Size, descending"). The rows and each group are sorted apart, the
@@ -554,6 +555,49 @@ requestAnimationFrame(tick);
 | Custom properties | `--aek-time-series-height` (the plot's), `--aek-time-series-line-width` (read with the colours), `--aek-time-series-grid-color`, `--aek-time-series-swatch` (a summary line's, written by it)                                                |
 | Keys              | None                                                                                                                                                                                                                                         |
 | Assistive tech    | The plot `aria-hidden`; the summary plain text in reading order, not live                                                                                                                                                                    |
+
+### A frame graph in your HUD
+
+The debugger's [stats panels](hub:features/debug-suite#stats-panels) are time series: a label,
+the figure as text written four times a second, and under it a graph with no summary or ticks,
+since the figure beside it says what it shows. The same for a frame time in your own HUD:
+
+```ts
+import { createTimeSeries, getHUDRootCMP } from 'aekasha/ui';
+
+const panel = getHUDRootCMP().add({ class: 'framePanel' });
+panel.add({ tag: 'span', text: 'Frame' });
+const figure = panel.add({ tag: 'span', text: '–' });
+const graph = createTimeSeries({
+  series: [{ label: 'Frame', color: 'var(--aek-text-muted)' }],
+  capacity: 120, // one sample per CSS px of a 120 px panel
+  summary: false,
+  ticks: false,
+  height: 32,
+});
+panel.add(graph.cmp);
+
+let last = performance.now();
+let untilText = 0;
+const tick = (now: number) => {
+  const ms = now - last;
+  last = now;
+  graph.push(ms); // drawn once this frame, nothing allocated
+  untilText -= ms;
+  if (untilText <= 0) {
+    untilText = 250; // 4 times a second: a figure changing every frame can't be read
+    figure.updateText(`${ms.toFixed(1)} ms`);
+  }
+  requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
+```
+
+- A graph pushed every frame shows every frame's time. The stats panels push 30 times a second
+  instead, each sample the worst frame since the last, so a hitch still shows and the graph
+  spans more time on the same width.
+- The muted text colour keeps the line out of the game's way. A status colour belongs to a
+  [threshold](#time-series), whose text says why.
 
 ## Stat tiles
 

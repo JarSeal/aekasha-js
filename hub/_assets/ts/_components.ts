@@ -19,9 +19,8 @@
  * The demos are in `_library/`, a module per group of the UI kit section's pages (p805 D15):
  * the core page's `core.ts` and `layout.ts`, `overlays.ts`, the forms pages' `fields.ts`,
  * `editors.ts` and `containers.ts`, the data page's `data.ts` and `graphs.ts`, the dev page's
- * `stress.ts` and `parity.ts` (the debugger parity box, its tables in `parityTables.ts`), and
- * `page.ts`, the parts they share. Each exports its demos by box key, and this merges them; their checks are
- * `_componentChecks.ts`' (`_library/*Checks.ts`).
+ * `stress.ts`, and `page.ts`, the parts they share. Each exports its demos by box key, and this
+ * merges them; their checks are `_componentChecks.ts`' (`_library/*Checks.ts`).
  */
 import { registerBuiltInIcons } from 'aekasha/ui';
 import { CONTAINERS_DEMOS } from './_library/containers';
@@ -35,7 +34,6 @@ import { PALETTE_DEMOS } from './_library/palette';
 import { LAYOUT_DEMOS } from './_library/layout';
 import { getKitRoot } from './_kitRoot';
 import { kitRoots, type Demo } from './_library/page';
-import { PARITY_DEMOS } from './_library/parity';
 import { STRESS_DEMOS } from './_library/stress';
 
 const DEMOS: Record<string, Demo> = {
@@ -49,7 +47,6 @@ const DEMOS: Record<string, Demo> = {
   ...DATA_DEMOS,
   ...GRAPHS_DEMOS,
   ...STRESS_DEMOS,
-  ...PARITY_DEMOS,
 };
 
 // --- The page ---

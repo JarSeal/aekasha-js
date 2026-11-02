@@ -229,10 +229,12 @@ describe('table (p805 D5): its parts', () => {
           label: 'Count',
           tone: (item) => (isLow && item.id === 'tex' ? 'danger' : null),
         },
+        { key: 'na', label: 'Budget', value: () => 'none', tone: () => 'muted' },
       ],
     });
     const cell = getRow(table, 'tex').children[1];
     expect(cell.getAttribute('data-tone')).toBe('danger');
+    expect(getRow(table, 'tex').children[2].getAttribute('data-tone')).toBe('muted');
     isLow = false;
     table.refresh();
     expect(cell.hasAttribute('data-tone')).toBe(false);

@@ -6,7 +6,8 @@
 // painted on the row through `--aek-table-row-tint` (the table's own), so a sticky cell, which
 // needs an opaque background (`--aek-table-bg`), paints the same tint over it. A column's
 // highlight is its `<col>`'s background, under the rows'. A tone is its status colour and a mark
-// (never the colour alone; the mark is said as nothing: the text says the status). A sorted
+// (never the colour alone; the mark is said as nothing: the text says the status), `muted` the
+// muted text without a mark. A sorted
 // column's mark is a shape (one triangle of two), a selected row the accent's soft tint and a bar
 // at its start; a grid's cells draw their ring inside (the scroll box would cut it).
 
@@ -369,7 +370,14 @@ $sticky-bg: var(--aek-table-bg, var(--aek-surface));
     }
   }
 
-  :where(.aekTable__cell[data-tone])::before {
+  // A figure that isn't one ("n/a"): muted, no mark (its text says it), the regular weight over a
+  // column's own
+  :where(.aekTable__cell[data-tone='muted']) {
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-regular);
+  }
+
+  :where(.aekTable__cell[data-tone]:not([data-tone='muted']))::before {
     display: inline-block;
     min-width: 1em;
     margin-inline-end: var(--aek-space-1);

@@ -1,12 +1,38 @@
-// The profiler window's GPU memory tab (p806 D9: on the tokens, unlayered). Its HTML strings are
-// p807's to rewrite on the kit's tables and bars.
+// The profiler window's GPU memory tab (p806 D9: on the tokens, unlayered): the layout around the
+// kit's tables and stacked bar (p807 D8). Their headings, notes and two-line names are the
+// profiler's global classes (Profiler.module.scss).
 
-.gpuMemorySummary {
-  padding: var(--aek-space-2) var(--aek-space-2) var(--aek-space-4);
-  color: var(--aek-text);
-  font-size: var(--aek-font-size-sm);
+// A section (_dbg__GPUMemoryView.ts, _dbg__GPUMemorySnapshotView.ts): its tables across the tab,
+// figures tabular on one line, a long name (an asset's, a source's id) broken
+.gpuMemorySection {
+  :global(.aekTable) + :global(.aekTable),
+  :global(.aekTable) + :global(.profilerNote),
+  :global(.profilerNote) + :global(.aekTable) {
+    margin-top: var(--aek-space-4);
+  }
+
+  :global(.aekTable__table) {
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th:global(.aekTable__cell) {
+    font-weight: var(--aek-font-weight-regular);
+    word-break: break-word;
+  }
+
+  // A figure on one line: the names wrap instead
+  td:global(.aekTable__cell) {
+    white-space: nowrap;
+  }
 }
 
+.gpuMemoryTotals[hidden],
+.gpuMemorySnapshot[hidden] {
+  display: none;
+}
+
+// "Total" and its figure: the tab's and the snapshot's
 .gpuMemoryTotalRow {
   display: flex;
   justify-content: space-between;
@@ -19,105 +45,26 @@
   }
 }
 
-.gpuMemoryBar {
-  height: var(--aek-space-3);
-  border-radius: var(--aek-radius-sm);
-  background-color: color-mix(in srgb, var(--aek-text) 8%, transparent);
-  overflow: hidden;
-}
+// The budget's share under its bar; over it, the danger colour with its words
+.gpuMemoryBudgetText {
+  margin: var(--aek-space-2) 0 var(--aek-space-4);
 
-.gpuMemoryBarFill {
-  height: 100%;
-  background-color: var(--aek-success);
-  transition: width var(--aek-motion-base) var(--aek-ease-standard);
-
-  .gpuMemoryOverBudget & {
-    background-color: var(--aek-danger);
-  }
-}
-
-.gpuMemoryBarLabel {
-  margin-top: var(--aek-space-2);
-
-  .gpuMemoryOverBudget & {
+  &[data-over] {
     color: var(--aek-danger);
   }
 }
 
-.gpuMemoryNote {
-  margin-top: var(--aek-space-3);
-  color: var(--aek-text-muted);
-}
+// By owner: an owner's name, its cells indented under it, the current scene's badge beside it
+.gpuMemoryOwner {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--aek-space-2);
 
-.gpuMemoryHeading {
-  margin: 0 0 var(--aek-space-3);
-  font-size: var(--aek-font-size-md);
-  font-weight: var(--aek-font-weight-semibold);
-}
-
-.gpuMemoryTable {
-  width: 100%;
-  margin-top: var(--aek-space-4);
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-
-  th {
-    color: var(--aek-text-muted);
-    font-weight: var(--aek-font-weight-regular);
-    text-align: right;
-    vertical-align: bottom;
+  &[data-level='1'] {
+    padding-left: var(--aek-space-4);
   }
 
-  td {
-    padding: var(--aek-space-1) 0;
-    text-align: right;
-    white-space: nowrap;
+  :global(.aekBadge[hidden]) {
+    display: none;
   }
-
-  th:first-child,
-  td:first-child {
-    text-align: left;
-  }
-
-  th + th,
-  td + td {
-    padding-left: var(--aek-space-3);
-  }
-
-  tfoot td {
-    border-top: 1px solid var(--aek-border-strong);
-    font-weight: var(--aek-font-weight-semibold);
-  }
-
-  tbody tr:hover {
-    background-color: var(--aek-surface-hover);
-  }
-}
-
-.gpuMemoryCurrent td:first-child {
-  font-weight: var(--aek-font-weight-semibold);
-}
-
-.gpuMemoryCell td:first-child {
-  padding-left: var(--aek-space-4);
-}
-
-.gpuMemoryUntracked td {
-  color: var(--aek-text-muted);
-  font-style: italic;
-}
-
-.gpuMemoryDim {
-  color: var(--aek-text-muted);
-}
-
-.gpuMemoryTable td.gpuMemoryWrap {
-  white-space: normal;
-  word-break: break-word;
-  text-align: left;
-  vertical-align: top;
-}
-
-.gpuMemoryTable td.gpuMemoryWrap ~ td {
-  vertical-align: top;
 }

@@ -123,6 +123,12 @@ export const createSparkline = (props: SparklineProps = {}): Sparkline => {
 
   /** The i-th value held, oldest first */
   const valueAt = (i: number) => ring[(head - count + i + capacity) % capacity];
+  /** Each slot's x as text, made once (a value's slot is its place from the left edge): a draw
+   * formats only the y's */
+  const xTexts: string[] = [];
+  for (let s = 0; s < capacity; s++) {
+    xTexts.push(String(capacity > 1 ? round((s / (capacity - 1)) * SIZE) : SIZE));
+  }
 
   const draw = () => {
     let lo = Infinity;
@@ -138,25 +144,30 @@ export const createSparkline = (props: SparklineProps = {}): Sparkline => {
     const span = hi - lo;
     const toY = (value: number) =>
       span > 0 ? round(SIZE - Math.min(1, Math.max(0, (value - lo) / span)) * SIZE) : SIZE / 2;
-    const toX = (i: number) =>
-      capacity > 1 ? round(((capacity - count + i) / (capacity - 1)) * SIZE) : SIZE;
+    const toX = (i: number) => xTexts[capacity - count + i];
 
     let lineD = '';
     let areaD = '';
     let runStart = -1;
+    /** Where the run's points start in `lineD`: the area repeats them */
+    let runFrom = 0;
     for (let i = 0; i <= count; i++) {
       const value = i < count ? valueAt(i) : NaN;
       if (Number.isFinite(value)) {
-        const point = `${toX(i)} ${toY(value)}`;
-        lineD += runStart < 0 ? `M${point}` : `L${point}`;
-        if (area) areaD += runStart < 0 ? `M${toX(i)} ${SIZE}L${point}` : `L${point}`;
-        if (runStart < 0) runStart = i;
+        if (runStart < 0) {
+          runStart = i;
+          runFrom = lineD.length;
+          lineD += `M${toX(i)} ${toY(value)}`;
+        } else lineD += `L${toX(i)} ${toY(value)}`;
         continue;
       }
       if (runStart < 0) continue;
+      // Down from the run's first point, along its points (its `M` dropped) and down again
+      if (area) {
+        areaD += `M${toX(runStart)} ${SIZE}L${lineD.slice(runFrom + 1)}L${toX(i - 1)} ${SIZE}Z`;
+      }
       // A run of one point: a segment of no length, which the round cap draws as a dot
-      if (runStart === i - 1) lineD += `L${toX(runStart)} ${toY(valueAt(runStart))}`;
-      if (area) areaD += `L${toX(i - 1)} ${SIZE}Z`;
+      if (runStart === i - 1) lineD += `L${lineD.slice(runFrom + 1)}`;
       runStart = -1;
     }
     line.setAttribute('d', lineD);
@@ -164,7 +175,7 @@ export const createSparkline = (props: SparklineProps = {}): Sparkline => {
 
     const last = count ? valueAt(count - 1) : NaN;
     if (Number.isFinite(last)) {
-      const x = String(toX(count - 1));
+      const x = toX(count - 1);
       const y = String(toY(last));
       dot.setAttribute('x1', x);
       dot.setAttribute('x2', x);

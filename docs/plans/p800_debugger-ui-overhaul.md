@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805 and p806 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805, p806 and p807 done; the rest not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -695,8 +695,9 @@ What follows is the sketch as written.
 
 ### p806 — Debugger migration (engine 6.0.0)
 
-Done: `_DONE_p806_debugger-migration.md` (2026-11-01, on the `engine-6` branch: engine 6.0.0
-when `engine-6` merges to `main`, `CHANGELOG.md`'s unreleased `engine-6` entry). What the later
+Done: `_DONE_p806_debugger-migration.md` (2026-11-01; merged into `main` with PR #73, not into
+`engine-6` as §6 had it: `main` carries the unreleased engine 6.0.0 work, under `CHANGELOG.md`'s
+unreleased `engine-6` entry, the bump p622's). What the later
 plans build on, each written there:
 
 - **The tab contract** (its D3): every 5.x function, `DebuggerTabDef` field, section and item
@@ -753,6 +754,35 @@ What follows is the sketch as written.
 
 ### p807 — Stats and profiler graphs
 
+Done: `_DONE_p807_stats-and-profiler-graphs.md` (2026-11-02; Phases 0-7). On its own branch from
+`main`, merging into `main`; no public type changes, and its changelog sections join the
+unreleased `engine-6` entry with no version bump (its D2). What the later plans build on, each written there:
+
+- **The gate** (its D3, Phases 0-2, in the Windows Chrome on the real GPU, both backends): FPS
+  and GPU agree with stats-gl's (GPU to 0.01 ms on WebGPU); stats-gl's "CPU" was 7-15 % of the
+  main loop's (the render's submission left out), so ours says what it spans; ours cost within
+  stats-gl's noise and allocate about 95 % less. `stats-gl` left `package.json`.
+- **The stats panels** (its D4, `_dbg__StatsPanels.ts`): one debugger root of kit time series on
+  the profiler's definitions, settings applied live, a button to the profiler named by its
+  content (an `aria-label` without the visible figures fails WCAG 2.5.3).
+- **GPU timing has one owner** (its D5): `_dbg__GPUTimer.ts` with compute, the frame records in
+  `_dbg__GPUFrameTimes.ts`, WebGL too (a frame's started contexts sum to its GPU time, nested or
+  not).
+- **The profiler's tabs on the kit** (its D6-D9): tables, the stacked bar, sparklines, a list and
+  a segmented control, written in place, so a sort, the focus and the scroll survive a refresh.
+  Nothing in the debugger writes table or SVG HTML, and `Stats.scss`, the last debugger
+  stylesheet off the tokens, went. The kit's table gained the `'muted'` tone. The profiler now
+  hears a scene change (`updateProfilerScene`), so an app's profiler tab is rebuilt as a drawer
+  tab is.
+- **Left open** (its Phase 5): a kit table on a scheduler allocates per render (a "rows
+  unchanged" path would remove it), the time series' empty animation frame after a draw, the 3D
+  symbols' and light helpers' per-frame allocations (outside its scope), p806's leftovers measured
+  and left.
+- **Size:** the debug chunks 1.6 kB gzip smaller (stats-gl's 10.3 gone); production's first
+  downloads unchanged.
+
+What follows is the sketch as written.
+
 - Phase 0 is a gate: our stats panels (FPS, CPU, GPU, compute, physics, target FPS) on p805's
   running graph and `_dbg__GPUTimer.ts`, compared with stats-gl on both backends for accuracy,
   cost per frame and the timestamp query budget. If it passes, `stats-gl` is removed and the GPU
@@ -786,11 +816,11 @@ Every PR into `main` runs `yarn checkVersions --against main` and bumps what it 
 per merge). The children are written and started one or two at a time; p804 and p805 can run in
 parallel branches.
 
-| Plans                                    | Branch                    | Merges into                                       | PR                                                                                                                                          |
-| ---------------------------------------- | ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| p801, p802, p803, p804, p805, p808, p809 | each its own, from `main` | `main`                                            | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                 |
-| p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` in p806 Phase 0)      | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
-| p807                                     | its own                   | `main`, or `engine-6` if it changes a public type | one when its last phase is done                                                                                                             |
+| Plans                                    | Branch                    | Merges into                                  | PR                                                                                                                                          |
+| ---------------------------------------- | ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| p801, p802, p803, p804, p805, p808, p809 | each its own, from `main` | `main`                                       | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                 |
+| p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` in p806 Phase 0) | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
+| p807                                     | its own, from `main`      | `main` (no public type changes; p807 D2)     | one when its last phase is done; its changelog joins the unreleased `engine-6` entry, no bump                                               |
 
 One exception to "one PR per plan": p802's Phase 1 (the dev-only pages) is its own PR into `main`
 (`p802-dev-pages`), merged before p801 starts, since p801's font study needs a dev-only page
@@ -798,8 +828,10 @@ One exception to "one PR per plan": p802's Phase 1 (the dev-only pages) is its o
 
 If p806 is ready long before p622 is scheduled, `engine-6` is cut then and kept rebased on `main`;
 p622 is expanded into a full plan at that point (its stub says so). That's how it went: `engine-6`
-was cut from `main` in p806's Phase 0 (2026-10-28, at `3adfac2b`), p806 merges into it, and p622
-is still a stub, expanded when the major is scheduled.
+was cut from `main` in p806's Phase 0 (2026-10-28, at `3adfac2b`) and p622 is still a stub,
+expanded when the major is scheduled. p806 itself merged into `main` (PR #73, `dc2b28ad`), so
+`main` carries the unreleased 6.0.0 work and `engine-6` is behind it: the later children branch
+from `main`, join the unreleased `engine-6` changelog entry and bump nothing until p622 (p807 D2).
 
 ---
 

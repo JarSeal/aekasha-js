@@ -390,6 +390,10 @@ export const createTable = <T>(props: TableProps<T>): Table<T> => {
     for (const record of allRecords) writeRowState(record);
   };
 
+  /** The keys and group keys a read met, made once (a live table reads at every refresh) */
+  const seen = new Set<string>();
+  const seenGroups = new Set<string>();
+
   /** Reads the rows, groups and footer into records (a key's first place wins), sorts each
    * section, works out the bars' lengths, drops the records that went and lists the selection's
    * order and the grid's rows: whether a selected key went */
@@ -398,7 +402,8 @@ export const createTable = <T>(props: TableProps<T>): Table<T> => {
     const groups = read(groupsSource);
     const footer = read(footerSource);
     const sorter = getSorter();
-    const seen = new Set<string>();
+    seen.clear();
+    seenGroups.clear();
     const all: TableRowRecord<T>[] = [];
     const take = (list: readonly T[], isFoot: boolean) => {
       const records: TableRowRecord<T>[] = [];
@@ -424,7 +429,6 @@ export const createTable = <T>(props: TableProps<T>): Table<T> => {
 
     bodyRecords = take(rows, false);
     shownGroups = [];
-    const seenGroups = new Set<string>();
     for (const group of groups) {
       if (seenGroups.has(group.key)) continue;
       seenGroups.add(group.key);

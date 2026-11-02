@@ -106,6 +106,12 @@ const getBadges = (row: HTMLElement) =>
 
 beforeAll(async () => {
   await stubKitDomAsync();
+  // The keys' names as on Windows and Linux (Node's navigator says the host's platform: on macOS
+  // the hints would be ⌃ ⇧ ⌥ ⌘)
+  Object.defineProperty(globalThis.navigator, 'platform', {
+    value: 'Linux x86_64',
+    configurable: true,
+  });
   // A root for the dialog's content (the overlay stack's listeners need a kit root's element)
   document.body.appendChild(CMP({ id: 'hudRoot', idAttr: true, class: 'aekUi' }).elem);
 });

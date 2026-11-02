@@ -7,7 +7,8 @@ import { getTexture } from '../assets/Texture';
 import { toThreeColor } from '../render/ThreeMath';
 import { initMainLoop } from '../loop/MainLoop';
 import { updateDebuggerSceneTitle } from '../../debug/DebuggerGUI';
-import { IS_DEBUG_ENV } from '../config/Config';
+import { updateProfilerScene } from '../../debug/Profiler';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import type { LightProps } from '../light/Light';
 import type { ImportAssetParams } from '../assets/import/ImportTypes';
 import { runSceneRegisteredHooks } from './SceneHooks';
@@ -246,6 +247,8 @@ export const setCurrentScene = (id: string | null) => {
   if (IS_DEBUG_ENV) {
     updateDebuggerSceneTitle(opts?.name || id || nextScene?.userData.id || '[No scene..]');
   }
+  // The profiler loads in prod test mode too
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) updateProfilerScene();
 
   if (rootScene.children.length) initMainLoop();
 

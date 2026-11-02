@@ -1,4 +1,5 @@
-import { CMP } from '../../ui/core/CMP';
+import { createTable } from '../../ui/data/Table';
+import type { TableColumn, TableGroup, TableTone } from '../../ui/data/TableTypes';
 import type { AnyDebuggerTabDef } from '../DebuggerGUI';
 import {
   _getStatsSources,
@@ -36,18 +37,15 @@ type OverviewSample = {
   get: <T>(id: string) => StatsReading<T>;
 };
 
-type MetricAction = { label: string; title: string; run: () => void };
-
 type MetricValue = {
   value: string;
   /** Small secondary text (min / max, "in view / total", a qualifier). */
   sub?: string;
   /** Why the metric has no value right now. */
   na?: string;
-  /** The figure needs attention (eg. physics sub-steps at their ceiling). */
-  warn?: boolean;
-  /** A button after the secondary text (eg. turning a boot-time measurement on). */
-  action?: MetricAction;
+  /** Why the figure needs attention, in words (eg. physics sub-steps at their ceiling): the
+   * detail's first words, beside the value's warning tone. */
+  warn?: string;
 };
 
 type OverviewMetric = {
@@ -122,7 +120,6 @@ const readPhysics = (s: OverviewSample): MetricValue => {
   if (subSteps.na) return { value: '—', na: subSteps.na };
 
   const parts: string[] = [];
-  let warn = false;
   const result: MetricValue = { value: '—' };
   if (step.na) {
     result.na = step.na;
@@ -143,12 +140,10 @@ const readPhysics = (s: OverviewSample): MetricValue => {
     const { subSteps: stat, maxSubSteps } = subSteps.value;
     parts.push(`sub-steps ${stat.avg.toFixed(1)}/frame (max ${stat.max})`);
     if (maxSubSteps > 0 && stat.max >= maxSubSteps) {
-      warn = true;
-      parts.push(`at the ${maxSubSteps} ceiling`);
+      result.warn = `sub-steps at the ${maxSubSteps} ceiling`;
     }
   }
   result.sub = parts.join(' · ');
-  result.warn = warn;
   return result;
 };
 
@@ -347,7 +342,7 @@ const OVERVIEW_METRICS: OverviewMetric[] = [
     read: fromSource<LongTaskStats>(PROFILER_SOURCE.LONG_TASKS, (l) => ({
       value: String(l.count),
       sub: l.count ? `in the last second · longest ${formatMs(l.longestMs)}` : 'in the last second',
-      warn: l.count > 0,
+      warn: l.count > 0 ? 'the main thread was blocked' : undefined,
     })),
   },
   {
@@ -478,21 +473,37 @@ export const getOverviewMetricLabel = (id: string) => {
   return source ? source.label : `${id.slice(APP_METRIC_PREFIX.length)} (not registered)`;
 };
 
-// RENDERING
+// THE TABLE (p807 D6: built once per mount, its figures written by `setCell` where they changed)
 
-const HTML_ESCAPES: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
+/** A shown row: its metric id, and its label, figures and value's tone as last written to the
+ * table. */
+type OverviewRow = {
+  id: string;
+  label: string;
+  value: string;
+  detail: string;
+  tone: TableTone | null;
 };
-export const escapeProfilerHtml = (text: string) =>
-  text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
-const esc = escapeProfilerHtml;
 
-/** The shown rows' actions of the last render, by metric id (the table's click handler). */
-const shownActions = new Map<string, MetricAction>();
+/** What a metric without a value shows in the Value column (its reason is the detail's text). */
+const NA_VALUE = 'n/a';
+
+const OVERVIEW_COLUMNS: TableColumn<OverviewRow>[] = [
+  { key: 'label', label: 'Metric', rowHeader: true },
+  // A warning's tone, or n/a muted (the word, its reason the detail's)
+  { key: 'value', label: 'Value', align: 'end', tone: (row) => row.tone },
+  { key: 'detail', label: 'Detail' },
+];
+
+const NO_GROUPS: TableGroup<OverviewRow>[] = [];
+
+/** A metric's detail: its warning's words, its n/a reason, then its secondary text. */
+const getDetail = ({ sub, na, warn }: MetricValue) => {
+  let detail = warn ?? '';
+  if (na) detail += detail ? ` · ${na}` : na;
+  if (sub) detail += detail ? ` · ${sub}` : sub;
+  return detail;
+};
 
 /** The shown rows: the engine metrics, then the registered app sources, each in list order. */
 const getVisibleRows = (settings: ProfilerSettings) => {
@@ -513,9 +524,10 @@ const getVisibleRows = (settings: ProfilerSettings) => {
   return { metrics, appSources };
 };
 
-const getVisibleSourceIds = (settings: ProfilerSettings) => {
+type VisibleRows = ReturnType<typeof getVisibleRows>;
+
+const getVisibleSourceIds = ({ metrics, appSources }: VisibleRows) => {
   const ids: string[] = [];
-  const { metrics, appSources } = getVisibleRows(settings);
   for (let i = 0; i < metrics.length; i++) ids.push(...(metrics[i].sources || []));
   for (let i = 0; i < appSources.length; i++) ids.push(appSources[i].id);
   return ids;
@@ -536,53 +548,83 @@ const createSample = (): OverviewSample => {
   };
 };
 
-const renderRow = (label: string, { value, sub, na, warn }: MetricValue, actionHtml = '') => {
-  let secondary = na ? `n/a (${na})` : '';
-  if (sub) secondary += secondary ? ` · ${sub}` : sub;
-  const classes = [na ? 'isNA' : '', warn ? 'isWarn' : ''].filter(Boolean).join(' ');
-  return (
-    `<tr${classes ? ` class="${classes}"` : ''}><th>${esc(label)}</th>` +
-    `<td class="profilerValue">${esc(value)}</td>` +
-    `<td class="profilerSub">${esc(secondary)}${actionHtml}</td></tr>`
-  );
-};
+const isSameRows = (a: readonly OverviewRow[], b: readonly OverviewRow[]) =>
+  a.length === b.length && a.every((row, i) => row === b[i]);
 
-const renderOverviewTable = (settings: ProfilerSettings) => {
-  const { metrics, appSources } = getVisibleRows(settings);
-  if (!metrics.length && !appSources.length) {
-    return '<div class="profilerNote">No rows are shown. Pick them in the Settings tab.</div>';
-  }
-  const sample = createSample();
-  shownActions.clear();
-  let rows = '';
-  for (let i = 0; i < metrics.length; i++) {
-    const metric = metrics[i];
-    const metricValue = metric.read(sample);
-    const { action } = metricValue;
-    let actionHtml = '';
-    if (action) {
-      shownActions.set(metric.id, action);
-      actionHtml =
-        ` <button class="profilerAction" data-metric="${esc(metric.id)}" ` +
-        `title="${esc(action.title)}">${esc(action.label)}</button>`;
+/**
+ * The Overview's table and its rows, kept by metric id: a refresh writes the figures that changed
+ * (`setCell`), and gives the table new rows (`setRows`, `setGroups`, kept by key) only when the
+ * shown rows changed (the Settings tab's reorder or visibility, an app source registered).
+ */
+const createOverviewTable = () => {
+  const table = createTable<OverviewRow>({
+    caption: 'Overview',
+    captionHidden: true,
+    columns: OVERVIEW_COLUMNS,
+    empty: 'No rows are shown. Pick them in the Settings tab.',
+    striped: true,
+    class: 'profilerOverview',
+  });
+  const rowsById = new Map<string, OverviewRow>();
+  let shownRows: OverviewRow[] = [];
+  let shownAppRows: OverviewRow[] = [];
+
+  const getRow = (id: string) => {
+    let row = rowsById.get(id);
+    if (!row) {
+      row = { id, label: '', value: '', detail: '', tone: null };
+      rowsById.set(id, row);
     }
-    rows += renderRow(metric.label, metricValue, actionHtml);
-  }
-  let appRows = '';
-  for (let i = 0; i < appSources.length; i++) {
-    appRows += renderRow(appSources[i].label, readAppSource(appSources[i], sample));
-  }
-  const appGroup = appRows
-    ? `<tbody class="profilerGroup"><tr><th class="profilerGroupHead" colspan="3">App</th></tr>` +
-      `${appRows}</tbody>`
-    : '';
-  return `<div><table class="profilerTable"><tbody>${rows}</tbody>${appGroup}</table></div>`;
-};
+    return row;
+  };
 
-const onTableClick = (e: Event) => {
-  const button = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-metric]');
-  const id = button?.dataset.metric;
-  if (id) shownActions.get(id)?.run();
+  /** Writes a row's figures: to the table's cells that changed when it shows the row (`isShown`),
+   * else to the row only (the table reads it with the new rows) */
+  const writeRow = (
+    row: OverviewRow,
+    label: string,
+    metricValue: MetricValue,
+    isShown: boolean
+  ) => {
+    const value = metricValue.na ? NA_VALUE : metricValue.value;
+    const detail = getDetail(metricValue);
+    const tone = metricValue.warn ? 'warning' : metricValue.na ? 'muted' : null;
+    if (row.label !== label) {
+      row.label = label;
+      if (isShown) table.setCell(row.id, 'label', label);
+    }
+    // The tone is read from the row when its cell is written
+    if (row.value !== value || row.tone !== tone) {
+      row.value = value;
+      row.tone = tone;
+      if (isShown) table.setCell(row.id, 'value', value);
+    }
+    if (row.detail !== detail) {
+      row.detail = detail;
+      if (isShown) table.setCell(row.id, 'detail', detail);
+    }
+  };
+
+  const update = ({ metrics, appSources }: VisibleRows) => {
+    const rows = metrics.map((metric) => getRow(metric.id));
+    const appRows = appSources.map((source) => getRow(APP_METRIC_PREFIX + source.id));
+    const isNewList = !isSameRows(rows, shownRows) || !isSameRows(appRows, shownAppRows);
+    const sample = createSample();
+    for (let i = 0; i < metrics.length; i++) {
+      writeRow(rows[i], metrics[i].label, metrics[i].read(sample), !isNewList);
+    }
+    for (let i = 0; i < appSources.length; i++) {
+      const source = appSources[i];
+      writeRow(appRows[i], source.label, readAppSource(source, sample), !isNewList);
+    }
+    if (!isNewList) return;
+    shownRows = rows;
+    shownAppRows = appRows;
+    table.setRows(rows);
+    table.setGroups(appRows.length ? [{ key: 'app', label: 'App', rows: appRows }] : NO_GROUPS);
+  };
+
+  return { cmp: table.cmp, update };
 };
 
 /**
@@ -593,6 +635,7 @@ const onTableClick = (e: Event) => {
  */
 export const createProfilerOverviewTabDef = (settings: ProfilerSettings): AnyDebuggerTabDef => {
   const sources = createStatsSourceHolder();
+  let overview: ReturnType<typeof createOverviewTable> | null = null;
   let isOpen = false;
   return {
     id: PROFILER_OVERVIEW_TAB_ID,
@@ -602,20 +645,29 @@ export const createProfilerOverviewTabDef = (settings: ProfilerSettings): AnyDeb
     get refreshIntervalMs() {
       return 1000 / settings.updateRateHz;
     },
-    // Runs before every build and refresh: a row shown or hidden in Settings (or an app source
-    // registered) applies here. Only once the tab is open: a build can fail before onOpen's
-    // cleanup exists, which would leak the holds.
+    // Nothing of a scene's: the rows, the focus and the scroll stay
+    keepOnSceneChange: true,
+    // A row shown, hidden or moved in Settings (or an app source registered) applies here. Only
+    // once the tab is open: a build can fail before onOpen's cleanup exists, which would leak the
+    // holds.
     onRefresh: () => {
-      if (isOpen) sources.set(getVisibleSourceIds(settings));
+      if (!isOpen) return;
+      const visible = getVisibleRows(settings);
+      sources.set(getVisibleSourceIds(visible));
+      overview?.update(visible);
     },
     onOpen: () => {
       isOpen = true;
-      sources.set(getVisibleSourceIds(settings));
+      sources.set(getVisibleSourceIds(getVisibleRows(settings)));
       return () => {
         isOpen = false;
         sources.releaseAll();
       };
     },
-    content: () => [CMP({ html: () => renderOverviewTable(settings), onClick: onTableClick })],
+    content: () => {
+      overview = createOverviewTable();
+      overview.update(getVisibleRows(settings));
+      return [overview.cmp];
+    },
   };
 };

@@ -330,6 +330,10 @@ export const _updateProfilerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
   host.refresh(opts?.rebuild);
 };
 
+/** A scene change (p807 D9, the drawer's contract): the open tab is rebuilt, or kept with
+ * `keepOnSceneChange` (its `onSceneChange`, then a refresh). The window itself stays open. */
+export const _updateProfilerScene = () => host.sceneChanged();
+
 // STATS SOURCES
 
 export { _onStatsSourceReplaced } from './_dbg__StatsSources';

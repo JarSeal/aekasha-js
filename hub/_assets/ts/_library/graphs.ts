@@ -32,8 +32,7 @@ const addPanel = (root: HTMLElement, label: string) => {
   return group;
 };
 
-/** A figure's line: its name, its value and its graph, as a panel shows one (the parity box's
- * too) */
+/** A figure's line: its name, its value and its graph, as a panel shows one */
 export const addFigureLine = (
   parent: HTMLElement,
   name: string,

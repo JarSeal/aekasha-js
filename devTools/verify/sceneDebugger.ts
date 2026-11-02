@@ -4,7 +4,7 @@
  * (`src/_engine/debug/_dbg__TestBridgeDebugger.ts`, by tab id, list row and control name, never
  * the debugger's classes) it records each tab host's tab order, opens every drawer tab, profiler
  * tab, window and dialog the scene's `debugger` settings name and the material editor's selector
- * and drawer tabs, shoots each element against its
+ * and drawer tabs, finds the stats panels, shoots each element against its
  * baseline (`verify:ui`'s tolerance, the live figures masked), counts axe's violations on it (any
  * fails, p806 D12), then runs the undo / redo scripts.
  */
@@ -184,6 +184,19 @@ const shootTabAsync = async (run: DebuggerRun, host: TestBridgeTabHost, id: stri
     return;
   }
   await shootAsync(run, opened.root, `${HOST_SHOT_PREFIX[host]}.${id}`);
+};
+
+/** Shoots the on-screen stats panels (their figures masked) */
+const shootStatsPanelsAsync = async (run: DebuggerRun) => {
+  const marked = await callBridge(
+    'markStatsPanels',
+    run.page.evaluate(() => window.__AEK_TEST__!.markStatsPanels())
+  );
+  if (marked.status === 'MISSING') {
+    run.result.failures.push(`stats panels: ${marked.reason}`);
+    return;
+  }
+  await shootAsync(run, marked.root, 'stats.panels');
 };
 
 /** Enters the material editor with its material loaded, shoots its selector and each tab of its
@@ -384,6 +397,8 @@ export const runDebuggerChecksAsync = async (opts: {
     }
   }
 
+  // First: the drawer opens over their corner
+  if (settings.statsPanels) await shootStatsPanelsAsync(run);
   const drawerTabs = settings.tabs === 'ALL' ? tabOrder.DRAWER ?? [] : settings.tabs;
   for (const id of drawerTabs) await shootTabAsync(run, 'DRAWER', id);
   if (settings.profiler) {

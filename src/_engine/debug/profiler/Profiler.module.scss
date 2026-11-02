@@ -1,6 +1,7 @@
 // The profiler window (p806 D6, D9: on the tokens, unlayered, so an app's element rules don't
-// reach it): its tab menu (`createTabs`) over each tab's container. The Overview's and Objects'
-// HTML strings are p807's to rewrite on the kit's tables and graphs; their classes stay global.
+// reach it): its tab menu (`createTabs`) over each tab's container. The Overview and Objects tabs
+// are the kit's tables, list, sparklines and segmented control (p807 D6, D7); the classes they add
+// stay global.
 
 .profiler {
   display: flex;
@@ -43,8 +44,6 @@
 
 // A tab's container and scroller (the tab host mounts the tab in it)
 .tabContent {
-  --profiler-stripe: color-mix(in srgb, var(--aek-text) 4%, transparent);
-
   flex: 1 1 auto;
   min-height: 0;
   padding: var(--aek-space-3) var(--aek-space-4) var(--aek-space-4);
@@ -53,94 +52,40 @@
   font-size: var(--aek-font-size-sm);
   scrollbar-width: thin;
 
-  :global(.profilerTable) {
-    width: 100%;
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
-
-    tr:nth-child(odd) {
-      background-color: var(--profiler-stripe);
+  // The Overview (p807 D6, a kit table): the metric, its figure, the detail. A warning is the
+  // value cell's tone (the kit's colour and mark), its words the detail's first.
+  :global(.profilerOverview) {
+    :global(.aekTable__table) {
+      width: 100%;
+      font-variant-numeric: tabular-nums;
     }
 
-    th,
-    td {
-      padding: var(--aek-space-2) var(--aek-space-3);
+    :global(.aekTable__cell) {
       vertical-align: baseline;
     }
 
-    th {
+    th:global(.aekTable__cell) {
       font-weight: var(--aek-font-weight-regular);
-      text-align: left;
       white-space: nowrap;
     }
 
-    :global(.profilerValue) {
-      color: var(--aek-text);
+    // The value column
+    td:global(.aekTable__cell):nth-child(2) {
       font-weight: var(--aek-font-weight-semibold);
-      text-align: right;
       white-space: nowrap;
     }
 
-    :global(.profilerSub) {
+    // n/a: the kit's muted tone, at its regular weight
+    td:global(.aekTable__cell)[data-tone='muted']:nth-child(2) {
+      font-weight: var(--aek-font-weight-regular);
+    }
+
+    // The detail column takes the rest
+    td:global(.aekTable__cell):nth-child(3) {
       width: 100%;
       color: var(--aek-text-muted);
       font-size: var(--aek-font-size-xs);
     }
-
-    :global(.profilerGroup) tr:first-child {
-      background-color: transparent;
-    }
-
-    :global(.profilerGroupHead) {
-      padding-top: var(--aek-space-4);
-      color: var(--aek-text-muted);
-      font-size: var(--aek-font-size-xs);
-      font-weight: var(--aek-font-weight-semibold);
-    }
-
-    :global(.isNA) :global(.profilerValue) {
-      color: var(--aek-text-muted);
-      font-weight: var(--aek-font-weight-regular);
-    }
-
-    :global(.isWarn) {
-      th,
-      :global(.profilerValue),
-      :global(.profilerSub) {
-        color: var(--aek-warning);
-      }
-    }
-  }
-
-  // The Objects tab's small buttons: the kit's small secondary button's look (p807 makes them kit
-  // buttons), a 24 px target
-  :global(.profilerAction),
-  :global(.profilerSegmented) button {
-    box-sizing: border-box;
-    min-height: 24px;
-    margin: 0;
-    padding: 0 var(--aek-space-3);
-    border: 1px solid var(--aek-border-control);
-    border-radius: var(--aek-radius-sm);
-    background-color: var(--aek-surface-raised);
-    color: var(--aek-text);
-    font: inherit;
-    font-size: var(--aek-font-size-xs);
-    cursor: pointer;
-    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
-
-    &:hover:not(:disabled) {
-      background-color: var(--aek-surface-hover);
-    }
-
-    &:disabled {
-      color: var(--aek-text-disabled);
-      cursor: default;
-    }
-  }
-
-  :global(.profilerAction) {
-    margin-left: var(--aek-space-2);
   }
 
   // The Settings tab's Overview rows (_dbg__ProfilerSettings.ts: two kit lists)
@@ -177,7 +122,11 @@
     line-height: var(--aek-line-height-relaxed);
   }
 
-  // OBJECTS TAB
+  :global(.profilerNote[hidden]) {
+    display: none;
+  }
+
+  // OBJECTS TAB (p807 D7: the kit's segmented control, tables, list and sparklines)
 
   :global(.profilerSection) {
     margin: var(--aek-space-5) 0;
@@ -194,196 +143,99 @@
       font-size: var(--aek-font-size-sm);
       font-weight: var(--aek-font-weight-regular);
     }
-  }
 
-  :global(.profilerObjectsHead) {
     :global(.profilerNote) {
-      margin: var(--aek-space-2) 0 0;
+      margin: 0 0 var(--aek-space-2);
     }
   }
 
-  :global(.profilerSegmented) {
+  :global(.profilerObjectsHead) :global(.profilerNote) {
+    margin: var(--aek-space-2) 0 0;
+  }
+
+  // The tables fill the tab's width, their figures tabular; a row header on one line
+  :global(.profilerBreakdown),
+  :global(.profilerHeaviest) {
+    :global(.aekTable__table) {
+      width: 100%;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th:global(.aekTable__cell) {
+      font-weight: var(--aek-font-weight-regular);
+    }
+  }
+
+  // A row header's two lines: the name, a dimmed line under it (none while empty)
+  :global(.profilerName) {
     display: flex;
-    align-items: center;
-    gap: var(--aek-space-1);
-    margin-top: var(--aek-space-2);
+    flex-direction: column;
+  }
+
+  :global(.profilerName__sub) {
+    color: var(--aek-text-muted);
     font-size: var(--aek-font-size-xs);
 
-    span {
-      margin-right: var(--aek-space-2);
-    }
-
-    // The picked measure: a pressed tool (p800 D6's accent)
-    button:global(.isSelected),
-    button:global(.isSelected):hover {
-      border-color: var(--aek-accent);
-      background-color: var(--aek-accent);
-      color: var(--aek-on-accent);
+    &:empty {
+      display: none;
     }
   }
 
-  :global(.profilerTable) {
-    thead th {
-      padding-top: 0;
-      color: var(--aek-text-muted);
-      font-size: var(--aek-font-size-xs);
-      white-space: nowrap;
-    }
-
-    th :global(.profilerSub) {
-      display: block;
-      color: var(--aek-text-muted);
-      font-size: var(--aek-font-size-xs);
-      white-space: normal;
-    }
-
-    :global(.profilerNum) {
-      text-align: right;
-      white-space: nowrap;
-
-      b {
-        color: var(--aek-text);
-        font-weight: var(--aek-font-weight-semibold);
-      }
-
-      span {
-        color: var(--aek-text-muted);
-        font-size: var(--aek-font-size-xs);
-      }
-    }
-
-    :global(.isTotal) {
-      border-top: 1px solid var(--aek-border-strong);
-
-      th {
-        font-weight: var(--aek-font-weight-semibold);
-      }
-    }
+  // The bars take the rest of the row
+  :global(.profilerBreakdown) td:global(.aekTable__cell)[data-kind='bar'] {
+    width: 35%;
   }
 
-  :global(.profilerBreakdown) {
-    thead th:not(:first-child) {
-      text-align: right;
-    }
-
-    thead th:last-child {
-      text-align: left;
-    }
-
-    :global(.profilerBarCell) {
-      width: 35%;
-      min-width: var(--aek-space-7);
-      vertical-align: middle;
-    }
+  :global(.profilerHeaviest) th:global(.aekTable__cell) {
+    word-break: break-word;
   }
 
-  // A measure in the text's shades, as the kit table's bar cells (not categories)
-  :global(.profilerBar) {
-    display: flex;
-    height: var(--aek-space-3);
-    border-radius: var(--aek-radius-sm);
-    background-color: color-mix(in srgb, var(--aek-text) 8%, transparent);
-    overflow: hidden;
-
-    :global(.profilerBarInView) {
-      background-color: var(--aek-text-muted);
+  // The component types in columns (a static list's rows), each name on one line
+  :global(.profilerComponentList) {
+    :global(.aekList__rows) {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(calc(var(--aek-space-7) * 6), 1fr));
+      column-gap: var(--aek-space-4);
+      font-variant-numeric: tabular-nums;
     }
 
-    :global(.profilerBarCulled) {
-      background-color: color-mix(in srgb, var(--aek-text-muted) 35%, transparent);
-    }
-  }
-
-  :global(.profilerHeaviest) {
-    th {
-      word-break: break-word;
-      white-space: normal;
-    }
-
-    thead th {
-      white-space: nowrap;
-    }
-
-    :global(.profilerRank) {
-      color: var(--aek-text-muted);
-      text-align: right;
-    }
-
-    :global(.profilerSub) {
-      width: auto;
-      white-space: nowrap;
-    }
-
-    :global(.profilerAction) {
-      margin-left: 0;
-    }
-  }
-
-  :global(.profilerComponentGrid) {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(calc(var(--aek-space-7) * 5), 1fr));
-    column-gap: var(--aek-space-4);
-    font-variant-numeric: tabular-nums;
-
-    div {
-      display: flex;
-      justify-content: space-between;
-      gap: var(--aek-space-3);
-      padding: var(--aek-space-1) var(--aek-space-3);
-      border-bottom: 1px solid var(--aek-border);
-    }
-
-    span {
+    :global(.aekList__title) {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    b {
-      color: var(--aek-text);
-      font-weight: var(--aek-font-weight-semibold);
-    }
   }
 
+  // Over time: the label, the latest figure and the max on a line over the sparkline
   :global(.profilerSpark) {
     margin: var(--aek-space-3) 0;
-
-    :global(.profilerSparkHead) {
-      display: flex;
-      align-items: baseline;
-      gap: var(--aek-space-3);
-
-      b {
-        color: var(--aek-text);
-        font-variant-numeric: tabular-nums;
-        font-weight: var(--aek-font-weight-semibold);
-      }
-
-      :global(.profilerSub) {
-        margin-left: auto;
-        color: var(--aek-text-muted);
-        font-size: var(--aek-font-size-xs);
-      }
-    }
   }
 
-  :global(.profilerSparkline) {
-    display: block;
-    width: 100%;
-    height: calc(var(--aek-space-7) * 1.5);
-    margin-top: var(--aek-space-1);
-    background-color: var(--profiler-stripe);
+  :global(.profilerSpark__head) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-3);
+    margin-bottom: var(--aek-space-1);
+  }
+
+  :global(.profilerSpark__latest) {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :global(.profilerSpark__max) {
+    margin-left: auto;
     color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+    font-variant-numeric: tabular-nums;
+  }
 
-    polygon {
-      fill: currentColor;
-      fill-opacity: 0.15;
-    }
+  // The line in the muted text, as the stats panels' graphs (no accent, p800 D6), across the tab
+  :global(.profilerSparkline) {
+    --aek-sparkline-color: var(--aek-text-muted);
+    --aek-sparkline-width: 100%;
+    --aek-sparkline-height: calc(var(--aek-space-7) * 1.5);
 
-    polyline {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.5;
-    }
+    display: block;
   }
 }

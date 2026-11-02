@@ -6,9 +6,11 @@ Earlier releases are only recorded in the git history.
 
 ## Unreleased — engine-6
 
-The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806.
+The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806 and p807.
 
 The debugger migration (p806, the debugger UI overhaul epic p800's sixth child) rebuilds the debugger on the UI kit. The drawer, the tab host, the panes, the edit windows, the profiler window's shell, the editor drawer, the material editor, the on-screen tools and the dialogs are on the kit's components and tokens, in the compact density, dark by default with a theme setting. Tweakpane leaves `package.json`. A tab keeps working unless it uses a binding's Tweakpane side, and what a 5.x debugger saved loads in 6.0. The Hub's migration guide gets an "Engine 5 → 6" section.
+
+The stats and profiler graphs (p807, p800's seventh child) replace stats-gl's on-screen panels with the debugger's own on the kit's time series, measured as the profiler measures (checked against stats-gl's on the same frames first), and move the profiler's Overview, Objects and GPU memory tabs from HTML strings to the kit's tables, bars, sparklines and lists, written in place. GPU timing has one owner, with compute and WebGL. `stats-gl` leaves `package.json`. Nothing public breaks.
 
 ### Engine 6.0.0 (unreleased)
 
@@ -44,6 +46,9 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
   - `createButtonGroup`'s `toolbar`: the APG toolbar (one tab stop, the arrows, Home / End) for items that act alone, which may be `createDropDown`s (`ButtonGroupItem`). An `aria-disabled` item is a stop, a `disabled` one is skipped.
   - `focusableWhenDisabled` on `createButton` and `createDropDown` (`aria-disabled` instead of `disabled`: still a tab stop, its clicks ignored), and a reason on `setDisabled(isDisabled, reason?)` shown as the button's tooltip or the trigger's title while disabled. `Button`'s `isDisabled`, `DropDown`'s `setDisabled`.
 - The test bridge (`TEST_BRIDGE_VERSION` 6): `getDebuggerTabOrder`, `openDebuggerTab({ host, id })`, `openDebuggerListRow`, `focusDebuggerControl({ root?, name, nth? })`, `markDebuggerWindows`, `closeDebuggerWindows`, `openMaterialEditor({ material })` and `closeMaterialEditor()`, for the scene runner's `debugger` configuration. They name things by tab id, list row and control name, never by the debugger's classes.
+- p807: the stats panels' GPU and CPT and the profiler's GPU and TFPS rows read WebGL 2 too (`EXT_disjoint_timer_query_webgl2`), where the profiler's rows were n/a; the Hz line reads any display's rate, where stats-gl's matched a list of rates and read nothing on a 132 Hz display.
+- p807, on `aekasha/ui`: `TableTone`'s `'muted'`, the muted text at the regular weight with no mark, for a figure that isn't one (the profiler's n/a).
+- p807: the test bridge's `markStatsPanels()` (`TEST_BRIDGE_VERSION` 7).
 
 **Changed**
 
@@ -63,12 +68,19 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - **The kit's icons:** a button's, tab's or drop-down trigger's SVG is a block in its `1em` slot, and the global `.uiIcon svg` rules (`width: 100%`, inline-block on the baseline) are gone from `kit.scss`, with the debugger's `.aekIcon` reset. The icons box in the Hub's component library is 19 px shorter, and the other pieces' icons moved a few pixels. A kit list's icons in the compact density are 11 px.
 - **A static list's disabled row** is drawn in `--aek-text-muted` (its text is content, not an inactive control). An interactive list's keeps `--aek-text-disabled`.
 - The big debug modules are split by what they do, so every file and function is within the coding standards' sizes and no p800 header is left: the camera, lights, physics, Debug tools, LOD, spatial index, ray tester, assets, character state window and material editor.
+- **The stats panels** (p807) are the debugger's own: one debugger root in the bottom-left corner in its theme and density, a panel per figure (TFPS, FPS, CPU, PHY, GPU, CPT) with its label, the figure written four times a second, the graph's lowest and highest sample and a kit time series (a sample 30 times a second, the worst frame since the last, so a hitch shows). Each figure is the profiler's: CPU is the main loop's CPU time per frame, the render's submission included (stats-gl's "CPU" left it out, 7-15 % of ours), and each panel's tooltip says what it spans. Hz is a line of the FPS panel. The Statistics tab's toggles and Horizontal apply without a reload (PHY still after one), and the GPU timer runs only while something reads it. With "Open from stats panels" the panels are a button (Tab, Enter, the tooltip "Open the profiler (F8)"), else a group named "Frame statistics". The debug toaster sits above them at any height. They cost within stats-gl's main-thread time and allocate about 95 % less.
+- **The profiler's Overview, Objects and GPU memory tabs** (p807) are the kit's tables, stacked bar, sparklines, list and segmented control, built once and written in place, so a sort, the focus and the scroll survive a refresh, and their layout and style time per second fell by half or more. The Overview has a header row; an n/a value reads a muted "n/a" with its reason in the detail, and a warning says why in words. Objects' tables have column labels, a bar of the share in view against the Total footer, and an Edit icon button per heaviest object, named by the object. GPU memory's categories, untracked and sources sort by a header; a source's id is on its name's second line, the current scene's owner has a "current" badge, and an empty diff shows its headers and its empty text.
+- **A profiler tab hears a scene change** (p807): an app's `createProfilerTab` tab is built again on a scene change unless it has `keepOnSceneChange`, as a drawer tab is (the profiler never heard one before). The built-in tabs keep, and Objects' history starts again.
+- **GPU timing** (p807): one timer resolves the render and compute timestamps for every reader (the stats panels, the profiler, the PostFX profiler, the sky box's bake stats), where stats-gl resolved them too.
+- **The kit's sparkline** (p807) makes each slot's x text once and takes the area's path from the line's: the same paths, about 40 % less allocated per draw. The table keeps its key sets between renders.
+- **Sizes** (p807, a `VITE_APP_ENV=test` build): the debugger's lazy JS chunks 200.4 → 198.8 kB gzip (stats-gl's 10.3 kB gone; the panels, the GPU frame times and GPU memory's views added). Production's first downloads are unchanged.
 
 **Removed**
 
 - `tweakpane` and `@tweakpane/core`.
 - The `--aek-rem` custom property (internal since p801) and `ui/styles/variables.scss`.
 - `DraggableWindow.scss`' debugger helper classes `winSmallLabel`, `winSmallIconButton`, `winNotRightPaddedContent`, `winFlexContent` and `winPaddedContent`.
+- `stats-gl` (p807): an app that imports it itself adds it to its `package.json`. With it went the `@internal` `getStats` and `getStatsCmp`, `StatsOptions`' stats-gl-only fields and `Stats.scss`.
 
 **Fixed**
 
@@ -77,6 +89,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - A debug window's title icon was drawn as wide as the window (the About dialog's giant Æ).
 - The Lights tab read no type for a load's last light (`??` in its row's icon). It refreshes a microtask after the light's tags, once per task.
 - An app's action map took Enter from a focused debugger control (`docs/issues/action-map-keys-on-focused-debugger-controls.md`, fixed).
+- The profiler's Objects tab mixed two scenes' samples in "Over time" after a scene change (p807).
 
 ### App (unreleased: a minor at the `engine-6` merge)
 
@@ -90,6 +103,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 **Added**
 
 - The scene runner's `debugger` configuration (in `all`; `devTools/verify/sceneDebugger.ts`, its pure parts `debuggerChecks.ts`). After `mainThread`'s run, on the scenes with `debugger` settings (`testDebugScene`, `thirdPersonGymScene`, `lodShowcase`, `assetCompare`, `space`, `exampleDebugTab`), it records and compares each tab host's tab order, a shot of every tab, profiler tab, window, dialog and the material editor, and axe on each. Any violation fails, a recording run too. It also runs four undo / redo scripts: a declarative slider, a window's field, a list toggle and the day-night row.
+- p807: the `debugger` configuration shoots the stats panels (`stats.panels`, on `testDebugScene`, their figures masked) with axe.
 
 **Changed**
 
@@ -105,6 +119,11 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - `yarn verify:baselines`: `api.json` (the additions above and the `@internal` modules: `ui/overlays/DebuggerRoot.ts`, `ui/forms/binding/AncestorReads.ts`), the bundle baselines and `docs.json`. `yarn verify:ui`'s screenshots re-recorded for the icon slots.
 - The root `CLAUDE.md`'s Debug system (on the kit), `src/_engine/debug/CLAUDE.md` (the builder, the host's scheduler, `keepOnSceneChange`, the theme, the density, the styles), `src/_engine/ui/CLAUDE.md` (its "until p806" lines resolved), `src/_engine/debug/editors/CLAUDE.md`, `devTools/verify/CLAUDE.md`, and the readme: the drawer on the UI kit, Tweakpane out of the credits, example 6's `AppConfig` with `debugDrawer: { theme }`.
 - The plans: p806 is `_DONE_`; p800, p801, p803, p804, p805, p622, p150 and p373 follow.
+- p807: the `debugger` configuration's masks cover the Overview's value and detail cells, Objects' census time and sparklines, and GPU memory's "Reached" times (a wall-clock time whose width made the shot pass or fail).
+- p807, the Hub: the debug suite's guide gains "Stats panels" and the profiler's tabs as built; the UI kit's data page "A frame graph in your HUD"; the dev library's "Debugger parity" box is gone (its rows ported), and its notes on the table, stacked bar, sparkline, stat tile, chart and time series say what p807 built.
+- p807: `yarn verify:baselines`' `api.json` and `docs.json` (`getStats` and `getStatsCmp` gone, the `@internal` `updateProfilerScene` added); the About dialog's packages lose stats-gl's row; `_dbg__DebugKeyShortcuts.test.ts` pins the key platform (on macOS the hint read `⌃+M`).
+- p807: `src/_engine/debug/CLAUDE.md` (the stats panels, GPU timing's one owner, the profiler's and GPU memory's tabs on the kit), the root `CLAUDE.md`'s pointers to it, `devTools/verify/CLAUDE.md` (the stats panels' shot), and the readme: the stats panels in the debug suite, stats-gl out of the credits.
+- The plans: p807 is `_DONE_`; p800 and p806 follow.
 
 ## 2026-10-28 — p805-data-display
 

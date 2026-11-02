@@ -233,6 +233,14 @@ export const updateProfilerTab = (id: string, opts?: UpdateDebuggerTabOpts) => {
   useProfiler()?._updateProfilerTab(id, opts);
 };
 
+/**
+ * Passes a scene change to the profiler's open tab, as the drawer's: `setCurrentScene`'s.
+ * @internal
+ */
+export const updateProfilerScene = () => {
+  useProfiler()?._updateProfilerScene();
+};
+
 /** Whether a profiler tab is visible: the window is open and the tab is the mounted one. */
 export const isProfilerTabOpen = (id: string) => useProfiler()?._isProfilerTabOpen(id) ?? false;
 
