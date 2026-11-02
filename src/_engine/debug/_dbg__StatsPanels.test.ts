@@ -251,9 +251,17 @@ describe('the stats panels (p807 D4)', () => {
     const fps = sources.pushes.FPS.filter((value) => !Number.isNaN(value));
     expect(Math.min(...fps)).toBeCloseTo(1000 / 15);
     // The range is the graph's lowest and highest sample (at the next text write)
-    runFrames(t, 34, 7.5, 1);
+    t = runFrames(t, 34, 7.5, 1);
     expect(rangeOf('CPU')).toBe('1.00–4.00');
     expect(rangeOf('FPS')).toBe('67–133');
+    // Kept as samples come; once the spikes scroll out (96 samples, 3.2 s), they leave the range
+    t = runFrames(t, 500, 7.5, 2);
+    expect(rangeOf('CPU')).toBe('2.00–2.00');
+    // A new high and low come in without a scan (each past a text write)
+    t = runFrames(t, 40, 7.5, 3);
+    expect(rangeOf('CPU')).toBe('2.00–3.00');
+    runFrames(t, 40, 7.5, 0.5);
+    expect(rangeOf('CPU')).toBe('0.50–3.00');
   });
 
   it('keeps TFPS as 1000 over the mean CPU time of the last 60 frames', () => {

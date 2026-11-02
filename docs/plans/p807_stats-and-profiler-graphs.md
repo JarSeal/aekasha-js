@@ -990,6 +990,69 @@ As built, section 1 (2026-11-02, not committed):
 - **Docs:** `devTools/verify/CLAUDE.md`'s `debugger` item and `debug/CLAUDE.md`'s test bridge line.
 - **Verified:** `yarn test` (269 files), `tsc`, lint.
 
+As built, section 2 (2026-11-02, not committed):
+
+- **The method on the Mac** (`.cache/p807/perf.mts`, scratch): Phase 0's figures are the
+  desktop's, so `main` at `dc2b28ad` (stats-gl, the HTML-string tabs) went into a scratch worktree
+  (`git worktree add --detach`, its own `yarn install`; run from its folder: Vite resolves the
+  config's `root` against the cwd) and both trees were measured the same way: the gym, WebGPU in
+  macOS's headless Chromium (rAF 61/s), DPR 1, a fresh page per scenario, 3 s warm-up, three 10 s
+  windows of main-thread task time (CDP `TaskDuration`, with `LayoutDuration` and
+  `RecalcStyleDuration`), then 10 s of the sampling heap profiler with the collected objects, by
+  module. The branch twice (before and after the `main` run), then the fixed scenarios again.
+- **Main-thread time is within this machine's noise:** "none" read 164, 201, 215 and 74 ms/s in
+  four runs, a tab's windows 20-50 ms/s apart, so no scenario's task time shows a difference
+  either way. **Layout and style time fell:** Overview 7.6 → 3.1 ms/s, Objects 8.4 → 3.8, GPU
+  memory 3.1 → 1.2 (D9's writes in place); the stats panels add 1.5 (their 4 Hz text; stats-gl
+  drew canvases only).
+- **Allocation, kB/s in the measured modules** (the page allocates about 4 MB/s in all; `main` /
+  the branch before the fixes / after):
+
+  | Scenario                     | `main` | Before | After |
+  | ---------------------------- | ------ | ------ | ----- |
+  | Stats panels, default three  | 172    | 44     | 19    |
+  | Stats panels, all six        | 515    | 73     | 40    |
+  | Profiler Overview            | 114    | 93     | —     |
+  | Profiler Objects             | 236    | 302    | 250   |
+  | GPU memory                   | 98     | 116    | 116   |
+  | GPU memory with a snapshot   | 228    | 259    | 235   |
+
+- **The perf-auditor's pass** (the agent, read-only, over the panels, the frame step's callees,
+  the three tabs and p806's leftovers), checked against the profiles. **Fixed:**
+  - **The sparkline** (the kit's `Sparkline.ts`, Objects' "Over time": 127 kB/s, the regression):
+    each slot's x text made once at creation, the area path taken from the line's run (its `M`
+    dropped) instead of formatting every point twice; the paths byte for byte as before (its
+    tests). 73 kB/s: the y's are still formatted per draw, as its JSDoc says (a panel's rate).
+  - **The stats panels' range** (`writeFigure`'s 96-sample scan at 4 Hz, 33 kB/s, an
+    interpreted loop boxing each read): each panel keeps its lowest and highest sample as they're
+    pushed (as stored, a float32), and scans again at the next text write only when a sample that
+    left was one of them. A test: the spikes leave the range once they scroll out, a new high and
+    low come in.
+  - **GPU memory with a snapshot** walked the assets twice a refresh (the live view, then
+    `getGPUMemoryDiff`): the view's `update` returns its rows and the snapshot view hands them to
+    the diff (`getGPUMemoryDiff(renderer, nowAssets?)`; the Log diff button still collects its
+    own). A test: the refresh's assets reach the diff.
+  - **The kit table's `readRows`** keeps its two key sets per table (cleared, not made per
+    render): little change measured.
+- **Recorded, not changed:**
+  - The kit tables still allocate per render on a scheduler (`readRows`' arrays and closure,
+    `place`, `placeElems`): 14-18 kB/s over `main` in Objects and GPU memory at 4 and 2 Hz. A
+    "rows unchanged" path in the kit's table would remove it; a kit change of its own, not a
+    regression in time.
+  - The census (`collectEntityObjects`, `countEntities`, about 55 kB/s while Overview or Objects
+    is open) and GPU memory's walks (`buildTrackedIndex`, `getGPUMemoryDiff`'s groups) are
+    `main`'s, unchanged.
+  - p806's leftovers measured the same in both trees: the Physics tab 14 kB/s (its list and the
+    tiers' readout, 500 ms; the gym's few bodies), the character state window 18-22 kB/s (its
+    every-frame default interval and the `OTHER` rows), the light window nothing measurable.
+  - The 3D symbols (`_dbg__Symbols.ts`, about 21 kB/s) and the light helpers (9 kB/s) allocate
+    every frame in any debug session, outside D1's scope (the 3D debug drawing).
+  - The time series schedules one more animation frame after each draw, which finds nothing
+    (p805's design for an app pushing every frame; at the panels' 30 Hz about 180 empty callbacks
+    a second for six panels).
+  - The ~70 B a frame of boxed doubles in the frame step (Phase 2's decision) stays.
+- **Verified:** `yarn test` (269 files), `tsc`, lint.
+
 ### Phase 6: the Hub, `CLAUDE.md`, readme
 
 D11's docs. `yarn hub:build` in both modes.

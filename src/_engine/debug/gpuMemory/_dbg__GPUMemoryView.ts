@@ -602,18 +602,20 @@ export const createGPUMemoryView = (opts: GPUMemoryViewOpts, scheduler: BindingS
   const frame = createFrameSection(opts, scheduler);
   const owners = createOwnersSection(opts, scheduler);
   const sources = createSourcesSection(scheduler);
+  // Returns the assets it read (the snapshot's diff reads them too), null without a renderer
   const update = () => {
     const renderer = opts.getRenderer() ?? null;
     const memory = renderer ? renderer.info.memory : null;
     totals.update(memory, renderer);
     frame.update();
-    if (!renderer || !memory) return;
+    if (!renderer || !memory) return null;
     // Assets first: a GPU object an asset holds is never counted again by a source
     const counted = new Set<object>();
     const assets = collectGPUAssets(renderer, counted);
     const sourceList = collectGPUMemorySources(renderer, counted);
     owners.update({ memory, assets, sources: sourceList });
     sources.update(sourceList);
+    return assets;
   };
   update();
   // The tab host's first refresh comes an interval after the mount: the tables read the first

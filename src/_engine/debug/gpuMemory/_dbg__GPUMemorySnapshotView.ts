@@ -17,6 +17,7 @@ import {
   type TwoLineRow,
 } from '../profiler/_dbg__ProfilerParts';
 import { ALLOCATION_KIND_LABELS } from './_dbg__GPUMemoryAllocations';
+import type { GPUAssetRow } from './_dbg__GPUMemoryOwners';
 import {
   getGPUMemoryDiff,
   getGPUMemorySnapshot,
@@ -308,10 +309,11 @@ export const createGPUMemorySnapshotView = (
     );
   };
 
-  const update = () => {
+  // `assets`: the live view's, read in the same refresh (else the diff collects them)
+  const update = (assets?: readonly GPUAssetRow[] | null) => {
     const renderer = opts.getRenderer();
     const snapshot = getGPUMemorySnapshot();
-    const diff = renderer && snapshot ? getGPUMemoryDiff(renderer) : null;
+    const diff = renderer && snapshot ? getGPUMemoryDiff(renderer, assets ?? undefined) : null;
     if (body.elem.hidden !== !diff) body.elem.toggleAttribute('hidden', !diff);
     none.write(
       diff

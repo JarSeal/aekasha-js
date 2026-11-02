@@ -98,8 +98,14 @@ const absDesc =
   (a: T, b: T) =>
     Math.abs(delta(b)) - Math.abs(delta(a));
 
-/** The diff between the snapshot and now, or null without a snapshot. */
-export const getGPUMemoryDiff = (renderer: Renderer): GPUMemoryDiff | null => {
+/**
+ * The diff between the snapshot and now, or null without a snapshot.
+ * @param nowAssets the assets now, when the caller collected them already (the tab's refresh)
+ */
+export const getGPUMemoryDiff = (
+  renderer: Renderer,
+  nowAssets?: readonly GPUAssetRow[]
+): GPUMemoryDiff | null => {
   if (!snapshot) return null;
   const memoryNow = renderer.info.memory as unknown as Record<string, number>;
   const memory = Object.keys(memoryNow)
@@ -107,7 +113,7 @@ export const getGPUMemoryDiff = (renderer: Renderer): GPUMemoryDiff | null => {
     .filter((change) => change.before !== change.after);
 
   const assets: AssetChange[] = [];
-  const nowRows = new Map(collectGPUAssets(renderer).map((row) => [row.key, row]));
+  const nowRows = new Map((nowAssets ?? collectGPUAssets(renderer)).map((row) => [row.key, row]));
   for (const key of new Set([...snapshot.assets.keys(), ...nowRows.keys()])) {
     const then = snapshot.assets.get(key);
     const now = nowRows.get(key);

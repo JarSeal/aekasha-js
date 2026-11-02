@@ -201,9 +201,10 @@ export const _createGPUMemoryDebugGUI = () => {
     // Its figures span scenes (the peaks, a snapshot's diff): kept (p807 D9)
     keepOnSceneChange: true,
     // The sections read once; the tab's scheduler then writes their tables
+    // The assets read once: the live view's go to the snapshot's diff
     onRefresh: () => {
-      view?.update();
-      snapshotView?.update();
+      const assets = view?.update();
+      snapshotView?.update(assets);
     },
     content: ({ scheduler }) => {
       view = createGPUMemoryView(viewOpts, scheduler);

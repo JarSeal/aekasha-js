@@ -12,11 +12,16 @@ vi.stubGlobal('window', (await dom).window);
 const snapshots = vi.hoisted(() => ({
   snapshot: null as unknown,
   diff: null as unknown,
+  /** The assets each diff read was given */
+  diffAssets: [] as unknown[],
 }));
 vi.mock('./_dbg__GPUMemorySnapshots', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./_dbg__GPUMemorySnapshots')>()),
   getGPUMemorySnapshot: () => snapshots.snapshot,
-  getGPUMemoryDiff: () => snapshots.diff,
+  getGPUMemoryDiff: (_renderer: unknown, assets?: unknown) => {
+    snapshots.diffAssets.push(assets);
+    return snapshots.diff;
+  },
 }));
 
 import type { Renderer } from 'three/webgpu';
@@ -184,5 +189,21 @@ describe('GPU memory tab’s snapshot section on the kit (p807 D8)', () => {
     expect(section.root.querySelector('h4')?.textContent).toBe('Snapshot');
     expect(section.root.textContent).toContain('No snapshot.');
     section.close();
+  });
+  it("reads the diff with the live view's assets when the refresh has them (one walk)", () => {
+    snapshots.snapshot = {};
+    snapshots.diff = null;
+    const view = createGPUMemorySnapshotView(
+      { getRenderer: () => ({}) as Renderer, isRecordingSites: () => false },
+      createBindingScheduler({ visible: true })
+    );
+    const assets = [
+      { key: 'texture:a', kind: 'texture', id: 'a', owner: 'x', bytes: 1, uncounted: 0 },
+    ];
+    snapshots.diffAssets.length = 0;
+    view.update(assets as never);
+    view.update();
+    expect(snapshots.diffAssets).toEqual([assets, undefined]);
+    view.cmp.remove();
   });
 });

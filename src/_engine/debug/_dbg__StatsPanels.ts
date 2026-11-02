@@ -96,6 +96,11 @@ type Panel = {
   /** The graph's samples (as the time series holds them), for the range text */
   ring: Float32Array;
   head: number;
+  /** The ring's lowest and highest sample, kept as samples come; stale when one that left was
+   * either, so the next text write scans the ring again (not every write: 96 samples at 4 Hz) */
+  lo: number;
+  hi: number;
+  isRangeStale: boolean;
 };
 
 /** The figures' text rate: 4 Hz, readable while they change */
@@ -284,6 +289,9 @@ const createPanel = (id: StatsPanelId): Panel => {
     hz,
     ring: new Float32Array(GRAPH_CAPACITY).fill(NaN),
     head: 0,
+    lo: Infinity,
+    hi: -Infinity,
+    isRangeStale: false,
   };
 };
 
@@ -296,8 +304,30 @@ const removePanel = (panel: Panel) => {
 const pushSample = (panel: Panel | undefined, value: number) => {
   if (!panel) return;
   panel.series.push(value);
-  panel.ring[panel.head] = value;
+  const ring = panel.ring;
+  const left = ring[panel.head];
+  ring[panel.head] = value;
+  // As stored (a float32), so a sample leaving later compares equal to the extreme it set
+  const stored = ring[panel.head];
   panel.head = (panel.head + 1) % GRAPH_CAPACITY;
+  if (left === panel.lo || left === panel.hi) panel.isRangeStale = true;
+  if (panel.isRangeStale) return;
+  if (stored < panel.lo) panel.lo = stored;
+  if (stored > panel.hi) panel.hi = stored;
+};
+
+const scanRange = (panel: Panel) => {
+  let lo = Infinity;
+  let hi = -Infinity;
+  const ring = panel.ring;
+  for (let i = 0; i < GRAPH_CAPACITY; i++) {
+    const sample = ring[i];
+    if (sample < lo) lo = sample;
+    if (sample > hi) hi = sample;
+  }
+  panel.lo = lo;
+  panel.hi = hi;
+  panel.isRangeStale = false;
 };
 
 const writeText = (text: Text, data: string) => {
@@ -307,15 +337,9 @@ const writeText = (text: Text, data: string) => {
 const writeFigure = (panel: Panel | undefined, value: number, hasValue: boolean) => {
   if (!panel) return;
   writeText(panel.value, hasValue ? panel.def.format(value) : NO_FIGURE);
-  let min = Infinity;
-  let max = -Infinity;
-  const ring = panel.ring;
-  for (let i = 0; i < GRAPH_CAPACITY; i++) {
-    const sample = ring[i];
-    if (sample < min) min = sample;
-    if (sample > max) max = sample;
-  }
-  writeText(panel.range, min <= max ? `${panel.def.format(min)}–${panel.def.format(max)}` : '');
+  if (panel.isRangeStale) scanRange(panel);
+  const { lo, hi } = panel;
+  writeText(panel.range, lo <= hi ? `${panel.def.format(lo)}–${panel.def.format(hi)}` : '');
 };
 
 // --- Hz ---
