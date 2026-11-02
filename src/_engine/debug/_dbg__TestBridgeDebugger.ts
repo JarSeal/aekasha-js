@@ -1,7 +1,7 @@
 // The test bridge's debugger methods (p806 D14): what the scene runner's `debugger` configuration
-// drives the drawer, the profiler window, the debug windows and the material editor through. It names things by tab
-// id, list row and control name, never by the debugger's classes, so its scripts outlive the port
-// from Tweakpane to the UI kit. Debug env only (the drawer and the profiler are lazy imports: the
+// drives the drawer, the profiler window, the debug windows, the material editor and the stats
+// panels through. It names things by tab id, list row and control name, never by the debugger's
+// classes, so its scripts outlive the port from Tweakpane to the UI kit. Debug env only (the drawer and the profiler are lazy imports: the
 // bridge also loads in prod test mode, where neither may exist).
 
 import { IS_DEBUG_ENV } from '../kernel/config/Config';
@@ -49,6 +49,7 @@ const missing = (reason: string) => ({ status: 'MISSING' as const, reason });
 const loadDrawer = () => import('./_dbg__DebuggerGUI');
 const loadProfiler = () => import('./profiler/_dbg__Profiler');
 const loadMaterialEditor = () => import('./editors/material/_dbg__MaterialEditor');
+const loadStatsPanels = () => import('./_dbg__StatsPanels');
 
 /** Marks `element` as `root`, the only element with that mark */
 const markRoot = (element: Element, root: string) => {
@@ -256,6 +257,14 @@ const closeDebuggerWindows: AekTestBridge['closeDebuggerWindows'] = async () => 
   await afterTwoFrames();
 };
 
+const markStatsPanels: AekTestBridge['markStatsPanels'] = async () => {
+  if (!IS_DEBUG_ENV) return missing('the debugger runs in the debug env only');
+  const element = (await loadStatsPanels())._getStatsPanelsRoot()?.elem;
+  if (!element) return missing('the stats panels are not shown');
+  markRoot(element, 'statsPanels');
+  return { status: 'OPEN', root: 'statsPanels', title: 'stats panels' };
+};
+
 /** The bridge's debugger methods, for `_installTestBridge` */
 export const testBridgeDebugger = {
   getDebuggerTabOrder,
@@ -266,4 +275,5 @@ export const testBridgeDebugger = {
   closeDebuggerWindows,
   openMaterialEditor,
   closeMaterialEditor,
+  markStatsPanels,
 } satisfies Partial<AekTestBridge>;

@@ -965,6 +965,31 @@ Notes from Phase 4 (on a Mac, where the desktop's scratch files aren't):
   groups, the asset and source walks, as the strings did), and the snapshot's diff is read on each
   refresh while there's a snapshot (`getGPUMemoryDiff`, as before).
 
+In sections (decided at the start, 2026-11-02), on the Mac (macOS's Chromium on WebGPU):
+
+1. The `debugger` configuration on all its scenes, with D11's stats panels shot it lacked.
+2. The perf pass: the perf-auditor over the panels, the three tabs' refreshes, p806's leftovers and
+   Phase 4's candidates; Phase 0's cost method written again here; the fixes a profile calls for.
+3. The debug chunks, `yarn sbp --profile all`, `yarn verify:baselines`.
+4. Every scene runner baseline: `--config all`, each change reviewed, then recorded.
+
+As built, section 1 (2026-11-02, not committed):
+
+- **The stats panels shot** (D11, missing until now): the test bridge's `markStatsPanels()`
+  (`_dbg__TestBridgeDebugger.ts`, through `_getStatsPanelsRoot`; MISSING with measuring off; the
+  bridge's version 7) marks their root `statsPanels`; `SceneDebuggerConfig.statsPanels`
+  (`testDebugScene`) shoots it first as `stats.panels` (the drawer opens over their corner) with
+  axe. Their figure, foot (range, Hz) and graph carry the global class `statsLive`, which
+  `DEBUGGER_LIVE_MASKS` masks: the shot compares the labels and the layout (103 × 171, the default
+  TFPS, FPS and CPU).
+- **The `debugger` configuration** (`--config debugger`, the six scenes, 78 s): every tab order,
+  shot and undo / redo script passes against the Mac's baselines (Phase 3's end plus Phase 4's
+  `testDebugScene`); `stats.panels` is new (not recorded: section 4 records); axe 0 on all 59
+  shots, the panels' button too. `assetCompare`'s `drawer.assetCompare` warned as its
+  `unstableShots` says (rows in their loads' order).
+- **Docs:** `devTools/verify/CLAUDE.md`'s `debugger` item and `debug/CLAUDE.md`'s test bridge line.
+- **Verified:** `yarn test` (269 files), `tsc`, lint.
+
 ### Phase 6: the Hub, `CLAUDE.md`, readme
 
 D11's docs. `yarn hub:build` in both modes.

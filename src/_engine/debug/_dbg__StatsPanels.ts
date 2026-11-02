@@ -251,11 +251,12 @@ const createPanel = (id: StatsPanelId): Panel => {
   const elem = cmp.elem;
   const head = createPart('span', styles.head, elem);
   createPart('span', styles.label, head).textContent = def.label;
-  const figure = createPart('span', styles.figure, head);
+  // `statsLive`: what changes run to run, masked in the scene runner's shot (DEBUGGER_LIVE_MASKS)
+  const figure = createPart('span', `${styles.figure} statsLive`, head);
   const value = document.createTextNode(NO_FIGURE);
   figure.append(value);
   if (def.unit) createPart('span', styles.unit, figure).textContent = def.unit;
-  const foot = createPart('span', styles.foot, elem);
+  const foot = createPart('span', `${styles.foot} statsLive`, elem);
   const rangeElem = createPart('span', styles.range, foot);
   // Read as "Range 0.81–1.20": the dash alone says little
   createPart('span', 'aekVisuallyHidden', rangeElem).textContent = 'Range ';
@@ -268,7 +269,7 @@ const createPanel = (id: StatsPanelId): Panel => {
     min: 0,
     ticks: false,
     summary: false,
-    class: styles.graph,
+    class: [styles.graph, 'statsLive'],
   });
   cmp.add(series.cmp);
   const tooltip = createTooltip({ anchor: elem, text: def.description });
