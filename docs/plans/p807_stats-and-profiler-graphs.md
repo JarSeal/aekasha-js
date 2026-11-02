@@ -523,6 +523,75 @@ D4 (or D3's restyle on a failed gate), in sections:
 2. The Statistics tab's live settings, the button to the profiler, `AEK_debugStats` loading.
 3. D10's removals (stats-gl, its comments, `Stats.scss`), the About dialog checked.
 
+As built, section 1 (2026-11-02, not committed):
+
+- **`debug/_dbg__StatsPanels.ts`** (the root, the panels, the frame step; `_createStatsPanels`,
+  `_removeStatsPanels`, `_onStatsFrameStart`, `_onStatsFrameEnd`, `_recordPhysicsStep`) and
+  **`Stats.module.scss`**; `_dbg__Stats.ts` keeps the init and the Statistics tab and no longer
+  imports stats-gl. The package, `Stats.scss` (no longer imported) and the stats-gl comments
+  elsewhere are section 3's. `getStats` / `_getStats` went now, not in section 3: their one caller,
+  the main loop's `update()`, went with the panels (D4).
+- **The frame step is `startCustomMeasurements` / `updateRestOfStats`**, not a `LATE_MAIN`
+  system: `LATE_MAIN` doesn't run in an editor view, where the panels show (`KEEP_IN_VIEWS_CLASS`);
+  `updateRestOfStats()` (it lost its renderer parameter) runs at every rendered frame's end in
+  every view, after the render and the late loopers.
+- **The figures:** FPS and CPU from the frame probe's summary (held while either panel exists:
+  the Overview's rows); GPU and CPT as `_dbg__GPUFrameTimes` holders, their mean over 1 s by the
+  profiler's `SampleWindow` (its GPU row); PHY the last step; TFPS unchanged (1000 / the mean
+  logic span of the last 60 frames). No GPU or CPT panel without timestamp queries (as before).
+  **Hz moved to the FPS panel** (a line beside its range; the toggle now needs FPS: "Track Hz
+  (shown in the FPS panel)"): the lower quartile of the last 120 animation frame intervals (the
+  limiter's skipped frames included), matched to a common rate within 3 %, else as measured (the
+  143 Hz display reads 144 Hz, a 132 Hz one 132).
+- **The graphs and the range:** a sample every 33 ms, the worst frame since the last (FPS the
+  longest interval's); the small text is the graph's lowest and highest sample (its 96 samples,
+  3.2 s), so it shows the load's hitches until they scroll out. The CPU graph's per-frame span is
+  the rendered frame's (the frame probe also adds the limiter's skipped frames' CPU: the two differ
+  only with `VITE_MAX_FPS`).
+- **Labels:** "CPU" with a muted "ms" after the figure (D3's label and D4's unit); each panel's
+  tooltip says what it spans. No threshold line (no TFPS target is defined).
+- **Sizes:** a panel `--aek-space-7` × 4 wide (96 px compact: one graph sample per CSS px), its
+  graph `--aek-space-7` tall with a 1 px line in `text-muted`; six panels make the root 103 × 336 px
+  vertical (stats-gl's 90 × 288) and 643 × 59 horizontal. Shots: `.cache/p807/phase2-s1/` (both
+  debugger themes, vertical, horizontal, the default three; `panelsShot.mts`). At 1280 px the
+  horizontal row reaches under the bottom-centre switch tools (stats-gl's 560 px row did too).
+- The root's CMP id `_statsContainer` isn't written to the element (as before): scripts select
+  `.statsContainer`, which the on-screen tools' click-through rule also reads.
+- **Tests:** `_dbg__StatsPanels.test.ts` (10): the panels in order, the group and orientation,
+  the holds and their release, no GPU / CPT panel without timestamps, the figures at 4 Hz from
+  the probe in the same text node, the 30 Hz pushes taking the worst frame, TFPS' 60 frames, the
+  GPU and compute means, PHY with its gap, the refresh rate matched and as measured, nothing
+  measured without panels.
+- **The gate's part B, cost** (`.cache/p807/runC.sh`: `gate.mts --tag p2 --only cost,alloc`,
+  Phase 0's seven configurations, the display at 143 Hz; `summaryC.mts` prints it beside Phase
+  0's). Main-thread task ms per second over "none" in the same run (the "none" figures differ
+  between the runs, so the deltas are compared):
+
+  | Scene, backend      | 3 / 6 panels, stats-gl (P0) | 3 / 6 panels, ours | Loop CPU ours +3 / +6 | Allocated stats-gl / ours |
+  | ------------------- | --------------------------- | ------------------ | --------------------- | ------------------------- |
+  | quickStart, WebGPU  | +6.8 / +17.4                | +6.4 / +42.0 (1)   | +0.00 / +0.10         | 1.11 MB/s / 59 kB/s       |
+  | gym, WebGPU         | +13.3 / +19.6               | +3.9 / +16.6       | +0.00 / +0.10         | 1.05 MB/s / 65 kB/s       |
+  | gym, WebGPU, DPR 2  | +12.4 / +26.1               | +5.2 / +13.8       | +0.00 / +0.10         | 1.20 MB/s / 51 kB/s       |
+  | lodShowcase, WebGPU | +15.9 / +22.7               | +4.8 / +15.7       | -0.10 / +0.00         | 0.94 MB/s / 55 kB/s       |
+  | quickStart, WebGL 2 | +6.8 / +17.8                | +6.5 / +17.3       | +0.00 / +0.00         | 1.19 MB/s / 63 kB/s       |
+  | gym, WebGL 2        | +11.3 / +21.5               | +11.9 / +25.2      | +0.10 / +0.10         | 1.05 MB/s / 58 kB/s       |
+  | lodShowcase, WebGL 2| +7.9 / +17.0                | -6.4 / +14.0       | +0.00 / +0.10         | 1.03 MB/s / 53 kB/s       |
+
+  (1) Warm-up: its windows read 155, 105 and 77 ms/s, the third +7 over none. Ours allocated
+  counts `_dbg__Stats*` and `TimeSeries.ts`; layout is a new 0.6 ms/s (the 4 Hz text; stats-gl
+  drew only canvases).
+
+  **Verdict: the cost passes** (within stats-gl's noise or below everywhere). **Allocation is
+  95 % under stats-gl's but not zero per frame.** By function (`allocDetail.mts`, gym, WebGPU):
+  most is the 4 Hz text writes (`writeFigure` 35-38 kB/s: the range's scan of 96 samples, each read
+  boxed by the interpreter in a function that never gets hot, and the frame probe's summary
+  7-8 kB/s), which D11 allows; the time series' draws and rescans 9-11 kB/s (the kit's: p805 D14
+  measured none per draw); and about 70 B a frame in the frame step, the GPU listener and the
+  30 Hz pushes (doubles V8 boxes: `performance.now()`'s result, arguments to calls not yet
+  optimized). Moving the frame step's numbers and the frame probe's into a `Float64Array`
+  measured the same, so it was dropped.
+- **Verified:** `yarn test` (266 files), `tsc`, lint.
+
 ### Phase 3: the profiler's Overview and Objects
 
 D6, D7, D9, a section each; their shots changed on purpose.

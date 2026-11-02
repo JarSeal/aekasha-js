@@ -1,5 +1,5 @@
 import { Timer, type Renderer, type Scene, type Camera } from 'three/webgpu';
-import { getStats, initStats, startCustomMeasurements, updateRestOfStats } from '../../debug/Stats';
+import { initStats, startCustomMeasurements, updateRestOfStats } from '../../debug/Stats';
 import { getRenderer } from '../render/Renderer';
 import {
   getRootScene,
@@ -463,9 +463,6 @@ const runFrame = () => {
     return;
   }
 
-  // Update stats-gl
-  if (IS_DEBUG_ENV) getStats()?.update();
-
   renderScene();
 
   if (isSceneSuspended) {
@@ -476,7 +473,7 @@ const runFrame = () => {
     runSceneMainLateLoopers(delta);
   }
 
-  if (IS_DEBUG_ENV) updateRestOfStats(getRenderer() as Renderer);
+  if (IS_DEBUG_ENV) updateRestOfStats();
   frameProbe?.end(performance.now(), true);
 };
 
