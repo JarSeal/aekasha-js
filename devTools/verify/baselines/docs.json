@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3026,
-      "total": 3026
+      "documented": 3040,
+      "total": 3040
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2946,
-        "total": 2946
+        "documented": 2960,
+        "total": 2960
       },
       "members": {
         "documented": 890,
@@ -749,8 +749,8 @@
     },
     "engine/ui/game": {
       "exports": {
-        "documented": 7,
-        "total": 7
+        "documented": 21,
+        "total": 21
       },
       "members": {
         "documented": 0,

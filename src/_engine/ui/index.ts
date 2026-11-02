@@ -6,6 +6,16 @@ export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
 export { createButtonGroup } from './components/ButtonGroup';
 export type { ButtonGroup, ButtonGroupItem, ButtonGroupProps } from './components/ButtonGroup';
+export { createCooldown } from './game/Cooldown';
+export type { Cooldown, CooldownProps } from './game/Cooldown';
+export { createCrosshair } from './game/Crosshair';
+export type {
+  Crosshair,
+  CrosshairProps,
+  CrosshairShape,
+  CrosshairState,
+  HitMarkerKind,
+} from './game/Crosshair';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,
@@ -111,6 +121,13 @@ export type { TextField, TextFieldProps } from './forms/TextField';
 export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export { createSlider } from './forms/Slider';
 export type { Slider, SliderProps } from './forms/Slider';
+export { createResourceBar } from './game/ResourceBar';
+export type {
+  ResourceBar,
+  ResourceBarProps,
+  ResourceBarState,
+  ResourceBarThreshold,
+} from './game/ResourceBar';
 export { createRangeSlider } from './forms/RangeSlider';
 export type { RangeSlider, RangeSliderProps, RangeValue } from './forms/RangeSlider';
 export type { SliderTick } from './forms/SliderTrack';

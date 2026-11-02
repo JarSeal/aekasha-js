@@ -1,0 +1,248 @@
+// The crosshair's default styles (Crosshair.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A zero-size element fixed at the
+// centre of the HUD's bounds (the window, or a mounted engine's container, whose layout
+// containment holds fixed elements); each part is placed from that point by a transform, so the
+// spread (one custom property) moves the arms without layout. The hit marker's timing is fixed,
+// not times the motion factor: a hit is information (p808 D4), so under reduced motion it shows
+// still for the same 250 ms.
+@layer aek.components {
+  :where(.aekCrosshair) {
+    --aek-crosshair-fill: var(--aek-crosshair-color, var(--aek-text));
+    --aek-crosshair-edge: 0 0 0 1px var(--aek-crosshair-outline, var(--aek-bg));
+    --aek-crosshair-reach: calc(
+      var(--aek-crosshair-gap, 4px) + var(--aek-crosshair-spread, 0px)
+    );
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: var(--aek-z-window);
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  :where(.aekCrosshair__arm, .aekCrosshair__dot, .aekCrosshair__ring, .aekCrosshair__slash) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    background-color: var(--aek-crosshair-fill);
+    box-shadow: var(--aek-crosshair-edge);
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekCrosshair__arm[data-arm='up'], .aekCrosshair__arm[data-arm='down']) {
+    width: var(--aek-crosshair-thickness, 2px);
+    height: var(--aek-crosshair-length, 8px);
+  }
+
+  :where(.aekCrosshair__arm[data-arm='left'], .aekCrosshair__arm[data-arm='right']) {
+    width: var(--aek-crosshair-length, 8px);
+    height: var(--aek-crosshair-thickness, 2px);
+  }
+
+  :where(.aekCrosshair__arm[data-arm='up']) {
+    transform: translate(-50%, calc(-100% - var(--aek-crosshair-reach)));
+  }
+
+  :where(.aekCrosshair__arm[data-arm='down']) {
+    transform: translate(-50%, var(--aek-crosshair-reach));
+  }
+
+  :where(.aekCrosshair__arm[data-arm='left']) {
+    transform: translate(calc(-100% - var(--aek-crosshair-reach)), -50%);
+  }
+
+  :where(.aekCrosshair__arm[data-arm='right']) {
+    transform: translate(var(--aek-crosshair-reach), -50%);
+  }
+
+  :where(.aekCrosshair__dot) {
+    width: calc(var(--aek-crosshair-thickness, 2px) * 1.5);
+    height: calc(var(--aek-crosshair-thickness, 2px) * 1.5);
+    border-radius: var(--aek-radius-full);
+    transform: translate(-50%, -50%);
+  }
+
+  // The ring: around the arms' reach (the circle shape, and a target in every shape)
+  :where(.aekCrosshair__ring) {
+    width: calc((var(--aek-crosshair-reach) + var(--aek-crosshair-length, 8px)) * 2);
+    height: calc((var(--aek-crosshair-reach) + var(--aek-crosshair-length, 8px)) * 2);
+    border: var(--aek-crosshair-thickness, 2px) solid var(--aek-crosshair-fill);
+    border-radius: var(--aek-radius-full);
+    background-color: transparent;
+    box-shadow:
+      var(--aek-crosshair-edge),
+      inset var(--aek-crosshair-edge);
+    transform: translate(-50%, -50%);
+    visibility: hidden;
+  }
+
+  :where(.aekCrosshair__slash) {
+    width: calc((var(--aek-crosshair-reach) + var(--aek-crosshair-length, 8px)) * 2);
+    height: var(--aek-crosshair-thickness, 2px);
+    background-color: var(--aek-danger);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    visibility: hidden;
+  }
+
+  // The shapes
+  :where(.aekCrosshair[data-shape='cross']) :where(.aekCrosshair__dot),
+  :where(.aekCrosshair[data-shape='dot']) :where(.aekCrosshair__arm),
+  :where(.aekCrosshair[data-shape='circle']) :where(.aekCrosshair__arm),
+  :where(.aekCrosshair[data-shape='chevron'])
+    :where(.aekCrosshair__arm[data-arm='up'], .aekCrosshair__arm[data-arm='down']) {
+    display: none;
+  }
+
+  :where(.aekCrosshair[data-shape='circle']) :where(.aekCrosshair__ring) {
+    visibility: visible;
+  }
+
+  // The chevron: the side arms turned down from the centre, a ^
+  :where(.aekCrosshair[data-shape='chevron']) :where(.aekCrosshair__arm[data-arm='left']) {
+    transform-origin: right center;
+    transform: translate(calc(-100% - var(--aek-crosshair-spread, 0px)), -50%) rotate(-35deg);
+  }
+
+  :where(.aekCrosshair[data-shape='chevron']) :where(.aekCrosshair__arm[data-arm='right']) {
+    transform-origin: left center;
+    transform: translate(var(--aek-crosshair-spread, 0px), -50%) rotate(35deg);
+  }
+
+  // Over a target: the ring, in its colour; blocked: muted, with the slash
+  :where(.aekCrosshair[data-state='target']) {
+    --aek-crosshair-fill: var(--aek-crosshair-target-color, var(--aek-accent));
+  }
+
+  :where(.aekCrosshair[data-state='target']) :where(.aekCrosshair__ring),
+  :where(.aekCrosshair[data-state='blocked']) :where(.aekCrosshair__slash) {
+    visibility: visible;
+  }
+
+  :where(.aekCrosshair[data-state='blocked']) {
+    --aek-crosshair-fill: var(--aek-text-muted);
+  }
+
+  // The hit marker: four diagonal arms out from the centre, larger and heavier by kind
+  :where(.aekCrosshair__hit) {
+    --aek-hit-size: 7px;
+    --aek-hit-thickness: 2px;
+    --aek-hit-gap: 5px;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+  }
+
+  :where(.aekCrosshair__hit[data-kind='critical']) {
+    --aek-hit-size: 10px;
+    --aek-hit-thickness: 2.5px;
+  }
+
+  :where(.aekCrosshair__hit[data-kind='kill']) {
+    --aek-hit-size: 13px;
+    --aek-hit-thickness: 3px;
+    --aek-hit-gap: 6px;
+  }
+
+  :where(.aekCrosshair__hitArm) {
+    position: absolute;
+    top: calc(var(--aek-hit-thickness) / -2);
+    left: 0;
+    width: var(--aek-hit-size);
+    height: var(--aek-hit-thickness);
+    background-color: var(--aek-crosshair-hit-color, var(--aek-text));
+    box-shadow: var(--aek-crosshair-edge);
+    transform-origin: left center;
+  }
+
+  :where(.aekCrosshair__hitArm:nth-child(1)) {
+    transform: rotate(45deg) translateX(var(--aek-hit-gap));
+  }
+
+  :where(.aekCrosshair__hitArm:nth-child(2)) {
+    transform: rotate(135deg) translateX(var(--aek-hit-gap));
+  }
+
+  :where(.aekCrosshair__hitArm:nth-child(3)) {
+    transform: rotate(225deg) translateX(var(--aek-hit-gap));
+  }
+
+  :where(.aekCrosshair__hitArm:nth-child(4)) {
+    transform: rotate(315deg) translateX(var(--aek-hit-gap));
+  }
+
+  // Two names, so setting the other one restarts it (no reflow)
+  :where(.aekCrosshair__hit[data-run='1']) {
+    animation: aekHitMarker1 250ms var(--aek-ease-standard);
+  }
+
+  :where(.aekCrosshair__hit[data-run='2']) {
+    animation: aekHitMarker2 250ms var(--aek-ease-standard);
+  }
+
+  :where(.aekCrosshair__hit[data-still][data-run='1']) {
+    animation: aekHitMarkerStill1 250ms steps(1, end);
+  }
+
+  :where(.aekCrosshair__hit[data-still][data-run='2']) {
+    animation: aekHitMarkerStill2 250ms steps(1, end);
+  }
+}
+
+@keyframes aekHitMarker1 {
+  from {
+    opacity: 1;
+    scale: 0.6;
+  }
+
+  30% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+@keyframes aekHitMarker2 {
+  from {
+    opacity: 1;
+    scale: 0.6;
+  }
+
+  30% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+@keyframes aekHitMarkerStill1 {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes aekHitMarkerStill2 {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}

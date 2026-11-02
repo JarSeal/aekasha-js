@@ -3578,6 +3578,19 @@
       "VectorFieldProps": "TypeAlias",
       "VectorValue": "TypeAlias"
     },
+    "src/_engine/ui/game/Cooldown.ts": {
+      "Cooldown": "TypeAlias",
+      "CooldownProps": "TypeAlias",
+      "createCooldown": "Function"
+    },
+    "src/_engine/ui/game/Crosshair.ts": {
+      "createCrosshair": "Function",
+      "Crosshair": "TypeAlias",
+      "CrosshairProps": "TypeAlias",
+      "CrosshairShape": "TypeAlias",
+      "CrosshairState": "TypeAlias",
+      "HitMarkerKind": "TypeAlias"
+    },
     "src/_engine/ui/game/InputPrompt.ts": {
       "createInputPrompt": "Function",
       "getPromptDevice": "Function",
@@ -3586,6 +3599,13 @@
       "InputPromptDevice": "TypeAlias",
       "InputPromptProps": "TypeAlias",
       "setPromptDevice": "Function"
+    },
+    "src/_engine/ui/game/ResourceBar.ts": {
+      "createResourceBar": "Function",
+      "ResourceBar": "TypeAlias",
+      "ResourceBarProps": "TypeAlias",
+      "ResourceBarState": "TypeAlias",
+      "ResourceBarThreshold": "TypeAlias"
     },
     "src/_engine/ui/overlays/Anchor.ts": {
       "AnchorAlign": "TypeAlias",
@@ -4891,6 +4911,12 @@
       "ContextMenu",
       "ContextMenuProps",
       "ContextMenuSource",
+      "Cooldown",
+      "CooldownProps",
+      "Crosshair",
+      "CrosshairProps",
+      "CrosshairShape",
+      "CrosshairState",
       "CurveBezier",
       "CurveEditor",
       "CurveEditorProps",
@@ -4938,6 +4964,7 @@
       "GraphMonitorProps",
       "GraphPart",
       "GraphPartFormat",
+      "HitMarkerKind",
       "HudRootProps",
       "InputGlyph",
       "InputGlyphFamily",
@@ -5012,6 +5039,10 @@
       "RangeSliderProps",
       "RangeValue",
       "ReadonlyBindingSource",
+      "ResourceBar",
+      "ResourceBarProps",
+      "ResourceBarState",
+      "ResourceBarThreshold",
       "RotationField",
       "RotationFieldProps",
       "SceneTargetResolver",
@@ -5120,6 +5151,8 @@
       "createColorField",
       "createCommandPalette",
       "createContextMenu",
+      "createCooldown",
+      "createCrosshair",
       "createCurveEditor",
       "createDivider",
       "createDonut",
@@ -5149,6 +5182,7 @@
       "createQuaternionField",
       "createRadioGroup",
       "createRangeSlider",
+      "createResourceBar",
       "createRotationField",
       "createSegmentedControl",
       "createSelectField",

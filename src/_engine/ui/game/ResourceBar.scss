@@ -1,0 +1,149 @@
+// The resource bar's default styles (ResourceBar.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). The fill and the trail are
+// scaleX of the track, so a value set every frame changes no layout. A drop: the fill jumps, the
+// trail holds --aek-resource-bar-trail-delay and shrinks over --aek-motion-slow (a transition with a
+// delay: a new drop meanwhile restarts the hold from where the trail is). A heal: the fill eases
+// over --aek-motion-fast and the flash plays once. The delay and the durations are times the
+// motion factor, so under reduced motion every change jumps and nothing flashes (p808 D4).
+@layer aek.components {
+  :where(.aekResourceBar) {
+    --aek-resource-bar-fill-color: var(--aek-resource-bar-color, var(--aek-accent));
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    min-width: 0;
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-tight);
+  }
+
+  :where(.aekResourceBar[data-label-hidden]) {
+    gap: 0;
+  }
+
+  // A threshold's status: its role colours the fill (the status word says it too)
+  :where(.aekResourceBar[data-state='danger']) {
+    --aek-resource-bar-fill-color: var(--aek-danger);
+  }
+
+  :where(.aekResourceBar[data-state='warning']) {
+    --aek-resource-bar-fill-color: var(--aek-warning);
+  }
+
+  :where(.aekResourceBar[data-state='success']) {
+    --aek-resource-bar-fill-color: var(--aek-success);
+  }
+
+  :where(.aekResourceBar[data-state='info']) {
+    --aek-resource-bar-fill-color: var(--aek-info);
+  }
+
+  :where(.aekResourceBar__header) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--aek-space-2);
+  }
+
+  :where(.aekResourceBar__label) {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--aek-text);
+    font-weight: var(--aek-font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekResourceBar__status) {
+    color: var(--aek-resource-bar-fill-color);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekResourceBar__value) {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--aek-text-muted);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  // The empty part's edge is the control border (3:1 on the surfaces)
+  :where(.aekResourceBar__track) {
+    position: relative;
+    box-sizing: border-box;
+    display: block;
+    height: var(--aek-resource-bar-height, var(--aek-space-4));
+    overflow: hidden;
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-resource-bar-radius, var(--aek-radius-sm));
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekResourceBar__fill, .aekResourceBar__trail, .aekResourceBar__flash) {
+    position: absolute;
+    inset: 0;
+    transform-origin: left;
+  }
+
+  :where(.aekResourceBar__trail) {
+    background-color: var(--aek-resource-bar-trail-color, var(--aek-text-muted));
+    transform: scaleX(1);
+    transition: transform var(--aek-motion-slow) var(--aek-ease-standard)
+      calc(var(--aek-resource-bar-trail-delay, 400ms) * var(--aek-motion, 1));
+  }
+
+  :where(.aekResourceBar__fill) {
+    background-color: var(--aek-resource-bar-fill-color);
+    transform: scaleX(1);
+  }
+
+  // Only a heal eases: a hit shows at once
+  :where(.aekResourceBar[data-change='heal']) :where(.aekResourceBar__fill) {
+    transition: transform var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekResourceBar__flash) {
+    background-color: var(--aek-text);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  // Two names, so setting the other one restarts it (no reflow)
+  :where(.aekResourceBar__flash[data-run='1']) {
+    animation: aekResourceBarFlash1 calc(400ms * var(--aek-motion, 1)) var(--aek-ease-standard);
+  }
+
+  :where(.aekResourceBar__flash[data-run='2']) {
+    animation: aekResourceBarFlash2 calc(400ms * var(--aek-motion, 1)) var(--aek-ease-standard);
+  }
+
+  // The dividers: a gap of the track's edge colour at each part's end
+  :where(.aekResourceBar__segments) {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0 calc(100% / var(--aek-resource-bar-segments, 1) - 2px),
+      var(--aek-border-control) 0 calc(100% / var(--aek-resource-bar-segments, 1))
+    );
+    pointer-events: none;
+  }
+}
+
+@keyframes aekResourceBarFlash1 {
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes aekResourceBarFlash2 {
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 0;
+  }
+}

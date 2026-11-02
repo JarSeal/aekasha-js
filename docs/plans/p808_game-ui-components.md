@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -460,10 +460,43 @@ As built:
 - The entry: 154 value names (149 + `createInputPrompt`, `getPromptDevice`, `setPromptDevice`,
   `getKitPreferences`, `setKitPreferences`).
 
-### Phase 2: bars, the cooldown, the crosshair
+### Phase 2: bars, the cooldown, the crosshair — done
 
 `createResourceBar`, `createCooldown`, `createCrosshair` with `showHitMarker` (D6), each with its
 stylesheet and tests.
+
+As built:
+
+- **The resource bar** (`game/ResourceBar.ts`): D6's thresholds take a `text` (the word shown in
+  `.aekResourceBar__status` and read in `aria-valuetext`, '18 of 100, Low'), not an `icon`; the
+  lowest `below` that holds applies. `flashAbove` (default 0.05 of the maximum) keeps a regen
+  tick from flashing. The trail is a CSS transition with a delay
+  (`--aek-resource-bar-trail-delay` × `--aek-motion`), so a drop needs no timer and a drop
+  during the hold restarts it from where the trail is; only a heal eases the fill
+  (`data-change`). The flash restarts by alternating two animation names (`data-run` 1 / 2), the
+  pattern the cooldown and the hit marker use too: no reflow, no timer. The texts are written
+  only when the rounded value or the percent changes. Segments are dividers drawn by a repeating
+  gradient over one fill (`--aek-resource-bar-segments`), not the progress bar's parts.
+- **The cooldown** (`game/Cooldown.ts`): D6's `for` prop is `target`. The sweep is
+  `conic-gradient` on `@property --aek-cooldown-progress` (1 → 0), animated on the sweep element
+  (a registered property that doesn't inherit), its duration, delay and timing inline: linear, or
+  `steps(seconds)` when `getMotionFactor` is 0 at the start. One `setTimeout` chain a second
+  writes the seconds and the target's description, a `hidden` span appended to the target (an
+  `aria-describedby` reference reads hidden text, and hidden content isn't part of the target's
+  name); `aria-disabled` and `aria-describedby` are put back as they were. The shade's default is
+  the text colour at 30 % (`color-mix`): the backdrop token, a dark scrim, vanished on the dark
+  theme's surfaces (seen in Chromium, both themes).
+- **The crosshair** (`game/Crosshair.ts`): fixed at 50 % / 50 % (the HUD root is a zero-size
+  fixed element, so an absolute child can't centre on it), so it goes on the HUD root, not a box.
+  The hit marker's 250 ms is fixed (information), with a still variant (`data-still`) when
+  `getMotionFactor` is 0. The `blocked` slash is in `--aek-danger` with the arms muted.
+- **Looked at in Chromium** (both themes) through a throwaway page served by Vite from the
+  gitignored `.cache/p808view/` (a `vite.config.mts` aliasing `aekasha/ui` to the entry, and
+  `devTools/verify/browser.ts`' `launchChromium` from a `tsx` script; `page.evaluate` takes a
+  string, since `tsx`'s `__name` helper isn't in the page). Not kept: Phase 8's library boxes and
+  `yarn verify:ui` are the lasting check.
+- **Size:** `yarn verify:baselines --update` recorded the names; the bundle baselines came out
+  as `main`'s (nothing in a first download).
 
 ### Phase 3: text
 
