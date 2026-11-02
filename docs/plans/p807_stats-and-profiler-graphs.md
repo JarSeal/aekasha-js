@@ -1053,6 +1053,39 @@ As built, section 2 (2026-11-02, not committed):
   - The ~70 B a frame of boxed doubles in the frame step (Phase 2's decision) stays.
 - **Verified:** `yarn test` (269 files), `tsc`, lint.
 
+As built, section 3 (2026-11-02, not committed; sections 1 and 2 committed as `84fef012`,
+`c22ac687`):
+
+- **The debug chunks** (`.cache/p807/debugChunks.mts`, Phase 0's measure written again: each
+  tree's `VITE_APP_ENV=test vite build` after a production gather, `build:test`'s bundle step
+  without its `tsc` and Hub; the lazy JS chunks of the main build by Vite's manifest, as `yarn
+  sbp` splits them, that hold a `_dbg__` module or one under an engine `debug` folder; the
+  modules' minified and gzip sizes from `dist-stats/module-sizes.json`). Both trees measured
+  alike, `main`'s in the section 2 worktree (the desktop's Phase 0 / Phase 2 figures counted the
+  chunks another way, so they aren't compared):
+
+  |                                    | `main` (`dc2b28ad`)       | The branch                |
+  | ---------------------------------- | ------------------------- | ------------------------- |
+  | Debug chunks                       | 53, 500.5 kB (200.4 gzip) | 56, 481.0 kB (198.8 gzip) |
+  | stats-gl                           | 33.2 kB (10.3 gzip)       | 0                         |
+  | `_dbg__Stats*`, the GPU timing     | 6.5 kB (2.9 gzip)         | 12.7 kB (5.9 gzip)        |
+  | The profiler's folder              | 41.6 kB (17.5 gzip)       | 42.5 kB (18.1 gzip)       |
+  | GPU memory's folder                | 25.0 kB (9.7 gzip)        | 28.4 kB (12.3 gzip)       |
+  | The kit's `ui/data` (lazy chunks)  | 75.1 kB (32.4 gzip)       | 76.4 kB (33.1 gzip)       |
+
+  19.5 kB less minified, 1.6 kB less gzip: stats-gl's 10.3 kB gzip went; ours (the panels, the
+  GPU frame times with compute and WebGL, GPU memory's two views) and the kit pieces the tabs now
+  bring (the segmented control, the list, the stacked bar) took most of it back.
+- **Production:** `yarn verify:baselines`: every baseline unchanged (the three bundles,
+  `api.json`, `docs.json` 100 %), no debug code in production or either embed; `yarn sbp
+  --profile all`: first downloads app 384.4, banner 287.4, uiKit 286.6 kB gzip, unchanged from
+  Phase 0, every budget within (the app group's "well under" note as before). Section 2's kit
+  changes (the sparkline, the table) are in no first download.
+- **`yarn verify:ui --only sparkline,table`:** axe, the keyboard scripts and both pieces' states in
+  the four settings pass; the Mac had no baselines for them (Phase 3's run was the desktop's), so
+  the shots were recorded (`--update --no-build`, local). The sparkline's paths are byte for byte
+  section 2's before (its unit tests).
+
 ### Phase 6: the Hub, `CLAUDE.md`, readme
 
 D11's docs. `yarn hub:build` in both modes.
