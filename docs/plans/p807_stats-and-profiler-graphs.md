@@ -591,6 +591,49 @@ As built, section 1 (2026-11-02, not committed):
   optimized). Moving the frame step's numbers and the frame probe's into a `Float64Array`
   measured the same, so it was dropped.
 - **Verified:** `yarn test` (266 files), `tsc`, lint.
+- **Decided at the review (2026-11-02):** the remaining ~70 B a frame passes D3's "nothing
+  allocated per frame" (95 % under stats-gl's; Phase 5's perf pass checks it again), and the
+  horizontal row stays as it is (vertical is the default).
+
+As built, section 2 (2026-11-02, not committed):
+
+- **Live settings:** `_createStatsPanels` became `_setStatsPanels(options)`: it builds the root
+  (and adds it to the HUD root itself) when there's none or it changes between a button and a
+  group, else adds a panel in its place in `STATS_PANEL_ORDER` (its own measures start again, its
+  figure written on the next frame) or removes one, and changes the orientation and the Hz line in
+  place; the frame probe and each GPU side are held only while a panel reads them, the GPU frame
+  listener only while a side is held. "Enable measuring" off removes the root
+  (`_removeStatsPanels`). Every toggle applies at once and refreshes the tab (the Hz toggle follows
+  FPS); the "(reloads the app)" notes went; "Track PHY (after a reload)" keeps a boot setting's
+  note. The GPU and CPT toggles are disabled without GPU timer queries (`_getGpuTimerSupport`).
+- **The button:** with `openFromStatsPanels` on (its default), the root is a `<button>`: named
+  by its content, a visually hidden "Open the profiler:" and then the panels (an `aria-label`
+  failed axe's `label-content-name-mismatch`, WCAG 2.5.3: the visible figures weren't in its name;
+  this way a screen reader gets the figures too), its tooltip "Open the profiler (F8)" on its
+  right (the key from `getDebugKeyChordLabel`, CONFIG.ts' rebinding; the panels' own tooltips are
+  above them) describing it, a press keeping the focus where it was (the on-screen tools' rule,
+  p806 D12), the ring inside (the viewport's edges would cut it). Off, a group "Frame statistics"
+  with no click. Switching builds the root again (its graphs start over); the profiler's setting
+  change reaches it through `updateStatsProfilerEntryPoint`. The panels are `span`s (a button's
+  content); the time series inside stays a `div`. The Statistics tab's Profiler button reads the
+  same tooltip text.
+- **The debug toaster** sits above the panels through `--aek-debug-stats-height` on `<body>`
+  (the drawer's `--aek-debug-drawer-width` precedent), which a `ResizeObserver` on the root writes
+  and `_removeStatsPanels` removes; `Boot.ts`' toaster offset is
+  `calc(-16px - var(--aek-debug-stats-height, 0px))`, so a live change moves it. `getStatsCmp` /
+  `_getStatsCmp`, the boot's one-off measure, went.
+- **`AEK_debugStats`** loads unchanged (the same `persistKeys`; the saved object after the live
+  check read back as set).
+- **Tests:** 14 (4 new): a change applied live with the root, the kept panel and its figure
+  unchanged, the Hz line shown and hidden, the button (its parts, name, description, click,
+  press) and back to a group built anew with no listener left, the height on `<body>` and its
+  removal.
+- **In the app** (`.cache/p807/liveCheck.mts`, gym, WebGPU, Windows Chrome; shots in
+  `.cache/p807/phase2-s2/`): Tab reaches the button and Enter opens the profiler; each toggle
+  (GPU, Hz, TFPS, Horizontal, FPS with the Hz toggle disabled, Enable measuring off and on, the
+  profiler's setting off and on) applied without a reload (a page marker kept); a debug toast sits
+  above the panels; axe finds nothing on the button or the group; no page error.
+- **Verified:** `yarn test` (266 files), `tsc`, lint, the docs ratchet (100 %).
 
 ### Phase 3: the profiler's Overview and Objects
 

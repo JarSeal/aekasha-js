@@ -1,5 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CMP } from '../ui/core/CMP';
+import type { CMPHandle } from '../ui/core/CMPTypes';
 import {
+  countListeners,
   stubCanvas2d,
   stubIntersectionObserver,
   stubKitDomAsync,
@@ -38,6 +41,12 @@ vi.mock('./_dbg__GPUFrameTimes', () => ({
     };
   },
 }));
+// The root goes in the HUD root: this test's
+const hud = vi.hoisted(() => ({ root: null as CMPHandle | null }));
+vi.mock(import('../ui/core/HUD'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getHUDRootCMP: () => hud.root as CMPHandle,
+}));
 vi.mock(import('../ui/data/graphs/TimeSeries'), async (importOriginal) => {
   const original = await importOriginal();
   return {
@@ -57,21 +66,23 @@ vi.mock(import('../ui/data/graphs/TimeSeries'), async (importOriginal) => {
 });
 
 import {
-  _createStatsPanels,
   _onStatsFrameEnd,
   _onStatsFrameStart,
   _recordPhysicsStep,
   _removeStatsPanels,
+  _setStatsPanels,
   type StatsPanelId,
   type StatsPanelsOptions,
 } from './_dbg__StatsPanels';
 
 let restores: (() => void)[] = [];
+let resizer: ReturnType<typeof stubResizeObserver>;
 
 beforeAll(async () => {
   await stubKitDomAsync();
+  resizer = stubResizeObserver();
   restores = [
-    stubResizeObserver().restore,
+    resizer.restore,
     stubIntersectionObserver().restore,
     stubCanvas2d().restore,
     stubMatchMedia().restore,
@@ -87,10 +98,13 @@ beforeEach(() => {
   sources.gpu.RENDER = true;
   sources.gpu.COMPUTE = true;
   sources.pushes = {};
+  hud.root = CMP({});
+  document.body.append(hud.root.elem);
 });
 
 afterEach(() => {
   _removeStatsPanels();
+  hud.root?.remove();
   document.body.replaceChildren();
 });
 
@@ -107,14 +121,14 @@ const build = (
   panels: Partial<Record<StatsPanelId, boolean>>,
   opts: Partial<StatsPanelsOptions> = {}
 ) => {
-  const root = _createStatsPanels({
+  _setStatsPanels({
     panels: { ...NONE, ...panels },
     showHz: false,
     horizontal: false,
+    activate: null,
     ...opts,
   });
-  document.body.append(root.elem);
-  return root;
+  return { elem: document.querySelector('.statsContainer') as HTMLElement };
 };
 
 const panelIds = (root: { elem: HTMLElement }) =>
@@ -168,7 +182,14 @@ describe('the stats panels (p807 D4)', () => {
     expect(sources.probeHolds).toBe(1);
     expect(sources.gpuHolds).toEqual({ RENDER: 1, COMPUTE: 1 });
     expect(sources.gpuListener).not.toBeNull();
-    // Built again: the old holds go first
+    // One side gone: the listener stays for the other
+    build({ FPS: true, CPU: true, CPT: true });
+    expect(sources.gpuHolds).toEqual({ RENDER: 0, COMPUTE: 1 });
+    expect(sources.gpuListener).not.toBeNull();
+    // CPU alone keeps the probe; nothing reads the GPU
+    build({ CPU: true });
+    expect(sources.probeHolds).toBe(1);
+    expect(sources.gpuListener).toBeNull();
     build({ TFPS: true });
     expect(sources.probeHolds).toBe(0);
     expect(sources.gpuHolds).toEqual({ RENDER: 0, COMPUTE: 0 });
@@ -289,6 +310,85 @@ describe('the stats panels (p807 D4)', () => {
     t = runFrames(0, 60, 1000 / 132, 0.5);
     runFrames(t + 250, 1, 1000 / 132, 0.5);
     expect(hzOf()).toBe('132 Hz');
+  });
+
+  it('applies a change live: a panel added in its place or removed, the rest kept', () => {
+    const root = build({ TFPS: true, CPU: true });
+    const cpuElem = panelElem('CPU');
+    sources.summary.frames = 100;
+    sources.summary.cpuAvgMs = 1.5;
+    const t = runFrames(0, 1, 7.5, 1);
+    expect(figureOf('CPU')).toBe('1.50');
+    build({ TFPS: true, FPS: true, CPU: true, GPU: true });
+    expect(panelIds(root)).toEqual(['TFPS', 'FPS', 'CPU', 'GPU']);
+    // The same root and the CPU panel with its figure; the new ones written on the next frame
+    expect(document.querySelector('.statsContainer')).toBe(root.elem);
+    expect(panelElem('CPU')).toBe(cpuElem);
+    expect(figureOf('FPS')).toBe('–');
+    runFrames(t, 1, 7.5, 1);
+    expect(figureOf('FPS')).not.toBe('–');
+    build({ FPS: true, GPU: true }, { horizontal: true });
+    expect(panelIds(root)).toEqual(['FPS', 'GPU']);
+    expect(root.elem.getAttribute('data-orientation')).toBe('horizontal');
+    expect(document.querySelectorAll('.statsContainer').length).toBe(1);
+  });
+
+  it('shows and hides the refresh rate line live', () => {
+    build({ FPS: true }, { showHz: true });
+    sources.summary.frames = 100;
+    sources.summary.fps = 60;
+    let t = runFrames(0, 40, 1000 / 60, 0.5);
+    t = runFrames(t + 250, 1, 1000 / 60, 0.5);
+    expect(hzOf()).toBe('60 Hz');
+    build({ FPS: true }, { showHz: false });
+    expect(hzOf()).toBe('');
+    runFrames(t + 250, 1, 1000 / 60, 0.5);
+    expect(hzOf()).toBe('');
+  });
+
+  it("is the profiler's button with `activate`, its press keeping the focus", () => {
+    const onActivate = vi.fn();
+    const activate = { label: 'Open the profiler', tooltip: 'Open the profiler (F8)', onActivate };
+    build({ FPS: true, CPU: true }, { activate });
+    const button = document.querySelector('.statsContainer') as HTMLElement;
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.getAttribute('type')).toBe('button');
+    // Named by its content: its purpose (hidden) and then the figures it shows
+    expect(button.hasAttribute('aria-label')).toBe(false);
+    expect(button.firstElementChild?.textContent).toBe('Open the profiler:');
+    expect(button.firstElementChild?.className).toBe('aekVisuallyHidden');
+    expect(button.hasAttribute('role')).toBe(false);
+    // The tooltip with the key describes it (its text isn't the name)
+    expect(button.getAttribute('aria-describedby')).toBeTruthy();
+    expect(panelIds({ elem: button })).toEqual(['FPS', 'CPU']);
+    button.dispatchEvent(new CustomEvent('click', { bubbles: true }));
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    const press = Object.assign(new CustomEvent('mousedown', { bubbles: true, cancelable: true }), {
+      button: 0,
+    });
+    button.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true);
+
+    // Off: a group again, built anew
+    build({ FPS: true, CPU: true });
+    const group = document.querySelector('.statsContainer') as HTMLElement;
+    expect(group).not.toBe(button);
+    expect(group.tagName).toBe('DIV');
+    expect(group.getAttribute('role')).toBe('group');
+    expect(panelIds({ elem: group })).toEqual(['FPS', 'CPU']);
+    expect(document.querySelectorAll('.statsContainer').length).toBe(1);
+    expect(countListeners(button)).toBe(0);
+    expect(sources.probeHolds).toBe(1);
+  });
+
+  it('writes its height on <body> for the debug toaster, and removes it', () => {
+    const root = build({ FPS: true });
+    expect(resizer.observerCount()).toBeGreaterThan(0);
+    resizer.resize(root.elem, { height: 120 });
+    expect(document.body.style.getPropertyValue('--aek-debug-stats-height')).toMatch(/px$/);
+    _removeStatsPanels();
+    expect(document.body.style.getPropertyValue('--aek-debug-stats-height')).toBe('');
+    expect(document.querySelector('.statsContainer')).toBeNull();
   });
 
   it('measures nothing without panels', () => {

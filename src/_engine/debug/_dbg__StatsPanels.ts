@@ -9,6 +9,10 @@
  *   PHY the physics step stats' last step, TFPS 1000 over the main loop's mean CPU time of the
  *   last 60 frames (as stats-gl's TFPS panel was). Hz is the display's refresh rate read from the
  *   animation frames' intervals, shown in the FPS panel.
+ * - Settings apply live (_setStatsPanels): a panel is added in its place or removed, the frame
+ *   probe and each GPU side held only while a panel reads it. With `activate` (the profiler's
+ *   "open from stats panels") the root is a `<button>`, else a named group; switching builds the
+ *   root again. Its height is on `<body>` (`--aek-debug-stats-height`) for the debug toaster.
  * - The main loop calls _onStatsFrameStart at every frame's start and _onStatsFrameEnd at a
  *   rendered frame's end (after the render and the late loopers, in every view). Nothing
  *   allocates per frame: the frame step adds to numbers, the pushes write the time series' and
@@ -16,7 +20,7 @@
  */
 import { CMP } from '../ui/core/CMP';
 import type { CMPHandle } from '../ui/core/CMPTypes';
-import { KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
+import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../ui/core/HUD';
 import { createTimeSeries, type TimeSeries } from '../ui/data/graphs/TimeSeries';
 import { getDebuggerRootProps } from '../ui/overlays/DebuggerRoot';
 import { createTooltip, type Tooltip } from '../ui/overlays/Tooltip';
@@ -25,6 +29,7 @@ import {
   _onGpuFrameTime,
   _releaseGpuFrameTimes,
   type GpuFrameTime,
+  type GpuFrameTimesSide,
 } from './_dbg__GPUFrameTimes';
 import {
   _acquireFrameProbe,
@@ -47,7 +52,17 @@ export const STATS_PANEL_ORDER: readonly StatsPanelId[] = [
   'CPT',
 ];
 
-/** What _createStatsPanels builds. */
+/** The root as a button: what it does and says. */
+export type StatsPanelsActivate = {
+  /** What it does ('Open the profiler'), its name's start (the figures follow). */
+  label: string;
+  /** Its tooltip, the key's hint in it. */
+  tooltip: string;
+  /** A click, Enter or Space on it (the profiler's toggle). */
+  onActivate: () => void;
+};
+
+/** What _setStatsPanels shows. */
 export type StatsPanelsOptions = {
   /** The panels shown (GPU and CPT only where the renderer has timestamp queries). */
   panels: Readonly<Record<StatsPanelId, boolean>>;
@@ -55,6 +70,8 @@ export type StatsPanelsOptions = {
   showHz: boolean;
   /** A row in place of a column. */
   horizontal: boolean;
+  /** Makes the root a button (null: a group). */
+  activate: StatsPanelsActivate | null;
 };
 
 type PanelDef = {
@@ -74,6 +91,7 @@ type Panel = {
   tooltip: Tooltip;
   value: Text;
   range: Text;
+  /** The FPS panel's refresh rate line (empty while it isn't shown) */
   hz: Text | null;
   /** The graph's samples (as the time series holds them), for the range text */
   ring: Float32Array;
@@ -103,6 +121,8 @@ const HZ_MATCH = 0.03;
 /** A longer gap between rendered frames isn't a frame (the frame probe's window) */
 const MAX_FRAME_GAP_MS = 1000;
 const NO_FIGURE = '–';
+/** The root's height on <body>, which the debug toaster sits above (Boot.ts) */
+const HEIGHT_PROPERTY = '--aek-debug-stats-height';
 
 const formatCount = (value: number) => value.toFixed(0);
 const formatMs = (value: number) => {
@@ -151,6 +171,10 @@ const PANEL_DEFS: Record<StatsPanelId, PanelDef> = {
 };
 
 let root: CMPHandle | null = null;
+let isButton = false;
+let rootTooltip: Tooltip | null = null;
+let resizeObserver: ResizeObserver | null = null;
+let showHz = false;
 const panels: Partial<Record<StatsPanelId, Panel>> = {};
 let isProbeHeld = false;
 let isRenderHeld = false;
@@ -220,23 +244,24 @@ const createTextPart = (className: string, parent: Element, initial = '') => {
   return text;
 };
 
-const createPanel = (id: StatsPanelId, showHz: boolean): Panel => {
+const createPanel = (id: StatsPanelId): Panel => {
   const def = PANEL_DEFS[id];
-  const cmp = CMP({ class: styles.panel, attr: { 'data-panel': id } });
+  // Spans: the root may be a button
+  const cmp = CMP({ tag: 'span', class: styles.panel, attr: { 'data-panel': id } });
   const elem = cmp.elem;
-  const head = createPart('div', styles.head, elem);
+  const head = createPart('span', styles.head, elem);
   createPart('span', styles.label, head).textContent = def.label;
   const figure = createPart('span', styles.figure, head);
   const value = document.createTextNode(NO_FIGURE);
   figure.append(value);
   if (def.unit) createPart('span', styles.unit, figure).textContent = def.unit;
-  const foot = createPart('div', styles.foot, elem);
+  const foot = createPart('span', styles.foot, elem);
   const rangeElem = createPart('span', styles.range, foot);
   // Read as "Range 0.81–1.20": the dash alone says little
   createPart('span', 'aekVisuallyHidden', rangeElem).textContent = 'Range ';
   const range = document.createTextNode('');
   rangeElem.append(range);
-  const hz = showHz && id === 'FPS' ? createTextPart(styles.hz, foot) : null;
+  const hz = id === 'FPS' ? createTextPart(styles.hz, foot) : null;
   const series = createTimeSeries({
     series: [{ label: def.label, color: 'var(--aek-text-muted)' }],
     capacity: GRAPH_CAPACITY,
@@ -350,7 +375,7 @@ const writeFigures = (now: number) => {
     writeFigure(panels.FPS, frames.fps, frames.frames > 0 && frames.fps > 0);
     writeFigure(panels.CPU, frames.cpuAvgMs, frames.frames > 0);
   }
-  if (panels.FPS?.hz) {
+  if (showHz && panels.FPS?.hz) {
     const hz = readRefreshRate();
     writeText(panels.FPS.hz, hz === hz ? `${hz} Hz` : '');
   }
@@ -429,65 +454,165 @@ export const _recordPhysicsStep = (stepMs: number) => {
   if (!(worstPhy >= stepMs)) worstPhy = stepMs;
 };
 
-// --- Build and removal ---
+// --- Build, changes and removal ---
 
-const holdSources = (options: StatsPanelsOptions) => {
-  const { panels: shown } = options;
-  if (shown.FPS || shown.CPU) {
-    _acquireFrameProbe();
-    isProbeHeld = true;
+const holdProbe = (on: boolean) => {
+  if (on === isProbeHeld) return;
+  if (on) _acquireFrameProbe();
+  else _releaseFrameProbe();
+  isProbeHeld = on;
+};
+
+/** Takes or gives back a GPU side.
+ * @returns whether it's held (never without timestamp queries or a renderer) */
+const holdGpuSide = (side: GpuFrameTimesSide, on: boolean) => {
+  const wasHeld = side === 'RENDER' ? isRenderHeld : isComputeHeld;
+  let isHeld = wasHeld;
+  if (on && !wasHeld) {
+    isHeld = _acquireGpuFrameTimes(side) === true;
+  } else if (!on && wasHeld) {
+    _releaseGpuFrameTimes(side);
+    isHeld = false;
   }
-  // GPU and CPT need timestamp queries: no panel without them (or without a renderer)
-  const gpu = shown.GPU && _acquireGpuFrameTimes('RENDER') === true;
-  const cpt = shown.CPT && _acquireGpuFrameTimes('COMPUTE') === true;
-  isRenderHeld = gpu;
-  isComputeHeld = cpt;
-  if (gpu || cpt) removeGpuListener = _onGpuFrameTime(onGpuFrame);
-  return { gpu, cpt };
+  if (side === 'RENDER') isRenderHeld = isHeld;
+  else isComputeHeld = isHeld;
+  return isHeld;
+};
+
+const syncGpuListener = () => {
+  const isNeeded = isRenderHeld || isComputeHeld;
+  if (isNeeded && !removeGpuListener) {
+    removeGpuListener = _onGpuFrameTime(onGpuFrame);
+  } else if (!isNeeded && removeGpuListener) {
+    removeGpuListener();
+    removeGpuListener = null;
+  }
 };
 
 const releaseSources = () => {
-  removeGpuListener?.();
-  removeGpuListener = null;
-  if (isRenderHeld) _releaseGpuFrameTimes('RENDER');
-  if (isComputeHeld) _releaseGpuFrameTimes('COMPUTE');
-  isRenderHeld = false;
-  isComputeHeld = false;
-  if (isProbeHeld) _releaseFrameProbe();
-  isProbeHeld = false;
+  holdGpuSide('RENDER', false);
+  holdGpuSide('COMPUTE', false);
+  syncGpuListener();
+  holdProbe(false);
 };
 
-/**
- * Builds the stats panels' root (replacing the one there was), its panels in STATS_PANEL_ORDER,
- * and holds what they read (the frame probe, the GPU frame times). The caller adds the root to
- * the HUD root.
- * @returns the root (`.statsContainer`, a debugger root)
- */
-export const _createStatsPanels = (options: StatsPanelsOptions) => {
-  _removeStatsPanels();
+/** A panel's own measures start again when it's added (the shared ones run on) */
+const resetPanelMeasures = (id: StatsPanelId) => {
+  if (id === 'TFPS') {
+    tfpsHead = 0;
+    tfpsCount = 0;
+    tfpsSum = 0;
+  } else if (id === 'PHY') {
+    lastPhy = NaN;
+    worstPhy = NaN;
+  } else if (id === 'GPU') {
+    gpuWindow.reset();
+    worstGpu = NaN;
+  } else if (id === 'CPT') {
+    cptWindow.reset();
+    worstCpt = NaN;
+  }
+};
+
+/** Adds a panel in its place in STATS_PANEL_ORDER */
+const addPanel = (target: CMPHandle, id: StatsPanelId) => {
+  resetPanelMeasures(id);
+  const panel = createPanel(id);
+  panels[id] = panel;
+  target.add(panel.cmp);
+  // CMP adds at the end: before the next panel shown
+  for (let i = STATS_PANEL_ORDER.indexOf(id) + 1; i < STATS_PANEL_ORDER.length; i++) {
+    const next = panels[STATS_PANEL_ORDER[i]];
+    if (!next) continue;
+    target.elem.insertBefore(panel.cmp.elem, next.cmp.elem);
+    break;
+  }
+  // Its figure on the next frame, not up to 250 ms later
+  nextTextAt = 0;
+};
+
+/** A press on the button leaves the focus where it was (the canvas): the app's keys go on working
+ * after a click (a debugger control's keys are the debugger's, p806 D12). Tab reaches it. */
+const keepFocusOnPress = (e: Event) => {
+  if ((e as MouseEvent).button === 0) e.preventDefault();
+};
+
+const getOrientation = (options: StatsPanelsOptions) =>
+  options.horizontal ? 'horizontal' : 'vertical';
+
+const createRoot = (options: StatsPanelsOptions) => {
+  const { activate } = options;
   const rootProps = getDebuggerRootProps();
-  root = CMP({
+  const cmp = CMP({
     id: '_statsContainer',
+    tag: activate ? 'button' : 'div',
     // The global class: the on-screen tools' click-through rule (OnScreenTools.module.scss)
     class: ['statsContainer', styles.stats, KEEP_IN_VIEWS_CLASS],
     ...rootProps,
     attr: {
       ...rootProps.attr,
-      role: 'group',
-      'aria-label': 'Frame statistics',
-      'data-orientation': options.horizontal ? 'horizontal' : 'vertical',
+      // A button is named by its content: the visible figures stay in its name (WCAG 2.5.3,
+      // axe's label-content-name-mismatch on an aria-label), after its hidden purpose
+      ...(activate ? { type: 'button' } : { role: 'group', 'aria-label': 'Frame statistics' }),
+      'data-orientation': getOrientation(options),
     },
+    ...(activate
+      ? {
+          onClick: () => activate.onActivate(),
+          listeners: [{ type: 'mousedown', fn: keepFocusOnPress }],
+        }
+      : {}),
   });
-  resetMeasures();
-  const held = holdSources(options);
-  for (const id of STATS_PANEL_ORDER) {
-    if (!options.panels[id]) continue;
-    if ((id === 'GPU' && !held.gpu) || (id === 'CPT' && !held.cpt)) continue;
-    const panel = createPanel(id, options.showHz);
-    panels[id] = panel;
-    root.add(panel.cmp);
+  isButton = Boolean(activate);
+  if (activate)
+    createPart('span', 'aekVisuallyHidden', cmp.elem).textContent = `${activate.label}:`;
+  // Right of it: the panels' own tooltips are above them
+  if (activate)
+    rootTooltip = createTooltip({ anchor: cmp.elem, text: activate.tooltip, side: 'right' });
+  if (typeof ResizeObserver === 'function') {
+    resizeObserver = new ResizeObserver(() => {
+      if (!root) return;
+      document.body.style.setProperty(HEIGHT_PROPERTY, `${root.elem.offsetHeight}px`);
+    });
+    resizeObserver.observe(cmp.elem);
   }
-  return root;
+  return cmp;
+};
+
+/**
+ * Shows the stats panels as `options` says, live: the root built (in the HUD root) when there's
+ * none or it changes between a button and a group, else a panel added in its place or removed,
+ * the orientation and the Hz line changed in place. Holds what the panels read (the frame probe,
+ * each GPU side) only while one does.
+ * @returns the root (`.statsContainer`, a debugger root)
+ */
+export const _setStatsPanels = (options: StatsPanelsOptions) => {
+  if (!root || Boolean(options.activate) !== isButton) {
+    _removeStatsPanels();
+    resetMeasures();
+    root = createRoot(options);
+    getHUDRootCMP().add(root);
+  }
+  const target = root;
+  const orientation = getOrientation(options);
+  if (target.elem.getAttribute('data-orientation') !== orientation) {
+    target.updateAttr({ 'data-orientation': orientation });
+  }
+  showHz = options.showHz;
+  if (!showHz && panels.FPS?.hz) writeText(panels.FPS.hz, '');
+  const shown = options.panels;
+  holdProbe(shown.FPS || shown.CPU);
+  // GPU and CPT need timestamp queries: no panel without them (or without a renderer)
+  const gpu = holdGpuSide('RENDER', shown.GPU);
+  const cpt = holdGpuSide('COMPUTE', shown.CPT);
+  syncGpuListener();
+  for (const id of STATS_PANEL_ORDER) {
+    const isWanted = shown[id] && (id !== 'GPU' || gpu) && (id !== 'CPT' || cpt);
+    const panel = panels[id];
+    if (isWanted && !panel) addPanel(target, id);
+    else if (!isWanted && panel) removePanel(panel);
+  }
+  return target;
 };
 
 /** Removes the stats panels' root and releases what they read. */
@@ -497,8 +622,14 @@ export const _removeStatsPanels = () => {
     if (panel) removePanel(panel);
   }
   releaseSources();
+  rootTooltip?.cmp.remove();
+  rootTooltip = null;
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+  if (root) document.body.style.removeProperty(HEIGHT_PROPERTY);
   root?.remove();
   root = null;
+  isButton = false;
 };
 
 /** The stats panels' root, null without one. */

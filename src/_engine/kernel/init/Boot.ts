@@ -28,7 +28,7 @@ import { createRendererDebugGUI } from '../render/Renderer';
 import { runBootAfterStartHooks } from './BootHooks';
 import { createToaster } from '../../ui/overlays/Toaster';
 import { DEBUGGER_ROOT_ATTR } from '../../ui/overlays/OverlayStack';
-import { getStatsCmp, registerStatsModule } from '../../debug/Stats';
+import { registerStatsModule } from '../../debug/Stats';
 import { getSvgIcon, registerBuiltInIcons } from '../../ui/core/icons/SvgIcon';
 import { restoreSavedView } from '../render/Views';
 
@@ -240,10 +240,6 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
   // The features' own, in install order
   await runFeatureDebugHooksAsync(debugAfterStartHooks);
 
-  // Make the debug toaster appear above the stats cmp
-  const statsCmp = getStatsCmp();
-  let yOffset = '-268px';
-  if (statsCmp) yOffset = `${-statsCmp.elem.offsetHeight - 16}px`;
   getHUDRootCMP().add(
     createToaster({
       id: DEBUG_TOASTER_ID,
@@ -255,7 +251,8 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
         horizontalPosition: 'left',
         toastDirection: 'up',
         toastAppearFromDirection: 'left',
-        offset: { x: '18px', y: yOffset },
+        // Above the stats panels, which write their height on <body> while they show (live)
+        offset: { x: '18px', y: 'calc(-16px - var(--aek-debug-stats-height, 0px))' },
         closeBtnIcon: getSvgIcon('x'),
         icons: {
           info: getSvgIcon('info'),

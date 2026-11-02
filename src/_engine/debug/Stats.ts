@@ -83,8 +83,8 @@ export const updatePhysicsPanel = (value: number) => {
 };
 
 /**
- * Applies the profiler's "open from stats panels" setting to the stats panels (their pointer and
- * title) and refreshes the Statistics tab's toggle of it. Debug env only. The profiler's.
+ * Applies the profiler's "open from stats panels" setting to the stats panels (its button, or a
+ * group) and refreshes the Statistics tab's toggle of it. Debug env only. The profiler's.
  * @internal
  */
 export const updateStatsProfilerEntryPoint = () => {
@@ -98,9 +98,3 @@ export const updateStatsProfilerEntryPoint = () => {
 export const startCustomMeasurements = () => {
   useDebug(debugGUI)?._startCustomMeasurements();
 };
-
-/**
- * The stats panels' container CMP: the boot's.
- * @internal
- */
-export const getStatsCmp = () => useDebug(debugGUI)?._getStatsCmp();

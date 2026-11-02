@@ -1,6 +1,5 @@
 import { createDebuggerTab, updateDebuggerTab } from './DebuggerGUI';
 import { GPU_MEMORY_TAB_ID } from './GPUMemory';
-import { getHUDRootCMP } from '../ui/core/HUD';
 import { defaultStatsOptions, type StatsOptions } from './Stats';
 import { setBootOverride } from '../features/physics/debug/_dbg__PhysicsBootOverrides';
 import { getConfig } from '../kernel/config/Config';
@@ -12,16 +11,19 @@ import {
   toggleProfilerWindow,
   type ProfilerSettings,
 } from './Profiler';
+import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
+import { _getGpuTimerSupport } from './_dbg__GPUTimer';
 import {
-  _createStatsPanels,
-  _getStatsPanelsRoot,
   _onStatsFrameEnd,
   _onStatsFrameStart,
   _recordPhysicsStep,
+  _removeStatsPanels,
+  _setStatsPanels,
 } from './_dbg__StatsPanels';
 
 const LS_KEY = 'AEK_debugStats';
 const STATS_TAB_ID = 'statsControls';
+const PROFILER_KEY_ID = 'sc-toggle-profiler';
 
 const statsConfig: StatsOptions = {
   trackFPS: true,
@@ -34,8 +36,49 @@ const statsConfig: StatsOptions = {
   enabled: true,
 };
 
-/** Every change reloads the app: the panels are only built once, at boot. */
-const RELOAD_NOTE = '(reloads the app)';
+/** The profiler's name with its key (CONFIG.ts' rebinding): 'Open the profiler (F8)' */
+const getProfilerTooltip = () => {
+  const chord = getDebugKeyChordLabel(PROFILER_KEY_ID);
+  return chord ? `Open the profiler (${chord})` : 'Open the profiler';
+};
+
+/** Shows the stats panels as the settings say (p807 D4), live: every toggle but PHY's. */
+const applyStatsSettings = () => {
+  const cfg = statsConfig;
+  if (!cfg.enabled) {
+    _removeStatsPanels();
+    return;
+  }
+  const isProfilerEntry = Boolean(getProfilerSettings()?.openFromStatsPanels);
+  _setStatsPanels({
+    panels: {
+      TFPS: Boolean(cfg.trackTFPS),
+      FPS: Boolean(cfg.trackFPS),
+      CPU: Boolean(cfg.trackCPU),
+      // PHY only while physics step tracking is on (a boot setting): with it off nothing
+      // measures, so the panel would sit at nothing and misrepresent physics as free
+      PHY: Boolean(getConfig().physics?.stepStatsEnabled),
+      GPU: Boolean(cfg.trackGPU),
+      CPT: Boolean(cfg.trackCPT),
+    },
+    // Hz is a line of the FPS panel
+    showHz: Boolean(cfg.trackHz && cfg.trackFPS),
+    horizontal: Boolean(cfg.horizontal),
+    activate: isProfilerEntry
+      ? {
+          label: 'Open the profiler',
+          tooltip: getProfilerTooltip(),
+          onActivate: toggleProfilerWindow,
+        }
+      : null,
+  });
+};
+
+/** A setting changed: the panels, and the tab (the Hz toggle's state follows FPS) */
+const onSettingChange = () => {
+  applyStatsSettings();
+  updateDebuggerTab(STATS_TAB_ID);
+};
 
 /**
  * Builds the stats panels from the Statistics tab's settings (p807 D4).
@@ -44,32 +87,9 @@ const RELOAD_NOTE = '(reloads the app)';
 export const _initStats = (config?: StatsOptions) => {
   Object.assign(statsConfig, defaultStatsOptions, config);
   // Registered first: the registration hydrates the persisted values into statsConfig, which
-  // the panels below are built from
+  // the panels are built from
   setDebuggerUI();
-  const cfg = statsConfig;
-  if (!cfg.enabled) return;
-  const root = _createStatsPanels({
-    panels: {
-      TFPS: Boolean(cfg.trackTFPS),
-      FPS: Boolean(cfg.trackFPS),
-      CPU: Boolean(cfg.trackCPU),
-      // PHY only while physics step tracking is on: with it off nothing measures, so the panel
-      // would sit at nothing and misrepresent physics as free
-      PHY: Boolean(getConfig().physics?.stepStatsEnabled),
-      GPU: Boolean(cfg.trackGPU),
-      CPT: Boolean(cfg.trackCPT),
-    },
-    // Hz is a line of the FPS panel
-    showHz: Boolean(cfg.trackHz && cfg.trackFPS),
-    horizontal: Boolean(cfg.horizontal),
-  });
-  root.elem.addEventListener('click', (e) => {
-    if (!getProfilerSettings()?.openFromStatsPanels) return;
-    e.stopPropagation();
-    toggleProfilerWindow();
-  });
-  getHUDRootCMP().add(root);
-  _applyProfilerEntryPoint();
+  applyStatsSettings();
 };
 
 /** A rendered frame's end: the panels' figures (the main loop's). */
@@ -82,7 +102,8 @@ export const _updatePhysicsPanel = (value: number) => _recordPhysicsStep(value);
 export const _startCustomMeasurements = () => _onStatsFrameStart();
 
 const setDebuggerUI = () => {
-  const reloadApp = () => location.reload();
+  // GPU and CPT need timestamp queries
+  const hasNoGpuTimer = () => _getGpuTimerSupport() === 'NONE';
   createDebuggerTab({
     id: STATS_TAB_ID,
     title: 'Statistics',
@@ -122,38 +143,49 @@ const setDebuggerUI = () => {
             {
               type: 'folder',
               id: 'performance',
-              title: `Performance Measuring ${RELOAD_NOTE}`,
+              title: 'Performance Measuring',
               content: [
-                { key: 'enabled', label: 'Enable measuring', onChange: reloadApp },
+                { key: 'enabled', label: 'Enable measuring', onChange: onSettingChange },
                 // Ordered to mirror the panels' own top-to-bottom order on screen
-                // (PANEL_ORDER), so the toggle list reads the same way the display does.
-                { key: 'trackTFPS', label: 'Track TFPS', onChange: reloadApp },
-                { key: 'trackFPS', label: 'Track FPS', onChange: reloadApp },
-                { key: 'trackCPU', label: 'Track CPU', onChange: reloadApp },
+                // (STATS_PANEL_ORDER), so the toggle list reads the same way the display does.
+                { key: 'trackTFPS', label: 'Track TFPS', onChange: onSettingChange },
+                { key: 'trackFPS', label: 'Track FPS', onChange: onSettingChange },
+                { key: 'trackCPU', label: 'Track CPU', onChange: onSettingChange },
                 // Hz has no panel of its own (a line of the FPS panel), so it is only offered
-                // while FPS is on. _initStats leaves it out for an already-persisted
-                // combination where FPS is off.
+                // while FPS is on; applyStatsSettings leaves it out of a persisted combination
+                // where FPS is off.
                 {
                   key: 'trackHz',
                   label: 'Track Hz (shown in the FPS panel)',
                   disabled: () => !statsConfig.trackFPS,
-                  onChange: reloadApp,
+                  onChange: onSettingChange,
                 },
+                // A boot setting: physics' step stats are configured at boot
                 {
                   key: 'stepStatsEnabled',
                   target: physicsStepTrackingProxy,
-                  label: 'Track PHY',
+                  label: 'Track PHY (after a reload)',
                   onChange: (value) => setBootOverride({ stepStatsEnabled: Boolean(value) }),
                 },
-                { key: 'trackGPU', label: 'Track GPU', onChange: reloadApp },
-                { key: 'trackCPT', label: 'Track CPT', onChange: reloadApp },
+                {
+                  key: 'trackGPU',
+                  label: 'Track GPU',
+                  disabled: hasNoGpuTimer,
+                  onChange: onSettingChange,
+                },
+                {
+                  key: 'trackCPT',
+                  label: 'Track CPT',
+                  disabled: hasNoGpuTimer,
+                  onChange: onSettingChange,
+                },
               ],
             },
             {
               type: 'folder',
               id: 'outlook',
-              title: `Measuring Outlook ${RELOAD_NOTE}`,
-              content: [{ key: 'horizontal', label: 'Horizontal', onChange: reloadApp }],
+              title: 'Measuring Outlook',
+              content: [{ key: 'horizontal', label: 'Horizontal', onChange: onSettingChange }],
             },
             {
               type: 'button',
@@ -169,7 +201,7 @@ const setDebuggerUI = () => {
                 {
                   type: 'button',
                   label: 'Profiler',
-                  title: 'Open profiler (F8)',
+                  title: getProfilerTooltip(),
                   onClick: toggleProfilerWindow,
                 },
                 {
@@ -190,20 +222,9 @@ const setDebuggerUI = () => {
   // - texture count, texture sizes, list of textures (and type, sizes, dimensions)
 };
 
-export const _getStatsCmp = () => _getStatsPanelsRoot();
-
-/** The stats panels show that a click opens the profiler (when its setting allows it), and the
- * Statistics tab's toggle of the setting is refreshed. */
+/** The profiler's "open from stats panels" setting changed: the panels become its button or a
+ * group, and the Statistics tab's toggle of it is refreshed. */
 export const _applyProfilerEntryPoint = () => {
-  const statsCmp = _getStatsPanelsRoot();
-  if (statsCmp) {
-    const isOn = Boolean(getProfilerSettings()?.openFromStatsPanels);
-    statsCmp.elem.style.cursor = isOn ? 'pointer' : '';
-    if (isOn) {
-      statsCmp.elem.title = 'Open the profiler';
-    } else {
-      statsCmp.elem.removeAttribute('title');
-    }
-  }
+  applyStatsSettings();
   updateDebuggerTab(STATS_TAB_ID);
 };

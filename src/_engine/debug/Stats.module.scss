@@ -26,6 +26,23 @@
   }
 }
 
+// The root as the profiler's button ("open from stats panels"): the ring inside, since the
+// viewport's edges would cut an outside one
+button.stats {
+  margin: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--aek-surface-hover) 90%, transparent);
+  }
+
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
+  }
+}
+
 // A panel: its graph's width at one sample per CSS px (GRAPH_CAPACITY, 96 at the compact
 // density's `--aek-space-7`)
 .panel {
