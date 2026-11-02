@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -428,7 +428,7 @@ As built (2026-11-01, `p807-stats-and-profiler-graphs` at `d5ab9bc4`, its `src/`
      0.08 ms a frame at 132 Hz) and its six 15-26 ms/s, with 1 MB/s allocated (about 8 KB a
      frame). Ours must stay within that and allocate nothing per frame (D4's 30 Hz graphs).
 
-### Phase 1: one owner for GPU timing
+### Phase 1: one owner for GPU timing — done
 
 D5, with stats-gl still in place (its resolves still steal batches until Phase 2; the retries
 cover it): `_dbg__GPUFrameTimes.ts`, the compute side, a WebGL path (Phase 0's finding 3: the
@@ -436,6 +436,83 @@ timestamps' uids summed per frame as on WebGPU when no context nests, else the p
 totals; the Overview's GPU row gains WebGL with it), the Overview's GPU row on it, the tests.
 Non-breaking: the Overview's GPU figure unchanged (checked against Phase 0's run). The gate's CPT
 check (part B) on a scratch compute pass.
+
+As built (2026-11-02; two sections: the code and its tests, `eff8d363`, then the gate's part B):
+
+- **The WebGL path needs no frame totals.** three r186's WebGL pool begins a context's query only
+  when none is active (`beginQuery`) and resolves only the `'ended'` ones, so a context opened
+  inside another (the scene pass inside PostFX's composite) has no query, and its GPU time is in
+  the outer context's. The sum of a frame's started contexts is its whole GPU time (and what the
+  pool's own frame total, stats-gl's figure, adds up), nested or not: `_keepTimedUids` drops the
+  uids whose query stayed `'inactive'` when the frame closes, and the record sums the rest as on
+  WebGPU. No "pool's frame totals" fallback.
+- **`_dbg__GPUTimer.ts`:** the tap reports compute contexts (`_onComputeContext`); one resolve
+  request takes the render pool and, once it exists, the compute pool (`Promise.all`); the
+  listeners get `(render, compute)` (the PostFX profiler and the bake stats read the first only,
+  unchanged); `_keepTimedUids(uids)` (in place, a no-op on WebGPU). Handing only a new batch to
+  the listeners was tried and left out: with another resolver taking every batch, the PostFX
+  profiler's pending frames would stop ageing and grow; every batch is handed, as before.
+- **`debug/_dbg__GPUFrameTimes.ts`** (D5): `_acquireGpuFrameTimes('RENDER' | 'COMPUTE')` (true,
+  false without timestamp queries, null without a renderer; holder counted per side, the first
+  hold of either takes the GPU timer), `_releaseGpuFrameTimes(side)`, `_onGpuFrameTime(listener)`
+  (a reused `{ renderMs, computeMs }`, null for a side nobody holds, `computeMs` 0 for a frame
+  without a dispatch), `_getGpuFrameTimesCounts()` (completed and dropped, for the tests and the
+  gate). It closes the frames itself: its own `LATE_MAIN` system at order -10000 and an
+  `'AFTER_RENDER'` view frame listener, as the profiler's sampler. A record completes once a
+  batch has every uid of the held sides; the pool of 10 records and the 8 batches a record waits
+  are the profiler's figures, moved.
+- **The profiler:** the GPU frame source is a RENDER holder (`_dbg__ProfilerSources.ts` lost its
+  records and the sampler's `gpu` flag); its availability is "no GPU timer queries" in place of
+  "WebGPU with timestamp queries only", so the Overview's GPU and TFPS rows read WebGL too.
+- **Tests:** `_dbg__GPUFrameTimes.test.ts` (8, a fake renderer and pools): nothing held without a
+  renderer or timestamps, a frame's contexts summed, a missing uid waiting then dropped after 8
+  batches, the pool dropping its oldest (the open record and 9 pending), the compute side without
+  and with its pool, the timer kept while either side is held, the WebGL rule.
+- **Not changed:** the PostFX profiler and the bake stats keep their own records (D5 moves only
+  the frame record); on WebGL they could time their outer contexts with `_keepTimedUids`, left
+  out. `debug/CLAUDE.md`'s profiler line ("GPU frame time through `_dbg__GPUTimer`") is Phase 6's
+  (D11).
+- **The gate's part B** (`.cache/p807/gate.mts --tag p1 --only accuracy,coverage,cpt`, run by
+  `runB.sh`, `summaryB.mts` prints `gate-p1-*.json` beside Phase 0's): Phase 0's seven
+  configurations in the Windows Chrome on the real GPU (the display at 143 Hz this time), 10 s a
+  measure. CPT: a scratch compute kernel (2^20 invocations of a 512-step `sin` loop, TSL from the
+  page's own three) dispatched in `MAIN` every frame, our COMPUTE side beside stats-gl's CPT
+  panel. No page error anywhere.
+
+  | Scene, backend      | GPU ours P0 / P1 / sgl | GPU frames resolved | Dropped / completed | CPT ours / sgl | CPT frames/s |
+  | ------------------- | ---------------------- | ------------------- | ------------------- | -------------- | ------------ |
+  | quickStart, WebGPU  | 0.11 / 0.11 / 0.11     | 100 %               | 0 / 1395            | 0.33 / 0.33    | 140          |
+  | gym, WebGPU         | 0.94 / 0.95 / 0.95     | 100 %               | 0 / 1391            | 0.33 / 0.33    | 139          |
+  | gym, WebGPU, DPR 2  | 2.22 / 2.25 / 2.25     | 100 %               | 0 / 1384            | 0.33 / 0.33    | 136          |
+  | lodShowcase, WebGPU | 0.29 / 0.28 / 0.28     | 98 %                | 0 / 1305            | 0.33 / 0.33    | 139          |
+  | quickStart, WebGL 2 | n/a / 0.47 / 0.45      | 73 %                | 374 / 1015          | 1.04 / 1.04    | 67           |
+  | gym, WebGL 2        | n/a / 0.82 / 0.82      | 65 %                | 483 / 908           | 1.04 / 1.04    | 29           |
+  | lodShowcase, WebGL 2| n/a / 2.60 / 2.54      | 65 %                | 487 / 902           | 1.04 / 1.04    | 34           |
+
+  GPU and CPT in ms per frame (P0: Phase 0's run, P1: this one, sgl: stats-gl in the same run);
+  frames resolved is the share of rendered frames with a GPU figure; dropped / completed counts
+  the accuracy run's records.
+
+  **Verdict: part B's Phase 1 checks pass.** The Overview's GPU figure is unchanged on WebGPU
+  and equals stats-gl's to 0.01 ms; on WebGL ours now reads within 0.06 ms of stats-gl's (D3's
+  10 % / 0.1 ms); CPT equals stats-gl's on both backends. Findings for Phase 2:
+
+  1. **WebGL resolves 65-73 % of the frames**, about the same with stats-gl's resolves on or off
+     (64-73 %): three's WebGL pool clears its offsets when a resolve ends, so the queries opened
+     while one was in flight (it polls each query until available) are lost. Each figure is
+     still a whole frame's; a 1 s window has 90+ of them.
+  2. **WebGL with both sides held resolves fewer frames** (29-67 a second): a record needs its
+     render and compute uids, each pool loses its own. Enough for a 4 Hz panel; if the CPT
+     panel's graph needs more, Phase 2 can complete each side of a record on its own.
+  3. With the scratch compute on, WebGPU dropped 0-11 records in about 1650 (its first frames'
+     compile).
+
+- **Verified:** `yarn test` (265 files), `tsc`, lint, the docs ratchet; `yarn verify:baselines`
+  and `yarn sbp --profile all` unchanged; `yarn verify:scenes --config all` 109 of 110 against
+  Phase 0's baselines. The one failure is old: `testDebugScene`'s `profiler.gpuMemory` shot
+  (0.12 % changed) differs only in the peak table's "Reached" cells, a wall-clock time
+  (`toLocaleTimeString`) that `DEBUGGER_LIVE_MASKS` doesn't mask, so the shot passes or fails by
+  how wide the time's digits come out. Phase 4, which rebuilds that table, masks those cells.
 
 ### Phase 2: the stats panels
 
@@ -452,7 +529,8 @@ D6, D7, D9, a section each; their shots changed on purpose.
 
 ### Phase 4: GPU memory
 
-D8, D9; its shots changed on purpose.
+D8, D9; its shots changed on purpose. The peak table's "Reached" cells (a wall-clock time) join
+`DEBUGGER_LIVE_MASKS` (Phase 1's verification: the shot flips on them).
 
 ### Phase 5: verification
 
