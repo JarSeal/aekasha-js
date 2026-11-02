@@ -16,9 +16,17 @@ import {
   type InViewTotal,
   type SceneCensus,
 } from './_dbg__Census';
-import { escapeProfilerHtml as esc } from './_dbg__ProfilerOverview';
 import { PROFILER_SOURCE, type DrawStats } from './_dbg__ProfilerSources';
 import { _readStatsSource, createStatsSourceHolder } from './_dbg__StatsSources';
+
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+const esc = (text: string) => text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 
 /**
  * The Objects tab (§2.8): the in-view census broken down by kind and by owner (two-tone bars:

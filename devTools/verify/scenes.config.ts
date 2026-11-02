@@ -121,11 +121,12 @@ export const DEBUGGER_VIEWPORT = { width: 1280, height: 2000 };
 /**
  * What a debugger shot masks (Playwright's `mask`, Playwright's selectors): the figures that change
  * run to run with the loops frozen (timings, memory, clocks, a build's time): the UI kit's
- * monitors, the profiler Overview's figures (p807 rewrites that tab) and the About dialog's build
- * line
+ * monitors, the profiler Overview's value and detail cells, the Objects tab's figures (p807
+ * rewrites that tab) and the About dialog's build line
  */
 export const DEBUGGER_LIVE_MASKS: string[] = [
   '.aekMonitor',
+  '.profilerOverview td',
   '.profilerValue',
   '.profilerSub',
   // The About dialog's build: the commit, local changes and the time (Playwright's selector)

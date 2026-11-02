@@ -673,6 +673,38 @@ As built, section 3 (2026-11-02, not committed):
 
 D6, D7, D9, a section each; their shots changed on purpose.
 
+As built, section 1 (D6, 2026-11-02, not committed):
+
+- **The table:** `createOverviewTable` in `_dbg__ProfilerOverview.ts`: one `createTable`
+  (`captionHidden` "Overview", class `profilerOverview`, striped), columns Metric (row header),
+  Value (`align: 'end'`, the warning tone) and Detail; its empty text "No rows are shown. Pick them
+  in the Settings tab." Built in `content()` (each mount) and filled there; `onRefresh` (the
+  profiler's rate, and `overviewMetrics`' change through `_updateProfilerTab`) holds the shown
+  rows' sources and writes. A row is a kept object per metric id holding its label and figures as
+  last written: a refresh compares each and calls `setCell` only for a changed one (the tone read
+  from the row when its value cell is written); a changed list of shown rows (the Settings tab's
+  reorder or visibility, an app source registered) is `setRows` and `setGroups` (the "App" group,
+  none without app rows), which keep the rows by key. Not on `ctx.scheduler`: the rows aren't
+  functions (a scheduler refresh would read every row again, which `setCell` avoids).
+- **n/a and warnings:** an n/a metric's value is the word "n/a", its reason the detail's first
+  words (then its secondary text). A warning is the value's `tone: 'warning'` with its words first
+  in the detail (`MetricValue.warn` is now a string: physics "sub-steps at the N ceiling", long
+  tasks "the main thread was blocked"). The n/a value isn't muted: the kit's table has no per-cell
+  hook but `tone` (open at the review).
+- **No action column:** no metric has had a row action since the file was written (its
+  `MetricAction` was never returned), so the type, the click handler by `data-metric` and the
+  column went; a metric that needs one later adds a `cell` column.
+- `escapeProfilerHtml` moved into `_dbg__ProfilerObjects.ts` (its last user, section 2's).
+  `Profiler.module.scss` lost the Overview's rules (`.profilerGroup`, `.profilerGroupHead`,
+  `.isNA`, `.isWarn`, `.profilerAction`'s margins) and gained `.profilerOverview`'s (tabular
+  figures, the value semibold, the detail muted and small, taking the rest of the width).
+- **The scene runner's mask:** `DEBUGGER_LIVE_MASKS` adds `.profilerOverview td` (the value and
+  detail cells); `.profilerValue` / `.profilerSub` stay for Objects until section 2.
+- **Tests:** `_dbg__ProfilerOverview.test.ts` (9, 5 new; the kit's `createTable` wrapped by
+  `vi.mock` to record `setCell`): the caption, columns and rows by id; a refresh writing nothing
+  when nothing changed, then only the changed value in the same row and text node, n/a's value and
+  detail; the reorder keeping the row elements, a hidden row going, the App group; the empty text.
+
 ### Phase 4: GPU memory
 
 D8, D9; its shots changed on purpose. The peak table's "Reached" cells (a wall-clock time) join

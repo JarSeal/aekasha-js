@@ -1,6 +1,7 @@
 // The profiler window (p806 D6, D9: on the tokens, unlayered, so an app's element rules don't
 // reach it): its tab menu (`createTabs`) over each tab's container. The Overview's and Objects'
-// HTML strings are p807's to rewrite on the kit's tables and graphs; their classes stay global.
+// The Overview is a kit table (p807 D6); Objects' HTML strings are p807's next to rewrite, their
+// classes global.
 
 .profiler {
   display: flex;
@@ -86,29 +87,36 @@
       color: var(--aek-text-muted);
       font-size: var(--aek-font-size-xs);
     }
+  }
 
-    :global(.profilerGroup) tr:first-child {
-      background-color: transparent;
+  // The Overview (p807 D6, a kit table): the metric, its figure, the detail. A warning is the
+  // value cell's tone (the kit's colour and mark), its words the detail's first.
+  :global(.profilerOverview) {
+    :global(.aekTable__table) {
+      width: 100%;
+      font-variant-numeric: tabular-nums;
     }
 
-    :global(.profilerGroupHead) {
-      padding-top: var(--aek-space-4);
+    :global(.aekTable__cell) {
+      vertical-align: baseline;
+    }
+
+    th:global(.aekTable__cell) {
+      font-weight: var(--aek-font-weight-regular);
+      white-space: nowrap;
+    }
+
+    // The value column
+    td:global(.aekTable__cell):nth-child(2) {
+      font-weight: var(--aek-font-weight-semibold);
+      white-space: nowrap;
+    }
+
+    // The detail column takes the rest
+    td:global(.aekTable__cell):nth-child(3) {
+      width: 100%;
       color: var(--aek-text-muted);
       font-size: var(--aek-font-size-xs);
-      font-weight: var(--aek-font-weight-semibold);
-    }
-
-    :global(.isNA) :global(.profilerValue) {
-      color: var(--aek-text-muted);
-      font-weight: var(--aek-font-weight-regular);
-    }
-
-    :global(.isWarn) {
-      th,
-      :global(.profilerValue),
-      :global(.profilerSub) {
-        color: var(--aek-warning);
-      }
     }
   }
 
@@ -137,10 +145,6 @@
       color: var(--aek-text-disabled);
       cursor: default;
     }
-  }
-
-  :global(.profilerAction) {
-    margin-left: var(--aek-space-2);
   }
 
   // The Settings tab's Overview rows (_dbg__ProfilerSettings.ts: two kit lists)
@@ -312,10 +316,6 @@
     :global(.profilerSub) {
       width: auto;
       white-space: nowrap;
-    }
-
-    :global(.profilerAction) {
-      margin-left: 0;
     }
   }
 
