@@ -1,5 +1,52 @@
-// The profiler window's GPU memory tab (p806 D9: on the tokens, unlayered). Its HTML strings are
-// p807's to rewrite on the kit's tables and bars.
+// The profiler window's GPU memory tab (p806 D9: on the tokens, unlayered). Its live sections are
+// the kit's tables and stacked bar (p807 D8: their headings, notes and two-line names are the
+// profiler's global classes, Profiler.module.scss); the snapshot's HTML strings are section 2's.
+
+// A live section (_dbg__GPUMemoryView.ts): its tables across the tab, figures tabular
+.gpuMemorySection {
+  :global(.aekTable) + :global(.aekTable),
+  :global(.aekTable) + :global(.profilerNote),
+  :global(.profilerNote) + :global(.aekTable) {
+    margin-top: var(--aek-space-4);
+  }
+
+  :global(.aekTable__table) {
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th:global(.aekTable__cell) {
+    font-weight: var(--aek-font-weight-regular);
+  }
+}
+
+.gpuMemoryTotals[hidden] {
+  display: none;
+}
+
+// The budget's share under its bar; over it, the danger colour with its words
+.gpuMemoryBudgetText {
+  margin: var(--aek-space-2) 0 var(--aek-space-4);
+
+  &[data-over] {
+    color: var(--aek-danger);
+  }
+}
+
+// By owner: an owner's name, its cells indented under it, the current scene's badge beside it
+.gpuMemoryOwner {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--aek-space-2);
+
+  &[data-level='1'] {
+    padding-left: var(--aek-space-4);
+  }
+
+  :global(.aekBadge[hidden]) {
+    display: none;
+  }
+}
 
 .gpuMemorySummary {
   padding: var(--aek-space-2) var(--aek-space-2) var(--aek-space-4);
@@ -16,31 +63,6 @@
   strong {
     font-size: var(--aek-font-size-xl);
     font-weight: var(--aek-font-weight-semibold);
-  }
-}
-
-.gpuMemoryBar {
-  height: var(--aek-space-3);
-  border-radius: var(--aek-radius-sm);
-  background-color: color-mix(in srgb, var(--aek-text) 8%, transparent);
-  overflow: hidden;
-}
-
-.gpuMemoryBarFill {
-  height: 100%;
-  background-color: var(--aek-success);
-  transition: width var(--aek-motion-base) var(--aek-ease-standard);
-
-  .gpuMemoryOverBudget & {
-    background-color: var(--aek-danger);
-  }
-}
-
-.gpuMemoryBarLabel {
-  margin-top: var(--aek-space-2);
-
-  .gpuMemoryOverBudget & {
-    color: var(--aek-danger);
   }
 }
 
@@ -92,14 +114,6 @@
   tbody tr:hover {
     background-color: var(--aek-surface-hover);
   }
-}
-
-.gpuMemoryCurrent td:first-child {
-  font-weight: var(--aek-font-weight-semibold);
-}
-
-.gpuMemoryCell td:first-child {
-  padding-left: var(--aek-space-4);
 }
 
 .gpuMemoryUntracked td {

@@ -36,7 +36,7 @@ import {
   formatInViewTotal,
   writeSub,
   type TwoLineRow,
-} from './_dbg__ProfilerObjectsParts';
+} from './_dbg__ProfilerParts';
 import { PROFILER_SOURCE, type DrawStats } from './_dbg__ProfilerSources';
 import { _readStatsSource, createStatsSourceHolder } from './_dbg__StatsSources';
 

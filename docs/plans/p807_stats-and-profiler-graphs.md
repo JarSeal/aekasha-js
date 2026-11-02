@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-3 implemented, Phase 4 section 1
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -807,7 +807,78 @@ As built, section 3 (D9, 2026-11-02, not committed):
 ### Phase 4: GPU memory
 
 D8, D9; its shots changed on purpose. The peak table's "Reached" cells (a wall-clock time) join
-`DEBUGGER_LIVE_MASKS` (Phase 1's verification: the shot flips on them).
+`DEBUGGER_LIVE_MASKS` (Phase 1's verification: the shot flips on them). In sections (decided at
+the start, 2026-11-02):
+
+1. The live sections on the kit: the total with its budget bar, the categories and the peaks, the
+   frame, by owner with the untracked, the sources; the "Reached" mask; their tests.
+2. The snapshot's sections (the three diffs), the removals (the HTML strings, the stylesheet's table
+   rules), the dev library's "Debugger parity" box (no rows left).
+3. D9 in the app (a sort, the focus and the scroll through the refreshes) and the phase's
+   verification.
+
+Decided at the start (2026-11-02, the recommendations taken): the budget bar's part in the kit's
+default series colour (the old green fill was a status colour no text said; over the budget it's
+`data-over` and "(over budget)"); categories (size and count, by size at the start, as before),
+the untracked (size) and the sources (size and GPU objects, `sortUnset` for their registration
+order) sortable, by owner and the diffs not (levels; rows cut at 12); a source's or an asset's id,
+a hover-only `title` before, on its name's second line; the current scene a "current" badge, not
+bold alone; the untracked a muted last body row in By owner, the Total its footer; an empty diff
+table its kit empty text with its headers, not a note in its place.
+
+The scene runner's baselines on this machine (a Mac, macOS's Chromium on WebGPU) were recorded on
+the branch at `37c1709c` (`--config all --update`, 110 runs, 494 s): Phases 0-3 were reviewed on
+the desktop's, so a `main` baseline here would show their changes again.
+
+As built, section 1 (2026-11-02, not committed):
+
+- **`gpuMemory/_dbg__GPUMemoryView.ts`** (new, 622 lines): `createGPUMemoryView(opts, scheduler)`,
+  the live sections built once per mount on the tab's scheduler, each a factory returning
+  `{ cmp, update, tables }`; `update` reads `info.memory`, the assets and the sources once and
+  writes the rows the tables read (kept by key, `createRowPool`) and the texts in place.
+  `MEMORY_CATEGORIES`, `FRAME_METRICS`, `getOwnerLabel` and `formatTime` moved there.
+  `_dbg__GPUMemory.ts` keeps the sampling, the peaks, the budget toast, the tab and (until section
+  2) the snapshot's string; it passes the view what it reads (`GPUMemoryViewOpts`: the renderer,
+  the scene id, the budget, the peaks, the frame arrays, whether paused), so the view's test needs
+  no kernel state.
+- **The total:** "Total" and the figure, a `createStackedBar` ("GPU memory against the budget",
+  one part, `total` the budget, its amount in bytes), the share under it (`data-over` past the
+  budget: the danger colour, with "(over budget)").
+- **The tables** (each `captionHidden`, a global class the masks and the tests read):
+  `gpuMemoryCategories` (Category, Size, Count; render targets and geometries in a "Counted
+  elsewhere" group, their size a muted word), `gpuMemoryPeaks`, `gpuMemoryFrame` (Counter, Last,
+  Min, Avg, Max: values read from the sampler's arrays), `gpuMemoryOwners` (an owner's cells
+  indented by `data-level`, the badge shown and hidden in place as the scene changes; the cell's
+  name and badge have a space between them, for the row header's name), `gpuMemoryUntracked`
+  ("Nothing untracked." when empty), `gpuMemorySources` (the name a two-line cell, "owner · id";
+  a source holding nothing muted; the Total footer only with rows).
+- **The frame's "(main loop paused)"** is a note above the table ("The main loop is paused: the
+  figures are its last frames'"), the window's note under it written in place.
+- **The first figures at the mount:** the tab host mounts a tab and starts its interval, with no
+  refresh until the first tick (500 ms here), so a table showed the empty rows it was made with
+  (the scene runner's shot, taken sooner, had every category at 0 B). The view refreshes its own
+  tables once after its first `update`.
+- **`profiler/_dbg__ProfilerObjectsParts.ts` is now `_dbg__ProfilerParts.ts`** (GPU memory uses its
+  section, note, text writer and two-line cell too); `createSection` takes a class for a tab's own.
+- **`GPUMemory.module.scss`:** the bar's, the over-budget, the current owner's and the cell rows'
+  rules went; `.gpuMemorySection` (the kit tables across the tab, tabular figures, the row headers
+  regular), `.gpuMemoryBudgetText`, `.gpuMemoryOwner` came. The snapshot's string rules stay for
+  section 2.
+- **The mask:** `DEBUGGER_LIVE_MASKS` adds `.gpuMemoryPeaks td:last-child` (the "Reached" times).
+- **Tests:** `_dbg__GPUMemoryView.test.ts` (8; the assets' and the sources' walks mocked): the
+  total, bar and budget line, the categories by size with their group, the peaks, the backend; the
+  figures at the build before any refresh; a changed figure in the same text node and the
+  over-budget state; a sort picked kept through a refresh; the frame and the paused line; the
+  owners, their cells, the badge moving in place, the untracked and its table; a source's name,
+  its muted state and the empty table; no renderer.
+- **`_dbg__DebugKeyShortcuts.test.ts` pins the key platform** (`navigator.platform` set to Linux in
+  its `beforeAll`): Node says the host's, so on macOS the hint was `⌃+M` and the test failed (on
+  the clean branch too).
+- **Verified:** `yarn test` (268 files), `tsc`, lint, the docs ratchet (100 %); the `debugger`
+  configuration on `testDebugScene` and `thirdPersonGymScene`: only `profiler.gpuMemory` changed
+  (on purpose, not recorded), axe 0 on every shot, the gym's unchanged; full-height unmasked shots
+  of the tab in both debugger themes in both scenes (`.cache/p807/gpuMemoryShots.mts`, in
+  `.cache/p807/phase4/`), no page error.
 
 ### Phase 5: verification
 

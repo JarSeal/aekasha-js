@@ -129,6 +129,8 @@ export const DEBUGGER_LIVE_MASKS: string[] = [
   '.profilerOverview td',
   '.profilerObjectsNote',
   '.profilerSpark',
+  // GPU memory's peaks: "Reached", a wall-clock time (p807 Phase 4)
+  '.gpuMemoryPeaks td:last-child',
   // The About dialog's build: the commit, local changes and the time (Playwright's selector)
   'dt:text-is("Build") + dd',
 ];

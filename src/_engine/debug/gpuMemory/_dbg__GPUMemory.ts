@@ -11,20 +11,8 @@ import { getRenderer, onRendererCreated } from '../../kernel/render/Renderer';
 import { getCurrentSceneId, registerOnAllSceneEnters } from '../../kernel/scene/Scene';
 import { addViewFrameListener } from '../../kernel/render/Views';
 import { formatBytes, formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
-import {
-  assetOwnerItem,
-  BOOT_OWNER,
-  collectGPUAssets,
-  groupByOwner,
-  installCompressedTextureSizer,
-  type OwnerSums,
-} from './_dbg__GPUMemoryOwners';
-import {
-  collectGPUMemorySources,
-  ENGINE_OWNER,
-  registerEngineGPUMemorySources,
-  type GPUMemorySourceRow,
-} from './_dbg__GPUMemorySources';
+import { installCompressedTextureSizer } from './_dbg__GPUMemoryOwners';
+import { registerEngineGPUMemorySources } from './_dbg__GPUMemorySources';
 import {
   ALLOCATION_KIND_LABELS,
   installAllocationTracker,
@@ -37,6 +25,14 @@ import {
   takeGPUMemorySnapshot,
   type GPUMemoryDiff,
 } from './_dbg__GPUMemorySnapshots';
+import {
+  createGPUMemoryView,
+  FRAME_METRICS,
+  formatTime,
+  getOwnerLabel,
+  MEMORY_CATEGORIES,
+  type GPUMemoryPeak,
+} from './_dbg__GPUMemoryView';
 import styles from './GPUMemory.module.scss';
 
 /**
@@ -55,6 +51,9 @@ import styles from './GPUMemory.module.scss';
  * interval: that would read 0 whenever three's reset ran last, the loop is paused or the FPS
  * limiter skipped the frame. The same system tracks the memory peaks and the budget, so they are
  * caught while the tab is closed too.
+ *
+ * The live sections are the UI kit's tables and stacked bar (p807 D8, `_dbg__GPUMemoryView.ts`),
+ * built once per mount and written in place on each refresh (D9).
  */
 
 const LS_KEY = 'AEK_debugGPUMemory';
@@ -72,30 +71,12 @@ const state = { budgetMB: DEFAULT_BUDGET_MB, recordSites: false };
 
 // --- MEMORY ---
 
-const MEMORY_CATEGORIES = [
-  { label: 'Textures', count: 'textures', size: 'texturesSize' },
-  { label: 'Attributes', count: 'attributes', size: 'attributesSize' },
-  { label: 'Index attributes', count: 'indexAttributes', size: 'indexAttributesSize' },
-  { label: 'Storage attributes', count: 'storageAttributes', size: 'storageAttributesSize' },
-  {
-    label: 'Indirect storage attr.',
-    count: 'indirectStorageAttributes',
-    size: 'indirectStorageAttributesSize',
-  },
-  { label: 'Uniform buffers', count: 'uniformBuffers', size: 'uniformBuffersSize' },
-  { label: 'Programs (code)', count: 'programs', size: 'programsSize' },
-  { label: 'Readback buffers', count: 'readbackBuffers', size: 'readbackBuffersSize' },
-] as const;
-
-type MemoryInfo = Renderer['info']['memory'];
-type Peak = { bytes: number; at: number };
-
-const bootPeak: Peak = { bytes: 0, at: 0 };
-const scenePeak: Peak = { bytes: 0, at: 0 };
+const bootPeak: GPUMemoryPeak = { bytes: 0, at: 0 };
+const scenePeak: GPUMemoryPeak = { bytes: 0, at: 0 };
 /** Over-budget toast shown in the current scene (reset on scene enter and on a budget change). */
 let isBudgetToastShown = false;
 
-const raisePeak = (peak: Peak, bytes: number) => {
+const raisePeak = (peak: GPUMemoryPeak, bytes: number) => {
   if (bytes <= peak.bytes) return;
   peak.bytes = bytes;
   peak.at = Date.now();
@@ -118,7 +99,6 @@ const trackMemory = (total: number) => {
 
 // --- FRAME COUNTERS ---
 
-const FRAME_METRICS = ['Draw calls', 'Triangles', 'Render calls', 'Compute calls'] as const;
 const METRIC_COUNT = FRAME_METRICS.length;
 
 const frameLast = new Float64Array(METRIC_COUNT);
@@ -180,197 +160,25 @@ const sampleGPUMemory = () => {
 
 // --- TAB CONTENT ---
 
-const getBackendLabel = (renderer: Renderer) =>
-  (renderer.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend
-    ? 'WebGPU'
-    : 'WebGL2';
-
-const formatTime = (at: number) => (at ? new Date(at).toLocaleTimeString() : '—');
-
-const totalsHtml = () => {
-  const renderer = getRenderer();
-  if (!renderer) return `<div class="${styles.gpuMemorySummary}">No renderer yet.</div>`;
-  const memory: MemoryInfo = renderer.info.memory;
-  const budgetBytes = state.budgetMB * MB;
-  const ratio = budgetBytes > 0 ? memory.total / budgetBytes : 0;
-  const isOver = ratio > 1;
-
-  const categories = MEMORY_CATEGORIES.map((c) => ({
-    label: c.label,
-    count: memory[c.count],
-    size: memory[c.size],
-  })).sort((a, b) => b.size - a.size);
-  const categoryRows = categories
-    .map(
-      (c) =>
-        `<tr><td>${c.label}</td><td>${formatBytes(c.size)}</td><td>${formatNumber(c.count)}</td></tr>`
-    )
-    .join('');
-
-  return `<div class="${styles.gpuMemorySummary}${isOver ? ` ${styles.gpuMemoryOverBudget}` : ''}">
-  <div class="${styles.gpuMemoryTotalRow}"><span>Total</span><strong>${formatBytes(memory.total)}</strong></div>
-  <div class="${styles.gpuMemoryBar}"><div class="${styles.gpuMemoryBarFill}" style="width:${Math.min(ratio, 1) * 100}%"></div></div>
-  <div class="${styles.gpuMemoryBarLabel}">${(ratio * 100).toFixed(0)} % of the ${state.budgetMB} MB budget${isOver ? ' (over budget)' : ''}</div>
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Category</th><th>Size</th><th>Count</th></tr></thead>
-    <tbody>${categoryRows}
-      <tr><td>Render targets</td><td>in textures</td><td>${formatNumber(memory.renderTargets)}</td></tr>
-      <tr><td>Geometries</td><td>in attributes</td><td>${formatNumber(memory.geometries)}</td></tr>
-    </tbody>
-  </table>
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Peak</th><th>Size</th><th>Reached</th></tr></thead>
-    <tbody>
-      <tr><td>Since boot</td><td>${formatBytes(bootPeak.bytes)}</td><td>${formatTime(bootPeak.at)}</td></tr>
-      <tr><td>Since scene enter</td><td>${formatBytes(scenePeak.bytes)}</td><td>${formatTime(scenePeak.at)}</td></tr>
-    </tbody>
-  </table>
-  <div class="${styles.gpuMemoryNote}">${getBackendLabel(renderer)} backend. three's own estimate of what it created, since boot, not a driver measurement. Compressed textures (KTX2) count their uploaded mip levels, in the format this device transcodes to (three r186 counts them as 1 B).</div>
-</div>`;
-};
-
-const formatMetric = (value: number) => formatNumber(Math.round(value));
-
-const frameHtml = () => {
-  const isPaused = performance.now() - lastSampledAt > PAUSED_AFTER_MS;
-  const rows = FRAME_METRICS.map(
-    (label, i) =>
-      `<tr><td>${label}</td><td>${formatMetric(frameLast[i])}</td><td>${formatMetric(shown.min[i])}</td><td>${formatMetric(shown.avg[i])}</td><td>${formatMetric(shown.max[i])}</td></tr>`
-  ).join('');
-  return `<div class="${styles.gpuMemorySummary}">
-  <h4 class="${styles.gpuMemoryHeading}">Frame${isPaused ? ' (main loop paused)' : ''}</h4>
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th><span class="aekVisuallyHidden">Metric</span></th><th>Last</th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="${styles.gpuMemoryNote}">Min / avg / max over the last ${FRAME_WINDOW_MS} ms (${shown.frames} frames). Includes every render of the frame: shadow maps, PostFX passes, sky bakes and viewports. The axes gizmo (F10) and the environment ball (F9) are viewports and add their own draw calls; the drawer itself is DOM and adds none.</div>
-</div>`;
-};
-
 const esc = (value: string) =>
   value.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
   );
 
-const ownerLabel = (owner: string) =>
-  owner === BOOT_OWNER
-    ? 'boot (before the first scene)'
-    : owner === ENGINE_OWNER
-      ? 'engine (no scene)'
-      : esc(owner);
+const ownerLabel = (owner: string) => esc(getOwnerLabel(owner));
 
-const ownerRowHtml = (sums: OwnerSums, label: string, className = '') =>
-  `<tr${className ? ` class="${className}"` : ''}><td>${label}</td><td>${formatBytes(sums.textures)}</td><td>${formatBytes(sums.geometries)}</td><td>${formatBytes(sums.total)}</td><td>${formatNumber(sums.count)}</td></tr>`;
-
-const sourcesHtml = (sources: GPUMemorySourceRow[]) => {
-  const rows = sources
-    .map(
-      (source) =>
-        `<tr${source.bytes ? '' : ` class="${styles.gpuMemoryUntracked}"`}><td class="${styles.gpuMemoryWrap}" title="${esc(source.id)}">${esc(source.label)}<br><span class="${styles.gpuMemoryDim}">${ownerLabel(source.owner)}${source.uncounted ? ` · about +${formatBytes(source.uncounted)} not counted (cube)` : ''}</span></td><td>${formatBytes(source.bytes)}</td><td>${formatNumber(source.count)}</td></tr>`
-    )
-    .join('');
-  const total = sources.reduce((sum, source) => sum + source.bytes, 0);
-  return `<div class="${styles.gpuMemorySummary}">
-  <h4 class="${styles.gpuMemoryHeading}">Sources</h4>
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Source (owner)</th><th>Size</th><th>GPU objects</th></tr></thead>
-    <tbody>${rows || '<tr><td>No sources registered.</td></tr>'}</tbody>
-    <tfoot><tr><td>Total</td><td>${formatBytes(total)}</td><td></td></tr></tfoot>
-  </table>
-  <div class="${styles.gpuMemoryNote}">GPU resources that aren't registered assets, named with registerGPUMemorySource (debug/GPUMemory.ts) and counted in "By owner" under their owner. A render target counts its textures and depth buffer, an attribute every buffer three made from its array. A GPU object an asset or an earlier source already counts is not counted again.</div>
-</div>`;
-};
-
-const ownersHtml = () => {
-  const renderer = getRenderer();
-  if (!renderer) return '';
-  const memory: MemoryInfo = renderer.info.memory;
-  // Assets first: a GPU object an asset holds is never counted again by a source
-  const counted = new Set<object>();
-  const rows = collectGPUAssets(renderer, counted);
-  const sources = collectGPUMemorySources(renderer, counted);
-  const groups = groupByOwner([
-    ...rows.map(assetOwnerItem),
-    ...sources.map((source) => {
-      const textures = source.bySize.texturesSize ?? 0;
-      return { owner: source.owner, textures, geometries: source.bytes - textures };
-    }),
-  ]);
-  const currentSceneId = getCurrentSceneId();
-
-  let trackedTotal = 0;
-  let assetTextures = 0;
-  let assetGeometries = 0;
-  for (const group of groups) trackedTotal += group.total;
-  for (const row of rows) {
-    if (row.kind === 'texture') assetTextures += row.bytes;
-    else assetGeometries += row.bytes;
-  }
-  /** Bytes the sources count in an `info.memory` size category */
-  const sourceBytes = (sizeKey: string) =>
-    sources.reduce((sum, source) => sum + (source.bySize[sizeKey] ?? 0), 0);
-  const notOnGPU = rows.filter((row) => !row.bytes).length;
-  const uncounted =
-    rows.reduce((sum, row) => sum + row.uncounted, 0) +
-    sources.reduce((sum, source) => sum + source.uncounted, 0);
-
-  const ownerRows = groups
-    .map((group) => {
-      const isCurrent = group.owner === currentSceneId;
-      const label = `${ownerLabel(group.owner)}${isCurrent ? ' (current)' : ''}`;
-      return (
-        ownerRowHtml(group, label, isCurrent ? styles.gpuMemoryCurrent : '') +
-        group.cells
-          .map((cell) =>
-            ownerRowHtml(cell, esc(cell.owner.slice(group.owner.length + 1)), styles.gpuMemoryCell)
-          )
-          .join('')
-      );
-    })
-    .join('');
-
-  // What neither the registries nor the sources name: unregistered geometry, render targets
-  // without a source, uniform buffers, shader code
-  const untrackedRows = [
-    { label: 'Textures', bytes: memory.texturesSize - assetTextures - sourceBytes('texturesSize') },
-    {
-      label: 'Attributes + index',
-      bytes:
-        memory.attributesSize +
-        memory.indexAttributesSize -
-        assetGeometries -
-        sourceBytes('attributesSize') -
-        sourceBytes('indexAttributesSize'),
-    },
-    ...MEMORY_CATEGORIES.filter(
-      (c) =>
-        c.size !== 'texturesSize' && c.size !== 'attributesSize' && c.size !== 'indexAttributesSize'
-    ).map((c) => ({ label: c.label, bytes: memory[c.size] - sourceBytes(c.size) })),
-  ]
-    .filter((row) => row.bytes > 0)
-    .sort((a, b) => b.bytes - a.bytes);
-  const untracked = memory.total - trackedTotal;
-  const untrackedRatio = memory.total > 0 ? untracked / memory.total : 0;
-
-  // One root element: CMP renders only the first
-  return `<div><div class="${styles.gpuMemorySummary}">
-  <h4 class="${styles.gpuMemoryHeading}">By owner</h4>
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Owner</th><th>Textures</th><th>Geometry</th><th>Total</th><th>Items</th></tr></thead>
-    <tbody>${ownerRows || '<tr><td>No registered assets or sources on the GPU.</td></tr>'}
-      <tr class="${styles.gpuMemoryUntracked}"><td>Untracked</td><td></td><td></td><td>${formatBytes(untracked)}</td><td>${(untrackedRatio * 100).toFixed(0)} %</td></tr>
-    </tbody>
-    <tfoot><tr><td>Total</td><td></td><td></td><td>${formatBytes(memory.total)}</td><td></td></tr></tfoot>
-  </table>
-  ${uncounted ? `<div class="${styles.gpuMemoryNote}">Cube textures: about +${formatBytes(uncounted)} more on the GPU, in none of the figures here. three r186 counts a cube's faces as 1×1 each; the estimate uses its formula at the real face size.</div>` : ''}
-  <table class="${styles.gpuMemoryTable}">
-    <thead><tr><th>Untracked</th><th>Size</th></tr></thead>
-    <tbody>${untrackedRows.map((row) => `<tr><td>${row.label}</td><td>${formatBytes(row.bytes)}</td></tr>`).join('')}</tbody>
-  </table>
-  <div class="${styles.gpuMemoryNote}">Registered textures and geometries, the textures a material holds alone (eg. clones) and the sources below, summed per owner with three's own byte counts. Geometry includes every buffer (attributes, index, storage). ${notOnGPU ? `${formatNumber(notOnGPU)} registered asset${notOnGPU === 1 ? ' is' : 's are'} not on the GPU (never drawn, or not uploaded yet). ` : ''}Untracked is everything else: unregistered geometry, uniform buffers, shader code, small instance counts (three keeps those in uniform buffers) and render targets no source names. A large or growing figure is a finding.</div>
-</div>
-${sourcesHtml(sources)}</div>`;
+/** What the live sections read (`_dbg__GPUMemoryView.ts`) */
+const viewOpts = {
+  getRenderer: () => getRenderer(),
+  getCurrentSceneId: () => getCurrentSceneId(),
+  getBudgetMB: () => state.budgetMB,
+  bootPeak,
+  scenePeak,
+  frameLast,
+  frameWindow: shown,
+  frameWindowMs: FRAME_WINDOW_MS,
+  isPaused: () => performance.now() - lastSampledAt > PAUSED_AFTER_MS,
 };
 
 // --- SNAPSHOTS ---
@@ -484,6 +292,9 @@ const logDiff = () => {
   );
 };
 
+/** The mounted tab's live sections (made again on each mount) */
+let view: ReturnType<typeof createGPUMemoryView> | null = null;
+
 export const _createGPUMemoryDebugGUI = () => {
   createProfilerTab({
     id: GPU_MEMORY_TAB_ID,
@@ -494,85 +305,88 @@ export const _createGPUMemoryDebugGUI = () => {
     lsKey: LS_KEY,
     state,
     persistKeys: ['budgetMB', 'recordSites'],
-    // Only re-renders the tables; the sampling runs in gpuMemorySamplerSystem
+    // Only writes the figures; the sampling runs in gpuMemorySamplerSystem
     refreshIntervalMs: 500,
     // Its figures span scenes (the peaks, a snapshot's diff): kept (p807 D9)
     keepOnSceneChange: true,
-    content: () => [
-      CMP({ html: totalsHtml }),
-      CMP({ html: frameHtml }),
-      CMP({ html: ownersHtml }),
-      {
-        pane: true,
-        content: [
-          {
-            key: 'budgetMB',
-            label: 'Budget (MB)',
-            min: 16,
-            step: 16,
-            onChange: (_value, e) => {
-              // Re-checked against the new budget from the next frame on
-              if (e.last) isBudgetToastShown = false;
+    // The live sections read once; the tab's scheduler then writes their tables
+    onRefresh: () => view?.update(),
+    content: ({ scheduler }) => {
+      view = createGPUMemoryView(viewOpts, scheduler);
+      return [
+        ...view.cmps,
+        {
+          pane: true,
+          content: [
+            {
+              key: 'budgetMB',
+              label: 'Budget (MB)',
+              min: 16,
+              step: 16,
+              onChange: (_value, e) => {
+                // Re-checked against the new budget from the next frame on
+                if (e.last) isBudgetToastShown = false;
+              },
             },
-          },
-          // Drawer tabs: there is no drawer in prodTest mode
-          {
-            type: 'button',
-            label: 'Viewports',
-            title: 'Open Debug tools',
-            hidden: !IS_DEBUG_ENV,
-            onClick: () => openDebuggerTab('debugToolsControls'),
-          },
-          {
-            type: 'button',
-            label: 'GPU time',
-            title: 'Open PostFX profiler',
-            hidden: !IS_DEBUG_ENV,
-            onClick: () => openDebuggerTab('postFxControls'),
-          },
-        ],
-      },
-      CMP({ html: snapshotHtml }),
-      {
-        pane: true,
-        content: [
-          {
-            type: 'button',
-            label: 'Snapshot',
-            title: 'Take snapshot',
-            disabled: () => !getRenderer(),
-            onClick: () => {
-              const renderer = getRenderer();
-              if (!renderer) return;
-              takeGPUMemorySnapshot(renderer);
-              updateProfilerTab(GPU_MEMORY_TAB_ID);
+            // Drawer tabs: there is no drawer in prodTest mode
+            {
+              type: 'button',
+              label: 'Viewports',
+              title: 'Open Debug tools',
+              hidden: !IS_DEBUG_ENV,
+              onClick: () => openDebuggerTab('debugToolsControls'),
             },
-          },
-          {
-            type: 'button',
-            label: 'Diff',
-            title: 'Log diff to console',
-            disabled: () => !getGPUMemorySnapshot(),
-            onClick: logDiff,
-          },
-          {
-            type: 'button',
-            label: 'Clear',
-            title: 'Clear snapshot',
-            disabled: () => !getGPUMemorySnapshot(),
-            onClick: () => {
-              clearGPUMemorySnapshot();
-              updateProfilerTab(GPU_MEMORY_TAB_ID);
+            {
+              type: 'button',
+              label: 'GPU time',
+              title: 'Open PostFX profiler',
+              hidden: !IS_DEBUG_ENV,
+              onClick: () => openDebuggerTab('postFxControls'),
             },
-          },
-          {
-            key: 'recordSites',
-            label: 'Call sites',
-            onChange: (value) => setRecordAllocationSites(Boolean(value)),
-          },
-        ],
-      },
-    ],
+          ],
+        },
+        CMP({ html: snapshotHtml }),
+        {
+          pane: true,
+          content: [
+            {
+              type: 'button',
+              label: 'Snapshot',
+              title: 'Take snapshot',
+              disabled: () => !getRenderer(),
+              onClick: () => {
+                const renderer = getRenderer();
+                if (!renderer) return;
+                takeGPUMemorySnapshot(renderer);
+                updateProfilerTab(GPU_MEMORY_TAB_ID);
+              },
+            },
+            {
+              type: 'button',
+              label: 'Diff',
+              title: 'Log diff to console',
+              disabled: () => !getGPUMemorySnapshot(),
+              onClick: logDiff,
+            },
+            {
+              type: 'button',
+              label: 'Clear',
+              title: 'Clear snapshot',
+              disabled: () => !getGPUMemorySnapshot(),
+              onClick: () => {
+                clearGPUMemorySnapshot();
+                updateProfilerTab(GPU_MEMORY_TAB_ID);
+              },
+            },
+            {
+              key: 'recordSites',
+              label: 'Call sites',
+              onChange: (value) => setRecordAllocationSites(Boolean(value)),
+            },
+          ],
+        },
+      ];
+    },
   });
 
   // Hydrated above; the tracker is installed before the renderer's init(), so it sees everything

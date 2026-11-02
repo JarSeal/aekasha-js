@@ -1,6 +1,6 @@
-// The Objects tab's small parts (p807 D7), out of `_dbg__ProfilerObjects.ts` so it stays under 800
-// lines: the figures' formats, a text written in place, a section with its heading, a note, a
-// table's empty text, and a row header's two lines.
+// The profiler tabs' small parts (p807 D7, D8; the Objects tab's, out of `_dbg__ProfilerObjects.ts`
+// so it stays under 800 lines, and GPU memory's): the figures' formats, a text written in place, a
+// section with its heading, a note, a table's empty text, and a row header's two lines.
 import { CMP } from '../../ui/core/CMP';
 import type { CMPHandle } from '../../ui/core/CMPTypes';
 import { formatNumber } from '../../kernel/assets/debug/_dbg__AssetStats';
@@ -21,9 +21,9 @@ export const createTextWriter = (node: Text) => (text: string) => {
   if (node.data !== text) node.data = text;
 };
 
-/** A section: its heading (`h4`) and its parts. */
-export const createSection = (heading: string, parts: CMPHandle[]) => {
-  const section = CMP({ class: 'profilerSection' });
+/** A section: its heading (`h4`) and its parts; `className` adds a tab's own class. */
+export const createSection = (heading: string, parts: CMPHandle[], className = '') => {
+  const section = CMP({ class: ['profilerSection', className] });
   section.add({ tag: 'h4', text: heading });
   for (let i = 0; i < parts.length; i++) section.add(parts[i]);
   return section;
