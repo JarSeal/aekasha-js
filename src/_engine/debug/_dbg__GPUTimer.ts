@@ -7,9 +7,8 @@
  *   _onComputeContext), so a measurement can collect the context uids of the work it wants timed.
  * - Every resolve replaces the timestamp pools' batches, so separate resolvers would consume each
  *   other's timestamps. _requestTimestampResolve runs one resolve of both pools at a time and
- *   hands the batches to every listener (_onTimestampsResolved). Something outside (eg. the
- *   stats-gl GPU panel) can still resolve on its own: listeners get a batch without their uids,
- *   and retry.
+ *   hands the batches to every listener (_onTimestampsResolved). Something outside (an app's own
+ *   resolve) can still resolve on its own: listeners get a batch without their uids, and retry.
  */
 import {
   InspectorBase,
@@ -170,8 +169,7 @@ export const _releaseGpuTimer = () => {
   if (holders > 0) return;
   // Leave an inspector installed after ours alone (it forwards to ours, which keeps forwarding)
   if (renderer && prevInspector && renderer.inspector === tap) renderer.inspector = prevInspector;
-  // Back to the state before the first hold: on if it was on then. Something that switched it on
-  // while held (eg. the stats-gl GPU panel) isn't seen, so it goes off with the last hold
+  // Back to the state before the first hold: on if it was on then
   if (backend && !prevTrackTimestamp) backend.trackTimestamp = false;
   prevInspector = null;
   tap = null;

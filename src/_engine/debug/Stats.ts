@@ -19,13 +19,9 @@ export type StatsOptions = {
   trackCPT?: boolean;
   /** The display's refresh rate, a line of the FPS panel, so it requires trackFPS. */
   trackHz?: boolean;
-  logsPerSecond?: number;
-  graphsPerSecond?: number;
-  samplesLog?: number;
-  samplesGraph?: number;
-  precision?: number;
+  /** The panels in a row, not a column. */
   horizontal?: boolean;
-  mode?: number;
+  /** Shows the stats panels at all. */
   enabled?: boolean;
 };
 

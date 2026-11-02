@@ -179,8 +179,6 @@
     },
     "src/_engine/debug/Stats.ts": {
       "defaultStatsOptions": "Variable",
-      "getStats": "Function",
-      "getStatsCmp": "Function",
       "initStats": "Function",
       "registerStatsModule": "Function",
       "startCustomMeasurements": "Function",

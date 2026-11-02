@@ -114,7 +114,7 @@ export const createBakeStats = (): BakeStats => {
       return ++record.age < MAX_PENDING_RESOLVES;
     });
     updateView();
-    // Another resolve (eg. stats-gl's) can have taken the batch: try again until it ages out
+    // Another resolve (an app's own) can have taken the batch: try again until it ages out
     if (pending.length) _requestTimestampResolve();
     else if (!captureUids) releaseTimer();
   };

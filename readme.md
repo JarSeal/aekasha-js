@@ -477,7 +477,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 
 ## Built with
 
-[Three.js](https://threejs.org/) (WebGPU + TSL) · [Rapier](https://rapier.rs/) · [Vite](https://vitejs.dev/) · [TypeScript](https://www.typescriptlang.org/) · [Zod](https://zod.dev/) · [glTF Transform](https://gltf-transform.dev/) · [KTX-Software](https://github.com/KhronosGroup/KTX-Software) · [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful) · [stats-gl](https://github.com/RenaudRohlinger/stats-gl)
+[Three.js](https://threejs.org/) (WebGPU + TSL) · [Rapier](https://rapier.rs/) · [Vite](https://vitejs.dev/) · [TypeScript](https://www.typescriptlang.org/) · [Zod](https://zod.dev/) · [glTF Transform](https://gltf-transform.dev/) · [KTX-Software](https://github.com/KhronosGroup/KTX-Software) · [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful)
 
 ## License
 

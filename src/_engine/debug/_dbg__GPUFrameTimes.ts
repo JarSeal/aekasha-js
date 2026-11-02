@@ -111,8 +111,8 @@ const collectFrames = (
       if (++record.age < GPU_MAX_PENDING_RESOLVES) {
         pendingRecords[kept++] = record;
       } else {
-        // Its batch went to another resolver (eg. the stats-gl GPU panel's), or a WebGL resolve
-        // in flight cleared its queries
+        // Its batch went to another resolver (an app's own resolve), or a WebGL resolve in
+        // flight cleared its queries
         counts.dropped++;
         recycleRecord(record);
       }

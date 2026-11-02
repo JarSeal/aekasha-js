@@ -7,7 +7,7 @@
  * - The figures share the profiler's definitions: FPS and CPU are the frame probe's summary (the
  *   Overview's FPS and CPU rows), GPU and CPT the GPU frame times' mean over 1 s (its GPU row),
  *   PHY the physics step stats' last step, TFPS 1000 over the main loop's mean CPU time of the
- *   last 60 frames (as stats-gl's TFPS panel was). Hz is the display's refresh rate read from the
+ *   last 60 frames (as the TFPS panel always was). Hz is the display's refresh rate read from the
  *   animation frames' intervals, shown in the FPS panel.
  * - Settings apply live (_setStatsPanels): a panel is added in its place or removed, the frame
  *   probe and each GPU side held only while a panel reads it. With `activate` (the profiler's
@@ -98,16 +98,16 @@ type Panel = {
   head: number;
 };
 
-/** The figures' text rate (stats-gl's) */
+/** The figures' text rate: 4 Hz, readable while they change */
 const TEXT_MS = 250;
-/** The graphs' sample rate (stats-gl's 30 Hz) */
+/** The graphs' sample rate: 30 Hz (p807 Phase 0's cost bar) */
 const GRAPH_MS = 1000 / 30;
 /** Samples a graph holds: one per CSS px of its width at the default size (Stats.module.scss'
  * `.graph`, the compact density's `--aek-space-7` × 4), 3.2 s at 30 Hz */
 const GRAPH_CAPACITY = 96;
 /** The GPU figures' window (the profiler's) */
 const GPU_WINDOW_MS = 1000;
-/** TFPS: the frames its mean CPU time covers (stats-gl's TFPS panel's) */
+/** TFPS: the frames its mean CPU time covers (unchanged since before p807) */
 const TFPS_SAMPLES = 60;
 /** Hz: the animation frame intervals kept, and the share of the shortest one read */
 const HZ_SAMPLES = 120;

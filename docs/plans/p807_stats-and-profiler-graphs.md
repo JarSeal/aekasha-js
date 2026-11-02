@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -514,7 +514,7 @@ As built (2026-11-02; two sections: the code and its tests, `eff8d363`, then the
   (`toLocaleTimeString`) that `DEBUGGER_LIVE_MASKS` doesn't mask, so the shot passes or fails by
   how wide the time's digits come out. Phase 4, which rebuilds that table, masks those cells.
 
-### Phase 2: the stats panels
+### Phase 2: the stats panels — done
 
 D4 (or D3's restyle on a failed gate), in sections:
 
@@ -634,6 +634,40 @@ As built, section 2 (2026-11-02, not committed):
   profiler's setting off and on) applied without a reload (a page marker kept); a debug toast sits
   above the panels; axe finds nothing on the button or the group; no page error.
 - **Verified:** `yarn test` (266 files), `tsc`, lint, the docs ratchet (100 %).
+
+As built, section 3 (2026-11-02, not committed):
+
+- **Removed:** `stats-gl` from `package.json` and `yarn.lock` (`yarn remove`), `Stats.scss`,
+  `StatsOptions`' stats-gl-only fields (`logsPerSecond`, `graphsPerSecond`, `samplesLog`,
+  `samplesGraph`, `precision`, `mode`; `horizontal` and `enabled` got their summaries), the
+  readme's credit. The comments: the "another resolver" retries in `_dbg__GPUTimer.ts`' header,
+  `_dbg__GPUFrameTimes.ts`, `_dbg__PostFXProfiler.ts` and `_dbg__BakeStats.ts` now name an app's
+  own resolve (D5); `_releaseGpuTimer`'s note about stats-gl's `trackTimestamp` went;
+  `OnScreenTools.module.scss`' click-through note names the stats panels' canvases;
+  `_dbg__StatsPanels.ts`' four mentions (its rates' history) went. `_dbg__ProfilerSources.ts`
+  (on D10's list) had none left: Phase 1 moved its records out. `getStats` went in section 1,
+  `getStatsCmp` in section 2. Nothing outside `docs/plans/` and `CHANGELOG.md` names stats-gl.
+- **The About dialog** lists `dependencies` itself (`devTools/projectMetadata.ts`): stats-gl's
+  row went (the `debugger` configuration's `window.about` shot, its rows after it moved up).
+- **Verification (Phase 2's):**
+  - `yarn verify:baselines`: the three bundles unchanged, no debug code in production or the
+    embeds; `api.json` lost `getStats` and `getStatsCmp` (`@internal`, on no entry) and
+    `docs.json` the two from its counts, both recorded with `--update` (its rewrite of
+    `bundle.json`, byte shifts only, restored as the baselines' notes say).
+  - `yarn sbp --profile all`: unchanged from Phase 0 (app 384.4, banner 287.4, uiKit 286.6 kB
+    gzip; the app group's "well under" note as before).
+  - The debug chunks (`yarn build:test`, `debugChunks.mts --out phase2`): 54 lazy JS chunks,
+    485.1 kB, 199.5 kB gzip (Phase 0: 53, 512.5 kB, 205.1 kB gzip); stats-gl 0 (34.0 kB
+    before); `_dbg__Stats` 8.9 kB, 4.1 kB gzip (38.5 kB, 10.9 kB gzip before; the time series
+    and tooltip come from shared chunks).
+  - `yarn verify:scenes --config all`: 108 of 110; the two failures were the changes on
+    purpose: `drawer.statsControls` in `testDebugScene` and `thirdPersonGymScene` (the tab's
+    labels: no reload notes, Hz in the FPS panel, PHY after a reload, the profiler button's
+    tooltip text) and `testDebugScene`'s `window.about` (stats-gl's row). Recorded with
+    `--only testDebugScene,thirdPersonGymScene --config debugger --update` (local baselines).
+  - The Stop hook's unit run once failed `devTools/hub/buildGuard.test.ts` while this run's
+    `yarn build:test` built the Hub at the same time (their staging folders): 9 / 9 alone after,
+    and `yarn test` 266 files.
 
 ### Phase 3: the profiler's Overview and Objects
 

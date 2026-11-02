@@ -146,7 +146,7 @@
 // Set on <body> by the Debug Tools "On-screen tools" folder / § shortcut (debug env only). Makes
 // the on-screen tools, the drawer handle, the stats panel and the axes gizmo click-through, so the
 // whole canvas is clickable. pointer-events goes on every descendant too, because a child with its
-// own value (buttons, <select>, stats-gl's canvases) would still catch clicks. The axes gizmo is
+// own value (buttons, <select>, the stats panels' canvases) would still catch clicks. The axes gizmo is
 // not dimmed: it renders into the canvas, its slot is an empty box.
 // New on-screen elements add their selector here.
 :global(body.aekOnScreenToolsDisabled) {
