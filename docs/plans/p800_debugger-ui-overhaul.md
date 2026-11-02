@@ -754,11 +754,35 @@ What follows is the sketch as written.
 
 ### p807 — Stats and profiler graphs
 
-In progress: `p807_stats-and-profiler-graphs.md` (written 2026-11-01). On its own branch from
-`main`, merging into `main`; no public type changes, and its changelog sections join the
-unreleased `engine-6` entry with no version bump (its D2). The gate is in two parts (its D3):
-Phase 0 compares the sources the panels read with stats-gl's, Phases 1-2 check compute timing and
-the panels' cost while stats-gl is still in place. What follows is the sketch as written.
+In progress: `p807_stats-and-profiler-graphs.md` (written 2026-11-01; Phases 0-6 done, Phase 7's
+changelog and done marking left). On its own branch from `main`, merging into `main`; no public
+type changes, and its changelog sections join the unreleased `engine-6` entry with no version
+bump (its D2). What the later plans build on, each written there:
+
+- **The gate** (its D3, Phases 0-2, in the Windows Chrome on the real GPU, both backends): FPS
+  and GPU agree with stats-gl's (GPU to 0.01 ms on WebGPU); stats-gl's "CPU" was 7-15 % of the
+  main loop's (the render's submission left out), so ours says what it spans; ours cost within
+  stats-gl's noise and allocate about 95 % less. `stats-gl` left `package.json`.
+- **The stats panels** (its D4, `_dbg__StatsPanels.ts`): one debugger root of kit time series on
+  the profiler's definitions, settings applied live, a button to the profiler named by its
+  content (an `aria-label` without the visible figures fails WCAG 2.5.3).
+- **GPU timing has one owner** (its D5): `_dbg__GPUTimer.ts` with compute, the frame records in
+  `_dbg__GPUFrameTimes.ts`, WebGL too (a frame's started contexts sum to its GPU time, nested or
+  not).
+- **The profiler's tabs on the kit** (its D6-D9): tables, the stacked bar, sparklines, a list and
+  a segmented control, written in place, so a sort, the focus and the scroll survive a refresh.
+  Nothing in the debugger writes table or SVG HTML, and `Stats.scss`, the last debugger
+  stylesheet off the tokens, went. The kit's table gained the `'muted'` tone. The profiler now
+  hears a scene change (`updateProfilerScene`), so an app's profiler tab is rebuilt as a drawer
+  tab is.
+- **Left open** (its Phase 5): a kit table on a scheduler allocates per render (a "rows
+  unchanged" path would remove it), the time series' empty animation frame after a draw, the 3D
+  symbols' and light helpers' per-frame allocations (outside its scope), p806's leftovers measured
+  and left.
+- **Size:** the debug chunks 1.6 kB gzip smaller (stats-gl's 10.3 gone); production's first
+  downloads unchanged.
+
+What follows is the sketch as written.
 
 - Phase 0 is a gate: our stats panels (FPS, CPU, GPU, compute, physics, target FPS) on p805's
   running graph and `_dbg__GPUTimer.ts`, compared with stats-gl on both backends for accuracy,

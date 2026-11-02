@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -1100,7 +1100,7 @@ As built, section 4 (2026-11-02, not committed; section 3 committed as `649dbcb2
   scripts stay in `.cache/p807/` (`perf.mts`, `debugChunks.mts`, their JSON in `perf/` and
   `chunks/`).
 
-### Phase 6: the Hub, `CLAUDE.md`, readme
+### Phase 6: the Hub, `CLAUDE.md`, readme — done
 
 D11's docs. `yarn hub:build` in both modes.
 
@@ -1138,6 +1138,30 @@ As built, section 1 (2026-11-02, not committed):
 - **Verified:** `yarn hub:build` (public, 101 pages) and the dev mode (`buildHub({ mode: 'dev' })`
   in `.cache/p807/hubDev.mts`, 108 pages), no warning or error in either; Prettier clean on the
   Hub pages.
+
+As built, section 2 (2026-11-02, not committed; section 1 committed as `2e24a49c`):
+
+- **`src/_engine/debug/CLAUDE.md`:** a "Stats panels" item (the files, the root and its class,
+  the panels and what each figure reads, Hz, the frame step's two calls and why not `LATE_MAIN`,
+  the per-frame allocation decided in Phase 2; the live settings and PHY's boot override; the
+  button, its name and tooltip, the height on `<body>`; the tests and the `stats.panels` shot) and
+  a "GPU timing has one owner" item (`_dbg__GPUTimer.ts` with compute and its support check,
+  `_dbg__GPUFrameTimes.ts`' records and holders, the WebGL rule and its lost queries, the retries
+  kept for an app's resolve). The theme item: the stats panels' root is a debugger root; the
+  styles item: `Stats.scss` went. The profiler item: the three tabs on the kit written in place,
+  the Overview's and Objects' modules, `_dbg__ProfilerParts.ts`, the scene change through
+  `updateProfilerScene`; its sources' GPU row a `_dbg__GPUFrameTimes` holder on both backends.
+  The GPU memory item: its two views, `createRowPool`, the assets walked once a refresh.
+- **The root `.claude/CLAUDE.md`:** the two pointers to `debug/CLAUDE.md` name the stats panels
+  and GPU timing.
+- **`readme.md`:** stats-gl's credit went in Phase 2; the debug suite list gained the stats panels
+  (their figures, both backends, live settings, the profiler from a click or Enter), and the
+  profiler's line says its figures update in place.
+- **p800 §5's p807 entry:** what the later plans build on (the gate, the panels, the GPU timer,
+  the tabs on the kit, what's left open, the size), as p805's and p806's entries; it stays "In
+  progress" for Phase 7 to mark done.
+- **Verified:** `yarn hub:build` (public, 101 pages) and the dev mode (108 pages), no warning or
+  error (the coverage check reads the new items); Prettier clean on every changed Markdown file.
 
 ### Phase 7: done
 

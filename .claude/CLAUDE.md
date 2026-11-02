@@ -60,7 +60,7 @@ In the browser, append query params to toggle modes: `?isDebug=true` (full debug
 
 Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session loads one when it reads a file in that folder; when a task touches a subsystem from elsewhere, read its file first:
 
-- `src/_engine/debug/CLAUDE.md`: the debug tooling (About dialog, debug keys, test bridge, profiler, GPU memory, drawer tabs).
+- `src/_engine/debug/CLAUDE.md`: the debug tooling (About dialog, debug keys, test bridge, stats panels, GPU timing, profiler, GPU memory, drawer tabs).
 - `src/_engine/kernel/input/CLAUDE.md`: input (the device bindings, the held-key hook, the master switches, action maps: sampling, contexts, recording; the gamepad).
 - `src/_engine/kernel/ecs/CLAUDE.md`: the ECS core (plugin registration, component types, app ids, managed entities, the system stages, the main loop).
 - `src/_engine/kernel/init/CLAUDE.md`: the boot step by step (`InitEngine`, the embed boot) and the engine features' install contract (the `FeatureContext`, install order, the production-build traps, a missing feature, the assets worker's jobs).
@@ -135,7 +135,7 @@ Debug tooling (built on the UI kit since p806: a tab's pane is a property grid o
 - The debug drawer itself is toggled in-app with the `h` key (the engine's default debug key `sc-toggle-debug-drawer`, rebindable in `src/CONFIG.ts`' `debugKeys`) via `toggleDrawer()`.
 - Draggable windows are the UI kit's (`src/_engine/ui/CLAUDE.md`: kinds, registration, LS, scene loads). A debug module's edit window per entity is a window kind, registered at its `_dbg__` module's load.
 
-Detail: `src/_engine/debug/CLAUDE.md` (the About dialog, debug keys, the test bridge, the profiler, GPU memory, drawer tabs) and `devTools/devFiles/CLAUDE.md` (dev files).
+Detail: `src/_engine/debug/CLAUDE.md` (the About dialog, debug keys, the test bridge, the stats panels, GPU timing, the profiler, GPU memory, drawer tabs) and `devTools/devFiles/CLAUDE.md` (dev files).
 
 ### Physics
 
