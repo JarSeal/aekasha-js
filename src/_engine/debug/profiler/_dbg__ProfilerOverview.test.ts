@@ -173,6 +173,7 @@ describe('profiler Overview: app stats sources (p618 D14)', () => {
 
 describe('profiler Overview: the table updated in place (p807 D6)', () => {
   it('is one table with a hidden caption, its columns and the engine rows by metric id', () => {
+    expect(createProfilerOverviewTabDef(createSettings()).keepOnSceneChange).toBe(true);
     const { table, keys, close } = openOverview(createSettings());
     const caption = table.elem.querySelector('caption');
     expect(caption?.textContent).toBe('Overview');

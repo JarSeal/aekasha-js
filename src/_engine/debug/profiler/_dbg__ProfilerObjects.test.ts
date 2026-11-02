@@ -108,6 +108,7 @@ const openObjects = () => {
       tr.getAttribute('data-key')
     );
   return {
+    def,
     root,
     census,
     settings,
@@ -212,6 +213,26 @@ describe('profiler Objects tab on the kit (p807 D7)', () => {
     expect(triangles.querySelector('.profilerSpark__latest')?.textContent).toBe('3,000');
     expect(triangles.querySelector('.profilerSpark__max')?.textContent).toBe('max 3,000');
     expect(triangles.querySelector('.aekSparkline')?.getAttribute('aria-hidden')).toBe('true');
+    objects.close();
+  });
+
+  it('is kept on a scene change, its history starting again (p807 D9)', () => {
+    const objects = openObjects();
+    expect(objects.def.keepOnSceneChange).toBe(true);
+    objects.refresh();
+    objects.census.meshes.triangles.inView = 3000;
+    objects.census.sampledAt = 2;
+    objects.refresh();
+    const triangles = objects.root.querySelector('.profilerSpark')!;
+    expect(triangles.querySelector('.profilerSpark__max')?.textContent).toBe('max 3,000');
+
+    // The next scene: the old samples forgotten, the same elements
+    objects.def.onSceneChange?.();
+    objects.census.meshes.triangles.inView = 500;
+    objects.census.sampledAt = 3;
+    objects.refresh();
+    expect(objects.root.querySelector('.profilerSpark')).toBe(triangles);
+    expect(triangles.querySelector('.profilerSpark__max')?.textContent).toBe('max 500');
     objects.close();
   });
 });

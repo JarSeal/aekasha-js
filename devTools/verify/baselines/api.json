@@ -175,6 +175,7 @@
       "setProfilerSettings": "Function",
       "StatsSource": "TypeAlias",
       "toggleProfilerWindow": "Function",
+      "updateProfilerScene": "Function",
       "updateProfilerTab": "Function"
     },
     "src/_engine/debug/Stats.ts": {

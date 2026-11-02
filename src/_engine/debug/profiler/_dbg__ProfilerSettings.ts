@@ -169,6 +169,8 @@ export const createProfilerSettingsTabDef = (
   title: 'Settings',
   icon: 'gear',
   orderNr: 100,
+  // Nothing of a scene's (p807 D9)
+  keepOnSceneChange: true,
   lsKey: PROFILER_LS_KEY,
   uiLsKey: PROFILER_UI_LS_KEY,
   state: opts.settings,

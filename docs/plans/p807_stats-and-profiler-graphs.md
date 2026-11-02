@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Debug, UI, Performance
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
@@ -669,7 +669,7 @@ As built, section 3 (2026-11-02, not committed):
     `yarn build:test` built the Hub at the same time (their staging folders): 9 / 9 alone after,
     and `yarn test` 266 files.
 
-### Phase 3: the profiler's Overview and Objects
+### Phase 3: the profiler's Overview and Objects — done
 
 D6, D7, D9, a section each; their shots changed on purpose.
 
@@ -767,7 +767,42 @@ As built, section 2 (D7, 2026-11-02, not committed):
   `debugger` configuration's `profiler.profilerObjects` shot changed on purpose (with the
   Overview's), axe 0, the other shots unchanged; unmasked shots of both tabs in the gym
   (`.cache/p807/phase3Shots.mts`, `.cache/p807/phase3/`), no page error. The changed shots aren't
-  recorded yet (`--only testDebugScene --config debugger --update` once reviewed).
+  recorded at the review (2026-11-02, with the Overview's).
+
+As built, section 3 (D9, 2026-11-02, not committed):
+
+- **D9's in-place updates** were sections 1 and 2's (each tab's sections built once in
+  `content(ctx)`, `onRefresh` writing the figures, no `CMP({ html })` rebuilt per refresh). No
+  Overview or Objects column is sortable (none was, and the kinds and the heaviest objects have
+  their own order), so "a sort the user picked" is GPU memory's (Phase 4).
+- **The profiler never heard of a scene change:** its window stays open across loads and its host
+  never got `sceneChanged()` (only the drawer's did, through `updateDebuggerSceneTitle`), so its
+  tabs were neither rebuilt nor told, and the Objects history mixed two scenes. Now `Scene.ts`'
+  `setCurrentScene` calls `updateProfilerScene()` (`debug/Profiler.ts`, `@internal`, a no-op until
+  the profiler loads) beside the drawer's title, under `IS_DEBUG_ENV || IS_PROD_TEST_MODE` (the
+  profiler loads in prod test mode too; a production build folds it), and `_dbg__Profiler.ts`'
+  `_updateProfilerScene` passes it to the host: the drawer's contract, so an app's profiler tab
+  (`createProfilerTab`, "the same definition as `createDebuggerTab`") is now rebuilt on a scene
+  change unless it has `keepOnSceneChange`, as the Hub's debug suite page already said.
+- **Kept:** the Overview (nothing of a scene's), Objects (`onSceneChange: resetHistory`: the
+  sparklines start again, the tables' rows follow the next census), Settings (nothing of a
+  scene's) and GPU memory (its peaks and a snapshot's diff span scenes; Phase 4 reworks it), so
+  none of the built-in tabs is rebuilt, as before. The rates stay.
+- The scene change comes at `setCurrentScene`, mid-load (as the drawer's): the new history's first
+  samples can be the load's last frames.
+- **Tests:** Objects kept with its history starting again (the same elements, the old max gone);
+  the Overview's `keepOnSceneChange`.
+- **In the app** (`.cache/p807/phase3SceneChange.mts`, Windows Chrome): the Objects tab open with
+  the focus on the Bars control, `loadScene` to another scene: the same table element, the focus
+  kept, the history's max from the new scene only (testDebugScene → gym: 6,748 → 5,466), no page
+  error.
+- **Verified:** `yarn test` (267 files), `tsc`, `tsc -p hub`, lint, the docs ratchet;
+  `yarn verify:baselines`: no debug code in production or the embeds, the bundles unchanged (their
+  rewrite's byte shifts restored), `api.json` and `docs.json` recorded with the new `@internal`
+  `updateProfilerScene` (191 / 191 documented in `engine/debug`); the `debugger` configuration on
+  `testDebugScene` and `thirdPersonGymScene` passes against the recorded shots; `yarn sbp
+  --profile all` unchanged from Phase 0 (app 384.4, banner 287.4, uiKit 286.6 kB gzip; the app
+  group's "well under" note as before).
 
 ### Phase 4: GPU memory
 

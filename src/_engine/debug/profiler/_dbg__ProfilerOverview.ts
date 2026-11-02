@@ -645,6 +645,8 @@ export const createProfilerOverviewTabDef = (settings: ProfilerSettings): AnyDeb
     get refreshIntervalMs() {
       return 1000 / settings.updateRateHz;
     },
+    // Nothing of a scene's: the rows, the focus and the scroll stay
+    keepOnSceneChange: true,
     // A row shown, hidden or moved in Settings (or an app source registered) applies here. Only
     // once the tab is open: a build can fail before onOpen's cleanup exists, which would leak the
     // holds.

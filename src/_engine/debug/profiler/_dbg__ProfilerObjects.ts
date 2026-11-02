@@ -734,6 +734,9 @@ export const createProfilerObjectsTabDef = (opts: ObjectsTabOpts): AnyDebuggerTa
     get refreshIntervalMs() {
       return 1000 / settings.updateRateHz;
     },
+    // Kept (the focus and the scroll stay); the history is the last scene's, so it starts again
+    keepOnSceneChange: true,
+    onSceneChange: resetHistory,
     // One census read for every section; the tab's scheduler then writes the kit's parts
     onRefresh: () => {
       readSample();

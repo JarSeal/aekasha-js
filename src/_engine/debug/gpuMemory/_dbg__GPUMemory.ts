@@ -496,6 +496,8 @@ export const _createGPUMemoryDebugGUI = () => {
     persistKeys: ['budgetMB', 'recordSites'],
     // Only re-renders the tables; the sampling runs in gpuMemorySamplerSystem
     refreshIntervalMs: 500,
+    // Its figures span scenes (the peaks, a snapshot's diff): kept (p807 D9)
+    keepOnSceneChange: true,
     content: () => [
       CMP({ html: totalsHtml }),
       CMP({ html: frameHtml }),
