@@ -262,6 +262,94 @@
       "sceneFile": "./examples/ecs/exampleEcs.ts",
       "__features": []
     },
+    "exampleGameHud": {
+      "name": "Example: A game HUD",
+      "description": "A small arena played with a keyboard and mouse or a gamepad, its HUD the UI kit's game pieces: a character with an orbiting camera, health and stamina bars, a hotbar with cooldowns, a crosshair with hit markers on the crates, nameplates, a waypoint and the crates' health over the world, a compass and a minimap, a notification feed, an objective tracker, subtitles, a dialogue with an NPC, a radial emote menu, input prompts that follow the device, and a pause menu with an inventory and a settings menu (the theme, the UI scale, reduced motion, the subtitles and the controls page, saved in the browser).",
+      "backgroundColor": "#1c212b",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 120,
+            "position": {
+              "x": 0,
+              "y": 2.7,
+              "z": 12.9
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 1.7,
+              "z": 6
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55,
+            "appId": "exampleGameHudCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleGameHudCamera",
+            "debugData": {
+              "name": "Game HUD example camera",
+              "description": "Driven by createFollowObjectCameraRig, orbiting the character at 7 m, about 8° down: a right-drag or the right stick turns it. This position is the rig's from the spawn point."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#ffffff",
+            "intensity": 0.6,
+            "appId": "exampleGameHudAmbient"
+          },
+          "entityOpts": {
+            "appId": "exampleGameHudAmbient",
+            "debugData": {
+              "name": "Game HUD example ambient light"
+            }
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 3,
+            "position": {
+              "x": 8,
+              "y": 16,
+              "z": 6
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowCameraNearFar": [
+              1,
+              50
+            ],
+            "shadowCameraFrustum": [
+              -18,
+              18,
+              18,
+              -18
+            ],
+            "appId": "exampleGameHudSun"
+          },
+          "entityOpts": {
+            "appId": "exampleGameHudSun",
+            "debugData": {
+              "name": "Game HUD example sun"
+            }
+          }
+        }
+      ],
+      "id": "exampleGameHud",
+      "sceneFile": "./examples/gameHud/exampleGameHud.ts",
+      "__features": []
+    },
     "exampleHubHero": {
       "name": "Example: Hub hero",
       "description": "The Ækasha Hub homepage's image: the SPACE sky box, a large toolkit asteroid in a glowing ring and smaller ones around it, slowly turning, with a bloom pass.",
@@ -14728,6 +14816,34 @@
       },
       "__sourcePath": "src/app/examples/ecs/exampleEcsCamera.camera.json"
     },
+    "exampleGameHudCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 120,
+        "position": {
+          "x": 0,
+          "y": 2.7,
+          "z": 12.9
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 1.7,
+          "z": 6
+        },
+        "type": "PERSPECTIVE",
+        "fov": 55,
+        "appId": "exampleGameHudCamera"
+      },
+      "entityOpts": {
+        "appId": "exampleGameHudCamera",
+        "debugData": {
+          "name": "Game HUD example camera",
+          "description": "Driven by createFollowObjectCameraRig, orbiting the character at 7 m, about 8° down: a right-drag or the right stick turns it. This position is the rig's from the spawn point."
+        }
+      },
+      "__sourcePath": "src/app/examples/gameHud/exampleGameHudCamera.camera.json"
+    },
     "exampleHubHeroCamera": {
       "camProps": {
         "active": true,
@@ -15429,6 +15545,57 @@
         }
       },
       "__sourcePath": "src/app/examples/ecs/exampleEcsSun.light.json"
+    },
+    "exampleGameHudAmbient": {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#ffffff",
+        "intensity": 0.6,
+        "appId": "exampleGameHudAmbient"
+      },
+      "entityOpts": {
+        "appId": "exampleGameHudAmbient",
+        "debugData": {
+          "name": "Game HUD example ambient light"
+        }
+      },
+      "__sourcePath": "src/app/examples/gameHud/exampleGameHudAmbient.light.json"
+    },
+    "exampleGameHudSun": {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 3,
+        "position": {
+          "x": 8,
+          "y": 16,
+          "z": 6
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": true,
+        "shadowCameraNearFar": [
+          1,
+          50
+        ],
+        "shadowCameraFrustum": [
+          -18,
+          18,
+          18,
+          -18
+        ],
+        "appId": "exampleGameHudSun"
+      },
+      "entityOpts": {
+        "appId": "exampleGameHudSun",
+        "debugData": {
+          "name": "Game HUD example sun"
+        }
+      },
+      "__sourcePath": "src/app/examples/gameHud/exampleGameHudSun.light.json"
     },
     "examplePhysicsAmbient": {
       "lightProps": {

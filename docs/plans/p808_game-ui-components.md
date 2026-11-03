@@ -1018,6 +1018,84 @@ boxes, the checks, `COMPONENT_USES`; the `uiKit` profile's game window and its b
 `yarn verify:ui`, `yarn verify:embed`, `yarn verify:scenes --only exampleGameHud --update`;
 the nested `CLAUDE.md` files and `readme.md`.
 
+Sections: 1 the example scene; 2 the component library's boxes and checks, `COMPONENT_USES`, the
+UI kit section's `game/` page, `yarn verify:ui`; 3 the example's Hub page, the input and toolkit
+pages, its Hub image, the nested `CLAUDE.md` files, `readme.md`, the scene baseline; 4 the
+`uiKit` profile's game window and budgets, `yarn verify:embed`.
+
+As built (section 1, the example):
+
+- **`src/app/examples/gameHud/`** (`exampleGameHud`, "Example: A game HUD"): the scene file
+  (`exampleGameHud.ts`: the player, its camera, the maps, the game's rules and the per-frame
+  system), `exampleGameHudLevel.ts` (the arena: a walled floor, four dynamic crates, the NPCs
+  Mara, Ivo and Pell on FIXED boxes, the beacon in the north-west corner, a fire pit drawn only),
+  `exampleGameHudHud.ts` (every kit piece, made from plain data and the game's callbacks),
+  `exampleGameHudMenus.ts` (the pause menu, the inventory, the settings menu, the controls page,
+  their saving), `exampleGameHudIcons.ts` (its own 16 px SVG icons, registered on each visit: a
+  production build registers no built-in icon) and `exampleGameHud.scss`; its own camera and
+  lights. No `createExampleHud` line: the hotbar is where it sits, and the device-aware prompts
+  under the bars are the hints.
+- **The player** is D14's character: a `CAMERA_RELATIVE` brain (W A S D or the left stick, Space
+  / SOUTH, Shift / L3 held, C / EAST) under the toolkit's follow rig with `getMouseMoveInput`,
+  orbiting 7 m out about 8° down at a 0.9 m target height, so the screen's centre (the crosshair)
+  reaches crate height 5-12 m ahead (12° and 25° missed every crate: the ray reached the ground
+  before them). The orbit is a right-drag on the canvas (DOM `pointermove`s summed between frames,
+  not a map: `read()` is the last step's sample, which two frames between steps read twice) plus
+  the right stick's rate.
+- **The toolkit's follow rig** (changed here): with `getMouseMoveInput` the orbit starts from the
+  offset's direction (`Spherical.setFromVector3`, its pitch clamped to the orbit's limits) instead
+  of a fixed 60° from straight up, which ignored the offset's direction; a test for it. The
+  changelog's Toolkit section names it (Phase 9).
+- **The maps**: the game's (`exampleGameHud`, `GAMEPLAY`: interact E / WEST, fire the left button /
+  RIGHT_TRIGGER, use F / NORTH, items 1-4 and the d-pad's left and right, the radial Q /
+  RIGHT_SHOULDER held, look the right stick, menu Escape / START, inventory I / SELECT; the wheel a
+  DOM listener), the brain's (`<id>:input`), the menu's (`MENU`, gamepad only: the d-pad to
+  `navigation.move`, SOUTH clicks the focused element, EAST back or puts a held item back, the
+  shoulders the settings' tabs, START closes; the keyboard's keys are the kit's own) and the
+  conversation's (`DIALOGUE`: E / SOUTH click the focused choice or `confirm()`, the d-pad to a
+  spatial navigation over the box with `handleKeys: false`). A conversation and the menu turn
+  `GAMEPLAY` off; the exit puts every context back.
+- **The rules**: stamina drains while running; the fire pit burns 30 a second (the respawn is
+  queued, with 500 ms of grace while the drawn pose catches up); a shot is a `Raycaster` through
+  the screen's centre against the crates (3 hits, a top hit critical, the last a kill: the crate
+  dark, its anchor's component removed, '+25 gold' merged by `key`) and its impulse waits for the
+  `APP_PHYSICS_STEP` system, as the respawn does (the simulation rule); the crosshair's `target`
+  ring is a ray against a 0.55 m sphere per crate a frame (no allocation; 0.75 promised misses);
+  its spread follows the speed. The hotbar: a potion (+35, 4 s cooldown, refused at full health),
+  a tonic, a whistle (Mara's subtitle), counts down to an empty slot.
+- **The world UI**: `registerWorldAnchorSync` with the layer and the compass; nameplates (Mara's
+  holds the Talk prompt, shown within 2.5 m), the crates' segmented bars (20 m: the anchor's
+  distance is the camera's), the beacon's clamped waypoint with the player's distance; the
+  compass's beacon and Mara markers (her marker has no label: two labels at close bearings
+  overlapped) moved by `setMarkerBearing` from the player each frame; the minimap a
+  `BOTTOM_RIGHT` viewport of the root scene through a north-up orthographic camera following the
+  player, its slot sized in `--aek-base` (`invalidateViewportLayout` after a UI scale change),
+  the frame appended into `slotElem` (the public `Viewport` has no `slotCmp`), its zoom 0.6 / 1 /
+  1.6.
+- **The text**: the feed (top right), the tracker (talk, then the crates' count and the beacon),
+  subtitles (raised over the hotbar by `--aek-subtitles-inset`; Mara's call at the start, Ivo's
+  and Pell's lines as the player passes, the emotes'), the dialogue (a small tree, Mara's portrait
+  a CMP); the bars and the hotbar are hidden (`visibility`) during a conversation by a
+  `data-example-game-hud` attribute on the HUD root, removed on the exit.
+- **The menus**: the game menu (Resume, Inventory, Settings, Restart) with a Select prompt in its
+  footer; the inventory (a bag and a chest in one drag group, the beacon key vetoed from the
+  chest, the details following the focus and the pointer, compared with the sword in hand, their
+  room kept so the menu doesn't move); the settings (Display: theme, UI scale, reduced motion,
+  crosshair shape; Subtitles: on, size; Controls: the page over the brain's and the game's maps,
+  its `onReset` the page's reset) saved in `localStorage` (`exampleGameHud.settings`, each key
+  kept only with the default's type) with `setKitPreferences` on the HUD root (put back as they
+  were on the exit); the bindings saved per `<map>/<action>` (`exampleGameHud.bindings`), applied
+  before the HUD's prompts are made, the defaults the maps' before that.
+- **Checked**: `tsc`, lint, `yarn test`; played in Chrome on the dev server
+  (`?isProdTest=true&startScene=exampleGameHud`, `startScene` needs a debug or prod test flag)
+  with a throwaway Playwright script in both themes: the walk to Mara and her prompt, the
+  conversation and its choices, the tracker, aiming (a right-drag sweep until the crosshair's
+  `data-state` is `target`), the hit marker and a crate's kill, the fire pit and the respawn, the
+  radial menu, a potion, the pause menu, the settings, the inventory with a held item; no console
+  errors. `yarn verify:scenes --only exampleGameHud`: all four configurations NEW, no errors, the
+  same hash in the three debug ones. The gamepad paths weren't driven (no pad: by hand, as the
+  gym's).
+
 ### Phase 9: versions and done
 
 The changelog's sections in the unreleased engine-6 entry (D15), p800's §5 p808 entry rewritten

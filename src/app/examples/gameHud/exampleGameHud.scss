@@ -1,0 +1,116 @@
+// The game HUD example's own styles: what the kit's pieces don't place themselves (the vitals
+// panel, the nameplates, the waypoint, the minimap's slot), on the kit's tokens so the UI scale
+// and the theme reach them. The pieces' own looks are the kit's.
+
+// The health and stamina bars and the prompts, bottom left
+.exampleGameHudVitals {
+  position: fixed;
+  left: var(--aek-space-5);
+  bottom: var(--aek-space-5);
+  width: calc(var(--aek-base) * 18);
+  display: grid;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4);
+  border-radius: var(--aek-radius-md);
+  background: color-mix(in srgb, var(--aek-bg) 75%, transparent);
+  color: var(--aek-text);
+}
+
+.exampleGameHudStamina {
+  --aek-resource-bar-color: var(--aek-info);
+}
+
+.exampleGameHudPrompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aek-space-2) var(--aek-space-4);
+  font-size: var(--aek-font-size-sm);
+}
+
+// Above the hotbar (about 100 px of a `md` bar from the bounds' bottom)
+.exampleGameHudSubtitles {
+  --aek-subtitles-inset: calc(var(--aek-base) * 9);
+}
+
+// A conversation's box is where the hotbar and the bars are: they step aside meanwhile
+[data-example-game-hud='conversation'] .exampleGameHudPlay {
+  visibility: hidden;
+}
+
+.exampleGameHudNameplate {
+  display: grid;
+  justify-items: center;
+  gap: var(--aek-space-1);
+}
+
+.exampleGameHudNameplate__name {
+  font-weight: 600;
+  color: var(--npc-color, var(--aek-text));
+}
+
+.exampleGameHudCrateBar {
+  width: calc(var(--aek-base) * 4.5);
+  --aek-resource-bar-height: calc(var(--aek-base) * 6 / 14);
+}
+
+.exampleGameHudWaypoint {
+  display: grid;
+  justify-items: center;
+  font-size: var(--aek-font-size-sm);
+}
+
+.exampleGameHudWaypoint__name {
+  font-weight: 600;
+  color: #d9c27a;
+}
+
+.exampleGameHudWaypoint__distance {
+  font-variant-numeric: tabular-nums;
+}
+
+.exampleGameHudPortrait {
+  display: grid;
+  place-items: center;
+  width: calc(var(--aek-base) * 4);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #e8833a;
+  color: #1c212b;
+  font-size: var(--aek-font-size-2xl);
+  font-weight: 700;
+}
+
+// The minimap viewport's slot, bottom right: the frame fills it
+.exampleGameHudMinimap {
+  width: calc(var(--aek-base) * 12.5);
+  height: calc(var(--aek-base) * 12.5);
+  margin: var(--aek-space-5);
+}
+
+.exampleGameHudInventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aek-space-6);
+  align-items: flex-start;
+}
+
+// The details' room is kept, so the menu doesn't move as the focused item changes
+.exampleGameHudInventory > .aekItemDetails {
+  width: 100%;
+  min-height: calc(var(--aek-base) * 11);
+}
+
+.exampleGameHudInventory__grids {
+  display: grid;
+  gap: var(--aek-space-3);
+
+  h3 {
+    margin: 0;
+    font-size: var(--aek-font-size-md);
+  }
+}
+
+.exampleGameHudMenuFooter {
+  display: flex;
+  gap: var(--aek-space-4);
+}

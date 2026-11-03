@@ -46,8 +46,8 @@ export interface FollowObjectCameraParams {
   targetMesh: THREE.Object3D;
   /**
    * Where the camera sits relative to the followed point, in world units (default
-   * `{ x: 0, y: 5, z: 10 }`). With `getMouseMoveInput` only its length counts: the camera orbits
-   * the point at that distance.
+   * `{ x: 0, y: 5, z: 10 }`). With `getMouseMoveInput` the camera orbits the point at its length,
+   * starting from its direction (its pitch kept between the orbit's limits).
    */
   offset?: { x: number; y: number; z: number };
   /**
@@ -268,18 +268,18 @@ export const createFollowObjectCameraRig = (params: FollowObjectCameraParams) =>
       : smoothType === 'LERP'
         ? DEFAULT_LERP_SMOOTH_TIME
         : DEFAULT_DAMP_SMOOTH_TIME;
-  const dist = new THREE.Vector3(0, 0, 0).distanceTo(offset);
   const isFixedOrientation = orientation === 'FIXED' && !getMouseMoveInput;
   const lookAhead = lookAheadParam ? createLookAhead(targetMesh, lookAheadParam) : null;
-
-  // Spherical coordinate system for orbiting
-  // Phi: Vertical angle (0 = top, PI = bottom). Start at roughly 45-60 deg.
-  // Theta: Horizontal angle.
-  const spherical = new THREE.Spherical(dist, Math.PI / 3, 0);
 
   // Limits for looking up/down (Don't clip through floor or flip over)
   const minPolarAngle = 0.1; // The camera almost straight above the target
   const maxPolarAngle = Math.PI / 2 - 0.1; // Almost level with it, never below
+
+  // Spherical coordinate system for orbiting, starting from the offset's direction
+  // Phi: Vertical angle (0 = top, PI = bottom), kept inside the limits.
+  // Theta: Horizontal angle.
+  const spherical = new THREE.Spherical().setFromVector3(offset);
+  spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
 
   const sensitivity = 0.002; // Mouse sensitivity
 
