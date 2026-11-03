@@ -1,0 +1,134 @@
+// The item slot's default styles (ItemSlot.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). A square button: the picture
+// centred, the count bottom right and the key hint top left over the cooldown's shade. The rarity
+// is the border's colour (--aek-item-slot-rarity-color, set per data-rarity) and a faint tint; an
+// empty slot's border is dashed and a pressed one has a ring and a bar under it: not colour alone
+// (p808 D4).
+@layer aek.components {
+  :where(.aekItemSlot) {
+    --aek-item-slot-current-size: var(--aek-item-slot-size, calc(var(--aek-space-7) * 1.75));
+
+    position: relative;
+    box-sizing: border-box;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--aek-item-slot-current-size);
+    height: var(--aek-item-slot-current-size);
+    padding: 0;
+    border: 2px solid var(--aek-item-slot-rarity-color, var(--aek-border-strong));
+    border-radius: var(--aek-radius-md);
+    background-color: color-mix(
+      in srgb,
+      var(--aek-item-slot-rarity-color, transparent) 12%,
+      var(--aek-item-slot-bg, var(--aek-surface))
+    );
+    color: var(--aek-text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background-color var(--aek-motion-fast) var(--aek-ease-standard),
+      box-shadow var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekItemSlot[data-size='sm']) {
+    --aek-item-slot-current-size: var(--aek-item-slot-size, calc(var(--aek-space-7) * 1.25));
+  }
+
+  :where(.aekItemSlot[data-size='lg']) {
+    --aek-item-slot-current-size: var(--aek-item-slot-size, calc(var(--aek-space-7) * 2.5));
+  }
+
+  :where(.aekItemSlot:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekItemSlot[data-empty]) {
+    border-style: dashed;
+    border-color: var(--aek-border-control);
+    background-color: var(--aek-item-slot-bg, color-mix(in srgb, var(--aek-surface) 60%, transparent));
+  }
+
+  // The rarities a game usually has; an app adds its own the same way
+  :where(.aekItemSlot[data-rarity='uncommon']) {
+    --aek-item-slot-rarity-color: var(--aek-success);
+  }
+
+  :where(.aekItemSlot[data-rarity='rare']) {
+    --aek-item-slot-rarity-color: var(--aek-chart-1);
+  }
+
+  :where(.aekItemSlot[data-rarity='epic']) {
+    --aek-item-slot-rarity-color: var(--aek-chart-3);
+  }
+
+  :where(.aekItemSlot[data-rarity='legendary']) {
+    --aek-item-slot-rarity-color: var(--aek-chart-5);
+  }
+
+  // Pressed (the hotbar's selected slot): a ring outside the border (the rarity's stays) and one
+  // inside, and a bar under it; the focus ring is an outline further out
+  :where(.aekItemSlot[aria-pressed='true']) {
+    box-shadow:
+      0 0 0 2px var(--aek-accent),
+      inset 0 0 0 1px var(--aek-accent);
+  }
+
+  :where(.aekItemSlot[aria-pressed='true'])::after {
+    content: '';
+    position: absolute;
+    top: calc(100% + var(--aek-space-2));
+    left: 25%;
+    width: 50%;
+    height: 3px;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekItemSlot__icon) {
+    display: grid;
+    place-items: center;
+    width: 70%;
+    height: 70%;
+    font-size: calc(var(--aek-item-slot-current-size) * 0.5);
+    pointer-events: none;
+  }
+
+  :where(.aekItemSlot__icon) > :where(img, svg, canvas) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  :where(.aekItemSlot__count, .aekItemSlot__key) {
+    position: absolute;
+    z-index: 1;
+    line-height: 1;
+    text-shadow:
+      0 0 2px var(--aek-bg),
+      0 0 4px var(--aek-bg);
+    pointer-events: none;
+  }
+
+  :where(.aekItemSlot__count) {
+    right: var(--aek-space-2);
+    bottom: var(--aek-space-2);
+    font-size: var(--aek-font-size-sm);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    font-weight: var(--aek-font-weight-bold);
+  }
+
+  :where(.aekItemSlot[data-size='sm']) :where(.aekItemSlot__count) {
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekItemSlot__count:empty) {
+    display: none;
+  }
+
+  :where(.aekItemSlot__key) {
+    top: var(--aek-space-1);
+    left: var(--aek-space-1);
+    font-size: var(--aek-font-size-xs);
+  }
+}

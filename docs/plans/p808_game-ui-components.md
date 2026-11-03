@@ -661,6 +661,30 @@ As built:
 `createItemSlot`, `createHotbar`, `createInventoryGrid` with `createItemDragGroup`,
 `createItemDetails` (D11).
 
+As built so far:
+
+- **The folder** is `game/items/` (D2 named `game/inventory/` as an example): the four pieces share
+  the item type, `ItemTypes.ts`' `GameItem` (`{ id, name, icon?, image?, count?, rarity?,
+  rarityLabel? }`, on the entry). D11's "an element or an image URL": `icon` is a registered
+  icon's name or a function making the picture (called for each slot showing the item, since one
+  element can't be in two slots), `image` a URL (an `img` with `alt=""`, `draggable=false` for
+  the inventory's own drag).
+- **The slot** (`game/items/ItemSlot.ts`): `createItemSlot({ item?, size?: 'sm' | 'md' | 'lg',
+  keyHint?, selected?, cooldown?, emptyLabel?, onClick? })` → `{ cmp, cooldown, setItem, getItem,
+  setCount, setSelected, isSelected }`. A native `<button>` named by a visually hidden `__spoken`
+  ('Health potion, 5, Rare'; `emptyLabel`, default 'Empty slot'), the picture, count and key hint
+  `aria-hidden`. `keyHint` is keys for `createKbd` (then the slot's `aria-keyshortcuts`) or a
+  handle whose `cmp` is drawn (an input glyph); removed with the slot. `selected` (or the first
+  `setSelected`) makes it a toggle (`aria-pressed`), so an inventory's slots aren't read as
+  toggles. `cooldown: true | { onReady }` makes `slot.cooldown` (the Phase 2 cooldown on the
+  button). `setItem` makes the picture again only when `icon` / `image` changed; `setCount` writes
+  only a changed count and leaves the app's item object alone. The rarity: `data-rarity`, the
+  border's `--aek-item-slot-rarity-color` (the stylesheet's `uncommon` success, `rare` chart-1,
+  `epic` chart-3, `legendary` chart-5) and a 12 % tint, read in the name and shown as a word in
+  the details (piece 4): the border isn't its only sign. An empty slot's border is dashed; a pressed
+  one has rings outside and inside and a bar under it (distinct from the focus outline).
+  `getRarityLabel` is `@internal`, for the details.
+
 ### Phase 6: settings
 
 `createSettingsMenu`, `createControlsPage` (D9).

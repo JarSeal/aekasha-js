@@ -160,6 +160,9 @@ export type {
   SpatialNavigation,
   SpatialNavigationProps,
 } from './game/SpatialNavigation';
+export { createItemSlot } from './game/items/ItemSlot';
+export type { ItemSlot, ItemSlotProps } from './game/items/ItemSlot';
+export type { GameItem } from './game/items/ItemTypes';
 export type {
   ResourceBar,
   ResourceBarProps,
