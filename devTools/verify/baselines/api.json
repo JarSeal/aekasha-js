@@ -3598,6 +3598,13 @@
       "DialogueChoice": "TypeAlias",
       "DialogueLine": "TypeAlias"
     },
+    "src/_engine/ui/game/GameMenu.ts": {
+      "createGameMenu": "Function",
+      "GameMenu": "TypeAlias",
+      "GameMenuItem": "TypeAlias",
+      "GameMenuPage": "TypeAlias",
+      "GameMenuProps": "TypeAlias"
+    },
     "src/_engine/ui/game/HudPlacement.ts": {
       "HudPlacement": "TypeAlias"
     },
@@ -3623,12 +3630,25 @@
       "ObjectiveTrackerProps": "TypeAlias",
       "ObjectiveTrackerStep": "TypeAlias"
     },
+    "src/_engine/ui/game/RadialMenu.ts": {
+      "createRadialMenu": "Function",
+      "RadialMenu": "TypeAlias",
+      "RadialMenuItem": "TypeAlias",
+      "RadialMenuOpenOptions": "TypeAlias",
+      "RadialMenuProps": "TypeAlias"
+    },
     "src/_engine/ui/game/ResourceBar.ts": {
       "createResourceBar": "Function",
       "ResourceBar": "TypeAlias",
       "ResourceBarProps": "TypeAlias",
       "ResourceBarState": "TypeAlias",
       "ResourceBarThreshold": "TypeAlias"
+    },
+    "src/_engine/ui/game/SpatialNavigation.ts": {
+      "createSpatialNavigation": "Function",
+      "NavigationDirection": "TypeAlias",
+      "SpatialNavigation": "TypeAlias",
+      "SpatialNavigationProps": "TypeAlias"
     },
     "src/_engine/ui/game/Subtitles.ts": {
       "createSubtitles": "Function",
@@ -4989,6 +5009,10 @@
       "Form",
       "FormChild",
       "FormProps",
+      "GameMenu",
+      "GameMenuItem",
+      "GameMenuPage",
+      "GameMenuProps",
       "GradientColor",
       "GradientEditor",
       "GradientEditorProps",
@@ -5037,6 +5061,7 @@
       "MenuSubmenuItem",
       "Monitor",
       "MonitorProps",
+      "NavigationDirection",
       "NotificationFeed",
       "NotificationFeedItem",
       "NotificationFeedProps",
@@ -5072,6 +5097,10 @@
       "QuaternionField",
       "QuaternionFieldProps",
       "QuaternionValue",
+      "RadialMenu",
+      "RadialMenuItem",
+      "RadialMenuOpenOptions",
+      "RadialMenuProps",
       "RadioGroup",
       "RadioGroupProps",
       "RadioOption",
@@ -5104,6 +5133,8 @@
       "SliderTick",
       "Sparkline",
       "SparklineProps",
+      "SpatialNavigation",
+      "SpatialNavigationProps",
       "Spinner",
       "SpinnerProps",
       "SplitButton",
@@ -5207,6 +5238,7 @@
       "createFieldset",
       "createFolder",
       "createForm",
+      "createGameMenu",
       "createGradientEditor",
       "createGraphMonitor",
       "createHudRoot",
@@ -5227,6 +5259,7 @@
       "createProgressBar",
       "createPropertyGrid",
       "createQuaternionField",
+      "createRadialMenu",
       "createRadioGroup",
       "createRangeSlider",
       "createResourceBar",
@@ -5236,6 +5269,7 @@
       "createSkeleton",
       "createSlider",
       "createSparkline",
+      "createSpatialNavigation",
       "createSpinner",
       "createSplitButton",
       "createSplitter",

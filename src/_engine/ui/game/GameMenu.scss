@@ -1,0 +1,203 @@
+// The game menu's default styles (GameMenu.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Fixed over the HUD's bounds at
+// --aek-z-dialog, a backdrop under a centred panel (or the whole bounds, `fullscreen`) of large
+// buttons. The focused item has a bar, a border and a fill: not colour alone (p808 D4), and the
+// d-pad's focus is where the eye goes first, so it's strong.
+@layer aek.components {
+  :where(.aekGameMenu) {
+    position: fixed;
+    inset: 0;
+    z-index: var(--aek-game-menu-z, var(--aek-z-dialog));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--aek-space-6);
+    background-color: var(--aek-game-menu-backdrop, var(--aek-backdrop));
+    color: var(--aek-text);
+  }
+
+  :where(.aekGameMenu[data-layout='fullscreen']) {
+    padding: 0;
+  }
+
+  :where(.aekGameMenu__panel) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-5);
+    width: min(100%, var(--aek-game-menu-width, calc(var(--aek-space-7) * 14)));
+    max-height: 100%;
+    padding: var(--aek-space-6);
+    border: 1px solid var(--aek-border);
+    border-radius: var(--aek-radius-lg);
+    background-color: var(--aek-game-menu-bg, var(--aek-surface-raised));
+    box-shadow: var(--aek-shadow-lg);
+    outline: none;
+    animation: aekGameMenuIn var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekGameMenu[data-layout='fullscreen']) :where(.aekGameMenu__panel) {
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: var(--aek-space-7);
+    border: 0;
+    border-radius: 0;
+    background-color: var(--aek-game-menu-bg, var(--aek-bg));
+  }
+
+  :where(.aekGameMenu__title) {
+    margin: 0;
+    font-size: var(--aek-font-size-2xl);
+    font-weight: var(--aek-font-weight-bold);
+    text-align: center;
+  }
+
+  :where(.aekGameMenu__body) {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  :where(.aekGameMenu__page[hidden]) {
+    display: none;
+  }
+
+  :where(.aekGameMenu__items) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-2);
+  }
+
+  :where(.aekGameMenu[data-layout='fullscreen']) :where(.aekGameMenu__body) {
+    width: min(100%, var(--aek-game-menu-width, calc(var(--aek-space-7) * 14)));
+    margin-inline: auto;
+  }
+
+  :where(.aekGameMenu__item) {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--aek-space-4);
+    align-items: center;
+    width: 100%;
+    min-height: calc(var(--aek-space-7) * 1.75);
+    padding: var(--aek-space-3) var(--aek-space-5);
+    border: 2px solid transparent;
+    border-radius: var(--aek-radius-md);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--aek-game-menu-item-font-size, var(--aek-font-size-xl));
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekGameMenu__item:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  // The focused item: a bar at its start, its border and a fill
+  :where(.aekGameMenu__item:focus-visible) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+    outline: none;
+  }
+
+  :where(.aekGameMenu__item:focus-visible)::before {
+    content: '';
+    position: absolute;
+    top: var(--aek-space-2);
+    bottom: var(--aek-space-2);
+    // Inside the item: the body scrolls, so it would clip a bar outside
+    left: var(--aek-space-2);
+    width: 4px;
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-accent);
+  }
+
+  :where(.aekGameMenu__item[aria-disabled='true']) {
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  :where(.aekGameMenu__itemIcon) {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  :where(.aekGameMenu__itemText) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  :where(.aekGameMenu__itemDescription) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekGameMenu__item[aria-disabled='true']) :where(.aekGameMenu__itemDescription) {
+    color: inherit;
+  }
+
+  :where(.aekGameMenu__itemChevron) {
+    flex-shrink: 0;
+    width: 0.45em;
+    height: 0.45em;
+    border: solid currentColor;
+    border-width: 0.12em 0.12em 0 0;
+    transform: rotate(45deg);
+    opacity: 0.7;
+  }
+
+  :where(.aekGameMenu__footer) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--aek-space-4);
+    align-items: center;
+  }
+
+  :where(.aekGameMenu__back) {
+    display: inline-flex;
+    gap: var(--aek-space-2);
+    align-items: center;
+    min-height: 32px;
+    padding: var(--aek-space-2) var(--aek-space-4);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-md);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  :where(.aekGameMenu__back:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekGameMenu__back:focus-visible) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+  }
+
+  :where(.aekGameMenu__back[hidden]) {
+    display: none;
+  }
+
+  :where(.aekGameMenu__backMark) {
+    width: 0.45em;
+    height: 0.45em;
+    border: solid currentColor;
+    border-width: 0 0 0.12em 0.12em;
+    transform: rotate(45deg);
+  }
+}
+
+@keyframes aekGameMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--aek-space-3));
+  }
+}

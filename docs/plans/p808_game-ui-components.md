@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -580,9 +580,81 @@ As built:
   screenshot, so a CSS animation is pending (`startTime: null`) until then and the shot shows its
   first keyframe; take one screenshot, wait, take the real one.
 
-### Phase 4: navigation and menus
+### Phase 4: navigation and menus — done
 
 `createSpatialNavigation`, `createRadialMenu`, `createGameMenu` (D8).
+
+As built:
+
+- **The spatial navigation** (`game/SpatialNavigation.ts`): a behaviour on a root, not a component:
+  `createSpatialNavigation({ root, onBack?, wrap?, handleKeys? })` (`root` an element or a CMP)
+  returns `{ move, nextGroup, previousGroup, back, focus, dispose }`; `move` and the group moves
+  return whether the focus moved (a sound's cue).
+  - Candidates: `FocusTrap.ts`' `getFocusableElements` (so `tabindex="-1"` and unrendered ones
+    out), not under `[inert]`, a native radio group's checked radio (else its first enabled).
+  - The score as D8 (along + 2 × the gap across), the boxes wholly ahead (1 px tolerance) first,
+    then the ones whose centre and far edge are ahead (an overlapping layout); a tie goes to the
+    smaller centre offset. Boxes are `getBoundingClientRect`, which the test sets per element.
+  - Groups: the focused element's group first; past its edge every other group is one target (its
+    box), entered on its last focused element (a `focusin` listener records it), else its nearest.
+    `wrap` goes round the focused element's group, else the whole root.
+  - The risk's override is in: `data-aek-nav-up` / `-down` / `-left` / `-right` name an id.
+  - Keys: one bubble `keydown` on the root, so it sees only the arrows no element under it used
+    (the kit's composites stop theirs); it leaves a text entry's, a native radio's or range's, a
+    slider's or spinbutton's and a focusable separator's (its own axis) alone; Escape calls
+    `onBack` when there is one. A key it uses is prevented, stopped, its keyup swallowed.
+  - The gamepad (D8's "leaves it from its edge", decided here): `move` sends a composite
+    (`tablist`, `radiogroup`, `toolbar`, `listbox`, `menu`, `menubar`, `tree`, `treegrid`, `grid`)
+    a synthetic arrow `KeyboardEvent` while it has an item ahead (so a d-pad walks a tab list, its
+    selection following, and leaves it at the end instead of going round); a slider gets the moves
+    along its axis; a text field is left at once; a native radio is checked by `click()` (a sent
+    key does nothing native). The root's listener stops every sent key, so no action map sees it.
+    A move with the focus in an open `menu` / `listbox` outside the root (a drop-down's list) is
+    sent there; from anywhere else outside it, the focus goes in.
+  - The focus moves with `focusVisible: true` (no keydown precedes a gamepad's move).
+  - `back()` without `onBack` sends Escape to the overlay stack (its top entry's close).
+- **The radial menu** (`game/RadialMenu.ts`): `{ items, label, onSelect?(id, index), onOpen?,
+  onClose?, deadZone? }` → `{ cmp, open({ point?, highlight? }), close, isOpen, setDirection,
+  select, getHighlighted, setItems }`; an item `{ id, label, description?, icon?, disabled? }`.
+  - A layer fixed over the HUD's bounds while open (the pointer's direction read anywhere), the
+    ring at the point (viewport px, clamped inside the bounds; the open measures `offsetWidth`,
+    which the scale-in's transform doesn't change), item 0 at the top, clockwise.
+  - It opens with nothing highlighted and the focus on the ring, so a stick's release right after
+    picks nothing. `setDirection` uses the Gamepad API's axes (y down), writes only when the sector
+    changes, and keeps the highlight inside the dead zone, so `select()` on the release picks it.
+  - The real focus follows the highlight; the arrows go round (Right / Down clockwise), not
+    skipping a disabled item (the kit menu's rule: its description says why); Enter / Space pick,
+    Tab and Escape (the overlay stack's entry, not inert) close. A click picks the sector there,
+    the backdrop's too; the centre closes; a touch picks where it lifts.
+  - Its z-index defaults to `--aek-z-loading` (above the app's windows, below its dialogs). The
+    highlight is opaque (the accent mixed into the surface: the soft accent over the backdrop read
+    as muted in Chromium), with a border and a 1.15 scale; a disabled item's border is dashed.
+- **The game menu** (`game/GameMenu.ts`): `{ title, items, onBack?, layout?: 'panel' |
+  'fullscreen', backLabel?, wrap? (true), footer?, onOpen?, onClose? }` → `{ cmp, open, close,
+  isOpen, back, openPage, getDepth, setItems, navigation }`; an item `{ id, label, description?,
+  icon?, disabled?, onSelect?, page? }`, a page `{ title, items?, content? }`.
+  - The command palette's pattern, not `openDialog` (a draggable window's header, id and LS are
+    no use here): its element goes into the HUD root on `open` and out on `close`, an `inert`
+    overlay stack entry whose `close` is Back, `trapFocus` on the panel (`role="dialog"`,
+    `aria-modal`, named by the title), `--aek-z-dialog`.
+  - Back: the page before (the focus back on the item that opened it), else `onBack`; without
+    `onBack` the first page has no Back (a title screen: the button hidden, Escape does nothing).
+    The Back button is in a footer, with the app's `footer` CMP (the input prompts) beside it.
+  - Pages are CMPs under the body, the ones below `hidden`; a page is a `role="group"` named by
+    its title. A page with a CMP `content` is kept between opens (moved last when opened again,
+    removed with the menu); an items page and a function `content` are made on each open and
+    removed on Back. `close` pops every page; `open` starts on the first.
+  - Its spatial navigation (on the panel, `wrap` default true) is public as `navigation`: the
+    app's gamepad calls `navigation.move`, `navigation.back()` is `back()`.
+  - A disabled item is `aria-disabled` (a stop, its description read); a description is shown
+    `aria-hidden` and read from a `hidden` copy by `aria-describedby`. Enter and Space on its
+    buttons are stopped (not prevented) before the action maps.
+  - The focused item: its border, a fill and a bar inside its start (outside, the scrolling body
+    clipped it).
+- **Looked at in Chromium** (both themes) with Phases 2-3's throwaway viewer (`.cache/p808view/`,
+  `radial.ts`, `menu.ts`): the two fixes above came from it.
+- **The entry:** 161 value names (158 + the three), and their types (`NavigationDirection`,
+  `SpatialNavigation*`, `RadialMenu*`, `GameMenu*`).
 
 ### Phase 5: items
 
