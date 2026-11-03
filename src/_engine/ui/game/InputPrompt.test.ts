@@ -65,6 +65,19 @@ describe('input prompt (p808 D5)', () => {
     expect(labels(prompt.cmp.elem)).toEqual(['W', 'A', 'S', 'D']);
     prompt.setBindings([{ device: 'KEYBOARD', negative: 'q', positive: 'e' }]);
     expect(labels(prompt.cmp.elem)).toEqual(['Q', 'E']);
+    // The action map's shape: each part a list of keys, the first shown
+    prompt.setBindings([
+      {
+        device: 'KEYBOARD',
+        up: ['w', 'ArrowUp'],
+        down: ['s'],
+        left: [{ key: 'a', shift: true }],
+        right: ['d'],
+      },
+    ]);
+    expect(labels(prompt.cmp.elem)).toEqual(['W', 'A', 'S', 'D']);
+    prompt.setBindings([{ device: 'KEYBOARD', negative: ['q'], positive: [] }]);
+    expect(labels(prompt.cmp.elem)).toEqual(['Q']);
     prompt.setLabel('');
     expect(prompt.cmp.elem.querySelector<HTMLElement>('.aekInputPrompt__label')?.hidden).toBe(true);
     prompt.cmp.remove();

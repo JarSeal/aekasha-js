@@ -1,0 +1,148 @@
+// The controls page's default styles (ControlsPage.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). A table of actions, its slots
+// key caps a player clicks; a capturing slot has a ring and its text says so (not colour alone).
+@layer aek.components {
+  :where(.aekControlsPage) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-4);
+    min-width: 0;
+    color: var(--aek-text);
+  }
+
+  :where(.aekControlsPage__table) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  :where(.aekControlsPage__columnHeader) {
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border-bottom: 1px solid var(--aek-border);
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-medium);
+    text-align: start;
+  }
+
+  :where(.aekControlsPage__action),
+  :where(.aekControlsPage__cell) {
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border-bottom: 1px solid var(--aek-border);
+    vertical-align: middle;
+  }
+
+  :where(.aekControlsPage__action) {
+    font-weight: var(--aek-font-weight-regular);
+    text-align: start;
+  }
+
+  :where(.aekControlsPage__actionName) {
+    display: block;
+  }
+
+  :where(.aekControlsPage__actionDescription) {
+    display: block;
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekControlsPage__cell) {
+    white-space: nowrap;
+  }
+
+  :where(.aekControlsPage__bind) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--aek-space-7);
+    min-height: var(--aek-space-7);
+    margin: 0 var(--aek-space-1) 0 0;
+    padding: var(--aek-space-1) var(--aek-space-2);
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-md);
+    background-color: var(--aek-surface);
+    color: var(--aek-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  // A slot with an input: the glyphs are its look (a frame round a key cap would be two); it
+  // fills on hover. An empty one and a capturing one have a frame: they show no glyph
+  :where(.aekControlsPage__bind:not([data-empty], [data-capturing])) {
+    border-color: transparent;
+    background-color: transparent;
+  }
+
+  :where(.aekControlsPage__bind:hover) {
+    background-color: var(--aek-surface-hover);
+  }
+
+  :where(.aekControlsPage__bind[data-empty]) {
+    border-style: dashed;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekControlsPage__bind[data-capturing]) {
+    border-color: var(--aek-controls-page-capture-color, var(--aek-accent));
+    box-shadow: 0 0 0 2px var(--aek-controls-page-capture-color, var(--aek-accent));
+    animation: aekControlsPageCapture calc(1.2s * var(--aek-motion)) ease-in-out infinite alternate;
+  }
+
+  :where(.aekControlsPage__glyphs),
+  :where(.aekControlsPage__fixed) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--aek-space-1);
+  }
+
+  // In line with a slot's glyphs: its padding and border
+  :where(.aekControlsPage__fixed),
+  :where(.aekControlsPage__none) {
+    padding-inline: calc(var(--aek-space-2) + 1px);
+  }
+
+  :where(.aekControlsPage__text),
+  :where(.aekControlsPage__none) {
+    font-size: var(--aek-font-size-sm);
+  }
+
+  :where(.aekControlsPage__none) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekControlsPage__conflictCell) {
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border-bottom: 1px solid var(--aek-border);
+  }
+
+  // A warning: its stripe, and the text says what (not colour alone)
+  :where(.aekControlsPage__conflict) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--aek-space-2);
+    padding: var(--aek-space-2) var(--aek-space-3);
+    border-inline-start: 3px solid var(--aek-warning);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-warning-soft);
+  }
+
+  :where(.aekControlsPage__conflictText) {
+    display: inline-flex;
+    flex: 1 1 100%;
+    align-items: center;
+    gap: var(--aek-space-2);
+  }
+
+  :where(.aekControlsPage__footer) {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @keyframes aekControlsPageCapture {
+    to {
+      box-shadow: 0 0 0 4px var(--aek-controls-page-capture-color, var(--aek-accent));
+    }
+  }
+}

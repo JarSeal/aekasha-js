@@ -14,7 +14,7 @@ export type InputPromptDevice = {
 };
 
 /** A key with modifiers, in the action bindings' `KeyChord` shape */
-type PromptKeyChord = {
+export type PromptKeyChord = {
   key: string;
   ctrl?: boolean;
   shift?: boolean;
@@ -23,15 +23,21 @@ type PromptKeyChord = {
 };
 
 /**
+ * The keys of a binding's part, in the action map's shape (`ActionKeys`: any of them triggers it,
+ * the first is shown), or one key.
+ */
+export type PromptKeys = string | readonly (string | PromptKeyChord)[];
+
+/**
  * One of an action's bindings, in the action map's shapes (`map.getBindings(id)` as it is): a
- * glyph's input, a button's keys (the first is shown), a keyboard axis' keys, a touch gesture
- * (never shown: touch has no glyph).
+ * glyph's input, a button's keys (the first is shown), a keyboard axis' or composite's keys (each
+ * part's first), a touch gesture (never shown: touch has no glyph).
  */
 export type InputPromptBinding =
   | InputGlyphInput
   | { device: 'KEYBOARD'; keys: readonly (string | PromptKeyChord)[] }
-  | { device: 'KEYBOARD'; negative: string; positive: string }
-  | { device: 'KEYBOARD'; up: string; down: string; left: string; right: string }
+  | { device: 'KEYBOARD'; negative: PromptKeys; positive: PromptKeys }
+  | { device: 'KEYBOARD'; up: PromptKeys; down: PromptKeys; left: PromptKeys; right: PromptKeys }
   | { device: 'TOUCH'; gesture: string };
 
 /** What {@link createInputPrompt} shows. */
@@ -86,30 +92,63 @@ export const setPromptDevice = (device: InputPromptDevice) => {
 /** The device the input prompts show their bindings for ({@link setPromptDevice}). */
 export const getPromptDevice = (): InputPromptDevice => promptDevice;
 
+/**
+ * Calls `fn` after every prompt device change ({@link setPromptDevice}): the controls page's
+ * glyphs follow the gamepad's family with the prompts.
+ * @internal
+ * @returns removes it
+ */
+export const onPromptDeviceChange = (fn: () => void) => {
+  promptRedraws.add(fn);
+  return () => {
+    promptRedraws.delete(fn);
+  };
+};
+
 const MODIFIERS = ['ctrl', 'shift', 'alt', 'meta'] as const;
 const MODIFIER_KEYS = { ctrl: 'Control', shift: 'Shift', alt: 'Alt', meta: 'Meta' };
 
-/** A binding's glyph inputs (one per key of a chord or an axis), none for one it can't draw */
-const toInputs = (binding: InputPromptBinding): InputGlyphInput[] => {
+/** A part's first key or chord (none for an empty list) */
+const getFirstKey = (keys: PromptKeys) => (typeof keys === 'string' ? keys : keys[0]);
+
+/**
+ * The glyph inputs of a part's first key: a chord's modifiers, then its key; none for no key.
+ * @internal
+ */
+export const getKeyInputs = (keys: PromptKeys): InputGlyphInput[] => {
+  const first = getFirstKey(keys);
+  if (first === undefined) return [];
+  if (typeof first === 'string') return [{ device: 'KEYBOARD', key: first }];
+  const inputs: InputGlyphInput[] = [];
+  for (const modifier of MODIFIERS) {
+    if (first[modifier]) inputs.push({ device: 'KEYBOARD', key: MODIFIER_KEYS[modifier] });
+  }
+  inputs.push({ device: 'KEYBOARD', key: first.key });
+  return inputs;
+};
+
+/**
+ * A binding's glyph inputs (one per key of a chord, a part's first key for an axis), none for one
+ * it can't draw.
+ * @internal
+ */
+export const getBindingInputs = (binding: InputPromptBinding): InputGlyphInput[] => {
   if (binding.device === 'TOUCH') return [];
   if (binding.device !== 'KEYBOARD') return [binding];
   if ('key' in binding) return [binding];
-  if ('keys' in binding) {
-    const first = binding.keys[0];
-    if (first === undefined) return [];
-    if (typeof first === 'string') return [{ device: 'KEYBOARD', key: first }];
-    const inputs: InputGlyphInput[] = [];
-    for (const modifier of MODIFIERS) {
-      if (first[modifier]) inputs.push({ device: 'KEYBOARD', key: MODIFIER_KEYS[modifier] });
-    }
-    inputs.push({ device: 'KEYBOARD', key: first.key });
-    return inputs;
-  }
-  const keys =
+  if ('keys' in binding) return getKeyInputs(binding.keys);
+  const parts =
     'negative' in binding
       ? [binding.negative, binding.positive]
       : [binding.up, binding.left, binding.down, binding.right];
-  return keys.map((key): InputGlyphInput => ({ device: 'KEYBOARD', key }));
+  const inputs: InputGlyphInput[] = [];
+  for (const part of parts) {
+    const key = getFirstKey(part);
+    // A part's chord shows its key alone: four chords side by side would read as one
+    if (key !== undefined)
+      inputs.push({ device: 'KEYBOARD', key: typeof key === 'string' ? key : key.key });
+  }
+  return inputs;
 };
 
 const isForDevice = (binding: InputPromptBinding, device: InputPromptDevice['device']) =>
@@ -121,7 +160,7 @@ const isForDevice = (binding: InputPromptBinding, device: InputPromptDevice['dev
 const pickInputs = (bindings: readonly InputPromptBinding[], device: InputPromptDevice) => {
   let fallback: InputGlyphInput[] | null = null;
   for (const binding of bindings) {
-    const inputs = toInputs(binding);
+    const inputs = getBindingInputs(binding);
     if (!inputs.length) continue;
     if (isForDevice(binding, device.device)) return inputs;
     fallback ??= inputs;

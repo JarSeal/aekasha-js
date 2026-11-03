@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -782,7 +782,7 @@ As built:
   `ItemSlot*`, `Hotbar*`, `InventoryGrid*`, `InventoryMove`, `HeldItem`, `ItemDragGroup`,
   `ItemDetails*`).
 
-### Phase 6: settings
+### Phase 6: settings — done
 
 `createSettingsMenu`, `createControlsPage` (D9).
 
@@ -819,6 +819,60 @@ As built:
     reset gets the same. And the menu's `refresh()` reads a page that isn't shown itself (the
     scheduler reads the shown fields only, so a hidden tab, or the whole menu out of the document
     in a closed game menu, would show old values).
+- **The controls page** (`game/controls/`: `ControlsPage.ts`, `ControlsBindings.ts` (pure),
+  `ControlsCapture.ts`): `createControlsPage<B>({ actions, onRebind, columns?, label?, family?,
+  captureTimeoutMs?, showReset?, onCaptureChange?, texts? })` → `{ cmp, reset, setActions,
+  setBindings, getBindings, isCapturing, cancelCapture, setFamily }`; an action `{ id, name,
+  description?, type?, bindings, defaults?, group?, rebindable? }`, `B` the bindings' type (the
+  map's `ActionBinding`, which passes as the kit's `ControlsBinding`: the prompt's
+  `InputPromptBinding`, a type test checks it).
+  - **`onRebind` reports the action's whole new list** (`{ action, bindings, column, reason:
+    'rebind' | 'swap' | 'reset' }`), not D9's `(actionId, device, binding)`: the app's line is
+    `map.setBindings(action, bindings)` and the page decides which binding a slot replaces. The
+    `@example` widens a typed map to `ActionMap` (any map is one) to take a string id.
+  - A native `table` (the action a row header; a column per device, `columns`): a cell rebinds
+    the action's first binding in its column, a slot button per part (a button binding's one, a
+    keyboard axis' `negative` / `positive`, a composite's `up` / `left` / `down` / `right`, decided
+    here: D9 named a button per column); a stick, the mouse's movement and a locked action
+    (`rebindable: false`) are shown, not rebound; a column without a binding has an empty slot
+    for a button action only. A slot is named by its action, column, part and input.
+  - The capture (D9's): the next key (a letter lowercased; Escape cancels and can't be bound), a
+    mouse button (the keyboard column) or a gamepad button pressed after the start (the gamepad
+    column; one held at the start, the `SOUTH` that clicked the slot, counts once released), in the
+    capture phase on the window, every key stopped while it runs. A press of the other device, a
+    touch, the window's blur and `captureTimeoutMs` (8000: a gamepad has no Escape) cancel. A
+    part takes a key only (a mouse press there cancels). A mouse capture's click, auxclick, context
+    menu and compatibility `mousedown` are dropped until the task after its release. A gamepad
+    press reaches the action maps too (the poll is theirs): `onCaptureChange` is the app's cue to
+    turn its menu map off.
+  - The conflict (D9's): any key of another slot's part in the action's `group` (default one for
+    all), or another part of the same action, asks under the row ("[E] Also bound to Interact.":
+    the glyph and a text, a `role="group"`): Swap (the other gets the old input, in place in its
+    key list; not offered when that would leave a part empty or put a mouse button in one), Keep
+    both, Cancel; the focus on the first, the focus leaving it cancels (the settings menu's rule).
+  - The same input again reports nothing. "Reset to defaults" (`showReset`, false in a settings
+    menu, whose page `onReset` calls `reset()`) reports each action that differs from `defaults`
+    (default the bindings at creation).
+  - The gamepad column's family follows the input prompts' (`setPromptDevice`; an `@internal`
+    `onPromptDeviceChange` in `InputPrompt.ts`), keeping the last gamepad's while on the keyboard;
+    `family` / `setFamily` fix it.
+  - Its texts are one `texts` object (15 strings, some functions), not a prop each: the language
+    an app replaces.
+  - Looks (seen in Chromium, both themes): a slot with an input is frameless (its key caps are the
+    look; it fills on hover), an empty one dashed, a capturing one an accent ring that pulses and
+    "Press a key"; the conflict a warning stripe on `warning-soft`.
+- **The input prompt's bindings** (`InputPrompt.ts`, fixed here): `InputPromptBinding` typed an
+  axis' and a composite's parts as one key, but the maps give key lists (`ActionKeys`), so a map's
+  `up: ['w']` drew an array as a key. A part is now `PromptKeys` (a key or a list, the first shown;
+  `PromptKeys` and `PromptKeyChord` on the entry), and `getBindingInputs` / `getKeyInputs` are
+  `@internal` for the controls page.
+- **Checked:** `yarn test`, lint, both `tsc`, the docs ratchet, `yarn verify:baselines --update`
+  (the names; no debug code; no first download changed), the throwaway viewer
+  (`.cache/p808view/settings.ts`, `controls.ts`): both pieces inside a game menu in both themes,
+  and a real capture (a key with a conflict swapped by Enter, a right click captured with no
+  context menu, Escape cancelling without the game menu's Back).
+- **The entry:** 171 value names (`createSettingsMenu`, `createControlsPage`), their types and
+  `PromptKeys`, `PromptKeyChord`.
 
 ### Phase 7: the world
 

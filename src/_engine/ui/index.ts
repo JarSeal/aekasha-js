@@ -147,6 +147,17 @@ export { createSubtitles } from './game/Subtitles';
 export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
 export { createGameMenu } from './game/GameMenu';
 export type { GameMenu, GameMenuItem, GameMenuPage, GameMenuProps } from './game/GameMenu';
+export { createControlsPage } from './game/controls/ControlsPage';
+export type {
+  ControlsAction,
+  ControlsActionType,
+  ControlsBinding,
+  ControlsColumn,
+  ControlsPage,
+  ControlsPageProps,
+  ControlsPageTexts,
+  ControlsRebind,
+} from './game/controls/ControlsPage';
 export { createSettingsMenu } from './game/SettingsMenu';
 export type {
   SettingsChange,
@@ -261,6 +272,8 @@ export type {
   InputPromptBinding,
   InputPromptDevice,
   InputPromptProps,
+  PromptKeyChord,
+  PromptKeys,
 } from './game/InputPrompt';
 export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
