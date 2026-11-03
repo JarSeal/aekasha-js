@@ -5,9 +5,9 @@ toasts. It's plain DOM with no framework, every piece works with the keyboard an
 tech, and a build carries only the parts the app imports. Everything is on `aekasha/ui`.
 
 ::: embed uiKit
-The UI kit live, mounted into this page: a window with a button and its tooltip, a toast, and a
-dialog with a drop-down from the window's "Open the dialog". Drag the window, press Escape in the
-dialog, or Tab through it. The [UI kit example](hub:examples/ui-kit) builds a whole HUD.
+The UI kit live, mounted into this page: a window with a button and its tooltip, a toast, a
+dialog with a drop-down from the window's "Open the dialog", a data window and a small game HUD
+from its other buttons. Drag the window, press Escape in the dialog, or Tab through it. The [UI kit example](hub:examples/ui-kit) builds a whole HUD.
 :::
 
 This page is the kit's base: [components](#components), [the HUD root](#the-hud-root) and

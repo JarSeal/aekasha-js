@@ -141,8 +141,8 @@ has each way, the tokens, the themes, the fonts and a worked example.
 
 A build carries only the pieces the app imports, with their styles, and loads them with the code
 that uses them. From the last `yarn sbp` report (gzip), for the `uiKit` embed profile, a scene
-with a window, a dialog, a toast, a button and a tooltip over one box, a small form in the dialog
-and a data window:
+with a window, a dialog, a toast, a button and a tooltip over one box, a small form in the dialog,
+a data window and a game window:
 
 - **The kit in the first download:** {{sbp:uiKit.group:_engine/ui}}: the HUD root and CMP, which
   the engine's boot needs.
@@ -160,6 +160,13 @@ and a data window:
   row, tabs, a stat tile and a sparkline ([data display](hub:features/ui-kit/data#in-a-build)),
   and {{sbp:uiKit.chunk:assets/BindingScheduler.js}} for the scheduler the form and the
   collections share.
+- **What a small game HUD adds,** loaded on the game window's first open:
+  {{sbp:uiKit.chunk:assets/uiKitEmbedGame.js}} of code and
+  {{sbp:uiKit.chunk:assets/uiKitEmbedGame.css}} of styles for a health bar, a hotbar with a
+  cooldown on each slot, a notification feed and an input prompt
+  ([game UI](hub:features/ui-kit/game#in-a-build)), and
+  {{sbp:uiKit.chunk:assets/Announcer.js}} for the announcer and the arrow keys' focus the hotbar
+  and the data pieces share.
 
 The [smallest build](hub:features/smallest-build) page shows how the numbers are measured and
 kept under their budgets.

@@ -40,9 +40,17 @@ const loading = createLoadingOverlay({
 
 Each piece is its own module with its own styles, in no first download: a build carries the ones
 the app makes, loaded with the code that makes them. The engine's device tracker and the
-toolkit's anchor sync are only in a build that calls them. A piece that uses another takes it as a
-value instead of importing it where it can: a slot's key hint is your Kbd or glyph, a settings
-page's content is your CMP.
+toolkit's anchor sync are only in a build that calls them. The `uiKit` embed profile measures a
+few pieces together: its window's fourth button opens a game window, from a module the first
+press imports, with a health bar, a hotbar of two items with a cooldown on each slot, a
+notification feed and an input prompt. From the last `yarn sbp` report (gzip), that comes to
+{{sbp:uiKit.chunk:assets/uiKitEmbedGame.js}} of code and
+{{sbp:uiKit.chunk:assets/uiKitEmbedGame.css}} of styles on top of the HUD's window, dialog and
+button, the prompt's gamepad glyphs the largest part of it, and
+{{sbp:uiKit.chunk:assets/Announcer.js}} for the announcer and the arrow keys' focus, which the
+hotbar shares with the [data display](hub:features/ui-kit/data#in-a-build). A piece that uses
+another takes it as a value instead of importing it where it can: a slot's key hint is your Kbd or
+glyph, a settings page's content is your CMP.
 
 ## Key APIs
 

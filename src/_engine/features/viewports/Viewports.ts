@@ -356,12 +356,17 @@ export const createViewport = (props: ViewportProps): Viewport => {
     uvScale: uniform(new THREE.Vector2(1, 1)),
     builtToneMapping: null,
     builtColorSpace: null,
-    removeGPUMemorySource: registerGPUMemorySource({
-      id: `viewport.${props.id}`,
-      label: `Viewport "${props.id}"`,
-      owner: props.sceneId,
-      getResources: () => [vp.renderTarget],
-    }),
+    // `__AEK_DEBUG__` first: a production build folds it to the no-op, so the debug wrapper and
+    // the profiler it reads stay out of the chunk that has the viewports (the main one, once two
+    // scenes use them); the wrapper's own check is prodTest's
+    removeGPUMemorySource: __AEK_DEBUG__
+      ? registerGPUMemorySource({
+          id: `viewport.${props.id}`,
+          label: `Viewport "${props.id}"`,
+          owner: props.sceneId,
+          getResources: () => [vp.renderTarget],
+        })
+      : () => {},
   };
   viewports.push(vp);
   if (vp.enabled) enabledCount++;

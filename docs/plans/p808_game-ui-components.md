@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: in progress | Phases 0-8 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -1011,7 +1011,7 @@ As built:
   `registerWorldAnchorSync`, `unregisterWorldAnchorSync`, `WorldAnchorData`,
   `WorldAnchorSyncOptions`.
 
-### Phase 8: the example, the Hub, the docs
+### Phase 8: the example, the Hub, the docs — done
 
 The `gameHud` example (D14) and its Hub page; the UI kit's `game/` page, both library pages'
 boxes, the checks, `COMPONENT_USES`; the `uiKit` profile's game window and its budgets (D12);
@@ -1151,7 +1151,7 @@ As built (section 2, the library, the checks, the game page):
   bundle changes are the new example's chunks and the shared chunks it split out (`FocusTrap`,
   `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`), to record with `--update` once the debug code
   is out. Still open after section 3 (not this section's files); section 4 runs `yarn sbp` and
-  the budgets, so it fixes it there before recording any baseline.
+  the budgets, so it fixes it there before recording any baseline. **Fixed in section 4** (below).
 
 As built (section 3, the example's page, the input and toolkit pages, the docs):
 
@@ -1188,6 +1188,64 @@ As built (section 3, the example's page, the input and toolkit pages, the docs):
   configurations recorded (`workerSab`, `workerMsg`, `mainThread` the same hash `f09aa8a3`;
   `prodTest`), no errors. The search index grew to 484 KiB gzipped with the page (the warning
   above).
+
+As built (section 4, the `uiKit` profile's game window, the budgets, `yarn verify:embed`):
+
+- **The viewports' debug wrapper** (section 2's open item): `createViewport`'s
+  `removeGPUMemorySource` is `__AEK_DEBUG__ ? registerGPUMemorySource({ … }) : () => {}`
+  (`Viewports.ts`), as proposed: the wrapper's own check stays prodTest's. `yarn verify:baselines`:
+  no debug code in the production build or either embed.
+- **Why `Viewports.ts` grew in `main`** (found here): `ViewportsFeature.ts` imports
+  `installViewports` from it, so the module was always in `main`, but before section 1 no shipping
+  code called `createViewport` (the debug gizmo and ball were its only callers), so the build
+  dropped it. The minimap is its first production caller: its code (1.1 kB) and the slots'
+  `Viewports.module.scss` ship with the feature. `assets/index.css` went over its budget (4.2 KiB,
+  budget 4): raised to 6 KiB (`suggestBudget`) with the reason in `sbp.config.ts`; the viewports
+  group (2.7 kB) is within its 3 KiB.
+- **The game window** (`src/app/profiles/uiKit/uiKitEmbedGame.ts`, D12): a health bar (40 of 100,
+  thresholds), a hotbar (`inline`, `sm`, no key hints: the embed binds no number keys) of a potion
+  (3, +25, a 3 s cooldown; refused at full health or with none left) and a ward (a 5 s cooldown)
+  and an empty slot, an input prompt ("Use": the mouse's left button or the pad's SOUTH) and an
+  `inline` feed (3 lines, 30 s each, merged by `key`); the items' two SVG icons registered by the
+  module (a production build registers no built-in icon). The scene's window got a fourth button,
+  "Open the game HUD" (`uiKitEmbedOpenGame`), which imports the module and opens a `Game HUD`
+  window (`uiKitEmbedGame`, 300 × 280 at 252, 16, over the data window's place); the first window
+  is 220 × 240 (was 230) for the fourth button.
+- **The budgets** (`sbp.config.ts`, from `suggestBudget`): `assets/uiKitEmbedGame.js` 9 KiB (7.6:
+  the bar, the hotbar, the slots, the cooldown, the feed, the prompt and the input glyph, the
+  gamepads' glyphs the largest at 1.5), its CSS 4 KiB (2.6), and a new shared chunk,
+  `assets/Announcer.js` 3 KiB (1.2: the announcer and `RovingFocus.ts`, which the hotbar and the
+  data window's list and table share), which took the data window from 19.4 to 18.6 KiB (its
+  budget 21 → 20, reported well under). `modules` at 0: `_engine/ui/game/` and
+  `_engine/kernel/input/InputDevice.ts` in the `app`, `banner` (a `modules` of its own now, inside
+  the Hub's `banner-profile` region) and `uiKit` profiles. First downloads unchanged: app 387.0,
+  banner 287.4, uiKit 286.6 kB gzip.
+- **`yarn verify:embed`'s kit scenario**, after Escape closed the dialog: the game window from its
+  button, its bar, hotbar, prompt and first feed line inside the container, the bar's and the
+  line's font sizes the same at both host roots in IBM Plex Sans, then a press on the potion's
+  slot: the meter's `aria-valuenow` 65, its cooldown `running`, a feed line with "health".
+- **Found by `yarn verify:embed`:** the cooldown's `@property --aek-cooldown-progress` (the sweep's
+  animated number, `Cooldown.scss`) is on every host element after the unmount (CSS has no scoped
+  registration). The registration stays (the animation needs it); the style check now leaves out
+  every `@property` the kit's stylesheets register (`src/_engine/ui/**/*.{css,scss}`), not only
+  `tokens.css`' (`embed.ts`, `embedChecks.ts`' doc, `devTools/verify/CLAUDE.md`).
+- **The Hub:** the UI kit overview's In a build, the game page's and the data page's (the shared
+  announcer chunk) name the new chunks; the overview's embed caption names the data and game
+  windows. `uiKitEmbed.hub.png` (the embed's poster) taken again: it was a button behind since
+  p805 (a throwaway Playwright script on the dev Hub's UI kit page, the stage 800 × 500 at a
+  device scale of 2, lifted over the page's side column).
+- **Docs:** `devTools/sbp/CLAUDE.md`'s profiles item, `devTools/verify/CLAUDE.md`'s embed item, the
+  embed check's header, the profile's and the entry's comments.
+- **Checked:** `tsc`, lint, `yarn test` (295 files; `buildGuard.test.ts` failed once while a
+  background build rewrote `dist-embed/` and passed alone and in the full run after),
+  `yarn sbp --profile all` (every budget within), `yarn verify:embed` (all 7 scenarios),
+  `yarn verify:baselines --update` (`bundle.json`: section 1's example chunks and the shared
+  chunks it split out, `FocusTrap`, `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`, `Hotbar`,
+  plus `Announcer` and `uiKitEmbedGame`; `bundle.uiKit.json`: the game window, the announcer, the
+  scene's button; no API or docs change), `yarn hub:build`.
+- **For Phase 9's changelog:** the viewports' production fix (Engine), the cooldown's registered
+  property in an embed (the check's rule, Project), the `uiKit` embed's game window and first
+  window's height (App), the budgets (Project).
 
 ### Phase 9: versions and done
 

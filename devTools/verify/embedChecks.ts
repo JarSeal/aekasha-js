@@ -13,9 +13,10 @@ export type StyleSnapshot = Record<string, Record<string, string>>;
 /**
  * The custom properties a stylesheet registers (`@property --aek-base { … }`). A registered
  * property with an `initial-value` is in every element's computed style, the host page's too:
- * CSS has no scoped registration. The UI kit's tokens register two (`ui/styles/tokens.css`, p801
- * D4), namespaced, which a host page sees only if it reads them, so the style check skips exactly
- * those names: a token declared on the host's elements still fails it.
+ * CSS has no scoped registration. The UI kit's stylesheets register a few (the tokens' units in
+ * `ui/styles/tokens.css`, p801 D4; the cooldown's sweep, p808), namespaced, which a host page sees
+ * only if it reads them, so the style check skips exactly those names: a token declared on the
+ * host's elements still fails it.
  */
 export const readRegisteredProperties = (css: string): string[] =>
   [...css.matchAll(/@property\s+(--[\w-]+)/g)].map((match) => match[1]);

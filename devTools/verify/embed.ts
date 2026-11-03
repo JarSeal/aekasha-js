@@ -13,8 +13,8 @@
  *   (a click on its heading reaches the heading) and without pointer events (a click in the middle
  *   reaches the page); `unmount()` leaves nothing.
  * - In both, no computed style of the host's elements (`HOST_STYLE_SELECTORS`) changes while
- *   mounted or after the unmount (but the custom properties `tokens.css` registers, which CSS
- *   puts on every element: `readRegisteredProperties`), and no console error or page error.
+ *   mounted or after the unmount (but the custom properties the kit's stylesheets register, which
+ *   CSS puts on every element: `readRegisteredProperties`), and no console error or page error.
  * - The banner only: the Hub's embed example (`embedExample.html`, its regions on
  *   `hub/pages/examples/embed/`) mounts into its hero at the target's size, turns, and its pause
  *   button pauses and resumes it, without an error.
@@ -26,9 +26,12 @@
  *   the window's, the toast's, the list's and the tooltip's font sizes the same at both roots, their font IBM
  *   Plex Sans (the scene opts in, p801 D8) and its face loaded; the list's last option shown
  *   where the list overflows the dialog (the top layer); Escape on the host page leaving
- *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, a drag of
- *   the window's title moving it by the pointer's distance, and the window inside the container
- *   after the target shrinks.
+ *   the dialog open and Escape inside it closing it (p803 D7); with the dialog closed, the game
+ *   window (opened from the window's fourth button, p808 D12) with its health bar, hotbar, prompt
+ *   and feed line inside the container, the bar's and the line's font sizes the same at both
+ *   roots in IBM Plex Sans, and a press on the potion's slot filling the bar, running its
+ *   cooldown and adding a feed line; a drag of the window's title moving it by the pointer's
+ *   distance, and the window inside the container after the target shrinks.
  *
  * It builds the profiles first (`yarn sbp`'s build, `dist-embed/<id>/`) unless `--no-build`,
  * serves the page and the build from its own static server (a free port on localhost: the page at `/`, the build
@@ -41,6 +44,7 @@ import http from 'http';
 import path from 'path';
 import type { Page } from 'playwright-core';
 import sbpProfiles from '../../sbp.config';
+import { listSourceFiles } from '../files';
 import { ROOT } from '../paths';
 import { getEmbedProfiles } from '../gather/output';
 import { buildBundles } from '../sbp/appBuild';
@@ -60,8 +64,9 @@ import {
 import { out, PROGRESS_LOG_WATCH } from '../progressLog';
 
 const HOST_PAGE = path.join(ROOT, 'devTools/verify/embedHost.html');
-/** The UI kit's tokens, whose `@property` registrations are in every element's computed style */
-const TOKENS_CSS = path.join(ROOT, 'src/_engine/ui/styles/tokens.css');
+/** The UI kit's folder, whose stylesheets' `@property` registrations (the tokens' units, p801 D4;
+ * the cooldown's sweep, p808) are in every element's computed style */
+const UI_KIT_DIR = path.join(ROOT, 'src/_engine/ui');
 /** The Hub's embed example (its regions), which imports the banner's entry by name */
 const EXAMPLE_PAGE = path.join(ROOT, 'devTools/verify/embedExample.html');
 const EXAMPLE_PROFILE = 'banner';
@@ -88,21 +93,42 @@ const UI_KIT = {
   list: '.uiKitEmbedShade .aekDropDownList',
   tooltip: '.uiKitEmbedTooltip',
   listItem: '.uiKitEmbedShade .aekDropDownList li',
+  // The game window (p808 D12) and its pieces
+  gameWindow: '#uiKitEmbedGame',
+  gameBar: '#uiKitEmbedGame .aekResourceBar',
+  gameHotbar: '#uiKitEmbedGame .aekHotbar',
+  gamePrompt: '#uiKitEmbedGame .aekInputPrompt',
+  gameFeedLine: '#uiKitEmbedGame .aekNotificationFeed__item',
 } as const;
 /** The window's button that opens the dialog, and the trigger of the dialog's select the list
  * opens from: the scene opens neither at load (p803 Phase 8: a page's focus would jump into the
  * embed); the dialog opens once its form's module loaded */
 const UI_KIT_OPEN_DIALOG = '#uiKitEmbedWindow .uiKitEmbedOpenDialog';
 const UI_KIT_LIST_TRIGGER = '#uiKitEmbedDialog .uiKitEmbedShade .aekDropDownTrigger';
+/** The window's button that opens the game window (once its module loaded), and the hotbar's
+ * potion slot, the first */
+const UI_KIT_OPEN_GAME = '#uiKitEmbedWindow .uiKitEmbedOpenGame';
+const UI_KIT_GAME_POTION = '#uiKitEmbedGame .aekItemSlot';
 /** The elements that must stay inside the container */
 const UI_KIT_INSIDE = ['window', 'dialog', 'backdrop', 'toast', 'list', 'tooltip'] as const;
+/** The game window's, checked once it's open (the dialog closed) */
+const UI_KIT_GAME_INSIDE = [
+  'gameWindow',
+  'gameBar',
+  'gameHotbar',
+  'gamePrompt',
+  'gameFeedLine',
+] as const;
 /** The elements whose font size must not follow the host's root */
 const UI_KIT_FONTS = ['window', 'toast', 'listItem', 'tooltip'] as const;
+const UI_KIT_GAME_FONTS = ['gameBar', 'gameFeedLine'] as const;
+/** The health bar's value after the potion's use: 40 + 25 (`uiKitEmbedGame.ts`) */
+const UI_KIT_GAME_HEALED = '65';
 /** The kit's font, which the profile's scene opts into (`aekasha/ui/fonts`, p801 D8) */
 const UI_KIT_FONT_FAMILY = 'IBM Plex Sans';
 /** The window's px position in the scene, from the container's top left corner */
 const UI_KIT_WINDOW_AT = { x: 16, y: 16 };
-/** The drag, which keeps the 220 × 230 window inside the 640 × 360 container */
+/** The drag, which keeps the 220 × 240 window inside the 640 × 360 container */
 const UI_KIT_DRAG = { x: 120, y: 60 };
 /** The shrunk target, which the dragged window no longer fits at its place */
 const UI_KIT_SHRUNK = { width: 320, height: 200 };
@@ -243,7 +269,7 @@ const runScenario = async (
   return problems.length ? 1 : 0;
 };
 
-/** The custom properties `tokens.css` registers, read on the first style check */
+/** The custom properties the kit's stylesheets register, read on the first style check */
 let registeredProperties: string[] | null = null;
 
 const expectNoStyleChange = (
@@ -252,7 +278,11 @@ const expectNoStyleChange = (
   before: StyleSnapshot,
   after: StyleSnapshot
 ) => {
-  registeredProperties ??= readRegisteredProperties(fs.readFileSync(TOKENS_CSS, 'utf8'));
+  registeredProperties ??= listSourceFiles(UI_KIT_DIR)
+    .filter((file) => /\.s?css$/.test(file))
+    .flatMap((file) =>
+      readRegisteredProperties(fs.readFileSync(path.join(UI_KIT_DIR, file), 'utf8'))
+    );
   const lines = diffComputedStyles(before, after, registeredProperties);
   if (lines.length) {
     problems.push(`host styles changed ${when}:`, ...lines.slice(0, 10).map((l) => `  ${l}`));
@@ -290,6 +320,21 @@ const checkUiKitAtRoot = async (
     ) as UiKitRects;
   };
   const measured: Record<string, string> = {};
+  /** The names' font sizes the same as at the first root, and their family the kit's */
+  const checkFonts = (problems: string[], r: UiKitRects, names: readonly (keyof UiKitRects)[]) => {
+    for (const name of names) {
+      const size = r[name]?.fontSize ?? '(missing)';
+      measured[name] = size;
+      if (fonts && fonts[name] !== size) {
+        problems.push(`${name}'s font size: ${size}, ${fonts[name]} at the first host root`);
+      }
+      // The kit's font, not the host's (its Georgia): the opt-in's family first
+      const family = r[name]?.fontFamily ?? '(missing)';
+      if (!family.replace(/["']/g, '').startsWith(`${UI_KIT_FONT_FAMILY},`)) {
+        problems.push(`${name}'s font family: ${family}, not ${UI_KIT_FONT_FAMILY} first`);
+      }
+    }
+  };
 
   const failed = await runScenario(
     page,
@@ -361,18 +406,7 @@ const checkUiKitAtRoot = async (
       // The container's box, not the page's
       pushIf(problems, checkPosition('backdrop', r.backdrop, container));
       pushIf(problems, checkBox('backdrop', r.backdrop, container));
-      for (const name of UI_KIT_FONTS) {
-        const size = r[name]?.fontSize ?? '(missing)';
-        measured[name] = size;
-        if (fonts && fonts[name] !== size) {
-          problems.push(`${name}'s font size: ${size}, ${fonts[name]} at the first host root`);
-        }
-        // The kit's font, not the host's (its Georgia): the opt-in's family first
-        const family = r[name]?.fontFamily ?? '(missing)';
-        if (!family.replace(/["']/g, '').startsWith(`${UI_KIT_FONT_FAMILY},`)) {
-          problems.push(`${name}'s font family: ${family}, not ${UI_KIT_FONT_FAMILY} first`);
-        }
-      }
+      checkFonts(problems, r, UI_KIT_FONTS);
       // ... and its face downloaded and used (font-display: swap loads it after the first paint)
       const loadedPlex = async () =>
         (await page.evaluate(() => window.__embedTest.loadedFonts())).filter((face) =>
@@ -398,6 +432,36 @@ const checkUiKitAtRoot = async (
       });
       r = await read();
       if (r.dialog || r.backdrop) problems.push('Escape inside the dialog didn’t close it');
+
+      // The game window (p808 D12), from the window's button once the dialog closed: its pieces
+      // inside the container in their fonts, and a press on the potion's slot filling the bar,
+      // running the slot's cooldown and adding a line to the feed
+      await page.click(UI_KIT_OPEN_GAME, { timeout: 10_000 });
+      await waitFor(async () => {
+        const g = await read();
+        return UI_KIT_GAME_INSIDE.every((name) => g[name]);
+      });
+      r = await read();
+      for (const name of UI_KIT_GAME_INSIDE)
+        pushIf(problems, checkInside(name, r[name], container));
+      checkFonts(problems, r, UI_KIT_GAME_FONTS);
+      await page.click(UI_KIT_GAME_POTION, { timeout: 10_000 });
+      const readGame = () =>
+        page.evaluate(
+          (s) => ({
+            value: document.querySelector(`${s.bar} [role="meter"]`)?.getAttribute('aria-valuenow'),
+            cooldown: document.querySelector(`${s.slot} .aekCooldown`)?.getAttribute('data-state'),
+            lines: Array.from(document.querySelectorAll(s.line), (line) => line.textContent ?? ''),
+          }),
+          { bar: UI_KIT.gameBar, slot: UI_KIT_GAME_POTION, line: UI_KIT.gameFeedLine }
+        );
+      const isHealed = (g: Awaited<ReturnType<typeof readGame>>) =>
+        g.value === UI_KIT_GAME_HEALED &&
+        g.cooldown === 'running' &&
+        g.lines.some((line) => line.includes('health'));
+      await waitFor(async () => isHealed(await readGame()));
+      const game = await readGame();
+      if (!isHealed(game)) problems.push(`the potion's use: ${JSON.stringify(game)}`);
 
       // A drag by the title moves the window by the pointer's distance (no jump by the
       // container's offset: Phase 2's fix of a drag's start)
