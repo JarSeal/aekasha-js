@@ -1,0 +1,172 @@
+// The compass's default styles (Compass.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). The strip is two turns wide in the
+// field's units (its width inline), so its labels sit at fixed percentages and the heading moves
+// it by one transform (a percentage of its own width: no measuring). The ticks are a background,
+// one every 15°. The markers are over the clipped track, each placed by its `left` (a percentage
+// of the field).
+@layer aek.components {
+  :where(.aekCompass) {
+    --aek-compass-width-resolved: var(--aek-compass-width, calc(var(--aek-space-7) * 10));
+    --aek-compass-height-resolved: var(--aek-compass-height, var(--aek-space-7));
+    --aek-compass-ink: var(--aek-compass-color, var(--aek-text));
+
+    display: block;
+    width: var(--aek-compass-width-resolved);
+    pointer-events: none;
+  }
+
+  :where(.aekCompass[data-placement='top']) {
+    position: fixed;
+    top: var(--aek-compass-inset, var(--aek-space-5));
+    left: 50%;
+    z-index: var(--aek-compass-z, var(--aek-z-window));
+    transform: translateX(-50%);
+  }
+
+  :where(.aekCompass__window) {
+    position: relative;
+    display: block;
+    height: var(--aek-compass-height-resolved);
+    // Room under the strip for the markers' labels
+    margin-bottom: calc(var(--aek-font-size-xs) * 1.5);
+  }
+
+  :where(.aekCompass__track) {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: var(--aek-radius-sm);
+    background-color: var(
+      --aek-compass-bg,
+      color-mix(in srgb, var(--aek-surface-raised) 70%, transparent)
+    );
+    contain: strict;
+    mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+
+  :where(.aekCompass__strip) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-image: linear-gradient(to right, var(--aek-compass-ink) 1px, transparent 1px);
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: calc(100% / var(--aek-compass-ticks, 48)) 25%;
+  }
+
+  :where(.aekCompass__label) {
+    position: absolute;
+    top: 12%;
+    color: var(--aek-compass-ink);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-tight);
+    opacity: 0.75;
+    transform: translateX(-50%);
+  }
+
+  :where(.aekCompass__label[data-kind='cardinal']) {
+    top: 6%;
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-bold);
+    opacity: 1;
+  }
+
+  // The centre: a notch pointing down from the top edge
+  :where(.aekCompass__needle) {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-top: 6px solid var(--aek-compass-needle-color, var(--aek-accent));
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    transform: translateX(-50%);
+  }
+
+  :where(.aekCompass__markers) {
+    position: absolute;
+    inset: 0;
+  }
+
+  :where(.aekCompass__marker) {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--aek-icon-size-md);
+    height: var(--aek-icon-size-md);
+    // Read here, not on the root: a marker's own colour is set on it
+    color: var(--aek-compass-marker-color, var(--aek-accent));
+    filter: drop-shadow(0 0 1px var(--aek-bg));
+    transform: translate(-50%, -50%);
+  }
+
+  :where(.aekCompass__marker[data-hidden]) {
+    display: none;
+  }
+
+  :where(.aekCompass__markerIcon) {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  :where(.aekCompass__markerIcon) :where(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  // No icon: a diamond
+  :where(.aekCompass__markerIcon[data-default])::before {
+    content: '';
+    width: 60%;
+    height: 60%;
+    margin: auto;
+    background-color: currentcolor;
+    transform: rotate(45deg);
+  }
+
+  :where(.aekCompass__markerLabel) {
+    position: absolute;
+    top: calc(100% + var(--aek-space-1));
+    left: 50%;
+    color: var(--aek-compass-ink);
+    font-size: var(--aek-font-size-xs);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  // At an end: inside the field, with an arrow out (turn this way)
+  :where(.aekCompass__marker[data-edge='start']) {
+    transform: translate(0, -50%);
+  }
+
+  :where(.aekCompass__marker[data-edge='end']) {
+    transform: translate(-100%, -50%);
+  }
+
+  :where(.aekCompass__marker[data-edge])::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(-50%);
+  }
+
+  :where(.aekCompass__marker[data-edge='start'])::after {
+    right: 100%;
+    border-right: 6px solid currentcolor;
+  }
+
+  :where(.aekCompass__marker[data-edge='end'])::after {
+    left: 100%;
+    border-left: 6px solid currentcolor;
+  }
+}

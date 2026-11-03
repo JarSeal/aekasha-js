@@ -190,6 +190,8 @@ export type { ItemSlot, ItemSlotProps } from './game/items/ItemSlot';
 export { createItemDetails } from './game/items/ItemDetails';
 export type { ItemDetails, ItemDetailsProps } from './game/items/ItemDetails';
 export type { GameItem, ItemStat } from './game/items/ItemTypes';
+export { createCompass } from './game/Compass';
+export type { Compass, CompassMarker, CompassProps, CompassTexts } from './game/Compass';
 export { createWorldAnchorLayer } from './game/anchors/WorldAnchorLayer';
 export type {
   WorldAnchor,

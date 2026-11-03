@@ -909,6 +909,26 @@ As built:
     (`--aek-world-anchor-halo`, default `--aek-bg`) so a bare name reads over any scene.
   - Looked at in Chromium (both themes) with the throwaway viewer (`.cache/p808view/anchors.ts`):
     the arrow was made narrower (11 × 10 px) so its direction reads at its size.
+- **The compass** (`game/Compass.ts`): `createCompass({ heading?, fov? (2π / 3), markers?,
+  placement?: 'top' | 'inline', texts? })` → `{ cmp, setHeading, getHeading, setMarker,
+  setMarkerBearing, removeMarker, hasMarker }`; a marker `{ bearing, label?, icon?, color?,
+  offScreen?: 'clamp' | 'hide' }`.
+  - Bearings and the heading are radians clockwise from north (the toolkit's sync turns the
+    camera's yaw into one: north is -z, east +x). `setMarkerBearing` (decided here) moves a
+    marker without an object a frame (a waypoint's bearing from the player changes as it moves).
+  - The strip is two turns (from -180°) wide in the field's units, its 16 labels at fixed
+    percentages and its ticks a background every 15°, moved by one `translateX` percentage of its
+    own width: nothing measured, no px. Written when the heading moved a tenth of a degree.
+  - Markers over the clipped track (its ends faded by a mask), each placed by its `left` as a
+    percentage of the field when its offset changed a tenth of a degree; outside the field on the
+    nearer end (`data-edge`, an arrow out: turn this way) or hidden. A marker without an icon is a
+    diamond; `color` is read on the marker itself (a custom property resolved on the root would
+    have hidden it: seen in Chromium).
+  - The spoken heading ('Facing north-east') is a visually hidden text, not live, written when
+    the nearest of the eight directions changes. `texts` holds the shown and spoken directions
+    and the facing text (the language).
+  - `placement: 'top'` is fixed at the top centre of the HUD's bounds (`--aek-compass-inset`).
+  - Looked at in Chromium (both themes, `.cache/p808view/compass.ts`).
 
 ### Phase 8: the example, the Hub, the docs
 
