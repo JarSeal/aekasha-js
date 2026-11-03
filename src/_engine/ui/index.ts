@@ -145,6 +145,12 @@ export type { Slider, SliderProps } from './forms/Slider';
 export { createResourceBar } from './game/ResourceBar';
 export { createSubtitles } from './game/Subtitles';
 export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
+export { createSpatialNavigation } from './game/SpatialNavigation';
+export type {
+  NavigationDirection,
+  SpatialNavigation,
+  SpatialNavigationProps,
+} from './game/SpatialNavigation';
 export type {
   ResourceBar,
   ResourceBarProps,
