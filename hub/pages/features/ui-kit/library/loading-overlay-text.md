@@ -11,6 +11,10 @@ blocks the pointer while shown, and nothing else (a scene load turns the inputs 
 
 The debug scene loader (the Debug tools' start scene) is one, a new overlay per load.
 
+A game's loading screen is the same overlay with `tips` (one at a time, every `tipIntervalMs`,
+not read out: the status is) and an `image` behind its content.
+
 - **States:** drawn in the page: an overlay over a panel with its spinner, the same with a bar
   ("Show the progress") and hidden ("Hide it"), and one over the HUD's bounds with a bar, as a
-  scene loader's (the demo closes it on a click; the overlay itself takes no input).
+  scene loader's, and with a tip, as a game's loading screen (the demo closes either on a click;
+  the overlay itself takes no input).

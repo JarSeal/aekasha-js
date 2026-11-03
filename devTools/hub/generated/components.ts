@@ -106,6 +106,36 @@ export const COMPONENT_USES = [
   { slot: 'generated-components-loading-overlay', calls: ['createLoadingOverlay'] },
   { slot: 'generated-components-kbd', calls: ['createKbd'] },
   { slot: 'generated-components-input-glyph', calls: ['createInputGlyph'] },
+  {
+    slot: 'generated-components-input-prompt',
+    calls: ['createInputPrompt', 'setPromptDevice', 'getPromptDevice'],
+  },
+  {
+    slot: 'generated-components-kit-preferences',
+    calls: ['setKitPreferences', 'getKitPreferences'],
+  },
+  { slot: 'generated-components-resource-bar', calls: ['createResourceBar'] },
+  { slot: 'generated-components-cooldown', calls: ['createCooldown'] },
+  { slot: 'generated-components-crosshair', calls: ['createCrosshair'] },
+  { slot: 'generated-components-notification-feed', calls: ['createNotificationFeed'] },
+  { slot: 'generated-components-objective-tracker', calls: ['createObjectiveTracker'] },
+  { slot: 'generated-components-subtitles', calls: ['createSubtitles'] },
+  { slot: 'generated-components-dialogue-box', calls: ['createDialogueBox'] },
+  { slot: 'generated-components-spatial-navigation', calls: ['createSpatialNavigation'] },
+  { slot: 'generated-components-radial-menu', calls: ['createRadialMenu'] },
+  { slot: 'generated-components-game-menu', calls: ['createGameMenu'] },
+  { slot: 'generated-components-settings-menu', calls: ['createSettingsMenu'] },
+  { slot: 'generated-components-controls-page', calls: ['createControlsPage'] },
+  { slot: 'generated-components-item-slot', calls: ['createItemSlot'] },
+  { slot: 'generated-components-hotbar', calls: ['createHotbar'] },
+  {
+    slot: 'generated-components-inventory-grid',
+    calls: ['createInventoryGrid', 'createItemDragGroup'],
+  },
+  { slot: 'generated-components-item-details', calls: ['createItemDetails'] },
+  { slot: 'generated-components-world-anchors', calls: ['createWorldAnchorLayer'] },
+  { slot: 'generated-components-compass', calls: ['createCompass'] },
+  { slot: 'generated-components-minimap-frame', calls: ['createMinimapFrame'] },
 ] as const;
 
 /** Where a user is, in the order the lists show them */

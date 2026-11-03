@@ -46,7 +46,12 @@ export type InputGlyphGamepadInput =
 type Shape = 'circle' | 'pill' | 'trigger' | 'plain';
 type FamilyLabels = [shown: string, spoken: string];
 
-/** Per family, by button: [shown, spoken]. The face buttons' PlayStation labels are shapes (SVG) */
+/**
+ * Per family, by button: [shown, spoken]. The face buttons' PlayStation labels are shapes (SVG).
+ * A spoken name starts with the shown label when the label is a word of its own ('RT, right
+ * trigger'): a control a glyph names (the controls page's slot) has its shown text in its name
+ * (WCAG 2.5.3, axe's `label-content-name-mismatch`, p808 Phase 8)
+ */
 const LABELS: Record<
   Exclude<InputGlyphGamepadButton, `DPAD_${string}`>,
   Record<InputGlyphFamily, FamilyLabels>
@@ -76,28 +81,28 @@ const LABELS: Record<
     GENERIC: ['', 'Top face button'],
   },
   LEFT_SHOULDER: {
-    XBOX: ['LB', 'Left bumper'],
+    XBOX: ['LB', 'LB, left bumper'],
     PLAYSTATION: ['L1', 'L1 button'],
     NINTENDO: ['L', 'L button'],
-    GENERIC: ['L1', 'Left shoulder button'],
+    GENERIC: ['L1', 'L1, left shoulder button'],
   },
   RIGHT_SHOULDER: {
-    XBOX: ['RB', 'Right bumper'],
+    XBOX: ['RB', 'RB, right bumper'],
     PLAYSTATION: ['R1', 'R1 button'],
     NINTENDO: ['R', 'R button'],
-    GENERIC: ['R1', 'Right shoulder button'],
+    GENERIC: ['R1', 'R1, right shoulder button'],
   },
   LEFT_TRIGGER: {
-    XBOX: ['LT', 'Left trigger'],
+    XBOX: ['LT', 'LT, left trigger'],
     PLAYSTATION: ['L2', 'L2 button'],
     NINTENDO: ['ZL', 'ZL button'],
-    GENERIC: ['L2', 'Left trigger'],
+    GENERIC: ['L2', 'L2, left trigger'],
   },
   RIGHT_TRIGGER: {
-    XBOX: ['RT', 'Right trigger'],
+    XBOX: ['RT', 'RT, right trigger'],
     PLAYSTATION: ['R2', 'R2 button'],
     NINTENDO: ['ZR', 'ZR button'],
-    GENERIC: ['R2', 'Right trigger'],
+    GENERIC: ['R2', 'R2, right trigger'],
   },
   SELECT: {
     XBOX: ['View', 'View button'],
@@ -112,16 +117,16 @@ const LABELS: Record<
     GENERIC: ['Start', 'Start button'],
   },
   LEFT_STICK: {
-    XBOX: ['LS', 'Left stick press'],
+    XBOX: ['LS', 'LS, left stick press'],
     PLAYSTATION: ['L3', 'L3 button'],
-    NINTENDO: ['LS', 'Left stick press'],
-    GENERIC: ['L3', 'Left stick press'],
+    NINTENDO: ['LS', 'LS, left stick press'],
+    GENERIC: ['L3', 'L3, left stick press'],
   },
   RIGHT_STICK: {
-    XBOX: ['RS', 'Right stick press'],
+    XBOX: ['RS', 'RS, right stick press'],
     PLAYSTATION: ['R3', 'R3 button'],
-    NINTENDO: ['RS', 'Right stick press'],
-    GENERIC: ['R3', 'Right stick press'],
+    NINTENDO: ['RS', 'RS, right stick press'],
+    GENERIC: ['R3', 'R3, right stick press'],
   },
   HOME: {
     XBOX: ['Xbox', 'Xbox button'],

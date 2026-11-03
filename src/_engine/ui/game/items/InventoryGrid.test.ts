@@ -212,6 +212,26 @@ describe('inventory grid (p808 D11)', () => {
     grid.cmp.remove();
   });
 
+  it('puts the item back on Escape outside the HUD root too, where the stack doesn’t listen', () => {
+    // A page's own kit root (the Hub's component library): no overlay stack listener above it
+    const root = document.createElement('div');
+    root.className = 'aekUi';
+    document.body.append(root);
+    const grid = createInventoryGrid({ label: 'Bag', columns: 3, items: [SWORD, BOW] });
+    root.append(grid.cmp.elem);
+    const slots = grid.slots.map((slot) => slot.cmp.elem);
+    slots[0].focus();
+    click(slots[0]);
+    slots[1].focus();
+    expect(dispatchKey(slots[1], 'keydown', 'Escape').defaultPrevented).toBe(true);
+    expect(grid.group.isHolding()).toBe(false);
+    expect(document.activeElement).toBe(slots[0]);
+    // Nothing held: Escape goes on
+    expect(dispatchKey(slots[0], 'keydown', 'Escape').defaultPrevented).toBe(false);
+    grid.cmp.remove();
+    root.remove();
+  });
+
   it('moves between the grids of a group, reported to the grid it lands in', () => {
     const group = createItemDragGroup();
     const onChestMove = vi.fn();

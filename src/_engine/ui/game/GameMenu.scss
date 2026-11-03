@@ -101,7 +101,9 @@
   :where(.aekGameMenu__item:focus-visible) {
     border-color: var(--aek-accent);
     background-color: var(--aek-accent-soft);
-    outline: none;
+    // The kit's ring too (a forced-colours mode draws only the outline), inside: the scrolling
+    // body would clip it outside
+    outline-offset: calc(-1 * var(--aek-focus-ring-width));
   }
 
   :where(.aekGameMenu__item:focus-visible)::before {

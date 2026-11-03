@@ -1,4 +1,4 @@
-/** The camera a {@link WorldAnchorLayer}'s `update` projects with, as plain numbers (no three
+/** The camera a world anchor layer's `update` projects with, as plain numbers (no three
  * import): keep one object and write it each frame, so the update allocates nothing. */
 export type WorldAnchorView = {
   /** The camera's view-projection matrix as 16 numbers, column-major: a `THREE.Matrix4`'s

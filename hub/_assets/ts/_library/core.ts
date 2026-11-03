@@ -28,6 +28,7 @@ import type {
   ButtonProps,
   InputGlyphFamily,
   InputGlyphInput,
+  LoadingOverlayProps,
   ProgressBarProps,
   CMPHandle,
 } from 'aekasha/ui';
@@ -572,18 +573,24 @@ const initLoadingOverlayDemo: Demo = (box) => {
   addButton(inPanel, 'Hide it', () => void overlay.hideAsync());
 
   const bounds = addGroup(root, 'Over the HUD’s bounds, as a scene loader’s (a click closes it)');
-  addButton(bounds, 'Over the HUD’s bounds', () => {
+  const openOverBounds = (props: Partial<LoadingOverlayProps>) => {
     const loader = createLoadingOverlay({
       id: OVERLAY_ID('Bounds'),
       text: 'Loading the level',
       progress: 35,
+      ...props,
     });
     getHUDRootCMP().add(loader.cmp);
     loader.cmp.elem.addEventListener('click', () =>
       loader.hideAsync().then((isHidden) => isHidden && loader.cmp.remove())
     );
     void loader.showAsync();
-  });
+  };
+  addButton(bounds, 'Over the HUD’s bounds', () => openOverBounds({}));
+  // A game's loading screen: a tip at a time (the first a random one, so the demo gives one)
+  addButton(bounds, 'A loading screen with a tip', () =>
+    openOverBounds({ tips: ['Hold Shift to run: it drains your stamina.'], tipIntervalMs: 60_000 })
+  );
 };
 
 // --- Kbd ---

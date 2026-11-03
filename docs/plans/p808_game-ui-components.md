@@ -1096,6 +1096,62 @@ As built (section 1, the example):
   same hash in the three debug ones. The gamepad paths weren't driven (no pad: by hand, as the
   gym's).
 
+As built (section 2, the library, the checks, the game page):
+
+- **The demos** are five group modules by the game page's sections, each with its checks:
+  `hub/_assets/ts/_library/game.ts` (the input prompt, the kit preferences, the resource bar, the
+  cooldown, the crosshair; its `createStatusLine` the others import), `gameText.ts`, `gameMenus.ts`,
+  `gameItems.ts` (the items' icons registered by the first demo that shows one) and `gameWorld.ts`
+  (the anchors' camera a view-projection built by hand, three's column-major order), merged in
+  `_components.ts` and `_componentChecks.ts`. 21 boxes in both library pages (after the input
+  glyph), their public and dev texts, the dev page's `generated-components-*` slots and
+  `COMPONENT_USES` (`createItemDragGroup` with the inventory, `setPromptDevice` and
+  `getPromptDevice` with the prompt). The loading overlay's box gained "A loading screen with a
+  tip" (D1's tips).
+- **Screenshots never wait on a timer** (`verify:ui` settles on animations, not timers): a piece
+  that places itself over the HUD's bounds is `inline` or in a `contain: layout` stage
+  (`.hubDemoStage`: the crosshair; the fixed centre is the stage's, as a mount's container); the
+  feed's and the subtitles' lines are held 60 s; the dialogue box shows its lines whole until a
+  switch in the box makes one that types (`charsPerSecond: 40`); a cooldown's state buttons run
+  1-2 s, ended by the shot; a hit marker's 250 ms is gone by it (the scripts check its
+  `data-kind`). The kit preferences' box is a kit root of its own, outside the page's switches.
+- **The game page** (`hub/pages/features/ui-kit/game/`, `aek:order` 25, `aek:covers "Game UI"`):
+  `intro` (the `exampleGameHud` scene panel: its Hub image is section 3's, a warning until then),
+  `hud-guide`, `text-guide`, `menus-guide`, `items-guide`, `world-guide` and `guide` (wiring the
+  engine, loading screens, in a build, key APIs, read more); each piece's section with its
+  `::: demo`, a code block, its rules and its reference table. The UI kit overview's intro links
+  it.
+- **`## Game UI` in `src/_engine/ui/CLAUDE.md`** (pulled forward from section 3: `aek:covers`
+  needs the section): the layout paragraph's long `game/` parenthesis moved there as a bullet per
+  piece, with an intro (the engine sides, D3's entry count, the demos' modules). The root
+  `CLAUDE.md`'s map line and `hub/CLAUDE.md`'s lists name it and the game page.
+- **Found by `yarn verify:ui`, fixed in the kit:**
+  - The game menu's focused item had `outline: none` (`tokens.css` says never: a forced-colours
+    mode draws only the outline): the kit's ring is back, inside the item (`outline-offset`
+    negative, the menu's own pattern), with the border, fill and bar.
+  - WCAG 2.5.3 (axe's `label-content-name-mismatch`, on the controls page's slots): a gamepad
+    glyph's spoken name now starts with its shown label where the label is a word of its own
+    (`GamepadGlyphs.ts`: Xbox `LB RB LT RT LS RS`, Nintendo `LS RS`, generic `L1 R1 L2 R2 L3 R3`:
+    'RT, right trigger').
+  - The inventory's Escape outside the HUD root: the hold's overlay stack entry never saw the key
+    in a page's kit root, so the grid's keydown puts the item back itself there (inside the HUD
+    the stack's capture listener takes it first); a test.
+  - `AnchorProjection.ts`' `{@link WorldAnchorLayer}` (no such symbol in its scope: TypeDoc's
+    warning) is plain text.
+- **The demo's speaker colours** are status roles (`var(--aek-warning)`, `var(--aek-info)`): the
+  first hex colours failed axe's contrast in the light theme; the guide's example says so.
+- **Not changed (for review):** the Hub's search index is 470 KiB gzipped (was 440), over
+  `devTools/hub/search.ts`' 450 KiB warning mark (a warning, not an error).
+- **Found by `yarn verify:baselines`, from section 1 (open):** the production build's `main` now
+  carries `debug/GPUMemory.ts` and `debug/Profiler.ts` (the check's failure) and a third viewports
+  module: `createViewport` calls the debug wrapper `registerGPUMemorySource` unguarded
+  (`features/viewports/Viewports.ts:359`), and with the game HUD a second scene uses the viewports,
+  so `Viewports.ts` moved into `main`. The proposed fix: `__AEK_DEBUG__ ? registerGPUMemorySource(…)
+  : () => {}` (folded in production, the wrapper's own run-time check kept for prodTest). The other
+  bundle changes are the new example's chunks and the shared chunks it split out (`FocusTrap`,
+  `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`), to record with `--update` once the debug code
+  is out.
+
 ### Phase 9: versions and done
 
 The changelog's sections in the unreleased engine-6 entry (D15), p800's §5 p808 entry rewritten

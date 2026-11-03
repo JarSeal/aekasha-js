@@ -77,9 +77,10 @@ export type InventoryGrid = {
  * - Keys: the APG grid's: one tab stop, the arrows by row and column (an arrow at the grid's edge
  *   goes on, so a spatial navigation round the grids takes it to the next), Home and End in the
  *   row, Ctrl+Home and Ctrl+End the first and last slot; Enter and Space pick up and drop (kept
- *   from the action maps); Escape puts a held item back (the overlay stack's). A gamepad: the
- *   spatial navigation's `move`, `SOUTH` clicks the focused slot, `EAST` is `group.cancel()` (or
- *   the navigation's `back()`).
+ *   from the action maps); Escape puts a held item back (the overlay stack's; outside the HUD
+ *   root, where the stack doesn't listen, the grid's own). A gamepad: the spatial navigation's
+ *   `move`, `SOUTH` clicks the focused slot, `EAST` is `group.cancel()` (or the navigation's
+ *   `back()`).
  * - Assistive tech: a pick says the item and the keys ('Iron sword picked up. Choose a slot…'),
  *   every slot is described as 'Holding Iron sword' while it's held, and a drop says what happened
  *   ('Iron sword moved to row 2, column 3', '… swapped with Bow', '… can't go there'), politely.
@@ -131,6 +132,15 @@ export const createInventoryGrid = (props: InventoryGridProps): InventoryGrid =>
     const ke = e as KeyboardEvent;
     const index = elems.indexOf(ke.target as HTMLElement);
     if (index === -1 || ke.altKey || ke.metaKey || ke.shiftKey) return;
+    // Inside the HUD root the hold's overlay stack entry takes Escape before this; outside it (a
+    // page's own kit root) the stack never sees the key, so the grid puts the item back itself
+    if (ke.key === 'Escape' && !ke.ctrlKey && group.isHolding()) {
+      ke.preventDefault();
+      ke.stopPropagation();
+      swallowNextKeyUp(ke.key);
+      group.cancel();
+      return;
+    }
     if ((ke.key === 'Enter' || ke.key === ' ') && !ke.ctrlKey) {
       // The slot's own click picks up or drops: kept from the action maps only
       ke.stopPropagation();

@@ -13,6 +13,7 @@ dialog, or Tab through it. The [UI kit example](hub:examples/ui-kit) builds a wh
 This page is the kit's base: [components](#components), [the HUD root](#the-hud-root) and
 [styling](#styling). The pieces have pages of their own,
 [core components](hub:features/ui-kit/core), [forms and fields](hub:features/ui-kit/forms),
-[data display](hub:features/ui-kit/data) and [windows and overlays](hub:features/ui-kit/overlays),
-each with live demos, and the
+[data display](hub:features/ui-kit/data), [windows and overlays](hub:features/ui-kit/overlays)
+and the [game UI](hub:features/ui-kit/game) (prompts, health bars, menus a gamepad moves through,
+inventories, nameplates), each with live demos, and the
 [component library](hub:features/ui-kit/library) shows every piece in every state.
