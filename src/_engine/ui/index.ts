@@ -190,6 +190,17 @@ export type { ItemSlot, ItemSlotProps } from './game/items/ItemSlot';
 export { createItemDetails } from './game/items/ItemDetails';
 export type { ItemDetails, ItemDetailsProps } from './game/items/ItemDetails';
 export type { GameItem, ItemStat } from './game/items/ItemTypes';
+export { createWorldAnchorLayer } from './game/anchors/WorldAnchorLayer';
+export type {
+  WorldAnchor,
+  WorldAnchorAlign,
+  WorldAnchorLayer,
+  WorldAnchorLayerProps,
+  WorldAnchorOffScreen,
+  WorldAnchorProps,
+  WorldAnchorState,
+} from './game/anchors/WorldAnchorLayer';
+export type { WorldAnchorView } from './game/anchors/AnchorProjection';
 export type {
   ResourceBar,
   ResourceBarProps,

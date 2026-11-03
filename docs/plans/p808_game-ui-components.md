@@ -880,6 +880,36 @@ As built:
 `registerWorldAnchorSync` and its `WORLD_ANCHOR` component; the perf-auditor's pass with 200
 anchors, its findings fixed or written down here.
 
+As built:
+
+- **The anchor layer** (`game/anchors/WorldAnchorLayer.ts`, its maths in `AnchorProjection.ts`):
+  `createWorldAnchorLayer({ cullDistance?, edgePadding? (32), depthSort?, placement?: 'hud' |
+  'inline' })` → `{ cmp, addAnchor, update, clear, getAnchorCount }`; `addAnchor({ content?,
+  position?, offset?, align?: 'center' | 'above' | 'below', offScreen?, maxDistance? })` → `{ cmp,
+  setPosition, setContent, setVisible, getState, getDistance, remove }`.
+  - **`update(view)` takes one `WorldAnchorView`** (`{ viewProjection, width, height,
+    cameraPosition }`), not D7's four positional arguments (the coding standards' options object
+    past two parameters); the caller keeps one object and writes it each frame, so nothing is
+    allocated.
+  - `content` is a text or a CMP (removed with the anchor, or when `setContent` replaces it).
+    `align` (decided here) puts a nameplate's bottom on its point; `offset` is screen px, not
+    applied while clamped (a clamped anchor is centred, the edge padding its room).
+  - The projection: in front and inside the screen it's shown; with `'clamp'` only inside the
+    padding, else moved onto the padded edge along its direction from the centre, with the arrow
+    (`--aek-world-anchor-angle`, written when its rounded degree changes). Behind the camera the
+    clip x and y are used undivided (dividing by the negative `w` mirrors them); straight behind
+    points down. Past `maxDistance` (default the layer's `cullDistance`) it hides, clamped or not;
+    `getDistance` still reports it (a waypoint's '120 m', the app's text).
+  - Writes: `transform: translate3d()` when the rounded position changed, `data-state`
+    (`shown` / `clamped` / `hidden`, `display: none`) when it changed. `depthSort` is an insertion
+    sort in place (nearly sorted from the frame before) with a `z-index` written only where an
+    anchor's place changed; hidden anchors go to the back.
+  - The layer: fixed over the HUD's bounds (the crosshair's reason), `contain: strict`, no pointer
+    events, `z-index: var(--aek-world-anchor-layer-z, auto)`. The body's text has a halo
+    (`--aek-world-anchor-halo`, default `--aek-bg`) so a bare name reads over any scene.
+  - Looked at in Chromium (both themes) with the throwaway viewer (`.cache/p808view/anchors.ts`):
+    the arrow was made narrower (11 × 10 px) so its direction reads at its size.
+
 ### Phase 8: the example, the Hub, the docs
 
 The `gameHud` example (D14) and its Hub page; the UI kit's `game/` page, both library pages'
