@@ -3678,6 +3678,14 @@
       "ResourceBarState": "TypeAlias",
       "ResourceBarThreshold": "TypeAlias"
     },
+    "src/_engine/ui/game/SettingsMenu.ts": {
+      "createSettingsMenu": "Function",
+      "SettingsChange": "TypeAlias",
+      "SettingsMenu": "TypeAlias",
+      "SettingsMenuProps": "TypeAlias",
+      "SettingsPage": "TypeAlias",
+      "SettingsResetConfirm": "TypeAlias"
+    },
     "src/_engine/ui/game/SpatialNavigation.ts": {
       "createSpatialNavigation": "Function",
       "NavigationDirection": "TypeAlias",
@@ -5173,6 +5181,11 @@
       "SelectValue",
       "SelectionMode",
       "SetKitPreferencesProps",
+      "SettingsChange",
+      "SettingsMenu",
+      "SettingsMenuProps",
+      "SettingsPage",
+      "SettingsResetConfirm",
       "Skeleton",
       "SkeletonProps",
       "Slider",
@@ -5318,6 +5331,7 @@
       "createRotationField",
       "createSegmentedControl",
       "createSelectField",
+      "createSettingsMenu",
       "createSkeleton",
       "createSlider",
       "createSparkline",

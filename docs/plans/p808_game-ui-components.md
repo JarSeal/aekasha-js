@@ -786,6 +786,40 @@ As built:
 
 `createSettingsMenu`, `createControlsPage` (D9).
 
+As built:
+
+- **The settings menu** (`game/SettingsMenu.ts`): `createSettingsMenu({ pages, label?, selected?,
+  onSelect?, onChange?, onReset?, orientation?, labelWidth?, resetPageLabel?, resetAllLabel?,
+  confirmResetAll?, resetDoneText? })` → `{ cmp, select, selectNext, getSelected, refresh,
+  resetPage(key?), resetAll, getFields(key) }`; a page `{ key, label, icon?, items?, content?,
+  onReset? }` (`content` after the items, the controls page's CMP, with its `onReset` the page's
+  reset for it).
+  - Inline content, not an overlay: a game menu page's `content` (a kept CMP) or a window's.
+  - Every page's property grid (`resizable: false`, label column 45 %) is built at creation on one
+    shared scheduler, so "Reset all" reaches a page never shown; the tabs add a page on its first
+    selection (a function `content`), and the menu removes the ones they never added.
+  - `onChange({ page, item, value, change })` after the item's own `onChange` (each field item's
+    `onChange` and `onCreate` wrapped; the handles of the non-monitor fields collected): every
+    write, the owner persisting on `change.last`. A reset reports each field it changes, then
+    `onReset(key | null)` once (one save).
+  - "Reset page" is disabled on a page with no field and no `onReset`. "Reset all" asks first
+    (`confirmResetAll`, default true; decided here: D9 didn't say): an inline `role="group"` in the
+    buttons' place, named by its question, the focus on Cancel, its danger button resetting; the
+    focus leaving it (a game menu's Back, a click elsewhere) cancels it. No dialog (the windows'
+    code in the chunk) and nothing a gamepad can't reach (a hold to confirm can't be held on one).
+  - A reset from a button is announced ('Display reset to defaults', `resetDoneText`); the API's
+    `resetPage` / `resetAll` aren't.
+  - `selectNext(±1)` for the shoulder buttons, round, calls `onSelect`, and moves the focus to the
+    new tab when it was in the menu (else it would stay in a hidden panel).
+  - Enter and Space on its buttons stopped before the action maps (the game menu's rule).
+  - **The field's `reset` reads the bound value first** (`forms/Field.ts`, decided here): it went
+    through `binding.change`, which compares with the kept copy, so a field on a page not shown
+    since the app changed its setting kept the default as its copy and a reset wrote nothing; it
+    now syncs first as `setValue` does, and redraws when the sync changed the copy. The form's
+    reset gets the same. And the menu's `refresh()` reads a page that isn't shown itself (the
+    scheduler reads the shown fields only, so a hidden tab, or the whole menu out of the document
+    in a closed game menu, would show old values).
+
 ### Phase 7: the world
 
 `createWorldAnchorLayer`, `createCompass`, `createMinimapFrame` (D7); the toolkit's

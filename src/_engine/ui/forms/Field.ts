@@ -651,7 +651,13 @@ export const createField = <T>(props: AnyFieldProps<T>, spec: FieldSpec<T>): Fie
       readState();
       if (!isHidden) read(true);
     },
-    reset: () => binding.change(valueKind.copy(defaultValue)),
+    reset: () => {
+      // Against the bound value, as `setValue`: a field not shown (a tab never opened) was read
+      // last before the app changed it, and its kept copy may be the default already
+      const synced = binding.sync();
+      binding.change(valueKind.copy(defaultValue));
+      if (synced) draw();
+    },
     setDisabled: (on) => {
       disabledProp = on;
       applyDisabled(on);

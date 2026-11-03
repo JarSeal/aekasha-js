@@ -85,6 +85,26 @@ describe('the field shell (p804 D5)', () => {
     shell.cmp.remove();
   });
 
+  it('resets against the bound value, which may have changed since its last read', () => {
+    const calls: FieldChange<string>[] = [];
+    const { shell, field, target, log } = makeField({
+      onChange: (_v, change) => calls.push(change),
+    });
+    // Not read since (a field on a page never shown): its kept copy is still the default
+    target.value = 'z';
+    field.reset();
+    expect(target.value).toBe('a');
+    expect(calls.map(({ prev }) => prev)).toEqual(['z']);
+    // Back at the default meanwhile: nothing written, but the value it showed redrawn
+    field.setValue('b', { silent: true });
+    target.value = 'a';
+    log.draws.length = 0;
+    field.reset();
+    expect(calls).toHaveLength(1);
+    expect(log.draws).toEqual(['a']);
+    shell.cmp.remove();
+  });
+
   it('shows the hint, or an error with aria-invalid, as the control’s description', () => {
     const { shell, control, part, field } = makeField({ hint: 'Your name' });
     const message = part('message');

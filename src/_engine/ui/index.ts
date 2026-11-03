@@ -147,6 +147,14 @@ export { createSubtitles } from './game/Subtitles';
 export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
 export { createGameMenu } from './game/GameMenu';
 export type { GameMenu, GameMenuItem, GameMenuPage, GameMenuProps } from './game/GameMenu';
+export { createSettingsMenu } from './game/SettingsMenu';
+export type {
+  SettingsChange,
+  SettingsMenu,
+  SettingsMenuProps,
+  SettingsPage,
+  SettingsResetConfirm,
+} from './game/SettingsMenu';
 export { createRadialMenu } from './game/RadialMenu';
 export type {
   RadialMenu,

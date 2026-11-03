@@ -1,0 +1,49 @@
+// The settings menu's default styles (SettingsMenu.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). The tabs over (or beside) the
+// page's property grid, the reset buttons at the end; "Reset all"'s question takes their place.
+@layer aek.components {
+  :where(.aekSettingsMenu) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-settings-menu-gap, var(--aek-space-5));
+    min-width: 0;
+    color: var(--aek-text);
+  }
+
+  :where(.aekSettingsMenu__page) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-settings-menu-gap, var(--aek-space-5));
+    padding-block: var(--aek-space-4);
+  }
+
+  :where(.aekSettingsMenu__actions) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--aek-space-3);
+    padding-top: var(--aek-space-4);
+    border-top: 1px solid var(--aek-border);
+  }
+
+  :where(.aekSettingsMenu__confirm) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--aek-space-3);
+  }
+
+  :where(.aekSettingsMenu__confirm[hidden]),
+  :where(.aekSettingsMenu__actions) :where(.aekButton[hidden]) {
+    display: none;
+  }
+
+  // A line of its own, the two answers together under it, however narrow the panel
+  :where(.aekSettingsMenu__confirmText) {
+    flex: 1 1 100%;
+    font-weight: var(--aek-font-weight-bold);
+    text-align: end;
+  }
+}
