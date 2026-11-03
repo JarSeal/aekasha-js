@@ -192,6 +192,8 @@ export type { ItemDetails, ItemDetailsProps } from './game/items/ItemDetails';
 export type { GameItem, ItemStat } from './game/items/ItemTypes';
 export { createCompass } from './game/Compass';
 export type { Compass, CompassMarker, CompassProps, CompassTexts } from './game/Compass';
+export { createMinimapFrame } from './game/MinimapFrame';
+export type { MinimapFrame, MinimapFrameProps, MinimapFrameTexts } from './game/MinimapFrame';
 export { createWorldAnchorLayer } from './game/anchors/WorldAnchorLayer';
 export type {
   WorldAnchor,

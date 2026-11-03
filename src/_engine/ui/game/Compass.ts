@@ -2,6 +2,7 @@ import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import type { SvgIconKey } from '../core/icons/SvgIcon';
 import { CMP, classes } from '../core/CMP';
 import { getSvgIcon } from '../core/icons/SvgIcon';
+import { DIRECTION_NAMES, RAD_TO_DEG as DEG, getDirectionIndex, wrapDegrees } from './Directions';
 import './Compass.scss';
 import '../styles/kit.scss';
 
@@ -73,17 +74,6 @@ export type Compass = {
 };
 
 const DEFAULT_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const DEFAULT_NAMES = [
-  'north',
-  'north-east',
-  'east',
-  'south-east',
-  'south',
-  'south-west',
-  'west',
-  'north-west',
-];
-const DEG = 180 / Math.PI;
 
 /** The strip's span in degrees: two turns from -180, so any field fits in it */
 const STRIP_START = -180;
@@ -111,12 +101,6 @@ const createPart = (className: string) => {
   const span = document.createElement('span');
   span.className = className;
   return span;
-};
-
-/** Degrees in [0, 360) */
-const wrapDegrees = (degrees: number) => {
-  const wrapped = degrees % 360;
-  return wrapped < 0 ? wrapped + 360 : wrapped;
 };
 
 /**
@@ -162,7 +146,7 @@ export const createCompass = (props: CompassProps = {}): Compass => {
   const fovDegrees =
     Math.round(Math.min(360, Math.max(1, (props.fov ?? (Math.PI * 2) / 3) * DEG)) * 1e6) / 1e6;
   const labels = props.texts?.labels ?? DEFAULT_LABELS;
-  const names = props.texts?.names ?? DEFAULT_NAMES;
+  const names = props.texts?.names ?? DIRECTION_NAMES;
   const facing = props.texts?.facing ?? ((name: string) => `Facing ${name}`);
   const records: MarkerRecord[] = [];
   const byId = new Map<string, MarkerRecord>();
@@ -240,7 +224,7 @@ export const createCompass = (props: CompassProps = {}): Compass => {
       const shift = (fovDegrees / 2 - (tenths / 10 - STRIP_START)) / STRIP_SPAN;
       strip.style.transform = `translateX(${shift * 100}%)`;
     }
-    const direction = Math.round(heading / 45) % 8;
+    const direction = getDirectionIndex(heading);
     if (direction !== shownDirection) {
       shownDirection = direction;
       spoken.textContent = facing(names[direction] ?? '');

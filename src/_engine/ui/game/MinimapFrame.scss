@@ -1,0 +1,113 @@
+// The minimap frame's default styles (MinimapFrame.ts), on the design tokens and layered (p803
+// D5): an app's unlayered rule wins, and every selector is in :where(). It fills the viewport's
+// slot (absolute, inset 0) and lets the pointer through to the canvas but for its buttons. The
+// map is the viewport's render under it, a rectangle the DOM can't clip: the border is rounded
+// inside and its outward shadow fills the square's corners in the border's colour, which the
+// frame's overflow cuts at the slot's edge.
+@layer aek.components {
+  :where(.aekMinimapFrame) {
+    --aek-minimap-frame-radius: var(--aek-minimap-radius, var(--aek-radius-lg));
+    --aek-minimap-frame-border: var(--aek-minimap-border-color, var(--aek-border-strong));
+
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  :where(.aekMinimapFrame__border) {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: var(--aek-minimap-border-width, 3px) solid var(--aek-minimap-frame-border);
+    border-radius: var(--aek-minimap-frame-radius);
+    box-shadow:
+      0 0 0 var(--aek-minimap-frame-radius) var(--aek-minimap-frame-border),
+      inset 0 0 0 1px color-mix(in srgb, var(--aek-bg) 50%, transparent);
+  }
+
+  // The north mark's box: inside the border, the mark centred on its edge point
+  :where(.aekMinimapFrame__ring) {
+    position: absolute;
+    inset: var(--aek-space-5);
+  }
+
+  :where(.aekMinimapFrame__north) {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    color: var(--aek-minimap-north-color, var(--aek-text));
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+    text-shadow:
+      0 0 2px var(--aek-bg),
+      0 0 2px var(--aek-bg);
+    transform: translate(-50%, -50%);
+  }
+
+  :where(.aekMinimapFrame__north[hidden]) {
+    display: none;
+  }
+
+  // The player: an arrowhead pointing up, turned by the setters
+  :where(.aekMinimapFrame__player) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--aek-minimap-player-size, var(--aek-space-5));
+    height: var(--aek-minimap-player-size, var(--aek-space-5));
+    filter: drop-shadow(0 0 1px var(--aek-bg)) drop-shadow(0 0 1px var(--aek-bg));
+    transform: translate(-50%, -50%) rotate(var(--aek-minimap-player-angle, 0deg));
+  }
+
+  // The shape on its own element: a filter is drawn before the element's clip
+  :where(.aekMinimapFrame__player)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--aek-minimap-player-color, var(--aek-accent));
+    clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%);
+  }
+
+  :where(.aekMinimapFrame__zoom) {
+    position: absolute;
+    right: var(--aek-space-3);
+    bottom: var(--aek-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+  }
+
+  :where(.aekMinimapFrame__zoomButton) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 24px;
+    min-height: 24px;
+    width: var(--aek-space-6);
+    height: var(--aek-space-6);
+    padding: 0;
+    border: 1px solid var(--aek-border-control);
+    border-radius: var(--aek-radius-sm);
+    background-color: color-mix(in srgb, var(--aek-surface-raised) 85%, transparent);
+    color: var(--aek-text);
+    font: inherit;
+    font-size: var(--aek-font-size-lg);
+    font-weight: var(--aek-font-weight-bold);
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  :where(.aekMinimapFrame__zoomButton:hover) {
+    background-color: var(--aek-surface-raised);
+  }
+
+  :where(.aekMinimapFrame__zoomButton[aria-disabled='true']) {
+    color: var(--aek-text-muted);
+    cursor: default;
+    opacity: 0.6;
+  }
+}

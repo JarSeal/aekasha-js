@@ -929,6 +929,28 @@ As built:
     and the facing text (the language).
   - `placement: 'top'` is fixed at the top centre of the HUD's bounds (`--aek-compass-inset`).
   - Looked at in Chromium (both themes, `.cache/p808view/compass.ts`).
+- **The minimap frame** (`game/MinimapFrame.ts`): `createMinimapFrame({ label? ('Map'),
+  playerHeading?, mapHeading?, showNorth?, onZoom?, texts? })` → `{ cmp, setPlayerHeading,
+  setMapHeading, setZoomEnabled, setLabel }`.
+  - D7's `title` is `label` (the other pieces' word): the group's `aria-label`, not shown; D7's
+    `zoom` is the buttons' presence by `onZoom(1 | -1)` (the app moves its viewport's camera and
+    owns the zoom's value), `setZoomEnabled({ zoomIn?, zoomOut? })` disabling one at a limit
+    (`aria-disabled`).
+  - `setMapHeading` (decided here): a map that turns with the player gets the player's heading;
+    the north mark goes round the ring's square edge along north's direction, and the arrow turns
+    by the player's heading less the map's. Each written when its rounded degree changes.
+  - It fills the slot (`position: absolute; inset: 0`), letting the pointer through to the canvas
+    but for its buttons (`pointer-events: auto` in a non-interactive slot). The square's corners
+    outside the rounded border are filled by the border's outward shadow in its colour (the
+    viewport's render can't be clipped: D1).
+  - Assistive tech: a `role="group"` named by `label`, the pictures `aria-hidden`, a visually
+    hidden 'Facing east' written when the nearest direction changes (not live). The compass's and
+    the frame's directions are `Directions.ts` (`@internal`, no styles: the frame doesn't bring
+    the compass's stylesheet).
+  - The zoom buttons are native buttons ('+' / '−', named by `texts`), their Enter and Space
+    stopped before the action maps (the game menu's rule); the kit's global focus ring.
+  - Looked at in Chromium (both themes, `.cache/p808view/minimap.ts`: a north-up frame and a
+    turning one with zoom).
 
 ### Phase 8: the example, the Hub, the docs
 
