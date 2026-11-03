@@ -201,6 +201,7 @@ const createOrbitInput = (look: () => { x: number; y: number }, isLocked: () => 
 };
 // #endregion game-hud-orbit
 
+// #region game-hud-minimap (shown in the Hub: hub/pages/examples/game-hud/)
 /** The minimap: a top-down orthographic camera over the game's scene, north up, in a viewport
  * at the bottom right, its slot the frame's place */
 const createMinimap = () => {
@@ -222,6 +223,7 @@ const createMinimap = () => {
   });
   return { camera, viewport };
 };
+// #endregion game-hud-minimap
 
 /** Mara's conversation: a line each, its choices leading to the next, `null` ending it */
 type ConversationLine = {

@@ -19,7 +19,7 @@ one call per event:
   controls page's `onRebind` are where you save; at the start, apply the saved bindings with
   `map.setBindings` before the prompts are made, and the settings with `setKitPreferences`.
 
-The game HUD example scene (at the top of this page) does all of it in one scene.
+The [game HUD example](hub:examples/game-hud) does all of it in one scene.
 
 ### Loading screens
 
@@ -71,11 +71,14 @@ page's content is your CMP.
 
 ## Read more
 
+- [The game HUD example](hub:examples/game-hud): every piece on this page in one scene, its
+  walkthrough.
 - [The UI kit](hub:features/ui-kit): components, the HUD root, styling.
 - [Core components](hub:features/ui-kit/core): the input glyphs, the progress bar and the loading
   overlay these build on.
 - [Forms and fields](hub:features/ui-kit/forms): the property grid a settings page is.
-- [Input](hub:features/input): action maps, contexts and the gamepad.
+- [Input](hub:features/input#the-last-used-device): action maps, contexts, the gamepad and the
+  device tracker.
 - [The component library](hub:features/ui-kit/library): every piece in every state.
 
 ::: claude-md

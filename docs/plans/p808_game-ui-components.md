@@ -1150,7 +1150,44 @@ As built (section 2, the library, the checks, the game page):
   : () => {}` (folded in production, the wrapper's own run-time check kept for prodTest). The other
   bundle changes are the new example's chunks and the shared chunks it split out (`FocusTrap`,
   `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`), to record with `--update` once the debug code
-  is out.
+  is out. Still open after section 3 (not this section's files); section 4 runs `yarn sbp` and
+  the budgets, so it fixes it there before recording any baseline.
+
+As built (section 3, the example's page, the input and toolkit pages, the docs):
+
+- **`hub/pages/examples/game-hud/`** ("Example: A game HUD", `aek:order` 77, after the app HUD):
+  `intro` (the `::: scene` panel with every control, keyboard and gamepad, and the HUD
+  screenshot) and `walkthrough`: the files, the game's actions, the prompts and the vitals, the
+  camera and its orbit, the hotbar and its use, shooting and the physics step, every frame, UI in
+  the world (the anchors, then the minimap), text (the pieces, the conversation's data and its
+  wiring), the radial menu, the pause menu's gamepad map, the inventory, the settings, the controls
+  page: the 19 regions section 1 left, plus `game-hud-minimap` (added around `createMinimap`).
+- **Two images, as the UI kit example's:** `exampleGameHud.hub.png` (the canvas, saved by the Hub
+  tab's button through the test bridge, `?isDebug=true`) is the scene panel's;
+  `hub/pages/examples/game-hud/game-hud.png` (a 1600 × 1000 page screenshot in `?isProdTest=true`,
+  the debugger roots hidden: the prod test's play tools sit over the compass) is the `aek:image`
+  and the intro's figure: a step forward, the aim swept until the crosshair rings a crate, the
+  whistle (Mara's subtitle, its cooldown), three shots (the kill marker, '+25 gold'). The script
+  was a throwaway in `.cache/p808view/hubImages.ts`; `hub/CLAUDE.md` says how the HUD screenshot is
+  taken.
+- **The input page:** a "The last used device" section after the gamepad's (the tracker's two
+  functions, what switches it, the families, the start, its listeners and the embed's scope), its
+  Key APIs, the intro's and Read more's links to the example and the game UI. Its `aek:covers`
+  already names Input devices, where the tracker is.
+- **The toolkit page:** `WorldAnchorSync` in the tree and the effects list (the exception to "once
+  in the app's feature": a scene registers it with its own layer and compass), the follow rig's
+  orbit (`getMouseMoveInput`, from `offset`'s direction), and the example in See it.
+- **The game page's guide** links the example page (Wiring the engine, Read more).
+- **Nested `CLAUDE.md` files:** `src/_engine/ui/CLAUDE.md`'s Game UI intro names the example;
+  `hub/CLAUDE.md` the HUD screenshot. `kernel/input/CLAUDE.md` already had the tracker (Phase 1).
+- **`readme.md`:** the UI kit feature gets the game UI's sentence and the Hub's two example
+  scenes, Input the device tracker, the toolkit `WorldAnchorSync` and the rig's orbit, the
+  structure's `ui/` line `game/`, and Examples' list the game HUD (eleven examples, ten scenes).
+- **Checked:** `yarn hub:build` (a dead `#the-worlds-ui`: the slug is `the-world-s-ui`, the heading
+  became "UI in the world"); `yarn verify:scenes --only exampleGameHud --update`: the four
+  configurations recorded (`workerSab`, `workerMsg`, `mainThread` the same hash `f09aa8a3`;
+  `prodTest`), no errors. The search index grew to 484 KiB gzipped with the page (the warning
+  above).
 
 ### Phase 9: versions and done
 
