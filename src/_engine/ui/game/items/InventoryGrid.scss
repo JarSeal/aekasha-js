@@ -1,0 +1,65 @@
+// The inventory grid's default styles (InventoryGrid.ts, ItemDragGroup.ts), on the design tokens
+// and layered (p803 D5): an app's unlayered rule wins, and every selector is in :where(). Rows of
+// item slots; while an item is held its own slot fades with a dashed border, the target shows an
+// accent ring (allowed) or a struck-through danger border (blocked: a shape, not colour alone,
+// p808 D4), and the ghost floats in the HUD root over everything, letting the pointer through.
+@layer aek.components {
+  :where(.aekInventoryGrid) {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--aek-inventory-grid-gap, var(--aek-space-2));
+    user-select: none;
+  }
+
+  :where(.aekInventoryGrid__row) {
+    display: flex;
+    gap: var(--aek-inventory-grid-gap, var(--aek-space-2));
+  }
+
+  :where(.aekInventoryGrid__cell) {
+    display: block;
+  }
+
+  // A drag on a touch screen moves the item, not the page
+  .aekInventoryGrid :where(.aekItemSlot) {
+    touch-action: none;
+  }
+
+  .aekInventoryGrid :where(.aekItemSlot[data-held]) {
+    border-style: dashed;
+    opacity: 0.45;
+  }
+
+  .aekInventoryGrid :where(.aekItemSlot[data-drop-target='allowed']) {
+    border-color: var(--aek-accent);
+    background-color: var(--aek-accent-soft);
+    box-shadow: 0 0 0 2px var(--aek-accent);
+  }
+
+  .aekInventoryGrid :where(.aekItemSlot[data-drop-target='blocked']) {
+    border-color: var(--aek-danger);
+    background-image: linear-gradient(
+      to top right,
+      transparent calc(50% - 1.5px),
+      var(--aek-danger) calc(50% - 1.5px),
+      var(--aek-danger) calc(50% + 1.5px),
+      transparent calc(50% + 1.5px)
+    );
+    cursor: not-allowed;
+  }
+
+  :where(.aekInventoryGrid__ghost) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--aek-z-tooltip);
+    pointer-events: none;
+    filter: drop-shadow(var(--aek-shadow-lg));
+    opacity: 0.85;
+  }
+
+  // Smaller than the slot it's over, so that slot's drop mark shows round it
+  :where(.aekInventoryGrid__ghost) > :where(.aekItemSlot) {
+    transform: scale(0.8);
+  }
+}

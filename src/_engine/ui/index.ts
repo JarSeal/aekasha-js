@@ -162,6 +162,10 @@ export type {
 } from './game/SpatialNavigation';
 export { createHotbar } from './game/items/Hotbar';
 export type { Hotbar, HotbarProps } from './game/items/Hotbar';
+export { createInventoryGrid } from './game/items/InventoryGrid';
+export type { InventoryGrid, InventoryGridProps } from './game/items/InventoryGrid';
+export { createItemDragGroup } from './game/items/ItemDragGroup';
+export type { HeldItem, InventoryMove, ItemDragGroup } from './game/items/ItemDragGroup';
 export { createItemSlot } from './game/items/ItemSlot';
 export type { ItemSlot, ItemSlotProps } from './game/items/ItemSlot';
 export type { GameItem } from './game/items/ItemTypes';

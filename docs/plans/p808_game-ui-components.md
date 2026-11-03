@@ -706,6 +706,43 @@ As built so far:
     bounds' bottom; a `md` bar reaches about 100 px up, over the subtitles' default inset (64 px),
     so an app with both raises `--aek-subtitles-inset` (Phase 8's example; the guide says so). A vertical bar puts the selected
     slot's bar at its start (`.aekHotbar:where(…) :where(.aekItemSlot…)::after`, one class).
+- **The inventory** (`game/items/InventoryGrid.ts`, `ItemDragGroup.ts`):
+  `createInventoryGrid({ label, columns, rows?, items, group?, canMove?, onMove?, size?,
+  emptyLabel? })` → `{ cmp, slots, group, setItems, setItem, getItem, focus(index?) }`;
+  `createItemDragGroup()` → `{ cancel, isHolding, getHeld }` (`HeldItem`: `{ item, grid, index
+  }`). A grid without `group` makes its own. The group's code reaches its grids through a
+  `WeakMap` (`useItemDragGroup`, `@internal`), each grid registering an `ItemDragHost`.
+  - **The move** (`InventoryMove`): `{ item, target, kind: 'move' | 'swap' | 'merge', from,
+    fromIndex, to, toIndex }`, `from` / `to` the grid handles. `merge` when the target has the
+    held item's `id` and the item a `count` (the app adds them and keeps any rest). It goes to the
+    `onMove` and `canMove` of the grid it lands in (the slot's rules are the target's: an
+    equipment slot); the grid moves nothing itself, the app's records change and `setItems` shows
+    them (D11's "reports").
+  - **One action picks up and drops** (decided here, over D11's keys-only Enter): a click, Enter
+    or Space (the button's own click) picks the focused item up and, on another slot, drops it; on
+    its own slot puts it back. So the mouse can click-to-carry too, and a gamepad's `SOUTH` is a
+    click on the focused slot. Escape (an overlay stack entry while held, so the spatial
+    navigation's `back()` reaches it) and `group.cancel()` put it back, the focus back on its slot
+    when it was in a grid. A veto keeps it held ('… can't go there').
+  - **The pointer**: a press on an item moved 4 px is a drag (a window listener per press, so the
+    pointer may leave every grid); the target is `document.elementFromPoint` under the ghost
+    (`pointer-events: none`); released over no slot or a vetoed one puts it back; the click the
+    release makes is ignored (the reorder's pattern). `touch-action: none` on the slots: a drag on
+    a touch screen moves the item.
+  - **The ghost** (`__ghost`, `aria-hidden`, `inert`): a clone of the slot, in the HUD root at
+    `--aek-z-tooltip`, placed from the HUD root's corner (an embed's container); dragged, it keeps
+    the point it was grabbed at under the pointer; held by a click or a key, it floats over the
+    target slot's corner. Drawn at 0.8 so the target's mark shows round it. The marks:
+    `data-held` (faded, dashed), `data-drop-target="allowed"` (an accent ring) or `"blocked"` (a
+    danger border struck through: a shape, not colour alone), set on a focus, a mouse hover
+    (held) or the pointer's slot (dragged).
+  - **Keys**: the APG grid's (one roving tab stop over the slot buttons in `gridcell`s), but an
+    arrow at an edge isn't used, so a spatial navigation round the grids (or the action maps) gets
+    it: the bag to the chest by the arrows or a d-pad. Home / End in the row, Ctrl+Home / End.
+  - **Assistive tech**: a pick says the item and the keys; every slot of every grid is described
+    by one hidden 'Holding Iron sword' (an id added to each `aria-describedby` while held); a drop
+    says what happened ('… moved to Bag, row 2, column 1' across grids, '… swapped with Bow',
+    '… stacked'), the kit's announcer.
 
 ### Phase 6: settings
 
