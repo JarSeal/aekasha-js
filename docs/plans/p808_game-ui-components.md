@@ -951,6 +951,29 @@ As built:
     stopped before the action maps (the game menu's rule); the kit's global focus ring.
   - Looked at in Chromium (both themes, `.cache/p808view/minimap.ts`: a north-up frame and a
     turning one with zoom).
+- **The anchor sync** (`toolkit/ecs/effects/WorldAnchorSync.ts`, on `aekasha/toolkit/ecs`):
+  `registerWorldAnchorSync(world, { layer, compass?, camera?, size? })`,
+  `unregisterWorldAnchorSync(world)`, `WorldAnchorComponentType.WORLD_ANCHOR`
+  (`'TOOL_WORLD_ANCHOR'`, `{ anchor, offsetY? }`), `getCompassBearing(dx, dz)`.
+  - One `LATE_MAIN` system per world (id `worldAnchorSync`): each entity's `OBJECT3D.matrixWorld`
+    position (+ `offsetY`) into its anchor (none: left where it was), then `layer.update` with a
+    kept view (the kept `Matrix4`'s `elements` as its `viewProjection`, written by
+    `multiplyMatrices(projectionMatrix, matrixWorldInverse)`), then the compass's heading.
+  - Not a plugin: it takes the layer, so the app calls it per world when it has one (a scene's
+    start). A second call on a world replaces its options (state in a `WeakMap` by world).
+  - `camera` and `size` are resolvers (decided here: the viewports' `camera` pattern), default
+    `getActiveCamera` and `getCanvasSize`; a frame with no camera updates nothing. They make it
+    testable and let an `'inline'` layer give its own box.
+  - The removal hooks (`onRemoveComponent`, `onDeleteEntity`: `anchor.remove()`) are registered
+    once on the first call, not in an install: D7's "needs no `FeatureContext`", and the call is
+    the app's at run time, not at module load.
+  - The heading: the camera's forward `-Z` column's bearing, or its `+Y` column's when it looks
+    straight down (a top-down camera's screen up). North is -z, east +x; `getCompassBearing` is
+    the one place that says it (a waypoint marker's bearing, the minimap's player heading).
+  - The tests use stand-ins for the kit's layer, anchor and compass (the toolkit's tests can't
+    reach the kit's DOM helpers), a real `ECSWorld` and three's cameras.
+  - **For the perf pass:** `getCanvasSize()` makes two objects a call (the source's `read` and
+    its result), so the default `size` allocates every frame.
 
 ### Phase 8: the example, the Hub, the docs
 

@@ -35,3 +35,10 @@ export {
 export type { MutualGravityConfig } from './effects/MutualGravity';
 export { SunShadowFitComponentType, registerSunShadowFitEffect } from './effects/SunShadowFit';
 export type { SunShadowFitData } from './effects/SunShadowFit';
+export {
+  WorldAnchorComponentType,
+  getCompassBearing,
+  registerWorldAnchorSync,
+  unregisterWorldAnchorSync,
+} from './effects/WorldAnchorSync';
+export type { WorldAnchorData, WorldAnchorSyncOptions } from './effects/WorldAnchorSync';
