@@ -145,6 +145,13 @@ export type { Slider, SliderProps } from './forms/Slider';
 export { createResourceBar } from './game/ResourceBar';
 export { createSubtitles } from './game/Subtitles';
 export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
+export { createRadialMenu } from './game/RadialMenu';
+export type {
+  RadialMenu,
+  RadialMenuItem,
+  RadialMenuOpenOptions,
+  RadialMenuProps,
+} from './game/RadialMenu';
 export { createSpatialNavigation } from './game/SpatialNavigation';
 export type {
   NavigationDirection,
