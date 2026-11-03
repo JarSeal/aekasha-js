@@ -226,7 +226,7 @@ export const createWorldAnchorLayer = (props: WorldAnchorLayerProps = {}): World
     if (x !== record.shownX || y !== record.shownY) {
       record.shownX = x;
       record.shownY = y;
-      record.elem.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      record.elem.style.transform = `translate(${x}px, ${y}px)`;
     }
     if (state === PROJECTED_CLAMPED) {
       const angle = Math.round((out[2] * 180) / Math.PI);

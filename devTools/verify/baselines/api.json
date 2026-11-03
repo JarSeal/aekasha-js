@@ -3578,6 +3578,31 @@
       "VectorFieldProps": "TypeAlias",
       "VectorValue": "TypeAlias"
     },
+    "src/_engine/ui/game/anchors/AnchorProjection.ts": {
+      "AnchorPoint": "TypeAlias",
+      "PROJECTED_CLAMPED": "Variable",
+      "PROJECTED_HIDDEN": "Variable",
+      "PROJECTED_SHOWN": "Variable",
+      "projectWorldPoint": "Function",
+      "WorldAnchorView": "TypeAlias"
+    },
+    "src/_engine/ui/game/anchors/WorldAnchorLayer.ts": {
+      "createWorldAnchorLayer": "Function",
+      "WorldAnchor": "TypeAlias",
+      "WorldAnchorAlign": "TypeAlias",
+      "WorldAnchorLayer": "TypeAlias",
+      "WorldAnchorLayerProps": "TypeAlias",
+      "WorldAnchorOffScreen": "TypeAlias",
+      "WorldAnchorProps": "TypeAlias",
+      "WorldAnchorState": "TypeAlias"
+    },
+    "src/_engine/ui/game/Compass.ts": {
+      "Compass": "TypeAlias",
+      "CompassMarker": "TypeAlias",
+      "CompassProps": "TypeAlias",
+      "CompassTexts": "TypeAlias",
+      "createCompass": "Function"
+    },
     "src/_engine/ui/game/controls/ControlsBindings.ts": {
       "applySlotInput": "Function",
       "BindSlot": "TypeAlias",
@@ -3630,6 +3655,12 @@
       "DialogueBoxProps": "TypeAlias",
       "DialogueChoice": "TypeAlias",
       "DialogueLine": "TypeAlias"
+    },
+    "src/_engine/ui/game/Directions.ts": {
+      "DIRECTION_NAMES": "Variable",
+      "getDirectionIndex": "Function",
+      "RAD_TO_DEG": "Variable",
+      "wrapDegrees": "Function"
     },
     "src/_engine/ui/game/GameMenu.ts": {
       "createGameMenu": "Function",
@@ -3688,6 +3719,12 @@
     "src/_engine/ui/game/items/ItemTypes.ts": {
       "GameItem": "TypeAlias",
       "ItemStat": "TypeAlias"
+    },
+    "src/_engine/ui/game/MinimapFrame.ts": {
+      "createMinimapFrame": "Function",
+      "MinimapFrame": "TypeAlias",
+      "MinimapFrameProps": "TypeAlias",
+      "MinimapFrameTexts": "TypeAlias"
     },
     "src/_engine/ui/game/NotificationFeed.ts": {
       "createNotificationFeed": "Function",
@@ -4055,6 +4092,14 @@
       "registerSunShadowFitEffect": "Function",
       "SunShadowFitComponentType": "Enum",
       "SunShadowFitData": "Interface"
+    },
+    "src/toolkit/ecs/effects/WorldAnchorSync.ts": {
+      "getCompassBearing": "Function",
+      "registerWorldAnchorSync": "Function",
+      "unregisterWorldAnchorSync": "Function",
+      "WorldAnchorComponentType": "Enum",
+      "WorldAnchorData": "Interface",
+      "WorldAnchorSyncOptions": "Interface"
     },
     "src/toolkit/ecs/gameplay/FollowObjectCameraRig.ts": {
       "createFollowObjectCameraRig": "Function",
@@ -4945,10 +4990,14 @@
       "PhysicsParams",
       "SunShadowFitComponentType",
       "SunShadowFitData",
+      "WorldAnchorComponentType",
+      "WorldAnchorData",
+      "WorldAnchorSyncOptions",
       "addGravityBody",
       "createFollowObjectCameraRig",
       "createMovingPlatform",
       "deleteFollowObjectCameraRig",
+      "getCompassBearing",
       "getMutualGravityConfig",
       "registerFollowObjectCameraRigSystem",
       "registerFollowToolEffect",
@@ -4956,8 +5005,10 @@
       "registerMovingPlatformSystem",
       "registerMutualGravityEffect",
       "registerSunShadowFitEffect",
+      "registerWorldAnchorSync",
       "removeGravityBody",
-      "setMutualGravityConfig"
+      "setMutualGravityConfig",
+      "unregisterWorldAnchorSync"
     ],
     "aekasha/toolkit/geometry": [
       "AsteroidCraterOptions",
@@ -5037,6 +5088,10 @@
       "CommandPalette",
       "CommandPaletteHints",
       "CommandPaletteProps",
+      "Compass",
+      "CompassMarker",
+      "CompassProps",
+      "CompassTexts",
       "ContextMenu",
       "ContextMenuProps",
       "ContextMenuSource",
@@ -5160,6 +5215,9 @@
       "MenuRadioGroup",
       "MenuSeparator",
       "MenuSubmenuItem",
+      "MinimapFrame",
+      "MinimapFrameProps",
+      "MinimapFrameTexts",
       "Monitor",
       "MonitorProps",
       "NavigationDirection",
@@ -5308,6 +5366,14 @@
       "VirtualRows",
       "VirtualRowsProps",
       "WindowCycleKeys",
+      "WorldAnchor",
+      "WorldAnchorAlign",
+      "WorldAnchorLayer",
+      "WorldAnchorLayerProps",
+      "WorldAnchorOffScreen",
+      "WorldAnchorProps",
+      "WorldAnchorState",
+      "WorldAnchorView",
       "addPropertyGridItems",
       "addToast",
       "aekashaIcon",
@@ -5333,6 +5399,7 @@
       "createCheckbox",
       "createColorField",
       "createCommandPalette",
+      "createCompass",
       "createContextMenu",
       "createControlsPage",
       "createCooldown",
@@ -5364,6 +5431,7 @@
       "createListReorder",
       "createLoadingOverlay",
       "createMenu",
+      "createMinimapFrame",
       "createMonitor",
       "createNotificationFeed",
       "createNumberField",
@@ -5402,6 +5470,7 @@
       "createTree",
       "createVectorField",
       "createVirtualRows",
+      "createWorldAnchorLayer",
       "databaseXIcon",
       "easelIcon",
       "ecsIcon",

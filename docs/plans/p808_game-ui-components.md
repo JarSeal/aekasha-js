@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -874,7 +874,7 @@ As built:
 - **The entry:** 171 value names (`createSettingsMenu`, `createControlsPage`), their types and
   `PromptKeys`, `PromptKeyChord`.
 
-### Phase 7: the world
+### Phase 7: the world — done
 
 `createWorldAnchorLayer`, `createCompass`, `createMinimapFrame` (D7); the toolkit's
 `registerWorldAnchorSync` and its `WORLD_ANCHOR` component; the perf-auditor's pass with 200
@@ -900,7 +900,7 @@ As built:
     clip x and y are used undivided (dividing by the negative `w` mirrors them); straight behind
     points down. Past `maxDistance` (default the layer's `cullDistance`) it hides, clamped or not;
     `getDistance` still reports it (a waypoint's '120 m', the app's text).
-  - Writes: `transform: translate3d()` when the rounded position changed, `data-state`
+  - Writes: `transform: translate()` (2D: piece 5) when the rounded position changed, `data-state`
     (`shown` / `clamped` / `hidden`, `display: none`) when it changed. `depthSort` is an insertion
     sort in place (nearly sorted from the frame before) with a `z-index` written only where an
     anchor's place changed; hidden anchors go to the back.
@@ -974,6 +974,42 @@ As built:
     reach the kit's DOM helpers), a real `ECSWorld` and three's cameras.
   - **For the perf pass:** `getCanvasSize()` makes two objects a call (the source's `read` and
     its result), so the default `size` allocates every frame.
+- **The perf pass** (D7, p800 §5): the perf-auditor agent read the per-frame path (the sync, the
+  layer, the projection, the compass, the minimap frame, the component storage), and the
+  throwaway viewer measured it (`.cache/p808view/perf.ts`, `layers.ts`: 200 anchors, 20 of them
+  clamped waypoints, half of them moving every frame, under an orbiting camera with a compass,
+  600 frames, 1280 × 720, Chromium on macOS, CDP's `Performance` and `LayerTree`).
+  - Measured: `layer.update` 0.12 ms a frame on average (p95 0.2 ms, max 1 ms) with about 136
+    anchors shown; the page's whole task time about 1.7 ms a frame, style recalculation 0.26 ms
+    and layout 0.08 ms a frame (one style pass a frame; layout in fewer than half the frames, all
+    inside the layer's `contain: strict`); `depthSort` changed none of it measurably. At most 4
+    compositor layers.
+  - **Fixed:** the anchors' `translate3d()` is now a 2D `translate()` (the auditor: a 3D
+    transform can make each anchor its own compositor layer). The measurement didn't show it
+    (4 layers and the same cost either way in this Chromium), but the positions are rounded, so
+    the 3D form bought nothing.
+  - **Written down, not changed:**
+    - The sync's `for … of` over the component storage makes an entry array per entity unless
+      V8's escape analysis removes it (often, not always). Every effect in the toolkit iterates
+      its storage this way, and `IComponentStorage` has no `forEach`: a change for the ECS core,
+      not this plan.
+    - `getCanvasSize()` (the default `size`) makes two small objects a frame, and a mount's size
+      source reads `clientWidth` / `clientHeight` (a layout read, after the frame before's
+      writes have been laid out by its render, so low risk). The fix would be the engine's (an
+      `out` argument, or a public `onCanvasResize`); the option's `@remarks` tells an app to
+      return a kept object updated on a resize.
+    - A marker's `left` in the compass is a layout property, contained in its track's box: fine
+      for a few markers, worth a transform only with tens.
+  - Fine as is (the auditor's list): the projection (scalar maths into a kept `Float64Array`),
+    the layer's guards (position, state, angle, `z-index` each written on a change only), the
+    kept view and matrix, the compass's and the frame's tenth-of-a-degree and one-degree guards,
+    the strings built only inside those guards, the order (positions before `update`, after the
+    render's matrices).
+- **The entry:** 174 value names on `aekasha/ui` (`createWorldAnchorLayer`, `createCompass`,
+  `createMinimapFrame`) and their types (`WorldAnchor*`, `Compass*`, `MinimapFrame*`); on
+  `aekasha/toolkit/ecs` `WorldAnchorComponentType`, `getCompassBearing`,
+  `registerWorldAnchorSync`, `unregisterWorldAnchorSync`, `WorldAnchorData`,
+  `WorldAnchorSyncOptions`.
 
 ### Phase 8: the example, the Hub, the docs
 

@@ -2,19 +2,19 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3131,
-      "total": 3131
+      "documented": 3164,
+      "total": 3164
     },
     "members": {
-      "documented": 1043,
-      "total": 1043
+      "documented": 1049,
+      "total": 1049
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3051,
-        "total": 3051
+        "documented": 3078,
+        "total": 3078
       },
       "members": {
         "documented": 890,
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 80,
-        "total": 80
+        "documented": 86,
+        "total": 86
       },
       "members": {
-        "documented": 153,
-        "total": 153
+        "documented": 159,
+        "total": 159
       }
     }
   },
@@ -749,8 +749,22 @@
     },
     "engine/ui/game": {
       "exports": {
-        "documented": 65,
-        "total": 65
+        "documented": 78,
+        "total": 78
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game/anchors": {
+      "exports": {
+        "documented": 14,
+        "total": 14
       },
       "members": {
         "documented": 0,
@@ -861,12 +875,12 @@
     },
     "toolkit/ecs/effects": {
       "exports": {
-        "documented": 19,
-        "total": 19
+        "documented": 25,
+        "total": 25
       },
       "members": {
-        "documented": 20,
-        "total": 20
+        "documented": 26,
+        "total": 26
       },
       "undocumented": {
         "exports": [],

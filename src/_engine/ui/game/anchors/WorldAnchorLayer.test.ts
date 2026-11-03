@@ -49,11 +49,11 @@ describe('world anchor layer (p808 D7)', () => {
     layer.update(createView());
     expect(anchor.getState()).toBe('shown');
     expect(elem.getAttribute('data-state')).toBe('shown');
-    expect(elem.style.transform).toBe('translate3d(60px, 41px, 0)');
+    expect(elem.style.transform).toBe('translate(60px, 41px)');
     expect(anchor.getDistance()).toBeCloseTo(Math.sqrt(105));
     anchor.setPosition(2.04, 1, -10);
     layer.update(createView());
-    expect(elem.style.transform).toBe('translate3d(60px, 41px, 0)');
+    expect(elem.style.transform).toBe('translate(60px, 41px)');
     layer.cmp.remove();
   });
 
@@ -72,7 +72,7 @@ describe('world anchor layer (p808 D7)', () => {
     // A move of a pixel writes it
     anchor.setPosition(0.2, 0, -10);
     layer.update(view);
-    expect(elem.style.transform).toBe('translate3d(51px, 50px, 0)');
+    expect(elem.style.transform).toBe('translate(51px, 50px)');
     layer.cmp.remove();
   });
 
@@ -104,12 +104,12 @@ describe('world anchor layer (p808 D7)', () => {
     expect(waypoint.getState()).toBe('clamped');
     expect(elem.getAttribute('data-state')).toBe('clamped');
     // The offset isn't applied while clamped
-    expect(elem.style.transform).toBe('translate3d(90px, 50px, 0)');
+    expect(elem.style.transform).toBe('translate(90px, 50px)');
     expect(elem.style.getPropertyValue('--aek-world-anchor-angle')).toBe('0deg');
     // Behind the camera, to the left
     waypoint.setPosition(-3, 0, 10);
     layer.update(createView());
-    expect(elem.style.transform).toBe('translate3d(10px, 50px, 0)');
+    expect(elem.style.transform).toBe('translate(10px, 50px)');
     expect(elem.style.getPropertyValue('--aek-world-anchor-angle')).toBe('180deg');
     layer.cmp.remove();
   });

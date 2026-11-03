@@ -41,8 +41,13 @@ export interface WorldAnchorSyncOptions {
   /** The camera to project with (default `getActiveCamera`); a frame it returns none in updates
    * nothing. */
   camera?: () => THREE.Camera | undefined;
-  /** The size the camera renders into, in CSS px (default `getCanvasSize`; an `'inline'` layer's
-   * box gives its own). */
+  /**
+   * The size the camera renders into, in CSS px (default `getCanvasSize`; an `'inline'` layer's
+   * box gives its own).
+   * @remarks It's called every frame, after the anchors' writes of the frame before: return a kept
+   * object updated on a resize, not a box read here (a layout read then forces a layout).
+   * `getCanvasSize` makes two small objects a call.
+   */
   size?: () => { width: number; height: number };
 }
 
