@@ -77,7 +77,8 @@
   :where(.aekItemSlot[aria-pressed='true'])::after {
     content: '';
     position: absolute;
-    top: calc(100% + var(--aek-space-2));
+    // Clear of the border and the ring outside it
+    top: calc(100% + var(--aek-space-3) + 2px);
     left: 25%;
     width: 50%;
     height: 3px;

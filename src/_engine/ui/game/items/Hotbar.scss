@@ -1,0 +1,40 @@
+// The hotbar's default styles (Hotbar.ts), on the design tokens and layered (p803 D5): an app's
+// unlayered rule wins, and every selector is in :where(). A row of item slots on a faint panel,
+// centred at the bottom of the HUD's bounds (fixed there) or in a panel's flow; the room at its
+// end side is for the selected slot's bar (ItemSlot.scss), which a vertical bar puts at the start.
+@layer aek.components {
+  :where(.aekHotbar) {
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--aek-space-3);
+    width: max-content;
+    max-width: 100%;
+    padding: var(--aek-space-3);
+    padding-bottom: calc(var(--aek-space-3) * 2 + 3px);
+    border-radius: var(--aek-radius-lg);
+    background-color: var(--aek-hotbar-bg, color-mix(in srgb, var(--aek-surface) 60%, transparent));
+  }
+
+  :where(.aekHotbar[data-orientation='vertical']) {
+    flex-direction: column;
+    padding: var(--aek-space-3);
+    padding-left: calc(var(--aek-space-3) * 2 + 3px);
+  }
+
+  :where(.aekHotbar[data-placement='bottom']) {
+    position: fixed;
+    bottom: var(--aek-hotbar-inset, var(--aek-space-5));
+    left: 50%;
+    z-index: var(--aek-hotbar-z, var(--aek-z-window));
+    max-width: calc(100% - var(--aek-space-6) * 2);
+    transform: translateX(-50%);
+  }
+
+  // A vertical bar's selected slot: the bar at its start, not under it
+  .aekHotbar:where([data-orientation='vertical']) :where(.aekItemSlot[aria-pressed='true'])::after {
+    top: 25%;
+    left: calc((var(--aek-space-3) + 3px) * -1);
+    width: 3px;
+    height: 50%;
+  }
+}

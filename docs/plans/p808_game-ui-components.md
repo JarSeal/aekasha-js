@@ -684,6 +684,28 @@ As built so far:
   the details (piece 4): the border isn't its only sign. An empty slot's border is dashed; a pressed
   one has rings outside and inside and a bar under it (distinct from the focus outline).
   `getRarityLabel` is `@internal`, for the details.
+- **The hotbar** (`game/items/Hotbar.ts`): `createHotbar({ slots, label?, selected?, keyHints?,
+  cooldowns?, onCooldownReady?, onUse?, size?, orientation?, placement?: 'bottom' | 'inline' })` →
+  `{ cmp, slots, setItem, select, selectNext, getSelected, getSelectedItem }`; the slot count is
+  set by `slots` (items or null).
+  - `onUse(index, item)` is a slot's click, Enter or Space, the one callback: the app uses the item
+    (an ability bar) or calls `select(index)` (a touch screen's hotbar). The hotbar binds no keys:
+    the app's map calls `select` for the number keys and `selectNext(±1)` for the wheel and the
+    shoulders. A running cooldown doesn't stop `onUse` (the cooldown's own rule: the action
+    checks it).
+  - Without `selected` there's no selection and the slots are plain buttons (an ability bar); the
+    first `select` makes every slot a toggle. `select` writes only the old and the new slot; the
+    tab stop follows it and it's announced ('Iron sword selected', the kit's announcer) only while
+    the focus isn't on the bar (on the bar, the stop is where the player is and the toggle's state
+    is read). `selectNext` goes round, from none 1 is the first and -1 the last.
+  - `keyHints` default '1'-'9', '0' (the slots' `aria-keyshortcuts`), `false` for none, or an
+    array of keys or handles by index. Keys: the toolbar's roving tab stop (`RovingFocus.ts`), the
+    arrows along the orientation round, Home / End; Enter and Space stopped (not prevented) before
+    the action maps.
+  - `'bottom'` is fixed, centred at `--aek-hotbar-inset` (default `--aek-space-5`) from the
+    bounds' bottom; a `md` bar reaches about 100 px up, over the subtitles' default inset (64 px),
+    so an app with both raises `--aek-subtitles-inset` (Phase 8's example; the guide says so). A vertical bar puts the selected
+    slot's bar at its start (`.aekHotbar:where(…) :where(.aekItemSlot…)::after`, one class).
 
 ### Phase 6: settings
 
