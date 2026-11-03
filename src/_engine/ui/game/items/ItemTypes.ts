@@ -22,4 +22,24 @@ export type GameItem = {
   /** The rarity's word as it's read and shown in the details (default the rarity with a capital:
    * 'Rare'). */
   rarityLabel?: string;
+  /** A line or two about it, shown in its details ('A plain blade, well kept.'). */
+  description?: string;
+  /** Its numbers, shown in its details as rows and compared with another item's of the same id. */
+  stats?: readonly ItemStat[];
+};
+
+/** One of an item's numbers ('Damage 12'), as its details show and compare it. */
+export type ItemStat = {
+  /** Which stat it is: two items' stats of the same id are compared. */
+  id: string;
+  /** Its name ('Damage'). */
+  label: string;
+  /** Its value. */
+  value: number;
+  /** Writes a value and a difference's size ('12', '1.5 s', '8 %'); default the number, rounded
+   * to two decimals. */
+  format?: (value: number) => string;
+  /** Whether less is better (a weight, a cast time): the comparison's better and worse turn round.
+   * Default false. */
+  lowerIsBetter?: boolean;
 };

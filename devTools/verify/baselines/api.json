@@ -3617,6 +3617,40 @@
       "InputPromptProps": "TypeAlias",
       "setPromptDevice": "Function"
     },
+    "src/_engine/ui/game/items/Hotbar.ts": {
+      "createHotbar": "Function",
+      "Hotbar": "TypeAlias",
+      "HotbarProps": "TypeAlias"
+    },
+    "src/_engine/ui/game/items/InventoryGrid.ts": {
+      "createInventoryGrid": "Function",
+      "InventoryGrid": "TypeAlias",
+      "InventoryGridProps": "TypeAlias"
+    },
+    "src/_engine/ui/game/items/ItemDetails.ts": {
+      "createItemDetails": "Function",
+      "ItemDetails": "TypeAlias",
+      "ItemDetailsProps": "TypeAlias"
+    },
+    "src/_engine/ui/game/items/ItemDragGroup.ts": {
+      "createItemDragGroup": "Function",
+      "HeldItem": "TypeAlias",
+      "InventoryMove": "TypeAlias",
+      "ItemDragGroup": "TypeAlias",
+      "ItemDragGroupImpl": "TypeAlias",
+      "ItemDragHost": "TypeAlias",
+      "useItemDragGroup": "Function"
+    },
+    "src/_engine/ui/game/items/ItemSlot.ts": {
+      "createItemSlot": "Function",
+      "getRarityLabel": "Function",
+      "ItemSlot": "TypeAlias",
+      "ItemSlotProps": "TypeAlias"
+    },
+    "src/_engine/ui/game/items/ItemTypes.ts": {
+      "GameItem": "TypeAlias",
+      "ItemStat": "TypeAlias"
+    },
     "src/_engine/ui/game/NotificationFeed.ts": {
       "createNotificationFeed": "Function",
       "NotificationFeed": "TypeAlias",
@@ -5009,6 +5043,7 @@
       "Form",
       "FormChild",
       "FormProps",
+      "GameItem",
       "GameMenu",
       "GameMenuItem",
       "GameMenuPage",
@@ -5021,7 +5056,10 @@
       "GraphMonitorProps",
       "GraphPart",
       "GraphPartFormat",
+      "HeldItem",
       "HitMarkerKind",
+      "Hotbar",
+      "HotbarProps",
       "HudPlacement",
       "HudRootProps",
       "InputGlyph",
@@ -5034,6 +5072,15 @@
       "InputPromptBinding",
       "InputPromptDevice",
       "InputPromptProps",
+      "InventoryGrid",
+      "InventoryGridProps",
+      "InventoryMove",
+      "ItemDetails",
+      "ItemDetailsProps",
+      "ItemDragGroup",
+      "ItemSlot",
+      "ItemSlotProps",
+      "ItemStat",
       "KEEP_IN_VIEWS_CLASS",
       "KIT_ROOT_CLASS",
       "Kbd",
@@ -5241,9 +5288,14 @@
       "createGameMenu",
       "createGradientEditor",
       "createGraphMonitor",
+      "createHotbar",
       "createHudRoot",
       "createInputGlyph",
       "createInputPrompt",
+      "createInventoryGrid",
+      "createItemDetails",
+      "createItemDragGroup",
+      "createItemSlot",
       "createKbd",
       "createLink",
       "createList",

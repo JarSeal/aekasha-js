@@ -21,4 +21,10 @@
     line-height: var(--aek-line-height-base);
     overflow-wrap: break-word;
   }
+
+  // Content (an item's details, p808): wider, with room round it
+  :where(.aekTooltip[data-content]) {
+    max-width: min(40ch, var(--aek-anchor-max-width, 100%));
+    padding: var(--aek-space-3);
+  }
 }

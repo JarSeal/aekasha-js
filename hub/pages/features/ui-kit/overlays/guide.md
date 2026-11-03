@@ -216,11 +216,23 @@ An icon button's tooltip that only repeats its `aria-label` describes nothing mo
 named in `aria-describedby`. `onlyWhenTruncated: true` shows a label's whole text only while an
 ellipsis cuts it (the windows' titles use it). A kit button or link takes a `tooltip` prop instead.
 
+`content` in place of `text` shows more than a line, still never interactive: an item's details
+over its inventory slot. A CMP is kept for the tooltip's life; a function is built on each show
+and removed on hide, so it shows what's true when it opens. It's read as the anchor's description
+like a text.
+
+```ts
+createTooltip({
+  anchor: slot.cmp.elem,
+  content: () => createItemDetails({ item: slot.getItem(), compareTo: equipped }).cmp,
+});
+```
+
 | Tooltip           |                                                            |
 | ----------------- | ---------------------------------------------------------- |
 | Props             | [`TooltipProps`](api:TooltipProps)                         |
 | Parts             | `.aekTooltip`, in the HUD root while it shows              |
-| States            | `data-side` (where it opened)                              |
+| States            | `data-side` (where it opened), `data-content` (`content`)  |
 | Custom properties | `--aek-tooltip-delay`, on the anchor or any ancestor       |
 | Keys              | Shown on a keyboard focus at once; Escape hides it         |
 | Assistive tech    | `role="tooltip"`; the anchor's `aria-describedby` names it |

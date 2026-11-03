@@ -1,0 +1,136 @@
+// The item details' default styles (ItemDetails.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). A header with the rarity's
+// stripe (the word says it too), the description muted, the stats as two columns, a comparison as
+// an arrow, a sign and the difference in the success or danger role (p808 D4: never colour alone).
+@layer aek.components {
+  :where(.aekItemDetails) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-3);
+    width: var(--aek-item-details-width, 18em);
+    max-width: 100%;
+    color: var(--aek-text);
+    font-size: var(--aek-font-size-sm);
+    line-height: var(--aek-line-height-base);
+  }
+
+  :where(.aekItemDetails[data-rarity='uncommon']) {
+    --aek-item-details-rarity-color: var(--aek-success);
+  }
+
+  :where(.aekItemDetails[data-rarity='rare']) {
+    --aek-item-details-rarity-color: var(--aek-chart-1);
+  }
+
+  :where(.aekItemDetails[data-rarity='epic']) {
+    --aek-item-details-rarity-color: var(--aek-chart-3);
+  }
+
+  :where(.aekItemDetails[data-rarity='legendary']) {
+    --aek-item-details-rarity-color: var(--aek-chart-5);
+  }
+
+  :where(.aekItemDetails[data-state='empty']) {
+    width: auto;
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekItemDetails__header) {
+    padding-left: var(--aek-space-3);
+    border-left: 3px solid var(--aek-item-details-rarity-color, var(--aek-border-strong));
+  }
+
+  :where(.aekItemDetails__name, .aekItemDetails__rarity, .aekItemDetails__description, .aekItemDetails__compare) {
+    margin: 0;
+  }
+
+  :where(.aekItemDetails__name) {
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-semibold);
+  }
+
+  :where(.aekItemDetails__rarity, .aekItemDetails__description, .aekItemDetails__compare) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekItemDetails__compare) {
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekItemDetails__stats) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--aek-space-1) var(--aek-space-4);
+    margin: 0;
+  }
+
+  // The rows are the grid's: each label and value a cell
+  :where(.aekItemDetails__stat) {
+    display: contents;
+  }
+
+  :where(.aekItemDetails__statLabel, .aekItemDetails__statValue) {
+    margin: 0;
+  }
+
+  :where(.aekItemDetails__statValue) {
+    font-variant-numeric: var(--aek-numeric-tabular);
+    font-weight: var(--aek-font-weight-semibold);
+    text-align: end;
+  }
+
+  // Compared: the values and the differences in columns of their own (the value cell a subgrid)
+  :where(.aekItemDetails__stats[data-compared]) {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  :where(.aekItemDetails__stats[data-compared]) :where(.aekItemDetails__statValue) {
+    display: grid;
+    grid-column: span 2;
+    grid-template-columns: subgrid;
+  }
+
+  :where(.aekItemDetails__value) {
+    grid-column: 1;
+  }
+
+  :where(.aekItemDetails__stat[data-missing]) :where(.aekItemDetails__statLabel, .aekItemDetails__value) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekItemDetails__diff) {
+    display: inline-flex;
+    grid-column: 2;
+    gap: var(--aek-space-1);
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  :where(.aekItemDetails__stat[data-change='better']) :where(.aekItemDetails__diff) {
+    color: var(--aek-success);
+  }
+
+  :where(.aekItemDetails__stat[data-change='worse']) :where(.aekItemDetails__diff) {
+    color: var(--aek-danger);
+  }
+
+  :where(.aekItemDetails__stat[data-change='same']) :where(.aekItemDetails__diff) {
+    color: var(--aek-text-muted);
+  }
+
+  // A triangle, up for better, down for worse
+  :where(.aekItemDetails__arrow) {
+    width: 0;
+    height: 0;
+    border-right: 0.32em solid transparent;
+    border-left: 0.32em solid transparent;
+  }
+
+  :where(.aekItemDetails__arrow[data-direction='up']) {
+    border-bottom: 0.5em solid currentColor;
+  }
+
+  :where(.aekItemDetails__arrow[data-direction='down']) {
+    border-top: 0.5em solid currentColor;
+  }
+}

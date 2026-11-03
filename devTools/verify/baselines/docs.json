@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3073,
-      "total": 3073
+      "documented": 3095,
+      "total": 3095
     },
     "members": {
       "documented": 1043,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2993,
-        "total": 2993
+        "documented": 3015,
+        "total": 3015
       },
       "members": {
         "documented": 890,
@@ -751,6 +751,20 @@
       "exports": {
         "documented": 54,
         "total": 54
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game/items": {
+      "exports": {
+        "documented": 22,
+        "total": 22
       },
       "members": {
         "documented": 0,

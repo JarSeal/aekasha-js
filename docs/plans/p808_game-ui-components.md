@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -656,12 +656,12 @@ As built:
 - **The entry:** 161 value names (158 + the three), and their types (`NavigationDirection`,
   `SpatialNavigation*`, `RadialMenu*`, `GameMenu*`).
 
-### Phase 5: items
+### Phase 5: items — done
 
 `createItemSlot`, `createHotbar`, `createInventoryGrid` with `createItemDragGroup`,
 `createItemDetails` (D11).
 
-As built so far:
+As built:
 
 - **The folder** is `game/items/` (D2 named `game/inventory/` as an example): the four pieces share
   the item type, `ItemTypes.ts`' `GameItem` (`{ id, name, icon?, image?, count?, rarity?,
@@ -743,6 +743,44 @@ As built so far:
     by one hidden 'Holding Iron sword' (an id added to each `aria-describedby` while held); a drop
     says what happened ('… moved to Bag, row 2, column 1' across grids, '… swapped with Bow',
     '… stacked'), the kit's announcer.
+- **The tooltip's `content`** (`overlays/Tooltip.ts`, decided here: D11's "the content for a
+  tooltip or a popover" met a text-only tooltip): `TooltipProps.text` is optional and `content`
+  takes its place, a CMP added once and kept, or a function built on each show and removed on hide
+  (a slot's tooltip shows the slot's item then); `data-content` widens it to 40ch with more
+  padding; still never interactive, read as the anchor's description; `setText` does nothing on
+  one. The popover was no fit (its trigger's click is the grid's pick). The overlays guide's
+  Tooltips section shows it. Its cost: +179 B of script and +115 B of CSS in the tooltip's chunks
+  (`DialogWindow`, `uiKitEmbed`), about 70 B gzip, recorded in the bundle baselines; no first
+  download changed.
+- **The details** (`game/items/ItemDetails.ts`): `createItemDetails({ item, compareTo?,
+  compareLabel?, emptyLabel? })` → `{ cmp, setItem(item, compareTo?) }`. `GameItem` gained
+  `description` and `stats` (`ItemStat`: `{ id, label, value, format?, lowerIsBetter? }`).
+  - A header (`__name`, `__rarity`: the rarity's word, its colour a stripe at the header's start,
+    not the text, which stays `--aek-text` for contrast), `__description`, the stats as a `dl`
+    (`__stat` rows `display: contents` in a grid; compared, `data-compared` gives a third column and
+    each `dd` is a subgrid, so the values and the differences line up), `__compare` ('Compared with
+    Bronze dagger', `compareLabel`).
+  - A comparison by stat id: the arrow says better (up) or worse (down), the sign which way the
+    number went ('▼ +0.4 s': a longer attack time, worse), the colour the success or danger role,
+    and a visually hidden text the words ('1.2 s, 0.4 s more, worse'); the same value a muted '='
+    ('the same'); a stat only the other item has a row with '–' (lost by the change). The
+    difference is rounded to 6 decimals before the app's `format` (1.2 − 0.8 was 0.3999…).
+  - Compared with itself (the same object): no comparison. No item: `emptyLabel` ('Empty slot'),
+    `data-state="empty"`.
+  - D11's option 2, the details in a panel beside the inventory that follows the focused slot (a
+    gamepad hovers nothing), is the same piece with `setItem` on the grid's `focusin`: Phase 8's
+    guide and example show it.
+- **Checked:** `yarn test`, lint, both `tsc`, the docs ratchet, `yarn verify:baselines --update`
+  (the names; no debug code), `yarn hub:build`; each piece looked at in Chromium in both themes
+  with the throwaway viewer (`.cache/p808view/`: `slot`, `hotbar`, `grid`, `details`), which
+  moved the pressed slot's bar clear of its ring, shrank the drag ghost and kept its grab point,
+  and aligned the details' columns.
+- **The entry:** five value names more (`createItemSlot`, `createHotbar`, `createInventoryGrid`,
+  `createItemDragGroup`, `createItemDetails`): 169 counting every value name of `index.ts`'
+  `export { … }` lines, where Phase 4's commit counts 164 (its note's 161 was counted another
+  way); and their types (`GameItem`, `ItemStat`,
+  `ItemSlot*`, `Hotbar*`, `InventoryGrid*`, `InventoryMove`, `HeldItem`, `ItemDragGroup`,
+  `ItemDetails*`).
 
 ### Phase 6: settings
 

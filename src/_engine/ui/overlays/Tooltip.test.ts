@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
+import { CMP } from '../core/CMP';
 import { createHudRoot, getHUDRootCMP } from '../core/HUD';
 import { createTooltip } from './Tooltip';
 
@@ -101,6 +102,39 @@ describe('tooltip (p803 D10)', () => {
     tooltip.cmp.remove();
     expect(vi.getTimerCount()).toBe(0);
     expect(countListeners(document, 'scroll')).toBe(0);
+  });
+
+  it('shows a CMP content, kept, and describes the anchor with it (p808)', () => {
+    const content = CMP({ class: 'details', text: 'Iron sword' });
+    const tooltip = createTooltip({ anchor, content });
+    expect(tooltip.cmp.elem.hasAttribute('data-content')).toBe(true);
+    expect(anchor.getAttribute('aria-describedby')).toBe(`hint ${tooltip.cmp.id}`);
+    tooltip.show();
+    expect(tooltip.cmp.elem.firstElementChild).toBe(content.elem);
+    tooltip.hide();
+    expect(content.elem.parentElement).toBe(tooltip.cmp.elem);
+    // The content is the app's to change
+    tooltip.setText('Other');
+    expect(tooltip.cmp.elem.firstElementChild).toBe(content.elem);
+    tooltip.cmp.remove();
+    expect(content.elem.parentElement).toBeNull();
+  });
+
+  it('builds a function content on each show and removes it on hide (p808)', () => {
+    const removed = vi.fn();
+    const make = vi.fn(() => CMP({ text: 'Built', onRemoveCmp: removed }));
+    const tooltip = createTooltip({ anchor, content: make });
+    expect(make).not.toHaveBeenCalled();
+    tooltip.show();
+    expect(make).toHaveBeenCalledTimes(1);
+    expect(tooltip.cmp.elem.textContent).toBe('Built');
+    tooltip.hide();
+    expect(removed).toHaveBeenCalledTimes(1);
+    expect(tooltip.cmp.elem.textContent).toBe('');
+    tooltip.show();
+    expect(make).toHaveBeenCalledTimes(2);
+    tooltip.cmp.remove();
+    expect(removed).toHaveBeenCalledTimes(2);
   });
 
   it('setText writes the text in place', () => {
