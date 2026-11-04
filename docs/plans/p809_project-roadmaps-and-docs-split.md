@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -579,12 +579,41 @@ As built:
   under the header. A save of p990 rebuilt in 1.2 s and reloaded only `project/aekasha/roadmap/`.
   The dev Hub has 112 pages (110 before).
 
-### Phase 6: the docs
+### Phase 6: the docs — done
 
 D9's list: `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md`, the root `CLAUDE.md`'s Ækasha Hub
 sentence, `project/aekasha/workflow.md`, `project/app/`'s intro, `readme.md`'s Roadmap and
 Documentation. `yarn hub:build` (dead links, coverage) and one `yarn verify:baselines` (the
 app's build unchanged).
+
+As built:
+
+- Already done with the code (Phases 1-5) and left as they were: both Hub `CLAUDE.md` files,
+  `docs/plans/CLAUDE.md`, the root's map and Workflow lines, the Issues page's intro and
+  `aek:description`.
+- The root `CLAUDE.md`'s Project sentence lists the roadmaps before the component library, so its
+  closing "a new token or UI kit piece shows there" still follows the library.
+- `workflow.md`: Plans names `docsApp/plans/` and links the app page's section; a paragraph after
+  the epics on both roadmaps and their warnings; "Finishing a plan" step 2 names the app's plans'
+  references; Issues names `docsApp/issues/`, the shared `issues/<name>/` URLs and the roadmaps'
+  issues by area.
+- `project/app/`'s "The app's plans and issues" is a `##` section of its `conventions` slot
+  (where the page's `##` sections are), between its design and its version: D2's rules for a
+  reader, the roadmap link, the app's issues being public, and `docs/plans/CLAUDE.md`'s section.
+  Phase 5's roadmap sentence in the intro moved into it; the intro lists what the page covers,
+  and the page's description and tags gain plans and issues. The Hub's slug of the heading is
+  `#the-app-s-plans-and-issues` (`slugify` turns the apostrophe into a hyphen; GitHub's, for the
+  `repo:` link, is `#the-apps-plans-and-issues`).
+- Outside D9's list: `project/`'s intro ("Plans first" names `docsApp/plans/` and links both
+  roadmaps), `issues/index.html`'s comment, and `readme.md`'s Project structure tree (a
+  `docsApp/` line). The readme's Documentation list also says where the issues are.
+- The readme's highlights checked as p621 did: p355, p102, p250, p500, p240 and p354 are still
+  open, and scene-JSON physics stays a wish. Unchanged.
+- Checks: a dev build (`buildHub({ mode: 'dev', api: 'last', isEmbedLive: false })` into a scratch
+  folder, the only one that renders the Project pages' links): 112 pages, no error or warning.
+  `yarn hub:build`: 103 pages, the search index 485 KiB gzipped with 624 page sections (Phase 0's
+  figures: the public Hub is unchanged), its one warning the known index size, no `project/` in
+  `dist-hub/`. `yarn verify:baselines`: every baseline unchanged, no debug code.
 
 ### Phase 7: done (this plan, and p800's epic)
 
