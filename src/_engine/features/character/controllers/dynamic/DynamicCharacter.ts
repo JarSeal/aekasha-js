@@ -14,12 +14,10 @@ import type {
   CharacterObject,
   LocomotionStateListener,
 } from '../../CharacterTypes';
-import { getBodyKind, HUMANOID_CAPSULE } from '../../CharacterBodyPlans';
+import { HUMANOID_CAPSULE } from '../../CharacterBodyPlans';
 import { clearIntentSubStep, createIntent } from '../../CharacterIntent';
-import { getInputBrainSpec, type CharacterInputOpts } from '../../CharacterInputSchemes';
 import type { CharacterBrainSpec } from '../../ActorTypes';
 import { createBrain } from '../../ActorKinds';
-import { lwarn } from '../../../../utils/Logger';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { getECSWorld } from '../../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../../kernel/ecs/ECSCoreComponents';
@@ -31,7 +29,6 @@ import {
   BAKED_CONFIG_KEYS,
   createDynamicCharacterData,
   DERIVED_CONFIG,
-  type CharacterData,
   type DynamicCharacterConfig,
   type DynamicCharacterContext,
   type DynamicCharacterController,
@@ -65,12 +62,6 @@ export type DynamicCharacterParams = {
   body?: CharacterBodyPlan;
   /** The configuration, over the defaults (see {@link DynamicCharacterConfig}). */
   config?: Partial<DynamicCharacterConfig>;
-  /**
-   * Overrides of the default data as one flat object: configuration keys with one underscore
-   * (`_maxVelocity`), state keys as they are. `config` wins over its `_` keys.
-   * @deprecated Use `config` (removed in engine 6.0.0).
-   */
-  charData?: Partial<CharacterData>;
 };
 
 /** {@link createDynamicCharacter}'s options. */
@@ -87,12 +78,6 @@ export type DynamicCharacterOpts = DynamicCharacterParams & {
    * (`TANK`, `WORLD_FIXED`, `CAMERA_RELATIVE`) on its own action map. Without one, code drives
    * the character through its intent. Switch it later with `setCharacterBrain`. */
   brain?: CharacterBrainSpec;
-  /**
-   * Keyboard input: a scheme and its key mappings, made into the player brain of the same kind
-   * (ignored when `brain` is given).
-   * @deprecated Use `brain` (removed in engine 6.0.0).
-   */
-  input?: CharacterInputOpts;
   /** Called on every locomotion state change (the same as registering it with
    * `onLocomotionStateChange` right after creation). */
   onLocomotionStateChange?: LocomotionStateListener;
@@ -105,12 +90,6 @@ export type DynamicCharacter = {
   /** The controller (the same object as `character.controller`): its `state`, `config` and
    * `internal`. */
   controller: DynamicCharacterController;
-  /**
-   * The live data as one flat object (the same object as `character.data`).
-   * @deprecated Use `controller.state`, `controller.config.values` and `controller.internal`
-   * (removed in engine 6.0.0).
-   */
-  data: CharacterData;
   /** The character's intent (the same object as `character.intent`). */
   intent: CharacterIntent;
   /** Shorthands that write the intent (nothing else: the tick is what moves the body). Call the
@@ -235,7 +214,7 @@ const getBodyColliders = (c: DynamicCharacterContext, body: CharacterBodyPlan) =
     const index = bodyColliders.findIndex((collider) => collider.role === role);
     if (index === -1) {
       throw new Error(
-        `createDynamicCharacter: body plan '${getBodyKind(body)}' has no '${role}' collider (character '${c.id}').`
+        `createDynamicCharacter: body plan '${body.bodyKind}' has no '${role}' collider (character '${c.id}').`
       );
     }
     indexes[role] = index;
@@ -324,17 +303,11 @@ export const createDynamicCharacter = async (
     name,
     visual,
     body = HUMANOID_CAPSULE,
-    input: inputOpts,
+    brain: brainSpec,
     onLocomotionStateChange: locomotionStateListener,
   } = opts;
-  if (opts.brain && inputOpts) {
-    lwarn(
-      `createDynamicCharacter: '${id}' has both 'brain' and the deprecated 'input': 'input' is ignored.`
-    );
-  }
-  const brainSpec = opts.brain ?? (inputOpts ? getInputBrainSpec(inputOpts) : undefined);
 
-  const data = createDynamicCharacterData(opts.charData, opts.config);
+  const data = createDynamicCharacterData(opts.config);
   const c = createContext(id, data, body.getDimensions(data.config));
   const { intent } = c;
   const colliders = getBodyColliders(c, body);
@@ -355,10 +328,9 @@ export const createDynamicCharacter = async (
     character = await createCharacter({
       id,
       name,
-      bodyKind: getBodyKind(body),
+      bodyKind: body.bodyKind,
       physicsParams: { colliders: colliders.params, rigidBody: rigidBodyParams },
       visual,
-      data: data.view,
       intent,
       brain,
     });
@@ -395,5 +367,5 @@ export const createDynamicCharacter = async (
     run: () => (intent.run = !intent.run),
     crouch: () => (intent.crouch = !intent.crouch),
   };
-  return { character, controller, data: data.view, intent, controlFns };
+  return { character, controller, intent, controlFns };
 };

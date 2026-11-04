@@ -497,6 +497,26 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 - **Section 2, characters:** the list in Grounding; `getInputBrainSpec`'s mapping goes with
   `CharacterInputScheme`. Re-check that no debug tool reads the flat `data` view first. The
   character scenes' hashes (`thirdPersonGymScene`, the character examples) must not move.
+
+  As built (section 2):
+
+  - Re-checked first: nothing read the flat `data` view; the Characters tab's info rows read
+    `keyBindingIds` / `mouseBindingIds` (removed with them) and `Casts.ts` wrote `resolvedAt`.
+  - **`CharacterInputSchemes.ts` went whole**, so `aekasha/character` also lost the mapping
+    types only the `input` option used: `CharacterActionMappings`, `TankInputMappings`,
+    `WorldFixedInputMappings`, `CameraRelativeInputMappings` and `CharacterInputCommonOpts`
+    (not deprecated themselves; D11's table and section 5's reports name them with
+    `CharacterInputOpts`). `CharacterInputScheme` wasn't on the entry.
+  - `CharacterBodyKindField` stays, as `{ bodyKind: string }`; `getBodyKind` (`@internal`, the
+    `bodyKind ?? kind` fallback) went, its callers read `bodyKind`.
+  - `createCharacter` no longer imports the keyboard and mouse bindings; its delete hook disposes
+    the brain and the controller only.
+  - `yarn verify:scenes` (all scenes, after sections 1-2): 113 of 114 passed with every probe
+    hash and the gym's character paths (`26f43551`) unchanged; the gym's `workerMsg` snapshot
+    differed once (the follow camera a little off: characters in the worker targets aren't
+    deterministic, p428) and passed twice on its own. The bundle baseline's main chunk −1.0 kB gzip
+    (`aekasha/character` −0.7, the input bindings it no longer imports −0.2), the controller's
+    chunk −0.2. Baselines recorded; `yarn hub:build` clean.
 - **Section 3, sky box:** the legacy shape everywhere it's listed, the gatherer's
   `warnOnLegacySkyBox`, the debug tab's LS migration, `ACCEPTED_LEAKS`' `LegacySkyBoxParams` and
   `engineImports.test.ts`' entry. A legacy-shaped JSON is then a schema error naming its field

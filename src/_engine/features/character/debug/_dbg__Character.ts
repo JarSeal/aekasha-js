@@ -119,12 +119,6 @@ const getCharacterInfoItems = (character: CharacterObject): PropertyGridItem[] =
     getInfoRowItem('Brain', character.brain?.kind ?? '- (code)'),
     getInfoRowItem('Control mode', character.controlMode),
     getInfoRowItem('Visual ID', String(character.visualId)),
-    ...(character.keyBindingIds.length
-      ? [getInfoRowItem('Key binding IDs', character.keyBindingIds.join(', '))]
-      : []),
-    ...(character.mouseBindingIds.length
-      ? [getInfoRowItem('Mouse binding IDs', character.mouseBindingIds.join(', '))]
-      : []),
   ];
 };
 
@@ -170,7 +164,7 @@ export const createEditCharacterContent = (data?: { [key: string]: unknown }) =>
       title: 'Open character state window',
       onClick: () => _openCharacterStateWindow(character),
     },
-    // The character holds references to its mesh, body and controls: logged, not copied
+    // The character holds references to its mesh, body and brain: logged, not copied
     {
       type: 'button',
       title: 'Log to the console',

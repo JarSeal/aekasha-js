@@ -301,24 +301,12 @@
       "updateCharactersDebuggerGUI": "Function"
     },
     "src/_engine/features/character/CharacterBodyPlans.ts": {
-      "getBodyKind": "Function",
       "HUMANOID_CAPSULE": "Variable",
       "HumanoidCapsuleDimensions": "TypeAlias"
     },
     "src/_engine/features/character/CharacterFeature.ts": {
       "character": "Function",
       "characterSceneHooks": "Variable"
-    },
-    "src/_engine/features/character/CharacterInputSchemes.ts": {
-      "CameraRelativeInputMappings": "TypeAlias",
-      "CharacterActionMappings": "TypeAlias",
-      "CharacterInputCommonOpts": "TypeAlias",
-      "CharacterInputHoldMode": "TypeAlias",
-      "CharacterInputOpts": "TypeAlias",
-      "CharacterInputScheme": "TypeAlias",
-      "getInputBrainSpec": "Function",
-      "TankInputMappings": "TypeAlias",
-      "WorldFixedInputMappings": "TypeAlias"
     },
     "src/_engine/features/character/CharacterIntent.ts": {
       "addIntentMove": "Function",
@@ -374,7 +362,6 @@
     },
     "src/_engine/features/character/controllers/dynamic/DynamicCharacterData.ts": {
       "BAKED_CONFIG_KEYS": "Variable",
-      "CharacterData": "TypeAlias",
       "createDynamicCharacterData": "Function",
       "DERIVED_CONFIG": "Variable",
       "DynamicCharacterConfig": "TypeAlias",
@@ -4488,8 +4475,6 @@
       "ActorBrain",
       "ActorController",
       "CameraRelativeBrainParams",
-      "CameraRelativeInputMappings",
-      "CharacterActionMappings",
       "CharacterBodyCollider",
       "CharacterBodyData",
       "CharacterBodyKindField",
@@ -4506,11 +4491,7 @@
       "CharacterControllerFactoryOpts",
       "CharacterControllerKinds",
       "CharacterControllerSpec",
-      "CharacterData",
       "CharacterDimensions",
-      "CharacterInputCommonOpts",
-      "CharacterInputHoldMode",
-      "CharacterInputOpts",
       "CharacterIntent",
       "CharacterObject",
       "CharacterProbeDimensions",
@@ -4533,9 +4514,7 @@
       "PlayerBrainHoldMode",
       "TankBrainActions",
       "TankBrainParams",
-      "TankInputMappings",
       "WorldFixedBrainParams",
-      "WorldFixedInputMappings",
       "character",
       "createCharacter",
       "createCharacterOfKind",

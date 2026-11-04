@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3158,
-      "total": 3158
+      "documented": 3147,
+      "total": 3147
     },
     "members": {
       "documented": 1049,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3072,
-        "total": 3072
+        "documented": 3061,
+        "total": 3061
       },
       "members": {
         "documented": 890,
@@ -63,8 +63,8 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 72,
-        "total": 72
+        "documented": 62,
+        "total": 62
       },
       "members": {
         "documented": 4,
@@ -91,8 +91,8 @@
     },
     "engine/features/character/controllers/dynamic": {
       "exports": {
-        "documented": 47,
-        "total": 47
+        "documented": 46,
+        "total": 46
       },
       "members": {
         "documented": 0,

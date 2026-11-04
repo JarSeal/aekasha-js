@@ -65,7 +65,6 @@ export type CharacterCast = {
 
 const createCastRecord = (): CharacterCastRecord => ({
   resolvedAtStep: -1,
-  resolvedAt: 0,
   isCrouching: false,
   origin: { x: 0, y: 0, z: 0 },
   dir: { x: 0, y: 0, z: 0 },
@@ -108,8 +107,6 @@ export const resolveCastRecord = (
   step: number
 ) => {
   record.resolvedAtStep = step;
-  // Deprecated: step time in ms, from 1 so that 0 still means "no result"
-  record.resolvedAt = (step + 1) * getPhysicsState().timestepRatio * 1000;
   copyVec(record.origin, shot.origin);
   copyVec(record.dir, shot.dir);
   record.maxDistance = shot.maxDistance;

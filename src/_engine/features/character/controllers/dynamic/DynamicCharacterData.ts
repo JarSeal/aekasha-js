@@ -190,19 +190,6 @@ export type DynamicCharacterInternal = {
   pendingLanding: boolean;
 };
 
-/**
- * A dynamic character's data as one flat object (`CharacterObject.data`): the state keys as they
- * are, the configuration keys with one underscore (`_maxVelocity`), the internal ones with two
- * (`__jumpStep`). Each key reads and writes the controller's own objects.
- * @deprecated Use the controller's `state`, `config.values` and `internal` (removed in engine
- * 6.0.0).
- */
-export type CharacterData = DynamicCharacterState & {
-  [K in keyof DynamicCharacterConfig as `_${K}`]: DynamicCharacterConfig[K];
-} & {
-  [K in keyof DynamicCharacterInternal as `__${K}`]: DynamicCharacterInternal[K];
-};
-
 /** The `DYNAMIC_CHARACTER` controller (`character.controller` of a dynamic character): its state,
  * configuration and internal memory, and its probes' last results. */
 export type DynamicCharacterController = CharacterController<
@@ -329,39 +316,21 @@ export const DERIVED_CONFIG = new Map<
   ],
 ]);
 
-/** A dynamic character's three data objects, and the deprecated flat view over them. */
+/** A dynamic character's three data objects. */
 export type DynamicCharacterDataObjects = {
   state: DynamicCharacterState;
   config: DynamicCharacterConfig;
   internal: DynamicCharacterInternal;
-  /** The deprecated flat view (`CharacterObject.data`). */
-  view: CharacterData;
   /** The configuration keys the creation options gave (a brain's defaults leave them alone). */
   givenConfigKeys: ReadonlySet<string>;
 };
 
-/** Defines `prefix + key` on `view` for every key of `target`, reading and writing `target`. */
-const defineViewKeys = (view: object, prefix: string, target: Record<string, unknown>) => {
-  for (const key of Object.keys(target)) {
-    Object.defineProperty(view, prefix + key, {
-      enumerable: true,
-      get: () => target[key],
-      set: (value: unknown) => {
-        target[key] = value;
-      },
-    });
-  }
-};
-
 /**
  * The three data objects from the defaults (every nested object and array a new copy), with the
- * creation options written over them: the deprecated `charData` first (through the flat view, so
- * `_` keys reach the configuration and `__` keys the internal memory; a key the view doesn't have
- * stays on it as a plain value, as before), then `config`. Derives the internal values from the
- * configuration. The flat view's accessors are made here, once.
+ * creation option `config` written over the configuration. Derives the internal values from the
+ * configuration.
  */
 export const createDynamicCharacterData = (
-  charData: Partial<CharacterData> | undefined,
   configOpts: Partial<DynamicCharacterConfig> | undefined
 ): DynamicCharacterDataObjects => {
   const d = DEFAULT_STATE;
@@ -383,21 +352,7 @@ export const createDynamicCharacterData = (
     currentPlatformVelocity: { ...i.currentPlatformVelocity },
   };
 
-  // Key order: state, configuration, internal (the debug tools' groups)
-  const view = {} as CharacterData;
-  defineViewKeys(view, '', state);
-  defineViewKeys(view, '_', config);
-  defineViewKeys(view, '__', internal);
-
   const givenConfigKeys = new Set<string>();
-  if (charData) {
-    Object.assign(view, charData);
-    for (const key of Object.keys(charData)) {
-      if (!key.startsWith('_') || key.startsWith('__')) continue;
-      if ((charData as Record<string, unknown>)[key] !== undefined)
-        givenConfigKeys.add(key.slice(1));
-    }
-  }
   if (configOpts) {
     Object.assign(config, configOpts);
     for (const key of Object.keys(configOpts)) {
@@ -405,7 +360,7 @@ export const createDynamicCharacterData = (
     }
   }
   for (const derive of DERIVED_CONFIG.values()) derive(config, internal);
-  return { state, config, internal, view, givenConfigKeys };
+  return { state, config, internal, givenConfigKeys };
 };
 
 /**

@@ -66,19 +66,9 @@ export type {
   DynamicCharacterParams,
 } from './controllers/dynamic/DynamicCharacter';
 export type {
-  CharacterData,
   DynamicCharacterConfig,
   DynamicCharacterController,
   DynamicCharacterInternal,
   DynamicCharacterState,
 } from './controllers/dynamic/DynamicCharacterData';
 export { character } from './CharacterFeature';
-export type {
-  CameraRelativeInputMappings,
-  CharacterActionMappings,
-  CharacterInputCommonOpts,
-  CharacterInputHoldMode,
-  CharacterInputOpts,
-  TankInputMappings,
-  WorldFixedInputMappings,
-} from './CharacterInputSchemes';
