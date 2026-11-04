@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -396,11 +396,22 @@ verify:baselines` (`--update` where a phase changes the API on purpose, its diff
 hub:build` after a Hub change. A phase that changes a subsystem updates its nested `CLAUDE.md`
 and its feature page in the same commit.
 
-### Phase 0 — Baselines
+### Phase 0 — Baselines — done
 
 - Before the first change (the branch is still `main`'s `a0b15403`): `yarn verify:scenes
   --update` and `yarn sbp` (the report Phase 4 compares against).
 - Run the reshapes' grep again (Grounding's table) and correct the table if `main` moved.
+
+As built (2026-11-04, on `9ec145d4`: `a0b15403` plus this plan's edit, no code change):
+
+- `yarn verify:scenes --update` (macOS, WebGPU): 114 runs recorded, 0 failed, in
+  `.cache/verify/scenes/webgpu/` (local, per machine: a later phase run on another machine records
+  its own on `main` first).
+- `yarn sbp`: all 29 budgets within; initial **387.0 kB gzip** (1416.9 kB minified; the plan's 389.0
+  was 2026-10-14's), `_engine/features/physics` 23.5 kB initial / 31.5 kB lazy. The report is kept
+  as `.cache/p622/sbp-phase0-report.json` (`.cache/sbp/report.json` is overwritten per run).
+- The table holds: `main` hasn't moved past `a0b15403`, and a re-count matches it within grep's
+  noise (65 `@deprecated` tags; the 3 more hits are `CLAUDE.md` mentions).
 
 ### Phase 1 — The codemod's frame and the renames (D10 kinds 1-2)
 
@@ -408,6 +419,39 @@ and its feature page in the same commit.
   error and report collection), `migrateEngine6.ts` (the CLI), `engine6Rules.ts` with the rename
   and move rules, `engine6.test.ts` with their fixtures. `devTools/engineImports.test.ts` and the
   root `CLAUDE.md`'s Dev tools rule apply (the codemod imports nothing of the engine).
+
+  As built (section 1):
+
+  - `engine6.ts` takes a `ts.Program` (`createMigrationProgram`: a base compiler host with
+    virtual texts over it, and `directoryExists` answering for their folders, which the module
+    resolution checks) and returns `{ changed, errors, reports }`, each finding `{ file, line,
+    message, anchor? }`. One pass per module: the imports are modelled per declaration and a
+    touched one is written again whole (so two rules on one import statement never collide), the
+    references are renamed through the checker's symbols (`getSymbolAtLocation`, a shorthand
+    property's value symbol, a local export's target), and `resolveName` checks each renamed
+    reference first (shadowed, or a name the module declares: an error, the module left as it
+    was). Two overlapping edits are an error for now: **the first call rule that nests (Phase 5's
+    `createMeshEntity(…, getScene(…))` kind) adds a second pass** over the rewritten text, the
+    runner then taking a program factory instead of a program.
+  - Kinds 1-2 also cover a namespace import's `ns.Old` and an `import('entry').Old` type (a move
+    through a namespace import is an error) and `export { Old } from` (the module's exported name
+    stays: `export { New as Old } from`). A dynamic `import()` of an entry isn't followed. A value
+    import left with only inline types becomes `import type`.
+  - **Reports' lines are the module as it was read.** Phase 2 section 5, the first report rules,
+    decides whether a writing run reports on its output instead (a second program over the
+    formatted text, so the lines match the written file).
+  - The CLI: targets anywhere in the repo, `src/generated/` skipped; `--report` writes nothing and
+    prints only the reports; exits 0, 1 (`--check` found modules to migrate) or 2 (an error, a bad
+    target or flag). About 3 s over `src` and `hub/_assets/ts` (962 modules).
+  - The rules' anchors are the slugs of the headings D11 plans: `removed-deprecations`,
+    `the-ui-kit-s-names`, `toolkit-3-0-0` (unique across the migration page, which concatenates
+    `intro.md`, `engine-6.md` and `engine-5.md`). **Phase 8 writes those headings and adds a test
+    that every rule's anchor is a heading of `engine-6.md`.**
+  - `engine6.test.ts`: stand-in entries in engine 6's shape (the old names gone, as an app sees
+    them) in a virtual `noLib` program; one generated fixture per rule plus the behaviours, each
+    run twice (the second run changes nothing); and a check that every rule's target is exported
+    by the repo's entry today (read with `importGraph.ts`' `parseModuleSource`).
+  - Provenance: the `T` aliases and `TDropDown` are p803 (D3), not p617.
 - **Section 2:** run it over `src` and `hub/_assets/ts` (`--check` first): the renames have
   replacements already, so whatever it changes is a remaining use of a deprecated name. The nested
   `devTools/migrate/CLAUDE.md`, the root map line and the command in the root's Commands.
