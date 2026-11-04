@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -338,13 +338,24 @@ plus `yarn hub:build` (public) and the dev server's Hub from Phase 2 on. Nothing
 app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` aren't needed. One
 `yarn verify:baselines` run in Phase 6 confirms that.
 
-### Phase 0: grounding
+### Phase 0: grounding — done
 
 1. §1 checked against `main` (done when this plan was written: §1). Recheck it if `main` has
    moved.
 2. The before figures: `yarn hub:build`'s time, the public search index size and the dev Hub's
    page count, in this plan.
 3. p800's Blocks line already names this plan. This plan's status becomes `in progress`.
+
+As built:
+
+- The branch `p809-project-roadmaps` is cut from `main` at `e2ec58e5` ("Create p809 plan"). Since
+  `86543f07` it has gained only this file, so §1 holds as written.
+- The before figures (macOS, Node 22.13.0, the API model reused):
+  - `yarn hub:build` (public): 103 pages in 6156 ms (7.5 s for the whole command). The search
+    index is 485 KiB gzipped (1.73 MiB raw), with 624 page sections and 1766 API docs, and it
+    warns over 450 KiB as before.
+  - The dev Hub (`buildHub({ mode: 'dev', isEmbedLive: false })` into a scratch folder): 110
+    pages in 6435 ms, 7 of them under `project/`.
 
 ### Phase 1: the app's folder
 
