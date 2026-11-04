@@ -217,6 +217,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   ├── issues/             # Known issues and their workarounds (also on the Hub)
 │   ├── plans/              # Feature plans and specs (priority-ordered)
 │   └── techniques/         # How-to guides (eg. asset optimization, writing Hub pages)
+├── docsApp/                # The app's own plans/ and issues/ (empty in the template)
 ├── .claude/                # CLAUDE.md (the contributor and agent guide), hooks, agents
 ├── .schemas/               # Generated JSON Schemas for editor autocomplete
 ├── assets.config.json      # Asset optimization defaults, profiles and rules
@@ -455,7 +456,7 @@ The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover m
 
 ## Roadmap
 
-Planned work is specified in [`docs/plans/`](docs/plans/), where a lower number means a higher priority. Highlights:
+Planned work is specified in [`docs/plans/`](docs/plans/), and the app's own in [`docsApp/plans/`](docsApp/plans/) (empty in the template), where a lower number means a higher priority. The roadmap pages are generated from them, with each epic's dependency graph, the plans in progress and the open issues by area: run `yarn dev` and open `http://localhost:8080/hub/project/aekasha/roadmap/` (the app's at `/hub/project/app/roadmap/`). Highlights:
 
 - Saving the material editor's edits to the material JSON, and editing textures and more material properties there
 - Physics objects in the scene JSON schema, physics world bounds, multibody joints and physics snapshot restore
@@ -474,7 +475,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 - **Architecture**: the Hub's `/hub/documentation/architecture/`: how the engine fits together (the layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, debug code, the build) and where a feature of your own goes.
 - **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with the `migrateToEntries.ts` codemod for the entry imports.
 - **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md).
-- **Design docs**: [`docs/plans/`](docs/plans/). Files prefixed `_DONE_` describe features that are already implemented.
+- **Design docs**: [`docs/plans/`](docs/plans/), and the app's in [`docsApp/plans/`](docsApp/plans/). Files prefixed `_DONE_` describe features that are already implemented. Known issues are in [`docs/issues/`](docs/issues/) (the app's in [`docsApp/issues/`](docsApp/issues/)) and on the Hub's Issues page.
 - **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md), with a map of the `CLAUDE.md` next to each subsystem.
 
 ## Built with

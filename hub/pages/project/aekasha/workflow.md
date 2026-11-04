@@ -2,10 +2,11 @@
 
 ### Plans
 
-Work that isn't a quick fix starts as a plan in `docs/plans/`. The file name is
-`p<number>_<name>.md`, and a lower number means a higher priority. A plan is a spec for work
-that hasn't started: it describes what to build, not how the code is today. Implement one only
-when it's the task.
+Work that isn't a quick fix starts as a plan in `docs/plans/`, or in `docsApp/plans/` when it's
+the app's ([the app's plans and issues](hub:project/app#the-app-s-plans-and-issues)). The file
+name is `p<number>_<name>.md`, and a lower number means a higher priority. A plan is a spec for
+work that hasn't started: it describes what to build, not how the code is today. Implement one
+only when it's the task.
 
 A plan opens with header lines: `Status` (required: `draft | not-implemented`,
 `in progress | Phases 1-2 implemented`, `implemented`), and where they apply `Category`,
@@ -22,6 +23,13 @@ A large piece of work is an **epic**: a plan whose child plans continue its numb
 p802, …). Its "Branches and PRs" section says which child plans share a branch, what each branch
 merges into, and when each PR opens. Each merge into `main` is one version bump, so several
 children that share one major need an integration branch.
+
+[Ækasha's roadmap](hub:project/aekasha/roadmap) is generated from the header lines when the Hub
+builds: the plans in progress, each epic's dependency graph and children, the other open plans,
+the done ones and the open issues by area. A header line it can't follow, such as a file name
+that no longer exists or a `_DONE_` name that disagrees with its `Status`, is a warning at its
+line in `yarn hub:build`. [The app's roadmap](hub:project/app/roadmap) does the same for
+`docsApp/`.
 
 ### Implementing a phase
 
@@ -47,7 +55,8 @@ The last phase marks the plan done:
 
 1. Set the Status line to `implemented` (with its phases: `implemented (Phases 1-4)`).
 2. `git mv` the file to `_DONE_<same name>`, and update the references to it: other plans'
-   `Blocked by` and `Blocks` lines and the `CLAUDE.md` files.
+   `Blocked by` and `Blocks` lines (for an Ækasha plan, the app's plans in `docsApp/plans/` too)
+   and the `CLAUDE.md` files.
 3. Update the root `CLAUDE.md`, the nested `CLAUDE.md` files and `readme.md` where the change
    alters what they describe.
 4. Bump the versions, add the `CHANGELOG.md` entry, and run `yarn checkVersions --against main`.
@@ -58,12 +67,15 @@ still needs it, and removed when the epic is done.
 
 ### Issues
 
-A known problem that isn't being fixed now gets a file in `docs/issues/`, such as an upstream bug,
-a workaround in use, or a deferred fix. Line 1 is `**Title:** …`. From line 3 comes a block of
-`Key: value` lines: `Status:` first (`open`, `not filed yet`, `fixed`, …, with a detail after a
-`|`), then `File at`, `Category`, `Found` and `Our workaround` where they apply. A blank line
-follows, then the issue itself. The Hub's [Issues](hub:issues) section lists them by status. A
-`TODO` in the code names its issue file or plan.
+A known problem that isn't being fixed now gets a file in `docs/issues/`, or in `docsApp/issues/`
+when it's in the app's code. It can be an upstream bug, a workaround in use, or a deferred fix.
+Line 1 is `**Title:** …`. From line 3 comes a block of `Key: value` lines: `Status:` first
+(`open`, `not filed yet`, `fixed`, …, with a detail after a `|`), then `File at`, `Category`,
+`Found` and `Our workaround` where they apply. A blank line follows, then the issue itself. The
+Hub's [Issues](hub:issues) section gives each one a page and lists both folders by status, and
+each roadmap lists its folder's open issues under the areas their `Category` names. Two issue
+files may not share a name, even across the folders: both are at `issues/<name>/`. A `TODO` in
+the code names its issue file or plan.
 
 ### Versions and the changelog
 

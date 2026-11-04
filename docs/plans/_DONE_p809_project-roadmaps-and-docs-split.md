@@ -1,6 +1,6 @@
-Status: draft | not-implemented
+Status: implemented (Phases 0-7)
 Category: Documentation, Hub, Tooling
-Epic: p800_debugger-ui-overhaul.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
 
 # Project Roadmaps and the Docs Split
@@ -338,7 +338,7 @@ plus `yarn hub:build` (public) and the dev server's Hub from Phase 2 on. Nothing
 app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` aren't needed. One
 `yarn verify:baselines` run in Phase 6 confirms that.
 
-### Phase 0: grounding
+### Phase 0: grounding — done
 
 1. §1 checked against `main` (done when this plan was written: §1). Recheck it if `main` has
    moved.
@@ -346,7 +346,18 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
    page count, in this plan.
 3. p800's Blocks line already names this plan. This plan's status becomes `in progress`.
 
-### Phase 1: the app's folder
+As built:
+
+- The branch `p809-project-roadmaps` is cut from `main` at `e2ec58e5` ("Create p809 plan"). Since
+  `86543f07` it has gained only this file, so §1 holds as written.
+- The before figures (macOS, Node 22.13.0, the API model reused):
+  - `yarn hub:build` (public): 103 pages in 6156 ms (7.5 s for the whole command). The search
+    index is 485 KiB gzipped (1.73 MiB raw), with 624 page sections and 1766 API docs, and it
+    warns over 450 KiB as before.
+  - The dev Hub (`buildHub({ mode: 'dev', isEmbedLive: false })` into a scratch folder): 110
+    pages in 6435 ms, 7 of them under `project/`.
+
+### Phase 1: the app's folder — done
 
 1. `docsApp/CLAUDE.md` and `docsApp/plans/.gitkeep`, `docsApp/issues/.gitkeep` (D1).
 2. `DOCS_DIR`, `DOCS_APP_DIR` in `devTools/paths.ts`. `ISSUES_DIR` rebuilt on them, and
@@ -355,7 +366,20 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
 3. `docs/plans/CLAUDE.md`'s new section (D2), and `project/app/`'s `aek:covers` for it.
 4. The root `CLAUDE.md`'s map line for `docsApp/CLAUDE.md` and its Workflow line (D9).
 
-### Phase 2: the Issues section reads both folders
+As built:
+
+- `docsApp/CLAUDE.md` is one paragraph with no `##` section, so the coverage check has nothing of
+  its own to cover.
+- `docs/plans/CLAUDE.md`: besides the new section, its first line and its "Agentic coding plans
+  are located in…" bullet name `docsApp/plans/`. The new section also has a **Versions** bullet
+  (an app plan bumps `app_metadata.version`, with App changelog sections), which D2 didn't list.
+- The Hub `CLAUDE.md` files are updated with the code rather than in Phase 6:
+  `devTools/hub/CLAUDE.md`'s `--out` refusals name `docsApp/`, and `hub/CLAUDE.md`'s Project
+  section bullet names `project/app/`'s new `aek:covers`.
+- The three new paths (`APP_ISSUES_DIR`, `PLANS_DIR`, `APP_PLANS_DIR`) have no users until
+  Phases 2-5.
+
+### Phase 2: the Issues section reads both folders — done
 
 1. `createIssuesSection` over both folders. Each issue carries its owner. The cross-folder
    slug collision is the existing error. The `## Ækasha` / `## The app` list appears only when
@@ -367,7 +391,26 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
    folder.
 4. The Issues page's intro and `aek:description` (D7).
 
-### Phase 3: the plan model
+As built:
+
+- `createIssuesSection(diag, sources = ISSUE_SOURCES)`: the folders are an argument (each an
+  `IssueSource`, `{ dir, owner }`; `DocsOwner` is `'aekasha' | 'app'`, for the plan model too),
+  so the tests pass temp folders. `listIssueFiles(dir)` is exported with `parseIssue` and
+  `parseStatus`.
+- The app issue page's meta row is `Part: The app`, not D7's `Of: The app` ("part" is the
+  versioning's word for the engine, toolkit and app).
+- `links.test.ts`' p619 slug-clash test mocked `ISSUES_DIR` with a getter. The default sources
+  capture the path at load, so the mock no longer reached it: the test now passes its folder to
+  the section and has no mock.
+- `issues.test.ts` has 7 tests: the header parse, the status kinds, the missing title, the list
+  without app issues (unchanged), the app's pages and headings, the clash across folders, a
+  missing folder.
+- The docs on the Issues section are updated here, not in Phase 6: `hub/CLAUDE.md`'s issue-file
+  bullet, `devTools/hub/CLAUDE.md`'s Generated sections, Dev plugin and `hub:preview` bullets,
+  and `hubPlugin.ts`' comment. Phase 6 still has `project/aekasha/workflow.md`'s Issues
+  paragraph.
+
+### Phase 3: the plan model — done
 
 1. `generated/plans.ts`' `readPlans` (D3): the fields, the references (a regex, an escaped
    `\_DONE_`, repo paths, parentheticals, `soft`), the epic membership rule, the phases and the
@@ -377,7 +420,49 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
    warning, and a cycle.
 3. A run over the real folders: no warnings (§1.1), its time noted (D8).
 
-### Phase 4: the dependency graph
+As built:
+
+- `readPlans(diag, sources = PLAN_SOURCES)`, shaped like `createIssuesSection`: one call reads
+  both folders (each a `PlanSource`, `{ dir, owner }`), since a cross-folder reference, a plan's
+  blockers from the other plans' `Blocks` and a cycle all need both. It returns a `PlanModel`:
+  `plans` (Ækasha's first, then by number, none last), `byKey`, `edges` and `files` (for the
+  watcher). A plan's key is `<owner>/<file name without .md>`. `listIssueFiles` lists the files
+  (`CLAUDE.md` left out).
+- Each `Plan` has D3's fields plus `unblocks` (the "Unblocks" column) and `children` (the plans
+  whose `Epic` names it). `blockers` and `unblocks` are `PlanLink`s, `{ plan, isSoft, note }`.
+  `epic` is `{ kind: 'plan' | 'url' | 'text' }`: p344's `Epic: Profiler (…)` is neither a plan nor
+  a URL, so it stays as text.
+- The header lines are every `Key: value` line before the first `# ` heading, in any order
+  (p304's `Epic` comes after its `Related`).
+- A reference must look like a plan file name (`p<digits>_…md`, optionally `_DONE_` with or
+  without escapes) and not sit inside a longer path, so `docs/issues/….md` in a `Related` line
+  isn't one. A repo path picks the folder by its owner (`docs/plans/` or `docsApp/plans/`), not
+  by the real folder, so the tests' temp folders work.
+- An edge both sides write (p304's `Blocks` p305 and p305's `Blocked by` p304) is one edge. It's
+  soft only when every mention says `soft`, and the blocked plan's own note wins. A reference to
+  a missing file whose `_DONE_` (or non-`_DONE_`) counterpart exists warns and resolves to the
+  counterpart, so the graph stays right while the warning shows.
+- The title's kind suffix: only the known ones are stripped (`— Plan`, `— Stub`, `— Epic`,
+  `— Backlog`, `— Research & Epic`, plus `— Research & Recommendation`: p050, p200). Other text
+  after a `—` is part of the title ("Material Editor — Editable Params, …").
+- The warnings add no `# ` title (the file name stands in) to D3's list, and no priority number,
+  which D3 has in its field table only.
+- The cycle's closing edge stays in the model as `PlanEdge.closesCycle`, and the tables still list
+  it. Phase 4's graph leaves out the edges that have it set.
+- `devTools/hub/plans.test.ts` (next to `issues.test.ts`), 14 tests: every status form, the
+  number, title suffixes, areas and phases (fences, a stub's, `Phase 2a`), header lines in any
+  order, `Epic` as a URL or text, a `Blocks` line with commas in its notes and an escaped
+  `\_DONE_`, one edge from both sides, an epic's membership, the other folder by repo path, each
+  warning, a cycle, missing folders.
+- Phases: only `##`-`####` headings starting `Phase <n>` / `Stage <x>`, outside code fences. Older
+  drafts write them as bold paragraphs (`**Phase 1 — …**`: p250, p500) or inside a numbered
+  heading (`## 2. Phase 0 — Spike`: p375, p150), so they show no phases. That doesn't matter on
+  the page: only in-progress plans' phases are shown, and both (p299, p809) use headings. p600
+  has no Stage headings either.
+- The real folders: 94 plans (50 done, 2 in progress: p299 and this plan), 117 edges, no warnings,
+  about 13 ms warm.
+
+### Phase 4: the dependency graph — done
 
 1. `generated/planGraph.ts` (D5): the layering, the points on long edges, the ordering, the
    cycle's dropped edge, and the SVG markup with its classes, links and escaping.
@@ -386,7 +471,60 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
 3. The node and edge styles in a new `hub/_assets/scss/_roadmap.scss` on the Hub's tokens, in
    both themes, with `.hubStatus_progress` in `_sections.scss`.
 
-### Phase 5: the roadmap pages
+As built:
+
+- Three steps. `createPlanGraph(model, members, hrefOf)` picks a set of member plans (an epic's
+  children, or Phase 5's other plans with dependencies), their open blockers from outside the set
+  (outside nodes, noted with their epic, `in p370`, and their folder when it's the other one),
+  and the edges into the members, without the `closesCycle` ones. `layoutPlanGraph` returns the
+  layers, the boxes and each edge's points. `renderPlanGraph(graph, id)` returns the `<figure>`
+  (`id` keeps the arrowhead marker's id unique on the page). Phase 5 picks the members and gives
+  `hrefOf` (the row ids are the roadmap's). `getPlanLabel` (`p305`, else the file name) is
+  exported for it too.
+- **Keyboard**: D5 says both "reachable by keyboard with the focus ring" and "`aria-hidden`, its
+  links `tabindex="-1"`". The second is built: the table is the keyboard and screen reader path.
+  The graph's links work by pointer, and each node's `<title>` is its tooltip.
+- Sizes are px at the kit's 14 px base: an SVG's `viewBox` is numbers. Nodes are 184 × 64, the
+  node gap is `--aek-space-6` (24) and the layer gap `--aek-space-7` + `--aek-space-5` (48, room
+  for the curve and the arrowhead). The SVG has its own `width` / `height`, so it draws at that
+  size and scrolls sideways in its box.
+- The title is wrapped at build time to two lines of 24 characters (12 px text in the box's 160
+  px), the second clipped with `…` (`wrapPlanTitle`). A node's first line is its label and a note
+  (`✓ done`, `in progress`, an outside node's epic).
+- The ends of the edges into or out of a node are spread along its edge (up to 12 px apart),
+  ordered by where the other end is, so p310's five blockers don't meet in one point.
+- The real graphs: p301's 10 nodes and 21 edges in 8 layers (568 × 864), p350's 8, p370's 8 (p302
+  outside), p800's 9, and the other plans' 8 (1032 wide, so it scrolls in the content column).
+  Each layout takes under 1 ms.
+- The title's clip falls at a word, with room for the `…` ("(gallery + showcase)…"), and inside
+  a word only when it's the clipped line's only one.
+- **The graph draws the transitive reduction**, which D5 didn't say: an edge another path already
+  implies isn't drawn (a hard edge needs a path of hard edges, a soft one any path), and the
+  caption says so; the model and the tables keep every edge. The plans list the blockers their
+  blockers wait on too (p310 names p305 to p309), so the first screenshots had p301's 21 edges
+  looping around the chain. It now draws 15 (the soft p304 → p305 keeps some hard ones), p800's
+  8 of 12, the other plans' 6 of 7.
+- `devTools/hub/planGraph.test.ts`, 12 tests: a fixed five-node graph whose layers, order, size
+  and long-edge points are worked out by hand in its comment, the edge ends spread along a node,
+  a graph without edges and an empty one, the SVG's `viewBox`, `aria-hidden`, tab order,
+  arrowheads and escaping, the title wrap, and from a fixture model: an epic's children by state,
+  an outside blocker with its epic (a done one left out), one from the other folder, the implied
+  edges left out, and a cycle's closing edge left out.
+- Styles (`hub/_assets/scss/_roadmap.scss`, after `sections` in `hub.scss`): a node's border is
+  its state's colour, the badges' (open the warning, in progress the info with a thicker border,
+  done muted: no fill, the plain border and muted text, outside dashed and muted), its note in that
+  colour mixed toward the text as a badge's, and the accent on hover only. The edges are the muted
+  text colour, soft ones dashed. `--hub-info` is a new alias of `--aek-info` in `_tokens.scss`,
+  used by `.hubStatus_progress` in `_sections.scss` too. The figure's box (`.hubPlanGraphScroll`)
+  has the page's background and border and scrolls sideways.
+- Checked in Chromium on a scratch page with the shell's layout (`.hubLayout` > `.hubMain` >
+  `.hubContent`) and the compiled `hub.css`, with the real plans' five graphs: dark and light at
+  1280 wide, dark at 375. The page never scrolls sideways (the column is `minmax(0, 1fr)` with
+  `min-width: 0`: in a box without them, a figure grows to its SVG's width). p350's, p370's and
+  the other plans' graphs (824 and 1032 wide) scroll in their box on the desktop column too. Phase
+  5 checks them again on the dev server's pages.
+
+### Phase 5: the roadmap pages — done
 
 1. `project/aekasha/roadmap/` and `project/app/roadmap/` (`index.html` with `aek:order`, tags,
    description; `intro.md`).
@@ -400,14 +538,84 @@ app's build, so `yarn verify:scenes`, `yarn verify:baselines` and `yarn sbp` are
    scroll in their box, the nodes and links work by keyboard, a plan save reloads only the
    roadmap pages. A `yarn hub:build` check that the public output has no `project/` page.
 
-### Phase 6: the docs
+As built:
+
+- `createRoadmapSections(diag, { plans, issues })` returns both pages' sections (a section fills
+  one page) from one `readPlans` and one read of the issues. The issues are parsed quietly (the
+  Issues section reports their warnings), and one whose page another file took is left out as
+  there. Each section's `files` and `dirs` are its own folders'.
+- The pages: `project/aekasha/roadmap/` ("Ækasha's roadmap", menu "Roadmap", `aek:order` 25,
+  between the design document and the component library) and `project/app/roadmap/` ("The app's
+  roadmap", order 20, after its design document), each an `intro` and a `generated-roadmap` slot.
+  `project/app/`'s intro links its roadmap (one sentence; Phase 6 still writes its "The app's
+  plans and issues").
+- The summary can't link a folder (`repo:` needs a file): it names the folders as code and links
+  `docs/plans/CLAUDE.md` (its app section on the app's page). Real counts: 42 open, 2 in
+  progress, 50 done, 21 open issues.
+- A status that starts with its badge's word drops it ("In progress" + "Phases 0-4
+  implemented", not "in progress | Phases 0-4 implemented").
+- Row ids: the plan's label (`getPlanLabel`, now the number as the file name writes it: `p056`,
+  not `p56`), on its first row on the page (a done child's in its epic's table, not in Done), an
+  open epic's on its section's wrapper. Each is added to `env.ids`, so the other roadmap's
+  `hub:` links to it are checked. A number two plans share, or none, gives the file name's slug.
+- An epic's table and graph members are its own folder's children only; the other folder's
+  plans show as links and outside nodes. The other plans' graph: the open plans outside an open
+  epic with a blocker or an unblocked plan that isn't done (exactly D4's eight today).
+- "Waits on" / "Unblocks" mark `soft` and `done` in words, with the reference's note as the
+  link's `title`. The Done table's columns are Plan, Category and Epic (a URL as its text without
+  the scheme).
+- `hub.ts` opens a closed `<details>` around a fragment's target (`hashchange` and load), for the
+  browsers that don't, and scrolls to it. `tr:target` is tinted with the accent's soft colour.
+- Styles appended to `_roadmap.scss` (lists, meta lines, the table's column minimums, the
+  `<details>`). `devTools/hub/CLAUDE.md` (the build steps, the watched folders, a Roadmap entry
+  under Generated sections) and `hub/CLAUDE.md` (the Project section, `PROJECT_LINKS`) are
+  updated with the code.
+- `roadmap.test.ts`, 12 tests, its fixtures under `.cache/` (the rows' `repo:` links must be in
+  the repo).
+- Checked in Chrome (Playwright's `channel: 'chrome'`: no Playwright Chromium on this machine),
+  dark and light at 1280 and 375: no page scrolls sideways; the graphs (up to 1048 wide) and the
+  tables (up to 694) scroll in their boxes; Tab never enters an SVG and reaches the Done
+  `<summary>` (Enter opens it); a graph node and `#p600` (in the closed Done) land on their row
+  under the header. A save of p990 rebuilt in 1.2 s and reloaded only `project/aekasha/roadmap/`.
+  The dev Hub has 112 pages (110 before).
+
+### Phase 6: the docs — done
 
 D9's list: `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md`, the root `CLAUDE.md`'s Ækasha Hub
 sentence, `project/aekasha/workflow.md`, `project/app/`'s intro, `readme.md`'s Roadmap and
 Documentation. `yarn hub:build` (dead links, coverage) and one `yarn verify:baselines` (the
 app's build unchanged).
 
-### Phase 7: done (this plan, and p800's epic)
+As built:
+
+- Already done with the code (Phases 1-5) and left as they were: both Hub `CLAUDE.md` files,
+  `docs/plans/CLAUDE.md`, the root's map and Workflow lines, the Issues page's intro and
+  `aek:description`.
+- The root `CLAUDE.md`'s Project sentence lists the roadmaps before the component library, so its
+  closing "a new token or UI kit piece shows there" still follows the library.
+- `workflow.md`: Plans names `docsApp/plans/` and links the app page's section; a paragraph after
+  the epics on both roadmaps and their warnings; "Finishing a plan" step 2 names the app's plans'
+  references; Issues names `docsApp/issues/`, the shared `issues/<name>/` URLs and the roadmaps'
+  issues by area.
+- `project/app/`'s "The app's plans and issues" is a `##` section of its `conventions` slot
+  (where the page's `##` sections are), between its design and its version: D2's rules for a
+  reader, the roadmap link, the app's issues being public, and `docs/plans/CLAUDE.md`'s section.
+  Phase 5's roadmap sentence in the intro moved into it; the intro lists what the page covers,
+  and the page's description and tags gain plans and issues. The Hub's slug of the heading is
+  `#the-app-s-plans-and-issues` (`slugify` turns the apostrophe into a hyphen; GitHub's, for the
+  `repo:` link, is `#the-apps-plans-and-issues`).
+- Outside D9's list: `project/`'s intro ("Plans first" names `docsApp/plans/` and links both
+  roadmaps), `issues/index.html`'s comment, and `readme.md`'s Project structure tree (a
+  `docsApp/` line). The readme's Documentation list also says where the issues are.
+- The readme's highlights checked as p621 did: p355, p102, p250, p500, p240 and p354 are still
+  open, and scene-JSON physics stays a wish. Unchanged.
+- Checks: a dev build (`buildHub({ mode: 'dev', api: 'last', isEmbedLive: false })` into a scratch
+  folder, the only one that renders the Project pages' links): 112 pages, no error or warning.
+  `yarn hub:build`: 103 pages, the search index 485 KiB gzipped with 624 page sections (Phase 0's
+  figures: the public Hub is unchanged), its one warning the known index size, no `project/` in
+  `dist-hub/`. `yarn verify:baselines`: every baseline unchanged, no debug code.
+
+### Phase 7: done (this plan, and p800's epic) — done
 
 1. This plan's status `implemented (Phases 0-7)` and `git mv` to `_DONE_p809_…`. The references
    to the old name updated: p800's and `_DONE_p802`'s `Blocks` lines and p800's §5 entry.
@@ -421,6 +629,26 @@ app's build unchanged).
 3. The roadmap built once more: p800 under Done, no warnings.
 4. The `CHANGELOG.md` entry (D10) and `yarn checkVersions --against main`.
 5. Time for the PR: `p809-project-roadmaps` into `main`.
+
+As built:
+
+- The children's `_DONE_` files (`_DONE_p801` to `_DONE_p809`) and `_DONE_p800` itself are kept,
+  the user's decision: p622 (the unreleased engine 6.0.0) builds on p803's and p806's records,
+  p150 and p373 on p806's, p355, p426 and `docs/issues/renderer-custom-tone-mapping.md` on p804's.
+  They can go once those are done, `engine-6`'s merge first.
+- The references: the 15 files named in step 2, as header lines with Prettier's escape
+  (`\_DONE_p800_…`) and in p600's two code spans without it. `_DONE_p802`'s `Blocks` names
+  `\_DONE_p809_…`, and p800's ends "(all done: §5)".
+- p800's §5 p809 entry is a "Done:" paragraph like p801-p808's (what it built, what it left open),
+  before the sketch as written. Its §8 open question on the folder's name stays as written, like
+  the others, which the children decided.
+- The roadmap built once more (the dev build Phase 6 ran): 112 pages, no error or warning. p800
+  and p809 are under Done, the Epics section has p301, p350 and p370, and the counts are 41 open,
+  1 in progress (p299), 52 done, 21 open issues.
+- `CHANGELOG.md`: "2026-11-04 — p809-project-roadmaps", a Project section (Added, Changed) right
+  under "Unreleased — engine-6", dated today (D10's "at the merge": the date to correct if the PR
+  merges later). `yarn checkVersions --against main` passes: Engine 5.14.0, Toolkit 2.2.1, App
+  1.18.0, unchanged.
 
 ---
 

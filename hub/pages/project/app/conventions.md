@@ -49,6 +49,35 @@ players. In the template it's empty: each section says what to decide and starts
 [Ækasha's design document](hub:project/aekasha/design), since the app's HUD is built from the
 UI kit and its tokens.
 
+## The app's plans and issues
+
+The app's plans go in `docsApp/plans/` and its issues in `docsApp/issues/`, next to Ækasha's
+`docs/`. A project made from the template then keeps its own plans and issues apart from
+Ækasha's, and takes Ækasha's updates to `docs/` without conflicts in its own files. In the
+template both folders are empty.
+
+They're written as Ækasha's are ([from a plan to a merge](hub:project/aekasha#from-a-plan-to-a-merge)),
+with these differences:
+
+- **What goes where:** a change to `src/app/` or the app-level files in `src/` is the app's. A
+  change to the engine or the toolkit is Ækasha's, even when an app scene shows it. An issue goes
+  with the code it's in.
+- **Numbers:** the app's plans have a number space of their own, so an app `p100` and an Ækasha
+  `p100` can both exist. The number is the priority within the folder.
+- **References:** a header line names a plan in its own folder by file name, and one in the other
+  folder by its repo path (`Blocked by: docs/plans/p302_material-and-texture-system-refactor.md`).
+- **One way, as in the code:** an app plan can wait on an Ækasha plan, but an Ækasha plan never
+  names an app plan in `Blocks`, `Blocked by` or `Epic`, so the app's plans never change
+  Ækasha's files. The roadmap warns when one does.
+- **Versions:** an app plan bumps `app_metadata.version`, and its changelog sections are the
+  App's.
+
+[The app's roadmap](hub:project/app/roadmap) lists its plans and open issues, in the same shape
+as [Ækasha's](hub:project/aekasha/roadmap). The app's issues also get pages in the Hub's
+[Issues](hub:issues) section, under a heading of their own. That section is public, so a project
+that publishes its Hub publishes its app's issues too. The rules in full are in
+[`docs/plans/CLAUDE.md`](repo:docs/plans/CLAUDE.md#the-apps-plans-and-issues).
+
 ## The app's version
 
 `app_metadata.version` covers `src/app/` and the app-level files in `src/`. It's bumped once per

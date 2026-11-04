@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-6)
 Category: Documentation, Hub, Tooling
-Epic: p800_debugger-ui-overhaul.md
-Blocks: p809_project-roadmaps-and-docs-split.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
+Blocks: \_DONE_p809_project-roadmaps-and-docs-split.md
 Related: \_DONE_p801_design-foundation.md (its Phase 0's font specimen page needed Phase 1's dev-only pages; Phase 3, the design document, reads its `tokens.css`), \_DONE_p601_refactoring-safety-net-tests-and-baselines.md (`::: dev-only`), \_DONE_p619_review-schemas-pipeline-devtools-hub.md (the Hub's generator as it is)
 
 # Hub Project Section

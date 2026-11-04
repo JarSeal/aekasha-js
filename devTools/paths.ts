@@ -10,3 +10,7 @@ export const SRC_DIR = path.join(ROOT, 'src');
 export const PUBLIC_DIR = path.join(SRC_DIR, 'public');
 /** `src/generated/`: the gather's output */
 export const GENERATED_DIR = path.join(SRC_DIR, 'generated');
+/** `docs/`: Ækasha's plans, issues, techniques, analysis and templates */
+export const DOCS_DIR = path.join(ROOT, 'docs');
+/** `docsApp/`: the app's plans and issues, in `docs/`' formats (p809 D1) */
+export const DOCS_APP_DIR = path.join(ROOT, 'docsApp');

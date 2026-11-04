@@ -31,6 +31,8 @@ $toc-column: 1200px;
   --hub-shadow: var(--aek-shadow-lg);
   --hub-warning: var(--aek-warning);
   --hub-success: var(--aek-success);
+  // The roadmap's "in progress" (p809 D4)
+  --hub-info: var(--aek-info);
   --hub-danger: var(--aek-danger);
   // A code block's error line and the dev plugin's build errors (p801 D2: no role of its own)
   --hub-error: var(--aek-danger);

@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Debugger
-Related: p800_debugger-ui-overhaul.md and \_DONE_p806_debugger-migration.md (the camera and light edit windows are on the UI kit: this plan's rows are items of their `createDebugWindowGrid`, `_dbg__DebugWindowGrid.ts`, e.g. `getInfoRowItem`; the windows are `_dbg__CameraEditWindow.ts` and `_dbg__LightEditWindow.ts`, their LS in `_dbg__CameraDebugState.ts` and `_dbg__LightDebugState.ts`)
+Related: \_DONE_p800_debugger-ui-overhaul.md and \_DONE_p806_debugger-migration.md (the camera and light edit windows are on the UI kit: this plan's rows are items of their `createDebugWindowGrid`, `_dbg__DebugWindowGrid.ts`, e.g. `getInfoRowItem`; the windows are `_dbg__CameraEditWindow.ts` and `_dbg__LightEditWindow.ts`, their LS in `_dbg__CameraDebugState.ts` and `_dbg__LightDebugState.ts`)
 
 # Current Entity Data Source Information on Edit Windows — Plan
 

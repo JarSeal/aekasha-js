@@ -71,6 +71,7 @@ describe('H1: a public build refuses to empty a folder that isn’t a Hub output
     ['a folder above it', path.dirname(ROOT), /holds the repo/],
     ['src/', path.join(ROOT, 'src'), /source folders/],
     ['hub/', path.join(ROOT, 'hub'), /source folders/],
+    ['docsApp/', path.join(ROOT, 'docsApp'), /source folders/],
   ])('refuses %s', (_label, dir, message) => {
     expect(getHubOutDirError(dir)).toMatch(message);
   });

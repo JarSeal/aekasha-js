@@ -1,8 +1,8 @@
-Notes for writing and implementing the plans in `docs/plans/`; the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
+Notes for writing and implementing the plans in `docs/plans/` (and the app's in `docsApp/plans/`); the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
 
 ## Plans logic and structure
 
-- Agentic coding plans are located in `docs/plans/`.
+- Agentic coding plans are located in `docs/plans/`, the app's in `docsApp/plans/` (see The app's plans and issues).
 - The naming of the files has a special pattern: [priority number eg. "p520" or "_DONE"]\_[name-of-the-feature].md (eg. "p020_some-feature.md").
 - The lower the priority number the higher the priority.
 - Plans that have been implement (filename starts with "\_DONE\_") are kept if they provide useful information for another feature and when the whole larger concept/epic that consists of those plans is done those plans are removed.
@@ -28,6 +28,16 @@ Notes for writing and implementing the plans in `docs/plans/`; the root `.claude
   - When the built code differs from the plan, add an "As built" list under the phase, so later phases don't build on stale assumptions.
 - "Mark the plan done" (the last phase's own steps included):
   - Status line: `implemented`, with the phases when it had some (`implemented (Phases 1-4)`, `implemented (Phases 1-3; Phase 4 dropped)`).
-  - `git mv` the file to `_DONE_<same name>` (`_DONE_p094_….md`), then update the references to the old name: other plans' `Blocked by` / `Blocks` lines and mentions (drop a `Blocked by` that pointed only at this plan) and the CLAUDE.md files.
+  - `git mv` the file to `_DONE_<same name>` (`_DONE_p094_….md`), then update the references to the old name: other plans' `Blocked by` / `Blocks` lines and mentions (drop a `Blocked by` that pointed only at this plan; for an engine plan, the app's plans in `docsApp/plans/` too) and the CLAUDE.md files.
   - Update the root `.claude/CLAUDE.md`, the nested `CLAUDE.md` of a subsystem it changed, and `readme.md` where the change alters what they describe (see the root's Workflow).
   - Bump the versions in `package.json` and add (or extend) the branch's `CHANGELOG.md` entry (see Versioning), then run `yarn checkVersions --against main`.
+
+## The app's plans and issues
+
+The app's plans are in `docsApp/plans/` and its issues in `docsApp/issues/` (p809 D1-D2), so an app made from the template keeps its own without mixing them with Ækasha's in `docs/`. Everything above applies to them, with these differences:
+
+- **What goes where:** a change to `src/app/` or the app-level `src/*.ts` files (`AppECSPlugins.ts`, `AppECSRegistry.ts`, `CONFIG.ts`) is the app's; one to the engine or the toolkit is Ækasha's, even when an app scene shows it. An issue goes with the code it's in.
+- **Numbers:** the app's plans have their own number space (an app `p100` and an engine `p100` can both exist); the number is the priority within its folder.
+- **References:** a header line names a plan in its own folder by file name, one in the other folder by its repo path (`Blocked by: docs/plans/p302_material-and-texture-system-refactor.md`).
+- **One way, as in the code:** an app plan can wait on an engine plan; an engine plan never names an app plan in `Blocks`, `Blocked by` or `Epic`, so a fork's app plans never change the engine's files. The app plan's own `Blocked by` records the dependency.
+- **Versions:** an app plan bumps `app_metadata.version` (see the root's Versioning), and its changelog sections are the App's.

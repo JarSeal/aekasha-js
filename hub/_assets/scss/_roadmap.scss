@@ -1,0 +1,209 @@
+// The roadmap pages' dependency graphs (devTools/hub/generated/planGraph.ts, p809 D5): an SVG drawn
+// at build time, so its sizes are the layout's px (the kit's 14 px base), and its colours the
+// Hub's tokens, so both themes work. The state colours are the status badges' (_sections.scss):
+// open the warning, in progress the info, done the success; the accent is for hover alone (p800
+// D6). A node's state is also its words (`✓ done`, `in progress`), never the colour alone.
+
+.hubPlanGraph {
+  margin: 1.5rem 0;
+
+  figcaption {
+    margin-top: 0.5rem;
+    color: var(--hub-text-muted);
+    font-size: 0.875rem;
+  }
+}
+
+// A wide graph scrolls in its box, so the page doesn't at phone width
+.hubPlanGraphScroll {
+  overflow-x: auto;
+  padding: 0.5rem;
+  background: var(--hub-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius);
+}
+
+.hubPlanGraphSvg {
+  display: block;
+  // At its own size: the layout wraps the titles for it
+  max-width: none;
+  margin: 0 auto;
+  font-family: var(--hub-font);
+}
+
+.hubPlanEdge {
+  fill: none;
+  stroke: var(--hub-text-muted);
+  stroke-width: 1.25;
+}
+
+.hubPlanEdge_soft {
+  stroke-dasharray: 5 4;
+}
+
+.hubPlanArrow path {
+  fill: var(--hub-text-muted);
+}
+
+.hubPlanNode {
+  --hub-plan-node: var(--hub-border-strong);
+
+  rect {
+    fill: var(--hub-panel);
+    stroke: var(--hub-plan-node);
+    stroke-width: 1.5;
+  }
+
+  text {
+    fill: var(--hub-text);
+  }
+
+  // The layout's sizes: the title wraps at 24 characters of this
+  .hubPlanNodeLabel {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .hubPlanNodeNote {
+    // Toward the text colour, as a badge's: the plain status colours miss 4.5:1 in the light theme
+    fill: color-mix(in srgb, var(--hub-plan-node) 75%, var(--hub-text));
+    font-weight: 400;
+  }
+
+  .hubPlanNodeTitle {
+    font-size: 12px;
+  }
+
+  &:hover rect {
+    fill: var(--hub-panel-hover);
+    stroke: var(--hub-accent);
+  }
+}
+
+.hubPlanNode_open {
+  --hub-plan-node: var(--hub-warning);
+}
+
+.hubPlanNode_progress {
+  --hub-plan-node: var(--hub-info);
+
+  rect {
+    stroke-width: 2.5;
+  }
+}
+
+// Muted: no panel, a quiet border and text
+.hubPlanNode_done {
+  --hub-plan-node: var(--hub-success);
+
+  rect {
+    fill: none;
+    stroke: var(--hub-border-strong);
+  }
+
+  text {
+    fill: var(--hub-text-muted);
+  }
+}
+
+// A blocker from outside the epic: a dashed box, labelled with its epic
+.hubPlanNode_outside {
+  --hub-plan-node: var(--hub-text-muted);
+
+  rect {
+    fill: none;
+    stroke: var(--hub-text-muted);
+    stroke-dasharray: 4 3;
+  }
+
+  .hubPlanNodeNote {
+    fill: var(--hub-text-muted);
+  }
+}
+
+// The roadmap pages around the graphs (devTools/hub/generated/roadmap.ts, p809 D4): the plans in
+// progress and the issues by area as lists, the plan tables, the done plans' <details>
+
+.hubRoadmapList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    margin: 0;
+  }
+}
+
+// A plan's number before its title, in a row or a list
+.hubRoadmapLabel {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+// The status as written, a dependency's "soft" / "done": quieter than the badge and the link
+.hubRoadmapStatus,
+.hubRoadmapNote {
+  color: var(--hub-text-muted);
+  font-size: 0.875rem;
+}
+
+.hubRoadmapMeta {
+  margin: 0.25rem 0 0;
+  color: var(--hub-text-muted);
+  font-size: 0.9375rem;
+}
+
+.hubRoadmapTable {
+  font-size: 0.9375rem;
+
+  th,
+  td {
+    vertical-align: top;
+  }
+
+  thead th {
+    white-space: nowrap;
+  }
+
+  // The plan's name: wide enough that a title wraps in two or three lines, not one word each
+  th[scope='row'] {
+    min-width: 14rem;
+    font-weight: 400;
+  }
+
+  // The status: the badge with its text under it when the cell is narrow
+  td:first-of-type {
+    min-width: 10rem;
+  }
+
+  // The row a graph node or a "Waits on" link jumped to
+  tr:target > * {
+    background: var(--hub-accent-soft);
+  }
+}
+
+.hubRoadmapEpic {
+  margin-top: 2.5rem;
+
+  // Its heading's own top margin is the section's
+  > h3:first-child {
+    margin-top: 0;
+  }
+}
+
+.hubRoadmapDone {
+  margin: 0 0 2rem;
+
+  > summary {
+    width: fit-content;
+    padding: 0.25rem 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  > .hubTable {
+    margin-top: 0.75rem;
+  }
+}

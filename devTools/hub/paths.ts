@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { ROOT, SRC_DIR } from '../paths';
+import { DOCS_APP_DIR, DOCS_DIR, ROOT, SRC_DIR } from '../paths';
 
 /** The repo root (`devTools/paths.ts`') */
 export { ROOT };
@@ -68,8 +68,11 @@ export const TSCONFIG_FILE = path.join(ROOT, 'tsconfig.json');
 /** The API model's cache: TypeDoc's JSON and the hash of its inputs */
 export const HUB_API_CACHE_FILE = path.join(ROOT, '.cache', 'hub', 'typedoc.json');
 
-/** The generated sections' sources */
-export const ISSUES_DIR = path.join(ROOT, 'docs', 'issues');
+/** The generated sections' sources: Ækasha's issues and plans, then the app's (p809 D1) */
+export const ISSUES_DIR = path.join(DOCS_DIR, 'issues');
+export const PLANS_DIR = path.join(DOCS_DIR, 'plans');
+export const APP_ISSUES_DIR = path.join(DOCS_APP_DIR, 'issues');
+export const APP_PLANS_DIR = path.join(DOCS_APP_DIR, 'plans');
 /** The Version section's changelog */
 export const CHANGELOG_FILE = path.join(ROOT, 'CHANGELOG.md');
 

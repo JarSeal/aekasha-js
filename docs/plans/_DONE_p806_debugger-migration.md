@@ -1,6 +1,6 @@
 Status: implemented (Phases 0-8)
 Category: UI, Debug, Refactoring, Accessibility
-Epic: p800_debugger-ui-overhaul.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
 Blocks: \_DONE_p807_stats-and-profiler-graphs.md (p800 §5)
 Related: \_DONE_p804_forms-and-bindings.md (the binding, the scheduler, the declarative grid; its §4: what this port rewrites by hand), \_DONE_p805_data-display.md (the list, the tabs, the table, the splitter; its §4: the debugger's lists and tab menus), \_DONE_p803_ui-kit-structure-and-core.md (D6: the debugger until p806; the window helper classes and `uiIcon` it left), \_DONE_p801_design-foundation.md (§4: every debugger colour mapped to a role; D2: the compact density's sizes left for this plan; D4: `--aek-rem`), \_DONE_p618_review-debug-public-api.md (P7: the Tweakpane fields in the tab types; D8: the header lines; the "Write your own tab" guide), p622_engine-6-major.md (the major this ships in; its migration page lists D3's breaks), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (edit windows built on this plan's), `docs/issues/on-screen-tools-during-scene-load.md` (closed here: D7), `docs/issues/action-map-keys-on-focused-debugger-controls.md` (closed here: D12, Phase 2)
 
