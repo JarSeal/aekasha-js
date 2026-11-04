@@ -3,7 +3,7 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1248
+      "gzip": 1249
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 148112,
@@ -59,7 +59,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7543,
-      "gzip": 3075
+      "gzip": 3076
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -70,8 +70,8 @@
       "gzip": 13863
     },
     "assets/HDRLoader.js": {
-      "bytes": 3406,
-      "gzip": 1633
+      "bytes": 3405,
+      "gzip": 1631
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -111,11 +111,11 @@
     },
     "assets/Kbd.js": {
       "bytes": 2886,
-      "gzip": 1305
+      "gzip": 1306
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
-      "gzip": 24362
+      "gzip": 24365
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -139,7 +139,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 181
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -150,16 +150,16 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 1039598,
-      "gzip": 291325
+      "bytes": 1039464,
+      "gzip": 291354
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
       "gzip": 3474
     },
     "assets/uiKitEmbed.js": {
-      "bytes": 47117,
-      "gzip": 17061
+      "bytes": 47010,
+      "gzip": 17026
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -167,7 +167,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19024
+      "gzip": 19022
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -183,18 +183,18 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 20393,
-      "gzip": 7739
+      "gzip": 7740
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 208
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
-    "modules": 66,
-    "minified": 1058638,
-    "gzip": 296826
+    "modules": 65,
+    "minified": 1058499,
+    "gzip": 296814
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -213,9 +213,9 @@
       "gzip": 1077
     },
     "_engine/kernel/ecs": {
-      "modules": 7,
-      "minified": 24712,
-      "gzip": 7023
+      "modules": 6,
+      "minified": 24573,
+      "gzip": 7011
     },
     "_engine/kernel/init": {
       "modules": 5,

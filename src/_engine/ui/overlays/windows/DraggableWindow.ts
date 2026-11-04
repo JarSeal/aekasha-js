@@ -8,7 +8,7 @@
 import type { CMPHandle } from '../../core/CMPTypes';
 import { CMP } from '../../core/CMP';
 import { lerror } from '../../../utils/Logger';
-import { getConfig, IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../../kernel/config/Config';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../core/HUD';
 import { onBoundsResize } from '../../core/Window';
 import { addSceneHooks } from '../../../kernel/scene/SceneHooks';
@@ -351,9 +351,7 @@ const buildContent = ({ config, runtime }: WindowEntry) => {
   const { content } = runtime;
   if (typeof content === 'function') return content(config.data);
   if (content) return content;
-  const kind = getWindowKind(config);
-  const contentFn = contentFns[kind] ?? getConfig().draggableWindows?.[kind]?.contentFn;
-  return contentFn?.(config.data);
+  return contentFns[getWindowKind(config)]?.(config.data);
 };
 
 /** Content passed as a CMP (not a function) outlives the window's DOM: it is detached before the

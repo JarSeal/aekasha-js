@@ -9,10 +9,76 @@ import type {
 } from '../../features/physics/PhysicsTierTypes';
 import type { PhysicsWireframeColors } from '../config/Config';
 import type { EntityDebugData, ManagedByData } from './ECSRegistry';
-import { CoreComponentType as CoreType } from './ECSRegistry';
 import type { CharacterObject } from '../../features/character/CharacterTypes';
 import type { LodData } from '../../features/lod/LodTypes';
 import type { InstancedMeshSlotData } from '../../features/instancing/InstancedMeshPoolTypes';
+
+/**
+ * The engine's own component keys, whose values (`'CORE_…'`) the debug listings print. App and
+ * toolkit keys live in their own modules' key objects.
+ */
+export const ComponentType = {
+  APP_ID: 'CORE_APP_ID',
+  TRANSFORM: 'CORE_TRANSFORM',
+  DISABLED: 'CORE_DISABLED',
+  PERSISTENT: 'CORE_PERSISTENT',
+  USER_DATA: 'CORE_USER_DATA',
+  LIFETIME: 'CORE_LIFETIME',
+  OBJECT3D: 'CORE_OBJECT3D',
+  TARGET_LINK: 'CORE_TARGET_LINK',
+  CAMERA_SETTINGS: 'CORE_CAMERA_SETTINGS',
+  ORBIT_CONTROLS: 'CORE_ORBIT_CONTROLS',
+  LINE: 'CORE_LINE',
+  /** An entity a manager owns and drives (eg. a sky box's sun light), see ManagedByData. */
+  MANAGED_BY: 'CORE_MANAGED_BY',
+  /** A character's registry entry (Character.ts's createCharacter), see CharacterObject. */
+  CHARACTER: 'CORE_CHARACTER',
+  // Physics
+  COLLIDER: 'CORE_COLLIDER',
+  BODY_DYNAMIC_VISUAL: 'CORE_BODY_DYNAMIC_VISUAL', // Moving + Has Mesh
+  BODY_DYNAMIC_HEADLESS: 'CORE_BODY_DYNAMIC_HEADLESS', // Moving + No Mesh
+  BODY_STATIC: 'CORE_BODY_STATIC', // Never moves (or frozen by a physics tier)
+  PHYSICS_SIM_TIER: 'CORE_PHYSICS_SIM_TIER', // runtime-only, see PhysicsTiers.ts (p352)
+  PHYSICS_TIER_POLICY: 'CORE_PHYSICS_TIER_POLICY', // opt-in, see PhysicsTierPolicy.ts (p352)
+  // Tags
+  TAG_IS_MESH: 'CORE_TAG_IS_MESH',
+  TAG_IS_GROUP: 'CORE_TAG_IS_GROUP',
+  TAG_IS_LINE: 'CORE_TAG_IS_LINE',
+  TAG_IS_LIGHT: 'CORE_TAG_IS_LIGHT',
+  TAG_IS_AMBIENT_LIGHT: 'CORE_IS_AMBIENT_LIGHT',
+  TAG_IS_HEMISPHERE_LIGHT: 'CORE_IS_HEMISPHERE_LIGHT',
+  TAG_IS_POINT_LIGHT: 'CORE_IS_POINT_LIGHT',
+  TAG_IS_DIRECTIONAL_LIGHT: 'CORE_IS_DIRECTIONAL_LIGHT',
+  TAG_IS_SPOT_LIGHT: 'CORE_IS_SPOT_LIGHT',
+  TAG_IS_CAMERA: 'CORE_TAG_IS_CAMERA',
+  TAG_IS_MAIN_CAMERA: 'CORE_TAG_IS_MAIN_CAMERA',
+  TAG_IS_CHARACTER: 'CORE_TAG_IS_CHARACTER',
+  TAG_IS_PHYSICS_OBJECT: 'CORE_TAG_IS_PHYSICS_OBJECT',
+  // Frustum culling
+  FRUSTUM_CULLING_ENABLED: 'CORE_FRUSTUM_CULLING_ENABLED', // opt-in, user-authored
+  TAG_FRUSTUM_CULLED: 'CORE_TAG_FRUSTUM_CULLED', // runtime-only, current culled state
+  // Object (contribution) culling — see features/spatial/LightObjectCullingSystem.ts
+  OBJECT_CULLING_ENABLED: 'CORE_OBJECT_CULLING_ENABLED', // opt-in, user-authored
+  TAG_OBJECT_CULLED: 'CORE_TAG_OBJECT_CULLED', // runtime-only, current culled state
+  // Spatial index (docs/plans/_DONE_p050_spatial-index.md)
+  SPATIAL_INDEXED: 'CORE_SPATIAL_INDEXED', // opt-in, membership in the DEFAULT spatial domain
+  SPATIAL_DOMAINS: 'CORE_SPATIAL_DOMAINS', // runtime-only, membership in the other spatial domains
+  // LOD selection (docs/plans/_DONE_p348_ecs-lod-selection.md) — see features/lod/LodSystem.ts
+  LOD: 'CORE_LOD', // opt-in, user-authored
+  TAG_LOD_CULLED: 'CORE_TAG_LOD_CULLED', // runtime-only, beyond the last level
+  TAG_LOD_TRANSITIONING: 'CORE_TAG_LOD_TRANSITIONING', // runtime-only, a LOD cross-fade runs (p351)
+  // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
+  INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
+  // Debug
+  DEBUG_DATA: 'CORE_DEBUG_DATA',
+  DEBUG_LIGHT_HELPER: 'CORE_DEBUG_LIGHT_HELPER',
+  DEBUG_CAMERA_HELPER: 'CORE_DEBUG_CAMERA_HELPER',
+  DEBUG_SYMBOL: 'CORE_DEBUG_SYMBOL',
+  DEBUG_PHYSICS_WIREFRAME: 'CORE_DEBUG_PHYSICS_WIREFRAME',
+  DEBUG_TAG_IS_DEBUG_CAMERA: 'CORE_DEBUG_IS_DEBUG_CAMERA',
+  DEBUG_STRESS_TEST_INSTANCE: 'CORE_DEBUG_STRESS_TEST_INSTANCE', // kernel/ecs/debug/_dbg__ECSStressTest.ts
+  DEBUG_STRESS_TEST_HOVER: 'CORE_DEBUG_STRESS_TEST_HOVER', // kernel/ecs/debug/_dbg__ECSStressTest.ts
+} as const;
 
 /** A position (or any 3D vector) as plain numbers. */
 export type ECSPosition = { x: number; y: number; z: number };
@@ -37,26 +103,26 @@ export interface LifetimeData {
 export interface CoreComponentData {
   /** The entity's app id (`createEntity`'s `appId`, else a generated UUID: `isFixed` false), found
    * with `getEntityIdByAppId`. Don't change `id` in place: add a new `APP_ID` instead. */
-  [CoreType.APP_ID]: { id: string; isFixed: boolean };
+  [ComponentType.APP_ID]: { id: string; isFixed: boolean };
   /** The entity's position, rotation and scale ({@link Transform}). */
-  [CoreType.TRANSFORM]: Transform;
+  [ComponentType.TRANSFORM]: Transform;
   /** Present: the entity is disabled (`setDisabled`): hidden, its body disabled. */
-  [CoreType.DISABLED]: boolean;
+  [ComponentType.DISABLED]: boolean;
   /** Present: the entity survives a scene switch (`clearNonPersistent`), and so does its
    * `TARGET_LINK` target. */
-  [CoreType.PERSISTENT]: boolean;
+  [ComponentType.PERSISTENT]: boolean;
   /** The app's own data for the entity (`createEntity`'s `userData`). */
-  [CoreType.USER_DATA]: Record<string, unknown>;
+  [ComponentType.USER_DATA]: Record<string, unknown>;
   /** Deletes the entity when it runs out ({@link LifetimeData}). */
-  [CoreType.LIFETIME]: LifetimeData;
+  [ComponentType.LIFETIME]: LifetimeData;
   /** The entity's Object3D, which `TRANSFORM` is synced to; `_lastVersion` is the transform
    * version last copied. Adding it tags the entity by kind (`TAG_IS_MESH`, …). */
-  [CoreType.OBJECT3D]: { value: THREE.Object3D; _lastVersion: number };
+  [ComponentType.OBJECT3D]: { value: THREE.Object3D; _lastVersion: number };
   /** The entity it faces (`lookAtSystem`), eg. a light's target; disabling or making this entity
    * persistent does the same to the target. */
-  [CoreType.TARGET_LINK]: { targetId: number };
+  [ComponentType.TARGET_LINK]: { targetId: number };
   /** A camera's settings (`createCameraEntity`). */
-  [CoreType.CAMERA_SETTINGS]: {
+  [ComponentType.CAMERA_SETTINGS]: {
     type: 'PERSPECTIVE' | 'ORTHOGRAPHIC';
     fov: number; // Only for Perspective
     near: number;
@@ -67,7 +133,7 @@ export interface CoreComponentData {
     referenceAspect: number; // Aspect ratio the base fov/frustumSize were authored for
   };
   /** A camera's OrbitControls and the scene they were made for. */
-  [CoreType.ORBIT_CONTROLS]: {
+  [ComponentType.ORBIT_CONTROLS]: {
     controls: OrbitControls;
     sceneId: string;
   };
@@ -75,100 +141,100 @@ export interface CoreComponentData {
    * the entity's deletion disposes it. Holds the id, not the LineObject or its Object3D — a
    * line swaps its Object3D when it moves between the thin and thick backends, so a stored
    * object would go stale. Resolve it with getLineForEntity. */
-  [CoreType.LINE]: { lineId: string };
+  [ComponentType.LINE]: { lineId: string };
   /** The manager that owns the entity ({@link ManagedByData}, `CoreEntityOpts.managedBy`). */
-  [CoreType.MANAGED_BY]: ManagedByData;
+  [ComponentType.MANAGED_BY]: ManagedByData;
   /** A character's registry entry (`aekasha/character`'s `createCharacter`). */
-  [CoreType.CHARACTER]: CharacterObject;
+  [ComponentType.CHARACTER]: CharacterObject;
   // Physics
   /** The entity's colliders (`aekasha/physics`' `createPhysicsEntity`). */
-  [CoreType.COLLIDER]: ColliderAPI[];
+  [ComponentType.COLLIDER]: ColliderAPI[];
   /** A dynamic body with an Object3D: synced to `TRANSFORM` every frame. */
-  [CoreType.BODY_DYNAMIC_VISUAL]: RigidBodyAPI;
+  [ComponentType.BODY_DYNAMIC_VISUAL]: RigidBodyAPI;
   /** A dynamic body without an Object3D: synced to `TRANSFORM` every frame. */
-  [CoreType.BODY_DYNAMIC_HEADLESS]: RigidBodyAPI;
+  [ComponentType.BODY_DYNAMIC_HEADLESS]: RigidBodyAPI;
   /** A fixed body, or a dynamic one a `STATIC` or `DISABLED` physics tier froze: not synced per
    * frame. */
-  [CoreType.BODY_STATIC]: RigidBodyAPI;
+  [ComponentType.BODY_STATIC]: RigidBodyAPI;
   /** Set by requestPhysicsTier (features/physics/PhysicsTiers.ts): don't add it directly. */
-  [CoreType.PHYSICS_SIM_TIER]: PhysicsSimTierData;
+  [ComponentType.PHYSICS_SIM_TIER]: PhysicsSimTierData;
   /** Added by createPhysicsEntity's `tierPolicy` option or setPhysicsTierPolicyMember
    * (features/physics/PhysicsTierPolicy.ts). */
-  [CoreType.PHYSICS_TIER_POLICY]: PhysicsTierPolicyMemberData;
+  [ComponentType.PHYSICS_TIER_POLICY]: PhysicsTierPolicyMemberData;
   // Tags: present means yes. The kind tags come from the OBJECT3D's add hook
   /** The Object3D is a mesh (also a thick engine line). */
-  [CoreType.TAG_IS_MESH]: boolean;
+  [ComponentType.TAG_IS_MESH]: boolean;
   /** The Object3D is a group. */
-  [CoreType.TAG_IS_GROUP]: boolean;
+  [ComponentType.TAG_IS_GROUP]: boolean;
   /** The Object3D is a line (a thin one, or a thick engine line, re-tagged by the lines feature). */
-  [CoreType.TAG_IS_LINE]: boolean;
+  [ComponentType.TAG_IS_LINE]: boolean;
   /** The Object3D is a light. */
-  [CoreType.TAG_IS_LIGHT]: boolean;
+  [ComponentType.TAG_IS_LIGHT]: boolean;
   /** The Object3D is an ambient light. */
-  [CoreType.TAG_IS_AMBIENT_LIGHT]: boolean;
+  [ComponentType.TAG_IS_AMBIENT_LIGHT]: boolean;
   /** The Object3D is a hemisphere light. */
-  [CoreType.TAG_IS_HEMISPHERE_LIGHT]: boolean;
+  [ComponentType.TAG_IS_HEMISPHERE_LIGHT]: boolean;
   /** The Object3D is a point light. */
-  [CoreType.TAG_IS_POINT_LIGHT]: boolean;
+  [ComponentType.TAG_IS_POINT_LIGHT]: boolean;
   /** The Object3D is a directional light. */
-  [CoreType.TAG_IS_DIRECTIONAL_LIGHT]: boolean;
+  [ComponentType.TAG_IS_DIRECTIONAL_LIGHT]: boolean;
   /** The Object3D is a spot light. */
-  [CoreType.TAG_IS_SPOT_LIGHT]: boolean;
+  [ComponentType.TAG_IS_SPOT_LIGHT]: boolean;
   /** The Object3D is a camera. */
-  [CoreType.TAG_IS_CAMERA]: boolean;
+  [ComponentType.TAG_IS_CAMERA]: boolean;
   /** The scene's main camera (one at a time, `setMainCamera`): culling and LOD measure from it,
    * whatever camera renders (the debug camera's doesn't count). */
-  [CoreType.TAG_IS_MAIN_CAMERA]: boolean;
+  [ComponentType.TAG_IS_MAIN_CAMERA]: boolean;
   /** A character's entity. */
-  [CoreType.TAG_IS_CHARACTER]: boolean;
+  [ComponentType.TAG_IS_CHARACTER]: boolean;
   /** A physics entity (its Object3D's `userData.isPhysicsObject`, or `createPhysicsEntity`). */
-  [CoreType.TAG_IS_PHYSICS_OBJECT]: boolean;
+  [ComponentType.TAG_IS_PHYSICS_OBJECT]: boolean;
   // Frustum culling
   /** Opt-in: the entity is hidden while outside the main camera's frustum (a mesh, a point or a
    * spot light). */
-  [CoreType.FRUSTUM_CULLING_ENABLED]: boolean;
+  [ComponentType.FRUSTUM_CULLING_ENABLED]: boolean;
   /** Runtime state: the entity is frustum culled now. Don't add it. */
-  [CoreType.TAG_FRUSTUM_CULLED]: boolean;
+  [ComponentType.TAG_FRUSTUM_CULLED]: boolean;
   // Object (contribution) culling
   /** Opt-in: a light is turned off while it lights nothing in view (`spatial()`'s light culling). */
-  [CoreType.OBJECT_CULLING_ENABLED]: boolean;
+  [ComponentType.OBJECT_CULLING_ENABLED]: boolean;
   /** Runtime state: the light is object culled now. Don't add it. */
-  [CoreType.TAG_OBJECT_CULLED]: boolean;
+  [ComponentType.TAG_OBJECT_CULLED]: boolean;
   /** Opt-in: the entity is in the world's `DEFAULT` spatial domain (`spatial()`). A plain marker:
    * the spatial grid (features/spatial/SpatialIndexSystem.ts) owns the position and radius. */
-  [CoreType.SPATIAL_INDEXED]: boolean;
+  [ComponentType.SPATIAL_INDEXED]: boolean;
   /** Bit i = member of the world's spatial domain with bit index i. Kept by
    * joinSpatialDomain/leaveSpatialDomain (features/spatial/SpatialIndexSystem.ts): don't add it
    * directly. */
-  [CoreType.SPATIAL_DOMAINS]: { mask: number };
+  [ComponentType.SPATIAL_DOMAINS]: { mask: number };
   // LOD selection
   /** Opt-in: the entity's LOD levels and its selected and applied level (`lod()`). */
-  [CoreType.LOD]: LodData;
+  [ComponentType.LOD]: LodData;
   /** Runtime state: the entity is beyond its last LOD level, hidden. Don't add it. */
-  [CoreType.TAG_LOD_CULLED]: boolean;
+  [ComponentType.TAG_LOD_CULLED]: boolean;
   /** Runtime state: a LOD cross-fade is running on the entity. Don't add it. */
-  [CoreType.TAG_LOD_TRANSITIONING]: boolean;
+  [ComponentType.TAG_LOD_TRANSITIONING]: boolean;
   /** An instanced mesh pool's slot, set by the pool's spawn (`instancing()`). */
-  [CoreType.INSTANCED_MESH_SLOT]: InstancedMeshSlotData;
+  [ComponentType.INSTANCED_MESH_SLOT]: InstancedMeshSlotData;
   // Debug
   /** What the debug tools show for the entity ({@link EntityDebugData}); stored only in the debug
    * env and prod test mode. */
-  [CoreType.DEBUG_DATA]: EntityDebugData;
+  [ComponentType.DEBUG_DATA]: EntityDebugData;
   /** A light's debug helper (and its shadow camera's). Debug env only. */
-  [CoreType.DEBUG_LIGHT_HELPER]: {
+  [ComponentType.DEBUG_LIGHT_HELPER]: {
     value: THREE.PointLightHelper | THREE.DirectionalLightHelper | THREE.SpotLightHelper;
     camHelper?: THREE.CameraHelper;
   };
   /** A camera's debug helper. Debug env only. */
-  [CoreType.DEBUG_CAMERA_HELPER]: { value: THREE.CameraHelper };
+  [ComponentType.DEBUG_CAMERA_HELPER]: { value: THREE.CameraHelper };
   /** The entity's 3D debug symbol, and whether the user switched it on. Debug env only. */
-  [CoreType.DEBUG_SYMBOL]: { value: THREE.Group | THREE.Mesh; userVisible: boolean };
+  [ComponentType.DEBUG_SYMBOL]: { value: THREE.Group | THREE.Mesh; userVisible: boolean };
   /** Opt-in, per-entity collider wireframe.
    * Its presence IS the on/off toggle — absent on every physics entity by default. The
    * THREE objects it drives are owned by features/physics/debug/_dbg__PhysicsDebugDraw.ts rather
    * than stored here, because they're built asynchronously (WORKER_THREAD mode fetches the
    * collider's shape over RPC) and addComponent is synchronous. */
-  [CoreType.DEBUG_PHYSICS_WIREFRAME]: {
+  [ComponentType.DEBUG_PHYSICS_WIREFRAME]: {
     /** Seeds this entity's color overrides, each key falling back to the global tab
      * value and then to AppConfig.debugPhysicsWireframe.colors. Read once when the
      * component is added — _dbg__PhysicsDebugDraw.ts then owns them, so they outlive
@@ -176,12 +242,12 @@ export interface CoreComponentData {
     colorOverrides?: PhysicsWireframeColors;
   };
   /** The scene debug camera's entity. Debug env only. */
-  [CoreType.DEBUG_TAG_IS_DEBUG_CAMERA]: boolean;
+  [ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA]: boolean;
   /** An ECS stress test entity drawn as one instance of the test's InstancedMesh
    * (kernel/ecs/debug/_dbg__ECSStressTest.ts). */
-  [CoreType.DEBUG_STRESS_TEST_INSTANCE]: { mesh: THREE.InstancedMesh; index: number };
+  [ComponentType.DEBUG_STRESS_TEST_INSTANCE]: { mesh: THREE.InstancedMesh; index: number };
   /** An ECS stress test entity's bobbing (kernel/ecs/debug/_dbg__ECSStressTest.ts). */
-  [CoreType.DEBUG_STRESS_TEST_HOVER]: {
+  [ComponentType.DEBUG_STRESS_TEST_HOVER]: {
     speed: number;
     amplitude: number;
     baseY: number;
@@ -208,9 +274,6 @@ export interface CoreComponentData {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the declaration merging target
 export interface ComponentDataMap extends CoreComponentData {}
 
-/** The engine's own component keys (the same object as `CoreComponentType`). App and
- * toolkit keys live in their own modules' key objects. */
-export const ComponentType = CoreType;
 /** Any component key the program knows: the engine's and every augmented one. */
 export type ComponentType = keyof ComponentDataMap;
 /** Every component type's data, by its key ({@link ComponentDataMap}: augment that, not this). */

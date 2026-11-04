@@ -131,13 +131,6 @@ export type LoadSceneProps = {
     sceneData: SceneData;
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
-  /**
-   * Never read: the loader's own `updateLoaderStatusFn` is the one {@link getLoaderStatusUpdater}
-   * returns.
-   * @deprecated Give the loader its `updateLoaderStatusFn` (`createSceneLoader`). Removed in
-   * engine 6.0.0.
-   */
-  updateLoaderStatusFn?: UpdateLoaderStatusFn;
   /** The loader to use (its {@link SceneLoader.id}), the current one without it. */
   loaderId?: string;
   /** Release the previous scene's assets before the next scene loads instead of after it: lower

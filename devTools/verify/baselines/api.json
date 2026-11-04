@@ -1034,7 +1034,6 @@
       "breakSimHistory": "Function",
       "clearPhysicsStepGates": "Function",
       "dropStepAccumulator": "Function",
-      "getPhysGameTime": "Function",
       "getPhysicsSimClock": "Function",
       "getPhysicsSimClockEpoch": "Function",
       "getPhysicsSimHistoryEpoch": "Function",
@@ -1110,9 +1109,6 @@
       "getPhysicsEngine": "Function",
       "initPhysicsEngine": "Function",
       "ValidProtocolTypes": "Variable"
-    },
-    "src/_engine/features/physics/PhysicsWallClock.ts": {
-      "readPhysicsWallClock": "Function"
     },
     "src/_engine/features/physics/PhysicsWorld.ts": {
       "createPhysicsAPIDebugGUI": "Function",
@@ -2034,10 +2030,6 @@
       "SampleAtlasCellOpts": "TypeAlias",
       "TextureAtlasInfo": "TypeAlias"
     },
-    "src/_engine/kernel/assets/TextureSync.ts": {
-      "loadTexture": "Function",
-      "loadTextures": "Function"
-    },
     "src/_engine/kernel/assets/worker/AssetsFetch.ts": {
       "AssetsSourceError": "Class",
       "fetchAsset": "Function"
@@ -2172,7 +2164,6 @@
       "teleport": "Function"
     },
     "src/_engine/kernel/ecs/ECSRegistry.ts": {
-      "CoreComponentType": "Enum",
       "EntityDebugData": "TypeAlias",
       "ManagedByData": "TypeAlias"
     },
@@ -2637,7 +2628,6 @@
       "getScene": "Function",
       "getSceneOpts": "Function",
       "Looper": "TypeAlias",
-      "registerOnAllSceneEnterings": "Variable",
       "registerOnAllSceneEnters": "Function",
       "registerOnAllSceneExits": "Function",
       "registerOnSceneEnter": "Function",
@@ -4225,7 +4215,6 @@
       "ComponentHook",
       "ComponentType",
       "CoreComponentData",
-      "CoreComponentType",
       "CreateRendererOptions",
       "DebugPhysicsWireframeConfig",
       "DracoConfig",
@@ -4447,9 +4436,7 @@
       "lerror",
       "llog",
       "loadScene",
-      "loadTexture",
       "loadTextureAsync",
-      "loadTextures",
       "loadTslMaterialFileAsync",
       "lwarn",
       "mountAekasha",
@@ -4458,7 +4445,6 @@
       "onLastInputDeviceChange",
       "playActionRecording",
       "recordActions",
-      "registerOnAllSceneEnterings",
       "registerOnAllSceneEnters",
       "registerOnAllSceneExits",
       "registerOnSceneEnter",

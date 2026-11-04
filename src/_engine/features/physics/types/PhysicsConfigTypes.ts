@@ -42,12 +42,6 @@ export type PhysicsState = {
   /** Whether stepping is paused (an explicit play toggle, the background behaviour or a scene
    * load: `pauseReason`). */
   isPaused: boolean;
-  /** When the physics loop is on pause (backgroundBehavior = 'PAUSE', loopState.masterPlay = false, or loopState.appPlay = false)
-   * the time it was paused (the physics wall clock, `PhysicsWallClock.ts`). 0 = not paused.
-   */
-  pausedTime: number;
-  /** Total pause duration, read by the deprecated `getPhysGameTime` (`PhysicsWallClock.ts`). */
-  pauseDurationTotal: number;
   /** Why physics is paused, when something other than an explicit play toggle paused it:
    * 'BACKGROUND_BEHAVIOR' = the app window is hidden, 'SCENE_LOAD' = a scene is loading (see
    * holdPhysicsStepping). */

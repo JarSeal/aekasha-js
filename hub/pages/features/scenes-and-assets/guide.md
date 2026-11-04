@@ -175,7 +175,7 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
   can register on every visit. Each call returns its remover.
 - [`registerOnAllSceneEnters`](api:registerOnAllSceneEnters) and
   [`registerOnAllSceneExits`](api:registerOnAllSceneExits) run for every scene, one function per
-  id, after the scene's own hook. (`registerOnAllSceneEnterings` is the old name, deprecated.)
+  id, after the scene's own hook.
 
 ## Key APIs
 
@@ -190,8 +190,7 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
 - [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial),
   [`loadTextureAsync`](api:loadTextureAsync) and [`importAssetAsync`](api:importAssetAsync): the
   same assets from code ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL
-  material). The synchronous `loadTexture` and `loadTextures` are deprecated: they load neither
-  the asset pipeline's output nor in the assets worker, and their errors never reach you.
+  material).
 
 ## Read more
 

@@ -583,12 +583,6 @@ export const registerOnAllSceneEnters = (id: string, fn: () => void) =>
   addListener(onAllSceneEnters, id, fn);
 
 /**
- * The old name of {@link registerOnAllSceneEnters}.
- * @deprecated Use {@link registerOnAllSceneEnters}. Removed in engine 6.0.0.
- */
-export const registerOnAllSceneEnterings = registerOnAllSceneEnters;
-
-/**
  * Sets a function every scene load runs when the previous scene exits, after that scene's own
  * {@link registerOnSceneExit} function. One per `id`: a second call with the same id replaces the
  * first.

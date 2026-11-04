@@ -49,8 +49,6 @@ export const facade: {
     timestepRatio: 1 / 60,
     backgroundBehavior: 'PAUSE',
     isPaused: false,
-    pausedTime: 0,
-    pauseDurationTotal: 0,
     pauseReason: null,
     minDeltaTime: 1 / 30,
     maxDeltaTime: 1 / 10,

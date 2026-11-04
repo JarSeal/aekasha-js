@@ -471,6 +471,29 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   `AppConfig.draggableWindows` (with `Config.ts`' `CMPHandle` and `DraggableWindow` type imports,
   the last kernel → ui imports of `Config.ts`; `DraggableWindow.ts` stops reading `getConfig()`),
   `getPhysGameTime` with `PhysicsWallClock.ts` and its `eslint.config.js` allow-list entry.
+
+  As built (section 1):
+
+  - **`ComponentType` is an `as const` object now** (`ECSCoreComponents.ts`, D9's pattern), and
+    the enum `CoreComponentType` is gone from `ECSRegistry.ts`: kept as an `@internal` enum, the
+    Hub's API check warned that `ComponentType` (public) named it. The string values are the
+    same; the data map's keys are those literals. An app that names an engine key as a type
+    (`ComponentType.TRANSFORM` in a type position) now writes `typeof ComponentType.TRANSFORM`
+    (the engine and the template already did): **Phase 7's `typeof` rule covers `ComponentType`
+    too**, and D11's page says so.
+  - `TextureSync.ts` went whole, with its test: `createTexture` was its own; `Texture.ts`' helpers
+    it used all have other callers.
+  - With `getPhysGameTime` went its pause bookkeeping: `setPhysicsPauseTime` and **`PhysicsState`'s
+    `pausedTime` and `pauseDurationTotal`** (a public type on `aekasha/physics`, read through
+    `getPhysicsState()`): nothing else read them. Section 5's report rules and D11's removals
+    table name them too. The `eslint.config.js` known-violations block is a comment now (empty).
+  - `DraggableWindow.ts`' `buildContent` reads only the registered content;
+    `DraggableWindow.test.ts`' config fallback test became a registered-content one.
+  - `yarn verify:baselines`: the bundle's size unchanged (nothing in the template called these;
+    one module fewer, `ECSRegistry.ts` being types only), the API diff only the removed names;
+    recorded with `--update`. `yarn hub:build` without the leak warning. `yarn verify:scenes`
+    not run for this section (no simulation change: the pause bookkeeping only fed
+    `getPhysGameTime`); section 2's run covers it.
 - **Section 2, characters:** the list in Grounding; `getInputBrainSpec`'s mapping goes with
   `CharacterInputScheme`. Re-check that no debug tool reads the flat `data` view first. The
   character scenes' hashes (`thirdPersonGymScene`, the character examples) must not move.

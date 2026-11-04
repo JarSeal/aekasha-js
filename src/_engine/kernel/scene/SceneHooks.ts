@@ -19,12 +19,6 @@ export type SceneHooks = {
   /** A scene of the gathered data was registered, with its data. `InitEngine` registers them
    * after every feature has installed, so the hook sees every one. */
   sceneRegistered?: (sceneId: string, data: SceneData) => void;
-  /**
-   * Never called: scenes aren't deleted (`deleteScene`, its one caller, had no caller and went in
-   * engine 5.4.0).
-   * @deprecated Nothing replaces it. Removed in engine 6.0.0.
-   */
-  sceneDeleted?: (sceneId: string) => void;
   /** The textures a scene's asset release must keep, though the released scene owns them and no
    * material uses them (eg. the sky box's). Read once per release. */
   retainedTextures?: () => readonly THREE.Texture[];

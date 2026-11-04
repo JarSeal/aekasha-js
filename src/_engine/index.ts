@@ -34,7 +34,6 @@ export type {
   ECSTransformProp,
   LifetimeData,
 } from './kernel/ecs/ECSCoreComponents';
-export { CoreComponentType } from './kernel/ecs/ECSRegistry';
 export type { EntityDebugData, ManagedByData } from './kernel/ecs/ECSRegistry';
 export { APP_RENDER_SYNC_ORDER, ECSSystemStage } from './kernel/loop/SystemStages';
 export type {
@@ -250,7 +249,6 @@ export {
   getGeneratedSceneData,
   getRootScene,
   getScene,
-  registerOnAllSceneEnterings,
   registerOnAllSceneEnters,
   registerOnAllSceneExits,
   registerOnSceneEnter,
@@ -276,7 +274,6 @@ export {
   saveTexture,
 } from './kernel/assets/Texture';
 export type { TexOpts, TextureProps } from './kernel/assets/Texture';
-export { loadTexture, loadTextures } from './kernel/assets/TextureSync';
 export {
   buildTextureArray,
   getArrayLayerIndex,

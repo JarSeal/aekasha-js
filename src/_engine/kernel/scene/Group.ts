@@ -172,22 +172,6 @@ export const removeFromGroupEntity = (
      * released like any mesh entity's. A mesh without an entity is only detached: what it holds
      * stays its owner's. */
     deleteMeshes?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's geometry. Removed in engine 6.0.0.
-     */
-    deleteGeometries?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's materials. Removed in engine 6.0.0.
-     */
-    deleteMaterials?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's materials, which release their textures.
-     * Removed in engine 6.0.0.
-     */
-    deleteTextures?: boolean;
   },
   ecsWorld?: ECSWorld
 ): THREE.Group | undefined => {
