@@ -7,7 +7,7 @@ Related: \_DONE_p347_lod-chain-generation.md (the simplifier that makes the prox
 # HLOD: Merged Cluster Proxies — Stub
 
 **This is a stub.** It records the target and what's known, so the real plan can be written once
-p372 and p348 have shipped and their numbers show where distant static content still costs too
+p372 has shipped (p348 has) and its numbers show where distant static content still costs too
 much.
 
 ## Goal
@@ -18,11 +18,17 @@ impostor. A whole streaming cell's content can be one proxy when p353 shows it a
 
 ## What's known
 
-- **Simplifier:** p347's meshoptimizer chains run on any registered geometry, at runtime in the
-  asset worker or at build time. A merged group's geometry is a candidate like any other; its part
-  table is dropped at the proxy levels (a proxy isn't editable per member).
+- **Simplifier:** p347's meshoptimizer chains (`generateLodChain`, `features/lod/CLAUDE.md`) run
+  on any registered geometry, at runtime in the asset worker or at build time. A merged group's
+  geometry is a candidate like any other; its part table is dropped at the proxy levels (a proxy
+  isn't editable per member).
 - **Selection:** p348 selects levels per entity by projected screen size. The group entity is the
   LOD unit; p372 refuses `LOD` on members, which stays true.
+- **No import of `lod()`:** a feature imports no other feature's code (p370 §13), and needs none
+  here: the group entity is a plain mesh, so `merging()` gives it `lod: 'AUTO'` (a chain from the
+  merged geometry, through the resolver `lod()` sets in `kernel/mesh/Mesh.ts`) or `setMeshLod`
+  with explicit proxy levels. Without `lod()` the group warns once and stays full detail, as any
+  mesh's `lod` does.
 - **No popping:** the group's switch to its proxy (and to an impostor or hidden) cross-fades with
   p351 Phase 2's plain-mesh fade, and a cell switching between its members and its cell proxy
   fades with p353's content fade. `fadeSeconds: 0` switches instantly. Proxy materials get
@@ -34,6 +40,8 @@ impostor. A whole streaming cell's content can be one proxy when p353 shows it a
   proxy without splitting anything. p353 §3.3's far representations are where it plugs in.
 - **Editing:** a proxy is rebuilt when a member is edited (p373 D4), debounced; in debug mode a
   stale proxy is marked.
+- **Showcase:** `features/lod/CLAUDE.md` asks each later LOD plan for a `lodShowcase` lane
+  (`src/app/scenes/lodShowcase/lanes/`): a merged group switching to its proxy.
 - **Prior art:** Unreal's HLOD (World Partition builds merged, simplified proxy meshes per cell
   and layer), Unity's community HLOD tools.
 

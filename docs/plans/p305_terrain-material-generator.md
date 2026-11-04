@@ -6,7 +6,7 @@ Epic: p301_terrain-texturing-epic.md
 
 # Terrain Material Generator
 
-One toolkit module, `createTerrainMaterial(config)`, plus a JSON route (`terrain.tsl.ts` `setup` entry), that builds a single `MeshStandardNodeMaterial` from a declarative config. It implements every texturing technique of the epic:
+One toolkit module, `createTerrainMaterial(config)`, plus a JSON route (`src/toolkit/materials/terrain/terrain.tsl.ts` `setup` entry), that builds a single `MeshStandardNodeMaterial` from a declarative config. It implements every texturing technique of the epic:
 
 - single tiled layer;
 - anti-tiling (dual-scale, hex);
@@ -43,10 +43,13 @@ Wet/dry hooks are reserved here and implemented in p307. The Blender sides of th
   - the `textureSetSurface` baseline;
   - the `terrainGallery` skeleton.
 - **After p304:** `macroNoise` and `rippleAtlas`, `bakeTexture`, surface generators with a live mode.
-- **Projection code:** `toolkit/materials/triplanarProjection.ts` has `triplanarProjection` (`positionWorld` + `normalWorldGeometry`; `alignToObject`, `fitToBounds`, `dominantAxis`), `blendProjections` and `blendProjectionGradients`. Reuse and extend it rather than writing a second triplanar.
-- **Normal space:** socket functions return a **view-space** normal for `normalNode` (`triplanarGrid.tsl.ts:247-248`: `normalView.sub(tangentGradient).normalize()`). The generator computes in world space and converts once at the end (`transformNormalToView` or `cameraViewMatrix` multiplication; check the r186 TSL helper name).
+- **Where the code lives** (p301 §2): `src/toolkit/terrain/`, a toolkit category of its own with the entry `aekasha/toolkit/terrain` (created by p303 Phase 5: a rule per subfolder in `devTools/layout/layoutRules.ts`' `getToolkitRules`, `TOOLKIT_CATEGORIES` in `eslint.config.js`, the alias in `devTools/aliases.ts` and `tsconfig.json`). The generator, its nodes and the code-registered graph (`aek.terrain`) are there; the JSON route's material is in the materials category's per-id folders, `src/toolkit/materials/terrain/` (`terrain.tsl.ts`, a thin `setup` over the entry's builder, and `terrain.material.json`), like p303's `materials/textureSetSurface/`. A world's terrain materials (layer choice, tuning) are app JSONs in its scene's folder. Module files are PascalCase (the layout check); an asset-id file keeps its id (`terrain.tsl.ts`). Another category is imported only through its entry (the layering lint), and `terrain` → `geometry` is the one direction between the two (see D1's `TerrainRule`).
+- **Projection code:** `src/toolkit/materials/TriplanarProjection.ts` has `triplanarProjection` (`positionWorld` + `normalWorldGeometry`; `alignToObject`, `fitToBounds`, `dominantAxis`), `blendProjections`, `blendProjectionGradients` and `readBooleanDefines`, all on `aekasha/toolkit/materials` (p620). Reuse and extend it through that entry rather than writing a second triplanar.
+- **Normal space:** socket functions return a **view-space** normal for `normalNode` (`toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts:269-273`: the world gradient through `cameraViewMatrix`, then `normalView.sub(tangentGradient).normalize()`). The generator computes in world space and converts once at the end the same way.
+- **The TSL socket contract** (`(inputs, material, staticDefines)`, uniforms named `<socket>_<input>`) is the Hub's "Writing a TSL material" (`hub/pages/features/toolkit/guide.md`).
+- **Smallest build:** the generator is toolkit code, so only the chunks of the scenes that use a terrain material carry it (`yarn sbp` shows it under `toolkit`, never in the first download of a scene without terrain); its debug views load through `import()` (D10).
 - **`aoNode`** on node materials applies to indirect light only, which is the composition rule of `docs/analysis/ambient-occlusion-options.md`. Texture AO (FULL) and vertex AO go there. AO baked into albedo (LITE/MINIMAL) can't, so the generator lowers `aoNode`'s influence for those layers.
-- **The GTAO PostFX pass** (`app/postFx/ambientOcclusion.tsl.ts`) multiplies the final colour, not indirect light. Baked AO and GTAO therefore stack; the handbook notes it.
+- **The GTAO PostFX pass** (`src/app/postFx/ambientOcclusion.tsl.ts`) multiplies the final colour, not indirect light. Baked AO and GTAO therefore stack; the handbook notes it.
 - **Binding budget:** the WebGPU default is 16 sampled textures per stage, shared with shadow maps and the environment (p301 §6). `renderer.backend.device.limits` gives the real limits on WebGPU.
 - **Quality scale:** `LOW | MEDIUM | HIGH | ULTRA` (p240 proposal, shadow presets).
 
@@ -54,7 +57,7 @@ Wet/dry hooks are reserved here and implemented in p307. The Blender sides of th
 
 ## Design
 
-### D1 — Config (`src/toolkit/terrain/terrainMaterialConfig.ts`, Zod + types)
+### D1 — Config (`src/toolkit/terrain/TerrainMaterialConfig.ts`, Zod + types)
 
 ```ts
 type TerrainMaterialConfig = {
@@ -115,6 +118,8 @@ type TerrainLayer = {
   projection?: TerrainMaterialConfig['projection']; // eg. TRIPLANAR on cliffs only
 };
 
+// Defined in `geometry/generate/TerrainRules.ts` next to its CPU evaluation (p306 D4) and
+// imported from `aekasha/toolkit/geometry`, so `geometry` never imports `terrain`
 type TerrainRule = {
   layer: number;
   slope?: [number, number]; // degrees, with softness
@@ -127,21 +132,21 @@ type TerrainRule = {
 ```
 
 - **Static config** goes in `staticDefines.terrain` (JSON route) or the `createTerrainMaterial` argument (code route). It's build time: the graph branches on it.
-- **Per-layer tunables** (tint, normal strength, roughness scale, height contrast and offset, tiling) become **uniforms**, registered in `mat.userData.uniforms` as `terrain_l<i>_<name>`. The gallery tab and p085's material editor can live-edit them without rebuilding.
+- **Per-layer tunables** (tint, normal strength, roughness scale, height contrast and offset, tiling) become **uniforms**, registered in `mat.userData.uniforms` as `terrain_l<i>_<name>`. The gallery tab and the material editor (`_DONE_p085`, `src/_engine/debug/editors/CLAUDE.md`) can live-edit them without rebuilding.
 - **Textures** (layer arrays, splat maps, macro, colour map) are **inputs**, so material variants swap them per block (p306) without a new graph.
 
-### D2 — Graph outline (`src/toolkit/terrain/terrain.tsl.ts` `setup`, nodes in `src/toolkit/terrain/nodes/`)
+### D2 — Graph outline (`src/toolkit/terrain/TerrainMaterial.ts`' `setup`, which `materials/terrain/terrain.tsl.ts` re-exposes; nodes in `src/toolkit/terrain/nodes/`)
 
 ```
 coords      = space/uv → worldPos, worldNormal(geometry), slope, height, viewDistance
-weights     = blend source (vertexColor | splat | rules | combos) → w[0..N)        (weights.ts, rules.ts)
-weights     = HEIGHT ? heightBlend(w, layerHeights) : w                         (heightBlend.ts)
-selection   = sparse ? topK(weights) : all non-zero layers                         (sparse.ts)
+weights     = blend source (vertexColor | splat | rules | combos) → w[0..N)        (Weights.ts, Rules.ts)
+weights     = HEIGHT ? heightBlend(w, layerHeights) : w                         (HeightBlend.ts)
+selection   = sparse ? topK(weights) : all non-zero layers                         (Sparse.ts)
 for each selected layer:
-  proj      = PLANAR | BIPLANAR | TRIPLANAR (slope-gated)                         (projection.ts)
-  sample    = antiTiling(NONE | DUAL_SCALE | HEX) of sampleTextureSet(...)        (antiTiling.ts)
+  proj      = PLANAR | BIPLANAR | TRIPLANAR (slope-gated)                         (Projection.ts)
+  sample    = antiTiling(NONE | DUAL_SCALE | HEX) of sampleTextureSet(...)        (AntiTiling.ts)
   accumulate albedo, normal(world), roughness, ao, height by weight
-surface     = macro(…) → colorMap(…) → distance fade/far mode → wet(…) [p307]      (macro.ts, colorMap.ts, distance.ts)
+surface     = macro(…) → colorMap(…) → distance fade/far mode → wet(…) [p307]      (Macro.ts, ColorMap.ts, Distance.ts)
 outputs     → colorNode, normalNode (world → view once), roughnessNode, metalnessNode = 0, aoNode
 ```
 
@@ -156,7 +161,7 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
   - `MESH_UV` uses derivative-based TBN (no tangent attribute).
 - **The shadow pass** uses only the position graph. The generator never touches `positionNode`, so shadows cost nothing extra.
 
-### D3 — Anti-tiling (`nodes/antiTiling.ts`)
+### D3 — Anti-tiling (`nodes/AntiTiling.ts`)
 
 | Mode         | Taps | How                                                                                                                                                                                                                  | Best for                                                                                     |
 | ------------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -166,7 +171,7 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
 
 - `apply: 'DOMINANT'` runs HEX only on the highest-weight layer and DUAL_SCALE on the rest. That cuts the cost from 3·L to 3 + 2·(L−1) taps per slot.
 
-### D4 — Blend sources (`nodes/weights.ts`, `nodes/rules.ts`)
+### D4 — Blend sources (`nodes/Weights.ts`, `nodes/Rules.ts`)
 
 - **`VERTEX_COLOR`:** reads `COLOR_0` (TSL vertex colour attribute).
   - `RGB_AO`: layers 1–3 from RGB; layer 0 = `max(0, 1 − (r + g + b))`; A = AO, which goes to `aoNode` when `ao.vertex`.
@@ -182,7 +187,7 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
 - **Combos:** `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` = painted base + rules on top. This is what a large world wants: rules everywhere, paint only where it matters.
 - **Generated meshes:** the same rules can be evaluated **on the CPU at mesh generation** into vertex colours (p306 `generateTerrain` v2), which trades per-pixel ALU for a vertex attribute. The handbook compares both.
 
-### D5 — Projection (`nodes/projection.ts`, extends `toolkit/materials/triplanarProjection.ts`)
+### D5 — Projection (`nodes/Projection.ts`, extends `triplanarProjection` from `aekasha/toolkit/materials`)
 
 - **`PLANAR`:** world XZ; 1 tap per set sample.
 - **`BIPLANAR`:** Quilez: the two most significant axes, with gradients; 2 taps. Its seams are less visible than a slope-gated planar, at 2/3 of triplanar's cost.
@@ -190,17 +195,17 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
 - **`slopeGate: [a, b]`:** below `a` degrees, PLANAR; above `b`, the configured mode; in between, blended.
   - It's implemented with a dynamic `If` on the slope, so flat pixels never pay for the extra taps.
   - Divergence happens only along the band.
-  - Remember the TSL trap from the sky box notes: a TSL `If` must not be the first to build a node that other branches share, so build the shared coordinates before the branch.
+  - Remember the TSL trap the sky box layers hit (`src/_engine/features/skybox/CLAUDE.md`, its two traps): a TSL `If` must not be the first to build a node that other branches share, so build the shared coordinates before the branch.
 - **Per layer:** `projection` overrides the material's, so typically only the cliff layer is TRIPLANAR.
 
-### D6 — Sparse top-K (`nodes/sparse.ts`, ARRAY storage only)
+### D6 — Sparse top-K (`nodes/Sparse.ts`, ARRAY storage only)
 
 - For L ≤ 16 weights, a fixed compare-exchange network keeps the top `maxLayers` (2–4) indices and weights.
 - Only those are sampled from the arrays (dynamic layer index into the array textures), and the kept weights are renormalized.
 - Most terrain pixels have 1–2 non-trivial layers, so 8-layer terrains cost about what 2–3 layers would.
 - Artifacts: popping where a third layer crosses the cut-off. The height blend hides most of it; `maxLayers: 3` hides the rest.
 
-### D7 — Macro, distance, colour map (`nodes/macro.ts`, `distance.ts`, `colorMap.ts`)
+### D7 — Macro, distance, colour map (`nodes/Macro.ts`, `Distance.ts`, `ColorMap.ts`)
 
 - **Macro:** `macroNoise` sampled at `positionWorld.xz / scale` (large scales, 1 fetch for all layers) modulates brightness, hue (a small rotation in YIQ) and roughness. Continuous across blocks (p301 §7).
 - **Distance:**
@@ -251,7 +256,7 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
 | HIGH   | DUAL_SCALE; HEX on DOMINANT      | cliffs TRIPLANAR slope-gated        | top-3  | on    | from 200 m              |
 | ULTRA  | HEX on ALL                       | cliffs TRIPLANAR                    | top-4  | on    | none                    |
 
-- **Debug views** (`debugView`, compiled only when `IS_DEBUG_ENV`). Their node code lives in `nodes/_dbg__debugViews.ts` and is imported dynamically by `createTerrainMaterial`; the JSON route uses it once the gallery tab has preloaded it:
+- **Debug views** (`debugView`, compiled only when `IS_DEBUG_ENV`). Their node code lives in `src/toolkit/terrain/debug/_dbg__DebugViews.ts` (a debug folder holds nothing that ships) and is reached only by an `import()` behind `IS_DEBUG_ENV` in `createTerrainMaterial` (never a static import, never inside a `try`), so a production build folds it away; the JSON route uses it once the gallery tab has preloaded it:
   - `WEIGHTS`: false colour per layer;
   - `LAYER_COUNT`: how many layers a pixel sampled (sparse check);
   - `TEXEL_DENSITY`: a 1 m checker with px/m colour bands;
@@ -266,11 +271,11 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
 
 ## Phases
 
-Each phase adds a gallery row (or extends one) so it can be checked and measured.
+Each phase adds a gallery row (or extends one) so it can be checked and measured: the app's `terrainGallery` scene (`src/app/scenes/terrainGallery/`, p303's skeleton, its tab the scene-scoped `_dbg__terrainGallery.ts` there). Each module gets its `*.test.ts` next to it (`yarn test`, Node, no GPU: the config schema, and which branches a config builds).
 
 ### Phase 1 — Scaffold and single layer
 
-1. Config schema/types, `createTerrainMaterial`, `registerTslMaterial('aek.terrain', { setup })`, JSON route (`toolkit/terrain/materials/terrain.tsl.ts`).
+1. Config schema/types, `createTerrainMaterial`, `registerTslMaterial('aek.terrain', { setup })`, JSON route (`src/toolkit/materials/terrain/terrain.tsl.ts` + `terrain.material.json`, importing the builder from `aekasha/toolkit/terrain`), all exported from `aekasha/toolkit/terrain` with JSDoc and `@example`s (the docs ratchet).
 2. `SINGLE` source, PLANAR world tiling, all three packings, surface uniforms, AO routing (D2 rules), world→view normal.
 3. Quality variant mechanism; debug view framework with `TEXEL_DENSITY` and `NORMALS`.
 
@@ -307,7 +312,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 ### Phase 6 — Sparse sampling and the performance pass (D6, D10 tiers)
 
 1. Sparse top-K; `LAYER_COUNT` view.
-2. Measure every gallery row per tier (p310 defines the measurement method; use a temporary fixed-camera GPU-ms readout here).
+2. Measure every gallery row per tier (p310 defines the measurement method; here, the stats panels' GPU readout from a fixed camera, `src/_engine/debug/CLAUDE.md`'s GPU timing).
 3. Set the default tier table.
 
 **Exit:** an 8-layer HIGH-tier terrain stays under the agreed budget (proposal: ≤ 3 ms GPU at 1080p on the reference machine; record the machine).
@@ -345,10 +350,11 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
      - Variation: AO and large-scale lighting baked into the colour map. Why: one fetch for all large-scale shading. Cost: static lighting assumptions; don't bake direct sunlight if day-night runs.
      - Best for: top-down/RTS/isometric, flight/racing (fast, far views), far LOD.
    - **Structures:** world vs object space, triplanar defaults, wear via vertex colours, decals; concrete examples; best for brutalist/industrial levels and large architecture.
-3. **Repo docs:**
+3. **Hub** (`hub/CLAUDE.md`): the terrain feature page (`hub/pages/features/terrain/`, p303 creates it): what the generator does, the config, the JSON route, the budget and the tiers, `api:` links to `aekasha/toolkit/terrain`, a `::: scene terrainGallery` panel, links to the handbook pages; the toolkit feature page (`features/toolkit/guide.md`) lists the new category. Then `yarn hub:build`.
+4. **Repo docs:**
    - `readme.md` Features (toolkit: terrain material generator) and a short example.
-   - `CLAUDE.md` gets a "Terrain materials" section: config, JSON route, budget, tiers, debug views.
-4. **Versions:** toolkit minor; app minor (gallery rows); `CHANGELOG.md`.
+   - A nested `src/toolkit/terrain/CLAUDE.md` (created by the first plan that needs it, if p303 hasn't; a line in the root's Architecture map) gets a `## Terrain materials` section: config, JSON route, budget, tiers, debug views. The feature page's `aek:covers` names it. The root's toolkit catalogue (Three-folder split) names the `terrain/` category.
+5. **Versions:** toolkit minor; app minor (gallery rows); `CHANGELOG.md`.
 
 ---
 

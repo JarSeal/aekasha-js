@@ -29,7 +29,7 @@ import {
 
 /**
  * GPU memory and draw-call tab (docs/plans/_DONE_p345_gpu-memory-and-draw-call-debugger.md), a
- * profiler window tab (docs/plans/_DONE_p344_profiler-mega-window.md §2.9). Loaded wherever the
+ * profiler window tab (p344: read next to the frame figures). Loaded wherever the
  * profiler is, so in prodTest mode too when the profiler is enabled there. prodTest has no drawer
  * and no debug toaster: the links to drawer tabs are hidden and there is no budget toast (the
  * budget bar still shows it).

@@ -24,11 +24,11 @@ measures a CPU win that matters.
   each counted in `info.render.drawCalls`.
 - `BatchedMesh` keeps member matrices in a data texture, supports per-member visibility, colour,
   `perObjectFrustumCulled` and `sortObjects`, and geometry slots that can be freed and reused.
-- **No `BatchedMesh` in the engine.** The profiler census counts one as a whole object
-  (`_dbg__Census.ts:296`).
-- p348 §4.4 plans a half-day spike on `@three.ez/batched-mesh-extensions`' LOD under
-  `WebGPURenderer`; p309 plans decal pools on `BatchedMesh` with a WebGPU risk. One spike answers
-  all three.
+- **No `BatchedMesh` in the engine** (checked 2026-11-04). The profiler census counts one as a
+  whole object (`debug/profiler/_dbg__Census.ts`).
+- p348's spike (its §4.4) answered the `@three.ez/batched-mesh-extensions` LOD question (item 7
+  below; `features/lod/CLAUDE.md`, "Not `BatchedMesh`"); p309 plans decal pools on `BatchedMesh`
+  with a WebGPU risk. This plan's spike answers the rest.
 - p372 provides groups, members, the build system and eligibility rules.
 
 ## 2. Phase 0 — Spike (1 day)
@@ -59,8 +59,13 @@ Record the numbers here, in p348 §4.4 and in p309's risk row. **Gate:** continu
 - **Members** get `MERGE_MEMBER` with a batch instance id instead of a part range. Each geometry is
   added once per batch (`addGeometry`), each member as an instance (`addInstance`).
 - **Sync:** a system at `APP_RENDER_SYNC` (after `POSE_PRODUCERS`, so interpolated physics poses
-  are final) writes the matrices of members whose transform changed (`setMatrixAt`), using the
-  same `_lastVersion` pattern as `instancedMeshPoolSyncSystem`.
+  are final), registered by `merging()`, writes the matrices of members whose transform changed
+  (`setMatrixAt`), deciding as `instancedMeshPoolSyncSystem` does (`features/instancing/CLAUDE.md`):
+  in `MAP` storage the `Transform`'s version, in `TYPED_ARRAY` the store's dirty flag, which
+  `object3DSyncSystem` clears only for an `OBJECT3D` holder. Whether a batched member keeps its
+  own (hidden) Object3D decides who clears the flag and whether this system still sees it (p616
+  found pool instances that never moved in `TYPED_ARRAY` mode over this flag); Phase 1 tests both
+  storage modes. Storages read once per frame, no allocation.
 - **Visibility:** `DISABLED`, frustum and object culling map to `setVisibleAt` per member; the
   batch itself is never hidden for one member.
 - **LOD (with p348):** a member's level is a different geometry id in the same batch (p347 chains
@@ -76,8 +81,8 @@ Record the numbers here, in p348 §4.4 and in p309's risk row. **Gate:** continu
 1. Batched groups, sync, visibility. **Exit:** 2 000 moving kinematic boxes in one batch match the
    spike's numbers in the engine.
 2. LOD per member (with p348). 3. p309's decal pools on batched groups (if p309 has shipped, port;
-   if not, p309 uses this). 4. Docs (`asset-optimization.md` merging section), versioning (engine
-   minor).
+   if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
+   per-member LOD lands), versioning (engine minor).
 
 ## 5. Risks
 

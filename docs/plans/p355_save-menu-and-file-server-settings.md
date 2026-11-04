@@ -3,7 +3,7 @@ Category: Debug, Dev tooling
 Related: \_DONE_p342_dev-file-server.md (builds on it: the routes, `writeDevFiles`, save entry
 writes, the "File server" folder; this plan is its §5 question 4), \_DONE_p085_material-editor-params-and-persistence.md
 (the material overrides this plan saves), p150_current-entity-data-source-info-on-edit-windows.md
-(origin info on the same camera and light data), \_DONE_p800_debugger-ui-overhaul.md (the menu and its settings on p803's and p804's components), \_DONE_p804_forms-and-bindings.md (the settings' form: `createForm`'s validation, error summary and busy submit, the property grid and the fields)
+(origin info on the same camera and light data)
 
 # Save Menu and File Server Settings
 
@@ -20,57 +20,85 @@ entries; this plan uses it:
   confirming writes before they land, the server's backup count, and an author stamp in save
   entries.
 
+Everything it draws is the UI kit's (`aekasha/ui`, `src/_engine/ui/CLAUDE.md`): the menu, the
+dialog, the checkboxes, the form, the spinner, the toasts and the File server folder's property
+grid rows. Line numbers below are as of 2026-11-04 and move; the names don't.
+
 ---
 
 ## 1. Grounding
 
-- **The Æ button** (`core/Debug/_dbg__OnScreenTools.ts` ~l.455) opens the About dialog
-  (`openAboutDialog`, `_dbg__About.ts`) directly. It's in the top left group, debug env only
-  (prod test mode has no such group), and stays visible in editor views.
-- **`createDropDown`** (`core/UI/DropDown.ts`) is a select: a trigger with a label and caret, a
-  current value, `{ value, label }` options. It has the list behaviour a menu needs (keys, focus,
-  click outside, its keys reach no binding) but no icon-only trigger, item hints, disabled items
-  or separators.
-- **Key bindings:** undo/redo (`core/Input/DefaultDebugKeyBindings.ts`) are `KEY_DOWN` with Ctrl
-  and ⌘ chords and `preventDefault`, the pattern Ctrl+S needs (the browser's "Save page as").
-- **Dialogs:** `openDialog` (`core/UI/DialogWindow.ts`) with `closeOnEscape`. `core/UI/` has no
-  checkbox list; `debuggerListCMP` (`_dbg__DebuggerList.ts`) has rows with icon toggles.
+- **The Æ button** (`debug/_dbg__OnScreenTools.ts`) opens the About dialog
+  (`openAboutDialog`, `debug/_dbg__About.ts`) directly. It's a kit ghost icon button in the top
+  left row's first toolbar (`onScreenTopLeftRow`: the About and undo / redo group, a
+  `createButtonGroup` toolbar), debug env only (prod test mode has no such group), and stays
+  visible in editor views.
+- **The kit's menu** (`createMenu`, `ui/overlays/Menu.ts`, the APG menu button): an `anchor`
+  (the trigger: any button), `items` (or a getter read on every open) of actions (`label`,
+  `onSelect`, `icon`, `kbd`: a `createKbd` hint with its `aria-keyshortcuts`, `disabled`) and
+  `type: 'separator'`, roles `menu` / `menuitem`, the arrows, Home / End and typeahead, Escape
+  through the overlay stack, the focus back on the trigger. A disabled item is `aria-disabled`,
+  focusable, and picks nothing; an item has no tooltip or reason text.
+- **`createDropDown`** (`ui/forms/DropDown.ts`) is a select (a current value, options); its
+  `setDisabled(isDisabled, reason?)` closes an open list and makes the reason the trigger's title.
+  A kit button has the same (`setDisabled(disabled, reason?)`, with `focusableWhenDisabled` a tab
+  stop with the reason as its tooltip) and `setLoading(isLoading)` (the text faded into a
+  spinner, `aria-busy`, clicks ignored).
+- **Key bindings:** the debug keys (`debug/DefaultDebugKeyBindings.ts`) are action maps in the
+  `DEBUG` context (`aek:debugKeys`; `src/_engine/debug/CLAUDE.md`), so they run in every view
+  and stop during a scene load. Undo/redo are `KEY_DOWN` with Ctrl and ⌘ chords, the pattern
+  Ctrl+S needs (the browser's "Save page as"). The maps prevent their keys' defaults only outside
+  a text field, and undo/redo do nothing in one (the field's own undo works).
+- **Dialogs:** `openDialog` (`ui/overlays/windows/DialogWindow.ts`): modal, `closeOnEscape`, a
+  focus trap, the focus back on the opener. The kit has the checkbox (`createCheckbox`, with
+  `setIndeterminate` for a group's heading box), the fieldset and the form (`createForm`:
+  validation with the error summary, a busy submit: `aria-busy`, the submit button loading, a
+  submit meanwhile ignored); the form has no form-level error yet (a failed save not tied to a
+  field). Toasts: `addToast` (the debug toaster, debug env only).
 - **p342's write side:** `writeDevFiles` (`debug/DevFiles.ts`) commits a batch all or nothing; a
   `saveData` write puts its entry first in `__saveData[sceneId]`, stamps `__meta` and keeps
   `getDevFilesSaveHistorySize()` entries. It replaces, it doesn't merge: the new entry must
   carry everything the latest one had. Each batch is one gather and one page reload. The
   server keeps the last 20 commits' backups (`BACKUPS_KEPT`, `devTools/devFiles/commit.ts`).
-- **`MetaSchema`** (`schemas/_saveDataSchema.ts`) has `author` commented out.
-- **`vite.config.ts`** reads git with `execSync` and gets '' without git.
+- **`MetaSchema`** (`schemas/_SaveDataSchema.ts`) has `date` and the three versions, no `author`.
+- **git in the dev tools** goes through `devTools/git.ts` (`git(args)`, which throws, and
+  `readGit(args)`, '' without git or a repo; synchronous `execFileSync`).
+- **The gather's event:** `aek:gather` (`AEK_GATHER_EVENT`, `DevDataGatheredEvent` in
+  `debug/DevFilesProtocol.ts`: `done` / `failed`, the changed files, the asset errors,
+  `willReload`), delivered by the dev files' `onDevDataGathered` (`devTools/gather/CLAUDE.md`).
 
 ### What the debug tools keep (localStorage)
 
 | Store                                                      | Asset                         | Scope             | Stored as                                                                                                                    | Saves into                                                        |
 | ---------------------------------------------------------- | ----------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `AEK_debugSkyBox` (`_dbg__SkyBoxShared.ts`)                | `*.skybox.json`               | scene, sky box id | deviation-only `SkyBoxOverrides`, a delta over the def **with the latest entry merged in**                                   | `__saveData`, no conversion                                       |
-| `AEK_debugPostFx` (`_dbg__PostFX.ts`)                      | `*.postFx.json`               | scene, pass id    | deviation-only `{ enabled?, params? }` over the authored snapshot (latest entry included)                                    | `__saveData`, no conversion                                       |
-| `AEK_debugCams` (`Camera/_dbg__CameraGUI.ts`)              | `*.camera.json`               | scene, appId      | full values (every edited key), plus UI keys (`helperVisible`, `_lensSettingsOpen`) and `debugCam`                           | `__saveData`, strip and diff                                      |
-| `AEK_debugLights` (`Light/_dbg__LightGUI.ts`)              | `*.light.json`                | scene, appId      | full values, plus UI keys and `globalHelpersVisible`; colours as hex numbers; every record has `enabled: true`               | `__saveData`, convert and diff                                    |
-| `AEK_debugMatEditorMat_<id>` (`_dbg__MaterialEditorStore`) | `*.material.json`             | **global**        | deviation-only `overrides: { params, nodes }` against the raw material JSON (plus editor `settings` and `camera`, not saved) | `__saveData` of the current scene, if its JSON lists the material |
-| `AEK_debugPostFxSettings` `postFxEnabled[sceneId]`         | scene JSON `postFxEnabled`    | scene             | deviation-only boolean                                                                                                       | scene `__saveData` (Phase 7)                                      |
-| `AEK_debugSpatialGrid` `domains[id].cellSizeByScene`       | scene JSON `spatialDomains[]` | scene             | full value                                                                                                                   | scene `__saveData` (Phase 7)                                      |
-| `AEK_debugCharConfig`                                      | none (characters are code)    | scene, character  | deviation-only                                                                                                               | not saved (characters come later)                                 |
+| `AEK_debugSkyBox` (`features/skybox/debug/_dbg__SkyBoxShared.ts`) | `*.skybox.json`        | scene, sky box id | deviation-only `SkyBoxOverrides`, a delta over the def **with the latest entry merged in**                                   | `__saveData`, no conversion                                       |
+| `AEK_debugPostFx` (`features/postfx/debug/_dbg__PostFX.ts`) | `*.postFx.json`              | scene, pass id    | deviation-only `{ enabled?, params? }` over the authored snapshot (latest entry included)                                    | `__saveData`, no conversion                                       |
+| `AEK_debugCams` (`kernel/camera/debug/_dbg__CameraDebugState.ts`) | `*.camera.json`        | scene, appId      | full values (every edited key), plus UI keys (`helperVisible`, `_lensSettingsOpen`) and `debugCam`                           | `__saveData`, strip and diff                                      |
+| `AEK_debugLights` (`kernel/light/debug/_dbg__LightDebugState.ts`) | `*.light.json`         | scene, appId      | full values, plus UI keys and `globalHelpersVisible`; colours as hex numbers; every record has `enabled: true`               | `__saveData`, convert and diff                                    |
+| `AEK_debugMatEditorMat_<id>` (`debug/editors/material/_dbg__MaterialEditorStore.ts`) | `*.material.json` | **global**        | deviation-only `overrides: { params, nodes }` against the raw material JSON (plus editor `settings` and `camera`, not saved) | `__saveData` of the current scene, if its JSON lists the material |
+| `AEK_debugPostFxSettings` `postFxEnabled[sceneId]` (`_dbg__PostFX.ts`) | scene JSON `postFxEnabled` | scene             | deviation-only boolean                                                                                                       | scene `__saveData` (Phase 7)                                      |
+| `AEK_debugSpatialGrid` `domains[id].cellSizeByScene` (`features/spatial/debug/_dbg__SpatialGridSettings.ts`) | scene JSON `spatialDomains[]` | scene             | full value                                                                                                                   | scene `__saveData` (Phase 7)                                      |
+| `AEK_debugCharConfig` (`features/character/debug/_dbg__CharacterConfigOverrides.ts`) | none (characters are code) | scene, character  | deviation-only                                                                                                               | not saved (characters come later)                                 |
 
 Not saved (config or tool settings, CONFIG.ts is code): renderer options, physics world
 settings, world-scope spatial cell size, PostFX `measureEnabled`, every UI state key. Nothing
 persists edits of meshes, geometries, textures, imported assets or LOD.
 
-- **Source files:** `getGeneratedAppData()` (dev data) keeps the registries (`cameras`, `lights`,
+- **Source files:** `getGeneratedAppData()` (`kernel/scene/Scene.ts`; dev data) keeps the registries (`cameras`, `lights`,
   `materials`, `skyboxes`, `postFx`, …) with `__sourcePath` and every `__saveData`. Cameras and
   lights are keyed by appId. A camera, light or sky box made in code, or written inline in a
   scene JSON, has no file of its own.
 - **A material's entry is applied only through a scene JSON's `materials` list** (the gather
-  resolves each listed id with that scene's entry, ~l.1347). In the dev data:
-  `sceneTestECS` lists `testMaterial`, `checkerBoard`, `testTslMat`; the gyms the two triplanar
-  ones; `space` `asteroid`; the other scenes none.
-- **Scene JSONs** have neither: the gather merges a scene's latest entry and sets `__sourcePath`
-  only on its internal list (`gatherAppData.ts` ~l.533), and the output pass re-reads the raw
-  file (~l.1133). So a scene's own `__saveData` is validated but never applied.
+  resolves each listed id with that scene's entry: `resolveMaterials` in
+  `devTools/gather/sceneAssets.ts`). In the dev data: `sceneTestECS` lists `testTslMat`;
+  `thirdPersonGymScene` and `topDownTestScene` the two triplanar ones (`triplanarGrid`,
+  `triplanarCheckerboard`); `space` `asteroid`; `lodShowcase` `lodShowcaseSphere`; the Hub's
+  examples (`src/app/examples/`) `asteroid` and the triplanar ones; the other scenes none.
+- **Scene JSONs:** the gather applies a scene's own latest `__saveData` entry (p619 G5,
+  `resolveScene` in `devTools/gather/scenePass.ts`) and drops `__saveData` from the output, but
+  the dev data has no `__sourcePath` for a scene (only the asset registries get one,
+  `devTools/gather/registries.ts`), so the browser can't name the scene JSON's file. None of the
+  app's scenes has a `__saveData` today.
 - **Undo/redo** names the asset of most actions (appId, skyBoxId, postFxPassId, materialId and the
   scene's bucket), but is trimmed, drops its redo tail and misses some edits (helper toggles, the
   cell size): not a changes list.
@@ -79,8 +107,10 @@ persists edits of meshes, geometries, textures, imported assets or LOD.
 
 ### 2.1 Save sources
 
-`debug/SaveData.ts` → `core/Debug/_dbg__SaveData.ts`, the usual split. Each debug module that
-keeps asset edits registers a source at module load:
+`debug/SaveData.ts` → `debug/_dbg__SaveData.ts`, the usual split (`src/_engine/debug/CLAUDE.md`:
+the thin module keeps what's registered before its implementation loads and hands it over, as
+`UndoRedo.ts` and `Profiler.ts` do). Each debug module that keeps asset edits (a `_dbg__` module,
+the only kind that may register at its load) registers a source:
 
 ```ts
 registerSaveSource({
@@ -156,12 +186,16 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
 | (separator)         |              |                     |
 | About Ækasha        |              | `openAboutDialog()` |
 
-- **Menu mode for `createDropDown`:** `variant: 'MENU'`. The trigger is the caller's
-  `triggerHtml` (the Æ icon, no label or caret), there's no current value, and items take
-  `hint` (right-aligned text), `disabled` (with a `title` saying why) and `separatorBefore`.
-  ARIA roles `menu` / `menuitem`. Arrow keys skip disabled items. The select behaviour stays the
-  default.
-- **Disabled save items**, with the reason as their title, read when the menu opens:
+- **The kit's menu:** `createMenu({ anchor: <the Æ button>, items: () => [...], label })`,
+  the items a getter so their disabled states are read on every open; the hints are
+  `createKbd` handles from the save keys' chords (`getDebugKeyChordLabel`: CONFIG.ts'
+  rebinding); the separator a `type: 'separator'` item. The Æ button gets `aria-haspopup` and
+  `aria-expanded` from the menu, and stays in its toolbar (one tab stop, the arrows inside).
+- **A disabled item's reason:** the kit's action item has `disabled` but no reason. Add one to
+  `MenuActionItem` (eg. `disabledReason`: its tooltip and its `aria-describedby`, read like the
+  button's `focusableWhenDisabled` reason), with its test, its component library demo and the
+  kit's `CLAUDE.md` line (`src/_engine/ui/CLAUDE.md`'s Writing a component).
+- **Disabled save items**, with the reason as their tooltip, read when the menu opens:
   - **Saving disabled** disables both: the dev files unavailable (the `getDevFilesStatus`
     reason) or the save history size 0 (saving off, p342). 0 turns off every save of the menu,
     also a later global one that writes no `__saveData`: one rule, "0 = saving off", is easier
@@ -169,8 +203,8 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
   - **Nothing saveable in this scene** (and no global change) disables "Save scene". "Save
     specific data…" stays on while another scene has a saveable change, and is disabled when
     no scene has one.
-- **While saving**, the Æ icon turns into a spinner and the menu is disabled (an open list
-  closes, the trigger can't open it, its title says "Saving…"):
+- **While saving**, the Æ icon turns into a spinner and the menu is disabled (an open menu
+  closes, the trigger can't open it, its tooltip says "Saving…"):
   - It starts when a save starts (the collect and the file reads) and ends when the commit
     fails, or when nothing was written (every file `unchanged`: no gather follows). After a
     commit that wrote files it stays until the reload; if the gather fails instead (the
@@ -178,15 +212,19 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
     event comes (a dev server restarted meanwhile).
   - The save keys do nothing meanwhile but a toast ("Saving…"), so a held or repeated Ctrl+S
     is one save.
-  - The spinner is a new `spinner` icon (`core/UI/icons/`), turned by CSS; with
-    `prefers-reduced-motion` it doesn't turn but pulses its opacity.
-  - `createDropDown` gets `setDisabled(disabled)` on `DropDown` (today `disabled` is fixed at
-    creation): it updates the trigger's `disabled` and closes an open list.
+  - The spinner is the kit's: the Æ button's `setLoading(true)` (its icon faded into the
+    button's spinner, `aria-busy`, clicks ignored; under `prefers-reduced-motion` it pulses), or
+    a `createSpinner` in the icon's place. No new icon.
+  - The menu off: `menu.close()` and the button's `setDisabled(true, 'Saving…')` (it stays a tab
+    stop with the reason: `focusableWhenDisabled`, as the on-screen tools' buttons are).
 - **Keys:** `sc-save-scene` (Ctrl+S, ⌘S) and `sc-save-specific` (Ctrl+Shift+S, ⌘⇧S),
   `KEY_DOWN`, category `DEBUGGER`, rebindable through `debugKeys`. They always
   `preventDefault` (the browser's save dialog is never wanted), also in a text field: they blur
-  it first, so a typed Tweakpane value is committed before the collect. A key on an unavailable
-  save (disabled, by the same rules) shows the reason as a toast. They work in every view.
+  it first, so a typed value is committed before the collect (the kit's text and number fields
+  write on a blur). The debug key maps leave a text field's keys alone (§1), so the save keys
+  take that case themselves (a capture `keydown` for their chords while a field has the focus,
+  or a map option for it). A key on an unavailable save (disabled, by the same rules) shows the
+  reason as a toast. They work in every view.
 
 ### 2.3 "Save specific data…" dialog
 
@@ -201,8 +239,11 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
     saveable ("scene not found");
   - **Not saveable**: greyed, no checkbox, with the reason (made in code, a material not in
     this scene, an inline asset whose new file or id is taken).
-- An inline asset's row says what its save does: "moves to `src/app/skyboxes/topDownTestSky.skybox.json`"
-  under its path.
+- An inline asset's row says what its save does: "moves to
+  `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json`" under its path.
+- Built on the kit: the groups as fieldsets, each row a `createCheckbox` (a group's heading box
+  `setIndeterminate` while some of its rows are checked), inside a `createForm` whose busy submit
+  is the Save button (§1).
 - A row: a checkbox, the label, the file path and the summary (the changed keys, folded after
   five).
 - Buttons: **Check all**, **Uncheck all**, **Save (n)** (disabled at 0) and **Cancel**.
@@ -213,12 +254,14 @@ The Æ button opens a menu (title "Ækasha menu") instead of the About dialog:
   measured against the same entry (the debug tools diff against the def with the scene's
   entry applied). The dialog stays open
   on an error (the code and message under the buttons), and closes on success (the reload
-  follows).
+  follows). That error is a form-level one, which the kit's form doesn't have yet (§1): add it
+  to `createForm` (a message in its error summary not tied to a field, with its test and demo),
+  or keep it the dialog's own `role="alert"` line; decide in Phase 4.
 - It's its own confirmation: a confirm-writes dialog (§2.4) isn't shown after it.
 
 ### 2.4 File server settings
 
-All in the "File server" folder (Debug tools tab) with a CONFIG default, as the save history size
+All in the "File server" folder (Debug tools tab, `debug/_dbg__DebugToolsFolders.ts`: property grid rows) with a CONFIG default, as the save history size
 (`AppConfig.devFiles`, overridden per browser by `debugToolsState.devFiles`, saved only once
 changed):
 
@@ -242,7 +285,7 @@ changed):
    still restores from them). `GET status` gets `backupsKept` and `backupDir`; the folder shows
    them read-only.
 4. **Author stamp:** the server stamps `__meta.author` in every save entry with git's
-   `user.name` (`git config user.name` in the repo, read on each commit with `execFile`, so a
+   `user.name` (`readGit(['config', 'user.name'])`, `devTools/git.ts`, read on each commit, so a
    change applies at once). Without git, outside a repo, or with no `user.name` set, `author` is
    undefined: the key is left out, also when the entry had one (the server's stamp always wins,
    as with the versions). `MetaSchema` gets `author: z.string().optional()`. `GET status` gets
@@ -250,11 +293,12 @@ changed):
 
 ### 2.5 Scene JSON entries (Phase 7)
 
-To save `postFxEnabled` and a scene's spatial domain cell size, the gatherer has to apply a
-scene's own `__saveData[sceneId][0]` in its output pass, and keep `__sourcePath` on the scene
-in dev data (production keeps neither). The cell size becomes a `spatialDomains` entry
-(`{ id, cellSize }`, merged by id into the latest entry's list). A gatherer fix, so applying an
-existing scene entry is a visible change: none of the app's scenes has one today.
+To save `postFxEnabled` and a scene's spatial domain cell size, the gatherer already applies a
+scene's own `__saveData[sceneId][0]` (§1); what's missing is `__sourcePath` on the scene in dev
+data (production keeps none: `resolveScene` deletes it there). The cell size becomes a
+`spatialDomains` entry (`{ id, cellSize }`, merged by id into the latest entry's list: today a
+scene entry's fields replace the scene's, so a list replaces the whole list, and the gatherer's
+merge of `spatialDomains` by id is part of this phase).
 
 ### 2.6 Inline assets to JSON files (Phase 8)
 
@@ -262,9 +306,11 @@ A camera, light or sky box written inline in a scene JSON (`cameras` / `lights` 
 entries that are objects, not ids) has no file for a `__saveData` entry, and the gather ignores
 an inline asset's own `__saveData`. Saving its changes moves it out:
 
-1. **The new file:** `src/app/<cameras | lights | skyboxes>/<id>.<camera | light | skybox>.json`
-   (the app's folders for them), with the inline object as it is (its `$schema` relative to the
-   new place) and the changes as its `__saveData[sceneId]` entry. The id is the sky box's `id`,
+1. **The new file:** `src/app/scenes/<sceneId>/<id>.<camera | light | skybox>.json`, in the
+   scene's folder, since only that scene uses it (the app's layout, p609 D2: an asset a second
+   scene starts using moves to its type's folder, `src/app/<type>/`), with the inline object as
+   it is (its `$schema` relative to the new place) and the changes as its `__saveData[sceneId]`
+   entry. The folder is the scene JSON's own (`__sourcePath`, §2.5). The id is the sky box's `id`,
    the camera's or light's `appId` (an inline one without an appId has no saved debug edits,
    so it never gets here).
 2. **The scene JSON:** the inline object in its list replaced with the id, in place (the order
@@ -276,7 +322,7 @@ an inline asset's own `__saveData`. Saving its changes moves it out:
 
 - **Taken:** a file already at the new path, or the id already in the registry (another file
   has it), makes the change Not saveable with the reason ("id taken by
-  `src/app/lights/sun.light.json`"); nothing is renamed automatically.
+  `src/app/scenes/largeWorld/largeWorldSun.light.json`"); nothing is renamed automatically.
 - **Server:** a write gets `json` and `saveData` together: `json` is the file's content and
   `saveData` is applied over it as over a read file (stamped, history size), so the new file's
   entry is stamped like any other. `saveData` alone still needs an existing file.
@@ -314,8 +360,8 @@ changed between the dry run and Confirm fails with `CONFLICT`.
 
 ### Phase 3 — The Æ menu and "Save scene"
 
-§2.1 and §2.2: `createDropDown`'s menu mode, the Æ menu (About moves into it), the save source
-registry, "Save scene" and its key. The first sources: sky boxes and PostFX passes (no
+§2.1 and §2.2: the menu item's disabled reason (the kit), the Æ menu on `createMenu` (About
+moves into it), the save source registry, "Save scene" and its key. The first sources: sky boxes and PostFX passes (no
 conversion).
 
 **Exit:** a sky box layer and a PostFX param edited in `skyShowcase`, Ctrl+S: one commit with
@@ -351,19 +397,22 @@ Its source (§2.1): the edited materials the current scene lists, as that scene'
 entries; the others Not saveable with the warning toast. A save clears the saved records'
 `overrides` (settings and camera kept).
 
-**Exit:** in `sceneTestECS`, `testMaterial` edited in the material editor and saved with Ctrl+S
-(also from the material editor view): its JSON gets a `sceneTestECS` entry with the edits merged
-into the existing one, the scene shows them, and the editor shows no override. `asteroid`
-(listed by `space` only) edited too: the same Ctrl+S leaves it out with the warning toast and
+**Exit:** in `sceneTestECS`, `testTslMat` (its only material, a TSL one: its `nodes`) edited in
+the material editor and saved with Ctrl+S (also from the material editor view): its JSON gets a
+`sceneTestECS` entry with the edits merged into the existing one, the scene shows them, and the
+editor shows no override. `asteroid` (listed by `space` and the Hub hero example, not by
+`sceneTestECS`) edited too: the same Ctrl+S leaves it out with the warning toast and
 keeps its editor changes; it's Not saveable in the dialog.
 
 ### Phase 7 — Scene JSON entries
 
-§2.5: the gatherer fix and the `postFxEnabled` and spatial cell size sources.
+§2.5: the scene's `__sourcePath` in the dev data, the `spatialDomains` merge by id, and the
+`postFxEnabled` and spatial cell size sources.
 
-**Exit:** a scene's PostFX switched off and a cell size changed, saved: the scene JSON gets one
-entry with both, the gather applies it (`generatedAppData.json`), and a scene without
-`__saveData` gathers byte for byte as before.
+**Exit:** a scene's PostFX switched off and a cell size changed, saved (`largeWorld`, whose JSON
+has `spatialDomains`): the scene JSON gets one entry with both, the gather applies it
+(`generatedAppData.json`), and a scene without `__saveData` gathers as before (the production
+data byte for byte; the dev data with only its `__sourcePath` added).
 
 ### Phase 8 — Inline assets to JSON files
 
@@ -373,21 +422,24 @@ created file, `expectedHash: null` refusing an existing one), the extraction in 
 light and sky box sources, the dialog's "moves to" line.
 
 **Exit:** `topDownTest`'s inline sky box (`topDownTestSky`, the only inline asset in the app)
-edited and saved: one commit creates `src/app/skyboxes/topDownTestSky.skybox.json` with the
+edited and saved: one commit creates `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json` with the
 entry for `topDownTestScene`, and the scene JSON lists `"topDownTestSky"` at the same place;
 after the reload the sky looks the same and the debug overrides are gone. A file put at that
 path first makes it Not saveable ("taken"), and nothing is written.
 
 ### Phase 9 — Docs and versioning
 
-CLAUDE.md (the Debug system section: the Æ menu, save sources and how a debug module adds one,
-the keys, the File server settings and env var), `readme.md` if it lists the debug keys, the
-versions and `CHANGELOG.md` (§4).
+`src/_engine/debug/CLAUDE.md` (the Æ menu, save sources and how a debug module adds one, the
+keys), `devTools/devFiles/CLAUDE.md` (the File server settings, the env var, the author, the dry
+run), `devTools/gather/CLAUDE.md` (the scene's `__sourcePath`), the kit's `CLAUDE.md` (the menu
+item's reason, a form-level error if added), the Hub's Debug suite page
+(`hub/pages/features/debug-suite/`), `readme.md` if it lists the debug keys, the versions and
+`CHANGELOG.md` (§4).
 
 ## 4. Versioning
 
-Engine minor (the save menu, `debug/SaveData.ts`, the DropDown menu mode, `MetaSchema.author`,
-new `AppConfig.devFiles` keys). App minor if `src/CONFIG.ts` gets the new `devFiles` keys.
+Engine minor (the save menu, `debug/SaveData.ts`, the menu item's disabled reason,
+`MetaSchema.author`, new `AppConfig.devFiles` keys). App minor if `src/CONFIG.ts` gets the new `devFiles` keys.
 Project entry for the dev server's author, backups and dry run. No toolkit change.
 
 ## 5. Open questions

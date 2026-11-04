@@ -1,18 +1,11 @@
 Status: draft | not-implemented
 Category: Physics
-Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the line rendering system (`LineManager.ts`, p058, implemented: Phase 3 draws the bounds with it), \_DONE_p352_physics-simulation-tiers.md (simulation tiers and their distance policy, §8)
+Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), \_DONE_p352_physics-simulation-tiers.md (simulation tiers and their distance policy, §8)
 
 # Physics World Bounds (Kill Volume) — Plan
 
-**Paths since p614 (2026-10-18).** The files below are the pre-p608 / pre-p614 ones, now in
-`src/_engine/features/physics/`: `Physics/EngineRapier.ts` → `backends/rapier/` (`step` in
-`RapierWorld.ts`, the event records in `RapierEvents.ts`); `Physics/PhysicsAPITypes.ts` → `types/`
-(one module per area) and `protocol/` (the message types and their ranges); `PhysicsAPI.ts` → the
-facade's modules (`flushPhysicsEvents` and the `EVENTS_PUSH` queue in `PhysicsMessaging.ts`,
-stepping in `PhysicsStepping.ts`); `PhysicsManager.ts` → `PhysicsEntity.ts`; the worker switches →
-`worker/PhysicsSwitch*.ts`; `SceneLoader.ts`' physics calls → physics' scene hooks
-(`physicsSceneHooks`, `PhysicsFeature.ts`: bounds applied right after `resetPhysicsWorld`, the
-`beforeAssets` hook); `LineManager.ts` → the `lines()` feature (`features/lines/`).
+**Paths** are relative to `src/_engine/features/physics/` unless they say otherwise (its layout:
+`src/_engine/features/physics/CLAUDE.md`).
 
 Dynamic physics bodies that leave a defined region of the world are taken out of the simulation and handled: deleted by default, or disabled, or handed to a callback. A body that tunnels through a thin floor, gets launched by a bad impulse or rolls off the edge of a level currently falls forever: it keeps stepping, keeps syncing its transform, keeps a slot in the transform buffer (`maxBodies`) and never goes away until the scene is switched.
 
@@ -59,23 +52,23 @@ Splitting it this way keeps the engine side free of ECS and app concepts: it onl
 
 p101 made scene loads deterministic, in both worker targets. A main-thread check in `APP_POST_PHYSICS` would break that: `APP_POST_PHYSICS` runs once per frame after 0–N sub-steps, so the step on which a body is removed would depend on frame timing, and the determinism probe's hash would differ between runs.
 
-So the check runs right after each `engAPI.step()`, inside the engine module (`Physics/EngineRapier.ts`), in whichever thread the simulation runs:
+So the check runs right after each `engAPI.step()`, inside the backend (`backends/rapier/RapierWorld.ts`' `step`), in whichever thread the simulation runs:
 
 - The body is disabled on the same fixed step in every run and in both worker targets, so the simulation itself stays deterministic.
-- The **delivery** of the exit record to the main thread uses the existing event path (`flushPhysicsEvents`, at the start of the next sub-step, before `APP_PHYSICS_STEP`), with the same timing contract as collision events. That is already documented in CLAUDE.md, and gameplay code already relies on it.
+- The **delivery** of the exit record to the main thread uses the existing event path (`flushPhysicsEvents`, at the start of the next sub-step, before `APP_PHYSICS_STEP`), with the same timing contract as collision events. That is already documented (`PhysicsMessaging.ts`, the root `CLAUDE.md`'s Physics), and gameplay code already relies on it.
 - Headless bodies never sync to `TRANSFORM`. An engine-side check reads the real body pose, so it does not care.
 
 ### 2.1 Cost
 
 - Global bounds unset and no per-body overrides: the check is skipped with one boolean test per step.
-- Otherwise: `physicsWorld.forEachActiveRigidBody` (available in the pinned `@dimforge/rapier3d-compat` 0.19.3 — verify the exact signature before building). Sleeping bodies cannot move, so iterating only the active set is both correct and cheap. Per body: one map lookup for an override, then six float compares.
+- Otherwise: Rapier's `World.forEachActiveRigidBody` (in the pinned `@dimforge/rapier3d-compat` 0.19.3 — verify the exact signature before building; the API's `WorldAPI` has it only commented out, in `types/PhysicsWorldTypes.ts`, and the backend calls Rapier directly). Sleeping bodies cannot move, so iterating only the active set is both correct and cheap. Per body: one map lookup for an override, then six float compares.
 - Edge case: a body **created** asleep (`sleeping: true`) outside the bounds is never active, so it is never caught. Also run the check once when a dynamic body is created (engine-side, in the create path), which covers it.
 
 ---
 
 ## 3. API sketch
 
-Types live in `Physics/PhysicsAPITypes.ts` (engine-agnostic protocol) and `PhysicsManager.ts` (ECS side).
+Types live in `types/` (engine-agnostic; the messages in `protocol/`) and `PhysicsEntity.ts` (ECS side); the public ones go on `aekasha/physics`.
 
 ```ts
 /** A missing side (or a missing min/max) is open. */
@@ -114,16 +107,16 @@ export type WorldBoundsExitEvent = {
 
 Public functions:
 
-- `setSceneWorldBounds(def: WorldBoundsDef | null, sceneId?: string)` (`PhysicsManager.ts`): per-scene registration. Default target is the loading scene, else the current one — the same rule as `registerSkyBox`. `null` explicitly turns bounds off for that scene even if `AppConfig` has a default.
-- `setEntityWorldBounds(entityId: number, bounds: EntityWorldBounds | null, ecsWorld?)` (`PhysicsManager.ts`): adds, replaces or removes the override.
+- `setSceneWorldBounds(def: WorldBoundsDef | null, sceneId?: string)` (`PhysicsEntity.ts`): per-scene registration. Default target is the loading scene, else the current one — the same rule as `registerSkyBox`. `null` explicitly turns bounds off for that scene even if `AppConfig` has a default.
+- `setEntityWorldBounds(entityId: number, bounds: EntityWorldBounds | null, ecsWorld?)` (`PhysicsEntity.ts`): adds, replaces or removes the override.
 - `createPhysicsEntity(..., entityOpts)`: `entityOpts.worldBounds?: EntityWorldBounds` as a shorthand for calling `setEntityWorldBounds` right after creation, applied before the creation promise resolves (so it is in place before the scene-load hold is released).
 - `getWorldBoundsStats()`: exit count for the current scene, last N exits. Used by the debug tab (Phase 3).
 
 ---
 
-## 4. Engine side (`Physics/EngineRapier.ts`)
+## 4. Engine side (`backends/rapier/`)
 
-State, all plain numbers so it is identical in both threads:
+State (on `RapierState.ts`' `backend`), all plain numbers so it is identical in both threads:
 
 - `globalBounds: Float64Array(6) | null` — `[minX, minY, minZ, maxX, maxY, maxZ]`, open sides as ±Infinity.
 - `bodyBounds: Map<bodyId, Float64Array(6) | IGNORE>` — per-body overrides. `IGNORE` is a shared sentinel.
@@ -131,35 +124,35 @@ State, all plain numbers so it is identical in both threads:
 
 `step()` becomes: `physicsWorld.step(...)`, `drainAndDispatchEvents()`, then `checkWorldBounds(stepIndex)`. For every active dynamic body that is outside its effective box: `setEnabled(false)`, push a record. Disabled bodies are not active, so a body is reported once.
 
-`resetPhysicsWorld` / world deletion clears `globalBounds`, `bodyBounds` and the pending records. Deleting a body removes its `bodyBounds` entry.
+`resetPhysicsWorld` / world deletion (`RapierWorld.ts`) clears `globalBounds`, `bodyBounds` and the pending records. Deleting a body removes its `bodyBounds` entry.
 
 Engine functions, exposed through the same `EngineAPIType` surface as the rest: `setWorldBounds(box | null)`, `setBodyWorldBounds(bodyId, box | 'IGNORE' | null)`, `drainPendingOutOfBoundsRecords()`.
 
-### 4.1 Protocol (`PhysicsAPITypes.ts`, worker switchboards)
+### 4.1 Protocol (`protocol/`, the worker switchboards)
 
-- `WORLD_SET_BOUNDS` in the 200 range (`physicsSwitchWorld.ts`), `RIGID_SET_BOUNDS` in the 400 range (`physicsSwitchRigid.ts`). Both one-way, like the other setters.
-- `EVENTS_PUSH` gets an `outOfBounds: OutOfBoundsRecord[]` field. `physicsWorker.ts`'s `pushPendingEvents` includes it and its "nothing to send" gate checks it too.
+- `WORLD_SET_BOUNDS` in the world range (200-399, `worker/PhysicsSwitchWorld.ts`), `RIGID_SET_BOUNDS` in the rigid-body range (400-599, `worker/PhysicsSwitchRigid.ts`), each the next free number of its range (`PhysicsProtocolType.ts`). Both one-way, like the other setters (`commandWorker`).
+- `EVENTS_PUSH` gets an `outOfBounds: OutOfBoundsRecord[]` field. `worker/PhysicsWorker.ts`' `pushPendingEvents` includes it and its "nothing to send" gate checks it too.
 
-### 4.2 Main-thread delivery (`PhysicsAPI.ts`)
+### 4.2 Main-thread delivery (`PhysicsMessaging.ts`)
 
-`PhysicsAPI.ts` stays ECS-free. It gets `registerOutOfBoundsHandler(fn)`, and `flushPhysicsEvents` hands the records to it — MAIN_THREAD straight from the engine, WORKER_THREAD from the queued `EVENTS_PUSH` messages — after collision/contact-force dispatch, in record order. `PhysicsManager.ts` registers the handler at module load.
+The facade stays ECS-free. It gets `registerOutOfBoundsHandler(fn)`, and `flushPhysicsEvents` hands the records to it — MAIN_THREAD straight from the backend, WORKER_THREAD from the queued `EVENTS_PUSH` messages — after collision/contact-force dispatch, in record order. `PhysicsEntity.ts` registers the handler from physics' install (`PhysicsFeature.ts`; nothing registers at module load).
 
 ---
 
-## 5. ECS side (`PhysicsManager.ts`)
+## 5. ECS side (`PhysicsEntity.ts`)
 
 - **Body id → entity id map.** There is none today (storages are keyed by entity id). Maintain `bodyIdToEntityId` from the `onAddComponent` / `onRemoveComponent` hooks of `BODY_DYNAMIC_VISUAL` and `BODY_DYNAMIC_HEADLESS`.
-- **`WORLD_BOUNDS` component** (core type in `ECS/ECSRegistry.ts` + `ECSCoreComponents.ts`) holding the `EntityWorldBounds`. Sparse: only entities with an override have it. Its add/remove hooks send `RIGID_SET_BOUNDS` (with `onExit` stripped — same pattern as `collisionEventFn`), and `onDeleteEntity` needs nothing extra because the body deletion clears the engine entry.
+- **`WORLD_BOUNDS` component** (core type in `kernel/ecs/ECSRegistry.ts` + `ECSCoreComponents.ts`, like `PHYSICS_SIM_TIER`) holding the `EntityWorldBounds`. Sparse: only entities with an override have it. Its add/remove hooks send `RIGID_SET_BOUNDS` (with `onExit` stripped — same pattern as `collisionEventFn`), and `onDeleteEntity` needs nothing extra because the body deletion clears the engine entry.
 - **Out-of-bounds handler:** resolve `bodyId → entityId` (skip quietly if the entity is gone — same rule as stale collider events), pick the action (entity override, else the active global def, else `'DELETE'`), apply it per §1.3. Deletions are collected and run after the loop over the records.
-- **Scene lifecycle:** `SceneLoader.ts` applies the scene's bounds (registered def, else `AppConfig.physics.worldBounds`, else none) right after `resetPhysicsWorld()`, before any `createPhysicsEntity` call, so the very first step of the scene already uses them. Registered scene defs are kept across visits (like sky boxes); per-entity overrides die with their entities.
+- **Scene lifecycle:** physics' scene hooks (`physicsSceneHooks`, `PhysicsFeature.ts`) apply the scene's bounds (registered def, else `AppConfig.physics.worldBounds`, else none) in the `beforeAssets` hook right after `resetPhysicsWorld()`, before any `createPhysicsEntity` call, so the very first step of the scene already uses them. Registered scene defs are kept across visits (like sky boxes); per-entity overrides die with their entities.
 
 ---
 
-## 6. Determinism probe (`Debug/_dbg__PhysicsDeterminism.ts`)
+## 6. Determinism probe (`debug/_dbg__PhysicsDeterminism.ts`)
 
 The body is disabled on a fixed step, but its ECS entity is deleted when the record is delivered, which in `WORKER_THREAD` mode can be a frame later. If the probe freezes on or just after an exit step, one run may still see the entity and another may not.
 
-Fix: the probe excludes every body with an exit record whose `step` is ≤ its target step, whether or not the ECS deletion has happened yet. PhysicsManager keeps the exit steps for the current scene (they are needed for the stats in Phase 3 anyway). Verify with `?physicsProbe=N` on a scene where bodies fall out on purpose, in both worker targets, with N set to just before, on and just after an exit.
+Fix: the probe excludes every body with an exit record whose `step` is ≤ its target step, whether or not the ECS deletion has happened yet. `PhysicsEntity.ts` keeps the exit steps for the current scene (they are needed for the stats in Phase 3 anyway). Verify with `?physicsProbe=N` on a scene where bodies fall out on purpose, in both worker targets, with N set to just before, on and just after an exit, and keep `yarn verify:scenes`' probe hashes unchanged (all three targets).
 
 ---
 
@@ -172,11 +165,11 @@ Fix: the probe excludes every body with an exit record whose `step` is ≤ its t
 
 ## 8. Interaction with other systems
 
-- **Characters** (`Character.ts`, `core/Character/DynamicCharacter.ts`) are created through `createPhysicsEntity`, so they are covered. A player character usually wants `action: 'CALLBACK'` (respawn) or `ignore: true`. The default `'DELETE'` is safe for them: since p066 Phase 2, deleting a character's entity any way runs the `CHARACTER` delete hook, which removes it from the registry with its bindings. Whether `createCharacter` should still default characters to `'CALLBACK'` (respawn rather than vanish) is a gameplay default. Decide in Phase 2.
+- **Characters** (`features/character/Character.ts`, `controllers/dynamic/DynamicCharacter.ts`) are created through `createPhysicsEntity`, so they are covered. A player character usually wants `action: 'CALLBACK'` (respawn) or `ignore: true`. The default `'DELETE'` is safe for them: deleting a character's entity any way runs the `CHARACTER` delete hook, which disposes its brain and controller (`src/_engine/features/character/CLAUDE.md`). Whether `createCharacter` should still default characters to `'CALLBACK'` (respawn rather than vanish) is a gameplay default. Decide in Phase 2.
 - **Joints:** deleting a body that has joints goes through the existing body deletion path; nothing new. `'DISABLE'` leaves the joint in place with a disabled body on one end: document it.
 - **Snapshots (p500):** bounds are configuration, not simulation state, so a Rapier snapshot does not contain them. When p500 is implemented, a restore must re-send the current global and per-body bounds (the ECS side is the source of truth). Add a line to p500 when this lands.
 - **`maxBodies` / transform buffer:** deleting exited bodies frees their slots, which is a real benefit in long-running scenes with spawners.
-- **Simulation tiers (`_DONE_p352`):** only `FULL` bodies are in the checked buckets. A `STATIC` or `DISABLED` tier body is in `BODY_STATIC` and a `REMOVED` one has no bucket, and none of them moves, so skipping them is right; the engine-side check must skip a detached body too. The catch is the engine side's own `setEnabled(false)` on exit: the tiers know only `world.setDisabled` ("a tier change keeps a world-disabled body disabled"), so a later round trip through the `DISABLED` tier (from the app or the tier policy, `PhysicsTierPolicy.ts`) would re-enable an exited body on its way back to `FULL`. The exit record's handling must win: `'DISABLE'` goes through `world.setDisabled`, and an exited entity leaves the tier policy (`setPhysicsTierPolicyMember(id, false)`). Between the exit step and the record's delivery, a tier request for the body can still apply; it changes nothing that matters (the body stays out of bounds), but the record's action must not assume the body is still `FULL`.
+- **Simulation tiers (`_DONE_p352`, `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers):** only `FULL` bodies are in the checked buckets. A `STATIC` or `DISABLED` tier body is in `BODY_STATIC` and a `REMOVED` one has no bucket, and none of them moves, so skipping them is right; the engine-side check must skip a detached body too. The catch is the engine side's own `setEnabled(false)` on exit: the tiers know only `world.setDisabled` ("a tier change keeps a world-disabled body disabled"), so a later round trip through the `DISABLED` tier (from the app or the tier policy, `PhysicsTierPolicy.ts`) would re-enable an exited body on its way back to `FULL`. The exit record's handling must win: `'DISABLE'` goes through `world.setDisabled`, and an exited entity leaves the tier policy (`setPhysicsTierPolicyMember(id, false)`). Between the exit step and the record's delivery, a tier request for the body can still apply; it changes nothing that matters (the body stays out of bounds), but the record's action must not assume the body is still `FULL`.
 
 ---
 
@@ -187,12 +180,13 @@ Each phase compiles, lints and can merge on its own.
 ### Phase 1 — Global bounds, delete only
 
 - Engine side (§4): `globalBounds`, `checkWorldBounds`, the create-time check, records, `WORLD_SET_BOUNDS`, `EVENTS_PUSH.outOfBounds`.
-- `PhysicsAPI.ts` delivery (§4.2).
-- `PhysicsManager.ts`: `bodyIdToEntityId`, the handler with `'DELETE'` only, `setSceneWorldBounds`.
-- `AppConfig.physics.worldBounds?: WorldBoundsDef | null` (default `null` in `core/Config.ts`).
-- `SceneLoader.ts` wiring (§5).
+- The facade's delivery (§4.2).
+- `PhysicsEntity.ts`: `bodyIdToEntityId`, the handler with `'DELETE'` only, `setSceneWorldBounds`.
+- `AppConfig.physics.worldBounds?: WorldBoundsDef | null` (`types/PhysicsConfigTypes.ts`; default `null` in `PhysicsState.ts`, the defaults' one owner).
+- The scene hook wiring (§5).
+- Tests: the backend's check in `backends/rapier/EngineRapier.test.ts`, the delivery and the delete in `PhysicsFacade.test.ts` (`MAIN_THREAD`) and `PhysicsWorkerRequests.test.ts` (`WORKER_THREAD`).
 - Debug log (§7) and the probe fix (§6).
-- App: set a kill-Y in the third-person gym scene as the first consumer.
+- App: set a kill-Y in the third-person gym scene (`src/app/scenes/thirdPersonGymScene/`) as the first consumer; its probe and path hashes must not move.
 
 ### Phase 2 — Per-entity overrides and actions
 
@@ -203,14 +197,15 @@ Each phase compiles, lints and can merge on its own.
 
 ### Phase 3 — Debug tooling
 
-- Physics API debug tab: a "World bounds" folder (declarative pane, `createDebuggerTab`) with the active global box (read-only, source: config / scene / none), the exit count for the current scene and a list of the last exits (`debuggerListCMP`, clicking a row logs the entity).
-- A toggle that draws the global box with the line system (`createLines`), open sides clipped to a large finite size, and per-entity boxes for selected entities. Implementation in a `_dbg__` file, dynamically imported.
-- Optional: live editing of the scene's global box, stored as a debug override with an undo action (the `_dbg__UndoRedo.ts` action-handler pattern). Skip if it isn't needed.
+- Physics API debug tab: a "World bounds" folder (`DebuggerPaneItem`s next to the others in `debug/_dbg__PhysicsTabFolders.ts`: the UI kit's property grid, compact density) with the active global box (monitors, source: config / scene / none), the exit count for the current scene and a list of the last exits (a `debuggerListCMP` list, clicking a row opens the entity's edit window, `_dbg__PhysicsEntityWindow.ts`).
+- A toggle that draws the global box with the `lines()` feature (`createLines`), open sides clipped to a large finite size, and per-entity boxes for selected entities (the entity window's own toggle). Implementation in a `_dbg__` file, dynamically imported; without `lines()` installed, the toggle is left out.
+- Optional: live editing of the scene's global box, stored as a debug override with an undo action (`registerUndoRedoActionHandler`, `src/_engine/debug/UndoRedo.ts`; the world settings' undo in `_dbg__PhysicsSettingsUndo.ts` is the pattern). Skip if it isn't needed.
 
 ### Phase 4 — Scene JSON
 
-- Optional `worldBounds` key in `schemas/sceneSchema.ts` (same shape as `WorldBoundsDef`, without callbacks).
-- `gatherAppData` passes it through; scene registration calls `setSceneWorldBounds`. The JSON Schema for editor autocomplete updates automatically.
+- Optional `worldBounds` scene key, same shape as `WorldBoundsDef` without callbacks, as physics' part of the scene schema (a `FeatureSchemaPart`, `src/_engine/schemas/FeatureSchemas.ts`: a feature brings its own scene fields, the kernel's `SceneSchema.ts` imports none), so a scene that sets it names `physics` in its feature manifest (`devTools/gather/CLAUDE.md`).
+- `gatherAppData` passes it through; physics' scene hook calls `setSceneWorldBounds`. The JSON Schema for editor autocomplete updates automatically.
+- The Hub: the physics feature page (`hub/pages/features/physics/`) documents the bounds.
 
 ### Phase 5 — Optional: non-physics entities
 

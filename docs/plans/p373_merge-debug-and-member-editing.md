@@ -2,7 +2,7 @@ Status: draft | not-implemented
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Blocked by: p372_mesh-merge-groups.md
-Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), \_DONE_p094_refactor-draggable-windows-and-dialogs.md, \_DONE_p800_debugger-ui-overhaul.md and \_DONE_p806_debugger-migration.md (the debug panels are on the UI kit: a tab's pane is a property grid, an edit window a `createDebugWindowGrid`)
+Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
 
 # Merge Debugging & Member Editing
 
@@ -20,59 +20,87 @@ Makes merging visible and editable in debug mode:
 
 ## 1. Grounding
 
+The debugger is built on the UI kit (`src/_engine/debug/CLAUDE.md`): a drawer tab's content is
+CMPs and declarative panes (a property grid of the kit's fields), lists are the kit's list, edit
+windows are the kit's draggable windows with a property grid. Checked 2026-11-04:
+
 - **No Meshes tab or mesh edit window exists** (`DEFAULT_DEBUG_DRAWER_TAB_ORDER`,
-  `core/Config.ts:22-37`). The Lights tab is the pattern for an entity list with edit windows:
-  `core/Debug/Light/_dbg__LightGUI.ts` builds rows with `debuggerListCMP` (`:1127`) and registers
-  its edit window kind with `registerDraggableWindowKind` (`:1146`).
+  `kernel/config/Config.ts`). The pattern for a feature's entity list with edit windows is the LOD
+  tab: `lod()`'s install registers it with `if (IS_DEBUG_ENV) ctx.onDebug(registerLodDebugGUI)`,
+  which loads `features/lod/debug/_dbg__LOD.ts` (`createDebuggerTab`, its rows a
+  `debuggerListCMP`); its entity window (`_dbg__LodEntityWindow.ts`) registers its kind with
+  `registerDraggableWindowKind` at the module's load (`ui/overlays/windows/DraggableWindow.ts`),
+  opens with `toggleDraggableWindow` and `getKindWindowId`, and is an `EntityWindowOpener` for the
+  profiler (`registerEntityWindowOpener`). The Lights tab (`kernel/light/debug/_dbg__LightGUI.ts`,
+  `_dbg__LightEditWindow.ts`) is the kernel's.
 - **Drawer tabs**: `createDebuggerTab({ id, title, icon, content, refreshIntervalMs, onOpen, ... })`
-  (`debug/DebuggerGUI.ts`); `updateDebuggerTab` is a no-op unless the tab is visible.
+  (`debug/DebuggerGUI.ts`, on `aekasha/debug`); `content` returns sections, `{ pane: true,
+  content: [...] }` a property grid (bindings, folders, buttons, `custom`); `updateDebuggerTab` is
+  a no-op unless the tab is visible. A `debuggerListCMP` row click is `onActivate`, its toggles
+  the row's actions. An icon names a registered icon (`ui/core/icons/`).
+- **Edit windows**: `createDebugWindowGrid` (`debug/_dbg__DebugWindowGrid.ts`): its own
+  scheduler, `getEntityInfoItems` (the entity's ids, type, name), `getReasonedButtonItem` (a
+  disabled button with its reason), `getInfoRowItem`, `getNoteItem`. A field's `onChange` gets
+  `last: true` at a gesture's end with `prev` the value before it, where the light window saves
+  and records undo.
 - **Managed entities**: `_registerManagerDebugInfo(manager, { label, icon, tabId })` and
-  `_getEntityManagerInfo` (`core/Debug/_dbg__ManagedEntities.ts:20,26`). A managed entity's window
-  is read-only with a link to its manager's tab (the sky box's lights do this).
+  `_getEntityManagerInfo` (`debug/_dbg__ManagedEntities.ts`). A managed entity's window is
+  read-only with a link to its manager's tab (the sky box's lights do this).
 - **Debug helpers** added to the root scene are marked with `markDebugHelper(obj)`
-  (`debug/Profiler.ts:189`), so the profiler census counts them in their own row.
-- **Undo** (`core/Debug/_dbg__UndoRedo.ts`): per-scene action buckets; actions are registered by
-  type with do/undo handlers.
-- **Lines** (`core/Lines/`): the line system the LOD overlay (p348 §6) also uses.
+  (`debug/Profiler.ts`, on `aekasha/debug`), so the profiler census counts them in their own row.
+- **Undo** (`debug/UndoRedo.ts`, `registerUndoRedoActionHandler`; the engine's debug modules
+  import `debug/_dbg__UndoRedo.ts`): per-scene buckets; actions registered by type with do/undo
+  handlers; `recordOrCoalesceUndoRedoAction` merges a field's ticks within 800 ms.
+- **Lines** (`features/lines/`, `features/lines/CLAUDE.md`): the line system the LOD overlay
+  (`features/lod/debug/_dbg__LodOverlay.ts`) also uses; without `lines()` a debug tool that draws
+  lines is off with one log line (`isLinesInstalledFor`).
+- **Checks**: the scene runner's `debugger` configuration (`devTools/verify/CLAUDE.md`) shoots
+  every tab and window of the scenes with a `debugger` entry and runs axe on them.
 - p372 gives `MERGE_GROUP`, `MERGE_MEMBER`, `TAG_MERGED`, `updateMergeMember` and the part table;
   group entities are `MANAGED_BY` `MERGE`.
 
 ## 2. Design
 
-### D1 — "Merging" drawer tab (`core/Debug/_dbg__MergeGroups.ts`)
+### D1 — "Merging" drawer tab (`features/merging/debug/_dbg__Merging.ts`)
 
-Public entry `debug/MergeGroups.ts`, loaded with the usual `_dbg__` dynamic import; a new id in
-`DEFAULT_DEBUG_DRAWER_TAB_ORDER` and an icon.
+Registered by `merging()`'s install with `if (IS_DEBUG_ENV) ctx.onDebug(registerMergingDebugGUI)`,
+which loads the `_dbg__` module through the debug loader (`loadDebugModuleAsync`), as `lod()`
+does; a new `mergingControls` id in `DEFAULT_DEBUG_DRAWER_TAB_ORDER` and a built-in icon. A
+production build carries none of it (`yarn verify:baselines`' debug code check).
 
-- **Summary pane:** groups, members, merged vertices, draws now vs. draws if unmerged (members +
-  groups, main pass; × shadow casters for the shadow passes), wasted vertices, rebuilds and
-  in-place updates last second, build time.
+- **Summary pane** (a property grid of monitors): groups, members, merged vertices, draws now vs.
+  draws if unmerged (members + groups, main pass; × shadow casters for the shadow passes), wasted
+  vertices, rebuilds and in-place updates last second, build time.
 - **Group list** (`debuggerListCMP`): one row per group (id, `AUTO` cell, material, members,
-  vertices); row toggles for "highlight" (D3) and "show unmerged" (D3); click opens the group
-  window.
-- **Refusals:** a collapsible list of entities that asked for `merge` and were refused (p372 §5),
-  with the reason.
+  vertices); row actions for "highlight" (D3) and "show unmerged" (D3); activating a row opens the
+  group window.
+- **Refusals:** a folder (closed by default) listing the entities that asked for `merge` and were
+  refused (p372 §5), with the reason.
 - `refreshIntervalMs: 500` while visible.
 
 ### D2 — Windows
 
-Two draggable window kinds (`registerDraggableWindowKind`), opened with `toggleDraggableWindow`:
+Two window kinds (`registerDraggableWindowKind` at the `_dbg__` module's load), opened with
+`toggleDraggableWindow` and `getKindWindowId(kind, entityId)`, each a `createDebugWindowGrid`:
 
-- **Group window** (`mergeGroup`): settings, stats, member list (click opens the member window),
-  buttons: rebuild, compact, dissolve (undoable: re-creates the group with the same members).
-- **Member window** (`mergeMember`): entity id and app id, geometry and material ids, its part
-  range, "Merged into <group>" (link to the group window), transform fields (D4), "remove from
-  group" (undoable).
+- **Group window** (`mergeGroup`): settings, stats, member list (a kit list; columns would need a treegrid, which the kit's table doesn't have
+  (p805 D1); activating a row
+  opens the member window), buttons: rebuild, compact, dissolve (undoable: re-creates the group
+  with the same members).
+- **Member window** (`mergeMember`): `getEntityInfoItems`, geometry and material ids, its part
+  range, "Merged into <group>" (a link to the group window), transform fields (the kit's vector
+  and rotation fields, D4), "remove from group" (undoable; a reasoned button while an edit session
+  is open).
 - `_registerManagerDebugInfo('MERGE', { label: 'Merge group', icon, tabId })`, so anything that
-  shows a managed entity (the profiler's Objects tab via `registerEntityWindowOpener`) links to
-  the group window.
+  shows a managed entity links to the group window, and a `registerEntityWindowOpener` for both
+  kinds, so the profiler's Objects tab opens them.
 - A future Meshes tab (not planned) opens the member window for merged meshes.
 
 ### D3 — Overlay and A/B
 
 - **Highlight:** member bounding boxes drawn with the line system in one colour per group (a
-  stable hash of the group id), only for groups in view; marked with `markDebugHelper`. "Highlight
-  all" in the summary pane.
+  stable hash of the group id), only for groups in view; marked with `markDebugHelper`; off with
+  one log line without `lines()`. "Highlight all" in the summary pane.
 - **Show unmerged** per group: hides the group mesh and shows its members' own meshes (removes
   `TAG_MERGED` visibility without leaving the group), for an A/B of image and draw count. Runtime
   only, cleared on scene exit.
@@ -96,7 +124,8 @@ getMergeMemberAtFace(groupEntityId: number, faceIndex: number, world?): number |
 - **Undo:** one `merge.memberTransform` action per session (transform before and after); undo
   and redo go through `updateMergeMember`.
 - **First user:** the member window's position / rotation / scale fields (D2) open a session on
-  the first change and end it when the window closes or after 500 ms without changes.
+  the first change and end it at the gesture's end (the field's `onChange` with `last: true`,
+  where the light window records its undo), or when the window closes.
 - **Persistence:** none here. Writing an edited transform back to the scene JSON is the editor
   epic's save plan (p083 "Future plans").
 
@@ -105,7 +134,9 @@ getMergeMemberAtFace(groupEntityId: number, faceIndex: number, world?): number |
 ### Phase 1 — Tab and windows (D1, D2)
 
 **Exit:** largeWorld's groups are listed with correct counts; group and member windows open from
-rows and link to each other; the profiler's Objects tab links a group entity to its window.
+rows and link to each other; the profiler's Objects tab links a group entity to its window; the
+scene runner's `debugger` configuration shoots the tab and both windows on largeWorld (a
+`debugger` entry in `scenes.config.ts`), axe clean, in both debugger themes.
 
 ### Phase 2 — Overlay and A/B (D3)
 
@@ -120,7 +151,9 @@ member for raycasts on 3 members of one group.
 
 ### Phase 4 — Docs and versioning
 
-1. `CLAUDE.md` debug system section (the tab, windows, edit sessions).
+1. `features/merging/CLAUDE.md` (the tab, windows, edit sessions), the Hub's Mesh merging page (a
+   debugging section with a shot of the tab) and the debug suite page's list of drawer tabs;
+   `yarn hub:build`.
 2. Engine minor; `CHANGELOG.md`.
 
 ## 4. Versioning

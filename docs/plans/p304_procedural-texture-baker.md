@@ -2,7 +2,7 @@ Status: draft | not-implemented
 Category: Rendering, Materials, Procedural
 Blocked by: p302_material-and-texture-system-refactor.md, p303_texture-sets-and-terrain-texture-library.md
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
-Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it)
+Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
 Epic: p301_terrain-texturing-epic.md
 
 # Procedural Texture Baker
@@ -11,7 +11,7 @@ A material built from a TSL node graph runs its noise math for every covered pix
 
 It adds:
 
-- **`bakeTexture()`**, engine core: TSL node(s) → `Texture` / array texture, with MRT, mips, clear-once, asset ownership, a bake queue and GPU timing.
+- **`bakeTexture()`**, engine kernel: TSL node(s) → `Texture` / array texture, with MRT, mips, clear-once, asset ownership, a bake queue and GPU timing.
 - **A periodic noise library** in the toolkit, so baked textures tile seamlessly.
 - **Procedural surface generators** in the toolkit (one or more per terrain category, plus concrete), usable **baked** (as procedural texture sets) or **live** (evaluated in the material; never tiles, costs ALU).
 - **Shared generated textures**: macro noise (p305) and the rain ripple atlas (p307).
@@ -19,27 +19,26 @@ It adds:
 
 ---
 
-## Context (grounded)
+## Context (grounded, re-grounded 2026-11-04)
 
-- **Bake precedent:** `core/SkyBox/SkyStaticLayers.ts`.
-  - It bakes a `NodeMaterial` into a HalfFloat `CubeRenderTarget` through a `CubeCamera` (`:65-117`, `:190`).
-  - It throttles to one bake per 150 ms (`:28`).
-  - It skips while a scene loads or before `renderer.hasInitialized()`.
-  - Its `initTarget` (`:80-96`) clears each face once on allocation. Three r186 otherwise destroys the placeholder GPU texture in place on the first render without invalidating bind groups ("Destroyed texture used in a submit"). `SkyEnvironment.ts:107-121` does the same.
-  - Neither bake generates mipmaps.
-- **QuadMesh precedent:** `core/Viewports.ts:295` composites with `THREE.QuadMesh`. It saves and restores the render target, cube face and mip level (`:550`, `:602`) and notes that a leaked scissor breaks PMREM (three #31777).
-- **GPU timing:** `core/Debug/_dbg__GPUTimer.ts` (`_acquireGpuTimer`, `_onRenderContext`, `_sumGpuMs`; WebGPU only; nested contexts never resolve on WebGL).
+- **Bake precedents:**
+  - **The sky box's static layers** (`features/skybox/SkyStaticLayers.ts`) bake a `NodeMaterial` into a HalfFloat `CubeRenderTarget` (no mipmaps), throttled to one bake per `STATIC_LAYERS_THROTTLE_MS` (150 ms), skipped while a scene loads or before `renderer.hasInitialized()`. Its `initTarget` clears each face once on allocation: three r186 otherwise destroys the placeholder GPU texture in place on the first render without invalidating bind groups ("Destroyed texture used in a submit"; `src/_engine/features/skybox/CLAUDE.md`'s traps). The env bake (`SkyEnvironment.ts`) does the same.
+  - **The impostor bakes** (`features/lod/impostors/ImpostorBake.ts`, p351) are the closest: synchronous 2D bakes between frames into atlas targets, through `getBakeRenderer`, `withBakeRendererState` (restores the renderer state it touched) and `clearBakeTarget` (the clear-once rule), with a dilation pass and a readback for the export. The Assets tab's GPU preview (`kernel/assets/debug/_dbg__TexturePreview.ts`, p299) reuses them and reads back with `readRenderTargetPixelsAsync` (WebGPU rows top-first and padded to 256 bytes, WebGL2 bottom-first).
+  - These helpers are in the LOD feature: the kernel may import a feature's types only (p612 D2, a lint rule), so a kernel `bakeTexture` can't use them where they are (D1).
+- **QuadMesh precedent:** `features/viewports/Viewports.ts` composites with `THREE.QuadMesh`, saves and restores the render target, cube face and mip level, and never touches the scissor test (a leaked scissor breaks PMREM, three #31777).
+- **GPU timing:** one owner, `debug/_dbg__GPUTimer.ts` (`_acquireGpuTimer`, `_onRenderContext`; a frame's sum is `debug/_dbg__GPUFrameTimes.ts`' `_acquireGpuFrameTimes` / `_onGpuFrameTime`; WebGPU with `timestamp-query`, WebGL 2 with `EXT_disjoint_timer_query_webgl2`; `src/_engine/debug/CLAUDE.md`'s GPU timing). The sky box's bake stats (`features/skybox/debug/_dbg__BakeStats.ts`) time each bake through it: the model for D1's stats.
 - **Noise in the repo:**
-  - `mx_noise_float`, `mx_fractal_noise_float` and `mx_worley_noise_float` (`toolkit/materials/asteroid.tsl.ts:11-13`, `SkyBox/layers/stars.ts:34`, `layers/nebula.ts:24`).
-  - `nebula.ts:10` warns that `mx_fractal_noise_vec3` **hangs SwiftShader's WebGL2**.
+  - `mx_noise_float`, `mx_fractal_noise_float` and `mx_worley_noise_float` (`toolkit/materials/asteroid/asteroid.tsl.ts`, `features/skybox/layers/Stars.ts`, `layers/Nebula.ts`).
+  - `Nebula.ts` warns that `mx_fractal_noise_vec3` **hangs SwiftShader's WebGL2**.
   - None of these are periodic, so baking them gives visible tile seams.
 - No `renderer.compute`, `StorageTexture` or render-target-array usage exists yet.
+- **Dev files** (D5): `aekasha/debug` has `encodePNG`, `writeDevFiles`, `readDevFile` and `getDevFilesStatus` (`debug/DevFiles.ts`); the impostor export (`features/lod/debug/_dbg__ImpostorExport.ts`) is the worked example of a bake written into the repo through them, with the download fallback.
 
 ---
 
 ## Design
 
-### D1 — `bakeTexture` (engine: `core/TextureBaker.ts`)
+### D1 — `bakeTexture` (engine: `kernel/render/TextureBaker.ts`, on `aekasha`)
 
 ```ts
 type BakeOutput = { name: string; node: Node; colorSpace?: 'SRGB' | 'LINEAR'; type?: 'UNSIGNED_BYTE' | 'HALF_FLOAT' };
@@ -59,20 +58,21 @@ bakeTexture(opts: {
 
 - **Render:** a full-screen `QuadMesh` with a `NodeMaterial` whose output is `mrt({ … })` for several outputs.
   - Several outputs mean one `RenderTarget` with `count: n`.
-  - Layers are rendered one by one into an array render target (three r186 array render target, chosen by layer). If r186 can't target array layers on both backends, the fallback bakes each layer into a 2D target and assembles them with p303's array assembly.
-  - Render-target state is saved and restored as in `Viewports.ts`, including the scissor.
-- **Clear once on allocation**, the same as `initTarget`.
+  - Layers are rendered one by one into an array render target (three r186 array render target, chosen by layer). If r186 can't target array layers on both backends, the fallback bakes each layer into a 2D target and assembles them into a `DataArrayTexture` (p299's uncompressed path in `buildTextureArray`).
+  - **The bake helpers move to the kernel:** `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` go from `features/lod/impostors/ImpostorBake.ts` to `kernel/render/` (`@internal`), and the impostor bakes and the texture preview import them from there. `withBakeRendererState` (today the target, clear colour and auto clear) also restores the cube face and mip level, and the bake never touches the scissor, as `Viewports.ts`. `getBakeRenderer` throws before `InitEngine`; the impostor atlases' registered texture disposing its render target is the model for D1's ownership (`src/_engine/features/lod/impostors/CLAUDE.md`).
+- **Clear once on allocation** (`clearBakeTarget`), the same rule as `initTarget`.
 - **Mipmaps:**
   - Turn on the target texture's `generateMipmaps` and verify that r186 generates them after the render on both backends.
   - If not, add a small downsample chain (box filter, one `QuadMesh` pass per level), which also lets alpha-as-data be averaged correctly.
 - **Pipeline compile:** `renderer.compileAsync(quad, camera)` before the first bake, so compiling doesn't stall the frame.
 - **Scheduling:**
   - During scene load, bakes run inside the loader's hold, with loader status updates (`getLoaderStatusUpdater`).
-  - Outside loads they queue into `textureBakeSystem` (MAIN, after `skyBoxSystem`), which runs at most one bake per frame and throttles rebakes of the same id to one per 150 ms (the latest request always runs; same rule as the static layers).
+  - Outside loads they queue into `textureBakeSystem` (`MAIN`), which runs at most one bake per frame and throttles rebakes of the same id to one per 150 ms (the latest request always runs; same rule as the static layers). The system is added by the first queued bake, not at module load or in the kernel's install, so an app that never bakes runs (and ships) none of it (SBP: nothing registers at load).
+  - Async rules (the coding standards): after each `await` the bake re-checks that its id is still wanted and the scene that owns it is still current; a later `rebake` of the same id wins, and `dispose()` during a bake drops its result.
 - **Memory:** `getBakedTextureMemoryBytes()` (RGBA8 1K + mips ≈ 5.6 MB; HalfFloat doubles that). This number goes into each page's "VRAM" section.
-- **Stats (debug only):** last bake GPU ms per id through `_dbg__GPUTimer`, shown in the gallery tab and in the profiler window (`_DONE_p344`, a `registerStatsSource` or a profiler tab) later.
+- **Stats (debug only):** last bake GPU ms per id through `_dbg__GPUTimer`, in a `_dbg__` module next to the baker (`kernel/render/debug/_dbg__TextureBakeStats.ts`, as the sky box's `_dbg__BakeStats.ts`), loaded through the debug loader (`useDebug` / `loadDebugModuleAsync`) so a production build folds it away. Shown in the gallery tab and, as a profiler figure, through `registerStatsSource` (`debug/Profiler.ts`: its Overview's App rows) later.
 
-### D2 — Periodic noise library (toolkit: `src/toolkit/terrain/nodes/noise/`)
+### D2 — Periodic noise library (toolkit: `src/toolkit/terrain/nodes/noise/`, on `aekasha/toolkit/terrain`)
 
 Tileable baking needs noise with an integer period over the tile:
 
@@ -87,7 +87,7 @@ Tileable baking needs noise with an integer period over the tile:
   - `hash22`, `hash12`.
 - All of these use our own hashing, not `mx_*`, so they're safe on SwiftShader and deterministic across backends up to float precision. GPU float differences make baked textures visual-only data. Never derive gameplay from them.
 
-### D3 — Procedural surface generators (toolkit: `src/toolkit/terrain/procedural/`)
+### D3 — Procedural surface generators (toolkit: `src/toolkit/terrain/procedural/`, on `aekasha/toolkit/terrain`)
 
 - **Shape:** each generator is `defineSurfaceGenerator({ id, category, params: ZodSchema, defaults, build(ctx, params) → { albedo, height, roughness, ao?, normal? } })`. `normal` defaults to `heightToNormal` and `ao` to `heightToCavity`.
 - **Packing:** the generator's output is packed into the requested packing (FULL/LITE/MINIMAL from p303 D2) by a shared `packSurfaceOutputs` node function. A baked procedural set is therefore indistinguishable from an imported one.
@@ -116,7 +116,7 @@ Tileable baking needs noise with an integer period over the tile:
   - It never repeats and costs only ALU, which makes it useful for comparison and for large stylized surfaces.
   - It is too costly for first-person photoreal on low-end hardware, and the handbook page says so with gallery measurements.
 
-### D4 — Shared generated textures (toolkit: `src/toolkit/terrain/textures/`)
+### D4 — Shared generated textures (toolkit: the bake code in `src/toolkit/terrain/textures/`, the exported assets in `src/toolkit/textures/<id>/`)
 
 - **`macroNoise`** (512², RGBA8, tileable over a large period):
   - R = low-frequency fbm (brightness);
@@ -124,14 +124,14 @@ Tileable baking needs noise with an integer period over the tile:
   - B = Worley cells (patch masks);
   - A = blue-ish noise (dithering, the rule-noise base).
   - It is sampled by p305 at 1/40–1/300 m scales.
-  - It is baked once at load, or exported and committed as KTX2 (`codec: none` or UASTC; it's data).
+  - It is baked once at load, or exported and committed as KTX2 (`src/toolkit/textures/macroNoise/`; slot `data`, whose default codec is `none`, or UASTC set per asset; it's data).
 - **`rippleAtlas`** (256², 4×4 cells, RGBA8): per cell, an expanding ring at a random phase. RG = ring normal XY, B = ring mask, A = cell time offset. p307 animates it with two time-offset samples.
 - **`blueNoise`** (64², R8): a void-and-cluster approximation baked once, for dithered transitions (optional).
 
 ### D5 — Export to PNG (debug only)
 
-- **Where:** in the gallery tab, and as `exportBakedTexture(id, output)` in `_dbg__TextureBaker.ts`.
-- **What:** reads the target back with `renderer.readRenderTargetPixelsAsync` (per mip 0 only; mips are rebuilt by p300), encodes it with `encodePNG` (`debug/DevFiles.ts`; `flipY` if the readback is bottom-up) and writes `<id>_<output>.png` (8-bit; `HALF_FLOAT` outputs are tone-clamped with a warning) into the chosen texture set's `source/` with `writeDevFiles` (the dev file server, `_DONE_p342`). Overwriting an existing PNG asks first (it's read with `readDevFile` and its hash passed as `expectedHash`). When `getDevFilesStatus()` is unavailable (a LAN device, a build), it downloads the PNG instead.
+- **Where:** in the gallery tab, and as `exportBakedTexture(id, output)` in `kernel/render/debug/_dbg__TextureBaker.ts` (debug only, reached through the debug loader).
+- **What:** reads the target back with `renderer.readRenderTargetPixelsAsync` (per mip 0 only; mips are rebuilt by p300), encodes it with `encodePNG` (`aekasha/debug`; `flipY` if the readback is bottom-up) and writes `<id>_<output>.png` (8-bit; `HALF_FLOAT` outputs are tone-clamped with a warning) into the chosen texture set's `source/` (`src/toolkit/textures/<setId>/source/`, or an app set's; beside the gitignored `source/raw/` of fetched maps, p303 D5) with `writeDevFiles` (the dev file server: its paths and refusals in `devTools/devFiles/CLAUDE.md`). Overwriting an existing PNG asks first (it's read with `readDevFile` and its hash passed as `expectedHash`). When `getDevFilesStatus()` is unavailable (a LAN device, a build), it downloads the PNG instead.
 - **Workflow** (documented in `procedural-textures.md`):
 
   1. Tune a generator live in the gallery.
@@ -147,8 +147,9 @@ Tileable baking needs noise with an integer period over the tile:
 
 ### Phase 1 — Bake core (D1, single output, 2D)
 
-1. `bakeTexture`, clear-once, state save/restore, mip check (or downsample chain), ownership, memory number.
-2. A debug-scene check: bake a checker, sample it on a plane.
+1. Move `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` into `kernel/render/` (the impostor bakes and `_dbg__TexturePreview.ts` import them from there; the scene runner's LOD and texture scenes unchanged).
+2. `bakeTexture`, clear-once, state save/restore, mip check (or downsample chain), ownership, memory number; summaries and `@example`s (it's on `aekasha`), unit tests for the pure parts (the memory figure, the throttle).
+3. A debug-scene check (`testDebugScene`): bake a checker, sample it on a plane.
 
 **Exit:**
 
@@ -169,13 +170,13 @@ Tileable baking needs noise with an integer period over the tile:
 
 - Each periodic function tiles seamlessly in a 3×3 repeat preview.
 - The non-periodic variants match the periodic ones statistically.
-- SwiftShader WebGL2 doesn't hang (`?forceWebGL` headless check).
+- SwiftShader WebGL2 doesn't hang (`yarn verify:scenes --webgl --only <the check scene>`).
 
 ### Phase 4 — Generators and procedural sets (D3)
 
 1. `defineSurfaceGenerator`, `packSurfaceOutputs`.
 2. The 10 generators.
-3. `procedural` in the texture set schema; bake on load; validation against arrays.
+3. `procedural` in the texture set schema (both documentation layers); bake on load; validation against arrays.
 4. Live-mode wrapper for p305.
 
 **Exit:** every generator bakes into all three packings and looks right on a gallery block.
@@ -187,7 +188,7 @@ Tileable baking needs noise with an integer period over the tile:
 - `macroNoise` and `rippleAtlas` exist as baked textures and as committed KTX2.
 - Export → commit → `yarn assets` round trip works for one generator (`sandRipples` → a new set `sand03` is **not** added to the library, only demonstrated in the doc).
 
-### Phase 6 — Gallery row, handbook, versioning
+### Phase 6 — Gallery row, handbook, Hub
 
 1. **Gallery** (`terrainGallery`): a "Procedural" row with one block per generator, toggling **imported / baked / live** for categories that have both, plus last-bake GPU ms and per-block frame GPU ms (p310 standardizes the measurement).
 2. **`docs/techniques/procedural-textures.md`** (page template), covering:
@@ -197,7 +198,13 @@ Tileable baking needs noise with an integer period over the tile:
    - seeds and determinism (visual only);
    - writing a generator (a worked example: `sandRipples` line by line);
    - "Best for": stylized PBR, top-down/RTS, procedural worlds, game jams with no texture budget, unique non-repeating large surfaces (live), and NOT first-person photoreal on low-end (live).
-3. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures); `CHANGELOG.md`; `readme.md` Features (engine: texture baker; toolkit: procedural surfaces).
+3. **The Hub:** the terrain feature page (p301 §5) gets procedural textures and the baker (linking `procedural-textures.md` with a `repo:` link), the rendering or toolkit page `bakeTexture` and the noise helpers; `yarn hub:build`.
+4. `readme.md` Features (engine: texture baker; toolkit: procedural surfaces); `src/_engine/kernel/render/CLAUDE.md` (the baker and the moved bake helpers) and `src/_engine/features/lod/impostors/CLAUDE.md` where it names them.
+
+### Phase 7 — Versioning
+
+1. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures); `CHANGELOG.md`.
+2. Mark the plan done (`docs/plans/CLAUDE.md`).
 
 ---
 
@@ -205,7 +212,7 @@ Tileable baking needs noise with an integer period over the tile:
 
 | Risk                                                               | Mitigation                                                                  |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| r186 doesn't render into array render target layers on one backend | 2D bake + p303 assembly fallback (Phase 2 decides)                          |
+| r186 doesn't render into array render target layers on one backend | 2D bake + p299's uncompressed array assembly (Phase 2 decides)              |
 | r186 doesn't generate mips for render targets on one backend       | Own downsample chain (Phase 1)                                              |
 | Pipeline compile hitches on first bake                             | `compileAsync` before baking; bakes at load                                 |
 | Baked VRAM adds up (16 procedural sets at 1K LITE ≈ 180 MB)        | The handbook's export → KTX2 path; `size` per set; the gallery shows memory |

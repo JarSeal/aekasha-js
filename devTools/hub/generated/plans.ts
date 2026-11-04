@@ -10,7 +10,7 @@ import { listIssueFiles, type DocsOwner } from './issues';
  *
  * A plan's header lines (`docs/plans/CLAUDE.md`) are the lines before its first `# ` heading:
  * `Status` (line 1), `Category`, `Blocks`, `Blocked by`, `Epic` and `Related`, in any order. A
- * reference in them is a plan file name (`p305_….md`, `\_DONE_p801_….md` with Prettier's escape),
+ * reference in them is a plan file name (`p305_….md`, `\_DONE_p347_….md` with Prettier's escape),
  * optionally behind a repo path (`docs/plans/…`, `docsApp/plans/…`: the other folder's, D2), and
  * its note is the text up to the next reference (`(soft: …)` makes a soft blocker). An epic's
  * `Blocks` entry for a plan whose `Epic` names it is membership, not a dependency.
@@ -112,7 +112,7 @@ export type PlanModel = {
 /** A plan reference as written in a header line */
 type PlanReference = {
   owner: DocsOwner;
-  /** Unescaped: `_DONE_p801_design-foundation.md` */
+  /** Unescaped: `_DONE_p347_lod-chain-generation.md` */
   fileName: string;
   note: string;
   isSoft: boolean;

@@ -20,37 +20,42 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 
 ## Context (grounded)
 
-- **`toolkit/geometry/scatterOnSurface.ts`:**
-  - `scatterOnSurface({ surface: Mesh, count, seed?, minSpacing?, maxAttemptsPerPoint?, scaleRange?, alignToNormal?, randomYRotation? })` → `ScatterPlacement[]` (`{ position, normal, quaternion, scale }`). Area-weighted `MeshSurfaceSampler`, seeded.
-  - `minSpacing` is **O(n²) rejection** (`:78`).
-  - `bakeScatterToInstancedMesh(mesh, placements, startIndex)` (`:153`), `spawnScatterAsMeshEntities` (`:174/:189`, one entity per placement).
-- **`core/Instancing/InstancedMeshPool.ts`** (an engine system since p348 Phase 3; it was `toolkit/ecs/`):
-  - Every instance is an ECS entity with a `Transform` and a slot component.
+- **`toolkit/geometry/scatter/ScatterOnSurface.ts`** (`aekasha/toolkit/geometry`):
+  - `scatterOnSurface({ surface: Mesh, count, seed?, minSpacing?, maxAttemptsPerPoint?, scaleRange?, alignToNormal?, randomYRotation? })` → `ScatterPlacement[]` (`{ position, normal, quaternion, scale }`). Area-weighted `MeshSurfaceSampler`, seeded; it may return fewer than `count` under `minSpacing`.
+  - `minSpacing` is rejection sampling (up to `maxAttemptsPerPoint`, default 30, per point) against a grid hash of the accepted positions (p620 T11; the placements for a seed are pinned by `ScatterOnSurface.test.ts`). Each placement is an object with its own vectors and quaternion.
+  - `bakeScatterToInstancedMesh(mesh, placements, startIndex)` bakes what fits after `startIndex` (a warning for the rest), sets `mesh.count` and undoes the mesh's world matrix; `spawnScatterAsMeshEntities` makes one entity per placement.
+- **`features/instancing/InstancedMeshPool.ts`** (the `instancing()` feature, `aekasha/instancing`; `src/_engine/features/instancing/CLAUDE.md`):
+  - `createInstancedMeshPool` / `createInstancedLodPool`: every instance is an ECS entity with a `Transform` and `INSTANCED_MESH_SLOT`.
   - `instancedMeshPoolSyncSystem` re-bakes changed instances at `APP_RENDER_SYNC`.
   - The pool mesh must be added to the scene by the caller.
   - Right for dynamic instances (largeWorld's trees); wasteful for 10 000 static pebbles.
-- **`app/largeWorld.ts:69-121`** scatters trees and bushes into pools, with frustum culling through the ECS (`ObjectFrustumCullingSystem`, `core/Spatial/SpatialGrid.ts`).
-- **Import:**
-  - `EXT_mesh_gpu_instancing` is **not handled**, and extraction only walks `isMesh` nodes (`GLTFExtract.ts:49-127`). three's `GLTFLoader` turns that extension into `InstancedMesh`; we'd register its geometry and lose the instance matrices.
+- **No public static cell** (`docs/issues/no-public-instanced-mesh-entity.md`, p620 N2): nothing public makes one entity of an `InstancedMesh` with static instances. `src/app/scenes/lodShowcase/lanes/instanceCell.ts` builds it by hand in five steps that must match `createMeshEntity` (the `InstancedMesh` and its matrices; `incGeometryRef` / `incMaterialRef`; the entity and `mesh.userData.entityId`; `OBJECT3D`, which tags it `TAG_IS_MESH`; the root scene). A step left out fails quietly. D1 is the way out the issue names.
+- **`src/app/scenes/largeWorld/largeWorld.ts`** scatters trees and bushes off its terrain into instanced LOD pools (`createInstancedLodPool`, cross-quad impostors at the far end), the trees in a `FOLIAGE` spatial domain (`registerSpatialDomain`, `aekasha/spatial`).
+- **Import** (`src/_engine/kernel/assets/import/`):
+  - `EXT_mesh_gpu_instancing` is **not handled**, and extraction only walks `isMesh` nodes (`GLTFExtract.ts`). three's `GLTFLoader` turns that extension into `InstancedMesh`; we'd register its geometry and lose the instance matrices.
   - `GeometryTransfer.ts` serializes geometry attributes generically, but has no instance-matrix path.
-- **Rocks:** `toolkit/geometry/generateAsteroid.ts` builds seeded displaced icospheres (positions and normals only, non-indexed by default), a base for procedural rocks.
+  - The kernel spawns what a feature owns through an import extension (`ImportExtensions.ts`, `FeatureContext.registerImportExtension`: physics' bodies, LOD's chains), one provider per member.
+- **Rocks:** `toolkit/geometry/generate/Asteroid.ts`' `generateAsteroid` builds seeded displaced icospheres: faceted (non-indexed) by default, indexed with smooth normals on request, with `hullVertices` / `hullVolume` for a `CONVEXHULL` collider. A base for procedural rocks.
+- **Ray casts against meshes:** the engine's `castRayFrom*` (`kernel/render/Raycast.ts`) are `@internal` and on no entry (`docs/issues/three-ray-casting-not-public.md`), so toolkit code casts with three's own `Raycaster`, or reads heights from a grid.
 - **p350:** LOD should be an ECS selection feeding the instancing/batching layer, not `THREE.LOD`. This plan's cell chunks are designed to be that layer's static case.
 
 ---
 
 ## Design
 
-### D1 — Static instance chunks (engine: `core/StaticInstances.ts`)
+### D1 — Static instance chunks (engine: `features/instancing/StaticInstances.ts`, on `aekasha/instancing`)
 
 - **`createStaticInstances({ id, geometry, material, placements | matrices, cellSize = 16, castShadow, receiveShadow, instanceColors?, lod? })`** splits instances into a grid of cells.
   - Each cell is one `InstancedMesh` with its own `boundingSphere` (computed from its instances), so three's per-object frustum culling skips whole cells.
   - Each cell is an entity with `OBJECT3D` + `TAG_IS_MESH`, and disposal follows the normal mesh path. A block's cells are owned by the block (p306's `spawnTerrainBlock` handle).
-- **`lod`** (a `LodDef`, p348 §4.3) is set on every cell with `setMeshLod`: the cell switches levels as a whole and hides below `cullScreenSize`, with hysteresis, by its screen size. Both cross-fade instead of popping (p351 Phase 2's plain-mesh fade, which covers an `InstancedMesh` cell as a whole): `lod.fadeSeconds`, default 0.25 s from `AppConfig.lod.fadeSeconds`, 0 = an instant switch. Cell materials get `enableLodDither`. This replaces the draft's `maxDistance`; a scatter without levels uses one level and `cullScreenSize`. The contract (p348 Phase 4, built): the cell mesh gets `userData.entityId` (it holds refs), its matrices are written before `setMeshLod`, and `refreshLodBounds` follows any later change. Don't opt cells into ECS frustum culling or spatial indexing: those read one instance's geometry at the mesh's origin (p348 Phase 4 As built).
+  - It's built on a public `createInstancedMeshEntity` next to the pools (the issue's way out): the five steps of `createMeshEntity`'s path for an `InstancedMesh` (refs, the entity and `userData.entityId`, `OBJECT3D`, the root scene, `castShadow` and the rest) in one call. `lodShowcase`'s `instanceCell` lane moves onto it, and the issue file is marked `fixed`.
+  - A cell is placed through its `Transform` (an `InstancedMesh` entity's `Transform` is synced onto the mesh every frame, `src/_engine/features/lod/CLAUDE.md`), not `mesh.position`.
+- **`lod`** (a `LodDef`, `_DONE_p348` §4.3; `src/_engine/features/lod/CLAUDE.md`'s `InstancedMesh` entity) is set on every cell with `setMeshLod`: the cell switches levels as a whole and hides below `cullScreenSize`, with hysteresis, by its screen size. Both cross-fade instead of popping (`_DONE_p351` Phase 2's plain-mesh fade, which covers an `InstancedMesh` cell as a whole; its copy builds its own shaders, 11-14 ms at a fade's start, so measure a scatter of many cells fading at once): `lod.fadeSeconds`, default 0.25 s from `AppConfig.lod.fadeSeconds`, 0 = an instant switch. Cell materials get `enableLodDither`. This replaces the draft's `maxDistance`; a scatter without levels uses one level and `cullScreenSize`. The contract (`_DONE_p348` Phase 4, built): the cell mesh gets `userData.entityId` (it holds refs), its matrices are written before `setMeshLod`, and `refreshLodBounds` follows any later change. Don't opt cells into ECS frustum culling or spatial indexing: those read one instance's geometry at the mesh's origin (`_DONE_p348` Phase 4 As built).
 - **No per-instance entities, no per-frame sync.** Matrices are uploaded once.
 - **`instanceColors`** (tint variation) use `InstancedMesh.instanceColor`.
 - **Ownership:** registered geometries and materials are ref counted like other meshes (`createMeshEntity` path), so a shared rock material is released when the last cell goes.
 
-### D2 — `*.scatter.json` (engine asset type)
+### D2 — `*.scatter.json` (engine asset type, in `instancing()`)
 
 ```json
 {
@@ -85,47 +90,48 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 }
 ```
 
+- **Where:** the schema (`features/instancing/ScatterSchema.ts`, on `aekasha/schemas`), the suffix (`GATHERED_SUFFIXES`), the generator registry and `spawnScatter` sit with the static instances in `instancing()`, so a scatter works without terrain. `spawnTerrainBlock` reaches it the way p306 D2 decides for the terrain feature's dependencies (`requires: ['instancing']` and a direct import, or a kernel registry).
 - **`source.type`:**
-  - `PROCEDURAL`: a generator from `registerScatterGenerator(id, fn)`; the toolkit registers `terrainScatter`.
+  - `PROCEDURAL`: a generator from `registerScatterGenerator(id, fn)`; the toolkit registers `terrainScatter` from an install the app calls (never at module load).
   - `IMPORTED`: `{ "importedAsset": "showcaseCoast_scatter", "nodes": ["Rocks*"] }`, the Blender GPU instances (D3).
   - `PLACEMENTS`: inline or file list, for hand placement or tools.
 - **Items:** an item picks a geometry and material and may have a collider (`CONVEXHULL` / `BALL` / `NONE`).
-  - Collider items become FIXED physics entities, one per instance. Use them only for large pieces; a lint warns above 200 colliders per block.
-- **Ownership and seeding:** spawned by `spawnTerrainBlock` (p306's `scatter` ids) or on their own (`spawnScatter(id, { target })`). The seed is combined with the block's grid coordinates (p301 §7).
+  - Collider items become FIXED physics entities, one per instance, through `physics()` (the same dependency question as above; without it, a warning and no colliders). Use them only for large pieces; the gatherer warns above 200 colliders per block.
+- **Ownership and seeding:** spawned by `spawnTerrainBlock` (p306's `scatter` ids) or on their own (`spawnScatter(id, { target })`, re-checking the scene after each `await`). The seed is combined with the block's grid coordinates (p301 §7).
 
-### D3 — Blender GPU instances import (engine: `core/Import/*`)
+### D3 — Blender GPU instances import (engine: `kernel/assets/import/*`)
 
 - **Extraction:** for nodes that three turned into `InstancedMesh` (`EXT_mesh_gpu_instancing`), store `instanceMatrices: Float32Array` (and `instanceColors` if present) in the manifest per node. Transfer them through the asset worker as transferable buffers (`GeometryTransfer.ts` gets an instance path).
-- **Spawn:** `spawnImportedAsset` and the `IMPORTED` scatter source spawn such nodes through `createStaticInstances` (D1), with the node's custom props for item settings (`aekScatterCollider`, `aekCastShadow`).
+- **Spawn:** `spawnImportedAsset` and the `IMPORTED` scatter source spawn such nodes through `createStaticInstances` (D1), with the node's custom props for item settings (`aekScatterCollider`, `aekCastShadow`). The kernel imports no feature code, so `instancing()` registers a new import extension member (`spawnInstances`, next to physics' `spawnPhysics`); without `instancing()` such a node warns once and spawns its geometry as one plain mesh.
 - **Fallback when an exporter version mangles GPU instances:** a **point-cloud** mesh.
   - The points' positions are the instance positions.
   - Custom attributes `_ROT` (quaternion as vec4) and `_SCALE` (vec3) carry the rest, and `_ITEM` (int) picks the item.
   - The importer turns any node with custom prop `aekScatterPoints: 1` into placements.
   - It's documented as the robust path. Geometry Nodes writes those attributes with _Store Named Attribute_.
 
-### D4 — Procedural scatter v2 (toolkit: `src/toolkit/terrain/scatter/terrainScatter.ts`)
+### D4 — Procedural scatter v2 (toolkit: `src/toolkit/terrain/scatter/TerrainScatter.ts`, on `aekasha/toolkit/terrain`)
 
-- **Poisson-disk sampling** (Bridson, grid-accelerated, O(n)) over the block's XZ area, replacing the O(n²) rejection for this path. `scatterOnSurface` stays as is for arbitrary meshes.
+- **Poisson-disk sampling** (Bridson, grid-accelerated, O(n)) over the block's XZ area: an even coverage of a regular grid, where `scatterOnSurface`'s area-weighted rejection (grid-hashed since p620) samples triangles. `scatterOnSurface` stays as is for arbitrary meshes. Placements go into typed arrays, not an object per point.
 - **Density mask** per candidate point, all CPU-readable:
-  - **layer weights** from the block's vertex colours (bilinear on the grid) or from CPU rules (p306 `evaluateTerrainRulesCPU`);
+  - **layer weights** from the block's vertex colours (bilinear on the grid) or from CPU rules (p306's `evaluateTerrainRulesCPU`, `aekasha/toolkit/geometry`);
   - a splat map only if its source is CPU-readable: an uncompressed PNG kept with `codec: none` and a CPU copy. KTX2 can't be read back (p300);
   - slope and height ranges;
   - `macroNoise`-equivalent CPU noise for clustering. The same periodic noise as p304 isn't available on the CPU, so a seeded simplex is used instead, documented as such.
 - **Placement:**
-  - height from `getHeightAt` (generated) or a downward ray against the block mesh (imported; `castRayFromDirection`, main-thread Three.js raycast, `core/Raycast.ts`);
+  - height from `getHeightAt` (generated) or, for an imported block, the grid heights its heightfield extraction reads (p306 D3), a downward three.js `Raycaster` against the block mesh only for a block that isn't a regular grid (the engine's casts are on no entry, see Context);
   - normal from the height grid;
   - yaw random; tilt = slerp(up, normal, `alignToNormal`); `sink` buries a fraction of the bounding height; scale range; per-instance tint.
-- **Determinism:** seed = hash(`worldSeed`, `gridX`, `gridZ`, scatter id). Scatter on a block never depends on load order.
-- **Cost:** 5–20k candidates per 64 m block runs in a few ms. Measure it; the worker path is the same as p306 Phase 4 if it's needed.
+- **Determinism:** seed = hash(the world seed, `getRandomSeed()` from `aekasha`, `gridX`, `gridZ`, scatter id), never a named stream (those restart per load and depend on draw order). Scatter on a block never depends on load order.
+- **Cost:** 5–20k candidates per 64 m block runs in a few ms. Measure it; the worker path is the same as p306 Phase 4 (a toolkit module worker) if it's needed.
 
 ### D5 — Scatter assets
 
-- **Procedural rocks** (toolkit `generateRock`, wrapping `generateAsteroid`):
+- **Procedural rocks** (toolkit `generateRock`, `geometry/generate/Rock.ts` on `aekasha/toolkit/geometry`, wrapping `generateAsteroid` in its indexed, smooth mode):
   - flattening and squash options, seeded variants;
   - indexed with smooth normals;
   - budgets: pebble ≤ 80 tris, rock ≤ 400, boulder ≤ 1500.
-  - Registered geometries `rockPebble_a..c`, `rockSmall_a..c`, `boulder_a..b`.
-- **Rock material** (toolkit `rockScatter.tsl.ts`, a `setup` material):
+  - Registered geometries `rockPebble_a..c`, `rockSmall_a..c`, `boulder_a..b`; a boulder's collider is its `hullVertices` as a `CONVEXHULL`.
+- **Rock material** (toolkit `src/toolkit/materials/rockScatter/`: `rockScatter.tsl.ts` with its `rockScatter.material.json`, a `setup` material over the terrain category's nodes through `aekasha/toolkit/terrain`):
   - triplanar in object space, sampling **the same texture set as the terrain layer it sits on** (`rocks01`, `cliffs01`, …), so rocks match the ground and cost **no extra texture memory**;
   - dual-scale anti-tiling;
   - macro tint by world position, so neighbouring rocks differ;
@@ -136,10 +142,10 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
   - download the **glTF at 1K** textures;
   - decimate in Blender to the budgets above (Decimate modifier, Collapse, then check silhouettes);
   - export geometry with its own 1K texture set (p300 `prop` profile);
-  - stored in `src/toolkit/terrain/scatter/models/` with `source.json` records like p303.
+  - stored in the toolkit's model catalogue, `src/toolkit/models/nature/<id>/` (the GLB next to its `<id>.importedAsset.json`, the category p450 plans; a layout rule per category in `layoutRules.ts`), with `source.json` records like p303.
 - **Leaf litter cards:**
   - ambientCG `LeafSet024` (an Atlas asset with colour, normal, roughness and opacity; download 1K-PNG);
-  - small flat quads with random atlas cells, alpha-tested (`alphaTest` + `alphaToCoverage` when MSAA is on);
+  - small flat quads with random atlas cells, alpha-tested (`alphaTest` + `alphaToCoverage` when MSAA is on); the card atlas is a `*.textureAtlas.json` (p299 D3) in `src/toolkit/textures/leafLitter/` whose albedo slot keeps its coverage down the mips (`optimize.alphaCoverage`, `_DONE_p341`), so distant cards don't thin out;
   - for `grass02` and `mud02`; no shadows.
 - **Shadows:** pebbles and cards don't cast; rocks and boulders do. Shadow-casting cells double their draw calls in the shadow pass.
 
@@ -187,7 +193,10 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 
 ### Phase 1 — Static instance chunks and the scatter asset (D1, D2)
 
-**Exit:** 20k pebbles on a 64 m block in 16 cells, culled per cell, released on scene exit; `PLACEMENTS` source works.
+1. `createInstancedMeshEntity` and `createStaticInstances` on `aekasha/instancing`, with tests (the refs given back on delete, a geometry another mesh shares kept); `lodShowcase`'s `instanceCell` lane on them (a lane module in `src/app/scenes/lodShowcase/lanes/`, the LOD showcase being the LOD plans' verification scene); close `docs/issues/no-public-instanced-mesh-entity.md`.
+2. The `*.scatter.json` schema, suffix and spawner in `instancing()`.
+
+**Exit:** 20k pebbles on a 64 m block in 16 cells, culled per cell, released on scene exit; `PLACEMENTS` source works; `yarn verify:scenes --only lodShowcase` unchanged (or its baseline updated with the reason).
 
 ### Phase 2 — GPU instances import and the point-cloud fallback (D3)
 
@@ -203,11 +212,12 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 
 **Exit:** the gallery "Scatter" row shows procedural vs imported rocks on the same block, wet and dry.
 
-### Phase 5 — Handbook, template, versioning
+### Phase 5 — Handbook, template, Hub, versioning
 
 1. The `terrain-scatter.md` page and the `terrain_scatter.blend` template.
-2. `readme.md` Features (engine: static instances, GPU instancing import, `*.scatter.json`; toolkit: terrain scatter, rocks).
-3. Versions: engine minor, toolkit minor, app minor; `CHANGELOG.md`.
+2. **Hub** (`hub/CLAUDE.md`): the instancing section of its feature page (static instances, `*.scatter.json`, the GPU instances import, `api:` links; `aek:covers` for the new `##` section of `features/instancing/CLAUDE.md`), the terrain feature page's scatter section, the toolkit page's `generateRock`; the LOD page's static cell lines if they change. Then `yarn hub:build`.
+3. **Repo docs:** `readme.md` Features (engine: static instances, GPU instancing import, `*.scatter.json`; toolkit: terrain scatter, rocks); `features/instancing/CLAUDE.md` (a `## Static instances` section) and `features/lod/CLAUDE.md`'s `InstancedMesh` entity line naming the public call; `devTools/gather/CLAUDE.md`'s suffix list.
+4. Versions: engine minor, toolkit minor, app minor; `CHANGELOG.md`.
 
 ---
 
@@ -218,4 +228,5 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 | Blender's GPU-instances export option changes or drops custom attributes | Point-cloud fallback (D3); the add-on (p306) can gain an "Export Scatter" operator if needed                                                                                                                                                                                                                                                                                                               |
 | Too many cells means too many draw calls                                 | `cellSize` per scatter; for low-poly item types (pebbles, cards), bake all of a cell's instances of one material into one geometry with p371's `mergeGeometryParts` (one draw per material per cell instead of one per item type; costs vertices × instances of memory, so not for high-poly rocks). Geometry groups don't help: one draw per group (p370 §2.1). `BatchedMesh` is p375's spike-gated topic |
 | Per-instance colliders hurt physics                                      | Colliders only on flagged items; lint threshold; FIXED bodies only                                                                                                                                                                                                                                                                                                                                         |
+| A cell's light culling or bounds read one instance at the origin          | Cells aren't opted into ECS frustum culling or spatial indexing (D1); check that light culling's receiver test sees a cell (pools' case: `docs/issues/pool-instances-not-light-receivers.md`) in the gallery's Scatter row under an object-culled light |
 | Raycast placement on imported blocks is slow for large counts            | Use the grid height from the heightfield extraction (p306 D3) instead of raycasts when the block is a regular grid                                                                                                                                                                                                                                                                                         |

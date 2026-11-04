@@ -3,6 +3,7 @@ Category: Materials, Terrain, Weather
 Blocked by: p305_terrain-material-generator.md, p306_terrain-blocks-and-procedural-terrain-meshes.md, p304_procedural-texture-baker.md (ripple atlas)
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
+Related: p427_weather-and-mood.md (its weather state drives this plan's surface conditions), p990_follow-ups-from-done-plans.md (precipitation, clouds, a weather driver, SSR)
 
 # Wet & Dry Surface States
 
@@ -13,19 +14,22 @@ This plan has two halves:
   - a global, engine-level **surface conditions** state (wetness, rain, puddle level, water level, snow coverage);
   - a toolkit **wet response** node used by the terrain material generator (p305), structure materials, scatter (p308) and decals (p309).
 
-This plan doesn't add a weather system, rain particles or audio. The surface-conditions state is the part of a future weather system that materials read. p990 lists "volumetric clouds and weather" as a deferred sky idea, so a later weather plan should drive this state rather than replace it.
+This plan doesn't add a weather system, rain particles or audio. The surface-conditions state is the part of a future weather system that materials read: p427 (weather and mood, a stub) drives this state rather than replacing it, and p990 keeps precipitation, volumetric clouds and a weather driver open. Visual weather may run at frame time; anything that changes gameplay (wet friction, T14) would run on the step clock and the seeded streams (p603 C7, the root `CLAUDE.md`'s Physics rules).
 
 ---
 
 ## Context (grounded)
 
 - **No weather, rain, wetness or puddle concept exists** in `src` (p301 survey).
-- **No global shared-uniform registry exists.** Sky uniforms are created per activation (`createSkyUniforms`), so a material that binds them goes stale when a sky box re-activates. Surface conditions therefore need **stable uniform nodes created once**, which materials bind at build time.
-- **Sky box API** (`core/SkyBox/SkyBox.ts`):
-  - `getSunElevation(i)` (radians), `getSunDirection`, `getTimeOfDay`, `isDayNightPlaying`;
-  - time advances by `getElapsedTime()` deltas per `dayNight.timeSource` (default `APP`: stops with the app loop).
-  - Drying can follow the sun through the getters. There are no events; games poll.
-- **Environment reflections:** both the background and the environment sample one PMREM (`SkyEnvironment.ts`). With day-night on, the environment re-bakes every ~1° of sun movement or 1/s at most.
+- **No global shared-uniform registry exists.** Sky uniforms are created per activation (`createSkyUniforms`, `src/_engine/features/skybox/CLAUDE.md`), so a material that binds them goes stale when a sky box re-activates. Surface conditions therefore need **stable uniform nodes created once**, which materials bind at build time.
+- **Sky box API** (`aekasha/skybox`, the day-night getters in `features/skybox/SkyDayNight.ts`):
+  - `getSunElevation(i = 0)` (radians, `null` without an active sky box or past its suns), `getSunDirection(out, i)`, `getTimeOfDay`, `isDayNightPlaying`;
+  - the time advances in `skyBoxSystem` (MAIN, order 1) by `getElapsedTime()` deltas per `dayNight.timeSource` (default `APP`: stops with the app loop; `MAIN`, `MANUAL`), and stands still while a scene loads;
+  - the sky clock (p615 D5, `skyClockSec`) is the model for a visual clock: held in the module (so a rebuild doesn't jump it), advanced unless a scene loads, restarted on the scene's exit, never three's `time` node (a snapshot would differ per run);
+  - `onSkyBoxChange` reports activations and updates; there are no day-night events (`onSunrise`, p990), so drying follows the sun by polling the getter.
+  - p427 may move the time-of-day clock out of the sky box into its world state; the sun factor below reads it through one provider, so only that line changes.
+- **Engine layout:** new engine state that only some apps use is an opt-in feature (`src/_engine/kernel/init/CLAUDE.md`, Engine features): it reaches the kernel through its `FeatureContext` (`registerPlugin`, `addSceneHooks`, `onDebug`), and the only feature → feature runtime import today is character → physics, so it can't call the sky box's getters itself.
+- **Environment reflections:** both the background and the environment sample one PMREM (`features/skybox/SkyEnvironment.ts`). With day-night on, the environment re-bakes every ~1° of sun movement or 1/s at most.
 - **No SSR** (p990: "More PostFX passes … SSR"). Puddle reflections are environment reflections only. Outdoors, under the sky, that's the dominant term; reflections of nearby objects are missing.
 - **`aoNode`** affects indirect light only.
 - **The GTAO pass** multiplies the final colour (p301 survey). Wet darkening and AO stack multiplicatively; that's fine.
@@ -119,7 +123,7 @@ snow       = coverage mask → blend to the snow set; melting → wetness += mel
 
 ## Part 2 — Implementation
 
-### D1 — Surface conditions state (engine: `core/SurfaceConditions.ts`)
+### D1 — Surface conditions state (engine: the `surfaceConditions()` feature, `features/surface/`)
 
 **Why the engine:**
 
@@ -140,7 +144,8 @@ type SurfaceConditions = {
 };
 ```
 
-- **`getSurfaceConditionNodes()`** returns uniform nodes created **once**, plus `surfaceTime` (seconds, from `getElapsedTime()` deltas; `timeSource` `APP` | `MAIN` like day-night, so pausing the app loop freezes ripples).
+- **Where:** `src/_engine/features/surface/` (`SurfaceConditions.ts`, `SurfaceConditionsFeature.ts` with the `surfaceConditions()` factory, the entry `index.ts` as `aekasha/surface` in `devTools/aliases.ts`, its schema part, its `debug/` and a nested `CLAUDE.md`), listed in the template's `features` after `skyBox()`. Opt-in: an app without wet surfaces carries none of it, and the banner profile budgets its group at 0 by itself (`FEATURE_GROUPS`).
+- **`getSurfaceConditionNodes()`** returns uniform nodes created **once**, plus `surfaceTime` (seconds, from `getElapsedTime()` deltas; `timeSource` `APP` | `MAIN` like day-night, so pausing the app loop freezes ripples). It lives in the module like the sky clock, stands still while a scene loads and restarts on the scene's exit; the test bridge's test clock and `freeze()` then hold it, so the scene runner's snapshots of a wet scene are the same on every run.
 - **Setters:**
   - `setSurfaceConditions(partial, { transitionSec? })` (smooth transitions);
   - `getSurfaceConditions()`;
@@ -148,23 +153,24 @@ type SurfaceConditions = {
 - **`surfaceConditionsSystem`** (MAIN, after `skyBoxSystem`), in `SIMULATED` mode:
 
   - `wetness` rises with `rain` (rate scaled by intensity);
-  - `wetness` decays with `dryingRate × sunFactor × windFactor`, where `sunFactor = clamp(sin(getSunElevation(0)), 0.2, 1)` when a day-night sky is active, else 1;
+  - `wetness` decays with `dryingRate × sunFactor × windFactor`, where `sunFactor = clamp(sin(elevation), 0.2, 1)` from a sun source, else 1. The source is a provider (`setSurfaceSunSource(() => number | null)`): the template's app sets it to the sky box's `getSunElevation` in its install, so neither feature imports the other (a kernel registry the sky box fills instead, if a second reader appears);
   - `puddleLevel` lags `wetness` (fills slower, drains slower);
   - `snowCoverage` melts above 0 °C into wetness.
 
-  `MANUAL` leaves all values to the app.
+  `MANUAL` leaves all values to the app. The system is registered from the feature's install (`ctx.registerPlugin`), never at module load.
 
 - **Per scene:**
-  - the scene schema gets an optional `surfaceConditions` object (initial values);
-  - `SceneLoader` resets the state on scene enter;
+  - the scene schema gets an optional `surfaceConditions` object (initial values), the feature's `FeatureSchemaPart` (`schemas/FeatureSchemas.ts`), so a scene that sets it names the feature in its manifest;
+  - the feature's scene hooks (`addSceneHooks`: `exit` clears, `entered` applies the scene's values) reset the state on every visit;
   - the state never runs while a scene loads (same rule as the sky).
 - **Allocation:** none per frame; values are written into the stable uniforms.
-- **Debug tab "Surface conditions"** (`core/Debug/_dbg__SurfaceConditions.ts`, dynamic import, droplet icon):
-  - runtime sliders, with no overrides, no undo and no LS, like the sky box's day-night Transport;
+- **Debug tab "Surface conditions"** (`features/surface/debug/_dbg__SurfaceConditions.ts`, registered by the feature's `ctx.onDebug`, so it loads by `import()` in the debug env only and folds out of a production build):
+  - one `createDebuggerTab({ id, title, icon, refreshIntervalMs: 250, content })` (`debug/DebuggerGUI.ts`, by relative path inside the engine; `src/_engine/debug/CLAUDE.md`'s drawer tabs) with a declarative pane: the UI kit's sliders and selects for the runtime values, with no overrides, no undo and no LS, like the sky box's day-night Transport;
   - buttons: Rain shower (ramp up 10 s, hold 60 s, stop), Dry now, Soak, Snowfall;
-  - a graph-free readout of the simulated values (250 ms refresh while visible).
+  - a readout of the simulated values (monitor items, refreshed while visible);
+  - its icon a new built-in one (Bootstrap Icons' `droplet-fill` into `src/_engine/ui/core/icons/svg/`, which the Hub's design document lists by itself).
 
-### D2 — Wet response nodes (toolkit: `src/toolkit/terrain/nodes/wet.ts`)
+### D2 — Wet response nodes (toolkit: `src/toolkit/terrain/nodes/Wet.ts`, on `aekasha/toolkit/terrain`)
 
 - **`applySurfaceWetness(surface, ctx, config)`:**
   - takes `{ albedo, roughness, normalWorld, height, cavity, response: { porosity, wetDarkening, wetRoughness, puddleResponse } }`;
@@ -188,6 +194,7 @@ type SurfaceConditions = {
     quality?: 'FULL' | 'SIMPLE';              // SIMPLE = T1 + T6 only (LOW tier)
   };
   ```
+- It binds the nodes from `getSurfaceConditionNodes()` (`aekasha/surface`, toolkit → engine entry); a material with `wet` in a scene without `surfaceConditions()` installed warns once and builds dry.
 - Each sub-feature compiles only when present. The ripple, streak and snow fetches sit in `If` branches on their masks and uniforms. Shared coordinates are built before the branches (TSL `If` trap, p305 D5).
 
 ### D3 — Defaults and data
@@ -202,10 +209,10 @@ type SurfaceConditions = {
 
 ### Phase 1 — State (D1)
 
-1. Module, system, setters, transitions, scene defaults, time source.
+1. The feature (folder, factory, entry and alias, layout rule, listed in `src/index.ts`'s `features`), module, system, setters, transitions, scene defaults (schema part), time source, the sun source; unit tests next to it (the drying model, the transitions, the reset).
 2. The debug tab.
 
-**Exit:** a rain shower in the debug tab raises and lowers `wetness` and `puddleLevel` over time; it pauses with F7 (app loop); it resets on scene re-enter.
+**Exit:** a rain shower in the debug tab raises and lowers `wetness` and `puddleLevel` over time; it pauses with F7 (the app loop, `sc-toggle-app-pause`); it resets on scene re-enter; `yarn sbp` shows no surface code in the app's first download of a scene that doesn't use it.
 
 ### Phase 2 — Wet response (T1, T2, T6, T9)
 
@@ -241,7 +248,7 @@ type SurfaceConditions = {
 
 **Exit:** the area under a concrete roof stays dry in rain; the cost measured and recorded.
 
-### Phase 7 — Handbook and versioning
+### Phase 7 — Handbook, Hub and versioning
 
 1. **`docs/techniques/wet-dry-surfaces.md`** (page template):
    - the S1 physics in plain words;
@@ -263,11 +270,13 @@ type SurfaceConditions = {
      - weather-driven games (survival, open world, racing on wet tracks);
      - stylized games use SIMPLE (darkening only);
      - top-down/RTS get little from puddles and ripples, so use SIMPLE.
-2. **Repo docs:**
+2. **Hub** (`hub/CLAUDE.md`): a feature page for surface conditions (`hub/pages/features/surface-conditions/`, group World: the state, its time source, the scene field, the API as `api:` links, `aek:covers` for the nested `CLAUDE.md`'s sections) and the terrain feature page's wet section linking the handbook page; a `::: scene` panel on `terrainGallery`'s wet row (its showcase comes with p310). Then `yarn hub:build`.
+3. **Repo docs:**
    - `readme.md` Features (engine: surface conditions; toolkit: wet response);
-   - `CLAUDE.md` gets a short section on surface conditions (stable uniforms, time source, scene reset);
-   - **p990:** its deferred "weather" bullet already points here (since 2026-10-02). When this plan lands, update that bullet to say the surface side is done.
-3. **Versions:** engine minor, toolkit minor, app minor; `CHANGELOG.md`.
+   - `src/_engine/features/surface/CLAUDE.md` (stable uniforms, time source, scene reset, the sun source), a line in the root's Architecture map, and the new feature in the root's Bootstrap flow and Three-folder split;
+   - **p990:** its deferred "weather" bullet already points here (since 2026-10-02). When this plan lands, update that bullet to say the surface side is done;
+   - **p427:** its grounding names the API that landed (`aekasha/surface`, the sun source it replaces when it owns the clock).
+4. **Versions:** engine minor, toolkit minor, app minor; `CHANGELOG.md`.
 
 ---
 
@@ -279,4 +288,4 @@ type SurfaceConditions = {
 | Puddles look like holes without reflections of nearby objects (no SSR)       | Keep puddles mostly in the open (sky reflections dominate); cap puddle darkness; document the SSR follow-up                      |
 | Ripple atlas tiling visible                                                  | Two time-offset samples at different scales and rotations; ripples only in puddles and film                                      |
 | Cost creep from every sub-feature                                            | Everything compiles out; SIMPLE for LOW; `TAPS` debug view; gallery measurements                                                 |
-| `surfaceTime` vs determinism                                                 | Visual only; it follows `getElapsedTime()` deltas and never touches physics                                                      |
+| `surfaceTime` vs determinism                                                 | Visual only; it follows `getElapsedTime()` deltas, stands still during a load and restarts per scene (the sky clock's rule), and never touches physics |

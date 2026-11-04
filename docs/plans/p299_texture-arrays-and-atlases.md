@@ -4,7 +4,7 @@ Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
 Blocked by: p302_material-and-texture-system-refactor.md (soft: only Phase 5's JSON binding)
 Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), p374_multi-material-merging.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline this extends), \_DONE_p351_impostor-billboard-lod.md (its exported atlases use D3's cell table), p308_terrain-scatter.md (leaf-card atlases), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
-Note: p608 (the engine folder restructure, `_DONE_p608_engine-folder-restructure.md`) didn't wait for Phases 5-6 (its D1): it moved this plan's files (`core/TextureArray.ts`, `core/TextureAtlas.ts` → `kernel/assets/`, the schemas to PascalCase names, …). Read paths here as before p608, and write the remaining phases against the moved files: each old path's target is in the map at the move's base (`git show 5491035:devTools/refactor/moveMap.json`; the current map has only the new layout).
+Note: p608 (the engine folder restructure) and p609 (the toolkit and app restructure) moved this plan's files while Phases 5-6 were open. The paths below are the current ones, the "As built" text's included: `core/` → `kernel/assets/` (`Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `Material.ts`; `core/Import/` → `kernel/assets/import/`), `core/Debug/` → `kernel/assets/debug/` (the Assets tab; p806 later put its info window on the UI kit: `_dbg__AssetInfoWindow.ts`, `_dbg__TextureInfoItems.ts`), the schemas in PascalCase (`schemas/TextureSchema.ts`, `TextureArraySchema.ts`, `TextureAtlasSchema.ts`, `AssetsConfigSchema.ts`), `gatherAppData.ts`' steps into `devTools/gather/` (the suffix table: `GATHERED_SUFFIXES` in `gatheredJson.ts`), the test assets and scenes into `src/app/scenes/textureArrays/` and `src/app/scenes/textureAtlases/`, and `p299ArraySpike.ts` → `devTools/assetPipeline/fixtures/textureArraysFiles.ts`.
 
 # Texture Arrays & Atlases
 
@@ -25,32 +25,34 @@ atlases are built on it instead of each shipping their own tool.
 
 ## 1. Grounding
 
-- **No array textures yet**: nothing uses `DataArrayTexture` or `CompressedArrayTexture`.
-- **Textures** (`core/Texture.ts`): a ref-counted registry. `loadTextureAsync(props)` (`:447`)
-  loads `.ktx2` through `loadKTX2Texture` (`core/Import/KTX2.ts:45`, a shared `KTX2Loader`); the
-  URL comes from `resolveAssetUrl` (the pipeline's `__url`). `saveTexture` (`:605`) registers a
+- **No array textures yet** (before Phase 1): nothing used `DataArrayTexture` or `CompressedArrayTexture`.
+- **Textures** (`kernel/assets/Texture.ts`): a ref-counted registry. `loadTextureAsync(props)`
+  loads `.ktx2` through `loadKTX2Texture` (`kernel/assets/import/KTX2.ts`, a shared `KTX2Loader`); the
+  URL comes from `resolveAssetUrl` (the pipeline's `__url`). `saveTexture` registers a
   texture built in code.
-- **Texture JSON** (`schemas/textureSchema.ts`): `id`, `fileName`, `texOpts`, plus build-time
+- **Texture JSON** (`schemas/TextureSchema.ts`): `id`, `fileName`, `texOpts`, plus build-time
   `optimize` and `pack`. `pack` combines channels of several images into one texture; it is not a
   spatial atlas.
 - **Pipeline** (`devTools/assetPipeline/`): `images.ts` reads and resizes, `pack.ts` packs
   channels, `ktxEncode.ts` / `ktxTool.ts` run the pinned `ktx` 4.4.2, `budgets.ts` checks budgets,
   outputs go to `src/public/aek-assets/` and `assets.lock.json`. Per-asset `optimize` is in
-  `schemas/assetsConfigSchema.ts:139-174`.
+  `schemas/AssetsConfigSchema.ts` (`TextureOptimizeSchema`).
 - **`ktx create --layers N`** exists in the pinned 4.4.2 ("If set the texture will be an array
   texture").
-- **Gathering a new suffix** needs a schema in `src/_engine/schemas/`, an entry in
-  `gatherAppData.ts`'s suffix table, a `generatedAppData` section and JSON Schema compilation
-  (p303 Context).
+- **Gathering a new suffix** needs a schema in `src/_engine/schemas/` (on `aekasha/schemas`), an
+  entry in `GATHERED_SUFFIXES` and `GATHERED_SCHEMAS` (`devTools/gather/gatheredJson.ts`), its
+  registry and id space (`devTools/gather/context.ts`), a `generatedAppData` section and its JSON
+  Schema (`devTools/gather/jsonSchemas.ts`); `devTools/gather/CLAUDE.md` has the steps.
 - **Binding budget:** WebGPU's default `maxSampledTexturesPerShaderStage` is 16, and shadow maps
   and the environment PMREM count against it (p301 §6).
 - **Material inputs:** texture ids in `params` or TSL `nodes` become `texture(tex)`
-  (`Material.ts:223-237`, `:342-461`). An array needs a layer index and a cell needs a UV rect,
+  (`kernel/assets/Material.ts`' `createMaterial`: `params`' texture keys, and the TSL
+  path's input wrapping). An array needs a layer index and a cell needs a UV rect,
   which plain ids can't say; p302 D4's input resolver registry is the hook (D5).
 
 ## 2. Design
 
-### D1 — Runtime array assembly (`core/TextureArray.ts`)
+### D1 — Runtime array assembly (`kernel/assets/TextureArray.ts`)
 
 **`buildTextureArray({ id?, members: string[], colorSpace?, texOpts? }): Promise<ArrayTexture>`**
 
@@ -156,7 +158,7 @@ One layout, one output per map slot:
   `inPlace: true`). For Blender assets UV'd straight into atlas space, nothing is needed.
 - **TSL:** `sampleArrayLayer(arrayTex, uv, layer)` and `sampleAtlasCell(atlasTex, uv, rect,
 { clampToCell = true })` (clamps half a texel inside the rect, so bilinear filtering never
-  reads the neighbour). Exported from `core/TextureArray.ts` / `core/TextureAtlas.ts` (the
+  reads the neighbour). Exported from `kernel/assets/TextureArray.ts` / `kernel/assets/TextureAtlas.ts` (the
   engine has no shared TSL node folder yet).
 - **Runtime lookups:** `getAtlasCell(atlasId, cellId)`, `getArrayLayerIndex(arrayId, memberId)`.
 
@@ -174,7 +176,7 @@ loads them. Until p302 lands, arrays and atlases are used from TSL code (D4).
 
 ### D6 — Debug
 
-- **Assets tab** (`core/Debug/_dbg__Assets.ts`): arrays list their layers (thumbnails per layer
+- **Assets tab** (`kernel/assets/debug/_dbg__Assets.ts`, its info window `_dbg__AssetInfoWindow.ts` and `_dbg__TextureInfoItems.ts`): arrays list their layers (thumbnails per layer
   and mip), atlases their cells (a padding/rect overlay on the slot image, cell ids on hover).
 - GPU memory: arrays and atlases are registered textures, so the GPU memory tab's "By owner"
   already counts them; three r186 counts a compressed array's mip bytes through
@@ -194,7 +196,7 @@ loads them. Until p302 lands, arrays and atlases are used from TSL code (D4).
 **Exit:** a test scene samples layer 0 and 1 of both kinds of array on both backends.
 
 As built (a spike scene, since turned into Phase 1's `textureArrays` scene; its files from
-`devTools/assetPipeline/p299ArraySpike.ts` in `src/public/debugger/assets/testOptimized/p299/`;
+`devTools/assetPipeline/fixtures/textureArraysFiles.ts` in `src/public/debugger/assets/testOptimized/p299/`;
 measured in Chrome on an Apple GPU, where ETC1S transcodes to ETC2 and UASTC to ASTC 4×4 on both
 backends):
 
@@ -227,7 +229,7 @@ by `isCompressedArrayTexture` alone). Phase 1 tests it or requires two members.
 
 ### Phase 1 — Runtime arrays (D1) — done
 
-`core/TextureArray.ts`, registry integration, ref counting, layer swap. **Exit:** an array of 4
+`kernel/assets/TextureArray.ts`, registry integration, ref counting, layer swap. **Exit:** an array of 4
 KTX2 members renders identically to the 4 separate textures, with one binding.
 
 As built (verified in the `textureArrays` debug scene on WebGPU and WebGL2: the 4-layer array,
@@ -239,7 +241,7 @@ debugData? })`, `setTextureArrayLayer(id, layer, member)` (async; swaps of one a
    per layer, kind, size, levels, bytes per layer, `swappable`, `cpuDataReleased`).
 2. A member is a registered texture's id (read and left alone), a `*.texture.json` id or
    `TextureProps`. The last two are loaded for the array alone through `loadTextureFileAsync` and
-   `resolveTextureUrl`, split out of `loadTextureAsync` (`core/Texture.ts`, which now uses them):
+   `resolveTextureUrl`, split out of `loadTextureAsync` (`kernel/assets/Texture.ts`, which now uses them):
    never registered nor uploaded, their asset's `texOpts` applied as `loadTextureAsync` would, and
    dropped after assembly.
 3. Ownership: an array holds a copy of its members' data, so it is self-contained: a registered
@@ -280,9 +282,10 @@ follow.
 
 #### Section 1: Schema, gatherer suffix, layer resolution — done
 
-`schemas/textureArraySchema.ts`, the `.textureArray.json` suffix in `gatherAppData.ts` (arrays
+`schemas/TextureArraySchema.ts`, the `.textureArray.json` suffix in the gatherer (`GATHERED_SUFFIXES`, now in
+`devTools/gather/gatheredJson.ts`; arrays
 share the textures' registry and id space) and `devTools/assetPipeline/textureArrays.ts`'s
-`resolveTextureArrayLayers`. Test asset: `src/app/textures/p299TestArray.textureArray.json`.
+`resolveTextureArrayLayers`. Test asset: `src/app/scenes/textureArrays/p299TestArray.textureArray.json`.
 
 As built:
 
@@ -335,7 +338,7 @@ build, naming the array):
 - `AEK_ASSETS_ALLOW_UNOPTIMIZED` leaves arrays out of its fallback (`command.ts`): they stay
   `encoderMissing`, and the gather says an array needs `ktx` even with it.
 - `assetOutputsBuildPlugin.ts` needed no change: it keeps every `__url` in the bundled data.
-- Fixed on the way (Phase 1): `TextureArray.ts` and `app/textureArrays.ts` read
+- Fixed on the way (Phase 1): `TextureArray.ts` and `app/scenes/textureArrays/textureArrays.ts` read
   `getGeneratedAppData().textures`, which production data doesn't have, so `yarn build`'s `tsc`
   failed (the Stop hook type-checks dev data). At runtime, a member given by `*.texture.json` id
   now fails with its own error in production, not a `TypeError`. Such a member still resolves in
@@ -352,7 +355,7 @@ the cell, the same on both backends, with the same orientation; GPU memory count
 bytes exactly):
 
 - `TextureProps.__layers` marks an array asset: `loadTextureAsync` hands it to
-  `loadTextureArrayAssetAsync` (`core/Texture.ts`). The scene loader needed no change: an array's
+  `loadTextureArrayAssetAsync` (`kernel/assets/Texture.ts`). The scene loader needed no change: an array's
   scene entry is already a texture entry. The texture gets a `TextureArrayInfo` on
   `userData.textureArray` with the new `origin: 'BUILD'` (runtime arrays: `'RUNTIME'`) and the
   layer names as `members`, so `getTextureArray` and `getTextureArrayInfo` cover both kinds.
@@ -371,7 +374,7 @@ bytes exactly):
   `textures` instead.
 - The build-time array keeps its CPU mip data after the upload, like every loaded KTX2 texture
   (only a non-swappable runtime array drops it).
-- Test asset: `src/app/textures/p299TestArray1.textureArray.json` (one 256² layer). The scene lists
+- Test asset: `src/app/scenes/textureArrays/p299TestArray1.textureArray.json` (one 256² layer). The scene lists
   both assets in its `textures` (column 4 rows 2-4 and column 5); its results add
   `noOutputFallback` and `assetErrors`.
 
@@ -406,13 +409,13 @@ Decided before it started (D3 as written can't meet its exit):
 
 #### Section 1: Schema, gatherer suffix, cell resolution, packer — done
 
-`schemas/textureAtlasSchema.ts`, the `.textureAtlas.json` suffix in `gatherAppData.ts` (slots in
+`schemas/TextureAtlasSchema.ts`, the `.textureAtlas.json` suffix in the gatherer (slots in
 the textures' registry and id space) and `devTools/assetPipeline/textureAtlases.ts`: cell sources
 resolved like array layers (a texture's source or pack, or a file), the layout (explicit rects and
 a shelf packer, both aligned; the protected level count) and the cell table (`__atlas`). Source
 sizes come from a synchronous header read (`readImageSizeSync`, PNG / JPEG / WebP), since the
 gather is synchronous; another format needs the cell's `size` or `rect`. Test asset:
-`src/app/textures/p299TestAtlas.textureAtlas.json` (2 slots, 6 cells: explicit rects and packed
+`src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json` (2 slots, 6 cells: explicit rects and packed
 ones, a texture asset source, a cell without a source in one slot).
 
 As built:
@@ -434,11 +437,11 @@ padding, levels, cells }`, a cell being `{ uv: [u0, v0, u1, v1], size: [w, h], d
 - Shared with arrays (`textureArrays.ts`): `resolveTextureSourceRef` (a layer or cell source) and
   `readTextureSourceSizeSync`. `readImageSizeSync` (`images.ts`) matched sharp on 44 files (PNG,
   baseline and progressive JPEG, lossy / lossless / alpha WebP).
-- `gatherAppData.ts`'s issue expansion also unwraps a record's "Invalid key in record" into the
+- The gatherer's issue expansion (now `devTools/gather/`) also unwraps a record's "Invalid key in record" into the
   key's own message (any record-keyed schema).
 - Not yet: the dev server doesn't watch an atlas's source images (section 2 adds them through the
   pipeline assets), and a scene can't list an atlas yet (section 3).
-- Test sources (`src/app/textures/source/p299Atlas/`): saturated solid cells with a dark border
+- Test sources (`src/app/scenes/textureAtlases/source/p299Atlas/`): saturated solid cells with a dark border
   and white diagonals, and greyscale masks, so a neighbour's hue shows where it bleeds.
 
 #### Section 2: Composition and encode — done
@@ -535,8 +538,8 @@ no hue the cell lacks at level 0, at every level, while the same test finds 91-1
 when judged by a neighbour's; the scene's exit releases both slots):
 
 - `TextureProps.__atlas` (the generated `TextureAtlasSlotInfo`) marks a slot: `loadTextureAsync`
-  hands it to `loadTextureAtlasSlotAsync` (`core/Texture.ts`). The scene loader needed no change.
-- `core/TextureAtlas.ts` (new; Phase 4 adds the helpers): `TextureAtlasInfo` on
+  hands it to `loadTextureAtlasSlotAsync` (`kernel/assets/Texture.ts`). The scene loader needed no change.
+- `kernel/assets/TextureAtlas.ts` (new; Phase 4 adds the helpers): `TextureAtlasInfo` on
   `userData.textureAtlas` is the slot's `__atlas` (a copy) plus the file's `width`, `height` and
   `storedLevels`: `__atlas.levels` is what the layout keeps apart, not what the file stores (fewer
   with `maxSize` or `mipmaps: false`). `getTextureAtlasInfo(texture)` reads it.
@@ -609,7 +612,7 @@ atlas scene the same to a mean of 0.003 / 255: the asset's layers picked by name
 source files by a mean of 0.7-1.8 / 255; clamped overscan stretches each cell's edge texels where
 unclamped shows its padding, then its neighbours):
 
-- `getAtlasCell(atlas, cellId)` (`core/TextureAtlas.ts`) takes the atlas id, a slot's id or a slot
+- `getAtlasCell(atlas, cellId)` (`kernel/assets/TextureAtlas.ts`) takes the atlas id, a slot's id or a slot
   texture and returns the cell table entry (`uv`, `size`, `data`), or undefined: an unknown cell or
   atlas, a texture that isn't a slot, or no slot loaded yet. `TextureAtlas.ts` now imports
   `Texture.ts` at runtime (`Texture.ts` imports it as types only, so no cycle).
@@ -618,7 +621,7 @@ unclamped shows its padding, then its neighbours):
   or a `vec4` node. The clamp's half texel comes from the file's size on the CPU
   (`TextureAtlasInfo.width`, else `texture.image`), not a `textureSize` node. Returns the texture
   node for `.level()` / `.grad()`.
-- `getArrayLayerIndex(array, member)` (`core/TextureArray.ts`) takes an id or the texture; a
+- `getArrayLayerIndex(array, member)` (`kernel/assets/TextureArray.ts`) takes an id or the texture; a
   runtime array's member is its id or file name (`getMemberKey`), an asset's its layer name.
 - `sampleArrayLayer(array, uv, layer)`: `layer` is an index (checked against `image.depth`, so a
   plain `--layers` KTX2 without a member list works too), a member name or a node. A texture that
@@ -643,7 +646,7 @@ the same sphere with the cell's source file by a mean of 7.8 / 255 with the grid
 `testTexture` layer differs from its source by 5.1 / 255):
 
 - `remapUVsToAtlasCell(geometry, atlas, cellId, { attribute = 'uv', inPlace, id })`
-  (`core/TextureAtlas.ts`): `geometry` is a geometry or a registered id, `atlas` what
+  (`kernel/assets/TextureAtlas.ts`): `geometry` is a geometry or a registered id, `atlas` what
   `getAtlasCell` takes (an atlas id, a slot id or a slot texture; a slot must be loaded). A cell id
   only, no rect: a rect needs no atlas, and `sampleAtlasCell` already takes one.
 - The clone: `geometry.clone()` (three r186 copies every attribute's array, an interleaved buffer
@@ -703,7 +706,7 @@ with GPU mips 682.7 KB; each atlas slot 341.0 KB, its `__vramBytes.out` of 349,1
 - An array or slot's "File" is its JSON's path (from dev data's registry: a scene entry has no
   `__sourcePath`), and the pipeline section's "Source" says what it was built from instead of
   "packed from several files". A runtime array's "File" says `buildTextureArray`.
-- The tables use the tab's first style module, `Debug/Assets.module.scss` (section 4 adds the
+- The tables use the tab's first style module, `kernel/assets/debug/Assets.module.scss` (section 4 adds the
   preview's styles there).
 - Not changed: "Used by materials" counts map slots only, so an array or slot sampled through TSL
   nodes built in code shows 0 (as before; the GPU memory tab's `forEachMaterialTexture` also reads
@@ -721,7 +724,7 @@ resampled into smaller cells) and each layer of the 3-layer asset by 0-3.4 / 255
 comparison flipped upside down gives 2.8-6.4 and 6.6-45: the orientation is right on both; the
 overlay covers the image exactly):
 
-- `renderTexturePreviewAsync(texture, { level, layers?, maxSize })` (`core/Debug/_dbg__TexturePreview.ts`):
+- `renderTexturePreviewAsync(texture, { level, layers?, maxSize })` (`kernel/assets/debug/_dbg__TexturePreview.ts`):
   one `NodeMaterial` per call sampling `texture(t, uv).level(levelUniform)` (`.depth(layerUniform)`
   for an array), so one shader serves every tile; the tiles are rendered side by side into one
   RGBA8 target per strip (up to 4096 px wide) and read back once. The target has the texture's
@@ -736,7 +739,7 @@ overlay covers the image exactly):
   arrays), else 1. A level over `maxSize` is sampled down at that level (bilinear, so fine detail
   aliases) and the status line says so; layer thumbnails cap at 128 px, the slot image at 1024 px.
   The canvases scale with `image-rendering: pixelated` over a checkerboard (alpha shows).
-- The window (`core/Debug/_dbg__AssetsPreview.ts`, a "Preview" section after the array / atlas
+- The window (`kernel/assets/debug/_dbg__AssetsPreview.ts`, a "Preview" section after the array / atlas
   section): level buttons (the file's levels; a slot whose maxSize dropped top levels also names
   the layout's level), a status line, then a thumbnail per layer captioned with its member or
   layer name, or the slot image with an SVG overlay in the layout's px (padded rects cyan, content
@@ -754,16 +757,34 @@ overlay covers the image exactly):
 
 ### Phase 5 — JSON binding (D5, after p302 D4)
 
+1. The two resolvers in `kernel/assets/` next to the arrays and atlases, registered from the
+   kernel's install (`installKernel`, `src/_engine/kernel/init/CLAUDE.md`), never at module load
+   (`moduleSideEffects.test.ts`).
+2. Their `dependencies` in a module the gatherer may import (the schemas entry, or a module listed
+   with its reason in `devTools/engineImports.test.ts`), so p302 D6's closure lists the array or
+   the atlas's slots (a scene's `"<atlasId>"` already expands to them, Phase 3 section 3).
+3. The schemas: the resolver forms in the material JSON's `nodes` / `inputs` (`TslNodeInputsSchema`,
+   `schemas/MaterialSchema.ts`), each field documented twice (JSDoc on the key and a
+   `.describe()`, as p302's "From p619" says).
+4. The material editor (`debug/editors/material/_dbg__MaterialEditorParams.ts`) shows the two
+   forms read-only, as it shows texture ids.
+5. A material JSON in each p299 scene sampling a layer / a cell.
+
 **Exit:** a material JSON samples an array layer and an atlas cell without TSL code.
 
-### Phase 6 — Docs and versioning
+### Phase 6 — Hub, docs and versioning
 
-1. A "Texture arrays and atlases" section in `docs/techniques/asset-optimization.md` (when to
+1. The Hub: the asset-optimization feature page's "Texture atlases" section
+   (`hub/pages/features/asset-optimization/guide.md`) gets texture arrays beside it, and the
+   scenes-and-assets page's asset type table (`hub/pages/features/scenes-and-assets/guide.md`,
+   which lists both suffixes) the material JSON forms of D5; `yarn hub:build`.
+2. A "Texture arrays and atlases" section in `docs/techniques/asset-optimization.md` (when to
    use which, sizes, padding, codec per slot, budgets).
-2. `CLAUDE.md`: the new asset suffixes in the data pipeline section, `readme.md` Features and
-   asset types.
-3. Update p303 D4 and p309 D1 if anything they rely on changed.
-4. Engine minor; `CHANGELOG.md`.
+3. `devTools/gather/CLAUDE.md` already lists both suffixes. `readme.md` names runtime arrays and
+   atlases only among the scenes: a Features line (both asset types, the runtime arrays, the
+   helpers, D5's JSON binding).
+4. Update p303 D4 and p309 D1 if anything they rely on changed.
+5. Engine minor; `CHANGELOG.md`.
 
 ## 4. Versioning
 

@@ -2,7 +2,7 @@ Status: draft | not-implemented
 Category: Physics
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 Blocks: p512_client-prediction-and-reconciliation.md
-Related: \_DONE_p604_multiplayer-viability-study.md (this plan is the prerequisite for client prediction and rollback)
+Related: p510_headless-simulation-runtime.md (The multiplayer path: this plan is the prerequisite for client prediction and rollback), p250_physics-api-support-for-multibody-joints.md (a fourth rebind pass), p102_physics-world-bounds.md (bounds are re-sent after a restore), `src/_engine/features/physics/CLAUDE.md` (the layout below)
 
 # Restore Physics Snapshot — Plan
 
@@ -46,9 +46,11 @@ D12), so read each item at its new place, by name:
   per entity). `registerOnAllSceneEnterings` is gone: physics takes part in scene loads through its
   scene hooks (`physicsSceneHooks`, `PhysicsFeature.ts`), and `addVisibilityChangeFn` is
   `onVisibilityChange` (`kernel/loop/MainLoop.ts`).
-- `core/Debug/_dbg__PhysicsAPI.ts` → `features/physics/debug/_dbg__PhysicsAPI.ts`;
-  `core/ECS.ts` → `kernel/ecs/ECS.ts`; `core/Character/DynamicCharacter.ts` →
-  `features/character/controllers/dynamic/DynamicCharacter.ts`.
+- `core/Debug/_dbg__PhysicsAPI.ts` → `features/physics/debug/_dbg__PhysicsAPI.ts` (its folders,
+  the UI kit's property grid since p806, in `_dbg__PhysicsTabFolders.ts`); `core/ECS.ts` →
+  `kernel/ecs/ECS.ts`; `core/Character/DynamicCharacter.ts` → `features/character/controllers/dynamic/`
+  (its user data read is `Floor.ts`' `getUserDataSync()`, the API-level data, which a restore
+  keeps).
 
 What p614 changed in what this plan relies on:
 
@@ -293,10 +295,10 @@ All of the following was read out of the original TypeScript embedded in
     rewind: entities created since are destroyed, and entities deleted since do not come back. Full
     scene rewind is a non-goal (see below). In debug builds, a restore that produces a non-empty
     reaped or orphan set emits an `lwarn` naming the counts, so this never happens silently.
-12. **`interpolationStates` is cleared on restore**, via a new exported
-    `clearPhysicsInterpolationStates()` from `PhysicsManager.ts`. Clearing rather than patching is
-    correct because `physicsInterpolationSystem` re-seeds `prev == curr` from the restored pose on
-    first sight of an entity, so the restored frame renders with zero smear.
+12. **The interpolation history is reset on restore**, which `restorePhysicsSnapshot` already
+    does (`breakSimHistory()`: the interpolation and the tier policy reset on its epoch), so no new
+    export. Resetting rather than patching is correct because the interpolation re-seeds
+    `prev == curr` from the restored pose, so the restored frame renders with zero smear.
 13. **The worker writes transforms back immediately at the end of the restore handler.** Otherwise
     `RigidBodyProxyAPI.pos`/`rot` keep serving pre-restore poses out of the transform buffer until
     the next `STEP` — which in a paused world is forever. The `RESTORE_SNAPSHOT` case calls the
@@ -309,12 +311,12 @@ All of the following was read out of the original TypeScript embedded in
     wireframes. `writeBackDebugState` already zeroes the flags for an id whose API is gone, which is
     the correct rendering for a reaped object, and the debug layer re-declares the full set on its
     own cadence via `setPhysicsDebugStateTracking`.
-15. **Restore is announced through a registration hook, not a direct import.** `PhysicsManager.ts`
-    imports `PhysicsAPI.ts`, so the reverse call has to be inverted. Add
-    `registerOnPhysicsRestore(name, fn)` plus the dispatch in `PhysicsAPI.ts`, mirroring the
-    existing `addVisibilityChangeFn` pattern (`PhysicsAPI.ts:524`, used at `:528`) and
-    `registerOnAllSceneEnterings` (`PhysicsManager.ts:33`). `registerPhysicsManager` registers its
-    reconciler there.
+15. **Restore is announced through a registration hook, not a direct import.** `PhysicsEntity.ts`
+    imports the facade's modules, so the reverse call has to be inverted (the facade's imports are a
+    DAG with state in leaf modules: a cycle reads a binding before its module ran). Add
+    `onPhysicsRestore(fn)`, returning its remover (the `on*` naming rule), plus the dispatch in
+    `PhysicsWorld.ts`, like `onVisibilityChange` (`kernel/loop/MainLoop.ts`). Physics' install
+    (`PhysicsFeature.ts`) registers `PhysicsEntity.ts`' reconciler there, never at module load.
 16. **Determinism is documented, not guaranteed.** Two separate caveats, and neither should be
     overstated in either direction:
     - *Restoring state is not the same as reproducing a run.* A snapshot restores physics state
@@ -322,13 +324,14 @@ All of the following was read out of the original TypeScript embedded in
       the caller also replays its own per-frame inputs** — applied forces and impulses, body
       creation and deletion, parameter changes — in identical order. That is the consumer's
       responsibility, and it is the most likely way a rewind feature silently "doesn't work".
-    - *Cross-build/cross-platform determinism is an open question, not a settled fact.* Rapier's
-      reproducibility guarantees are at best same-binary/same-platform, and whether this npm build
-      enables Rust-side enhanced determinism **could not be confirmed from the
-      `@dimforge/rapier3d-compat` 0.19.3 package** — it ships no Rust source, no feature manifest,
-      and no mention of determinism in its typings. Phase 1 therefore includes a cheap empirical
-      check rather than an assumption either way, and this stays in the risks table as an open
-      question rather than being asserted as a fact anywhere.
+    - *Cross-build/cross-platform determinism is evidence, not a guarantee.* Rapier guarantees it
+      only for its deterministic build (`@dimforge/rapier3d-deterministic-compat`); we ship the
+      compat build. p604 measured the compat build anyway: a recorded `physicsTiers` run (1,200
+      steps, 687 bodies, tier changes) came out bit for bit the same in Chromium, Firefox, Node and
+      on an Android phone, x86-64 and ARM, Rapier snapshot bytes included. Not covered: joints,
+      trimesh and convex colliders, CCD, iOS / Safari. The two builds disagree with each other, so
+      every peer runs the same one (p510's multiplayer rule 9). Phase 1's check covers
+      restore-then-replay on one machine.
 
 ## New / changed types (`Physics/PhysicsAPITypes.ts`)
 
@@ -375,12 +378,13 @@ All four `@CHORE` comments at `:1257-1265` are deleted as resolved.
 
 Each phase compiles clean, leaves the repo working, and is separately reviewable/committable.
 
-**Phase 0 — Reconcile the duplicates and fix the two pre-existing bugs.** Small and
-self-contained, no new feature. In `EngineRapier.ts`: collapse to one implementation per design
-decision 8, add the `physicsWorld.free()` of the replaced world per decision 10, and add the
-`if (!newWorld) throw` guard for the `null` return. In `PhysicsAPI.ts`: make `deletePhysicsWorld()`
-(`:554-577`) clear `rigidBodies`/`colliders`/`joints` (`:181-183`), the two worker event registries
-(`:191-192`), and reset `transformBuffer`/`debugStateBuffer`/`resolvedTransportMode`.
+**Phase 0 — Reconcile the duplicates and fix the pre-existing bug.** Small and
+self-contained, no new feature. In the backend (`RapierWorld.ts`, `proxies/EngineWorldProxyAPI.ts`):
+collapse to one implementation per design decision 8, add the `free()` of the replaced world per
+decision 10, and add the `if (!newWorld) throw` guard for the `null` return. The
+`deletePhysicsWorld()` half is done (p614: `clearDeletedWorld` clears the registry, the event
+pushes and `transformBuffer`); left there: `debugStateBuffer` and `resolvedTransportMode`, if a
+later world shows them stale.
 
 Manual verification: `physicsTest.ts` behaves exactly as before. From the console, run
 `deletePhysicsWorld()` then `createPhysicsWorld()` and confirm the physics debugger tab's entity
@@ -400,8 +404,9 @@ and `rapierUserData` to the rigid-body one. In `PhysicsAPI.ts`: rewrite `takePhy
 `restorePhysicsSnapshot` around a single private `applyRestoreDelta(delta)` that runs identically
 in both modes (prune the three maps, call the existing `cleanupWorkerColliderEventFns` per reaped
 collider, write world params into `physicsState`, fire the decision-15 hooks); wire the
-`MAIN_THREAD` branch only; add `registerOnPhysicsRestore` and an `isRestoringSnapshot` guard that
-makes `stepPhysics` (`:292`) early-return and reset its accumulator while a restore is in flight.
+`MAIN_THREAD` branch only; add `onPhysicsRestore` and an `isRestoringSnapshot` guard that
+makes `stepPhysics` (`PhysicsStepping.ts`) early-return and reset its accumulator while a restore
+is in flight (or holds stepping, as a scene load does with `holdPhysicsStepping`).
 
 Manual verification (`?isDebug=true`, `physicsTest.ts`, `MAIN_THREAD`): take a snapshot, let the
 bodies fall, restore → everything snaps back and the meshes follow; delta is all-empty. Then create
@@ -430,13 +435,15 @@ Manual verification: flip `CONFIG.physics.workerTarget` to `'WORKER_THREAD'` and
 without stepping). Confirm pending resolver requests return to zero after each restore. Confirm slot
 reuse: create → restore (reaps it) → create again, and check the new body reuses the freed slot.
 
-**Phase 3 — ECS reconciliation (`PhysicsManager.ts`).** Export
-`clearPhysicsInterpolationStates()`. Add `reconcilePhysicsEntitiesAfterRestore(delta, world?)`:
+**Phase 3 — ECS reconciliation (`PhysicsEntity.ts`).** Add
+`reconcilePhysicsEntitiesAfterRestore(delta, world?)`:
 walk `world.getStorage(ComponentType.TAG_IS_PHYSICS_OBJECT)`, resolve each entity's body via
 `ECSWorld.getRigidBody(entityId)` (`ECS.ts:776-782`), and if its id is in `reapedRigidBodyIds`
 call `world.deleteEntity(entityId)` — the same call the debugger's delete button makes. For an
 entity whose body survived but some of whose `COLLIDER` entries were reaped, filter that array in
-place rather than deleting the entity. Register both via `registerOnPhysicsRestore`.
+place rather than deleting the entity. A `REMOVED`-tier entity (no bucket, its body on
+`PHYSICS_SIM_TIER.body`: read it with `getPhysicsEntityBody`) is neither. Register it via
+`onPhysicsRestore`.
 **Ordering constraint to preserve:** the facade's maps are pruned *before* the hooks fire, so when
 `deleteEntity` triggers the `TAG_IS_PHYSICS_OBJECT.onDeleteEntity` hook → `disposePhysicsEntity` →
 `deleteColliders`/`deleteRigidBody`, those run against already-removed ids. Confirm during
@@ -450,10 +457,10 @@ Manual verification: snapshot → `createPhysicsEntity(...)` a new body → rest
 gone, its mesh is out of the scene, no console errors, and the debugger tab's entity list matches
 the ECS entity count. Both thread modes, both `useSAB` settings.
 
-**Phase 4 — Debugger tab affordance (`core/Debug/_dbg__PhysicsAPI.ts`).** A "Snapshot" folder with
-`Take snapshot` / `Restore snapshot` / `Clear snapshot` buttons following the existing `addButton`
-pattern (`:313`, `:320`, `:490`), holding the last `PhysicsSnapshot` in a module-local, plus a
-readout of `bytes.byteLength`, `takenAt`, and the last restore's reaped/orphan counts. This is the
+**Phase 4 — Debugger tab affordance (`debug/_dbg__PhysicsTabFolders.ts`).** A "Snapshot" folder
+of `DebuggerPaneItem`s next to the determinism probe's (`Take snapshot` / `Restore snapshot` /
+`Clear snapshot` `button`s), holding the last `PhysicsSnapshot` in a module-local, plus monitors
+of `bytes.byteLength`, `takenAt`, and the last restore's reaped/orphan counts. This is the
 primary manual-verification surface for every other phase and should not be skipped — pull it
 earlier if any phase proves fiddly.
 
@@ -486,17 +493,17 @@ Manual verification: take/restore/clear from the tab in all four configurations 
 | **The generation test is the whole design.** If `wrapper.handle` from a deserialized set ever stopped carrying the generation in its high 32 bits, reaped bodies would silently alias onto unrelated restored bodies — corruption, not a crash. | Mitigate with a debug-build assertion in the rebind pass cross-checking `isValid()` (which *is* generation-checked Rust-side) against the handle comparison. `@dimforge/rapier3d-compat` is already pinned exactly at `0.19.3`; re-verify this on any version bump. |
 | **`old.free()` after rebinding.** If any code path still holds a wrapper from the old world (e.g. a `ColliderAPI` handed to a raycast callback that outlived the call), `free()` turns it into a use-after-free surfacing as a WASM trap far from the cause. | Gated by the `isRestoringSnapshot` guard and the post-sweep `isValid()` check. If a trap shows up in manual testing, the fallback is to not free the old world in v1 and accept the leak — strictly less dangerous. |
 | **`deleteEntity` re-entrancy during Phase 3.** Deleting entities while iterating an ECS storage, with the delete hook firing async physics disposal. | Iterate a materialized array of entity ids, never the live storage. Gated by Phase 3's ordering constraint above. |
-| **Determinism (decision 16) is unresolved and gates the rewind/replay consumer.** Restoring state is not the same as reproducing a run, and whether this Rapier build is deterministic enough cannot be answered from the npm package. | Phase 1's empirical check answers the same-machine half. If it fails, the rewind consumer needs rethinking — but the snapshot API itself would still be correct and useful for reset-to-checkpoint. |
+| **Determinism (decision 16) gates the rewind/replay consumer.** Restoring state is not the same as reproducing a run; the compat build reproduced across machines in p604's run, which is evidence, not a guarantee. | Phase 1's empirical check answers the restore-then-replay half. If it fails, the rewind consumer needs rethinking — but the snapshot API itself would still be correct and useful for reset-to-checkpoint. |
 | **Upstream leak in `World.restoreSnapshot`.** Rapier never frees the temporary `SerializationPipeline` it allocates. | Unavoidable without reimplementing `restoreSnapshot`; a few hundred bytes per call. Documented, not worked around. |
 | **`useSAB: false` visibility window.** Between the restore reply and the `TRANSFORMS_PUSH` it triggers, the main thread reads stale poses. | Decision 13 puts both inside the same handler, so the window is one message hop. Confirm visually with `useSAB: false`. |
-| **Snapshot cost per capture is O(world size)** and allocates a fresh `Uint8Array` out of WASM every time. | Measure in Phase 4's readout before any per-frame rewind consumer is built on top of it. |
-| **No test suite exists in this repo.** | Accepted. Every phase is verified manually via `?isDebug=true`, Phase 4's tab and `physicsTest.ts`. Phase 4 is worth pulling earlier if needed. |
+| **Snapshot cost per capture is O(world size)** and allocates a fresh `Uint8Array` out of WASM every time. | p604 measured plain Rapier in Node (box stacks mid-collapse): take / restore 0.25 / 0.54 ms with 256 awake bodies (444 kB), 0.89 / 1.33 ms with 1,568 (2.9 MB), 3.0 / 4.0 ms with 4,000 (7.4 MB); one step after a restore 0.8, 4.5 and 11.7 ms. Measure the engine's path in Phase 4's readout before any per-frame rewind consumer is built on top of it. |
+| **World bounds (p102), if they land first,** are configuration, not in a Rapier snapshot. | A restore re-sends the current global and per-body bounds from the ECS side (p102 §8). |
 | **Interplay with p101 (scene-load determinism, implemented).** Every scene load replaces the physics world (`resetPhysicsWorld`) while stepping is held, so a snapshot can never outlive its scene, and every body/collider reference from the previous scene is stale. Two questions p101 left open land here: (1) a `LoadSceneProps.keepPhysicsWorld` opt-out for persistent physics entities (none exist yet), and (2) whether identical output **across** `MAIN_THREAD` and `WORKER_THREAD` is a goal, or repeatability within one mode is enough (p101 delivered the latter). | Reject (or drop) a restore whose snapshot was taken in another scene load. Answer (2) together with decision 16; the determinism probe (`?physicsProbe=N`, `_dbg__PhysicsDeterminism.ts`) is the tool for both. |
 
 ## Verification
 
-- `tsc --noEmit` and `yarn lint` clean at every phase boundary (the repo's Stop hook runs both).
-  Note there is no standalone typecheck script — `tsc` runs as part of `yarn build`.
+- `yarn test`, the lint and `tsc` clean at every phase boundary (the Stop hook runs them), and
+  `yarn verify:scenes`' hashes unchanged (a restore is never on a scene's path).
 - Every phase's functional verification runs in **both `workerTarget` modes**, and under
   `WORKER_THREAD` in **both `useSAB: true` and `useSAB: false`**.
 - Phase 0: no behavioral change; delete→create leaves no stale proxies.
@@ -506,4 +513,9 @@ Manual verification: take/restore/clear from the tab in all four configurations 
   slot reuse after a reap.
 - Phase 3: ECS entity count and scene contents match after a restore that reaps.
 - Phase 4: take/restore/clear from the debugger tab in all four configurations.
-- No test suite exists in this repo and none should be added as part of this work.
+- Unit tests with each phase, next to the physics ones (`src/_engine/features/physics/CLAUDE.md`):
+  the backend's matrix (survivors, reaped, orphans, the epoch guard, the `null` restore, restore
+  twice) in `backends/rapier/EngineRapier.test.ts`, the facade's `MAIN_THREAD` path in
+  `PhysicsFacade.test.ts`, the worker path (slots freed, the immediate write-back, both `useSAB`
+  settings) in `PhysicsWorkerRequests.test.ts`. The manual checks stay for what a test can't see
+  (the meshes following, the wireframes).

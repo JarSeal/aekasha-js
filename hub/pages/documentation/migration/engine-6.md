@@ -1,9 +1,9 @@
 ## Engine 5 → 6
 
 ::: note In progress
-Engine 6.0.0 isn't released yet. Its changes land on the `engine-6` branch, and this section
-grows with them: so far the debugger's move onto the UI kit. The removals of what the 5.x minors
-deprecated come next.
+Engine 6.0.0 isn't released yet. Its changes merge into `main` ahead of the release, and this
+section grows with them: so far the debugger's move onto the UI kit. The removals of what the
+5.x minors deprecated come next.
 :::
 
 ### The debugger on the UI kit

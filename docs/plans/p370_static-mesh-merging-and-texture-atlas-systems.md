@@ -1,4 +1,4 @@
-Status: research done — epic, not-implemented
+Status: epic, in progress | p299 Phases 0-4 implemented; p371-p376 not started
 Category: Rendering, Merging, Texture atlas
 Blocks: p299_texture-arrays-and-atlases.md, p371_geometry-merging.md, p372_mesh-merge-groups.md, p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
 Related: p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result)
@@ -38,36 +38,48 @@ Non-goal: merging colliders (§7).
 
 ## 2. Grounding (checked against the code, 2026-10-05)
 
-- **Meshes** (`core/MeshManager.ts:81`): `createMeshEntity(props, entityOpts?, world?)` builds one
+- **Meshes** (`kernel/mesh/Mesh.ts`): `createMeshEntity(props, entityOpts?, world?)` builds one
   `THREE.Mesh`, adds `OBJECT3D` and `TAG_IS_MESH`, and adds the mesh to the root scene unless
-  `doNotAddToScene`. Geometry and material come from ref-counted registries (`Geometry.ts`,
-  `Material.ts`); `disposeMesh` releases the refs on entity delete. `MeshProps` has no static,
-  merge, group or LOD flag. `CoreEntityOpts.managedBy` already passes through to `createEntity`.
-- **Ad hoc merges exist**: `app/largeWorld.ts:348,398`, `utils/world/characterTestObjects.ts:25`
-  and `toolkit/geometry/generateFoliage.ts:59,101` call `mergeGeometries` and register the result
-  with `saveBufferGeometry` (`Geometry.ts:290`). No shared utility, no part bookkeeping.
+  `doNotAddToScene`. Geometry and material come from ref-counted registries
+  (`kernel/assets/Geometry.ts`, `Material.ts`); `disposeMesh` releases the refs on entity delete.
+  `MeshProps` has a `lod` (p348) but no static, merge or group flag. `CoreEntityOpts.managedBy`
+  already passes through to `createEntity`.
+- **Ad hoc merges exist** (checked 2026-11-04): `app/scenes/largeWorld/largeWorld.ts` (its
+  props), `app/scenes/thirdPersonGymScene/gymStairsAndWall.ts` (stairs, with groups) and
+  `toolkit/geometry/generate/Foliage.ts` (the tree with groups, for a material array; the bush)
+  call `mergeGeometries` and register the result with `saveBufferGeometry`
+  (`kernel/assets/Geometry.ts`). No shared utility, no part bookkeeping.
 - **Imported assets** use one engine material for all their pieces (`SpawnImportedParams.material`,
-  `core/Import/ImportTypes.ts`); glTF materials are never imported. So the pieces of one imported
-  level are already same-material: the easiest merge case.
-- **Visibility** (`ECS/ECSCoreSystems.ts:22`): `reconcileObject3DVisibility` sets
-  `.visible = !DISABLED && !TAG_FRUSTUM_CULLED && !TAG_OBJECT_CULLED`; p348 adds `TAG_LOD_CULLED`.
+  `kernel/assets/import/ImportTypes.ts`); glTF materials are never imported (an import can
+  register their textures, not the materials). So the pieces of one imported level are already
+  same-material: the easiest merge case.
+- **Visibility** (`kernel/ecs/ECSCoreSystems.ts`): `reconcileObject3DVisibility` sets
+  `.visible = !DISABLED && !TAG_FRUSTUM_CULLED && !TAG_OBJECT_CULLED && !TAG_LOD_CULLED` (a
+  LOD-culled mesh still fading out, `TAG_LOD_TRANSITIONING`, stays visible).
 - **Static bodies aren't synced per frame** (`_DONE_p352` Phase 1): `physicsToTransformSystem`
   skips `BODY_STATIC`, and a fixed body takes no transform-buffer slot. A fixed body moved by
   `world.setTransform` or a direct `setTranslation` / `setRotation` is synced (and its transform
   marked dirty) once, through `setBodyMovedListener` and `queueStaticBodySync`. A dynamic body
   whose pose didn't change no longer marks its transform dirty either.
-- **Spatial index** (`core/Spatial/`): meshes are `SPATIAL_INDEXED` by default, with a radius
-  from their geometry. A large merged mesh lands in the grid's oversized tier.
-  `core/Spatial/CellKey.ts` (`worldToCell`, `packCellKey`, `cellBounds`) is the shared cell maths.
-- **No `BatchedMesh` anywhere**, only the profiler census counts one (`_dbg__Census.ts:296`).
-- **No array textures** (`DataArrayTexture` / `CompressedArrayTexture`) are used yet. p303 D4
-  designs KTX2 array assembly; p309 D1 designs a decal atlas build tool.
+- **Spatial index** (`features/spatial/`, the `spatial()` feature): meshes are `SPATIAL_INDEXED`
+  by default, with a radius from their geometry. A large merged mesh lands in the grid's
+  oversized tier. `features/spatial/CellKey.ts` (`worldToCell`, `packCellKey`, `cellBounds`,
+  `@internal`) is the shared cell maths (see §13 for using it from another feature).
+- **No `BatchedMesh` anywhere**, only the profiler counts one (`debug/profiler/_dbg__Census.ts`,
+  its Overview and Objects tabs).
+- **Array textures and atlases exist** (p299 Phases 0-4): runtime arrays
+  (`kernel/assets/TextureArray.ts`: `buildTextureArray`, `sampleArrayLayer`), build-time KTX2
+  arrays (`*.textureArray.json`, `ktx create --layers`), 2D atlases with cell tables
+  (`kernel/assets/TextureAtlas.ts`, `*.textureAtlas.json`) and their debug views. Its JSON binding
+  (Phase 5) waits for p302 D4. p303 D4's layer arrays and p309 D1's decal atlases build on it.
 - **Asset pipeline** (`devTools/assetPipeline/`): `gltf.ts` uses only `weld`, `simplify`,
   `meshopt`, `draco` and `quantize`. The installed `@gltf-transform/functions` 4.5.1 also has
   `flatten`, `join`, `dedup`, `instance` and `palette`. The pinned `ktx` 4.4.2 can write array
   textures (`ktx create --layers N`).
 - **No Meshes debug tab or mesh edit window exists.** The Lights tab
-  (`core/Debug/Light/_dbg__LightGUI.ts`) is the pattern for an entity list with edit windows.
+  (`kernel/light/debug/_dbg__LightGUI.ts`) and the LOD tab with its entity window
+  (`features/lod/debug/`) are the pattern for an entity list with edit windows on the UI kit
+  (`src/_engine/debug/CLAUDE.md`).
 
 ### 2.1 How three r186 draws batches on WebGPU
 
@@ -181,7 +193,7 @@ longer dirty their transforms every frame (§2), but a dirty flag is still set b
 ## 8. Culling, LOD, streaming and editing
 
 - **Culling:** a merged group is one bounding sphere, so it is culled as a whole. `AUTO` groups
-  are therefore bounded by a spatial cell (`CellKey.ts`) and a vertex cap, and the group entity,
+  are therefore bounded by a cell (the `CellKey.ts` maths) and a vertex cap, and the group entity,
   not its members, is in the DEFAULT spatial domain and frustum culling.
 - **LOD:** a group's LOD unit is the group. Simplifying a merged group as a whole is HLOD (p376),
   which reuses p347's simplifier and p348's selection.
@@ -229,7 +241,7 @@ Heightfield blocks themselves gain little: each is already one mesh.
 
 | Tier | Plan                                      | What it delivers                                                                                                               | Depends on                          |
 | ---- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| 0    | `p299_texture-arrays-and-atlases`         | Runtime and build-time texture arrays, 2D atlases with cell tables, UV remap and TSL helpers, JSON binding                     | \_DONE_p300; p302 D4 (Phase 5 only) |
+| 0    | `p299_texture-arrays-and-atlases`         | Runtime and build-time texture arrays, 2D atlases with cell tables, UV remap and TSL helpers, JSON binding (Phases 0-4 done)   | \_DONE_p300; p302 D4 (Phase 5 only) |
 | 1.1  | `p371_geometry-merging`                   | `mergeGeometryParts` with a part range table, `MERGED` geometry JSON, GLB `merge` at build time, adoption of the ad hoc merges | —                                   |
 | 1.2  | `p372_mesh-merge-groups`                  | `MERGE_GROUP` / `MERGE_MEMBER`, `merge: id \| 'AUTO'`, in-place member updates, scene-load build                               | p371                                |
 | 1.3  | `p373_merge-debug-and-member-editing`     | "Merging" drawer tab, group and member windows, overlay, A/B toggle, edit sessions, face picking                               | p372                                |
@@ -248,3 +260,42 @@ Heightfield blocks themselves gain little: each is already one mesh.
    group per member range. Only if p354 lands and merged groups prove too coarse.
 4. **Multi-draw-indirect.** If WebGPU ships it (or three uses Chrome's experimental extension),
    `BatchedMesh` becomes a real draw-count win and p375's trade-off changes.
+
+## 13. Placement (SBP and layering)
+
+Written after the engine folder restructure and the opt-in features (2026-11-04), for the child
+plans to follow; each child's paths below say the same.
+
+- **A `merging()` feature** (`src/_engine/features/merging/`, entry `aekasha/merging`,
+  `MergingFeature.ts`, its debug modules in `features/merging/debug/`, a nested `CLAUDE.md`; the
+  install contract is `src/_engine/kernel/init/CLAUDE.md`'s Engine features) holds the runtime of
+  p372-p376: the components' hooks, the build system, the scene step (a scene hook), the debug tab.
+  An app that doesn't list it carries none of it, and the scene JSON's `merge` / `mergeGroups`
+  fields are its `FeatureSchemaPart`, so the gather's feature manifest names it and `InitEngine`
+  fails a scene that merges without it. `yarn sbp` budgets its folder (`sbp.config.ts`).
+- **p371's utility** (`mergeGeometryParts`) is plain geometry code that the kernel's `MERGED`
+  geometry type (p371 D2) needs, so it is the kernel's: `kernel/assets/GeometryMerge.ts`, on
+  `aekasha`, tree-shaken where unused. `createGeometry` reaches it the way a scene reaches the glTF
+  import (`kernel/assets/import/ImportRegistry.ts`): an `import()` on the first merged geometry a
+  scene loads, so a build whose scenes merge nothing doesn't carry it. `merging()` imports it by
+  relative path (a feature may import the kernel).
+- **Kernel seams, not imports:** the kernel imports a feature's types only (`import type`), so
+  `TAG_MERGED`'s visibility reason, the `merge` mesh prop and the scene step reach the feature as
+  `TAG_LOD_CULLED`, `lod` and LOD's hooks reach `lod()`: a component type in the kernel's
+  registry, hooks registered through the `FeatureContext`, a registry the feature fills.
+- **The cell maths** (`features/spatial/CellKey.ts`, `@internal`) is another feature's. A feature
+  imports no other feature's code at runtime (only character → physics), so it moves to
+  `src/_engine/utils/` (pure, no three or ECS; `spatial()` keeps using it from there) in whichever
+  of p372 Phase 3 (`AUTO` buckets) and p353 Phase 1 (streaming cells) comes first.
+- **Heavy parts behind `import()`:** the worker merge (p371 D4, an assets worker job module the
+  worker loads on its first job, as LOD's `AssetsSwitchSimplify`), the HLOD simplifier (p376:
+  `lod()`'s `AUTO`, p347's lazy chunk, so `merging()` imports none of `lod()`) and the merge
+  material's TSL (p374) load on first use.
+
+## 14. Branches and PRs
+
+Not decided yet: decide before p371 starts. The default, as p350's children and p299 do: each
+child on its own branch from `main`, merging into `main` with its own bump (p299's Phases 0-4 are
+on `main`). p371-p373 are one feature's first release (the utility, the groups, their debug
+tools), so sharing one branch, with one engine minor, is the likely alternative. p375 runs only
+if its spike passes; p376 is a stub until p372 has numbers.

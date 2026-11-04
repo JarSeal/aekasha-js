@@ -22,15 +22,18 @@ back to one group per material (p372).
 
 ## 1. Grounding
 
-- **Materials** (`core/Material.ts`): classic types (`STANDARD`, `PHONG`, …) with `params`, where
-  texture map keys (`TextureMapKeys`, `utils/constants.ts:41`: `map`, `normalMap`, `aoMap`,
+- **Materials** (`kernel/assets/Material.ts`): classic types (`STANDARD`, `PHONG`, …) with
+  `params`, where texture map keys (`TextureMapKeys`, on `aekasha`: `map`, `normalMap`, `aoMap`,
   `roughnessMap`, `metalnessMap`, `emissiveMap`, …) are texture ids; and TSL node materials with
-  per-socket `nodes`. `createMaterial` caches by id and stores its `props` (`:478`); variants are
-  `${baseId}#hash` (`getMaterialVariant`, `:525`).
+  per-socket `nodes` (a TSL material's file loads with its scene's assets, `devTools/gather/CLAUDE.md`).
+  `createMaterial` caches by id and stores its `props`; variants are `${baseId}#hash`
+  (`getMaterialVariant`).
 - **After p302:** a multi-socket `setup` entry sets several sockets from one graph; runtime
   `registerTslMaterial(id, fns)`; an input resolver registry.
-- **After p299:** build-time KTX2 arrays (`*.textureArray.json`, layers resized to one size,
-  `ktx create --layers`), runtime assembly for same-sized members, `sampleArrayLayer`.
+- **p299 (Phases 0-4 built):** build-time KTX2 arrays (`*.textureArray.json`, layers resized to
+  one size, `ktx create --layers`), runtime assembly for same-sized members (`buildTextureArray`),
+  `sampleArrayLayer` (`kernel/assets/TextureArray.ts`), and their debug views (the Assets tab's
+  info window). Its JSON binding (Phase 5) waits for p302 D4, as this plan does.
 - **After p372:** groups of same-material members, `mergeGeometryParts` with a part table, `AUTO`
   buckets keyed by material ref.
 - **Binding budget:** WebGPU's default is 16 sampled textures per stage, and shadow maps and the
@@ -92,7 +95,8 @@ materials don't merge automatically (open question 1).
   flags. Stored as:
   - WebGPU: a storage buffer (`storage(..., 'vec4', n)` in TSL);
   - WebGL2: a uniform array, capped at 64 entries (UBO size), or a float `DataTexture` above that.
-- **TSL `setup` entry** (`core/Merge/mergeMaterial.tsl.ts`, registered with
+- **TSL `setup` entry** (`features/merging/MergeMaterial.ts`, `merging()`'s, loaded with an
+  `import()` on the first palette a scene uses (p370 §13), registered with
   `registerTslMaterial('aek:merge', …)`): reads the entry by `aekMatIndex` (a flat varying),
   applies its UV transform, samples each slot's array with `sampleArrayLayer(arr, uv, layer)`, and
   sets `colorNode`, `normalNode`, `roughnessNode`, `metalnessNode`, `aoNode`, `emissiveNode`.
@@ -111,9 +115,9 @@ materials don't merge automatically (open question 1).
 
 ### D5 — Measurements and the "when not" list
 
-Measured in the profiler (draws, GPU ms, VRAM by owner) on a test scene of 4 materials × 400
-meshes in 9 cells, merge material vs per-material groups vs unmerged, both backends. Recorded here
-and in the handbook:
+Measured in the profiler (draws, GPU ms, the GPU memory tab's VRAM by owner) on a test scene of
+4 materials × 400 meshes in 9 cells, merge material vs per-material groups vs unmerged, both
+backends. Recorded here and in the handbook:
 
 - don't palette materials with very different texture sizes (the small ones get upscaled);
 - don't palette a feature only one member uses;
@@ -145,9 +149,11 @@ compression error), with the table on both backends.
 ### Phase 4 — Measurements, handbook, versioning (D5)
 
 1. D5's numbers in this file.
-2. The array-material variation in `docs/techniques/terrain-modular-kits.md` (p372 Phase 5), and
-   the palette section in `docs/techniques/asset-optimization.md`.
-3. `CLAUDE.md` (merge materials), `readme.md` Features.
+2. The array-material variation in `docs/techniques/terrain-modular-kits.md` (p372 Phase 5), the
+   palette section on the Hub's Mesh merging page (p372 Phase 5) and the asset optimization page
+   (`hub/pages/features/asset-optimization/`: the generated arrays); `yarn hub:build`.
+3. `features/merging/CLAUDE.md` (merge materials), `devTools/gather/CLAUDE.md` (the
+   `*.mergeMaterial.json` suffix), `readme.md` Features.
 4. Engine minor; `CHANGELOG.md`.
 
 ## 4. Versioning

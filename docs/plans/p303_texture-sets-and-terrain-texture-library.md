@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Assets, Materials, Terrain
-Blocked by: p302_material-and-texture-system-refactor.md, p299_texture-arrays-and-atlases.md (D4's array assembly is p299 D1)
+Blocked by: p302_material-and-texture-system-refactor.md, p299_texture-arrays-and-atlases.md (soft: D4 needs only p299 D1, done in its Phase 1)
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
 
@@ -16,21 +16,23 @@ This plan delivers:
 
 ---
 
-## Context (grounded)
+## Context (grounded, re-grounded 2026-11-04)
 
 - After p300:
-  - texture JSONs may have relative `fileName`s and `pack` sources;
-  - outputs are KTX2 in `src/public/aek-assets/`;
-  - `loadTextureAsync` loads `.ktx2` through a shared `KTX2Loader` on the main thread.
+  - texture JSONs may have relative `fileName`s and `pack` sources (`TexturePackSchema`, `schemas/AssetsConfigSchema.ts`: per target channel a `src`, `channel`, `remap`, `invert` and a `multiply` by a constant or another image's channel with a `strength`);
+  - outputs are KTX2 in `src/public/aek-assets/`, recorded in `assets.lock.json`, with the profiles and slots of `assets.config.json` (its `terrainLayer` and `terrainBlock` profiles exist already);
+  - `loadTextureAsync` loads `.ktx2` through a shared `KTX2Loader` on the main thread (`kernel/assets/import/KTX2.ts`).
+  - The pipeline's commands and checks: `devTools/assetPipeline/CLAUDE.md`.
 - After p302:
-  - material inputs go through a resolver registry (`registerMaterialInputResolver`, with `dependencies`);
+  - material inputs go through a resolver registry (`registerMaterialInputResolver`, with `dependencies`), registered from an install or a first call, never at module load;
   - `setup` TSL entries take shared `inputs`;
-  - scenes get per-scene dependency closure.
-- `gatherAppData` gathers 10 suffixes (`gatherAppData.ts:35-47`). A new suffix needs: a schema in `src/_engine/schemas/`, an entry in the suffix table, a `generatedAppData` section, and JSON Schema compilation.
-- Asset ownership and release are in `core/Assets/AssetOwners.ts` and `SceneAssetRelease.ts:57-94`. Textures are released when no material uses them (`isTextureUsedByAnyMaterial`, `Material.ts:601-634`).
-- After p299: `buildTextureArray` (`core/TextureArray.ts`) assembles same-sized KTX2 members into a `CompressedArrayTexture` (uncompressed fallback: `DataArrayTexture`), ref counted, with layer swaps; build-time `*.textureArray.json` arrays and `sampleArrayLayer` exist too.
+  - scenes get a per-scene dependency closure in the gather.
+- **The gather** handles 13 suffixes (`GATHERED_SUFFIXES`, `devTools/gather/gatheredJson.ts`). A new suffix needs: a schema in `src/_engine/schemas/` on `aekasha/schemas` (each field documented twice: JSDoc on the key and a `.describe()`), an entry in `GATHERED_SUFFIXES` / `GATHERED_SCHEMAS`, its registry and id space (`devTools/gather/context.ts`), a scene list resolved in `devTools/gather/sceneAssets.ts`, a `generatedAppData` section (`devTools/gather/output.ts`), its JSON Schema (`devTools/gather/jsonSchemas.ts`) and a runtime-type pair in `schemas/RuntimeTypes.test.ts`. `devTools/gather/CLAUDE.md` has the steps; the gather fails on an invalid file, a duplicate id and an id a scene lists that no asset JSON has.
+- Asset ownership and release are in `kernel/assets/AssetOwners.ts` and `kernel/assets/SceneAssetRelease.ts`. Textures are released when no material uses them (`isTextureUsedByAnyMaterial`, `kernel/assets/Material.ts`), unless `getKeptTextures` keeps them (a scene's `retainedTextures` hook, the root scene's background and environment).
+- After p299 (Phases 0-4): `buildTextureArray` (`kernel/assets/TextureArray.ts`, on `aekasha`) assembles same-sized KTX2 members into a `CompressedArrayTexture` (uncompressed fallback: `DataArrayTexture`). An array is a registered texture owned by the scene that built it (no ref counts: the engine releases by owner and material use); `swappable: true` keeps its CPU copy so `setTextureArrayLayer` can swap a layer. Build-time `*.textureArray.json` arrays, `sampleArrayLayer` and `getArrayLayerIndex` exist too, and the Assets tab shows an array's layers with a GPU preview.
 - WebGPU's default `maxSampledTexturesPerShaderStage` is 16. Shadow maps and the environment PMREM count against it (p301 §6).
-- `toolkit/geometry/generateTerrain.ts` builds an indexed grid with `position`, `uv` and `normal` (no tangents, no colour), seeded simplex noise, and returns `getHeightAt` / `heights`.
+- `generateTerrain` (`toolkit/geometry/generate/Terrain.ts`, on `aekasha/toolkit/geometry`) builds an indexed grid with `position`, `uv` and `normal` (no tangents, no colour), seeded simplex noise, and returns `getHeightAt` (bilinear over the grid's triangles) / `heights` (row-major; Rapier's HEIGHTFIELD is column-major: `docs/issues/heightfield-grid-layout.md`).
+- **Where things go** (p301 §2): the sets are toolkit assets in `src/toolkit/textures/<setId>/`, the code in the toolkit's `terrain` category (`aekasha/toolkit/terrain`), the TSL materials in `src/toolkit/materials/<id>/`, the gallery in `src/app/scenes/terrainGallery/`.
 
 ---
 
@@ -38,11 +40,11 @@ This plan delivers:
 
 ### D1 — The `*.textureSet.json` asset
 
-**Schema:** `src/_engine/schemas/textureSetSchema.ts`.
+**Schema:** `src/_engine/schemas/TextureSetSchema.ts` (on `aekasha/schemas`), the set folder `src/toolkit/textures/<setId>/`.
 
 ```json
 {
-  "$schema": "../../../../../.schemas/textureSet.schema.json",
+  "$schema": "../../../../.schemas/textureSet.schema.json",
   "id": "sand01",
   "category": "SAND",
   "physicalSize": [3, 3],
@@ -75,10 +77,11 @@ This plan delivers:
 - **`physicalSize`**: metres covered by one tile. **`heightScale`**: metres of relief that height = 1 represents. Used for height blending, puddles and parallax-free depth cues.
 - **`packings`**: at least one. Each slot is a texture id. Slot names are fixed per packing (D2).
 - **`surface`**: defaults the terrain material copies into uniforms. Each layer of a terrain material can override any of them.
-- **`averageColor`** (the linear-averaged albedo of the shipped map) is **computed by the p300 pack/encode step**. It's stored as generated metadata of the albedo texture (`__averageColor` in `generatedAppData`) and exposed through `getTextureSet(id).averageColor`. An optional `averageColor` in the set JSON overrides it. The source JSON is never written back. p305 uses it for the zero-fetch far mode and for colour map + detail.
-- **Runtime** (`core/TextureSet.ts`): `getTextureSet(id)`, `loadTextureSetAsync(id, packing?)` (loads only that packing's textures) and `getTextureSetPackingTextures(id, packing)`.
+- **`averageColor`** (the linear-averaged albedo of the shipped map) is **computed by the asset pipeline's pack/encode step** (new: `devTools/assetPipeline/textures.ts`, recorded in the lock entry, so a cache hit has it). It's stored as generated metadata of the albedo texture (`__averageColor`, a field of `GeneratedAssetFieldsSchema` set in `devTools/assetPipeline/generated.ts`) and exposed through `getTextureSet(id).averageColor`. An optional `averageColor` in the set JSON overrides it. The source JSON is never written back. p305 uses it for the zero-fetch far mode and for colour map + detail.
+- **Runtime** (`kernel/assets/TextureSet.ts`, on `aekasha`): `getTextureSet(id)`, `loadTextureSetAsync(id, packing?)` (loads only that packing's textures) and `getTextureSetPackingTextures(id, packing)`.
+- **SBP:** nothing registers at load. The resolvers (D1's, D4's) are the only part every build would carry once the kernel's install registers them; Phase 1 measures them with `yarn sbp` and, if they show in the kernel's group, makes texture sets an opt-in feature (`features/textureSets/` with `TextureSet.ts`, since the kernel imports no feature code; its install registering the resolvers through its `FeatureContext`, a `FeatureSchemaPart` for the scene's `textureSets` so the scene's feature manifest names it; `src/_engine/kernel/init/CLAUDE.md`'s Engine features).
 - **Ownership:** texture sets are owned and released like other assets. A set is plain data; its textures are what get released.
-- **Scenes:** the scene schema gets an optional `textureSets: string[]` for code-only use. D6 of p302 adds sets referenced by materials automatically.
+- **Scenes:** the scene schema (`schemas/SceneSchema.ts`) gets an optional `textureSets: string[]` for code-only use, resolved in the gather's scene pass (`devTools/gather/sceneAssets.ts`) into the sets' packing textures. p302 D6 adds sets referenced by materials automatically.
 
 ### D2 — Packings (binding conventions)
 
@@ -95,12 +98,12 @@ This plan delivers:
 - **LITE** reconstructs N.z = √(1 − x² − y²).
 - **MINIMAL** gets its normal from screen-space height derivatives (a bump from `dFdx/dFdy`, no extra fetch) or uses a flat normal, per material option.
 - **Height** is remapped per set to the full 0..1 range when packing. The real relief is `heightScale`.
-- **Missing AO** (the Ice and Concrete034 sources have none) is derived when packing as a **cavity term** from height: `ao = 1 − k·max(0, blur(height, r) − height)`. Constant 1 is the fallback. This is a pack-recipe option, not a code path at runtime.
+- **Missing AO** (the Ice and Concrete034 sources have none) is derived when packing as a **cavity term** from height: `ao = 1 − k·max(0, blur(height, r) − height)`. Constant 1 is the fallback. This is a new pack-recipe option (`TexturePackSchema`'s channel source, `devTools/assetPipeline/pack.ts`), not a code path at runtime.
 - **AO into albedo** (LITE, MINIMAL), with `aoStrength` applied at pack time:
   - **Why:** it saves the AO fetch (and in LITE, all of ORM) per layer, per anti-tiling tap, per projection, which is the biggest multiplier in p301 §6. Pebble-scale crevice AO looks the same whether it darkens all light or only indirect light.
   - **Cost:**
     - AO now darkens direct sunlight too. That's wrong for large-scale occlusion: never bake valley- or rock-scale AO into a tiling layer (that belongs in vertex AO or a colour map, p306/p305).
-    - It stacks with screen-space GTAO (`app/postFx/ambientOcclusion.tsl.ts`), so p305 lowers the material's AO influence when the layer's AO is baked (`docs/analysis/ambient-occlusion-options.md` rule: combine with `min()` or split by scale).
+    - It stacks with screen-space GTAO (the app's `src/app/postFx/ambientOcclusion.tsl.ts`, a `postFx()` pass), so p305 lowers the material's AO influence when the layer's AO is baked (`docs/analysis/ambient-occlusion-options.md` rule: combine with `min()` or split by scale).
 - **Metalness** is constant 0 for terrain. FULL keeps the channel for glTF compatibility, since structures may use it.
 - **Mipmaps:** all mip levels are generated at encode time (p300). Height and roughness in alpha are mipmapped as linear data; sRGB applies to RGB only.
 
@@ -122,7 +125,7 @@ The LITE `albedoRough` of `sand01`:
     }
   },
   "optimize": { "profile": "terrainLayer", "slot": "baseColor" },
-  "texOpts": { "wrapS": "REPEAT", "wrapT": "REPEAT", "colorSpace": "SRGB", "anisotropy": "MAX" }
+  "texOpts": { "wrapS": "REPEAT", "wrapT": "REPEAT", "colorSpace": "srgb", "anisotropy": "MAX" }
 }
 ```
 
@@ -131,18 +134,18 @@ The LITE `albedoRough` of `sand01`:
 
 ### D4 — Layer arrays
 
-**`buildTextureSetArray({ id, sets: string[], packing }): TextureSetArray`**, in `core/TextureSet.ts`, a thin layer over p299's `buildTextureArray` (p299 D1 owns the assembly: KTX2 per-mip concatenation, the uncompressed fallback, format validation, the optional GPU assembly spike, ref counting and layer swaps):
+**`buildTextureSetArray({ id, sets: string[], packing, swappable? }): TextureSetArray`**, in `kernel/assets/TextureSet.ts`, a thin layer over p299's `buildTextureArray` (p299 D1 owns the assembly: KTX2 per-mip concatenation, the uncompressed fallback, format validation and layer swaps; its Phase 0 rejected GPU assembly):
 
 - Returns one array texture per slot of the packing (2 for LITE): one `buildTextureArray` call per slot, with `members` = that slot's texture id of each set. Layer `i` = `sets[i]`.
 - A per-layer uniform array holds `physicalSize`, `heightScale` and the surface defaults.
 - **Requirements** (checked by p299 D1, errors name the set): all sets have the packing; every slot has the same resolution and mip count; the transcoded format is the same, which holds when every slot was encoded with the same codec.
-- **Runtime assembly, not p299's build-time arrays**, so the debug tab and p310's gallery can swap a member: `setTextureSetArrayLayer(arrayId, i, setId)` calls p299's `setTextureArrayLayer` per slot.
+- **Runtime assembly, not p299's build-time arrays**, so the debug tab and p310's gallery can swap a member: `setTextureSetArrayLayer(arrayId, i, setId)` calls p299's `setTextureArrayLayer` per slot. Only a `swappable` array can (it keeps its CPU copy, about its VRAM size again in memory); a shipped material's array isn't, so its copy is dropped after the upload.
 - **Resolver** (p302 D4): `{ "textureSetArray": ["sand01", "grass01", "rocks01", "cliffs01"], "packing": "LITE" }` → a bundle `{ arrays: { albedoRough, normalHeight }, layerCount, layerParams }`. Its `dependencies` list every member texture.
-- Array ids are derived from the member list and packing, so two materials with the same palette share one array. The array is ref counted like textures.
+- Array ids are derived from the member list and packing, so two materials with the same palette share one array (`buildTextureArray`'s `arr:<hash>` does this for a non-swappable array; a swappable one gets a unique id). The array is owned and released like any registered texture.
 
 ### D5 — The fetch tool
 
-- **`devTools/fetchTextureSources.ts`** (`yarn fetchTextureSources [--only <setId>] [--force]`). It reads every `src/**/textureSets/*/source.json`:
+- **`devTools/fetchTextureSources.ts`** (`yarn fetchTextureSources [--only <setId>] [--force]`; a dev tool by the root `CLAUDE.md`'s coding standards: the repo's folders from `devTools/paths.ts`, `sha256` and atomic writes from `devTools/files.ts`, `main()` only when run as the script, promises named `*Async`). It reads every `source.json` in a texture set folder (`src/toolkit/textures/*/`, and an app set's folder):
 
 ```json
 {
@@ -165,12 +168,12 @@ The LITE `albedoRough` of `sand01`:
 - **Poly Haven:** `https://api.polyhaven.com/files/<assetId>` → per-map URLs (`Diffuse`, `nor_gl`, `Rough`, `AO`, `Displacement`; `arm` is a ready-made AO/rough/metal pack).
 - **Behaviour:**
   - Downloads are cached in `.cache/texture-downloads/` (gitignored).
-  - Maps are matched by file-name suffix, extracted with `fflate` (small pure-JS unzip, dev dependency) and written to `<setDir>/source/raw/<map>.<ext>`.
-  - `src/**/textureSets/*/source/` is gitignored.
+  - Maps are matched by file-name suffix, extracted with a zip reader added to `devTools/assetPipeline/archives.ts` (Node's `zlib.inflateRawSync`, as its `ar` / `tar` / `cpio` / `xar` readers: no new dependency; `fflate` only if that proves bigger) and written to `<setDir>/source/raw/<map>.<ext>`.
+  - A set's `source/raw/` (the fetched maps) is gitignored, a pattern for the set folders only: the other assets' `source/` folders are committed, and so are a set's own sources beside `raw/` (p304's exported PNGs).
   - A missing optional map (`ao`) is logged as such, never as an error.
 - **Download size:** use `2K-JPG` by default (≈ 20–40 MB per zip, ≈ 0.5 GB for all 16 sets, one-off and cached). `2K-PNG` (≈ 55–75 MB) is worth it only for a set whose normal map shows JPEG blocking at 1K, typically cliffs.
 - **Why 2K sources for 1K output:** downsampling averages out JPEG artifacts and gives clean mips. 4K is unnecessary for tiling layers. 2K output is kept for an optional `terrainLayerHero` profile (cliffs, first-person close-ups).
-- **Credits:** `src/toolkit/terrain/CREDITS.md` is generated from the `source.json` files (asset, provider, licence, page). CC0 requires no attribution, but the record keeps provenance clear.
+- **Credits:** `src/toolkit/textures/CREDITS.md` is generated from the `source.json` files (asset, provider, licence, page), written only when it changed (`writeFileIfChanged`). CC0 requires no attribution, but the record keeps provenance clear. The layout check needs a rule for it (`devTools/layout/layoutRules.ts`' toolkit rules: `textures/` has only its per-id folders).
 
 ### D6 — The library (toolkit, 16 sets)
 
@@ -206,22 +209,22 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
 
 ### D7 — `textureSetSurface` toolkit material (baseline and preview)
 
-- `src/toolkit/terrain/materials/textureSetSurface.tsl.ts`: a `setup` TSL material that renders **one** texture set with world-space tiling (`positionWorld.xz / physicalSize`), any packing, and `surface` uniforms. No anti-tiling, no splat.
+- `src/toolkit/materials/textureSetSurface/` (`textureSetSurface.material.json`, `textureSetSurface.tsl.ts`): a `setup` TSL material that renders **one** texture set with world-space tiling (`positionWorld.xz / physicalSize`), any packing, and `surface` uniforms. No anti-tiling, no splat.
 - It is the baseline every technique in p305 is compared against, the gallery's isolated-block material and the simplest structure material.
-- **Decode helper** `src/toolkit/terrain/nodes/sampleTextureSet.ts`: `sampleTextureSet(bundle, uv, { packing, grad? }) → { albedo, normalTS, roughness, ao, height }`. It is shared by p305 (array and non-array variants).
+- **Decode helper** `src/toolkit/terrain/nodes/SampleTextureSet.ts` (the toolkit's modules are PascalCase), on `aekasha/toolkit/terrain`: `sampleTextureSet(bundle, uv, { packing, grad? }) → { albedo, normalTS, roughness, ao, height }`. It is shared by p305 (array and non-array variants); the material's TSL file imports it through the entry (a toolkit category imports another only so).
 
 ### D8 — `terrainGallery` skeleton (app)
 
-- `src/app/terrainGallery.scene.json` + `terrainGallery.ts`.
+- `src/app/scenes/terrainGallery/` (`terrainGallery.scene.json`, `terrainGallery.ts`, the scene's own asset JSONs; p609's scene folder rule). Its sky box needs the `skyBox()` feature (the scene's feature manifest names it).
 - **Blocks:** a 4 × 4 grid of 12 × 12 m blocks with 4 m gaps, one per set, all from `generateTerrain`:
   - 48 segments, gentle 0.4 m noise;
   - one edge raised into a 35° ramp, so normals and later triplanar can be judged;
   - a distinct seed per block.
-- **Look:** sky box `dayNight`, paused at 10:00. `cliffs*` blocks get a vertical 6 m wall piece.
-- **Scene-scoped debug tab** `app/_dbg__terrainGallery.ts` (pattern: `_dbg__spaceDemo.ts`):
-  - a list of sets, where clicking one flies the camera to it;
-  - a packing selector (for the 3 sets that ship all packings);
-  - a "1 m checker" toggle for checking `physicalSize`.
+- **Look:** sky box `dayNight` (`src/app/skyboxes/dayNight.skybox.json`), paused at 10:00. `cliffs*` blocks get a vertical 6 m wall piece.
+- **Scene-scoped debug tab** `src/app/scenes/terrainGallery/_dbg__terrainGallery.ts` (pattern: `scenes/space/_dbg__spaceDemo.ts` and the Hub's debug tab example, `src/app/examples/debugTab/`): a `createDebuggerTab` from `aekasha/debug`, its pane items the UI kit's fields (compact density):
+  - a list of sets (`debuggerListCMP`), where clicking one flies the camera to it;
+  - a packing selector (a segmented control, for the 3 sets that ship all packings);
+  - a "1 m checker" switch for checking `physicalSize`.
 - p305 adds the technique rows, p307 the wet controls, and p310 the camera presets and measurements.
 
 ---
@@ -230,16 +233,18 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
 
 ### Phase 1 — Asset type and runtime (D1, D2)
 
-1. Schema, suffix in `gatherAppData`, generated section, JSON Schema.
-2. `core/TextureSet.ts`, ownership, scene `textureSets`.
-3. Resolver `{ "textureSet": id }` with dependencies.
+1. Schema (both documentation layers), the gather's suffix, registry, scene list and generated section, JSON Schema, the runtime-type pair, `gatheredJson.test.ts` passing on the repo's JSONs.
+2. `kernel/assets/TextureSet.ts` (summaries and `@example`s: it's on `aekasha`), ownership, scene `textureSets`; unit tests next to it.
+3. Resolver `{ "textureSet": id }` with dependencies (its dependency function in a module the gather may import, p302 D6).
+4. `yarn sbp`: the kernel's group against its budget; the feature decision of D1's SBP note.
+5. The Assets tab (`kernel/assets/debug/`): a texture's info window names the set and slot it belongs to.
 
 **Exit:** a hand-made set (PNG sources, no pipeline) loads through a material input and is released on scene exit.
 
 ### Phase 2 — Fetch tool and recipes (D3, D5)
 
-1. `fetchTextureSources.ts`, `fflate`, gitignore entries, `CREDITS.md` generation.
-2. Pack recipe templates (FULL/LITE/MINIMAL), cavity-AO derivation.
+1. `fetchTextureSources.ts` (and its `package.json` script), the zip reader in `archives.ts` (unit-tested like its other readers, `archives.test.ts`), gitignore entries, `CREDITS.md` generation.
+2. Pack recipe templates (FULL/LITE/MINIMAL), cavity-AO derivation, `averageColor` (D1).
 
 **Exit:** `yarn fetchTextureSources --only sand01 && yarn assets --only 'sand01*'` produces the three packings as KTX2.
 
@@ -261,12 +266,13 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
 
 ### Phase 5 — Baseline material and gallery skeleton (D7, D8)
 
-1. `textureSetSurface` + `sampleTextureSet`.
-2. `terrainGallery` scene and tab.
+1. The toolkit's `terrain` category (p301 §2; the first code in it): its entry `src/toolkit/terrain/index.ts` (named `export … from` lines only), `TOOLKIT_CATEGORIES` in `eslint.config.js`, the alias in `devTools/aliases.ts` and `tsconfig.json`'s `paths` (`aliases.test.ts` checks the copy), its folders' rules in `devTools/layout/layoutRules.ts`' `getToolkitRules`, a row in the Hub's entry table (`hub/pages/documentation/intro.md`), the API baseline (`yarn verify:baselines --update`).
+2. `textureSetSurface` + `sampleTextureSet` (summary and `@example`, a `*.test.ts` for what runs in Node).
+3. `terrainGallery` scene and tab; a `devTools/verify/scenes.config.ts` entry if the scene runner needs settings for it.
 
 **Exit:** 16 blocks render with correct scale and orientation (no mirrored normals, sun-lit relief matches light direction), on both backends.
 
-### Phase 6 — Handbook and versioning
+### Phase 6 — Handbook and Hub
 
 1. **`docs/techniques/README.md`:** index table (p301 §5), the page template, the "which technique for my game" matrix skeleton (rows: game type/camera; columns: recommended technique, packing, anti-tiling, projection), and a "start here" path.
 2. **`docs/techniques/texture-sets.md`** (page template), covering:
@@ -279,8 +285,14 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
    - making your own set in Blender: baking a tileable PBR set from a sculpted or procedural Blender material (Cycles bake of colour, normal, roughness and AO to a 2K image on a plane, with seam checking via a 2×2 tiled preview);
    - adding a set to the library (folder, JSON, fetch or commit sources, `yarn assets`);
    - KTX2 settings per slot.
-3. `readme.md` Features: "Texture sets" (engine) and "Terrain texture library" (toolkit).
-4. Versions: engine minor (asset type, arrays), toolkit minor (library, baseline material), app minor (gallery); `CHANGELOG.md`.
+3. The Hub (p301 §5): the terrain feature page (`hub/pages/features/terrain/`, created here) with texture sets, the library and the baseline material, linking the two handbook pages with `repo:` links; the scenes-and-assets page's asset type table gets `*.textureSet.json` (`hub/pages/features/scenes-and-assets/guide.md`); the toolkit page (`hub/pages/features/toolkit/guide.md`) the `terrain` category and `textureSetSurface`; ask whether `terrainGallery` gets a Hub scene block. `yarn hub:build`.
+4. `readme.md` Features: "Texture sets" (engine) and "Terrain texture library" (toolkit); the new command. The root `CLAUDE.md`: `yarn fetchTextureSources` in Commands, the toolkit's `terrain` category and `textures/` content in the Three-folder split; `devTools/gather/CLAUDE.md` the new suffix; `devTools/assetPipeline/CLAUDE.md` the fetch tool, the cavity AO and `averageColor`.
+
+### Phase 7 — Versioning
+
+1. Versions: engine minor (asset type, arrays), toolkit minor (library, baseline material, the `terrain` entry), app minor (gallery); `CHANGELOG.md`, with a Project section for the fetch tool.
+2. Mark the plan done (`docs/plans/CLAUDE.md`).
+
 
 ---
 
@@ -291,6 +303,7 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
 | UASTC transcodes to different GPU formats on different devices, so an array can mix formats if members use different codecs | One codec per packing slot (profile), validated at assembly                                                                                    |
 | CPU mip data is not retained after upload                                                                                   | Members are fetched for assembly and never uploaded on their own; assembly happens before any material uses them                               |
 | Committed outputs make the repo heavy (~40 MB)                                                                              | LITE only by default; FULL and MINIMAL only for 3 sets; revisit LFS (p301 Open questions)                                                      |
+| A resized source doesn't encode byte for byte the same on another machine (`devTools/assetPipeline/CLAUDE.md`), and every set is resized 2K → 1K | The lock keys are the inputs', so a clone takes the committed outputs from the lock; re-encode only on a cache miss, and compare outputs on one machine |
 | Provider ids or download URL patterns change                                                                                | `source.json` records the page URL; the fetch tool fails per set with a clear message; committed outputs keep the repo working without a fetch |
 | Photo-scanned layers have baked-in lighting or strong large-scale features that repeat visibly                              | Choose by eye (Phase 4); p305's anti-tiling and macro variation                                                                                |
 | Sets differ in brightness, so a blend shows seams in tone                                                                   | `surface.tint` per set and per layer; gallery side-by-side tuning                                                                              |

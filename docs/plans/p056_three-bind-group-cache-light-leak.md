@@ -7,7 +7,8 @@ Category: Bug fix
 
 Found while verifying the (implemented, since-removed) p055 debug-camera-helper-leak fix.
 Each `thirdPersonGymScene` visit leaves ~16 `_BufferGeometry` objects in the JS heap for good,
-in every mode:
+in every mode (measured in One More Scene, a nearly empty scene since removed: cycle the Gym
+with any light scene now, eg. `testDebugScene`, and take its counts as the new baseline):
 
 | Mode | `_BufferGeometry` in One More Scene after Gym visit 1 / 2 / 4 |
 | --- | --- |
@@ -60,20 +61,22 @@ NodeBuilder.js module scope: _bindingGroupsCache (WeakMap)
    the path above.
    - Still unfixed on `dev` (r187dev, `ce0fdf2`, 2026-09-29). Reported upstream as
      [mrdoob/three.js#34705](https://github.com/mrdoob/three.js/issues/34705), with the standalone
-     page as a CodePen. Related, closed without a fix: #33912 (same symptom, no repro) and #33676
+     page as a CodePen (the report's text: `docs/issues/three-bind-group-cache-light-leak.md`). Related, closed without a fix: #33912 (same symptom, no repro) and #33676
      (`NodeManager.nodeBuilderCache`, merged into #32409).
    - Fix PR: [mrdoob/three.js#34707](https://github.com/mrdoob/three.js/pull/34707) (open, not
      merged as of 2026-09-29). It moves the cache into `Bindings` and deletes an entry when its
      bind group is destroyed. The standalone page at the PR commit `aec7fcc` (WebGL2 backend)
      collected 20 / 20 lights, and 19 / 20 with shadows; the last one is held through the latest
      shadow render's render list, bounded to one light. Once it ships in a release, this plan
-     becomes a Three upgrade plus the Verification checks below (Gym ↔ One More Scene cycle).
+     becomes a Three upgrade plus the Verification checks below (the Gym ↔ light scene cycle).
+     The repo is on three 0.186.1 (`package.json`): re-check the PR's state first.
 2. **Reset the render contexts on scene leave.** `renderer._renderContexts.dispose()` drops the
    cached `RenderContext`s, so their `_bindingGroupsCache` entries (and the `.camera` reference)
    can be collected. It's a private field, and other caches are keyed by `RenderContext`
    (render objects, bindings), so the first frames of the next scene rebuild them. Measure that
    cost, and check that pipelines/shaders are not recompiled. It would live next to the scene-leave
-   asset sweep in `SceneLoader.ts`, not in `_engine` code that runs every frame.
+   asset sweep (`releaseSceneOwnedAssets`, `kernel/assets/SceneAssetRelease.ts`, called from
+   `kernel/scene/SceneLoader.ts`), not in engine code that runs every frame.
    - **Not enough on its own** (tested in the standalone page, Three 0.186.1): with
      `_renderContexts.dispose()` after every light swap, all 20 removed lights stayed alive. The
      old `RenderContext`s are still referenced by the render objects of meshes that stay in the
@@ -90,17 +93,19 @@ NodeBuilder.js module scope: _bindingGroupsCache (WeakMap)
 - Cycle script: a Playwright script driven by `.claude/skills/run-aekasha-js` opens
   `http://localhost:8080/?isDebug=true`, waits for the first scene, then in the page imports the
   engine modules at the exact URLs the app loaded them from (after HMR Vite serves them with a
-  `?t=` query, so a plain `import('/_engine/core/SceneLoader.ts')` gets a second module instance):
+  `?t=` query, so a plain `import('/_engine/kernel/scene/SceneLoader.ts')` gets a second module
+  instance):
 
   ```js
   const url = (n) => performance.getEntriesByType('resource').map((e) => e.name)
     .find((x) => new URL(x).pathname === n) || n;
-  const L = await import(url('/_engine/core/SceneLoader.ts'));
+  const L = await import(url('/_engine/kernel/scene/SceneLoader.ts'));
   ```
 
   It calls `loadScene`, waits while `isCurrentlyLoading()`, then 1.5 s, reads
-  `getRenderer().info.memory`, and repeats `thirdPersonGymScene` → `oneMoreScene`.
-- Heap snapshots: CDP `HeapProfiler.takeHeapSnapshot` in One More Scene after visits 1, 2 and 4.
+  `getRenderer().info.memory` (`kernel/render/Renderer.ts`), and repeats `thirdPersonGymScene` →
+  the light scene.
+- Heap snapshots: CDP `HeapProfiler.takeHeapSnapshot` in the light scene after visits 1, 2 and 4.
   Count `_BufferGeometry`, and diff node ids against the first snapshot to trace retainers of the
   geometries left from earlier visits.
 - Standalone page (no engine; also the upstream repro): `WebGPURenderer` with a persistent ground
@@ -119,6 +124,10 @@ NodeBuilder.js module scope: _bindingGroupsCache (WeakMap)
   Promise as truthy. Poll inside `page.evaluate` instead.
 - The `url()` helper's `|| n` fallback imports the bare path, which is a second module instance,
   if it runs before the app has loaded that module. Only import once the resource entry exists.
+- The resource timing buffer holds 250 entries by default, fewer than the dev app's modules, so a
+  late-loaded module (a debug one) is missing from it: call
+  `performance.setResourceTimingBufferSize(100000)` in an init script first, and make `url()`
+  throw unless exactly one entry matches.
 - Heap snapshots taken over CDP include `(Global handles) → DevTools console` roots: whatever
   the page logged is kept alive by the attached session. Skip edges with that name (it's in the
   edge name, not the node name).
@@ -137,7 +146,7 @@ NodeBuilder.js module scope: _bindingGroupsCache (WeakMap)
 
 ## Verification
 
-- `_BufferGeometry` in One More Scene stays flat over 4+ Gym ↔ One More Scene cycles, with and
+- `_BufferGeometry` in the light scene stays flat over 4+ Gym ↔ light scene cycles, with and
   without `?isDebug=true`, and no old `DirectionalLight` or its shadow camera is retained.
 - The Gym renders the same (shadows included), with no new WebGPU warnings, and the first frame
   after a scene switch costs no more than before (no shader recompiles).

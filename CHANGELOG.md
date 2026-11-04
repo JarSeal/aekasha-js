@@ -6,7 +6,7 @@ Earlier releases are only recorded in the git history.
 
 ## Unreleased — engine-6
 
-The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806, p807 and p808.
+Engine 6.0.0's entry, not released yet. Its branches merge into `main` and add their sections here with no version bump (no `engine-6` integration branch was made). The release is p622's branch, which adds the 5.x removals, dates this entry, bumps the engine to 6.0.0 with a new codename, the app a minor, and the toolkit at least a minor. Until then `package.json` keeps its versions. So far it holds p806, p807 and p808.
 
 The debugger migration (p806, the debugger UI overhaul epic p800's sixth child) rebuilds the debugger on the UI kit. The drawer, the tab host, the panes, the edit windows, the profiler window's shell, the editor drawer, the material editor, the on-screen tools and the dialogs are on the kit's components and tokens, in the compact density, dark by default with a theme setting. Tweakpane leaves `package.json`. A tab keeps working unless it uses a binding's Tweakpane side, and what a 5.x debugger saved loads in 6.0. The Hub's migration guide gets an "Engine 5 → 6" section.
 
@@ -107,7 +107,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - `createViewport` called the debugger's GPU memory registration unguarded, so an app that made a viewport shipped `debug/GPUMemory.ts` and `debug/Profiler.ts` in its production build (p808: the game HUD's minimap made `yarn verify:baselines` fail on it).
 - A field's `reset()`, and the form's, wrote nothing when the field hadn't read its value since the app changed it (a settings tab never opened). It reads the bound value first now (p808).
 
-### Toolkit (unreleased: a minor at the `engine-6` merge)
+### Toolkit (unreleased: a minor at the 6.0.0 release)
 
 **Added**
 
@@ -117,7 +117,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 
 - p808: `createFollowObjectCameraRig` with `getMouseMoveInput` starts its orbit from `offset`'s direction, its pitch kept inside the orbit's limits. Before, it started 60° from straight up whatever the offset. The default offset starts at 63°.
 
-### App (unreleased: a minor at the `engine-6` merge)
+### App (unreleased: a minor at the 6.0.0 release)
 
 **Added**
 

@@ -1,4 +1,4 @@
-Status: research done — epic, not-implemented
+Status: epic, in progress | Tiers 0-1 and p351 implemented; p353 and p354 open
 Category: Rendering, LOD
 Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, p353_macro-streaming-grid.md, p354_gpu-driven-culling.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)
@@ -8,6 +8,15 @@ Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its p
 How Ækasha does level of detail for large worlds. The research is done: this file holds the
 findings and decisions, and the work is split into the child plans listed in §8. The original
 rough draft was checked against the code on 2026-10-02; what changed is recorded in §4.
+
+**Where it stands (2026-11-04):** Tiers 0 and 1 and p351 (Tier 2) are implemented, as features
+an app opts into (`lod()`, `spatial()`, `instancing()`, `lines()`, with `physics()`'s tiers). What
+they built is documented next to the code: `src/_engine/features/lod/CLAUDE.md` (chains,
+selection, cross-fades, the `lodShowcase` scene), `features/lod/impostors/CLAUDE.md`,
+`features/spatial/CLAUDE.md`, `features/instancing/CLAUDE.md`, `features/lines/CLAUDE.md`,
+`features/physics/CLAUDE.md` (simulation tiers and the tier policy), `src/_engine/debug/CLAUDE.md`
+(GPU memory) and the Hub's LOD and Spatial index feature pages (`hub/pages/features/lod/`,
+`spatial-index/`). Open: p353 (streaming) and p354 (GPU culling, a stub), then Tier 4's research.
 
 The short version: `THREE.LOD` is the wrong foundation. LOD is a _selection decision made by an
 ECS system_ that feeds the instancing/batching layer. Large worlds also need several spatial
@@ -21,11 +30,11 @@ tiers, which are a stability ceiling rather than a frame-rate one.
 Decide how Ækasha does LOD, given what is already true of the engine:
 
 1. The target is **large worlds**, so per-object per-frame CPU work does not scale.
-2. The renderer is `THREE.WebGPURenderer` (`core/Renderer.ts:56`, three `0.186.1`), with a WebGL2
+2. The renderer is `THREE.WebGPURenderer` (`kernel/render/Renderer.ts`, three `0.186.1`), with a WebGL2
    fallback (`forceWebGL`). Some off-the-shelf options are WebGL-only (§7.1), and anything
    GPU-driven needs a CPU fallback for the WebGL2 backend.
-3. A `SpatialGrid` (`core/Spatial/SpatialGrid.ts`) and an `InstancedMeshPool`
-   (`toolkit/ecs/InstancedMeshPool.ts`, moved to `core/Instancing/` by p348 Phase 3) exist and are reused, not paralleled.
+3. A `SpatialGrid` (`features/spatial/SpatialGrid.ts`) and an `InstancedMeshPool`
+   (`features/instancing/InstancedMeshPool.ts`) exist and are reused, not paralleled.
 
 Secondary goal: decide whether "physics LOD" is worth building (§6). It is.
 
@@ -41,8 +50,8 @@ all: no batching, no streaming, no fading, no screen-space metric.
   collapse into one draw.
 - **It duplicates ECS state.** Position lives in `TRANSFORM`, and visibility is already reconciled
   from three independent reasons (`DISABLED`, `TAG_FRUSTUM_CULLED`, `TAG_OBJECT_CULLED`) by
-  `reconcileObject3DVisibility` (`ECS/ECSCoreSystems.ts:22`). A parallel `.visible` toggle fights
-  it.
+  `reconcileObject3DVisibility` (`kernel/ecs/ECSCoreSystems.ts`; p348 added `TAG_LOD_CULLED` as a
+  fourth). A parallel `.visible` toggle fights it.
 
 **Decision:** LOD selection is an ECS system writing per-entity level state, and the rendering
 layer applies it (p348). `THREE.LOD` is not used.
@@ -77,6 +86,14 @@ domain is still useful _inside_ streaming: it answers "which live entities are i
 a cell unloads.
 
 ## 4. Findings checked against the code (2026-10-02)
+
+A record of the code as the children found it, before they ran; most of what it lists is fixed by
+the plan it names. Its paths are the layout of the time (`core/`, `ECS/`, `workers/`, `toolkit/`):
+since the engine folder restructure (p608) the same modules are in `kernel/` (`ecs/`, `render/`,
+`assets/`, `mesh/`, `scene/`, `loop/`) and `features/` (`spatial/`, `instancing/`, `lod/`,
+`physics/`), `MeshManager.ts` is `kernel/mesh/Mesh.ts`, `AppECSRegistry.ts`' order table is
+`APP_RENDER_SYNC_ORDER` in `kernel/loop/SystemStages.ts`, and `PhysicsManager.ts` is split over
+`features/physics/` (`features/physics/CLAUDE.md`).
 
 Corrections to the original draft:
 
@@ -127,9 +144,12 @@ Questions the original draft marked `[UNVERIFIED]`, now answered:
   plus `total`, and `info.render` has per-frame `drawCalls` and `triangles`. The Assets debug tab
   already lists per-asset byte sizes (`_dbg__AssetStats.ts`). p345 is mostly wiring.
 
-Still open: whether `@three.ez/batched-mesh-extensions`' LOD path works under `WebGPURenderer`
-(§7.1). It is a spike inside p348, and p348 does not depend on it: its baseline is one
-`InstancedMesh` per asset and level.
+Then open, answered since: whether `@three.ez/batched-mesh-extensions`' LOD path works under
+`WebGPURenderer` (§7.1). p348's spike (its §4.4) found 0.0.12's `addGeometryLOD` broken on WebGPU
+r186 (its `onBeforeRender` never sets `_multiDrawBytesPerElement`) and, once fixed, no faster than
+the instanced LOD pool for one geometry, with a draw per instance instead of one per level. LOD'd
+instances stay on `createInstancedLodPool` (`features/lod/CLAUDE.md`); p375 owns any wider
+`BatchedMesh` use.
 
 ## 5. Texture and memory findings
 
@@ -220,12 +240,14 @@ world. Cluster-level LOD stays research (§8, Tier 4).
   `BatchedMesh`, plus BVH frustum culling and raycasting (threejs.org `webgl_batch_lod_bvh`:
   500k instances, 5 LODs each). Two flags: its per-instance uniforms are documented as
   `WebGLRenderer`-only, and its LODs must share one vertex array. p347's chains share the vertex
-  buffer by design (meshoptimizer only writes new indices), which keeps the option open. Spike in
-  p348.
+  buffer by design (meshoptimizer only writes new indices), which keeps the option open. p348's
+  spike ruled it out for now (§4).
 
 ## 8. Roadmap
 
-Child plans, in the order they should run. Each is independently useful.
+Child plans, in the order they should run. Each is independently useful. Done: every `_DONE_`
+row (2026-11-04); open: p353, p354 and Tier 4. p349 (scene-scoped spatial domains) and p343 (the
+tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 
 | Tier | Plan                                           | What it delivers                                                                                                  | Depends on                               |
 | ---- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
@@ -251,7 +273,7 @@ cheaper than retrofitting.
 ## 9. Open questions and known gaps
 
 1. **Shadow LOD.** Shadow passes draw whatever level the main view selected. A separate shadow
-   level (or no shadow casting for far levels) is a per-level `castShadow` in p348; a real
+   level (or no shadow casting for far levels) is a level's `castShadow` (p348, built); a real
    shadow-specific selection is not planned.
 2. **Terrain LOD** (clipmaps, quadtree, CDLOD) is a separate problem with its own literature. p306's
    power-of-two blocks keep it possible; p348 can switch whole blocks between generated chain
@@ -259,3 +281,18 @@ cheaper than retrofitting.
 3. **Large-world float precision.** Rapier and the transform buffer use 32-bit floats: positions
    jitter a few km from the origin. Origin rebasing would be its own plan (p353 §8, p420).
 4. **Mip streaming** (§5.1) is out of scope.
+
+## 10. Branches and PRs
+
+Written after the rule, from what the children did: each child plan has its own branch from
+`main` and merges into `main` with its own bump; no integration branch, since no two children
+share a major. The open ones:
+
+- **p353:** its own branch (or one per phase: its §10 bumps the engine minor for each phase that
+  adds API, and each bump is a merge to `main`). A PR when its last phase in the branch is done.
+- **p354:** written as a real plan first (it's a stub); then its own branch into `main`.
+- **Tier 4:** a spike, no PR unless it leaves code.
+
+While `main` carries the unreleased `engine-6` entry (`CHANGELOG.md`, p622), a child's PR says
+whether its changelog joins that entry or bumps a 5.x minor (p807 and p808 joined it with no
+bump).

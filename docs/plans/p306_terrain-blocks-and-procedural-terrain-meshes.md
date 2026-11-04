@@ -24,27 +24,28 @@ The geometry side of the epic. It covers:
 
 ## Context (grounded)
 
-- **`toolkit/geometry/generateTerrain.ts`:**
-  - `generateTerrain({ width, depth, widthSegments, depthSegments, maxHeight, noiseOctaves?, seed? })` builds a centred, indexed grid. Vertex (row, col) sits at `x = col/wS·width − width/2`, `z = row/dS·depth − depth/2` (`:81-99`).
-  - Seeded `SimplexNoise` sampled in **block-local** coordinates.
+- **`toolkit/geometry/generate/Terrain.ts`** (`aekasha/toolkit/geometry`):
+  - `generateTerrain({ width, depth, widthSegments, depthSegments, maxHeight, noiseOctaves?, seed?, heightModifier? })` builds a centred, indexed grid. Vertex (row, col) sits at `x = col/wS·width − width/2`, `z = row/dS·depth − depth/2`. The segment counts are rounded and at least 1, and returned as used.
+  - Seeded `SimplexNoise` (`createSeededRandom` from `aekasha`) sampled in **block-local** coordinates. `heightModifier(x, z, h)` reshapes the noise height per vertex before the geometry is built (the same local x, z).
   - Attributes: `position`, `uv` (0..1), `normal` from `computeVertexNormals()`. No colour, no tangents.
-  - Returns `{ geometry, getHeightAt, heights (row-major, X fastest) }`.
-  - Used by `app/largeWorld.ts:39-55`: 200 × 200, 150 segments, flat PHONG material, **no collider** (`:23-31`).
-  - p066 (current branch) proposes a `heightModifier` option (§2.7). Reuse it if it has landed by the time this plan runs.
-- **Imports:**
-  - `importAssetAsync` registers one geometry per primitive as `${id}/${nodeName}` and returns a manifest of node transforms and parsed Blender custom props (`core/Import/CustomProps.ts`).
-  - `spawnImportedAsset(manifest, { material, meshProps, physicsParams, filter, entityOpts })` (`SpawnImported.ts:236-292`) creates mesh entities and physics from custom props. A `material` string resolves to a registered material.
+  - Returns `{ geometry, width, depth, widthSegments, depthSegments, getHeightAt, heights }`. `getHeightAt` follows the mesh's triangles (each cell split along its b–c diagonal), and `heights` is **row-major** (X fastest), while the `HEIGHTFIELD` collider reads column-major (its `@remarks`).
+  - Used by `src/app/scenes/largeWorld/largeWorld.ts`' `createTerrain`: 200 × 200, 150 segments, a PHONG material, **no collider**. `topDownTestScene` gives its terrain a `TRIMESH` of the geometry, which matches the mesh exactly.
+- **Imports** (`src/_engine/kernel/assets/import/`):
+  - `importAssetAsync` (`ImportRegistry.ts`) registers one geometry per primitive as `${id}/${nodeName}` and returns a manifest of node transforms and parsed Blender custom props (`CustomProps.ts`).
+  - `spawnImportedAsset(manifestOrId, { transform, material, castShadow, receiveShadow, meshProps, physicsParams, filter, entityOpts })` (`SpawnImported.ts`, on `aekasha`) creates mesh entities, and physics from custom props through the `physics()` feature's import extension (`registerImportExtension`; without `physics()` the physics nodes spawn no bodies, with a warning). A `material` string resolves to a registered material.
   - `GeometryTransfer.ts` keeps every attribute (`color`, extra UVs, `_CUSTOM`) through the worker hop.
-- **Custom props** (`CustomProps.ts`): `isPhysObj`, `rigidType`, `colliderType` (including `HEIGHTFIELD` with `nCols`/`nRows`, `TRIMESH`, `CONVEXHULL`), `keepMesh`, `index`, friction etc. Template: `src/_engine/3dModels/customPropTemplates.blend`.
-- **Heightfield extraction** (`core/Import/MeshColliderGeometry.ts:74-129`):
-  - `mergeVertices`;
-  - assumes a square grid when `nrows`/`ncols` are absent;
+- **Custom props** (`CustomProps.ts`): `isPhysObj`, `rigidType`, `colliderType` (including `HEIGHTFIELD` with `nCols`/`nRows`, `TRIMESH`, `CONVEXHULL`), `keepMesh`, `index`, friction etc. Template: `src/_engine/kernel/assets/import/customPropTemplates.blend`.
+- **Heightfield extraction** (`deriveColliderFromGeometry`, `src/_engine/features/physics/import/MeshColliderGeometry.ts`, on `aekasha/physics`; `src/_engine/features/physics/CLAUDE.md`'s imported physics):
+  - `mergeVertices` on a scratch copy (the registered geometry is never changed);
+  - assumes a square grid when `nrows`/`ncols` are absent, and skips the collider with an error when the grid gives no whole number of rows and columns;
   - indexes `heights[i*sizeZ + j] = posY[(sizeZ−1−j)*sizeX + i]` (column-major, Z flipped), i.e. **by vertex order**;
   - `scale = {bboxX, scale.y, bboxZ}`;
-  - refuses Draco.
-  - **Known bug (from p990):** the collider is centred on the node origin, but a mesh whose bbox isn't centred sits ~0.5 units off. Up to ~190 heights near one edge differ from the mesh by ≤ 0.22 units, probably from the vertex order after `mergeVertices`.
-- **Physics:** `createPhysicsEntity({ type: 'HEIGHTFIELD', nrows, ncols, heights, scale }, { rigidType: 'FIXED' }, target)`. Rapier's `HeightFieldData` is column-major (`paramsToShape`'s `HEIGHTFIELD` case, `features/physics/backends/rapier/RapierShapes.ts`, since p614).
-- **Scene loads hold physics stepping** until every `createPhysicsEntity` settles (p101), so blocks spawned in `scene()` are deterministic.
+  - refuses Draco and quantized positions (both reorder the vertices); the asset pipeline keeps a GLB with a `colliderType` node lossless.
+  - **Known bug** (the former p990 item "Heightfield importer mismatches", p125, moved here on 2026-10-02): the collider is centred on the node origin, but a mesh whose bbox isn't centred sits ~0.5 units off. Up to ~190 heights near one edge differ from the mesh by ≤ 0.22 units, probably from the vertex order after `mergeVertices`.
+  - **The layout is undocumented** (`docs/issues/heightfield-grid-layout.md`, p620 N4): `nrows`/`ncols` count cells, so `heights` holds (`nrows` + 1) × (`ncols` + 1) values, not the `nrows` × `ncols` the type's docs say; which axis runs along the rows, the Z flip and the centring are only in the import's loop; no non-square grid has been through it.
+- **Physics:** `createPhysicsEntity({ type: 'HEIGHTFIELD', nrows, ncols, heights, scale }, { rigidType: 'FIXED' }, target)` (`aekasha/physics`). Rapier's `HeightFieldData` is column-major (`paramsToShape`'s `HEIGHTFIELD` case, `features/physics/backends/rapier/RapierShapes.ts`).
+- **Scene loads hold physics stepping** until every `createPhysicsEntity` settles (p101), so blocks spawned in the scene file's `scene()` are deterministic.
+- **Engine layout:** an engine asset type with its own spawner is opt-in code, so it's a feature (`src/_engine/kernel/init/CLAUDE.md`, Engine features): `features/<name>/` with its `<Name>Feature.ts`, its entry, its schema next to it, and its scene field as a `FeatureSchemaPart` (`schemas/FeatureSchemas.ts`, composed for the gatherer in `devTools/gather/engineSchemas.ts`; `devTools/gather/CLAUDE.md`). A feature reaches the kernel only through its `FeatureContext`; the only feature → feature runtime import today is character → physics.
 
 ---
 
@@ -67,17 +68,19 @@ The geometry side of the epic. It covers:
 | Materials       | Not exported; the engine assigns the terrain material                                                                                        | Swappable maps (p301 goal 3)                                                            |
 | Custom props    | `colliderType: "HEIGHTFIELD"`, `nCols`, `nRows`, `isPhysObj: 1`, `rigidType: "FIXED"`, `aekBlockSize`, `aekBlockRes`, `aekGridX`, `aekGridZ` | Collider and metadata travel with the GLB                                               |
 
-### D2 — `*.terrainBlock.json` (engine asset type)
+### D2 — `*.terrainBlock.json` (engine asset type, the `terrain()` feature)
 
 **Why an engine asset type, not just a mesh JSON plus code:**
 
 - A block is the unit a future world streamer loads and unloads. Today it's 3–6 files (GLB, imported asset, splat, colour map, scatter, decals) plus a material variant and a collider. Without a manifest, that unit only exists in scene code.
 - **Alternative considered:** a `*.mesh.json` with `matOverrides` plus custom-prop colliders spawned through `spawnImportedAsset`. It works today but has no single manifest and no generated-geometry path. Rejected for the reasons above.
 - The engine spawner stays generic: generated geometry goes through a generator **registry** that the toolkit fills. The engine never imports toolkit code.
+- **Opt-in (SBP):** the asset type, its spawner and the registry are a feature, `terrain()` (`src/_engine/features/terrain/`: `TerrainFeature.ts`, the entry `index.ts` as `aekasha/terrain` in `devTools/aliases.ts`, `TerrainBlockSchema.ts` next to it and on `aekasha/schemas`, its nested `CLAUDE.md`), listed in the template's `features` after `physics()`. Its `terrainBlocks` scene field is its `FeatureSchemaPart`, so a scene listing blocks names the feature in its manifest (`__features`) and a missing `terrain()` is the boot's error, not a silent no-op. The banner profile budgets the new feature group at 0 by itself (`FEATURE_GROUPS`, `devTools/sbp/CLAUDE.md`).
+- **Its collider goes through `physics()`:** either `requires: ['physics']` and a direct import, as `character()` does (the one feature → feature runtime import today), or `isInstalled('physics')` and a kernel registry like the import extensions, so a block without a collider needs no physics. Decide in Phase 2; an imported block's custom-prop collider already spawns through `spawnImportedAsset`'s physics extension.
 
 ```json
 {
-  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
   "id": "showcaseCoast",
   "geometry": { "importedAsset": "showcaseCoast", "node": "TerrainBlock" },
   "material": "terrainCoast",
@@ -90,17 +93,18 @@ The geometry side of the epic. It covers:
 }
 ```
 
+- **Where a block's files live** (p301 §2): in its scene's folder (`src/app/scenes/<sceneId>/`, eg. `terrainShowcase/blocks/showcaseCoast/`, which the `$schema` path above assumes), or in a shared `src/app/terrainBlocks/` (a new entry in `layoutRules.ts`' `APP_ASSET_FOLDERS`) once a second scene uses the block. The world's terrain material JSON sits with it the same way.
 - **Generated geometry:** `"geometry": { "generator": "noiseTerrain", "params": { "maxHeight": 6, "octaves": [[0.02, 1], [0.08, 0.3]] }, "seed": 11 }`. The generator is looked up in `registerTerrainGenerator(id, fn)`; the toolkit registers `noiseTerrain` and `rulesTerrain`. Seeds combine with `grid.x`/`grid.z` (p301 §7).
-- **`materialInputs`** become a material variant (`getMaterialVariant(material, { inputs })`, p302 D2). Blocks of one biome share a pipeline (p302 Phase 3 verifies).
+- **`materialInputs`** become a material variant (`getMaterialVariant(material, { inputs })`, `kernel/assets/Material.ts`; p302 D2 adds the `inputs` override). Blocks of one biome share a pipeline (p302 Phase 3 verifies).
 - **`collider.type`:**
   - `HEIGHTFIELD` (default; from geometry, D3);
   - `TRIMESH` (overhangs, caves; costlier);
   - `NONE` (background blocks).
 - **`scatter` / `decals`** are ids of p308/p309 assets, spawned with the block and owned by it.
-- **Loading:** the scene schema gets `terrainBlocks: string[]` (asset preloading: geometry, textures through p302's dependency closure). **Spawning stays in scene code** (`await spawnTerrainBlock(id, opts?)`) so this plan doesn't anticipate "physics objects in scene JSON" (a roadmap item). That plan can later make `SceneLoader` spawn listed blocks automatically.
+- **Loading:** the scene schema gets `terrainBlocks: string[]` (the feature's schema part; asset preloading through a `beforeAssets` scene hook: geometry, textures through p302's dependency closure). **Spawning stays in scene code** (`await spawnTerrainBlock(id, opts?)`, re-checking the scene after each `await`) so this plan doesn't anticipate "physics objects in scene JSON" (a roadmap item). That plan can later make the scene load spawn listed blocks automatically.
 - **`spawnTerrainBlock`** returns `{ meshEntityId, physicsEntityId?, scatterIds, decalIds, dispose() }`. Everything is deleted on scene exit like any non-persistent entity.
 
-### D3 — Robust heightfield extraction (`core/Import/MeshColliderGeometry.ts`)
+### D3 — Robust heightfield extraction (`features/physics/import/MeshColliderGeometry.ts`)
 
 - **Index by position, not vertex order.**
   - After `mergeVertices`, compute the bbox and spacing (`dx = sizeX / (ncols − 1)`).
@@ -108,8 +112,9 @@ The geometry side of the epic. It covers:
   - Fill `heights` in Rapier's column-major layout with the same Z flip as today.
   - Validate that every cell got exactly one vertex. Otherwise error with the first offending cell ("not a regular grid: was a vertex moved in X/Z?").
 - **Centre offset:** offset the collider by the bbox centre relative to the node origin (rigid body translation), instead of assuming a centred mesh. Warn when the offset is non-zero for a `terrainBlock` (the convention says centred).
-- **Generated terrain:** `toHeightfieldColliderParams(generated)` converts `generateTerrain`'s row-major heights. The mapping proposed by the p301 survey (`nrows = depthSegments`, `ncols = widthSegments`, transposed, `scale = {width, 1, depth}`) is **unverified**. Verify it with the Physics API tab's collider wireframe over a strongly asymmetric test terrain (a single spike near one corner).
-- **Fixes the former p990 item** "Heightfield importer mismatches" (p125), which moved here on 2026-10-02. Its full text is in the Context section above. Re-check the Gym terrains (`terrainSpiked`, `terrainSmooth`) with the wireframe.
+- **One conversion, on `aekasha/physics`** (`docs/issues/heightfield-grid-layout.md`'s way out): a helper next to the shape params, `toHeightfieldColliderParams({ heights, rows, cols, width, depth })`, takes a **row-major** grid (the terrain's layout, what a generator or an image gives) and returns the `HEIGHTFIELD` params; the import's position-bucketed extraction above fills its row-major grid and calls it, so the layout lives in one place with a test, a non-square grid included. The mapping proposed by the p301 survey (`nrows = depthSegments`, `ncols = widthSegments`, transposed, `scale = {width, 1, depth}`) is **unverified**. Verify it with the Physics API controls tab's collider wireframes over a strongly asymmetric test terrain (a single spike near one corner), then pin it in the helper's test.
+- **Docs:** `HeightFieldData.heights` and the shape param say the count ((`nrows` + 1) × (`ncols` + 1)), which axis the rows run along, the order and the centring, with a two-by-two example; `features/physics/CLAUDE.md`'s imported physics says the same. That closes the issue file (mark it `fixed`).
+- **Fixes the former p990 item** "Heightfield importer mismatches" (p125), which moved here on 2026-10-02. Its full text is in the Context section above. Re-check the Gym terrains (`terrainSpiked`, `terrainSmooth`, `thirdPersonGymScene`) with the wireframes.
 
 ### D4 — `generateTerrain` v2 (toolkit, backwards compatible)
 
@@ -117,17 +122,16 @@ New optional fields on `TerrainOptions`:
 
 | Option                                                                                     | Effect                                                                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `center?: [x, z]`                                                                          | Noise is sampled at **world** coordinates `center + local`, so neighbouring blocks continue each other. Default `[0, 0]` reproduces today's output exactly                                                                                   |
+| `center?: [x, z]`                                                                          | Noise is sampled at **world** coordinates `center + local`, so neighbouring blocks continue each other; `heightModifier` (already an option) gets the same world x, z. Default `[0, 0]` reproduces today's output exactly                   |
 | `heightFn?: (x, z) => number`                                                              | Replaces the octave noise (custom shapes, heightmaps)                                                                                                                                                                                        |
-| `heightModifier?`                                                                          | p066's option, if not yet present                                                                                                                                                                                                            |
 | `normals?: 'GEOMETRY' \| 'HEIGHT_FN'`                                                      | `HEIGHT_FN`: central differences of the height function, including samples beyond the block edge. The result is seamless normals across blocks                                                                                               |
-| `vertexColors?: { layout: 'RGB_AO' \| 'RGBA'; rules?: TerrainRule[]; ao?: HorizonAOOpts }` | CPU evaluation of p305's rules into `COLOR_0` (same `TerrainRule` type and math; one shared pure-TS implementation, `evaluateTerrainRulesCPU`, unit-tested against the TSL output on the gallery's rules block). AO goes into A for `RGB_AO` |
+| `vertexColors?: { layout: 'RGB_AO' \| 'RGBA'; rules?: TerrainRule[]; ao?: HorizonAOOpts }` | CPU evaluation of p305's rules into `COLOR_0` (same `TerrainRule` type and math; one shared pure-TS implementation, `evaluateTerrainRulesCPU`, in `geometry/generate/TerrainRules.ts` with the type, so `terrain` imports both from `aekasha/toolkit/geometry` and never the reverse; unit-tested, and checked against the TSL output on the gallery's rules block). AO goes into A for `RGB_AO` |
 | `ao?: { directions: 8; radius: number; strength: number }`                                 | Horizon-based AO on the height grid (max elevation angle per direction, averaged). Large-scale occlusion (valleys, under cliffs), the part a tiling layer can't carry                                                                        |
-| `collider?: boolean`                                                                       | Also returns `heightfield: ColliderParams` (D3)                                                                                                                                                                                              |
+| `collider?: boolean`                                                                       | Also returns `heightfield: ColliderParams`, from D3's `toHeightfieldColliderParams` (`aekasha/physics`; a pure function, so the geometry chunk carries only it)                                                                             |
 | `skirt?: number`                                                                           | Optional skirt depth (hides cracks between blocks of different resolution later; off by default)                                                                                                                                             |
 
 - **Cost** on the main thread, to be measured in Phase 3: a 257² block with 3 octaves takes ~10–30 ms; horizon AO (8 directions × 16 steps) is ~50–150 ms.
-- **Threaded option:** if a block exceeds 16 ms, Phase 4 moves generation into the asset worker as a new `runAssetTask('TERRAIN_GENERATE', …)` task returning transferable buffers. Rule closures (`heightFn`) can't cross into the worker, so worker generation supports the declarative options only.
+- **Threaded option:** if a block exceeds 16 ms, Phase 4 moves generation off the main thread, returning transferable buffers. The assets worker can't be handed code and `import()`s only the engine's own job modules (`src/_engine/kernel/init/CLAUDE.md`), and the engine never imports the toolkit, so it's a module worker of the toolkit's own (`new Worker(new URL('./TerrainWorker.ts', import.meta.url), { type: 'module' })`, loaded on first use), unless the engine has gained a way to register an app or toolkit job by then. Rule closures (`heightFn`, `heightModifier`) can't cross into a worker, so worker generation supports the declarative options only.
 - **Heightmap import (Phase 4, optional):** `terrainFromHeightmap({ url, format: 'R16' | 'R32F', size, heightRange })` for heightmaps from Gaea, World Machine or World Creator, as a Blender-less path.
   - Raw little-endian files, fetched as an `ArrayBuffer`.
   - 16-bit PNGs aren't used: browsers decode them to 8 bits through `ImageBitmap`.
@@ -173,10 +177,10 @@ A single-file add-on (Blender ≥ 4.2; installable with _Edit → Preferences �
 - **Rules for all templates** (p301 §2):
   - compressed save;
   - no packed images;
-  - relative image paths into `src/toolkit/terrain/textureSets/*/source/raw/` (fetched by `yarn fetchTextureSources`);
+  - relative image paths into the texture sets' `src/toolkit/textures/<setId>/source/raw/` (fetched by `yarn fetchTextureSources`);
   - a README text block mirroring the handbook page;
   - ~1–3 MB each.
-- **Repo hygiene:** add `*.blend1` to `.gitignore`, and remove the two tracked backups (`src/_engine/3dModels/3DSymbols.blend1`, `characterObstacles.blend1`) in this plan's last phase.
+- **Repo hygiene:** Blender's backups are already ignored (`.gitignore`'s `*.blend[0-9]`) and none is tracked; `terrain/blender/` gets its rule in `devTools/layout/layoutRules.ts` (the `.py` and `.blend` files aren't modules, so the PascalCase rule doesn't apply).
 
 ---
 
@@ -198,12 +202,12 @@ A single-file add-on (Blender ≥ 4.2; installable with _Edit → Preferences �
 4. **UVs:** done by the add-on, or top view → _UV → Project from View (Bounds)_. Check orientation with the corner-marker image (top-left red, top-right green) against the gallery's orientation block.
 5. **Paint** (per technique page): vertex colours or splat image, with the preview material.
 6. **Bake AO** (optional): _Bake AO → Splat Alpha_. Why: valley-scale AO, applied to indirect light only in the engine, at zero cost.
-7. **Custom props:** collider and block metadata (D1 table); copy from `customPropTemplates.blend`.
+7. **Custom props:** collider and block metadata (D1 table); copy from `src/_engine/kernel/assets/import/customPropTemplates.blend`.
 8. **Validate, then Export Block** (or manual export with the locked settings).
 9. **Into Ækasha:**
    - the files written, and what to fill in `terrainBlock.json`;
    - the scene: `terrainBlocks` list plus `await spawnTerrainBlock(id)`;
-   - checking the collider with the Physics API tab's wireframe.
+   - checking the collider with the Physics API controls tab's collider wireframes (debug drawer, `?isDebug=true`).
 10. **Multi-block preparation:** shared edges, normal transfer, _Split Into Blocks_, grid coordinates. A preview of the future world workflow.
 11. **Pitfalls:**
     - moved X/Z vertices (validator);
@@ -212,7 +216,7 @@ A single-file add-on (Blender ≥ 4.2; installable with _Edit → Preferences �
     - Draco on;
     - Float Color (doubles the size for no gain);
     - painting over 1 (normalize);
-    - `.blend1` files.
+    - committing `.blend1` backups (ignored, but a renamed copy isn't).
 
 ### `docs/techniques/terrain-procedural-meshes.md`
 
@@ -223,7 +227,7 @@ A single-file add-on (Blender ≥ 4.2; installable with _Edit → Preferences �
   - Measured in the gallery.
 - CPU horizon AO: why, cost, settings.
 - Colliders for generated terrain (`collider: true`).
-- Seeds and determinism (`worldSeed`, grid).
+- Seeds and determinism: the world seed (`getRandomSeed` / `setRandomSeed`, `aekasha`) hashed with the grid coordinates, never a named stream (`getRandomStream` restarts per scene load and depends on draw order).
 - Worker generation (if Phase 4 lands) and heightmap import.
 - "Best for": procedural/sandbox/survival worlds, roguelites, prototypes, infinite runners. Poor fit: art-directed hero areas (use Blender or the splat combo).
 
@@ -243,25 +247,28 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 ### Phase 1 — Heightfield extraction (D3)
 
-1. Position-bucketed extraction, centre offset, regular-grid validation, `toHeightfieldColliderParams` with the asymmetric-spike check.
-2. Re-check the Gym terrains (the item was already moved out of p990 into this plan).
+1. `toHeightfieldColliderParams` on `aekasha/physics` with its test (the asymmetric-spike check, a non-square grid), then the import on it: position-bucketed extraction, centre offset, regular-grid validation; the `HeightFieldData` docs and `features/physics/CLAUDE.md` (D3).
+2. Re-check the Gym terrains (the former p990 item); mark `docs/issues/heightfield-grid-layout.md` `fixed`.
+3. `yarn test`, and `yarn verify:scenes` for the scenes with heightfields (`thirdPersonGymScene`): a collider that moves changes the probe's hash, so update its baseline in the same commit and say why.
 
 **Exit:** collider wireframe coincides with the mesh (≤ 1 mm) on the Gym terrains and on a generated asymmetric terrain.
 
 ### Phase 2 — Terrain block asset (D2)
 
-1. Schema, suffix, generated section, scene `terrainBlocks`.
-2. Generator registry, `spawnTerrainBlock` (imported and generated geometry, material variant inputs, collider, shadows).
-3. p308/p309 hooks stay empty until those plans.
+1. The `terrain()` feature (D2): its folder, `TerrainFeature.ts`, the `aekasha/terrain` entry and alias, a layout rule, listed in the template's `features` (`src/index.ts`) after `physics()`.
+2. Schema (next to the feature, on `aekasha/schemas`), the `*.terrainBlock.json` suffix (`GATHERED_SUFFIXES`), the generated section, the scene's `terrainBlocks` as its `FeatureSchemaPart`.
+3. Generator registry, `spawnTerrainBlock` (imported and generated geometry, material variant inputs, collider, shadows), every API with JSDoc and an `@example`.
+4. p308/p309 hooks stay empty until those plans.
+5. `yarn sbp`: no terrain code in the app's first download or in the banner (its feature group at 0).
 
 **Exit:** a JSON-only block (imported Gym terrain re-used as a test) and a generated block spawn, collide and are released on scene exit.
 
 ### Phase 3 — `generateTerrain` v2 (D4)
 
 1. Options, CPU rules, horizon AO, collider params.
-2. `noiseTerrain` and `rulesTerrain` generators registered from the toolkit (`AppECSPlugins.ts` or a toolkit init import).
+2. `noiseTerrain` and `rulesTerrain` generators, registered by a toolkit `registerTerrainGenerators()` that the app calls from an install (`appECSPlugins`, `src/AppECSPlugins.ts`), never at module load (`moduleSideEffects.test.ts`).
 3. Gallery isolated blocks become `terrainBlock` JSONs with generated geometry.
-4. `largeWorld.ts` stays byte-identical (default options); optionally give it a collider in a separate commit.
+4. `src/app/scenes/largeWorld/largeWorld.ts`'s terrain stays identical with the default options (the `Terrain.test.ts` and `ScatterOnSurface.test.ts` hashes and its scene baseline unchanged); optionally give it a collider in a separate commit.
 
 **Exit:** a 3 × 3 generated patch has no visible seams in geometry or lighting, and CPU-rule colours match the shader rules on the same block.
 
@@ -273,14 +280,14 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 **Exit:** _Add → paint → bake AO → Validate → Export_ produces a block that spawns correctly, with the splat orientation matching the gallery's orientation block.
 
-### Phase 6 — Templates, handbook, hygiene, versioning
+### Phase 6 — Templates, handbook, Hub, versioning
 
 1. The 7 templates (D6).
 2. The two new pages, plus sections 5–7 of p305's pages.
-3. `*.blend1` in `.gitignore`; remove the two tracked backups.
+3. **Hub** (`hub/CLAUDE.md`): the terrain feature page (`hub/pages/features/terrain/`) gets terrain blocks, `spawnTerrainBlock` and generated terrain (`api:` links, `aek:covers` for the terrain feature's `CLAUDE.md` sections); the toolkit feature page's `generateTerrain` lines (`features/toolkit/guide.md`: the new options and the collider helper in place of its "give the body a `TRIMESH`" workaround and its link to the open issue); the physics guide's heightfield lines (`features/physics/guide.md`). Then `yarn hub:build`.
 4. **Repo docs:**
    - `readme.md` Features: terrain blocks (engine) and procedural terrain v2 (toolkit); a new asset JSON type (`*.terrainBlock.json`); commands if any.
-   - `CLAUDE.md`'s data pipeline suffix list.
+   - The root `CLAUDE.md`: the tenth feature in Bootstrap flow and Three-folder split, the map line for `src/_engine/features/terrain/CLAUDE.md`; `devTools/gather/CLAUDE.md`'s suffix list.
 5. Versions: engine minor, toolkit minor, app minor; `CHANGELOG.md`.
 
 ---

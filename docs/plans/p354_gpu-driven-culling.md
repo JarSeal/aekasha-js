@@ -28,13 +28,32 @@ without meshlets or software rasterization.
 - three r186's WebGPU backend supports indirect draws (`geometry.indirect`, an
   `IndirectStorageBufferAttribute`; `renderers/common/Geometries.js:286`,
   `WebGPUBackend.js:2187`) and indirect compute dispatch (`WebGPUBackend.js:1925`).
-- The engine has no compute passes yet. The only compute-related code is the debug GPU timer
-  wrapper (`core/Debug/_dbg__GPUTimer.ts:80`).
+- The engine has no compute passes yet (checked 2026-11-04). The only compute-related code is
+  debug: the GPU timer (`src/_engine/debug/_dbg__GPUTimer.ts`) times compute dispatches with the
+  frame's render contexts, and the stats panels show them (`src/_engine/debug/CLAUDE.md`, GPU
+  timing), so the spike's dispatch cost is readable without new tooling.
 - **The WebGL2 fallback (`forceWebGL`) has no compute.** The CPU path (p348) must stay and is
   chosen per backend.
 - ECS state: GPU-culled instances have no ECS visibility tags (`TAG_FRUSTUM_CULLED`,
   `TAG_LOD_CULLED`). That's fine for instanced content, which has none of the per-entity hooks
   anyway, but anything gameplay-side reading "is this visible" can't use the GPU path.
+- **The CPU path's cost, measured** (p616 Phase 2, largeWorld's 3,800 `LOD` entities and pool
+  instances, debug env): LOD selection about 0.12-0.17 µs per entity a frame
+  (`features/lod/CLAUDE.md`); `instancedMeshPoolSyncSystem` about 35 ns per instance with nothing
+  moving (130-150 µs for 3,500). These are the numbers the GPU path has to beat, and the point
+  where the CPU path stops scaling is somewhere above them: the real plan measures it first.
+- **The pieces it builds on** (`features/instancing/CLAUDE.md`, `features/lod/CLAUDE.md`): the
+  instanced LOD pool (`createInstancedLodPool`, one `InstancedMesh` per level, instances moved
+  between them through `registerLodTarget`), its per-instance `lodFade` attribute
+  (`createLodFadeAttribute`, `enableLodDither`, on `aekasha/lod`), and pool bounds that grow
+  with their instances and never shrink.
+- **Where it goes** (SBP, `devTools/sbp/CLAUDE.md`): the GPU path is part of `instancing()` (with
+  `lod()`'s rules ported), opted into per pool, and its compute code loads with an `import()` on
+  the first pool that asks for it on a WebGPU backend, so a build or a device that doesn't use it
+  downloads none of it; `yarn sbp`'s `instancing` and `lod` groups stay within their budgets.
+- Known leak to keep in mind when measuring memory across scene visits:
+  `docs/issues/three-instanced-node-attribute-leak.md` (three r186 never deletes a removed
+  `InstancedMesh`'s instance attributes).
 
 ## Open questions for the real plan
 
@@ -48,7 +67,10 @@ without meshlets or software rasterization.
    Worth it only for dense scenes (cities, forests seen from inside); measure first.
 4. **Interaction with three's own culling.** Instanced meshes on the GPU path must have
    `frustumCulled = false` (the whole batch is one object to three).
-5. **Debugging.** A readback of per-level visible counts (async, debug only) for the LOD tab.
+5. **Debugging.** A readback of per-level visible counts (async, debug only) for the LOD drawer
+   tab (`features/lod/debug/_dbg__LOD.ts`), and the GPU memory tab's view of the storage
+   buffers (a `registerGPUMemorySource`, `aekasha/debug`, if three's `info.memory` doesn't place
+   them under an owner).
 6. **Cross-fades** (p351 Phase 2, no popping). An instance changing level is appended to both
    levels' visible lists for `fadeSeconds`, each with its signed fade for `lodDither`, and fades
    out to culled the same way; the fade state per instance moves to the GPU. `fadeSeconds: 0`
@@ -63,6 +85,10 @@ without meshlets or software rasterization.
 2. **Per-instance LOD** binned into per-level indirect draws (p348's rules ported to TSL).
 3. **Shadow passes.**
 4. **Occlusion culling**, if measured as worth it.
+5. **Hub and docs** (second-to-last, per the plans' convention): the LOD feature page
+   (`hub/pages/features/lod/`, which covers the pools too) and the instancing and LOD nested
+   `CLAUDE.md` files, a `lodShowcase` lane for the GPU path
+   (`features/lod/CLAUDE.md`'s lanes), then versioning.
 
 ## Not in scope
 

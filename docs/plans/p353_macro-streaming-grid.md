@@ -18,28 +18,47 @@ entities does this cell own".
 
 ## 1. Grounding
 
-- **Scene loading** (`core/SceneLoader.ts:495-620`): a scene load holds physics stepping, deletes
-  the previous scene's characters, physics and group entities, `clearNonPersistent()`s the ECS
-  world, resets the physics world (p101), loads the next scene's assets
-  (`loadNextSceneAssets`), runs its init, creates its Object3Ds, releases the previous scene's
-  assets, waits for every pending physics create, and releases stepping. Everything is per scene;
-  nothing can be added or removed in parts.
-- **Asset ownership** (`core/Assets/AssetOwners.ts`): a `WeakMap` from asset to **one** owner
-  scene id; cache hits re-tag the asset to the scene getting it. `releaseSceneOwnedAssets`
-  (`SceneAssetRelease.ts`) frees what an exited scene still owns and nothing uses (ref count 0, no
-  material or sky box using it).
+- **Scene loading** (`kernel/scene/SceneLoader.ts`, its steps in `src/_engine/kernel/scene/CLAUDE.md`):
+  one load at a time, through `tearDownPrevScene` (the features' `exit` hooks: characters, then
+  physics entities; the groups, loopers, `clearNonPersistent()`, the `worldCleared` hooks),
+  `loadNextSceneAsync` (the cameras, the random streams restarted, the `beforeAssets` hooks:
+  physics starts a fresh world (p101); `loadNextSceneAssets`, the scene code, the `created` hooks,
+  `createNextSceneObject3Ds`, the previous scene's assets released) and `enterSceneAsync` (the
+  `entered` hooks: physics waits for every pending create, `settlePendingPhysicsEntities`, and
+  releases its stepping, held since `loadStart`). A feature takes part only through these scene
+  hooks (`kernel/scene/SceneHooks.ts`, the `FeatureContext`'s `addSceneHooks`). Everything is per
+  scene; nothing can be added or removed in parts.
+- **Asset ownership** (`kernel/assets/AssetOwners.ts`): a `WeakMap` from asset to **one** owner
+  scene id; cache hits re-tag the asset to the scene getting it (`retagAssetOwner`), a derived
+  asset takes its base's (`copyAssetOwner`: LOD levels). `releaseSceneOwnedAssets`
+  (`kernel/assets/SceneAssetRelease.ts`) frees what an exited scene still owns and nothing uses
+  (ref count 0, no material using it, not a feature's `retainedTextures`, eg. the sky box's).
 - **Priming:** `renderer.initTexture(texture)` uploads synchronously (r186); `compileAsync`
   compiles pipelines and is used for mesh `preWarm` (p350 §4).
-- **Asset worker** (`core/Assets/AssetsAPI.ts`): textures and GLTFs load off the main thread when
-  `assets.workerTarget` is `WORKER_THREAD`.
+- **Asset worker** (`kernel/assets/AssetsAPI.ts`, the worker in `kernel/assets/worker/`):
+  textures and GLTFs load off the main thread when `assets.workerTarget` is `WORKER_THREAD`.
 - **p306:** terrain blocks are self-contained square units, 32–256 m, power of two.
 - **Determinism (p101):** guaranteed for scene loads, in both worker targets.
-- **Physics tiers** (`_DONE_p352`, `core/PhysicsTiers.ts`, `core/PhysicsTierPolicy.ts`): a
+- **Physics tiers** (`_DONE_p352`, `features/physics/PhysicsTiers.ts`,
+  `features/physics/PhysicsTierPolicy.ts`, on `aekasha/physics`; `features/physics/CLAUDE.md`): a
   `DYNAMIC` `createPhysicsEntity` body can be `FULL`, `STATIC`, `DISABLED` or `REMOVED`
   (detached, ids and state kept engine side, slot freed). `requestPhysicsTier` applies at the
   next `APP_PHYSICS_STEP` sub-step and returns `false` when it refuses.
   The distance policy (`setPhysicsTierPolicy`, `cadence: 'STEPS'` by default, `_DONE_p343`) only
   calls it. What constrains this plan's Phase 4 is in §6.
+- **Features opt in** (`src/_engine/kernel/init/CLAUDE.md`, Engine features): this plan is a new
+  feature, `streaming()` (`features/streaming/`, its entry `aekasha/streaming`, a
+  `StreamingFeature.ts`, its debug modules in `features/streaming/debug/`, a nested `CLAUDE.md`).
+  It installs its system and scene hooks through the `FeatureContext`, cooperates with `spatial()`
+  (§4.3), `lod()` (§3.3) and `lines()` (§7) through `ctx.isInstalled`, and `requires` none of
+  them until a phase needs one. The scene JSON's `streaming` field is its `FeatureSchemaPart`
+  (`schemas/FeatureSchemas.ts`), so the gather's feature manifest names it and `InitEngine` fails
+  a scene that streams without the feature. A build without it carries none of it; `yarn sbp`
+  budgets its folder like the others (`sbp.config.ts`). The kernel changes (§4.2's owner sets)
+  stay `@internal` and small. The cell maths (`packCellKey`, `worldToCell`, `cellBounds`) is in
+  `features/spatial/CellKey.ts`, `@internal`, and a feature imports no other feature's code at
+  runtime (only character → physics): it moves to `src/_engine/utils/` (pure), where `spatial()`
+  and p372's `AUTO` groups use it too, in this plan's Phase 1 unless p372 did it first (p370 §13).
 
 ## 2. Cells and rings
 
@@ -122,9 +141,11 @@ not a reload.
 - **Cancellation:** a `LOADING` cell that's no longer wanted finishes its asset requests (they
   may be shared), skips entity creation, and goes straight to `UNLOADING`. Each transition carries a
   generation counter, so a late result from a cancelled load is ignored.
-- Nothing streams while a scene loads (`isLoadingScene`). A scene load creates the cells around the
-  focus's initial position **as part of the load**, inside p101's physics hold, so a scene enter
-  stays deterministic. Only cells crossed during play stream at runtime.
+- Nothing streams while a scene loads (`loopState.isLoadingScene`, `kernel/loop/MainLoop.ts`). A
+  scene load creates the cells around the focus's initial position **as part of the load**, in the
+  feature's `created` scene hook (awaited), inside p101's physics hold: physics' `entered` hook
+  then waits for the cells' bodies like the scene's own, so a scene enter stays deterministic.
+  Only cells crossed during play stream at runtime.
 
 ### 4.2 Ownership
 
@@ -148,8 +169,9 @@ entities currently inside it (by position, not by who spawned them):
 - an entity spawned by another cell but now inside this one is deleted only if its own cell is
   also unloading (otherwise it stays with its owner).
 
-The domain is rebuilt only when a cell is about to unload (`MANUAL`), so this costs nothing per
-frame.
+The domain is rebuilt (`rebuildSpatialDomain`) only when a cell is about to unload (`MANUAL`: a
+join or a move is seen only after a rebuild), so this costs nothing per frame. A rebuild costs
+about 0.1 µs per member (p616 measured `FOLIAGE`'s 1,500 at 113-158 µs), once per unload.
 
 ## 5. Priming
 
@@ -231,10 +253,18 @@ Constraints from p352 as built (each needs an answer in Phase 4):
 
 ## 7. Debug
 
-A "Streaming" tab: focus cell, per-state cell counts, queue, loads in flight, last load time per
-cell, priming stalls, per-cell memory (p345 owners). A top-down overlay of cell outlines coloured
-by state, drawn with the line system at ground level. "Freeze focus" and "teleport focus to cell"
-for testing, and `?streamingFocus=x,z` to start from a cell.
+A "Streaming" drawer tab (`features/streaming/debug/_dbg__Streaming.ts`, registered from the
+feature's install with `if (IS_DEBUG_ENV) ctx.onDebug(…)` as `lod()` does; a `streamingControls`
+id in `DEFAULT_DEBUG_DRAWER_TAB_ORDER`): `createDebuggerTab` with a pane (the kit's property grid)
+for the focus cell, per-state cell counts, the queue, loads in flight, priming stalls and the
+settings, and a `debuggerListCMP` of cells (state, last load time, per-cell memory from the GPU
+memory tab's owners, §4.2). A cell row opens a cell window (a window kind,
+`registerDraggableWindowKind` at the `_dbg__` module's load, its grid `createDebugWindowGrid`):
+its entities, assets and transitions. A top-down overlay of cell outlines coloured by state, drawn
+with the line system at ground level (off with one log line without `lines()`), marked with
+`markDebugHelper`. "Freeze focus" and "teleport focus to cell" for testing, and
+`?streamingFocus=x,z` to start from a cell (read like `?startScene`: only in the debug env and
+prod test mode, so a production build never reads it).
 
 ## 8. Not in this plan
 
@@ -257,10 +287,12 @@ fallback, in `largeWorld`. Record the numbers here; they set §5's defaults.
 
 ### Phase 1 — Cells and the state machine (code content)
 
-1. Scene `streaming` settings, rings, asymmetric thresholds, `streamingSystem`, budgets,
+1. The `streaming()` feature (its install, entry, schema part, a `sbp.config.ts` budget line) and
+   the cell maths in `src/_engine/utils/` unless p372 moved it (§1).
+2. Scene `streaming` settings, rings, asymmetric thresholds, `streamingSystem`, budgets,
    cancellation (§2, §4.1).
-2. `registerStreamingCellContent` (§3.1).
-3. Debug tab and overlay (§7).
+3. `registerStreamingCellContent` (§3.1).
+4. Debug tab and overlay (§7).
 
 **Exit:** a test scene with a 16 × 16 grid of code-registered cells (procedural terrain blocks
 with scattered props) streams while flying across it, with no frame over 33 ms caused by
@@ -295,10 +327,17 @@ into a neighbouring cell is re-owned and unloads with it; no capacity refusal at
 
 `FAR` content (§3.3) with p348 and p351.
 
-## 10. Versioning
+## 10. Versioning, Hub and docs
 
 Engine minor per phase that adds API (Phases 1–4); the `AssetOwners` change in Phase 2 is internal.
 App minor for a streaming demo scene. `readme.md`: a Features entry when Phase 3 lands.
+
+Each phase that changes what an app can do updates in the same branch: the feature's nested
+`features/streaming/CLAUDE.md` (its line in the root's map), a Streaming feature page
+(`hub/pages/features/streaming/`, `aek:covers` that file's section) and the root `CLAUDE.md`'s
+Bootstrap flow (ten features). The streaming demo scene is the page's example (and a
+`lodShowcase` lane, as `features/lod/CLAUDE.md` asks of later LOD plans, if a lane can show it);
+`yarn hub:build` after the change.
 
 ## 11. Open questions
 

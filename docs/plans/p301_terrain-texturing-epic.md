@@ -10,7 +10,7 @@ Large-surface texturing for Ækasha: terrain (sand, mud, rocks, cliffs, snow, ic
 - a texture library in the toolkit;
 - a terrain material generator in the toolkit;
 - Blender templates;
-- a technique handbook in `docs/techniques/`;
+- a technique handbook in `docs/techniques/`, and a terrain feature page in the Ækasha Hub (§5);
 - two preview scenes in the app.
 
 This file is the epic: shared decisions, conventions, the plan map and the technique catalogue. The work happens in p302–p310. Each child plan is phased so it can be reviewed and committed in chunks.
@@ -26,7 +26,7 @@ This file is the epic: shared decisions, conventions, the plan map and the techn
 
 ## 1. Goals
 
-1. **Fast by default.** Every technique states its per-pixel texture fetch count and VRAM cost. Features compile out when unused ("only bring into existence what you need"). Wherever it has a choice, the generator picks the cheaper option.
+1. **Fast by default.** Every technique states its per-pixel texture fetch count and VRAM cost. Features compile out when unused ("only bring into existence what you need"), and the code ships only with what uses it (Smallest Build Possible): the toolkit code lands in the chunks of the scenes that use it, engine parts register from an install or a first call (never at module load), and debug views load through the debug loader. `yarn sbp` shows each in its group. Wherever it has a choice, the generator picks the cheaper option.
 2. **One generator, many techniques.** `createTerrainMaterial(config)` (p305) covers single-layer tiling, anti-tiling, macro variation, vertex-colour splat, splat maps, procedural rules, triplanar/biplanar, colour map + detail, wet/dry, and structures, all from one config.
 3. **Swappable maps.** Geometry, texture maps and materials are separate assets. A block's maps can be changed in the engine without re-exporting its GLB. Texture sets are referenced by id.
 4. **A documented artist workflow.** Each technique has a handbook page: Blender → export → import → set up, with variations, performance cost, and which art styles and game types it suits.
@@ -46,24 +46,30 @@ This file is the epic: shared decisions, conventions, the plan map and the techn
 
 **Where do the assets live?**
 
-| Asset                                                                     | Folder                                     | Why                                          |
-| ------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------- |
-| Texture sets (maps + set JSON)                                            | `src/toolkit/terrain/textureSets/<setId>/` | Reusable across apps, ships with the toolkit |
-| Shared generated textures (macro noise, ripple atlas, procedural decals)  | `src/toolkit/terrain/textures/`            | Reusable                                     |
-| Material generator, TSL nodes                                             | `src/toolkit/terrain/`                     | Toolkit module                               |
-| Block geometry (GLB), splat maps, colour maps, block meshes, scatter data | `src/app/terrain/blocks/<blockId>/`        | Specific to one world                        |
-| Terrain materials for a world (layer choice, tuning)                      | `src/app/terrain/materials/`               | App-specific tuning of toolkit sets          |
-| Preview scenes                                                            | `src/app/terrain*.scene.json` + `.ts`      | App                                          |
-| Blender templates                                                         | `src/toolkit/terrain/blender/`             | See below                                    |
+The toolkit is a catalogue by category (code categories with an entry each, asset categories reached by id; `devTools/layout/layoutRules.ts` keeps it as rules, so `layout.test.ts` fails on a file outside them) and the app is one folder per scene (the root `CLAUDE.md`'s Three-folder split). The epic adds one code category, `terrain`, and puts its assets in the asset categories:
 
+| Asset                                                                     | Folder                                                                                                       | Why                                                                   |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Material generator, TSL nodes, noise, procedural generators, bake code    | `src/toolkit/terrain/` (entry `aekasha/toolkit/terrain`)                                                     | A toolkit code category of its own (created by p303, below)           |
+| Texture sets (maps + set JSON + `source.json`)                            | `src/toolkit/textures/<setId>/`                                                                              | Toolkit texture assets, by id; reusable across apps                   |
+| Shared generated textures, exported (macro noise, ripple atlas, decals)   | `src/toolkit/textures/<id>/`                                                                                 | Reusable; the bake code that makes them is in `terrain/`              |
+| TSL materials (`textureSetSurface`, `terrain`, decals)                    | A material JSON and its `<id>.tsl.ts` in `src/toolkit/materials/<id>/`; a graph only code registers (`registerTslMaterial`, p302 D3) with its code in `terrain/` | The materials category's per-id folders; the helpers through `aekasha/toolkit/terrain` |
+| Scatter models (rocks)                                                    | `src/toolkit/models/nature/<id>/`                                                                            | The models category (p450 names `nature/`)                            |
+| Block geometry (GLB), splat maps, colour maps, block meshes, scatter data | The scene's folder (`src/app/scenes/<sceneId>/`), or a shared app type folder when two scenes use a block    | Specific to one world; "only this scene uses it" rule                 |
+| Terrain materials for a world (layer choice, tuning)                      | The scene's folder, or `src/app/materials/` when shared                                                      | App-specific tuning of toolkit sets                                   |
+| Preview scenes                                                            | `src/app/scenes/terrainGallery/`, `src/app/scenes/terrainShowcase/`                                          | App                                                                   |
+| Blender templates and add-on                                              | `src/toolkit/terrain/blender/`                                                                               | See below                                                             |
+
+- **A new folder gets a layout rule.** The `terrain` category: its entry, `TOOLKIT_CATEGORIES` in `eslint.config.js` (the layering lint: another category only through its entry), the alias in `devTools/aliases.ts` and `tsconfig.json`, a rule per subfolder in `getToolkitRules`. A shared app folder for blocks (`terrainBlocks/`) would join `APP_ASSET_FOLDERS` there. `toolkit/textures/` holds only per-id folders, so a file at its root (the credits, p303) needs its own rule.
+- **Layering:** the toolkit imports the engine only through the `aekasha*` entries, the app the toolkit only through `aekasha/toolkit/*`; module files are PascalCase (an asset-id file keeps its id: `terrain.tsl.ts`).
 - Optimized binaries are generated into `src/public/aek-assets/` (p300 DD3). Sources sit next to their JSON.
-- The CC0 texture sources aren't committed. `yarn fetchTextureSources` re-downloads them from `source.json` manifests into gitignored `source/` folders (p303).
+- The CC0 texture sources aren't committed. `yarn fetchTextureSources` re-downloads them from `source.json` manifests into gitignored `source/raw/` folders (p303); a set's own committed sources (an exported procedural bake, p304) sit in `source/` beside them.
 
 **Should the Blender files be in the toolkit?**
 
-- **Yes, one template per technique, under these rules.** There is precedent: `src/_engine/3dModels/customPropTemplates.blend`, `characterObstacles.blend`.
-  - Save with **Compress** on, and **never pack images**. Images use relative paths into the fetched `source/` folders, so a template is ~1–3 MB and opens with textures after `yarn fetchTextureSources`.
-  - Gitignore `*.blend1`. The repo currently tracks two `.blend1` backups in `src/_engine/3dModels/`; remove them in p306's docs phase.
+- **Yes, one template per technique, under these rules.** There is precedent: `src/_engine/kernel/assets/import/customPropTemplates.blend`, `src/app/scenes/thirdPersonGymScene/characterObstacles.blend`, `src/_engine/debug/symbols/source/3DSymbols.blend`.
+  - Save with **Compress** on, and **never pack images**. Images use relative paths into the fetched `source/raw/` folders, so a template is ~1–3 MB and opens with textures after `yarn fetchTextureSources`.
+  - Blender backups are already ignored (`.gitignore`'s `*.blend[0-9]`), and none is tracked.
   - The handbook page is the source of truth. The template is its worked example, so a template that drifts from its doc is a bug.
   - Git LFS isn't set up (not installed here). About 10 templates at ~2 MB is acceptable without it, but each re-save adds its full size to history. Re-save templates only when a doc changes; adopt LFS if binary churn becomes a problem (Open questions).
   - A small Blender Python add-on (`src/toolkit/terrain/blender/aekasha_terrain_tools.py`, p306) does the error-prone parts: export settings, the grid check, the AO-into-vertex-colour bake, JSON stubs. The templates aren't the only way to get those steps right.
@@ -88,8 +94,8 @@ p300 asset pipeline (KTX2, meshopt, packing)
 
 | Plan | Delivers                                                                                                                                                                 | Main parts             |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
-| p302 | Engine prerequisites: texture JSON gaps, multi-socket TSL `setup` entry, a material input resolver registry, scene dependency closure, two bug fixes                     | Engine                 |
-| p303 | `*.textureSet.json` asset type, `FULL`/`LITE`/`MINIMAL` packings, layer array assembly, 16 CC0 texture sets with a fetch script, `terrainGallery` skeleton               | Engine + Toolkit + App |
+| p302 | Engine prerequisites: texture JSON gaps, multi-socket TSL `setup` entry, runtime TSL registration, a material input resolver registry, scene dependency closure (its two bug fixes landed with p613) | Engine |
+| p303 | `*.textureSet.json` asset type, `FULL`/`LITE`/`MINIMAL` packings, layer array assembly, 16 CC0 texture sets with a fetch script, the toolkit's `terrain` category, `terrainGallery` skeleton | Engine + Toolkit + App |
 | p304 | `bakeTexture()` (TSL node → mipmapped texture, 2D/array), procedural surface generators, macro noise, ripple atlas                                                       | Engine + Toolkit       |
 | p305 | `createTerrainMaterial` and the `terrain` TSL material: every texturing technique, quality variants, debug views                                                         | Toolkit                |
 | p306 | Block conventions, the Blender block workflow and add-on, `spawnTerrainBlock`, robust heightfield extraction, `generateTerrain` v2 (vertex splat, CPU AO, world offsets) | Engine + Toolkit       |
@@ -100,7 +106,15 @@ p300 asset pipeline (KTX2, meshopt, packing)
 
 p304 can be implemented in parallel with p305 Phase 1. p308 and p309 are independent of each other.
 
-p299 (texture arrays and atlases) is outside this epic but runs before p303: p303's layer arrays and p309's decal atlases are built on it. The mesh merging plans (p370 epic, p371–p376) run after the LOD plans; nothing here is blocked by them, but they add the modular kit and tile-chunk processes (§5) and lower the draw count of a block's static dressing (§7).
+p299 (texture arrays and atlases) is outside this epic but runs before p303: p303's layer arrays and p309's decal atlases are built on it. Its Phases 0-4 are done (runtime and build-time arrays, atlases, the TSL helpers, the Assets tab's previews); its Phase 5 (the JSON binding) waits for p302 D4. The mesh merging plans (p370 epic, p371–p376) run after the LOD plans; nothing here is blocked by them, but they add the modular kit and tile-chunk processes (§5) and lower the draw count of a block's static dressing (§7).
+
+### Branches and PRs
+
+Proposed with this update (2026-11-04), to confirm before p302 starts: no child plan breaks anything (§9, question 3), so no integration branch.
+
+- **One branch per child plan**, each into `main` with its own PR when its last phase is done, in the plan map's order: p302, then p303 (after p299 has merged its Phase 5-6 branch, or with p303 D4 on p299 D1 alone, which is done), then p304 and p305 (in parallel, separate branches), p306, then p307, p308 and p309 (independent), and p310 last.
+- Each PR bumps the parts it changed once (engine, toolkit, app; `yarn checkVersions --against main`) and adds its `CHANGELOG.md` entry.
+- p299 belongs to the p370 epic and keeps its own branch.
 
 ---
 
@@ -183,6 +197,8 @@ Each technique gets a page in `docs/techniques/`. The plan that implements it wr
 | `terrain-scatter.md`            | GPU-instanced rocks and details from Blender and procedural masks                                          | p308                                     | `terrain_scatter.blend`          |
 | `terrain-decals.md`             | Mesh decals with an atlas, projected decals, procedural decals                                             | p309                                     | `terrain_decals.blend`           |
 | `terrain-modular-kits.md`       | Terrain from kit modules (cliffs, ledges, caves) and tile-chunk worlds (hex/square tiles), merged per cell | p372 (array-material variation: p374)    | — (decided in p372)              |
+
+**The Hub.** The handbook stays in `docs/techniques/` (long-form, linked from the Hub with `repo:` links, which `yarn hub:build` checks: `hub/CLAUDE.md`). The Hub gets a terrain feature page (`hub/pages/features/terrain/`), created by p303's Hub phase and extended by each child's (the root `CLAUDE.md`'s "Keep the Ækasha Hub current"): what the feature does, the toolkit pieces with their `api:` links, a `::: scene` block of `terrainGallery` or `terrainShowcase` (p310), and the technique matrix pointing at the handbook. A `#region` a page includes is a Hub include: renaming one fails `yarn hub:build`. Each child plan's second-to-last phase is its Hub phase, before the versioning one.
 
 **Page template** (every technique page has these sections, in this order):
 

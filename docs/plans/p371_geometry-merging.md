@@ -22,27 +22,34 @@ The result is an ordinary geometry id any mesh can use. Keeping the members as e
 ## 1. Grounding
 
 - **Ad hoc merges** call three's `mergeGeometries` directly and register the result with
-  `saveBufferGeometry` (`core/Geometry.ts:290`): `app/largeWorld.ts:348` (crate stacks),
-  `:398` (barbells), `utils/world/characterTestObjects.ts:25` (stairs, with groups) and
-  `toolkit/geometry/generateFoliage.ts:59` (with groups, for a material array), `:101`.
+  `saveBufferGeometry` (`kernel/assets/Geometry.ts`; checked 2026-11-04):
+  `app/scenes/largeWorld/largeWorld.ts` (its merged props, without groups),
+  `app/scenes/thirdPersonGymScene/gymStairsAndWall.ts` (the stairs, with groups) and
+  `toolkit/geometry/generate/Foliage.ts` (the tree with groups, for a material array; the bush
+  without).
 - **`mergeGeometries`** (`three/examples/jsm/utils/BufferGeometryUtils.js`) requires every input to
   have the same attribute set and the same indexed-ness, and returns `null` otherwise. It doesn't
   apply transforms: callers bake them into each input first.
-- **Registry** (`core/Geometry.ts`): ref counted by id; `warnIfUnregistered` (`MeshManager.ts:59`)
-  warns in debug about a mesh geometry that isn't registered, since nothing would dispose it.
-- **Geometry JSON** (`schemas/geometrySchema.ts`): a union of `BOX`, `SPHERE`, `CYLINDER`,
-  `CAPSULE`, `CONE`. No buffer or merged type.
-- **GLB pipeline** (`devTools/assetPipeline/gltf.ts`): `encodeGLTFAsset` runs `weld`,
-  `simplify`, `meshopt`/`draco` and `quantize`. `flatten` and `join` from the installed
+- **Registry** (`kernel/assets/Geometry.ts`): ref counted by id; `warnIfUnregistered`
+  (`kernel/mesh/Mesh.ts`) warns in debug about a mesh geometry that isn't registered, since
+  nothing would dispose it.
+- **Geometry JSON** (`src/_engine/schemas/GeometrySchema.ts`): a union of `BOX`, `SPHERE`,
+  `CYLINDER`, `CAPSULE`, `CONE`. No buffer or merged type.
+- **GLB pipeline** (`devTools/assetPipeline/gltf.ts`, `devTools/assetPipeline/CLAUDE.md`):
+  `encodeGLTFAsset` runs `weld`, `simplify`, `meshopt`/`draco` and `quantize`, and builds a
+  JSON's `lodChain` (`lodChains.ts`). `flatten` and `join` from the installed
   `@gltf-transform/functions` 4.5.1 are not used. Collider nodes are forced lossless
   (`settings.ts`'s `COLLIDER_LEVEL`), since a reordered mesh breaks HEIGHTFIELD and CONVEXHULL
   colliders.
-- **Import** (`core/Import/`): scene meshes reference imported geometry as `${assetId}/${nodeName}`;
-  all pieces of an imported asset share one engine material.
+- **Import** (`kernel/assets/import/`): scene meshes reference imported geometry as
+  `${assetId}/${nodeName}`; all pieces of an imported asset share one engine material.
+- **Placement** (p370 §13): the utility is the kernel's (`kernel/assets/GeometryMerge.ts`, on
+  `aekasha`), since the kernel's `MERGED` type needs it, and loads with an `import()` there, so a
+  build that merges nothing doesn't carry it (`yarn sbp`).
 
 ## 2. Design
 
-### D1 — `mergeGeometryParts` (`core/GeometryMerge.ts`)
+### D1 — `mergeGeometryParts` (`kernel/assets/GeometryMerge.ts`)
 
 ```ts
 type MergePart = {
@@ -78,7 +85,7 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 
 ### D2 — `MERGED` geometry JSON
 
-`geometrySchema.ts` gets a new union member:
+`GeometrySchema.ts` gets a new union member:
 
 ```json
 {
@@ -97,8 +104,9 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 
 - Parts reference registered geometry ids, including imported pieces (`assetId/nodeName`).
   `createGeometry` loads the parts first (imported assets and other geometries load before
-  geometries in `SceneLoader`'s order), merges, registers, and releases the parts it loaded only
-  for this merge.
+  geometries in `loadNextSceneAssets`' order, `kernel/scene/SceneDataLoader.ts`), loads
+  `GeometryMerge.ts` with an `import()` on the first `MERGED` geometry, merges, registers, and
+  releases the parts it loaded only for this merge.
 - `gatherAppData` validates that each part id exists; the scene dependency closure (p302 D6, when
   it lands) follows part ids.
 - Useful for kit-bashed props: a wall section made from kit pieces, one draw wherever it's used.
@@ -117,7 +125,7 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 
 - In `encodeGLTFAsset`, before compression: `flatten` (bakes the node hierarchy) then `join`
   (joins primitives with compatible attributes and the same material), on every node that isn't
-  excluded, isn't a physics node (a `colliderType` custom prop, `core/Import/CustomProps.ts`) and
+  excluded, isn't a physics node (a `colliderType` custom prop, `kernel/assets/import/CustomProps.ts`) and
   isn't skinned or morph-targeted. Excluded nodes keep their names, so code can still find doors and levers.
 - `mode`: `BY_MATERIAL` (one primitive per glTF material; the default, since p302/p303 may import
   materials later) or `ALL` (everything into one primitive, since the engine uses one material per
@@ -133,25 +141,31 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 
 Merging tens of thousands of vertices is CPU work. `mergeGeometryPartsAsync` runs D1 in the asset
 worker (`AppConfig.assets.workerTarget`), transferring attribute buffers, with a main-thread
-fallback (`fallbackToMainThread`). The same worker plumbing p347 uses for runtime LOD chains.
+fallback (`fallbackToMainThread`). The same worker plumbing p347 uses for runtime LOD chains: a
+job module in `kernel/assets/worker/` (`AssetsSwitchMerge`) that the worker `import()`s on its
+first merge job, as LOD's `AssetsSwitchSimplify`.
 
 ### D5 — Adoption
 
-Replace the ad hoc merges (§1) with `registerMergedGeometry` / `mergeGeometryParts`. The two
-`groups: true` callers use `groups: 'BY_SLOT'`.
+Replace the ad hoc merges (§1) with `registerMergedGeometry` / `mergeGeometryParts`, imported from
+`aekasha`. The two `groups: true` callers (the gym's stairs, the foliage tree) use
+`groups: 'BY_SLOT'`.
 
 ## 3. Phases
 
 ### Phase 1 — Core utility (D1)
 
 `mergeGeometryParts`, `registerMergedGeometry`, part table, transforms, attribute unification.
-**Exit:** in `debugScene`, a merged box + sphere + mirrored cylinder renders like the three
-separate meshes (normals, winding, shadows), with one draw (profiler).
+**Exit:** in `testDebugScene`, a merged box + sphere + mirrored cylinder renders like the three
+separate meshes (normals, winding, shadows), with one draw (profiler). Unit tests next to the
+module (`GeometryMerge.test.ts`, in Node): transforms, winding, attribute unification, index
+type, the part table.
 
 ### Phase 2 — JSON type (D2)
 
 Schema, gatherer validation, `createGeometry` path, compiled `.schemas/`. **Exit:** a `MERGED`
-geometry of three imported pieces is used by two scene meshes.
+geometry of three imported pieces is used by two scene meshes; `yarn sbp`: the app's first
+download doesn't grow by the merge code (it loads with the first `MERGED` geometry).
 
 ### Phase 3 — GLB option (D3)
 
@@ -161,14 +175,19 @@ cached re-run is a cache hit.
 
 ### Phase 4 — Worker and adoption (D4, D5)
 
-**Exit:** largeWorld, the character test objects and the foliage generator use the new utility
-with unchanged visuals; a 100k-vertex merge doesn't block a frame for more than its transfer.
+**Exit:** largeWorld, the gym's stairs and the foliage generator use the new utility with
+unchanged visuals (`yarn verify:scenes`' snapshots); a 100k-vertex merge doesn't block a frame for
+more than its transfer.
 
 ### Phase 5 — Docs and versioning
 
-1. `docs/techniques/asset-optimization.md`: "Merging a model's pieces" (D3 and its trade-off).
-2. `CLAUDE.md` data pipeline section (the `MERGED` type), `readme.md` if asset types are listed.
-3. Engine minor, toolkit patch (foliage), app patch (largeWorld); `CHANGELOG.md`.
+1. The Hub: the asset optimization feature page (`hub/pages/features/asset-optimization/`):
+   "Merging a model's pieces" (D3 and its trade-off), and the scenes and assets page for the
+   `MERGED` type; `docs/techniques/asset-optimization.md` if it still mirrors the page; `yarn
+   hub:build`.
+2. `devTools/gather/CLAUDE.md` and `devTools/assetPipeline/CLAUDE.md` (the `MERGED` type, the GLB
+   `merge` step), `readme.md` if asset types are listed.
+3. Engine minor, toolkit patch (foliage), app patch (largeWorld, the gym); `CHANGELOG.md`.
 
 ## 4. Risks
 
@@ -184,3 +203,6 @@ with unchanged visuals; a 100k-vertex merge doesn't block a frame for more than 
 
 1. Should `MERGED` JSON parts accept p299 atlas cells (`"atlasCell": "…"`, remapping each part's
    UVs)? Only if a kit uses an atlas; p374's arrays need no UV change.
+2. A JSON with both `merge` and `lodChain` (the pipeline builds chains into the GLB since p347):
+   is the chain built from the joined mesh, so the join runs before the chain step? Decide in
+   Phase 3.

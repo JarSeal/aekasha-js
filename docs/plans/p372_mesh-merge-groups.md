@@ -25,29 +25,39 @@ Members join a group by id or automatically:
 
 ## 1. Grounding
 
-- **Meshes** (`core/MeshManager.ts:81`): `createMeshEntity` builds a `THREE.Mesh`, adds `OBJECT3D`
+- **Meshes** (`kernel/mesh/Mesh.ts`): `createMeshEntity` builds a `THREE.Mesh`, adds `OBJECT3D`
   and `TAG_IS_MESH`, adds the mesh to the root scene (unless `doNotAddToScene`), sets `TRANSFORM`,
-  and adds `SPATIAL_INDEXED` by default (`:224-226`). `object3DSyncSystem`
-  (`ECS/ECSCoreSystems.ts:156`) copies `TRANSFORM` onto the Object3D every frame. `disposeMesh`
-  (`:238`) releases the geometry and material refs.
-- **Visibility** (`ECS/ECSCoreSystems.ts:22`): `reconcileObject3DVisibility(entityId, world,
-overrides?)` sets `.visible` from `DISABLED`, `TAG_FRUSTUM_CULLED` and `TAG_OBJECT_CULLED`; each
-  tag's hooks call it, with an `overrides` field for the tag being toggled.
+  and adds `SPATIAL_INDEXED` unless `entityOpts.spatialIndex` is `false`. `object3DSyncSystem`
+  (`kernel/ecs/ECSCoreSystems.ts`) copies `TRANSFORM` onto the Object3D every frame.
+  `disposeMesh` releases the geometry and material refs. A mesh's `lod` prop reaches `lod()`
+  through a resolver the feature sets (`setAutoLodResolverLoader`): the pattern for `merge`.
+- **Visibility** (`kernel/ecs/ECSCoreSystems.ts`): `reconcileObject3DVisibility(entityId, world,
+overrides?)` sets `.visible` from `DISABLED`, `TAG_FRUSTUM_CULLED`, `TAG_OBJECT_CULLED` and
+  `TAG_LOD_CULLED` (kept visible while `TAG_LOD_TRANSITIONING`); each tag's hooks call it, with an
+  `overrides` field for the tag being toggled. The tags are kernel component types
+  (`kernel/ecs/ECSRegistry.ts`) whose hooks a feature registers (`lod()` for its two).
 - **Managed entities**: `CoreEntityOpts.managedBy` adds `MANAGED_BY { manager, ownerId, role }`
-  (`ECS.ts:470`); debug tools treat managed entities as read-only.
-- **Scene load** (`SceneLoader.ts`): `createNextSceneObject3Ds` (`:345`, called at `:580`) creates
-  the scene JSON's meshes; then the enter hooks run (scene code creates its meshes there or in its
-  init); then `settlePendingPhysicsEntities()` (`:610`) and `releasePhysicsStepping()`, while the
-  loader is still shown.
+  (`kernel/ecs/ECS.ts`); debug tools treat managed entities as read-only.
+- **Scene load** (`kernel/scene/SceneLoader.ts`, `src/_engine/kernel/scene/CLAUDE.md`):
+  `createNextSceneObject3Ds` (`kernel/scene/SceneDataLoader.ts`) creates the scene JSON's meshes
+  after the scene code and the features' `created` hooks; then the enter listeners run (scene
+  code creates its meshes there or in its code), then the features' `entered` hooks, in install
+  order (physics' waits for its pending creates, `settlePendingPhysicsEntities`, and releases its
+  stepping), while the loader is still shown.
 - **Static bodies** (`_DONE_p352` Phase 1): `BODY_STATIC` isn't synced per frame. A fixed body
   moved by `world.setTransform` or a direct `setTranslation` / `setRotation` is synced once
-  (`setBodyMovedListener`, `queueStaticBodySync` in `PhysicsManager.ts`), which marks its
-  transform dirty.
-- **Render-sync order** (`AppECSRegistry.ts:101`): `POSE_PRODUCERS` 0, `POSE_CONSUMERS` -0.5,
-  `SHADOW_FIT` -0.75, `FRUSTUM_CULLING` -1, `LIGHT_CULLING` -2 (higher runs earlier).
-- **Cell maths** (`core/Spatial/CellKey.ts`): `worldToCell`, `packCellKey`, `cellBounds`.
+  (`setBodyMovedListener` in `features/physics/PhysicsRegistry.ts`, `queueStaticBodySync` in
+  `features/physics/PhysicsEntity.ts`), which marks its transform dirty.
+- **Render-sync order** (`APP_RENDER_SYNC_ORDER`, `kernel/loop/SystemStages.ts`, on `aekasha`):
+  `POSE_PRODUCERS` 0, `POSE_CONSUMERS` -0.5, `SHADOW_FIT` -0.75, `FRUSTUM_CULLING` -1,
+  `LOD_SELECTION` -1.5, `LIGHT_CULLING` -2 (higher runs earlier).
+- **Cell maths** (`features/spatial/CellKey.ts`, `@internal`): `worldToCell`, `packCellKey`,
+  `cellBounds`; `spatial()`'s, so it moves to `src/_engine/utils/` for this plan (p370 §13).
 - **Imported assets** share one engine material per asset (`SpawnImportedParams.material`), and
-  Blender custom props already group physics nodes (`index`, `core/Import/ImportTypes.ts:71`).
+  Blender custom props already group physics nodes (`index`, `kernel/assets/import/CustomProps.ts`,
+  `ImportTypes.ts`).
+- **Placement** (p370 §13): this plan starts the `merging()` feature (`features/merging/`,
+  `aekasha/merging`); the kernel gains only types, a component type and seams.
 - p371's `mergeGeometryParts` returns a merged geometry with a part table
   (`vertexStart/Count`, `indexStart/Count`, `key`).
 
@@ -57,7 +67,7 @@ overrides?)` sets `.visible` from `DISABLED`, `TAG_FRUSTUM_CULLED` and `TAG_OBJE
 | -------------- | ------------ | ------------------------------------------------------------------------------------------------- |
 | `MERGE_GROUP`  | group entity | `{ id, members: number[], cellKey?, settings, partIndex: Map<entityId, part>, wasted, rebuilds }` |
 | `MERGE_MEMBER` | member       | `{ groupEntityId, groupId, partIndex }`                                                           |
-| `TAG_MERGED`   | member       | runtime-only; a fourth (fifth with p348) reason in `reconcileObject3DVisibility`                  |
+| `TAG_MERGED`   | member       | runtime-only; a fifth reason in `reconcileObject3DVisibility`, a kernel type                      |
 
 - **The group entity** is a plain mesh entity (`OBJECT3D` + `TAG_IS_MESH`, so `disposeMesh` and
   the profiler handle it) created with `managedBy: { manager: 'MERGE', ownerId: <scene or
@@ -67,7 +77,7 @@ caller>, role: 'group' }`. Its geometry is registered (`mergeGroup:<id>`), its m
   leaves the DEFAULT spatial domain (its `SPATIAL_INDEXED` is removed and restored on leave).
   Its geometry and material refs stay, so leaving the group needs no reload.
 
-## 3. API (`core/MergeGroups.ts`)
+## 3. API (`features/merging/MergeGroups.ts`, on `aekasha/merging`)
 
 ```ts
 createMergeGroup(opts: { id: string; sceneId?: string; castShadow?: boolean; receiveShadow?: boolean }, world?): number;
@@ -80,7 +90,8 @@ getMergeGroupOf(entityId: number, world?): string | undefined;
 ```
 
 - **Builds** are batched: adds and removes mark the group pending; `mergeGroupBuildSystem` at
-  `APP_RENDER_SYNC` (new `APP_RENDER_SYNC_ORDER.MERGE_BUILD = 0.5`, before the pose producers)
+  `APP_RENDER_SYNC`, registered by `merging()`'s install (new `APP_RENDER_SYNC_ORDER.MERGE_BUILD
+  = 0.5`, before the pose producers; the scene runner's system order baseline records it)
   builds pending groups once per frame with `mergeGeometryParts` (or its worker variant above a
   vertex threshold, the members staying visible until the new mesh is in).
 - **`updateMergeMember`** rewrites the member's range in place: positions by the new world matrix,
@@ -98,8 +109,12 @@ getMergeGroupOf(entityId: number, world?): string | undefined;
 
 ### 4.1 `merge`
 
-On `createMeshEntity` props, `meshSchema` (`MeshAssetSchema`, next to `props` / `entityOpts`) and
-inline scene meshes:
+On `createMeshEntity` props (`MeshProps` in `kernel/mesh/Mesh.ts`, its type imported from the
+feature with `import type`), `*.mesh.json` and inline scene meshes: a `mesh` field of
+`merging()`'s `FeatureSchemaPart` (`schemas/FeatureSchemas.ts`; `mergeGroups` its `scene` field),
+so the feature manifest names the feature and `InitEngine` fails a scene that merges without it.
+Without `merging()`, a code mesh's `merge` warns once and the mesh renders on its own (as `lod:
+'AUTO'` does without `lod()`):
 
 ```ts
 merge?: string | 'AUTO' | { group?: string | 'AUTO'; cellSize?: number; maxVertices?: number };
@@ -131,7 +146,9 @@ explicit group whose members span two streaming cells is warned about.
 ### 4.3 Imported assets
 
 - A `merge` custom prop on Blender nodes (`"AUTO"` or a group id), parsed with the other custom
-  props (`core/Import/CustomProps.ts`), like `index` for compound bodies.
+  props (`kernel/assets/import/CustomProps.ts`, its template in `customPropTemplates.blend`),
+  like `index` for compound bodies, and handed to `merging()` through an import extension
+  (`ctx.registerImportExtension`, as physics' and LOD's).
 - `spawnImportedAsset` options: `merge: 'AUTO' | string` applies to every eligible node of the
   asset (the common case: one imported level, one material).
 
@@ -149,11 +166,12 @@ Refused with a dev warning naming the entity and the reason (it then renders on 
 
 ## 6. Scene load
 
-`buildSceneMergeGroups()` runs in `SceneLoader` after the enter hooks and before
-`settlePendingPhysicsEntities()` (`:610`): by then the scene JSON's meshes and the scene code's
-meshes exist, and the loader still hides the scene. It builds every pending group synchronously
-(or awaits worker builds), so the first frame already draws merged. Physics members' transforms
-are their creation transforms at that point (bodies spawn at the entity's `TRANSFORM`).
+`buildSceneMergeGroups()` is `merging()`'s `entered` scene hook (awaited, before the loader's
+`loadEndFn`): by then the scene JSON's meshes and the scene code's meshes exist, and the loader
+still hides the scene. It builds every pending group synchronously (or awaits worker builds), so
+the first frame already draws merged. Physics members' transforms are their creation transforms
+at that point (bodies spawn at the entity's `TRANSFORM`; `merging()` listed after `physics()`
+runs after physics has settled them).
 
 On scene exit, the group entities are deleted with the scene's non-persistent entities;
 `disposeMesh` releases their geometry, and the members' refs go with the members.
@@ -177,9 +195,11 @@ faceIndex)` (p373 D4) maps the hit to its member.
 
 ### Phase 1 — Components and runtime API (§2, §3)
 
-Components, `TAG_MERGED` in the reconcile, `createMergeGroup` / `addToMergeGroup` /
-`dissolveMergeGroup`, the build system. **Exit:** 200 debugScene boxes with one material in one
-group: one draw (profiler), same image as unmerged, dissolving restores 200 draws.
+The `merging()` feature (its install, entry, a `sbp.config.ts` budget line), components,
+`TAG_MERGED` in the reconcile, `createMergeGroup` / `addToMergeGroup` / `dissolveMergeGroup`, the
+build system, unit tests next to the modules. **Exit:** 200 `testDebugScene` boxes with one
+material in one group: one draw (profiler), same image as unmerged, dissolving restores 200
+draws; without `merging()` in `features` the app's first download is unchanged (`yarn sbp`).
 
 ### Phase 2 — In-place updates (§3)
 
@@ -188,8 +208,9 @@ group: one draw (profiler), same image as unmerged, dissolving restores 200 draw
 
 ### Phase 3 — JSON, AUTO and scene load (§4, §6)
 
-`merge` in `meshSchema` and `createMeshEntity`, scene `mergeGroups`, `AUTO` buckets, imported
-asset custom prop and option, the scene-load step. **Exit:** a scene with 500 `AUTO` meshes in 3
+The cell maths to `src/_engine/utils/` unless p353 moved it (p370 §13), `merge` in the feature's
+schema part and `createMeshEntity`, scene `mergeGroups`, `AUTO` buckets, imported asset custom
+prop and option, the scene-load step. **Exit:** a scene with 500 `AUTO` meshes in 3
 materials over 4 cells loads with 12 groups, and its first frame is already merged.
 
 ### Phase 4 — Adoption and measurements
@@ -205,9 +226,12 @@ backends.
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk
    worlds, built on groups. Page template from p301 §5; p374 adds the array-material variation.
-2. A "Merging" section in `docs/techniques/asset-optimization.md`: p370 §3's decision table, when
-   not to merge.
-3. `CLAUDE.md` (a "Mesh merging" architecture paragraph), `readme.md` Features.
+2. A Mesh merging feature page on the Hub (`hub/pages/features/mesh-merging/`, `aek:covers` the
+   nested file's section, with p370 §3's decision table and when not to merge), linked from the
+   asset optimization page; whether an example scene is built for it is asked when the plan
+   starts (largeWorld's adoption may be enough); `yarn hub:build`.
+3. `features/merging/CLAUDE.md` (a `## Mesh merging` section) and its line in the root's map, the
+   root's Bootstrap flow (the features the template lists), `readme.md` Features.
 4. Engine minor, app patch; `CHANGELOG.md`.
 
 ## 9. Versioning

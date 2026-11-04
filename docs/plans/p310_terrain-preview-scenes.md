@@ -8,8 +8,8 @@ Related: p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing 
 
 Two app scenes to preview, compare and measure every technique of the epic:
 
-- **`terrainGallery`**: isolated, engine-generated blocks. One block per material, one row per technique, camera presets per game type, and a **measurement mode** that produces the GPU-ms tables for the handbook. Its skeleton comes from p303, and p304–p309 add rows to it. This plan completes it.
-- **`terrainShowcase`**: blended, art-directed blocks built in Blender:
+- **`terrainGallery`** (`src/app/scenes/terrainGallery/`): isolated, engine-generated blocks. One block per material, one row per technique, camera presets per game type, and a **measurement mode** that produces the GPU-ms tables for the handbook. Its skeleton comes from p303, and p304–p309 add rows to it. This plan completes it.
+- **`terrainShowcase`** (`src/app/scenes/terrainShowcase/`): blended, art-directed blocks built in Blender:
 
   - a coast;
   - an alpine slope;
@@ -19,7 +19,9 @@ Two app scenes to preview, compare and measure every technique of the epic:
 
   The **step-by-step Blender build of each block** is in this plan.
 
-The plan ends with the final handbook pass: the decision matrix with measured numbers, and the `readme.md` highlight.
+The plan ends with the final handbook and Hub pass: the decision matrix with measured numbers, the terrain feature page's showcase, and the `readme.md` highlight.
+
+Both are ordinary app scenes (`hub/CLAUDE.md`'s Scenes and examples): one folder each, holding the scene JSON, the scene file, its `_dbg__` module, its Hub image and every asset only that scene uses (blocks, splat and colour maps, world materials, scatter and decal data); the layout check (`devTools/layout/layoutRules.ts`) fails on a file elsewhere.
 
 ---
 
@@ -29,11 +31,11 @@ All are CC0. Source sizes are what to download. Shipped sizes are what p300 prod
 
 | What                                                                                                       | Where from                                   | Download                                                     | Ships as                                                                                          | Location                                             |
 | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 16 terrain/structure texture sets (p303 D6 table)                                                          | ambientCG (primary), Poly Haven (alternates) | 2K-JPG zip (2K-PNG for cliffs if JPEG blocking shows)        | 1K LITE KTX2 (+FULL/MINIMAL for `sand01`, `grass01`, `cliffs01`; 2K LITE optional for `cliffs01`) | `src/toolkit/terrain/textureSets/<set>/`             |
-| Decals: `TireTracks001`, `AsphaltDamage001`, `Leaking012A`, `Leaking017B`, `Leaking019A`                   | ambientCG                                    | 1K-PNG zip (decals live in 512-px atlas cells; 1K is enough) | Atlas cells in `decalsGround` / `decalsStructure` (2K KTX2)                                       | `src/toolkit/terrain/decals/sources/<id>/`           |
-| Leaf litter: `LeafSet024`                                                                                  | ambientCG                                    | 1K-PNG zip                                                   | Scatter-card atlas (1K KTX2)                                                                      | `src/toolkit/terrain/scatter/leaves/`                |
-| Rocks (optional realism): `rock_moss_set_01`, `namaqualand_stones_01`, `sand_rocks_small_01`, `boulder_01` | Poly Haven (models)                          | glTF, 1K textures                                            | Decimated GLBs (meshopt) + 1K KTX2 (`prop` profile)                                               | `src/toolkit/terrain/scatter/models/<id>/`           |
-| Procedural sets, decals, macro noise, ripple atlas                                                         | Generated (p304)                             | —                                                            | Baked at load, or exported → committed PNG → KTX2                                                 | `src/toolkit/terrain/textures/`, decal atlas sources |
+| 16 terrain/structure texture sets (p303 D6 table)                                                          | ambientCG (primary), Poly Haven (alternates) | 2K-JPG zip (2K-PNG for cliffs if JPEG blocking shows)        | 1K LITE KTX2 (+FULL/MINIMAL for `sand01`, `grass01`, `cliffs01`; 2K LITE optional for `cliffs01`) | `src/toolkit/textures/<set>/`                        |
+| Decals: `TireTracks001`, `AsphaltDamage001`, `Leaking012A`, `Leaking017B`, `Leaking019A`                   | ambientCG                                    | 1K-PNG zip (decals live in 512-px atlas cells; 1K is enough) | Atlas cells in `decalsGround` / `decalsStructure` (2K KTX2)                                       | `src/toolkit/textures/decalsGround/` / `decalsStructure/` (`source/<id>/`) |
+| Leaf litter: `LeafSet024`                                                                                  | ambientCG                                    | 1K-PNG zip                                                   | Scatter-card atlas (1K KTX2)                                                                      | `src/toolkit/textures/leafLitter/`                   |
+| Rocks (optional realism): `rock_moss_set_01`, `namaqualand_stones_01`, `sand_rocks_small_01`, `boulder_01` | Poly Haven (models)                          | glTF, 1K textures                                            | Decimated GLBs (meshopt) + 1K KTX2 (`prop` profile)                                               | `src/toolkit/models/nature/<id>/`                    |
+| Procedural sets, decals, macro noise, ripple atlas                                                         | Generated (p304)                             | —                                                            | Baked at load, or exported → committed PNG → KTX2                                                 | `src/toolkit/textures/<id>/`, decal atlas sources    |
 
 **Disk budget for the downloads:**
 
@@ -47,7 +49,7 @@ All are CC0. Source sizes are what to download. Shipped sizes are what p300 prod
 
 ### 2.1 Layout
 
-All blocks come from `terrainBlock` JSONs with generated geometry (p306), so the gallery needs no Blender. Rows run along +Z and are labelled by the tab and world-space signposts (simple text sprites, debug only).
+All blocks come from `terrainBlock` JSONs with generated geometry (p306), kept in the scene's folder, so the gallery needs no Blender. Rows run along +Z and are labelled by the tab and world-space signposts (the UI kit's world anchors, `createWorldAnchorLayer` on `aekasha/ui`, moved by the toolkit's `registerWorldAnchorSync` (`aekasha/toolkit/ecs`); created by the debug module only).
 
 | Row           | Blocks                                                                                    | Shows                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -67,7 +69,7 @@ All blocks come from `terrainBlock` JSONs with generated geometry (p306), so the
 
 ### 2.2 Camera presets per game type
 
-Buttons in the gallery tab. Each preset sets the pose relative to the selected block and FOV, and shows a one-line description. Movement is the debug camera's controls.
+Buttons in the gallery tab (the scene-scoped `src/app/scenes/terrainGallery/_dbg__terrainGallery.ts`: one `createDebuggerTab({ id, title, icon, sceneId, content })` from `aekasha/debug`, a declarative pane of the UI kit's fields, like `space`'s "Space demo" tab). Each preset sets the pose relative to the selected block and FOV, and shows a one-line description. Movement is the debug camera's controls.
 
 | Preset                      | Pose                                                      | FOV | Why                                            |
 | --------------------------- | --------------------------------------------------------- | --- | ---------------------------------------------- |
@@ -82,12 +84,12 @@ Buttons in the gallery tab. Each preset sets the pose relative to the selected b
 
 - **Solo:** hide every block except the selected one. The camera goes to the row's **measurement pose**: block filling the screen, 1920 × 1080 canvas, DPR 1, PostFX off, shadows on, sky paused.
 - **Measure:**
-  - sums GPU time over the frame's render contexts through `_dbg__GPUTimer` (`_acquireGpuTimer`, `_onRenderContext`, `_sumGpuMs`), WebGPU only;
+  - reads the frame's GPU time from the engine's one frame record (`debug/_dbg__GPUFrameTimes.ts`: `_acquireGpuFrameTimes('RENDER')`, `_onGpuFrameTime`, `src/_engine/debug/CLAUDE.md`'s GPU timing), which sums every render context of the frame; it's `@internal` debug code, so the gallery reaches it through a public `aekasha/debug` source (the stats panels' GPU, or a small public reader added for this), not a deep import;
   - averages 120 frames after a 30-frame warm-up;
   - records `{ row, block, technique, tier, packing, taps estimate, gpuMs, backend, adapter info }`.
 - **Measure row:** runs every block of a row × every quality tier.
 - **Copy results:** writes a markdown table to the clipboard to paste into the handbook pages. The machine (GPU, browser, OS) is in the table header. Numbers are only comparable within one machine; the handbook says so.
-- WebGL2 can't time nested contexts (`_dbg__GPUTimer` note), so measurements are WebGPU only and the tab says why.
+- On WebGL2 three's pool times one context at a time and loses the queries opened while a resolve polls, so only about two frames in three get a figure (the GPU timing notes): measurements are WebGPU-only for the tables and the tab says why.
 
 ---
 
@@ -95,9 +97,9 @@ Buttons in the gallery tab. Each preset sets the pose relative to the selected b
 
 **Scene:**
 
-- `src/app/terrainShowcase.scene.json` + `terrainShowcase.ts`, sky box `dayNight` (5-minute day, playing).
-- Surface conditions `SIMULATED`, with a scenario button "Rain shower" (p307).
-- Optional: the third-person character from the gym (`DynamicCharacter` + `FollowObjectCameraRig`) to walk on the heightfield colliders, stamp footprints (p309 runtime decals) and test the blocks the way a game would.
+- `src/app/scenes/terrainShowcase/terrainShowcase.scene.json` + `terrainShowcase.ts`, sky box `dayNight` (the shared `src/app/skyboxes/` one, 5-minute day, playing).
+- Surface conditions `SIMULATED` (the scene JSON's `surfaceConditions`), with a scenario button "Rain shower" (p307).
+- Optional: a third-person character as the gym has one (the `character()` feature's dynamic controller and player brain, `src/_engine/features/character/CLAUDE.md`, with the toolkit's `FollowObjectCameraRig`; the visual from `src/app/shared/characterVisual.ts`) to walk on the heightfield colliders, stamp footprints (p309 runtime decals) and test the blocks the way a game would.
 
 **Blocks** (64 m, 129 vertices, 0.5 m spacing), placed as separate islands with sunk edges. Seamless multi-block worlds are the future world plan; p306's _Split Into Blocks_ is tested separately.
 
@@ -112,15 +114,19 @@ Buttons in the gallery tab. Each preset sets the pose relative to the selected b
 ### 3.1 Files per block (app)
 
 ```
-src/app/terrain/blocks/showcaseCoast/
-  showcaseCoast.blend                     (app source, committed; not a toolkit template)
-  showcaseCoast.glb                       (exported geometry, committed source; p300 → meshopt)
-  showcaseCoast.importedAsset.json
-  showcaseCoast.terrainBlock.json
-  showcaseCoast_decals.glb + .importedAsset.json + .decalSet.json
-  showcaseCoast_rocks.scatter.json
-src/app/terrain/materials/terrainCoast.material.json   (terrain material: layers, techniques, wet)
+src/app/scenes/terrainShowcase/
+  terrainShowcase.scene.json, terrainShowcase.ts, _dbg__terrainShowcase.ts, terrainShowcase.hub.png
+  blocks/showcaseCoast/
+    showcaseCoast.blend                     (app source, committed; not a toolkit template)
+    showcaseCoast.glb                       (exported geometry, committed source; p300 → meshopt, lossless for the collider)
+    showcaseCoast.importedAsset.json
+    showcaseCoast.terrainBlock.json
+    showcaseCoast_decals.glb + .importedAsset.json + .decalSet.json
+    showcaseCoast_rocks.scatter.json
+    terrainCoast.material.json              (terrain material: layers, techniques, wet)
 ```
+
+A block another scene starts using moves to a shared `src/app/terrainBlocks/` (p306 D2), keeping its ids.
 
 The Alpine block adds `showcaseAlpine_splat0.png` / `_splat1.png` + `.texture.json` (`data` slot, `codec: none`).
 
@@ -128,7 +134,7 @@ The Alpine block adds `showcaseAlpine_splat0.png` / `_splat1.png` + `.texture.js
 
 These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 
-1. **Open the template:** `src/toolkit/terrain/blender/terrain_blockTemplate.blend`. _Save As_ into the block folder in `src/app/terrain/blocks/<id>/<id>.blend`. Run `yarn fetchTextureSources` first so the preview material finds its images.
+1. **Open the template:** `src/toolkit/terrain/blender/terrain_blockTemplate.blend`. _Save As_ into the block folder in `src/app/scenes/terrainShowcase/blocks/<id>/<id>.blend`. Run `yarn fetchTextureSources` first so the preview material finds its images.
 2. **Add the block:** Ækasha sidebar → _Add Terrain Block_: size 64, resolution 129, grid (x, z) per the table. The object is `TerrainBlock`.
 3. **Set the preview material's layers** to the block's sets (the node group's image slots are pre-wired to the `source/raw/` folders).
 4. **Shape, paint and bake** (per-block steps below).
@@ -237,7 +243,7 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 
 ### 3.6 `showcaseBunker`: step by step (structure)
 
-1. **Open** `src/toolkit/terrain/blender/structure_concrete.blend` and _Save As_ `src/app/terrain/blocks/showcaseWetlands/showcaseBunker.blend`.
+1. **Open** `src/toolkit/terrain/blender/structure_concrete.blend` and _Save As_ `src/app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseBunker.blend`.
 2. **Model** a 6 × 4 × 2.6 m bunker (walls 0.4 m) and a 12 m wall segment, with simple bevels (Bevel modifier, 0.03 m, 2 segments, then apply).
    - **No UVs needed:** world/object triplanar.
    - Apply scale; origin at the bottom centre.
@@ -251,12 +257,13 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 ### 3.7 Scene code (outline)
 
 ```ts
+// src/app/scenes/terrainShowcase/terrainShowcase.ts: entries only (`aekasha*`, `aekasha/toolkit/*`)
 export const scene = async () => {
   const update = getLoaderStatusUpdater();
   for (const id of ['showcaseCoast', 'showcaseAlpine', 'showcaseWetlands', 'showcaseProcedural']) {
     await spawnTerrainBlock(id); // geometry, material variant, collider, scatter, decals (p306/p308/p309)
   }
-  await spawnImportedAsset(getImportManifest('showcaseBunker'), {
+  await spawnImportedAsset('showcaseBunker', {
     material: getStructureMaterial('concrete') /* … */,
   });
   setSurfaceConditions({ wetness: 0, waterLevel: 0.5 }); // p307 (or the scene JSON's `surfaceConditions`)
@@ -264,7 +271,9 @@ export const scene = async () => {
 };
 ```
 
-**Showcase tab** (scene-scoped): block list (fly to), Rain shower / Dry / Snowfall scenarios, time of day, per-block technique toggles (material variants), debug views (`WEIGHTS`, `TAPS`, `WETNESS`), and the camera presets from §2.2.
+Each block's physics is created inside the load, so the load's physics hold covers it (p101) and the scene simulates the same on every visit. `terrain()` (p306), `instancing()` with its static instances and scatter (p308) and `surfaceConditions()` (p307) are in the template's `features`; the scene JSON's fields name them in its feature manifest.
+
+**Showcase tab** (scene-scoped, `_dbg__terrainShowcase.ts`: `createDebuggerTab({ …, sceneId: 'terrainShowcase' })`, removed on the scene's exit): block list (fly to), Rain shower / Dry / Snowfall scenarios, time of day, per-block technique toggles (material variants), debug views (`WEIGHTS`, `TAPS`, `WETNESS`), and the camera presets from §2.2.
 
 ---
 
@@ -292,7 +301,12 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
    - a **highlight** with a showcase screenshot;
    - a short example (`terrainBlock.json` + `spawnTerrainBlock`);
    - commands (`fetchTextureSources`, `assets`).
-5. **`CLAUDE.md`:** a "Terrain" architecture section summarizing p302–p309 (where things live, binding budget, conventions, debug views), and the two new scenes as the verification scenes for terrain plans.
+5. **`CLAUDE.md`:** the root's Architecture gets a short "Terrain" section summarizing p302–p309 (where things live, binding budget, conventions, debug views) pointing at the nested files (`src/toolkit/terrain/CLAUDE.md`, the terrain, instancing and surface features' own), each listed in the map; the terrain feature's `CLAUDE.md` names the two scenes as the verification scenes for terrain plans, as `features/lod/CLAUDE.md` does `lodShowcase`. A new `###` section needs a Hub page's `aek:covers` (the terrain feature page's).
+6. **Hub** (`hub/CLAUDE.md`), the epic's showcase:
+   - the terrain feature page (`hub/pages/features/terrain/`, p303's) gets a `::: scene terrainShowcase` panel in its intro, the decision matrix (or a link to it) and a "start here" list of the handbook pages (`repo:` links); `aek:image` `scene:terrainShowcase`, and `aek:featured` only if it replaces one of the homepage's four;
+   - the Hub images: `terrainGallery` and `terrainShowcase` join `OTHER_HUB_SCENES` (`src/app/examples/_dbg__exampleHub.ts`), so their drawer gets the "Hub" tab, and **Save Hub image** writes `<sceneId>.hub.png` into each scene's folder;
+   - an example page for the geometry half of the toolkit (which has no example scene on the Hub; p620 D1 left it as an alternative): either a small example scene in `src/app/examples/terrain/` (a generated block with its collider, rules colours and a procedural scatter, its regions included by a `hub/pages/examples/terrain/` page), or `exampleToolkit` extended with the same. Ask which before Phase 4;
+   - then `yarn hub:build` (a dead `hub:` link, a moved `#region` or an unknown scene id fails it).
 
 ---
 
@@ -301,6 +315,7 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 ### Phase 1 — Gallery completion (§2)
 
 1. Rows A–L (whatever previous plans haven't added), signposts, camera presets, solo + measurement mode with copy-out.
+2. The scene runner: `terrainGallery` in `devTools/verify/scenes.config.ts` (its camera poses, the tab it opens), its baseline recorded (`yarn verify:scenes --only terrainGallery --update`).
 
 **Exit:** every row renders on WebGPU and WebGL2, and a full row measurement completes and copies a table.
 
@@ -309,7 +324,9 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 1. Build Coast, Alpine, Wetlands and Bunker in Blender exactly as written. Where a step proves wrong, fix both this plan and the handbook page.
 2. Export, JSONs, materials, scatter, decals.
 
-**Exit:** all blocks spawn with colliders matching the wireframe; the character (if added) walks every block.
+3. `terrainShowcase` in `scenes.config.ts` with its baseline (sky paused, rain off, so the snapshot is stable; `?physicsProbe=N` checks the blocks' determinism).
+
+**Exit:** all blocks spawn with colliders matching the wireframe; the character (if added) walks every block; `yarn verify:scenes --only terrainShowcase` passes in both worker targets.
 
 ### Phase 3 — Procedural block and scenarios
 
@@ -317,15 +334,19 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 
 **Exit:** a full rain shower cycle (dry → soaked → puddles → drying) reads plausibly on every block, and the GPU cost of the wettest state is recorded.
 
-### Phase 4 — Measurements and the handbook pass (§4)
+### Phase 4 — Measurements, the handbook and the Hub (§4)
 
-**Exit:** no handbook page has a placeholder left; the README matrix has numbers.
+1. §4's steps 1-3 and 6 (the Hub), the Hub images saved.
+2. `yarn sbp`: no terrain, scatter or surface code in the app's first download, and the banner's feature groups at 0.
+
+**Exit:** no handbook page has a placeholder left; the README matrix has numbers; `yarn hub:build` passes.
 
 ### Phase 5 — Release
 
-1. `readme.md`, `CLAUDE.md`, `CHANGELOG.md`.
+1. `readme.md`, `CLAUDE.md` (§4 steps 4-5), `CHANGELOG.md`.
 2. App minor bump (scenes); engine/toolkit bumps if this plan touched them.
 3. `yarn checkVersions --against main`.
+4. Mark the plan done; it's the epic's last child, so the epic's own closing steps follow (p301).
 
 ---
 
@@ -336,4 +357,4 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 | Blender steps drift from the installed Blender version | The add-on encapsulates the fragile steps; pages name the version they were verified with; Phase 2 corrects the text while building |
 | Showcase too heavy for low-end machines                | The tab's tier switch (p305 variants); the gallery documents per-tier cost; the showcase is a demo, not a budget target             |
 | Measurement noise                                      | Warm-up, 120-frame averages, fixed poses, PostFX off, one machine per table                                                         |
-| Headless WebGPU doesn't render under WSL2              | Visual checks and measurements need a real browser (noted in `docs/templates/todo-plan-prompts.txt`'s context)                      |
+| Headless WebGPU doesn't render under WSL2              | `yarn verify:scenes` renders in the Windows Chrome on the real GPU there (`devTools/verify/CLAUDE.md`; `--webgl` is SwiftShader, too slow for these scenes); the GPU-ms tables need a headed browser on the recorded machine |

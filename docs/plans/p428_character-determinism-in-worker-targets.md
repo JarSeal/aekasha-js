@@ -1,12 +1,12 @@
 Status: stub — not-implemented
 Category: Characters, Physics
 Blocks: p512_client-prediction-and-reconciliation.md (the local player predicted in the default worker target)
-Related: \_DONE_p610_character-and-input-action-architecture.md (D1: made characters deterministic on `MAIN_THREAD` and left the worker targets here), \_DONE_p614_review-physics.md (the worker protocol and its transport interface, which this changes), p421_kinematic-character-controller.md (the KCC's sweeps must run inside the step: its open question 1 is this plan's), \_DONE_p603_gameplay-architecture-contracts.md (C2: the controller contract), \_DONE_p604_multiplayer-viability-study.md (§4: step-index time, the simulation reads its own state)
+Related: `src/_engine/features/character/CLAUDE.md` (p610 D1: characters deterministic on `MAIN_THREAD`, the worker targets left here), `src/_engine/features/physics/CLAUDE.md` (Worker targets: the protocol and its transport, which this changes), p421_kinematic-character-controller.md (the KCC's sweeps must run inside the step: its open question 1 is this plan's), p420_npc-simulation-tiers.md (The gameplay contracts: C2, the controller contract), p510_headless-simulation-runtime.md (The multiplayer path: step-index time, the simulation reads its own state)
 
 # Character Determinism in the Worker Targets — Stub
 
 **This is a stub.** It records the goal, what p610 left and the open questions so the real plan can
-be written with p614 and p421. Nothing here is a final design.
+be written with p421. Nothing here is a final design.
 
 ## Goal
 
@@ -16,7 +16,7 @@ path whatever the frame timing and the worker's latency. `WORKER_THREAD` is the 
 until then a scene with characters isn't reproducible where apps run, and p512's prediction can't
 replay the local player there.
 
-## Grounding (2026-10-13, after p610)
+## Grounding (2026-11-04)
 
 - **Deterministic already, in every target:** the brains and the action sample (the sub-step index,
   which `stepPhysics` passes in both worker targets), step-index time in the controller, the seeded
@@ -40,13 +40,13 @@ replay the local player there.
   the characters' path hash on `MAIN_THREAD` only (`devTools/verify/scenes.ts`). The `space` scene's
   `MutualGravity` has the same cause (it reads the worker's last synced poses) and the same entry.
 - **The controller's dependencies:** `controllers/dynamic/` is built on `three/webgpu` maths, the
-  physics facade (since p614: `PhysicsState.ts`' `getPhysicsWorld` for its casts and
-  `PhysicsStepping.ts`' step clock, plus the `types/` enums) and the ECS, and its configuration's hooks are app closures. The physics worker
+  physics facade (`PhysicsState.ts`' `getPhysicsWorld` for its casts and `PhysicsStepping.ts`' step
+  clock, plus the `types/` enums) and the ECS, and its configuration's hooks are app closures. The physics worker
   bundles without three, `MainLoop`, `Config` or the facade's 14 modules
   (`features/physics/worker/PhysicsWorker.test.ts`), and a worker can't be handed code: it
   `import()`s a module by name, as the assets worker does with its jobs.
 
-## The two directions (p610 D1)
+## The two directions (p610 D1; the transport fits both)
 
 1. **The controller in the worker:** the worker loads the controller's module by its registered
    kind and ticks it inside the step against the live world, with the sync casts, as `MAIN_THREAD`
@@ -64,7 +64,7 @@ replay the local player there.
 
 ## Open questions
 
-1. **Which direction**, decided here: p614 left both open (its D5). The protocol is in
+1. **Which direction**, decided here (the physics review left both open, p614 D5). The protocol is in
    `features/physics/protocol/` (a new message takes the next free number in its switch's range,
    `PhysicsProtocolType.ts`), the transport in `transport/PhysicsTransport.ts` (plain data, in order,
    one message handled to the end before the next); the first direction adds a message type, the
@@ -73,11 +73,17 @@ replay the local player there.
 2. **One baseline or one per target:** must a worker target give `MAIN_THREAD`'s path hash (only
    the first direction can), or only the same hash on every run of that target?
 3. **Step-stamped events:** stamp `EVENTS_PUSH` records with their step and deliver them at the
-   sub-step after it, in both directions (and for every gameplay code that reacts to contacts).
-4. **The other main-thread readers of the snapshot** (`MutualGravity`, the tier policy's `'FRAMES'`
-   cadence): the same mechanism, or left as presentation.
+   sub-step after it, in both directions (and for every gameplay code that reacts to contacts:
+   p425's game events emitted from them).
+4. **The other main-thread readers of the snapshot** (`MutualGravity`, the `space` scene's
+   `unstableHash` entry; the tier policy's `'FRAMES'` cadence): the same mechanism, or left as
+   presentation.
 5. **The debug tools** (the state window, the gizmos, the saved overrides) when the controller's
    state lives in the worker.
+6. **`MAIN_THREAD` with real frame timing** (several sub-steps a frame) isn't checked yet: the
+   scene runner's test clock runs one step a frame. A check for it leaves the `CAMERA_RELATIVE`
+   player out (it follows the camera, which depends on the frame timing by design); it belongs
+   with this plan's per-target baselines (question 2).
 
 ## Done when
 

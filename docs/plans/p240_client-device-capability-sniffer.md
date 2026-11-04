@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Performance, Settings
-Related: the PostFX system (`core/PostFX.ts`, p070, implemented: `setPostFxEnabled` is one of the switches the recommendations target), p350_lod-system-research.md (the device levels are a natural LOD budget input), _DONE_p063_triple-buffered-physics-transform-buffer.md (SAB availability is part of the probe), the procedural sky box (p112, implemented: its sky box sun light `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
+Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), p350_lod-system-research.md (the device levels are a natural LOD budget input), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (§2.4: a device memory level is the GPU memory tab's natural default budget), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
 
 # Client Device Capability Sniffer — Plan
 
@@ -10,11 +10,13 @@ Measure what the client device can do, once, and hand the result to the app so i
 2. **Verdict**: the measurements checked against **targets** (FPS, memory, GPU memory, cores, required features). Every target has an engine default and can be overridden in `CONFIG.ts` or per call.
 3. **Levels and recommendations**: a device level (`LOW | MEDIUM | HIGH | ULTRA`, the same scale as the shadow presets) per category (GPU, CPU, memory, GPU memory) plus an overall level (§3.1), and suggested values (pixel ratio, antialias, shadow quality, PostFX, backend, physics worker target). They are advisory data. The engine applies nothing on its own (see §1.3).
 
-It is opt-in at engine init (`AppConfig.deviceCapabilities.runAtInit`, default `false`) and always callable from app code (eg. a "Re-test my device" button in a game settings menu). With `saveToLS` (default `true`) the measurements are stored in localStorage and later boots skip the test while the stored result is still valid (§4).
+It is opt-in at engine init (`AppConfig.deviceCapabilities.runAtInit`, default `false`) and always callable from app code (eg. a "Re-test my device" button in a game settings menu: the UI kit's `createSettingsMenu`, `ui/game/SettingsMenu.ts`). With `saveToLS` (default `true`) the measurements are stored in localStorage and later boots skip the test while the stored result is still valid (§4).
 
 Code-level name: `DeviceCapabilities` (the plan name keeps "sniffer"; in web terms "sniffing" usually means user-agent string guessing, which is only a small fallback here).
 
-All phases are non-breaking: with `runAtInit` off and nobody calling the API, nothing runs and the benchmark code is never downloaded.
+All phases are non-breaking: with `runAtInit` off and nobody calling the API, nothing runs and the benchmark code is never downloaded (the Smallest Build Possible rule: the heavy parts load on first use, and `yarn sbp` shows none of it in the first download).
+
+**Where it lives:** a kernel area, `src/_engine/kernel/deviceCapabilities/` (the kernel's layout rule covers a new `kernel/<area>/`; the root `CLAUDE.md`'s kernel list gets it), its API on the `aekasha` entry. Not an opt-in feature (`EngineFeature`): `runAtInit` runs before the kernel and the features install (§5), and nothing of it runs or downloads unless asked, which is what a feature's opt-in would buy.
 
 ---
 
@@ -44,13 +46,15 @@ The effective FPS target is `min(targets.fps, measuredRefreshHz)`. A 60 Hz displ
 
 ### 1.3 Advisory, not applied
 
-The engine has no graphics settings system yet (`createRenderer` options are set once by the app, and `ShadowQuality`/`SHADOW_PRESETS` in `core/LightManager.ts` are chosen per light). This plan therefore stops at data. The app reads `report.recommendations` and passes them where it wants, eg. `createRenderer({ devicePixelRatio: rec.pixelRatio, antialias: rec.antialias })` in `appStartFn`. A future "graphics settings" plan can consume the same report to apply settings automatically.
+The engine has no graphics settings system yet (`createRenderer` options are set once by the app, and a light's `shadowPreset` (`ShadowQuality`, `SHADOW_PRESETS` in `kernel/light/Light.ts`) is chosen per light). This plan therefore stops at data. The app reads `report.recommendations` and passes them where it wants, eg. `createRenderer({ devicePixelRatio: rec.pixelRatio, antialias: rec.antialias })` in `InitEngine`'s `start`. A future "graphics settings" plan can consume the same report to apply settings automatically.
+
+`recommendations.physicsWorkerTarget` is the exception in timing: `AppConfig.physics.workerTarget` is read at `physics()`'s install, which comes after a `runAtInit` check but takes the config the app already passed, so the app applies it on the next boot (eg. from the stored report, read before `InitEngine`).
 
 ### 1.4 Benchmark on raw WebGPU / WebGL2, not three.js
 
 The benchmark creates its own short-lived GPU device (WebGPU) or context (WebGL2) on a small offscreen canvas and destroys it afterwards. Why not three.js:
 
-- It runs at engine init, **before** `createRenderer` (the app creates the renderer in `appStartFn`), so its result can shape the renderer options.
+- It runs at engine init, **before** `createRenderer` (the app creates the renderer in `InitEngine`'s `start`), so its result can shape the renderer options.
 - A second `WebGPURenderer` would cost TSL node compilation (often seconds on a first compile) and a second full renderer.
 - Raw pipelines with fixed WGSL/GLSL shaders measure throughput in milliseconds and give numbers that are comparable across runs.
 
@@ -60,11 +64,11 @@ The trade-off (synthetic ≠ the app's scene) is what §1.2 and Phase 4 address.
 
 ## 2. Config
 
-New optional block in `AppConfig` (`src/_engine/core/Config.ts`), with defaults in the `config` default object:
+New optional block in `AppConfig` (`src/_engine/kernel/config/Config.ts`), with its defaults where `loadConfig` fills the others':
 
 ```ts
 deviceCapabilities?: {
-  /** Run the check in InitEngine, before appStartFn. Default false (opt-in). */
+  /** Run the check in InitEngine, before the app's `start`. Default false (opt-in). */
   runAtInit?: boolean;
   /** Store the measurements in localStorage and reuse them on later boots. Default true. */
   saveToLS?: boolean;
@@ -104,7 +108,7 @@ Targets are deep-merged: engine defaults ← `CONFIG.ts` ← per-call `targets`.
 
 ---
 
-## 3. Public API (`src/_engine/core/DeviceCapabilities.ts`)
+## 3. Public API (`src/_engine/kernel/deviceCapabilities/DeviceCapabilities.ts`, on `aekasha`)
 
 ```ts
 runDeviceCapabilityCheck(opts?: {
@@ -123,9 +127,10 @@ addDeviceCapabilityListener(fn: (report) => void): () => void; // returns unsubs
 ```
 
 - Concurrent calls share one in-flight promise.
+- Naming and docs as the coding standards say: `addDeviceCapabilityListener` returns its remover (an `on*` name, `onDeviceCapabilityReport`, is the standards' form; pick one in Phase 1), every export has its JSDoc and the entry APIs an `@example`.
 - `evaluateDeviceCapabilities` lets a settings menu answer "what would ULTRA need / does this device meet the 'High' preset's targets" without running anything.
 
-Report shape (`DeviceCapabilities/DeviceCapabilitiesTypes.ts`):
+Report shape (`kernel/deviceCapabilities/DeviceCapabilitiesTypes.ts`):
 
 ```ts
 type DeviceCapabilityReport = {
@@ -172,13 +177,12 @@ type DeviceCapabilityVerdict = {
 
 **One scale.** Device levels use the same `LOW | MEDIUM | HIGH | ULTRA` scale as the shadow presets, so a level can be used directly as a preset key:
 
-- `ShadowQuality` enum + `SHADOW_PRESETS` in `core/LightManager.ts` (on `main` and on `skybox-overhaul`).
-- Since engine 3.0 (the merged `skybox-overhaul` branch), also `ShadowQualitySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'ULTRA'])` in `schemas/_helperSchemas.ts`. The light JSON `shadowPreset` and the sky box sun light (`SUN_LIGHT_DEFAULTS.shadowPreset: 'MEDIUM'` in `core/SkyBox/SkyLights.ts`, p112) use it.
+- `ShadowQualitySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'ULTRA'])` and its `ShadowQuality` type in `schemas/_HelperSchemas.ts` (the type on `aekasha/schemas`). The light JSON `shadowPreset` and the sky box sun light (`SUN_LIGHT_DEFAULTS.shadowPreset: 'MEDIUM'` in `features/skybox/SkyLights.ts`; `SkyBoxSchema.ts`) use it.
+- `SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset>` in `kernel/light/Light.ts`.
 
-**Shared type.** Add a general `QualityLevelSchema` (same enum) and `QualityLevel` type to `schemas/_helperSchemas.ts`, with `QUALITY_LEVELS` (ordered array), `compareQualityLevels(a, b)` and `minQualityLevel(...levels)`. Then make `ShadowQualitySchema` an alias of it (`export const ShadowQualitySchema = QualityLevelSchema`). This is non-breaking and the generated JSON schema is unchanged.
+**Shared type.** Add a general `QualityLevelSchema` (same enum) and `QualityLevel` type to `schemas/_HelperSchemas.ts`, with `QUALITY_LEVELS` (ordered array), `compareQualityLevels(a, b)` and `minQualityLevel(...levels)`. Then make `ShadowQualitySchema` an alias of it, keeping its `.describe` text so the generated JSON schema (`.schemas/`) is unchanged. This is non-breaking.
 
-- **Merge order:** if this plan lands before `skybox-overhaul`, it adds `QualityLevelSchema` on `main` and the sky box branch turns its `ShadowQualitySchema` into the alias when it rebases. If the sky box branch lands first, this plan adds the alias there.
-- **Imports:** `DeviceCapabilities` imports only the `QualityLevel` type and string literals, never `ShadowQuality` from `LightManager.ts`. That keeps it out of the `LightManager → Scene → SkyBox` import cycle that `SkyLights.ts` already works around.
+- **Imports:** `DeviceCapabilities` imports only the `QualityLevel` type (`import type`) and string literals, never `kernel/light/Light.ts`, so a report reads no renderer or light code.
 
 **Categories.**
 
@@ -213,7 +217,7 @@ type DeviceLevels = {
 - **Overall** is the lowest of the known category levels, because the weakest part is the bottleneck. `UNKNOWN` categories are skipped.
 - **Memory cap:** `deviceMemory` never reports more than 8, so a reading of 8 is marked capped. It shows as `HIGH` but doesn't limit `overall`.
 - **GPU depends on resolution:** the same GPU rates lower on a 4K DPR-2 display than at 1080p. The level answers "what can this device run here", not "how fast is this chip".
-- **Shadow level:** `recommendations.shadowQuality` is `min(gpu, gpuMemory ?? gpu)`, because ULTRA's 4096² shadow maps need memory headroom. An app can pass it as a light's or the sky box sun light's `shadowPreset`, or use `SHADOW_PRESETS[level]`. The engine doesn't apply it (§1.3). A future `shadowPreset: 'AUTO'` that resolves to this level would be a separate change.
+- **Shadow level:** `recommendations.shadowQuality` is `min(gpu, gpuMemory ?? gpu)`, because ULTRA's 4096² shadow maps need memory headroom. An app can pass it as a light's or the sky box sun light's `shadowPreset`, or use `SHADOW_PRESETS[level]` (`kernel/light/Light.ts`). The engine doesn't apply it (§1.3). A future `shadowPreset: 'AUTO'` that resolves to this level would be a separate change.
 - **Intended use per category** (a guide for apps, not enforced):
   - GPU: rendering settings (shadows, PostFX, antialias, pixel ratio, sky/env bake resolution).
   - CPU: physics sub-steps, entity and character counts, spatial-index density.
@@ -238,28 +242,28 @@ type DeviceLevels = {
 
 ## 5. Flow
 
-**At init** (`src/_engine/InitApp.ts`): right after `loadConfig()`/`consoleBootText()`, before `createRootScene()`. It runs this early so the Rapier worker boot, asset work and scene registration don't compete with the CPU benchmark:
+**At init** (`bootEngineAsync` in `src/_engine/kernel/init/Boot.ts`, which `InitEngine` and `mountAekasha` run): right after `loadConfig()`/`consoleBootText()`, before `createRootScene()` and `installKernel()`. It runs this early so the features' installs (the Rapier worker boot), asset work and scene registration don't compete with the CPU benchmark:
 
 ```ts
 if (getConfig().deviceCapabilities?.runAtInit) {
-  const { runDeviceCapabilityCheck } = await import('./core/DeviceCapabilities');
+  const { runDeviceCapabilityCheck } = await import('../deviceCapabilities/DeviceCapabilities');
   await runDeviceCapabilityCheck();
 }
 ```
 
-The dynamic import keeps the module out of the main chunk for apps that don't use it. The report is ready for `appStartFn` through `getDeviceCapabilityReport()`. A first-run benchmark delays boot by up to `budgetMs`. No engine UI exists at that point, so the app's `index.html` splash covers it.
+The dynamic import keeps the module out of the main chunk for apps that don't use it (its own chunk: check it with `yarn sbp`). The report is ready for the app's `start` through `getDeviceCapabilityReport()`. A first-run benchmark delays boot by up to `budgetMs`. No engine UI exists at that point (the HUD and the app's loading overlay come later), so the app's page covers it.
 
-**From app code at runtime**: when the main loop is running and `pauseMainLoop` is true, the check pauses it (`toggleMainPlay(false)` in `core/MainLoop.ts`), runs, then restores the previous `masterPlay` state (it reads it first via `getReadOnlyLoopState()`). Otherwise the game's own rendering would share the GPU with the benchmark and skew it.
+**From app code at runtime**: when the main loop is running and `pauseMainLoop` is true, the check pauses it (`toggleMainPlay(false)` in `kernel/loop/MainLoop.ts`), runs, then restores the previous `masterPlay` state (it reads it first via `getReadOnlyLoopState()`). Otherwise the game's own rendering would share the GPU with the benchmark and skew it.
 
 **Steps:**
 
-1. **Probe** (`DeviceCapabilities/probe.ts`):
+1. **Probe** (`kernel/deviceCapabilities/DeviceProbe.ts`):
    - WebGPU: `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })` for `info`, `features`, the relevant `limits` and `getPreferredCanvasFormat()`.
    - WebGL2: a temporary `webgl2` context for `MAX_TEXTURE_SIZE`, `MAX_SAMPLES`, extensions and `WEBGL_debug_renderer_info` (when allowed). The context is released with `WEBGL_lose_context`. This runs when WebGPU is missing, and always for the WebGL2 fallback fields.
    - Memory, cores, display (`screen`, DPR, `matchMedia` for HDR/P3/coarse pointer), `crossOriginIsolated`, `userAgentData.mobile` (UA fallback).
    - GPU memory heuristic (§1.1).
 2. **Refresh rate**: median rAF interval over ~30 frames.
-3. **GPU benchmark** (`DeviceCapabilities/_bench_gpu.ts`):
+3. **GPU benchmark** (`kernel/deviceCapabilities/GpuBenchmark.ts`, dynamically imported):
    - Own device and offscreen target at the target resolution, capped at 3840×2160.
    - Workload A: blended fullscreen quads running a fixed-cost fragment shader (ALU loop + texture sample), which measures fill rate × shader cost.
    - Workload B: instanced triangles, which measures geometry throughput.
@@ -267,8 +271,8 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
    - Timing: `timestamp-query` when the adapter has it, otherwise wall time around `queue.onSubmittedWorkDone()`.
    - WebGL2 path: the same workloads in GLSL, synced with a 1-pixel `readPixels`, plus `EXT_disjoint_timer_query_webgl2` if exposed.
    - `device.destroy()` / lose context at the end.
-4. **CPU benchmark** (`DeviceCapabilities/_bench_cpu.ts`): about 150 ms of typed-array mat4 multiplies (ECS-transform-like work) after a JIT warm-up, reported as ops/ms.
-5. **Score** (`DeviceCapabilities/scoring.ts`, pure functions):
+4. **CPU benchmark** (`kernel/deviceCapabilities/CpuBenchmark.ts`, dynamically imported): about 150 ms of typed-array mat4 multiplies (ECS-transform-like work) after a JIT warm-up, reported as ops/ms.
+5. **Score** (`kernel/deviceCapabilities/DeviceScoring.ts`, pure functions, unit-tested next to it):
    - Predict the reference-frame time from the throughputs and the target pixel count, then derive `estimatedFps`.
    - Normalise the gpu/cpu/memory/gpuMemory scores.
    - Rate each category's level from the thresholds, then the overall level (§3.1). An `UNKNOWN` category never lowers the overall level.
@@ -280,29 +284,32 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
 
 ### Phase 1: Probe, config, cache, API (no benchmark)
 
-- `QualityLevelSchema`/`QualityLevel` + helpers in `schemas/_helperSchemas.ts`, with `ShadowQualitySchema` aliased to it (§3.1).
-- `DeviceCapabilitiesTypes.ts`, `probe.ts`, `scoring.ts` (levels from probe data only: GPU from heuristics, CPU from cores, memory and GPU memory from the API and heuristics), `DeviceCapabilities.ts` (API, LS cache, fingerprint, listeners).
-- `AppConfig.deviceCapabilities` + defaults in `Config.ts`.
-- `runAtInit` hook in `InitApp.ts`.
+- `QualityLevelSchema`/`QualityLevel` in `schemas/_HelperSchemas.ts`, with `ShadowQualitySchema` aliased to it, and the helpers (§3.1).
+- `DeviceCapabilitiesTypes.ts`, `DeviceProbe.ts`, `DeviceScoring.ts` (levels from probe data only: GPU from heuristics, CPU from cores, memory and GPU memory from the API and heuristics), `DeviceCapabilities.ts` (API, LS cache, fingerprint, listeners), with `*.test.ts` next to each (`yarn test`, in Node: no module reads a browser global at load).
+- `AppConfig.deviceCapabilities` + defaults in `kernel/config/Config.ts`.
+- `runAtInit` hook in `kernel/init/Boot.ts`.
+- The API on the `aekasha` entry (`src/_engine/index.ts`; `yarn verify:baselines --update` records the new names).
 - FPS check is `UNKNOWN` in this phase.
 - Engine minor bump + CHANGELOG entry.
 
 ### Phase 2: Benchmarks and FPS target
 
-- Refresh-rate sampling, `_bench_gpu.ts` (WebGPU + WebGL2 paths), `_bench_cpu.ts`, `budgetMs`, the hidden-tab deferral, main-loop pausing for runtime calls and `onProgress`.
+- Refresh-rate sampling, `GpuBenchmark.ts` (WebGPU + WebGL2 paths), `CpuBenchmark.ts`, `budgetMs`, the hidden-tab deferral, main-loop pausing for runtime calls and `onProgress`.
 - The full verdict with `estimatedFps` and the pixel-ratio solver.
 - Calibrate the `referenceFrame` defaults: run the example app's `sceneTestECS` on 2–3 machines (integrated laptop GPU, Apple silicon, a discrete GPU). Compare the predicted and observed FPS (debug stats panel) and tune the constants. Record the numbers in this plan.
 - Calibrate the level thresholds on the same machines: the GPU headroom bands and the CPU benchmark-score bands. As a sanity check, each machine's GPU level should match the shadow preset it actually runs at the target FPS.
 
 ### Phase 3: Debug tab and level override
 
-- `debug/DeviceCapabilities.ts` (thin entry) → `core/Debug/_dbg__DeviceCapabilities.ts` (the `_dbg__` + `loadDebugModuleAsync` pattern), a `createDebuggerTab({ id: 'deviceCapabilitiesControls', ... })`, and the id added to `DEFAULT_DEBUG_DRAWER_TAB_ORDER`.
-- Tab contents:
-  - Measurements and checks as a `debuggerListCMP` (PASS/FAIL/UNKNOWN per target).
-  - The levels per category and overall, with their `sources`.
+- `registerDeviceCapabilitiesDebugGUI()` in `DeviceCapabilities.ts` (the thin side: `loadDebugModuleAsync(() => import('./debug/_dbg__DeviceCapabilities'))`, called from `Boot.ts`' debug step as the camera's and light's are) → `kernel/deviceCapabilities/debug/_dbg__DeviceCapabilities.ts`, a `createDebuggerTab({ id: 'deviceCapabilitiesControls', title, icon, content, ... })` (`debug/DebuggerGUI.ts`; `src/_engine/debug/CLAUDE.md`'s drawer tabs), and the id added to `DEFAULT_DEBUG_DRAWER_TAB_ORDER` (`kernel/config/Config.ts`).
+- Tab contents, on the UI kit (a `{ pane: true, content: [...] }` section is a property grid of its fields):
+  - Measurements and checks as a kit table (`createTable`, `aekasha/ui`: a row per target, PASS/FAIL/UNKNOWN as its tone) or a `debuggerListCMP`.
+  - The levels per category and overall, with their `sources` (monitors, or kit badges).
   - Buttons "Re-run (force)" and "Clear stored result".
-  - Debug-only **forced levels** (`lsKey` persisted): overall and/or per category, each `OFF` or `LOW`…`ULTRA`. When set, `getDeviceCapabilityReport()` returns the forced levels (`levels.forced: true`) and the recommendations derived from them, so developers can test the LOW path on a strong machine. The override has no effect outside `IS_DEBUG_ENV`.
+  - Debug-only **forced levels** (`lsKey` + `persistKeys`): overall and/or per category, each `OFF` or `LOW`…`ULTRA` (selects). When set, `getDeviceCapabilityReport()` returns the forced levels (`levels.forced: true`) and the recommendations derived from them, so developers can test the LOW path on a strong machine. The override has no effect outside `IS_DEBUG_ENV`.
+- The profiler (`debug/Profiler.ts`): the GPU memory tab's default budget from the device's GPU memory level when there is one (`_DONE_p345` §2.4; the tab's own saved budget still wins), and the device's levels as an Overview row, so the measured figures sit next to the device's budgets.
 - Example app: enable `runAtInit` in `src/CONFIG.ts` and pass `recommendations.pixelRatio`/`antialias` to `createRenderer` in `src/index.ts`. App minor bump.
+- The Hub: the feature on a page (the Rendering feature page, `hub/pages/features/rendering/`, or a page of its own with `aek:covers`), its snippet from `src/index.ts` through a `#region`; `readme.md`'s Features list.
 
 ### Phase 4 (optional, may split into its own plan): Runtime verification
 
@@ -327,36 +334,40 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
 
 New:
 
-- `src/_engine/core/DeviceCapabilities.ts`: public API, cache, listeners
-- `src/_engine/core/DeviceCapabilities/DeviceCapabilitiesTypes.ts`
-- `src/_engine/core/DeviceCapabilities/probe.ts`
-- `src/_engine/core/DeviceCapabilities/scoring.ts`
-- `src/_engine/core/DeviceCapabilities/_bench_gpu.ts`, `_bench_cpu.ts` (dynamically imported)
-- `src/_engine/debug/DeviceCapabilities.ts`, `src/_engine/core/Debug/_dbg__DeviceCapabilities.ts`
+- `src/_engine/kernel/deviceCapabilities/DeviceCapabilities.ts`: public API, cache, listeners, the debug registration
+- `src/_engine/kernel/deviceCapabilities/DeviceCapabilitiesTypes.ts`
+- `src/_engine/kernel/deviceCapabilities/DeviceProbe.ts`
+- `src/_engine/kernel/deviceCapabilities/DeviceScoring.ts`
+- `src/_engine/kernel/deviceCapabilities/GpuBenchmark.ts`, `CpuBenchmark.ts` (dynamically imported)
+- `src/_engine/kernel/deviceCapabilities/debug/_dbg__DeviceCapabilities.ts`
+- a `*.test.ts` next to each module with logic
 
 Changed:
 
-- `src/_engine/schemas/_helperSchemas.ts`: `QualityLevelSchema`/`QualityLevel` + helpers, `ShadowQualitySchema` alias (§3.1)
-- `src/_engine/core/Config.ts`: `AppConfig.deviceCapabilities`, defaults, tab order id
-- `src/_engine/InitApp.ts`: the `runAtInit` hook, debug tab registration
+- `src/_engine/schemas/_HelperSchemas.ts`: `QualityLevelSchema`/`QualityLevel`, `ShadowQualitySchema` alias (§3.1)
+- `src/_engine/kernel/config/Config.ts`: `AppConfig.deviceCapabilities`, defaults, tab order id
+- `src/_engine/kernel/init/Boot.ts`: the `runAtInit` hook, debug tab registration
+- `src/_engine/index.ts`: the API's exports
 - `src/CONFIG.ts`, `src/index.ts`: example usage (Phase 3)
+- the profiler's GPU memory budget and Overview row (`debug/gpuMemory/`, `debug/profiler/`, Phase 3)
+- `hub/pages/`, `readme.md`, the root `.claude/CLAUDE.md` (the kernel's folder list)
 - `package.json` versions, `CHANGELOG.md`
 
 Reused:
 
 - `lsGetItem`/`lsSetItem`/`lsRemoveItem` (`utils/LocalAndSessionStorage.ts`)
-- `toggleMainPlay`/`getReadOnlyLoopState` (`core/MainLoop.ts`)
-- The `LOW`…`ULTRA` scale of `ShadowQuality`/`SHADOW_PRESETS` (`core/LightManager.ts`) and `ShadowQualitySchema` (`schemas/_helperSchemas.ts`, `skybox-overhaul` branch)
-- `PhysicsWorkerTarget` (`core/Physics/PhysicsAPITypes.ts`)
-- `createDebuggerTab`/`debuggerListCMP` (`debug/DebuggerGUI.ts`)
-- `loadDebugModuleAsync` (`utils/helpers.ts`)
+- `toggleMainPlay`/`getReadOnlyLoopState` (`kernel/loop/MainLoop.ts`)
+- The `LOW`…`ULTRA` scale of `ShadowQualitySchema`/`ShadowQuality` (`schemas/_HelperSchemas.ts`) and `SHADOW_PRESETS` (`kernel/light/Light.ts`)
+- `PhysicsWorkerTarget` (`features/physics/types/PhysicsConfigTypes.ts`, `import type` only: the kernel names a feature's types, never its code)
+- `createDebuggerTab`/`debuggerListCMP` (`debug/DebuggerGUI.ts`), the UI kit's table and fields (`aekasha/ui`)
+- `loadDebugModuleAsync` (`kernel/config/DebugModules.ts`)
 - `llog`/`lwarn` (`utils/Logger.ts`)
 
 ---
 
 ## 9. Verification
 
-- `yarn lint` and `yarn build` pass. `yarn build` + `dist-stats/bundle-stats.html`: with `runAtInit: false` and no app import, no DeviceCapabilities code is in the main chunk. On a cache hit, the `_bench_*` chunks are not requested (Network tab).
+- `yarn lint`, `yarn test` and `yarn build` pass. `yarn sbp` (or `dist-stats/bundle-stats.html`): with `runAtInit: false` and no app import, no DeviceCapabilities code is in the first download; `yarn verify:baselines` shows only the new chunks and API names. On a cache hit, the benchmark chunks are not requested (Network tab).
 - `yarn dev` with `runAtInit: true`:
   - The first load logs a report and writes `AEK_deviceCapabilities`.
   - A reload uses the cache (`fromCache: true`, no benchmark).

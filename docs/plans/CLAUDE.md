@@ -5,7 +5,7 @@ Notes for writing and implementing the plans in `docs/plans/` (and the app's in 
 - Agentic coding plans are located in `docs/plans/`, the app's in `docsApp/plans/` (see The app's plans and issues).
 - The naming of the files has a special pattern: [priority number eg. "p520" or "_DONE"]\_[name-of-the-feature].md (eg. "p020_some-feature.md").
 - The lower the priority number the higher the priority.
-- Plans that have been implement (filename starts with "\_DONE\_") are kept if they provide useful information for another feature and when the whole larger concept/epic that consists of those plans is done those plans are removed.
+- Plans that have been implement (filename starts with "\_DONE\_") are kept if they provide useful information for another feature and when the whole larger concept/epic that consists of those plans is done those plans are removed. Before removing one, make the open plans that cite it self-contained (state the decision they rely on, or point at the nested `CLAUDE.md` or Hub page that holds it; a bare tag like "p610 D5" is fine as provenance) and move its open follow-ups into the open plan they belong to or `p990_follow-ups-from-done-plans.md`.
 - Plan header has some required and optional information lines:
   - Status (required): describes a status of the plan. This is usually something like "draft | not-implemented", "draft | feasibility study — not-implemented", or "implemented".
   - "Category" (optional): a general category that this particular plan falls into, usually one or two words like "ECS", "Assets", "Bug fix", "Refactoring", or "Physics".
