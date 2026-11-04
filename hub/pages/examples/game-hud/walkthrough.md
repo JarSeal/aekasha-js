@@ -4,6 +4,7 @@ The example is a scene folder, `src/app/examples/gameHud/`, split by what each f
 
 - `exampleGameHud.ts`: the scene file. The player, its camera, the game's action maps, the
   game's rules and the per-frame system that feeds the HUD.
+- `exampleGameHudView.ts`: the camera's orbit input and the minimap's viewport.
 - `exampleGameHudLevel.ts`: the arena. A walled floor, four dynamic crates, three NPCs (Mara, Ivo
   and Pell) on `FIXED` bodies, the beacon and a fire pit, which is only drawn: the game checks the
   player's position against its square.
@@ -29,8 +30,9 @@ these bindings, so a rebinding shows everywhere.
   crouch).
 - The HUD is UI, so the game reacts at the press: `onPressed` and `onReleased` call back at the
   device's event ([reading actions](hub:features/input#reading-actions)).
-- The mouse wheel picks the next or previous item. It's a DOM listener on the canvas, read only
-  while the map is active.
+- The mouse wheel picks the next or previous item. It's an engine mouse binding
+  ([`createMouseBinding`](api:createMouseBinding), `MOUSE_WHEEL`), so the input switches apply to
+  it, and it acts only while the game's map is active.
 
 ## Prompts that follow the device
 
@@ -65,7 +67,7 @@ With `getMouseMoveInput` the rig orbits the followed point at `offset`'s length,
 its direction, so the camera starts behind the player, about 8° down. The screen's centre, where
 the crosshair is, then reaches crate height 5 to 12 m ahead. The orbit's input is the scene's:
 
-<<< src/app/examples/gameHud/exampleGameHud.ts#game-hud-orbit
+<<< src/app/examples/gameHud/exampleGameHudView.ts#game-hud-orbit
 
 - A right-drag on the canvas sums the pointer's movement between frames. It's DOM events, not an
   action map: a map's `read()` is the last physics step's sample, which two frames between steps
@@ -96,9 +98,18 @@ Enter or Space. The scene's use:
 
 <<< src/app/examples/gameHud/exampleGameHud.ts#game-hud-fire
 
-- A shot is a three.js `Raycaster` through the screen's centre (`(0, 0)` in normalised device
-  coordinates) against the crates' meshes. The [crosshair](hub:features/ui-kit/game#crosshairs)'s
-  `showHitMarker` says how it went: a hit, a critical one on the crate's top, or the kill.
+- The aim is the camera's ray through the screen's centre, where the crosshair is: the camera's
+  position and its forward, a `THREE.Ray` of plain maths that tests nothing.
+- A shot is a [physics ray](hub:features/physics#queries-events-and-joints) along the aim, so a
+  wall or an NPC in the way stops it. It starts at the aim's point nearest the player, so nothing
+  behind the player stops it, and leaves out the player's own body. A hit's collider names its
+  body (`parentId`), which the scene maps back to its crate.
+- On `WORKER_THREAD` the cast resolves a frame or two later, so after the `await` the shot checks
+  again that the visit is still on and the crate still whole.
+- With `debug` the debug env draws each shot, and the Physics API tab and the profiler count it
+  with the physics rays. A three.js `Raycaster` against the meshes would be invisible to both.
+- The [crosshair](hub:features/ui-kit/game#crosshairs)'s `showHitMarker` says how it went: a hit,
+  a critical one on the crate's top, or the kill.
 - A crate's health bar is a segmented resource bar over it (below, the world's UI). The kill
   removes the crate's `WORLD_ANCHOR` component, and its bar goes with it.
 - The shot pushes the crate, but not from the shot's callback: physics writes go in a physics
@@ -118,9 +129,11 @@ One `APP_LOGIC` system, after physics has synced the drawn poses, feeds the HUD 
 
 - The stamina drains while running and comes back while not. The fire pit burns the health
   while the player stands in it; at 0 the respawn is queued for the next step, with half a second
-  of grace while the drawn pose catches up.
+  of grace while the drawn pose catches up, counted in the frames' `dt` so a pause holds it.
 - The crosshair opens up with the speed (`setSpread`) and shows its `target` ring while the
-  screen's centre is on a crate: a ray against a sphere about each crate, with no allocation.
+  screen's centre is on a crate: the aim against a sphere about each crate, maths with no
+  allocation and no cast. It's a hint: a wall in front of a crate still rings it, where the shot
+  stops at the wall.
 - Mara's talk prompt shows within 2.5 m of her. Ivo and Pell each say a line as the player
   passes.
 - The waypoint's distance and the compass's markers are the player's: `getCompassBearing`, from
@@ -148,7 +161,7 @@ The nameplates, the crates' bars and the beacon's waypoint are
 The minimap is a [viewport](hub:features/viewports) of the same scene through a top-down camera,
 and the kit's [minimap frame](hub:features/ui-kit/game#minimap-frames) its ring and zoom buttons:
 
-<<< src/app/examples/gameHud/exampleGameHud.ts#game-hud-minimap
+<<< src/app/examples/gameHud/exampleGameHudView.ts#game-hud-minimap
 
 - The viewport places its slot at the bottom right; the frame is appended into `slotElem` and
   fills it. The slot is sized in the kit's units in the stylesheet, so after a UI scale change

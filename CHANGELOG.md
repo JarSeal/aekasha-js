@@ -122,7 +122,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 **Added**
 
 - p808: the game HUD example (`exampleGameHud`, "Example: A game HUD", with its Hub page). It plays with a keyboard, a mouse or a gamepad, and saves its settings and bindings in `localStorage`. A character in a small arena uses every game UI piece:
-  - prompts that follow the device, health and stamina bars, a hotbar with cooldowns and a crosshair with hit markers on physics crates;
+  - prompts that follow the device, health and stamina bars, a hotbar with cooldowns and a crosshair with hit markers on physics crates (each shot a physics ray, drawn and counted by the debug tools);
   - nameplates and a clamped waypoint, a compass and a minimap viewport;
   - the feed, the tracker, subtitles and a conversation with an NPC;
   - a radial menu, the pause menu, an inventory with a chest and a settings menu with a controls page.

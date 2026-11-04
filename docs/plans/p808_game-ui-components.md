@@ -1271,6 +1271,31 @@ As built (section 1, the changelog):
   menu's ring, the prompt's `PromptKeys`) aren't fixes: they're in the Added lines as built.
 - **The app's first download** grew 384.4 → 387.0 KiB gzip against `main`; section 4's
   "unchanged" is corrected above, and the changelog's Sizes line has the parts.
+- **The example's engine APIs** (found in review, after section 1): Phase 8's shot was a three.js
+  `Raycaster` against the crates' meshes, which no ray statistic or debug helper sees (the
+  engine's own casts, `kernel/render/Raycast.ts`, are all `@internal`) and which hit a crate
+  through an NPC's box or a wall. Changed:
+  - The shot is `getPhysicsWorld().castRay` (`fireAsync`): from the camera ray's point nearest
+    the player (nothing behind the player stops it), the player's body left out, `debug` with a
+    helper id (drawn, counted in the Physics API tab and the profiler), the hit's
+    `collider.parentId` mapped to its crate, the visit (`isRemoved`) and the crate checked again
+    after the `await` (a frame or two on `WORKER_THREAD`).
+  - The crosshair's ring stays maths on the camera's ray (no cast a frame: an async query would
+    allocate a promise a frame); its comment and the walkthrough say it's a hint.
+  - No `THREE.Raycaster` left: the aim (the shot's ray and the ring's) is a kept `THREE.Ray` from
+    the camera's position and `getWorldDirection` (`updateAim`), which is the screen centre's ray
+    of a perspective camera, `setFromCamera((0, 0))`'s, without a raycaster in the snippet.
+  - The wheel is a `MOUSE_WHEEL` `createMouseBinding` (the input switches apply), not a DOM
+    listener. The kit's items guide keeps its DOM line: the kit works without the engine.
+  - No wall clock in the game's rules: the respawn's grace counts down by the frame's `dt`
+    (`safeFor`), the stick's orbit rate reads `getAppDelta()`.
+  - The orbit input and the minimap moved to `exampleGameHudView.ts` (the scene file was 853
+    lines, now 770); the walkthrough's includes and file list follow.
+  - Making the engine's render casts public (`castRayFromScreenPosition` on `aekasha`) is left to
+    a plan of its own: an API decision outside p808.
+  - Checked: `tsc` (both), lint, `yarn test`, `yarn hub:build`, the shot and the wheel driven in
+    Chromium on `WORKER_THREAD` (`.cache/p808view/physShot.ts`: hit, hit, kill, '+25 gold', the
+    wheel down and up), `yarn verify:scenes --only exampleGameHud`.
 
 ---
 

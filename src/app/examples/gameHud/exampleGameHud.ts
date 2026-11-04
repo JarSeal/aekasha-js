@@ -2,6 +2,8 @@ import * as THREE from 'three/webgpu';
 import {
   createActionMap,
   createMeshEntity,
+  createMouseBinding,
+  deleteMouseBinding,
   ECSSystemStage,
   existsOrThrow,
   getActionMap,
@@ -9,15 +11,14 @@ import {
   getECSWorld,
   getLastInputDevice,
   getMeshByAppId,
-  getRenderer,
-  getRootScene,
   onLastInputDeviceChange,
   registerOnSceneExit,
   setActionContextEnabled,
 } from 'aekasha';
-import type { ActionMap } from 'aekasha';
+import type { ActionMap, RayDebugOpts } from 'aekasha';
 import { createDynamicCharacter } from 'aekasha/character';
-import { createViewport, invalidateViewportLayout } from 'aekasha/viewports';
+import { getPhysicsWorld } from 'aekasha/physics';
+import { invalidateViewportLayout } from 'aekasha/viewports';
 import { CMP, setPromptDevice } from 'aekasha/ui';
 import type { DialogueLine, HitMarkerKind } from 'aekasha/ui';
 import {
@@ -33,6 +34,7 @@ import { createGameHudLevelAsync } from './exampleGameHudLevel';
 import type { GameHudLevel } from './exampleGameHudLevel';
 import { createGameHudMenus } from './exampleGameHudMenus';
 import type { GameHudSettings } from './exampleGameHudMenus';
+import { createMinimap, createOrbitInput } from './exampleGameHudView';
 import './exampleGameHud.scss';
 
 const SCENE_ID = 'exampleGameHud';
@@ -40,6 +42,7 @@ const CHARACTER_ID = 'exampleGameHudPlayer';
 const DIALOGUE_CONTEXT = 'DIALOGUE';
 const LOGIC_SYSTEM_ID = 'exampleGameHudLogic';
 const STEP_SYSTEM_ID = 'exampleGameHudStep';
+const WHEEL_BINDING_ID = 'exampleGameHudWheel';
 /** Where the player starts and comes back to: south of the middle, facing north */
 const SPAWN = { x: 0, y: 1, z: 6 };
 const MAX_HEALTH = 100;
@@ -48,8 +51,8 @@ const CRATE_HEALTH = 3;
 /** The talk prompt shows within this distance of Mara (m) */
 const TALK_DISTANCE = 2.5;
 const BEACON_DISTANCE = 2;
-/** The right stick's look speed, in the rig's mouse pixels a second */
-const STICK_LOOK_SPEED = 900;
+/** How far a shot reaches (m) */
+const SHOT_RANGE = 60;
 const MAP_ZOOMS = [0.6, 1, 1.6];
 
 // #region game-hud-actions (shown in the Hub: hub/pages/examples/game-hud/)
@@ -142,88 +145,6 @@ const createPlayerVisual = () => {
   body.add(existsOrThrow(getMeshByAppId('exampleGameHudNose'), 'No nose mesh'));
   return body;
 };
-
-// #region game-hud-orbit (shown in the Hub: hub/pages/examples/game-hud/)
-/**
- * The camera's orbit input: a right-drag on the canvas (the pointer's movement summed between
- * frames) and the right stick's rate, in the rig's pixels. The drag is DOM events, not an action
- * map: a map's `read()` is the last physics step's sample, which two frames between steps would
- * read twice. Returns the rig's `getMouseMoveInput` and the listeners' remover.
- */
-const createOrbitInput = (look: () => { x: number; y: number }, isLocked: () => boolean) => {
-  const canvas = existsOrThrow(getRenderer()?.domElement, 'No canvas');
-  const moved = { x: 0, y: 0 };
-  const out = { x: 0, y: 0 };
-  let dragging = false;
-  let last = performance.now();
-  const onDown = (e: PointerEvent) => {
-    if (e.button !== 2) return;
-    dragging = true;
-    canvas.setPointerCapture(e.pointerId);
-  };
-  const onMove = (e: PointerEvent) => {
-    if (!dragging) return;
-    moved.x += e.movementX;
-    moved.y += e.movementY;
-  };
-  const onUp = () => {
-    dragging = false;
-  };
-  // The right button is the orbit's, not the browser's menu
-  const onContextMenu = (e: Event) => e.preventDefault();
-  canvas.addEventListener('pointerdown', onDown);
-  canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointercancel', onUp);
-  canvas.addEventListener('contextmenu', onContextMenu);
-  return {
-    canvas,
-    getMouseMoveInput: () => {
-      const now = performance.now();
-      const dt = Math.min((now - last) / 1000, 0.1);
-      last = now;
-      const stick = look();
-      out.x = isLocked() ? 0 : moved.x + stick.x * STICK_LOOK_SPEED * dt;
-      // The stick's up is positive, the pointer's down
-      out.y = isLocked() ? 0 : moved.y - stick.y * STICK_LOOK_SPEED * dt;
-      moved.x = 0;
-      moved.y = 0;
-      return out;
-    },
-    remove: () => {
-      canvas.removeEventListener('pointerdown', onDown);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerup', onUp);
-      canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('contextmenu', onContextMenu);
-    },
-  };
-};
-// #endregion game-hud-orbit
-
-// #region game-hud-minimap (shown in the Hub: hub/pages/examples/game-hud/)
-/** The minimap: a top-down orthographic camera over the game's scene, north up, in a viewport
- * at the bottom right, its slot the frame's place */
-const createMinimap = () => {
-  const camera = new THREE.OrthographicCamera(-12, 12, 12, -12, 0.1, 80);
-  // Looking straight down with -z (north) up: its rotation is set once, the frame moves it
-  camera.up.set(0, 0, -1);
-  camera.position.set(SPAWN.x, 40, SPAWN.z);
-  camera.lookAt(SPAWN.x, 0, SPAWN.z);
-  const viewport = createViewport({
-    id: 'exampleGameHudMap',
-    scene: existsOrThrow(getRootScene(), 'No root scene'),
-    camera,
-    anchor: 'BOTTOM_RIGHT',
-    slotClass: 'exampleGameHudMinimap',
-    transparent: false,
-    clearColor: '#1c212b',
-    toneMapping: 'RENDERER',
-    sceneId: SCENE_ID,
-  });
-  return { camera, viewport };
-};
-// #endregion game-hud-minimap
 
 /** Mara's conversation: a line each, its choices leading to the next, `null` ending it */
 type ConversationLine = {
@@ -337,7 +258,8 @@ const createGame = ({
     heardIvo: false,
     heardPell: false,
     zoom: 1,
-    safeUntil: 0,
+    /** The fire pit's grace after a respawn, in seconds of play */
+    safeFor: 0,
     line: null as string | null,
   };
   /** What the next physics step applies: the shots' impulses and a respawn */
@@ -346,6 +268,8 @@ const createGame = ({
     respawn: false,
   };
   const timers: number[] = [];
+  /** Set by `remove`: a shot's cast that resolves after the visit does nothing */
+  let isRemoved = false;
 
   let hud: GameHud | null = null;
   const applySettings = (settings: GameHudSettings) => {
@@ -374,7 +298,7 @@ const createGame = ({
     onBindingsChange: refreshPrompts,
   });
 
-  const minimap = createMinimap();
+  const minimap = createMinimap(SCENE_ID, SPAWN);
   const look = gameplay.read('look');
   const orbit = createOrbitInput(
     () => look,
@@ -507,32 +431,71 @@ const createGame = ({
   };
 
   // #region game-hud-fire (shown in the Hub: hub/pages/examples/game-hud/)
-  const raycaster = new THREE.Raycaster();
-  const screenCentre = new THREE.Vector2(0, 0);
-  const crateMeshes = level.crates.map((crate) => crate.mesh);
+  /** The aim: the camera's ray through the screen's centre (the crosshair), its position and
+   * forward. Plain maths: the shot's cast is the physics world's */
+  const aim = new THREE.Ray();
+  const updateAim = () => {
+    aim.origin.setFromMatrixPosition(camera.matrixWorld);
+    camera.getWorldDirection(aim.direction);
+    return aim;
+  };
+  const toPlayer = new THREE.Vector3();
+  /** A crate's body id to its index: a hit names its collider's body (`parentId`) */
+  const crateByBody = new Map<number, number>();
+  level.crates.forEach((crate, index) => {
+    const body = world.getRigidBody(crate.entityId);
+    if (body) crateByBody.set(body.id, index);
+  });
+  /** The debug env draws the shots, and the Physics API tab and the profiler count them */
+  const shotDebug: RayDebugOpts = { id: 'exampleGameHudShot', color: '#f2c14e' };
 
-  /** A shot through the crosshair: the first crate on the ray loses health and is knocked (the
-   * impulse waits for the next physics step), and the hit marker says how it went */
-  const fire = () => {
-    raycaster.setFromCamera(screenCentre, camera);
-    const hit = raycaster.intersectObjects(crateMeshes, false)[0];
-    const index = hit ? crateMeshes.indexOf(hit.object as THREE.Mesh) : -1;
+  /** A shot through the crosshair: a physics ray, so a wall or an NPC in the way stops it. The
+   * crate it reaches loses health and is knocked (the impulse waits for the next physics step),
+   * and the hit marker says how it went */
+  const fireAsync = async () => {
+    const { origin, direction } = updateAim();
+    // From the aim's point nearest the player, so nothing behind the player stops it
+    const ahead = Math.max(0, toPlayer.subVectors(visual.position, origin).dot(direction));
+    const ray = {
+      origin: {
+        x: origin.x + direction.x * ahead,
+        y: origin.y + direction.y * ahead,
+        z: origin.z + direction.z * ahead,
+      },
+      dir: { x: direction.x, y: direction.y, z: direction.z },
+    };
+    const player = world.getRigidBody(characterEntityId);
+    const hit = await getPhysicsWorld().castRay(
+      ray,
+      SHOT_RANGE,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      player, // the ray starts inside the player's capsule
+      undefined,
+      shotDebug
+    );
+    // On WORKER_THREAD the cast takes a frame or two: the visit may have ended meanwhile, or an
+    // earlier shot broken the crate
+    if (isRemoved || !hit) return;
+    const index = crateByBody.get(hit.collider.parentId ?? -1) ?? -1;
     if (index < 0 || state.crateHealth[index] <= 0) return;
     const crate = level.crates[index];
     state.crateHealth[index]--;
     ui.crateBars[index].setValue(state.crateHealth[index]);
-    const isTop = hit.point.y > crate.mesh.position.y + 0.4;
+    const hitY = ray.origin.y + ray.dir.y * hit.timeOfImpact;
+    const isTop = hitY > crate.mesh.position.y + 0.4;
     const broken = state.crateHealth[index] === 0;
     const kind: HitMarkerKind = broken ? 'kill' : isTop ? 'critical' : 'hit';
     ui.crosshair.showHitMarker(kind);
     // A nudge along the shot (a 1 kg crate): a hit on the top pushes it less
     const push = isTop ? 0.4 : 1;
-    const { direction } = raycaster.ray;
     pending.impulses.push({
       entityId: crate.entityId,
-      x: direction.x * push,
+      x: ray.dir.x * push,
       y: 0.5,
-      z: direction.z * push,
+      z: ray.dir.z * push,
     });
     if (broken) breakCrate(index);
   };
@@ -637,7 +600,7 @@ const createGame = ({
   // #endregion game-hud-conversation
 
   // The game's keys (UI: the callbacks at the device event, also while paused)
-  gameplay.onPressed('fire', fire);
+  gameplay.onPressed('fire', () => void fireAsync());
   gameplay.onPressed('use', () => useSlot(Math.max(0, ui.hotbar.getSelected())));
   gameplay.onPressed('previousItem', () => ui.hotbar.selectNext(-1));
   gameplay.onPressed('nextItem', () => ui.hotbar.selectNext(1));
@@ -657,10 +620,15 @@ const createGame = ({
   // #endregion game-hud-radial
   gameplay.onPressed('menu', () => menus.open());
   gameplay.onPressed('inventory', () => menus.openInventory());
-  const onWheel = (e: WheelEvent) => {
-    if (gameplay.isActive() && e.deltaY !== 0) ui.hotbar.selectNext(Math.sign(e.deltaY));
-  };
-  orbit.canvas.addEventListener('wheel', onWheel, { passive: true });
+  // The wheel over the canvas: an engine mouse binding, so the input switches apply to it
+  createMouseBinding({
+    id: WHEEL_BINDING_ID,
+    type: 'MOUSE_WHEEL',
+    sceneId: SCENE_ID,
+    fn: (e) => {
+      if (gameplay.isActive() && e.deltaY !== 0) ui.hotbar.selectNext(Math.sign(e.deltaY));
+    },
+  });
 
   // #region game-hud-frame (shown in the Hub: hub/pages/examples/game-hud/)
   const lastPosition = visual.position.clone();
@@ -688,25 +656,28 @@ const createGame = ({
     const inPit = Math.abs(x - pit.x) < pit.halfSize && Math.abs(z - pit.z) < pit.halfSize;
     if (inPit && !state.inPit) ui.feed.add({ text: 'Too hot!', key: 'hot', tone: 'danger' });
     state.inPit = inPit;
-    const isSafe = pending.respawn || performance.now() < state.safeUntil;
+    state.safeFor = Math.max(0, state.safeFor - dt);
+    const isSafe = pending.respawn || state.safeFor > 0;
     if (inPit && isPlaying && !isSafe) state.health = Math.max(0, state.health - 30 * dt);
     if (state.health === 0) {
       state.health = MAX_HEALTH;
       pending.respawn = true;
       // The drawn pose reaches the spawn a frame or two after the step moves the body
-      state.safeUntil = performance.now() + 500;
+      state.safeFor = 0.5;
       ui.feed.add({ text: 'You were burned', key: 'burned', tone: 'danger' });
     }
     ui.health.setValue(state.health);
 
-    // The crosshair opens up while moving, and rings a crate it's on
+    // The crosshair opens up while moving, and rings a crate it's on: maths on the camera's ray,
+    // no cast, so it's a hint (a wall in front of the crate still rings it; the shot's physics
+    // ray stops there)
     ui.crosshair.setSpread(Math.round(Math.min(speed, 8) * 2));
-    raycaster.setFromCamera(screenCentre, camera);
+    updateAim();
     let onCrate = false;
     for (let i = 0; i < level.crates.length && !onCrate; i++) {
       if (state.crateHealth[i] <= 0) continue;
       sphere.center.copy(level.crates[i].mesh.position);
-      onCrate = raycaster.ray.intersectsSphere(sphere);
+      onCrate = aim.intersectsSphere(sphere);
     }
     ui.crosshair.setState(onCrate ? 'target' : 'default');
 
@@ -783,12 +754,13 @@ const createGame = ({
 
   return {
     remove: () => {
+      isRemoved = true;
       world.removeSystem(LOGIC_SYSTEM_ID);
       world.removeSystem(STEP_SYSTEM_ID);
       unregisterWorldAnchorSync(world);
       for (const timer of timers) window.clearTimeout(timer);
       stopDeviceWatch();
-      orbit.canvas.removeEventListener('wheel', onWheel);
+      deleteMouseBinding(WHEEL_BINDING_ID);
       orbit.remove();
       menus.remove();
       ui.remove();
