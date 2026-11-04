@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -461,7 +461,7 @@ As built (2026-11-04, on `9ec145d4`: `a0b15403` plus this plan's edit, no code c
   section, "Engine 6 codemod", is covered by the migration page's `aek:covers` (its first; the
   page's tags got `migrateEngine6`), and the readme's Migration guide line names the codemod.
 
-### Phase 2 — The deprecated removals (engine)
+### Phase 2 — The deprecated removals (engine) — done
 
 Each section removes its names, their uses in the engine's own code, their entry lines and their
 nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json` / `docs.json`.
@@ -566,6 +566,49 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     path's `import('./Kbd')` split it off) and its game chunk, which makes Kbds, +0.8 kB gzip.
 - **Section 5:** the codemod's report rules for everything removed here, with fixtures. Done when
   `grep -rn "6\.0\.0" src/_engine | grep -i deprecated` is empty.
+
+  As built (section 5):
+
+  - Three rule kinds in `engine6Rules.ts`, applied by `engine6.ts` from the checker's symbols:
+    `removedImport` (an import, `export … from` or `ns.Name` of a name the entry dropped),
+    `removedMember` (a member an entry's type lost: `x.member`, a destructuring, or an object
+    literal whose contextual type is the type or has it in a union / intersection; `onlyString`
+    for the `kbd` that became a Kbd) and `callArg` (an entry function's argument: any, an object
+    literal's named properties, or a string literal, rewritten when the rule has `rewrite`).
+    The entries' exports come from the first module that imports each entry (`createEntryExports`).
+  - **`getSvgIcon`'s `'small'` is rewritten to `'sm'`** (a `callArg` with `rewrite`), not
+    reported: D10 lists it under kind 3, and the literal swap needed no more machinery.
+  - The rules (each with its anchor): the sync texture loaders; `SceneHooks.sceneDeleted`,
+    `LoadSceneProps.updateLoaderStatusFn`, `AppConfig.draggableWindows`, `PhysicsState`'s
+    `pausedTime` / `pauseDurationTotal`; `removeFromGroupEntity`'s three flags; the character
+    imports (the input types, `CharacterData`) and members (`input`, `controls`, `charData`,
+    `data`, `kind`, the binding ids, `initialConfig`, `resolvedAt`) on their eight types; the
+    legacy sky box's imports and `createSkyBox({ type, params })`; the debug entry's names and
+    `createDebuggerTab`'s second argument; `AddToastResponse.timeout`, `doCheckIsInDom` and a
+    string `kbd`. The debug entry's anchor is `the-debug-entry-s-names` (**Phase 8 writes that
+    heading** with the other two). `getPhysGameTime` has no rule: it was never on an entry.
+  - **Reports' lines (Phase 1's open question):** `--check` and `--report` give the module as
+    read; a writing run runs the rules again on a second program over the rewritten modules'
+    formatted text and reports those modules from it, so the lines match the written files (an
+    end-to-end run on a scratch module: line 6 read, line 5 written after an import merge). A
+    module's reports are sorted by line. The CLI takes about 7 s over `src hub/_assets/ts` (957
+    modules; Phase 1's 3 s, the member walk's contextual types the most of it).
+  - `engine6.test.ts`: the stand-in entries grew the types the rules name (engine 6's shapes)
+    and a `GLOBALS` file (a global `Array`, without which `noLib` gives an array literal's
+    elements no contextual type: a menu's items); generated fixtures per removed name and per
+    removed member (read and written), behaviour tests (a namespace import, calls,
+    destructuring, a union of item types, a type that only shares a member's name, a Kbd
+    handle, the call arguments, the rewrite and a local function of the same name), and the
+    repo check (removed names not exported; member types and callees exported). **The check
+    that a rename's old name is gone from its entry waits for Phase 7**: the toolkit still
+    exports `PhysicsParams`. 47 tests.
+  - Over the template: `--check src hub/_assets/ts` migrates nothing and reports nothing. No
+    `@deprecated` is left in `src/_engine` (the grep's two hits are `CLAUDE.md` lines saying
+    what 6.0.0 removed); `src/toolkit` keeps its four for Phase 7.
+  - Later phases add their report rules to this frame: the Rapier enums (Phase 3), the tiers'
+    API without `physicsTiers()` (Phase 4), `deleteMeshOptions` and the toolkit's and the
+    engine's component keys named as types (`typeof`, Phase 7: a `removedMember`-like walk over
+    type positions, or a rewrite).
 
 ### Phase 3 — Physics: `createPhysicsEntity`, the setter, the enums (D3, D7)
 

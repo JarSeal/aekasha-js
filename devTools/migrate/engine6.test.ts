@@ -6,7 +6,13 @@ import { ENTRY_FILES } from '../aliases';
 import { parseModuleSource } from '../layout/importGraph';
 import { ROOT } from '../paths';
 import { createMigrationProgram, migrateEngine6 } from './engine6';
-import { ENGINE6_RULES } from './engine6Rules';
+import {
+  ENGINE6_RULES,
+  type CallArgRule,
+  type ImportRule,
+  type RemovedImportRule,
+  type RemovedMemberRule,
+} from './engine6Rules';
 
 // The modules live in a folder that doesn't exist; the entries are stand-ins in engine 6's shape
 // (the old names gone), as an app sees them after taking the new engine
@@ -21,7 +27,30 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       'export const registerOnAllSceneEnters = () => {};',
       'export const createSeededRandom = (seed: number) => () => seed;',
       'export const getX = () => 1;',
+      'export type SceneHooks = { loadStart?: () => void };',
+      'export type LoadSceneProps = { sceneId: string };',
+      'export type AppConfig = { name?: string };',
+      'export const addSceneHooks = (hooks: SceneHooks) => hooks;',
+      'export const removeFromGroupEntity = (id: number, o: string, opts?: { deleteMeshes?: boolean }) => id;',
     ].join('\n'),
+  },
+  'aekasha/physics': {
+    file: 'engine/physics.ts',
+    text: [
+      'export type PhysicsState = { timestep: number };',
+      'export const getPhysicsState = (): PhysicsState => ({ timestep: 60 });',
+    ].join('\n'),
+  },
+  'aekasha/skybox': {
+    file: 'engine/skybox.ts',
+    text: [
+      'export type SkyBoxDef = { id: string; base?: { type: string } };',
+      'export const createSkyBox = (def: SkyBoxDef) => def;',
+    ].join('\n'),
+  },
+  'aekasha/debug': {
+    file: 'engine/debug.ts',
+    text: 'export const createDebuggerTab = (def: { id: string }) => def;',
   },
   'aekasha/ui': {
     file: 'engine/ui.ts',
@@ -39,13 +68,35 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
         'CMPAnimChain',
         'CMPAnimState',
         'DropDown',
+        'AddToastResponse',
       ].map((name) => `export type ${name} = { kind: '${name}' };`),
       'export const createCMP = () => ({});',
+      'export type Kbd = { keys: string };',
+      'export const createKbd = (o: { keys: string }): Kbd => o;',
+      'export type ButtonProps = { label: string; kbd?: Kbd };',
+      'export type SplitButtonProps = { label: string; kbd?: Kbd; items: unknown[] };',
+      'export type MenuActionItem = { label: string; kbd?: Kbd };',
+      "export type MenuCheckboxItem = { type: 'checkbox'; label: string; kbd?: Kbd };",
+      'export const createMenu = (items: (MenuActionItem | MenuCheckboxItem)[]) => items;',
+      'export const addToast = (): AddToastResponse => ({ kind: "AddToastResponse" });',
+      "export const getSvgIcon = (name: string, size?: 'sm' | 'md' | 'lg') => name;",
     ].join('\n'),
   },
   'aekasha/character': {
     file: 'engine/character.ts',
-    text: "export type PlayerBrainHoldMode = 'HOLD' | 'TOGGLE';",
+    text: [
+      "export type PlayerBrainHoldMode = 'HOLD' | 'TOGGLE';",
+      'export type CharacterObject = { id: string; bodyKind: string };',
+      'export type CreateCharacterOpts = { id: string; bodyKind: string };',
+      'export type DynamicCharacterParams = { config?: { maxVelocity?: number } };',
+      'export type DynamicCharacterOpts = DynamicCharacterParams & { id: string };',
+      'export type DynamicCharacter = { character: CharacterObject };',
+      'export type CharacterCastRecord = { resolvedAtStep: number };',
+      'export type CharacterBodyKindField = { bodyKind: string };',
+      'export type CharacterBodyPlan<D = number> = CharacterBodyKindField & { dims?: D };',
+      'export const createDynamicCharacter = (opts: DynamicCharacterOpts): DynamicCharacter =>',
+      "  ({ character: { id: opts.id, bodyKind: '' } });",
+    ].join('\n'),
   },
   'aekasha/toolkit/ecs': {
     file: 'toolkit/ecs.ts',
@@ -69,23 +120,37 @@ const OPTIONS: ts.CompilerOptions = {
   ),
 };
 
+// What `noLib` leaves out and the checker needs: an array literal's elements get their contextual
+// type through the global `Array`
+const GLOBALS = [
+  'interface Array<T> { length: number; [n: number]: T }',
+  ...['Boolean', 'CallableFunction', 'Function', 'IArguments', 'NewableFunction', 'Number'].map(
+    (name) => `interface ${name} {}`
+  ),
+  ...['Object', 'RegExp', 'String'].map((name) => `interface ${name} {}`),
+].join('\n');
+
 /** Migrates the modules (`app/…` → source) once */
 const runOnce = (modules: Record<string, string>) => {
-  const texts = new Map<string, string>();
+  const texts = new Map<string, string>([[abs('globals.d.ts'), GLOBALS]]);
   for (const { file, text } of Object.values(ENTRIES)) texts.set(abs(file), text);
   for (const [file, text] of Object.entries(modules)) texts.set(abs(file), text);
   const files = Object.keys(modules).map(abs);
   const program = createMigrationProgram({
-    rootNames: files,
+    rootNames: [...files, abs('globals.d.ts')],
     options: OPTIONS,
     texts,
     baseHost: ts.createCompilerHost(OPTIONS),
   });
   const result = migrateEngine6({ program, files, rules: ENGINE6_RULES });
   const rel = (file: string) => path.relative(VIRTUAL, file);
+  const finding = (f: { file: string; line: number; message: string }) =>
+    `${rel(f.file)}:${f.line} ${f.message}`;
   return {
     changed: Object.fromEntries([...result.changed].map(([file, text]) => [rel(file), text])),
-    errors: result.errors.map((e) => `${rel(e.file)}:${e.line} ${e.message}`),
+    errors: result.errors.map(finding),
+    reports: result.reports.map(finding),
+    anchors: result.reports.map((r) => r.anchor),
   };
 };
 
@@ -97,6 +162,14 @@ const run = (modules: Record<string, string>) => {
   return first;
 };
 
+/** The one module's reports (its text unchanged, no error) */
+const reportsOf = (text: string) => {
+  const { changed, errors, reports } = run({ 'app/a.ts': text });
+  expect(errors).toEqual([]);
+  expect(changed).toEqual({});
+  return reports;
+};
+
 /** The one module's output */
 const migrate = (text: string) => {
   const { changed, errors } = run({ 'app/a.ts': text });
@@ -106,8 +179,18 @@ const migrate = (text: string) => {
 
 const lines = (...l: string[]) => l.join('\n');
 
+const ofKind = <K extends (typeof ENGINE6_RULES)[number]['kind']>(kind: K) =>
+  ENGINE6_RULES.filter((rule) => rule.kind === kind) as Extract<
+    (typeof ENGINE6_RULES)[number],
+    { kind: K }
+  >[];
+const IMPORT_RULES: ImportRule[] = ofKind('import');
+const REMOVED_IMPORT_RULES: RemovedImportRule[] = ofKind('removedImport');
+const MEMBER_RULES: RemovedMemberRule[] = ofKind('removedMember');
+const CALL_RULES: CallArgRule[] = ofKind('callArg');
+
 describe('the rules', () => {
-  it.each(ENGINE6_RULES.map((rule) => [rule.id, rule] as const))(
+  it.each(IMPORT_RULES.map((rule) => [rule.id, rule] as const))(
     '%s: the import and its references',
     (_, rule) => {
       const input = lines(
@@ -128,17 +211,67 @@ describe('the rules', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("name what the repo's entries export today", () => {
+  it("name what the repo's entries export today, and not the names they removed", () => {
     const exported = (entry: string) => {
       const file = ENTRY_FILES[entry as keyof typeof ENTRY_FILES];
       expect(file, entry).toBeDefined();
       const { exports } = parseModuleSource(file, fs.readFileSync(path.join(ROOT, file), 'utf8'));
       return [...exports.local, ...Object.keys(exports.named)];
     };
-    for (const rule of ENGINE6_RULES) {
+    for (const rule of IMPORT_RULES) {
       expect(exported(rule.to.entry), `${rule.id} → ${rule.to.entry}`).toContain(rule.to.name);
     }
+    for (const rule of REMOVED_IMPORT_RULES) {
+      for (const name of Object.keys(rule.names)) {
+        expect(exported(rule.entry), `${rule.id}: ${name}`).not.toContain(name);
+      }
+    }
+    for (const rule of MEMBER_RULES) {
+      for (const t of rule.types) expect(exported(t.entry), rule.id).toContain(t.name);
+    }
+    for (const rule of CALL_RULES) {
+      expect(exported(rule.callee.entry), rule.id).toContain(rule.callee.name);
+    }
   });
+
+  it.each(REMOVED_IMPORT_RULES.map((rule) => [rule.id, rule] as const))(
+    '%s: each import is reported',
+    (_, rule) => {
+      for (const name of Object.keys(rule.names)) {
+        const reports = reportsOf(
+          lines(`import { ${name} } from '${rule.entry}';`, `export const used = [${name}];`)
+        );
+        expect(reports, name).toEqual([
+          `app/a.ts:1 \`${name}\` (${rule.entry}): ${rule.names[name]}`,
+        ]);
+      }
+    }
+  );
+
+  it.each(MEMBER_RULES.map((rule) => [rule.id, rule] as const))(
+    '%s: a read and an object literal are reported',
+    (_, rule) => {
+      for (const t of rule.types) {
+        for (const member of Object.keys(rule.members)) {
+          const value = rule.onlyString ? "'x'" : '1';
+          const reports = reportsOf(
+            lines(
+              `import type { ${t.name} } from '${t.entry}';`,
+              `declare const x: ${t.name};`,
+              `export const read = x.${member};`,
+              `export const written: ${t.name} = { ${member}: ${value} };`
+            )
+          );
+          const message = `\`${t.name}.${member}\`: ${rule.members[member]}`;
+          // An `onlyString` member's read is its new type's
+          const expected = rule.onlyString ? [4] : [3, 4];
+          expect(reports, `${t.name}.${member}`).toEqual(
+            expected.map((line) => `app/a.ts:${line} ${message}`)
+          );
+        }
+      }
+    }
+  );
 });
 
 describe('renames by import', () => {
@@ -389,5 +522,104 @@ describe('errors', () => {
     expect(errors).toEqual([
       "app/a.ts:2 `geo.createSeededRandom`: import `createSeededRandom` from 'aekasha'",
     ]);
+  });
+});
+
+describe('reports', () => {
+  it('a removed name through a namespace import, with its anchor', () => {
+    const { reports, anchors } = run({
+      'app/a.ts': lines(
+        "import * as debug from 'aekasha/debug';",
+        'export const a = debug.AEK_GATHER_EVENT;',
+        'export type B = debug.DebugGUIOpts;'
+      ),
+    });
+    expect(reports.map((r) => r.split(' ')[0] + ' ' + r.split(' ')[1])).toEqual([
+      'app/a.ts:2 `AEK_GATHER_EVENT`',
+      'app/a.ts:3 `DebugGUIOpts`',
+    ]);
+    expect(anchors).toEqual(['the-debug-entry-s-names', 'the-debug-entry-s-names']);
+  });
+
+  it('members through calls, destructuring and a union of item types', () => {
+    expect(
+      reportsOf(
+        lines(
+          "import { addSceneHooks } from 'aekasha';",
+          "import { getPhysicsState } from 'aekasha/physics';",
+          "import { createDynamicCharacter } from 'aekasha/character';",
+          "import { createMenu, createKbd } from 'aekasha/ui';",
+          'addSceneHooks({ loadStart: () => {}, sceneDeleted: () => {} });',
+          'export const paused = getPhysicsState().pausedTime;',
+          "const { data, character } = createDynamicCharacter({ id: 'a', input: {} });",
+          'export const k = [data, character.kind];',
+          "createMenu([{ label: 'a', kbd: 'Ctrl+S' }, { label: 'b', kbd: createKbd({ keys: 'x' }) }]);"
+        )
+      ).map((r) => r.slice(0, r.indexOf(':', r.indexOf('`'))))
+    ).toEqual([
+      'app/a.ts:5 `SceneHooks.sceneDeleted`',
+      'app/a.ts:6 `PhysicsState.pausedTime`',
+      'app/a.ts:7 `DynamicCharacter.data`',
+      'app/a.ts:7 `DynamicCharacterOpts.input`',
+      'app/a.ts:8 `CharacterObject.kind`',
+      'app/a.ts:9 `MenuActionItem.kbd`',
+    ]);
+  });
+
+  it('leaves a member of another type, and a Kbd handle, alone', () => {
+    expect(
+      reportsOf(
+        lines(
+          "import { createKbd, type ButtonProps } from 'aekasha/ui';",
+          'const local = { data: 1, kind: 2, timeout: 3 };',
+          'export const a = [local.data, local.kind, local.timeout];',
+          "export const b: ButtonProps = { label: 'Save', kbd: createKbd({ keys: 'Ctrl+S' }) };"
+        )
+      )
+    ).toEqual([]);
+  });
+
+  it("an entry function's argument: options, a second argument, a legacy sky box", () => {
+    expect(
+      reportsOf(
+        lines(
+          "import { removeFromGroupEntity } from 'aekasha';",
+          "import { createDebuggerTab } from 'aekasha/debug';",
+          "import { createSkyBox } from 'aekasha/skybox';",
+          "removeFromGroupEntity(1, 'a', { deleteMeshes: true, deleteTextures: true });",
+          "createDebuggerTab({ id: 'a' }, { drawerBtnPlace: 'TOP' });",
+          "createDebuggerTab({ id: 'b' });",
+          "createSkyBox({ id: 's', type: 'COLOR', params: {} });",
+          "createSkyBox({ id: 't', base: { type: 'COLOR' } });"
+        )
+      ).map((r) => r.slice(0, r.indexOf(':', r.indexOf('`'))))
+    ).toEqual([
+      "app/a.ts:4 `removeFromGroupEntity`'s `deleteTextures`",
+      "app/a.ts:5 `createDebuggerTab`'s argument 2",
+      "app/a.ts:7 `createSkyBox`'s `type`",
+      "app/a.ts:7 `createSkyBox`'s `params`",
+    ]);
+  });
+
+  it("rewrites getSvgIcon's 'small', and leaves a local function of the name alone", () => {
+    expect(
+      migrate(
+        lines(
+          "import { getSvgIcon } from 'aekasha/ui';",
+          "import * as ui from 'aekasha/ui';",
+          "export const a = [getSvgIcon('gear', 'small'), ui.getSvgIcon('gear', \"small\")];",
+          'const own = (name: string, size: string) => name + size;',
+          "export const b = own('gear', 'small');"
+        )
+      )
+    ).toBe(
+      lines(
+        "import { getSvgIcon } from 'aekasha/ui';",
+        "import * as ui from 'aekasha/ui';",
+        "export const a = [getSvgIcon('gear', 'sm'), ui.getSvgIcon('gear', \"sm\")];",
+        'const own = (name: string, size: string) => name + size;',
+        "export const b = own('gear', 'small');"
+      )
+    );
   });
 });

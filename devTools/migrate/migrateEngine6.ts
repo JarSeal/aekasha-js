@@ -10,8 +10,9 @@
  * The rules are `engine6Rules.ts`'s and the logic `engine6.ts`'s, on a program from the repo's
  * `tsconfig.json`; the rewritten modules are formatted with Prettier. A module with an error is
  * left as it was, and every error is listed. The reports (what needs a person) always print, on
- * stderr. `--check` writes nothing and exits 1 when a module would change; `--report` writes
- * nothing and prints only the reports. Exits 2 on an error.
+ * stderr, with the lines of the module as written (a writing run finds a rewritten module's again
+ * in its formatted text, p622 Phase 2 section 5). `--check` writes nothing and exits 1 when a
+ * module would change; `--report` writes nothing and prints only the reports. Exits 2 on an error.
  */
 import fs from 'fs';
 import path from 'path';
@@ -85,22 +86,26 @@ const mainAsync = async () => {
   // The config's ambient declarations (`vite-env.d.ts`, the engine's globals) and the modules
   const ambient = parsed.fileNames.filter((f) => f.endsWith('.d.ts'));
   const sorted = [...files].sort();
-  const program = createMigrationProgram({
-    rootNames: [...sorted, ...ambient],
-    options,
-    baseHost: ts.createCompilerHost(options),
-  });
-  const { changed, errors, reports } = migrateEngine6({
-    program,
-    files: sorted,
-    rules: ENGINE6_RULES,
-  });
+  const migrate = (texts?: ReadonlyMap<string, string>, only?: string[]) =>
+    migrateEngine6({
+      program: createMigrationProgram({
+        rootNames: [...sorted, ...ambient],
+        options,
+        texts,
+        baseHost: ts.createCompilerHost(options),
+      }),
+      files: only ?? sorted,
+      rules: ENGINE6_RULES,
+    });
+  const { changed, errors, reports } = migrate();
+  const printReports = (found: MigrationFinding[]) => {
+    if (!found.length) return;
+    console.error(`${YELLOW}⚠ ${found.length} use(s) need a person:${RESET}`);
+    for (const r of found) console.error(`  ${formatFinding(r)}`);
+  };
 
-  if (reports.length) {
-    console.error(`${YELLOW}⚠ ${reports.length} use(s) need a person:${RESET}`);
-    for (const r of reports) console.error(`  ${formatFinding(r)}`);
-  }
   if (isReport) {
+    printReports(reports);
     if (!reports.length)
       console.log(`${GREEN}✔ nothing in ${files.size} module(s) needs a person${RESET}`);
     return 0;
@@ -118,6 +123,17 @@ const mainAsync = async () => {
       `${RED}✖ ${errors.length} error(s); their modules are left as they were:${RESET}`
     );
     for (const e of errors) console.error(`  ${formatFinding(e)}`);
+  }
+  if (isCheck || !rewritten.length) printReports(reports);
+  else {
+    // The rewritten modules' reports again, on the text as written, so their lines match it
+    const written = new Map(rewritten);
+    const again = migrate(written, [...written.keys()]);
+    printReports(
+      [...reports.filter((r) => !written.has(r.file)), ...again.reports].sort(
+        (a, b) => sorted.indexOf(a.file) - sorted.indexOf(b.file) || a.line - b.line
+      )
+    );
   }
   if (isCheck) {
     if (rewritten.length) {

@@ -13,13 +13,25 @@
  *   (`export { New as Old } from`). A dynamic `import()` of an entry isn't followed.
  * - A touched import is written again whole, in the repo's style (a value import left with only
  *   inline types becomes `import type`); the CLI formats the module with Prettier.
+ * - Kind 4, the reports (what needs a person), each from the checker's symbols: an import of a
+ *   name an entry no longer exports (`RemovedImportRule`), a member an entry's type lost, read or
+ *   written in an object literal of that contextual type (`RemovedMemberRule`), and an argument of
+ *   an entry's function (`CallArgRule`, which also rewrites a renamed string option). An entry's
+ *   exports are found through any module of the program that imports it.
  * - A module with an error is left as it was, and every error is listed: a renamed reference that
  *   would resolve to another declaration (shadowed, or a name the module declares itself), two
  *   edits on the same code.
  */
 import path from 'path';
 import ts from 'typescript';
-import type { Engine6Rule, ImportRule } from './engine6Rules';
+import type {
+  CallArgRule,
+  Engine6Rule,
+  EntryName,
+  ImportRule,
+  RemovedImportRule,
+  RemovedMemberRule,
+} from './engine6Rules';
 
 /** An error or a report: where, what, and the migration page's anchor */
 export type MigrationFinding = {
@@ -126,6 +138,8 @@ type ModuleState = {
   edits: Edit[];
   /** An error at a node or a position */
   error: (at: ts.Node | number, message: string) => void;
+  /** A report at a node */
+  report: (at: ts.Node, message: string, anchor: string) => void;
 };
 
 const specText = (s: Spec, isInline: boolean) =>
@@ -145,7 +159,8 @@ const readModule = (
   file: string,
   sf: ts.SourceFile,
   checker: ts.TypeChecker,
-  error: ModuleState['error']
+  error: ModuleState['error'],
+  report: ModuleState['report']
 ): ModuleState => {
   const decls: Decl[] = [];
   const namespaces = new Map<string, ts.Symbol[]>();
@@ -201,7 +216,7 @@ const readModule = (
       });
     }
   }
-  return { file, sf, checker, decls, namespaces, renames: new Map(), edits: [], error };
+  return { file, sf, checker, decls, namespaces, renames: new Map(), edits: [], error, report };
 };
 
 const symbolOf = (m: ModuleState, s: Spec) =>
@@ -425,12 +440,198 @@ const applyEdits = (m: ModuleState) => {
   return text;
 };
 
+const resolveAlias = (checker: ts.TypeChecker, symbol: ts.Symbol) =>
+  symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+
+/** An entry's exports by name (aliases resolved), found through the first module of the program
+ * that imports it or re-exports from it; empty when none does */
+const createEntryExports = (program: ts.Program, checker: ts.TypeChecker) => {
+  const cache = new Map<string, Map<string, ts.Symbol>>();
+  const find = (entry: string) => {
+    for (const sf of program.getSourceFiles()) {
+      if (sf.isDeclarationFile) continue;
+      for (const st of sf.statements) {
+        const spec =
+          ts.isImportDeclaration(st) || ts.isExportDeclaration(st) ? st.moduleSpecifier : undefined;
+        if (!spec || !ts.isStringLiteral(spec) || spec.text !== entry) continue;
+        const moduleSymbol = checker.getSymbolAtLocation(spec);
+        if (moduleSymbol) return checker.getExportsOfModule(moduleSymbol);
+      }
+    }
+    return [];
+  };
+  return (entry: string) => {
+    let exports = cache.get(entry);
+    if (!exports) {
+      exports = new Map(find(entry).map((s) => [s.name, resolveAlias(checker, s)]));
+      cache.set(entry, exports);
+    }
+    return exports;
+  };
+};
+
+type EntryExports = ReturnType<typeof createEntryExports>;
+
+const symbolsOf = (exportsOf: EntryExports, names: readonly EntryName[]) =>
+  new Set(
+    names.map((n) => exportsOf(n.entry).get(n.name)).filter((s): s is ts.Symbol => s !== undefined)
+  );
+
+/** The first of `targets` the type is (by its alias or its own symbol), or a union's or an
+ * intersection's member is */
+const findTargetType = (type: ts.Type, targets: ReadonlySet<ts.Symbol>): ts.Symbol | undefined => {
+  for (const s of [type.aliasSymbol, type.getSymbol()]) if (s && targets.has(s)) return s;
+  if (type.isUnionOrIntersection()) {
+    for (const t of type.types) {
+      const found = findTargetType(t, targets);
+      if (found) return found;
+    }
+  }
+  return undefined;
+};
+
+const propertyNameOf = (name: ts.PropertyName | ts.BindingName | undefined) =>
+  name && (ts.isIdentifier(name) || ts.isStringLiteral(name)) ? name.text : undefined;
+
+/** The reports of the removed imports: each import, `export … from` and `ns.Name` of one */
+const applyRemovedImportRule = (m: ModuleState, rule: RemovedImportRule) => {
+  const report = (at: ts.Node, name: string) => {
+    const advice = rule.names[name];
+    if (advice) m.report(at, `\`${name}\` (${rule.entry}): ${advice}`, rule.anchor);
+  };
+  for (const d of m.decls) {
+    if (d.entry !== rule.entry) continue;
+    for (const s of d.specs) if (s.el) report(s.el, s.imported);
+  }
+  const namespaces = m.namespaces.get(rule.entry) ?? [];
+  if (!namespaces.length) return;
+  const visit = (node: ts.Node) => {
+    const pair = ts.isPropertyAccessExpression(node)
+      ? ([node.expression, node.name] as const)
+      : ts.isQualifiedName(node)
+        ? ([node.left, node.right] as const)
+        : undefined;
+    if (pair && ts.isIdentifier(pair[0]) && ts.isIdentifier(pair[1])) {
+      if (isNamespaceRef(m, pair[0], namespaces)) report(node, pair[1].text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(m.sf);
+};
+
+type MemberRuleTargets = { rule: RemovedMemberRule; targets: ReadonlySet<ts.Symbol> };
+
+/** The reports of the removed members: a read (`x.member`, a destructuring) of one on a value of
+ * a target type, and an object literal of a target contextual type writing one */
+const applyRemovedMemberRules = (m: ModuleState, rules: readonly MemberRuleTargets[]) => {
+  const byMember = new Map<string, MemberRuleTargets[]>();
+  for (const r of rules) {
+    if (!r.targets.size) continue;
+    for (const member of Object.keys(r.rule.members)) {
+      if (m.sf.text.includes(member)) byMember.set(member, [...(byMember.get(member) ?? []), r]);
+    }
+  }
+  if (!byMember.size) return;
+  const { checker } = m;
+  const check = (at: ts.Node, member: string, type: ts.Type | undefined, value?: ts.Node) => {
+    if (!type) return;
+    for (const { rule, targets } of byMember.get(member) ?? []) {
+      const target = findTargetType(type, targets);
+      if (!target) continue;
+      if (rule.onlyString) {
+        if (!value || !(checker.getTypeAtLocation(value).flags & ts.TypeFlags.StringLike)) continue;
+      }
+      m.report(at, `\`${target.name}.${member}\`: ${rule.members[member]}`, rule.anchor);
+      return;
+    }
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isPropertyAccessExpression(node) && byMember.has(node.name.text)) {
+      check(node.name, node.name.text, checker.getTypeAtLocation(node.expression));
+    } else if (ts.isObjectLiteralExpression(node)) {
+      let contextual: ts.Type | undefined | null = null;
+      for (const prop of node.properties) {
+        const member = propertyNameOf(prop.name);
+        if (!member || !byMember.has(member)) continue;
+        contextual ??= checker.getContextualType(node);
+        const value = ts.isPropertyAssignment(prop)
+          ? prop.initializer
+          : ts.isShorthandPropertyAssignment(prop)
+            ? prop.name
+            : undefined;
+        check(prop, member, contextual, value);
+      }
+    } else if (ts.isObjectBindingPattern(node)) {
+      for (const el of node.elements) {
+        const member = propertyNameOf(el.propertyName ?? el.name);
+        if (member && byMember.has(member)) check(el, member, checker.getTypeAtLocation(node));
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(m.sf);
+};
+
+type CallRuleTargets = { rule: CallArgRule; target: ts.Symbol };
+
+/** The argument rules on each call of their entry functions */
+const applyCallArgRules = (m: ModuleState, rules: readonly CallRuleTargets[]) => {
+  if (!rules.length) return;
+  const { checker, sf } = m;
+  const applyRule = (rule: CallArgRule, arg: ts.Expression) => {
+    const name = `\`${rule.callee.name}\``;
+    if (rule.literal !== undefined) {
+      if (!ts.isStringLiteralLike(arg) || arg.text !== rule.literal) return;
+      if (rule.rewrite === undefined) {
+        m.report(arg, `${name}'s '${rule.literal}': ${rule.advice}`, rule.anchor);
+        return;
+      }
+      const quote = arg.getText(sf)[0];
+      m.edits.push(replaceEdit(sf, arg, `${quote}${rule.rewrite}${quote}`));
+    } else if (rule.members) {
+      if (!ts.isObjectLiteralExpression(arg)) return;
+      for (const prop of arg.properties) {
+        const member = propertyNameOf(prop.name);
+        if (member && rule.members.includes(member)) {
+          m.report(prop, `${name}'s \`${member}\`: ${rule.advice}`, rule.anchor);
+        }
+      }
+    } else m.report(arg, `${name}'s argument ${rule.index + 1}: ${rule.advice}`, rule.anchor);
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) {
+      const callee = ts.isPropertyAccessExpression(node.expression)
+        ? node.expression.name
+        : node.expression;
+      const symbol = checker.getSymbolAtLocation(callee);
+      const resolved = symbol && resolveAlias(checker, symbol);
+      for (const { rule, target } of rules) {
+        const arg = node.arguments[rule.index];
+        if (resolved === target && arg) applyRule(rule, arg);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+};
+
 /** Runs the rules on each module; a module with an error is left as it was */
 export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6Result => {
   const checker = program.getTypeChecker();
   const changed = new Map<string, string>();
   const errors: MigrationFinding[] = [];
   const reports: MigrationFinding[] = [];
+  const exportsOf = createEntryExports(program, checker);
+  const memberRules: MemberRuleTargets[] = [];
+  const callRules: CallRuleTargets[] = [];
+  for (const rule of rules) {
+    if (rule.kind === 'removedMember') {
+      memberRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
+    } else if (rule.kind === 'callArg') {
+      const [target] = symbolsOf(exportsOf, [rule.callee]);
+      if (target) callRules.push({ rule, target });
+    }
+  }
 
   for (const file of files) {
     const sf = program.getSourceFile(file);
@@ -439,18 +640,25 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
       continue;
     }
     const fileErrors: MigrationFinding[] = [];
-    const error = (at: ts.Node | number, message: string) => {
-      const pos = typeof at === 'number' ? at : at.getStart(sf);
-      const line = sf.getLineAndCharacterOfPosition(pos).line + 1;
-      fileErrors.push({ file, line, message });
-    };
-    const m = readModule(file, sf, checker, error);
+    const lineOf = (at: ts.Node | number) =>
+      sf.getLineAndCharacterOfPosition(typeof at === 'number' ? at : at.getStart(sf)).line + 1;
+    const error = (at: ts.Node | number, message: string) =>
+      fileErrors.push({ file, line: lineOf(at), message });
+    const fileReports: MigrationFinding[] = [];
+    const report = (at: ts.Node, message: string, anchor: string) =>
+      fileReports.push({ file, line: lineOf(at), message, anchor });
+    const m = readModule(file, sf, checker, error, report);
     for (const rule of rules) {
       if (rule.kind === 'import') applyImportRule(m, rule);
+      else if (rule.kind === 'removedImport') applyRemovedImportRule(m, rule);
     }
+    applyRemovedMemberRules(m, memberRules);
+    applyCallArgRules(m, callRules);
     renameReferences(m);
     declarationEdits(m);
     const text = applyEdits(m);
+    // By line: the rules' walks find them in their own orders
+    reports.push(...fileReports.sort((a, b) => a.line - b.line));
     if (fileErrors.length) errors.push(...fileErrors);
     else if (text !== sf.text) changed.set(file, text);
   }
