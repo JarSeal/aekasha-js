@@ -1,4 +1,4 @@
-Status: in progress
+Status: in progress | Phases 0-1 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -357,7 +357,7 @@ As built:
   - The dev Hub (`buildHub({ mode: 'dev', isEmbedLive: false })` into a scratch folder): 110
     pages in 6435 ms, 7 of them under `project/`.
 
-### Phase 1: the app's folder
+### Phase 1: the app's folder — done
 
 1. `docsApp/CLAUDE.md` and `docsApp/plans/.gitkeep`, `docsApp/issues/.gitkeep` (D1).
 2. `DOCS_DIR`, `DOCS_APP_DIR` in `devTools/paths.ts`. `ISSUES_DIR` rebuilt on them, and
@@ -365,6 +365,19 @@ As built:
    `SOURCE_DIRS` (its test: `--out docsApp` refused) and `codecat.sh`.
 3. `docs/plans/CLAUDE.md`'s new section (D2), and `project/app/`'s `aek:covers` for it.
 4. The root `CLAUDE.md`'s map line for `docsApp/CLAUDE.md` and its Workflow line (D9).
+
+As built:
+
+- `docsApp/CLAUDE.md` is one paragraph with no `##` section, so the coverage check has nothing of
+  its own to cover.
+- `docs/plans/CLAUDE.md`: besides the new section, its first line and its "Agentic coding plans
+  are located in…" bullet name `docsApp/plans/`. The new section also has a **Versions** bullet
+  (an app plan bumps `app_metadata.version`, with App changelog sections), which D2 didn't list.
+- The Hub `CLAUDE.md` files are updated with the code rather than in Phase 6:
+  `devTools/hub/CLAUDE.md`'s `--out` refusals name `docsApp/`, and `hub/CLAUDE.md`'s Project
+  section bullet names `project/app/`'s new `aek:covers`.
+- The three new paths (`APP_ISSUES_DIR`, `PLANS_DIR`, `APP_PLANS_DIR`) have no users until
+  Phases 2-5.
 
 ### Phase 2: the Issues section reads both folders
 

@@ -86,6 +86,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `devTools/verify/CLAUDE.md`: `yarn test` (writing a test, the structural tests), `yarn verify:scenes`, `yarn verify:baselines`, `yarn verify:embed` and `yarn verify:ui` in detail, and the `@example` check.
 - `devTools/sbp/CLAUDE.md`: the Smallest Build Possible (`yarn sbp`, the module sizes and the file keys, the profiles and budgets, the embed profiles: their data, build and prune).
 - `docs/plans/CLAUDE.md`: the plans (naming, header lines, phases, marking a phase or a plan done).
+- `docsApp/CLAUDE.md`: the app's own plans and issues folder (its rules: `docs/plans/CLAUDE.md`'s The app's plans and issues).
 
 ### Three-folder split
 
@@ -215,4 +216,4 @@ Rules:
 - **Keep the Ækasha Hub current.** A change that adds, changes or removes an engine or toolkit feature or public API updates its Hub content (`hub/pages/`) in the same branch: the feature page, the example page and its scene, and the snippets they include. Run `yarn hub:build` after a Hub change: it fails on a dead `hub:` link.
 - **Keep the nested `CLAUDE.md` files current.** A change to a subsystem that has one (the map under Architecture) updates it in the same branch; project-wide rules stay here. A new nested file starts with one line naming what it covers, gets a line in the map, and its `## ` sections are Hub sections like the Architecture ones (see Ækasha Hub).
 - `readme.md` (root) is the project's public face. Update it in the same branch when a change alters what it lists: a new engine subsystem or toolkit module (Features), a new asset JSON type, a new command or URL flag, a changed runtime/browser requirement, a changed signature of an API its Examples use (`InitEngine`, `createRenderer`, `createSceneLoader`/`loadScene`, `createMeshEntity`, `createPhysicsEntity`, `addSystem`/`registerPlugin`, `AppConfig`), or a Roadmap item that lands (move it into Features). Physics objects in the scene JSON schema, the procedural sky/day-night cycle, the editor/material editor and the LOD system are the ones that call for a new highlight or example. Keep version numbers out of it (they live in `CHANGELOG.md`).
-- `docs/plans/` holds specs for unstarted work. Never treat one as current state or implement one unless I reference it explicitly.
+- `docs/plans/` (Ækasha's) and `docsApp/plans/` (the app's) hold specs for unstarted work. Never treat one as current state or implement one unless I reference it explicitly.
