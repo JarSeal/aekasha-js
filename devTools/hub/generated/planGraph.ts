@@ -78,8 +78,9 @@ const LINE_HEIGHT = 16;
 
 const OWNER_NAMES: Record<DocsOwner, string> = { aekasha: 'Ækasha', app: 'the app' };
 
-/** A plan's label: its number (`p305`), else its file name */
-export const getPlanLabel = (plan: Plan) => (plan.number === null ? plan.name : `p${plan.number}`);
+/** A plan's label: its number as its file name writes it (`p305`, `p056`), else its file name */
+export const getPlanLabel = (plan: Plan) =>
+  plan.number === null ? plan.name : /^(?:_DONE_)?(p\d+)/.exec(plan.name)?.[1] ?? plan.name;
 
 const VARIANT_NOTES: Record<PlanGraphVariant, string> = {
   open: '',

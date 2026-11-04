@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -524,7 +524,7 @@ As built:
   the other plans' graphs (824 and 1032 wide) scroll in their box on the desktop column too. Phase
   5 checks them again on the dev server's pages.
 
-### Phase 5: the roadmap pages
+### Phase 5: the roadmap pages — done
 
 1. `project/aekasha/roadmap/` and `project/app/roadmap/` (`index.html` with `aek:order`, tags,
    description; `intro.md`).
@@ -537,6 +537,47 @@ As built:
 5. Checked on the dev server's Hub, light and dark, at desktop and phone widths: the graphs
    scroll in their box, the nodes and links work by keyboard, a plan save reloads only the
    roadmap pages. A `yarn hub:build` check that the public output has no `project/` page.
+
+As built:
+
+- `createRoadmapSections(diag, { plans, issues })` returns both pages' sections (a section fills
+  one page) from one `readPlans` and one read of the issues. The issues are parsed quietly (the
+  Issues section reports their warnings), and one whose page another file took is left out as
+  there. Each section's `files` and `dirs` are its own folders'.
+- The pages: `project/aekasha/roadmap/` ("Ækasha's roadmap", menu "Roadmap", `aek:order` 25,
+  between the design document and the component library) and `project/app/roadmap/` ("The app's
+  roadmap", order 20, after its design document), each an `intro` and a `generated-roadmap` slot.
+  `project/app/`'s intro links its roadmap (one sentence; Phase 6 still writes its "The app's
+  plans and issues").
+- The summary can't link a folder (`repo:` needs a file): it names the folders as code and links
+  `docs/plans/CLAUDE.md` (its app section on the app's page). Real counts: 42 open, 2 in
+  progress, 50 done, 21 open issues.
+- A status that starts with its badge's word drops it ("In progress" + "Phases 0-4
+  implemented", not "in progress | Phases 0-4 implemented").
+- Row ids: the plan's label (`getPlanLabel`, now the number as the file name writes it: `p056`,
+  not `p56`), on its first row on the page (a done child's in its epic's table, not in Done), an
+  open epic's on its section's wrapper. Each is added to `env.ids`, so the other roadmap's
+  `hub:` links to it are checked. A number two plans share, or none, gives the file name's slug.
+- An epic's table and graph members are its own folder's children only; the other folder's
+  plans show as links and outside nodes. The other plans' graph: the open plans outside an open
+  epic with a blocker or an unblocked plan that isn't done (exactly D4's eight today).
+- "Waits on" / "Unblocks" mark `soft` and `done` in words, with the reference's note as the
+  link's `title`. The Done table's columns are Plan, Category and Epic (a URL as its text without
+  the scheme).
+- `hub.ts` opens a closed `<details>` around a fragment's target (`hashchange` and load), for the
+  browsers that don't, and scrolls to it. `tr:target` is tinted with the accent's soft colour.
+- Styles appended to `_roadmap.scss` (lists, meta lines, the table's column minimums, the
+  `<details>`). `devTools/hub/CLAUDE.md` (the build steps, the watched folders, a Roadmap entry
+  under Generated sections) and `hub/CLAUDE.md` (the Project section, `PROJECT_LINKS`) are
+  updated with the code.
+- `roadmap.test.ts`, 12 tests, its fixtures under `.cache/` (the rows' `repo:` links must be in
+  the repo).
+- Checked in Chrome (Playwright's `channel: 'chrome'`: no Playwright Chromium on this machine),
+  dark and light at 1280 and 375: no page scrolls sideways; the graphs (up to 1048 wide) and the
+  tables (up to 694) scroll in their boxes; Tab never enters an SVG and reaches the Done
+  `<summary>` (Enter opens it); a graph node and `#p600` (in the closed Done) land on their row
+  under the header. A save of p990 rebuilt in 1.2 s and reloaded only `project/aekasha/roadmap/`.
+  The dev Hub has 112 pages (110 before).
 
 ### Phase 6: the docs
 

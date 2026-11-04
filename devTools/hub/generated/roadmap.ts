@@ -94,8 +94,8 @@ type RoadmapRender = {
 };
 
 /**
- * Each plan's row id: `p305`, `app-p100` for the app's, or its file name's slug when it has no
- * number or shares it with another plan of its folder
+ * Each plan's row id: its label (`p305`, `p056`), `app-p100` for the app's, or its file name's
+ * slug when it has no number or shares it with another plan of its folder
  */
 export const createRowIds = (model: PlanModel) => {
   const numbers = new Map<string, number>();
@@ -106,7 +106,7 @@ export const createRowIds = (model: PlanModel) => {
     model.plans.map((plan) => {
       const id =
         plan.number !== null && numbers.get(numberKey(plan)) === 1
-          ? `p${plan.number}`
+          ? getPlanLabel(plan)
           : slugify(plan.name);
       return [plan.key, plan.owner === 'app' ? `app-${id}` : id];
     })

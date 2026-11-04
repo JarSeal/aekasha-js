@@ -124,9 +124,9 @@ describe("Ækasha's roadmap", () => {
     expect(count(html, 'id="p102"')).toBe(1);
     expect(html.indexOf('id="p102"')).toBeLessThan(html.indexOf('<details'));
     expect(html).toMatch(/<details class="hubRoadmapDone">\n<summary>The 2 done plans<\/summary>/);
-    expect(html).toContain('<tr id="p50">');
+    expect(html).toContain('<tr id="p050">');
     expect(html).toContain('>trello.com/b/x</a>');
-    for (const id of ['p100', 'p101', 'p102', 'p200', 'p201', 'p202', 'p50']) {
+    for (const id of ['p100', 'p101', 'p102', 'p200', 'p201', 'p202', 'p050']) {
       expect(env.ids.has(id)).toBe(true);
     }
   });
@@ -209,18 +209,18 @@ describe('the sections', () => {
     expect(app.files).toEqual([path.join(appPlans, 'p100_app-plan.md')]);
   });
 
-  it('give a plan without a number, or sharing one, its file name’s slug', () => {
+  it('give a plan its number as written, or its file name’s slug without one or sharing it', () => {
     const dir = writeFolder('ids', {
       'p7_a.md': plan('Status: draft', 'A'),
       'p7_b.md': plan('Status: draft', 'B'),
-      'p8_c.md': plan('Status: draft', 'C'),
+      'p008_c.md': plan('Status: draft', 'C'),
       'notes.md': plan('Status: draft', 'Notes'),
     });
     const model = readPlans(new HubDiagnostics(), [{ dir, owner: 'app' }]);
     expect([...createRowIds(model).values()]).toEqual([
       'app-p7-a',
       'app-p7-b',
-      'app-p8',
+      'app-p008',
       'app-notes',
     ]);
   });

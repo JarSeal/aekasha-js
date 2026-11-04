@@ -120,3 +120,90 @@
     fill: var(--hub-text-muted);
   }
 }
+
+// The roadmap pages around the graphs (devTools/hub/generated/roadmap.ts, p809 D4): the plans in
+// progress and the issues by area as lists, the plan tables, the done plans' <details>
+
+.hubRoadmapList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    margin: 0;
+  }
+}
+
+// A plan's number before its title, in a row or a list
+.hubRoadmapLabel {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+// The status as written, a dependency's "soft" / "done": quieter than the badge and the link
+.hubRoadmapStatus,
+.hubRoadmapNote {
+  color: var(--hub-text-muted);
+  font-size: 0.875rem;
+}
+
+.hubRoadmapMeta {
+  margin: 0.25rem 0 0;
+  color: var(--hub-text-muted);
+  font-size: 0.9375rem;
+}
+
+.hubRoadmapTable {
+  font-size: 0.9375rem;
+
+  th,
+  td {
+    vertical-align: top;
+  }
+
+  thead th {
+    white-space: nowrap;
+  }
+
+  // The plan's name: wide enough that a title wraps in two or three lines, not one word each
+  th[scope='row'] {
+    min-width: 14rem;
+    font-weight: 400;
+  }
+
+  // The status: the badge with its text under it when the cell is narrow
+  td:first-of-type {
+    min-width: 10rem;
+  }
+
+  // The row a graph node or a "Waits on" link jumped to
+  tr:target > * {
+    background: var(--hub-accent-soft);
+  }
+}
+
+.hubRoadmapEpic {
+  margin-top: 2.5rem;
+
+  // Its heading's own top margin is the section's
+  > h3:first-child {
+    margin-top: 0;
+  }
+}
+
+.hubRoadmapDone {
+  margin: 0 0 2rem;
+
+  > summary {
+    width: fit-content;
+    padding: 0.25rem 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  > .hubTable {
+    margin-top: 0.75rem;
+  }
+}

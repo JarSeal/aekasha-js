@@ -40,14 +40,17 @@ const QUICK_LINKS = [
 
 /**
  * The hero's Project links (dev pages), in p802 D6's order: the app's design document first, then
- * Ækasha's after the app's page (Phase 4 adds the component library after it)
+ * Ækasha's after the app's page (Phase 4 adds the component library after it), and each roadmap
+ * after its part's page (p809 D4)
  */
 const PROJECT_LINKS = [
   { href: 'hub:project/app/design', label: 'The app’s design' },
   { href: 'hub:project/app', label: 'The app' },
+  { href: 'hub:project/app/roadmap', label: 'The app’s roadmap' },
   { href: 'hub:project/aekasha/design', label: 'Ækasha’s design' },
   { href: 'hub:project/aekasha/components', label: 'Component library' },
   { href: 'hub:project/aekasha', label: 'Developing Ækasha' },
+  { href: 'hub:project/aekasha/roadmap', label: 'Ækasha’s roadmap' },
   { href: 'hub:project/aekasha#from-a-plan-to-a-merge', label: 'Plan workflow' },
   { href: 'hub:project/aekasha/code-blocks', label: 'Code blocks' },
 ] as const;

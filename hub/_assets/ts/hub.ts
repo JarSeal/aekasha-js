@@ -221,6 +221,26 @@ document.addEventListener('click', (e) => {
   });
 });
 
+// --- Links into a closed <details> (the roadmap's done plans, p809 D4) ---
+
+// Not every browser opens a closed <details> around a fragment's target: open it, then scroll to
+// the target, which the closed box hid
+const openTargetDetails = () => {
+  let id = '';
+  try {
+    id = decodeURIComponent(location.hash.slice(1));
+  } catch {
+    return; // A malformed escape names no element
+  }
+  const target = id ? document.getElementById(id) : null;
+  const details = target?.closest('details');
+  if (!target || !details || details.open) return;
+  details.open = true;
+  target.scrollIntoView();
+};
+window.addEventListener('hashchange', openTargetDetails);
+openTargetDetails();
+
 // --- Search ---
 
 /**
