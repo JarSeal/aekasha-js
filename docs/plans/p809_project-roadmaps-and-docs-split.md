@@ -471,6 +471,32 @@ As built:
 3. The node and edge styles in a new `hub/_assets/scss/_roadmap.scss` on the Hub's tokens, in
    both themes, with `.hubStatus_progress` in `_sections.scss`.
 
+As built (section 1, `generated/planGraph.ts`):
+
+- Three steps. `createPlanGraph(model, members, hrefOf)` picks a set of member plans (an epic's
+  children, or Phase 5's other plans with dependencies), their open blockers from outside the set
+  (outside nodes, noted with their epic, `in p370`, and their folder when it's the other one),
+  and the edges into the members, without the `closesCycle` ones. `layoutPlanGraph` returns the
+  layers, the boxes and each edge's points. `renderPlanGraph(graph, id)` returns the `<figure>`
+  (`id` keeps the arrowhead marker's id unique on the page). Phase 5 picks the members and gives
+  `hrefOf` (the row ids are the roadmap's). `getPlanLabel` (`p305`, else the file name) is
+  exported for it too.
+- **Keyboard**: D5 says both "reachable by keyboard with the focus ring" and "`aria-hidden`, its
+  links `tabindex="-1"`". The second is built: the table is the keyboard and screen reader path.
+  The graph's links work by pointer, and each node's `<title>` is its tooltip.
+- Sizes are px at the kit's 14 px base: an SVG's `viewBox` is numbers. Nodes are 184 × 64, the
+  node gap is `--aek-space-6` (24) and the layer gap `--aek-space-7` + `--aek-space-5` (48, room
+  for the curve and the arrowhead). The SVG has its own `width` / `height`, so it draws at that
+  size and scrolls sideways in its box.
+- The title is wrapped at build time to two lines of 24 characters (12 px text in the box's 160
+  px), the second clipped with `…` (`wrapPlanTitle`). A node's first line is its label and a note
+  (`✓ done`, `in progress`, an outside node's epic).
+- The ends of the edges into or out of a node are spread along its edge (up to 12 px apart),
+  ordered by where the other end is, so p310's five blockers don't meet in one point.
+- The real graphs: p301's 10 nodes and 21 edges in 8 layers (568 × 864), p350's 8, p370's 8 (p302
+  outside), p800's 9, and the other plans' 8 (1032 wide, so it scrolls in the content column).
+  Each layout takes under 1 ms.
+
 ### Phase 5: the roadmap pages
 
 1. `project/aekasha/roadmap/` and `project/app/roadmap/` (`index.html` with `aek:order`, tags,
