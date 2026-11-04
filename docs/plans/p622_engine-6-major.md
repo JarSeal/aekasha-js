@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -413,7 +413,7 @@ As built (2026-11-04, on `9ec145d4`: `a0b15403` plus this plan's edit, no code c
 - The table holds: `main` hasn't moved past `a0b15403`, and a re-count matches it within grep's
   noise (65 `@deprecated` tags; the 3 more hits are `CLAUDE.md` mentions).
 
-### Phase 1 — The codemod's frame and the renames (D10 kinds 1-2)
+### Phase 1 — The codemod's frame and the renames (D10 kinds 1-2) — done
 
 - **Section 1:** `devTools/migrate/engine6.ts` (the program, the module walk, the rule runner, the
   error and report collection), `migrateEngine6.ts` (the CLI), `engine6Rules.ts` with the rename
@@ -455,6 +455,11 @@ As built (2026-11-04, on `9ec145d4`: `a0b15403` plus this plan's edit, no code c
 - **Section 2:** run it over `src` and `hub/_assets/ts` (`--check` first): the renames have
   replacements already, so whatever it changes is a remaining use of a deprecated name. The nested
   `devTools/migrate/CLAUDE.md`, the root map line and the command in the root's Commands.
+
+  As built (section 2): `--check` and the run over `src hub/_assets/ts` changed none of the 962
+  modules (a grep agrees: no deprecated name is left outside the engine). The nested file's one
+  section, "Engine 6 codemod", is covered by the migration page's `aek:covers` (its first; the
+  page's tags got `migrateEngine6`), and the readme's Migration guide line names the codemod.
 
 ### Phase 2 — The deprecated removals (engine)
 

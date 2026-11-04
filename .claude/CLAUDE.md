@@ -51,6 +51,7 @@ Maintain the brand, feeling, and core principles in creating the best UX for bot
 
 - The layout check (`devTools/layout/layout.test.ts`, in `yarn test`): the working tree against `layoutRules.ts` (a new folder gets a rule there) and the imports through the entries; `npx tsx devTools/layout/layoutReport.ts` writes the whole picture to `.cache/layout/layoutReport.md`. Detail: `devTools/layout/CLAUDE.md`.
 - `npx tsx devTools/layout/migrateToEntries.ts [--check] <folder | file>...` — p606's codemod: rewrites deep engine and toolkit imports to entry imports. Detail: `devTools/layout/CLAUDE.md`.
+- `npx tsx devTools/migrate/migrateEngine6.ts [--check] [--report] <folder | file>...` — p622's codemod: migrates an app to engine 6.0.0 and toolkit 3.0.0 (the renamed and moved names), and reports what needs a person. Detail: `devTools/migrate/CLAUDE.md`.
 
 The verify commands and `yarn verify:devFiles` write their output to `.cache/verify/progress.log` too (emptied when a run starts; `devTools/progressLog.ts`; `yarn verify:baselines --docs` only prints), and `yarn sbp` to `.cache/sbp/progress.log`: watch them as Workflow's "Watching a long run" says.
 
@@ -83,6 +84,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `devTools/devFiles/CLAUDE.md`: the dev file server (API, security, paths, save entries, its self-check).
 - `devTools/gather/CLAUDE.md`: the scene/asset data pipeline (the gatherer's steps, the generated files, the feature manifest, `__saveData`, the dev plugin).
 - `devTools/layout/CLAUDE.md`: the layout check and the entry-imports codemod.
+- `devTools/migrate/CLAUDE.md`: the engine 6 codemod (its rules, the program, errors and reports, its tests).
 - `devTools/verify/CLAUDE.md`: `yarn test` (writing a test, the structural tests), `yarn verify:scenes`, `yarn verify:baselines`, `yarn verify:embed` and `yarn verify:ui` in detail, and the `@example` check.
 - `devTools/sbp/CLAUDE.md`: the Smallest Build Possible (`yarn sbp`, the module sizes and the file keys, the profiles and budgets, the embed profiles: their data, build and prune).
 - `docs/plans/CLAUDE.md`: the plans (naming, header lines, phases, marking a phase or a plan done).
