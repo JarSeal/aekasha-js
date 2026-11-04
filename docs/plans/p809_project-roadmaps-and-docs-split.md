@@ -420,6 +420,41 @@ As built:
    warning, and a cycle.
 3. A run over the real folders: no warnings (§1.1), its time noted (D8).
 
+As built (section 1, `generated/plans.ts`):
+
+- `readPlans(diag, sources = PLAN_SOURCES)`, shaped like `createIssuesSection`: one call reads
+  both folders (each a `PlanSource`, `{ dir, owner }`), since a cross-folder reference, a plan's
+  blockers from the other plans' `Blocks` and a cycle all need both. It returns a `PlanModel`:
+  `plans` (Ækasha's first, then by number, none last), `byKey`, `edges` and `files` (for the
+  watcher). A plan's key is `<owner>/<file name without .md>`. `listIssueFiles` lists the files
+  (`CLAUDE.md` left out).
+- Each `Plan` has D3's fields plus `unblocks` (the "Unblocks" column) and `children` (the plans
+  whose `Epic` names it). `blockers` and `unblocks` are `PlanLink`s, `{ plan, isSoft, note }`.
+  `epic` is `{ kind: 'plan' | 'url' | 'text' }`: p344's `Epic: Profiler (…)` is neither a plan nor
+  a URL, so it stays as text.
+- The header lines are every `Key: value` line before the first `# ` heading, in any order
+  (p304's `Epic` comes after its `Related`).
+- A reference must look like a plan file name (`p<digits>_…md`, optionally `_DONE_` with or
+  without escapes) and not sit inside a longer path, so `docs/issues/….md` in a `Related` line
+  isn't one. A repo path picks the folder by its owner (`docs/plans/` or `docsApp/plans/`), not
+  by the real folder, so the tests' temp folders work.
+- An edge both sides write (p304's `Blocks` p305 and p305's `Blocked by` p304) is one edge. It's
+  soft only when every mention says `soft`, and the blocked plan's own note wins. A reference to
+  a missing file whose `_DONE_` (or non-`_DONE_`) counterpart exists warns and resolves to the
+  counterpart, so the graph stays right while the warning shows.
+- The title's kind suffix: only the known ones are stripped (`— Plan`, `— Stub`, `— Epic`,
+  `— Backlog`, `— Research & Epic`, plus `— Research & Recommendation`: p050, p200). Other text
+  after a `—` is part of the title ("Material Editor — Editable Params, …").
+- Two warnings D3 doesn't list: no `# ` title (the file name stands in), and no priority number
+  (D3's field table has that one).
+- Phases: only `##`-`####` headings starting `Phase <n>` / `Stage <x>`, outside code fences. Older
+  drafts write them as bold paragraphs (`**Phase 1 — …**`: p250, p500) or inside a numbered
+  heading (`## 2. Phase 0 — Spike`: p375, p150), so they show no phases. That doesn't matter on
+  the page: only in-progress plans' phases are shown, and both (p299, p809) use headings. p600
+  has no Stage headings either.
+- The real folders: 94 plans (50 done, 2 in progress: p299 and this plan), 117 edges, no warnings,
+  about 13 ms warm.
+
 ### Phase 4: the dependency graph
 
 1. `generated/planGraph.ts` (D5): the layering, the points on long edges, the ordering, the
