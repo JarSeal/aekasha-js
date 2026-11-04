@@ -1218,8 +1218,11 @@ As built (section 4, the `uiKit` profile's game window, the budgets, `yarn verif
   data window's list and table share), which took the data window from 19.4 to 18.6 KiB (its
   budget 21 → 20, reported well under). `modules` at 0: `_engine/ui/game/` and
   `_engine/kernel/input/InputDevice.ts` in the `app`, `banner` (a `modules` of its own now, inside
-  the Hub's `banner-profile` region) and `uiKit` profiles. First downloads unchanged: app 387.0,
-  banner 287.4, uiKit 286.6 kB gzip.
+  the Hub's `banner-profile` region) and `uiKit` profiles. First downloads: banner 287.4 and uiKit
+  286.6 kB gzip, unchanged; the app 387.0, `main`'s 384.4 (found in Phase 9, against `main`'s
+  `bundle.json`): the viewports +1.2 kB (the minimap's `createViewport`, above), `_engine/ui` +0.4
+  (the loading overlay's tips: `src/index.ts` makes the overlay) and `kernel/input` +0.3 (the
+  gamepad family, through `GamepadInput.ts`).
 - **`yarn verify:embed`'s kit scenario**, after Escape closed the dialog: the game window from its
   button, its bar, hotbar, prompt and first feed line inside the container, the bar's and the
   line's font sizes the same at both host roots in IBM Plex Sans, then a press on the potion's
@@ -1251,6 +1254,23 @@ As built (section 4, the `uiKit` profile's game window, the budgets, `yarn verif
 
 The changelog's sections in the unreleased engine-6 entry (D15), p800's §5 p808 entry rewritten
 as done ("what the later plans build on"), the plan marked done, `_DONE_`.
+
+Sections: 1 the changelog; 2 p800's §5 entry, the plan marked done and moved to `_DONE_`, the
+references to its name, `yarn checkVersions --against main`.
+
+As built (section 1, the changelog):
+
+- **`CHANGELOG.md`'s "Unreleased — engine-6"**: the intro names p808 and gets a paragraph for it;
+  Engine 6.0.0's Added (the device tracker on `aekasha`; the game UI on `aekasha/ui` by D1's
+  groups; the loading overlay's tips and image, the tooltip's `content`), Changed (the embed's
+  gamepad scope; the sizes), Fixed (`createViewport`'s unguarded debug wrapper, the field's
+  `reset`); a new Toolkit section (unreleased, a minor at the merge: `registerWorldAnchorSync`
+  Added, the follow rig's orbit Changed); App's Added (the example, the `uiKit` embed's game
+  window); Project (the embed check, the budgets, the Hub, the baselines, the layout rule, the
+  docs, the plans). Pieces made and fixed inside this branch (the glyphs' WCAG 2.5.3 names, the
+  menu's ring, the prompt's `PromptKeys`) aren't fixes: they're in the Added lines as built.
+- **The app's first download** grew 384.4 → 387.0 KiB gzip against `main`; section 4's
+  "unchanged" is corrected above, and the changelog's Sizes line has the parts.
 
 ---
 

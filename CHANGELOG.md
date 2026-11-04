@@ -6,11 +6,13 @@ Earlier releases are only recorded in the git history.
 
 ## Unreleased — engine-6
 
-The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806 and p807.
+The `engine-6` integration branch's entry: engine 6.0.0, which merges to `main` once p622's removals join it. That merge dates this entry, bumps the engine to 6.0.0 with a new codename (p622), the app a minor, and the toolkit if p622 changes it. Until then `package.json` keeps its versions. So far it holds p806, p807 and p808.
 
 The debugger migration (p806, the debugger UI overhaul epic p800's sixth child) rebuilds the debugger on the UI kit. The drawer, the tab host, the panes, the edit windows, the profiler window's shell, the editor drawer, the material editor, the on-screen tools and the dialogs are on the kit's components and tokens, in the compact density, dark by default with a theme setting. Tweakpane leaves `package.json`. A tab keeps working unless it uses a binding's Tweakpane side, and what a 5.x debugger saved loads in 6.0. The Hub's migration guide gets an "Engine 5 → 6" section.
 
 The stats and profiler graphs (p807, p800's seventh child) replace stats-gl's on-screen panels with the debugger's own on the kit's time series, measured as the profiler measures (checked against stats-gl's on the same frames first), and move the profiler's Overview, Objects and GPU memory tabs from HTML strings to the kit's tables, bars, sparklines and lists, written in place. GPU timing has one owner, with compute and WebGL. `stats-gl` leaves `package.json`. Nothing public breaks.
+
+The game UI components (p808, p800's eighth child) put the pieces games build again and again on `aekasha/ui`, in a new `ui/game/` folder: input prompts that follow the last used device, resource bars, a cooldown, a crosshair, a notification feed, an objective tracker, subtitles, a dialogue box, spatial navigation, a radial menu, a game menu, item slots, a hotbar, an inventory, item details, a settings menu, a controls page, world anchors, a compass and a minimap frame. Each is plain DOM taking plain data, so it works without the engine. Where the engine knows more, the kernel's device tracker and the toolkit's anchor sync feed it. The `exampleGameHud` scene uses every piece and plays with a keyboard, a mouse or a gamepad. Nothing breaks, and none of it is in a first download.
 
 ### Engine 6.0.0 (unreleased)
 
@@ -49,6 +51,16 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - p807: the stats panels' GPU and CPT and the profiler's GPU and TFPS rows read WebGL 2 too (`EXT_disjoint_timer_query_webgl2`), where the profiler's rows were n/a; the Hz line reads any display's rate, where stats-gl's matched a list of rates and read nothing on a 132 Hz display.
 - p807, on `aekasha/ui`: `TableTone`'s `'muted'`, the muted text at the regular weight with no mark, for a figure that isn't one (the profiler's n/a).
 - p807: the test bridge's `markStatsPanels()` (`TEST_BRIDGE_VERSION` 7).
+- p808, on `aekasha`: the last used device. `getLastInputDevice()` returns a `LastInputDevice` (`KEYBOARD_MOUSE`, `GAMEPAD` or `TOUCH`, with a gamepad's `family`), and `onLastInputDeviceChange(fn)` returns its remover. A key, a click, a touch, the wheel, a gamepad button or a stick past its dead zone switches the device. A mouse move alone doesn't switch away from a gamepad. The listeners start with the first read or callback and follow the input scope. The gamepad poll runs only while something listens and a pad is connected. `getGamepadFamily(id)` (`'XBOX' | 'PLAYSTATION' | 'NINTENDO' | 'GENERIC'`, from the vendor id or the name) and `GamepadInfo.family`.
+- p808, on `aekasha/ui`: the game UI (`ui/game/`, 25 value names, the Hub's UI kit Game UI page). Its per-frame setters write nothing when a value is unchanged and allocate nothing. Colour is never a piece's only sign, reduced motion is followed, and its decoration (the crosshair, the anchors' arrows, the compass strip) is `aria-hidden`.
+  - Input: `createInputPrompt`, which shows the binding of an action for the current device with its label, and `setPromptDevice` / `getPromptDevice`, which switch every prompt at once (`onLastInputDeviceChange(setPromptDevice)` is the wiring). The input glyph draws a gamepad's buttons, sticks and d-pad (`{ device: 'GAMEPAD', … }`) with the labels of the Xbox, PlayStation, Nintendo or generic family (`family`, `setFamily`), its face buttons neutral in colour.
+  - The HUD: `createResourceBar` is a meter with a damage trail, a heal flash, segments and thresholds that show a word. `createCooldown` is a CSS sweep over any element, with its seconds and a "Ready in 3 s" description. `createCrosshair` has four shapes, a spread, a ring for a target, a slash for blocked and `showHitMarker` for a hit, a critical or a kill.
+  - Text: `createNotificationFeed` merges a repeat by `key` ("×3"), `createObjectiveTracker` has counts, steps and completions, `createSubtitles` takes a speaker and has its size and background as custom properties, and `createDialogueBox` has a typewriter, a portrait and numbered choices.
+  - Navigation and menus: `createSpatialNavigation` moves the focus by position, with focus groups and `data-aek-nav-*` overrides. Its `move` (a d-pad's) walks a composite and leaves it at its edge. `createRadialMenu` is picked by the pointer, a stick or the arrows. `createGameMenu` is a modal menu of pages with a back stack (a pause or a title screen).
+  - Items: `createItemSlot`, `createHotbar`, `createInventoryGrid` and `createItemDragGroup`, which moves items between grids by a pointer drag or by a pick and a drop (a click, a key or a gamepad's button). `createItemDetails` compares an item's stats with another's, with an arrow, a sign and words.
+  - Settings: `createSettingsMenu` has tabs of property grid items, a reset per page and for all, and reports each change for its owner to save. `createControlsPage` rebinds a key, a mouse button or a gamepad button. It captures the input before any action map sees it, offers a swap or a keep on a conflict, and reports the action's whole new list for `map.setBindings`. `setKitPreferences` / `getKitPreferences` write the theme, the UI scale, reduced motion and the density on a kit root: the styling guide's manual writes as one call.
+  - The world: `createWorldAnchorLayer` places anchors from world positions. An anchor behind the camera hides, one off the screen can clamp to the edge with an arrow, a far one is culled, and a move is written only when its rounded position changes. `createCompass` scrolls the bearings with markers. `createMinimapFrame` is a frame for a viewport's slot, with a north mark, the player's arrow and zoom buttons.
+- p808, on `aekasha/ui`: the loading overlay's `tips` (`tipIntervalMs`, `tipLabel`, `setTips`) and `image`, so it can be a game's loading screen. The tooltip's `content` takes a CMP or a function in place of `text` (an item's details).
 
 **Changed**
 
@@ -74,6 +86,8 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - **GPU timing** (p807): one timer resolves the render and compute timestamps for every reader (the stats panels, the profiler, the PostFX profiler, the sky box's bake stats), where stats-gl resolved them too.
 - **The kit's sparkline** (p807) makes each slot's x text once and takes the area's path from the line's: the same paths, about 40 % less allocated per draw. The table keeps its key sets between renders.
 - **Sizes** (p807, a `VITE_APP_ENV=test` build): the debugger's lazy JS chunks 200.4 → 198.8 kB gzip (stats-gl's 10.3 kB gone; the panels, the GPU frame times and GPU memory's views added). Production's first downloads are unchanged.
+- p808: in an embed's `CANVAS` input scope the gamepads are read while the focus is anywhere in the mount's container (a HUD menu's button), not only on the canvas, so a gamepad can drive a menu in an embed.
+- **Sizes** (p808, production): the game UI and the device tracker are in no first download (`_engine/ui/game/` and `kernel/input/InputDevice.ts` at 0 in every profile). The app's first download is 384.4 → 387.0 KiB gzip. The viewports took 1.2 kB of that: the game HUD's minimap is the first shipping caller of `createViewport`, so its code and slot styles ship with the feature. The loading overlay's tips took 0.4 kB and the gamepad family 0.3 kB. The banner's and the `uiKit` embed's first downloads are unchanged. The `uiKit` embed's game window (a bar, a hotbar with cooldowns, a feed and a prompt) is 7.6 KiB of script and 2.6 KiB of styles, loaded by its button.
 
 **Removed**
 
@@ -90,8 +104,29 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - The Lights tab read no type for a load's last light (`??` in its row's icon). It refreshes a microtask after the light's tags, once per task.
 - An app's action map took Enter from a focused debugger control (`docs/issues/action-map-keys-on-focused-debugger-controls.md`, fixed).
 - The profiler's Objects tab mixed two scenes' samples in "Over time" after a scene change (p807).
+- `createViewport` called the debugger's GPU memory registration unguarded, so an app that made a viewport shipped `debug/GPUMemory.ts` and `debug/Profiler.ts` in its production build (p808: the game HUD's minimap made `yarn verify:baselines` fail on it).
+- A field's `reset()`, and the form's, wrote nothing when the field hadn't read its value since the app changed it (a settings tab never opened). It reads the bound value first now (p808).
+
+### Toolkit (unreleased: a minor at the `engine-6` merge)
+
+**Added**
+
+- p808, on `aekasha/toolkit/ecs`: `registerWorldAnchorSync(world, { layer, compass?, camera?, size? })` and `unregisterWorldAnchorSync(world)` feed the UI kit's world anchor layer. One `LATE_MAIN` system moves the anchor of each entity with a `WORLD_ANCHOR` component (`WorldAnchorComponentType`, `{ anchor, offsetY? }`) to its `OBJECT3D`'s world position. It then updates the layer from the active camera and the canvas size, and turns the compass by the camera's heading. Removing the component or the entity removes its anchor. `getCompassBearing(dx, dz)` gives a direction's bearing (north is -z, east +x). With 200 anchors the layer's update took about 0.12 ms a frame (Chromium on macOS).
+
+**Changed**
+
+- p808: `createFollowObjectCameraRig` with `getMouseMoveInput` starts its orbit from `offset`'s direction, its pitch kept inside the orbit's limits. Before, it started 60° from straight up whatever the offset. The default offset starts at 63°.
 
 ### App (unreleased: a minor at the `engine-6` merge)
+
+**Added**
+
+- p808: the game HUD example (`exampleGameHud`, "Example: A game HUD", with its Hub page). It plays with a keyboard, a mouse or a gamepad, and saves its settings and bindings in `localStorage`. A character in a small arena uses every game UI piece:
+  - prompts that follow the device, health and stamina bars, a hotbar with cooldowns and a crosshair with hit markers on physics crates;
+  - nameplates and a clamped waypoint, a compass and a minimap viewport;
+  - the feed, the tracker, subtitles and a conversation with an NPC;
+  - a radial menu, the pause menu, an inventory with a chest and a settings menu with a controls page.
+- p808: the `uiKit` embed's game window ("Open the game HUD"): a health bar, a hotbar of two items with cooldowns, an input prompt and a feed. The first window is 220 × 240 for its fourth button.
 
 **Changed**
 
@@ -124,6 +159,18 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - p807: `yarn verify:baselines`' `api.json` and `docs.json` (`getStats` and `getStatsCmp` gone, the `@internal` `updateProfilerScene` added); the About dialog's packages lose stats-gl's row; `_dbg__DebugKeyShortcuts.test.ts` pins the key platform (on macOS the hint read `⌃+M`).
 - p807: `src/_engine/debug/CLAUDE.md` (the stats panels, GPU timing's one owner, the profiler's and GPU memory's tabs on the kit), the root `CLAUDE.md`'s pointers to it, `devTools/verify/CLAUDE.md` (the stats panels' shot), and the readme: the stats panels in the debug suite, stats-gl out of the credits.
 - The plans: p807 is `_DONE_`; p800 and p806 follow.
+- p808: `yarn verify:embed`'s kit scenario opens the game window. It checks that the pieces are inside the container, the font sizes match at both host roots, and the potion's use (the meter, the cooldown, a feed line). Its style check now leaves out every `@property` the kit's stylesheets register, not only `tokens.css`'. The cooldown's `--aek-cooldown-progress` stays on the host after an unmount, since CSS has no scoped registration.
+- p808, the budgets (`sbp.config.ts`): `_engine/ui/game/` and `kernel/input/InputDevice.ts` are at 0 in the `app`, `banner` and `uiKit` profiles. The app's `index.css` budget is 4 → 6 KiB (the viewports' slot styles). The `uiKit` profile adds its game window (9 KiB, its CSS 4) and the shared `Announcer.js` (3), and the data window goes 21 → 20 KiB (the announcer and the roving focus moved to that shared chunk).
+- p808, the Hub (its search index is now 484 KiB gzipped, over `devTools/hub/search.ts`' 450 KiB warning mark: a warning):
+  - The UI kit's Game UI page: each piece's demo, rules, keys and reference, and the guide to wiring the engine.
+  - The game pieces' 21 boxes in both component library pages, and the loading overlay's "A loading screen with a tip".
+  - The game HUD example page.
+  - The input page's "The last used device", and the toolkit page's `WorldAnchorSync` and the rig's orbit.
+  - The styling guide's `setKitPreferences`, the overlays guide's tooltip `content`, and the In a build notes on the new chunks.
+  - The `uiKitEmbed` poster, taken again.
+- p808: `yarn verify:baselines`' `api.json` and `docs.json` (the names above) and the bundle baselines: the example's chunks and the shared chunks it split out (`FocusTrap`, `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`, `Hotbar`), and the `uiKit` embed's game window and `Announcer`. `yarn verify:scenes` records `exampleGameHud`'s baselines.
+- p808: `ui/game/` is a `UI_KIT_FOLDERS` layout rule. The docs: the root `CLAUDE.md`'s map, `src/_engine/ui/CLAUDE.md`'s "Game UI", `src/_engine/kernel/input/CLAUDE.md` (the tracker), `hub/CLAUDE.md` (the game page, the HUD screenshot), `devTools/sbp/CLAUDE.md`, `devTools/verify/CLAUDE.md`, and the readme (the game UI, the device tracker, `WorldAnchorSync`, the rig's orbit and the game HUD example).
+- The plans: p808 is `_DONE_`; p800 follows.
 
 ## 2026-10-28 — p805-data-display
 
