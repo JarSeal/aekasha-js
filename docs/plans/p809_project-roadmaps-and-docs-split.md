@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -410,7 +410,7 @@ As built:
   and `hubPlugin.ts`' comment. Phase 6 still has `project/aekasha/workflow.md`'s Issues
   paragraph.
 
-### Phase 3: the plan model
+### Phase 3: the plan model — done
 
 1. `generated/plans.ts`' `readPlans` (D3): the fields, the references (a regex, an escaped
    `\_DONE_`, repo paths, parentheticals, `soft`), the epic membership rule, the phases and the
@@ -420,7 +420,7 @@ As built:
    warning, and a cycle.
 3. A run over the real folders: no warnings (§1.1), its time noted (D8).
 
-As built (section 1, `generated/plans.ts`):
+As built:
 
 - `readPlans(diag, sources = PLAN_SOURCES)`, shaped like `createIssuesSection`: one call reads
   both folders (each a `PlanSource`, `{ dir, owner }`), since a cross-folder reference, a plan's
@@ -445,8 +445,15 @@ As built (section 1, `generated/plans.ts`):
 - The title's kind suffix: only the known ones are stripped (`— Plan`, `— Stub`, `— Epic`,
   `— Backlog`, `— Research & Epic`, plus `— Research & Recommendation`: p050, p200). Other text
   after a `—` is part of the title ("Material Editor — Editable Params, …").
-- Two warnings D3 doesn't list: no `# ` title (the file name stands in), and no priority number
-  (D3's field table has that one).
+- The warnings add no `# ` title (the file name stands in) to D3's list, and no priority number,
+  which D3 has in its field table only.
+- The cycle's closing edge stays in the model as `PlanEdge.closesCycle`, and the tables still list
+  it. Phase 4's graph leaves out the edges that have it set.
+- `devTools/hub/plans.test.ts` (next to `issues.test.ts`), 14 tests: every status form, the
+  number, title suffixes, areas and phases (fences, a stub's, `Phase 2a`), header lines in any
+  order, `Epic` as a URL or text, a `Blocks` line with commas in its notes and an escaped
+  `\_DONE_`, one edge from both sides, an epic's membership, the other folder by repo path, each
+  warning, a cycle, missing folders.
 - Phases: only `##`-`####` headings starting `Phase <n>` / `Stage <x>`, outside code fences. Older
   drafts write them as bold paragraphs (`**Phase 1 — …**`: p250, p500) or inside a numbered
   heading (`## 2. Phase 0 — Spike`: p375, p150), so they show no phases. That doesn't matter on
