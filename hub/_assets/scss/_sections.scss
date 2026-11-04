@@ -26,6 +26,11 @@
   --hub-status: var(--hub-success);
 }
 
+// A plan in progress (the roadmap, p809 D4)
+.hubStatus_progress {
+  --hub-status: var(--hub-info);
+}
+
 // An issue page's title is a sentence, often with code: smaller than a page title
 .hubContent .hubIssueTitle {
   font-size: clamp(1.75rem, 3vw, 2.125rem);

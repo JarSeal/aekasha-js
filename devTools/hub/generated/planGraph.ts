@@ -7,7 +7,8 @@ import type { Plan, PlanModel } from './plans';
  * written for these graphs (the largest, p301's, has 10 nodes), so nothing runs in the page.
  *
  * `createPlanGraph` picks the nodes and edges from the plan model (a set of member plans, their open
- * blockers from outside the set as dashed boxes, the edges that close a cycle left out),
+ * blockers from outside the set as dashed boxes, the edges that close a cycle or that another
+ * path implies left out),
  * `layoutPlanGraph` lays them out top to bottom with the blockers above (longest-path layering,
  * a point per layer a long edge crosses, two barycenter sweeps with ties by plan order), and
  * `renderPlanGraph` draws it in a `<figure>`. The SVG is `aria-hidden` and its links are out of
@@ -90,8 +91,8 @@ const VARIANT_NOTES: Record<PlanGraphVariant, string> = {
 /**
  * The graph of `members` (plan keys): those plans, their blockers from outside the set that
  * aren't done (a done one blocks nothing), and the edges into the members from either (not the
- * ones closing a cycle, `PlanEdge.closesCycle`). An outside node says whose epic it's in, and its
- * folder when that's the other one.
+ * ones closing a cycle, `PlanEdge.closesCycle`, nor the ones another path implies). An outside
+ * node says whose epic it's in, and its folder when that's the other one.
  */
 export const createPlanGraph = (
   model: PlanModel,
@@ -140,7 +141,28 @@ export const createPlanGraph = (
         !closesCycle && memberSet.has(to) && (memberSet.has(from) || outside.has(from))
     )
     .map(({ from, to, isSoft }) => ({ from, to, isSoft }));
-  return { nodes, edges };
+  return { nodes, edges: edges.filter((edge) => !isImplied(edges, edge)) };
+};
+
+/**
+ * Whether another path of `edges` already says what `edge` does, so the graph leaves it out (the
+ * plans list blockers their blockers wait on too: p310 names p305 to p309): a hard edge needs a
+ * path of hard edges, a soft one any path. The table still lists every dependency.
+ */
+const isImplied = (edges: PlanGraphEdge[], edge: PlanGraphEdge) => {
+  const counts = (other: PlanGraphEdge) => other !== edge && (edge.isSoft || !other.isSoft);
+  const stack = edges
+    .filter((other) => other.from === edge.from && counts(other))
+    .map(({ to }) => to);
+  const seen = new Set<string>();
+  while (stack.length) {
+    const key = stack.pop()!;
+    if (key === edge.to) return true;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const other of edges) if (other.from === key && counts(other)) stack.push(other.to);
+  }
+  return false;
 };
 
 /** A slot in a layer: a node, or a point of a long edge crossing it */
@@ -377,7 +399,7 @@ export const renderPlanGraph = (graph: PlanGraph, id: string) => {
     .join('');
   return `<figure class="hubPlanGraph">
 <div class="hubPlanGraphScroll"><svg class="hubPlanGraphSvg" viewBox="0 0 ${round(layout.width)} ${round(layout.height)}" width="${round(layout.width)}" height="${round(layout.height)}" aria-hidden="true" focusable="false"><defs><marker id="${escapeHtml(marker)}" class="hubPlanArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="hubPlanEdges">${edges}</g><g class="hubPlanNodes">${layout.nodes.map(renderNode).join('')}</g></svg></div>
-<figcaption>Blockers above, soft dependencies dashed, plans from outside dashed boxes. The table lists the same dependencies.</figcaption>
+<figcaption>Blockers above, soft dependencies dashed, plans from outside dashed boxes. An arrow another path already implies isn't drawn: the table lists every dependency.</figcaption>
 </figure>
 `;
 };

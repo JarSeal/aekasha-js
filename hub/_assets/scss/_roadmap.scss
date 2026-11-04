@@ -1,0 +1,122 @@
+// The roadmap pages' dependency graphs (devTools/hub/generated/planGraph.ts, p809 D5): an SVG drawn
+// at build time, so its sizes are the layout's px (the kit's 14 px base), and its colours the
+// Hub's tokens, so both themes work. The state colours are the status badges' (_sections.scss):
+// open the warning, in progress the info, done the success; the accent is for hover alone (p800
+// D6). A node's state is also its words (`✓ done`, `in progress`), never the colour alone.
+
+.hubPlanGraph {
+  margin: 1.5rem 0;
+
+  figcaption {
+    margin-top: 0.5rem;
+    color: var(--hub-text-muted);
+    font-size: 0.875rem;
+  }
+}
+
+// A wide graph scrolls in its box, so the page doesn't at phone width
+.hubPlanGraphScroll {
+  overflow-x: auto;
+  padding: 0.5rem;
+  background: var(--hub-bg);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-radius);
+}
+
+.hubPlanGraphSvg {
+  display: block;
+  // At its own size: the layout wraps the titles for it
+  max-width: none;
+  margin: 0 auto;
+  font-family: var(--hub-font);
+}
+
+.hubPlanEdge {
+  fill: none;
+  stroke: var(--hub-text-muted);
+  stroke-width: 1.25;
+}
+
+.hubPlanEdge_soft {
+  stroke-dasharray: 5 4;
+}
+
+.hubPlanArrow path {
+  fill: var(--hub-text-muted);
+}
+
+.hubPlanNode {
+  --hub-plan-node: var(--hub-border-strong);
+
+  rect {
+    fill: var(--hub-panel);
+    stroke: var(--hub-plan-node);
+    stroke-width: 1.5;
+  }
+
+  text {
+    fill: var(--hub-text);
+  }
+
+  // The layout's sizes: the title wraps at 24 characters of this
+  .hubPlanNodeLabel {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .hubPlanNodeNote {
+    // Toward the text colour, as a badge's: the plain status colours miss 4.5:1 in the light theme
+    fill: color-mix(in srgb, var(--hub-plan-node) 75%, var(--hub-text));
+    font-weight: 400;
+  }
+
+  .hubPlanNodeTitle {
+    font-size: 12px;
+  }
+
+  &:hover rect {
+    fill: var(--hub-panel-hover);
+    stroke: var(--hub-accent);
+  }
+}
+
+.hubPlanNode_open {
+  --hub-plan-node: var(--hub-warning);
+}
+
+.hubPlanNode_progress {
+  --hub-plan-node: var(--hub-info);
+
+  rect {
+    stroke-width: 2.5;
+  }
+}
+
+// Muted: no panel, a quiet border and text
+.hubPlanNode_done {
+  --hub-plan-node: var(--hub-success);
+
+  rect {
+    fill: none;
+    stroke: var(--hub-border-strong);
+  }
+
+  text {
+    fill: var(--hub-text-muted);
+  }
+}
+
+// A blocker from outside the epic: a dashed box, labelled with its epic
+.hubPlanNode_outside {
+  --hub-plan-node: var(--hub-text-muted);
+
+  rect {
+    fill: none;
+    stroke: var(--hub-text-muted);
+    stroke-dasharray: 4 3;
+  }
+
+  .hubPlanNodeNote {
+    fill: var(--hub-text-muted);
+  }
+}

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -462,7 +462,7 @@ As built:
 - The real folders: 94 plans (50 done, 2 in progress: p299 and this plan), 117 edges, no warnings,
   about 13 ms warm.
 
-### Phase 4: the dependency graph
+### Phase 4: the dependency graph — done
 
 1. `generated/planGraph.ts` (D5): the layering, the points on long edges, the ordering, the
    cycle's dropped edge, and the SVG markup with its classes, links and escaping.
@@ -471,7 +471,7 @@ As built:
 3. The node and edge styles in a new `hub/_assets/scss/_roadmap.scss` on the Hub's tokens, in
    both themes, with `.hubStatus_progress` in `_sections.scss`.
 
-As built (section 1, `generated/planGraph.ts`):
+As built:
 
 - Three steps. `createPlanGraph(model, members, hrefOf)` picks a set of member plans (an epic's
   children, or Phase 5's other plans with dependencies), their open blockers from outside the set
@@ -498,12 +498,31 @@ As built (section 1, `generated/planGraph.ts`):
   Each layout takes under 1 ms.
 - The title's clip falls at a word, with room for the `…` ("(gallery + showcase)…"), and inside
   a word only when it's the clipped line's only one.
-- `devTools/hub/planGraph.test.ts`, 11 tests: a fixed five-node graph whose layers, order, size
+- **The graph draws the transitive reduction**, which D5 didn't say: an edge another path already
+  implies isn't drawn (a hard edge needs a path of hard edges, a soft one any path), and the
+  caption says so; the model and the tables keep every edge. The plans list the blockers their
+  blockers wait on too (p310 names p305 to p309), so the first screenshots had p301's 21 edges
+  looping around the chain. It now draws 15 (the soft p304 → p305 keeps some hard ones), p800's
+  8 of 12, the other plans' 6 of 7.
+- `devTools/hub/planGraph.test.ts`, 12 tests: a fixed five-node graph whose layers, order, size
   and long-edge points are worked out by hand in its comment, the edge ends spread along a node,
   a graph without edges and an empty one, the SVG's `viewBox`, `aria-hidden`, tab order,
   arrowheads and escaping, the title wrap, and from a fixture model: an epic's children by state,
-  an outside blocker with its epic (a done one left out), one from the other folder, and a
-  cycle's closing edge left out.
+  an outside blocker with its epic (a done one left out), one from the other folder, the implied
+  edges left out, and a cycle's closing edge left out.
+- Styles (`hub/_assets/scss/_roadmap.scss`, after `sections` in `hub.scss`): a node's border is
+  its state's colour, the badges' (open the warning, in progress the info with a thicker border,
+  done muted: no fill, the plain border and muted text, outside dashed and muted), its note in that
+  colour mixed toward the text as a badge's, and the accent on hover only. The edges are the muted
+  text colour, soft ones dashed. `--hub-info` is a new alias of `--aek-info` in `_tokens.scss`,
+  used by `.hubStatus_progress` in `_sections.scss` too. The figure's box (`.hubPlanGraphScroll`)
+  has the page's background and border and scrolls sideways.
+- Checked in Chromium on a scratch page with the shell's layout (`.hubLayout` > `.hubMain` >
+  `.hubContent`) and the compiled `hub.css`, with the real plans' five graphs: dark and light at
+  1280 wide, dark at 375. The page never scrolls sideways (the column is `minmax(0, 1fr)` with
+  `min-width: 0`: in a box without them, a figure grows to its SVG's width). p350's, p370's and
+  the other plans' graphs (824 and 1032 wide) scroll in their box on the desktop column too. Phase
+  5 checks them again on the dev server's pages.
 
 ### Phase 5: the roadmap pages
 

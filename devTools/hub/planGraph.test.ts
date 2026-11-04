@@ -167,6 +167,11 @@ describe('what a graph shows', () => {
         'p40_a.md': 'Status: draft\nBlocks: p41_b.md',
         'p41_b.md': 'Status: draft\nBlocks: p42_c.md',
         'p42_c.md': 'Status: draft\nBlocks: p40_a.md',
+        'p50_a.md': 'Status: draft\nBlocks: p51_b.md, p52_c.md',
+        'p51_b.md': 'Status: draft\nBlocks: p52_c.md',
+        'p52_c.md': 'Status: draft',
+        'p53_d.md': 'Status: draft\nBlocks: p51_b.md (soft), p52_c.md',
+        'p54_e.md': 'Status: draft\nBlocks: p51_b.md, p52_c.md (soft)',
       },
       app: { 'p1_app.md': 'Status: draft\nBlocked by: docs/plans/p21_other.md' },
     },
@@ -205,6 +210,23 @@ describe('what a graph shows', () => {
       href: '#p21',
     });
     expect(byKey(graph)['app/p1_app'].href).toBe('#app-p1');
+  });
+
+  it('leaves out an edge another path implies: a hard one only through hard edges', () => {
+    const members = ['a', 'b', 'c', 'd', 'e'].map((name, i) => `aekasha/p${50 + i}_${name}`);
+    const graph = createPlanGraph(model, members, href);
+    expect(
+      graph.edges.map(({ from, to, isSoft }) => `${from} → ${to}${isSoft ? ' (soft)' : ''}`)
+    ).toEqual([
+      // a → c is a → b → c's; e → c (soft) is e → b → c's; d → c stays: d → b is soft
+      'aekasha/p50_a → aekasha/p51_b',
+      'aekasha/p51_b → aekasha/p52_c',
+      'aekasha/p53_d → aekasha/p51_b (soft)',
+      'aekasha/p53_d → aekasha/p52_c',
+      'aekasha/p54_e → aekasha/p51_b',
+    ]);
+    // The model keeps them all, for the tables
+    expect(model.byKey.get('aekasha/p52_c')?.blockers).toHaveLength(4);
   });
 
   it('leaves out the edge that closes a cycle', () => {
