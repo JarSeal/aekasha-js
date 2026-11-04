@@ -1,278 +1,545 @@
-Status: stub — not-implemented
+Status: draft | not-implemented
 Category: Refactoring, API
-Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (the physics items below), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
+Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
-# Engine 6.0.0 — Stub
+# Engine 6.0.0 (Sunset)
 
-**This is a stub.** It collects what the engine's next major removes or reshapes, so the minors
-in between can deprecate instead of break. Expand it into a full plan (grounding, phases, the
-codemod and migration guide, versioning with a new codename) when the major is scheduled. The
-provenance tags ("p615 D3") name the plan that decided an item; each item says what to do
-without it.
+One branch that releases engine 6.0.0 "Sunset" and toolkit 3.0.0 "Gibbous": it removes every API
+deprecated "until engine 6.0.0" (and the toolkit's "until toolkit 3.0.0"), lands the breaking
+reshapes the Stage C reviews deferred, ships a codemod that migrates an app made from the template,
+and finishes the Hub's "Engine 5 → 6" migration section and the unreleased changelog entry that
+p806-p808 started on `main`. The provenance tags ("p615 D3") name the plan that decided an item;
+each item here says what to do without it.
+
+**Paths** are relative to `src/_engine/` unless they say otherwise.
 
 ## Goal
 
-One major that removes every API deprecated "until engine 6.0.0" and lands the breaking changes
-the Stage C reviews deferred, with a codemod (on the model of `devTools/layout/migrateToEntries.ts`,
-engine 5.0.0's) and the Hub migration page's "Engine 5 → 6" section, so an app made from the
-template upgrades in one step.
+- Every `@deprecated` that names engine 6.0.0 or toolkit 3.0.0 is gone, with its replacement in
+  the migration page.
+- The public API follows the coding standards' options-object rule, with one written exception
+  for the ECS world (D2), so later minors don't need another round of positional reshapes.
+- The tiers are an opt-in feature (`physicsTiers()`), so an app without them doesn't download them.
+- `npx tsx devTools/migrate/migrateEngine6.ts src` migrates the template app (and an app made from
+  it) mechanically, and reports what needs a person.
+- The merge into `main` is the release: versions bumped, the changelog entry dated, the tags made.
 
-## Where 6.0.0 stands (checked 2026-11-04)
+## 1. Grounding (checked 2026-11-04, on `a0b15403`)
 
-- **No `engine-6` branch exists**, locally or on `origin` (`git branch -a`). It was planned as an
-  integration branch, but the debugger migration (p806), the stats and profiler graphs (p807) and
-  the game UI components (p808) merged straight into `main` (PRs #73-#75). So `main` already
-  carries unreleased 6.0.0 work, the tab types' breaking changes included (below), while
-  `package.json` still says engine 5.14.0 (Golden Hour), toolkit 2.2.1 (Half Moon), app 1.18.0.
-- **`CHANGELOG.md`'s top entry is "## Unreleased — engine-6"**, holding p806-p808: an intro,
-  "### Engine 6.0.0 (unreleased)" (with the tab types' 5.x → 6.0 table under **Breaking**),
-  "### Toolkit (unreleased: a minor at the 6.0.0 release)" (p808's `registerWorldAnchorSync`
-  and the rig's orbit), "### App (unreleased: a minor at the 6.0.0 release)" and "### Project".
-  Its intro says branches merge into `main` with no bump and this plan's branch is the release
-  (rewritten 2026-11-04; it had called itself the `engine-6` integration branch's entry).
+### Where 6.0.0 stands
+
+- **No `engine-6` integration branch exists.** The debugger migration (p806), the stats and
+  profiler graphs (p807) and the game UI components (p808) merged straight into `main` (PRs
+  #73-#75), so `main` already carries unreleased 6.0.0 work, the tab types' breaking changes
+  included, while `package.json` still says engine 5.14.0 (Golden Hour), toolkit 2.2.1 (Half
+  Moon), app 1.18.0. This plan's branch is `p622_engine-6-major`, made from `main` at `a0b15403`.
+- **`CHANGELOG.md`'s top entry is "## Unreleased — engine-6"**: an intro, "### Engine 6.0.0
+  (unreleased)" (the tab types' 5.x → 6.0 table under **Breaking**), "### Toolkit (unreleased: a
+  minor at the 6.0.0 release)" (p808's `registerWorldAnchorSync` and the rig's orbit), "### App
+  (unreleased: a minor at the 6.0.0 release)" and "### Project". p809's Project-only entry
+  (2026-11-04) sits under it. The Hub's homepage "What's new" shows the latest entry.
 - **The Hub's migration guide** has the section: `hub/pages/documentation/migration/engine-6.md`
-  ("Engine 5 → 6": "The debugger on the UI kit" with the same table, "What reads differently",
-  "New in a tab"), under a `::: note In progress` that says the changes merge into `main` ahead
-  of the release (rewritten 2026-11-04 from "land on the `engine-6` branch"). `migration/intro.md`
-  says the section is in progress and that the 5.x deprecations go next.
-- **Until this major merges:** a branch that changes the engine merges into `main` with its
-  changelog sections added to the unreleased entry and no version bump, and its
-  `yarn checkVersions --against main` fails on purpose (engine files changed, version unchanged;
-  p807 D2). A branch that changes only the Project (repo tooling, docs) gets a dated entry of its
-  own under the unreleased one (p809).
-- **So the release is an ordinary branch from `main`** (no integration branch to merge): it lands
-  the scope below, the codemod and the migration page, and its merge into `main` is engine 6.0.0
-  (see Versioning and the changelog).
+  (89 lines: "The debugger on the UI kit" with the same table, "What reads differently", "New in
+  a tab") under a `::: note In progress`; `migration/intro.md` says the section is in progress and
+  that the 5.x deprecations go next. `engine-5.md` (286 lines, a subsection per change, "Before
+  you start" first) is the model.
+- **Until this branch merges:** an engine branch merges into `main` with its changelog sections
+  added to the unreleased entry and no version bump, and its `yarn checkVersions --against main`
+  fails on purpose (p807 D2). A Project-only branch gets a dated entry of its own (p809).
 
-## Scope
+### The deprecations
 
-- **Every `@deprecated` that names engine 6.0.0.** Today (`grep -rn "6\.0\.0" src/_engine`,
-  2026-11-04):
-  - characters (p610 D5; `features/character/CLAUDE.md` lists most): `DynamicCharacterOpts.input`
-    and `charData`, `DynamicCharacter.data` (`controllers/dynamic/DynamicCharacter.ts`; replaced
-    by `brain`, `config` and the controller's `state` / `config.values` / `internal`), the
-    `CharacterData` type (`DynamicCharacterData.ts`), `CharacterInputScheme`,
-    `CharacterInputHoldMode` (→ `PlayerBrainHoldMode`), `CharacterInputOpts` and
-    `getInputBrainSpec`'s mapping (`CharacterInputSchemes.ts`), `CreateCharacterOpts.controls` and
-    `data` (`Character.ts`), and in `CharacterTypes.ts` `CharacterObject.kind`, `keyBindingIds`,
-    `mouseBindingIds` (its tag says only "See `keyBindingIds`": give it the version in a minor, or
-    remove it here with the rest), `data` and `initialConfig` (→ `config.initial`),
-    `CharacterBodyKindField`'s `kind` (→ `bodyKind`), `CharacterCastRecord.resolvedAt`
-    (→ `resolvedAtStep`), and `HUMANOID_CAPSULE`'s `kind` (`CharacterBodyPlans.ts`). Before
-    removing the flat `data` view, check that no debug tool reads it (none does today);
-  - the kernel (p612, p613): `CoreComponentType` leaves the entry (`kernel/ecs/ECSRegistry.ts`;
-    `ComponentType` is the same object), `SceneHooks.sceneDeleted` (`SceneHooks.ts`, no
-    replacement), `Group.ts`' `deleteGeometries`, `deleteMaterials` and `deleteTextures` (never
-    read: `deleteMeshes` releases them), the scene load options' `updateLoaderStatusFn`
-    (`SceneLoader.ts`, never read: the loader's own from `createSceneLoader` is used),
-    `registerOnAllSceneEnterings` (`Scene.ts`, → `registerOnAllSceneEnters`), and
-    `TextureSync.ts`' `loadTextures` and `loadTexture` (→ `loadTextureAsync`);
-  - physics: `getPhysGameTime()` (`PhysicsStepping.ts`, → the step index times the fixed
-    timestep) with `PhysicsWallClock.ts`, and its allow-list entry in `eslint.config.js` (the
-    known-violations block after `SIMULATION_FILES`);
-  - the sky box (p615): `LegacySkyBox.ts` and the rest of the legacy shape (from p615 below);
-  - the debug entry (p618): `debug/DevFilesProtocol.ts`, `debug/TestBridge.ts`,
-    `debug/DebuggerGUI.ts` (from p618 below);
-  - the UI kit (p617, p803, p804): from p617 below;
-  - the dev tools that name what goes: `devTools/hub/api/entries.ts`' `ACCEPTED_LEAKS` (both
-    entries, `PhysicsProbeReport` and `LegacySkyBoxParams`, leak only through names removed
-    here: the map is then empty), `devTools/engineImports.test.ts`' `LegacySkyBox.ts` entry, and
-    the nested `CLAUDE.md` lists of what waits for 6.0.0 (`ui/`, `features/character/`,
-    `features/skybox/`, `features/physics/`, `debug/`); `yarn verify:baselines --update` for
-    `api.json` and `docs.json`.
-- **From p614 (physics):**
-  - `physicsTiers()`, a feature of its own (below);
-  - `createPhysicsEntity(colliderParams, rigidBodyParams?, target?, entityOpts?, ecsWorld?)`
-    with an options object instead of five positional parameters (counted 2026-11-04: 31 calls in
-    `src/app`, 2 in `src/toolkit`, 2 in engine code (`Character.ts`, `import/ImportPhysics.ts`)
-    plus 4 in its tests and 2 `@example`s, the readme's example and 3 in the Hub: the codemod's
-    job);
-  - only if a second physics backend is planned: `WorldAPI`'s positional queries (they mirror
-    Rapier's today);
-  - `WorldAPI.setMaxCcdSubstepsSync` (`types/PhysicsWorldTypes.ts`, `proxies/WorldProxyAPI.ts`,
-    `backends/rapier/proxies/EngineWorldProxyAPI.ts`, the worker's `PhysicsSwitchWorld.ts`): a
-    one-way setter named like a sync getter, so `OmitSync` drops it from the worker proxy's
-    type. Renamed `setMaxCcdSubsteps` (the old name deprecated in a minor first, or removed here);
-    `docs/issues/physics-ccd-substeps-setting.md` (a config setting for it) can land with it;
-  - the Rapier enums nothing in the API takes or returns (`ActiveHooks`, `ActiveCollisionTypes`,
-    `CoefficientCombineRule`, `ActiveEvents`, `SolverFlags`; `PhysicsHooks` can't run without
-    them): dropped here from `aekasha/physics` and the backend's mirrors (and
-    `EngineRapier.test.ts`' pairs), unless `docs/issues/physics-unused-rapier-enums.md` wires them
-    into `ColliderParams` in a minor first.
-- **From p615 (the sky box):**
-  - the pre-3.0 sky box shape (`{ type, params }`): `features/skybox/LegacySkyBox.ts` with its
-    entry names (`LegacySkyBoxProps`, `LegacySkyBoxParams`, `isLegacySkyBoxProps`,
-    `LEGACY_SKYBOX_WARNING`, `fromLegacySkyBoxProps`), `createSkyBox`'s legacy overload
-    (`SkyBox.ts`), the schema's two conversions (`SkyBoxAssetSchema`'s preprocess and the
-    `__saveData` entries' `fromLegacySkyBoxOverrides`, `SkyBoxSchema.ts`), the gatherer's
-    `warnOnLegacySkyBox` (`devTools/gather/registries.ts`) and the debug tab's one-time
-    `AEK_debugSkyBoxStates` migration (`migrateLegacySkyBoxLS`,
-    `features/skybox/debug/_dbg__SkyBoxShared.ts`). Nothing in the template uses the shape (no
-    JSON, no `createSkyBox` call; checked 2026-10-18);
-  - candidates, decided here: the optional positional parameters of `setActiveSkyBox(id,
-sceneId?)`, `getSunDirection(out, i = 0)`, `getMoonDirection(out, i = 0)`,
-    `getSunElevation(i = 0)` and `getMoonPhase(i = 0)` (the coding standard asks for an options
-    object; a trailing index is common enough that keeping them is an option).
-    `registerSkyBox(def, sceneId?)` is `@internal`, so it can change in any release.
-- **From p616 (candidates, decided here; call sites counted 2026-11-04):**
-  - the spatial API's argument order: `registerSpatialDomain(world, opts)`,
-    `getSpatialDomain(world, id)`, `invalidateSpatialDomain(world, id)` and the rest take the world
-    first, but `joinSpatialDomain`, `leaveSpatialDomain` and `isInSpatialDomain` take
-    `(entityId, domainId, world?)` and `refreshSpatialRadius` `(entityId, world?)`
-    (`features/spatial/SpatialIndexSystem.ts`). World first everywhere, or an options object
-    (outside their module: `joinSpatialDomain` once in the Hub, `refreshSpatialRadius` twice in
-    the engine's light debug modules);
-  - an instanced pool's `spawn(world, placements, entityOpts?)` and `despawn(world, entityId)`
-    (`features/instancing/InstancedMeshPool.ts`) without their `world`: the pool's own
-    (`opts.world`, which owns the mesh). Instances spawned into another world outlive the mesh's
-    scene there and keep slots in a disposed mesh (6 calls in the app, the Hub's LOD example's
-    among them, all passing the pool's world, and `Foliage.ts`' `@example` in the toolkit);
-  - `createLineEntity(props, entityOpts?, ecsWorld?)` and `bindLineToEntity(line, entityId,
-ecsWorld?)` (`features/lines/Lines.ts`): optional positional parameters, where the coding
-    standard asks for an options object (no call outside the engine).
-  - With them, the ones p613 kept by decision (documented, not filed): `getScene(id, silent?,
-throwOnError?)` (`Scene.ts`) and `createSceneLoader(sceneLoader, isCurrent?)`
-    (`SceneLoader.ts`)' positional booleans, and the kernel's positional `world` parameters
-    (optional on the entity creators, `createXEntity(props, entityOpts?, ecsWorld?)`, required on
-    the light setters). `createLineEntity` above has the creators' shape, so decide them
-    together: reshape them all, or keep them all.
-- **From p617, p803 and p804 (the UI kit, all on `aekasha/ui`):**
-  - `AppConfig.draggableWindows` (`kernel/config/Config.ts`, deprecated in engine 5.8.0): the
-    windows' content functions are a module map (`registerDraggableWindow`,
-    `registerDraggableWindowKind`), and the key is only read as a fallback (`buildContent`,
-    `ui/overlays/windows/DraggableWindow.ts`). Removed with `Config.ts`' `CMPHandle` and
-    `DraggableWindow` type imports (`ui/core/CMPTypes.ts`,
-    `ui/overlays/windows/DraggableWindowTypes.ts`), the last kernel → ui imports of `Config.ts`;
-    after it `DraggableWindow.ts` no longer reads `getConfig()`;
-  - `AddToastResponse.timeout` (`ui/overlays/Toaster.ts`, deprecated in engine 5.8.0): the
-    toast's first timer, which its later phases replace (→ `removeToast`);
-  - `CMPSettings.doCheckIsInDom` (`ui/core/CMPTypes.ts`, deprecated in engine 5.8.0): stored,
-    never read;
-  - the `T`-prefixed type names' deprecated aliases (p803 D3, engine 5.12.0): `TCMP`
-    (→ `CMPHandle`), `TProps` (→ `CMPProps`), `TSettings` (→ `CMPSettings`), `TListener`,
-    `TListenerCache`, `TListenerCreator`, `TStyle`, `TAttr`, `TClassAction`, `TAnimChain` and
-    `TAnimState` (each → its `CMP` name: `CMPListener`, …, `CMPAnimState`) at the end of
-    `ui/core/CMPTypes.ts`, and `TDropDown` (→ `DropDown`) in `ui/forms/DropDown.ts`. Removed
-    here, with their rows in the migration page (a rename, the codemod's job);
-  - `getSvgIcon`'s `size` value `'small'` (p803 D5, deprecated in engine 5.12.0: `'sm'`;
-    `ui/core/icons/SvgIcon.ts`), and the `uiIcon` / `smallIcon` classes it writes next to
-    `aekIcon` (no style reads them since the debugger's restyle removed their rules);
-  - the string form of `kbd` (p804 D13, deprecated in engine 5.13.0: a `Kbd` handle from
-    `createKbd`) on `ButtonProps`, `SplitButtonProps`, `MenuActionItem` and `MenuCheckboxItem`:
-    `ui/components/ShortcutHint.ts`' string path (its `import('./Kbd')`) goes with it, and the
-    props' type is `Kbd` alone.
-- **From p618 (the debug entry):**
-  - the names on `aekasha/debug` that only the dev files protocol's two sides and the scene runner
-    use (deprecated in engine 5.9.0): the dev server's route, header and meta constants
-    (`DEV_FILES_ROUTE_BASE`, `DEV_FILES_TOKEN_HEADER`, `DEV_FILES_TOKEN_META`,
-    `DEV_FILES_HASH_HEADER`), `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite`,
-    `DevFilesErrorBody` (`debug/DevFilesProtocol.ts`) and the test bridge's `TestBridgeProbeResult`,
-    `TestBridgeSceneReady`, `TestBridgeSnapshot` (`debug/TestBridge.ts`). They leave the entry and
-    become `@internal`; `devTools/` already imports them by path, so only the entry changes. The
-    protocol types the client API names stay public (`DevFilesStatusBody`, `DevFilesCommitBody`,
-    `DevFilesConflicts`, `DevFilesSchemaIssues`, `DevFilesErrorCode`, `DevFilesWriteStatus`,
-    `DevFilesSaveData`, `DevDataGatheredEvent`);
-  - `createDebuggerTab(def, opts?)`'s second parameter and `DebugGUIOpts` (`debug/DebuggerGUI.ts`,
-    deprecated in engine 5.9.0): it moves the drawer's button for the whole drawer, whichever tab
-    passes it, and nothing passes it. Removed; the button stays in the middle (an app moves it
-    with CSS).
-- **Already on `main`, nothing left in code: the tab types' break** (p806 D3). The debugger runs
-  on the UI kit and Tweakpane is gone from `package.json`: a binding takes the kit's field props
-  only, `view: 'color'` is `kind: 'color'`, `onChange` gets `{ prev, last, source, field }`,
-  `onCreate(field)`, `custom.build(container: CMPHandle)`, `prev` on the `last: true` call is the
-  value before the gesture, a `THREE.Euler` is a rotation field in degrees, a typed number is
-  rounded to the step's decimals. The table is in the changelog entry and the migration page;
-  this major only releases it (below). One behaviour the page doesn't list yet: `onChange` also
-  fires on a field's `setValue` (`source: 'api'`).
-- **The deprecations without a version:** none in a tag's version (`mouseBindingIds`' "See
-  `keyBindingIds`" aside, above).
-- **The toolkit** keeps its own scale: toolkit 3.0.0 (Gibbous) ships with this major only if an
-  engine change requires it, or if the list below is taken (Versioning). Its list (p620 D5; each
-  `@deprecated` names toolkit 3.0.0):
-  - `createSeededRandom` on `aekasha/toolkit/geometry` (`geometry/SeededRandom.ts`, a deprecated
-    copy): removed, import it from `aekasha`. Its layout rule in `devTools/layout/layoutRules.ts`
-    goes with it.
-  - `PhysicsParams` (`ecs/gameplay/movingPlatform/MovingPlatform.ts`): removed, its name is
-    `MovingPlatformPhysicsParams`.
-  - `DeleteMeshOptions` and `MovingPlatformOptions.deleteMeshOptions`: removed, never read
-    (`controls.delete()` deletes the platform's entity and its mesh).
-  - Not deprecated, breaking to change: `addGravityBody(entityId, mass, world?)`'s optional
-    positional `world` (`ecs/effects/MutualGravity.ts`) becomes an options object (`{ world }`),
-    the coding standards' shape.
-  - Not deprecated, to decide: the component keys (`HoverToolComponentType`,
-    `FollowToolComponentType`, `SunShadowFitComponentType`, and p808's `WorldAnchorComponentType`)
-    are TS `enum`s, where the app's keys are `as const` objects (`src/AppECSRegistry.ts`, the ECS
-    page's pattern). An enum member is a type of its own, so the change breaks a caller that names
-    one as a type; decide it with the engine's `ComponentType` (`CoreComponentType`, also an enum).
+`grep -rn "@deprecated" src/_engine src/toolkit`: 65 tags, every one naming engine 6.0.0 or
+toolkit 3.0.0 (some on the tag's next line), except `CharacterObject.mouseBindingIds`' "See
+`keyBindingIds`" (removed with it here). By area:
 
-## The tiers as a feature (from p611, 2026-10-14)
+- **Kernel** (p612, p613): `CoreComponentType` (`kernel/ecs/ECSRegistry.ts`; `ComponentType` is
+  the same object) leaves `aekasha`; `SceneHooks.sceneDeleted` (`kernel/scene/SceneHooks.ts`, no
+  replacement); `Group.ts`' `deleteGeometries`, `deleteMaterials`, `deleteTextures` (never read:
+  `deleteMeshes` releases them); the scene load options' `updateLoaderStatusFn`
+  (`kernel/scene/SceneLoader.ts`, never read: the loader's own from `createSceneLoader` is used);
+  `registerOnAllSceneEnterings` (`kernel/scene/Scene.ts`, → `registerOnAllSceneEnters`);
+  `TextureSync.ts`' `loadTextures` and `loadTexture` (→ `loadTextureAsync`);
+  `AppConfig.draggableWindows` (`kernel/config/Config.ts`, engine 5.8.0: the content is a module
+  map, `registerDraggableWindow` / `registerDraggableWindowKind`, and the key is only read as a
+  fallback in `ui/overlays/windows/DraggableWindow.ts`' `buildContent`).
+- **Characters** (p610 D5; `features/character/CLAUDE.md` lists them): `DynamicCharacterOpts.input`
+  and `charData`, `DynamicCharacter.data` (`controllers/dynamic/DynamicCharacter.ts`; replaced by
+  `brain`, `config` and the controller's `state` / `config.values` / `internal`), the
+  `CharacterData` type (`DynamicCharacterData.ts`), `CharacterInputScheme`,
+  `CharacterInputHoldMode` (→ `PlayerBrainHoldMode`), `CharacterInputOpts` and
+  `getInputBrainSpec`'s mapping (`CharacterInputSchemes.ts`), `CreateCharacterOpts.controls` and
+  `data` (`Character.ts`), and in `CharacterTypes.ts` `CharacterObject.kind`, `keyBindingIds`,
+  `mouseBindingIds`, `data` and `initialConfig` (→ `config.initial`), `CharacterBodyKindField`'s
+  `kind` (→ `bodyKind`), `CharacterCastRecord.resolvedAt` (→ `resolvedAtStep`), and
+  `HUMANOID_CAPSULE`'s `kind` (`CharacterBodyPlans.ts`). No debug tool reads the flat `data` view
+  (re-check before removing it).
+- **Physics:** `getPhysGameTime()` (`features/physics/PhysicsStepping.ts`, → the step index times
+  the fixed timestep) with `PhysicsWallClock.ts` and its allow-list entry in `eslint.config.js`
+  (the known-violations block after `SIMULATION_FILES`).
+- **Sky box** (p615): the pre-3.0 `{ type, params }` shape: `features/skybox/LegacySkyBox.ts` with
+  its entry names (`LegacySkyBoxProps`, `LegacySkyBoxParams`, `isLegacySkyBoxProps`,
+  `LEGACY_SKYBOX_WARNING`, `fromLegacySkyBoxProps`), `createSkyBox`'s legacy overload (`SkyBox.ts`
+  line ~497), the schema's two conversions (`SkyBoxAssetSchema`'s preprocess and the `__saveData`
+  entries' `fromLegacySkyBoxOverrides`, `SkyBoxSchema.ts`), the gatherer's `warnOnLegacySkyBox`
+  (`devTools/gather/registries.ts`) and the debug tab's one-time `AEK_debugSkyBoxStates` migration
+  (`migrateLegacySkyBoxLS`, `features/skybox/debug/_dbg__SkyBoxShared.ts`). Nothing in the template
+  uses the shape (no JSON, no `createSkyBox` call; checked 2026-10-18).
+- **The debug entry** (p618, engine 5.9.0): on `aekasha/debug`, the dev files protocol's
+  `DEV_FILES_ROUTE_BASE`, `DEV_FILES_TOKEN_HEADER`, `DEV_FILES_TOKEN_META`,
+  `DEV_FILES_HASH_HEADER`, `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite`,
+  `DevFilesErrorBody` (`debug/DevFilesProtocol.ts`) and the test bridge's `TestBridgeProbeResult`,
+  `TestBridgeSceneReady`, `TestBridgeSnapshot` (`debug/TestBridge.ts`) leave the entry and become
+  `@internal` (`devTools/` imports them by path already). The protocol types the client API names
+  stay public (`DevFilesStatusBody`, `DevFilesCommitBody`, `DevFilesConflicts`,
+  `DevFilesSchemaIssues`, `DevFilesErrorCode`, `DevFilesWriteStatus`, `DevFilesSaveData`,
+  `DevDataGatheredEvent`). `createDebuggerTab(def, opts?)`'s second parameter and `DebugGUIOpts`
+  (`debug/DebuggerGUI.ts`): nothing passes it; removed, the drawer's button stays in the middle.
+- **The UI kit** (p617, p803, p804, all `aekasha/ui`): `AddToastResponse.timeout`
+  (`ui/overlays/Toaster.ts`, → `removeToast`); `CMPSettings.doCheckIsInDom` (`ui/core/CMPTypes.ts`,
+  stored, never read); the `T`-prefixed aliases at the end of `ui/core/CMPTypes.ts` (`TCMP` →
+  `CMPHandle`, `TProps` → `CMPProps`, `TSettings` → `CMPSettings`, `TListener`, `TListenerCache`,
+  `TListenerCreator`, `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, each → its
+  `CMP` name) and `TDropDown` (→ `DropDown`, `ui/forms/DropDown.ts`); `getSvgIcon`'s `size: 'small'`
+  (→ `'sm'`, `ui/core/icons/SvgIcon.ts`) and the `uiIcon` / `smallIcon` classes it writes (no
+  style reads them); the string form of `kbd` on `ButtonProps`, `SplitButtonProps`,
+  `MenuActionItem` and `MenuCheckboxItem` (→ a `Kbd` from `createKbd`), with
+  `ui/components/ShortcutHint.ts`' string path (its `import('./Kbd')`).
+- **Toolkit** (p620 D5): `createSeededRandom` on `aekasha/toolkit/geometry`
+  (`toolkit/geometry/SeededRandom.ts`, a copy; import it from `aekasha`) with its layout rule in
+  `devTools/layout/layoutRules.ts`; `PhysicsParams` (→ `MovingPlatformPhysicsParams`,
+  `toolkit/ecs/gameplay/movingPlatform/MovingPlatform.ts`); `DeleteMeshOptions` and
+  `MovingPlatformOptions.deleteMeshOptions` (never read).
+- **Dev tools naming what goes:** `devTools/hub/api/entries.ts`' `ACCEPTED_LEAKS`
+  (`PhysicsProbeReport`, `LegacySkyBoxParams`; both leak only through names removed here, so the map
+  ends empty), `devTools/engineImports.test.ts`' `LegacySkyBox.ts` entry, and the nested
+  `CLAUDE.md` lists of what waits for 6.0.0 (`ui/` "Waiting for engine 6.0.0", `features/character/`
+  "Deprecated, removed in engine 6.0.0", `features/skybox/` the legacy shape line,
+  `features/physics/` the tiers line, `debug/` the public API line).
+- **Already on `main`, nothing left in code: the tab types' break** (p806 D3). The table is in the
+  changelog entry and the migration page; this branch only releases it. One behaviour the page
+  doesn't list yet: `onChange` also fires on a field's `setValue` (`source: 'api'`).
 
-- **Leaving the tiers and the tier policy out** (p611 D10, measured then). `physics()`
-  (`features/physics/PhysicsFeature.ts`) installs both (`installPhysicsTiers`,
-  `installPhysicsTierPolicy`, and the exit hook's `deleteScenePhysicsTierPolicies`) whether the
-  app uses them or not (still so 2026-11-04). A scratch build of the app without those three calls:
-  - The initial load 389.0 → **384.8 KiB gzip (−4.2 KiB, −1.1%)**: `PhysicsTiers.ts` (2.4 kB
-    before minification) and `PhysicsTierPolicy.ts` (3.7 kB) left the main chunk, and the
-    `physicsTiers` scene's lazy chunk grew 0.7 KiB (the policy API it calls). It matched the
-    −4.0 kB measured when they loaded with that scene.
-  - Not counted, and kept unless split further: the tiers' parts of the facade and the worker:
-    `detach` / `reattachRigidBody` and `readBodyPositionsAtStep` in `PhysicsBodies.ts`,
-    `addPhysicsStepGate` in `PhysicsStepping.ts` (public API of its own, though only the policy
-    uses it today), the `REMOVED` body in `PhysicsEntity.ts`' `getPhysicsEntityBody`,
-    `isBodyJointed` in `PhysicsJoints.ts`.
-- **The shape:**
-  - A runtime option (`physics({ tiers: false })`) saves nothing: `physics()`'s install still
-    names the install functions, so the build keeps them.
-  - Installing on first use (`requestPhysicsTier`, `setPhysicsTierPolicy`) would save it, but
-    registers systems mid-run: they were moved into the install because their late registration
-    gave a build another system order than the dev server, and their exit hook needs the feature
-    context.
-  - So **a feature of its own, `physicsTiers()`** (`requires: ['physics']`): its systems, component
-    hooks and exit hook installed there, `requestPhysicsTier`, `setPhysicsTierPolicy` and
-    `createPhysicsEntity`'s `tierPolicy` throw or warn naming it without it, as `createLines` does
-    for `lines()`. Listed right after `physics()`, every tie stays: physics' own systems are in
-    other stages (`APP_POST_PHYSICS`, `APP_RENDER_SYNC`, `LATE_MAIN`), the characters' are at other
-    orders (-10 and -5 against 100 and 110), and the policy's `APP_LOGIC` system still registers
-    before every later feature's and the app's. The scene runner's system order baseline and hashes
-    check it.
-  - One order does change: `exit` hooks run in reverse install order, so the policies would go
-    before the physics entities (today after). Check that a policy's members don't need their
-    bodies while it's deleted.
-- An app that uses tiers adds `physicsTiers()` to `features` (the template does, for
-  `physicsTiers`), a line in the migration guide; the scenes' manifests can't name it (tiers are
-  code only, like physics). `features/physics/CLAUDE.md`, the root `CLAUDE.md`'s Bootstrap flow
-  (the ten features) and the physics feature page change with it. 4.2 KiB is small, but it's the
-  "you only bring into existence what you need" principle at no cost to the apps that don't use
-  tiers.
+### The reshapes' call sites
 
-## Versioning and the changelog
+Counted with grep on 2026-11-04 (engine counts exclude the declaration and comments):
 
-- **Versions** (the root `CLAUDE.md`'s Versioning): engine and project 6.0.0 with the next
-  codename on the sun's path after Golden Hour; the toolkit at least a minor (p808's additions
-  are in the unreleased entry), or 3.0.0 Gibbous if its list above is taken; the app a minor
-  (p806-p808 changed it), more if the codemod's changes to it say so.
-- **`CHANGELOG.md`:** the "Unreleased — engine-6" entry becomes a dated entry for this branch
-  (`## <date> — <branch>`): its intro rewritten (no integration branch; what the major holds),
-  its headings without "(unreleased …)", and this plan's removals and reshapes added under
-  Engine 6.0.0 (and Toolkit) as **Breaking**, each with its replacement.
-- **The migration page** (`hub/pages/documentation/migration/engine-6.md`): a subsection per
-  removal or reshape with its replacement (and the codemod's command), the `setValue` line above,
-  the `::: note In progress` dropped; `migration/intro.md`'s "in progress" paragraph updated.
-- After the merge, `yarn tagRelease` and push its tags.
+| API | Today | Outside the engine | In the engine |
+| --- | --- | --- | --- |
+| `createPhysicsEntity` | `(colliderParams, rigidBodyParams?, target?, entityOpts?, ecsWorld?)` | 31 app, 2 toolkit, 3 Hub, 1 readme | 13 (`Character.ts`, `import/ImportPhysics.ts`, tests), 2 `@example`s |
+| `createMeshEntity` / `createCameraEntity` / `createGroupEntity` / `createLightEntity` | `(props, entityOpts?, ecsWorld?)` | 99 / 6 / 1 / 5, 4 of them with entity options, none with a world | 5 / 10 / 4 / 8 |
+| `createEntity` (the helper, not `world.createEntity`) | `(opts?, ecsWorld?)` | few | ~10 |
+| `createLineEntity` | `(props, entityOpts?, ecsWorld?)` | 0 | 0 |
+| `getScene` | `(id, silent?, throwOnError?)` | 0 with flags | 2 |
+| `createSceneLoader` | `(sceneLoader, isCurrent?)` | `src/index.ts`, readme, 1 Hub | 3 |
+| `setActiveSkyBox` | `(id, sceneId?)` | 0 | 18 (6 with a scene id) |
+| `getSunDirection` / `getMoonDirection` / `getSunElevation` / `getMoonPhase` | `(out, i = 0)` / `(i = 0)` | 0 | 2 / 0 / 1 / 2 |
+| `joinSpatialDomain` / `leaveSpatialDomain` / `isInSpatialDomain` | `(entityId, domainId, world?)` | 1 Hub / 0 / 0 | their module |
+| `refreshSpatialRadius` | `(entityId, world?)` | 0 | 3 (the light debug modules) |
+| pool `spawn` / `despawn` | `(world, placements, entityOpts?)` / `(world, entityId)` | 6 app (lodShowcase, largeWorld, the LOD example), `Foliage.ts`' `@example` | their module |
+| `setLightEnabled` / `setLightFrustumCullingEnabled` / `setLightObjectCullingEnabled` | `(lightId, enabled, world)` | 1 / 0 / 0 | 5 / 3 / 3 |
+| `WorldAPI.setMaxCcdSubstepsSync` | `(substeps)` | 0 | 4 files (types, `WorldProxyAPI`, `EngineWorldProxyAPI`, `PhysicsSwitchWorld`) |
 
-## Inputs
+The optional trailing `world` is everywhere on the public API: the audit (`api.json`'s entries
+against the declarations) finds it on 37 entry functions; 27 keep it (D2), eg. `getPosition(entityId, world?)`,
+`setTransform(entityId, transform, world?)`, `hasComponent`, `deleteEntity`, the `get*ByAppId`
+getters, `cameraLookAtPoint`, `setMeshLod`, `refreshLodBounds`, `getLineForEntity`,
+`bindLineToEntity`, `requestPhysicsTier`, `getPhysicsTier`, `setPhysicsTierPolicy`,
+`setPhysicsTierPolicyMember`, `validateSpatialGridQuery`, and the toolkit's `addGravityBody`. D2
+keeps them.
 
-- The engine 5.0.0 codemod `devTools/layout/migrateToEntries.ts` (`--check`, the folders and
-  files it takes) and its migration section, `hub/pages/documentation/migration/engine-5.md`:
-  the model for this one.
-- The `@deprecated` tags themselves (each names its replacement), and the nested `CLAUDE.md`
-  lists named above.
+### The physics leftovers
+
+- The five mirrored Rapier enums (`docs/issues/physics-unused-rapier-enums.md`): `ActiveHooks`,
+  `ActiveCollisionTypes`, `ActiveEvents`, `CoefficientCombineRule` (`types/PhysicsColliderTypes.ts`)
+  and `SolverFlags` with `PhysicsHooks` (`types/PhysicsEventTypes.ts`). Correction to the issue
+  file: `SolverFlags` and `PhysicsHooks` **are** on `aekasha/physics`
+  (`features/physics/index.ts` lines 15-16); the other four aren't on an entry.
+  `WorldAPI.step(eventQueue?, hooks?)` (`types/PhysicsWorldTypes.ts` line 96) names `PhysicsHooks`.
+  `EngineRapier.test.ts` pins all five to Rapier 0.19.3.
+- `setMaxCcdSubstepsSync` (`docs/issues/physics-ccd-substeps-setting.md`): a one-way setter named
+  like a sync getter, so `OmitSync` drops it from the worker proxy's type; and no setting: every
+  world starts at Rapier's 1, a value set is lost at the next scene load.
+
+### The tiers (p611 D10, measured 2026-10-14, still so 2026-11-04)
+
+`physics()` (`features/physics/PhysicsFeature.ts`) installs the tiers and the tier policy
+(`installPhysicsTiers`, `installPhysicsTierPolicy`, and the exit hook's
+`deleteScenePhysicsTierPolicies`) whether the app uses them or not. A scratch build without those
+three calls: the initial load 389.0 → **384.8 KiB gzip (−4.2 KiB, −1.1%)**: `PhysicsTiers.ts`
+(2.4 kB before minification) and `PhysicsTierPolicy.ts` (3.7 kB) left the main chunk, and the
+`physicsTiers` scene's lazy chunk grew 0.7 KiB. Not counted, and kept: the tiers' parts of the
+facade and the worker (`detach` / `reattachRigidBody`, `readBodyPositionsAtStep` in
+`PhysicsBodies.ts`, `addPhysicsStepGate` in `PhysicsStepping.ts` (public on its own), the `REMOVED`
+body in `PhysicsEntity.ts`' `getPhysicsEntityBody`, `isBodyJointed` in `PhysicsJoints.ts`). Only
+`src/app/scenes/physicsTiers/physicsTiers.ts` and the physics feature page use the tiers' API.
+
+### The codemod's model
+
+`devTools/layout/migrateToEntries.ts` (108 lines, engine 5.0.0's): a CLI over `entryImports.ts`
+(the logic without the file system, tested in `entryImports.test.ts`), using the `typescript`
+compiler API (5.4.5) and `importGraph.ts`' `resolveSpecifier`; Prettier-formats what it rewrites;
+on any error lists them all and writes nothing; `--check` writes nothing and exits 1 when a module
+would change. `devTools/` has no layout rules, so a new `devTools/migrate/` folder needs none.
+
+## 2. Design
+
+### D1 — One release branch, `main` held for engine work
+
+`p622_engine-6-major` lands everything below and merges into `main` as engine 6.0.0 "Sunset"
+(project 6.0.0), toolkit 3.0.0 "Gibbous" and the app's next minor. While it's open, no other branch
+that changes the engine or the toolkit merges into `main` (a Project-only branch may: it gets its
+own dated entry, as p809's). If one has to, this branch merges `main` in and adds that branch's
+changelog sections to the entry. Each phase is a commit (or a section per commit) that leaves the
+tree compiling, lint-clean and green, so the PR can be reviewed by commit.
+
+### D2 — The ECS world parameter (the options-object rule's one exception)
+
+The coding standards ask for an options object "for a function with more than two parameters or
+any optional one", and p613 kept the kernel's positional `world` by decision without writing it
+down. 37 entry functions take an optional trailing `world`; reshaping them all would churn
+`getPosition(entityId)` and its kind for nothing. So the rule gets its exception, written into
+`hub/pages/documentation/coding-standards/intro.md`'s Public API:
+
+- **A required `world` comes first** (`registerSpatialDomain(world, opts)`,
+  `getPhysicsEntityBody(world, entityId)`, a system's `(world, dt)`), and **an optional `world`
+  comes last** and defaults to the current world. Either way it doesn't count toward the two
+  parameters.
+- **A trailing optional `world` is the only optional positional parameter allowed.** Everything
+  else optional goes in an options object, and a function that would need two optional trailing
+  parameters takes them both in it (the world as `world`).
+
+What changes under it (D3-D6): the entity creators and `createPhysicsEntity` (two optional
+trailing parameters), `getScene`, `createSceneLoader` and the sky box functions (an optional that
+isn't a world), the spatial membership functions and the light setters (a world in the wrong
+place). What stays: the other 27 functions with a trailing optional world, among them
+`bindLineToEntity(line, entityId, world?)` and the toolkit's `addGravityBody(entityId, mass,
+world?)`, which the stub listed for a reshape (both fit the rule as they are), and
+`createRawEntity(world?)`.
+
+### D3 — `createPhysicsEntity(props, opts?)`
+
+```ts
+createPhysicsEntity(
+  { colliders: { type: 'BALL', restitution: 0.6 }, body: { rigidType: 'DYNAMIC', translation }, target: ballId },
+  { id: 'ball', tierPolicy: true, world }
+);
+```
+
+- `PhysicsEntityProps = { colliders: ColliderParams | ColliderParams[]; body?: RigidBodyParams;
+  target?: THREE.Object3D | number }` (the names say what the five-parameter version's JSDoc said:
+  colliders attached to the body when there is one, no body makes the colliders alone, `target` an
+  `Object3D` or an existing entity id).
+- `opts?: PhysicsEntityOpts & { world?: ECSWorld }` (`PhysicsEntityOpts` is `CoreEntityOpts` with
+  `tierPolicy`; for a `target` id only `tierPolicy` applies, as today).
+- The same shape as the creators (D4): props, then the entity's options with the world.
+- `createPhysicsEntityNow` and the pending-creates tracking are unchanged inside.
+
+### D4 — The creators, the scene functions
+
+- `CreateEntityOpts = CoreEntityOpts & { world?: ECSWorld }`, a new public type on `aekasha`
+  (`CoreEntityOpts` has no `world` key: `id`, `appId`, `disabled`, `persistent`,
+  `doNotAddToScene`, `userData`, `debugData`, `managedBy`). `createMeshEntity(props, opts?)`,
+  `createCameraEntity`, `createGroupEntity`, `createLightEntity`, `createLineEntity` and the
+  `createEntity(opts?)` helper take it. The scene JSONs' `entityOpts` are unchanged (the schema is
+  `CoreEntityOptsSchema`; `world` is code only).
+- `getScene(id, opts?: { silent?: boolean; throwOnError?: boolean })` and
+  `createSceneLoader(sceneLoader, opts?: { isCurrent?: boolean })`.
+- The light setters take the world first: `setLightEnabled(world, lightId, enabled)`,
+  `setLightFrustumCullingEnabled(world, entityId, enabled)`,
+  `setLightObjectCullingEnabled(world, lightId, enabled)`.
+
+### D5 — The spatial membership and the pools
+
+- `joinSpatialDomain(world, entityId, domainId)`, `leaveSpatialDomain(world, entityId, domainId)`,
+  `isInSpatialDomain(world, entityId, domainId)` and `refreshSpatialRadius(world, entityId)`: the
+  world required and first, like the rest of `features/spatial/SpatialIndexSystem.ts`.
+- An instanced pool's `spawn(placements, entityOpts?)` and `despawn(entityId)`
+  (`features/instancing/InstancedMeshPool.ts`, both `createInstancedMeshPool`'s and
+  `createInstancedLodPool`'s) use the pool's own world (`opts.world`, which owns the mesh): an
+  instance spawned into another world outlived the mesh's scene there and kept a slot in a disposed
+  mesh. `entityOpts` is an options object already, so it may stay positional.
+
+### D6 — The sky box functions
+
+`setActiveSkyBox(id, opts?: { sceneId?: string })`, `getSunDirection(out, opts?: SkyBodyOpts)`,
+`getMoonDirection(out, opts?)`, `getSunElevation(opts?)` and `getMoonPhase(opts?)`, with
+`SkyBodyOpts = { index?: number }` (the sun or moon index, 0 by default) on `aekasha/skybox`. The
+internal `*Of` helpers (`getMoonPhaseOf(def, state, isDayNight, index)` in `SkyTime.ts`) and
+`registerSkyBox(def, sceneId?)` (`@internal`) aren't public and stay.
+
+### D7 — The physics leftovers
+
+- **The Rapier enums go:** `ActiveHooks`, `ActiveCollisionTypes`, `ActiveEvents`,
+  `CoefficientCombineRule`, `SolverFlags`, `PhysicsHooks` and `WorldAPI.step`'s `hooks` parameter,
+  from the types, the entry, the backend's mirrors and `EngineRapier.test.ts`' pairs. Wiring
+  `activeCollisionTypes` or contact hooks into `ColliderParams` later is a minor (an addition) and a
+  plan of its own; the issue file is closed with that note.
+- **`setMaxCcdSubsteps(substeps)`** replaces `setMaxCcdSubstepsSync` on `WorldAPI`, its proxies and
+  the worker's switch (the worker proxy's type then has it), and
+  **`AppConfig.physics.maxCcdSubsteps`** (default 1, Rapier's) goes to every new world like the
+  other world settings (`PhysicsState.ts`' defaults, the backend's world create on both targets,
+  each scene load's `resetPhysicsWorld`), with a field in the Physics API debug tab saved like the
+  other world settings. Both issue files are closed (`Status: fixed | p622`).
+
+### D8 — `physicsTiers()`, a feature of its own
+
+- `physicsTiers()` (`features/physics/PhysicsTiersFeature.ts`, on `aekasha/physics`,
+  `requires: ['physics']`) installs what `physics()` installs for them today:
+  `installPhysicsTiers`, `installPhysicsTierPolicy` and an exit hook running
+  `deleteScenePhysicsTierPolicies`. `physics()` no longer names them, so a build without
+  `physicsTiers()` drops both modules (a runtime option, `physics({ tiers: false })`, would save
+  nothing; installing on first use would register systems mid-run, which once gave a build another
+  system order than the dev server).
+- Without it, `requestPhysicsTier`, `setPhysicsTierPolicy` and `setPhysicsTierPolicyMember` throw,
+  and `createPhysicsEntity`'s `tierPolicy: true` warns once, each naming the feature, as
+  `createLines` does for `lines()` (`features/lines/Lines.ts` line 81). The getters
+  (`getPhysicsTier`, `getPhysicsTierPolicy`, `getPhysicsTierPolicyStatus`) answer as "no tiers"
+  (`ACTIVE`, `null`).
+- Listed right after `physics()` in the template's `features`, every system order tie stays:
+  physics' own systems are in other stages (`APP_POST_PHYSICS`, `APP_RENDER_SYNC`, `LATE_MAIN`),
+  the characters' at other orders (-10 and -5 against 100 and 110), and the policy's `APP_LOGIC`
+  system still registers before every later feature's and the app's. The scene runner's system
+  order baseline and hashes check it.
+- **One order changes:** exit hooks run in reverse install order, so the scene's policies are
+  deleted before the physics entities (today after). Phase 4 checks that deleting a policy doesn't
+  read its members' bodies.
+- The scenes' feature manifests can't name it (tiers are code only, like physics); an app that
+  uses tiers adds `physicsTiers()` to `features`. Ten features: the root `CLAUDE.md`'s Bootstrap
+  flow, `kernel/init/CLAUDE.md`, `features/physics/CLAUDE.md`'s Simulation tiers, the readme and
+  the physics feature page say so.
+
+### D9 — Toolkit 3.0.0
+
+- The removals in Grounding (`createSeededRandom`'s copy and its layout rule, `PhysicsParams`,
+  `DeleteMeshOptions`, `deleteMeshOptions`).
+- The component keys become `as const` objects, the app's and the engine's pattern
+  (`src/AppECSRegistry.ts`, `ComponentType` in `kernel/ecs/ECSCoreComponents.ts`):
+  `HoverToolComponentType` (`ecs/effects/HoverEffect.ts`), `FollowToolComponentType`
+  (`FollowTool.ts`), `SunShadowFitComponentType` (`SunShadowFit.ts`) and p808's
+  `WorldAnchorComponentType` (`WorldAnchorSync.ts`). The string values stay (they key stores and
+  saved data). A caller that names a member as a type (`HoverToolComponentType.HOVER` in a type
+  position) writes `typeof HoverToolComponentType.HOVER`; the `declare module 'aekasha'` blocks'
+  computed keys work as they are.
+- `addGravityBody` stays (D2).
+
+### D10 — The codemod (`devTools/migrate/`)
+
+`npx tsx devTools/migrate/migrateEngine6.ts [--check] [--report] <folder | file>...`, run after the
+app took the new engine (the migration page's order: the template's engine, toolkit and tools
+first, then the section). Files:
+
+- `migrateEngine6.ts`: the CLI, on `migrateToEntries.ts`' model (targets, Prettier, `--check`, a
+  module with an error left as it was and every error listed, exit codes 0 / 1 / 2).
+- `engine6Rules.ts`: the rules as data (one table, each with the plan decision it comes from).
+- `engine6.ts`: the logic without the file system, on an in-memory `ts.Program` built from the
+  target repo's `tsconfig.json` (the checker resolves each callee through the aliases and relative
+  imports alike, so the same call rules migrate the engine's own calls).
+- `engine6.test.ts`: fixtures as strings in a virtual program (as `examples.ts` does), one per
+  rule, each also run twice (idempotent: a migrated call is left alone).
+
+The rule kinds:
+
+1. **Renames by import:** a name imported from an entry, renamed in the import and every reference
+   in the module (merged when the new name is already imported): `CoreComponentType` →
+   `ComponentType`, `registerOnAllSceneEnterings` → `registerOnAllSceneEnters`,
+   `CharacterInputHoldMode` → `PlayerBrainHoldMode`, the `T*` aliases → their `CMP*` names,
+   `TDropDown` → `DropDown`, the toolkit's `PhysicsParams` → `MovingPlatformPhysicsParams`.
+2. **Moves by import:** `createSeededRandom` from `aekasha/toolkit/geometry` → `aekasha`.
+3. **Call reshapes, by the callee's declaration** (the checker's symbol → its declaration's file
+   and name, so a local function of the same name is never touched), each with an "old shape"
+   test so a new-shaped call is skipped: `createPhysicsEntity` (D3), the creators and
+   `createEntity` (D4: a third argument, or a second that isn't an object literal of entity
+   options, folds into one object: `{ ...entityOpts, world }`, an object literal merged in place),
+   `getScene`, `createSceneLoader`, the light setters, the spatial membership functions and
+   `refreshSpatialRadius` (a world first; an omitted optional world becomes `getECSWorld()` with its
+   import), the pools' `spawn` / `despawn` (first argument typed `ECSWorld` dropped), the sky box
+   functions (D6), `WorldAPI.setMaxCcdSubstepsSync` → `setMaxCcdSubsteps`, `getSvgIcon`'s
+   `size: 'small'` → `'sm'`, and the toolkit's component keys used as types (`typeof` added).
+   An `undefined` placeholder argument is dropped; an argument with side effects keeps its
+   evaluation order (the object literal lists them in the old order).
+4. **Reports** (`--report`, and always on stderr): what needs a person, found by imported name or
+   by the checker: the character fields and options (`data`, `charData`, `input`, `controls`,
+   `kind`, `keyBindingIds`, `mouseBindingIds`, `initialConfig`, `resolvedAt`), `loadTexture` /
+   `loadTextures` (async now), a legacy sky box object or name, `createDebuggerTab`'s second
+   argument, a string `kbd`, `AddToastResponse.timeout`, `doCheckIsInDom`,
+   `AppConfig.draggableWindows`, `SceneHooks.sceneDeleted`, the group delete flags, the load
+   options' `updateLoaderStatusFn`, `getPhysGameTime`, a removed debug-entry name, a removed Rapier
+   enum, `deleteMeshOptions`, and a use of the tiers' API in a project whose `InitEngine` call
+   doesn't list `physicsTiers()`. Each line: file, line, the name, the migration page's anchor.
+
+The Hub's Markdown code blocks aren't migrated (the snippets come from code, which is); `yarn
+hub:build` and the `@example` check find what's left. The migration page's "Before you start"
+gives the command; `devTools/migrate/CLAUDE.md` (a new nested file, a line in the root map)
+documents it, and the rules table names the page's anchors.
+
+### D11 — The migration page and the changelog
+
+- `hub/pages/documentation/migration/engine-6.md`: "Before you start" (take the template's engine,
+  toolkit and tools; run the codemod; `yarn build` and `yarn lint` show the rest), then a
+  subsection per change, each with its before / after and whether the codemod does it: the
+  debugger on the UI kit (as today, plus the `setValue` line), `physicsTiers()`, the entity
+  creators and `createPhysicsEntity`, the scene functions, the spatial and pool functions, the
+  light setters, the sky box functions, the physics leftovers, the removed deprecations by area
+  (a table: name → replacement), the debug entry's names, the UI kit's, the toolkit 3.0.0
+  changes. The `::: note In progress` goes; `migration/intro.md`'s paragraph is rewritten.
+- `CHANGELOG.md`: the "Unreleased — engine-6" entry becomes `## <date> — p622_engine-6-major`,
+  its intro rewritten (what the major holds, no "unreleased"), its headings "### Engine 6.0.0
+  (Sunset)", "### Toolkit 3.0.0 (Gibbous)", "### App 1.19.0 (Preschooler)", "### Project", and
+  this plan's removals and reshapes added as **Breaking**, each with its replacement.
+
+## 3. Phases
+
+Every phase: the Stop hook's lint, `tsc`, `tsc -p hub`, `yarn test` and the docs ratchet; `yarn
+verify:scenes` with unchanged hashes (the baselines recorded on `main` first, Phase 0); `yarn
+verify:baselines` (`--update` where a phase changes the API on purpose, its diff read first); `yarn
+hub:build` after a Hub change. A phase that changes a subsystem updates its nested `CLAUDE.md`
+and its feature page in the same commit.
+
+### Phase 0 — Baselines
+
+- Before the first change (the branch is still `main`'s `a0b15403`): `yarn verify:scenes
+  --update` and `yarn sbp` (the report Phase 4 compares against).
+- Run the reshapes' grep again (Grounding's table) and correct the table if `main` moved.
+
+### Phase 1 — The codemod's frame and the renames (D10 kinds 1-2)
+
+- **Section 1:** `devTools/migrate/engine6.ts` (the program, the module walk, the rule runner, the
+  error and report collection), `migrateEngine6.ts` (the CLI), `engine6Rules.ts` with the rename
+  and move rules, `engine6.test.ts` with their fixtures. `devTools/engineImports.test.ts` and the
+  root `CLAUDE.md`'s Dev tools rule apply (the codemod imports nothing of the engine).
+- **Section 2:** run it over `src` and `hub/_assets/ts` (`--check` first): the renames have
+  replacements already, so whatever it changes is a remaining use of a deprecated name. The nested
+  `devTools/migrate/CLAUDE.md`, the root map line and the command in the root's Commands.
+
+### Phase 2 — The deprecated removals (engine)
+
+Each section removes its names, their uses in the engine's own code, their entry lines and their
+nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json` / `docs.json`.
+
+- **Section 1, kernel and physics:** `CoreComponentType`, `sceneDeleted`, the group delete flags,
+  `updateLoaderStatusFn`, `registerOnAllSceneEnterings`, `loadTextures` / `loadTexture`,
+  `AppConfig.draggableWindows` (with `Config.ts`' `CMPHandle` and `DraggableWindow` type imports,
+  the last kernel → ui imports of `Config.ts`; `DraggableWindow.ts` stops reading `getConfig()`),
+  `getPhysGameTime` with `PhysicsWallClock.ts` and its `eslint.config.js` allow-list entry.
+- **Section 2, characters:** the list in Grounding; `getInputBrainSpec`'s mapping goes with
+  `CharacterInputScheme`. Re-check that no debug tool reads the flat `data` view first. The
+  character scenes' hashes (`thirdPersonGymScene`, the character examples) must not move.
+- **Section 3, sky box:** the legacy shape everywhere it's listed, the gatherer's
+  `warnOnLegacySkyBox`, the debug tab's LS migration, `ACCEPTED_LEAKS`' `LegacySkyBoxParams` and
+  `engineImports.test.ts`' entry. A legacy-shaped JSON is then a schema error naming its field
+  (check one by hand in a scratch copy, not in `src/`).
+- **Section 4, debug entry and UI kit:** the debug entry's names leave `debug/index.ts` (become
+  `@internal`), `createDebuggerTab`'s second parameter and `DebugGUIOpts`; the UI kit's list;
+  `ACCEPTED_LEAKS`' `PhysicsProbeReport` (the map is then empty: keep the mechanism, empty). The
+  component library page and `yarn verify:ui` for the `kbd` and icon changes.
+- **Section 5:** the codemod's report rules for everything removed here, with fixtures. Done when
+  `grep -rn "6\.0\.0" src/_engine | grep -i deprecated` is empty.
+
+### Phase 3 — Physics: `createPhysicsEntity`, the setter, the enums (D3, D7)
+
+- **Section 1:** `createPhysicsEntity(props, opts?)` and its types on `aekasha/physics`; the codemod
+  rule and fixtures; run the codemod over `src` (engine, toolkit, app); the two `@example`s, the
+  readme's example and the Hub's three blocks by hand; `features/physics/CLAUDE.md`.
+- **Section 2:** `setMaxCcdSubsteps` and `AppConfig.physics.maxCcdSubsteps` through
+  `PhysicsState.ts`, both targets' world create, `resetPhysicsWorld` and the Physics API tab
+  (the tab's saved value applied before the first world, like the others). A unit test that a
+  second world gets the configured value on both targets' paths that run in Node; the scene runner
+  with the default 1 keeps the hashes.
+- **Section 3:** the enums, `PhysicsHooks` and `step`'s `hooks` out of the types, the entry, the
+  backend and `EngineRapier.test.ts`; the report rule; both issue files closed.
+
+### Phase 4 — `physicsTiers()` (D8)
+
+- **Section 1:** `PhysicsTiersFeature.ts`, its entry line, `physics()` without the tiers' installs
+  and exit hook, the "needs `physicsTiers()`" errors and warning, the template's `features` (right
+  after `physics()`), the codemod's report rule. Read the exit order change: a policy's delete
+  must not need its members' bodies.
+- **Section 2:** `yarn verify:scenes` (all scenes, the system order baseline unchanged, the
+  `physicsTiers` scene's hashes unchanged), `yarn sbp` against Phase 0's report: the initial load
+  about 4 KiB smaller for an app without the feature (measure with a scratch `features` list
+  without it; the template keeps it, so its own number moves only by the lazy chunk). Record the
+  numbers under the phase. `kernel/init/CLAUDE.md`, the physics `CLAUDE.md`, the root's Bootstrap
+  flow (ten features), the readme's Features and the physics feature page.
+
+### Phase 5 — The kernel's reshapes (D2, D4)
+
+- **Section 1:** `CreateEntityOpts` and the creators (`createMeshEntity`, `createCameraEntity`,
+  `createGroupEntity`, `createLightEntity`, `createEntity`, and `createLineEntity` on
+  `aekasha/lines`); the codemod rule; the codemod over `src`. Most of the 99 `createMeshEntity`
+  calls pass only props and don't change.
+- **Section 2:** `getScene`, `createSceneLoader` and the light setters; the codemod rules and run;
+  `src/index.ts`, the readme's `createSceneLoader` example, the UI kit guide's block.
+- **Section 3:** D2 into the coding standards page (`hub/pages/documentation/coding-standards/
+  intro.md`) and its one line in the root `CLAUDE.md`'s Coding standards.
+
+### Phase 6 — The features' reshapes (D5, D6)
+
+- **Section 1:** the spatial membership functions and `refreshSpatialRadius` (world first); the
+  pools' `spawn` / `despawn`; the codemod rules and run; the Hub's `joinSpatialDomain` block; the
+  spatial and instancing `CLAUDE.md`s (`refreshSpatialRadius(entityId)` there).
+- **Section 2:** the sky box functions with `SkyBodyOpts`; the codemod rules and run (engine-only
+  calls today); the sky box `CLAUDE.md` and feature page.
+
+### Phase 7 — Toolkit 3.0.0 (D9)
+
+- The removals, the layout rule, the component keys as `as const` objects; the codemod's toolkit
+  rules (the `PhysicsParams` rename and the `createSeededRandom` move are Phase 1's; here the
+  `typeof` rule) and run; `yarn verify:baselines --update`. Done when no `@deprecated` in
+  `src/toolkit` names 3.0.0.
+
+### Phase 8 — The migration page, the docs, the full check
+
+- **Section 1:** `engine-6.md` and `migration/intro.md` (D11), every subsection naming its codemod
+  rule or saying it's by hand; the root `CLAUDE.md` (Bootstrap flow, Physics, Commands, the map,
+  Coding standards), the readme (its examples type-check through `examples.test.ts`).
+- **Section 2, the upgrade rehearsal:** a scratch copy of the template at `main` (`git worktree`
+  under the scratchpad), the branch's engine, toolkit and `devTools/` copied over it, then the
+  codemod, `yarn build` and `yarn lint`: what's left must be exactly the reports. Fix the codemod
+  or the page until it is. Then the full set on the branch: `yarn test`, `yarn build` (with its
+  SBP and Hub), `yarn verify:scenes`, `yarn verify:baselines`, `yarn verify:embed`, `yarn
+  verify:ui`.
+
+### Phase 9 — Versions, changelog, done
+
+- `package.json`: `version` and `engine_metadata.version` 6.0.0, codename "Sunset";
+  `toolkit_metadata` 3.0.0 "Gibbous"; `app_metadata` 1.19.0 (same codename). `yarn checkVersions
+  --against main`.
+- `CHANGELOG.md` (D11); the Hub's homepage "What's new" then shows it (`yarn hub:build`).
+- Mark the plan done (`docs/plans/CLAUDE.md`), move p990's 6.0.0 items if any, and say it's time
+  for the PR: `p622_engine-6-major` into `main`. After the merge, `yarn tagRelease` and push its
+  tags.
+
+## 4. Risks
+
+- **The codemod on code that doesn't compile.** It runs after the app took the new engine, so the
+  old calls are type errors; the checker still resolves a callee's symbol through them. A call it
+  can't resolve (a callee through `any`, a re-export the program can't follow) is reported, never
+  guessed at.
+- **A reshape that type-checks in both shapes.** `createMeshEntity(props, opts)` reads the same
+  before and after; only calls whose old shape differs are rewritten, and each rule's fixtures
+  include the already-new shape.
+- **A long branch with `main` held** (D1). Phases 2-7 are independent enough to land in any order
+  after Phase 1; keep the branch short, and merge `main` in rather than rebasing once pushed.
+- **Determinism:** none of the reshapes changes what runs, but the tiers' exit order (D8) and the
+  character removals touch simulation code. `yarn verify:scenes`' hashes are the check, per phase.
+- **Bundle:** removing the legacy sky box and the deprecated paths shrinks the build; the
+  options objects add a few bytes. `yarn sbp`'s budgets catch a surprise; record the before and
+  after in Phase 9's changelog.
+
+## 5. Open questions
+
+- **`bindLineToEntity` and `addGravityBody`** stay under D2 although the stub listed them; reshape
+  them anyway if a uniform "every creator and binder takes an options object" reads better.
 
 ## Done when
 
-- No `@deprecated` in `src/_engine` names 6.0.0, and none is left without a version (in
-  `src/toolkit`, none names 3.0.0 if the toolkit major is taken).
-- The codemod migrates the template app (`yarn test`, `yarn verify:scenes` with unchanged hashes,
-  `yarn build`), and the Hub's migration page lists every removal with its replacement.
-- `yarn checkVersions --against main` passes with the new codename(s), and `CHANGELOG.md` has no
+- No `@deprecated` in `src/_engine` names 6.0.0 and none in `src/toolkit` names 3.0.0; none is
+  left without a version.
+- The codemod migrates the template (Phase 8's rehearsal: what's left is its report), with a fixture
+  per rule in `yarn test`.
+- `yarn test`, `yarn build`, `yarn verify:scenes` (unchanged hashes), `yarn verify:baselines`,
+  `yarn verify:embed` and `yarn verify:ui` pass; the Hub's migration page lists every change with
+  its replacement.
+- `yarn checkVersions --against main` passes with Sunset and Gibbous, and `CHANGELOG.md` has no
   unreleased entry left.
