@@ -6,5 +6,6 @@ press itself, also while the game is paused.
 
 Every example scene with controls reads them through an action map: the
 [character example](hub:examples/character)'s player brain, the
-[physics example](hub:examples/physics)'s drop and the [sky box example](hub:examples/sky-box)'s
-time controls.
+[physics example](hub:examples/physics)'s drop, the [sky box example](hub:examples/sky-box)'s
+time controls and the [game HUD example](hub:examples/game-hud)'s game, menus and conversation,
+whose prompts follow the device the player last used.

@@ -1,0 +1,58 @@
+// The subtitles' default styles (Subtitles.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). Centred at the bottom (or the top)
+// of the HUD's bounds, fixed there; each line is its own box, as captions are, sized in its own
+// font size so an app's subtitle size setting is one custom property. The pointer passes through.
+@layer aek.components {
+  :where(.aekSubtitles) {
+    --aek-subtitles-inset-resolved: var(--aek-subtitles-inset, calc(var(--aek-space-7) * 2));
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--aek-space-1);
+    font-size: var(--aek-subtitles-font-size, var(--aek-font-size-xl));
+    line-height: var(--aek-line-height-base);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  :where(.aekSubtitles:not([data-placement='inline'])) {
+    position: fixed;
+    left: 50%;
+    z-index: var(--aek-subtitles-z, var(--aek-z-window));
+    width: max-content;
+    max-width: calc(100% - var(--aek-space-6) * 2);
+    transform: translateX(-50%);
+  }
+
+  :where(.aekSubtitles[data-placement='bottom']) {
+    bottom: var(--aek-subtitles-inset-resolved);
+  }
+
+  :where(.aekSubtitles[data-placement='top']) {
+    top: var(--aek-subtitles-inset-resolved);
+  }
+
+  :where(.aekSubtitles__line) {
+    box-sizing: border-box;
+    max-width: var(--aek-subtitles-width, 40em);
+    margin: 0;
+    padding: 0.15em 0.5em;
+    border-radius: var(--aek-radius-sm);
+    background-color: var(--aek-subtitles-bg, color-mix(in srgb, var(--aek-bg) 80%, transparent));
+    color: var(--aek-subtitles-color, var(--aek-text));
+    text-wrap: balance;
+    animation: aekSubtitlesIn var(--aek-motion-fast) var(--aek-ease-standard);
+  }
+
+  :where(.aekSubtitles__speaker) {
+    color: var(--aek-subtitles-speaker-color, var(--aek-accent));
+    font-weight: var(--aek-font-weight-bold);
+  }
+}
+
+@keyframes aekSubtitlesIn {
+  from {
+    opacity: 0;
+  }
+}

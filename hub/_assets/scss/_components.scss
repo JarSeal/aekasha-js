@@ -483,3 +483,163 @@
   color: var(--aek-text-muted);
   font-size: var(--aek-font-size-sm);
 }
+
+// --- The game pieces (p808, `_library/game*.ts`) ---
+
+// The prompts in a row, a gap between them
+.hubComponentDemoGroup.hubDemoPrompts {
+  gap: 0.5rem 1.5rem;
+}
+
+// A bar in a row gets a width of its own, as the progress bar's
+.hubDemoBar,
+.hubComponentDemoGroup.hubDemoBars > .aekResourceBar {
+  width: min(100%, 16rem);
+}
+
+// The preferences' kit root: a panel, so its theme and scale show against the page's
+.hubDemoPreferencesRoot {
+  padding: 1rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  background: var(--aek-bg);
+  color: var(--aek-text);
+}
+
+// An ability button the cooldown covers: its overlay is positioned in it
+.aekButton.hubDemoAbility {
+  position: relative;
+  overflow: hidden;
+}
+
+// A stage for a piece that places itself over the HUD's bounds: `contain: layout` makes it the
+// fixed elements' containing block, as a mounted engine's container is
+.hubDemoStage {
+  position: relative;
+  contain: layout;
+  width: min(100%, 28rem);
+  height: 12rem;
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  background:
+    linear-gradient(to bottom, var(--aek-surface) 0 55%, var(--aek-surface-hover) 55% 100%);
+  overflow: hidden;
+}
+
+.hubDemoWorldStage {
+  width: min(100%, 36rem);
+  height: 16rem;
+}
+
+.hubDemoNameplate,
+.hubDemoWaypoint {
+  font-size: var(--aek-font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hubDemoWaypoint {
+  color: var(--aek-warning);
+}
+
+// The text pieces inline: a panel's width
+.aekNotificationFeed.hubDemoFeed,
+.aekSubtitles.hubDemoSubtitles {
+  width: min(100%, 24rem);
+}
+
+.hubDemoPortrait {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--aek-accent-soft);
+  color: var(--aek-accent);
+  font-size: var(--aek-font-size-xl);
+  font-weight: 700;
+}
+
+.hubComponentDemoGroup > .aekDialogueBox {
+  width: min(100%, 36rem);
+}
+
+// The spatial navigation's panel: a side list beside an uneven grid
+.hubDemoNavPanel {
+  display: flex;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.hubDemoNavSide {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.hubDemoNavGrid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0.5rem;
+}
+
+.aekButton.hubDemoNavWide {
+  grid-column: span 2;
+}
+
+.hubDemoMenuFooter {
+  display: flex;
+  gap: 1rem;
+}
+
+.hubComponentDemoGroup.hubDemoSettings > .aekSettingsMenu,
+.hubComponentDemoGroup.hubDemoControls > .aekControlsPage {
+  width: min(100%, 36rem);
+}
+
+// The inventory: the grids and the details side by side, the details' room kept
+.hubDemoInventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.hubDemoInventoryGrids {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.hubDemoInventoryHeading {
+  margin: 0;
+  font-size: var(--aek-font-size-md);
+}
+
+.hubComponentDemoGroup.hubDemoDetails {
+  align-items: start;
+}
+
+.hubComponentDemoGroup.hubDemoCompass > .aekCompass {
+  width: min(100%, 28rem);
+}
+
+// The minimap's slot: a map picture (a grid of streets) where a viewport would render, scaled by
+// the demo's zoom and turned for a map that turns with the player
+.hubDemoMinimap {
+  --hub-demo-map-zoom: 1;
+  --hub-demo-map-turn: 0deg;
+
+  position: relative;
+  width: 12rem;
+  height: 12rem;
+  overflow: hidden;
+
+  &::before {
+    position: absolute;
+    inset: -50%;
+    background:
+      repeating-linear-gradient(0deg, var(--aek-border) 0 2px, transparent 2px 24px),
+      repeating-linear-gradient(90deg, var(--aek-border) 0 2px, transparent 2px 24px),
+      var(--aek-surface);
+    content: '';
+    transform: rotate(var(--hub-demo-map-turn)) scale(var(--hub-demo-map-zoom));
+  }
+}

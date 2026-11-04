@@ -608,7 +608,12 @@ describe('the gamepad', () => {
       gamepad: { index: 2, id: 'pad', mapping: 'standard' },
     });
     dom.win.dispatchEvent(e);
-    expect(fn).toHaveBeenCalledWith({ index: 2, id: 'pad', isStandardMapping: true });
+    expect(fn).toHaveBeenCalledWith({
+      index: 2,
+      id: 'pad',
+      isStandardMapping: true,
+      family: 'GENERIC',
+    });
     remove();
   });
 });

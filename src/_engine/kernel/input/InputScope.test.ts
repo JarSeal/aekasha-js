@@ -167,4 +167,18 @@ describe('input scope: CANVAS', () => {
     expect(readGamepadButton(undefined, 'SOUTH')).toBe(0);
     expect(pollGamepads()).toBe(false);
   });
+
+  it("reads the gamepads while the focus is in the mount's root: a HUD menu's button (p808 D5)", () => {
+    const hudButton = {};
+    const root = { contains: (elem: unknown) => elem === hudButton };
+    setInputScope('CANVAS', root as unknown as HTMLElement);
+    setSouthPressed(true);
+    dom.doc.activeElement = hudButton;
+    expect(pollGamepads()).toBe(true);
+    expect(readGamepadButton(undefined, 'SOUTH')).toBe(1);
+
+    dom.doc.activeElement = {};
+    expect(pollGamepads()).toBe(true);
+    expect(readGamepadButton(undefined, 'SOUTH')).toBe(0);
+  });
 });

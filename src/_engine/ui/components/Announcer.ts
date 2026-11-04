@@ -9,7 +9,12 @@ import '../styles/kit.scss';
  * toaster's delay) */
 const ANNOUNCE_DELAY_MS = 50;
 
-type Region = { elem: HTMLElement; timer: ReturnType<typeof setTimeout> | null };
+type Region = {
+  elem: HTMLElement;
+  timer: ReturnType<typeof setTimeout> | null;
+  /** The text the timer will write */
+  pending: string;
+};
 
 /** Each kit root's region, made on its first announcement */
 const regions = new WeakMap<Element, Region>();
@@ -31,7 +36,7 @@ const getRegion = (parent: Element) => {
   // A modal's inert leaves it live: what a piece in the dialog announces is still read
   elem.setAttribute(KEEP_LIVE_ATTR, '');
   parent.append(elem);
-  region = { elem, timer: null };
+  region = { elem, timer: null, pending: '' };
   regions.set(parent, region);
   return region;
 };
@@ -40,18 +45,22 @@ const getRegion = (parent: Element) => {
  * Reads `text` to a screen reader, politely, through the live region of `elem`'s kit root (made
  * there on the first announcement, visually hidden, and kept). The region is emptied at once and
  * filled 50 ms later, so a repeated text is read again; an announcement before that replaces the
- * pending one. Never assertive: a sort, a filter's count or a move waits for the reader.
+ * pending one, or with `append` joins it ('+25 gold. Quest updated': a game's lines that come
+ * together, p808 D10). Never assertive: a sort, a filter's count or a move waits for the reader.
  * @internal
  * @param elem the announcing piece's element (its kit root takes the region)
  * @param text what's read; empty does nothing
+ * @param options `append`: added to a pending text (after a full stop) instead of replacing it
  */
-export const announce = (elem: Element, text: string) => {
+export const announce = (elem: Element, text: string, options?: { append?: boolean }) => {
   if (!text) return;
   const region = getRegion(getRegionParent(elem));
+  region.pending = options?.append && region.timer ? `${region.pending}. ${text}` : text;
   region.elem.textContent = '';
   if (region.timer) clearTimeout(region.timer);
   region.timer = setTimeout(() => {
     region.timer = null;
-    region.elem.textContent = text;
+    region.elem.textContent = region.pending;
+    region.pending = '';
   }, ANNOUNCE_DELAY_MS);
 };

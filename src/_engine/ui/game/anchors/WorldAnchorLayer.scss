@@ -1,0 +1,81 @@
+// The world anchor layer's default styles (WorldAnchorLayer.ts), on the design tokens and layered
+// (p803 D5): an app's unlayered rule wins, and every selector is in :where(). The layer covers
+// the HUD's bounds (fixed: the HUD root is a zero-size element, so an absolute child can't cover
+// it) with strict containment, so the anchors' moves lay out and paint nothing outside it. Each
+// anchor is a zero-size point at the layer's top left moved by its transform (the update's), and
+// its body is placed on that point by its own transform (the align).
+@layer aek.components {
+  :where(.aekWorldAnchorLayer) {
+    position: fixed;
+    inset: 0;
+    z-index: var(--aek-world-anchor-layer-z, auto);
+    overflow: hidden;
+    contain: strict;
+    pointer-events: none;
+  }
+
+  :where(.aekWorldAnchorLayer[data-placement='inline']) {
+    position: absolute;
+  }
+
+  :where(.aekWorldAnchor) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+  }
+
+  :where(.aekWorldAnchor[data-state='hidden']) {
+    display: none;
+  }
+
+  :where(.aekWorldAnchor__body) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: var(--aek-world-anchor-color, var(--aek-text));
+    font-size: var(--aek-font-size-sm);
+    font-weight: var(--aek-font-weight-medium);
+    line-height: var(--aek-line-height-tight);
+    white-space: nowrap;
+    text-shadow:
+      0 0 2px var(--aek-world-anchor-halo, var(--aek-bg)),
+      0 0 2px var(--aek-world-anchor-halo, var(--aek-bg));
+    transform: translate(-50%, -50%);
+  }
+
+  :where(.aekWorldAnchor[data-align='above']) :where(.aekWorldAnchor__body) {
+    transform: translate(-50%, -100%);
+  }
+
+  :where(.aekWorldAnchor[data-align='below']) :where(.aekWorldAnchor__body) {
+    transform: translate(-50%, 0);
+  }
+
+  // Clamped to the edge: centred on its point (the edge padding is its room), the arrow out
+  :where(.aekWorldAnchor[data-state='clamped']) :where(.aekWorldAnchor__body) {
+    transform: translate(-50%, -50%);
+  }
+
+  // A triangle pointing right from the centre, turned toward the point
+  :where(.aekWorldAnchor__arrow) {
+    position: absolute;
+    top: -5px;
+    left: 0;
+    display: none;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 11px solid var(--aek-world-anchor-arrow-color, var(--aek-accent));
+    filter: drop-shadow(0 0 1px var(--aek-world-anchor-halo, var(--aek-bg)));
+    transform-origin: 0 5px;
+    transform: rotate(var(--aek-world-anchor-angle, 0deg))
+      translateX(var(--aek-world-anchor-arrow-distance, 20px));
+  }
+
+  :where(.aekWorldAnchor[data-state='clamped']) :where(.aekWorldAnchor__arrow) {
+    display: block;
+  }
+}

@@ -1,0 +1,86 @@
+// The cooldown's default styles (Cooldown.ts), on the design tokens and layered (p803 D5): an
+// app's unlayered rule wins, and every selector is in :where(). The sweep is a conic gradient on a
+// registered number, --aek-cooldown-progress (the share still covered, 1 to 0), animated by CSS:
+// Cooldown.ts sets its duration, its delay (the time already gone) and its timing (linear, or a
+// step a second under reduced motion) inline, and restarts it by alternating two names.
+
+@property --aek-cooldown-progress {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@layer aek.components {
+  :where(.aekCooldown) {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  :where(.aekCooldown__sweep) {
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(
+      transparent calc((1 - var(--aek-cooldown-progress)) * 360deg),
+      var(--aek-cooldown-shade, color-mix(in srgb, var(--aek-text) 30%, transparent)) 0
+    );
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
+  }
+
+  :where(.aekCooldown[data-run='1']) :where(.aekCooldown__sweep) {
+    animation-name: aekCooldownSweep1;
+  }
+
+  :where(.aekCooldown[data-run='2']) :where(.aekCooldown__sweep) {
+    animation-name: aekCooldownSweep2;
+  }
+
+  :where(.aekCooldown__time) {
+    position: relative;
+    color: var(--aek-cooldown-color, var(--aek-text));
+    font-size: var(--aek-font-size-md);
+    font-variant-numeric: var(--aek-numeric-tabular);
+    font-weight: var(--aek-font-weight-semibold);
+    text-shadow: 0 0 3px var(--aek-bg);
+  }
+
+  // Ready: one ring of the accent, out from the edge (none under reduced motion)
+  :where(.aekCooldown[data-state='ready']) {
+    animation: aekCooldownReady calc(450ms * var(--aek-motion, 1)) var(--aek-ease-standard);
+  }
+}
+
+@keyframes aekCooldownSweep1 {
+  from {
+    --aek-cooldown-progress: 1;
+  }
+
+  to {
+    --aek-cooldown-progress: 0;
+  }
+}
+
+@keyframes aekCooldownSweep2 {
+  from {
+    --aek-cooldown-progress: 1;
+  }
+
+  to {
+    --aek-cooldown-progress: 0;
+  }
+}
+
+@keyframes aekCooldownReady {
+  from {
+    box-shadow: inset 0 0 0 3px var(--aek-accent);
+  }
+
+  to {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}

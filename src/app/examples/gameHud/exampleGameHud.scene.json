@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "exampleGameHud",
+  "sceneFile": "./examples/gameHud/exampleGameHud.ts",
+  "name": "Example: A game HUD",
+  "description": "A small arena played with a keyboard and mouse or a gamepad, its HUD the UI kit's game pieces: a character with an orbiting camera, health and stamina bars, a hotbar with cooldowns, a crosshair with hit markers on the crates, nameplates, a waypoint and the crates' health over the world, a compass and a minimap, a notification feed, an objective tracker, subtitles, a dialogue with an NPC, a radial emote menu, input prompts that follow the device, and a pause menu with an inventory and a settings menu (the theme, the UI scale, reduced motion, the subtitles and the controls page, saved in the browser).",
+  "backgroundColor": "#1c212b",
+  "cameras": ["exampleGameHudCamera"],
+  "lights": ["exampleGameHudAmbient", "exampleGameHudSun"]
+}

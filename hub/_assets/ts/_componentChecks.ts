@@ -19,6 +19,11 @@ import { CORE_CHECKS } from './_library/coreChecks';
 import { DATA_CHECKS } from './_library/dataChecks';
 import { EDITORS_CHECKS } from './_library/editorsChecks';
 import { FIELDS_CHECKS } from './_library/fieldsChecks';
+import { GAME_CHECKS } from './_library/gameChecks';
+import { GAME_ITEMS_CHECKS } from './_library/gameItemsChecks';
+import { GAME_MENUS_CHECKS } from './_library/gameMenusChecks';
+import { GAME_TEXT_CHECKS } from './_library/gameTextChecks';
+import { GAME_WORLD_CHECKS } from './_library/gameWorldChecks';
 import { GRAPHS_CHECKS } from './_library/graphsChecks';
 import { LAYOUT_CHECKS } from './_library/layoutChecks';
 import { OVERLAYS_CHECKS } from './_library/overlaysChecks';
@@ -115,4 +120,9 @@ export const UI_DEMO_CHECKS: Record<string, UiDemoChecks> = {
   ...CONTAINERS_CHECKS,
   ...DATA_CHECKS,
   ...GRAPHS_CHECKS,
+  ...GAME_CHECKS,
+  ...GAME_TEXT_CHECKS,
+  ...GAME_MENUS_CHECKS,
+  ...GAME_ITEMS_CHECKS,
+  ...GAME_WORLD_CHECKS,
 };

@@ -173,6 +173,20 @@ describe('createFollowObjectCameraRig', () => {
     }
   });
 
+  it("starts the mouse orbit from the offset's direction", () => {
+    const { camera, targetMesh } = createRig({
+      offset: { x: 3, y: 1.5, z: 6 },
+      smoothingType: 'LERP',
+      smoothingTime: 0.01,
+      getMouseMoveInput: () => ({ x: 0, y: 0 }),
+    });
+    runFrames(300);
+    const fromTarget = camera.position.clone().sub(targetMesh.position);
+    expect(fromTarget.x).toBeCloseTo(3, 6);
+    expect(fromTarget.y).toBeCloseTo(1.5, 6);
+    expect(fromTarget.z).toBeCloseTo(6, 6);
+  });
+
   it('replaces the rig of an id in use', () => {
     const first = createRig();
     const second = createRig({ offset: { x: 0, y: 3, z: 0 } });

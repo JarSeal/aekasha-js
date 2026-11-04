@@ -2,19 +2,19 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3004,
-      "total": 3004
+      "documented": 3164,
+      "total": 3164
     },
     "members": {
-      "documented": 1043,
-      "total": 1043
+      "documented": 1049,
+      "total": 1049
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 2924,
-        "total": 2924
+        "documented": 3078,
+        "total": 3078
       },
       "members": {
         "documented": 890,
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 80,
-        "total": 80
+        "documented": 86,
+        "total": 86
       },
       "members": {
-        "documented": 153,
-        "total": 153
+        "documented": 159,
+        "total": 159
       }
     }
   },
@@ -483,8 +483,8 @@
     },
     "engine/kernel/input": {
       "exports": {
-        "documented": 128,
-        "total": 128
+        "documented": 135,
+        "total": 135
       },
       "members": {
         "documented": 0,
@@ -595,8 +595,8 @@
     },
     "engine/ui/components": {
       "exports": {
-        "documented": 77,
-        "total": 77
+        "documented": 81,
+        "total": 81
       },
       "members": {
         "documented": 0,
@@ -609,8 +609,8 @@
     },
     "engine/ui/core": {
       "exports": {
-        "documented": 40,
-        "total": 40
+        "documented": 44,
+        "total": 44
       },
       "members": {
         "documented": 0,
@@ -747,6 +747,62 @@
         "members": []
       }
     },
+    "engine/ui/game": {
+      "exports": {
+        "documented": 78,
+        "total": 78
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game/anchors": {
+      "exports": {
+        "documented": 14,
+        "total": 14
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game/controls": {
+      "exports": {
+        "documented": 25,
+        "total": 25
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/ui/game/items": {
+      "exports": {
+        "documented": 22,
+        "total": 22
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/ui/overlays": {
       "exports": {
         "documented": 75,
@@ -819,12 +875,12 @@
     },
     "toolkit/ecs/effects": {
       "exports": {
-        "documented": 19,
-        "total": 19
+        "documented": 25,
+        "total": 25
       },
       "members": {
-        "documented": 20,
-        "total": 20
+        "documented": 26,
+        "total": 26
       },
       "undocumented": {
         "exports": [],

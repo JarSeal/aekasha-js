@@ -741,9 +741,11 @@ the first press imports, with tabs of a sortable, selectable table, a list with 
 toggle on each row, and a stat tile with a sparkline. From the last `yarn sbp` report (gzip), that
 comes to {{sbp:uiKit.chunk:assets/uiKitEmbedData.js}} of code and
 {{sbp:uiKit.chunk:assets/uiKitEmbedData.css}} of styles on top of the HUD's window, dialog and
-button, and the [forms'](hub:features/ui-kit/forms#in-a-build) scheduler,
+button, the [forms'](hub:features/ui-kit/forms#in-a-build) scheduler,
 {{sbp:uiKit.chunk:assets/BindingScheduler.js}}, which a collection carries for its `scheduler`
-prop. What a piece doesn't always need, it takes as a value instead of importing it:
+prop, and {{sbp:uiKit.chunk:assets/Announcer.js}} for the announcer and the arrow keys' focus,
+which the collections share with the [game UI's](hub:features/ui-kit/game#in-a-build) hotbar.
+What a piece doesn't always need, it takes as a value instead of importing it:
 
 - **Virtual rows and reorder** are `createVirtualRows()` and `createListReorder()`, passed in: a
   list without them carries neither.

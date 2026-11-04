@@ -181,7 +181,8 @@ describe('mountAekasha: the defaults', () => {
     expect(fns.setCanvasSizeSource).toHaveBeenCalledWith(m.sizeSource);
     // The HUD's bounds: the windows measure the container, not the browser window
     expect(fns.setWindowBoundsElement).toHaveBeenCalledWith(container);
-    expect(fns.setInputScope).toHaveBeenCalledWith('NONE');
+    // The container is the scope's root: focus in the HUD keeps the gamepads read (p808 D5)
+    expect(fns.setInputScope).toHaveBeenCalledWith('NONE', container);
     expect(fns.setAssetBaseUrl).not.toHaveBeenCalled();
     // The canvas in its own element, the HUD's slot next to it
     const [canvasParent, hudSlot] = container.children;
@@ -214,7 +215,7 @@ describe('mountAekasha: the defaults', () => {
       zIndex: '-1',
       pointerEvents: 'none',
     });
-    expect(fns.setInputScope).toHaveBeenCalledWith('CANVAS');
+    expect(fns.setInputScope).toHaveBeenCalledWith('CANVAS', container);
     expect(fns.setAssetBaseUrl).toHaveBeenCalledWith('https://cdn.test/embed/');
     expect(fns.createRenderer).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,6 +1,7 @@
 import { lwarn } from '../../utils/Logger';
 import { getRenderer } from '../render/Renderer';
-import { addInputListenerRemover, getInputScope } from './InputState';
+import { getGamepadFamily, type GamepadFamily } from './GamepadFamily';
+import { addInputListenerRemover, getInputScope, getInputScopeRoot } from './InputState';
 
 // The Gamepad API has no button events: `navigator.getGamepads()` is polled once per frame (the
 // action layer's frame hook, Actions.ts, while a map has a gamepad binding) and each pad's buttons
@@ -52,6 +53,9 @@ export type GamepadInfo = {
   /** Whether the browser maps it to the standard layout. Without it, the button and axis names
    * read the same indices, which may not be where the names say. */
   isStandardMapping: boolean;
+  /** The labels on its face buttons, from its `id` ({@link getGamepadFamily}): for a prompt's
+   * glyphs. */
+  family: GamepadFamily;
 };
 
 const BUTTON_COUNT = GAMEPAD_BUTTON_NAMES.length;
@@ -89,6 +93,7 @@ const toInfo = (gp: Gamepad): GamepadInfo => ({
   index: gp.index,
   id: gp.id,
   isStandardMapping: gp.mapping === 'standard',
+  family: getGamepadFamily(gp.id),
 });
 
 const onConnected = (e: GamepadEvent) => {
@@ -122,14 +127,18 @@ const removeGamepadListeners = (): void => {
   pads.length = 0;
 };
 
-/** Whether the pads are read, by the input scope: always for the window, while the canvas has
- * focus for the canvas (like the keys), never for none. */
+/** Whether the pads are read, by the input scope: always for the window, never for none, and for
+ * the canvas while the focus is on it or in the scope's root (the mount's container: a HUD
+ * menu's button a gamepad moves the focus through, p808 D5). */
 const isInScope = () => {
   const scope = getInputScope();
   if (scope === 'WINDOW') return true;
   if (scope === 'NONE') return false;
+  const focused = document.activeElement;
   const canvas = getRenderer()?.domElement;
-  return !!canvas && document.activeElement === canvas;
+  if (canvas && focused === canvas) return true;
+  const root = getInputScopeRoot();
+  return !!root && !!focused && root.contains(focused);
 };
 
 /** Forgets every pad's state, so nothing reads held. Whether any pad had one. */

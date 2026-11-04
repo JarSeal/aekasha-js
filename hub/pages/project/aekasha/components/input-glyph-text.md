@@ -3,6 +3,6 @@
 [What it is and its states](hub:features/ui-kit/library#input-glyph), on the public page.
 
 ::: note For a later plan
-Static and keyboard plus mouse here: p808 makes it follow the device in use and adds the gamepad
-families.
+p808 added the gamepads and their families (`components/GamepadGlyphs.ts`); following the device
+is the [input prompt's](hub:project/aekasha/components#input-prompt) (`game/InputPrompt.ts`).
 :::

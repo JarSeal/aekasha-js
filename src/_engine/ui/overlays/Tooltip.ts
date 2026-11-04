@@ -10,8 +10,12 @@ import '../styles/kit.scss';
 export type TooltipProps = {
   /** The element it describes: its `aria-describedby` gets the tooltip's id. */
   anchor: HTMLElement;
-  /** The tooltip's text (text, not HTML). */
-  text: string;
+  /** The tooltip's text (text, not HTML). Give this or `content`. */
+  text?: string;
+  /** Content in place of `text`, read as the anchor's description too: a CMP added once and kept
+   * (removed with the tooltip), or a function built on each show and removed on hide (an item's
+   * details for the slot's item then, p808). Never interactive: a control in it is a popover's. */
+  content?: CMPHandle | (() => CMPHandle);
   /** The side of the anchor it shows on when it fits there, else the opposite one. Default 'top'. */
   side?: 'top' | 'bottom' | 'left' | 'right';
   /** Shows only while the anchor's own text is cut off (an ellipsis: its `scrollWidth` over its
@@ -37,7 +41,8 @@ export type Tooltip = {
   hide: () => void;
   /** Whether it shows */
   isShown: () => boolean;
-  /** Changes its text in place (and whether it describes the anchor: see {@link createTooltip}). */
+  /** Changes its text in place (and whether it describes the anchor: see {@link createTooltip}).
+   * Does nothing on a tooltip with `content`, which is the app's to change. */
   setText: (text: string) => void;
 };
 
@@ -81,6 +86,8 @@ const isFocusVisible = (elem: HTMLElement) => {
  * - Keys: Escape hides it (the kit's overlay stack: the press goes no further), wherever the focus
  *   is in the HUD.
  * - Custom properties: `--aek-tooltip-delay` (on the anchor or any ancestor).
+ * - `content` (p808) in place of `text`: a richer description (an item's details), wider
+ *   (`data-content`, up to 40ch), read as the anchor's description all the same.
  *
  * The tooltip isn't added anywhere: dispose of it with `cmp.remove()` when its anchor goes.
  * @example
@@ -90,8 +97,10 @@ const isFocusVisible = (elem: HTMLElement) => {
  * ```
  */
 export const createTooltip = (props: TooltipProps): Tooltip => {
-  const { anchor, side = 'top', onlyWhenTruncated = false } = props;
+  const { anchor, side = 'top', onlyWhenTruncated = false, content } = props;
   let isShown = false;
+  /** A function content's CMP while it shows */
+  let built: CMPHandle | null = null;
   let showTimer: ReturnType<typeof setTimeout> | null = null;
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
   let hideAnchored: (() => void) | null = null;
@@ -113,6 +122,10 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     const parent = hasHudRoot()
       ? getHUDRootCMP().elem
       : anchor.closest(`.${KIT_ROOT_CLASS}`) ?? document.body;
+    if (typeof content === 'function') {
+      built = content();
+      cmp.add(built);
+    }
     parent.appendChild(cmp.elem);
     hideAnchored = showAnchored({ elem: cmp.elem, anchor, side, onAnchorRemoved: hide });
     removeOverlay = pushOverlay({ elem: cmp.elem, close: hide, returnFocus: null });
@@ -127,6 +140,8 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     hideAnchored?.();
     hideAnchored = null;
     cmp.elem.remove();
+    built?.remove();
+    built = null;
   }
 
   const scheduleShow = () => {
@@ -170,8 +185,8 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     id: props.id,
     idAttr: true,
     class: classes('aekTooltip', props.class),
-    text: props.text,
-    attr: { ...props.attr, role: 'tooltip' },
+    text: content ? undefined : props.text,
+    attr: { ...props.attr, role: 'tooltip', ...(content ? { 'data-content': '' } : {}) },
     listeners: [
       { type: 'pointerenter', fn: scheduleShow },
       { type: 'pointerleave', fn: (e) => scheduleHide(e as PointerEvent) },
@@ -199,7 +214,9 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     setDescribing(!onlyWhenTruncated && text !== anchor.getAttribute('aria-label'));
 
   for (const [type, fn] of anchorListeners) anchor.addEventListener(type, fn);
-  updateDescribing(props.text);
+  if (content && typeof content !== 'function') cmp.add(content);
+  if (content) setDescribing(!onlyWhenTruncated);
+  else updateDescribing(props.text ?? '');
 
   return {
     cmp,
@@ -207,6 +224,7 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
     hide,
     isShown: () => isShown,
     setText: (text) => {
+      if (content) return;
       cmp.updateText(text);
       updateDescribing(text);
     },

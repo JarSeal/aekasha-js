@@ -7,7 +7,8 @@ models' JSONs) are found by id, like the app's:
 ```text
 src/toolkit/
   ecs/                      aekasha/toolkit/ecs
-    effects/                FollowTool, HoverEffect, MutualGravity, SunShadowFit
+    effects/                FollowTool, HoverEffect, MutualGravity, SunShadowFit,
+                            WorldAnchorSync
     gameplay/               FollowObjectCameraRig, movingPlatform/
   geometry/                 aekasha/toolkit/geometry
     generate/               Asteroid, Foliage, Terrain
@@ -26,7 +27,8 @@ platform did.
 In `ecs/effects/`. Each is a system you register once per world, in the app's feature in
 `src/AppECSPlugins.ts` (see [ECS](hub:features/ecs#plugins-and-hooks)); a second call on the same
 world does nothing. Three of them act on the entities that have their component; the gravity
-keeps a list of bodies instead.
+keeps a list of bodies instead. The world anchor sync is the exception: it updates the UI pieces
+a scene makes, so the scene registers it with them.
 
 - [`registerHoverToolEffect`](api:registerHoverToolEffect): an entity with a `HOVER` component
   ([`HoverToolData`](api:HoverToolData)) bobs on a sine around `baseY`, at `speed` and
@@ -46,6 +48,17 @@ keeps a list of bodies instead.
   the cost grows with the square of the bodies: fine for tens. The settings
   ([`setMutualGravityConfig`](api:setMutualGravityConfig)) are global; the bodies are dropped on
   every scene exit. Deterministic with physics on the main thread only.
+- [`registerWorldAnchorSync`](api:registerWorldAnchorSync): feeds the UI kit's
+  [world anchors and compass](hub:features/ui-kit/game#world-anchors) from the ECS. An entity with
+  a `WORLD_ANCHOR` component ([`WorldAnchorData`](api:WorldAnchorData): an anchor of the layer,
+  raised by `offsetY`) keeps its anchor on its drawn position: one `LATE_MAIN` system, after the
+  render, moves the anchors, projects the layer with the active camera and turns the compass, also
+  while the app is paused. Removing the component, or the entity, removes its anchor. A scene
+  registers it with its own layer and compass (a second call replaces them) and
+  [`unregisterWorldAnchorSync`](api:unregisterWorldAnchorSync) on its exit.
+  [`getCompassBearing`](api:getCompassBearing) turns a direction on the ground into the compass's
+  bearing, for a waypoint's marker. The [game HUD example](hub:examples/game-hud#ui-in-the-world)
+  puts nameplates, health bars and a waypoint on it.
 
 ### Gameplay
 
@@ -54,7 +67,10 @@ In `ecs/gameplay/`, each with a system to register once per world:
 - [`createFollowObjectCameraRig`](api:createFollowObjectCameraRig): a camera that follows an
   object at an offset, smoothed, reading the pose that's drawn. It can keep its view direction
   (`orientation: 'FIXED'`) and look ahead of where the object is going (`lookAhead`), as in the
-  [character example](hub:examples/character#the-camera). Give it the scene's `sceneId` and it's
+  [character example](hub:examples/character#the-camera). With `getMouseMoveInput` (the pointer's
+  or a stick's movement each frame, in pixels) it orbits the object at `offset`'s length instead,
+  starting from `offset`'s direction, as in the
+  [game HUD example](hub:examples/game-hud#the-camera). Give it the scene's `sceneId` and it's
   deleted when the scene exits.
 - [`createMovingPlatform`](api:createMovingPlatform): a kinematic platform moving along a closed
   path of points, on every physics step, so characters ride it: the body's user data carries the
@@ -183,6 +199,8 @@ in place of `../TriplanarProjection`.
 ## See it
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
+- The [game HUD example](hub:examples/game-hud): the world anchor sync and the follow rig's
+  orbit.
 - The app's `space` scene: toolkit asteroids under `MutualGravity`, at zero world gravity. Open it
   with `?isDebug=true&startScene=space`.
 - The app's `largeWorld` scene: a generated terrain with scattered trees, bushes and rocks;

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 55,
+    "near": 0.1,
+    "far": 120,
+    "position": { "x": 0, "y": 2.7, "z": 12.9 },
+    "lookAtPoint": { "x": 0, "y": 1.7, "z": 6 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "exampleGameHudCamera",
+    "debugData": {
+      "name": "Game HUD example camera",
+      "description": "Driven by createFollowObjectCameraRig, orbiting the character at 7 m, about 8° down: a right-drag or the right stick turns it. This position is the rig's from the spawn point."
+    }
+  }
+}

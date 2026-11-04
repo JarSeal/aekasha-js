@@ -1,0 +1,162 @@
+// The radial menu's default styles (RadialMenu.ts), on the design tokens and layered (p803 D5):
+// an app's unlayered rule wins, and every selector is in :where(). A layer fixed over the HUD's
+// bounds while open (the pointer's direction is read anywhere on it), the ring centred on the open's
+// point (--aek-radial-menu-x / -y), each item turned out to the radius and back upright. The
+// highlight is a border, a fill and a size: not colour alone (p808 D4). The ring scales in with
+// `scale` and `opacity` (its centring is `translate`, which the scale doesn't replace); the open
+// measures layout sizes, which no transform changes.
+@layer aek.components {
+  :where(.aekRadialMenu) {
+    --aek-radial-menu-radius-resolved: var(--aek-radial-menu-radius, calc(var(--aek-space-7) * 4));
+    --aek-radial-menu-item-resolved: var(
+      --aek-radial-menu-item-size,
+      calc(var(--aek-space-7) * 2)
+    );
+
+    position: fixed;
+    inset: 0;
+    z-index: var(--aek-radial-menu-z, var(--aek-z-loading));
+    background-color: var(
+      --aek-radial-menu-backdrop,
+      color-mix(in srgb, var(--aek-backdrop) 50%, transparent)
+    );
+    color: var(--aek-text);
+    touch-action: none;
+    user-select: none;
+  }
+
+  :where(.aekRadialMenu[hidden]) {
+    display: none;
+  }
+
+  :where(.aekRadialMenu__ring, .aekRadialMenu__centre) {
+    position: absolute;
+    top: var(--aek-radial-menu-y, 50%);
+    left: var(--aek-radial-menu-x, 50%);
+    translate: -50% -50%;
+    border-radius: var(--aek-radius-full);
+  }
+
+  :where(.aekRadialMenu__ring) {
+    width: calc(
+      var(--aek-radial-menu-radius-resolved) * 2 + var(--aek-radial-menu-item-resolved)
+    );
+    aspect-ratio: 1;
+    outline: none;
+    animation: aekRadialMenuIn var(--aek-motion-fast) var(--aek-ease-emphasized);
+  }
+
+  :where(.aekRadialMenu__item) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    align-items: center;
+    justify-content: center;
+    width: var(--aek-radial-menu-item-resolved);
+    height: var(--aek-radial-menu-item-resolved);
+    margin: calc(var(--aek-radial-menu-item-resolved) / -2);
+    padding: var(--aek-space-2);
+    border: 2px solid var(--aek-border);
+    border-radius: var(--aek-radius-full);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-sm);
+    color: inherit;
+    font: inherit;
+    font-size: var(--aek-font-size-xs);
+    transform: rotate(var(--aek-radial-menu-angle, 0deg))
+      translateY(calc(var(--aek-radial-menu-radius-resolved) * -1))
+      rotate(calc(var(--aek-radial-menu-angle, 0deg) * -1));
+    transition:
+      scale var(--aek-motion-fast) var(--aek-ease-standard),
+      background-color var(--aek-motion-fast) var(--aek-ease-standard);
+    cursor: pointer;
+  }
+
+  :where(.aekRadialMenu__item[data-highlighted]) {
+    border-color: var(--aek-radial-menu-highlight-color, var(--aek-accent));
+    // Opaque: the soft accent over the backdrop would read as muted
+    background-color: color-mix(
+      in srgb,
+      var(--aek-radial-menu-highlight-color, var(--aek-accent)) 18%,
+      var(--aek-surface-raised)
+    );
+    scale: 1.15;
+  }
+
+  // Disabled: muted, and a dashed border (a shape as well as the colour)
+  :where(.aekRadialMenu__item[aria-disabled='true']) {
+    border-style: dashed;
+    color: var(--aek-text-disabled);
+    cursor: not-allowed;
+  }
+
+  // The highlight shows the focus: the ring would be drawn round the turned box's corners
+  :where(.aekRadialMenu__item:focus-visible) {
+    outline: 2px solid var(--aek-radial-menu-highlight-color, var(--aek-accent));
+    outline-offset: 2px;
+  }
+
+  :where(.aekRadialMenu__icon) {
+    font-size: var(--aek-font-size-xl);
+    line-height: 1;
+  }
+
+  :where(.aekRadialMenu__label) {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekRadialMenu__centre) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--aek-space-1);
+    align-items: center;
+    justify-content: center;
+    width: var(--aek-radial-menu-centre-size, calc(var(--aek-space-7) * 3.5));
+    aspect-ratio: 1;
+    padding: var(--aek-space-4);
+    border: 1px solid var(--aek-border);
+    background-color: var(--aek-surface-raised);
+    box-shadow: var(--aek-shadow-lg);
+    text-align: center;
+    cursor: pointer;
+    animation: aekRadialMenuIn var(--aek-motion-fast) var(--aek-ease-emphasized);
+  }
+
+  :where(.aekRadialMenu__centreLabel, .aekRadialMenu__centreDescription) {
+    margin: 0;
+  }
+
+  :where(.aekRadialMenu__centreLabel) {
+    font-size: var(--aek-font-size-md);
+    font-weight: var(--aek-font-weight-bold);
+  }
+
+  :where(.aekRadialMenu__centre[data-empty]) :where(.aekRadialMenu__centreLabel) {
+    color: var(--aek-text-muted);
+    font-weight: normal;
+  }
+
+  :where(.aekRadialMenu__centreDescription) {
+    color: var(--aek-text-muted);
+    font-size: var(--aek-font-size-xs);
+  }
+
+  :where(.aekRadialMenu__centreDescription:empty) {
+    display: none;
+  }
+}
+
+@keyframes aekRadialMenuIn {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}

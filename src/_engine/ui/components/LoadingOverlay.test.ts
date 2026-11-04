@@ -93,4 +93,73 @@ describe('loading overlay (p803 D10)', () => {
     ]);
     swapped.cmp.remove();
   });
+
+  it('shows a random tip first, then the next in order while shown, and none while hidden (p808 D1)', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const overlay = addOverlay({
+      text: 'Loading',
+      tips: ['Hold Shift to run', 'Crates break', 'Mara knows the way'],
+      tipIntervalMs: 1000,
+      fadeInMs: 0,
+      fadeOutMs: 0,
+    });
+    vi.mocked(Math.random).mockRestore();
+    const elem = overlay.cmp.elem;
+    const tip = elem.querySelector('.aekLoadingOverlay__tip') as HTMLElement;
+    const tipText = () => tip.querySelector('.aekLoadingOverlay__tipText')?.textContent;
+    expect(tip.tagName).toBe('P');
+    expect(tip.hasAttribute('role')).toBe(false);
+    expect(tip.hasAttribute('aria-live')).toBe(false);
+    expect(tip.querySelector('.aekLoadingOverlay__tipLabel')?.textContent).toBe('Tip: ');
+    // 0.5 × 3
+    expect(tipText()).toBe('Crates break');
+    expect(tip.getAttribute('data-run')).toBe('1');
+    // Hidden: no rotation
+    vi.advanceTimersByTime(5000);
+    expect(tipText()).toBe('Crates break');
+    await overlay.showAsync();
+    vi.advanceTimersByTime(1000);
+    expect(tipText()).toBe('Mara knows the way');
+    expect(tip.getAttribute('data-run')).toBe('2');
+    vi.advanceTimersByTime(1000);
+    expect(tipText()).toBe('Hold Shift to run');
+    await overlay.hideAsync();
+    vi.advanceTimersByTime(5000);
+    expect(tipText()).toBe('Hold Shift to run');
+    expect(vi.getTimerCount()).toBe(0);
+    overlay.cmp.remove();
+  });
+
+  it('changes its tips, hides them when there are none, and stops their timer on removal', async () => {
+    const overlay = addOverlay({ text: 'Loading', tipLabel: 'Hint', fadeInMs: 0 });
+    const elem = overlay.cmp.elem;
+    expect(elem.querySelector('.aekLoadingOverlay__tip')).toBe(null);
+    await overlay.showAsync();
+    overlay.setTips(['One']);
+    const tip = elem.querySelector('.aekLoadingOverlay__tip') as HTMLElement;
+    expect(tip.textContent).toBe('Hint: One');
+    // One tip: nothing to rotate
+    expect(vi.getTimerCount()).toBe(0);
+    overlay.setTips(['Two', 'Three']);
+    expect(vi.getTimerCount()).toBe(1);
+    overlay.setTips([]);
+    expect(tip.hidden).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    overlay.setTips(['Four', 'Five']);
+    expect(tip.hidden).toBe(false);
+    overlay.cmp.remove();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('covers itself with a decorative image behind the content (p808 D1)', () => {
+    const overlay = addOverlay({ text: 'Loading', image: '/art/loading.webp' });
+    const elem = overlay.cmp.elem;
+    expect(elem.hasAttribute('data-image')).toBe(true);
+    const image = elem.querySelector('.aekLoadingOverlay__image') as HTMLImageElement;
+    expect(image.tagName).toBe('IMG');
+    expect(image.getAttribute('alt')).toBe('');
+    expect(image.getAttribute('src')).toBe('/art/loading.webp');
+    expect(elem.firstElementChild).toBe(image);
+    overlay.cmp.remove();
+  });
 });

@@ -58,14 +58,19 @@ export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputs
 export type InputScope = 'WINDOW' | 'CANVAS' | 'NONE';
 
 let inputScope: InputScope = 'WINDOW';
+let inputScopeRoot: HTMLElement | null = null;
 
 /**
  * Sets where the input devices listen. A device reads it when it adds its listeners (its first
  * binding or action source), so set it before: the mount does, before the boot.
  * @internal
+ * @param scope where the devices listen
+ * @param root the element the `CANVAS` scope's engine owns (the mount's container: the canvas
+ * and the HUD), where focus keeps the gamepads read and the device tracker listens (p808 D5)
  */
-export const setInputScope = (scope: InputScope): void => {
+export const setInputScope = (scope: InputScope, root?: HTMLElement | null): void => {
   inputScope = scope;
+  inputScopeRoot = root ?? null;
 };
 
 /**
@@ -73,6 +78,12 @@ export const setInputScope = (scope: InputScope): void => {
  * @internal
  */
 export const getInputScope = (): InputScope => inputScope;
+
+/**
+ * The element the `CANVAS` scope's engine owns ({@link setInputScope}'s `root`), or null.
+ * @internal
+ */
+export const getInputScopeRoot = (): HTMLElement | null => inputScopeRoot;
 
 const listenerRemovers = new Set<() => void>();
 

@@ -32,6 +32,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  exampleGameHud: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/gameHud/exampleGameHud.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   exampleHubHero: async ({ sceneData, assets }) => {
     const module = await import('../app/./examples/hubHero/exampleHubHero.ts');
     await (

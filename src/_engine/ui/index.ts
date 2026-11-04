@@ -6,6 +6,23 @@ export { createButton } from './components/Button';
 export type { Button, ButtonProps } from './components/Button';
 export { createButtonGroup } from './components/ButtonGroup';
 export type { ButtonGroup, ButtonGroupItem, ButtonGroupProps } from './components/ButtonGroup';
+export { createCooldown } from './game/Cooldown';
+export type { Cooldown, CooldownProps } from './game/Cooldown';
+export { createCrosshair } from './game/Crosshair';
+export type {
+  Crosshair,
+  CrosshairProps,
+  CrosshairShape,
+  CrosshairState,
+  HitMarkerKind,
+} from './game/Crosshair';
+export { createDialogueBox } from './game/DialogueBox';
+export type {
+  DialogueBox,
+  DialogueBoxProps,
+  DialogueChoice,
+  DialogueLine,
+} from './game/DialogueBox';
 export { CMP, classes } from './core/CMP';
 export type {
   CMPAnimChain,
@@ -105,12 +122,95 @@ export { createMonitor } from './forms/Monitor';
 export type { Monitor, MonitorProps } from './forms/Monitor';
 export { createGraphMonitor } from './forms/GraphMonitor';
 export type { GraphMonitorProps } from './forms/GraphMonitor';
+export { createNotificationFeed } from './game/NotificationFeed';
+export type {
+  NotificationFeed,
+  NotificationFeedItem,
+  NotificationFeedProps,
+} from './game/NotificationFeed';
+export type { HudPlacement } from './game/HudPlacement';
+export { createObjectiveTracker } from './game/ObjectiveTracker';
+export type {
+  ObjectiveTracker,
+  ObjectiveTrackerObjective,
+  ObjectiveTrackerProps,
+  ObjectiveTrackerStep,
+} from './game/ObjectiveTracker';
 export { createNumberField } from './forms/NumberField';
 export { createTextField } from './forms/TextField';
 export type { TextField, TextFieldProps } from './forms/TextField';
 export type { NumberField, NumberFieldProps } from './forms/NumberField';
 export { createSlider } from './forms/Slider';
 export type { Slider, SliderProps } from './forms/Slider';
+export { createResourceBar } from './game/ResourceBar';
+export { createSubtitles } from './game/Subtitles';
+export type { SubtitleLine, Subtitles, SubtitlesProps } from './game/Subtitles';
+export { createGameMenu } from './game/GameMenu';
+export type { GameMenu, GameMenuItem, GameMenuPage, GameMenuProps } from './game/GameMenu';
+export { createControlsPage } from './game/controls/ControlsPage';
+export type {
+  ControlsAction,
+  ControlsActionType,
+  ControlsBinding,
+  ControlsColumn,
+  ControlsPage,
+  ControlsPageProps,
+  ControlsPageTexts,
+  ControlsRebind,
+} from './game/controls/ControlsPage';
+export { createSettingsMenu } from './game/SettingsMenu';
+export type {
+  SettingsChange,
+  SettingsMenu,
+  SettingsMenuProps,
+  SettingsPage,
+  SettingsResetConfirm,
+} from './game/SettingsMenu';
+export { createRadialMenu } from './game/RadialMenu';
+export type {
+  RadialMenu,
+  RadialMenuItem,
+  RadialMenuOpenOptions,
+  RadialMenuProps,
+} from './game/RadialMenu';
+export { createSpatialNavigation } from './game/SpatialNavigation';
+export type {
+  NavigationDirection,
+  SpatialNavigation,
+  SpatialNavigationProps,
+} from './game/SpatialNavigation';
+export { createHotbar } from './game/items/Hotbar';
+export type { Hotbar, HotbarProps } from './game/items/Hotbar';
+export { createInventoryGrid } from './game/items/InventoryGrid';
+export type { InventoryGrid, InventoryGridProps } from './game/items/InventoryGrid';
+export { createItemDragGroup } from './game/items/ItemDragGroup';
+export type { HeldItem, InventoryMove, ItemDragGroup } from './game/items/ItemDragGroup';
+export { createItemSlot } from './game/items/ItemSlot';
+export type { ItemSlot, ItemSlotProps } from './game/items/ItemSlot';
+export { createItemDetails } from './game/items/ItemDetails';
+export type { ItemDetails, ItemDetailsProps } from './game/items/ItemDetails';
+export type { GameItem, ItemStat } from './game/items/ItemTypes';
+export { createCompass } from './game/Compass';
+export type { Compass, CompassMarker, CompassProps, CompassTexts } from './game/Compass';
+export { createMinimapFrame } from './game/MinimapFrame';
+export type { MinimapFrame, MinimapFrameProps, MinimapFrameTexts } from './game/MinimapFrame';
+export { createWorldAnchorLayer } from './game/anchors/WorldAnchorLayer';
+export type {
+  WorldAnchor,
+  WorldAnchorAlign,
+  WorldAnchorLayer,
+  WorldAnchorLayerProps,
+  WorldAnchorOffScreen,
+  WorldAnchorProps,
+  WorldAnchorState,
+} from './game/anchors/WorldAnchorLayer';
+export type { WorldAnchorView } from './game/anchors/AnchorProjection';
+export type {
+  ResourceBar,
+  ResourceBarProps,
+  ResourceBarState,
+  ResourceBarThreshold,
+} from './game/ResourceBar';
 export { createRangeSlider } from './forms/RangeSlider';
 export type { RangeSlider, RangeSliderProps, RangeValue } from './forms/RangeSlider';
 export type { SliderTick } from './forms/SliderTrack';
@@ -176,8 +276,24 @@ export {
 export type { HudRootProps } from './core/HUD';
 export { createInputGlyph } from './components/InputGlyph';
 export type { InputGlyph, InputGlyphInput, InputGlyphProps } from './components/InputGlyph';
+export type {
+  InputGlyphFamily,
+  InputGlyphGamepadButton,
+  InputGlyphGamepadInput,
+} from './components/GamepadGlyphs';
+export { createInputPrompt, getPromptDevice, setPromptDevice } from './game/InputPrompt';
+export type {
+  InputPrompt,
+  InputPromptBinding,
+  InputPromptDevice,
+  InputPromptProps,
+  PromptKeyChord,
+  PromptKeys,
+} from './game/InputPrompt';
 export { createKbd } from './components/Kbd';
 export type { Kbd, KbdProps } from './components/Kbd';
+export { getKitPreferences, setKitPreferences } from './core/KitPreferences';
+export type { KitPreferences, SetKitPreferencesProps } from './core/KitPreferences';
 export { createLink } from './components/Link';
 export type { Link, LinkProps } from './components/Link';
 export { createList } from './data/List';

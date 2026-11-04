@@ -30,8 +30,11 @@ const profiles: SbpProfile[] = [
       chunks: {
         'assets/index.js': 401 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
-        // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB
-        'assets/index.css': 4 * KIB,
+        // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
+        // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
+        // first shipping caller of `createViewport` (the debug gizmo and ball were the only ones),
+        // so the viewports' slot styles (`Viewports.module.scss`) ship with the feature
+        'assets/index.css': 6 * KIB,
         'assets/rapier.js': 843 * KIB,
         // The physics worker's own file (`assets/PhysicsWorker.js` is its 0.1 kB `?worker` wrapper)
         'assets/PhysicsWorker.js@PhysicsWorker': 11 * KIB,
@@ -72,6 +75,10 @@ const profiles: SbpProfile[] = [
         '_engine/ui/forms/': 0,
         // p805 D13: the data display loads with what shows it, as the forms do
         '_engine/ui/data/': 0,
+        // p808 D12: the game UI loads with the scene that makes it (the game HUD example), and
+        // the device tracker only with an app that calls it
+        '_engine/ui/game/': 0,
+        '_engine/kernel/input/InputDevice.ts': 0,
       },
     },
   },
@@ -105,13 +112,18 @@ const profiles: SbpProfile[] = [
         // The floor's promise: no feature reaches the initial chunks
         ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
       },
+      modules: {
+        // p808 D12: no game UI and no device tracker in the floor
+        '_engine/ui/game/': 0,
+        '_engine/kernel/input/InputDevice.ts': 0,
+      },
     },
   },
   // #endregion banner-profile
   {
     // The UI kit in an embed (p801 D9): one code-made scene that opens a window with a button and
-    // its tooltip, a toast, a dialog with a small form (p804 D12) and a data window (p805 D13),
-    // no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks the kit's sizes and
+    // its tooltip, a toast, a dialog with a small form (p804 D12), a data window (p805 D13) and a
+    // game window (p808 D12), no feature, built into dist-embed/uiKit/; `yarn verify:embed` checks the kit's sizes and
     // bounds in it
     id: 'uiKit',
     entry: 'src/app/profiles/uiKit/uiKit.embed.ts',
@@ -151,14 +163,25 @@ const profiles: SbpProfile[] = [
         // p805 D13: the data window, a module its button's first press imports
         // (`uiKitEmbedData.ts`): tabs of a sortable, selectable table, a list with an action per
         // row, and a stat tile with a sparkline: what a few data pieces cost on top of the HUD.
-        // From `suggestBudget` (19.3 KiB)
-        'assets/uiKitEmbedData.js': 21 * KIB,
+        // From `suggestBudget` (19.3 KiB). p808 Phase 8: 21 → 20 KiB (18.6 KiB): the announcer and
+        // the roving focus went into a chunk the game window shares (below)
+        'assets/uiKitEmbedData.js': 20 * KIB,
         // Its styles (3.9 KiB)
         'assets/uiKitEmbedData.css': 5 * KIB,
         // The binding scheduler, which the form's fields and the data window's collections share
         // (a collection imports it for its `scheduler` prop), so the build makes it a chunk of
         // its own: 0.8 KiB, from the form's chunk (p805 Phase 7)
         'assets/BindingScheduler.js': 2 * KIB,
+        // p808 D12: the game window, a module its button's first press imports
+        // (`uiKitEmbedGame.ts`): a health bar, a hotbar of item slots with cooldowns, a
+        // notification feed and an input prompt (with the gamepads' glyphs, 1.5 KiB of it): what
+        // a small game HUD costs on top of the kit's HUD. From `suggestBudget` (7.6 KiB)
+        'assets/uiKitEmbedGame.js': 9 * KIB,
+        // Its styles (2.6 KiB)
+        'assets/uiKitEmbedGame.css': 4 * KIB,
+        // The announcer and the roving focus, which the hotbar and the data window's list and
+        // table share, so the build makes them a chunk of their own: 1.2 KiB (p808 Phase 8)
+        'assets/Announcer.js': 3 * KIB,
       },
       groups: {
         three: 261 * KIB,
@@ -176,6 +199,9 @@ const profiles: SbpProfile[] = [
         '_engine/ui/forms/': 0,
         // p805 D13: the data display too: its data window loads it
         '_engine/ui/data/': 0,
+        // p808 D12: the game UI too: its game window loads it; the device tracker isn't called
+        '_engine/ui/game/': 0,
+        '_engine/kernel/input/InputDevice.ts': 0,
       },
     },
   },

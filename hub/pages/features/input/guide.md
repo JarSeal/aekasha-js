@@ -140,6 +140,38 @@ Chrome reports a gamepad only after a button on it has been pressed, so a "press
 prompt is the usual start screen.
 :::
 
+## The last used device
+
+[`getLastInputDevice`](api:getLastInputDevice) is the device the player used last: the keyboard
+and mouse, a gamepad (with its family) or touch.
+[`onLastInputDeviceChange`](api:onLastInputDeviceChange) calls back when the player switches. A
+game's button prompts follow it, so "[E] Talk" becomes "[X] Talk" the moment the player picks up
+a pad:
+
+```ts
+import { getLastInputDevice, onLastInputDeviceChange } from 'aekasha';
+import { setPromptDevice } from 'aekasha/ui';
+
+setPromptDevice(getLastInputDevice());
+const stop = onLastInputDeviceChange(setPromptDevice); // Call stop() on the scene's exit
+```
+
+- A key, a click, a touch or the wheel switch to their device; a mouse move switches only from
+  touch, so a bumped desk doesn't take the prompts off the gamepad. A gamepad switches with a
+  pressed button or a stick pushed past half way.
+- A gamepad's `family` is `XBOX`, `PLAYSTATION`, `NINTENDO` or `GENERIC`: the labels on its face
+  buttons, read from the pad's id by [`getGamepadFamily`](api:getGamepadFamily). Windows reports
+  every XInput pad as an Xbox one.
+- Before any input it's touch on a page without a fine pointer (a phone, a tablet), else the
+  keyboard and mouse.
+- The tracker starts with its first read or callback: its own listeners, apart from the bindings'
+  and the maps', and a gamepad poll only while a pad is connected. An app that never asks bundles
+  none of it. In an [embed](hub:examples/embed#the-options) it listens by the mount's `input` scope:
+  the engine's container with `CANVAS`, nothing with `NONE`.
+
+The [game UI](hub:features/ui-kit/game#input-prompts)'s input prompts are what it's for; the
+[game HUD example](hub:examples/game-hud#prompts-that-follow-the-device) wires it in one line.
+
 ## Recording and replay
 
 [`recordActions`](api:recordActions) records a map's samples, one frame per step in which an
@@ -212,6 +244,10 @@ own; a gameplay binding on a debug key's chord logs a warning in debug mode.
 - [`getConnectedGamepads`](api:getConnectedGamepads),
   [`onGamepadConnected`](api:onGamepadConnected) and
   [`onGamepadDisconnected`](api:onGamepadDisconnected).
+- [`getLastInputDevice`](api:getLastInputDevice),
+  [`onLastInputDeviceChange`](api:onLastInputDeviceChange) and
+  [`getGamepadFamily`](api:getGamepadFamily) ([`LastInputDevice`](api:LastInputDevice),
+  [`GamepadFamily`](api:GamepadFamily)).
 - [`createKeyBinding`](api:createKeyBinding), [`createMouseBinding`](api:createMouseBinding) and
   [`createTouchBinding`](api:createTouchBinding); [`KeyBinding`](api:KeyBinding),
   [`MouseBinding`](api:MouseBinding), [`TouchBinding`](api:TouchBinding) and
@@ -224,6 +260,8 @@ own; a gameplay binding on a debug key's chord logs a warning in debug mode.
 - [Characters](hub:features/characters): the player brains read action maps.
 - [Physics](hub:features/physics#stepping): the fixed steps the actions are sampled for.
 - [UI kit](hub:features/ui-kit/overlays#dialogs): a pause menu that switches the contexts.
+- [Game UI](hub:features/ui-kit/game): the prompts that follow the device, a controls page that
+  rebinds a map, and menus a gamepad moves through.
 - The API reference: [`input/`](hub:documentation/aekasha/input) of `aekasha`.
 
 ::: claude-md

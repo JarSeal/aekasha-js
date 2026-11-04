@@ -48,6 +48,22 @@ describe('announce (p805 D4)', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('joins a pending text with append, and replaces it without', () => {
+    vi.useFakeTimers();
+    const hud = getHUDRootCMP().elem;
+    announce(hud, '+25 gold', { append: true });
+    announce(hud, 'Quest updated', { append: true });
+    vi.advanceTimersByTime(50);
+    const [region] = getRegions(hud);
+    expect(region.textContent).toBe('+25 gold. Quest updated');
+    // Nothing pending: an append starts a new text
+    announce(hud, 'Level up', { append: true });
+    announce(hud, 'Sorted');
+    announce(hud, '3 of 8', { append: true });
+    vi.advanceTimersByTime(50);
+    expect(region.textContent).toBe('Sorted. 3 of 8');
+  });
+
   it('a kit root of the app’s own gets its region; outside every kit root the body does', () => {
     vi.useFakeTimers();
     const appRoot = document.createElement('div');

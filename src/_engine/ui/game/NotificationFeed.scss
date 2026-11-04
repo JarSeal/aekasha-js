@@ -1,0 +1,156 @@
+// The notification feed's default styles (NotificationFeed.ts), on the design tokens and layered
+// (p803 D5): an app's unlayered rule wins, and every selector is in :where(). In a corner it's fixed
+// in the HUD's bounds (a mount's container holds fixed elements: its `contain: layout`); the
+// feed lets the pointer through, its lines don't (a hovered line holds the feed). A line slides in
+// and fades out over --aek-motion-base, which is 0 under reduced motion (p808 D4), so then it
+// appears and goes at once (the JS removes it after the same time).
+@layer aek.components {
+  :where(.aekNotificationFeed) {
+    --aek-notification-feed-inset-resolved: var(--aek-notification-feed-inset, var(--aek-space-5));
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--aek-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--aek-font-size-md);
+    line-height: var(--aek-line-height-tight);
+    pointer-events: none;
+  }
+
+  :where(.aekNotificationFeed:not([data-placement='inline'])) {
+    position: fixed;
+    z-index: var(--aek-notification-feed-z, var(--aek-z-window));
+  }
+
+  :where(.aekNotificationFeed[data-placement^='top']) {
+    top: var(--aek-notification-feed-inset-resolved);
+  }
+
+  :where(.aekNotificationFeed[data-placement^='bottom']) {
+    bottom: var(--aek-notification-feed-inset-resolved);
+  }
+
+  :where(.aekNotificationFeed[data-placement$='left']) {
+    left: var(--aek-notification-feed-inset-resolved);
+  }
+
+  :where(.aekNotificationFeed[data-placement$='right']) {
+    right: var(--aek-notification-feed-inset-resolved);
+    align-items: flex-end;
+  }
+
+  // A line: the tone's stripe at its start, its text on the raised surface (the text's contrast
+  // is the surface's, whatever the tone)
+  :where(.aekNotificationFeed__item) {
+    --aek-notification-feed-tone: var(--aek-border-strong);
+
+    display: flex;
+    align-items: center;
+    gap: var(--aek-space-2);
+    box-sizing: border-box;
+    max-width: var(--aek-notification-feed-width, calc(var(--aek-space-7) * 10));
+    padding: var(--aek-space-1) var(--aek-space-3);
+    border-inline-start: 3px solid var(--aek-notification-feed-tone);
+    border-radius: var(--aek-radius-sm);
+    background-color: var(
+      --aek-notification-feed-bg,
+      color-mix(in srgb, var(--aek-surface-raised) 88%, transparent)
+    );
+    box-shadow: var(--aek-shadow-sm);
+    color: var(--aek-text);
+    pointer-events: auto;
+    animation: aekNotificationFeedIn var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekNotificationFeed[data-placement$='right']) :where(.aekNotificationFeed__item) {
+    animation-name: aekNotificationFeedInRight;
+  }
+
+  :where(.aekNotificationFeed__item[data-state='leaving']) {
+    opacity: 0;
+    transition: opacity var(--aek-motion-base) var(--aek-ease-standard);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='accent']) {
+    --aek-notification-feed-tone: var(--aek-accent);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='info']) {
+    --aek-notification-feed-tone: var(--aek-info);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='success']) {
+    --aek-notification-feed-tone: var(--aek-success);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='warning']) {
+    --aek-notification-feed-tone: var(--aek-warning);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='danger']) {
+    --aek-notification-feed-tone: var(--aek-danger);
+  }
+
+  :where(.aekNotificationFeed__icon) {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--aek-notification-feed-tone);
+  }
+
+  :where(.aekNotificationFeed__item[data-tone='neutral']) :where(.aekNotificationFeed__icon) {
+    color: var(--aek-text-muted);
+  }
+
+  :where(.aekNotificationFeed__text) {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: var(--aek-font-weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :where(.aekNotificationFeed__count) {
+    flex-shrink: 0;
+    color: var(--aek-text-muted);
+    font-weight: var(--aek-font-weight-semibold);
+    font-variant-numeric: var(--aek-numeric-tabular);
+  }
+
+  // Two names, so setting the other one restarts the pop (no reflow)
+  :where(.aekNotificationFeed__count[data-run='1']) {
+    animation: aekNotificationFeedPop1 var(--aek-motion-base) var(--aek-ease-emphasized);
+  }
+
+  :where(.aekNotificationFeed__count[data-run='2']) {
+    animation: aekNotificationFeedPop2 var(--aek-motion-base) var(--aek-ease-emphasized);
+  }
+}
+
+@keyframes aekNotificationFeedIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes aekNotificationFeedInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@keyframes aekNotificationFeedPop1 {
+  from {
+    transform: scale(1.4);
+  }
+}
+
+@keyframes aekNotificationFeedPop2 {
+  from {
+    transform: scale(1.4);
+  }
+}
