@@ -33,9 +33,11 @@ does it make someone want to come back.
 
 ## How Ækasha is developed
 
-- **Plans first.** Work starts as a plan in `docs/plans/`, grounded in the code as it is and
-  split into phases that each leave the tree working. A phase is built in sections, and each one
-  is reviewed before the next starts.
+- **Plans first.** Work starts as a plan in `docs/plans/` (the app's in `docsApp/plans/`),
+  grounded in the code as it is and split into phases that each leave the tree working. A phase
+  is built in sections, and each one is reviewed before the next starts. The roadmaps
+  ([Ækasha's](hub:project/aekasha/roadmap), [the app's](hub:project/app/roadmap)) are generated
+  from the plans.
 - **Checks hold the line.** Hooks lint, type-check and test every change as it's made, and
   committed baselines and budgets make a regression in the bundle, the API, the docs or a scene
   deliberate.

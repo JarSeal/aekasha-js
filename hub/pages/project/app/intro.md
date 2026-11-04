@@ -9,5 +9,5 @@ The app follows the same [coding standards](hub:documentation/coding-standards) 
 It imports the engine and the toolkit only through their entries (`aekasha`,
 `aekasha/physics`, `aekasha/toolkit/ecs`, …), and the lint fails on a path into either.
 [Where your feature goes](hub:documentation/architecture#where-your-feature-goes) says which
-layer a new piece belongs in. This page covers what's specific to the app's own folder, and
-[the app's roadmap](hub:project/app/roadmap) lists its plans and issues.
+layer a new piece belongs in. This page covers what's specific to the app: its folders, its
+design, its plans and issues, and its version.
