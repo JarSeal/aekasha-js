@@ -642,6 +642,13 @@ As built:
 - p800's §5 p809 entry is a "Done:" paragraph like p801-p808's (what it built, what it left open),
   before the sketch as written. Its §8 open question on the folder's name stays as written, like
   the others, which the children decided.
+- The roadmap built once more (the dev build Phase 6 ran): 112 pages, no error or warning. p800
+  and p809 are under Done, the Epics section has p301, p350 and p370, and the counts are 41 open,
+  1 in progress (p299), 52 done, 21 open issues.
+- `CHANGELOG.md`: "2026-11-04 — p809-project-roadmaps", a Project section (Added, Changed) right
+  under "Unreleased — engine-6", dated today (D10's "at the merge": the date to correct if the PR
+  merges later). `yarn checkVersions --against main` passes: Engine 5.14.0, Toolkit 2.2.1, App
+  1.18.0, unchanged.
 
 ---
 
