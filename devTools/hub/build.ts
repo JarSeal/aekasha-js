@@ -22,6 +22,7 @@ import { createComponentsSection } from './generated/components';
 import { createDesignSection } from './generated/design';
 import { createHomeSection, getRepoWebUrl } from './generated/home';
 import { createIssuesSection } from './generated/issues';
+import { createRoadmapSections } from './generated/roadmap';
 import type { HubGeneratedSection } from './generated/section';
 import { createVersionSection } from './generated/version';
 import { HubDiagnostics } from './diagnostics';
@@ -208,6 +209,7 @@ const createSectionsAsync = async (
     api.section,
     createDesignSection(diag),
     createComponentsSection(),
+    ...createRoadmapSections(diag),
   ];
   return { sections, api };
 };
