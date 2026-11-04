@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Documentation, Hub, Tooling
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
@@ -379,7 +379,7 @@ As built:
 - The three new paths (`APP_ISSUES_DIR`, `PLANS_DIR`, `APP_PLANS_DIR`) have no users until
   Phases 2-5.
 
-### Phase 2: the Issues section reads both folders
+### Phase 2: the Issues section reads both folders — done
 
 1. `createIssuesSection` over both folders. Each issue carries its owner. The cross-folder
    slug collision is the existing error. The `## Ækasha` / `## The app` list appears only when
@@ -390,6 +390,25 @@ As built:
    the two folders, the collision, the app-less page unchanged. Fixtures written to a temp
    folder.
 4. The Issues page's intro and `aek:description` (D7).
+
+As built:
+
+- `createIssuesSection(diag, sources = ISSUE_SOURCES)`: the folders are an argument (each an
+  `IssueSource`, `{ dir, owner }`; `DocsOwner` is `'aekasha' | 'app'`, for the plan model too),
+  so the tests pass temp folders. `listIssueFiles(dir)` is exported with `parseIssue` and
+  `parseStatus`.
+- The app issue page's meta row is `Part: The app`, not D7's `Of: The app` ("part" is the
+  versioning's word for the engine, toolkit and app).
+- `links.test.ts`' p619 slug-clash test mocked `ISSUES_DIR` with a getter. The default sources
+  capture the path at load, so the mock no longer reached it: the test now passes its folder to
+  the section and has no mock.
+- `issues.test.ts` has 7 tests: the header parse, the status kinds, the missing title, the list
+  without app issues (unchanged), the app's pages and headings, the clash across folders, a
+  missing folder.
+- The docs on the Issues section are updated here, not in Phase 6: `hub/CLAUDE.md`'s issue-file
+  bullet, `devTools/hub/CLAUDE.md`'s Generated sections, Dev plugin and `hub:preview` bullets,
+  and `hubPlugin.ts`' comment. Phase 6 still has `project/aekasha/workflow.md`'s Issues
+  paragraph.
 
 ### Phase 3: the plan model
 

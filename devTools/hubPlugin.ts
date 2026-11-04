@@ -30,8 +30,8 @@ import { getHubContentType, resolveHubRoute } from './hub/serve';
  * them to the server: the watchers, the HMR socket and the middleware.
  * - `hub/` is watched with `fs.watch`, not Vite's watcher: Vite logs every watched `.html` save
  *   as a "page reload", clearing the terminal, and sends a `full-reload`. The build's sources
- *   outside `hub/` (`package.json`, `CHANGELOG.md`, `docs/issues/*.md`) and the folders whose new
- *   files it reads (`docs/issues/`) go through Vite's watcher. `hub/hub.config.ts` and the
+ *   outside `hub/` (`package.json`, `CHANGELOG.md`, the issue files) and the folders whose new
+ *   files it reads (`docs/issues/`, `docsApp/issues/`) go through Vite's watcher. `hub/hub.config.ts` and the
  *   generator are Vite config dependencies: a change restarts the server, and the open pages
  *   reload once it's back.
  * - A page with an error is served as an error page (`buildHub`), and the terminal gets the
