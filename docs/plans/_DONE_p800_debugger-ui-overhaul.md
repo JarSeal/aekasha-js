@@ -1,6 +1,6 @@
-Status: draft | epic — not-implemented
+Status: implemented (p801-p809)
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, \_DONE_p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 to p808 done; p809 not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, \_DONE_p808_game-ui-components.md, \_DONE_p809_project-roadmaps-and-docs-split.md (all done: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -840,6 +840,30 @@ What follows is the sketch as written.
 - The world anchor system's per-frame cost measured (the perf-auditor agent) with 200 anchors.
 
 ### p809 — Project roadmaps and docs split
+
+Done: `_DONE_p809_project-roadmaps-and-docs-split.md` (2026-11-04; Phases 0-7), the epic's last
+child. On its own branch from `main`, merging into `main`, with a Project changelog entry of its
+own and no bump: nothing in the engine, the toolkit or the app changed (its D10). What it built,
+each written there:
+
+- **The split** (its D1, D2): `docsApp/plans/` and `docsApp/issues/` are the app's, in `docs/`'s
+  formats with their own numbers. An app plan names an engine plan by its repo path; an engine
+  plan never names an app plan. The rules are `docs/plans/CLAUDE.md`'s "The app's plans and
+  issues".
+- **The roadmaps** (its D3-D6): two dev pages, `project/aekasha/roadmap/` and
+  `project/app/roadmap/`, generated from the plans' header lines (`readPlans`,
+  `devTools/hub/generated/plans.ts`): the plans in progress, each open epic with its dependency
+  graph (an SVG laid out at build time, `planGraph.ts`, which draws the transitive reduction) and
+  its table, the other open plans, the done ones and the open issues by area. A header line
+  naming a missing file, a `_DONE_` name and a status that disagree, an engine plan naming an app
+  plan and a `Blocks` cycle are warnings in `yarn hub:build` and the dev Hub.
+- **The Issues section** reads both folders, with the same `issues/<name>/` URLs for both (its
+  D7). The app's issues are public like the engine's.
+- **Left open:** a client-side filter on the roadmap (the pages are static); older drafts write
+  their phases as bold paragraphs, so they show none; the search index stays over its 450 KiB
+  warning mark (485, unchanged: the roadmaps are dev only).
+
+What follows is the sketch as written.
 
 - `docs/` stays Ækasha's (plans, issues, techniques, analysis, templates); `docsApp/` (the name is
   this plan's to confirm) gets the app's plans and issues with the same file formats, so an app

@@ -1,6 +1,6 @@
-Status: in progress | Phases 0-6 implemented
+Status: implemented (Phases 0-7)
 Category: Documentation, Hub, Tooling
-Epic: p800_debugger-ui-overhaul.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
 Related: \_DONE_p802_hub-project-section.md (the dev pages, the Project section and the generated sections that fill a dev page's slots, which the roadmap pages are; its Blocks line names this plan), \_DONE_p621_hub-docs-readme-and-claude-md-final.md (the readme's Roadmap, last checked against the open plans there), p990_follow-ups-from-done-plans.md (the backlog, listed on the roadmap as a plan)
 
 # Project Roadmaps and the Docs Split
@@ -615,7 +615,7 @@ As built:
   figures: the public Hub is unchanged), its one warning the known index size, no `project/` in
   `dist-hub/`. `yarn verify:baselines`: every baseline unchanged, no debug code.
 
-### Phase 7: done (this plan, and p800's epic)
+### Phase 7: done (this plan, and p800's epic) — done
 
 1. This plan's status `implemented (Phases 0-7)` and `git mv` to `_DONE_p809_…`. The references
    to the old name updated: p800's and `_DONE_p802`'s `Blocks` lines and p800's §5 entry.
@@ -629,6 +629,19 @@ As built:
 3. The roadmap built once more: p800 under Done, no warnings.
 4. The `CHANGELOG.md` entry (D10) and `yarn checkVersions --against main`.
 5. Time for the PR: `p809-project-roadmaps` into `main`.
+
+As built:
+
+- The children's `_DONE_` files (`_DONE_p801` to `_DONE_p809`) and `_DONE_p800` itself are kept,
+  the user's decision: p622 (the unreleased engine 6.0.0) builds on p803's and p806's records,
+  p150 and p373 on p806's, p355, p426 and `docs/issues/renderer-custom-tone-mapping.md` on p804's.
+  They can go once those are done, `engine-6`'s merge first.
+- The references: the 15 files named in step 2, as header lines with Prettier's escape
+  (`\_DONE_p800_…`) and in p600's two code spans without it. `_DONE_p802`'s `Blocks` names
+  `\_DONE_p809_…`, and p800's ends "(all done: §5)".
+- p800's §5 p809 entry is a "Done:" paragraph like p801-p808's (what it built, what it left open),
+  before the sketch as written. Its §8 open question on the folder's name stays as written, like
+  the others, which the children decided.
 
 ---
 

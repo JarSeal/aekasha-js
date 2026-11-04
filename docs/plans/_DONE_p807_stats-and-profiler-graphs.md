@@ -1,6 +1,6 @@
 Status: implemented (Phases 0-7)
 Category: Debug, UI, Performance
-Epic: p800_debugger-ui-overhaul.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
 Related: \_DONE_p806_debugger-migration.md (D1: what it left here; its §4: what this plan can count on; Phase 6's "As built": the perf-auditor's findings and the debug chunks' sizes), \_DONE_p805_data-display.md (§4's p807 lines: the tables, bars, sparklines and the time series for the stats panels; Phase 5 section 3's time series figures; D14's "Debugger parity" box), \_DONE_p344_profiler-mega-window.md and \_DONE_p345_gpu-memory-and-draw-call-debugger.md (the profiler and GPU memory as built), p622_engine-6-major.md (the unreleased engine 6.0.0 entry this plan's changelog section may join: D2)
 
 # Stats and Profiler Graphs

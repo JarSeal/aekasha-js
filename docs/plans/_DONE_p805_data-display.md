@@ -1,6 +1,6 @@
 Status: implemented (Phases 0-8)
 Category: UI, Accessibility, Debug
-Epic: p800_debugger-ui-overhaul.md
+Epic: \_DONE_p800_debugger-ui-overhaul.md
 Blocks: \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md (p800 §5)
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer and menu this builds on; its D1 moved the pie, the debugger list, the tab buttons and the context menu here), \_DONE_p804_forms-and-bindings.md (the binding scheduler, the field shell, `ValueText.ts`, the property grid's separator; its D1 moved the label's context menu and the monitor's graph view here; its D13's opt-in pattern: D8), \_DONE_p801_design-foundation.md (the tokens; its §4 left the table's stripe and the bars' roles to this plan), \_DONE_p808_game-ui-components.md (the list's reorder under its inventory, the tabs and splitter under its menus), p373_merge-debug-and-member-editing.md (a tree user, after p806), `hub/_assets/ts/_search.ts` (the Hub's ⌘K search, the command palette's model: D12)
 
