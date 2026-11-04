@@ -496,6 +496,14 @@ As built (section 1, `generated/planGraph.ts`):
 - The real graphs: p301's 10 nodes and 21 edges in 8 layers (568 × 864), p350's 8, p370's 8 (p302
   outside), p800's 9, and the other plans' 8 (1032 wide, so it scrolls in the content column).
   Each layout takes under 1 ms.
+- The title's clip falls at a word, with room for the `…` ("(gallery + showcase)…"), and inside
+  a word only when it's the clipped line's only one.
+- `devTools/hub/planGraph.test.ts`, 11 tests: a fixed five-node graph whose layers, order, size
+  and long-edge points are worked out by hand in its comment, the edge ends spread along a node,
+  a graph without edges and an empty one, the SVG's `viewBox`, `aria-hidden`, tab order,
+  arrowheads and escaping, the title wrap, and from a fixture model: an epic's children by state,
+  an outside blocker with its epic (a done one left out), one from the other folder, and a
+  cycle's closing edge left out.
 
 ### Phase 5: the roadmap pages
 

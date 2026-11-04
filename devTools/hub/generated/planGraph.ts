@@ -201,7 +201,7 @@ const portX = (centre: number, index: number, count: number) =>
 /** The graph laid out top to bottom, blockers above (this module's comment) */
 export const layoutPlanGraph = (graph: PlanGraph): PlanGraphLayout => {
   const layerOf = assignLayers(graph);
-  const layerCount = Math.max(0, ...layerOf.values()) + 1;
+  const layerCount = graph.nodes.length ? Math.max(...layerOf.values()) + 1 : 0;
   const layers: Slot[][] = Array.from({ length: layerCount }, () => []);
   const slots = new Map<string, Slot>();
   graph.nodes.forEach((node, i) => {
@@ -324,7 +324,13 @@ export const wrapPlanTitle = (title: string): string[] => {
   }
   if (line) lines.push(line);
   if (lines.length <= TITLE_LINES) return lines;
-  const last = lines[TITLE_LINES - 1].slice(0, TITLE_LINE_CHARS - 1).replace(/[\s,.;:&]+$/, '');
+  // Clipped at a word with room for the `…`, or inside the word when it's the line's only one
+  const full = lines[TITLE_LINES - 1];
+  const cut = full.lastIndexOf(' ', TITLE_LINE_CHARS - 1);
+  const last = (cut > 0 ? full.slice(0, cut) : full.slice(0, TITLE_LINE_CHARS - 1)).replace(
+    /[\s,.;:&+(-]+$/,
+    ''
+  );
   return [...lines.slice(0, TITLE_LINES - 1), `${last}…`];
 };
 
