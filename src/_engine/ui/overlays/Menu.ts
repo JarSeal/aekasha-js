@@ -28,10 +28,8 @@ export type MenuActionItem = {
   /** Raw HTML of its icon (`getSvgIcon('gear')`), at `1em`. */
   icon?: string;
   /** A shortcut's hint (`createKbd({ keys: 'Ctrl+S' })`), whose keys are its
-   * `aria-keyshortcuts`. The menu removes it (see {@link MenuProps}' `items`). A string is
-   * deprecated (removed in engine 6.0.0): the menu loads Kbd's code for it, so its hint appears a
-   * frame later the first time. */
-  kbd?: Kbd | string;
+   * `aria-keyshortcuts`. The menu removes it (see {@link MenuProps}' `items`). */
+  kbd?: Kbd;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
 };
@@ -47,7 +45,7 @@ export type MenuCheckboxItem = {
   /** Its new state, after a pick flipped it. */
   onCheckedChange?: (checked: boolean) => void;
   /** A shortcut's hint (`createKbd({ keys: 'Ctrl+G' })`), as an action's `kbd`. */
-  kbd?: Kbd | string;
+  kbd?: Kbd;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
 };

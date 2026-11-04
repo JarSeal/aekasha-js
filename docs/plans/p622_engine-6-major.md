@@ -543,6 +543,27 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   `@internal`), `createDebuggerTab`'s second parameter and `DebugGUIOpts`; the UI kit's list;
   `ACCEPTED_LEAKS`' `PhysicsProbeReport` (the map is then empty: keep the mechanism, empty). The
   component library page and `yarn verify:ui` for the `kbd` and icon changes.
+
+  As built (section 4):
+
+  - The protocol's and the bridge's names keep their declarations, now `@internal` with the
+    summary naming their users; the entry drops them. `ACCEPTED_LEAKS` is `{}`.
+  - With `DebugGUIOpts` went the drawer's toggler placement: `_dbg__DrawerShell.ts`'
+    `togglerPlace` / `setTogglerPlace`, the `TOP` / `MIDDLE` / `BOTTOM` classes,
+    `DebuggerGUI.module.scss`' two rules and `AxesGizmo.module.scss`' rule that cleared a `TOP`
+    toggler. The toggler stays in the middle.
+  - `ShortcutHint.ts` takes a Kbd only (no `import('./Kbd')`, no stop-before-load case);
+    `findMenuHintHandles` takes every item's `kbd`. The command palette's `kbd` stays text (p805:
+    its rows are made on every query), so the UI kit example's two string `kbd`s are palette rows.
+  - The Hub: the UI kit core guide's string `kbd` sentence, the public icons text's `'small'` line
+    and the dev component library's icon and button notes.
+  - `yarn verify:ui`: the full run failed 14 states on this machine's local baselines, recorded
+    2026-11-03 before p806-p808's demos (boxes 77-99 px taller, a row they didn't have). With the
+    changes stashed, the ten pieces involved (`window`, `menu`, `divider`, `icons`, `button`,
+    `buttonGroup`, `dropDown`, `monitor`, `emptyState`, `settingsMenu`) were recorded at HEAD
+    (`--update`), then the branch passed them all: no rendering change.
+  - Bundle: the main chunk unchanged; the uiKit embed's `Kbd.js` chunk is gone (only the string
+    path's `import('./Kbd')` split it off) and its game chunk, which makes Kbds, +0.8 kB gzip.
 - **Section 5:** the codemod's report rules for everything removed here, with fixtures. Done when
   `grep -rn "6\.0\.0" src/_engine | grep -i deprecated` is empty.
 

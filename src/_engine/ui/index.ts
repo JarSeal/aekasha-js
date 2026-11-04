@@ -36,17 +36,6 @@ export type {
   CMPProps,
   CMPSettings,
   CMPStyle,
-  TAnimChain,
-  TAnimState,
-  TAttr,
-  TClassAction,
-  TCMP,
-  TListener,
-  TListenerCache,
-  TListenerCreator,
-  TProps,
-  TSettings,
-  TStyle,
 } from './core/CMPTypes';
 export { createDivider } from './components/Divider';
 export type { Divider, DividerProps } from './components/Divider';
@@ -224,7 +213,7 @@ export type {
   SegmentedControlProps,
   SegmentOption,
 } from './forms/RadioGroup';
-export type { DropDown, DropDownOption, DropDownProps, TDropDown } from './forms/DropDown';
+export type { DropDown, DropDownOption, DropDownProps } from './forms/DropDown';
 export { createSelectField } from './forms/SelectField';
 export type {
   SelectField,

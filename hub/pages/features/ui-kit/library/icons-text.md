@@ -8,4 +8,3 @@ or gets `??` and a warning. [`BuiltInIconName`](api:BuiltInIconName) lists the b
 
 - **States:** icons at `1em`, the three sizes, an icon in a button with its text, and an
   unregistered name.
-- `'small'` is the deprecated name of `'sm'` (removed in engine 6.0.0).

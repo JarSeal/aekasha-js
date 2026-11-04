@@ -160,15 +160,12 @@ export const registerBuiltInIcons = () => {
 export type SvgIconSize = 'sm' | 'md' | 'lg';
 
 /**
- * A registered icon as HTML: `<span class="aekIcon">` around the SVG (also `uiIcon`, and with
- * `'sm'` `smallIcon`: the debugger's old classes, which no style reads; they go in engine 6.0.0),
- * `1em` square so it follows its text, or at a `size` from the type scale (`data-size`). An
+ * A registered icon as HTML: `<span class="aekIcon">` around the SVG, `1em` square so it follows its text, or at a `size` from the type scale (`data-size`). An
  * unregistered name renders `??` and warns once.
  * - Parts: `.aekIcon` (`data-size`) and its SVG, which takes the text colour when it's drawn with
  *   `currentColor` (the built-ins are).
  * - Custom properties: `--aek-icon-size-sm`, `-md`, `-lg`.
- * @param size `'sm'`, `'md'` or `'lg'` (default: `1em`); `'small'` is the deprecated name of
- * `'sm'` (removed in engine 6.0.0)
+ * @param size `'sm'`, `'md'` or `'lg'` (default: `1em`)
  * @example
  * ```ts
  * import { CMP, getSvgIcon } from 'aekasha/ui';
@@ -177,7 +174,7 @@ export type SvgIconSize = 'sm' | 'md' | 'lg';
  * const badge = CMP({ html: getSvgIcon('shield', 'lg') });
  * ```
  */
-export const getSvgIcon = (name: SvgIconKey, size?: SvgIconSize | 'small') => {
+export const getSvgIcon = (name: SvgIconKey, size?: SvgIconSize) => {
   let icon = icons.get(name);
   if (icon === undefined) {
     if (!warnedNames.has(name)) {
@@ -186,8 +183,6 @@ export const getSvgIcon = (name: SvgIconKey, size?: SvgIconSize | 'small') => {
     }
     icon = '??';
   }
-  const resolved = size === 'small' ? 'sm' : size;
-  if (!resolved) return `<span class="aekIcon uiIcon">${icon}</span>`;
-  const debugClass = resolved === 'sm' ? ' smallIcon' : '';
-  return `<span class="aekIcon uiIcon${debugClass}" data-size="${resolved}">${icon}</span>`;
+  if (!size) return `<span class="aekIcon">${icon}</span>`;
+  return `<span class="aekIcon" data-size="${size}">${icon}</span>`;
 };

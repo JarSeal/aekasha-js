@@ -73,11 +73,6 @@ export type CMPSettings = {
   sanitizer?: ((html: string) => string) | null;
   /** Sanitizes every CMP's `html`, not only the ones with `sanitize` (default false) */
   sanitizeAll?: boolean;
-  /**
-   * Not read by the kit.
-   * @deprecated No effect. Removed in engine 6.0.0.
-   */
-  doCheckIsInDom?: boolean;
   /** The root replaces its `attach` element (default true); false adds it into the element. */
   replaceRootDom?: boolean;
 };
@@ -240,71 +235,3 @@ export type CMPHandle = {
   /** Free for its maker: handles the CMP's own code keeps on it */
   controls: { [key: string]: unknown };
 };
-
-// The old `T`-prefixed names (p803 D3), until engine 6.0.0 (p622)
-
-/**
- * The old name of {@link CMPHandle}.
- * @deprecated Use {@link CMPHandle}. Removed in engine 6.0.0.
- */
-export type TCMP = CMPHandle;
-
-/**
- * The old name of {@link CMPProps}.
- * @deprecated Use {@link CMPProps}. Removed in engine 6.0.0.
- */
-export type TProps = CMPProps;
-
-/**
- * The old name of {@link CMPSettings}.
- * @deprecated Use {@link CMPSettings}. Removed in engine 6.0.0.
- */
-export type TSettings = CMPSettings;
-
-/**
- * The old name of {@link CMPListener}.
- * @deprecated Use {@link CMPListener}. Removed in engine 6.0.0.
- */
-export type TListener = CMPListener;
-
-/**
- * The old name of {@link CMPListenerCache}.
- * @deprecated Use {@link CMPListenerCache}. Removed in engine 6.0.0.
- */
-export type TListenerCache = CMPListenerCache;
-
-/**
- * The old name of {@link CMPListenerCreator}.
- * @deprecated Use {@link CMPListenerCreator}. Removed in engine 6.0.0.
- */
-export type TListenerCreator = CMPListenerCreator;
-
-/**
- * The old name of {@link CMPStyle}.
- * @deprecated Use {@link CMPStyle}. Removed in engine 6.0.0.
- */
-export type TStyle = CMPStyle;
-
-/**
- * The old name of {@link CMPAttr}.
- * @deprecated Use {@link CMPAttr}. Removed in engine 6.0.0.
- */
-export type TAttr = CMPAttr;
-
-/**
- * The old name of {@link CMPClassAction}.
- * @deprecated Use {@link CMPClassAction}. Removed in engine 6.0.0.
- */
-export type TClassAction = CMPClassAction;
-
-/**
- * The old name of {@link CMPAnimChain}.
- * @deprecated Use {@link CMPAnimChain}. Removed in engine 6.0.0.
- */
-export type TAnimChain = CMPAnimChain;
-
-/**
- * The old name of {@link CMPAnimState}.
- * @deprecated Use {@link CMPAnimState}. Removed in engine 6.0.0.
- */
-export type TAnimState = CMPAnimState;

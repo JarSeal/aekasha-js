@@ -149,10 +149,7 @@ const isReflection = (value: object): value is DeclarationReflection =>
  * Leaked types kept until their namer goes, by `<file>#<name>`: each a deprecated public name's
  * only type, removed with it. A key that no longer leaks is a warning (`reportEntries`).
  */
-export const ACCEPTED_LEAKS: Record<string, string> = {
-  'src/_engine/features/physics/PhysicsProbeTypes.ts#PhysicsProbeReport':
-    'only `TestBridgeProbeResult` names it (`aekasha/debug`, deprecated by p618 D3), removed in engine 6.0.0',
-};
+export const ACCEPTED_LEAKS: Record<string, string> = {};
 
 /**
  * The types the public exports name that no entry exports, sorted by source, and the types those

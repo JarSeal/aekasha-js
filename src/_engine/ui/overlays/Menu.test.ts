@@ -231,12 +231,16 @@ describe('menu (p803 D10)', () => {
     menu.cmp.remove();
   });
 
-  it('draws its items’ hints: a getter’s removed at each close, an array’s with the menu (p804 D13)', async () => {
+  it('draws its items’ hints: a getter’s removed at each close, an array’s with the menu (p804 D13)', () => {
     const kept = createKbd({ keys: 'Ctrl+S' });
     const removeKept = vi.spyOn(kept.cmp, 'remove');
     const menu = addMenu([
       { label: 'Save', kbd: kept },
-      { type: 'group', label: 'Edit', items: [{ label: 'Undo', kbd: 'Ctrl+Z' }] },
+      {
+        type: 'group',
+        label: 'Edit',
+        items: [{ label: 'Undo', kbd: createKbd({ keys: 'Ctrl+Z' }) }],
+      },
     ]);
     menu.open();
     const [save, undo] = getItems();
@@ -245,9 +249,7 @@ describe('menu (p803 D10)', () => {
     expect(kept.cmp.elem.getAttribute('aria-hidden')).toBe('true');
     kept.setKeys('Ctrl+Shift+S');
     expect(save.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+S');
-    // The deprecated string: drawn once Kbd has loaded
-    expect(undo.querySelector('.aekMenu__kbd')).toBeNull();
-    await vi.dynamicImportSettled();
+    // In a group too
     expect(undo.getAttribute('aria-keyshortcuts')).toBe('Control+Z');
     expect(undo.querySelector('.aekMenu__kbd')?.getAttribute('aria-hidden')).toBe('true');
     menu.close();

@@ -42,7 +42,6 @@ const removeWrapper = (id: string) => {
 const globalSettings: CMPSettings = {
   sanitizer: null,
   sanitizeAll: false,
-  doCheckIsInDom: false,
   replaceRootDom: true,
 };
 
@@ -127,8 +126,6 @@ export const CMP = (
   if (props?.attach) {
     if (props?.settings?.sanitizer) globalSettings.sanitizer = props?.settings.sanitizer;
     if (props?.settings?.sanitizeAll) globalSettings.sanitizeAll = props?.settings.sanitizeAll;
-    if (props?.settings?.doCheckIsInDom !== undefined)
-      globalSettings.doCheckIsInDom = props?.settings.doCheckIsInDom;
     if (props?.settings?.replaceRootDom !== undefined)
       globalSettings.replaceRootDom = props?.settings.replaceRootDom;
     if (globalSettings.replaceRootDom) {
