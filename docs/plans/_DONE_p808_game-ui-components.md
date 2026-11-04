@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-8 implemented
+Status: implemented (Phases 0-9)
 Category: UI, Accessibility, Input
 Epic: p800_debugger-ui-overhaul.md
 Related: \_DONE_p803_ui-kit-structure-and-core.md (the folders, coding style, overlay layer, the input glyph whose gamepads this adds: its D10), \_DONE_p804_forms-and-bindings.md (the form, the property grid and its items the settings menu builds on; its D1: a field reports, its owner persists), \_DONE_p805_data-display.md (`RovingFocus.ts`, the announcer, the tabs the settings menu's pages are on, the list's reorder model the inventory's moves follow), \_DONE_p610_character-and-input-action-architecture.md (the action maps the prompts read and the controls page rebinds), \_DONE_p611_sbp-tooling-profiles-and-marketing.md (the embed's `CANVAS` input scope: D5), p770 (still a prompt in `docs/templates/todo-plan-prompts.txt`: its rebinding UI is this plan's controls page, D9), p355_save-menu-and-file-server-settings.md (its menu on the game menu, D8)
@@ -1250,7 +1250,7 @@ As built (section 4, the `uiKit` profile's game window, the budgets, `yarn verif
   property in an embed (the check's rule, Project), the `uiKit` embed's game window and first
   window's height (App), the budgets (Project).
 
-### Phase 9: versions and done
+### Phase 9: versions and done — done
 
 The changelog's sections in the unreleased engine-6 entry (D15), p800's §5 p808 entry rewritten
 as done ("what the later plans build on"), the plan marked done, `_DONE_`.
@@ -1296,6 +1296,22 @@ As built (section 1, the changelog):
   - Checked: `tsc` (both), lint, `yarn test`, `yarn hub:build`, the shot and the wheel driven in
     Chromium on `WORKER_THREAD` (`.cache/p808view/physShot.ts`: hit, hit, kill, '+25 gold', the
     wheel down and up), `yarn verify:scenes --only exampleGameHud`.
+
+As built (section 2, done):
+
+- **p800:** the Blocks line names `\_DONE_p808_game-ui-components.md` (p801 to p808 done, p809
+  not yet); §5's p808 entry is "Done" with what the later plans build on (the pieces, the engine
+  sides, the rules, the checks, p770's and p355's starting points, what's left open, the size),
+  the sketch kept under it; §6's table gives p808 a row of its own (from `main` into `main`, its
+  changelog in the unreleased `engine-6` entry, no bump: D15), where the first row had it with the
+  plans that bump.
+- **The plan:** `implemented (Phases 0-9)`, moved to `_DONE_p808_game-ui-components.md`; the
+  references to its name (p803's and p804's Blocks lines, p805's Related line) follow. No
+  `CLAUDE.md`, Hub page or issue names the file; they name p808 by number.
+- **The root `CLAUDE.md`, the nested ones and `readme.md`** already describe the result (Phase 8
+  sections 2-4); nothing in this phase changed what they say.
+- **Versions:** none bumped (D15). `yarn checkVersions` passes; `--against main` fails as D15
+  says, as p806's and p807's did.
 
 ---
 

@@ -170,7 +170,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
   - The `uiKitEmbed` poster, taken again.
 - p808: `yarn verify:baselines`' `api.json` and `docs.json` (the names above) and the bundle baselines: the example's chunks and the shared chunks it split out (`FocusTrap`, `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`, `Hotbar`), and the `uiKit` embed's game window and `Announcer`. `yarn verify:scenes` records `exampleGameHud`'s baselines.
 - p808: `ui/game/` is a `UI_KIT_FOLDERS` layout rule. The docs: the root `CLAUDE.md`'s map, `src/_engine/ui/CLAUDE.md`'s "Game UI", `src/_engine/kernel/input/CLAUDE.md` (the tracker), `hub/CLAUDE.md` (the game page, the HUD screenshot), `devTools/sbp/CLAUDE.md`, `devTools/verify/CLAUDE.md`, and the readme (the game UI, the device tracker, `WorldAnchorSync`, the rig's orbit and the game HUD example).
-- The plans: p808 is `_DONE_`; p800 follows.
+- The plans: p808 is `_DONE_`; p800, p803, p804 and p805 follow.
 
 ## 2026-10-28 — p805-data-display
 

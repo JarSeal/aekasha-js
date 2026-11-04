@@ -1,6 +1,6 @@
 Status: draft | epic — not-implemented
 Category: Refactoring, Documentation, UI, Debug
-Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801, p802, p803, p804, p805, p806 and p807 done; the rest not yet: §5)
+Blocks: \_DONE_p801_design-foundation.md, \_DONE_p802_hub-project-section.md, \_DONE_p803_ui-kit-structure-and-core.md, \_DONE_p804_forms-and-bindings.md, \_DONE_p805_data-display.md, \_DONE_p806_debugger-migration.md, \_DONE_p807_stats-and-profiler-graphs.md, \_DONE_p808_game-ui-components.md, p809_project-roadmaps-and-docs-split.md (p801 to p808 done; p809 not yet: §5)
 Related: \_DONE_p600_whole-codebase-refactoring-and-documentation.md (§9: this epic follows its p608 move and p617's kit), \_DONE_p602_architecture-and-target-structure.md (D5: "the debugger is the kit's first consumer, not its owner"), \_DONE_p617_review-input-ui-hud.md (the kit on `aekasha/ui`; D8: the embed issue), \_DONE_p618_review-debug-public-api.md (D3, P7: Tweakpane in the tab types; the "Write your own tab" guide), p622_engine-6-major.md (the major p806 ships with: D12), p150_current-entity-data-source-info-on-edit-windows.md and p373_merge-debug-and-member-editing.md (debug UI built on p806's components), p355_save-menu-and-file-server-settings.md (its menu on p803 / p804), p426_sequencer-splines-and-cutscenes.md (p804's curve editor), `docs/issues/ui-kit-in-an-embed.md` (p801), `docs/issues/on-screen-tools-during-scene-load.md` (p806) (the original prompt was in `docs/templates/todo-plan-prompts.txt` until this plan's commit, `208b177`, removed it: this plan is its record)
 
 # Debugger UI Overhaul — Epic
@@ -791,11 +791,47 @@ What follows is the sketch as written.
 
 ### p808 — Game UI components
 
-Written: `p808_game-ui-components.md` (2026-11-02, in progress on `p808-game-ui-components`). Its
-D1 keeps all of §4.5 but the loading screen (the loading overlay gains tips) and a circular
-minimap (the viewport renders into the main canvas); its D2 splits each engine-aware piece into a
-DOM-only kit piece and a kernel (the device tracker) or toolkit (the anchor sync) side, since the
-kit can't import the input, camera or ECS modules. What follows is the sketch as written.
+Done: `_DONE_p808_game-ui-components.md` (2026-11-04; Phases 0-9). On its own branch from
+`main`, merging into `main`; its changelog sections join the unreleased `engine-6` entry with no
+bump, the toolkit's and the app's minors made at the `engine-6` merge (its D15). What the later
+plans build on, each written there:
+
+- **The pieces** (its D1, `ui/game/`, 25 value names on `aekasha/ui`, 174 in all): the input
+  prompt and the glyph's gamepad families, the resource bar, the cooldown, the crosshair, the
+  feed, the tracker, subtitles, the dialogue box, the spatial navigation, the radial and game
+  menus, the item slot, hotbar, inventory (with its drag group) and details, the settings menu,
+  the controls page, the kit preferences, the world anchor layer, the compass and the minimap
+  frame. §4.5's loading screen is the loading overlay's `tips` and `image`; the tooltip gained
+  `content`. A circular minimap stayed out: the viewport renders into the main canvas.
+- **The engine sides** (its D2): every kit piece is DOM-only and takes plain data, so it works
+  without the engine. The kernel's device tracker (`getLastInputDevice`,
+  `onLastInputDeviceChange`, `getGamepadFamily` on `aekasha`; in an embed's `CANVAS` scope the
+  pads are read while the focus is in the container) and the toolkit's `registerWorldAnchorSync`
+  feed them. The wiring between them (the tracker to the prompts, a d-pad to the spatial
+  navigation, the maps to the controls page) is app code, the example's and the Hub guide's.
+- **The rules** (its D4), for any later HUD piece: per-frame setters write only on a change and
+  allocate nothing; colour is never the only sign; reduced motion is followed; an animation
+  restarts by alternating two names (`data-run` 1 / 2: no reflow, no timer); lines that come
+  together are read together (the announcer's `append`); Enter and Space on a piece's own buttons
+  are stopped before the action maps.
+- **The checks:** each piece's tests, its box in both component library pages under
+  `yarn verify:ui` (21 boxes), the `exampleGameHud` scene's baseline, `yarn verify:embed`'s game
+  window, the perf pass (200 anchors, 0.12 ms a frame).
+- **For p770:** the controls page is its rebinding UI (its D9): it captures before the action
+  maps, reports an action's whole new list for `map.setBindings`, and the app persists it.
+  **For p355:** its save menu can be a game menu page (its D8).
+- **Left open:** the ECS storage's `for … of` makes an entry array per entity
+  (`IComponentStorage` has no `forEach`); `getCanvasSize()` makes two objects a frame (an `out`
+  argument or a public `onCanvasResize` would end it); the engine's render casts
+  (`kernel/render/Raycast.ts`) are `@internal`, so the example's shot is a physics ray, and a
+  public screen-position cast is a plan of its own; the Hub's search index is over its 450 KiB
+  warning mark (485); `aekasha/ui` is revisited at about 250 value names (its D3).
+- **Size:** the game pieces and the device tracker are in no first download. The app's grew
+  384.4 → 387.0 KiB gzip: the game HUD's minimap is the first shipping caller of
+  `createViewport`, plus the loading overlay's tips and the gamepad family. The `uiKit` embed's
+  game window is 7.6 KiB of script, budgeted.
+
+What follows is the sketch as written.
 
 - §4.5, and the `examples/gameHud/` scene with its Hub example page: a small arena where world
   anchors (nameplates, a waypoint), health and resource bars, a hotbar, a notification feed, a
@@ -822,11 +858,12 @@ Every PR into `main` runs `yarn checkVersions --against main` and bumps what it 
 per merge). The children are written and started one or two at a time; p804 and p805 can run in
 parallel branches.
 
-| Plans                                    | Branch                    | Merges into                                  | PR                                                                                                                                          |
-| ---------------------------------------- | ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| p801, p802, p803, p804, p805, p808, p809 | each its own, from `main` | `main`                                       | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                 |
-| p806                                     | its own, from `engine-6`  | `engine-6` (cut from `main` in p806 Phase 0) | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename) |
-| p807                                     | its own, from `main`      | `main` (no public type changes; p807 D2)     | one when its last phase is done; its changelog joins the unreleased `engine-6` entry, no bump                                               |
+| Plans                              | Branch                    | Merges into                                  | PR                                                                                                                                                         |
+| ---------------------------------- | ------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| p801, p802, p803, p804, p805, p809 | each its own, from `main` | `main`                                       | one per plan when its last phase is done: engine / toolkit minors or patches, the Project entry for p802 and p809's tooling                                |
+| p806                               | its own, from `engine-6`  | `engine-6` (cut from `main` in p806 Phase 0) | into `engine-6` after its last phase; `engine-6` → `main` is engine 6.0.0 with p622's removals, codemod and migration page (a new codename)                |
+| p807                               | its own, from `main`      | `main` (no public type changes; p807 D2)     | one when its last phase is done; its changelog joins the unreleased `engine-6` entry, no bump                                                              |
+| p808                               | its own, from `main`      | `main` (additive only; p808 D15)             | one when its last phase is done; its changelog joins the unreleased `engine-6` entry, no bump (the toolkit's and the app's minors at the `engine-6` merge) |
 
 One exception to "one PR per plan": p802's Phase 1 (the dev-only pages) is its own PR into `main`
 (`p802-dev-pages`), merged before p801 starts, since p801's font study needs a dev-only page
