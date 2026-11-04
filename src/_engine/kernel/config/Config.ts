@@ -138,6 +138,10 @@ export type AppConfig = {
     solverIterations?: number;
     /** Rapier's internal PGS iterations per solver iteration. Default 1. */
     internalPgsIterations?: number;
+    /** How many times continuous collision detection (a body's `ccdEnabled`) continues a fast
+     * body's path after a hit in one step: smoother paths at a cost; 0 turns CCD off. Default 1
+     * (Rapier's). */
+    maxCcdSubsteps?: number;
     /** Render-time smoothing on top of the discrete physics-step pose. Default 'NONE'
      * (unchanged behavior). See PhysicsState.interpolationMode for the mode semantics. */
     interpolationMode?: PhysicsInterpolationMode;

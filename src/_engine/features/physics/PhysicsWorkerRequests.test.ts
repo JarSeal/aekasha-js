@@ -98,8 +98,8 @@ import { createCollider, createColliders } from './PhysicsColliders';
 import { beginSubStepCapture, endSubStepCapture, messageWorker } from './PhysicsMessaging';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
-import { getPhysicsWorld } from './PhysicsState';
-import { createPhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
+import { getPhysicsState, getPhysicsWorld } from './PhysicsState';
+import { createPhysicsWorld, initPhysics, resetPhysicsWorld, stopPhysics } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
@@ -134,7 +134,9 @@ const countBodies = () => [...getAllRigidBodyIds()].length;
 describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   it('boots against the real worker and creates collider 0', async () => {
     initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
-    loadConfig({ physics: { enabled: true, workerTarget: 'WORKER_THREAD', useSAB: false } });
+    loadConfig({
+      physics: { enabled: true, workerTarget: 'WORKER_THREAD', useSAB: false, maxCcdSubsteps: 3 },
+    });
     await initPhysics(true);
     // doNotCreateWorld: the worker answers worldCreated false, so no world proxy yet
     expect(getPhysicsWorld()).not.toBeInstanceOf(WorldProxyAPI);
@@ -281,6 +283,25 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     expect(endSubStepCapture()).toEqual([
       { type: PhysicsProtocolType.RIGID_WAKE_UP, rigidBodyId: 0 },
     ]);
+  });
+
+  // Replaces the world: after the tests that use the first world's collider 0
+  it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
+    // The proxy's copy and the worker's world
+    const read = async () => [
+      getPhysicsWorld().getMaxCcdSubstepsSync(),
+      await getPhysicsWorld().getMaxCcdSubsteps(),
+    ];
+    expect(await read()).toEqual([3, 3]);
+    getPhysicsWorld().setMaxCcdSubsteps(5);
+    expect(await read()).toEqual([5, 5]);
+    // A scene load's fresh world
+    await resetPhysicsWorld();
+    expect(await read()).toEqual([3, 3]);
+    getPhysicsState().maxCcdSubsteps = 0;
+    await resetPhysicsWorld();
+    expect(await read()).toEqual([0, 0]);
+    getPhysicsState().maxCcdSubsteps = 3;
   });
 
   // Last: physics stays stopped for this file

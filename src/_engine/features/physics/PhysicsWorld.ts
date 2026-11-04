@@ -123,6 +123,8 @@ export const createPhysicsWorld = async (
     solverIterations?: number;
     /** Integer */
     internalPgsIterations?: number;
+    /** Integer, 0 turns CCD off */
+    maxCcdSubsteps?: number;
   }
 ) => {
   // A scene load still running when the engine unmounted: nothing to create a world for
@@ -147,6 +149,8 @@ export const createPhysicsWorld = async (
     timestep,
     numSolverIterations: solverIterations,
     numInternalPgsIterations: internalPgsIterations,
+    // 0 is a value (CCD off), so not `||`
+    maxCcdSubsteps: opts?.maxCcdSubsteps ?? facade.state.maxCcdSubsteps,
   };
 
   if (!isWorkerTarget()) {

@@ -36,6 +36,7 @@ export type EngineAPIType = {
       timestep?: number;
       numSolverIterations?: number;
       numInternalPgsIterations?: number;
+      maxCcdSubsteps?: number;
     }
   ) => WorldAPI;
   /** Creates a rigid body. */

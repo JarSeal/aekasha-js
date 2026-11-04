@@ -58,6 +58,7 @@ export const facade: {
     gravity: { x: 0, y: -9.81, z: 0 },
     solverIterations: 10,
     internalPgsIterations: 1,
+    maxCcdSubsteps: 1,
     interpolationMode: 'NONE',
     useSAB: true,
     maxBodies: 2048,

@@ -79,6 +79,7 @@ export type PhysicsUpProtocol =
           timestep?: number;
           numSolverIterations?: number;
           numInternalPgsIterations?: number;
+          maxCcdSubsteps?: number;
         };
       }
     | { type: PhysicsProtocolType.DELETE_WORLD }

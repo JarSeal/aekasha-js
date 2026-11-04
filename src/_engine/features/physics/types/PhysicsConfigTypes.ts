@@ -71,6 +71,9 @@ export type PhysicsState = {
   solverIterations: number;
   /** The internal PGS iterations per solver iteration (`WorldAPI.setNumInternalPgsIterations`). */
   internalPgsIterations: number;
+  /** The continuous collision detection's substeps per step, 0 turning it off
+   * (`WorldAPI.setMaxCcdSubsteps`). */
+  maxCcdSubsteps: number;
   /** Render-time smoothing applied on top of the discrete physics-step pose (never written
    * back into the ECS TRANSFORM, which always stays the authoritative, non-interpolated
    * pose for gameplay code). Engine default 'NONE'. Both smoothing modes blend the last

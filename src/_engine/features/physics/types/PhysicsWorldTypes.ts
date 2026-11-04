@@ -174,15 +174,15 @@ export type WorldAPI = {
    * be truncated to their first impact on their path. The number of CCD substeps beyond 1 indicate how
    * many times that trajectory will be updated and continued after a hit. This can results in smoother
    * paths, but at a significant computational cost.
-   * `setMaxCcdSubstepsSync`'s `substeps` is the new maximum number of CCD substeps. Setting it
-   * to `0` disables CCD entirely.
+   * `setMaxCcdSubsteps`'s `substeps` is the new maximum number of CCD substeps. Setting it
+   * to `0` disables CCD entirely. Every new world (each scene load's) starts at
+   * `AppConfig.physics.maxCcdSubsteps`.
    */
   getMaxCcdSubsteps(): Promise<number>;
   /** `getMaxCcdSubsteps()` without the wait (on WORKER_THREAD the proxy's copy). */
   getMaxCcdSubstepsSync(): number;
-  /** Sets the maximum CCD substeps (0 turns CCD off). A one-way setter in both worker targets,
-   * despite its `Sync` name. */
-  setMaxCcdSubstepsSync(substeps: number): void;
+  /** Sets the maximum CCD substeps (0 turns CCD off). */
+  setMaxCcdSubsteps(substeps: number): void;
   /**
    * Creates a new rigid-body from the given rigid-body descriptor.
    * @param params The parameters of the rigid-body.

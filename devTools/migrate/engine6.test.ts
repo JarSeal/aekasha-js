@@ -12,6 +12,7 @@ import {
   type ImportRule,
   type RemovedImportRule,
   type RemovedMemberRule,
+  type RenamedMemberRule,
   type ReshapeRule,
 } from './engine6Rules';
 
@@ -48,6 +49,8 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       '  target?: number;',
       '};',
       'export type PhysicsEntityOpts = { id?: string; tierPolicy?: boolean };',
+      'export type WorldAPI = { setMaxCcdSubsteps(n: number): void };',
+      'export const getPhysicsWorld = (): WorldAPI => ({ setMaxCcdSubsteps: () => {} });',
       'export const createPhysicsEntity = (',
       '  props: PhysicsEntityProps,',
       '  opts?: PhysicsEntityOpts & { world?: object }',
@@ -202,6 +205,7 @@ const REMOVED_IMPORT_RULES: RemovedImportRule[] = ofKind('removedImport');
 const MEMBER_RULES: RemovedMemberRule[] = ofKind('removedMember');
 const CALL_RULES: CallArgRule[] = ofKind('callArg');
 const RESHAPE_RULES: ReshapeRule[] = ofKind('reshape');
+const RENAMED_MEMBER_RULES: RenamedMemberRule[] = ofKind('renamedMember');
 
 // Each reshape rule's fixture: a call in the old shape with every argument, and the new shape
 const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after: string }> = {
@@ -250,13 +254,31 @@ describe('the rules', () => {
         expect(exported(rule.entry), `${rule.id}: ${name}`).not.toContain(name);
       }
     }
-    for (const rule of MEMBER_RULES) {
+    for (const rule of [...MEMBER_RULES, ...RENAMED_MEMBER_RULES]) {
       for (const t of rule.types) expect(exported(t.entry), rule.id).toContain(t.name);
     }
     for (const rule of [...CALL_RULES, ...RESHAPE_RULES]) {
       expect(exported(rule.callee.entry), rule.id).toContain(rule.callee.name);
     }
   });
+
+  it.each(RENAMED_MEMBER_RULES.map((rule) => [rule.id, rule] as const))(
+    '%s: a read on a value of each type, and a call of it',
+    (_, rule) => {
+      for (const t of rule.types) {
+        for (const [from, to] of Object.entries(rule.members)) {
+          const before = (name: string) =>
+            lines(
+              `import type { ${t.name} } from '${t.entry}';`,
+              `declare const x: ${t.name};`,
+              `export const read = x.${name};`,
+              `x?.${name}(1);`
+            );
+          expect(migrate(before(from)), `${t.name}.${from}`).toBe(before(to));
+        }
+      }
+    }
+  );
 
   it.each(RESHAPE_RULES.map((rule) => [rule.id, rule] as const))(
     '%s: its fixture, and the old arguments each used once in their order',
@@ -658,6 +680,28 @@ describe('reports', () => {
         "export const a = [getSvgIcon('gear', 'sm'), ui.getSvgIcon('gear', \"sm\")];",
         'const own = (name: string, size: string) => name + size;',
         "export const b = own('gear', 'small');"
+      )
+    );
+  });
+});
+
+describe('member renames', () => {
+  it('renames on a call result, and leaves a member of another type alone', () => {
+    expect(
+      migrate(
+        lines(
+          "import { getPhysicsWorld } from 'aekasha/physics';",
+          'getPhysicsWorld().setMaxCcdSubstepsSync(2);',
+          'const mine = { setMaxCcdSubstepsSync: (n: number) => n };',
+          'mine.setMaxCcdSubstepsSync(2);'
+        )
+      )
+    ).toBe(
+      lines(
+        "import { getPhysicsWorld } from 'aekasha/physics';",
+        'getPhysicsWorld().setMaxCcdSubsteps(2);',
+        'const mine = { setMaxCcdSubstepsSync: (n: number) => n };',
+        'mine.setMaxCcdSubstepsSync(2);'
       )
     );
   });

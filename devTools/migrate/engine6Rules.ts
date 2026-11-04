@@ -77,6 +77,21 @@ export type CallArgRule = {
   anchor: string;
 };
 
+/**
+ * D10 kind 3, by the checker: a member an entry's type renamed. Where code reads it (`x.member`,
+ * a call of it included) on a value of one of `types`, it gets its new name.
+ */
+export type RenamedMemberRule = {
+  kind: 'renamedMember';
+  id: string;
+  /** The types (each an entry's export) whose members were renamed */
+  types: readonly EntryName[];
+  /** Each old member → its new name */
+  members: Readonly<Record<string, string>>;
+  decision: string;
+  anchor: string;
+};
+
 /** One of a reshaped call's new arguments: an old argument as it was, or an object of them */
 export type ReshapeArg = { param: string } | { props: readonly ReshapeProp[] };
 
@@ -112,7 +127,8 @@ export type Engine6Rule =
   | RemovedImportRule
   | RemovedMemberRule
   | CallArgRule
-  | ReshapeRule;
+  | ReshapeRule
+  | RenamedMemberRule;
 
 const rename = (
   entry: string,
@@ -134,6 +150,7 @@ const UI_KIT = 'the-ui-kit-s-names';
 const DEBUG = 'the-debug-entry-s-names';
 const TOOLKIT = 'toolkit-3-0-0';
 const CREATORS = 'the-entity-creators-and-createphysicsentity';
+const PHYSICS = 'the-physics-leftovers';
 
 /** Each name → the same advice */
 const each = (names: readonly string[], advice: string) =>
@@ -379,6 +396,14 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     newHas: { index: 0, member: 'colliders' },
     decision: 'p622 D3',
     anchor: CREATORS,
+  },
+  {
+    kind: 'renamedMember',
+    id: 'rename:setMaxCcdSubstepsSync',
+    types: type('aekasha/physics', 'WorldAPI'),
+    members: { setMaxCcdSubstepsSync: 'setMaxCcdSubsteps' },
+    decision: 'p622 D7',
+    anchor: PHYSICS,
   },
   {
     kind: 'import',

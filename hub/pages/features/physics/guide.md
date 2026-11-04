@@ -89,6 +89,12 @@ force events arrive at the start of the next step.
 In worker mode, the commands those systems send are captured per step, carried in the frame's
 one STEP message and replayed in order in the worker.
 
+The world's settings come from `AppConfig.physics`: `gravity`, `solverIterations`,
+`internalPgsIterations` and `maxCcdSubsteps` (how many times continuous collision detection, a
+body's `ccdEnabled`, continues a fast body's path after a hit in one step; 0 turns it off). Every
+world is made from them, each scene load's too, so a value set on the running world
+(`getPhysicsWorld().setMaxCcdSubsteps(2)`) lasts until the next scene load. The Physics API debug tab edits and saves them.
+
 ## Deterministic scene loads
 
 A scene load holds physics, replaces the world with a fresh one, and lets it step only after

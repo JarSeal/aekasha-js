@@ -171,7 +171,7 @@ export class EngineWorldProxyAPI implements WorldAPI {
   async getMaxCcdSubsteps(): Promise<number> {
     return this.getMaxCcdSubstepsSync();
   }
-  setMaxCcdSubstepsSync(substeps: number): void {
+  setMaxCcdSubsteps(substeps: number): void {
     backend.world.maxCcdSubsteps = substeps;
   }
 

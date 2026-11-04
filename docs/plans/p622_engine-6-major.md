@@ -655,6 +655,37 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   (the tab's saved value applied before the first world, like the others). A unit test that a
   second world gets the configured value on both targets' paths that run in Node; the scene runner
   with the default 1 keeps the hashes.
+
+  As built (section 2):
+
+  - `maxCcdSubsteps` goes where `internalPgsIterations` goes: `PhysicsState` (default 1),
+    `AppConfig.physics`, `createPhysicsWorld`'s options, the backend contract's and the
+    `CREATE_WORLD` message's `opts`, `RapierWorld.ts`' `init` and `createWorld`. **0 is a value**
+    (CCD off), so it's passed with `??` and set when it isn't `undefined` (the other settings'
+    `||` / truthy checks would drop it). The worker proxy's copy starts from the state (Rapier's
+    1 was hard-coded there).
+  - The Physics API tab: a "Max CCD substeps (0 turns CCD off)" field after the PGS iterations,
+    in `LIVE_PERSIST_KEYS` (saved under `PHYSICS_LS_KEY`, restored before the first world by
+    `_hydratePhysicsLiveSettings`) and on the undo history with the solver settings
+    (`_dbg__PhysicsSettingsUndo.ts`).
+  - Tests: one per target (`PhysicsFacade.test.ts`, `PhysicsWorkerRequests.test.ts`, the config
+    at 3): the first world, the setter, a `resetPhysicsWorld` world back at the setting, and 0
+    reaching the world; on the worker target both the proxy's copy and the worker's answer.
+  - **The codemod: a fifth rule kind, `renamedMember`** (`x.old` on a value of an entry's type →
+    the new name; kind 3 in D10's terms), for `WorldAPI.setMaxCcdSubstepsSync`. Its anchor is
+    `the-physics-leftovers` (**Phase 8 writes that heading** with the others). The run changes
+    nothing (no caller in the template). 55 tests.
+  - The Hub's physics guide's Stepping section names the world settings and that a value set on
+    the running world lasts until the next scene load; `features/physics/CLAUDE.md` has a bullet
+    on the settings' path. The issue file is closed in section 3, with the enums' (D7).
+  - `yarn verify:baselines` unchanged (`api.json` lists exports, not members); `yarn
+    hub:build` clean but the search index's size warning. `yarn verify:scenes`: every hash
+    unchanged; the `debugger` shots of the Physics API tab (`testDebugScene`,
+    `thirdPersonGymScene`) differ by the new row and were recorded (`--only … --config debugger
+    --update`); the gym's `workerMsg` snapshot failed once and passed twice alone (p428, as in
+    Phase 2). The `testDebugScene` `stats.panels` shot is intermittent: its graphs' bars aren't
+    masked, so a recording run can catch another bar (failed once after the recording, passed the
+    next run).
 - **Section 3:** the enums, `PhysicsHooks` and `step`'s `hooks` out of the types, the entry, the
   backend and `EngineRapier.test.ts`; the report rule; both issue files closed.
 

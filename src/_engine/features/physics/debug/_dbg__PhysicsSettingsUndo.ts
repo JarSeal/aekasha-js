@@ -1,5 +1,5 @@
 // The Physics API tab's world settings on the global undo / redo history (the physics world and
-// its settings are shared by every scene): gravity and the solver's iterations, their handlers
+// its settings are shared by every scene): gravity, the solver's iterations and the CCD substeps, their handlers
 // registered at this module's load.
 import { persistDebuggerTabValue, updateDebuggerTab } from '../../../debug/DebuggerGUI';
 import {
@@ -14,7 +14,7 @@ import {
   getPhysicsEntityRigidBody,
 } from './_dbg__PhysicsDebugState';
 
-type UndoableSetting = 'gravity' | 'solverIterations' | 'internalPgsIterations';
+type UndoableSetting = 'gravity' | 'solverIterations' | 'internalPgsIterations' | 'maxCcdSubsteps';
 type SettingValues = Pick<PhysicsState, UndoableSetting>;
 type SettingUndoPayload<K extends UndoableSetting> = {
   prev: SettingValues[K];
@@ -25,6 +25,7 @@ const UNDOABLE_SETTING_LABELS: Record<UndoableSetting, string> = {
   gravity: 'Physics: gravity',
   solverIterations: 'Physics: solver iterations',
   internalPgsIterations: 'Physics: internal PGS iterations',
+  maxCcdSubsteps: 'Physics: max CCD substeps',
 };
 
 /** Pushes a setting from the state into the running world. */
@@ -45,6 +46,9 @@ export const applySettingToWorld: Record<UndoableSetting, (state: PhysicsState) 
     if (isPhysicsWorldEnabled()) {
       getPhysicsWorld().setNumInternalPgsIterations(state.internalPgsIterations);
     }
+  },
+  maxCcdSubsteps: (state) => {
+    if (isPhysicsWorldEnabled()) getPhysicsWorld().setMaxCcdSubsteps(state.maxCcdSubsteps);
   },
 };
 
@@ -85,3 +89,4 @@ const registerSettingUndoHandler = <K extends UndoableSetting>(key: K) => {
 registerSettingUndoHandler('gravity');
 registerSettingUndoHandler('solverIterations');
 registerSettingUndoHandler('internalPgsIterations');
+registerSettingUndoHandler('maxCcdSubsteps');

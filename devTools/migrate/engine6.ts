@@ -15,6 +15,8 @@
  *   callee's declaration, in its old shape gets the new one; the old arguments' comments go with
  *   them. Its argument list is written last, with the other edits inside it applied (a renamed
  *   name in an argument, a reshaped call in another), so those are no overlap.
+ * - Kind 3, the member renames (`RenamedMemberRule`): `x.old` on a value of an entry's type gets
+ *   the new name.
  * - A touched import is written again whole, in the repo's style (a value import left with only
  *   inline types becomes `import type`); the CLI formats the module with Prettier.
  * - Kind 4, the reports (what needs a person), each from the checker's symbols: an import of a
@@ -35,6 +37,7 @@ import type {
   ImportRule,
   RemovedImportRule,
   RemovedMemberRule,
+  RenamedMemberRule,
   ReshapeRule,
 } from './engine6Rules';
 
@@ -575,6 +578,31 @@ const applyRemovedImportRule = (m: ModuleState, rule: RemovedImportRule) => {
 };
 
 type MemberRuleTargets = { rule: RemovedMemberRule; targets: ReadonlySet<ts.Symbol> };
+type RenameRuleTargets = { rule: RenamedMemberRule; targets: ReadonlySet<ts.Symbol> };
+
+/** The renamed members read (`x.member`) on a value of a target type */
+const applyRenamedMemberRules = (m: ModuleState, rules: readonly RenameRuleTargets[]) => {
+  const byMember = new Map<string, { to: string; targets: ReadonlySet<ts.Symbol> }[]>();
+  for (const { rule, targets } of rules) {
+    for (const [from, to] of Object.entries(rule.members)) {
+      if (targets.size && m.sf.text.includes(from)) {
+        byMember.set(from, [...(byMember.get(from) ?? []), { to, targets }]);
+      }
+    }
+  }
+  if (!byMember.size) return;
+  const visit = (node: ts.Node) => {
+    if (ts.isPropertyAccessExpression(node)) {
+      const type = m.checker.getTypeAtLocation(node.expression);
+      const renamed = byMember
+        .get(node.name.text)
+        ?.find(({ targets }) => findTargetType(type, targets));
+      if (renamed) m.edits.push(replaceEdit(m.sf, node.name, renamed.to));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(m.sf);
+};
 
 /** The reports of the removed members: a read (`x.member`, a destructuring) of one on a value of
  * a target type, and an object literal of a target contextual type writing one */
@@ -861,9 +889,12 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
   const memberRules: MemberRuleTargets[] = [];
   const callRules: CallRuleTargets[] = [];
   const reshapeRules: ReshapeRuleTargets[] = [];
+  const renameRules: RenameRuleTargets[] = [];
   for (const rule of rules) {
     if (rule.kind === 'removedMember') {
       memberRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
+    } else if (rule.kind === 'renamedMember') {
+      renameRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
     } else if (rule.kind === 'callArg') {
       const [target] = symbolsOf(exportsOf, [rule.callee]);
       if (target) callRules.push({ rule, target });
@@ -893,6 +924,7 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
       else if (rule.kind === 'removedImport') applyRemovedImportRule(m, rule);
     }
     applyRemovedMemberRules(m, memberRules);
+    applyRenamedMemberRules(m, renameRules);
     applyCallArgRules(m, callRules);
     applyReshapeRules(m, reshapeRules);
     renameReferences(m);
