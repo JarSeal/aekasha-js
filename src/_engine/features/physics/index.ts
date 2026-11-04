@@ -57,7 +57,7 @@ export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
 export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
 export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';
-export type { PhysicsEntityOpts } from './PhysicsEntity';
+export type { PhysicsEntityOpts, PhysicsEntityProps } from './PhysicsEntity';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from './PhysicsTierPolicy';
 export { getPhysicsTier, requestPhysicsTier } from './PhysicsTiers';
 export { physics } from './PhysicsFeature';

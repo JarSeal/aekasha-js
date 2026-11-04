@@ -173,17 +173,17 @@ const createGroundAsync = async () => {
     },
     { appId: 'groundMesh' }
   );
-  await createPhysicsEntity(
-    {
+  await createPhysicsEntity({
+    colliders: {
       type: 'BOX',
       hx: GROUND_SIZE / 2,
       hy: GROUND_HEIGHT / 2,
       hz: GROUND_SIZE / 2,
       friction: 0,
     },
-    { rigidType: 'FIXED', translation: GROUND_POSITION },
-    groundEntityId
-  );
+    body: { rigidType: 'FIXED', translation: GROUND_POSITION },
+    target: groundEntityId,
+  });
 };
 
 /** A spinning box that bounces, a metal ball and a tumbling cylinder, all DYNAMIC. */
@@ -197,11 +197,15 @@ const createFallingObjectsAsync = async () => {
     },
     { appId: 'boxMesh1' }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5, restitution: 0.5, friction: 0 },
-    { rigidType: 'DYNAMIC', translation: { x: 2, y: 0, z: 0 }, angvel: { x: 1, y: -2, z: 20 } },
-    boxEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5, restitution: 0.5, friction: 0 },
+    body: {
+      rigidType: 'DYNAMIC',
+      translation: { x: 2, y: 0, z: 0 },
+      angvel: { x: 1, y: -2, z: 20 },
+    },
+    target: boxEntityId,
+  });
 
   // The three maps of the batch load: the metallic map picks the rusty parts out of the metal
   const ballEntityId = createMeshEntity(
@@ -223,11 +227,11 @@ const createFallingObjectsAsync = async () => {
     { appId: 'physicsBall01' }
   );
   // The radius given: a collider isn't inferred from the mesh's sphere params
-  await createPhysicsEntity(
-    { type: 'BALL', radius: 1 },
-    { rigidType: 'DYNAMIC', translation: { x: 2, y: 3, z: -2 } },
-    ballEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BALL', radius: 1 },
+    body: { rigidType: 'DYNAMIC', translation: { x: 2, y: 3, z: -2 } },
+    target: ballEntityId,
+  });
 
   const cylinderEntityId = createMeshEntity(
     {
@@ -251,11 +255,15 @@ const createFallingObjectsAsync = async () => {
     { appId: 'physicsCyl01' }
   );
   // Given too: the half height is half the mesh's height, the radius its bottom radius
-  await createPhysicsEntity(
-    { type: 'CYLINDER', halfHeight: 0.125, radius: 0.5 },
-    { rigidType: 'DYNAMIC', translation: { x: -2, y: 3, z: -2 }, angvel: { x: 23, y: 1, z: 5 } },
-    cylinderEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'CYLINDER', halfHeight: 0.125, radius: 0.5 },
+    body: {
+      rigidType: 'DYNAMIC',
+      translation: { x: -2, y: 3, z: -2 },
+      angvel: { x: 23, y: 1, z: 5 },
+    },
+    target: cylinderEntityId,
+  });
 };
 
 /** A group entity holding two small boxes, made without adding them to the scene first. */
@@ -350,19 +358,19 @@ const createSensorAsync = async (sphereMaterial: THREE.Material | THREE.Material
   let bodiesInside = 0;
   await createPhysicsEntity(
     {
-      type: 'BOX',
-      hx: 10,
-      hy: 0.2,
-      hz: 10,
-      isSensor: true,
-      translation: { x: 0, y: -1.5, z: 0 },
-      collisionEventFn: (_collider1, _collider2, started) => {
-        bodiesInside += started ? 1 : -1;
-        color?.setHex(bodiesInside > 0 ? 0x00ff00 : 0xff0000);
+      colliders: {
+        type: 'BOX',
+        hx: 10,
+        hy: 0.2,
+        hz: 10,
+        isSensor: true,
+        translation: { x: 0, y: -1.5, z: 0 },
+        collisionEventFn: (_collider1, _collider2, started) => {
+          bodiesInside += started ? 1 : -1;
+          color?.setHex(bodiesInside > 0 ? 0x00ff00 : 0xff0000);
+        },
       },
     },
-    undefined,
-    undefined,
     { appId: 'sensorTest' }
   );
 };

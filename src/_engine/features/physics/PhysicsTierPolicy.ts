@@ -284,7 +284,11 @@ export const getPhysicsTierPolicyStatus = (ecsWorld?: ECSWorld) => {
  *
  * declare const rockMesh: Parameters<typeof createMeshEntity>[0];
  * const rockId = createMeshEntity(rockMesh);
- * await createPhysicsEntity({ type: 'BALL', radius: 1 }, { rigidType: 'DYNAMIC' }, rockId);
+ * await createPhysicsEntity({
+ *   colliders: { type: 'BALL', radius: 1 },
+ *   body: { rigidType: 'DYNAMIC' },
+ *   target: rockId,
+ * });
  * setPhysicsTierPolicyMember(rockId, true);
  * ```
  */

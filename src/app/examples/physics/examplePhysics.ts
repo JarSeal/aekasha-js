@@ -56,11 +56,11 @@ const dropShape = async (shape: Shape, position: { x: number; y: number; z: numb
     receiveShadow: true,
   });
   const tilt = new THREE.Quaternion().setFromEuler(tmpEuler.set(position.z, 0, position.x));
-  await createPhysicsEntity(
-    shape.collider,
-    { rigidType: 'DYNAMIC', translation: position, rotation: tilt },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: shape.collider,
+    body: { rigidType: 'DYNAMIC', translation: position, rotation: tilt },
+    target: entityId,
+  });
   return entityId;
 };
 // #endregion physics-drop
@@ -74,11 +74,11 @@ export const scene = async () => {
     position: { y: -0.25 },
     receiveShadow: true,
   });
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 10, hy: 0.25, hz: 10 },
-    { rigidType: 'FIXED', translation: { x: 0, y: -0.25, z: 0 } },
-    groundId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 10, hy: 0.25, hz: 10 },
+    body: { rigidType: 'FIXED', translation: { x: 0, y: -0.25, z: 0 } },
+    target: groundId,
+  });
 
   // One of each, in a row: the same drop on every visit (scene loads are deterministic)
   const dropped = await Promise.all(

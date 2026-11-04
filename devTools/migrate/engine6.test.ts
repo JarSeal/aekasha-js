@@ -12,6 +12,7 @@ import {
   type ImportRule,
   type RemovedImportRule,
   type RemovedMemberRule,
+  type ReshapeRule,
 } from './engine6Rules';
 
 // The modules live in a folder that doesn't exist; the entries are stand-ins in engine 6's shape
@@ -39,6 +40,18 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
     text: [
       'export type PhysicsState = { timestep: number };',
       'export const getPhysicsState = (): PhysicsState => ({ timestep: 60 });',
+      'export type ColliderParams = { type: string; radius?: number; userData?: object };',
+      'export type RigidBodyParams = { rigidType: string };',
+      'export type PhysicsEntityProps = {',
+      '  colliders: ColliderParams | ColliderParams[];',
+      '  body?: RigidBodyParams;',
+      '  target?: number;',
+      '};',
+      'export type PhysicsEntityOpts = { id?: string; tierPolicy?: boolean };',
+      'export const createPhysicsEntity = (',
+      '  props: PhysicsEntityProps,',
+      '  opts?: PhysicsEntityOpts & { world?: object }',
+      '): number => 1;',
     ].join('\n'),
   },
   'aekasha/skybox': {
@@ -188,6 +201,17 @@ const IMPORT_RULES: ImportRule[] = ofKind('import');
 const REMOVED_IMPORT_RULES: RemovedImportRule[] = ofKind('removedImport');
 const MEMBER_RULES: RemovedMemberRule[] = ofKind('removedMember');
 const CALL_RULES: CallArgRule[] = ofKind('callArg');
+const RESHAPE_RULES: ReshapeRule[] = ofKind('reshape');
+
+// Each reshape rule's fixture: a call in the old shape with every argument, and the new shape
+const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after: string }> = {
+  'reshape:createPhysicsEntity': {
+    imports: "import { createPhysicsEntity } from 'aekasha/physics';\ndeclare const w: object;",
+    before: "createPhysicsEntity({ type: 'BALL' }, { rigidType: 'DYNAMIC' }, 1, { id: 'b' }, w);",
+    after:
+      "createPhysicsEntity({ colliders: { type: 'BALL' }, body: { rigidType: 'DYNAMIC' }, target: 1 }, { id: 'b', world: w });",
+  },
+};
 
 describe('the rules', () => {
   it.each(IMPORT_RULES.map((rule) => [rule.id, rule] as const))(
@@ -229,10 +253,25 @@ describe('the rules', () => {
     for (const rule of MEMBER_RULES) {
       for (const t of rule.types) expect(exported(t.entry), rule.id).toContain(t.name);
     }
-    for (const rule of CALL_RULES) {
+    for (const rule of [...CALL_RULES, ...RESHAPE_RULES]) {
       expect(exported(rule.callee.entry), rule.id).toContain(rule.callee.name);
     }
   });
+
+  it.each(RESHAPE_RULES.map((rule) => [rule.id, rule] as const))(
+    '%s: its fixture, and the old arguments each used once in their order',
+    (_, rule) => {
+      const used = rule.args.flatMap((arg) =>
+        'param' in arg ? [arg.param] : arg.props.map((p) => ('key' in p ? p.param : p.spread))
+      );
+      expect(used).toEqual(rule.params);
+      const fixture = RESHAPE_FIXTURES[rule.id];
+      expect(fixture, rule.id).toBeDefined();
+      expect(migrate(lines(fixture.imports, fixture.before))).toBe(
+        lines(fixture.imports, fixture.after)
+      );
+    }
+  );
 
   it.each(REMOVED_IMPORT_RULES.map((rule) => [rule.id, rule] as const))(
     '%s: each import is reported',
@@ -621,5 +660,134 @@ describe('reports', () => {
         "export const b = own('gear', 'small');"
       )
     );
+  });
+});
+
+describe('call reshapes', () => {
+  const IMPORTS = lines(
+    "import { createPhysicsEntity } from 'aekasha/physics';",
+    "import * as physics from 'aekasha/physics';",
+    'declare const world: object;',
+    'declare const colliders: { type: string }[];',
+    'declare const isNew: boolean;'
+  );
+  const reshape = (...body: string[]) => {
+    const out = migrate(lines(IMPORTS, ...body));
+    expect(out.startsWith(`${IMPORTS}\n`)).toBe(true);
+    return out.slice(IMPORTS.length + 1);
+  };
+
+  it('createPhysicsEntity: the props, the options merged with the world, the placeholders dropped', () => {
+    expect(
+      reshape(
+        "createPhysicsEntity({ type: 'BOX' }, { rigidType: 'FIXED' }, 1);",
+        'createPhysicsEntity(colliders);',
+        "createPhysicsEntity(colliders, undefined, 2, { tierPolicy: true, id: 'a' });",
+        "createPhysicsEntity(colliders, { rigidType: 'FIXED' }, 3, undefined, world);",
+        "physics.createPhysicsEntity(colliders, undefined, undefined, isNew ? { id: 'b' } : undefined);",
+        "createPhysicsEntity(colliders, undefined, undefined, isNew ? { id: 'c' } : undefined, world);",
+        'createPhysicsEntity(colliders, undefined, undefined, {}, world);'
+      )
+    ).toBe(
+      lines(
+        "createPhysicsEntity({ colliders: { type: 'BOX' }, body: { rigidType: 'FIXED' }, target: 1 });",
+        'createPhysicsEntity({ colliders });',
+        "createPhysicsEntity({ colliders, target: 2 }, { tierPolicy: true, id: 'a' });",
+        "createPhysicsEntity({ colliders, body: { rigidType: 'FIXED' }, target: 3 }, { world });",
+        "physics.createPhysicsEntity({ colliders }, isNew ? { id: 'b' } : undefined);",
+        "createPhysicsEntity({ colliders }, { ...(isNew ? { id: 'c' } : undefined), world });",
+        'createPhysicsEntity({ colliders }, { world });'
+      )
+    );
+  });
+
+  it('leaves a new-shaped call and a local function of the name alone', () => {
+    const input = lines(
+      "createPhysicsEntity({ colliders: { type: 'BOX' } }, { world });",
+      'const props = { colliders };',
+      'createPhysicsEntity(props);',
+      'const own = (a: object, b?: object, c?: number) => c;',
+      "own({ type: 'BOX' }, { rigidType: 'FIXED' }, 1);"
+    );
+    expect(reshape(input)).toBe(input);
+  });
+
+  it("keeps the arguments' comments, a dropped placeholder's with the next argument", () => {
+    expect(
+      reshape(
+        'createPhysicsEntity(',
+        "  { type: 'BALL' }, // the radius comes from the sphere",
+        "  { rigidType: 'DYNAMIC' },",
+        '  1',
+        ');',
+        'createPhysicsEntity(',
+        '  // the ground',
+        "  { type: 'BOX' },",
+        '  undefined,',
+        '  2 /* its mesh */',
+        ');',
+        'createPhysicsEntity(',
+        '  colliders,',
+        '  undefined,',
+        '  // No mesh: its own entity',
+        '  undefined,',
+        "  { id: 'sensor' }",
+        ');'
+      )
+    ).toBe(
+      lines(
+        'createPhysicsEntity({',
+        "colliders: { type: 'BALL' }, // the radius comes from the sphere",
+        "body: { rigidType: 'DYNAMIC' },",
+        'target: 1,',
+        '});',
+        'createPhysicsEntity({',
+        '// the ground',
+        "colliders: { type: 'BOX' },",
+        'target: 2, /* its mesh */',
+        '});',
+        'createPhysicsEntity(',
+        '{ colliders },',
+        '// No mesh: its own entity',
+        "{ id: 'sensor' },",
+        ');'
+      )
+    );
+  });
+
+  it('takes in the edits inside its arguments: a rename, a nested call', () => {
+    expect(
+      migrate(
+        lines(
+          "import { createPhysicsEntity } from 'aekasha/physics';",
+          "import { registerOnAllSceneEnterings } from 'aekasha';",
+          'createPhysicsEntity(',
+          "  { type: 'BOX', userData: { f: registerOnAllSceneEnterings } },",
+          '  undefined,',
+          "  createPhysicsEntity({ type: 'BALL' })",
+          ');'
+        )
+      )
+    ).toBe(
+      lines(
+        "import { createPhysicsEntity } from 'aekasha/physics';",
+        "import { registerOnAllSceneEnters } from 'aekasha';",
+        "createPhysicsEntity({ colliders: { type: 'BOX', userData: { f: registerOnAllSceneEnters } }, target: createPhysicsEntity({ colliders: { type: 'BALL' } }) });"
+      )
+    );
+  });
+
+  it('reports a call it cannot tell or reshape: an `any` argument, a spread', () => {
+    expect(
+      reportsOf(
+        lines(
+          IMPORTS,
+          'declare const loose: any;',
+          'declare const all: [{ type: string }];',
+          'createPhysicsEntity(loose);',
+          'createPhysicsEntity(colliders, ...([] as []));'
+        )
+      ).map((r) => r.slice(0, r.indexOf(':', r.indexOf('`'))))
+    ).toEqual(['app/a.ts:8 `createPhysicsEntity`', 'app/a.ts:9 `createPhysicsEntity`']);
   });
 });

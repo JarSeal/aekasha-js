@@ -140,9 +140,9 @@ const resolveTierGroup = (
  * ```ts
  * import { createPhysicsEntity, requestPhysicsTier } from 'aekasha/physics';
  *
- * const crateId = await createPhysicsEntity({ type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 }, {
- *   rigidType: 'DYNAMIC',
- *   translation: { x: 0, y: 2, z: 0 },
+ * const crateId = await createPhysicsEntity({
+ *   colliders: { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 },
+ *   body: { rigidType: 'DYNAMIC', translation: { x: 0, y: 2, z: 0 } },
  * });
  * // Out of sight: frozen in place, still collidable
  * requestPhysicsTier(crateId, 'STATIC');

@@ -321,9 +321,7 @@ export const createMovingPlatform = async (
   const target: THREE.Object3D | number | undefined = meshEntityId ?? mesh;
   const world = getECSWorld();
   const entityId = await createPhysicsEntity(
-    colliderParamsArray,
-    rigidBodyParams,
-    target,
+    { colliders: colliderParamsArray, body: rigidBodyParams, target },
     target === undefined ? { appId: `movingPlatform-${id}`, debugData: { name } } : undefined
   );
   if (!world.isAlive(entityId)) {

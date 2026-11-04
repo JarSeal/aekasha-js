@@ -615,6 +615,41 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 - **Section 1:** `createPhysicsEntity(props, opts?)` and its types on `aekasha/physics`; the codemod
   rule and fixtures; run the codemod over `src` (engine, toolkit, app); the two `@example`s, the
   readme's example and the Hub's three blocks by hand; `features/physics/CLAUDE.md`.
+
+  As built (section 1):
+
+  - `PhysicsEntityProps` (`colliders`, `body`, `target`, each key documented) is new on
+    `aekasha/physics`; `opts` is `PhysicsEntityOpts & { world?: ECSWorld }` written inline
+    (Phase 5's `CreateEntityOpts` may name it). `createPhysicsEntity` takes `world` out before
+    the entity's options reach `world.createEntity`; `createPhysicsEntityNow` is unchanged.
+  - **The codemod's kind 3 frame** (`ReshapeRule` in `engine6Rules.ts`, `reshapeCall` in
+    `engine6.ts`): `params` names the old arguments, `args` the new ones (an old argument, or an
+    object of `{ key, param }` / `{ spread }`). A call is in the old shape when it has more than
+    `newArgCount` arguments, or when its argument at `newHas.index` has no `newHas.member`; an
+    `any` there and a spread argument are reported. An `undefined` (and an empty literal to
+    spread) is dropped, its comments carried to the next argument kept (`physicsTest.ts`' sensor
+    comment). Comments go with their argument; an object of one spread is that argument as it
+    was. **No second pass:** the reshaped argument list is written last, innermost first, with
+    the edits inside its arguments applied to their text (`resolveReshapes`), so a rename or a
+    reshaped call inside an argument isn't an overlap (Phase 1's note about nested calls is
+    settled). A test checks that each rule's `args` name its `params` once, in order.
+    **Phases 5-6 extend it:** the light setters and the spatial functions move the world first
+    (reordered arguments: allow it only for arguments without side effects, or report the
+    others), an omitted world becomes `getECSWorld()` with its import (nothing in the frame adds
+    an import yet), and `getScene` / `createSceneLoader` / the sky box functions need another
+    old-shape test (a boolean or number argument where the options object goes now).
+  - The run over `src hub/_assets/ts`: 16 modules (the engine's `Character.ts`,
+    `ImportPhysics.ts` and two tests, the toolkit's `MovingPlatform.ts`, 11 app modules), nothing
+    reported; a second `--check` finds nothing. By hand: four `@example`s, not two
+    (`PhysicsEntity.ts`, `PhysicsTiers.ts`, `PhysicsTierPolicy.ts`, the toolkit's
+    `MutualGravity.ts`), `MovingPlatform.test.ts`' `vi.mock` factory, the readme, the code
+    blocks page's three blocks (`documentation/intro.md` only imports the name) and the physics
+    guide's `target` line.
+  - `yarn verify:baselines`: the API diff is `PhysicsEntityProps` alone, the bundles unchanged
+    (recorded). `yarn hub:build` clean except the search index's size warning (483 KiB gzipped,
+    over 450; one name added, so not from this section). `yarn verify:scenes`: 114 passed, every
+    hash unchanged (`space`'s worker hashes differ from `MAIN_THREAD`'s, as its `unstableHash`
+    says).
 - **Section 2:** `setMaxCcdSubsteps` and `AppConfig.physics.maxCcdSubsteps` through
   `PhysicsState.ts`, both targets' world create, `resetPhysicsWorld` and the Physics API tab
   (the tab's saved value applied before the first world, like the others). A unit test that a

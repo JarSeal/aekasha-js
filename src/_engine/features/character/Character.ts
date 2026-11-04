@@ -163,11 +163,8 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
   const visualId = ecsWorld.getComponent(entityId, ComponentType.APP_ID)?.id ?? visualAppId;
 
   await createPhysicsEntity(
-    physicsParams.colliders,
-    physicsParams.rigidBody,
-    entityId,
-    undefined,
-    ecsWorld
+    { colliders: physicsParams.colliders, body: physicsParams.rigidBody, target: entityId },
+    { world: ecsWorld }
   );
 
   const char: CharacterObject = {

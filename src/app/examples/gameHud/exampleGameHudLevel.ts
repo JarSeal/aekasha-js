@@ -68,11 +68,11 @@ const createWall = async (size: Vec3, at: Vec3, color: string) => {
     castShadow: true,
     receiveShadow: true,
   });
-  await createPhysicsEntity(
-    { type: 'BOX', hx: width / 2, hy: height / 2, hz: depth / 2 },
-    { rigidType: 'FIXED', translation: { x, y, z } },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: width / 2, hy: height / 2, hz: depth / 2 },
+    body: { rigidType: 'FIXED', translation: { x, y, z } },
+    target: entityId,
+  });
 };
 
 /** A crate: a DYNAMIC body the player pushes and the shots knock, a material each (a broken
@@ -89,11 +89,11 @@ const createCrate = async ([x, y, z]: Vec3, index: number): Promise<GameHudCrate
     },
     { appId }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 },
-    { rigidType: 'DYNAMIC', translation: { x, y, z } },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 },
+    body: { rigidType: 'DYNAMIC', translation: { x, y, z } },
+    target: entityId,
+  });
   const material = getStandardMaterial(appId);
   // A material outlives a visit: each one starts whole
   material.color.set(CRATE);
@@ -117,11 +117,11 @@ const createNpc = async ({ id, name, color, at: [x, , z] }: (typeof NPCS)[number
     castShadow: true,
     receiveShadow: true,
   });
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 0.45, hy: 0.85, hz: 0.45 },
-    { rigidType: 'FIXED', translation: { x, y: 0.85, z } },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 0.45, hy: 0.85, hz: 0.45 },
+    body: { rigidType: 'FIXED', translation: { x, y: 0.85, z } },
+    target: entityId,
+  });
   return { id, name, color, entityId, position: new THREE.Vector3(x, 0, z) };
 };
 
@@ -142,11 +142,11 @@ const createBeacon = async () => {
     position: { x, y: 1.5, z },
     castShadow: true,
   });
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 0.6, hy: 1.5, hz: 0.6 },
-    { rigidType: 'FIXED', translation: { x, y: 1.5, z } },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 0.6, hy: 1.5, hz: 0.6 },
+    body: { rigidType: 'FIXED', translation: { x, y: 1.5, z } },
+    target: entityId,
+  });
   const material = getStandardMaterial('exampleGameHudBeacon');
   material.emissive.set('#000000');
   return { entityId, position: new THREE.Vector3(x, 0, z), material };

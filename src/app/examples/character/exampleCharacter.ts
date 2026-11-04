@@ -67,11 +67,11 @@ const createBlock = async ({
     castShadow: true,
     receiveShadow: true,
   });
-  await createPhysicsEntity(
-    { type: 'BOX', hx: width / 2, hy: height / 2, hz: depth / 2 },
-    { rigidType: 'FIXED', translation: { x, y, z }, rotation },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: width / 2, hy: height / 2, hz: depth / 2 },
+    body: { rigidType: 'FIXED', translation: { x, y, z }, rotation },
+    target: entityId,
+  });
 };
 
 /** A box `thickness` thick, tilted about X, whose top face rises from `from` to `to` ([y, z],
@@ -115,14 +115,14 @@ const createStairs = () => {
     });
   }
   const stairs = getSlope([0, -1.75], [1, -4.25], 0.2);
-  return createPhysicsEntity(
-    { type: 'BOX', hx: 1.5, hy: 0.1, hz: stairs.length / 2 },
-    {
+  return createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 1.5, hy: 0.1, hz: stairs.length / 2 },
+    body: {
       rigidType: 'FIXED',
       translation: { x: -6, y: stairs.y, z: stairs.z },
       rotation: new THREE.Quaternion().setFromAxisAngle(X_AXIS, stairs.angle),
-    }
-  );
+    },
+  });
 };
 
 /** Every body requested at once, then awaited together: a create sends its body before its first

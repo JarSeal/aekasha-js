@@ -61,11 +61,11 @@ const createGround = async () => {
     },
     { appId: 'topDownTestGround' }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', friction: 2 },
-    { rigidType: 'FIXED', translation: position },
-    groundEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', friction: 2 },
+    body: { rigidType: 'FIXED', translation: position },
+    target: groundEntityId,
+  });
 };
 
 /** The hills patch on the East side of the ground (world-space center and size). */
@@ -144,8 +144,8 @@ const createHills = async () => {
     },
     { appId: 'topDownTestHills' }
   );
-  await createPhysicsEntity(
-    {
+  await createPhysicsEntity({
+    colliders: {
       type: 'TRIMESH',
       vertices: geometry.getAttribute('position').array as Float32Array,
       indices: Uint32Array.from(
@@ -153,9 +153,9 @@ const createHills = async () => {
       ),
       friction: 1,
     },
-    { rigidType: 'FIXED', translation: position },
-    hillsEntityId
-  );
+    body: { rigidType: 'FIXED', translation: position },
+    target: hillsEntityId,
+  });
 
   return (x: number, z: number) => {
     const localX = x - HILLS.centerX;
@@ -364,7 +364,11 @@ const createStaticObstacles = async (getGroundHeightAt: (x: number, z: number) =
       // The body takes the mesh's position and rotation, the collider its geometry's size. The
       // default friction (0.5): with 1, a character pushing into a wall at 45° can stick to it
       // instead of sliding along it.
-      await createPhysicsEntity({ type: shape.collider }, { rigidType: 'FIXED' }, entityId);
+      await createPhysicsEntity({
+        colliders: { type: shape.collider },
+        body: { rigidType: 'FIXED' },
+        target: entityId,
+      });
       index++;
     }
   }
@@ -506,11 +510,11 @@ const createDynamicProps = async (obstacles: Footprint[]) => {
       },
       { appId: `topDownTestProp${index}`, debugData: { name: `Prop ${index} (${kind})` } }
     );
-    await createPhysicsEntity(
-      { type: shape.collider, density: PROPS.densities[densityIndex].density },
-      { rigidType: 'DYNAMIC' },
-      entityId
-    );
+    await createPhysicsEntity({
+      colliders: { type: shape.collider, density: PROPS.densities[densityIndex].density },
+      body: { rigidType: 'DYNAMIC' },
+      target: entityId,
+    });
   }
 };
 

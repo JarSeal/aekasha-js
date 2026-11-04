@@ -77,7 +77,42 @@ export type CallArgRule = {
   anchor: string;
 };
 
-export type Engine6Rule = ImportRule | RemovedImportRule | RemovedMemberRule | CallArgRule;
+/** One of a reshaped call's new arguments: an old argument as it was, or an object of them */
+export type ReshapeArg = { param: string } | { props: readonly ReshapeProp[] };
+
+/** A property of a new object argument: an old argument under a key, or spread into it (an
+ * object literal's properties are merged in place) */
+export type ReshapeProp = { key: string; param: string } | { spread: string };
+
+/**
+ * D10 kind 3, by the callee's declaration: a call of an entry's function in its old shape gets
+ * the new one. An old argument that's left out or `undefined` is dropped, a trailing new
+ * argument left empty too; an object of a single spread is that argument as it was. The new
+ * arguments name the old ones in their order, so the evaluation order stays.
+ */
+export type ReshapeRule = {
+  kind: 'reshape';
+  id: string;
+  callee: EntryName;
+  /** The old parameters' names, in order */
+  params: readonly string[];
+  /** The new arguments */
+  args: readonly ReshapeArg[];
+  /** A call with more arguments than this is in the old shape */
+  newArgCount: number;
+  /** A call whose argument at `index` has no `member` is in the old shape too (the new props
+   * have it); one of type `any` is reported */
+  newHas?: { index: number; member: string };
+  decision: string;
+  anchor: string;
+};
+
+export type Engine6Rule =
+  | ImportRule
+  | RemovedImportRule
+  | RemovedMemberRule
+  | CallArgRule
+  | ReshapeRule;
 
 const rename = (
   entry: string,
@@ -98,6 +133,7 @@ const REMOVED = 'removed-deprecations';
 const UI_KIT = 'the-ui-kit-s-names';
 const DEBUG = 'the-debug-entry-s-names';
 const TOOLKIT = 'toolkit-3-0-0';
+const CREATORS = 'the-entity-creators-and-createphysicsentity';
 
 /** Each name → the same advice */
 const each = (names: readonly string[], advice: string) =>
@@ -322,6 +358,27 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     advice: "`'sm'`",
     decision: 'p803 D5',
     anchor: UI_KIT,
+  },
+  // Phase 3: physics
+  {
+    kind: 'reshape',
+    id: 'reshape:createPhysicsEntity',
+    callee: { entry: 'aekasha/physics', name: 'createPhysicsEntity' },
+    params: ['colliders', 'body', 'target', 'opts', 'world'],
+    args: [
+      {
+        props: [
+          { key: 'colliders', param: 'colliders' },
+          { key: 'body', param: 'body' },
+          { key: 'target', param: 'target' },
+        ],
+      },
+      { props: [{ spread: 'opts' }, { key: 'world', param: 'world' }] },
+    ],
+    newArgCount: 2,
+    newHas: { index: 0, member: 'colliders' },
+    decision: 'p622 D3',
+    anchor: CREATORS,
   },
   {
     kind: 'import',

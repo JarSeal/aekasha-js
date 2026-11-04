@@ -11,6 +11,10 @@
  *   import's `ns.Old` and an `import('entry').Old` type are renamed too (a move through a
  *   namespace import is an error), and `export { Old } from` keeps the module's exported name
  *   (`export { New as Old } from`). A dynamic `import()` of an entry isn't followed.
+ * - Kind 3, the call reshapes (`ReshapeRule`): a call of an entry's function, found by the
+ *   callee's declaration, in its old shape gets the new one; the old arguments' comments go with
+ *   them. Its argument list is written last, with the other edits inside it applied (a renamed
+ *   name in an argument, a reshaped call in another), so those are no overlap.
  * - A touched import is written again whole, in the repo's style (a value import left with only
  *   inline types becomes `import type`); the CLI formats the module with Prettier.
  * - Kind 4, the reports (what needs a person), each from the checker's symbols: an import of a
@@ -31,6 +35,7 @@ import type {
   ImportRule,
   RemovedImportRule,
   RemovedMemberRule,
+  ReshapeRule,
 } from './engine6Rules';
 
 /** An error or a report: where, what, and the migration page's anchor */
@@ -125,6 +130,14 @@ type Decl = {
 
 type Edit = { start: number; end: number; text: string };
 
+/** The text from `start` to `end` with the edits inside it applied */
+type Slice = (start: number, end: number) => string;
+
+/** A reshaped call's argument list (from its `(` to its `)`): its text is made once every other
+ * edit is known, through `slice`, so an edit inside an argument (a renamed name, a nested
+ * reshaped call) is part of it and no overlap */
+type Reshape = { start: number; end: number; render: (slice: Slice) => string };
+
 /** A module's state while the rules run on it */
 type ModuleState = {
   file: string;
@@ -136,6 +149,7 @@ type ModuleState = {
   /** An imported binding's symbol → its new local name */
   renames: Map<ts.Symbol, string>;
   edits: Edit[];
+  reshapes: Reshape[];
   /** An error at a node or a position */
   error: (at: ts.Node | number, message: string) => void;
   /** A report at a node */
@@ -216,7 +230,18 @@ const readModule = (
       });
     }
   }
-  return { file, sf, checker, decls, namespaces, renames: new Map(), edits: [], error, report };
+  return {
+    file,
+    sf,
+    checker,
+    decls,
+    namespaces,
+    renames: new Map(),
+    edits: [],
+    reshapes: [],
+    error,
+    report,
+  };
 };
 
 const symbolOf = (m: ModuleState, s: Spec) =>
@@ -427,8 +452,38 @@ const declarationEdits = (m: ModuleState) => {
   }
 };
 
+/** The reshapes' edits, the inner ones first: each takes in the edits inside its range */
+const resolveReshapes = (m: ModuleState) => {
+  const { text } = m.sf;
+  let edits = m.edits;
+  for (const r of [...m.reshapes].sort((a, b) => a.end - a.start - (b.end - b.start))) {
+    const inside = edits
+      .filter((e) => e.start >= r.start && e.end <= r.end)
+      .sort((a, b) => a.start - b.start);
+    edits = edits.filter((e) => !inside.includes(e));
+    const used = new Set<Edit>();
+    const slice: Slice = (start, end) => {
+      let out = '';
+      let pos = start;
+      for (const e of inside) {
+        if (e.start < start || e.end > end) continue;
+        if (e.start < pos) m.error(e.start, 'two of the codemod’s edits overlap here');
+        else out += text.slice(pos, e.start) + e.text;
+        pos = Math.max(pos, e.end);
+        used.add(e);
+      }
+      return out + text.slice(pos, end);
+    };
+    edits.push({ start: r.start, end: r.end, text: r.render(slice) });
+    for (const e of inside) {
+      if (!used.has(e)) m.error(e.start, 'an edit inside a reshaped call’s dropped argument');
+    }
+  }
+  return edits;
+};
+
 const applyEdits = (m: ModuleState) => {
-  const edits = [...m.edits].sort((a, b) => a.start - b.start);
+  const edits = resolveReshapes(m).sort((a, b) => a.start - b.start);
   for (let i = 1; i < edits.length; i++) {
     if (edits[i].start < edits[i - 1].end)
       m.error(edits[i].start, 'two of the codemod’s edits overlap here');
@@ -572,6 +627,15 @@ const applyRemovedMemberRules = (m: ModuleState, rules: readonly MemberRuleTarge
   visit(m.sf);
 };
 
+/** The declaration a call's callee resolves to, through imports and namespaces */
+const calleeOf = (checker: ts.TypeChecker, call: ts.CallExpression) => {
+  const callee = ts.isPropertyAccessExpression(call.expression)
+    ? call.expression.name
+    : call.expression;
+  const symbol = checker.getSymbolAtLocation(callee);
+  return symbol && resolveAlias(checker, symbol);
+};
+
 type CallRuleTargets = { rule: CallArgRule; target: ts.Symbol };
 
 /** The argument rules on each call of their entry functions */
@@ -600,11 +664,7 @@ const applyCallArgRules = (m: ModuleState, rules: readonly CallRuleTargets[]) =>
   };
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node)) {
-      const callee = ts.isPropertyAccessExpression(node.expression)
-        ? node.expression.name
-        : node.expression;
-      const symbol = checker.getSymbolAtLocation(callee);
-      const resolved = symbol && resolveAlias(checker, symbol);
+      const resolved = calleeOf(checker, node);
       for (const { rule, target } of rules) {
         const arg = node.arguments[rule.index];
         if (resolved === target && arg) applyRule(rule, arg);
@@ -613,6 +673,182 @@ const applyCallArgRules = (m: ModuleState, rules: readonly CallRuleTargets[]) =>
     ts.forEachChild(node, visit);
   };
   visit(sf);
+};
+
+type ReshapeRuleTargets = { rule: ReshapeRule; target: ts.Symbol };
+
+/** A piece of a reshaped call: a new argument or an object's property, with the comments of the
+ * old argument it holds */
+type Piece = { text: string; leading: string[]; trailing: string[] };
+
+// The spread arguments written without parentheses
+const BARE_SPREADS = new Set([
+  ts.SyntaxKind.Identifier,
+  ts.SyntaxKind.PropertyAccessExpression,
+  ts.SyntaxKind.ElementAccessExpression,
+  ts.SyntaxKind.CallExpression,
+  ts.SyntaxKind.ParenthesizedExpression,
+  ts.SyntaxKind.NonNullExpression,
+  ts.SyntaxKind.ThisKeyword,
+]);
+
+const renderPiece = (p: Piece) =>
+  `${p.leading.map((c) => `${c}\n`).join('')}${p.text},${p.trailing.map((c) => ` ${c}`).join('')}\n`;
+
+const hasComments = (pieces: readonly Piece[]) =>
+  pieces.some((p) => p.leading.length || p.trailing.length);
+
+/** Each argument's comments: the ones before it (from the line after the comma before it, or
+ * right after the `(`) and the ones after it on its line (after its comma too); the last one's
+ * also the lines below it, up to the `)` */
+const argumentComments = (sf: ts.SourceFile, list: readonly ts.Node[]) => {
+  const { text } = sf;
+  const read = (ranges: ts.CommentRange[] | undefined) =>
+    (ranges ?? []).map((r) => text.slice(r.pos, r.end));
+  const args = list.filter((n) => n.kind !== ts.SyntaxKind.CommaToken);
+  return args.map((arg, i) => {
+    const after = list[list.indexOf(arg) + 1];
+    const comma = after?.kind === ts.SyntaxKind.CommaToken ? after : undefined;
+    const leading = [
+      ...(i === 0 ? read(ts.getTrailingCommentRanges(text, arg.pos)) : []),
+      ...read(ts.getLeadingCommentRanges(text, arg.pos)),
+    ];
+    const trailing = [
+      ...read(ts.getTrailingCommentRanges(text, arg.end)),
+      ...(comma ? read(ts.getTrailingCommentRanges(text, comma.end)) : []),
+      ...(i === args.length - 1
+        ? read(ts.getLeadingCommentRanges(text, comma?.end ?? arg.end))
+        : []),
+    ];
+    return { leading, trailing };
+  });
+};
+
+/** An old argument of a reshaped call, with its comments */
+type OldArg = { node: ts.Expression; leading: string[]; trailing: string[] };
+
+const isUndefined = (node: ts.Node) => ts.isIdentifier(node) && node.text === 'undefined';
+
+/** Reshapes a call of the rule's callee when it's in the old shape */
+const reshapeCall = (m: ModuleState, rule: ReshapeRule, call: ts.CallExpression) => {
+  const { checker, sf } = m;
+  const name = `\`${rule.callee.name}\``;
+  const args = call.arguments;
+  let isOld = args.length > rule.newArgCount;
+  if (!isOld && rule.newHas) {
+    const arg = args[rule.newHas.index];
+    if (!arg) return;
+    const type = checker.getTypeAtLocation(arg);
+    if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) {
+      m.report(
+        arg,
+        `${name}: an argument of type \`any\` hides the call's shape: reshape it by hand if it's the old one`,
+        rule.anchor
+      );
+      return;
+    }
+    isOld = !checker.getPropertyOfType(type, rule.newHas.member);
+  }
+  if (!isOld) return;
+  if (args.some(ts.isSpreadElement)) {
+    m.report(call, `${name}: a spread argument: reshape the call by hand`, rule.anchor);
+    return;
+  }
+  if (args.length > rule.params.length) {
+    m.error(call, `${name}: more arguments than its old parameters`);
+    return;
+  }
+  const children = call.getChildren(sf);
+  const open = children.findIndex((c) => c.kind === ts.SyntaxKind.OpenParenToken);
+  const list = children[open + 1].getChildren(sf);
+  const close = children[children.length - 1];
+  const comments = argumentComments(sf, list);
+
+  // The old arguments by parameter. A dropped one (`undefined`, or an empty object literal to
+  // spread) carries its comments to the next one kept (the previous one when none is)
+  const spreads = new Set(
+    rule.args
+      .flatMap((a) => ('props' in a ? a.props : []))
+      .flatMap((p) => ('spread' in p ? [p.spread] : []))
+  );
+  const values = new Map<string, OldArg>();
+  let carried: string[] = [];
+  let last: OldArg | undefined;
+  for (const [i, node] of args.entries()) {
+    const c = comments[i];
+    const isEmptySpread =
+      spreads.has(rule.params[i]) && ts.isObjectLiteralExpression(node) && !node.properties.length;
+    if (isUndefined(node) || isEmptySpread) {
+      carried.push(...c.leading, ...c.trailing);
+      continue;
+    }
+    last = { node, leading: [...carried, ...c.leading], trailing: c.trailing };
+    values.set(rule.params[i], last);
+    carried = [];
+  }
+  if (carried.length) {
+    if (last) last.trailing.push(...carried);
+    else m.error(call, `${name}: a comment on an argument the reshape drops`);
+  }
+
+  const render = (slice: Slice) => {
+    const textOf = (node: ts.Node) => slice(node.getStart(sf), node.getEnd());
+    const newArgs = rule.args.map((arg): Piece | null => {
+      if ('param' in arg) {
+        const v = values.get(arg.param);
+        return v ? { ...v, text: textOf(v.node) } : null;
+      }
+      const pieces: (Piece & { whole?: string })[] = [];
+      for (const prop of arg.props) {
+        const v = values.get('key' in prop ? prop.param : prop.spread);
+        if (!v) continue;
+        const { node } = v;
+        if ('key' in prop) {
+          const isShorthand = ts.isIdentifier(node) && node.text === prop.key;
+          pieces.push({ ...v, text: isShorthand ? prop.key : `${prop.key}: ${textOf(node)}` });
+        } else if (ts.isObjectLiteralExpression(node)) {
+          const { properties: ps } = node;
+          const text = slice(ps[0].getStart(sf), ps[ps.length - 1].getEnd());
+          pieces.push({ ...v, text, whole: textOf(node) });
+        } else {
+          const whole = textOf(node);
+          const text = BARE_SPREADS.has(node.kind) ? `...${whole}` : `...(${whole})`;
+          pieces.push({ ...v, text, whole });
+        }
+      }
+      if (!pieces.length) return null;
+      // An object of one spread is that argument as it was
+      if (pieces.length === 1 && pieces[0].whole !== undefined) {
+        return { ...pieces[0], text: pieces[0].whole };
+      }
+      const text = hasComments(pieces)
+        ? `{\n${pieces.map(renderPiece).join('')}}`
+        : `{ ${pieces.map((p) => p.text).join(', ')} }`;
+      return { text, leading: [], trailing: [] };
+    });
+    while (newArgs.length && !newArgs[newArgs.length - 1]) newArgs.pop();
+    const pieces = newArgs.map(
+      (p, i): Piece =>
+        p ?? { text: 'param' in rule.args[i] ? 'undefined' : '{}', leading: [], trailing: [] }
+    );
+    return hasComments(pieces)
+      ? `\n${pieces.map(renderPiece).join('')}`
+      : pieces.map((p) => p.text).join(', ');
+  };
+  m.reshapes.push({ start: children[open].getEnd(), end: close.getStart(sf), render });
+};
+
+/** The reshape rules on each call of their entry functions */
+const applyReshapeRules = (m: ModuleState, rules: readonly ReshapeRuleTargets[]) => {
+  if (!rules.length) return;
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) {
+      const resolved = calleeOf(m.checker, node);
+      for (const { rule, target } of rules) if (resolved === target) reshapeCall(m, rule, node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(m.sf);
 };
 
 /** Runs the rules on each module; a module with an error is left as it was */
@@ -624,12 +860,16 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
   const exportsOf = createEntryExports(program, checker);
   const memberRules: MemberRuleTargets[] = [];
   const callRules: CallRuleTargets[] = [];
+  const reshapeRules: ReshapeRuleTargets[] = [];
   for (const rule of rules) {
     if (rule.kind === 'removedMember') {
       memberRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
     } else if (rule.kind === 'callArg') {
       const [target] = symbolsOf(exportsOf, [rule.callee]);
       if (target) callRules.push({ rule, target });
+    } else if (rule.kind === 'reshape') {
+      const [target] = symbolsOf(exportsOf, [rule.callee]);
+      if (target) reshapeRules.push({ rule, target });
     }
   }
 
@@ -654,6 +894,7 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
     }
     applyRemovedMemberRules(m, memberRules);
     applyCallArgRules(m, callRules);
+    applyReshapeRules(m, reshapeRules);
     renameReferences(m);
     declarationEdits(m);
     const text = applyEdits(m);

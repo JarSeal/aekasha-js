@@ -374,11 +374,11 @@ const createGroundAsync = async (materials: GymMaterials) => {
     },
     { appId: 'largeGroundMesh' }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', friction: 2 },
-    { rigidType: 'FIXED', translation: GROUND.position },
-    groundEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', friction: 2 },
+    body: { rigidType: 'FIXED', translation: GROUND.position },
+    target: groundEntityId,
+  });
 };
 
 /** A frictionless, bouncy box dropped spinning next to the start. */
@@ -396,15 +396,15 @@ const createSpinningBoxAsync = async (materials: GymMaterials) => {
     },
     { appId: 'testBox1Mesh' }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', restitution: 0.5, friction: 0 },
-    {
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', restitution: 0.5, friction: 0 },
+    body: {
       rigidType: 'DYNAMIC',
       translation: { x: 2, y: 0, z: 0 },
       angvel: { x: 1, y: -2, z: 20 },
     },
-    boxEntityId
-  );
+    target: boxEntityId,
+  });
 };
 
 /** The player character (a TANK brain on the keyboard and a gamepad, with its follow camera), a

@@ -58,11 +58,11 @@ const createAnchorBodyAsync = async (id: string, position: PhysVector) => {
     { geo, mat, position, castShadow: true, receiveShadow: true },
     { appId: id }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 0.2, hy: 0.2, hz: 0.2 },
-    { rigidType: 'FIXED', translation: position },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 0.2, hy: 0.2, hz: 0.2 },
+    body: { rigidType: 'FIXED', translation: position },
+    target: entityId,
+  });
   return getRigidBodyId(entityId, id);
 };
 
@@ -83,11 +83,11 @@ const createDynamicBoxAsync = async (
     { geo, mat, position, castShadow: true, receiveShadow: true },
     { appId }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', hx, hy, hz, restitution, userData: name ? { name } : undefined },
-    { rigidType: 'DYNAMIC', translation: position, angvel },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx, hy, hz, restitution, userData: name ? { name } : undefined },
+    body: { rigidType: 'DYNAMIC', translation: position, angvel },
+    target: entityId,
+  });
   return getRigidBodyId(entityId, id);
 };
 // #endregion dynamic-box
@@ -101,11 +101,11 @@ const createDynamicBallAsync = async (params: DynamicBodyParams & { radius?: num
     { geo, mat, position, castShadow: true, receiveShadow: true },
     { appId }
   );
-  await createPhysicsEntity(
-    { type: 'BALL', radius, userData: name ? { name } : undefined },
-    { rigidType: 'DYNAMIC', translation: position, angvel },
-    entityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BALL', radius, userData: name ? { name } : undefined },
+    body: { rigidType: 'DYNAMIC', translation: position, angvel },
+    target: entityId,
+  });
   return getRigidBodyId(entityId, id);
 };
 
@@ -129,11 +129,11 @@ const createGroundAsync = async () => {
     },
     { appId: 'physicsTestGroundMesh' }
   );
-  await createPhysicsEntity(
-    { type: 'BOX', hx: 25, hy: 0.25, hz: 25 },
-    { rigidType: 'FIXED', translation: { x: 0, y: 0, z: 0 } },
-    groundEntityId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', hx: 25, hy: 0.25, hz: 25 },
+    body: { rigidType: 'FIXED', translation: { x: 0, y: 0, z: 0 } },
+    target: groundEntityId,
+  });
 };
 
 /** The two shape casts against the ground box, each result in a toast (debug env). */
@@ -231,24 +231,25 @@ const createFallingBodiesAsync = async () => {
   // Invisible, just above the ground's top face (y = 0.25), under the ball and the box
   await createPhysicsEntity(
     {
-      type: 'BOX',
-      hx: 5,
-      hy: 0.25,
-      hz: 5,
-      isSensor: true,
-      collisionEventFn: (_sensor, other, started) => {
-        if (!started) return;
-        const otherName = other.getUserDataSync().name;
-        const name = typeof otherName === 'string' ? otherName : String(other.id);
-        if (IS_DEBUG_ENV) {
-          addToast({ title: 'Physics sensor', message: `${name} entered` });
-        }
+      colliders: {
+        type: 'BOX',
+        hx: 5,
+        hy: 0.25,
+        hz: 5,
+        isSensor: true,
+        collisionEventFn: (_sensor, other, started) => {
+          if (!started) return;
+          const otherName = other.getUserDataSync().name;
+          const name = typeof otherName === 'string' ? otherName : String(other.id);
+          if (IS_DEBUG_ENV) {
+            addToast({ title: 'Physics sensor', message: `${name} entered` });
+          }
+        },
       },
+      body: { rigidType: 'FIXED', translation: { x: 0, y: 0.5, z: 10 } },
     },
-    { rigidType: 'FIXED', translation: { x: 0, y: 0.5, z: 10 } },
     // No mesh to hang off, so this one creates its own entity: an explicit appId, or it gets a
     // fresh UUID on every load and its debug settings (eg. a wireframe toggle) can't survive one
-    undefined,
     { appId: 'physicsTestSensor' }
   );
 };

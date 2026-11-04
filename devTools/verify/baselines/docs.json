@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3128,
-      "total": 3128
+      "documented": 3129,
+      "total": 3129
     },
     "members": {
       "documented": 1049,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3042,
-        "total": 3042
+        "documented": 3043,
+        "total": 3043
       },
       "members": {
         "documented": 890,
@@ -175,8 +175,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 202,
-        "total": 202
+        "documented": 203,
+        "total": 203
       },
       "members": {
         "documented": 34,

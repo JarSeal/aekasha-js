@@ -13,8 +13,8 @@ waiting for the worker rejects.
 ## Bodies on entities
 
 A physics object is an ECS entity with a rigid body and its colliders.
-[`createPhysicsEntity`](api:createPhysicsEntity) attaches them to an entity you already have (a
-mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
+[`createPhysicsEntity`](api:createPhysicsEntity) attaches them to an entity you already have (its
+`target`, a mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
 
 <<< src/app/examples/physics/examplePhysics.ts#physics-drop
 

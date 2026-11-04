@@ -103,9 +103,7 @@ describe('the facade (MAIN_THREAD)', () => {
     const world = new ECSWorld({ id: DEFAULT_ECS_WORLD_ID });
     world.createEntity({ appId: 'plain' });
     const ballId = await createPhysicsEntity(
-      { type: 'BALL', radius: 0.5 },
-      { rigidType: 'DYNAMIC' },
-      undefined,
+      { colliders: { type: 'BALL', radius: 0.5 }, body: { rigidType: 'DYNAMIC' } },
       { appId: 'ball' }
     );
     expect(getPhysicsEntityByAppId('ball')).toBe(ballId);

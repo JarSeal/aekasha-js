@@ -85,11 +85,11 @@ export const createGymStairsAndWallAsync = async ({
     },
     { appId: 'stairsMesh' }
   );
-  await createPhysicsEntity(
-    createStairsColliders(),
-    { rigidType: 'FIXED', userData: { isStairs: true, stairsColliderIndex: 0 } },
-    stairsEntityId
-  );
+  await createPhysicsEntity({
+    colliders: createStairsColliders(),
+    body: { rigidType: 'FIXED', userData: { isStairs: true, stairsColliderIndex: 0 } },
+    target: stairsEntityId,
+  });
 
   const wallEntityId = createMeshEntity(
     {
@@ -105,5 +105,9 @@ export const createGymStairsAndWallAsync = async ({
     },
     { appId: 'bigBoxWallMesh' }
   );
-  await createPhysicsEntity({ type: 'BOX', friction: 1 }, { rigidType: 'FIXED' }, wallEntityId);
+  await createPhysicsEntity({
+    colliders: { type: 'BOX', friction: 1 },
+    body: { rigidType: 'FIXED' },
+    target: wallEntityId,
+  });
 };

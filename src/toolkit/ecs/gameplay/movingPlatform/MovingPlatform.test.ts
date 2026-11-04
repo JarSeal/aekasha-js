@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from 'aekasha';
-import type { ColliderParams, RigidBodyParams } from 'aekasha/physics';
+import type { PhysicsEntityProps, RigidBodyParams } from 'aekasha/physics';
 import {
   createMovingPlatform,
   registerMovingPlatformSystem,
@@ -79,13 +79,9 @@ vi.mock('aekasha', async (importOriginal) => {
   };
 });
 vi.mock('aekasha/physics', () => ({
-  createPhysicsEntity: async (
-    _colliders: ColliderParams[],
-    rigidBody: RigidBodyParams,
-    target?: number | THREE.Object3D
-  ) => {
+  createPhysicsEntity: async ({ body, target }: PhysicsEntityProps) => {
     const entityId = typeof target === 'number' ? target : stubs.newEntityId();
-    stubs.bodies.set(entityId, createBodyStub(rigidBody.userData));
+    stubs.bodies.set(entityId, createBodyStub(body?.userData));
     return entityId;
   },
 }));

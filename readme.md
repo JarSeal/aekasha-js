@@ -346,11 +346,11 @@ export const scene = async () => {
   const ballId = createMeshEntity({ geo, mat, position, castShadow: true }, { appId: 'ball' });
 
   // Attach a dynamic rigid body. Its transform syncs back to the mesh every frame.
-  await createPhysicsEntity(
-    { type: 'BALL', radius: 0.4, restitution: 0.6 },
-    { rigidType: 'DYNAMIC', translation: position },
-    ballId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BALL', radius: 0.4, restitution: 0.6 },
+    body: { rigidType: 'DYNAMIC', translation: position },
+    target: ballId,
+  });
 };
 ```
 
