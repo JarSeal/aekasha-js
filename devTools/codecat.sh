@@ -37,7 +37,7 @@ max_lines=0
 include_all=false
 
 # Default excludes
-default_excludes=("node_modules" ".git" "dist" "dist-stats" "docs")
+default_excludes=("node_modules" ".git" "dist" "dist-stats" "docs" "docsApp")
 exclude_files=("*.log" "*.lock")
 exclude_dirs=("${default_excludes[@]}")
 

@@ -10,8 +10,8 @@ import { ROOT, toRepoPath } from './paths';
  */
 
 /** The repo's source folders: never a Hub output, even empty */
-const SOURCE_DIRS = ['src', 'hub', 'devTools', 'docs', 'node_modules', '.git'].map((dir) =>
-  path.join(ROOT, dir)
+const SOURCE_DIRS = ['src', 'hub', 'devTools', 'docs', 'docsApp', 'node_modules', '.git'].map(
+  (dir) => path.join(ROOT, dir)
 );
 
 /** What every public build writes at its root: a folder with all three is a Hub output */
@@ -31,7 +31,7 @@ const formatDir = (dir: string) => {
 /**
  * Why `outDir` can't take a public build, or null when it can: it may be missing, empty or an
  * earlier Hub output. Refused: the repo root and every folder above it, the repo's source folders
- * (`src/`, `hub/`, `devTools/`, `docs/`, `node_modules/`, `.git/`), a file, and a non-empty folder
+ * (`src/`, `hub/`, `devTools/`, `docs/`, `docsApp/`, `node_modules/`, `.git/`), a file, and a non-empty folder
  * that isn't a Hub output.
  * @param outDir Absolute
  */
