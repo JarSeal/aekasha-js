@@ -521,6 +521,24 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   `warnOnLegacySkyBox`, the debug tab's LS migration, `ACCEPTED_LEAKS`' `LegacySkyBoxParams` and
   `engineImports.test.ts`' entry. A legacy-shaped JSON is then a schema error naming its field
   (check one by hand in a scratch copy, not in `src/`).
+
+  As built (section 3):
+
+  - `SkyBoxAssetSchema` is `SkyBoxDefSchema` now (the name kept: the schemas entry, the gatherer
+    and `.schemas/skyBox.schema.json` use it; the JSON Schema didn't change). The gatherer's scene
+    reader lost its `prepare` (it only warned); the sky box reader's only sets the id default.
+  - Checked by hand (a scratch script through `SkyBoxAssetSchema`): a `{ id, type, params }` sky
+    box fails with `base: A sky box needs a base, unless it has a preset`. **A pre-p111 flat
+    `__saveData` entry (`{ colorSpace, roughness }`) parses and is ignored**: the overrides schema
+    strips unknown keys, so nothing applies. None in the template (checked every `*.skybox.json`
+    and inline scene sky box); D11's page says to move such an entry's values by hand.
+  - `createSkyBox(def: SkyBoxDef)` is a plain `async function` (no overloads); `type: ''`'s "no sky
+    box" is `setActiveSkyBox(null)`. `layers/Base.ts`' empty-string colour space stays unset.
+  - The debug tab's `AEK_debugSkyBoxStates` key is no longer read or removed: a browser that still
+    has it keeps a dead key.
+  - The main chunk −0.6 kB gzip (`features/skybox`, one module fewer); baselines recorded, `yarn
+    hub:build` clean (no stale `ACCEPTED_LEAKS` key), `yarn verify:scenes` over the sky scenes
+    (`skyShowcase`, `space`, `largeWorld`, `exampleHubHero`; 17 runs) unchanged.
 - **Section 4, debug entry and UI kit:** the debug entry's names leave `debug/index.ts` (become
   `@internal`), `createDebuggerTab`'s second parameter and `DebugGUIOpts`; the UI kit's list;
   `ACCEPTED_LEAKS`' `PhysicsProbeReport` (the map is then empty: keep the mechanism, empty). The

@@ -1465,14 +1465,6 @@
       "sunNode": "Function",
       "SunUniforms": "TypeAlias"
     },
-    "src/_engine/features/skybox/LegacySkyBox.ts": {
-      "fromLegacySkyBoxOverrides": "Function",
-      "fromLegacySkyBoxProps": "Function",
-      "isLegacySkyBoxProps": "Function",
-      "LEGACY_SKYBOX_WARNING": "Variable",
-      "LegacySkyBoxParams": "TypeAlias",
-      "LegacySkyBoxProps": "TypeAlias"
-    },
     "src/_engine/features/skybox/Presets.ts": {
       "isSkyBoxPresetName": "Function",
       "mergeSkyBoxPreset": "Function",
@@ -4876,8 +4868,6 @@
       "spatialSchemaPart"
     ],
     "aekasha/skybox": [
-      "LEGACY_SKYBOX_WARNING",
-      "LegacySkyBoxProps",
       "SKYBOX_PRESET_NAMES",
       "SkyBoxBaseDef",
       "SkyBoxBaseInput",
@@ -4900,7 +4890,6 @@
       "getSunElevation",
       "getTimeOfDay",
       "isDayNightPlaying",
-      "isLegacySkyBoxProps",
       "mergeSkyBoxPreset",
       "onSkyBoxChange",
       "pauseDayNight",

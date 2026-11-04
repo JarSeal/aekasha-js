@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3147,
-      "total": 3147
+      "documented": 3141,
+      "total": 3141
     },
     "members": {
       "documented": 1049,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3061,
-        "total": 3061
+        "documented": 3055,
+        "total": 3055
       },
       "members": {
         "documented": 890,
@@ -329,8 +329,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 178,
-        "total": 178
+        "documented": 172,
+        "total": 172
       },
       "members": {
         "documented": 0,

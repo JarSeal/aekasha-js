@@ -152,8 +152,6 @@ const isReflection = (value: object): value is DeclarationReflection =>
 export const ACCEPTED_LEAKS: Record<string, string> = {
   'src/_engine/features/physics/PhysicsProbeTypes.ts#PhysicsProbeReport':
     'only `TestBridgeProbeResult` names it (`aekasha/debug`, deprecated by p618 D3), removed in engine 6.0.0',
-  'src/_engine/features/skybox/LegacySkyBox.ts#LegacySkyBoxParams':
-    'only `LegacySkyBoxProps` names it (`aekasha/skybox`, deprecated), removed in engine 6.0.0',
 };
 
 /**

@@ -12,10 +12,6 @@ import {
   SkyBoxAssetSchema,
   type SkyBoxAsset,
 } from '../../src/_engine/schemas';
-import {
-  isLegacySkyBoxProps,
-  LEGACY_SKYBOX_WARNING,
-} from '../../src/_engine/features/skybox/LegacySkyBox';
 import { mergeSkyBoxPreset } from '../../src/_engine/features/skybox/Presets';
 import {
   claimIds,
@@ -37,47 +33,25 @@ import {
 } from './sources';
 import { readTextureAssets } from './textures';
 
-/** Warns (doesn't fail) about a sky box in the legacy `{ type, params }` shape: the schema still
- * converts it, but it should be migrated to the layered one. Goes in engine 6.0.0 with the shape. */
-const warnOnLegacySkyBox = (ctx: GatherContext, file: string, data: unknown) => {
-  if (!isLegacySkyBoxProps(data)) return;
-  const skyAndSunNote =
-    data.type === 'SKYANDSUN'
-      ? ' The SKYANDSUN type is now the atmosphere layer, so it becomes a COLOR base.'
-      : '';
-  ctx.log.warn(`Sky box "${data.id}" in ${file}: ${LEGACY_SKYBOX_WARNING}.${skyAndSunNote}`);
-};
-
 /** The material and PostFX ids the shipped scenes list: their TSL files get loaders (a
  * production build leaves the debug scenes out, and their files with them, p619 G6) */
 type ShippedLists = { materials: Set<string>; postFx: Set<string> };
 
 const readScenes = (ctx: GatherContext, reg: Registries, taken: TakenIds): ShippedLists => {
   const shipped: ShippedLists = { materials: new Set(), postFx: new Set() };
-  const prepare = (parsed: unknown, file: string) => {
-    const skyboxes = (parsed as { skyboxes?: unknown } | null)?.skyboxes;
-    if (Array.isArray(skyboxes)) for (const sky of skyboxes) warnOnLegacySkyBox(ctx, file, sky);
-    return parsed;
-  };
-  readAssetJsons(
-    ctx,
-    'scene',
-    EngineSceneAssetSchema,
-    (data, file) => {
-      const id = data.id || getIdFromFileName(file.file, 'scene');
-      if (!claimIds(ctx, taken.scenes, 'scene', file.file, id)) return;
-      reg.scenes.push({ id, data, file });
-      const scene = { ...data, ...getSaveEntry(data, id) };
-      if (!scene.sceneFile || (ctx.isProduction && scene.isDebugScene)) return;
-      for (const matId of scene.materials ?? []) {
-        if (typeof matId === 'string') shipped.materials.add(matId);
-      }
-      for (const postFxId of scene.postFx ?? []) {
-        if (typeof postFxId === 'string') shipped.postFx.add(postFxId);
-      }
-    },
-    { prepare }
-  );
+  readAssetJsons(ctx, 'scene', EngineSceneAssetSchema, (data, file) => {
+    const id = data.id || getIdFromFileName(file.file, 'scene');
+    if (!claimIds(ctx, taken.scenes, 'scene', file.file, id)) return;
+    reg.scenes.push({ id, data, file });
+    const scene = { ...data, ...getSaveEntry(data, id) };
+    if (!scene.sceneFile || (ctx.isProduction && scene.isDebugScene)) return;
+    for (const matId of scene.materials ?? []) {
+      if (typeof matId === 'string') shipped.materials.add(matId);
+    }
+    for (const postFxId of scene.postFx ?? []) {
+      if (typeof postFxId === 'string') shipped.postFx.add(postFxId);
+    }
+  });
   return shipped;
 };
 
@@ -191,11 +165,7 @@ const readImportedAssets = (ctx: GatherContext, reg: Registries, taken: TakenIds
 
 const readSkyBoxes = (ctx: GatherContext, reg: Registries, taken: TakenIds) => {
   // The id defaults to the file name (set before validating: the schema requires one)
-  const prepare = (parsed: unknown, file: string) => {
-    const withId = withSkyBoxIdDefault(file, parsed);
-    warnOnLegacySkyBox(ctx, file, withId);
-    return withId;
-  };
+  const prepare = (parsed: unknown, file: string) => withSkyBoxIdDefault(file, parsed);
   readAssetJsons(
     ctx,
     'skybox',

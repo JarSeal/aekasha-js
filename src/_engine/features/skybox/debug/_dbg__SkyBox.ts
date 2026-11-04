@@ -33,7 +33,6 @@ import { applySkyBoxPreset } from './_dbg__SkyBoxEdits';
 import {
   clearSkyBoxOverrides,
   getSceneIdsWithOverrides,
-  migrateLegacySkyBoxLS,
   NO_SKYBOX_ID,
   SKYBOX_TAB_ID,
   skyBoxProxy,
@@ -53,9 +52,6 @@ import { buildNebulaeFolder } from './_dbg__NebulaFolder';
 
 const LS_KEY_UI = 'AEK_debugSkyBoxUI';
 let debuggerCreated = false;
-
-// Before any sky box activates: the first scene load reads the migrated overrides
-if (IS_DEBUG_ENV) migrateLegacySkyBoxLS();
 
 // The Lights tab shows a sky box's lights as managed, with a link here
 _registerManagerDebugInfo(SKYBOX_MANAGER_ID, {
