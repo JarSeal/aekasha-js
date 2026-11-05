@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-8 implemented
+Status: implemented (Phases 0-9)
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -1080,12 +1080,13 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     a sub-pixel off) and `settingsMenu`'s "Changed from outside" (light compact, 0.10 / 0.40 %);
     every other state and script passed. **`main` (`a0b15403`, a worktree with the same local
     baselines and SBP report) fails them with the same deltas**, and `--only itemDetails` passes
-    on the branch: not this branch's. Their baselines were recorded with `--only` (2026-11-03
-    and 11-04), and a full run puts them a sub-pixel elsewhere. Not filed or re-recorded yet. A
-    full run takes 14-17 min on this machine (`devTools/verify/CLAUDE.md` says about 50 s,
+    on the branch: not this branch's. Runs of each piece alone then showed them intermittent,
+    not tied to the full run (`itemDetails` failed one alone run in five, `settingsMenu` three
+    in four): `docs/issues/verify-ui-intermittent-screenshots.md` (the settle check races the
+    field's 200 ms `data-flash`; the tooltip's cause not found). Not re-recorded. A full run takes 14-17 min on this machine (`devTools/verify/CLAUDE.md` says about 50 s,
     from before p804-p808's pieces).
 
-### Phase 9 — Versions, changelog, done
+### Phase 9 — Versions, changelog, done — done
 
 - `package.json`: `version` and `engine_metadata.version` 6.0.0, codename "Sunset";
   `toolkit_metadata` 3.0.0 "Gibbous"; `app_metadata` 1.19.0 (same codename). `yarn checkVersions
@@ -1094,6 +1095,20 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 - Mark the plan done (`docs/plans/CLAUDE.md`), move p990's 6.0.0 items if any, and say it's time
   for the PR: `p622_engine-6-major` into `main`. After the merge, `yarn tagRelease` and push its
   tags.
+
+As built (2026-11-05):
+
+- `package.json`: project and engine 6.0.0 "Sunset", toolkit 3.0.0 "Gibbous", app 1.19.0
+  "Preschooler"; `yarn checkVersions --against main` passes.
+- `CHANGELOG.md`: the entry is `## 2026-11-05 — p622_engine-6-major`, its intro what the major
+  holds (p806-p808 and the release) and what the codemod did on the template. "### Engine 6.0.0
+  (Sunset)"'s **Breaking** lists p622's changes first (`physicsTiers()`, the reshapes, physics,
+  `ComponentType`, the removals by area), then p806's tab types as before; p622's additions,
+  sizes (387.0 → 385.8 kB, 381.0 without the tiers), removed modules and the two closed issues
+  join the lists. "### Toolkit 3.0.0 (Gibbous)" got a **Breaking** list, "### App 1.19.0
+  (Preschooler)" and "### Project" p622's items. No unreleased entry is left.
+- p990 has no 6.0.0 item. `p350`'s "Branches and PRs" no longer describes the held `main`.
+
 
 ## 4. Risks
 
