@@ -129,7 +129,7 @@ const getLightItems = (ctx: LightWindowContext, light: THREE.Light): PropertyGri
       key: 'visible',
       label: 'Enabled',
       onChange: onLightChange(ctx, 'enabled', (value: boolean) => {
-        setLightEnabled(entityId, value, world);
+        setLightEnabled(world, entityId, value);
         updateDebuggerTab(LIGHTS_TAB_ID);
       }),
     },
@@ -184,7 +184,7 @@ const getLightItems = (ctx: LightWindowContext, light: THREE.Light): PropertyGri
       min: 0,
       step: 0.01,
       // The spatial index reads a light's range only when it joins
-      onChange: onLightChange(ctx, 'distance', () => refreshSpatialRadius(entityId, world)),
+      onChange: onLightChange(ctx, 'distance', () => refreshSpatialRadius(world, entityId)),
     });
   }
   if (chars.hasDecay) {
@@ -203,13 +203,13 @@ const getLightItems = (ctx: LightWindowContext, light: THREE.Light): PropertyGri
       {
         label: 'Frustum culling',
         get: () => world.hasComponent(entityId, ComponentType.FRUSTUM_CULLING_ENABLED),
-        set: (on) => setLightFrustumCullingEnabled(entityId, on as boolean, world),
+        set: (on) => setLightFrustumCullingEnabled(world, entityId, on as boolean),
         onChange: onLightChange(ctx, 'frustumCullingEnabled'),
       },
       {
         label: 'Object culling',
         get: () => world.hasComponent(entityId, ComponentType.OBJECT_CULLING_ENABLED),
-        set: (on) => setLightObjectCullingEnabled(entityId, on as boolean, world),
+        set: (on) => setLightObjectCullingEnabled(world, entityId, on as boolean),
         onChange: onLightChange(ctx, 'objectCullingEnabled'),
       }
     );

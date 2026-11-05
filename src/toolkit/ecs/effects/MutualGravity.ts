@@ -229,11 +229,11 @@ export const getMutualGravityDefaults = (): MutualGravityConfig => ({ ...DEFAULT
  *   geo: saveBufferGeometry(rock.geometry, { id: 'rock7' }),
  *   mat: 'asteroid',
  * });
- * await createPhysicsEntity(
- *   { type: 'CONVEXHULL', vertices: rock.hullVertices, density: DENSITY },
- *   { rigidType: 'DYNAMIC', translation: { x: 10, y: 0, z: 0 } },
- *   entityId
- * );
+ * await createPhysicsEntity({
+ *   colliders: { type: 'CONVEXHULL', vertices: rock.hullVertices, density: DENSITY },
+ *   body: { rigidType: 'DYNAMIC', translation: { x: 10, y: 0, z: 0 } },
+ *   target: entityId,
+ * });
  * addGravityBody(entityId, DENSITY * rock.hullVolume);
  * setMutualGravityConfig({ G: 0.5 });
  * ```

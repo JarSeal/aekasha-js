@@ -42,12 +42,6 @@ export type PhysicsState = {
   /** Whether stepping is paused (an explicit play toggle, the background behaviour or a scene
    * load: `pauseReason`). */
   isPaused: boolean;
-  /** When the physics loop is on pause (backgroundBehavior = 'PAUSE', loopState.masterPlay = false, or loopState.appPlay = false)
-   * the time it was paused (the physics wall clock, `PhysicsWallClock.ts`). 0 = not paused.
-   */
-  pausedTime: number;
-  /** Total pause duration, read by the deprecated `getPhysGameTime` (`PhysicsWallClock.ts`). */
-  pauseDurationTotal: number;
   /** Why physics is paused, when something other than an explicit play toggle paused it:
    * 'BACKGROUND_BEHAVIOR' = the app window is hidden, 'SCENE_LOAD' = a scene is loading (see
    * holdPhysicsStepping). */
@@ -77,6 +71,9 @@ export type PhysicsState = {
   solverIterations: number;
   /** The internal PGS iterations per solver iteration (`WorldAPI.setNumInternalPgsIterations`). */
   internalPgsIterations: number;
+  /** The continuous collision detection's substeps per step, 0 turning it off
+   * (`WorldAPI.setMaxCcdSubsteps`). */
+  maxCcdSubsteps: number;
   /** Render-time smoothing applied on top of the discrete physics-step pose (never written
    * back into the ECS TRANSFORM, which always stays the authoritative, non-interpolated
    * pose for gameplay code). Engine default 'NONE'. Both smoothing modes blend the last

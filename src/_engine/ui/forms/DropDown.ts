@@ -83,12 +83,6 @@ export type DropDown = {
   setDisabled: (isDisabled: boolean, reason?: string) => void;
 };
 
-/**
- * The old name of {@link DropDown}.
- * @deprecated Use {@link DropDown}. Removed in engine 6.0.0.
- */
-export type TDropDown = DropDown;
-
 const ROOT_CLASS = 'aekDropDown';
 const TRIGGER_CLASS = 'aekDropDownTrigger';
 const LABEL_CLASS = 'aekDropDownLabel';

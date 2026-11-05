@@ -3,29 +3,17 @@ import { createPhysicsEntity } from '../physics/PhysicsEntity';
 import { getPhysicsSubStepIndex } from '../physics/PhysicsStepping';
 import type { RigidBodyParams } from '../physics/types/PhysicsBodyTypes';
 import type { ColliderParams } from '../physics/types/PhysicsColliderTypes';
-import {
-  createKeyBinding,
-  deleteKeyBinding,
-  type KeyBinding,
-} from '../../kernel/input/KeyboardInput';
-import {
-  createMouseBinding,
-  deleteMouseBinding,
-  type MouseBinding,
-} from '../../kernel/input/MouseInput';
 import { type ECSWorld, getECSWorld, getEntityIdByAppId } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type {
   CharacterBodyKindField,
-  CharacterConfigValues,
   CharacterControlMode,
   CharacterIntent,
   CharacterObject,
   LocomotionState,
   LocomotionStateListener,
 } from './CharacterTypes';
-import { getBodyKind } from './CharacterBodyPlans';
 import { createIntent } from './CharacterIntent';
 import type { ActorBrain, CharacterBrainSpec } from './ActorTypes';
 import { createBrain } from './ActorKinds';
@@ -115,10 +103,6 @@ export const installCharacters = (ctx: FeatureContext) => {
       char.brain?.dispose?.();
       char.brain = undefined;
       char.controller?.dispose?.();
-      for (let i = 0; i < char.keyBindingIds.length; i++) deleteKeyBinding(char.keyBindingIds[i]);
-      for (let i = 0; i < char.mouseBindingIds.length; i++) {
-        deleteMouseBinding(char.mouseBindingIds[i]);
-      }
       if (characterEntityIds.get(char.id) === entityId) characterEntityIds.delete(char.id);
       locomotionStateListeners.delete(entityId);
       const onDelete = onDeleteCharacter[char.id];
@@ -130,21 +114,8 @@ export const installCharacters = (ctx: FeatureContext) => {
   });
 };
 
-/** The `_` keys of the data with a primitive value, copied and frozen. */
-const getConfigSnapshot = (data: Record<string, unknown>): CharacterConfigValues => {
-  const config: Record<string, number | boolean | string> = {};
-  for (const key of Object.keys(data)) {
-    if (!key.startsWith('_') || key.startsWith('__')) continue;
-    const value = data[key];
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string') {
-      config[key] = value;
-    }
-  }
-  return Object.freeze(config);
-};
-
-/** {@link createCharacter}'s options. The body's kind (eg. `'HUMANOID'`, usually from its body
- * plan) is `bodyKind`, or the deprecated `kind`. */
+/** {@link createCharacter}'s options. The body's kind (eg. `'HUMANOID'`) is usually its body
+ * plan's `bodyKind`. */
 export type CreateCharacterOpts = CharacterBodyKindField & {
   /** The character's id: the public handle ({@link getCharacterById}, {@link deleteCharacter}). */
   id: string;
@@ -155,20 +126,7 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
   /** The visual root (eg. a mesh or a group made with createMeshEntity or createGroupEntity), or
    * its app id: its entity becomes the character. */
   visual: THREE.Object3D | string;
-  /**
-   * The character's input bindings ({@link KeyBinding}s and {@link MouseBinding}s), deleted with
-   * it.
-   * @deprecated Give the character a brain (a player brain reads an action map); removed in engine
-   * 6.0.0.
-   */
-  controls?: (KeyBinding | MouseBinding)[];
-  /**
-   * The controller's data as one flat object ({@link CharacterObject}'s `data`).
-   * @deprecated A controller keeps its data on itself (`state`, `config`, `internal`); removed in
-   * engine 6.0.0.
-   */
-  data?: { [key: string]: unknown };
-  /** The intent the controller reads (default: a new one); pass it when the bindings write it. */
+  /** The intent the controller reads (default: a new one). */
   intent?: CharacterIntent;
   /** The brain that writes the intent (see {@link setCharacterBrain}), made by the controller's
    * creator (it may suggest controller configuration first). Disposed with the character. */
@@ -177,29 +135,16 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
 
 /**
  * Creates a character: adds the physics body, a `CHARACTER` component ({@link CharacterObject})
- * and `TAG_IS_CHARACTER` to the visual's entity, and registers the bindings. Deleting that entity
- * any way deletes the character and its bindings. An existing character with the same id is
+ * and `TAG_IS_CHARACTER` to the visual's entity. Deleting that entity any way deletes the
+ * character and disposes of its brain and controller. An existing character with the same id is
  * replaced. Controllers build on this (eg. createDynamicCharacter): a character created here alone
  * has no controller, so nothing moves it.
  * @param opts see {@link CreateCharacterOpts}
  * @returns the character ({@link CharacterObject})
  */
 export const createCharacter = async (opts: CreateCharacterOpts) => {
-  const {
-    id,
-    name,
-    physicsParams,
-    visual,
-    controls,
-    data = {},
-    intent = createIntent(),
-    brain,
-  } = opts;
-  const bodyKind = getBodyKind(opts);
-  // Before anything else can write the data
-  const initialConfig = getConfigSnapshot(data);
+  const { id, name, bodyKind, physicsParams, visual, intent = createIntent(), brain } = opts;
 
-  // Before the new bindings exist: the old character's delete hook removes its bindings by id
   if (deleteCharacter(id)) {
     lwarn(`createCharacter: replaced the existing character with id '${id}'.`);
   }
@@ -218,24 +163,16 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
   const visualId = ecsWorld.getComponent(entityId, ComponentType.APP_ID)?.id ?? visualAppId;
 
   await createPhysicsEntity(
-    physicsParams.colliders,
-    physicsParams.rigidBody,
-    entityId,
-    undefined,
-    ecsWorld
+    { colliders: physicsParams.colliders, body: physicsParams.rigidBody, target: entityId },
+    { world: ecsWorld }
   );
 
   const char: CharacterObject = {
     id,
     name,
     bodyKind,
-    kind: bodyKind,
     entityId,
     visualId,
-    keyBindingIds: [],
-    mouseBindingIds: [],
-    data,
-    initialConfig,
     intent,
     controlMode: 'CONTROLLED',
     brain,
@@ -243,19 +180,6 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
   ecsWorld.addComponent(entityId, ComponentType.CHARACTER, char);
   ecsWorld.addComponent(entityId, ComponentType.TAG_IS_CHARACTER, true);
   characterEntityIds.set(id, entityId);
-
-  if (controls) {
-    for (let i = 0; i < controls.length; i++) {
-      const ctrl = controls[i];
-      if (ctrl.type.startsWith('MOUSE')) {
-        createMouseBinding(ctrl as MouseBinding);
-        char.mouseBindingIds.push(ctrl.id);
-        continue;
-      }
-      createKeyBinding(ctrl as KeyBinding);
-      char.keyBindingIds.push(ctrl.id);
-    }
-  }
 
   updateCharactersDebuggerGUI();
 
@@ -403,7 +327,7 @@ export const createCharactersDebuggerGUI = () => {
  * For controllers: applies the character's saved debug config overrides (the Character state
  * window's tuned values; debug environment only, a no-op elsewhere). Call it once, right after
  * assigning `character.controller`, so its `config.onChange` recomputes what derives from them.
- * `initialConfig` never contains them.
+ * The controller's `config.initial` never contains them.
  */
 export const applySavedCharacterConfig = (char: CharacterObject) => {
   useDebug(debugGUI)?._applySavedCharacterConfig(char);

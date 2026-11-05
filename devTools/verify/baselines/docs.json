@@ -2,41 +2,41 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3164,
-      "total": 3164
+      "documented": 3125,
+      "total": 3125
     },
     "members": {
-      "documented": 1049,
-      "total": 1049
+      "documented": 1042,
+      "total": 1042
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3078,
-        "total": 3078
+        "documented": 3042,
+        "total": 3042
       },
       "members": {
-        "documented": 890,
-        "total": 890
+        "documented": 888,
+        "total": 888
       }
     },
     "toolkit": {
       "exports": {
-        "documented": 86,
-        "total": 86
+        "documented": 83,
+        "total": 83
       },
       "members": {
-        "documented": 159,
-        "total": 159
+        "documented": 154,
+        "total": 154
       }
     }
   },
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 191,
-        "total": 191
+        "documented": 190,
+        "total": 190
       },
       "members": {
         "documented": 3,
@@ -63,8 +63,8 @@
     },
     "engine/features/character": {
       "exports": {
-        "documented": 72,
-        "total": 72
+        "documented": 62,
+        "total": 62
       },
       "members": {
         "documented": 4,
@@ -91,8 +91,8 @@
     },
     "engine/features/character/controllers/dynamic": {
       "exports": {
-        "documented": 47,
-        "total": 47
+        "documented": 46,
+        "total": 46
       },
       "members": {
         "documented": 0,
@@ -175,8 +175,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 204,
-        "total": 204
+        "documented": 206,
+        "total": 206
       },
       "members": {
         "documented": 34,
@@ -287,12 +287,12 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 52,
-        "total": 52
+        "documented": 46,
+        "total": 46
       },
       "members": {
-        "documented": 22,
-        "total": 22
+        "documented": 20,
+        "total": 20
       },
       "undocumented": {
         "exports": [],
@@ -329,8 +329,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 178,
-        "total": 178
+        "documented": 173,
+        "total": 173
       },
       "members": {
         "documented": 0,
@@ -385,8 +385,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 127,
-        "total": 127
+        "documented": 125,
+        "total": 125
       },
       "members": {
         "documented": 0,
@@ -553,8 +553,8 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 73,
-        "total": 73
+        "documented": 72,
+        "total": 72
       },
       "members": {
         "documented": 1,
@@ -609,8 +609,8 @@
     },
     "engine/ui/core": {
       "exports": {
-        "documented": 44,
-        "total": 44
+        "documented": 33,
+        "total": 33
       },
       "members": {
         "documented": 0,
@@ -665,8 +665,8 @@
     },
     "engine/ui/forms": {
       "exports": {
-        "documented": 139,
-        "total": 139
+        "documented": 138,
+        "total": 138
       },
       "members": {
         "documented": 0,
@@ -903,26 +903,12 @@
     },
     "toolkit/ecs/gameplay/movingPlatform": {
       "exports": {
-        "documented": 25,
-        "total": 25
+        "documented": 23,
+        "total": 23
       },
       "members": {
-        "documented": 52,
-        "total": 52
-      },
-      "undocumented": {
-        "exports": [],
-        "members": []
-      }
-    },
-    "toolkit/geometry": {
-      "exports": {
-        "documented": 1,
-        "total": 1
-      },
-      "members": {
-        "documented": 0,
-        "total": 0
+        "documented": 47,
+        "total": 47
       },
       "undocumented": {
         "exports": [],

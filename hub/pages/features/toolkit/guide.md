@@ -130,8 +130,8 @@ instanced pool, which owns it.
   body. The `asteroid` material dresses it.
 
 The generators draw from the engine's
-[`createSeededRandom`](api:utils/SeededRandom.createSeededRandom) (on `aekasha`). The toolkit's
-geometry entry still exports it, deprecated until toolkit 3.0.0: import it from `aekasha`.
+[`createSeededRandom`](api:utils/SeededRandom.createSeededRandom) (on `aekasha`), which an app
+imports from there too.
 
 ### Models
 

@@ -21,7 +21,7 @@ export type InitEngineOptions = {
    * each `install`. The engine installs nothing else on its own: each engine feature comes from
    * its entry (`physics()` from `aekasha/physics`, …), and one not listed isn't installed
    * (`createLines` throws without `lines()`, a scene's `postFx` is ignored without `postFx()`).
-   * The template lists all nine and the app's own last (`appECSPlugins`); `[]` is the kernel
+   * The template lists all ten and the app's own last (`appECSPlugins`); `[]` is the kernel
    * alone. */
   features: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
@@ -42,7 +42,7 @@ export type InitEngineOptions = {
  * import { instancing } from 'aekasha/instancing';
  * import { lines } from 'aekasha/lines';
  * import { lod } from 'aekasha/lod';
- * import { physics } from 'aekasha/physics';
+ * import { physics, physicsTiers } from 'aekasha/physics';
  * import { postFx } from 'aekasha/postfx';
  * import { skyBox } from 'aekasha/skybox';
  * import { spatial } from 'aekasha/spatial';
@@ -55,6 +55,7 @@ export type InitEngineOptions = {
  *   data: appData,
  *   features: [
  *     physics(),
+ *     physicsTiers(),
  *     character(),
  *     skyBox(),
  *     lod(),

@@ -7,10 +7,10 @@ import type { Compass, WorldAnchor, WorldAnchorLayer, WorldAnchorView } from 'ae
  * `WorldAnchorComponentType.WORLD_ANCHOR` to an entity to keep an anchor of a
  * `WorldAnchorLayer` on it.
  */
-export enum WorldAnchorComponentType {
+export const WorldAnchorComponentType = {
   /** An entity a world anchor follows ({@link WorldAnchorData}). */
-  WORLD_ANCHOR = 'TOOL_WORLD_ANCHOR',
-}
+  WORLD_ANCHOR: 'TOOL_WORLD_ANCHOR',
+} as const;
 
 /**
  * An entity's world anchor: every frame its `OBJECT3D`'s world position (the rendered pose,

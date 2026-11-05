@@ -13,7 +13,6 @@ import {
   deleteSceneAppLooper,
   deleteSceneMainLooper,
   getRootScene,
-  registerOnAllSceneEnterings,
   registerOnAllSceneEnters,
   registerOnAllSceneExits,
   registerOnSceneEnter,
@@ -184,10 +183,6 @@ describe('scene listeners', () => {
     runOnAllSceneExits();
     expect(calls).toEqual(['first']);
     removeFirst();
-  });
-
-  it('keeps the deprecated name as the same function', () => {
-    expect(registerOnAllSceneEnterings).toBe(registerOnAllSceneEnters);
   });
 });
 

@@ -177,8 +177,7 @@ export const buildMenuItems = (parent: HTMLElement, items: MenuItem[], hints: St
 };
 
 /**
- * The `Kbd` handles an item array holds, its submenus' included (not the strings: their hints are
- * the menu's own).
+ * The `Kbd` handles an item array holds, its submenus' included.
  * @internal
  */
 export const findMenuHintHandles = (items: MenuItem[], handles: Kbd[] = []) => {
@@ -190,7 +189,7 @@ export const findMenuHintHandles = (items: MenuItem[], handles: Kbd[] = []) => {
     for (const one of item.type === 'group' ? item.items : [item]) {
       if (one.type === 'submenu') findMenuHintHandles(one.items, handles);
       else if ((!one.type || one.type === 'item' || one.type === 'checkbox') && one.kbd) {
-        if (typeof one.kbd !== 'string') handles.push(one.kbd);
+        handles.push(one.kbd);
       }
     }
   }

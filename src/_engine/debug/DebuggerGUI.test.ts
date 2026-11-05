@@ -132,23 +132,20 @@ describe('createDebuggerTab before the drawer loads (p618 Phase 5)', () => {
     createDebuggerTab(early);
     createDebuggerTab(tabDef('replaced'));
     createDebuggerTab(tabDef('removed'));
-    createDebuggerTab(replacement, { drawerBtnPlace: 'TOP' });
+    createDebuggerTab(replacement);
     removeDebuggerTab('removed');
     expect(drawer._createDebuggerTab).not.toHaveBeenCalled();
 
     await registerDebuggerGUI();
 
-    expect(drawer._createDebuggerTab.mock.calls).toEqual([
-      [early, undefined],
-      [replacement, { drawerBtnPlace: 'TOP' }],
-    ]);
+    expect(drawer._createDebuggerTab.mock.calls).toEqual([[early], [replacement]]);
     expect(drawer._removeDebuggerTab).not.toHaveBeenCalled();
   });
 
   it('hands tabs to the drawer once it has loaded', () => {
     const late = tabDef('late');
     createDebuggerTab(late);
-    expect(drawer._createDebuggerTab).toHaveBeenLastCalledWith(late, undefined);
+    expect(drawer._createDebuggerTab).toHaveBeenLastCalledWith(late);
     removeDebuggerTab('late');
     expect(drawer._removeDebuggerTab).toHaveBeenCalledWith('late');
   });

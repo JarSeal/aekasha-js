@@ -1,12 +1,12 @@
 {
   "name": "aekasha-js",
-  "version": "5.14.0",
+  "version": "6.0.0",
   "description": "High-performance WebGPU application powered by the Ækasha framework.",
   "repository": "https://github.com/JarSeal/aekasha-js.git",
   "author": "JarSeal",
   "engine_metadata": {
-    "version": "5.14.0",
-    "codename": "Golden Hour",
+    "version": "6.0.0",
+    "codename": "Sunset",
     "name": "Ækasha",
     "fullName": "Ækasha Framework",
     "description": "The 'fifth element' of web development: a modular, high-performance WebGPU framework built on Three.js and the Ækasha ECS.",
@@ -15,15 +15,15 @@
     "author": "JarSeal"
   },
   "toolkit_metadata": {
-    "version": "2.2.1",
-    "codename": "Half Moon",
+    "version": "3.0.0",
+    "codename": "Gibbous",
     "name": "Ækasha Toolkit",
     "fullName": "Ækasha Toolkit — Modules & Assets",
     "description": "Ready-made ECS components, modules, models, textures, and shaders for Ækasha: bring in only what you need, as-is, or copy it into your app and make it your own.",
     "url": ""
   },
   "app_metadata": {
-    "version": "1.18.0",
+    "version": "1.19.0",
     "codename": "Preschooler",
     "name": "Example App",
     "fullName": "Example App for Ækasha",

@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
+import type { ECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
@@ -58,11 +58,7 @@ export const registerSpatialIndexDebugGUI = async () => {
  * false if the domain isn't registered, the entity isn't alive, or the domain is full; true if
  * the entity is (or already was) a member. Joining `DEFAULT` adds SPATIAL_INDEXED.
  */
-export function joinSpatialDomain(
-  entityId: number,
-  domainId: string,
-  world: ECSWorld = getECSWorld()
-): boolean {
+export function joinSpatialDomain(world: ECSWorld, entityId: number, domainId: string): boolean {
   if (!world.isAlive(entityId)) return false;
   if (domainId === DEFAULT_SPATIAL_DOMAIN) {
     if (!world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED)) {
@@ -88,11 +84,7 @@ export function joinSpatialDomain(
 }
 
 /** Removes `entityId` from `world`'s domain `domainId` (a no-op for a non-member). Leaving `DEFAULT` removes SPATIAL_INDEXED. */
-export function leaveSpatialDomain(
-  entityId: number,
-  domainId: string,
-  world: ECSWorld = getECSWorld()
-): void {
+export function leaveSpatialDomain(world: ECSWorld, entityId: number, domainId: string): void {
   if (domainId === DEFAULT_SPATIAL_DOMAIN) {
     if (world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED)) {
       world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
@@ -108,11 +100,7 @@ export function leaveSpatialDomain(
 
 /** Whether `entityId` is a member of `world`'s domain `domainId` (false when the domain isn't
  * registered). `DEFAULT`: whether it has SPATIAL_INDEXED. */
-export function isInSpatialDomain(
-  entityId: number,
-  domainId: string,
-  world: ECSWorld = getECSWorld()
-): boolean {
+export function isInSpatialDomain(world: ECSWorld, entityId: number, domainId: string): boolean {
   if (domainId === DEFAULT_SPATIAL_DOMAIN) {
     return world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
   }
@@ -127,7 +115,7 @@ export function isInSpatialDomain(
  * changing what the provider measures (a light's distance or angle, a mesh's geometry); a
  * Transform scale change needs no call.
  */
-export function refreshSpatialRadius(entityId: number, world: ECSWorld = getECSWorld()): void {
+export function refreshSpatialRadius(world: ECSWorld, entityId: number): void {
   const list = findWorldDomains(world)?.list;
   if (!list) return;
   for (let i = 0; i < list.length; i++) {

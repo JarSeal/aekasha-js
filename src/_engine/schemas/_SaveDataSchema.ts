@@ -29,9 +29,8 @@ export const MetaSchema = z
 
 /**
  * An asset's `__saveData`: per scene id, its save entries, newest first (the gatherer applies only
- * the first), each validated by `propertyOverrideObject`. A ZodType, not only a ZodObject: an
- * overrides schema can be wrapped (the sky box's legacy adapter is a `z.preprocess`). Every asset
- * schema with save entries, the sky box's included.
+ * the first), each validated by `propertyOverrideObject` (a ZodType, not only a ZodObject: an
+ * overrides schema may be wrapped). Every asset schema with save entries, the sky box's included.
  * @internal
  */
 export function createSaveDataSchema<T extends z.ZodType>(propertyOverrideObject: T) {

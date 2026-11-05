@@ -272,8 +272,7 @@ export const spawnScatterAsMeshEntities = (
         quaternion: placement.quaternion,
         scale: { x: placement.scale, y: placement.scale, z: placement.scale },
       },
-      opts.entityOpts,
-      world
+      { ...opts.entityOpts, world }
     );
     entityIds.push(entityId);
   }

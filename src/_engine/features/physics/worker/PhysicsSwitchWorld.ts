@@ -80,7 +80,7 @@ export const physicsSwitchWorld = async (
       return sendMessage({ type: data.type, substeps }, data);
     case PhysicsProtocolType.WORLD_SET_CCD_SUBSTEPS:
       // WORLD_SET_CCD_SUBSTEPS
-      return physicsWorldAPI.setMaxCcdSubstepsSync(data.substeps);
+      return physicsWorldAPI.setMaxCcdSubsteps(data.substeps);
     case PhysicsProtocolType.WORLD_CAST_RAY:
       // WORLD_CAST_RAY
       let hitTransfer: WorldCastRayResponse['hit'] = null;

@@ -9,7 +9,6 @@ export {
   updateDebuggerTab,
 } from './DebuggerGUI';
 export type {
-  DebugGUIOpts,
   DebuggerDyn,
   DebuggerListDef,
   DebuggerListItem,
@@ -47,23 +46,13 @@ export type {
   EncodePNGOpts,
   PNGSource,
 } from './DevFiles';
-export {
-  AEK_GATHER_EVENT,
-  DEV_FILES_HASH_HEADER,
-  DEV_FILES_ROUTE_BASE,
-  DEV_FILES_TOKEN_HEADER,
-  DEV_FILES_TOKEN_META,
-} from './DevFilesProtocol';
 export type {
   DevDataGatheredEvent,
   DevFilesCommitBody,
   DevFilesConflicts,
-  DevFilesErrorBody,
   DevFilesErrorCode,
   DevFilesSaveData,
-  DevFilesSaveDataWrite,
   DevFilesSchemaIssues,
-  DevFilesStageBody,
   DevFilesStatusBody,
   DevFilesWriteStatus,
 } from './DevFilesProtocol';
@@ -84,7 +73,6 @@ export {
   updateProfilerTab,
 } from './Profiler';
 export type { EntityWindowOpener, StatsSource } from './Profiler';
-export type { TestBridgeProbeResult, TestBridgeSceneReady, TestBridgeSnapshot } from './TestBridge';
 export {
   recordOrCoalesceUndoRedoAction,
   recordUndoRedoAction,

@@ -41,8 +41,8 @@ export const generatedChainLane: ShowcaseLane = {
             name: `LOD showcase: generated chain ${index}`,
             description: `${distance.toFixed(0)} m from the start camera.`,
           },
-        },
-        ctx.world
+          world: ctx.world,
+        }
       );
 
     // The levels AUTO resolves to (it waits for the chain), to place the meshes by

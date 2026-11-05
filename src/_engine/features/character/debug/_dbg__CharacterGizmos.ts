@@ -1,7 +1,6 @@
 // The character gizmos: their toggles, the line writers (arrows, casts, sensors, the trail) and the
 // refill. Over 800 lines as one feature's debug drawing; p618 reviewed it for correctness only
 // (D1), so it is split when it is next reworked.
-import { getBodyKind } from '../CharacterBodyPlans';
 import * as THREE from 'three/webgpu';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../../kernel/loop/SystemStages';
 import { lsGetItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
@@ -379,10 +378,10 @@ const getFloorSensorBall = (probes: Readonly<CharacterProbes>, character: Charac
     const { params } = collider;
     const radius = getBoundingRadius(params);
     const isBall = params.type === 'BALL' || params.type === 'SPHERE';
-    if (!isBall && !warnedSensorKinds.has(getBodyKind(probes.body))) {
-      warnedSensorKinds.add(getBodyKind(probes.body));
+    if (!isBall && !warnedSensorKinds.has(probes.body.bodyKind)) {
+      warnedSensorKinds.add(probes.body.bodyKind);
       lwarn(
-        `[Character gizmos] The '${getBodyKind(probes.body)}' body plan's FLOOR_SENSOR is a ${params.type}: ` +
+        `[Character gizmos] The '${probes.body.bodyKind}' body plan's FLOOR_SENSOR is a ${params.type}: ` +
           (radius === null
             ? 'the Sensor gizmo draws nothing.'
             : 'the Sensor gizmo draws its bounding ball.')

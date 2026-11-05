@@ -41,9 +41,6 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/features/lod/impostors/ImpostorFormat.ts': {
     reason: 'the export format and atlas slots the gather checks an impostor against',
   },
-  'src/_engine/features/skybox/LegacySkyBox.ts': {
-    reason: 'the legacy sky box shape the gather warns about (goes in engine 6.0.0)',
-  },
   'src/_engine/features/skybox/Presets.ts': {
     reason: 'the sky box presets the gather merges into a definition',
   },

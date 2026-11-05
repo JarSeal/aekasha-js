@@ -45,9 +45,7 @@ createButton({
   [dialog](hub:features/ui-kit/overlays#dialogs)). Without it, such a click does nothing.
 - `kbd` takes a [key hint](#key-hints-and-input-glyphs) you make with `createKbd`: the button
   draws it after the label, names its keys in `aria-keyshortcuts` (a later `setKeys` included)
-  and removes it with itself. A button without one carries none of the hint's code. A string
-  (`kbd: 'Ctrl+S'`) still works, deprecated until engine 6.0.0: the button loads the hint's code
-  for it, so the hint appears a frame later.
+  and removes it with itself. A button without one carries none of the hint's code.
 - `tooltip` adds a tooltip; an `iconOnly` button gets its label as one.
 - `setDisabled(true)` disables it natively (`disabled`: out of the tab order). With
   `focusableWhenDisabled` it's `aria-disabled` instead: still a tab stop, so the focus stays on it

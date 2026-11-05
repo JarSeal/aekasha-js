@@ -6,6 +6,7 @@
 // proxies/ (the WORKER_THREAD API objects).
 
 import { existsOrThrow } from '../../utils/Assert';
+import { lerror } from '../../utils/Logger';
 import type { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
 import type { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
 import type { EngineAPIType } from './types/PhysicsBackendTypes';
@@ -39,6 +40,10 @@ export const facade: {
    * time. SHARED_MEMORY: set once and never replaced. MESSAGE_BATCH: replaced on every
    * DEBUG_STATE_PUSH. */
   debugStateBuffer: PhysicsDebugStateBuffer | undefined;
+  /** Whether the `physicsTiers()` feature is installed (PhysicsTiersFeature.ts): the tiers' and
+   * the policy's setters throw without it, and createPhysicsEntity's `tierPolicy` warns. Here so
+   * that reading it imports neither of their modules. */
+  tiersInstalled: boolean;
 } = {
   state: {
     enabled: false,
@@ -49,8 +54,6 @@ export const facade: {
     timestepRatio: 1 / 60,
     backgroundBehavior: 'PAUSE',
     isPaused: false,
-    pausedTime: 0,
-    pauseDurationTotal: 0,
     pauseReason: null,
     minDeltaTime: 1 / 30,
     maxDeltaTime: 1 / 10,
@@ -60,6 +63,7 @@ export const facade: {
     gravity: { x: 0, y: -9.81, z: 0 },
     solverIterations: 10,
     internalPgsIterations: 1,
+    maxCcdSubsteps: 1,
     interpolationMode: 'NONE',
     useSAB: true,
     maxBodies: 2048,
@@ -71,6 +75,7 @@ export const facade: {
   worldEnabled: false,
   transformBuffer: undefined,
   debugStateBuffer: undefined,
+  tiersInstalled: false,
 };
 
 /** Returns the current physicsState */
@@ -113,4 +118,16 @@ export const assertWorldCreated = (what: string) => {
     facade.worldEnabled,
     `Physics world is not created. Create the world before creating ${what}.`
   );
+};
+
+/**
+ * Throws (and logs) when the `physicsTiers()` feature isn't installed: the tiers' and the tier
+ * policy's setters call it first, as `createLines` does for `lines()`.
+ * @internal
+ */
+export const assertPhysicsTiersInstalled = (fnName: string) => {
+  if (facade.tiersInstalled) return;
+  const msg = `${fnName}: the physics tiers feature isn't installed. Add \`physicsTiers()\` (from 'aekasha/physics') to InitEngine's \`features\`, right after \`physics()\`.`;
+  lerror(msg);
+  throw new Error(msg);
 };

@@ -35,9 +35,15 @@ import {
 } from './PhysicsEntity';
 import { deleteJoint, deleteJointSync } from './PhysicsJoints';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
-import { isPhysicsWorldEnabled } from './PhysicsState';
+import { getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
 import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
-import { createPhysicsWorld, deletePhysicsWorld, initPhysics, stopPhysics } from './PhysicsWorld';
+import {
+  createPhysicsWorld,
+  deletePhysicsWorld,
+  initPhysics,
+  resetPhysicsWorld,
+  stopPhysics,
+} from './PhysicsWorld';
 import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
 
 // The facade on MAIN_THREAD, against the real Rapier backend (the compat build runs in Node)
@@ -50,7 +56,7 @@ const count = (entries: IterableIterator<unknown>) => [...entries].length;
 describe('the facade (MAIN_THREAD)', () => {
   it('boots and creates the world', async () => {
     initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
-    loadConfig({ physics: { enabled: true, workerTarget: 'MAIN_THREAD' } });
+    loadConfig({ physics: { enabled: true, workerTarget: 'MAIN_THREAD', maxCcdSubsteps: 3 } });
     await initPhysics(true);
     await createPhysicsWorld();
     expect(createRigidBodySync({ rigidType: 'DYNAMIC' }).id).toBeTypeOf('number');
@@ -103,9 +109,7 @@ describe('the facade (MAIN_THREAD)', () => {
     const world = new ECSWorld({ id: DEFAULT_ECS_WORLD_ID });
     world.createEntity({ appId: 'plain' });
     const ballId = await createPhysicsEntity(
-      { type: 'BALL', radius: 0.5 },
-      { rigidType: 'DYNAMIC' },
-      undefined,
+      { colliders: { type: 'BALL', radius: 0.5 }, body: { rigidType: 'DYNAMIC' } },
       { appId: 'ball' }
     );
     expect(getPhysicsEntityByAppId('ball')).toBe(ballId);
@@ -113,6 +117,19 @@ describe('the facade (MAIN_THREAD)', () => {
     expect(getPhysicsEntityByAppId('missing')).toBeUndefined();
     expect(getPhysicsEntityBody(world, ballId)).toBe(world.getRigidBody(ballId));
     expect(getPhysicsEntityBody(world, getEntityIdByAppId('plain')!)).toBeUndefined();
+  });
+
+  it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
+    expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(3);
+    getPhysicsWorld().setMaxCcdSubsteps(5);
+    expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(5);
+    // A scene load's fresh world
+    await resetPhysicsWorld();
+    expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(3);
+    getPhysicsState().maxCcdSubsteps = 0;
+    await resetPhysicsWorld();
+    expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(0);
+    getPhysicsState().maxCcdSubsteps = 3;
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

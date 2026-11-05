@@ -36,6 +36,7 @@ export type EngineAPIType = {
       timestep?: number;
       numSolverIterations?: number;
       numInternalPgsIterations?: number;
+      maxCcdSubsteps?: number;
     }
   ) => WorldAPI;
   /** Creates a rigid body. */
@@ -78,7 +79,7 @@ export type EngineAPIType = {
   getAllRigidBodyIds: () => IterableIterator<number>;
   /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
    * `drainPendingEventRecords`. */
-  step: (eventQueue?: unknown, hooks?: unknown) => void;
+  step: (eventQueue?: unknown) => void;
   /** The world's debug render lines (as {@link WorldAPI.debugRender}); needs a world. */
   debugRender: () => { vertices: Float32Array; colors: Float32Array } | undefined;
   /** WORKER_THREAD only: returns (and clears) collision/contact-force events accumulated

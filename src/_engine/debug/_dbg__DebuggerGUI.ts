@@ -5,7 +5,7 @@ import { lsGetItem, lsSetItem } from '../utils/LocalAndSessionStorage';
 import { getHUDRootCMP } from '../ui/core/HUD';
 import { DEFAULT_DEBUG_DRAWER_TAB_ORDER, getConfig, IS_DEBUG_ENV } from '../kernel/config/Config';
 import { lwarn } from '../utils/Logger';
-import type { DebugGUIOpts, AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
+import type { AnyDebuggerTabDef, UpdateDebuggerTabOpts } from './DebuggerGUI';
 import { createDebuggerSceneLoader } from '../kernel/scene/debug/_dbg__DebuggerSceneLoader';
 import { persistDebuggerTabStateValue } from './_dbg__DebuggerPaneBuilder';
 import { createTabHost } from './_dbg__TabHost';
@@ -203,14 +203,11 @@ const syncTabs = (replacedId?: string) => {
   if (target.id !== host.mountedId || target.id === replacedId) mountTab(target);
 };
 
-let guiOpts: DebugGUIOpts | undefined = undefined;
-
 const createShell = () => {
   shell = createDrawerShell({
     id: 'debugger',
     label: 'Debugger',
     togglerText: 'Debug',
-    togglerPlace: guiOpts?.drawerBtnPlace,
     keys: getDebugKeyChordLabel(TOGGLE_KEY_ID),
     headingLabel: 'Scene',
     title: currentSceneTitleText,
@@ -235,9 +232,8 @@ const createShell = () => {
 };
 
 /** Builds the drawer on its first call (the first scene title); later calls change nothing. */
-export const _createDebugGui = (opts?: DebugGUIOpts) => {
+export const _createDebugGui = () => {
   if (!IS_DEBUG_ENV || shell) return;
-  guiOpts = opts;
   _ensureDebuggerSceneLoader();
   drawerState = { ...drawerState, ..._readSavedDrawerState() };
   createShell();
@@ -293,7 +289,7 @@ export const _setDrawerSuspendedByView = (suspended: boolean) => {
   host.resume();
 };
 
-export const _createDebuggerTab = (def: AnyDebuggerTabDef, opts?: DebugGUIOpts) => {
+export const _createDebuggerTab = (def: AnyDebuggerTabDef) => {
   if (def.sceneId && !doesSceneExist(def.sceneId)) {
     lwarn(
       `Debugger tab "${def.id}" has a sceneId "${def.sceneId}" that is not a scene, so it is never removed on a scene exit (in createDebuggerTab)`
@@ -302,8 +298,6 @@ export const _createDebuggerTab = (def: AnyDebuggerTabDef, opts?: DebugGUIOpts) 
   // A replaced tab keeps its registration position
   const isReplaced = tabs.has(def.id);
   tabs.set(def.id, def);
-  if (opts) guiOpts = { ...guiOpts, ...opts };
-  if (opts?.drawerBtnPlace) shell?.setTogglerPlace(opts.drawerBtnPlace);
   syncTabs(isReplaced ? def.id : undefined);
 };
 
@@ -386,7 +380,7 @@ export const _updateDebuggerSceneTitle = (title: string) => {
     host.sceneChanged();
     return;
   }
-  _createDebugGui(guiOpts);
+  _createDebugGui();
 };
 
 /** During a scene load (p806 D6, D7): the drawer is `inert`, `aria-busy` and dimmed, and every

@@ -460,7 +460,7 @@ const syncDerivedPositions = (active: NonNullable<ReturnType<typeof getActiveSky
   }
   const moon = selectedIndex.moons;
   setElevationAzimuth(skyBoxProxy.moon, active.uniforms.moons[moon].direction.value);
-  const phase = getMoonPhase(moon);
+  const phase = getMoonPhase({ index: moon });
   if (phase !== null) skyBoxProxy.moon.phase = Math.round(phase * 1000) / 1000;
 };
 
@@ -540,45 +540,4 @@ export const clearSkyBoxOverrides = (sceneIds: string[]) => {
   const all = readAllOverrides();
   for (const sceneId of sceneIds) delete all[sceneId];
   writeAllOverrides(all);
-};
-
-// One-time migration of the pre-p111 key (a full copy of each sky box's flat state). Goes in
-// engine 6.0.0 with the legacy shape (LegacySkyBox.ts).
-
-const LEGACY_LS_KEY = 'AEK_debugSkyBoxStates';
-
-type LegacySkyBoxState = {
-  type?: string;
-  equiRectRoughness?: number;
-  cubeTextRoughness?: number;
-};
-
-/**
- * Moves each saved background roughness that isn't zero and differs from its definition into
- * AEK_debugSkyBox, then removes the old key. Nothing else in it is worth keeping (the selection
- * is session-only). A sky box created in code isn't registered yet at this point, so its value
- * is compared to the default (0) only.
- */
-export const migrateLegacySkyBoxLS = () => {
-  const legacy = lsGetItem(LEGACY_LS_KEY, {}) as {
-    [sceneId: string]: { [id: string]: LegacySkyBoxState } | null;
-  } | null;
-  if (!legacy || !Object.keys(legacy).length) {
-    lsRemoveItem(LEGACY_LS_KEY);
-    return;
-  }
-  for (const [sceneId, states] of Object.entries(legacy)) {
-    for (const [skyBoxId, state] of Object.entries(states || {})) {
-      const roughness =
-        state?.type === 'CUBETEXTURE' ? state.cubeTextRoughness : state?.equiRectRoughness;
-      if (
-        !roughness ||
-        getSkyBoxOverrides(sceneId, skyBoxId)?.env?.backgroundRoughness !== undefined
-      ) {
-        continue;
-      }
-      writeSkyBoxOverride(sceneId, skyBoxId, 'env.backgroundRoughness', roughness);
-    }
-  }
-  lsRemoveItem(LEGACY_LS_KEY);
 };

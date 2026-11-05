@@ -364,8 +364,9 @@ const createInstanceEntity = (
 
 /** What {@link createInstancedMeshPool} takes. */
 export interface CreateInstancedMeshPoolOptions {
-  /** Used to create one dedicated ECS entity that owns `mesh` itself (distinct from the
-   * per-instance slot entities `spawn()` creates) — see `InstancedMeshPool.mesh`'s doc comment. */
+  /** The pool's world: it holds the dedicated entity that owns `mesh` itself (see
+   * `InstancedMeshPool.mesh`'s doc comment) and every instance's entity `spawn()` creates, so an
+   * instance never outlives the mesh's scene. */
   world: ECSWorld;
   /** Every instance's geometry. The mesh holds a registry ref on it while it lives. */
   geometry: THREE.BufferGeometry;
@@ -402,16 +403,12 @@ export interface InstancedMeshPool {
   /** The entity that owns `mesh` for lifecycle purposes (see `mesh`'s doc comment above). */
   meshEntityId: number;
   /**
-   * Spawns one ECS entity per placement, holding a slot index into `mesh`, so every instance is
-   * addressable through the ECS. Placements can come straight from the toolkit's
+   * Spawns one ECS entity per placement in the pool's world, holding a slot index into `mesh`, so
+   * every instance is addressable through the ECS. Placements can come straight from the toolkit's
    * `scatterOnSurface`. Returns the created entity ids (fewer than `placements.length` if the
    * pool's `maxInstances` is reached).
    */
-  spawn: (
-    world: ECSWorld,
-    placements: InstancePlacement[],
-    entityOpts?: CoreEntityOpts
-  ) => number[];
+  spawn: (placements: InstancePlacement[], entityOpts?: CoreEntityOpts) => number[];
   /**
    * Deletes an instance's entity. The pool's last instance moves into its slot (swap-remove), so
    * another instance's `INSTANCED_MESH_SLOT.index` can change; read it from the component, never
@@ -419,7 +416,7 @@ export interface InstancedMeshPool {
    * slot the same way. Returns false (and deletes nothing) when `entityId` isn't a live instance
    * of this pool.
    */
-  despawn: (world: ECSWorld, entityId: number) => boolean;
+  despawn: (entityId: number) => boolean;
 }
 
 /**
@@ -444,7 +441,7 @@ export const createInstancedMeshPool = (
     opts.entityOpts
   );
 
-  const spawn: InstancedMeshPool['spawn'] = (world, placements, entityOpts) => {
+  const spawn: InstancedMeshPool['spawn'] = (placements, entityOpts) => {
     const entityIds: number[] = [];
     const { spatialDomain } = opts;
     const spatial = getSpawnSpatialMembership(world, spatialDomain, 'InstancedMeshPool');
@@ -467,7 +464,7 @@ export const createInstancedMeshPool = (
         _fadeOutIndex: -1,
       });
       // After the slot, which its radius provider reads
-      if (spatial && spatialDomain) spatial.join(entityId, spatialDomain, world);
+      if (spatial && spatialDomain) spatial.join(world, entityId, spatialDomain);
 
       entityIds.push(entityId);
     }
@@ -484,7 +481,7 @@ export const createInstancedMeshPool = (
     return entityIds;
   };
 
-  const despawn: InstancedMeshPool['despawn'] = (world, entityId) => {
+  const despawn: InstancedMeshPool['despawn'] = (entityId) => {
     const slot = getSlot(entityId, world);
     if (!slot || slot.mesh !== mesh) return false;
     // The slot hook frees the slot
@@ -511,7 +508,8 @@ export interface InstancedLodPoolLevel {
 
 /** What {@link createInstancedLodPool} takes. */
 export interface CreateInstancedLodPoolOptions {
-  /** Owns one entity per level mesh, like `CreateInstancedMeshPoolOptions.world`. */
+  /** The pool's world: one entity per level mesh and every instance's, like
+   * `CreateInstancedMeshPoolOptions.world`. */
   world: ECSWorld;
   /** Level 0 (the finest) first. */
   levels: InstancedLodPoolLevel[];
@@ -545,15 +543,12 @@ export interface InstancedLodPool {
   meshes: THREE.InstancedMesh[];
   /** The entity owning each mesh of `meshes`, in the same order. */
   meshEntityIds: number[];
-  /** Spawns one entity per placement with `INSTANCED_MESH_SLOT` and `LOD`, starting in level 0's
-   * mesh. Returns the created entity ids (fewer than `placements.length` past `maxInstances`). */
-  spawn: (
-    world: ECSWorld,
-    placements: InstancePlacement[],
-    entityOpts?: CoreEntityOpts
-  ) => number[];
+  /** Spawns one entity per placement in the pool's world, with `INSTANCED_MESH_SLOT` and `LOD`,
+   * starting in level 0's mesh. Returns the created entity ids (fewer than `placements.length`
+   * past `maxInstances`). */
+  spawn: (placements: InstancePlacement[], entityOpts?: CoreEntityOpts) => number[];
   /** Deletes an instance's entity, like `InstancedMeshPool.despawn`. */
-  despawn: (world: ECSWorld, entityId: number) => boolean;
+  despawn: (entityId: number) => boolean;
 }
 
 /**
@@ -626,7 +621,7 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
   }
   const level0Mesh = state.meshes[0];
 
-  const spawn: InstancedLodPool['spawn'] = (world, placements, entityOpts) => {
+  const spawn: InstancedLodPool['spawn'] = (placements, entityOpts) => {
     const entityIds: number[] = [];
     const { spatialDomain } = opts;
     const spatial = getSpawnSpatialMembership(world, spatialDomain, 'InstancedLodPool');
@@ -654,7 +649,7 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
       // After the slot, which the LOD target and the radius provider read
       const lod: LodData = { def, level: -1, applied: -1, radius: 0, _levels: [] };
       world.addComponent(entityId, ComponentType.LOD, lod);
-      if (spatial && spatialDomain) spatial.join(entityId, spatialDomain, world);
+      if (spatial && spatialDomain) spatial.join(world, entityId, spatialDomain);
 
       entityIds.push(entityId);
     }
@@ -666,7 +661,7 @@ export const createInstancedLodPool = (opts: CreateInstancedLodPoolOptions): Ins
     return entityIds;
   };
 
-  const despawn: InstancedLodPool['despawn'] = (world, entityId) => {
+  const despawn: InstancedLodPool['despawn'] = (entityId) => {
     const slot = getSlot(entityId, world);
     if (!slot || lodPoolsByMesh.get(slot.mesh) !== state) return false;
     // The slot hook frees the slot

@@ -43,12 +43,6 @@ $fitsNextToOpenDrawer: 650px;
 :global(.aekViewportStack_TOP_RIGHT) {
   transition: right var(--aek-motion-base) ease-in-out;
 
-  // Clear the drawer toggler when it is in the TOP position (it covers the right edge there).
-  // Not while the drawer is open: `:has()` would out-specify the open rule below.
-  :global(body:not(.debugDrawerOpen):has(.debugDrawerToggler.TOP)) & {
-    right: calc($drawerTogglerWidth + $stackInset);
-  }
-
   :global(.debugDrawerOpen) & {
     right: calc(var(--aek-debug-drawer-width, 400px) + $drawerTogglerWidth + $stackInset);
   }

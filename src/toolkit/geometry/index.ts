@@ -23,4 +23,3 @@ export type {
   ScatterPlacement,
   SpawnScatterMeshOptions,
 } from './scatter/ScatterOnSurface';
-export { createSeededRandom } from './SeededRandom';

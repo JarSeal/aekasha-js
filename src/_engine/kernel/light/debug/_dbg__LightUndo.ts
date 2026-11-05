@@ -119,7 +119,7 @@ export const applyLightField: {
 } = {
   enabled: ({ world, entityId, light }, value) => {
     light.visible = value;
-    setLightEnabled(entityId, value, world);
+    setLightEnabled(world, entityId, value);
   },
   // For a hemisphere light `color` is the sky color
   color: ({ light }, value) => light.color.setHex(value),
@@ -131,15 +131,15 @@ export const applyLightField: {
   },
   distance: ({ world, entityId, light }, value) => {
     (light as THREE.PointLight | THREE.SpotLight).distance = value;
-    refreshSpatialRadius(entityId, world);
+    refreshSpatialRadius(world, entityId);
   },
   decay: ({ light }, value) => {
     (light as THREE.PointLight | THREE.SpotLight).decay = value;
   },
   frustumCullingEnabled: ({ world, entityId }, value) =>
-    setLightFrustumCullingEnabled(entityId, value, world),
+    setLightFrustumCullingEnabled(world, entityId, value),
   objectCullingEnabled: ({ world, entityId }, value) =>
-    setLightObjectCullingEnabled(entityId, value, world),
+    setLightObjectCullingEnabled(world, entityId, value),
   position: ({ world, entityId }, value) => {
     world.setTransform(entityId, { pos: value });
     world.getComponent(entityId, ComponentType.DEBUG_LIGHT_HELPER)?.value.update();

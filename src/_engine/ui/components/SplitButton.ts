@@ -23,9 +23,8 @@ export type SplitButtonProps = {
   size?: 'sm' | 'md' | 'lg';
   /** Raw HTML of the action's icon (`getSvgIcon('fileCode')`). */
   icon?: string;
-  /** The action's shortcut's hint (`createKbd({ keys: 'Ctrl+S' })`), as the button's `kbd`; a
-   * string is deprecated (removed in engine 6.0.0). */
-  kbd?: Kbd | string;
+  /** The action's shortcut's hint (`createKbd({ keys: 'Ctrl+S' })`), as the button's `kbd`. */
+  kbd?: Kbd;
   /** Disables both buttons (default false). */
   disabled?: boolean;
   /** Extra classes for the group. */

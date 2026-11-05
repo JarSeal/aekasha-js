@@ -101,10 +101,6 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}geometry/generate/` },
   { from: `${T}geometry/scatter/` },
   {
-    from: `${T}geometry/SeededRandom.ts`,
-    note: "`createSeededRandom`'s deprecated toolkit name (p620 D5), removed in toolkit 3.0.0",
-  },
-  {
     from: `${T}materials/TriplanarProjection.ts`,
     note: 'the TSL helper the triplanar materials share',
   },

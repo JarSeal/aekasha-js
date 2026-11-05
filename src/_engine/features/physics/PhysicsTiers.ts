@@ -1,7 +1,8 @@
 // Physics simulation tiers (docs/plans/_DONE_p352_physics-simulation-tiers.md): a dynamic body can be
 // frozen in place but collidable (STATIC), taken out of the simulation (DISABLED) or out of the
-// physics world (REMOVED), and put back (FULL). The physics feature installs its system and
-// hooks (installPhysicsTiers); with no tier requested, the system returns at once.
+// physics world (REMOVED), and put back (FULL). The physicsTiers() feature installs its system and
+// hooks (installPhysicsTiers, PhysicsTiersFeature.ts); with no tier requested, the system returns
+// at once.
 
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { existsOrThrow } from '../../utils/Assert';
@@ -17,7 +18,7 @@ import {
   reattachRigidBodySync,
 } from './PhysicsBodies';
 import { forEachJointBodyPair, hasJoints, isBodyJointed } from './PhysicsJoints';
-import { getPhysicsState } from './PhysicsState';
+import { assertPhysicsTiersInstalled, getPhysicsState } from './PhysicsState';
 import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
 import { getPhysicsBodyOwner, getPhysicsEntityBody, queueStaticBodySync } from './PhysicsEntity';
@@ -135,14 +136,15 @@ const resolveTierGroup = (
  * Every body connected to it by impulse joints changes tier with it (see resolveTierGroup).
  * Returns false and changes nothing when the entity or a member of its joint group can't have a
  * tier: a character, no rigid body (yet), or a body not created `DYNAMIC` by
- * `createPhysicsEntity`.
+ * `createPhysicsEntity`. Throws without the `physicsTiers()` feature in `InitEngine`'s
+ * `features`.
  * @example
  * ```ts
  * import { createPhysicsEntity, requestPhysicsTier } from 'aekasha/physics';
  *
- * const crateId = await createPhysicsEntity({ type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 }, {
- *   rigidType: 'DYNAMIC',
- *   translation: { x: 0, y: 2, z: 0 },
+ * const crateId = await createPhysicsEntity({
+ *   colliders: { type: 'BOX', hx: 0.5, hy: 0.5, hz: 0.5 },
+ *   body: { rigidType: 'DYNAMIC', translation: { x: 0, y: 2, z: 0 } },
  * });
  * // Out of sight: frozen in place, still collidable
  * requestPhysicsTier(crateId, 'STATIC');
@@ -153,6 +155,7 @@ export const requestPhysicsTier = (
   tier: PhysicsTier,
   ecsWorld?: ECSWorld
 ): boolean => {
+  assertPhysicsTiersInstalled('requestPhysicsTier');
   const world =
     ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in requestPhysicsTier.');
   const group = resolveTierGroup(world, entityId, tier);
@@ -191,7 +194,8 @@ export const requestPhysicsTier = (
 /**
  * `entityId`'s tier, the tier requested for it that hasn't applied yet (null if none), and
  * whether it's in flight back from `REMOVED` (WORKER_THREAD: the body is back, its bucket and
- * COLLIDER components aren't yet). An entity that never got a tier is `FULL`.
+ * COLLIDER components aren't yet). An entity that never got a tier is `FULL` (every entity, without
+ * the `physicsTiers()` feature).
  * @example
  * ```ts
  * import { getPhysicsTier } from 'aekasha/physics';
@@ -391,8 +395,8 @@ const physicsTierSystem = (world: ECSWorld) => {
 };
 
 /**
- * Installs the tiers' `APP_PHYSICS_STEP` system and the `PHYSICS_SIM_TIER` hooks (the physics
- * feature's install).
+ * Installs the tiers' `APP_PHYSICS_STEP` system and the `PHYSICS_SIM_TIER` hooks (the
+ * `physicsTiers()` feature's install).
  * @internal
  */
 export const installPhysicsTiers = (ctx: FeatureContext) => {

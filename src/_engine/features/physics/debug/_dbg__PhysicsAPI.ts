@@ -69,6 +69,7 @@ const LIVE_PERSIST_KEYS = [
   'gravity',
   'solverIterations',
   'internalPgsIterations',
+  'maxCcdSubsteps',
   'backgroundBehavior',
   'minDeltaTime',
   'maxDeltaTime',
@@ -79,7 +80,7 @@ const LIVE_PERSIST_KEYS = [
 /**
  * Restores the persisted world settings into the physics state, before the first physics world
  * is created (registerPhysicsAPIDebugGUI in kernel/init/InitEngine.ts). gravity/solverIterations/
- * internalPgsIterations/timestep are baked into a Rapier world when it's created, and every
+ * internalPgsIterations/maxCcdSubsteps/timestep are baked into a Rapier world when it's created, and every
  * world (the boot one, and each scene load's fresh one) is built from the physics state. So
  * nothing is pushed into a running world: that would overwrite what the start scene set on its
  * own world (eg. the space scene's zero gravity). The tab hydrates the same values again when it
@@ -150,7 +151,7 @@ const getBootItems = (state: PhysicsState): Item[] => {
   ];
 };
 
-/** The live world settings: the step, gravity and the solver (the last three undoable) */
+/** The live world settings: the step, gravity, the solver and CCD (the last four undoable) */
 const getWorldItems = (state: PhysicsState): Item[] => [
   // Enable visualizer is still omitted: visualizerEnabled has no debugRender wiring
   // yet. 'EXTRAPOLATION' isn't offered below yet — reserved, not implemented.
@@ -192,6 +193,16 @@ const getWorldItems = (state: PhysicsState): Item[] => [
     onChange: (value, e) => {
       applySettingToWorld.internalPgsIterations(state);
       recordSettingChange('internalPgsIterations', Number(e.prev), Number(value));
+    },
+  },
+  {
+    key: 'maxCcdSubsteps',
+    label: 'Max CCD substeps (0 turns CCD off)',
+    min: 0,
+    step: 1,
+    onChange: (value, e) => {
+      applySettingToWorld.maxCcdSubsteps(state);
+      recordSettingChange('maxCcdSubsteps', Number(e.prev), Number(value));
     },
   },
 ];

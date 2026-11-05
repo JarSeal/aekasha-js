@@ -74,14 +74,6 @@ type DebuggerGUIModule = typeof import('./_dbg__DebuggerGUI');
 let debugGUI: DebugModuleRef<DebuggerGUIModule> | null = null;
 
 /**
- * Where the drawer's open button sits on its edge. It applies to the whole drawer, whichever tab
- * passes it.
- * @deprecated Removed with {@link createDebuggerTab}'s second parameter in engine 6.0.0: the
- * button stays in the middle (move it with CSS).
- */
-export type DebugGUIOpts = { drawerBtnPlace?: 'TOP' | 'MIDDLE' | 'BOTTOM' };
-
-/**
  * A key of a tab's state, or a one level deep path into a nested object of it
  * (eg. `'helpers.showGrid'`): what a binding's `key` takes.
  * @template S the tab's state
@@ -379,13 +371,13 @@ export const registerDebuggerGUI = async () => {
   module?._ensureDebuggerSceneLoader();
   if (!module) return;
   // The tabs created before it loaded, in their creation order
-  for (const [def, opts] of pendingTabs.values()) module._createDebuggerTab(def, opts);
+  for (const def of pendingTabs.values()) module._createDebuggerTab(def);
   pendingTabs.clear();
 };
 
 // Tabs created before the drawer has loaded (eg. in a feature's `install`, which runs before the
 // boot's debug step): it creates them when it loads
-const pendingTabs = new Map<string, [AnyDebuggerTabDef, DebugGUIOpts | undefined]>();
+const pendingTabs = new Map<string, AnyDebuggerTabDef>();
 
 /**
  * Toggles the drawer open or closed. The views' (`toggleActiveViewDrawer`) and the material
@@ -414,8 +406,6 @@ export const setDrawerSuspendedByView = (suspended: boolean) => {
  * (also in prod test mode, where the drawer itself doesn't exist). Works at any time: a tab
  * created before the drawer has loaded (eg. in a feature's `install`) is added when it loads. Only
  * the debug env shows the drawer.
- * @param opts deprecated, removed in engine 6.0.0 ({@link DebugGUIOpts}): moves the drawer button
- * for the whole drawer
  * @remarks A scene tab (`sceneId`) belongs in its scene's code, behind `IS_DEBUG_ENV` and an
  * `import()` of a `_dbg__` module, so it never ships.
  * @example
@@ -443,10 +433,7 @@ export const setDrawerSuspendedByView = (suspended: boolean) => {
  * });
  * ```
  */
-export const createDebuggerTab = <S extends object>(
-  def: DebuggerTabDef<S>,
-  opts?: DebugGUIOpts
-) => {
+export const createDebuggerTab = <S extends object>(def: DebuggerTabDef<S>) => {
   // Folds the pending tabs out of a production build
   if (!__AEK_DEBUG__) return;
   hydrateDebuggerTabState(def);
@@ -454,11 +441,11 @@ export const createDebuggerTab = <S extends object>(
   const anyDef = def as unknown as AnyDebuggerTabDef;
   const module = useDebug(debugGUI);
   if (module) {
-    module._createDebuggerTab(anyDef, opts);
+    module._createDebuggerTab(anyDef);
     return;
   }
   // A replaced pending tab keeps its creation position, as a replaced tab does in the drawer
-  pendingTabs.set(def.id, [anyDef, opts]);
+  pendingTabs.set(def.id, anyDef);
 };
 
 /**

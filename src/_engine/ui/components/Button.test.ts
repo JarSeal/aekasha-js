@@ -97,11 +97,10 @@ describe('button (p803 D10)', () => {
     expect(elem.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+S');
   });
 
-  it('draws a string kbd (deprecated) once Kbd has loaded, before a hold’s fill', async () => {
-    const { cmp } = addButton({ label: 'Delete', kbd: 'Del', holdToConfirmMs: HOLD_MS });
+  it('draws its kbd before a hold’s fill', () => {
+    const kbd = createKbd({ keys: 'Del' });
+    const { cmp } = addButton({ label: 'Delete', kbd, holdToConfirmMs: HOLD_MS });
     const elem = cmp.elem;
-    expect(elem.querySelector('.aekButton__kbd')).toBeNull();
-    await vi.dynamicImportSettled();
     expect(getParts(elem)).toEqual([
       'aekButton__label',
       'aekKbd aekButton__kbd',
@@ -110,13 +109,6 @@ describe('button (p803 D10)', () => {
     ]);
     expect(elem.getAttribute('aria-keyshortcuts')).toBe('Delete');
     cmp.remove();
-
-    // Removed before Kbd loaded: nothing is drawn
-    const early = addButton({ label: 'Save', kbd: 'Ctrl+S' });
-    early.cmp.remove();
-    await vi.dynamicImportSettled();
-    expect(getParts(early.cmp.elem)).toEqual(['aekButton__label']);
-    expect(early.cmp.elem.hasAttribute('aria-keyshortcuts')).toBe(false);
   });
 
   it('clicks; while loading it is busy and ignores them; disabled it is disabled', () => {

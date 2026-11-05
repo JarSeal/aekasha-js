@@ -95,20 +95,22 @@ export const spawnImportedPhysics = async ({ nodes, params, appIdPrefix }: Impor
     };
     const isHeadless = anchor.entityId === undefined;
     const entityId = await createPhysicsEntity(
-      colliders,
-      isHeadless
-        ? {
-            ...rigidBody,
-            translation: { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z },
-            rotation: {
-              x: anchor.quaternion.x,
-              y: anchor.quaternion.y,
-              z: anchor.quaternion.z,
-              w: anchor.quaternion.w,
-            },
-          }
-        : rigidBody,
-      anchor.entityId,
+      {
+        colliders,
+        body: isHeadless
+          ? {
+              ...rigidBody,
+              translation: { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z },
+              rotation: {
+                x: anchor.quaternion.x,
+                y: anchor.quaternion.y,
+                z: anchor.quaternion.z,
+                w: anchor.quaternion.w,
+              },
+            }
+          : rigidBody,
+        target: anchor.entityId,
+      },
       isHeadless
         ? {
             ...params.entityOpts,

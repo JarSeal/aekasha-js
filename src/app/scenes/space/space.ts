@@ -178,16 +178,16 @@ const addAsteroid = async (
     mass,
     boundingRadius: rock.boundingRadius,
   });
-  await createPhysicsEntity(
-    {
+  await createPhysicsEntity({
+    colliders: {
       type: 'CONVEXHULL',
       vertices: rock.hullVertices,
       density: DENSITY,
       restitution: RESTITUTION,
     },
-    { rigidType: 'DYNAMIC', translation: position, linvel, angvel: def.spin },
-    entityId
-  );
+    body: { rigidType: 'DYNAMIC', translation: position, linvel, angvel: def.spin },
+    target: entityId,
+  });
   addGravityBody(entityId, mass);
   return entityId;
 };

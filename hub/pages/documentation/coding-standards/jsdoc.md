@@ -54,7 +54,7 @@ A function that isn't exported gets a comment when its purpose isn't obvious fro
  * day, including a setTimeOfDay made this frame).
  * @returns `out`, or null (no active sky box, or no such sun)
  */
-export const getSunDirection = (out: THREE.Vector3, i = 0) => {
+export const getSunDirection = (out: THREE.Vector3, opts?: SkyBodyOpts) => {
 ```
 
 ```ts

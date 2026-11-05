@@ -131,13 +131,6 @@ export type LoadSceneProps = {
     sceneData: SceneData;
     assets: ScenePrimitiveAssets;
   }) => Promise<void>;
-  /**
-   * Never read: the loader's own `updateLoaderStatusFn` is the one {@link getLoaderStatusUpdater}
-   * returns.
-   * @deprecated Give the loader its `updateLoaderStatusFn` (`createSceneLoader`). Removed in
-   * engine 6.0.0.
-   */
-  updateLoaderStatusFn?: UpdateLoaderStatusFn;
   /** The loader to use (its {@link SceneLoader.id}), the current one without it. */
   loaderId?: string;
   /** Release the previous scene's assets before the next scene loads instead of after it: lower
@@ -156,8 +149,6 @@ let nextSceneId: string | null = null;
  * lives as long as the page (the boot runs once per page load). An id that is registered already
  * warns and keeps the first.
  * @param sceneLoader the loader (its `phase` and `loaderContainer` are set by the loads)
- * @param isCurrent `false` registers it without making it the current loader (default `true`):
- * a load then uses it only through its `loaderId`
  * @returns a promise that resolves at once (the registration is synchronous)
  * @example
  * ```ts
@@ -176,7 +167,11 @@ let nextSceneId: string | null = null;
  */
 export const createSceneLoader = async (
   sceneLoader: Omit<SceneLoader, 'phase' | 'loaderContainer'>,
-  isCurrent?: boolean
+  opts?: {
+    /** `false` registers it without making it the current loader (default `true`): a load then
+     * uses it only through its `loaderId` */
+    isCurrent?: boolean;
+  }
 ) => {
   const foundSameId = sceneLoaders.find((sl) => sl.id === sceneLoader.id);
   if (foundSameId) {
@@ -186,7 +181,7 @@ export const createSceneLoader = async (
   }
 
   sceneLoaders.push(sceneLoader);
-  if (isCurrent !== false) currentSceneLoader = sceneLoader;
+  if (opts?.isCurrent !== false) currentSceneLoader = sceneLoader;
 };
 
 /** The current loader: a load without a `loaderId` uses it. Throws when none is registered. */

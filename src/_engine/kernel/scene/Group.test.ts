@@ -33,7 +33,7 @@ const createMeshChild = (target: ECSWorld, appId: string) => {
 };
 
 const createGroup = (appId: string, target = world) =>
-  createGroupEntity({ appId }, { doNotAddToScene: true }, target);
+  createGroupEntity({ appId }, { doNotAddToScene: true, world: target });
 
 const getGroup = (entityId: number, target = world) =>
   target.getComponent(entityId, ComponentType.OBJECT3D)?.value as THREE.Group;

@@ -293,6 +293,5 @@ share a major. The open ones:
 - **p354:** written as a real plan first (it's a stub); then its own branch into `main`.
 - **Tier 4:** a spike, no PR unless it leaves code.
 
-While `main` carries the unreleased `engine-6` entry (`CHANGELOG.md`, p622), a child's PR says
-whether its changelog joins that entry or bumps a 5.x minor (p807 and p808 joined it with no
-bump).
+Engine 6.0.0 is released (p622, 2026-11-05), so a child's PR bumps a 6.x minor with a dated entry
+of its own.

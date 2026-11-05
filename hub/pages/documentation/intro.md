@@ -44,8 +44,9 @@ import { createPhysicsEntity } from 'aekasha/physics';
 | [`aekasha/toolkit/geometry`](hub:documentation/aekasha/toolkit/geometry)   | The toolkit's procedural geometry and scattering.                                                                                                                                                                                                                 |
 | [`aekasha/toolkit/materials`](hub:documentation/aekasha/toolkit/materials) | The toolkit's material helpers (`triplanarProjection`).                                                                                                                                                                                                           |
 
-- Each feature's entry exports its factory, named after it: `physics()`, `character()`,
-  `skyBox()`, `lod()`, `spatial()`, `instancing()`, `lines()`, `postFx()` and `viewports()`. A
+- Each feature's entry exports its factory, named after it: `physics()` (with
+  `physicsTiers()`, the simulation tiers), `character()`, `skyBox()`, `lod()`, `spatial()`,
+  `instancing()`, `lines()`, `postFx()` and `viewports()`. A
   feature is installed only when [`InitEngine`](api:InitEngine)'s `features` lists it (see
   [How the app starts](hub:examples/quick-start#how-the-app-starts)), and a production build holds
   only what's listed.

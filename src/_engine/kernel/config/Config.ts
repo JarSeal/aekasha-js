@@ -1,4 +1,3 @@
-import type { CMPHandle } from '../../ui/core/CMPTypes';
 import type {
   PhysicsBackgroundBehavior,
   PhysicsEngine,
@@ -6,7 +5,6 @@ import type {
   PhysicsWorkerTarget,
 } from '../../features/physics/types/PhysicsConfigTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
-import type { DraggableWindow } from '../../ui/overlays/windows/DraggableWindowTypes';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugKeyBindingConfig } from '../../debug/DefaultDebugKeyBindings';
@@ -140,6 +138,10 @@ export type AppConfig = {
     solverIterations?: number;
     /** Rapier's internal PGS iterations per solver iteration. Default 1. */
     internalPgsIterations?: number;
+    /** How many times continuous collision detection (a body's `ccdEnabled`) continues a fast
+     * body's path after a hit in one step: smoother paths at a cost; 0 turns CCD off. Default 1
+     * (Rapier's). */
+    maxCcdSubsteps?: number;
     /** Render-time smoothing on top of the discrete physics-step pose. Default 'NONE'
      * (unchanged behavior). See PhysicsState.interpolationMode for the mode semantics. */
     interpolationMode?: PhysicsInterpolationMode;
@@ -271,18 +273,6 @@ export type AppConfig = {
      * Debug tools tab's "File server" folder overrides it per browser. Always 0 outside the debug
      * env. Default 20. */
     saveHistorySize?: number;
-  };
-  /**
-   * Draggable windows' content functions, keyed by window kind (a window's id when it has no
-   * kind): a window opened without `content` builds it with its kind's `contentFn`, when none is
-   * registered for the kind. Only `contentFn` is read.
-   * @deprecated Register the content with `registerDraggableWindow` or
-   * `registerDraggableWindowKind` (`aekasha/ui`). Removed in engine 6.0.0.
-   */
-  draggableWindows?: {
-    [kind: string]: Partial<DraggableWindow> & {
-      contentFn?: (data?: { [key: string]: unknown }) => CMPHandle;
-    };
   };
 };
 

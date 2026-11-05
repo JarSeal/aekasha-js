@@ -97,8 +97,8 @@ export const initPhysicsStressTest = ({
 
       // Created in parallel, not awaited one by one (WORKER_THREAD round-trips to the worker). A
       // body that isn't created (eg. the world's maxBodies) takes its mesh with it
-      const create = createPhysicsEntity(
-        {
+      const create = createPhysicsEntity({
+        colliders: {
           type: isBox ? 'BOX' : 'BALL',
           ...(isBox
             ? { hx: BOX_SIZE / 2, hy: BOX_SIZE / 2, hz: BOX_SIZE / 2 }
@@ -107,14 +107,14 @@ export const initPhysicsStressTest = ({
           restitution: 0.5, // Bounciness makes them settle slower (more CPU usage)
           density: 1.0,
         },
-        {
+        body: {
           rigidType: 'DYNAMIC',
           translation: position,
           // Tumbling boxes make the collisions complex
           rotation: getRandomRotation(random),
         },
-        entityId
-      ).catch((error: unknown) => {
+        target: entityId,
+      }).catch((error: unknown) => {
         const world = getECSWorld();
         if (world.isAlive(entityId)) world.deleteEntity(entityId);
         throw error;

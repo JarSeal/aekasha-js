@@ -26,13 +26,23 @@ export const createRawEntity = (ecsWorld?: ECSWorld) => {
 };
 
 /**
+ * The entity creators' options (`createEntity`, `createMeshEntity`, `createLineEntity`, …): the
+ * entity's {@link CoreEntityOpts} and the world it's created in.
+ */
+export type CreateEntityOpts = CoreEntityOpts & {
+  /** The entity's world; the default world when left out. Code only (not in the JSONs'
+   * `entityOpts`). */
+  world?: ECSWorld;
+};
+
+/**
  * {@link ECSWorld.createEntity}: an entity with the core components (`APP_ID`, `TRANSFORM`, …).
- * `ecsWorld` defaults to the default world.
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the new entity's id
  */
-export const createEntity = (opts?: CoreEntityOpts, ecsWorld?: ECSWorld) => {
-  const world = ecsWorld || getECSWorld();
-  return world.createEntity(opts);
+export const createEntity = (opts?: CreateEntityOpts) => {
+  const { world = getECSWorld(), ...entityOpts } = opts ?? {};
+  return world.createEntity(entityOpts);
 };
 
 /**

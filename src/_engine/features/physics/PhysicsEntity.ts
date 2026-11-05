@@ -9,6 +9,7 @@ import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
+import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import {
@@ -25,7 +26,7 @@ import {
 } from './PhysicsInterpolation';
 import { endPhysicsRayStatsFrame } from './PhysicsQueryStats';
 import { setBodyMovedListener } from './PhysicsRegistry';
-import { getPhysicsState } from './PhysicsState';
+import { facade, getPhysicsState } from './PhysicsState';
 import { getPhysicsSnapshotStepIndex, getPhysicsWriteVisibleStep } from './PhysicsStepping';
 import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
@@ -39,6 +40,8 @@ import {
 import { readStatsClock } from '../../utils/StatsClock';
 
 let debugPhysicsDraw: DebugModuleRef<typeof import('./debug/_dbg__PhysicsDebugDraw')> | null = null;
+/** createPhysicsEntity's `tierPolicy` without physicsTiers() warns once. */
+let isTierPolicyWithoutFeatureWarned = false;
 
 /**
  * Installs the physics entities' side (the physics feature's install): the transform reset
@@ -132,11 +135,25 @@ export const settlePendingPhysicsEntities = async () => {
   await flushPhysics();
 };
 
+/** What createPhysicsEntity makes: the colliders, the body they attach to, and its entity. */
+export type PhysicsEntityProps = {
+  /** The colliders, attached to the body when there is one */
+  colliders: ColliderParams | ColliderParams[];
+  /** The body; none makes the colliders alone (static, in no bucket) */
+  body?: RigidBodyParams;
+  /** An `Object3D` (a new entity gets it as its OBJECT3D and adds it to the root scene unless
+   * `doNotAddToScene`), or the id of an existing entity (eg. from `createMeshEntity`) to add the
+   * physics components to: its OBJECT3D, if any, picks the visual bucket, and a body without a
+   * `translation` starts at its TRANSFORM. None makes a new entity without a visual. */
+  target?: THREE.Object3D | number;
+};
+
 /** createPhysicsEntity's entity options: CoreEntityOpts plus the physics ones, which apply to a
  * `target` entity too. */
 export type PhysicsEntityOpts = CoreEntityOpts & {
   /** Code only: the entity's simulation tier follows its world's distance policy
-   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only. */
+   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only, and only with the
+   * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
 };
 
@@ -150,15 +167,9 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
  * with the backend's error when a body or collider can't be made (eg. a `TRIMESH` without
  * indices). Then nothing of it exists: a new entity is deleted, an existing `target` entity is
  * left as it was.
- * @param colliderParams the colliders, attached to the body when there is one
- * @param rigidBodyParams the body; none makes the colliders alone (static, in no bucket)
- * @param target an `Object3D` (a new entity gets it as its OBJECT3D and adds it to the root
- * scene unless `entityOpts.doNotAddToScene`), or the id of an existing entity (eg. from
- * `createMeshEntity`) to add the physics components to: its OBJECT3D, if any, picks the
- * visual bucket, and a body without a `translation` starts at its TRANSFORM. None makes a new
- * entity without a visual
- * @param entityOpts the new entity's options (for a `target` id only `tierPolicy` applies)
- * @param ecsWorld the world; the default one when left out
+ * @param props the colliders, the body and the target
+ * @param opts the new entity's options (for a `target` id only `tierPolicy` applies) and its
+ * world (the default one when left out)
  * @remarks An entity deleted while its `WORKER_THREAD` create is in flight (a scene exit) gets
  * nothing: what the create made is deleted again, and the promise resolves with the deleted
  * entity's id. Check `world.isAlive(id)` after the await before using it.
@@ -172,26 +183,24 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
  * const mat = createMaterial({ id: 'ball', type: 'STANDARD', params: { color: 0xff5533 } });
  * const ballId = createMeshEntity({ geo, mat, position });
  *
- * await createPhysicsEntity(
- *   { type: 'BALL', restitution: 0.6 }, // the radius comes from the sphere
- *   { rigidType: 'DYNAMIC', translation: position },
- *   ballId
- * );
+ * await createPhysicsEntity({
+ *   colliders: { type: 'BALL', restitution: 0.6 }, // the radius comes from the sphere
+ *   body: { rigidType: 'DYNAMIC', translation: position },
+ *   target: ballId,
+ * });
  * ```
  */
 export const createPhysicsEntity = (
-  colliderParams: ColliderParams | ColliderParams[],
-  rigidBodyParams?: RigidBodyParams,
-  target?: THREE.Object3D | number,
-  entityOpts?: PhysicsEntityOpts,
-  ecsWorld?: ECSWorld
+  props: PhysicsEntityProps,
+  opts?: PhysicsEntityOpts & CreateEntityOpts
 ): Promise<number> => {
+  const { world, ...entityOpts } = opts ?? {};
   const creation = createPhysicsEntityNow(
-    colliderParams,
-    rigidBodyParams,
-    target,
+    props.colliders,
+    props.body,
+    props.target,
     entityOpts,
-    ecsWorld
+    world
   );
   pendingPhysicsEntityCreates.add(creation);
   const untrack = () => pendingPhysicsEntityCreates.delete(creation);
@@ -339,10 +348,17 @@ const createPhysicsEntityNow = async (
     world.addComponent(entityId, bucket, rb!);
   }
 
-  // Data only: the policy's system comes with PhysicsTierPolicy.ts, so an app that never sets a
-  // policy pays nothing
+  // Data only: the policy's systems come with physicsTiers() (PhysicsTiersFeature.ts), so an app
+  // without it doesn't download them
   if (entityOpts?.tierPolicy) {
-    if (rigidBodyParams?.rigidType === 'DYNAMIC') {
+    if (!facade.tiersInstalled) {
+      if (!isTierPolicyWithoutFeatureWarned) {
+        isTierPolicyWithoutFeatureWarned = true;
+        lwarn(
+          "createPhysicsEntity: `tierPolicy` needs the physics tiers feature: add `physicsTiers()` (from 'aekasha/physics') to InitEngine's `features`, right after `physics()`. Ignored."
+        );
+      }
+    } else if (rigidBodyParams?.rigidType === 'DYNAMIC') {
       world.addComponent(entityId, ComponentType.PHYSICS_TIER_POLICY, {
         refusedTier: null,
         placed: false,

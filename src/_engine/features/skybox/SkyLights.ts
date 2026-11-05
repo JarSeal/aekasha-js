@@ -235,8 +235,8 @@ const createDiscLight = (
       appId: `__skybox_${skyBoxId}_${role}`,
       managedBy: { manager: SKYBOX_MANAGER_ID, ownerId: skyBoxId, role },
       debugData: { name: getDiscLightName(kind, index) },
-    },
-    world
+      world,
+    }
   );
   // Render the shadow map once now, even when the light starts faded out (autoUpdate false):
   // a map first sampled and only later rendered into gets its GPU texture destroyed in place
@@ -395,7 +395,7 @@ const updateDiscLightTransform = (state: DiscLightState, world: ECSWorld) => {
   state.lastFollow.copy(_followPoint);
   state.needsWrite = false;
 
-  const targetId = getLightTargetId(state.entityId, world);
+  const targetId = getLightTargetId(world, state.entityId);
   if (targetId !== undefined) writeTransform(targetId, _followPoint, world);
   writeTransform(
     state.entityId,
@@ -414,8 +414,8 @@ const createAmbientLight = (skyBoxId: string, type: 'HEMISPHERE' | 'AMBIENT', wo
       appId: `__skybox_${skyBoxId}_AMBIENT`,
       managedBy: { manager: SKYBOX_MANAGER_ID, ownerId: skyBoxId, role: 'AMBIENT' },
       debugData: { name: 'Sky box ambient' },
-    },
-    world
+      world,
+    }
   ),
 });
 
@@ -653,7 +653,7 @@ export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) 
  * const removeListener = onSkyBoxChange(() => {
  *   const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
  *   const sunId = getEntityIdByAppId('mySun');
- *   if (sunId !== undefined) setLightEnabled(sunId, !hasSkySun, getECSWorld());
+ *   if (sunId !== undefined) setLightEnabled(getECSWorld(), sunId, !hasSkySun);
  * });
  * ```
  */

@@ -1,5 +1,3 @@
-export { LEGACY_SKYBOX_WARNING, isLegacySkyBoxProps } from './LegacySkyBox';
-export type { LegacySkyBoxProps } from './LegacySkyBox';
 export { mergeSkyBoxPreset, resolveSkyBoxPreset, SKYBOX_PRESET_NAMES } from './Presets';
 export type { SkyBoxPresetDef, SkyBoxPresetName } from './Presets';
 export {
@@ -25,6 +23,7 @@ export {
   setDayNightSpeed,
   setTimeOfDay,
 } from './SkyDayNight';
+export type { SkyBodyOpts } from './SkyDayNight';
 export type {
   SkyBoxBaseDef,
   SkyBoxBaseInput,

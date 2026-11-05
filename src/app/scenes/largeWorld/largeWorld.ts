@@ -306,7 +306,7 @@ const createTreePool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     spatialDomain: 'FOLIAGE',
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /** 2,000 bushes in two levels (the second at fewer segments), hidden when a few pixels tall. */
@@ -341,7 +341,7 @@ const createBushPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     receiveShadow: true,
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /**
@@ -379,7 +379,7 @@ const createRockPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     receiveShadow: true,
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /** The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`. */
@@ -411,8 +411,8 @@ const createStaticProps = ({ world, terrain }: WorldContext) => {
         appId: prop.appId,
         debugData: { name: prop.appId },
         ecsFrustumCullingEnabled: prop.offFrustum,
-      },
-      world
+        world,
+      }
     );
   }
 };
@@ -433,8 +433,7 @@ const createLanterns = ({ world, terrainMesh }: WorldContext) => {
         objectCullingEnabled: true,
         position: { x: position.x, y: position.y + 1.2, z: position.z },
       },
-      { appId: `largeWorldLantern${i}`, debugData: { name: `Large world lantern ${i}` } },
-      world
+      { appId: `largeWorldLantern${i}`, debugData: { name: `Large world lantern ${i}` }, world }
     );
   });
 };
@@ -455,8 +454,7 @@ const createRestingObjects = ({ world, terrain }: WorldContext) => {
         receiveShadow: true,
         position: { x: obj.x, y: terrain.getHeightAt(obj.x, obj.z) + 0.6, z: obj.z },
       },
-      { appId: obj.appId, debugData: { name: obj.appId } },
-      world
+      { appId: obj.appId, debugData: { name: obj.appId }, world }
     );
   }
   return material;
@@ -486,8 +484,8 @@ const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Mate
     {
       appId: 'largeWorldDynamicCrateStack',
       debugData: { name: 'Large world dynamic crate stack' },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(entityId, HoverToolComponentType.HOVER, {
     speed: 1.2,
@@ -514,8 +512,7 @@ const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Materia
       receiveShadow: true,
       position: { x, y: terrain.getHeightAt(x, z) + 0.5, z },
     },
-    { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' } },
-    world
+    { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' }, world }
   );
 };
 
@@ -548,8 +545,8 @@ const createFollowCamera = ({ world }: WorldContext, crateStackId: number) => {
         name: 'Large world dynamic camera',
         description: 'Follows largeWorldDynamicCrateStack via FollowTool. Toggle with the C key.',
       },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(cameraId, FollowToolComponentType.FOLLOW, {
     leaderId: crateStackId,
@@ -591,7 +588,7 @@ const syncSceneLightsWithSky = (world: ECSWorld) => {
     const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
     for (const appId of ['largeWorldSun', 'largeWorldAmbient']) {
       const lightId = getEntityIdByAppId(appId, world);
-      if (lightId !== undefined) setLightEnabled(lightId, !hasSkySun, world);
+      if (lightId !== undefined) setLightEnabled(world, lightId, !hasSkySun);
     }
   };
   registerOnSceneEnter(LARGE_WORLD_SCENE_ID, syncSceneLights);

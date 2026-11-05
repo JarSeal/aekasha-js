@@ -23,7 +23,6 @@ import {
   recordMainThreadStepStats,
   resetPhysicsStepStats,
 } from './PhysicsStepStats';
-import { readPhysicsWallClock } from './PhysicsWallClock';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
 
@@ -87,7 +86,6 @@ const takeFrameDelta = (loopState: LoopState): number | null => {
     // the world step off counts as one too, so switching it back on resumes cleanly instead
     // of catching up on the time it was off, and so does a scene suspended by an editor view
     // (Views.ts).
-    if (!facade.state.isPaused) setPhysicsPauseTime();
     facade.state.isPaused = true;
     timerRunning = false;
     return null;
@@ -99,7 +97,6 @@ const takeFrameDelta = (loopState: LoopState): number | null => {
       // loop (toggleMainPlay(false), which makes loopState.masterPlay false and is caught
       // above) — this is a defensive fallback in case stepPhysics is still reached directly
       // while hidden.
-      if (!facade.state.isPaused) setPhysicsPauseTime();
       facade.state.isPaused = true;
       timerRunning = false;
       return null;
@@ -117,8 +114,6 @@ const takeFrameDelta = (loopState: LoopState): number | null => {
     // accumulator rather than trying to simulate the whole paused duration in one go. The
     // timer restarts from now, whatever paused it, so the next frame's dt is one frame long.
     facade.state.isPaused = false;
-    facade.state.pauseDurationTotal += readPhysicsWallClock() - facade.state.pausedTime;
-    facade.state.pausedTime = 0;
     accDelta = 0;
     simClockEpoch++;
     timerRunning = true;
@@ -311,33 +306,6 @@ export const getWriteVisibleStep = () => stepsIssued + 1;
 export const isWritePending = (visibleAt: number) =>
   !facade.transformBuffer || facade.transformBuffer.getStepIndex() < visibleAt;
 
-const setPhysicsPauseTime = () => {
-  const now = readPhysicsWallClock();
-  if (facade.state.pausedTime > 0) {
-    facade.state.pauseDurationTotal += now - facade.state.pausedTime;
-  }
-  facade.state.pausedTime = now;
-};
-
-/**
- * The wall clock (ms) minus the time physics was paused. Not deterministic: simulation code
- * counts fixed steps instead.
- * @internal
- * @deprecated Use the step index ({@link getPhysicsSubStepIndex}) times the fixed timestep
- * (removed in engine 6.0.0).
- */
-export const getPhysGameTime = () => {
-  const now = readPhysicsWallClock();
-  let currentTotalPauseDuration = facade.state.pauseDurationTotal;
-
-  // If currently paused, add the time since the last pause began
-  if (facade.state.pausedTime > 0) {
-    currentTotalPauseDuration += now - facade.state.pausedTime;
-  }
-
-  return now - currentTotalPauseDuration;
-};
-
 /**
  * Window visibility change handler (PhysicsWorld.ts adds it with the first world).
  * @internal
@@ -346,7 +314,6 @@ export const physicsVisibilityChangeHandler = (isHidden: boolean) => {
   const loopState = getReadOnlyLoopState();
   if (isHidden) {
     if (loopState.masterPlay && facade.state.backgroundBehavior === 'PAUSE') {
-      setPhysicsPauseTime();
       facade.state.isPaused = true;
       timerRunning = false;
       facade.state.pauseReason = 'BACKGROUND_BEHAVIOR';
@@ -370,13 +337,12 @@ let isSteppingHeld = false;
 /**
  * Stops the world from stepping until releasePhysicsStepping() is called. Physics' scene hooks
  * hold it for the whole scene load (loadStart to entered), so every body of the next scene starts stepping on the same
- * step no matter how long its assets took to load. Counts as a pause for getPhysGameTime().
+ * step no matter how long its assets took to load.
  * @internal
  */
 export const holdPhysicsStepping = () => {
   if (isSteppingHeld) return;
   isSteppingHeld = true;
-  if (!facade.state.isPaused) setPhysicsPauseTime();
   facade.state.isPaused = true;
   facade.state.pauseReason ??= 'SCENE_LOAD';
 };

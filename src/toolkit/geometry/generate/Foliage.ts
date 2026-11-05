@@ -56,7 +56,7 @@ export interface GeneratedTreeGeometry {
  *   maxInstances: placements.length,
  * });
  * getRootScene()?.add(pool.mesh);
- * pool.spawn(world, placements);
+ * pool.spawn(placements);
  * ```
  */
 export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedTreeGeometry => {

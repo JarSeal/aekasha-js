@@ -28,9 +28,8 @@ export type ButtonProps = {
   tooltip?: string;
   /** A shortcut's hint drawn after the label (`createKbd({ keys: 'Ctrl+S' })`), whose keys are the
    * button's `aria-keyshortcuts`, also after its `setKeys`. The button removes it with itself.
-   * Display only: binding the key is the app's. A string (`'Ctrl+S'`) is deprecated (removed in
-   * engine 6.0.0): the button loads Kbd's code for it, so its hint appears a frame later. */
-  kbd?: Kbd | string;
+   * Display only: binding the key is the app's. */
+  kbd?: Kbd;
   /** Makes it a toggle button with this state (`aria-pressed`): a click flips it. */
   pressed?: boolean;
   /** A toggle's new state, after a click flipped it. */

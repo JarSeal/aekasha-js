@@ -28,7 +28,7 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 
 ### Engine (`src/_engine/`)
 
-- **Feature modules**: `InitEngine({ features })` installs the kernel (ECS, meshes, cameras, lights, input, scenes) and then only the features the app lists, each from its entry (`physics()`, `skyBox()`, `lod()`, …), plus the app's own. A feature reaches the kernel through one install context (ECS registrations, scene load phases, the fixed-step driver, the render pipeline, import extensions, debug hooks). Nothing registers itself on import, and a scene whose JSON needs a feature the app left out fails at boot with its name.
+- **Feature modules**: `InitEngine({ features })` installs the kernel (ECS, meshes, cameras, lights, input, scenes) and then only the features the app lists, each from its entry (`physics()`, `physicsTiers()`, `skyBox()`, `lod()`, …), plus the app's own. A feature reaches the kernel through one install context (ECS registrations, scene load phases, the fixed-step driver, the render pipeline, import extensions, debug hooks). Nothing registers itself on import, and a scene whose JSON needs a feature the app left out fails at boot with its name.
 - **Smallest build possible**: `yarn sbp` reports each build's first download and what loads later, each feature's size and the import chain that put it there, and checks the budgets in `sbp.config.ts` (`yarn build` fails over one). A profile is a build to measure: the template app, and embeds like the banner, one scene made in code with no engine feature, the measured floor.
 - **Embedding**: `mountAekasha({ target, width, height, layout })` mounts the engine into an element of a page it doesn't own (a hero, a product view, a background behind the content), without touching the page's styles or input. The canvas follows its container, the scene pauses out of view and respects reduced motion, and the handle loads scenes, pauses and unmounts (which stops the workers, physics' with its world). An embed profile builds as an ES module a site imports.
 - **Rendering**: Three.js `WebGPURenderer` with automatic WebGL fallback, configurable tone mapping, color space and shadow maps.
@@ -36,7 +36,7 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 - **Physics API**: an engine-agnostic facade with Rapier as the backend. It covers rigid bodies, colliders (including heightfields, and the bodies and colliders an imported glTF node's custom properties describe), impulse joints, ray casts and shape casts, contact and collision events, and fixed-timestep stepping with render interpolation.
 - **Threaded physics**: `WORKER_THREAD` or `MAIN_THREAD` mode. The worker syncs every body's transform through one shared buffer per frame, never one message per body. The buffer is a lock-free triple buffer, so every system in a frame reads the same complete physics step. Every message between the threads goes through one transport, as plain data and in order: the seam a network channel will plug into.
 - **Deterministic scene loads**: physics is held during a scene load, the world is recreated fresh, and stepping resumes only after every body exists. Simulation code draws its random numbers from named, seeded streams (`getRandomStream`) that every load restarts, so a scene draws the same numbers on every visit.
-- **Physics simulation tiers**: a large world doesn't keep every body simulated. A dynamic body can be frozen in place but still collidable, disabled, or taken out of the physics world with its state kept, and comes back where it left off. A distance policy picks each body's tier from rings around a focus (the camera, an entity or a point), on fixed physics steps, so a scene driven by it stays deterministic in both thread modes.
+- **Physics simulation tiers** (`physicsTiers()`, a feature of their own: an app without it doesn't download them): a large world doesn't keep every body simulated. A dynamic body can be frozen in place but still collidable, disabled, or taken out of the physics world with its state kept, and comes back where it left off. A distance policy picks each body's tier from rings around a focus (the camera, an entity or a point), on fixed physics steps, so a scene driven by it stays deterministic in both thread modes.
 - **Scene system**: JSON scenes with per-scene overrides (`__saveData`), a customizable scene loader with progress callbacks that runs one load at a time and leaves the current scene running when a load fails, and persistent or scene-scoped entities.
 - **Assets**: glTF/GLB import (with meshopt and Draco), textures (including KTX2), HDR environment maps, per-scene asset ownership and release, and optional worker-thread loading.
 - **LOD chains**: `generateLodChain` simplifies a registered geometry into a chain of lighter levels with meshoptimizer, in the asset worker. Each level records its triangle count and error, and shares the base's vertex buffer (only its index differs) unless asked for its own. Material groups are kept, and the chain is released with its base geometry. An imported asset asks for chains with `"lodChain": true` in its JSON: the asset pipeline builds them into the optimized GLB, so the client loads them instead of simplifying (and generates them after the load when the mesh isn't optimized). A mesh with `lod: "AUTO"` uses its chain's levels.
@@ -346,11 +346,11 @@ export const scene = async () => {
   const ballId = createMeshEntity({ geo, mat, position, castShadow: true }, { appId: 'ball' });
 
   // Attach a dynamic rigid body. Its transform syncs back to the mesh every frame.
-  await createPhysicsEntity(
-    { type: 'BALL', radius: 0.4, restitution: 0.6 },
-    { rigidType: 'DYNAMIC', translation: position },
-    ballId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BALL', radius: 0.4, restitution: 0.6 },
+    body: { rigidType: 'DYNAMIC', translation: position },
+    target: ballId,
+  });
 };
 ```
 
@@ -473,7 +473,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 - **Ækasha Hub**: run `yarn dev` and open `http://localhost:8080/hub/` for the getting-started guide, a page per feature, examples, known issues and the changelog, all searchable (⌘K / Ctrl+K), or build it as a static site with `yarn hub:build`. To add or edit its pages, see [writing Hub pages](docs/techniques/hub-authoring.md).
 - **API reference**: the Hub's Documentation section (`/hub/documentation/`): a page per public entry (`aekasha`, `aekasha/physics`, …, at `/hub/documentation/aekasha/physics/`) with every name it exports, its signature, JSDoc and source link, searchable and linked from the other Hub pages. `yarn docs` still writes TypeDoc's own HTML to `docs-api/`.
 - **Architecture**: the Hub's `/hub/documentation/architecture/`: how the engine fits together (the layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, debug code, the build) and where a feature of your own goes.
-- **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with the `migrateToEntries.ts` codemod for the entry imports.
+- **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with its codemods: `migrateToEntries.ts` for engine 5's entry imports, `devTools/migrate/migrateEngine6.ts` for engine 6.
 - **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md).
 - **Design docs**: [`docs/plans/`](docs/plans/), and the app's in [`docsApp/plans/`](docsApp/plans/). Files prefixed `_DONE_` describe features that are already implemented. Known issues are in [`docs/issues/`](docs/issues/) (the app's in [`docsApp/issues/`](docsApp/issues/)) and on the Hub's Issues page.
 - **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md), with a map of the `CLAUDE.md` next to each subsystem.

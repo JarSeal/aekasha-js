@@ -81,8 +81,7 @@ export type BaseLayer = {
   environmentNode: THREE.Node | null;
 };
 
-/** Default sRGB, or linear sRGB for .hdr files. An empty string is unset (the legacy save data
- * has one). */
+/** Default sRGB, or linear sRGB for .hdr files. An empty string is unset. */
 const resolveColorSpace = (colorSpace: string | undefined, fileName?: string): THREE.ColorSpace =>
   (colorSpace as THREE.ColorSpace) ||
   (isHDR(fileName) ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace);

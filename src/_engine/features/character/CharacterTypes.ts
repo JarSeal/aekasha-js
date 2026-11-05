@@ -80,11 +80,6 @@ export type CharacterCastRecord = {
   /** The physics step the result belongs to (getPhysicsSubStepIndex; in WORKER_THREAD mode the
    * snapshot step when it arrived), -1 = no result yet. */
   resolvedAtStep: number;
-  /**
-   * When the result arrived, in step time (ms), 0 = no result yet.
-   * @deprecated Use `resolvedAtStep` (removed in engine 6.0.0).
-   */
-  resolvedAt: number;
   /** The stance the cast was sized for. */
   isCrouching: boolean;
   /** World origin of the cast. */
@@ -135,29 +130,11 @@ export type CharacterBodyCollider = {
   params: ColliderParams;
 };
 
-/**
- * A body's kind (eg. `'HUMANOID'`), given as `bodyKind` or as the deprecated `kind` (at least
- * one; `bodyKind` wins when both are given).
- */
-export type CharacterBodyKindField =
-  | {
-      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
-      bodyKind: string;
-      /**
-       * The body's kind.
-       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
-       */
-      kind?: string;
-    }
-  | {
-      /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
-      bodyKind?: string;
-      /**
-       * The body's kind.
-       * @deprecated Use `bodyKind` (removed in engine 6.0.0).
-       */
-      kind: string;
-    };
+/** A body's kind (eg. `'HUMANOID'`): a body plan's and `createCharacter`'s. */
+export type CharacterBodyKindField = {
+  /** The body's kind (eg. `'HUMANOID'`): data for game code, not a code path. */
+  bodyKind: string;
+};
 
 /**
  * What a character's body looks like to physics: its kind and its colliders and probes, all sized
@@ -274,38 +251,10 @@ export type CharacterObject = {
   /** The body's kind, from its body plan (eg. `'HUMANOID'`). Data, not a code path: switch on it
    * in game code. */
   bodyKind: string;
-  /**
-   * The body's kind (the same as `bodyKind`).
-   * @deprecated Use `bodyKind` (removed in engine 6.0.0).
-   */
-  kind: string;
   /** The character's entity: the visual's, with the physics components. */
   entityId: number;
   /** App id of the visual root (the Object3D the body moves). */
   visualId: string;
-  /**
-   * Key binding ids owned by this character (`createCharacter`'s `controls`), deleted with it.
-   * @deprecated A brain owns a character's input now (a player brain's action map); removed in
-   * engine 6.0.0 with `controls`.
-   */
-  keyBindingIds: string[];
-  /**
-   * Mouse binding ids owned by this character, deleted with it.
-   * @deprecated See `keyBindingIds`.
-   */
-  mouseBindingIds: string[];
-  /**
-   * The controller's data as one flat object: state keys as they are, configuration keys with one
-   * underscore (`_maxVelocity`), internal ones with two (`__jumpStep`).
-   * @deprecated Use the controller's `state`, `config.values` and `internal` (removed in engine
-   * 6.0.0).
-   */
-  data: Record<string, unknown>;
-  /**
-   * The configuration (`_` keys of `data`) as the character was created with it. Frozen.
-   * @deprecated Use the controller's `config.initial` (removed in engine 6.0.0).
-   */
-  initialConfig: CharacterConfigValues;
   /** What the character wants to do this sub-step: write it to drive the character. */
   intent: CharacterIntent;
   /** Who moves the body. Change it with `setControlMode`: the controller applies it on its next

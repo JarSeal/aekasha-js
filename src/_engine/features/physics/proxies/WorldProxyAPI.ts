@@ -63,9 +63,7 @@ export class WorldProxyAPI implements WorldAPI {
     lengthUnit: 1.0,
     solverIters: facade.state.solverIterations,
     pgsIters: facade.state.internalPgsIterations,
-    // Rapier's default, until a getter or setter call (no setting sets it:
-    // docs/issues/physics-ccd-substeps-setting.md)
-    ccdSubsteps: 1,
+    ccdSubsteps: facade.state.maxCcdSubsteps,
   };
 
   /** A world proxy, its settings' copy from the physics state the worker's world was made from. */
@@ -126,7 +124,7 @@ export class WorldProxyAPI implements WorldAPI {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  step(_eventQueue?: unknown, _hooks?: unknown): void {
+  step(_eventQueue?: unknown): void {
     throw new Error('step is not yet implemented in Worker thread mode.');
   }
 
@@ -207,7 +205,7 @@ export class WorldProxyAPI implements WorldAPI {
   getMaxCcdSubstepsSync(): number {
     return this._cache.ccdSubsteps;
   }
-  setMaxCcdSubstepsSync(substeps: number): void {
+  setMaxCcdSubsteps(substeps: number): void {
     this._cache.ccdSubsteps = substeps;
     messageWorker({ type: PhysicsProtocolType.WORLD_SET_CCD_SUBSTEPS, substeps });
   }

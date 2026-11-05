@@ -134,9 +134,9 @@ export type LodMeasure = {
  * @param out written in place
  */
 export const getLodWorldSphere = (
+  world: ECSWorld,
   entityId: number,
   lod: LodData,
-  world: ECSWorld,
   out: THREE.Sphere
 ) => {
   if (lod._levels.length === 0) return false;

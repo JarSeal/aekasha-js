@@ -6,7 +6,7 @@ import { getLightCharacteristics } from './LightHelpers';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { ComponentType, Transform } from '../ecs/ECSCoreComponents';
 import { loadPersistentProps } from '../scene/PropertyLoader';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
@@ -209,12 +209,12 @@ export type LightProps = {
 
 /**
  * Creates a light entity: an ambient, hemisphere, point, directional or spot light (in the root
- * scene unless `entityOpts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
+ * scene unless `opts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
  * directional or spot light a target entity (deleted with it, see {@link getLightTargetId}).
- * Point and spot lights join the spatial index unless `entityOpts.spatialIndex` is `false`. In
+ * Point and spot lights join the spatial index unless `opts.spatialIndex` is `false`. In
  * the debug env the debugger's saved overrides for its app id apply, unless the light has a
- * manager (`entityOpts.managedBy`).
- * @param ecsWorld default: the default world
+ * manager (`opts.managedBy`).
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the light's entity id
  * @example
  * ```ts
@@ -233,11 +233,8 @@ export type LightProps = {
  * );
  * ```
  */
-export const createLightEntity = (
-  lightProps: LightProps,
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world = ecsWorld || getECSWorld();
   const rootScene = existsOrThrow(getRootScene(), 'Could not find root scene.');
 
@@ -428,15 +425,15 @@ export const createLightEntity = (
   }
 
   if (props.enabled === false) {
-    setLightEnabled(entityId, false, world);
+    setLightEnabled(world, entityId, false);
   }
 
   if ('frustumCullingEnabled' in props && props.frustumCullingEnabled) {
-    setLightFrustumCullingEnabled(entityId, true, world);
+    setLightFrustumCullingEnabled(world, entityId, true);
   }
 
   if ('objectCullingEnabled' in props && props.objectCullingEnabled) {
-    setLightObjectCullingEnabled(entityId, true, world);
+    setLightObjectCullingEnabled(world, entityId, true);
   }
 
   // Opt-in, not opt-out (docs/plans/_DONE_p050_spatial-index.md §3): ambient/hemisphere lights are
@@ -462,11 +459,11 @@ export const createLightEntity = (
  *
  * const world = getECSWorld();
  * const sunId = getEntityIdByAppId('sun');
- * const targetId = sunId !== undefined ? getLightTargetId(sunId, world) : undefined;
+ * const targetId = sunId !== undefined ? getLightTargetId(world, sunId) : undefined;
  * if (targetId !== undefined) world.setTransform(targetId, { pos: { x: 0, y: 0, z: -5 } });
  * ```
  */
-export const getLightTargetId = (lightId: number, world: ECSWorld): number | undefined =>
+export const getLightTargetId = (world: ECSWorld, lightId: number): number | undefined =>
   world.getComponent(lightId, ComponentType.TARGET_LINK)?.targetId;
 
 /**
@@ -476,10 +473,10 @@ export const getLightTargetId = (lightId: number, world: ECSWorld): number | und
  * import { getECSWorld, getEntityIdByAppId, setLightEnabled } from 'aekasha';
  *
  * const lampId = getEntityIdByAppId('lamp');
- * if (lampId !== undefined) setLightEnabled(lampId, false, getECSWorld());
+ * if (lampId !== undefined) setLightEnabled(getECSWorld(), lampId, false);
  * ```
  */
-export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
+export const setLightEnabled = (world: ECSWorld, lightId: number, enabled: boolean) => {
   if (enabled) {
     world.removeComponent(lightId, ComponentType.DISABLED);
   } else {
@@ -496,9 +493,9 @@ export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWor
 // → ECSCoreSystems.ts → Light.ts is an import cycle, and an alias would read the import while
 // this module loads, possibly before ObjectFrustumCullingSystem.ts has defined it
 export const setLightFrustumCullingEnabled = (
+  world: ECSWorld,
   entityId: number,
-  enabled: boolean,
-  world: ECSWorld
+  enabled: boolean
 ) => setFrustumCullingEnabled(entityId, enabled, world);
 
 /**
@@ -507,9 +504,9 @@ export const setLightFrustumCullingEnabled = (
  * @internal
  */
 export const setLightObjectCullingEnabled = (
+  world: ECSWorld,
   lightId: number,
-  enabled: boolean,
-  world: ECSWorld
+  enabled: boolean
 ) => {
   if (enabled) {
     world.addComponent(lightId, ComponentType.OBJECT_CULLING_ENABLED, true);

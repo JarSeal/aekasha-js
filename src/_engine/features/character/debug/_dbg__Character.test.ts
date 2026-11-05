@@ -85,8 +85,6 @@ const createCharacter = (id: string) => {
     controlMode: 'PLAYER',
     controller: { kind: 'DYNAMIC_CHARACTER' },
     brain: undefined,
-    keyBindingIds: [],
-    mouseBindingIds: [],
   });
   return { pose };
 };

@@ -5,7 +5,7 @@ import { getRootScene } from './Scene';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { setTransformFromProps } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import type { FeatureContext } from '../init/Features';
 
@@ -21,7 +21,7 @@ export const installGroups = (ctx: FeatureContext) => {
 
 /** What {@link createGroupEntity} makes a group with. */
 export type GroupProps = {
-  /** The entity's app id (over `entityOpts.appId`); default: the group's uuid, not fixed. */
+  /** The entity's app id (over `opts.appId`); default: the group's uuid, not fixed. */
   appId?: string;
   /** Objects added to the group at once (see {@link addToGroupEntity}). */
   objects?: THREE.Object3D | THREE.Object3D[];
@@ -53,10 +53,10 @@ const getGroupOfEntity = (entityId: number, world: ECSWorld, fnName: string) => 
 };
 
 /**
- * Creates a group entity: a `THREE.Group` (in the root scene unless `entityOpts.doNotAddToScene`)
+ * Creates a group entity: a `THREE.Group` (in the root scene unless `opts.doNotAddToScene`)
  * with an `OBJECT3D` and a transform. Deleting the entity deletes its children's entities and
  * detaches the rest.
- * @param ecsWorld default: the default world
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the group's entity id
  * @example
  * ```ts
@@ -66,11 +66,8 @@ const getGroupOfEntity = (entityId: number, world: ECSWorld, fnName: string) => 
  * addToGroupEntity(groupId, [crateMesh1, crateMesh2]);
  * ```
  */
-export const createGroupEntity = (
-  props: GroupProps,
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createGroupEntity = (props: GroupProps, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world =
     ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createGroupEntity.');
 
@@ -172,22 +169,6 @@ export const removeFromGroupEntity = (
      * released like any mesh entity's. A mesh without an entity is only detached: what it holds
      * stays its owner's. */
     deleteMeshes?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's geometry. Removed in engine 6.0.0.
-     */
-    deleteGeometries?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's materials. Removed in engine 6.0.0.
-     */
-    deleteMaterials?: boolean;
-    /**
-     * Never read.
-     * @deprecated `deleteMeshes` releases an entity's materials, which release their textures.
-     * Removed in engine 6.0.0.
-     */
-    deleteTextures?: boolean;
   },
   ecsWorld?: ECSWorld
 ): THREE.Group | undefined => {

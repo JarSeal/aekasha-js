@@ -171,7 +171,11 @@ const createGroundAsync = async () => {
     },
     { appId: 'physicsTiersGround', debugData: { name: 'Physics tiers ground' } }
   );
-  await createPhysicsEntity({ type: 'BOX' }, { rigidType: 'FIXED' }, groundId);
+  await createPhysicsEntity({
+    colliders: { type: 'BOX' },
+    body: { rigidType: 'FIXED' },
+    target: groundId,
+  });
 };
 
 /** The GRID × GRID crate piles, every crate in the tier policy; a pile's bodies created
@@ -213,9 +217,17 @@ const createCratePilesAsync = async (
             );
             creates.push(
               createPhysicsEntity(
-                { type: 'BOX', hx: CRATE_HALF, hy: CRATE_HALF, hz: CRATE_HALF, friction: 0.8 },
-                { rigidType: 'DYNAMIC', translation: position },
-                meshId,
+                {
+                  colliders: {
+                    type: 'BOX',
+                    hx: CRATE_HALF,
+                    hy: CRATE_HALF,
+                    hz: CRATE_HALF,
+                    friction: 0.8,
+                  },
+                  body: { rigidType: 'DYNAMIC', translation: position },
+                  target: meshId,
+                },
                 { tierPolicy: true }
               )
             );
@@ -248,11 +260,11 @@ const createPloughAsync = async (path: PloughPath) => {
     },
     { appId: 'physicsTiersPlough', debugData: { name: 'Physics tiers plough' } }
   );
-  await createPhysicsEntity(
-    { type: 'BALL', radius: PLOUGH_RADIUS },
-    { rigidType: 'POS_BASED', translation: path.start },
-    ploughId
-  );
+  await createPhysicsEntity({
+    colliders: { type: 'BALL', radius: PLOUGH_RADIUS },
+    body: { rigidType: 'POS_BASED', translation: path.start },
+    target: ploughId,
+  });
   const ploughBody = existsOrThrow(
     world.getRigidBody(ploughId),
     'Could not find the plough body in the physicsTiers scene.'
@@ -318,8 +330,8 @@ const createChaseCamera = (path: PloughPath, ploughId: number) => {
     {
       appId: 'physicsTiersChase',
       debugData: { name: 'Physics tiers chase camera', description: 'Follows the plough.' },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(chaseId, FollowToolComponentType.FOLLOW, {
     leaderId: ploughId,

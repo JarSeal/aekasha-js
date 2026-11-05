@@ -6,11 +6,6 @@ import {
   DebugDataSchema,
   ShadowQualitySchema,
 } from '../../schemas/_HelperSchemas';
-import {
-  fromLegacySkyBoxOverrides,
-  fromLegacySkyBoxProps,
-  isLegacySkyBoxProps,
-} from './LegacySkyBox';
 import { mergeSkyBoxPreset, SKYBOX_PRESET_NAMES } from './Presets';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 import { deepMerge } from '../../utils/DeepMerge';
@@ -573,10 +568,7 @@ export const SkyBoxDefSchema = z
     /** Written by the data pipeline: the file the definition came from. */
     __sourcePath: z.string().optional(),
     /** Per-scene overrides (`{ [sceneId]: [latest, ...older] }`; only the latest applies). */
-    // A pre-p111 (flat) entry is converted first: deprecated, removed in engine 6.0.0
-    __saveData: createSaveDataSchema(
-      z.preprocess((entry) => fromLegacySkyBoxOverrides(entry) ?? entry, SkyBoxOverridesSchema)
-    ),
+    __saveData: createSaveDataSchema(SkyBoxOverridesSchema),
   })
   .refine((def) => Boolean(def.base || def.preset), {
     error: 'A sky box needs a base, unless it has a preset (which gives one).',
@@ -595,16 +587,11 @@ export const SkyBoxDefSchema = z
     }
   );
 
-/** A sky box asset file (or an inline sky box in scene JSON): the definition, with the legacy
- * `{ type, params }` shape converted to it first (deprecated: the conversion goes in engine 6.0.0,
- * LegacySkyBox.ts). */
-export const SkyBoxAssetSchema = z.preprocess(
-  (input) => (isLegacySkyBoxProps(input) ? fromLegacySkyBoxProps(input) ?? input : input),
-  SkyBoxDefSchema
-);
+/** A sky box asset file (or an inline sky box in scene JSON): the definition. */
+export const SkyBoxAssetSchema = SkyBoxDefSchema;
 
 /** A sky box asset as the data pipeline outputs it: a {@link SkyBoxAssetSchema} after its
- * conversion and validation, its preset still unresolved (the gatherer resolves it). */
+ * validation, its preset still unresolved (the gatherer resolves it). */
 export type SkyBoxAsset = z.infer<typeof SkyBoxAssetSchema>;
 
 /**

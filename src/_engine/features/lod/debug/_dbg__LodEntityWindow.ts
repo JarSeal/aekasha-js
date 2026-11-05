@@ -265,7 +265,7 @@ export const findNearestLodEntityInView = (world: ECSWorld) => {
     ) {
       continue;
     }
-    if (!getLodWorldSphere(entityId, lod, world, _sphere)) continue;
+    if (!getLodWorldSphere(world, entityId, lod, _sphere)) continue;
     if (!_frustum.intersectsSphere(_sphere)) continue;
     const distance = _sphere.center.distanceTo(_camPos);
     if (distance < nearestDistance) {

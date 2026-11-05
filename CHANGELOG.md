@@ -4,9 +4,11 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## Unreleased — engine-6
+## 2026-11-05 — p622_engine-6-major
 
-Engine 6.0.0's entry, not released yet. Its branches merge into `main` and add their sections here with no version bump (no `engine-6` integration branch was made). The release is p622's branch, which adds the 5.x removals, dates this entry, bumps the engine to 6.0.0 with a new codename, the app a minor, and the toolkit at least a minor. Until then `package.json` keeps its versions. So far it holds p806, p807 and p808.
+Engine 6.0.0 "Sunset" and toolkit 3.0.0 "Gibbous", released together with the app's 1.19.0. The major holds four branches: the debugger migration (p806), the stats and profiler graphs (p807) and the game UI components (p808), which merged into `main` ahead of the release with their sections here and no version bump, and p622, which releases them.
+
+The release (p622) removes every API the 5.x minors and toolkit 2.x deprecated, reshapes the functions that took several optional positional parameters to the coding standards' options-object rule (with one written exception: an ECS world comes first when it's required and last when it's optional, and that trailing world is the only optional positional parameter left), and makes the simulation tiers a feature of their own, `physicsTiers()`, so an app that doesn't use them doesn't download them. A codemod, `npx tsx devTools/migrate/migrateEngine6.ts`, migrates an app made from the template (renames, moves, the reshaped calls, the component keys' `typeof`) and reports what needs a person, each report naming its subsection of the Hub's migration guide, "Engine 5 → 6", which lists every change with its replacement. On the template the codemod migrated all 19 modules that needed it (the same rules migrated this branch's app), and the one report, `physicsTiers()` for the tiers scene, was the only fix by hand.
 
 The debugger migration (p806, the debugger UI overhaul epic p800's sixth child) rebuilds the debugger on the UI kit. The drawer, the tab host, the panes, the edit windows, the profiler window's shell, the editor drawer, the material editor, the on-screen tools and the dialogs are on the kit's components and tokens, in the compact density, dark by default with a theme setting. Tweakpane leaves `package.json`. A tab keeps working unless it uses a binding's Tweakpane side, and what a 5.x debugger saved loads in 6.0. The Hub's migration guide gets an "Engine 5 → 6" section.
 
@@ -14,11 +16,28 @@ The stats and profiler graphs (p807, p800's seventh child) replace stats-gl's on
 
 The game UI components (p808, p800's eighth child) put the pieces games build again and again on `aekasha/ui`, in a new `ui/game/` folder: input prompts that follow the last used device, resource bars, a cooldown, a crosshair, a notification feed, an objective tracker, subtitles, a dialogue box, spatial navigation, a radial menu, a game menu, item slots, a hotbar, an inventory, item details, a settings menu, a controls page, world anchors, a compass and a minimap frame. Each is plain DOM taking plain data, so it works without the engine. Where the engine knows more, the kernel's device tracker and the toolkit's anchor sync feed it. The `exampleGameHud` scene uses every piece and plays with a keyboard, a mouse or a gamepad. Nothing breaks, and none of it is in a first download.
 
-### Engine 6.0.0 (unreleased)
+### Engine 6.0.0 (Sunset)
 
-**Breaking** (the tab types on `aekasha/debug`; the Hub's migration guide, "Engine 5 → 6", has a before / after example)
+**Breaking** (the Hub's migration guide, "Engine 5 → 6", has each one's before and after and says which the codemod does)
 
-The functions keep their names and signatures (`createDebuggerTab`, `openDebuggerTab`, `updateDebuggerTab`, `removeDebuggerTab`, `isDebuggerTabOpen`, `persistDebuggerTabValue`, `debuggerListCMP`, the profiler's). So do every field of `DebuggerTabDef`, the sections and the item types' names (`DebuggerPaneBinding`, `DebuggerPaneFolder`, …, now defined over the kit's property grid items), `type: 'binding'`, a folder's `persistExpanded`, and `onChange` on user input only. A tab's `lsKey` values, its `uiLsKey` folder states and `AEK_debugDrawerState` from 5.x load. What breaks:
+- **`physicsTiers()`** (p622 D8, on `aekasha/physics`, id `physicstiers`, `requires: ['physics']`): the simulation tiers and the tier policy, which `physics()` installed in every app, are a feature of their own, listed right after `physics()` (the template does; every system keeps its order). Without it `requestPhysicsTier`, `setPhysicsTierPolicy` and `setPhysicsTierPolicyMember` throw naming the feature, `createPhysicsEntity`'s `tierPolicy: true` warns once and is ignored, and the getters answer `FULL` and `null`. A scene's JSON can't ask for it. Its exit hook runs before physics', so a scene's policies are deleted before its physics entities (a policy's delete reads no body).
+- **`createPhysicsEntity(props, opts?)`** (p622 D3): `props` is the new `PhysicsEntityProps` (`colliders`, `body`, `target`), `opts` the entity's options with `tierPolicy` and the `world`. Was `(colliderParams, rigidBodyParams?, target?, entityOpts?, ecsWorld?)`.
+- **The entity creators' world goes into their options** (p622 D4): `createMeshEntity(props, opts?)`, `createCameraEntity`, `createGroupEntity`, `createLightEntity`, `aekasha/lines`' `createLineEntity` and `createEntity(opts?)` take a `CreateEntityOpts` (new on `aekasha`: `CoreEntityOpts` and a code-only `world`), where the world was a third (`createEntity`'s second) parameter. A scene JSON's `entityOpts` don't change.
+- **The scene functions** (p622 D4): `getScene(id, { silent?, throwOnError? })` and `createSceneLoader(sceneLoader, { isCurrent? })`, where the flags were positional.
+- **A required world comes first** (p622 D2, D4, D5): `setLightEnabled(world, lightId, enabled)`, `getLightTargetId(world, lightId)`, `joinSpatialDomain(world, entityId, domainId)`, `leaveSpatialDomain`, `isInSpatialDomain`, `refreshSpatialRadius(world, entityId)` (the spatial functions' world was optional and last) and `getLodWorldSphere(world, entityId, lod, out)`. The callbacks an app implements (`SpatialRadiusProvider`, `LodTarget`) keep their parameters.
+- **The instanced pools' own world** (p622 D5): `spawn(placements, entityOpts?)` and `despawn(entityId)` of `createInstancedMeshPool`'s and `createInstancedLodPool`'s pools take no world; they use the pool's `world`. An instance spawned into another world outlived the mesh's scene there and kept a slot in a disposed mesh.
+- **The sky box functions** (p622 D6): `setActiveSkyBox(id, { sceneId? })`, `getSunDirection(out, opts?)`, `getMoonDirection(out, opts?)`, `getSunElevation(opts?)` and `getMoonPhase(opts?)`, the options a new `SkyBodyOpts` (`{ index }`, the sun or moon, 0 by default) on `aekasha/skybox`, where the index and the scene id were positional.
+- **Physics** (p622 D7): `WorldAPI.setMaxCcdSubstepsSync` is `setMaxCcdSubsteps` (a setter, now on the worker proxy's type too). `PhysicsHooks` and `SolverFlags` leave `aekasha/physics` and `WorldAPI.step` its `hooks` (no collider could ask for the hooks, so they never ran); the mirrored `ActiveHooks`, `ActiveCollisionTypes`, `ActiveEvents` and `CoefficientCombineRule`, on no entry, went too.
+- **`ComponentType` is an `as const` object** (p612, p622): the enum `CoreComponentType` is gone, so a key named as a type is `typeof ComponentType.TRANSFORM`. The values are the same.
+- **The 5.x deprecations are gone** (p622 Phase 2), each with its replacement:
+  - The kernel (`aekasha`): `CoreComponentType` (`ComponentType`), `registerOnAllSceneEnterings` (`registerOnAllSceneEnters`), `loadTexture` and `loadTextures` (`loadTextureAsync`), `SceneHooks.sceneDeleted` (never called), `removeFromGroupEntity`'s `deleteGeometries`, `deleteMaterials` and `deleteTextures` (never read: `deleteMeshes` releases them), `LoadSceneProps.updateLoaderStatusFn` (never read: the loader's own), `AppConfig.draggableWindows` (`registerDraggableWindow` / `registerDraggableWindowKind`).
+  - Physics: `PhysicsState`'s `pausedTime` and `pauseDurationTotal`, with the internal `getPhysGameTime` (count fixed steps, `getPhysicsSubStepIndex()`).
+  - Characters (`aekasha/character`): `createDynamicCharacter`'s `input` and `createCharacter`'s `controls` (a brain on an action map), with `CharacterInputOpts`, `CharacterInputCommonOpts`, `CharacterActionMappings`, `TankInputMappings`, `WorldFixedInputMappings` and `CameraRelativeInputMappings`; `CharacterInputHoldMode` (`PlayerBrainHoldMode`); `charData` (`config`); `createCharacter`'s `data`, `CharacterObject.data`, `DynamicCharacter.data` and `CharacterData` (the controller's `state`, `config.values` and `internal`); `CharacterObject.kind` and a body plan's `kind` (`bodyKind`); `keyBindingIds` and `mouseBindingIds`; `initialConfig` (the controller's `config.initial`); `CharacterCastRecord.resolvedAt` (`resolvedAtStep`).
+  - The sky box (`aekasha/skybox`): the pre-3.0 `{ type, params }` shape (a JSON in it fails the schema, `createSkyBox` takes a layered definition only) with `LegacySkyBoxProps`, `isLegacySkyBoxProps` and `LEGACY_SKYBOX_WARNING`. A flat pre-3.0 `__saveData` entry parses and is ignored.
+  - The debug entry (`aekasha/debug`): the dev files protocol's `DEV_FILES_ROUTE_BASE`, `DEV_FILES_TOKEN_HEADER`, `DEV_FILES_TOKEN_META`, `DEV_FILES_HASH_HEADER`, `AEK_GATHER_EVENT`, `DevFilesStageBody`, `DevFilesSaveDataWrite` and `DevFilesErrorBody`, and the test bridge's `TestBridgeProbeResult`, `TestBridgeSceneReady` and `TestBridgeSnapshot`, are `@internal` (the client API stays: `writeDevFiles`, `readDevFile`, `onDevDataGathered`); `createDebuggerTab`'s second parameter and `DebugGUIOpts` (the drawer's toggler stays in the middle of its edge).
+  - The UI kit (`aekasha/ui`): the `T`-prefixed aliases (`TCMP` → `CMPHandle`, `TProps`, `TSettings`, `TListener`, `TListenerCache`, `TListenerCreator`, `TStyle`, `TAttr`, `TClassAction`, `TAnimChain`, `TAnimState`, each its `CMP` name) and `TDropDown` (`DropDown`); `getSvgIcon`'s `'small'` (`'sm'`) and the `uiIcon` / `smallIcon` classes it wrote; the string `kbd` of `ButtonProps`, `SplitButtonProps`, `MenuActionItem` and `MenuCheckboxItem` (a `createKbd`); `AddToastResponse.timeout` (`removeToast`); `CMPSettings.doCheckIsInDom` (never read).
+
+**The debugger's tab types** (p806, on `aekasha/debug`): the functions keep their names and signatures (`createDebuggerTab`, `openDebuggerTab`, `updateDebuggerTab`, `removeDebuggerTab`, `isDebuggerTabOpen`, `persistDebuggerTabValue`, `debuggerListCMP`, the profiler's). So do every field of `DebuggerTabDef`, the sections and the item types' names (`DebuggerPaneBinding`, `DebuggerPaneFolder`, …, now defined over the kit's property grid items), `type: 'binding'`, a folder's `persistExpanded`, and `onChange` on user input only. A tab's `lsKey` values, its `uiLsKey` folder states and `AEK_debugDrawerState` from 5.x load. What breaks:
 
 | 5.x                                                                         | 6.0                                                                                                       |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -61,6 +80,8 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
   - Settings: `createSettingsMenu` has tabs of property grid items, a reset per page and for all, and reports each change for its owner to save. `createControlsPage` rebinds a key, a mouse button or a gamepad button. It captures the input before any action map sees it, offers a swap or a keep on a conflict, and reports the action's whole new list for `map.setBindings`. `setKitPreferences` / `getKitPreferences` write the theme, the UI scale, reduced motion and the density on a kit root: the styling guide's manual writes as one call.
   - The world: `createWorldAnchorLayer` places anchors from world positions. An anchor behind the camera hides, one off the screen can clamp to the edge with an arrow, a far one is culled, and a move is written only when its rounded position changes. `createCompass` scrolls the bearings with markers. `createMinimapFrame` is a frame for a viewport's slot, with a north mark, the player's arrow and zoom buttons.
 - p808, on `aekasha/ui`: the loading overlay's `tips` (`tipIntervalMs`, `tipLabel`, `setTips`) and `image`, so it can be a game's loading screen. The tooltip's `content` takes a CMP or a function in place of `text` (an item's details).
+- p622: `physicsTiers()`, `PhysicsEntityProps` (on `aekasha/physics`), `CreateEntityOpts` (on `aekasha`) and `SkyBodyOpts` (on `aekasha/skybox`), as above.
+- p622: `AppConfig.physics.maxCcdSubsteps` (default 1, Rapier's; 0 turns CCD off) goes to every new world on both worker targets, a scene load's included, like the other world settings. The Physics API tab has a "Max CCD substeps" field, saved and restored before the first world and on the undo history with the solver settings.
 
 **Changed**
 
@@ -88,6 +109,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - **Sizes** (p807, a `VITE_APP_ENV=test` build): the debugger's lazy JS chunks 200.4 → 198.8 kB gzip (stats-gl's 10.3 kB gone; the panels, the GPU frame times and GPU memory's views added). Production's first downloads are unchanged.
 - p808: in an embed's `CANVAS` input scope the gamepads are read while the focus is anywhere in the mount's container (a HUD menu's button), not only on the canvas, so a gamepad can drive a menu in an embed.
 - **Sizes** (p808, production): the game UI and the device tracker are in no first download (`_engine/ui/game/` and `kernel/input/InputDevice.ts` at 0 in every profile). The app's first download is 384.4 → 387.0 KiB gzip. The viewports took 1.2 kB of that: the game HUD's minimap is the first shipping caller of `createViewport`, so its code and slot styles ship with the feature. The loading overlay's tips took 0.4 kB and the gamepad family 0.3 kB. The banner's and the `uiKit` embed's first downloads are unchanged. The `uiKit` embed's game window (a bar, a hotbar with cooldowns, a feed and a prompt) is 7.6 KiB of script and 2.6 KiB of styles, loaded by its button.
+- **Sizes** (p622, production): the app's first download is 387.0 → 385.8 kB gzip with `physicsTiers()` listed (the removals: `aekasha/character` 0.7 kB, the sky box's legacy shape 0.6, the input bindings the character no longer imports 0.2; the tiers' feature module and guard +0.3). Without `physicsTiers()` the template's first download is 381.0 kB (−4.7 kB, −1.2 %): the tiers' and the policy's modules move into the chunk of the scene that uses them. The banner's (287.4 kB) and the `uiKit` embed's (286.7 kB) are unchanged; the `uiKit` embed's `Kbd.js` chunk is gone (only the string `kbd`'s `import()` split it off).
 
 **Removed**
 
@@ -95,6 +117,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - The `--aek-rem` custom property (internal since p801) and `ui/styles/variables.scss`.
 - `DraggableWindow.scss`' debugger helper classes `winSmallLabel`, `winSmallIconButton`, `winNotRightPaddedContent`, `winFlexContent` and `winPaddedContent`.
 - `stats-gl` (p807): an app that imports it itself adds it to its `package.json`. With it went the `@internal` `getStats` and `getStatsCmp`, `StatsOptions`' stats-gl-only fields and `Stats.scss`.
+- p622: the modules of the removed APIs (`kernel/assets/TextureSync.ts`, `features/physics/PhysicsWallClock.ts`, `features/character/CharacterInputSchemes.ts`, `features/skybox/LegacySkyBox.ts`), the debug tab's one-time `AEK_debugSkyBoxStates` migration (a browser that still has the key keeps a dead one), and the drawer toggler's placement classes (`TOP`, `MIDDLE`, `BOTTOM`).
 
 **Fixed**
 
@@ -106,8 +129,17 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - The profiler's Objects tab mixed two scenes' samples in "Over time" after a scene change (p807).
 - `createViewport` called the debugger's GPU memory registration unguarded, so an app that made a viewport shipped `debug/GPUMemory.ts` and `debug/Profiler.ts` in its production build (p808: the game HUD's minimap made `yarn verify:baselines` fail on it).
 - A field's `reset()`, and the form's, wrote nothing when the field hadn't read its value since the app changed it (a settings tab never opened). It reads the bound value first now (p808).
+- A max CCD substeps value set on the running world was lost at the next scene load, and there was no setting for it (`docs/issues/physics-ccd-substeps-setting.md`, fixed by `maxCcdSubsteps`, p622).
+- The physics API mirrored five Rapier enums and a hooks parameter nothing could use (`docs/issues/physics-unused-rapier-enums.md`, fixed by their removal, p622).
 
-### Toolkit (unreleased: a minor at the 6.0.0 release)
+### Toolkit 3.0.0 (Gibbous)
+
+**Breaking** (the migration guide's "Toolkit 3.0.0"; the codemod moves and renames the imports and writes the `typeof`)
+
+- `createSeededRandom` leaves `aekasha/toolkit/geometry` (it was a copy): import it from `aekasha`.
+- `PhysicsParams` is `MovingPlatformPhysicsParams`.
+- `DeleteMeshOptions` and `MovingPlatformOptions.deleteMeshOptions` are gone (never read: the platform's `controls.delete()` deletes its entity, its mesh and its body).
+- `HoverToolComponentType`, `FollowToolComponentType`, `SunShadowFitComponentType` and `WorldAnchorComponentType` are `as const` objects, not enums, with the same values. A member named as a type is `typeof HoverToolComponentType.HOVER`, and the key itself as a type (the enum's union) `(typeof HoverToolComponentType)[keyof typeof HoverToolComponentType]`. The `declare module 'aekasha'` blocks' keys work as they are.
 
 **Added**
 
@@ -117,7 +149,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 
 - p808: `createFollowObjectCameraRig` with `getMouseMoveInput` starts its orbit from `offset`'s direction, its pitch kept inside the orbit's limits. Before, it started 60° from straight up whatever the offset. The default offset starts at 63°.
 
-### App (unreleased: a minor at the 6.0.0 release)
+### App 1.19.0 (Preschooler)
 
 **Added**
 
@@ -132,6 +164,7 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 
 - The debug tab example's tab gains a CMP section of kit fields on `ctx.scheduler` (the `debug-tab-kit` region the Hub shows): a "Ring" folder with a slider of the boxes' ring radius (persisted, with undo at the gesture's end) and a monitor of their spacing with `interval: 'refresh'`. Its colour binding is `kind: 'color'`.
 - The app's other scene tabs (`lodShowcase`'s, `assetCompare`'s, `space`'s) work on the kit unchanged.
+- p622: on engine 6.0.0 and toolkit 3.0.0. `src/index.ts` lists `physicsTiers()` right after `physics()` (the `physicsTiers` scene uses the tiers), and the engine 6 codemod migrated 19 app modules (the physics entities, the creators with a world, the light setter, the spatial and LOD calls and the pools' `spawn` in `largeWorld`, `lodShowcase`, `exampleLod` and the other scenes), with every scene's probe hash unchanged.
 
 ### Project
 
@@ -171,6 +204,12 @@ The functions keep their names and signatures (`createDebuggerTab`, `openDebugge
 - p808: `yarn verify:baselines`' `api.json` and `docs.json` (the names above) and the bundle baselines: the example's chunks and the shared chunks it split out (`FocusTrap`, `Tabs`, `TextField`, `TimeSeries`, `GraphMonitor`, `Hotbar`), and the `uiKit` embed's game window and `Announcer`. `yarn verify:scenes` records `exampleGameHud`'s baselines.
 - p808: `ui/game/` is a `UI_KIT_FOLDERS` layout rule. The docs: the root `CLAUDE.md`'s map, `src/_engine/ui/CLAUDE.md`'s "Game UI", `src/_engine/kernel/input/CLAUDE.md` (the tracker), `hub/CLAUDE.md` (the game page, the HUD screenshot), `devTools/sbp/CLAUDE.md`, `devTools/verify/CLAUDE.md`, and the readme (the game UI, the device tracker, `WorldAnchorSync`, the rig's orbit and the game HUD example).
 - The plans: p808 is `_DONE_`; p800, p803, p804 and p805 follow.
+- p622: the engine 6 codemod, `npx tsx devTools/migrate/migrateEngine6.ts [--check] [--report] <folder | file>...` (`devTools/migrate/`, with its nested `CLAUDE.md` and a line in the root's map and Commands). It works on the type checker's symbols: renames and moves by import, the call reshapes (by the callee's declaration, with a check that no argument changes its evaluation order), the member rename, the component keys' `typeof`, and reports of what needs a person, each naming its migration guide anchor (a test checks every anchor is a heading of the page). The rules are one table (`engine6Rules.ts`), each with its plan decision; 105 tests on a virtual program with engine 6's stand-in entries, each fixture run twice. Rehearsed on a copy of `main` with this branch's engine, toolkit and tools: what was left after it was exactly its reports.
+- p622, the Hub: the migration guide's "Engine 5 → 6" section complete (before you start, the codemod, a subsection per change with its rules, the removals by area), its intro rewritten; the coding standards' options-object rule with the world's exception (D2); the physics page's `physicsTiers()` (installing it, what happens without it) and world settings; the pages and the readme with the new signatures (the code blocks page, the spatial guide, the sky box page, the UI kit's core and icon texts, "ten features" in the architecture guide, the quick start and the SBP table). The search index is 493 KiB gzipped (over the 450 KiB warning mark, as since p808).
+- p622: `eslint.config.js`' simulation known-violations block is empty (`PhysicsWallClock.ts`' entry gone), `devTools/hub/api/entries.ts`' `ACCEPTED_LEAKS` is `{}`, `devTools/engineImports.test.ts` lost its `LegacySkyBox.ts` entry, and `devTools/layout/layoutRules.ts` the toolkit's `SeededRandom.ts` rule. `FeatureFactories.test.ts` allows several features per entry.
+- p622: `yarn verify:baselines`' `api.json` and `docs.json` (the removals, `physicsTiers`, the three option types, the five keys' kind), and the bundle baselines. The scene runner's hashes are unchanged in every phase; the Physics API tab's `debugger` shots took the new field.
+- p622, the docs: the root `CLAUDE.md` (the ten features, the codemod, the world's exception), the nested `CLAUDE.md`s of the kernel's ECS and init, physics, characters, the sky box, spatial, instancing, the UI kit and the debugger (what 6.0.0 removed or reshaped), and the readme (the feature list, the tiers, the `createPhysicsEntity` example, the migration guide line). Both physics issue files are closed.
+- The plans: p622 is `_DONE_`.
 
 ## 2026-11-04 — p809-project-roadmaps
 

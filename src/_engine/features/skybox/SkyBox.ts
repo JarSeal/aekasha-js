@@ -9,7 +9,6 @@ import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { deepMerge, isIndexObject } from '../../utils/DeepMerge';
 import type { SkyBoxBaseDef, SkyBoxDef, SkyBoxEnvDef, SkyBoxOverrides } from './SkyBoxTypes';
-import { fromLegacySkyBoxProps, isLegacySkyBoxProps, type LegacySkyBoxProps } from './LegacySkyBox';
 import {
   BASE_DEFAULTS,
   BASE_STRUCTURAL_KEYS,
@@ -419,14 +418,18 @@ const loadAndShow = async (
  * fails the call.
  * @param id one of the current scene's sky boxes (its JSON `skyboxes`, or a `createSkyBox`), or
  * null for none
- * @param sceneId the current scene's id (default); another scene's warns and changes nothing
  * @returns the active sky box once it shows (unchanged when `id` isn't registered, which warns),
  * or null
  */
 export const setActiveSkyBox = async (
   id: string | null,
-  sceneId?: string
+  opts?: {
+    /** The scene whose sky box `id` is: the current scene (the default), since another scene's
+     * warns and changes nothing. */
+    sceneId?: string;
+  }
 ): Promise<SkyBoxState | null> => {
+  const sceneId = opts?.sceneId;
   if (id === null) {
     clearSkyBox();
     return null;
@@ -455,7 +458,7 @@ export const setActiveSkyBox = async (
 export const activateSceneDefaultSkyBox = async (sceneId: string) => {
   const id = getSceneDefaultSkyBoxId(sceneId);
   if (!id) return null;
-  return setActiveSkyBox(id, sceneId);
+  return setActiveSkyBox(id, { sceneId });
 };
 
 /**
@@ -465,10 +468,6 @@ export const activateSceneDefaultSkyBox = async (sceneId: string) => {
  * @internal
  */
 export const getActiveSkyBox = () => active;
-
-const LEGACY_WARN = (message: string) => {
-  if (IS_DEBUG_ENV) lwarn(message);
-};
 
 /**
  * Registers a sky box and, when it belongs to the current scene and `isDefault` isn't false,
@@ -490,31 +489,10 @@ const LEGACY_WARN = (message: string) => {
  * });
  * ```
  */
-export function createSkyBox(def: SkyBoxDef): Promise<SkyBoxState | null>;
-/**
- * The pre-3.0 `{ type, params }` form: converted to a layered definition, with a warning in the
- * debug env; `type: ''` clears the current scene's sky box.
- * @deprecated Write a layered definition ({@link SkyBoxDef}: `base`, `env`); removed in engine
- * 6.0.0 with the legacy shape.
- */
-export function createSkyBox(legacy: LegacySkyBoxProps): Promise<SkyBoxState | null>;
-export async function createSkyBox(
-  defOrLegacy: SkyBoxDef | LegacySkyBoxProps
-): Promise<SkyBoxState | null> {
-  const converted = isLegacySkyBoxProps(defOrLegacy)
-    ? fromLegacySkyBoxProps(defOrLegacy, LEGACY_WARN)
-    : defOrLegacy;
-  if (!converted) {
-    // Legacy `type: ''`: "no sky box"
-    const legacy = defOrLegacy as LegacySkyBoxProps;
-    if (legacy.isCurrent !== false && resolveSceneId(legacy.sceneId) === getCurrentSceneId()) {
-      clearSkyBox();
-    }
-    return null;
-  }
-  const def = { ...converted, isDefault: converted.isDefault ?? true };
+export async function createSkyBox(created: SkyBoxDef): Promise<SkyBoxState | null> {
+  const def = { ...created, isDefault: created.isDefault ?? true };
   const sceneId = registerSkyBox(def);
-  if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, sceneId);
+  if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, { sceneId });
   return null;
 }
 

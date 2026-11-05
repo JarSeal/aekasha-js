@@ -1,6 +1,6 @@
 import { lerror, llog } from '../../utils/Logger';
 import { existsOrThrow } from '../../utils/Assert';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
@@ -121,9 +121,9 @@ export const disposeNonPersistentLines = () => {
  * places it (`props.localTransform` seeds it), deleting the entity disposes the line and
  * disposing the line deletes the entity. A backend swap re-points OBJECT3D at the new
  * Object3D, so read OBJECT3D (or `getLineForEntity(id).object3D`) each time, never cache it.
- * @param props the line's props, as `createLines`'; `entityOpts.appId` is its id when it has none
- * @param entityOpts the entity's options; `doNotAddToScene` attaches the line nowhere
- * @param ecsWorld the entity's world (default: the default world)
+ * @param props the line's props, as `createLines`'; `opts.appId` is its id when it has none
+ * @param opts the entity's options (`doNotAddToScene` attaches the line nowhere) and its world
+ *   (default: the default world)
  * @returns the entity id
  * @example
  * ```ts
@@ -135,11 +135,8 @@ export const disposeNonPersistentLines = () => {
  * setTransform(markerId, { pos: { x: 0, y: 0.05, z: 10 } });
  * ```
  */
-export const createLineEntity = (
-  props: LineProps = {},
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createLineEntity = (props: LineProps = {}, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world =
     ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createLineEntity.');
   const line = createLines({

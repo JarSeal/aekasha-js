@@ -268,19 +268,8 @@ export default [
       'no-restricted-syntax': ['error', ...SIMULATION_RESTRICTED_SYNTAX],
     },
   },
-  // Known violations, each with the plan that removes it. A later entry replaces the rule's
-  // options for its file, so it lists what stays restricted there.
-  {
-    // The wall clock under the deprecated getPhysGameTime(), which no simulation code reads any
-    // more (removed with it in engine 6.0.0)
-    files: ['src/_engine/features/physics/PhysicsWallClock.ts'],
-    rules: {
-      'no-restricted-properties': [
-        'error',
-        ...SIMULATION_RESTRICTED_PROPERTIES.filter((p) => p.object !== 'performance'),
-      ],
-    },
-  },
+  // Known violations go here, each with the plan that removes it (none since engine 6.0.0). A
+  // later entry replaces the rule's options for its file, so it lists what stays restricted there.
   // The gatherer's output, written unformatted on every gather: `yarn lint --fix` reformatting it
   // would leave a diff that the next gather undoes (a long import path in generatedAppFns.ts)
   { files: ['src/generated/**'], rules: { 'prettier/prettier': 'off' } },

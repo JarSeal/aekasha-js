@@ -168,22 +168,28 @@ export const createScene = (id: string, opts?: SceneOptions) => {
 
 /**
  * A registered scene's group by id: every scene of the gathered data is registered at boot, so
- * scene code can add to its own scene's group before the scene is current.
- * @param silent no warning for an unknown id
- * @param throwOnError throw for an unknown id instead (unless `silent`)
+ * scene code can add to its own scene's group before the scene is current. An unknown id warns.
  * @returns the scene's group, or `null` for an unknown id
  * @example
  * ```ts
  * import { getScene } from 'aekasha';
  *
- * const scene = getScene('myScene', false, true)!;
+ * const scene = getScene('myScene', { throwOnError: true })!;
  * ```
  */
-export const getScene = (id: string, silent?: boolean, throwOnError?: boolean) => {
+export const getScene = (
+  id: string,
+  opts?: {
+    /** No warning for an unknown id */
+    silent?: boolean;
+    /** Throws for an unknown id instead of warning (unless `silent`) */
+    throwOnError?: boolean;
+  }
+) => {
   const scene = scenes[id];
-  if (!scene && !silent) {
+  if (!scene && !opts?.silent) {
     const msg = `Could not find scene with id "${id}", in getScene(id).`;
-    if (throwOnError) {
+    if (opts?.throwOnError) {
       lerror(msg);
       throw new Error(msg);
     }
@@ -581,12 +587,6 @@ export const runOnSceneExit = (sceneId?: string) => {
  */
 export const registerOnAllSceneEnters = (id: string, fn: () => void) =>
   addListener(onAllSceneEnters, id, fn);
-
-/**
- * The old name of {@link registerOnAllSceneEnters}.
- * @deprecated Use {@link registerOnAllSceneEnters}. Removed in engine 6.0.0.
- */
-export const registerOnAllSceneEnterings = registerOnAllSceneEnters;
 
 /**
  * Sets a function every scene load runs when the previous scene exits, after that scene's own

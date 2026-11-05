@@ -1,10 +1,11 @@
 ## Installing it
 
 List [`physics()`](api:physics), from `aekasha/physics`, in `InitEngine`'s `features` (see
-[How the app starts](hub:examples/quick-start#how-the-app-starts)). It installs the physics API,
-physics entities, simulation tiers and the tier policy, and drives the fixed steps. Without it,
-neither physics nor Rapier is loaded, or in a production build. With
-`AppConfig.physics.enabled: false` it's installed, but no world is created at boot.
+[How the app starts](hub:examples/quick-start#how-the-app-starts)). It installs the physics API
+and physics entities, and drives the fixed steps. Without it, neither physics nor Rapier is
+loaded, or in a production build. With `AppConfig.physics.enabled: false` it's installed, but no
+world is created at boot. The [simulation tiers](#simulation-tiers) are a feature of their own,
+[`physicsTiers()`](api:physicsTiers), listed right after it.
 
 An [embedded engine](hub:examples/embed)'s `unmount()` stops physics for good: the world is
 deleted (in worker mode, the worker is terminated with it), and every query or create still
@@ -13,8 +14,8 @@ waiting for the worker rejects.
 ## Bodies on entities
 
 A physics object is an ECS entity with a rigid body and its colliders.
-[`createPhysicsEntity`](api:createPhysicsEntity) attaches them to an entity you already have (a
-mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
+[`createPhysicsEntity`](api:createPhysicsEntity) attaches them to an entity you already have (its
+`target`, a mesh from [`createMeshEntity`](api:createMeshEntity)), or makes a new one:
 
 <<< src/app/examples/physics/examplePhysics.ts#physics-drop
 
@@ -89,6 +90,12 @@ force events arrive at the start of the next step.
 In worker mode, the commands those systems send are captured per step, carried in the frame's
 one STEP message and replayed in order in the worker.
 
+The world's settings come from `AppConfig.physics`: `gravity`, `solverIterations`,
+`internalPgsIterations` and `maxCcdSubsteps` (how many times continuous collision detection, a
+body's `ccdEnabled`, continues a fast body's path after a hit in one step; 0 turns it off). Every
+world is made from them, each scene load's too, so a value set on the running world
+(`getPhysicsWorld().setMaxCcdSubsteps(2)`) lasts until the next scene load. The Physics API debug tab edits and saves them.
+
 ## Deterministic scene loads
 
 A scene load holds physics, replaces the world with a fresh one, and lets it step only after
@@ -125,8 +132,15 @@ body's state, and compares the hash with the last run of the same scene.
 
 ## Simulation tiers
 
-A large world doesn't have to simulate every body. A `DYNAMIC` body made by
-`createPhysicsEntity` can change its tier with [`requestPhysicsTier`](api:requestPhysicsTier):
+A large world doesn't have to simulate every body. The tiers are a feature of their own,
+[`physicsTiers()`](api:physicsTiers) from `aekasha/physics`, listed right after `physics()`:
+
+```ts
+features: [physics(), physicsTiers(), character(), skyBox(), appECSPlugins],
+```
+
+With it, a `DYNAMIC` body made by `createPhysicsEntity` can change its tier with
+[`requestPhysicsTier`](api:requestPhysicsTier):
 
 | Tier       | The body                                                                            |
 | ---------- | ----------------------------------------------------------------------------------- |
@@ -157,6 +171,10 @@ setPhysicsTierPolicy({
 It measures and decides on fixed physics steps, so a scene driven by it stays deterministic.
 The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startScene=physicsTiers`.
 
+An app without `physicsTiers()` doesn't download the tiers' code. There `requestPhysicsTier`,
+`setPhysicsTierPolicy` and `setPhysicsTierPolicyMember` throw naming the feature, `tierPolicy:
+true` is ignored with one warning, and `getPhysicsTier` answers `FULL` for every body.
+
 ## Key APIs
 
 - [`createPhysicsEntity`](api:createPhysicsEntity): a body and its colliders on an entity, and
@@ -164,8 +182,8 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 - [`spawnImportedAsset`](api:spawnImportedAsset): an imported model's nodes, with their physics.
 - [`getPhysicsWorld`](api:getPhysicsWorld): the world, for queries.
 - [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint).
-- [`requestPhysicsTier`](api:requestPhysicsTier), [`getPhysicsTier`](api:getPhysicsTier) and
-  [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
+- [`physicsTiers`](api:physicsTiers) (the feature), [`requestPhysicsTier`](api:requestPhysicsTier),
+  [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
   systems.
 

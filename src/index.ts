@@ -4,7 +4,7 @@ import { character } from 'aekasha/character';
 import { instancing } from 'aekasha/instancing';
 import { lines } from 'aekasha/lines';
 import { lod } from 'aekasha/lod';
-import { physics } from 'aekasha/physics';
+import { physics, physicsTiers } from 'aekasha/physics';
 import { postFx } from 'aekasha/postfx';
 import { skyBox } from 'aekasha/skybox';
 import { spatial } from 'aekasha/spatial';
@@ -20,6 +20,7 @@ InitEngine({
   // Installed in this order, after the engine's kernel (the app's last)
   features: [
     physics(),
+    physicsTiers(),
     character(),
     skyBox(),
     lod(),

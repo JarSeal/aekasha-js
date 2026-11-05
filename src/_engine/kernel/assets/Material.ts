@@ -699,7 +699,7 @@ export const getKeptTextures = (): Set<THREE.Texture> => {
 
 /**
  * Releases a material's textures from VRAM cache, as far as no other registered material still
- * uses them: a texture shared between materials (e.g. the same cached loadTexture id) survives
+ * uses them: a texture shared between materials (e.g. the same loadTextureAsync id) survives
  * until its last material goes. A texture that isn't the registered one itself — typically a
  * `.clone()` of it, which copies the source's `userData.id` — belongs to the material alone and
  * is disposed directly; the registered source is then released with the last material holding

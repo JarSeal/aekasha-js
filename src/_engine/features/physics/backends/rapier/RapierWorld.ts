@@ -51,6 +51,7 @@ export const init = (
       timestep: physicsSt.timestepRatio,
       numSolverIterations: physicsSt.solverIterations,
       numInternalPgsIterations: physicsSt.internalPgsIterations,
+      maxCcdSubsteps: physicsSt.maxCcdSubsteps,
     });
     return physicsWorldAPI;
   } catch (err) {
@@ -72,6 +73,8 @@ export const createWorld = (
     numSolverIterations?: number;
     /** Integer */
     numInternalPgsIterations?: number;
+    /** Integer, 0 turns CCD off */
+    maxCcdSubsteps?: number;
   }
 ) => {
   if (worldCreated && physicsWorldAPI) return physicsWorldAPI;
@@ -88,6 +91,9 @@ export const createWorld = (
   if (opts?.numSolverIterations) backend.world.numSolverIterations = opts.numSolverIterations;
   if (opts?.numInternalPgsIterations)
     backend.world.numInternalPgsIterations = opts.numInternalPgsIterations;
+  // 0 is a value (CCD off); without one, Rapier's 1 stays
+  const maxCcdSubsteps = opts?.maxCcdSubsteps ?? physicsState?.maxCcdSubsteps;
+  if (maxCcdSubsteps !== undefined) backend.world.maxCcdSubsteps = maxCcdSubsteps;
   physicsWorldAPI = new EngineWorldProxyAPI();
   worldCreated = true;
   return physicsWorldAPI;
@@ -153,11 +159,11 @@ export const debugRender = () => {
 };
 
 /**
- * Runs one fixed step on Rapier's own event queue (not `_eventQueue`) and collects its events for
+ * Runs one fixed step on Rapier's own event queue (the contract's `eventQueue` isn't read) and collects its events for
  * dispatchPendingEventRecords / drainPendingEventRecords.
  * @internal
  */
-export const step = (_eventQueue?: unknown, hooks?: unknown) => {
-  backend.world.step(backend.eventQueue, hooks as Rapier.PhysicsHooks | undefined);
+export const step = () => {
+  backend.world.step(backend.eventQueue);
   drainAndDispatchEvents();
 };

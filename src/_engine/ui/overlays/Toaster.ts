@@ -144,12 +144,6 @@ export type AddToastResponse = {
   toastCmp: CMPHandle;
   /** Whether it has a close button */
   hasCloseButton: boolean;
-  /**
-   * The toast's first lifecycle timer (later phases replace it internally).
-   * @deprecated Use `removeToast` to remove the toast early, not `clearTimeout`. Removed in engine
-   * 6.0.0.
-   */
-  timeout: ReturnType<typeof setTimeout>;
   /** Its kind */
   type: ToastType;
   /** Its title, as given */
@@ -677,7 +671,6 @@ export const addToast = (props: ToastProps): AddToastResponse => {
     totalTime: showTime + animTime * 2,
     toastCmp,
     hasCloseButton,
-    timeout: toast.timer,
     type,
     title: props.title,
     message: props.message,

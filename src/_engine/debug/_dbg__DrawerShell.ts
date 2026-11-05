@@ -53,8 +53,6 @@ export type DrawerShellOpts = {
   label: string;
   /** The toggler's text ('Debug') */
   togglerText: string;
-  /** The toggler's place on the drawer's edge (a global class other debug styles read) */
-  togglerPlace?: 'TOP' | 'MIDDLE' | 'BOTTOM';
   /** The key that toggles the drawer, as `getKeyChordLabel` writes it: the toggler's key hint */
   keys?: string;
   /** The small label above the title ('Scene') */
@@ -102,8 +100,6 @@ export type DrawerShell = {
   setDisabled: (disabled: boolean) => void;
   /** The width in px */
   getWidth: () => number;
-  /** Moves the toggler along the edge */
-  setTogglerPlace: (place: 'TOP' | 'MIDDLE' | 'BOTTOM') => void;
   /** Removes it */
   dispose: () => void;
 };
@@ -121,7 +117,7 @@ const createToggler = (opts: DrawerShellOpts, asideId: string) =>
     variant: 'secondary',
     size: 'sm',
     ...(opts.keys ? { kbd: createKbd({ keys: opts.keys }) } : {}),
-    class: [styles.toggler, 'debugDrawerToggler', opts.togglerPlace ?? 'MIDDLE'],
+    class: [styles.toggler, 'debugDrawerToggler'],
     attr: { 'aria-expanded': String(opts.isOpen), 'aria-controls': asideId },
     onClick: () => opts.onToggle(),
   });
@@ -285,10 +281,6 @@ export const createDrawerShell = (opts: DrawerShellOpts): DrawerShell => {
       else root.removeAttr(['inert', 'aria-busy', 'data-disabled']);
     },
     getWidth: () => state.width,
-    setTogglerPlace: (place) => {
-      toggler.cmp.updateClass(['TOP', 'MIDDLE', 'BOTTOM'], 'remove');
-      toggler.cmp.updateClass(place, 'add');
-    },
     dispose: () => {
       width.dispose();
       root.remove();

@@ -20,6 +20,6 @@ export const createDebuggerSceneLoader = () => {
       loadStartFn: () => overlay?.showAsync() ?? Promise.resolve(true),
       loadEndFn: () => overlay?.hideAsync() ?? Promise.resolve(true),
     },
-    false
+    { isCurrent: false }
   );
 };

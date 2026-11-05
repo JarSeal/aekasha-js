@@ -54,12 +54,12 @@ export const scene = async () => {
 ### A diff
 
 ```ts
-await createPhysicsEntity(
-  { type: 'BALL', radius: 0.4, restitution: 0.2 }, // [!code --]
-  { type: 'BALL', radius: 0.4, restitution: 0.6 }, // [!code ++]
-  { rigidType: 'DYNAMIC', translation: position },
-  ballId
-);
+await createPhysicsEntity({
+  colliders: { type: 'BALL', radius: 0.4, restitution: 0.2 }, // [!code --]
+  colliders: { type: 'BALL', radius: 0.4, restitution: 0.6 }, // [!code ++]
+  body: { rigidType: 'DYNAMIC', translation: position },
+  target: ballId,
+});
 ```
 
 ### Focus
@@ -68,11 +68,11 @@ await createPhysicsEntity(
 const position = { x: 0, y: 5, z: 0 };
 const ballId = createMeshEntity({ geo, mat, position, castShadow: true }, { appId: 'ball' });
 // [!code focus:4]
-await createPhysicsEntity(
-  { type: 'BALL', radius: 0.4, restitution: 0.6 },
-  { rigidType: 'DYNAMIC', translation: position },
-  ballId
-);
+await createPhysicsEntity({
+  colliders: { type: 'BALL', radius: 0.4, restitution: 0.6 },
+  body: { rigidType: 'DYNAMIC', translation: position },
+  target: ballId,
+});
 ```
 
 ### Errors and warnings
@@ -187,12 +187,12 @@ export const scene = async () => {
 
   // Attach a dynamic rigid body. Its transform syncs back to the mesh every frame, at APP_POST_PHYSICS, after the physics step.
   const ballId = createMeshEntity({ geo, mat, position, castShadow: true }, { appId: 'ball' });
-  await createPhysicsEntity( // [!code focus:5]
-    { type: 'BALL', radius: 0.4, restitution: 0.2 }, // [!code --]
-    { type: 'BALL', radius: 0.4, restitution: 0.6 }, // [!code ++]
-    { rigidType: 'DYNAMIC', translation: position },
-    ballId
-  );
+  await createPhysicsEntity({ // [!code focus:5]
+    colliders: { type: 'BALL', radius: 0.4, restitution: 0.2 }, // [!code --]
+    colliders: { type: 'BALL', radius: 0.4, restitution: 0.6 }, // [!code ++]
+    body: { rigidType: 'DYNAMIC', translation: position },
+    target: ballId,
+  });
   // [!code highlight]
   return ballId;
 };
