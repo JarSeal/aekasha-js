@@ -71,8 +71,8 @@ export const handMadeLevelsLane: ShowcaseLane = {
               name: `LOD showcase: hand-made levels ${i + 1}`,
               description: `A copy of ${MESH_APP_ID}, ${slot.distance.toFixed(0)} m from the start camera (${slot.level < 0 ? 'LOD culled' : `level ${slot.level}`} there).`,
             },
-          },
-          ctx.world
+            world: ctx.world,
+          }
         )
       );
     });

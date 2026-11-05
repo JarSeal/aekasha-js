@@ -330,8 +330,8 @@ const createChaseCamera = (path: PloughPath, ploughId: number) => {
     {
       appId: 'physicsTiersChase',
       debugData: { name: 'Physics tiers chase camera', description: 'Follows the plough.' },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(chaseId, FollowToolComponentType.FOLLOW, {
     leaderId: ploughId,

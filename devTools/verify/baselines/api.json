@@ -2122,6 +2122,7 @@
     "src/_engine/kernel/ecs/ECSHelpers.ts": {
       "addComponent": "Function",
       "createEntity": "Function",
+      "CreateEntityOpts": "TypeAlias",
       "createRawEntity": "Function",
       "deleteEntity": "Function",
       "EntityDiagnosticData": "Interface",
@@ -4181,6 +4182,7 @@
       "ComponentHook",
       "ComponentType",
       "CoreComponentData",
+      "CreateEntityOpts",
       "CreateRendererOptions",
       "DebugPhysicsWireframeConfig",
       "DracoConfig",

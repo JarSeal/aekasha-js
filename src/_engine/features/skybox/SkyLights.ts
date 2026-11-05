@@ -235,8 +235,8 @@ const createDiscLight = (
       appId: `__skybox_${skyBoxId}_${role}`,
       managedBy: { manager: SKYBOX_MANAGER_ID, ownerId: skyBoxId, role },
       debugData: { name: getDiscLightName(kind, index) },
-    },
-    world
+      world,
+    }
   );
   // Render the shadow map once now, even when the light starts faded out (autoUpdate false):
   // a map first sampled and only later rendered into gets its GPU texture destroyed in place
@@ -414,8 +414,8 @@ const createAmbientLight = (skyBoxId: string, type: 'HEMISPHERE' | 'AMBIENT', wo
       appId: `__skybox_${skyBoxId}_AMBIENT`,
       managedBy: { manager: SKYBOX_MANAGER_ID, ownerId: skyBoxId, role: 'AMBIENT' },
       debugData: { name: 'Sky box ambient' },
-    },
-    world
+      world,
+    }
   ),
 });
 

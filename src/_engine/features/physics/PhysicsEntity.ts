@@ -9,6 +9,7 @@ import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
+import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import {
@@ -191,10 +192,7 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
  */
 export const createPhysicsEntity = (
   props: PhysicsEntityProps,
-  opts?: PhysicsEntityOpts & {
-    /** The world; the default one when left out */
-    world?: ECSWorld;
-  }
+  opts?: PhysicsEntityOpts & CreateEntityOpts
 ): Promise<number> => {
   const { world, ...entityOpts } = opts ?? {};
   const creation = createPhysicsEntityNow(

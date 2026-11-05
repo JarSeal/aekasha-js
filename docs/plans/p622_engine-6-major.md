@@ -790,6 +790,33 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   `createGroupEntity`, `createLightEntity`, `createEntity`, and `createLineEntity` on
   `aekasha/lines`); the codemod rule; the codemod over `src`. Most of the 99 `createMeshEntity`
   calls pass only props and don't change.
+
+  As built (section 1):
+
+  - `CreateEntityOpts` (`kernel/ecs/ECSHelpers.ts`, next to `createEntity`, a type line on
+    `aekasha`): `CoreEntityOpts & { world?: ECSWorld }`, the `world` documented as code only.
+    Each creator destructures `const { world: ecsWorld, ...entityOpts } = opts ?? {}` first, so
+    its body is unchanged and `world.createEntity` never sees a `world` key (an empty object
+    where `undefined` went: `ECSWorld.createEntity` reads both alike). `createPhysicsEntity`'s
+    options are now written `PhysicsEntityOpts & CreateEntityOpts`.
+  - The codemod: no new machinery. `engine6Rules.ts`' `creator(entry, name)` makes the five
+    creators' rules (`params: props, opts, world`, `newArgCount: 2`) and `createEntity`'s is
+    written out (`newArgCount: 1`); all share `OPTS_WITH_WORLD` (`{ ...opts, world }`) with
+    `createPhysicsEntity`'s. The test stand-ins grew the creators and an `aekasha/lines` entry;
+    a fixture per rule and a behaviour test (placeholders dropped, an options variable spread,
+    a new-shaped call left). 66 tests.
+  - The run over `src hub/_assets/ts` (958 modules): 10 modules, all with a world passed
+    (`SkyLights.ts`, `Camera.ts`' debug orbit camera, two engine tests, `largeWorld`, three
+    `lodShowcase` lanes, `physicsTiers`, the toolkit's `ScatterOnSurface.ts`), nothing
+    reported; `tsc` and `tsc -p hub` clean after it. Nothing in the Hub's Markdown, the readme or
+    an `@example` passed a world; `p370`'s Grounding line names the new shape.
+  - `yarn verify:baselines`: the API diff is `CreateEntityOpts` alone, the bundles unchanged
+    (a byte or two of gzip per chunk), recorded. `yarn hub:build` clean. `yarn verify:scenes`:
+    114 passed, every hash unchanged (`physicsTiers` `49157b8f`, the gym's character paths
+    `26f43551`); the gym's `workerMsg` snapshot passed.
+  - Docs: `kernel/ecs/CLAUDE.md` (a "The creators' options" bullet) and
+    `devTools/migrate/CLAUDE.md` (kind 3's examples). The Hub's pages need nothing until Phase
+    8's migration subsection.
 - **Section 2:** `getScene`, `createSceneLoader` and the light setters; the codemod rules and run;
   `src/index.ts`, the readme's `createSceneLoader` example, the UI kit guide's block.
 - **Section 3:** D2 into the coding standards page (`hub/pages/documentation/coding-standards/

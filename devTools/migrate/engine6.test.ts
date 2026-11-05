@@ -34,6 +34,18 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       'export type AppConfig = { name?: string };',
       'export const addSceneHooks = (hooks: SceneHooks) => hooks;',
       'export const removeFromGroupEntity = (id: number, o: string, opts?: { deleteMeshes?: boolean }) => id;',
+      'export type CreateEntityOpts = { appId?: string; world?: object };',
+      'export const createEntity = (opts?: CreateEntityOpts) => 1;',
+      ...['createMeshEntity', 'createCameraEntity', 'createGroupEntity', 'createLightEntity'].map(
+        (name) => `export const ${name} = (props: object, opts?: CreateEntityOpts) => 1;`
+      ),
+    ].join('\n'),
+  },
+  'aekasha/lines': {
+    file: 'engine/lines.ts',
+    text: [
+      "import type { CreateEntityOpts } from 'aekasha';",
+      'export const createLineEntity = (props: object = {}, opts?: CreateEntityOpts) => 1;',
     ].join('\n'),
   },
   'aekasha/physics': {
@@ -218,6 +230,28 @@ const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after:
     before: "createPhysicsEntity({ type: 'BALL' }, { rigidType: 'DYNAMIC' }, 1, { id: 'b' }, w);",
     after:
       "createPhysicsEntity({ colliders: { type: 'BALL' }, body: { rigidType: 'DYNAMIC' }, target: 1 }, { id: 'b', world: w });",
+  },
+  ...Object.fromEntries(
+    ['createMeshEntity', 'createCameraEntity', 'createGroupEntity', 'createLightEntity'].map(
+      (name) => [
+        `reshape:${name}`,
+        {
+          imports: `import { ${name} } from 'aekasha';\ndeclare const w: object;`,
+          before: `${name}({ id: 'p' }, { appId: 'e' }, w);`,
+          after: `${name}({ id: 'p' }, { appId: 'e', world: w });`,
+        },
+      ]
+    )
+  ),
+  'reshape:createLineEntity': {
+    imports: "import { createLineEntity } from 'aekasha/lines';\ndeclare const w: object;",
+    before: "createLineEntity(undefined, { appId: 'l' }, w);",
+    after: "createLineEntity(undefined, { appId: 'l', world: w });",
+  },
+  'reshape:createEntity': {
+    imports: "import { createEntity } from 'aekasha';\ndeclare const w: object;",
+    before: "createEntity({ appId: 'e' }, w);",
+    after: "createEntity({ appId: 'e', world: w });",
   },
 };
 
@@ -880,5 +914,43 @@ describe('call reshapes', () => {
         )
       ).map((r) => r.slice(0, r.indexOf(':', r.indexOf('`'))))
     ).toEqual(['app/a.ts:8 `createPhysicsEntity`', 'app/a.ts:9 `createPhysicsEntity`']);
+  });
+
+  it("the creators: the entity's options and the world folded into one, a new-shaped call left", () => {
+    const imports = lines(
+      "import { createEntity, createMeshEntity, type CreateEntityOpts } from 'aekasha';",
+      "import { createLineEntity } from 'aekasha/lines';",
+      'declare const world: object;',
+      'declare const opts: CreateEntityOpts;'
+    );
+    expect(
+      migrate(
+        lines(
+          imports,
+          'createMeshEntity({}, undefined, world);',
+          'createMeshEntity({}, opts, world);',
+          "createMeshEntity({}, { appId: 'a' }, undefined);",
+          'createMeshEntity({}, opts);',
+          "createMeshEntity({}, { appId: 'b', world });",
+          'createEntity(undefined, world);',
+          'createEntity(opts, world);',
+          'createEntity(opts);',
+          'createLineEntity(undefined, undefined, world);'
+        )
+      )
+    ).toBe(
+      lines(
+        imports,
+        'createMeshEntity({}, { world });',
+        'createMeshEntity({}, { ...opts, world });',
+        "createMeshEntity({}, { appId: 'a' });",
+        'createMeshEntity({}, opts);',
+        "createMeshEntity({}, { appId: 'b', world });",
+        'createEntity({ world });',
+        'createEntity({ ...opts, world });',
+        'createEntity(opts);',
+        'createLineEntity(undefined, { world });'
+      )
+    );
   });
 });

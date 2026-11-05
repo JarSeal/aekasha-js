@@ -59,8 +59,8 @@ export const rockImpostorsLane: ShowcaseLane = {
                 name: `LOD showcase: rock, ${column.name} (${distance} m)`,
                 description: `The baked against exported lane's row at ${distance} m from the start camera: baked impostor, mesh, exported impostor (left to right).`,
               },
-            },
-            ctx.world
+              world: ctx.world,
+            }
           )
         );
       });

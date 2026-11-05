@@ -38,7 +38,7 @@ Non-goal: merging colliders (§7).
 
 ## 2. Grounding (checked against the code, 2026-10-05)
 
-- **Meshes** (`kernel/mesh/Mesh.ts`): `createMeshEntity(props, entityOpts?, world?)` builds one
+- **Meshes** (`kernel/mesh/Mesh.ts`): `createMeshEntity(props, opts?)` builds one
   `THREE.Mesh`, adds `OBJECT3D` and `TAG_IS_MESH`, and adds the mesh to the root scene unless
   `doNotAddToScene`. Geometry and material come from ref-counted registries
   (`kernel/assets/Geometry.ts`, `Material.ts`); `disposeMesh` releases the refs on entity delete.

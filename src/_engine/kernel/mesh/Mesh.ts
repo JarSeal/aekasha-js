@@ -22,7 +22,7 @@ import { getRenderer } from '../render/Renderer';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { setTransformFromProps } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import { getGeometry } from '../assets/Geometry';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
@@ -63,7 +63,7 @@ export type MeshProps = {
   /** A rotation quaternion (a `THREE.Quaternion`, or its four components, as the JSON gives it) */
   quaternion?: { x: number; y: number; z: number; w: number };
   scale?: { x: number; y: number; z: number };
-  /** The entity's app id, over `entityOpts.appId` */
+  /** The entity's app id, over `opts.appId` */
   appId?: string;
   /** Native Object3D.frustumCulled (Three.js's own per-mesh render-list culling). Defaults to Three's own default (true). */
   frustumCullingEnabled?: boolean;
@@ -138,11 +138,11 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
 };
 
 /**
- * Creates a mesh entity: a `THREE.Mesh` (in the root scene unless `entityOpts.doNotAddToScene`)
+ * Creates a mesh entity: a `THREE.Mesh` (in the root scene unless `opts.doNotAddToScene`)
  * with an `OBJECT3D` and a transform. It takes a ref on its registered geometry and material,
  * released when the entity is deleted (an unregistered one warns in the debug env: nothing ever
- * disposes it). It joins the spatial index unless `entityOpts.spatialIndex` is `false`.
- * @param ecsWorld default: the default world
+ * disposes it). It joins the spatial index unless `opts.spatialIndex` is `false`.
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the mesh's entity id
  * @throws for a geometry or material id that isn't registered
  * @example
@@ -160,11 +160,8 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
  * );
  * ```
  */
-export const createMeshEntity = (
-  props: MeshProps,
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world =
     ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createMeshEntity.');
 

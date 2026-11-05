@@ -166,6 +166,24 @@ const each = (names: readonly string[], advice: string) =>
 
 const type = (entry: string, ...names: string[]) => names.map((name) => ({ entry, name }));
 
+// The entity creators' last two optional parameters, the entity's options and its world, as one
+// object (p622 D2-D4): an object literal merged in place, anything else spread
+const OPTS_WITH_WORLD: ReshapeArg = {
+  props: [{ spread: 'opts' }, { key: 'world', param: 'world' }],
+};
+
+/** An entity creator `(props, entityOpts?, world?)` → `(props, { ...entityOpts, world })` */
+const creator = (entry: string, name: string): ReshapeRule => ({
+  kind: 'reshape',
+  id: `reshape:${name}`,
+  callee: { entry, name },
+  params: ['props', 'opts', 'world'],
+  args: [{ param: 'props' }, OPTS_WITH_WORLD],
+  newArgCount: 2,
+  decision: 'p622 D4',
+  anchor: CREATORS,
+});
+
 const BRAIN = 'give the character a brain (`brain: { kind, params: { bindings } }`)';
 const CONTROLLER_DATA = "read the controller's `state`, `config.values` and `internal`";
 const TIERS_FEATURE = { entry: 'aekasha/physics', name: 'physicsTiers' };
@@ -401,7 +419,7 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
           { key: 'target', param: 'target' },
         ],
       },
-      { props: [{ spread: 'opts' }, { key: 'world', param: 'world' }] },
+      OPTS_WITH_WORLD,
     ],
     newArgCount: 2,
     newHas: { index: 0, member: 'colliders' },
@@ -451,6 +469,21 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     withoutFeature: TIERS_FEATURE,
     decision: 'p622 D8',
     anchor: TIERS,
+  },
+  // Phase 5: the kernel's reshapes
+  ...['createMeshEntity', 'createCameraEntity', 'createGroupEntity', 'createLightEntity'].map(
+    (name) => creator('aekasha', name)
+  ),
+  creator('aekasha/lines', 'createLineEntity'),
+  {
+    kind: 'reshape',
+    id: 'reshape:createEntity',
+    callee: { entry: 'aekasha', name: 'createEntity' },
+    params: ['opts', 'world'],
+    args: [OPTS_WITH_WORLD],
+    newArgCount: 1,
+    decision: 'p622 D4',
+    anchor: CREATORS,
   },
   {
     kind: 'import',

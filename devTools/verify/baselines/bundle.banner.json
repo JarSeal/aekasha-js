@@ -26,16 +26,16 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 1041120,
-      "gzip": 292022
+      "bytes": 1041183,
+      "gzip": 292050
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 336
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 284
+      "gzip": 285
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -67,7 +67,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7544,
-      "gzip": 3074
+      "gzip": 3076
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4297,
@@ -75,15 +75,15 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 45869,
-      "gzip": 13860
+      "gzip": 13861
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1626
+      "gzip": 1629
     },
     "assets/ImportRegistry.js": {
       "bytes": 16557,
-      "gzip": 6658
+      "gzip": 6660
     },
     "assets/KTX2Loader.js": {
       "bytes": 59895,
@@ -111,7 +111,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 182
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -119,14 +119,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 209
+      "gzip": 208
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 64,
-    "minified": 1060329,
-    "gzip": 297515
+    "minified": 1060392,
+    "gzip": 297577
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -136,8 +136,8 @@
     },
     "_engine/kernel/camera": {
       "modules": 1,
-      "minified": 3251,
-      "gzip": 1378
+      "minified": 3272,
+      "gzip": 1402
     },
     "_engine/kernel/config": {
       "modules": 1,
@@ -161,8 +161,8 @@
     },
     "_engine/kernel/light": {
       "modules": 2,
-      "minified": 5525,
-      "gzip": 2011
+      "minified": 5546,
+      "gzip": 2030
     },
     "_engine/kernel/loop": {
       "modules": 3,
@@ -171,8 +171,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3550,
-      "gzip": 1524
+      "minified": 3571,
+      "gzip": 1543
     },
     "_engine/kernel/render": {
       "modules": 6,

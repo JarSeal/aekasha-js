@@ -17,7 +17,7 @@ import { addResizer } from '../loop/MainLoop';
 import { inspectEntity, lookAtPoint } from '../ecs/ECSHelpers';
 import { loadPersistentProps } from '../scene/PropertyLoader';
 import type { CameraProps } from '../../schemas/CameraSchema';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import { DEBUG_CAMERA_ID } from '../../debug/DebugTools';
 import { updateOnScreenTools } from '../../debug/OnScreenTools';
@@ -179,14 +179,14 @@ export const applyCameraProjection = (
 
 /**
  * Creates a camera entity: a perspective or orthographic camera (in the root scene unless
- * `entityOpts.doNotAddToScene`) with an `OBJECT3D`, its `CAMERA_SETTINGS` and a transform. Its
+ * `opts.doNotAddToScene`) with an `OBJECT3D`, its `CAMERA_SETTINGS` and a transform. Its
  * aspect follows the canvas (`responsiveAspect` keeps the horizontal field of view instead of
  * the vertical one). In the default world, a camera with `active: true`, or the first camera
  * while none is active, becomes the main camera and the one the scene renders through; in
  * another world, `active: true` only tags it that world's main camera.
  * @param camProps the camera's props (a `*.camera.json`'s `cameraProps`); in the debug env with
  *   the debugger's saved overrides for its app id
- * @param ecsWorld default: the default world
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the camera's entity id
  * @example
  * ```ts
@@ -198,11 +198,8 @@ export const applyCameraProjection = (
  * );
  * ```
  */
-export const createCameraEntity = (
-  camProps: CameraProps,
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createCameraEntity = (camProps: CameraProps, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world = ecsWorld || getECSWorld();
   const rootScene = existsOrThrow(getRootScene(), 'No Scene for Camera.');
   const { aspect } = getCanvasSize();
@@ -556,8 +553,7 @@ export const initDebugCamera = async (world: ECSWorld) => {
 
     debugCameraEntityId = createCameraEntity(
       { type: 'PERSPECTIVE', active: false, fov: 60, near: 0.1, far: 2000 },
-      { appId: DEBUG_CAMERA_ID, userData: { name: 'DebugOrbitCamera' }, persistent: true },
-      world
+      { appId: DEBUG_CAMERA_ID, userData: { name: 'DebugOrbitCamera' }, persistent: true, world }
     );
 
     world.addComponent(debugCameraEntityId, ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA, true);

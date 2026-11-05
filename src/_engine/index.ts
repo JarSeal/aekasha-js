@@ -337,6 +337,7 @@ export {
   setTransform,
   teleport,
 } from './kernel/ecs/ECSHelpers';
+export type { CreateEntityOpts } from './kernel/ecs/ECSHelpers';
 export { initECSStressTest } from './kernel/ecs/ECSStressTest';
 export type { TypedArrayTransformStore } from './kernel/ecs/TypedArrayTransformStore';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';

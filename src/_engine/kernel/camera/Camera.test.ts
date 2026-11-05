@@ -62,12 +62,14 @@ describe('createCameraEntity', () => {
     const other = new ECSWorld({ id: 'camera-test-active', maxEntities: 100 });
 
     // Neither the first camera nor an active one: only the other world's tag moves
-    const first = createRealCameraEntity({ type: 'PERSPECTIVE' }, { appId: 'otherFirst' }, other);
+    const first = createRealCameraEntity(
+      { type: 'PERSPECTIVE' },
+      { appId: 'otherFirst', world: other }
+    );
     expect(other.hasComponent(first, ComponentType.TAG_IS_MAIN_CAMERA)).toBe(false);
     const active = createRealCameraEntity(
       { type: 'PERSPECTIVE', active: true },
-      { appId: 'otherActive' },
-      other
+      { appId: 'otherActive', world: other }
     );
     expect(other.hasComponent(active, ComponentType.TAG_IS_MAIN_CAMERA)).toBe(true);
     expect(getActiveCameraId()).toBeNull();

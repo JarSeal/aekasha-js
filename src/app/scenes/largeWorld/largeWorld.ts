@@ -411,8 +411,8 @@ const createStaticProps = ({ world, terrain }: WorldContext) => {
         appId: prop.appId,
         debugData: { name: prop.appId },
         ecsFrustumCullingEnabled: prop.offFrustum,
-      },
-      world
+        world,
+      }
     );
   }
 };
@@ -433,8 +433,7 @@ const createLanterns = ({ world, terrainMesh }: WorldContext) => {
         objectCullingEnabled: true,
         position: { x: position.x, y: position.y + 1.2, z: position.z },
       },
-      { appId: `largeWorldLantern${i}`, debugData: { name: `Large world lantern ${i}` } },
-      world
+      { appId: `largeWorldLantern${i}`, debugData: { name: `Large world lantern ${i}` }, world }
     );
   });
 };
@@ -455,8 +454,7 @@ const createRestingObjects = ({ world, terrain }: WorldContext) => {
         receiveShadow: true,
         position: { x: obj.x, y: terrain.getHeightAt(obj.x, obj.z) + 0.6, z: obj.z },
       },
-      { appId: obj.appId, debugData: { name: obj.appId } },
-      world
+      { appId: obj.appId, debugData: { name: obj.appId }, world }
     );
   }
   return material;
@@ -486,8 +484,8 @@ const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Mate
     {
       appId: 'largeWorldDynamicCrateStack',
       debugData: { name: 'Large world dynamic crate stack' },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(entityId, HoverToolComponentType.HOVER, {
     speed: 1.2,
@@ -514,8 +512,7 @@ const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Materia
       receiveShadow: true,
       position: { x, y: terrain.getHeightAt(x, z) + 0.5, z },
     },
-    { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' } },
-    world
+    { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' }, world }
   );
 };
 
@@ -548,8 +545,8 @@ const createFollowCamera = ({ world }: WorldContext, crateStackId: number) => {
         name: 'Large world dynamic camera',
         description: 'Follows largeWorldDynamicCrateStack via FollowTool. Toggle with the C key.',
       },
-    },
-    world
+      world,
+    }
   );
   world.addComponent(cameraId, FollowToolComponentType.FOLLOW, {
     leaderId: crateStackId,

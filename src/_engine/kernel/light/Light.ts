@@ -6,7 +6,7 @@ import { getLightCharacteristics } from './LightHelpers';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { ComponentType, Transform } from '../ecs/ECSCoreComponents';
 import { loadPersistentProps } from '../scene/PropertyLoader';
-import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
+import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
@@ -209,12 +209,12 @@ export type LightProps = {
 
 /**
  * Creates a light entity: an ambient, hemisphere, point, directional or spot light (in the root
- * scene unless `entityOpts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
+ * scene unless `opts.doNotAddToScene`) with an `OBJECT3D` and a transform, and for a
  * directional or spot light a target entity (deleted with it, see {@link getLightTargetId}).
- * Point and spot lights join the spatial index unless `entityOpts.spatialIndex` is `false`. In
+ * Point and spot lights join the spatial index unless `opts.spatialIndex` is `false`. In
  * the debug env the debugger's saved overrides for its app id apply, unless the light has a
- * manager (`entityOpts.managedBy`).
- * @param ecsWorld default: the default world
+ * manager (`opts.managedBy`).
+ * @param opts the entity's options and its world (default: the default world)
  * @returns the light's entity id
  * @example
  * ```ts
@@ -233,11 +233,8 @@ export type LightProps = {
  * );
  * ```
  */
-export const createLightEntity = (
-  lightProps: LightProps,
-  entityOpts?: CoreEntityOpts,
-  ecsWorld?: ECSWorld
-): number => {
+export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpts): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world = ecsWorld || getECSWorld();
   const rootScene = existsOrThrow(getRootScene(), 'Could not find root scene.');
 
