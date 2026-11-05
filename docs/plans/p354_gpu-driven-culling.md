@@ -51,9 +51,31 @@ without meshlets or software rasterization.
   `lod()`'s rules ported), opted into per pool, and its compute code loads with an `import()` on
   the first pool that asks for it on a WebGPU backend, so a build or a device that doesn't use it
   downloads none of it; `yarn sbp`'s `instancing` and `lod` groups stay within their budgets.
-- Known leak to keep in mind when measuring memory across scene visits:
-  `docs/issues/three-instanced-node-attribute-leak.md` (three r186 never deletes a removed
-  `InstancedMesh`'s instance attributes).
+- The instance attribute leak (`docs/issues/three-instanced-node-attribute-leak.md`, three
+  r186 never deleted a removed `InstancedMesh`'s instance attributes) is fixed in three r187
+  (#34603, #34690; p057 checks it).
+- **three r187 (2026-10-30) ships a drawing pipeline hook and an experimental GPU-driven
+  pipeline** (p057's review):
+  - `renderer.drawingPipeline` (core, `renderers/common/StandardDrawingPipeline.js`, marked
+    experimental): `begin`, `isCulled`, `pushRenderItem`, `project`, `prepareAsync`, the part
+    that was `Renderer._projectObject`. It's the supported place for a GPU path to take over a
+    pool's culling and submission without patching three (open question 4).
+  - `MeshletDrawingPipeline` / `VisibilityBufferDrawingPipeline` (addons,
+    `examples/jsm/pipelines/`, #35191, "experimental, interface might change", WebGPU only):
+    64-triangle clusters with up to 6 simplified levels, compute frustum, normal-cone and
+    two-phase Hi-Z occlusion culling per object and per cluster, LOD by projected error,
+    indirect draws; it handles `InstancedMesh` instances, `THREE.LOD`, static `BundleGroup`s and
+    `maskNode` (so `lodDither` survives). It falls back to the standard path for `VSMShadowMap`
+    shadow passes (the app's shadow type), non-perspective cameras, reversed or log depth,
+    transparent, non-`FrontSide`, `flatShading` or `vertexColors` materials, a texture `channel`
+    other than 0, mirrored objects and storage instance matrices. Its LOD is continuous per
+    cluster: no discrete p347 levels, impostor bins or cross-fades. About 190 KB raw plus ~90 KB
+    of meshopt clusterizer and simplifier it bundles itself (a duplicate of the engine's
+    `meshoptimizer`), so it could only ever be a lazy `import()` chunk.
+  - InstancedMeshes now share shader builds (#35007): the instance matrix is a
+    `referenceAttribute('instanceMatrix', 'mat4')`, bound per object. A GPU path's per-instance
+    buffers (visible lists, fades) bind per object the same way (p058), or mark their builds
+    object-specific as `LodFade.ts` does since p057.
 
 ## Open questions for the real plan
 
@@ -79,8 +101,14 @@ without meshlets or software rasterization.
 
 ## Rough phases (to be refined)
 
-0. **Spike.** A TSL compute pass that frustum-culls 100k instances into one indirect draw, on
-   WebGPU, with p345's frame numbers before and after.
+0. **Spike.** Two parts, on WebGPU, with p345's frame numbers before and after:
+   - three's drop-in first (`renderer.drawingPipeline = new MeshletDrawingPipeline()`, a lazy
+     `import()`) on largeWorld and lodShowcase: what it culls, what falls back (VSM shadows, the
+     fades) and what it costs. If it covers a content class (static content in a `BundleGroup`,
+     huge single meshes), that class can use it instead of this plan's path.
+   - Then a TSL compute pass that frustum-culls 100k instances into one indirect draw, wired in
+     through `renderer.drawingPipeline` rather than a patch: the hand-rolled path keeps what
+     three's lacks (discrete levels, impostor bins, per-instance cross-fades, VSM shadows).
 1. **Frustum culling + indirect draw** for one instanced pool type, behind a per-pool flag.
 2. **Per-instance LOD** binned into per-level indirect draws (p348's rules ported to TSL).
 3. **Shadow passes.**
@@ -92,5 +120,6 @@ without meshlets or software rasterization.
 
 ## Not in scope
 
-Cluster-level (meshlet) LOD stays research (p350 §8, Tier 4): a timeboxed spike, and only if huge
-single meshes (terrain chunks, large architecture) need finer detail than per-object LOD gives.
+Cluster-level (meshlet) LOD of the engine's own stays out (p350 §8, Tier 4): since three r187 the
+question is whether three's `MeshletDrawingPipeline` serves huge single meshes (terrain chunks,
+large architecture), Phase 0's first part.

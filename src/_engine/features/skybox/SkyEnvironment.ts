@@ -10,7 +10,7 @@ import type { SkyBoxEnvSize } from './SkyBoxTypes';
  */
 
 /** Baked PMREMs by source texture, disposed with the source texture. */
-const pmrems = new WeakMap<THREE.Texture, { target: THREE.RenderTarget; version: number }>();
+const pmrems = new WeakMap<THREE.Texture, { target: THREE.CubeRenderTarget; version: number }>();
 
 /**
  * Whether a texture can be baked into a PMREM yet: PMREMNode's own checks
@@ -32,23 +32,23 @@ export const isPMREMSourceReady = (texture: THREE.Texture) => {
  * version), disposed when its source texture is disposed. A PMREMNode given the source texture
  * itself bakes it with a PMREMGenerator of its own, and nothing ever disposes either. A source
  * that isn't ready (eg. a failed load) is returned as is, for PMREMNode to bake once it is.
- * Without a renderer, the source is returned as is too.
+ * Without an initialized renderer, the source is returned as is too (three r187's generator
+ * throws before `renderer.init()`; r186 baked asynchronously).
  * @internal
  */
 export const getPMREMTexture = (texture: THREE.Texture) => {
   const renderer = getRenderer();
-  if (!renderer || !isPMREMSourceReady(texture)) return texture;
+  if (!renderer?.hasInitialized() || !isPMREMSourceReady(texture)) return texture;
   const cached = pmrems.get(texture);
   if (cached?.version === texture.pmremVersion) return cached.target.texture;
 
-  // A generator per bake, disposed right after: its working set (a ping-pong target as large as
-  // the PMREM, LOD planes, blur materials) would otherwise stay on the GPU. Before the renderer
-  // has initialized, the generator bakes asynchronously, so it can't be disposed here.
+  // A generator per bake, disposed right after: its working set (a source cube target as large
+  // as the PMREM, its box mesh and materials) would otherwise stay on the GPU.
   const generator = new THREE.PMREMGenerator(renderer);
   const target = (texture as THREE.CubeTexture).isCubeTexture
     ? generator.fromCubemap(texture, cached?.target)
     : generator.fromEquirectangular(texture, cached?.target);
-  if (renderer.hasInitialized()) generator.dispose();
+  generator.dispose();
   if (!cached) {
     const onDispose = () => {
       texture.removeEventListener('dispose', onDispose);
@@ -70,13 +70,13 @@ export const getPMREMTexture = (texture: THREE.Texture) => {
  */
 export type EnvBake = {
   size: SkyBoxEnvSize;
-  /** The PMREM (CubeUV) target every bake re-renders. */
-  target: THREE.RenderTarget;
+  /** The PMREM (a cube target with its prefiltered mips) every bake re-renders. */
+  target: THREE.CubeRenderTarget;
   /** `pmremTexture(target.texture)`: the root scene's environmentNode. Created with the target,
    * and never re-pointed (a `.value` swap to a new target left stale bindings on WebGL2). */
   environmentNode: THREE.Node;
-  /** Long-lived: its working set (ping-pong target, LOD planes, GGX material) is reused while
-   * the size stays the same. */
+  /** Long-lived: its working set (the source cube target, its box mesh, the GGX materials) is
+   * reused while the size stays the same. */
   generator: THREE.PMREMGenerator;
   /** Private: holds only the ENV_BAKE composite as its backgroundNode. */
   scene: THREE.Scene;
@@ -100,28 +100,40 @@ export const _setEnvBakeHooks = (hooks: EnvBakeHooks | null) => {
   bakeHooks = hooks;
 };
 
+/** three's smallest PMREM face (`MIN_SIZE` in PMREMGenerator.js, three r187): `fromScene` bakes
+ * a smaller `size` at this one. */
+const PMREM_MIN_SIZE = 256;
+/** The face size of a PMREM's smallest prefiltered mip, as a power of two (`LOD_MIN`, r187). */
+const PMREM_LOD_MIN = 3;
+
+/** The cube face size an env bake of `size` gets: three r187 bakes at least 256 (64 and 128
+ * bake at 256). */
+const getEnvBakeFaceSize = (size: SkyBoxEnvSize) => Math.max(PMREM_MIN_SIZE, size);
+
 /**
- * A CubeUV target like the one `PMREMGenerator.fromScene` allocates for `size` (`_allocateTarget`
- * and `_createRenderTarget` in PMREMGenerator.js, three r186). Allocated here, not by the first
- * bake, so the environment node exists from activation on: activation runs while the scene
- * loads, and bakes never do.
+ * A PMREM target like the one `PMREMGenerator.fromScene` allocates for `size` (`_allocateTarget`
+ * and `_createRenderTarget` in PMREMGenerator.js, three r187: a cube target with only the
+ * prefiltered mips, down to 8 texels). Allocated here, not by the first bake, so the environment
+ * node exists from activation on: activation runs while the scene loads, and bakes never do.
  */
 const createEnvBakeTarget = (size: SkyBoxEnvSize) => {
-  const cubeSize = 2 ** Math.floor(Math.log2(size));
-  const target = new THREE.RenderTarget(3 * Math.max(cubeSize, 16 * 7), 4 * cubeSize, {
-    magFilter: THREE.LinearFilter,
-    minFilter: THREE.LinearFilter,
+  const faceSize = getEnvBakeFaceSize(size);
+  const target = new THREE.CubeRenderTarget(faceSize, {
+    minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: false,
     type: THREE.HalfFloatType,
-    format: THREE.RGBAFormat,
     colorSpace: THREE.LinearSRGBColorSpace,
-    depthBuffer: true,
+    depthBuffer: false,
   });
-  target.texture.mapping = THREE.CubeUVReflectionMapping;
+  // Size-only entries, as three's: they allocate the mips, which the bakes render (the types
+  // declare only image mipmaps)
+  const mipmaps = target.texture.mipmaps as unknown as { width: number; height: number }[];
+  const maxLod = Math.log2(faceSize) - PMREM_LOD_MIN;
+  for (let lod = 0; lod <= maxLod; lod++)
+    mipmaps.push({ width: faceSize >> lod, height: faceSize >> lod });
   target.texture.name = 'SkyBox.envBake';
   // What makes pmremTexture() sample it as is (the types don't declare the flag)
   (target.texture as THREE.Texture & { isPMREMTexture: boolean }).isPMREMTexture = true;
-  target.scissorTest = true;
   return target;
 };
 

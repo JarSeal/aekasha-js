@@ -157,11 +157,11 @@ export const collectGPUMemorySources = (
 
 // --- ENGINE SOURCES ---
 
-/** PMREMGenerator's working set (private in three r186): what a long-lived generator keeps. */
+/** PMREMGenerator's working set (private in three r187: the source cube target and the box it
+ * renders): what a long-lived generator keeps. */
 type PMREMGeneratorInternals = {
-  _pingPongRenderTarget: THREE.RenderTarget | null;
-  _lodMeshes: THREE.Mesh[];
-  _backgroundBox: THREE.Mesh | null;
+  _sourceTarget: THREE.CubeRenderTarget | null;
+  _boxMesh: THREE.Mesh | null;
 };
 
 /** A shadow map's VSM blur targets, kept on the map when it's an array (three r186, ShadowNode). */
@@ -303,9 +303,8 @@ export const registerEngineGPUMemorySources = () => {
       if (!bake) return;
       yield bake.target;
       const generator = bake.generator as unknown as PMREMGeneratorInternals;
-      yield generator._pingPongRenderTarget;
-      for (const mesh of generator._lodMeshes) yield mesh.geometry;
-      yield generator._backgroundBox?.geometry;
+      yield generator._sourceTarget;
+      yield generator._boxMesh?.geometry;
     },
   });
 

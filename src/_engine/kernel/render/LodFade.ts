@@ -10,9 +10,13 @@
 // can't be a fixed input of the material. Every dither-enabled material uses one mask node that
 // resolves the fade of the object being drawn when its shader is built: an InstancedMesh's
 // per-instance `lodFade` attribute (createLodFadeAttribute), else a per-object value
-// (setLodObjectFade). three r186 builds every InstancedMesh on its own (its uuid is in the render
-// object's cache key), while plain meshes share their builds, so all of them take the per-object
-// path. The shadow pass reads `maskNode` too: shadows dither with the same split.
+// (setLodObjectFade). three r187 shares one build between InstancedMeshes with the same material
+// and attributes (its render object's cache key no longer has the mesh's uuid), and looks a cached
+// build up before any setup runs, so the mask marks an InstancedMesh's build object-specific
+// (`NodeBuilder.objectSpecific`: never cached): each one binds its own fade attribute, and one
+// without a fade never lends its build to one with. Plain meshes share their builds, so all of
+// them take the per-object path. The shadow pass reads `maskNode` too: shadows dither with the
+// same split.
 import * as THREE from 'three/webgpu';
 import {
   bool,
@@ -127,6 +131,10 @@ class LodFadeMaskNode extends THREE.Node {
   }
 
   setup(builder: THREE.NodeBuilder) {
+    // A shared InstancedMesh build would bind the first mesh's fade attribute (or none) for all
+    if ((builder.object as THREE.InstancedMesh | null)?.isInstancedMesh) {
+      (builder as THREE.NodeBuilder & { objectSpecific: boolean }).objectSpecific = true;
+    }
     const attribute = builder.object && fadeAttributes.get(builder.object);
     if (!attribute) return lodDither(objectFade);
     let fade = fadeAttributeNodes.get(attribute);

@@ -94,9 +94,9 @@ export const SkyBoxEnvSchema = z.object({
 
   // Environment bake settings: used by sky boxes on the composite path (procedural layers),
   // which bake their environment. A texture-only or colour-only sky box has no bake.
-  /** The bake's cube face size, fixed per activation. Default 256, or 128 with day-night. 512
-   * gives sharper mirror reflections for 4× the memory (a 1536×2048 half-float target); the
-   * bake's GPU cost is per pass, so it barely changes with size (p110 spike). */
+  /** The bake's cube face size, fixed per activation. Default 256, or 128 with day-night. Since
+   * three r187 a bake is at least 256 per face, so 64 and 128 bake at 256. 512 gives sharper
+   * mirror reflections for 4× the memory (a 512² half-float cube with its prefiltered mips). */
   size: SkyBoxEnvSizeSchema.optional(),
   /** Whether value changes and the day-night cycle re-bake the environment. False: only
    * activation, a rebuild and `bakeEnvironment()` do (reflections lag, the rest animates).

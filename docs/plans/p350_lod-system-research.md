@@ -229,8 +229,20 @@ of Nanite.
 WebGPU makes painful. Per-instance LOD on the GPU (p354) gets most of the benefit for an outdoor
 world. Cluster-level LOD stays research (§8, Tier 4).
 
+**three r187 (2026-10-30)** ships `MeshletDrawingPipeline` (an experimental WebGPU addon,
+`examples/jsm/pipelines/`, set as `renderer.drawingPipeline`): 64-triangle clusters with up to six
+simplified levels, compute frustum, normal-cone and Hi-Z occlusion culling per cluster, LOD by
+projected error, indirect draws, without a software rasterizer. It falls back to the standard path
+for VSM shadow passes and several material features, and has no discrete levels, impostors or
+cross-fades (p354's "What's known" has the detail). So Tier 4 is no longer "build it": it's
+"evaluate three's addon for huge single meshes and static `BundleGroup` content", p354 Phase 0's
+first part.
+
 ### 7.1 Tooling
 
+- **three's `MeshletDrawingPipeline`** (r187, above): clusterizes at runtime with its own bundled
+  meshopt clusterizer and simplifier (`examples/jsm/utils/MeshletGeometryUtils.js`), a duplicate
+  of the engine's `meshoptimizer` package if both ship.
 - **`meshoptimizer`** (WASM, npm): `simplify` with an error bound, plus vertex/overdraw
   optimization. The workhorse for LOD chains (p347). It runs in Node (build time) and in a browser
   worker (runtime), from the same package.
@@ -259,7 +271,7 @@ tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 | 2    | `p353_macro-streaming-grid`                    | Cell residency state machine, per-cell asset ownership, build-time manifest, priming, per-cell physics tiers      | p346 Phase 1; p352 for its physics phase |
 | 2    | `_DONE_p351_impostor-billboard-lod`            | Cross-quads, dithered cross-fade, octahedral impostors                                                            | p348 Phase 3                             |
 | 3    | `p354_gpu-driven-culling` (stub)               | Compute frustum culling, indirect draws, per-instance LOD on the GPU                                              | p348, p346                               |
-| 4    | — (research only)                              | Cluster (meshlet) LOD, §7: a timeboxed spike whose output is a recommendation, only if huge single meshes need it | p354                                     |
+| 4    | — (research only)                              | Cluster (meshlet) LOD, §7: evaluate three r187's `MeshletDrawingPipeline` (p354 Phase 0) for huge single meshes   | p354                                     |
 
 **Follow-on epic:** `p370_static-mesh-merging-and-texture-atlas-systems` (after these plans) merges
 static meshes into fewer draws. Its HLOD stub (p376) turns merged groups into LOD units with p347's

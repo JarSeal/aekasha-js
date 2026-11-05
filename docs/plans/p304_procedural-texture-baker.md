@@ -58,11 +58,12 @@ bakeTexture(opts: {
 
 - **Render:** a full-screen `QuadMesh` with a `NodeMaterial` whose output is `mrt({ … })` for several outputs.
   - Several outputs mean one `RenderTarget` with `count: n`.
-  - Layers are rendered one by one into an array render target (three r186 array render target, chosen by layer). If r186 can't target array layers on both backends, the fallback bakes each layer into a 2D target and assembles them into a `DataArrayTexture` (p299's uncompressed path in `buildTextureArray`).
+  - Layers are rendered one by one into an array render target (three's array render target, chosen by layer). If three can't target array layers on both backends, the fallback bakes each layer into a 2D target and assembles them into a `DataArrayTexture` (p299's uncompressed path in `buildTextureArray`). three r187 fixed single-layer array render targets (#34510) and layer detection in `copyTextureToTexture()` (#35111) on the WebGL backend, which this path relies on: check on r187 or later.
   - **The bake helpers move to the kernel:** `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` go from `features/lod/impostors/ImpostorBake.ts` to `kernel/render/` (`@internal`), and the impostor bakes and the texture preview import them from there. `withBakeRendererState` (today the target, clear colour and auto clear) also restores the cube face and mip level, and the bake never touches the scissor, as `Viewports.ts`. `getBakeRenderer` throws before `InitEngine`; the impostor atlases' registered texture disposing its render target is the model for D1's ownership (`src/_engine/features/lod/impostors/CLAUDE.md`).
 - **Clear once on allocation** (`clearBakeTarget`), the same rule as `initTarget`.
 - **Mipmaps:**
-  - Turn on the target texture's `generateMipmaps` and verify that r186 generates them after the render on both backends.
+  - Turn on the target texture's `generateMipmaps` and verify that three (r187 or later) generates them after the render on both backends.
+  - Bake many layers or passes into one mipped target with `texture.mipmapsAutoUpdate = false` (three r187, #34630: the mips stay allocated, but they aren't regenerated after every render into it, which WebGPU's `finishRender` otherwise does), and set it back to `true` before the last render, so the mips are built once.
   - If not, add a small downsample chain (box filter, one `QuadMesh` pass per level), which also lets alpha-as-data be averaged correctly.
 - **Pipeline compile:** `renderer.compileAsync(quad, camera)` before the first bake, so compiling doesn't stall the frame.
 - **Scheduling:**

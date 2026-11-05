@@ -36,7 +36,7 @@ Each item names the plan it came from; the full plan text is in git history (e.g
 ## Sky box
 
 - **Retune the default day sky** (p112): with the sun at 30° it is very pale toward the horizon, and the default ground colour (`#3b3a36`) reads as nearly black against it. Both are SkyMesh's defaults and were never retuned. A preset change is a visible change: bump its template version and note it in the changelog.
-- **three.js upgrades** (p110): `layers/atmosphere.ts` is a port of `examples/jsm/objects/SkyMesh.js` (r186, recorded in its header). On a three upgrade, diff that file and re-check the sky against SkyMesh side by side.
+- **three.js upgrades** (p110): `layers/atmosphere.ts` is a port of `examples/jsm/objects/SkyMesh.js` (r186, recorded in its header). On a three upgrade, diff that file and re-check the sky against SkyMesh side by side. r187 (p057): only docs and the `Fn` layout syntax changed in `SkyMesh.js`; the port needs nothing.
 - **Deferred epic ideas** (p110 non-goals): auto-exposure / eye adaptation for night scenes (a PostFX pass), a precomputed-LUT atmosphere layer (Hillaire 2020 multiple scattering), volumetric 3D clouds and weather (the surface side of weather, i.e. wetness, puddles, rain ripples and snow coverage as global state that materials read, is planned in `p307_wet-and-dry-surface-states.md`; precipitation, clouds and a weather driver remain open here), day-night events (`onSunrise` / `onSunset`; today games poll the getters), a JSON write-back endpoint (the Skybox tab's "Copy JSON" covers authoring), the sky in viewports other than the env ball, sky boxes in secondary ECS worlds.
 - **A lit material-preview env ball** (p115): a metal and dielectric pair next to the unlit ball. Overlaps with the material editor (p084).
 - **Leaving unused sky box layers out of a build** (p612): the eight layers are 12.9 kB before minification (`SkyLights.ts` 3.5, `SkyTime.ts` 1.5, `SkyStaticLayers.ts` 1.0). A feature manifest can't fold them, because a code-made sky can name any layer. It needs an API, e.g. `skyBox({ layers })` listing the layers the app may build (`skyBox()` takes no options today).
@@ -87,7 +87,7 @@ Each item names the plan it came from; the full plan text is in git history (e.g
 
 ## Smallest build
 
-- **A "lite" embed profile without TSL** (p611 §7.3, decided against for now): about 110 KiB gzip less on the banner (three 237.7 → 128.3 KiB), with classic materials only: no sky box, PostFX, viewports, fat lines, impostors, LOD fades or texture arrays. Revisit when three ships its node system apart from `WebGPURenderer`, or when a real embed needs well under 200 KiB. Its shape: a lite flag in `sbp.config.ts` aliasing `three/webgpu` to `three`, a classic `createRenderer`, and the gatherer failing a lite profile's TSL scene.
+- **A "lite" embed profile without TSL** (p611 §7.3, decided against for now): about 110 KiB gzip less on the banner (three 237.7 → 128.3 KiB), with classic materials only: no sky box, PostFX, viewports, fat lines, impostors, LOD fades or texture arrays. Revisit when three ships its node system apart from `WebGPURenderer`, or when a real embed needs well under 200 KiB. three r187 made `three/tsl` tree-shakeable (#34533) and dropped unused maths classes (#34619): the banner's `three` group went from 251.7 to 231.1 kB gzip (p057), so the gap is smaller; measure it again before deciding. Its shape: a lite flag in `sbp.config.ts` aliasing `three/webgpu` to `three`, a classic `createRenderer`, and the gatherer failing a lite profile's TSL scene.
 
 ## Ækasha Hub
 

@@ -1,5 +1,7 @@
 **Title:** WebGPURenderer: `_bindingGroupsCache` keeps every disposed light alive (and, with shadows, its shadow camera)
 
+Status: fixed | three r187 ([#34707](https://github.com/mrdoob/three.js/pull/34707)), 2026-11-05. In the app one more retainer needed an engine change (a render context per PostFX pre-pass MRT): `docs/plans/p057_three-r187-migration.md` D4, `docs/plans/_DONE_p056_three-bind-group-cache-light-leak.md`. Reported upstream as [#34705](https://github.com/mrdoob/three.js/issues/34705); the text below is the report.
+
 ### Description
 
 `NodeBuilder`'s module-level `_bindingGroupsCache` (`WeakMap<RenderContext, Map<hash, BindGroup>>`) never removes

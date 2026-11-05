@@ -79,6 +79,13 @@ let pipeline: THREE.RenderPipeline | null = null;
 let scenePass: THREE.PassNode | null = null;
 /** Lazy non-MSAA depth + normal pre-pass, see buildPostFxPipeline(). */
 let prePass: THREE.PassNode | null = null;
+/**
+ * The pre-pass's MRT, one for every build: three caches a render context per MRT id for the
+ * renderer's lifetime (`RenderContexts`, three r187), and each keeps the last camera it rendered
+ * with, so a new MRT per build kept every rebuilt scene's camera, its render list and that list's
+ * lights alive (p056).
+ */
+let prePassMRT: THREE.MRTNode | null = null;
 /** The camera the current build's scene pass renders with. */
 let builtCamera: THREE.Camera | null = null;
 let needsRebuild = true;
@@ -194,7 +201,8 @@ const buildPostFxPipeline = (
   const getPrePass = () => {
     if (!prePass) {
       prePass = pass(rootScene, camera, { samples: 0 });
-      prePass.setMRT(mrt({ output: normalView }));
+      prePassMRT ??= mrt({ output: normalView });
+      prePass.setMRT(prePassMRT);
     }
     return prePass;
   };

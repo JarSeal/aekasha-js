@@ -30,7 +30,7 @@ This plan doesn't add a weather system, rain particles or audio. The surface-con
   - p427 may move the time-of-day clock out of the sky box into its world state; the sun factor below reads it through one provider, so only that line changes.
 - **Engine layout:** new engine state that only some apps use is an opt-in feature (`src/_engine/kernel/init/CLAUDE.md`, Engine features): it reaches the kernel through its `FeatureContext` (`registerPlugin`, `addSceneHooks`, `onDebug`), and the only feature → feature runtime import today is character → physics, so it can't call the sky box's getters itself.
 - **Environment reflections:** both the background and the environment sample one PMREM (`features/skybox/SkyEnvironment.ts`). With day-night on, the environment re-bakes every ~1° of sun movement or 1/s at most.
-- **No SSR** (p990: "More PostFX passes … SSR"). Puddle reflections are environment reflections only. Outdoors, under the sky, that's the dominant term; reflections of nearby objects are missing.
+- **No SSR** (p990: "More PostFX passes … SSR"). Puddle reflections are environment reflections only. Outdoors, under the sky, that's the dominant term; reflections of nearby objects are missing. three r187 made its `SSRNode` addon more usable (#35238-#35243: the full GGX lobe, material F0 and F90, validated ray bounds and refined hits), so the p990 SSR pass is a more realistic follow-up for puddles than when this was written.
 - **`aoNode`** affects indirect light only.
 - **The GTAO pass** multiplies the final colour (p301 survey). Wet darkening and AO stack multiplicatively; that's fine.
 - **p305** reserves `wet?: WetConfig` and a `WETNESS` debug view. Layers have `surface.porosity`, `wetDarkening` and `wetRoughness` from their texture set (p303 D1).
@@ -196,6 +196,9 @@ type SurfaceConditions = {
   ```
 - It binds the nodes from `getSurfaceConditionNodes()` (`aekasha/surface`, toolkit → engine entry); a material with `wet` in a scene without `surfaceConditions()` installed warns once and builds dry.
 - Each sub-feature compiles only when present. The ripple, streak and snow fetches sit in `If` branches on their masks and uniforms. Shared coordinates are built before the branches (TSL `If` trap, p305 D5).
+- **three r187 options** (optional, decided in implementation):
+  - EON rough diffuse (`diffuseRoughness` / `diffuseRoughnessNode`, #34379, `MeshPhysicalNodeMaterial` only): the flat, dusty look of dry sand, regolith and soil, which wetting lowers. It costs a Physical material, so only where the material is Physical already.
+  - `BumpMapNode`'s `normalNode` parameter (#35101): bumps on top of an existing normal (a normal-mapped surface), for the ripple and puddle detail and p309's wet decals. It still needs a height texture node.
 
 ### D3 — Defaults and data
 

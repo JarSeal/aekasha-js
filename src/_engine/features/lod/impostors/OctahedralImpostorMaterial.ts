@@ -12,8 +12,9 @@
 // `positionLocal` by the instance matrix before `positionNode` runs (`NodeMaterial.setupPosition`,
 // `Instance.js`) and keeps the matrix to itself. So the material binds the instance matrix a
 // second time: `impostorInstanceMatrix` resolves the drawn object's when its shader is built
-// (three builds every InstancedMesh on its own, LodFade.ts), and reads `positionGeometry`, the
-// quad's corners before any transform. On a plain mesh it's the identity.
+// (marking an InstancedMesh's build object-specific, as LodFade.ts does: three r187 shares
+// instanced builds), and reads `positionGeometry`, the quad's corners before any transform. On a
+// plain mesh it's the identity.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):
 // there the quad faces the light and shows the frames seen from it, so the impostor casts its own
@@ -105,6 +106,8 @@ class ImpostorInstanceMatrixNode extends THREE.Node {
   setup(builder: THREE.NodeBuilder) {
     const mesh = builder.object as THREE.InstancedMesh | null;
     if (!mesh?.isInstancedMesh) return mat4(IDENTITY);
+    // A shared build (three r187) would bind the first mesh's matrices for every mesh
+    (builder as THREE.NodeBuilder & { objectSpecific: boolean }).objectSpecific = true;
     const buffer = getInstanceMatrixBuffer(mesh.instanceMatrix);
     let node = instanceMatrixNodes.get(buffer);
     if (!node) {

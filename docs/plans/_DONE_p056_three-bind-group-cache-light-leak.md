@@ -1,7 +1,22 @@
-Status: draft | not-implemented
+Status: implemented (by p057_three-r187-migration.md Phase 1: three r187 plus D4)
 Category: Bug fix
 
 # Three Bind Group Cache Light Leak — Plan
+
+## Outcome (2026-11-05)
+
+- **Fixed upstream** in three r187 by [#34707](https://github.com/mrdoob/three.js/pull/34707)
+  (the shared bind group cache moved into `Bindings`, an entry deleted with its bind group). The
+  standalone page (WebGPU, Chromium, macOS): r186.1 collected 0 / 10 disposed lights, r187.0
+  9 / 10, with and without shadows.
+- **In the app** r187 alone still kept every Gym visit's lights, through another three path: a
+  render context per MRT id, never evicted, keeping its last camera, whose idle render list keeps
+  `lightsArray` (`RenderList.clear()` doesn't reset it). PostFX's pre-pass made a new MRT per
+  build; p057 D4 reuses one, so two visits' lights stay at most (the first and the latest), and
+  `BufferGeometry` stays flat (35, 58 with `?isDebug=true`, over 4 cycles). The `RenderList` bug
+  goes upstream in p057 Phase 4.
+- The method below held, with one trap more: a CDP `Runtime.queryObjects` result keeps its
+  objects alive until its object group is released, which reads as a leak of whatever it counted.
 
 ## Context
 

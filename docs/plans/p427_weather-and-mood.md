@@ -30,7 +30,9 @@ between weather presets.
   a second copy of wetness.
 - No fog (`scene.fog` / fog nodes) and no audio in the engine.
 - PostFX passes are TSL files with `params` (`schemas/PostFxSchema.ts`, the `postFx()` feature);
-  there is no colour grade or LUT pass. A mood drives a pass's params.
+  there is no colour grade or LUT pass. A mood drives a pass's params. three r187 adds a lens dirt
+  TSL function (`lensDirt`, #34715, a small addon for the bloom input): rain on the lens as a PostFX
+  TSL file a weather state drives.
 - The sky box's clouds are a layer of the composite (`clouds`, needing the atmosphere;
   `features/skybox/layers/Clouds.ts`), with `coverage`, `speed` and `windDirection` in its
   definition: the cover and wind a weather state would drive. They drift on the sky clock

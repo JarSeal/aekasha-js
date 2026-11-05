@@ -95,11 +95,12 @@ touched.
 
 ## Known issues
 
-Two three.js r186 issues of the WebGPU renderer keep memory after a scene is gone. Neither has a
-workaround in the engine yet:
+Two three.js r186 issues of the WebGPU renderer that kept memory after a scene was gone are fixed
+with three r187:
 
-- [Disposed lights stay in memory](hub:issues/three-bind-group-cache-light-leak).
-- [A removed `InstancedMesh` leaks its instance attributes](hub:issues/three-instanced-node-attribute-leak).
+- [Disposed lights stayed in memory](hub:issues/three-bind-group-cache-light-leak) (and the
+  engine's PostFX pre-pass now reuses one MRT, so at most two scene visits' lights remain).
+- [A removed `InstancedMesh` leaked its instance attributes](hub:issues/three-instanced-node-attribute-leak).
 
 One of the engine's own:
 
