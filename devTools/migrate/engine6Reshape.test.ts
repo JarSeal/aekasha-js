@@ -93,6 +93,31 @@ const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after:
       ];
     })
   ),
+  'reshape:setActiveSkyBox': {
+    imports: "import { setActiveSkyBox } from 'aekasha/skybox';",
+    before: "setActiveSkyBox('night', 'space');",
+    after: "setActiveSkyBox('night', { sceneId: 'space' });",
+  },
+  ...Object.fromEntries(
+    ['getSunDirection', 'getMoonDirection'].map((name) => [
+      `reshape:${name}`,
+      {
+        imports: `import { ${name}, type Vec } from 'aekasha/skybox';\ndeclare const v: Vec;`,
+        before: `${name}(v, 1);`,
+        after: `${name}(v, { index: 1 });`,
+      },
+    ])
+  ),
+  ...Object.fromEntries(
+    ['getSunElevation', 'getMoonPhase'].map((name) => [
+      `reshape:${name}`,
+      {
+        imports: `import { ${name} } from 'aekasha/skybox';`,
+        before: `${name}(1);`,
+        after: `${name}({ index: 1 });`,
+      },
+    ])
+  ),
   'reshape:createEntity': {
     imports: "import { createEntity, type ECSWorld } from 'aekasha';\ndeclare const w: ECSWorld;",
     before: "createEntity({ appId: 'e' }, w);",
@@ -469,6 +494,42 @@ describe('call reshapes', () => {
     ).toEqual([
       'app/a.ts:5 `InstancedLodPool.despawn`: the argument it no longer takes has side effects: reshape the call by hand',
     ]);
+  });
+
+  it('the sky box functions: an index or a scene id where the options go now, a new-shaped call left', () => {
+    const imports = lines(
+      "import { getMoonPhase, getSunDirection, setActiveSkyBox, type Vec } from 'aekasha/skybox';",
+      'declare const v: Vec;',
+      'declare const index: number;',
+      'declare const sceneId: string | undefined;'
+    );
+    expect(
+      migrate(
+        lines(
+          imports,
+          'getSunDirection(v, index);',
+          'getSunDirection(v);',
+          'getSunDirection(v, { index: 2 });',
+          'getMoonPhase(index);',
+          'getMoonPhase();',
+          "setActiveSkyBox('a', sceneId);",
+          'setActiveSkyBox(null);',
+          "setActiveSkyBox('a', { sceneId: 's' });"
+        )
+      )
+    ).toBe(
+      lines(
+        imports,
+        'getSunDirection(v, { index });',
+        'getSunDirection(v);',
+        'getSunDirection(v, { index: 2 });',
+        'getMoonPhase({ index });',
+        'getMoonPhase();',
+        "setActiveSkyBox('a', { sceneId });",
+        'setActiveSkyBox(null);',
+        "setActiveSkyBox('a', { sceneId: 's' });"
+      )
+    );
   });
 
   it('reports a reorder past an argument with side effects', () => {

@@ -65,7 +65,7 @@ _registerManagerDebugInfo(SKYBOX_MANAGER_ID, {
 type SkyBoxSelectPayload = { sceneId: string; prev: string | null; next: string | null };
 
 const selectSkyBox = (sceneId: string, id: string | null) => {
-  if (getCurrentSceneId() === sceneId) void setActiveSkyBox(id, sceneId);
+  if (getCurrentSceneId() === sceneId) void setActiveSkyBox(id, { sceneId });
 };
 
 _registerUndoRedoActionHandler<SkyBoxSelectPayload>('skybox.select', {
@@ -170,7 +170,7 @@ const copySkyBoxJSON = async () => {
 const reapplyAfterClear = (clearedSceneIds: string[]) => {
   const active = getActiveSkyBox();
   if (active && clearedSceneIds.includes(active.sceneId)) {
-    void setActiveSkyBox(active.id, active.sceneId);
+    void setActiveSkyBox(active.id, { sceneId: active.sceneId });
   }
 };
 

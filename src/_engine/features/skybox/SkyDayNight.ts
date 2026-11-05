@@ -95,12 +95,19 @@ export const setDayNightCycleDuration = (seconds: number) => {
   if (time && Number.isFinite(seconds) && seconds > 0) time.cycleDurationSec = seconds;
 };
 
+/** Which sun or moon a sky body getter ({@link getSunDirection}, {@link getMoonPhase}, …) reads. */
+export type SkyBodyOpts = {
+  /** The sun's or moon's index in the definition's `suns` / `moons`. Default 0: the primary sun,
+   * the first moon. */
+  index?: number;
+};
+
 /**
  * The unit world direction toward a sun, into `out` (with day-night on, for the current time
  * of day, including a setTimeOfDay made this frame). suns[0]'s is there without any suns too:
  * it's the atmosphere's.
  * @param out the vector written
- * @param i the sun's index in the definition's `suns`
+ * @param opts.index the sun's index in the definition's `suns` (default 0)
  * @returns `out`, or null (no active sky box, or no such sun)
  * @example
  * ```ts
@@ -112,7 +119,8 @@ export const setDayNightCycleDuration = (seconds: number) => {
  * const isDay = (getSunDirection(toSun)?.y ?? -1) > 0;
  * ```
  */
-export const getSunDirection = (out: THREE.Vector3, i = 0) => {
+export const getSunDirection = (out: THREE.Vector3, opts?: SkyBodyOpts) => {
+  const i = opts?.index ?? 0;
   const active = getActiveSkyBox();
   if (!active || i < 0 || (i > 0 && i >= getSunCount(active.def))) return null;
   return computeSunDirectionOf(active.def, i, active.time.timeOfDay, out);
@@ -121,9 +129,9 @@ export const getSunDirection = (out: THREE.Vector3, i = 0) => {
 const _sunDirection = new THREE.Vector3();
 
 /** A sun's elevation above the horizon in radians (negative below it), or null (see
- * getSunDirection). */
-export const getSunElevation = (i = 0) => {
-  const direction = getSunDirection(_sunDirection, i);
+ * {@link getSunDirection}). */
+export const getSunElevation = (opts?: SkyBodyOpts) => {
+  const direction = getSunDirection(_sunDirection, opts);
   return direction ? Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1)) : null;
 };
 
@@ -131,10 +139,11 @@ export const getSunElevation = (i = 0) => {
  * The unit world direction toward a moon, into `out` (with day-night on, for the current time
  * and its phase).
  * @param out the vector written
- * @param i the moon's index in the definition's `moons`
+ * @param opts.index the moon's index in the definition's `moons` (default 0)
  * @returns `out`, or null (no active sky box, or no such moon)
  */
-export const getMoonDirection = (out: THREE.Vector3, i = 0) => {
+export const getMoonDirection = (out: THREE.Vector3, opts?: SkyBodyOpts) => {
+  const i = opts?.index ?? 0;
   const active = getActiveSkyBox();
   if (!active || i < 0 || i >= getMoonCount(active.def)) return null;
   return computeMoonDirectionOf(active.def, i, active.time, out);
@@ -142,7 +151,8 @@ export const getMoonDirection = (out: THREE.Vector3, i = 0) => {
 
 /** A moon's phase in [0, 1) (0 new, 0.5 full): with day-night, the running one (a 'CYCLE' moon
  * advances with the days). Null without an active sky box or such a moon. */
-export const getMoonPhase = (i = 0) => {
+export const getMoonPhase = (opts?: SkyBodyOpts) => {
+  const i = opts?.index ?? 0;
   const active = getActiveSkyBox();
   if (!active || i < 0 || i >= getMoonCount(active.def)) return null;
   return getMoonPhaseOf(active.def, active.time, isDayNightEnabled(active.def), i);

@@ -112,6 +112,13 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
     text: [
       'export type SkyBoxDef = { id: string; base?: { type: string } };',
       'export const createSkyBox = (def: SkyBoxDef) => def;',
+      'export const setActiveSkyBox = (id: string | null, opts?: { sceneId?: string }) => id;',
+      'export type SkyBodyOpts = { index?: number };',
+      'export type Vec = { y: number };',
+      'export const getSunDirection = (out: Vec, opts?: SkyBodyOpts) => out;',
+      'export const getMoonDirection = (out: Vec, opts?: SkyBodyOpts) => out;',
+      'export const getSunElevation = (opts?: SkyBodyOpts) => 0;',
+      'export const getMoonPhase = (opts?: SkyBodyOpts) => 0;',
     ].join('\n'),
   },
   'aekasha/debug': {

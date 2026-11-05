@@ -141,8 +141,9 @@ export type ReshapeRule = {
    * the new shape has none); one of type `any` is reported */
   oldHas?: { index: number; member: string };
   /** A call whose argument at `index` is of this type (`undefined` aside) is in the old shape
-   * too: an old flag or index where the options object goes now; one of type `any` is reported */
-  oldType?: { index: number; type: 'boolean' | 'number' };
+   * too: an old flag, index or id where the options object goes now; one of type `any` is
+   * reported */
+  oldType?: { index: number; type: 'boolean' | 'number' | 'string' };
   decision: string;
   anchor: string;
 };
@@ -182,6 +183,7 @@ const CREATORS = 'the-entity-creators-and-createphysicsentity';
 const SCENES = 'the-scene-functions';
 const LIGHTS = 'the-light-setters';
 const SPATIAL = 'the-spatial-lod-and-pool-functions';
+const SKY = 'the-sky-box-functions';
 const PHYSICS = 'the-physics-leftovers';
 const TIERS = 'physicstiers';
 
@@ -240,6 +242,19 @@ const poolMethod = (type: string, member: string, rest: readonly string[]): Resh
   oldHas: WORLD_AT_0,
   decision: 'p622 D5',
   anchor: SPATIAL,
+});
+
+/** A sky body getter `(…out, index?)` → `(…out, { index })` (p622 D6) */
+const skyBody = (name: string, out: readonly string[]): ReshapeRule => ({
+  kind: 'reshape',
+  id: `reshape:${name}`,
+  callee: { entry: 'aekasha/skybox', name },
+  params: [...out, 'index'],
+  args: [...out.map((param) => ({ param })), { props: [{ key: 'index', param: 'index' }] }],
+  newArgCount: out.length + 1,
+  oldType: { index: out.length, type: 'number' },
+  decision: 'p622 D6',
+  anchor: SKY,
 });
 
 const BRAIN = 'give the character a brain (`brain: { kind, params: { bindings } }`)';
@@ -616,6 +631,21 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     poolMethod(type, 'spawn', ['placements', 'opts']),
     poolMethod(type, 'despawn', ['entityId']),
   ]),
+  {
+    kind: 'reshape',
+    id: 'reshape:setActiveSkyBox',
+    callee: { entry: 'aekasha/skybox', name: 'setActiveSkyBox' },
+    params: ['id', 'sceneId'],
+    args: [{ param: 'id' }, { props: [{ key: 'sceneId', param: 'sceneId' }] }],
+    newArgCount: 2,
+    oldType: { index: 1, type: 'string' },
+    decision: 'p622 D6',
+    anchor: SKY,
+  },
+  skyBody('getSunDirection', ['out']),
+  skyBody('getMoonDirection', ['out']),
+  skyBody('getSunElevation', []),
+  skyBody('getMoonPhase', []),
   {
     kind: 'import',
     id: 'move:createSeededRandom',

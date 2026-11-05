@@ -144,7 +144,7 @@ const applyLayerOverride = async (
   // doesn't have it: activate again from the definition and the remaining overrides instead
   const prevLayer = asObj(getPath(current, layerPath));
   if ([...touchedKeys].some((key) => isObj(prevLayer[key]) || isObj(layerOverride?.[key]))) {
-    await setActiveSkyBox(skyBoxId, sceneId);
+    await setActiveSkyBox(skyBoxId, { sceneId });
     return;
   }
   const def = getSkyBoxDef(sceneId, skyBoxId);
@@ -260,7 +260,7 @@ const applyWholeOverride = async (
 ) => {
   setSkyBoxOverrides(sceneId, skyBoxId, overrides);
   // Layers turn on and off, and the lists change: activate again from the definition
-  if (isActive(sceneId, skyBoxId)) await setActiveSkyBox(skyBoxId, sceneId);
+  if (isActive(sceneId, skyBoxId)) await setActiveSkyBox(skyBoxId, { sceneId });
   else refreshTab();
 };
 

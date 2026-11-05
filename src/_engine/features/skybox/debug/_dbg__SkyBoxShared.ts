@@ -460,7 +460,7 @@ const syncDerivedPositions = (active: NonNullable<ReturnType<typeof getActiveSky
   }
   const moon = selectedIndex.moons;
   setElevationAzimuth(skyBoxProxy.moon, active.uniforms.moons[moon].direction.value);
-  const phase = getMoonPhase(moon);
+  const phase = getMoonPhase({ index: moon });
   if (phase !== null) skyBoxProxy.moon.phase = Math.round(phase * 1000) / 1000;
 };
 

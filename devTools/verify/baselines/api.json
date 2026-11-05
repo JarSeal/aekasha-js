@@ -1597,7 +1597,8 @@
       "playDayNight": "Function",
       "setDayNightCycleDuration": "Function",
       "setDayNightSpeed": "Function",
-      "setTimeOfDay": "Function"
+      "setTimeOfDay": "Function",
+      "SkyBodyOpts": "TypeAlias"
     },
     "src/_engine/features/skybox/SkyEnvironment.ts": {
       "_setEnvBakeHooks": "Function",
@@ -4846,6 +4847,7 @@
     ],
     "aekasha/skybox": [
       "SKYBOX_PRESET_NAMES",
+      "SkyBodyOpts",
       "SkyBoxBaseDef",
       "SkyBoxBaseInput",
       "SkyBoxChangeListener",

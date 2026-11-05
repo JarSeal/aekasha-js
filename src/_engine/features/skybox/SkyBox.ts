@@ -418,14 +418,18 @@ const loadAndShow = async (
  * fails the call.
  * @param id one of the current scene's sky boxes (its JSON `skyboxes`, or a `createSkyBox`), or
  * null for none
- * @param sceneId the current scene's id (default); another scene's warns and changes nothing
  * @returns the active sky box once it shows (unchanged when `id` isn't registered, which warns),
  * or null
  */
 export const setActiveSkyBox = async (
   id: string | null,
-  sceneId?: string
+  opts?: {
+    /** The scene whose sky box `id` is: the current scene (the default), since another scene's
+     * warns and changes nothing. */
+    sceneId?: string;
+  }
 ): Promise<SkyBoxState | null> => {
+  const sceneId = opts?.sceneId;
   if (id === null) {
     clearSkyBox();
     return null;
@@ -454,7 +458,7 @@ export const setActiveSkyBox = async (
 export const activateSceneDefaultSkyBox = async (sceneId: string) => {
   const id = getSceneDefaultSkyBoxId(sceneId);
   if (!id) return null;
-  return setActiveSkyBox(id, sceneId);
+  return setActiveSkyBox(id, { sceneId });
 };
 
 /**
@@ -488,7 +492,7 @@ export const getActiveSkyBox = () => active;
 export async function createSkyBox(created: SkyBoxDef): Promise<SkyBoxState | null> {
   const def = { ...created, isDefault: created.isDefault ?? true };
   const sceneId = registerSkyBox(def);
-  if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, sceneId);
+  if (def.isDefault && sceneId === getCurrentSceneId()) return setActiveSkyBox(def.id, { sceneId });
   return null;
 }
 

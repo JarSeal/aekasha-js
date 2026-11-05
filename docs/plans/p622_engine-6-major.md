@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -867,7 +867,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     verify:scenes` over the sky scenes (`skyShowcase`, `space`, `largeWorld`, `exampleHubHero`,
     the sky lights' `getLightTargetId`): 17 passed.
 
-### Phase 6 — The features' reshapes (D5, D6)
+### Phase 6 — The features' reshapes (D5, D6) — done
 
 - **Section 1:** the spatial membership functions and `refreshSpatialRadius` (world first);
   `getLodWorldSphere(world, entityId, lod, out)` (`aekasha/lod`, D2: a required world first; a
@@ -913,6 +913,28 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     --only largeWorld,lodShowcase,exampleLod`: 13 passed, every hash unchanged.
 - **Section 2:** the sky box functions with `SkyBodyOpts`; the codemod rules and run (engine-only
   calls today); the sky box `CLAUDE.md` and feature page.
+
+  As built (section 2):
+
+  - `setActiveSkyBox(id, opts?: { sceneId? })` (inline, the key documented),
+    `getSunDirection(out, opts?)`, `getMoonDirection(out, opts?)`, `getSunElevation(opts?)` and
+    `getMoonPhase(opts?)`, with `SkyBodyOpts = { index? }` (`SkyDayNight.ts`, a type line on
+    `aekasha/skybox`). `getSunElevation` passes its options through, so no call allocates when
+    the index is left out; a per-frame caller of another index keeps its options in a constant
+    (the sky box `CLAUDE.md` and the feature page say so; **Phase 8's subsection says it too**:
+    the codemod writes `{ index: i }` in place).
+  - The codemod: `oldType` takes `'string'` too (`setActiveSkyBox`' scene id); the getters'
+    rules come from `skyBody` (an old number where the options go now). Anchor
+    **`the-sky-box-functions`** (**Phase 8 writes that heading**). 93 tests.
+  - The run over `src hub/_assets/ts`: 4 modules (`SkyBox.ts`' two internal calls, the debug
+    tab's three modules: five `setActiveSkyBox` calls with a scene id and `getMoonPhase(moon)`),
+    nothing reported; a second `--check` finds nothing. The tests called `setActiveSkyBox(id)`
+    only. By hand: the coding standards' JSDoc page shows `getSunDirection`'s signature.
+  - `yarn verify:baselines`: the API diff is `SkyBodyOpts` alone, the bundles unchanged (a few
+    bytes of gzip per chunk, sections 1-2 together; recorded). `yarn hub:build` clean but the
+    search index's size warning (485 KiB). `yarn verify:scenes` over the sky scenes
+    (`skyShowcase`, `space` with its debugger run, `largeWorld`, `exampleHubHero`): 17 passed,
+    every hash unchanged.
 
 ### Phase 7 — Toolkit 3.0.0 (D9)
 

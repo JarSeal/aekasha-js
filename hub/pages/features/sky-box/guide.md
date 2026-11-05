@@ -74,7 +74,9 @@ With `dayNight`, the sky keeps a running time of day. Your game drives it:
   for the length of a whole day.
 - [`getSunDirection`](api:getSunDirection), [`getSunElevation`](api:getSunElevation),
   [`getMoonDirection`](api:getMoonDirection) and [`getMoonPhase`](api:getMoonPhase): for game
-  logic that follows the sky (street lights at dusk).
+  logic that follows the sky (street lights at dusk). They read the primary sun and the first
+  moon; `{ index: 1 }` reads another
+  ([`SkyBodyOpts`](api:SkyBodyOpts): in a per-frame loop, keep that object in a constant).
 
 By default the time stops when the app is paused (`dayNight.timeSource: "APP"`). `MAIN` keeps it
 going, and `MANUAL` moves it only when you set it. It stands still while a scene loads.

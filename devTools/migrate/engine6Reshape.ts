@@ -77,7 +77,11 @@ const isOfOldType = (
 ) => {
   const type = checker.getTypeAtLocation(arg);
   if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return null;
-  const flags = oldType.type === 'boolean' ? ts.TypeFlags.BooleanLike : ts.TypeFlags.NumberLike;
+  const flags = {
+    boolean: ts.TypeFlags.BooleanLike,
+    number: ts.TypeFlags.NumberLike,
+    string: ts.TypeFlags.StringLike,
+  }[oldType.type];
   const empty = ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Void;
   const types = (type.isUnion() ? type.types : [type]).filter((t) => !(t.flags & empty));
   return types.length > 0 && types.every((t) => t.flags & flags);

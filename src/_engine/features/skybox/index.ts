@@ -23,6 +23,7 @@ export {
   setDayNightSpeed,
   setTimeOfDay,
 } from './SkyDayNight';
+export type { SkyBodyOpts } from './SkyDayNight';
 export type {
   SkyBoxBaseDef,
   SkyBoxBaseInput,
