@@ -244,6 +244,29 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
 
 ### Phase 3: Clean-ups r187 allows
 
+Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev build):
+
+- Step 1 measured: `skyShowcase`'s `dayNight` at each `env.size`, r186 (a `main` worktree) and
+  r187 (this branch), the same probe (scratchpad). The Environment folder's GPU ms is unusable on
+  this machine: the timestamp sums read 80-100 ms a bake on r187 and 79-700 ms on r186 (growing
+  with the size) while ten bakes a frame cost ~60 ms of frame time, so the timestamps measure
+  something else on Apple's GPU (headless and headed alike; `queue.onSubmittedWorkDone()` takes
+  ~300 ms to resolve there too). So the cost is wall clock: the frame time with ten bakes a
+  frame (`runRequestedEnvBake`) minus without, over ten, CPU and GPU together (the CPU alone
+  1-3.5 ms a bake in the dev build):
+
+  | `env.size` | r186 face | r186 ms / bake | r187 face | r187 ms / bake |
+  | --- | --- | --- | --- | --- |
+  | 64 | 64 (CubeUV 336 wide) | 2.2 | 256 | 5.9 |
+  | 128 (the day-night default) | 128 (384) | 3.2-3.3 | 256 | 5.8-6.0 |
+  | 256 | 256 (768) | 5.7 | 256 | 5.8-6.1 |
+  | 512 | 512 (1536) | 14.6 | 512 | 11.4-11.9 |
+
+  Two runs each, within 0.2 ms. So a day-night bake costs ~1.8× r186's (~+2.7 ms here), 256 the
+  same and 512 less; 64 and 128 cost exactly 256's. The re-bake rate doesn't change with three:
+  0.95 / s at ×1 and 1.0 / s at ×100 on `skyShowcase` (its 5-minute day turns the sun 1.2° / s,
+  so the 1 / s cap binds at ×1 too; the default 20-minute day bakes every ~3.3 s).
+
 1. **`env.size` below 256** (D1). Measure a day-night bake at 256 against r186's 128 (the
    Environment folder's bake stats, GPU ms, on `skyShowcase`; p110's numbers are r186's) and the
    re-bake rate (`env.maxUpdatesPerSec`). Then decide: keep 64 / 128 as documented aliases of 256
