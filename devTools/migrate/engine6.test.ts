@@ -533,6 +533,22 @@ describe('a feature the project lists', () => {
     expect(anchors).toEqual(['physicstiers', 'physicstiers']);
   });
 
+  it('`tierPolicy` is reported in the five-parameter shape too, once after the migration', () => {
+    const OLD = lines(
+      "import { createPhysicsEntity } from 'aekasha/physics';",
+      "createPhysicsEntity({ type: 'BALL' }, undefined, undefined, { tierPolicy: true });"
+    );
+    const prefix = (r: string) => r.slice(0, r.indexOf(':', r.indexOf('`')));
+    expect(run({ 'app/a.ts': OLD }).reports.map(prefix)).toEqual([
+      "app/a.ts:2 `createPhysicsEntity`'s `tierPolicy`",
+    ]);
+    const migrated = migrate(OLD);
+    expect(migrated).toContain('{ colliders: {');
+    expect(run({ 'app/a.ts': migrated }).reports.map(prefix)).toEqual([
+      "app/a.ts:2 `createPhysicsEntity`'s `tierPolicy`",
+    ]);
+  });
+
   it('nothing is reported when one does, in another module; a test or a mention does not count', () => {
     expect(run({ 'app/a.ts': USES, 'app/boot.ts': BOOT }).reports).toEqual([]);
     const notCalled = run({

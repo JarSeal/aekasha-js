@@ -284,6 +284,18 @@ const CONTROLLER_DATA = "read the controller's `state`, `config.values` and `int
 const TIERS_FEATURE = { entry: 'aekasha/physics', name: 'physicsTiers' };
 const ADD_TIERS =
   "add `physicsTiers()` (aekasha/physics) to `InitEngine`'s `features`, right after `physics()`";
+/** `createPhysicsEntity`'s `tierPolicy` (its options, the second argument) */
+const TIER_POLICY_OPTION: CallArgRule = {
+  kind: 'callArg',
+  id: 'requires:physicsTiersOption',
+  callee: { entry: 'aekasha/physics', name: 'createPhysicsEntity' },
+  index: 1,
+  members: ['tierPolicy'],
+  advice: `ignored without the \`physicsTiers()\` feature: ${ADD_TIERS}`,
+  withoutFeature: TIERS_FEATURE,
+  decision: 'p622 D8',
+  anchor: TIERS,
+};
 const DELETE_MESH_OPTIONS =
   "never read: delete it (the platform's `controls.delete()` deletes its entity, its mesh and its body)";
 const DEV_FILES =
@@ -556,17 +568,11 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     decision: 'p622 D8',
     anchor: TIERS,
   },
-  {
-    kind: 'callArg',
-    id: 'requires:physicsTiersOption',
-    callee: { entry: 'aekasha/physics', name: 'createPhysicsEntity' },
-    index: 1,
-    members: ['tierPolicy'],
-    advice: `ignored without the \`physicsTiers()\` feature: ${ADD_TIERS}`,
-    withoutFeature: TIERS_FEATURE,
-    decision: 'p622 D8',
-    anchor: TIERS,
-  },
+  TIER_POLICY_OPTION,
+  // The same option in engine 5's five-parameter shape (its entity options were the fourth), for
+  // `--check` and `--report`, which read a module as it was (p622 Phase 8's rehearsal); a
+  // migrated call has no fourth argument
+  { ...TIER_POLICY_OPTION, id: 'requires:physicsTiersOldOption', index: 3 },
   // Phase 5: the kernel's reshapes
   ...['createMeshEntity', 'createCameraEntity', 'createGroupEntity', 'createLightEntity'].map(
     (name) => creator('aekasha', name)

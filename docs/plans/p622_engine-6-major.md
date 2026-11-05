@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-7 implemented
+Status: in progress | Phases 0-8 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -1007,7 +1007,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     `84a78084` with its character paths `26f43551`); the gym's `workerMsg` snapshot failed (the
     p428 flake of Phases 2-3) and passed alone.
 
-### Phase 8 — The migration page, the docs, the full check
+### Phase 8 — The migration page, the docs, the full check — done
 
 - **Section 1:** `engine-6.md` and `migration/intro.md` (D11), every subsection naming its codemod
   rule or saying it's by hand; the root `CLAUDE.md` (Bootstrap flow, Physics, Commands, the map,
@@ -1047,6 +1047,43 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   or the page until it is. Then the full set on the branch: `yarn test`, `yarn build` (with its
   SBP and Hub), `yarn verify:scenes`, `yarn verify:baselines`, `yarn verify:embed`, `yarn
   verify:ui`.
+
+  As built (section 2, 2026-11-05):
+
+  - **The rehearsal:** a detached worktree of `main` (`a0b15403`) in the scratchpad, with the
+    branch's `src/_engine/`, `src/toolkit/`, `devTools/` and `eslint.config.js` over it and
+    `node_modules` linked. Before the codemod `tsc` had 55 errors, all in the 19 app modules
+    `--check` listed (`tsc -p hub` clean). The run migrated those 19 of 957; after it `tsc` and
+    `tsc -p hub` were clean and a second `--check` changed nothing. **Its `src/app` was
+    byte-identical to the branch's** (Phases 3-6 migrated the template with the same rules), so
+    the reports' one fix by hand, `physicsTiers()` in `src/index.ts`, made `src/` the branch's.
+    Then `yarn lint` passed with no warning and `yarn build` passed (SBP within every budget).
+  - **What the rehearsal fixed in the codemod:** `--check` before the migration reported only
+    `setPhysicsTierPolicy`, the writing run also `tierPolicy`. `requires:physicsTiersOption`
+    reads `createPhysicsEntity`'s second argument, which in engine 5's shape is the body, and
+    `--check` / `--report` read the module unmigrated. A second rule,
+    `requires:physicsTiersOldOption` (the same `callArg` at index 3, the old entity options; a
+    migrated call has no fourth argument), so both modes give the same two reports. A test
+    (the old shape reported once, and once after its migration); 105 tests. The page and
+    `devTools/migrate/CLAUDE.md` name it.
+  - **What it fixed in the page:** the rehearsal's Hub (`main`'s pages with the branch's
+    `devTools/`) warned that `devTools/migrate/CLAUDE.md`'s section has no page, so "Before you
+    start" says to take the template's `hub/` pages too, keeping the app's own.
+  - **The full set on the branch** (macOS, WebGPU): `yarn test` 2641 passed; `yarn build` clean
+    but the search index's size warning (493 KiB), the app's initial **385.8 kB gzip** (Phase 4's
+    385.7), the banner 287.4, `uiKit` 286.7; `yarn verify:baselines --no-build` all unchanged,
+    no debug code, docs 100 %; `yarn verify:embed --no-build` passed; `yarn verify:scenes` 114
+    passed, 0 failed (the gym's `workerMsg` too). No `@deprecated` is left in `src/_engine` or
+    `src/toolkit`.
+  - `yarn verify:ui`: two full runs failed the same two states, `itemDetails`' "Show the slot's
+    tooltip" (dark and light: mean delta 2.78 / 3.36, 3.77 / 3.88 % of the pixels, the same text
+    a sub-pixel off) and `settingsMenu`'s "Changed from outside" (light compact, 0.10 / 0.40 %);
+    every other state and script passed. **`main` (`a0b15403`, a worktree with the same local
+    baselines and SBP report) fails them with the same deltas**, and `--only itemDetails` passes
+    on the branch: not this branch's. Their baselines were recorded with `--only` (2026-11-03
+    and 11-04), and a full run puts them a sub-pixel elsewhere. Not filed or re-recorded yet. A
+    full run takes 14-17 min on this machine (`devTools/verify/CLAUDE.md` says about 50 s,
+    from before p804-p808's pieces).
 
 ### Phase 9 — Versions, changelog, done
 

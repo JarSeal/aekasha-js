@@ -14,7 +14,9 @@ deprecated is gone. A codemod rewrites most of it and reports the rest.
 2. Take the new `src/_engine/`, `src/toolkit/` and `devTools/` from the template, and from the
    root: `package.json`'s dependencies (`tweakpane`, `@tweakpane/core` and `stats-gl` are gone:
    keep them only if your app imports them itself) and `eslint.config.js` (the simulation lint's
-   allow-list entry for `PhysicsWallClock.ts` went with the file). Run `yarn`, then
+   allow-list entry for `PhysicsWallClock.ts` went with the file). Take the template's `hub/`
+   pages too, keeping your own: they document the new engine, and the Hub's coverage check warns
+   about the new tools' notes (`devTools/migrate/CLAUDE.md`) without them. Run `yarn`, then
    `yarn gatherAppData`.
 3. Run the codemod with the repo's Node version (`.nvmrc`), over every folder of your TypeScript:
 
@@ -134,7 +136,8 @@ Not type errors, but a tab may look or behave differently:
 ### `physicsTiers()`
 
 **Codemod:** reports the tiers' API when no module calls `physicsTiers()`
-(`requires:physicsTiers`, `requires:physicsTiersOption`); adding the feature is by hand.
+(`requires:physicsTiers`, `requires:physicsTiersOption`, `requires:physicsTiersOldOption`);
+adding the feature is by hand.
 
 The [simulation tiers](hub:features/physics#simulation-tiers) (`requestPhysicsTier`, the tier
 policies, `createPhysicsEntity`'s `tierPolicy`) were part of `physics()`. Now they're a feature of
