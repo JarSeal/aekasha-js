@@ -7,16 +7,9 @@ import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../../types/PhysicsBackendTypes';
 import { RigidBodyTypeAPI } from '../../types/PhysicsBodyTypes';
-import {
-  ActiveCollisionTypes,
-  ActiveEvents,
-  ActiveHooks,
-  CoefficientCombineRule,
-  ShapeType,
-} from '../../types/PhysicsColliderTypes';
+import { ShapeType } from '../../types/PhysicsColliderTypes';
 import type { ColliderParams } from '../../types/PhysicsColliderTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
-import { SolverFlags } from '../../types/PhysicsEventTypes';
 import { JointAxesMask } from '../../types/PhysicsJointTypes';
 import { FeatureType, QueryFilterFlags } from '../../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../../types/PhysicsWorldTypes';
@@ -113,13 +106,8 @@ describe('EngineRapier', () => {
     const pairs: [object, object][] = [
       [RigidBodyTypeAPI, RAPIER.RigidBodyType],
       [ShapeType, RAPIER.ShapeType],
-      [CoefficientCombineRule, RAPIER.CoefficientCombineRule],
-      [ActiveHooks, RAPIER.ActiveHooks],
-      [ActiveEvents, RAPIER.ActiveEvents],
-      [ActiveCollisionTypes, RAPIER.ActiveCollisionTypes],
       [FeatureType, RAPIER.FeatureType],
       [QueryFilterFlags, RAPIER.QueryFilterFlags],
-      [SolverFlags, RAPIER.SolverFlags],
       [JointAxesMask, RAPIER.JointAxesMask],
     ];
     for (const [ours, rapiers] of pairs) expect(members(ours)).toEqual(members(rapiers));

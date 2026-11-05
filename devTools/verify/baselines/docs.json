@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3129,
-      "total": 3129
+      "documented": 3123,
+      "total": 3123
     },
     "members": {
-      "documented": 1049,
-      "total": 1049
+      "documented": 1047,
+      "total": 1047
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3043,
-        "total": 3043
+        "documented": 3037,
+        "total": 3037
       },
       "members": {
-        "documented": 890,
-        "total": 890
+        "documented": 888,
+        "total": 888
       }
     },
     "toolkit": {
@@ -287,12 +287,12 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 52,
-        "total": 52
+        "documented": 46,
+        "total": 46
       },
       "members": {
-        "documented": 22,
-        "total": 22
+        "documented": 20,
+        "total": 20
       },
       "undocumented": {
         "exports": [],

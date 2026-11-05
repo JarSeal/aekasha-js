@@ -406,6 +406,18 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     anchor: PHYSICS,
   },
   {
+    kind: 'removedImport',
+    id: 'removed:physicsHooks',
+    entry: 'aekasha/physics',
+    names: {
+      PhysicsHooks:
+        'gone, with `WorldAPI.step`’s `hooks`: no collider could ask for them (no `ColliderParams` field set its active hooks), so they never ran',
+      SolverFlags: 'gone with `PhysicsHooks`: it was a contact filter’s answer',
+    },
+    decision: 'p622 D7',
+    anchor: PHYSICS,
+  },
+  {
     kind: 'import',
     id: 'move:createSeededRandom',
     from: { entry: 'aekasha/toolkit/geometry', name: 'createSeededRandom' },

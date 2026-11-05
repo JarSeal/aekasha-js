@@ -1,6 +1,6 @@
 **Title:** Five mirrored Rapier enums aren't used by any API field, so `PhysicsHooks` can never run
 
-Status: open | wire them in a minor, or drop them in p622
+Status: fixed | 2026-11-05, p622 (D7, Phase 3 section 3): dropped
 Category: Physics
 Found: 2026-10-17, p614 Phase 3 (documenting the types); filed in Phase 8
 
@@ -37,3 +37,12 @@ unused.
    `ActiveCollisionTypes`, `ActiveEvents`, `CoefficientCombineRule`, `SolverFlags`, `PhysicsHooks`
    and `WorldAPI.step`'s `hooks` parameter. None is on an entry, so in a minor they could already be
    marked `@internal` (only `WorldAPI.step`'s signature names `PhysicsHooks`).
+
+## The fix (p622 Phase 3 section 3)
+
+Option 2, in engine 6.0.0: the six types and `WorldAPI.step`'s `hooks` are gone (the backend's
+contract and both world proxies with them), `SolverFlags` and `PhysicsHooks` from
+`aekasha/physics`, and `EngineRapier.test.ts`' pairs for them. The codemod reports an import of
+either. Option 1 stays open as a plan of its own: `ColliderParams.activeCollisionTypes` (sensors
+and kinematic platforms reporting contacts with fixed geometry) and contact hooks both targets
+can run would be a minor, adding the types back as they're used.

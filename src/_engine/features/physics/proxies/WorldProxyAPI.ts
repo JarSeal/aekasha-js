@@ -124,7 +124,7 @@ export class WorldProxyAPI implements WorldAPI {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  step(_eventQueue?: unknown, _hooks?: unknown): void {
+  step(_eventQueue?: unknown): void {
     throw new Error('step is not yet implemented in Worker thread mode.');
   }
 

@@ -12,8 +12,7 @@ export { ShapeType } from './types/PhysicsColliderTypes';
 export type { PhysRotation, PhysVector } from './types/PhysicsCommonTypes';
 export { JointAxesMask } from './types/PhysicsJointTypes';
 export type { JointAPI, JointMotorModel, JointParams } from './types/PhysicsJointTypes';
-export type { EventQueue, PhysicsHooks, TempContactForceEvent } from './types/PhysicsEventTypes';
-export { SolverFlags } from './types/PhysicsEventTypes';
+export type { EventQueue, TempContactForceEvent } from './types/PhysicsEventTypes';
 export type {
   PhysRay,
   RayColliderHitAPI,

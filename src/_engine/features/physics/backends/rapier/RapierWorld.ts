@@ -159,11 +159,11 @@ export const debugRender = () => {
 };
 
 /**
- * Runs one fixed step on Rapier's own event queue (not `_eventQueue`) and collects its events for
+ * Runs one fixed step on Rapier's own event queue (the contract's `eventQueue` isn't read) and collects its events for
  * dispatchPendingEventRecords / drainPendingEventRecords.
  * @internal
  */
-export const step = (_eventQueue?: unknown, hooks?: unknown) => {
-  backend.world.step(backend.eventQueue, hooks as Rapier.PhysicsHooks | undefined);
+export const step = () => {
+  backend.world.step(backend.eventQueue);
   drainAndDispatchEvents();
 };

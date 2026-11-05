@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -610,7 +610,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     engine's component keys named as types (`typeof`, Phase 7: a `removedMember`-like walk over
     type positions, or a rewrite).
 
-### Phase 3 — Physics: `createPhysicsEntity`, the setter, the enums (D3, D7)
+### Phase 3 — Physics: `createPhysicsEntity`, the setter, the enums (D3, D7) — done
 
 - **Section 1:** `createPhysicsEntity(props, opts?)` and its types on `aekasha/physics`; the codemod
   rule and fixtures; run the codemod over `src` (engine, toolkit, app); the two `@example`s, the
@@ -688,6 +688,30 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     next run).
 - **Section 3:** the enums, `PhysicsHooks` and `step`'s `hooks` out of the types, the entry, the
   backend and `EngineRapier.test.ts`; the report rule; both issue files closed.
+
+  As built (section 3):
+
+  - Gone: the four collider enums (`PhysicsColliderTypes.ts`), `SolverFlags` and `PhysicsHooks`
+    (`PhysicsEventTypes.ts`; the two entry names), and `hooks` from `WorldAPI.step`, the backend
+    contract's `step` and both world proxies. The backend's own uses of Rapier's
+    `ActiveEvents` / `ActiveHooks` / `ActiveCollisionTypes` / `CoefficientCombineRule`
+    (`RapierColliders.ts`, a detached body's colliders in `RapierBodies.ts` / `RapierState.ts`)
+    are Rapier's types and stay. With `hooks` gone, the Rapier backend's two `step`s take no
+    parameter (the contract's `eventQueue` was never read; the lint flagged it once last).
+  - The report rule `removed:physicsHooks` (`removedImport`: `PhysicsHooks`, `SolverFlags`; the
+    other four were on no entry). A call of `world.step(queue, hooks)` isn't reported: it's a
+    type error, and the hooks' import is. 56 tests; the run over the template finds nothing.
+  - Both issue files `Status: fixed | 2026-11-05, p622`, each with a "The fix" section; the
+    enums' keeps option 1 (`activeCollisionTypes`, contact hooks both targets can run) as a
+    later minor's plan.
+  - `yarn verify:baselines`: the six removals and the entry's two names (recorded), the bundles
+    unchanged; `yarn hub:build` clean but the search index's size warning (484 KiB).
+    `yarn verify:scenes`: 113 of 114, every hash unchanged; the gym's `workerMsg` failed on its
+    snapshot (the follow camera elsewhere: a character drifted, p428) and passed three times
+    alone. **It failed in two of Phase 3's three full runs and in Phase 2's, never alone:**
+    `unstableHash` skips the gym's worker hashes but not their snapshots, so a full run's timing
+    fails it. Not filed yet (p428 owns the cause); an issue file or a snapshot skip for those two
+    configurations would stop it reading as a regression.
 
 ### Phase 4 — `physicsTiers()` (D8)
 

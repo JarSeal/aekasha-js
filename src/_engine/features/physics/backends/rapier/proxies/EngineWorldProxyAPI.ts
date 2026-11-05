@@ -10,7 +10,6 @@ import type {
   ShapeParams,
 } from '../../../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../../../types/PhysicsCommonTypes';
-import type { EventQueue, PhysicsHooks } from '../../../types/PhysicsEventTypes';
 import type { JointAPI, JointParams } from '../../../types/PhysicsJointTypes';
 import type {
   PhysRay,
@@ -102,8 +101,9 @@ export class EngineWorldProxyAPI implements WorldAPI {
   }
 
   // --- Stepping & Propagation ---
-  step(_eventQueue?: EventQueue, hooks?: PhysicsHooks): void {
-    backend.world.step(backend.eventQueue, hooks as Rapier.PhysicsHooks | undefined);
+  // The backend steps on its own event queue: the contract's `eventQueue` isn't read
+  step(): void {
+    backend.world.step(backend.eventQueue);
     drainAndDispatchEvents();
   }
 

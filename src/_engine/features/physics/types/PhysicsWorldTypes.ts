@@ -7,7 +7,7 @@ import type {
   ShapeParams,
 } from './PhysicsColliderTypes';
 import type { OmitSync, PhysRotation, PhysVector } from './PhysicsCommonTypes';
-import type { EventQueue, PhysicsHooks } from './PhysicsEventTypes';
+import type { EventQueue } from './PhysicsEventTypes';
 import type { JointAPI, JointParams } from './PhysicsJointTypes';
 import type {
   PhysRay,
@@ -89,11 +89,10 @@ export type WorldAPI = {
   /**
    * Advance the simulation by one time step. MAIN_THREAD only (throws on WORKER_THREAD).
    * @param eventQueue Ignored by the Rapier backend, which collects the events in its own queue.
-   * @param hooks Contact and intersection filters for this step (see {@link PhysicsHooks}).
    * @remarks The facade's `stepPhysics` already steps the world every fixed step: call this
    * yourself only with stepping off (`worldStepEnabled: false`).
    */
-  step(eventQueue?: EventQueue, hooks?: PhysicsHooks): void;
+  step(eventQueue?: EventQueue): void;
   /**
    * Update colliders positions after rigid-bodies moved.
    *

@@ -1264,10 +1264,6 @@
       "RigidBodyWorkerEngine": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsColliderTypes.ts": {
-      "ActiveCollisionTypes": "Enum",
-      "ActiveEvents": "Enum",
-      "ActiveHooks": "Enum",
-      "CoefficientCombineRule": "Enum",
       "ColliderAPI": "TypeAlias",
       "ColliderParams": "TypeAlias",
       "ColliderProxyAPIType": "TypeAlias",
@@ -1294,8 +1290,6 @@
       "ContactForceEventRecord": "TypeAlias",
       "ContactForceEventSnapshot": "Class",
       "EventQueue": "TypeAlias",
-      "PhysicsHooks": "Interface",
-      "SolverFlags": "Enum",
       "TempContactForceEvent": "Interface"
     },
     "src/_engine/features/physics/types/PhysicsJointTypes.ts": {
@@ -4706,7 +4700,6 @@
       "PhysicsEngine",
       "PhysicsEntityOpts",
       "PhysicsEntityProps",
-      "PhysicsHooks",
       "PhysicsInterpolationMode",
       "PhysicsSimTierData",
       "PhysicsState",
@@ -4727,7 +4720,6 @@
       "ShapeCastHitAPI",
       "ShapeParams",
       "ShapeType",
-      "SolverFlags",
       "TempContactForceEvent",
       "WorldAPI",
       "addPhysicsStepGate",
