@@ -238,12 +238,9 @@ const createDiscLight = (
       world,
     }
   );
-  // Render the shadow map once now, even when the light starts faded out (autoUpdate false):
-  // a map first sampled and only later rendered into gets its GPU texture destroyed in place
-  // on that first render (see initEnvBakeTarget in SkyEnvironment.ts), a "Destroyed texture
-  // used in a submit" on every frame after that (WebGPU)
-  const light = getLight<THREE.DirectionalLight>(entityId, world);
-  if (castShadow && light?.shadow) light.shadow.needsUpdate = true;
+  // No forced first shadow render, even when the light starts faded out (autoUpdate false):
+  // three r187 renders a new shadow map once by itself (ShadowNode.setupShadow) and creates a
+  // sampled 2D target's texture with its target. three r186 needed one (syncSkyLights' remarks).
   return {
     kind,
     index,
@@ -599,15 +596,17 @@ export const deleteSkyLights = () => {
  * skyBoxSystem tick.
  * @internal
  * @remarks
- * Two three r186 traps (WebGPU), each guarded here:
- * - A new shadow-casting disc light renders its shadow map once right away, even faded out
- *   (`shadow.autoUpdate` false): a map sampled before its first render gets its GPU texture
- *   destroyed in place by that render ("Destroyed texture used in a submit" on every frame, as
- *   setEnvBake's remarks describe).
- * - A `castShadow` change deletes the light and creates a new one, never sets the flag: with
- *   PostFX on, a light whose shadow is turned back on after it was off crashes the frame
- *   ("Texture 'output' ... writable usage and another usage in the same synchronization
- *   scope"). Something else changing the light's flag is treated the same way.
+ * A three r186 trap (WebGPU), guarded here: a `castShadow` change deletes the light and creates
+ * a new one, never sets the flag: with PostFX on, a light whose shadow is turned back on after
+ * it was off crashes the frame ("Texture 'output' ... writable usage and another usage in the
+ * same synchronization scope"). Something else changing the light's flag is treated the same
+ * way.
+ *
+ * A new shadow-casting light needs no forced first shadow render, even faded out
+ * (`shadow.autoUpdate` false): three r187 renders a new map once itself. On three r186 a map
+ * sampled before its first render had its GPU texture destroyed in place by that render
+ * ("Destroyed texture used in a submit" on every frame, setEnvBake's remarks), so a new light
+ * set `needsUpdate` until p057 (Phase 3: 120 errors on r186 without it, none on r187).
  */
 export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) => {
   const world = getECSWorld();

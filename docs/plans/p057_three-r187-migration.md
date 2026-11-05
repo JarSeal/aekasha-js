@@ -281,6 +281,27 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
     now, and a deprecated size and day-night are uniform writes.
   - The sky box `CLAUDE.md` and the Hub's sky box guide say so (Phase 5's sky box line, done).
   - Not r187's, left open: the bake stats' GPU ms is unusable on Apple Silicon (above).
+- Step 2 done. Each removal was checked against a control: the same removal on r186 (the `main`
+  worktree), which must show the trap, or a pass on r187 proves nothing.
+  - `initEnvBakeTarget` **stays**. Without it `skyShowcase` fails on r187 as on r186 (100 and
+    104 × "Destroyed texture [Texture "SkyBox.envBake"] used in a submit", `workerSab`): r187's
+    fix (#35204, `Textures.updateTexture` creating a sampled render target texture with its
+    target) goes through `texture.renderTarget`, and `CubeRenderTarget`'s constructor swaps its
+    `CubeTexture` in through the `texture` setter, which sets no back-link (`renderTarget` stays
+    null). A three bug: Phase 4 reports it. `space` and `largeWorld` pass without the clear on
+    both versions.
+  - `SkyStaticLayers`' `initTarget` **stays**: a `CubeRenderTarget` too, so the same missing
+    link. No scene shows its trap even on r186 without it (`skyShowcase` and `space` load clean),
+    so the runner can't decide either way; its remarks say so.
+  - The sky light's forced first shadow render **is gone** (`SkyLights.ts`): a probe (scratchpad
+    `lightProbe.mts`: `skyShowcase` at 01:00, the sun light's `castShadow` off and on, so a new
+    light is created faded out, then noon) counts 120 × "Destroyed texture [1024² RG16Float]"
+    (the VSM map) on r186 without it, 0 with it, and 0 on r187 either way: r187's
+    `ShadowNode.setupShadow` sets `needsUpdate`, and a 2D target's texture has its back-link.
+  - The remarks (`initEnvBakeTarget`, `setEnvBake`, `initTarget`, `setStaticLayers`,
+    `syncSkyLights`), the sky box `CLAUDE.md`'s "Two traps" and p304's Context line say so.
+    `syncSkyLights`' other trap (the `castShadow` crash under PostFX) keeps "three r186" for
+    step 4.
 
 1. **`env.size` below 256** (D1). Measure a day-night bake at 256 against r186's 128 (the
    Environment folder's bake stats, GPU ms, on `skyShowcase`; p110's numbers are r186's) and the
@@ -315,9 +336,18 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
    an MRT per scene keeps each scene's camera and lights. Suggested fixes: `lightsArray.length = 0`
    in `clear()`, and the context's `camera` dropped when its list goes idle (or the context cache
    evicted with the MRT).
-2. The user posts it upstream (an outward action) and its number goes here and in the issue
-   file. D4 stays either way.
-3. ~~Add the r187 findings to `renderer-custom-tone-mapping.md` and
+2. A second issue file, `docs/issues/three-cube-render-target-texture-link.md` (Phase 3 step 2):
+   `CubeRenderTarget`'s cube texture has no `renderTarget` back-link (the constructor's
+   `this.texture = new CubeTexture(…)` goes through `RenderTarget`'s `texture` setter, which only
+   stores it), so #35204's "created with their render target" path misses cube targets, and a
+   cube target sampled before its first render still gets its texture destroyed in place
+   ("Destroyed texture used in a submit"). Repro: a `CubeRenderTarget` sampled by a material,
+   then rendered into by `PMREMGenerator.fromScene`. Suggested fix: the setter (or
+   `CubeRenderTarget`'s constructor) setting `value.renderTarget = this`. Once fixed upstream,
+   `initEnvBakeTarget` and `initTarget` can go.
+3. The user posts them upstream (an outward action) and their numbers go here and in the issue
+   files. D4 stays either way.
+4. ~~Add the r187 findings to `renderer-custom-tone-mapping.md` and
    `three-animation-classes-in-builds-without-models.md`~~ (done with Phase 1: a "three r187"
    section in each).
 

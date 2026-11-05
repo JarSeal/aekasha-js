@@ -141,8 +141,12 @@ const createEnvBakeTarget = (faceSize: SkyBoxEnvSize) => {
  * setup, as a render would). Without it, the target is first sampled (by every lit material,
  * for the whole scene load: bakes wait for it to end) before anything renders into it, so three
  * gives it a placeholder GPU texture, and the first bake's render target setup destroys that
- * one in place (Textures.updateTexture, three r186) without invalidating the bind groups that
- * sample it: a "Destroyed texture used in a submit" on every frame after that (WebGPU).
+ * one in place (Textures.updateTexture) without invalidating the bind groups that sample it: a
+ * "Destroyed texture used in a submit" on every frame after that (WebGPU). Still needed with
+ * three r187: its fix (#35204, a sampled render target texture is created with its target) goes
+ * through `texture.renderTarget`, which a `CubeRenderTarget`'s cube texture doesn't have (its
+ * constructor swaps the texture in through the setter, which sets no back-link; p057 Phase 3
+ * measured the error without this clear on r187).
  */
 const initEnvBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
   if (!renderer.hasInitialized()) return;
@@ -167,9 +171,10 @@ const disposeBakeScene = (scene: THREE.Scene) => {
  * @internal
  * @remarks
  * A new target is cleared right away (initEnvBakeTarget): every lit material samples it for
- * the whole scene load, before the first bake, and three r186 destroys a target's placeholder
- * GPU texture in place on its first render without invalidating the bind groups that sample it
- * (WebGPU: "Destroyed texture used in a submit" on every frame). That needs an initialized
+ * the whole scene load, before the first bake, and three (r186, r187: a cube target's texture has
+ * no `renderTarget` link) destroys a target's placeholder GPU texture in place on its first
+ * render without invalidating the bind groups that sample it (WebGPU: "Destroyed texture used in
+ * a submit" on every frame). That needs an initialized
  * renderer: activated before `createRenderer` has resolved, the clear is skipped and the
  * generator gets no renderer. No path does (the boot and `mountAekasha` create the renderer
  * before the first scene loads), so it isn't guarded.
