@@ -18,7 +18,8 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
   aekasha: {
     file: 'engine/index.ts',
     text: [
-      "export const ComponentType = { A: 'a' } as const;",
+      "export const ComponentType = { TRANSFORM: 'CORE_TRANSFORM' } as const;",
+      'export type ComponentType = string;',
       'export const registerOnAllSceneEnters = () => {};',
       'export const createSeededRandom = (seed: number) => () => seed;',
       'export const getX = () => 1;',
@@ -176,6 +177,10 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
     text: [
       'export type MovingPlatformPhysicsParams = { mass: number };',
       'export type MovingPlatformOptions = { isPlayingFromStart?: boolean };',
+      "export const HoverToolComponentType = { HOVER: 'TOOL_HOVER' } as const;",
+      "export const FollowToolComponentType = { FOLLOW: 'TOOL_FOLLOW' } as const;",
+      "export const SunShadowFitComponentType = { SUN_SHADOW_FIT: 'TOOL_SUN_SHADOW_FIT' } as const;",
+      "export const WorldAnchorComponentType = { WORLD_ANCHOR: 'TOOL_WORLD_ANCHOR' } as const;",
     ].join('\n'),
   },
   'aekasha/toolkit/geometry': {

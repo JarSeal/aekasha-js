@@ -17,6 +17,8 @@
  *   a reshaped call in another), so those are no overlap.
  * - Kind 3, the member renames (`RenamedMemberRule`): `x.old` on a value of an entry's type gets
  *   the new name.
+ * - Kind 3, a component key named as a type (`KeyTypeRule`, `engine6KeyTypes.ts`): `Key.X` gets
+ *   `typeof` (an insertion, which goes before a rename's edit at the same place).
  * - A touched import is written again whole, in the repo's style (a value import left with only
  *   inline types becomes `import type`); the CLI formats the module with Prettier.
  * - Kind 4, the reports (what needs a person), each from the checker's symbols: an import of a
@@ -37,6 +39,7 @@ import type {
   Engine6Rule,
   EntryName,
   ImportRule,
+  KeyTypeRule,
   RemovedImportRule,
   RemovedMemberRule,
   RenamedMemberRule,
@@ -44,6 +47,7 @@ import type {
 } from './engine6Rules';
 import { PURE_CALLS } from './engine6Rules';
 import { calleeOf, resolveAlias } from './engine6Calls';
+import { applyKeyTypeRules } from './engine6KeyTypes';
 import { applyReshapeRules, type ReshapeRuleTargets } from './engine6Reshape';
 
 /** An error or a report: where, what, and the migration page's anchor */
@@ -493,14 +497,15 @@ const declarationEdits = (m: ModuleState) => {
   }
 };
 
+/** By start, an insertion (`typeof `) before an edit that replaces the code after it */
+const byPosition = (a: Edit, b: Edit) => a.start - b.start || a.end - b.end;
+
 /** The reshapes' edits, the inner ones first: each takes in the edits inside its range */
 const resolveReshapes = (m: ModuleState) => {
   const { text } = m.sf;
   let edits = m.edits;
   for (const r of [...m.reshapes].sort((a, b) => a.end - a.start - (b.end - b.start))) {
-    const inside = edits
-      .filter((e) => e.start >= r.start && e.end <= r.end)
-      .sort((a, b) => a.start - b.start);
+    const inside = edits.filter((e) => e.start >= r.start && e.end <= r.end).sort(byPosition);
     edits = edits.filter((e) => !inside.includes(e));
     const used = new Set<Edit>();
     const slice: Slice = (start, end) => {
@@ -524,7 +529,7 @@ const resolveReshapes = (m: ModuleState) => {
 };
 
 const applyEdits = (m: ModuleState) => {
-  const edits = resolveReshapes(m).sort((a, b) => a.start - b.start);
+  const edits = resolveReshapes(m).sort(byPosition);
   for (let i = 1; i < edits.length; i++) {
     if (edits[i].start < edits[i - 1].end)
       m.error(edits[i].start, 'two of the codemod’s edits overlap here');
@@ -791,8 +796,10 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
   const callRules: CallRuleTargets[] = [];
   const reshapeRules: ReshapeRuleTargets[] = [];
   const renameRules: RenameRuleTargets[] = [];
+  const keyRules: KeyTypeRule[] = [];
   for (const rule of activeRules) {
-    if (rule.kind === 'removedMember') {
+    if (rule.kind === 'keyType') keyRules.push(rule);
+    else if (rule.kind === 'removedMember') {
       memberRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
     } else if (rule.kind === 'renamedMember') {
       renameRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
@@ -829,6 +836,7 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
       if (rule.kind === 'import') applyImportRule(m, rule);
       else if (rule.kind === 'removedImport') applyRemovedImportRule(m, rule);
     }
+    applyKeyTypeRules(m, keyRules);
     applyRemovedMemberRules(m, memberRules);
     applyRenamedMemberRules(m, renameRules);
     applyCallArgRules(m, callRules);

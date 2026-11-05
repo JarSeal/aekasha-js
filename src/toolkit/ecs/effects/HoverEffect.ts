@@ -5,10 +5,10 @@ import type { ECSWorld } from 'aekasha';
  * The hover effect's component key: add {@link HoverToolData} under
  * `HoverToolComponentType.HOVER` to an entity to make it bob up and down.
  */
-export enum HoverToolComponentType {
+export const HoverToolComponentType = {
   /** An entity that bobs up and down ({@link HoverToolData}). */
-  HOVER = 'TOOL_HOVER',
-}
+  HOVER: 'TOOL_HOVER',
+} as const;
 
 /**
  * A hovering entity's motion: its `TRANSFORM` height follows a sine around `baseY`, written every

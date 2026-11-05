@@ -6,10 +6,10 @@ import type { ECSWorld } from 'aekasha';
  * The follow effect's component key: add {@link FollowToolData} under
  * `FollowToolComponentType.FOLLOW` to an entity to make it follow another one.
  */
-export enum FollowToolComponentType {
+export const FollowToolComponentType = {
   /** An entity that follows a leader entity ({@link FollowToolData}). */
-  FOLLOW = 'TOOL_FOLLOW',
-}
+  FOLLOW: 'TOOL_FOLLOW',
+} as const;
 
 /**
  * A follower's leader and how it follows: every frame the follower's `TRANSFORM` position moves

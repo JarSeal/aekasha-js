@@ -28,7 +28,8 @@ which is what a system loops over.
 `ComponentType.OBJECT3D` and the rest. An app or toolkit module adds its own next to its code, with a
 key object of its own and an augmentation of the engine's `ComponentDataMap` interface
 (`declare module 'aekasha'`), so the type checker knows each component's data everywhere. Code
-uses each module's key object (`HoverToolComponentType.HOVER`). The
+uses each module's key object (`HoverToolComponentType.HOVER`). A key object is an `as const`
+object, a value: a key named as a type is `typeof HoverToolComponentType.HOVER`. The
 [ECS example](hub:examples/ecs#2-adding-it-to-the-component-map) shows how.
 
 The transform is a component too. Write it with [`setTransform`](api:ECSWorld.setTransform)

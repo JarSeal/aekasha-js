@@ -4025,12 +4025,12 @@
       "readStatsClock": "Function"
     },
     "src/toolkit/ecs/effects/FollowTool.ts": {
-      "FollowToolComponentType": "Enum",
+      "FollowToolComponentType": "Variable",
       "FollowToolData": "Interface",
       "registerFollowToolEffect": "Function"
     },
     "src/toolkit/ecs/effects/HoverEffect.ts": {
-      "HoverToolComponentType": "Enum",
+      "HoverToolComponentType": "Variable",
       "HoverToolData": "Interface",
       "registerHoverToolEffect": "Function"
     },
@@ -4048,14 +4048,14 @@
     },
     "src/toolkit/ecs/effects/SunShadowFit.ts": {
       "registerSunShadowFitEffect": "Function",
-      "SunShadowFitComponentType": "Enum",
+      "SunShadowFitComponentType": "Variable",
       "SunShadowFitData": "Interface"
     },
     "src/toolkit/ecs/effects/WorldAnchorSync.ts": {
       "getCompassBearing": "Function",
       "registerWorldAnchorSync": "Function",
       "unregisterWorldAnchorSync": "Function",
-      "WorldAnchorComponentType": "Enum",
+      "WorldAnchorComponentType": "Variable",
       "WorldAnchorData": "Interface",
       "WorldAnchorSyncOptions": "Interface"
     },

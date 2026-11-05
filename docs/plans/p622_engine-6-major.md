@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: in progress | Phases 0-7 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -936,7 +936,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     (`skyShowcase`, `space` with its debugger run, `largeWorld`, `exampleHubHero`): 17 passed,
     every hash unchanged.
 
-### Phase 7 — Toolkit 3.0.0 (D9)
+### Phase 7 — Toolkit 3.0.0 (D9) — done
 
 - The removals, the layout rule, the component keys as `as const` objects; the codemod's toolkit
   rules (the `PhysicsParams` rename and the `createSeededRandom` move are Phase 1's; here the
@@ -971,6 +971,41 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   fixtures and the run; `kernel/ecs/CLAUDE.md` and the Hub's ECS pages where they say enum;
   `yarn verify:baselines --update` (the kind changes from `Enum`), `yarn verify:scenes` over the
   scenes that use the keys.
+
+  As built (section 2, 2026-11-05):
+
+  - The four keys are `as const` objects (each member's JSDoc kept); nothing in the toolkit or the
+    template named one as a type, so no other source changed, and no `enum` is left in
+    `src/toolkit`, `src/app` or `src/*.ts`.
+  - **The codemod: a seventh rule kind, `KeyTypeRule`** (`kind: 'keyType'`, in its own module,
+    `engine6KeyTypes.ts`; `engine6.ts` only dispatches it, 856 lines now): a key's member named as
+    a type (`Key.X`, `ns.Key.X`, `import('entry').Key.X`) gets `typeof`; with `bare` (the
+    toolkit's four) the key itself as a type, the enum's union, becomes
+    `(typeof Key)[keyof typeof Key]`, which Prettier keeps. `ComponentType`'s rule has `bare:
+    false` (engine 6 still exports `type ComponentType`, every key) and `was: 'CoreComponentType'`,
+    so `CoreComponentType.X` as a type becomes `typeof ComponentType.X`: the `typeof` is an
+    insertion at the reference's start, and the edits now sort by start, then end, so it goes
+    before the rename's edit there. References are found by import with `resolveName` (at a type
+    position the checker's symbol is the type's, which a value has none of): a local enum of the
+    name, a `typeof` and the `declare module` blocks' computed keys are left. Anchors:
+    `toolkit-3-0-0` for the toolkit's, `removed-deprecations` for `ComponentType`'s (**Phase 8's
+    subsections say both: the `typeof`, and a bare toolkit key's union**). The harness's stand-ins
+    grew the four keys and `type ComponentType`; a generated fixture per rule, three behaviour
+    tests (the bare union, `CoreComponentType` with a namespace and `import()` types, what's
+    left), and the repo check expects each key exported. 103 tests in `devTools/migrate`.
+  - End to end on a scratch module in `.cache/` against the real entries: `CoreComponentType.X`,
+    a toolkit key's member and a bare key, each a type error before, migrated with no type error
+    left. `--check src hub/_assets/ts` (957 modules) migrates and reports nothing.
+  - Docs: `kernel/ecs/CLAUDE.md` (the toolkit's keys are objects too, the codemod writes the
+    `typeof`), `devTools/migrate/CLAUDE.md` (the kind and its module) and the Hub's ECS guide (a key
+    named as a type is `typeof Key.X`).
+  - `yarn verify:baselines`: the API diff is the four keys' kind (`Enum → Variable`), the bundles,
+    the embeds and the docs unchanged; recorded. `yarn hub:build` clean. `yarn verify:scenes` over
+    the scenes that use the keys (`physicsTiers`, `sceneTestECS`, `topDownTestScene`,
+    `thirdPersonGymScene`, `largeWorld`, `exampleEcs`, `exampleQuickStart`, `exampleGameHud`,
+    `exampleToolkit`): 36 of 37, every hash unchanged (`physicsTiers` `49157b8f`, the gym
+    `84a78084` with its character paths `26f43551`); the gym's `workerMsg` snapshot failed (the
+    p428 flake of Phases 2-3) and passed alone.
 
 ### Phase 8 — The migration page, the docs, the full check
 

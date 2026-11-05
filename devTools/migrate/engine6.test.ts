@@ -8,6 +8,7 @@ import {
   ENGINE6_RULES,
   type CallArgRule,
   type ImportRule,
+  type KeyTypeRule,
   type RemovedImportRule,
   type RemovedMemberRule,
   type RenamedMemberRule,
@@ -21,6 +22,7 @@ const MEMBER_RULES: RemovedMemberRule[] = ofKind('removedMember');
 const CALL_RULES: CallArgRule[] = ofKind('callArg');
 const RESHAPE_RULES: ReshapeRule[] = ofKind('reshape');
 const RENAMED_MEMBER_RULES: RenamedMemberRule[] = ofKind('renamedMember');
+const KEY_TYPE_RULES: KeyTypeRule[] = ofKind('keyType');
 
 describe('the rules', () => {
   it.each(IMPORT_RULES.map((rule) => [rule.id, rule] as const))(
@@ -69,6 +71,9 @@ describe('the rules', () => {
     for (const rule of [...REMOVED_IMPORT_RULES, ...CALL_RULES]) {
       const feature = rule.withoutFeature;
       if (feature) expect(exported(feature.entry), rule.id).toContain(feature.name);
+    }
+    for (const rule of KEY_TYPE_RULES) {
+      expect(exported(rule.key.entry), rule.id).toContain(rule.key.name);
     }
     for (const rule of [...MEMBER_RULES, ...RENAMED_MEMBER_RULES]) {
       for (const t of rule.types) expect(exported(t.entry), rule.id).toContain(t.name);
@@ -544,6 +549,82 @@ describe('member renames', () => {
         'getPhysicsWorld().setMaxCcdSubsteps(2);',
         'const mine = { setMaxCcdSubstepsSync: (n: number) => n };',
         'mine.setMaxCcdSubstepsSync(2);'
+      )
+    );
+  });
+});
+
+describe('component keys named as types', () => {
+  it.each(KEY_TYPE_RULES.map((rule) => [rule.id, rule] as const))(
+    '%s: a member gets `typeof`, a value is left',
+    (_, rule) => {
+      const before = (type: string) =>
+        lines(
+          `import { ${rule.key.name} } from '${rule.key.entry}';`,
+          `export type T = ${type}.X | Record<${type}.X, ${type}.X[]>;`,
+          `export const value = ${rule.key.name}.X;`
+        );
+      expect(migrate(before(rule.key.name))).toBe(before(`typeof ${rule.key.name}`));
+    }
+  );
+
+  it('a bare key becomes its values’ union; `ComponentType` still names a type', () => {
+    expect(
+      migrate(
+        lines(
+          "import { ComponentType } from 'aekasha';",
+          "import { HoverToolComponentType as Hover } from 'aekasha/toolkit/ecs';",
+          'export type T = Hover | ComponentType;'
+        )
+      )
+    ).toBe(
+      lines(
+        "import { ComponentType } from 'aekasha';",
+        "import { HoverToolComponentType as Hover } from 'aekasha/toolkit/ecs';",
+        'export type T = (typeof Hover)[keyof typeof Hover] | ComponentType;'
+      )
+    );
+  });
+
+  it('`CoreComponentType` is renamed too, a namespace and an `import()` type followed', () => {
+    expect(
+      migrate(
+        lines(
+          "import { CoreComponentType } from 'aekasha';",
+          "import * as toolkit from 'aekasha/toolkit/ecs';",
+          'export type A = CoreComponentType.TRANSFORM | CoreComponentType;',
+          'export type B = toolkit.FollowToolComponentType.FOLLOW;',
+          "export type C = import('aekasha/toolkit/ecs').SunShadowFitComponentType.SUN_SHADOW_FIT;",
+          "export type D = import('aekasha').CoreComponentType.TRANSFORM;"
+        )
+      )
+    ).toBe(
+      lines(
+        "import { ComponentType } from 'aekasha';",
+        "import * as toolkit from 'aekasha/toolkit/ecs';",
+        'export type A = typeof ComponentType.TRANSFORM | ComponentType;',
+        'export type B = typeof toolkit.FollowToolComponentType.FOLLOW;',
+        "export type C = typeof import('aekasha/toolkit/ecs').SunShadowFitComponentType.SUN_SHADOW_FIT;",
+        "export type D = typeof import('aekasha').ComponentType.TRANSFORM;"
+      )
+    );
+  });
+
+  it('leaves `typeof`, a computed key, and a local key of the same name alone', () => {
+    reportsOf(
+      lines(
+        "import { HoverToolComponentType } from 'aekasha/toolkit/ecs';",
+        'export type T = typeof HoverToolComponentType.HOVER;',
+        "declare module 'aekasha' {",
+        '  interface ComponentDataMap {',
+        '    [HoverToolComponentType.HOVER]: { speed: number };',
+        '  }',
+        '}',
+        'export const f = () => {',
+        '  enum HoverToolComponentType { HOVER = "mine" }',
+        '  const k: HoverToolComponentType.HOVER = HoverToolComponentType.HOVER;',
+        '  return k;',
+        '};'
       )
     );
   });

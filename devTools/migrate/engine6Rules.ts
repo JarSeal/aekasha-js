@@ -99,6 +99,27 @@ export type RenamedMemberRule = {
   anchor: string;
 };
 
+/**
+ * D10 kind 3, by import: a component key object (an enum in engine 5, an `as const` object in
+ * engine 6) named as a type. A member's type (`Key.X`, `ns.Key.X`, `import('entry').Key.X`) gets
+ * `typeof`; with `bare`, the key itself as a type (the enum's union) becomes
+ * `(typeof Key)[keyof typeof Key]`.
+ */
+export type KeyTypeRule = {
+  kind: 'keyType';
+  id: string;
+  /** The key object, an entry's export */
+  key: EntryName;
+  /** Its engine 5 name when a rename rule renames it (`CoreComponentType`): a reference by that
+   * name gets `typeof` too, the rename doing the rest */
+  was?: string;
+  /** Whether a bare reference is rewritten: false when the entry still exports a type of the
+   * name (`ComponentType`, every key's union) */
+  bare: boolean;
+  decision: string;
+  anchor: string;
+};
+
 /** One of a reshaped call's new arguments: an old argument as it was, or an object of them */
 export type ReshapeArg = { param: string } | { props: readonly ReshapeProp[] };
 
@@ -158,7 +179,8 @@ export type Engine6Rule =
   | RemovedMemberRule
   | CallArgRule
   | ReshapeRule
-  | RenamedMemberRule;
+  | RenamedMemberRule
+  | KeyTypeRule;
 
 const rename = (
   entry: string,
@@ -665,6 +687,31 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     decision: 'p620 D5',
     anchor: TOOLKIT,
   },
+  // The component keys as `as const` objects: a key named as a type takes `typeof`
+  {
+    kind: 'keyType',
+    id: 'typeof:ComponentType',
+    key: { entry: 'aekasha', name: 'ComponentType' },
+    was: 'CoreComponentType',
+    bare: false,
+    decision: 'p612, p622 D9',
+    anchor: REMOVED,
+  },
+  ...[
+    'HoverToolComponentType',
+    'FollowToolComponentType',
+    'SunShadowFitComponentType',
+    'WorldAnchorComponentType',
+  ].map(
+    (name): KeyTypeRule => ({
+      kind: 'keyType',
+      id: `typeof:${name}`,
+      key: { entry: 'aekasha/toolkit/ecs', name },
+      bare: true,
+      decision: 'p622 D9',
+      anchor: TOOLKIT,
+    })
+  ),
   {
     kind: 'import',
     id: 'move:createSeededRandom',

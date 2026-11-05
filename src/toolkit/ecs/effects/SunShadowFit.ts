@@ -6,10 +6,10 @@ import type { ComponentDataMap, ECSWorld, IComponentStorage } from 'aekasha';
  * The sun shadow fit's component key: add {@link SunShadowFitData} under
  * `SunShadowFitComponentType.SUN_SHADOW_FIT` to a directional light's entity.
  */
-export enum SunShadowFitComponentType {
+export const SunShadowFitComponentType = {
   /** A directional light whose shadow follows the view ({@link SunShadowFitData}). */
-  SUN_SHADOW_FIT = 'TOOL_SUN_SHADOW_FIT',
-}
+  SUN_SHADOW_FIT: 'TOOL_SUN_SHADOW_FIT',
+} as const;
 
 /**
  * Fits a directional light's shadow camera to a camera's view every frame (add it to the light's
