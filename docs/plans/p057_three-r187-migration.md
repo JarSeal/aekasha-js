@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Rendering, Dependencies
 Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
 
@@ -188,7 +188,7 @@ As built:
   text. The cycle's page helpers import the engine modules from the URLs the app loaded them from
   (`performance.setResourceTimingBufferSize` first, as p056's Method said).
 
-### Phase 2: Verification and baselines
+### Phase 2: Verification and baselines — done
 
 Results so far (2026-11-05, macOS, Chromium, WebGPU):
 
@@ -215,6 +215,17 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
 - Step 3 done: the issue's round trip is flat (62 attributes, 1.51 MB on all four `largeWorld`
   visits); the issue is closed, and the Hub's rendering guide says both leaks are fixed (Phase 5's
   step 1, done early).
+- Step 4: `yarn verify:baselines` on a fresh build showed the Context's bundle numbers exactly (the
+  growths only `GLTFLoader.js` +0.2 kB in all three profiles and `ambientOcclusion.tsl.js`
+  +0.1 kB; `api.json`, `docs.json` unchanged, no debug code), recorded with `--update`, then
+  "All baselines unchanged". `yarn sbp --profile all` flagged the embeds' initial, main chunk and
+  `three` budgets well under; each went to `suggestBudget` (banner 313 / 311 / 262 → 277 / 275 /
+  241 KiB, uiKit 298 / 296 / 261 → 276 / 274 / 240). The app's were about 9 % under, short of
+  "well under", but r187 is what freed them, so they went to `suggestBudget` too (initial
+  404 → 385, `assets/index.js` 401 → 380, `three` 265 → 249). After: every budget within but the
+  app's `_engine/features/character` group (2.6 kB of 5 KiB), well under on `main` too (2,686 B
+  in its `bundle.json`): not r187's, left for its own change. `yarn test`: 300 files, 2,641
+  tests.
 
 1. `yarn verify:scenes` against `main`'s baselines (recorded 2026-11-05 on the engine 6.0.0
    code). Expected: snapshot diffs (D6) and nothing else; a changed probe hash, system order,
