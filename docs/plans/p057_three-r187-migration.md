@@ -203,6 +203,15 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
   recorded, nothing but allowed errors), then the plain run: 114 passed, 0 failed, 13 snapshots
   within tolerance (mean ≤ 0.1), `drawer.assetCompare`'s load-order note again; no `!` worker
   target note this time.
+- Step 2: `yarn verify:embed` passed (both profiles, every scenario). `yarn verify:ui` failed one
+  state of 1 piece, `settingsMenu`'s "Changed from outside" in light (mean 0.10, 0.40 %: the UI
+  scale field's change tint not yet faded); `--no-build --only settingsMenu` passed on the same
+  build, so a timing flake in the kit alone (no three in it). `yarn verify:devFiles` failed one
+  check, "/@fs/ outside the repo is refused" (HTTP 200): macOS has no `/etc/hostname`, and Vite
+  serves its SPA fallback for a missing file (a probe: `/@fs/etc/hostname` 200 with
+  `index.html`, `/@fs/etc/hosts` 403), so the check now asks for `/etc/hosts`
+  (`devTools/devFiles/selfCheck.ts`; a Project changelog line), then 61 / 61 passed.
+  `yarn verify:scenes --browser firefox` (Firefox 155.0, WebGL2): 81 passed, every hash Chromium's.
 - Step 3 done: the issue's round trip is flat (62 attributes, 1.51 MB on all four `largeWorld`
   visits); the issue is closed, and the Hub's rendering guide says both leaks are fixed (Phase 5's
   step 1, done early).
@@ -270,7 +279,7 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
    page's `env.size` (the 256 floor).
 2. `CHANGELOG.md`: Engine (three r187; the PMREM change and its look; `env.size` below 256 bakes at
    256; the LOD fade and impostor build fix; the PostFX pre-pass MRT; smaller first download),
-   Project (the baselines, the SBP budgets).
+   Project (the baselines, the SBP budgets, the dev files self-check's `/@fs/` probe on macOS).
 3. Versions: an engine minor (6.1.0: a dependency upgrade that changes rendered output and
    `env.size`'s cost), the project version with it; the toolkit and app keep theirs unless Phase 3
    touches them. `yarn checkVersions --against main`.
