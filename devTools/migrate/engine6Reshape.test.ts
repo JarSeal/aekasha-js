@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReshapeRule } from './engine6Rules';
-import { lines, migrate, ofKind, reportsOf } from './engine6TestHarness';
+import { lines, migrate, ofKind, reportsOf, run } from './engine6TestHarness';
 
 const RESHAPE_RULES: ReshapeRule[] = ofKind('reshape');
 
@@ -52,6 +52,47 @@ const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after:
     before: 'getLightTargetId(1, w);',
     after: 'getLightTargetId(w, 1);',
   },
+  ...Object.fromEntries(
+    ['joinSpatialDomain', 'leaveSpatialDomain', 'isInSpatialDomain'].map((name) => [
+      `reshape:${name}`,
+      {
+        imports: `import { type ECSWorld } from 'aekasha';\nimport { ${name} } from 'aekasha/spatial';\ndeclare const w: ECSWorld;`,
+        before: `${name}(1, 'D', w);`,
+        after: `${name}(w, 1, 'D');`,
+      },
+    ])
+  ),
+  'reshape:refreshSpatialRadius': {
+    imports:
+      "import { type ECSWorld } from 'aekasha';\nimport { refreshSpatialRadius } from 'aekasha/spatial';\ndeclare const w: ECSWorld;",
+    before: 'refreshSpatialRadius(1, w);',
+    after: 'refreshSpatialRadius(w, 1);',
+  },
+  'reshape:getLodWorldSphere': {
+    imports:
+      "import { type ECSWorld } from 'aekasha';\nimport { getLodWorldSphere, type LodData } from 'aekasha/lod';\ndeclare const w: ECSWorld;\ndeclare const lod: LodData;",
+    before: 'getLodWorldSphere(1, lod, w, {});',
+    after: 'getLodWorldSphere(w, 1, lod, {});',
+  },
+  ...Object.fromEntries(
+    ['InstancedMeshPool', 'InstancedLodPool'].flatMap((type) => {
+      const imports = `import { type ECSWorld } from 'aekasha';\nimport type { ${type} } from 'aekasha/instancing';\ndeclare const w: ECSWorld;\ndeclare const pool: ${type};`;
+      return [
+        [
+          `reshape:${type}.spawn`,
+          {
+            imports,
+            before: "pool.spawn(w, [{ x: 1 }], { appId: 'i' });",
+            after: "pool.spawn([{ x: 1 }], { appId: 'i' });",
+          },
+        ],
+        [
+          `reshape:${type}.despawn`,
+          { imports, before: 'pool.despawn(w, 1);', after: 'pool.despawn(1);' },
+        ],
+      ];
+    })
+  ),
   'reshape:createEntity': {
     imports: "import { createEntity, type ECSWorld } from 'aekasha';\ndeclare const w: ECSWorld;",
     before: "createEntity({ appId: 'e' }, w);",
@@ -66,6 +107,8 @@ describe('the reshape rules', () => {
       const used = rule.args.flatMap((arg) =>
         'param' in arg ? [arg.param] : arg.props.map((p) => ('key' in p ? p.param : p.spread))
       );
+      used.push(...(rule.drop ?? []));
+      for (const param of Object.keys(rule.defaults ?? {})) expect(used).toContain(param);
       expect([...used].sort()).toEqual([...rule.params].sort());
       const fixture = RESHAPE_FIXTURES[rule.id];
       expect(fixture, rule.id).toBeDefined();
@@ -304,6 +347,128 @@ describe('call reshapes', () => {
         'setLightEnabled(world, ids.lamp, on);'
       )
     );
+  });
+
+  it('the spatial functions: the world first, an omitted one `getECSWorld()` with its import', () => {
+    expect(
+      migrate(
+        lines(
+          "import { type ECSWorld } from 'aekasha';",
+          "import { joinSpatialDomain, refreshSpatialRadius } from 'aekasha/spatial';",
+          'declare const world: ECSWorld;',
+          "joinSpatialDomain(1, 'D', world);",
+          "joinSpatialDomain(2, 'D');",
+          "joinSpatialDomain(3, 'D', undefined);",
+          'refreshSpatialRadius(4);',
+          "joinSpatialDomain(world, 5, 'D');"
+        )
+      )
+    ).toBe(
+      lines(
+        "import { type ECSWorld, getECSWorld } from 'aekasha';",
+        "import { joinSpatialDomain, refreshSpatialRadius } from 'aekasha/spatial';",
+        'declare const world: ECSWorld;',
+        "joinSpatialDomain(world, 1, 'D');",
+        "joinSpatialDomain(getECSWorld(), 2, 'D');",
+        "joinSpatialDomain(getECSWorld(), 3, 'D');",
+        'refreshSpatialRadius(getECSWorld(), 4);',
+        "joinSpatialDomain(world, 5, 'D');"
+      )
+    );
+  });
+
+  it("an omitted world: the module's own getECSWorld, a namespace's, or a new import", () => {
+    const join = "import { leaveSpatialDomain } from 'aekasha/spatial';";
+    expect(
+      migrate(
+        lines("import { getECSWorld as w } from 'aekasha';", join, "leaveSpatialDomain(1, 'D');")
+      )
+    ).toBe(
+      lines("import { getECSWorld as w } from 'aekasha';", join, "leaveSpatialDomain(w(), 1, 'D');")
+    );
+    expect(
+      migrate(lines("import * as aek from 'aekasha';", join, "leaveSpatialDomain(1, 'D');"))
+    ).toBe(
+      lines(
+        "import * as aek from 'aekasha';",
+        join,
+        "leaveSpatialDomain(aek.getECSWorld(), 1, 'D');"
+      )
+    );
+    expect(migrate(lines(join, "leaveSpatialDomain(1, 'D');", "leaveSpatialDomain(2, 'D');"))).toBe(
+      lines(
+        join,
+        "import { getECSWorld } from 'aekasha';",
+        "leaveSpatialDomain(getECSWorld(), 1, 'D');",
+        "leaveSpatialDomain(getECSWorld(), 2, 'D');"
+      )
+    );
+  });
+
+  it('an omitted world where another getECSWorld is in scope: an error, the module left', () => {
+    const { changed, errors } = run({
+      'app/a.ts': lines(
+        "import { isInSpatialDomain } from 'aekasha/spatial';",
+        'const getECSWorld = () => null;',
+        "isInSpatialDomain(1, 'D');"
+      ),
+    });
+    expect(changed).toEqual({});
+    expect(errors).toEqual([
+      "app/a.ts:3 `getECSWorld` from 'aekasha': the module has another `getECSWorld`",
+    ]);
+  });
+
+  it("the pools' spawn and despawn: the world dropped, a new-shaped call left", () => {
+    const imports = lines(
+      "import { getECSWorld, type ECSWorld } from 'aekasha';",
+      "import { createInstancedMeshPool } from 'aekasha/instancing';",
+      'declare const ctx: { world: ECSWorld };',
+      'const pool = createInstancedMeshPool({ world: ctx.world });'
+    );
+    expect(
+      migrate(
+        lines(
+          imports,
+          'pool.spawn(ctx.world, [{ x: 1 }]);',
+          'pool.spawn(',
+          '  getECSWorld(), // the default world',
+          '  [{ x: 2 }]',
+          ');',
+          'pool.despawn(ctx.world, 1);',
+          'pool.spawn([{ x: 3 }]);',
+          'pool.despawn(2);'
+        )
+      )
+    ).toBe(
+      lines(
+        imports,
+        'pool.spawn([{ x: 1 }]);',
+        'pool.spawn(',
+        '// the default world',
+        '[{ x: 2 }],',
+        ');',
+        'pool.despawn(1);',
+        'pool.spawn([{ x: 3 }]);',
+        'pool.despawn(2);'
+      )
+    );
+  });
+
+  it('reports a pool call whose world argument has side effects', () => {
+    expect(
+      reportsOf(
+        lines(
+          "import { type ECSWorld } from 'aekasha';",
+          "import type { InstancedLodPool } from 'aekasha/instancing';",
+          'declare const pool: InstancedLodPool;',
+          'declare const makeWorld: () => ECSWorld;',
+          'pool.despawn(makeWorld(), 1);'
+        )
+      )
+    ).toEqual([
+      'app/a.ts:5 `InstancedLodPool.despawn`: the argument it no longer takes has side effects: reshape the call by hand',
+    ]);
   });
 
   it('reports a reorder past an argument with side effects', () => {

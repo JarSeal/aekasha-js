@@ -25,7 +25,7 @@ registerSpatialDomain(world, {
   update: 'STATIC', // Rebuilt only when a member joins or leaves
   sceneId: 'myScene', // These settings end with the scene
 });
-joinSpatialDomain(pickupId, 'pickups', world);
+joinSpatialDomain(world, pickupId, 'pickups');
 ```
 
 ## Queries

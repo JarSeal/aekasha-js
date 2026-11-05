@@ -106,27 +106,40 @@ export type ReshapeArg = { param: string } | { props: readonly ReshapeProp[] };
  * object literal's properties are merged in place) */
 export type ReshapeProp = { key: string; param: string } | { spread: string };
 
+/** A reshaped function: an entry's function, or with `member` a method of an entry's type (an
+ * instanced pool's `spawn`) */
+export type ReshapeCallee = EntryName & { member?: string };
+
 /**
  * D10 kind 3, by the callee's declaration: a call of an entry's function in its old shape gets
- * the new one. An old argument that's left out or `undefined` is dropped, a trailing new
- * argument left empty too; an object of a single spread is that argument as it was. New
- * arguments that name the old ones out of their order (the world moved first) are checked per
- * call: two arguments that change places must both be free of side effects (`PURE_CALLS` aside,
- * no call), or one of them a literal, else the call is reported.
+ * the new one. An old argument that's left out or `undefined` is dropped (or with `defaults`,
+ * filled with a call: an omitted optional world that's required now), a trailing new argument
+ * left empty too; an object of a single spread is that argument as it was. New arguments that
+ * name the old ones out of their order (the world moved first) are checked per call: two
+ * arguments that change places must both be free of side effects (`PURE_CALLS` aside, no call),
+ * or one of them a literal, else the call is reported; so must a `drop`ped one.
  */
 export type ReshapeRule = {
   kind: 'reshape';
   id: string;
-  callee: EntryName;
+  callee: ReshapeCallee;
   /** The old parameters' names, in order */
   params: readonly string[];
   /** The new arguments */
   args: readonly ReshapeArg[];
+  /** Old parameters the new shape has no place for (a pool's world: it uses its own) */
+  drop?: readonly string[];
+  /** An old parameter that's left out or `undefined` → the entry function called in its place
+   * (`getECSWorld()`, imported when the module doesn't), when a new argument names it */
+  defaults?: Readonly<Record<string, EntryName>>;
   /** A call with more arguments than this is in the old shape */
   newArgCount: number;
   /** A call whose argument at `index` has no `member` is in the old shape too (the new props
    * have it); one of type `any` is reported */
   newHas?: { index: number; member: string };
+  /** A call whose argument at `index` has `member` is in the old shape too (an old world where
+   * the new shape has none); one of type `any` is reported */
+  oldHas?: { index: number; member: string };
   /** A call whose argument at `index` is of this type (`undefined` aside) is in the old shape
    * too: an old flag or index where the options object goes now; one of type `any` is reported */
   oldType?: { index: number; type: 'boolean' | 'number' };
@@ -168,6 +181,7 @@ const TOOLKIT = 'toolkit-3-0-0';
 const CREATORS = 'the-entity-creators-and-createphysicsentity';
 const SCENES = 'the-scene-functions';
 const LIGHTS = 'the-light-setters';
+const SPATIAL = 'the-spatial-lod-and-pool-functions';
 const PHYSICS = 'the-physics-leftovers';
 const TIERS = 'physicstiers';
 
@@ -193,6 +207,39 @@ const creator = (entry: string, name: string): ReshapeRule => ({
   newArgCount: 2,
   decision: 'p622 D4',
   anchor: CREATORS,
+});
+
+// A world moved first (p622 D2): the world's type has it, an entity id doesn't
+const WORLD_AT_0 = { index: 0, member: 'addComponent' } as const;
+const GET_ECS_WORLD: EntryName = { entry: 'aekasha', name: 'getECSWorld' };
+
+/** A spatial function `(entityId, …rest, world?)` → `(world, entityId, …rest)`, an omitted world
+ * `getECSWorld()` */
+const spatialWorldFirst = (name: string, rest: readonly string[]): ReshapeRule => ({
+  kind: 'reshape',
+  id: `reshape:${name}`,
+  callee: { entry: 'aekasha/spatial', name },
+  params: ['entityId', ...rest, 'world'],
+  args: ['world', 'entityId', ...rest].map((param) => ({ param })),
+  defaults: { world: GET_ECS_WORLD },
+  newArgCount: rest.length + 2,
+  newHas: WORLD_AT_0,
+  decision: 'p622 D5',
+  anchor: SPATIAL,
+});
+
+/** An instanced pool's method `(world, …rest)` → `(…rest)`: the pool's own world (p622 D5) */
+const poolMethod = (type: string, member: string, rest: readonly string[]): ReshapeRule => ({
+  kind: 'reshape',
+  id: `reshape:${type}.${member}`,
+  callee: { entry: 'aekasha/instancing', name: type, member },
+  params: ['world', ...rest],
+  args: rest.map((param) => ({ param })),
+  drop: ['world'],
+  newArgCount: rest.length,
+  oldHas: WORLD_AT_0,
+  decision: 'p622 D5',
+  anchor: SPATIAL,
 });
 
 const BRAIN = 'give the character a brain (`brain: { kind, params: { bindings } }`)';
@@ -549,6 +596,26 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     decision: 'p622 D2',
     anchor: LIGHTS,
   },
+  // Phase 6: the features' reshapes
+  spatialWorldFirst('joinSpatialDomain', ['domainId']),
+  spatialWorldFirst('leaveSpatialDomain', ['domainId']),
+  spatialWorldFirst('isInSpatialDomain', ['domainId']),
+  spatialWorldFirst('refreshSpatialRadius', []),
+  {
+    kind: 'reshape',
+    id: 'reshape:getLodWorldSphere',
+    callee: { entry: 'aekasha/lod', name: 'getLodWorldSphere' },
+    params: ['entityId', 'lod', 'world', 'out'],
+    args: [{ param: 'world' }, { param: 'entityId' }, { param: 'lod' }, { param: 'out' }],
+    newArgCount: 4,
+    newHas: WORLD_AT_0,
+    decision: 'p622 D2',
+    anchor: SPATIAL,
+  },
+  ...['InstancedMeshPool', 'InstancedLodPool'].flatMap((type) => [
+    poolMethod(type, 'spawn', ['placements', 'opts']),
+    poolMethod(type, 'despawn', ['entityId']),
+  ]),
   {
     kind: 'import',
     id: 'move:createSeededRandom',

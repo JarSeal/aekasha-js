@@ -63,9 +63,9 @@ describe('createInstancedMeshPool', () => {
       material: new THREE.MeshBasicNodeMaterial(),
       maxInstances: 3,
     });
-    const [first, second, third] = pool.spawn(world, [placeAt(1), placeAt(2), placeAt(3)]);
+    const [first, second, third] = pool.spawn([placeAt(1), placeAt(2), placeAt(3)]);
 
-    expect(pool.despawn(world, first)).toBe(true);
+    expect(pool.despawn(first)).toBe(true);
 
     expect(pool.mesh.count).toBe(2);
     expect(world.getComponent(third, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(0);
@@ -73,7 +73,7 @@ describe('createInstancedMeshPool', () => {
     expect(xOf(pool.mesh, 0)).toBe(3);
     expect(xOf(pool.mesh, 1)).toBe(2);
     // Not an instance any more, and never one of another pool
-    expect(pool.despawn(world, first)).toBe(false);
+    expect(pool.despawn(first)).toBe(false);
   });
 
   test('removing the slot component frees the slot too, and spawn reuses it', () => {
@@ -83,11 +83,11 @@ describe('createInstancedMeshPool', () => {
       material: new THREE.MeshBasicNodeMaterial(),
       maxInstances: 2,
     });
-    const [first, second] = pool.spawn(world, [placeAt(1), placeAt(2)]);
+    const [first, second] = pool.spawn([placeAt(1), placeAt(2)]);
 
     world.removeComponent(second, ComponentType.INSTANCED_MESH_SLOT);
     expect(pool.mesh.count).toBe(1);
-    const [third] = pool.spawn(world, [placeAt(5)]);
+    const [third] = pool.spawn([placeAt(5)]);
 
     expect(pool.mesh.count).toBe(2);
     expect(world.getComponent(third, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(1);
@@ -103,7 +103,7 @@ describe('createInstancedMeshPool', () => {
       material: new THREE.MeshBasicNodeMaterial(),
       maxInstances: 2,
     });
-    const [entityId] = pool.spawn(world, [placeAt(0)]);
+    const [entityId] = pool.spawn([placeAt(0)]);
 
     moveTo(entityId, 100);
     instancedMeshPoolSyncSystem(world);
@@ -122,7 +122,7 @@ describe('createInstancedMeshPool', () => {
       material: new THREE.MeshBasicNodeMaterial(),
       maxInstances: 2,
     });
-    const [entityId] = pool.spawn(world, [placeAt(0)]);
+    const [entityId] = pool.spawn([placeAt(0)]);
     instancedMeshPoolSyncSystem(world);
     const version = pool.mesh.instanceMatrix.version;
 
@@ -142,7 +142,7 @@ describe('createInstancedMeshPool', () => {
       material: new THREE.MeshBasicNodeMaterial(),
       maxInstances: 2,
     });
-    const [entityId] = pool.spawn(world, [placeAt(-10), placeAt(10)]);
+    const [entityId] = pool.spawn([placeAt(-10), placeAt(10)]);
     const sphere = pool.mesh.boundingSphere!.clone();
     const box = pool.mesh.boundingBox!.clone();
 
@@ -157,7 +157,7 @@ describe('createInstancedMeshPool', () => {
 describe('createInstancedLodPool', () => {
   test('grows every level mesh to hold an instance moved through its Transform', () => {
     const pool = createLodPool();
-    const [entityId] = pool.spawn(world, [placeAt(0)]);
+    const [entityId] = pool.spawn([placeAt(0)]);
 
     moveTo(entityId, 100);
     instancedMeshPoolSyncSystem(world);
@@ -170,7 +170,7 @@ describe('createInstancedLodPool', () => {
 
   test('grows the bounds for an instance that moved while it was LOD culled', () => {
     const pool = createLodPool();
-    const [entityId] = pool.spawn(world, [placeAt(0)]);
+    const [entityId] = pool.spawn([placeAt(0)]);
     const target = getLodTargets().find(
       (entry) => entry.componentType === ComponentType.INSTANCED_MESH_SLOT
     )!.target;
@@ -206,7 +206,7 @@ describe('TYPED_ARRAY storage', () => {
 
   test('bakes every move of an instance, and grows the bounds for it', () => {
     const pool = createTypedPool();
-    const [entityId] = pool.spawn(typedWorld, [placeAt(1)]);
+    const [entityId] = pool.spawn([placeAt(1)]);
     instancedMeshPoolSyncSystem(typedWorld);
 
     moveTo(entityId, 50, typedWorld);
@@ -221,7 +221,7 @@ describe('TYPED_ARRAY storage', () => {
 
   test('uploads nothing after spawn while no instance moved', () => {
     const pool = createTypedPool();
-    pool.spawn(typedWorld, [placeAt(1), placeAt(2)]);
+    pool.spawn([placeAt(1), placeAt(2)]);
     const version = pool.mesh.instanceMatrix.version;
 
     instancedMeshPoolSyncSystem(typedWorld);

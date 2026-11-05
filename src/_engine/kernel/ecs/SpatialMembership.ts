@@ -70,7 +70,7 @@ export type SpatialDomainMembership = {
   /** Whether entities can join `domainId` in `world` (`DEFAULT` always can). */
   hasDomain: (world: ECSWorld, domainId: string) => boolean;
   /** Joins `entityId` to the domain (`joinSpatialDomain`): false when it couldn't. */
-  join: (entityId: number, domainId: string, world: ECSWorld) => boolean;
+  join: (world: ECSWorld, entityId: number, domainId: string) => boolean;
 };
 
 let membership: SpatialDomainMembership | null = null;

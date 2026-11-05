@@ -83,7 +83,7 @@ export const treeGroveLane: ShowcaseLane = {
       receiveShadow: true,
     });
     ctx.rootScene.add(...pool.meshes);
-    const entityIds = pool.spawn(ctx.world, placements);
+    const entityIds = pool.spawn(placements);
 
     return {
       getEntityIds: () => entityIds,

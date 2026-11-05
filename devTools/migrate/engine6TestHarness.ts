@@ -72,6 +72,41 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       'export const setPhysicsTierPolicyMember = (id: number, member: boolean) => true;',
     ].join('\n'),
   },
+  'aekasha/spatial': {
+    file: 'engine/spatial.ts',
+    text: [
+      "import type { ECSWorld } from 'aekasha';",
+      ...['joinSpatialDomain', 'leaveSpatialDomain', 'isInSpatialDomain'].map(
+        (name) => `export const ${name} = (world: ECSWorld, id: number, domainId: string) => true;`
+      ),
+      'export const refreshSpatialRadius = (world: ECSWorld, id: number) => {};',
+    ].join('\n'),
+  },
+  'aekasha/lod': {
+    file: 'engine/lod.ts',
+    text: [
+      "import type { ECSWorld } from 'aekasha';",
+      'export type LodData = { level: number };',
+      'export const getLodWorldSphere = (world: ECSWorld, id: number, lod: LodData, out: object) => true;',
+    ].join('\n'),
+  },
+  'aekasha/instancing': {
+    file: 'engine/instancing.ts',
+    text: [
+      "import type { CreateEntityOpts, ECSWorld } from 'aekasha';",
+      'export type InstancePlacement = { x: number };',
+      ...['InstancedMeshPool', 'InstancedLodPool'].map((name) =>
+        [
+          `export interface ${name} {`,
+          '  spawn: (placements: InstancePlacement[], opts?: CreateEntityOpts) => number[];',
+          '  despawn: (id: number) => boolean;',
+          '}',
+        ].join('\n')
+      ),
+      'export const createInstancedMeshPool = (o: { world: ECSWorld }): InstancedMeshPool =>',
+      '  ({ spawn: () => [], despawn: () => true });',
+    ].join('\n'),
+  },
   'aekasha/skybox': {
     file: 'engine/skybox.ts',
     text: [

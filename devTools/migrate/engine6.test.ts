@@ -72,6 +72,11 @@ describe('the rules', () => {
     for (const rule of [...CALL_RULES, ...RESHAPE_RULES]) {
       expect(exported(rule.callee.entry), rule.id).toContain(rule.callee.name);
     }
+    for (const rule of RESHAPE_RULES) {
+      for (const d of Object.values(rule.defaults ?? {})) {
+        expect(exported(d.entry), rule.id).toContain(d.name);
+      }
+    }
   });
 
   it.each(RENAMED_MEMBER_RULES.map((rule) => [rule.id, rule] as const))(

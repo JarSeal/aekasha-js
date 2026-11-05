@@ -381,7 +381,7 @@ documents it, and the rules table names the page's anchors.
   toolkit and tools; run the codemod; `yarn build` and `yarn lint` show the rest), then a
   subsection per change, each with its before / after and whether the codemod does it: the
   debugger on the UI kit (as today, plus the `setValue` line), `physicsTiers()`, the entity
-  creators and `createPhysicsEntity`, the scene functions, the spatial and pool functions, the
+  creators and `createPhysicsEntity`, the scene functions, the spatial, LOD and pool functions, the
   light setters, the sky box functions, the physics leftovers, the removed deprecations by area
   (a table: name → replacement), the debug entry's names, the UI kit's, the toolkit 3.0.0
   changes. The `::: note In progress` goes; `migration/intro.md`'s paragraph is rewritten.
@@ -874,6 +874,43 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   reorder rule, `newHas` on the world's type); the pools' `spawn` / `despawn`; the codemod rules
   and run; the Hub's `joinSpatialDomain` block; the
   spatial and instancing `CLAUDE.md`s (`refreshSpatialRadius(entityId)` there).
+
+  As built (section 1):
+
+  - `joinSpatialDomain(world, entityId, domainId)`, `leaveSpatialDomain`, `isInSpatialDomain`
+    and `refreshSpatialRadius(world, entityId)`, the world required (no `getECSWorld()` default
+    left in `SpatialIndexSystem.ts`). The internal seam instancing joins through,
+    `SpatialDomainMembership.join` (`kernel/ecs/SpatialMembership.ts`), takes the same order.
+    `getLodWorldSphere(world, entityId, lod, out)`. The pools' `spawn(placements, entityOpts?)`
+    and `despawn(entityId)` use `opts.world`, which the JSDoc of both options' `world` and both
+    `spawn`s now say holds the instances too. Not reshaped: the callback types with a world
+    second (`SpatialRadiusProvider`, `LodTarget`'s members), which the engine calls and an app
+    implements; D2 is about the functions an app calls.
+  - **The codemod's frame grew four things** (Phase 5's open note, the omitted-world default,
+    included): `ReshapeRule.callee.member` (a method of an entry's type: the target is the
+    declared type's property, which `calleeOf` gives a method call), `drop` (an old argument
+    the new shape has no place for: left out when `isPure`, else the call is reported), `oldHas`
+    (an argument with the member where the new shape has none: the pools' world) and
+    `defaults` (an omitted or `undefined` old argument filled with an entry function's call,
+    through `ModuleState.useImport`: the module's import of it, a namespace's `ns.name`, the
+    binding in scope when it resolves to the same function (the engine's modules import by
+    path), else a new import after the module's last one; another binding of the name in scope
+    is an error). Rules from `spatialWorldFirst` (the four spatial functions, the world's
+    default `getECSWorld()`) and `poolMethod` (`spawn` / `despawn` on `InstancedMeshPool` and
+    `InstancedLodPool`), and `getLodWorldSphere`'s reorder. Anchor
+    **`the-spatial-lod-and-pool-functions`** (D11's subsection, renamed to take in the LOD
+    function: **Phase 8 writes the heading "The spatial, LOD and pool functions"**). 87 tests
+    (fixtures per rule, the omitted world's three import paths and its error, the pools' drop
+    with a comment, the side-effect report; the repo check also checks each default's function
+    is exported).
+  - The run over `src hub/_assets/ts`: 11 modules (the pool and spatial tests, the two LOD and
+    two light debug modules, `exampleLod`, `largeWorld`, the `lodShowcase` debug module and two
+    lanes), nothing reported; each app pool spawned into the world it was made with, so dropping
+    the argument changes nothing. By hand: `Foliage.ts`' `@example` and the spatial guide's
+    `joinSpatialDomain` block (the LOD example's region is code, so the Hub shows the new shape).
+  - `yarn verify:baselines` unchanged (signatures aren't in `api.json`, the bundles the same);
+    `yarn hub:build` clean but the search index's size warning (484 KiB). `yarn verify:scenes
+    --only largeWorld,lodShowcase,exampleLod`: 13 passed, every hash unchanged.
 - **Section 2:** the sky box functions with `SkyBodyOpts`; the codemod rules and run (engine-only
   calls today); the sky box `CLAUDE.md` and feature page.
 

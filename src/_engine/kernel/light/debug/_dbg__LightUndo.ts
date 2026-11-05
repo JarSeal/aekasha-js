@@ -131,7 +131,7 @@ export const applyLightField: {
   },
   distance: ({ world, entityId, light }, value) => {
     (light as THREE.PointLight | THREE.SpotLight).distance = value;
-    refreshSpatialRadius(entityId, world);
+    refreshSpatialRadius(world, entityId);
   },
   decay: ({ light }, value) => {
     (light as THREE.PointLight | THREE.SpotLight).decay = value;

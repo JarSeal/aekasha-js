@@ -40,6 +40,7 @@ import type {
   RemovedImportRule,
   RemovedMemberRule,
   RenamedMemberRule,
+  ReshapeCallee,
 } from './engine6Rules';
 import { PURE_CALLS } from './engine6Rules';
 import { calleeOf, resolveAlias } from './engine6Calls';
@@ -161,6 +162,9 @@ export type ModuleState = {
   error: (at: ts.Node | number, message: string) => void;
   /** A report at a node */
   report: (at: ts.Node, message: string, anchor: string) => void;
+  /** How the module names an entry's function `target` at `at`: its import (added when it has
+   * none) or its namespace's; null after an error (another binding of the name is in scope) */
+  useImport: (name: EntryName, target: ts.Symbol, at: ts.Node) => string | null;
 };
 
 const specText = (s: Spec, isInline: boolean) =>
@@ -237,7 +241,7 @@ const readModule = (
       });
     }
   }
-  return {
+  const m: ModuleState = {
     file,
     sf,
     checker,
@@ -248,7 +252,37 @@ const readModule = (
     reshapes: [],
     error,
     report,
+    useImport: (name, target, at) => useImport(m, name, target, at),
   };
+  return m;
+};
+
+/** `ModuleState.useImport`: the module's value import of the name (one a rule added included), a
+ * namespace import's `ns.name`, the binding in scope when it's the same function (the engine's
+ * own modules import by path), else a new import after the module's last one */
+const useImport = (m: ModuleState, name: EntryName, target: ts.Symbol, at: ts.Node) => {
+  const imports = m.decls.filter((d) => !d.isExport);
+  for (const d of imports) {
+    if (d.entry !== name.entry) continue;
+    const s = d.specs.find((x) => !x.isRemoved && !x.isType && x.imported === name.name);
+    if (s) return s.local;
+  }
+  const namespace = m.namespaces.get(name.entry)?.[0];
+  if (namespace) return `${namespace.name}.${name.name}`;
+  const found = m.checker.resolveName(name.name, at, ts.SymbolFlags.Value, false);
+  if (found) {
+    if (resolveAlias(m.checker, found) === target) return name.name;
+    m.error(at, `\`${name.name}\` from '${name.entry}': the module has another \`${name.name}\``);
+    return null;
+  }
+  const near = imports.filter((d) => d.node).pop();
+  if (!near) {
+    m.error(at, `\`${name.name}\`: the module imports nothing to put its import after`);
+    return null;
+  }
+  const spec = { el: null, imported: name.name, local: name.name, isType: false, isRemoved: false };
+  addSpec(m, name.entry, false, spec, near);
+  return name.name;
 };
 
 const symbolOf = (m: ModuleState, s: Spec) =>
@@ -658,6 +692,14 @@ const applyRemovedMemberRules = (m: ModuleState, rules: readonly MemberRuleTarge
 
 type CallRuleTargets = { rule: CallArgRule; target: ts.Symbol };
 
+/** A reshape's callee: the entry's function, or its type's method (`calleeOf` gives a method
+ * call the property's symbol) */
+const reshapeTarget = (checker: ts.TypeChecker, exportsOf: EntryExports, callee: ReshapeCallee) => {
+  const [symbol] = symbolsOf(exportsOf, [callee]);
+  if (!symbol || callee.member === undefined) return symbol;
+  return checker.getDeclaredTypeOfSymbol(symbol).getProperty(callee.member);
+};
+
 /** Whether a module of the program (not a declaration, a library or a test) calls the feature's
  * factory: a rule's `withoutFeature`. A feature the entry doesn't export counts as not called. */
 const createFeatureCalls = (
@@ -758,8 +800,13 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
       const [target] = symbolsOf(exportsOf, [rule.callee]);
       if (target) callRules.push({ rule, target });
     } else if (rule.kind === 'reshape') {
-      const [target] = symbolsOf(exportsOf, [rule.callee]);
-      if (target) reshapeRules.push({ rule, target });
+      const target = reshapeTarget(checker, exportsOf, rule.callee);
+      const defaults = new Map<string, { name: EntryName; target: ts.Symbol }>();
+      for (const [param, name] of Object.entries(rule.defaults ?? {})) {
+        const [found] = symbolsOf(exportsOf, [name]);
+        if (found) defaults.set(param, { name, target: found });
+      }
+      if (target) reshapeRules.push({ rule, target, defaults });
     }
   }
 

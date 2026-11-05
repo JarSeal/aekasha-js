@@ -1,6 +1,7 @@
 /**
- * The engine 6 codemod's call reshapes (D10 kind 3, `ReshapeRule`; p622 Phases 3 and 5): a call
- * of an entry's function in its old shape gets the new one, its arguments' comments with them.
+ * The engine 6 codemod's call reshapes (D10 kind 3, `ReshapeRule`; p622 Phases 3, 5 and 6): a
+ * call of an entry's function (or an entry type's method) in its old shape gets the new one, its
+ * arguments' comments with them, an omitted world filled (`defaults`) and a dropped one left out.
  * The argument list is written last (`ModuleState.reshapes`), with the other edits inside it
  * applied, so a renamed name or a reshaped call in an argument is no overlap. Arguments that
  * change places are checked first (`engine6Calls.ts`' `isPure`), so the evaluation order stays.
@@ -8,9 +9,14 @@
 import ts from 'typescript';
 import type { ModuleState, Slice } from './engine6';
 import { calleeOf, isLiteral, isPure, isUndefined } from './engine6Calls';
-import type { ReshapeRule } from './engine6Rules';
+import type { EntryName, ReshapeRule } from './engine6Rules';
 
-export type ReshapeRuleTargets = { rule: ReshapeRule; target: ts.Symbol };
+export type ReshapeRuleTargets = {
+  rule: ReshapeRule;
+  target: ts.Symbol;
+  /** The rule's `defaults`, each with its function's symbol */
+  defaults: ReadonlyMap<string, { name: EntryName; target: ts.Symbol }>;
+};
 
 /** A piece of a reshaped call: a new argument or an object's property, with the comments of the
  * old argument it holds */
@@ -80,12 +86,13 @@ const isOfOldType = (
 /** Reshapes a call of the rule's callee when it's in the old shape */
 const reshapeCall = (
   m: ModuleState,
-  rule: ReshapeRule,
+  { rule, defaults }: ReshapeRuleTargets,
   call: ts.CallExpression,
   pure: ReadonlySet<ts.Symbol>
 ) => {
   const { checker, sf } = m;
-  const name = `\`${rule.callee.name}\``;
+  const { callee } = rule;
+  const name = `\`${callee.member === undefined ? callee.name : `${callee.name}.${callee.member}`}\``;
   const args = call.arguments;
   const reportAny = (arg: ts.Node) =>
     m.report(
@@ -100,6 +107,13 @@ const reshapeCall = (
     const type = checker.getTypeAtLocation(arg);
     if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return reportAny(arg);
     isOld = !checker.getPropertyOfType(type, rule.newHas.member);
+  }
+  if (!isOld && rule.oldHas) {
+    const arg = args[rule.oldHas.index];
+    if (!arg) return;
+    const type = checker.getTypeAtLocation(arg);
+    if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return reportAny(arg);
+    isOld = !!checker.getPropertyOfType(type, rule.oldHas.member);
   }
   if (!isOld && rule.oldType) {
     const arg = args[rule.oldType.index];
@@ -135,6 +149,19 @@ const reshapeCall = (
   let last: OldArg | undefined;
   for (const [i, node] of args.entries()) {
     const c = comments[i];
+    // A dropped argument's evaluation goes with it: only one without side effects is dropped
+    if (rule.drop?.includes(rule.params[i])) {
+      if (!isPure(checker, pure, node)) {
+        m.report(
+          node,
+          `${name}: the argument it no longer takes has side effects: reshape the call by hand`,
+          rule.anchor
+        );
+        return;
+      }
+      carried.push(...c.leading, ...c.trailing);
+      continue;
+    }
     const isEmptySpread =
       spreads.has(rule.params[i]) && ts.isObjectLiteralExpression(node) && !node.properties.length;
     if (isUndefined(node) || isEmptySpread) {
@@ -175,11 +202,23 @@ const reshapeCall = (
     }
   }
 
+  // An omitted argument with a default: its function's call, through the module's import of it
+  const filled = new Map<string, string>();
+  for (const arg of rule.args) {
+    const fill = 'param' in arg && !values.has(arg.param) && defaults.get(arg.param);
+    if (!fill) continue;
+    const local = m.useImport(fill.name, fill.target, call);
+    if (local === null) return;
+    filled.set(arg.param, `${local}()`);
+  }
+
   const render = (slice: Slice) => {
     const textOf = (node: ts.Node) => slice(node.getStart(sf), node.getEnd());
     const newArgs = rule.args.map((arg): Piece | null => {
       if ('param' in arg) {
         const v = values.get(arg.param);
+        const fill = filled.get(arg.param);
+        if (fill) return { text: fill, leading: [], trailing: [] };
         return v ? { ...v, text: textOf(v.node) } : null;
       }
       const pieces: (Piece & { whole?: string })[] = [];
@@ -232,9 +271,7 @@ export const applyReshapeRules = (
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node)) {
       const resolved = calleeOf(m.checker, node);
-      for (const { rule, target } of rules) {
-        if (resolved === target) reshapeCall(m, rule, node, pure);
-      }
+      for (const r of rules) if (resolved === r.target) reshapeCall(m, r, node, pure);
     }
     ts.forEachChild(node, visit);
   };

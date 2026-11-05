@@ -109,7 +109,7 @@ const getSwitchPose = (entry: ShowcaseLaneEntry, index: number, side: StopSide) 
   let bestDistance = Infinity;
   for (const id of entry.state.getEntityIds()) {
     const lod = world.getComponent(id, ComponentType.LOD);
-    if (!lod || !getLodWorldSphere(id, lod, world, _sphere)) continue;
+    if (!lod || !getLodWorldSphere(world, id, lod, _sphere)) continue;
     const d = _sphere.center.distanceTo(start.position);
     if (d > distance && d < bestDistance) {
       bestDistance = d;

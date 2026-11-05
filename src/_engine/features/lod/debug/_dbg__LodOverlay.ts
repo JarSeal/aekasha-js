@@ -70,7 +70,7 @@ const lodOverlaySystem = (world: ECSWorld) => {
       if (disabled.has(entityId) || frustumCulled.has(entityId) || lodCulled.has(entityId)) {
         continue;
       }
-      if (!getLodWorldSphere(entityId, lod, world, _sphere)) continue;
+      if (!getLodWorldSphere(world, entityId, lod, _sphere)) continue;
       if (!_frustum.intersectsSphere(_sphere)) continue;
       const r = _sphere.radius;
       const c = _sphere.center;

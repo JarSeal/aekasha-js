@@ -306,7 +306,7 @@ const createTreePool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     spatialDomain: 'FOLIAGE',
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /** 2,000 bushes in two levels (the second at fewer segments), hidden when a few pixels tall. */
@@ -341,7 +341,7 @@ const createBushPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     receiveShadow: true,
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /**
@@ -379,7 +379,7 @@ const createRockPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
     receiveShadow: true,
   });
   rootScene.add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 
 /** The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`. */

@@ -89,6 +89,6 @@ export const scene = async () => {
   // 6. One instanced pool: a mesh per level, each knot an entity in the one its level draws
   const pool = createInstancedLodPool({ world, levels, maxInstances: placements.length });
   existsOrThrow(getRootScene(), 'No root scene.').add(...pool.meshes);
-  pool.spawn(world, placements);
+  pool.spawn(placements);
 };
 // #endregion lod-scene

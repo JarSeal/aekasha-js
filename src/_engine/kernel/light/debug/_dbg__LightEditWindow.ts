@@ -184,7 +184,7 @@ const getLightItems = (ctx: LightWindowContext, light: THREE.Light): PropertyGri
       min: 0,
       step: 0.01,
       // The spatial index reads a light's range only when it joins
-      onChange: onLightChange(ctx, 'distance', () => refreshSpatialRadius(entityId, world)),
+      onChange: onLightChange(ctx, 'distance', () => refreshSpatialRadius(world, entityId)),
     });
   }
   if (chars.hasDecay) {

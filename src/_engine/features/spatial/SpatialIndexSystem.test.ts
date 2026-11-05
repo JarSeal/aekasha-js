@@ -45,8 +45,8 @@ describe.each<ECSStorageMode>(['MAP', 'TYPED_ARRAY'])('the refresh (%s storage)'
     registerSpatialDomain(world, { id: 'D', cellSize: 10, maxMembers: 8, update: 'MANUAL' });
     const first = createMeshMember(world);
     const second = createMeshMember(world);
-    joinSpatialDomain(first, 'D', world);
-    joinSpatialDomain(second, 'D', world);
+    joinSpatialDomain(world, first, 'D');
+    joinSpatialDomain(world, second, 'D');
     rebuildSpatialDomain(world, 'D');
     const grid = getSpatialDomain(world, 'D')!;
     const localRadius = grid.getRadius(second)!;
