@@ -459,11 +459,11 @@ export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpt
  *
  * const world = getECSWorld();
  * const sunId = getEntityIdByAppId('sun');
- * const targetId = sunId !== undefined ? getLightTargetId(sunId, world) : undefined;
+ * const targetId = sunId !== undefined ? getLightTargetId(world, sunId) : undefined;
  * if (targetId !== undefined) world.setTransform(targetId, { pos: { x: 0, y: 0, z: -5 } });
  * ```
  */
-export const getLightTargetId = (lightId: number, world: ECSWorld): number | undefined =>
+export const getLightTargetId = (world: ECSWorld, lightId: number): number | undefined =>
   world.getComponent(lightId, ComponentType.TARGET_LINK)?.targetId;
 
 /**

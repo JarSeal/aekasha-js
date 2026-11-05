@@ -46,6 +46,12 @@ const RESHAPE_FIXTURES: Record<string, { imports: string; before: string; after:
     before: 'setLightEnabled(1, true, w);',
     after: 'setLightEnabled(w, 1, true);',
   },
+  'reshape:getLightTargetId': {
+    imports:
+      "import { getLightTargetId, type ECSWorld } from 'aekasha';\ndeclare const w: ECSWorld;",
+    before: 'getLightTargetId(1, w);',
+    after: 'getLightTargetId(w, 1);',
+  },
   'reshape:createEntity': {
     imports: "import { createEntity, type ECSWorld } from 'aekasha';\ndeclare const w: ECSWorld;",
     before: "createEntity({ appId: 'e' }, w);",

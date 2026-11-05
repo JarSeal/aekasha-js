@@ -395,7 +395,7 @@ const updateDiscLightTransform = (state: DiscLightState, world: ECSWorld) => {
   state.lastFollow.copy(_followPoint);
   state.needsWrite = false;
 
-  const targetId = getLightTargetId(state.entityId, world);
+  const targetId = getLightTargetId(world, state.entityId);
   if (targetId !== undefined) writeTransform(targetId, _followPoint, world);
   writeTransform(
     state.entityId,

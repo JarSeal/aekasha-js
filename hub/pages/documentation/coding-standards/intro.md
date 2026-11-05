@@ -47,6 +47,13 @@ The layers and the boot they come together in are on [Architecture](hub:document
   so the build keeps its import.
 - **Options objects** for a function with more than two parameters or any optional one:
   `createViewport({ id, scene, camera, anchor })`, not positional flags.
+- **The ECS world is the one exception** (engine 6.0.0). A **required** world comes first
+  (`registerSpatialDomain(world, opts)`, `setLightEnabled(world, lightId, enabled)`, a system's
+  `(world, dt)`); an **optional** world comes last and defaults to the default world
+  (`getPosition(entityId, world?)`). Either way it doesn't count toward the two parameters. A
+  trailing optional world is the only optional positional parameter allowed: a function that
+  would need another optional parameter takes both in its options object, the world as `world`
+  (`createMeshEntity(props, { appId, world })`).
 - **No internals in public types:** a public signature names only public types. An internal type
   leaking into a parameter or a result is an internal that can't change anymore. `yarn hub:build`
   warns about each one at the reference that names it, with the types it names in turn: export the

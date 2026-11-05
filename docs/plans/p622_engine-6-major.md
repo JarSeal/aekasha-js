@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -212,7 +212,9 @@ down. 37 entry functions take an optional trailing `world`; reshaping them all w
 What changes under it (D3-D6): the entity creators and `createPhysicsEntity` (two optional
 trailing parameters), `getScene`, `createSceneLoader` and the sky box functions (an optional that
 isn't a world), the spatial membership functions and the light setters (a world in the wrong
-place). What stays: the other 27 functions with a trailing optional world, among them
+place), and `getLightTargetId(world, lightId)` (D4) and `getLodWorldSphere(world, entityId, lod,
+out)` (D5), a required world last, which an audit of the entries' signatures found in Phase 5
+(only these two). What stays: the other 27 functions with a trailing optional world, among them
 `bindLineToEntity(line, entityId, world?)` and the toolkit's `addGravityBody(entityId, mass,
 world?)`, which the stub listed for a reshape (both fit the rule as they are), and
 `createRawEntity(world?)`.
@@ -784,7 +786,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     the throws and warnings) and the physics `CLAUDE.md` (the feature's bullet in Simulation
     tiers). `migration/engine-5.md`'s "all nine" stays (engine 5's list).
 
-### Phase 5 — The kernel's reshapes (D2, D4)
+### Phase 5 — The kernel's reshapes (D2, D4) — done
 
 - **Section 1:** `CreateEntityOpts` and the creators (`createMeshEntity`, `createCameraEntity`,
   `createGroupEntity`, `createLightEntity`, `createEntity`, and `createLineEntity` on
@@ -852,10 +854,25 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 - **Section 3:** D2 into the coding standards page (`hub/pages/documentation/coding-standards/
   intro.md`) and its one line in the root `CLAUDE.md`'s Coding standards.
 
+  As built (section 3):
+
+  - **`getLightTargetId(world, lightId)`** too (D2's "a required world first": section 2's audit
+    of every entry function's signatures found it and `getLodWorldSphere`, which no D listed;
+    decided to reshape both, the LOD one in Phase 6 section 1). Its rule is a reorder like
+    `setLightEnabled`'s; the codemod moved `SkyLights.ts`' call, the `@example` by hand. 73 tests.
+  - The coding standards page's Public API has the exception as its own bullet after the options
+    objects one, with an example of each case; the root `CLAUDE.md`'s Coding standards line names
+    it in a clause.
+  - `yarn test`, `yarn hub:build` and `yarn verify:baselines` clean (unchanged); `yarn
+    verify:scenes` over the sky scenes (`skyShowcase`, `space`, `largeWorld`, `exampleHubHero`,
+    the sky lights' `getLightTargetId`): 17 passed.
+
 ### Phase 6 — The features' reshapes (D5, D6)
 
-- **Section 1:** the spatial membership functions and `refreshSpatialRadius` (world first); the
-  pools' `spawn` / `despawn`; the codemod rules and run; the Hub's `joinSpatialDomain` block; the
+- **Section 1:** the spatial membership functions and `refreshSpatialRadius` (world first);
+  `getLodWorldSphere(world, entityId, lod, out)` (`aekasha/lod`, D2: a required world first; a
+  reorder rule, `newHas` on the world's type); the pools' `spawn` / `despawn`; the codemod rules
+  and run; the Hub's `joinSpatialDomain` block; the
   spatial and instancing `CLAUDE.md`s (`refreshSpatialRadius(entityId)` there).
 - **Section 2:** the sky box functions with `SkyBodyOpts`; the codemod rules and run (engine-only
   calls today); the sky box `CLAUDE.md` and feature page.
@@ -910,11 +927,6 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 
 - **`bindLineToEntity` and `addGravityBody`** stay under D2 although the stub listed them; reshape
   them anyway if a uniform "every creator and binder takes an options object" reads better.
-- **A required world that isn't first** (found in Phase 5 section 2 by an audit of the entries'
-  signatures): `getLightTargetId(lightId, world)` (`aekasha`) and `getLodWorldSphere(entityId,
-  lod, world, out)` (`aekasha/lod`) break D2's "a required `world` comes first", and neither D4
-  nor D5 lists them. Reshape them (Phase 5 section 3 and Phase 6 section 1, with a reorder rule
-  each), or write them into D2 as exceptions.
 
 ## Done when
 

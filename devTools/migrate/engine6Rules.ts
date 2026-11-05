@@ -539,6 +539,17 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     anchor: LIGHTS,
   },
   {
+    kind: 'reshape',
+    id: 'reshape:getLightTargetId',
+    callee: { entry: 'aekasha', name: 'getLightTargetId' },
+    params: ['lightId', 'world'],
+    args: [{ param: 'world' }, { param: 'lightId' }],
+    newArgCount: 2,
+    newHas: { index: 0, member: 'addComponent' },
+    decision: 'p622 D2',
+    anchor: LIGHTS,
+  },
+  {
     kind: 'import',
     id: 'move:createSeededRandom',
     from: { entry: 'aekasha/toolkit/geometry', name: 'createSeededRandom' },

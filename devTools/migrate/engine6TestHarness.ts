@@ -33,6 +33,7 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       'export const getScene = (id: string, opts?: { silent?: boolean; throwOnError?: boolean }) => id;',
       'export const createSceneLoader = (l: { id: string }, opts?: { isCurrent?: boolean }) => l;',
       'export const setLightEnabled = (world: ECSWorld, lightId: number, enabled: boolean) => {};',
+      'export const getLightTargetId = (world: ECSWorld, lightId: number): number | undefined => 1;',
       'export const createEntity = (opts?: CreateEntityOpts) => 1;',
       ...['createMeshEntity', 'createCameraEntity', 'createGroupEntity', 'createLightEntity'].map(
         (name) => `export const ${name} = (props: object, opts?: CreateEntityOpts) => 1;`
