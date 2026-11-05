@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ENTRY_FILES } from '../aliases';
+import { slugify } from '../hub/markdown';
 import { parseModuleSource } from '../layout/importGraph';
 import { ROOT } from '../paths';
 import {
@@ -44,6 +45,22 @@ describe('the rules', () => {
   it('have unique ids', () => {
     const ids = ENGINE6_RULES.map((rule) => rule.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("anchor a heading of the migration page's engine 6 section", () => {
+    // The page is `intro.md`, then `engine-6.md` (then `engine-5.md`): an id is its heading's slug
+    // when no earlier heading has it (`uniqueId` adds `-2` to a later one)
+    const dir = path.join(ROOT, 'hub/pages/documentation/migration');
+    const headings = (file: string) =>
+      fs
+        .readFileSync(path.join(dir, file), 'utf8')
+        .replace(/^ *```[\s\S]*?^ *```/gm, '')
+        .split('\n')
+        .filter((line) => /^#{2,6} /.test(line))
+        .map((line) => slugify(line.replace(/^#+ /, '').replace(/`/g, '')));
+    const intro = headings('intro.md');
+    const ids = headings('engine-6.md').filter((slug) => !intro.includes(slug));
+    for (const rule of ENGINE6_RULES) expect(ids, rule.id).toContain(rule.anchor);
   });
 
   it("name what the repo's entries export today, and not the names they removed", () => {

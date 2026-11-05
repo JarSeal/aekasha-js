@@ -1012,6 +1012,35 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 - **Section 1:** `engine-6.md` and `migration/intro.md` (D11), every subsection naming its codemod
   rule or saying it's by hand; the root `CLAUDE.md` (Bootstrap flow, Physics, Commands, the map,
   Coding standards), the readme (its examples type-check through `examples.test.ts`).
+
+  As built (section 1, 2026-11-05):
+
+  - `engine-6.md`: the intro ("Sunset" and "Gibbous", in short), "Before you start" (the template's
+    engine, toolkit and `devTools/`, `package.json`'s dependencies without Tweakpane and stats-gl,
+    `eslint.config.js`' emptied allow-list; the codemod with `--check` first; what it does, its
+    reports' anchors, its exit codes, and to run it over the folder with `src/index.ts`), then a
+    `###` per D11 item in its order, each opening with a **Codemod:** or **By hand:** line naming
+    its rule ids. The debugger's "What reads differently" and "New in a tab" are `####` under it
+    (out of the TOC) and the former has the `setValue` bullet. The removals are a table per area
+    (kernel, physics, characters, sky box) with `typeof ComponentType.X` (**5.x's enum was
+    `CoreComponentType`**: `ComponentType` was a value and a type alias, so
+    `ComponentType.TRANSFORM` was never a type) and the hand-made sky box's `rotate` / `flipY`;
+    the flat sky box `__saveData` entry is a row. No sizes stated (the Hub's rule: no number by
+    hand). `getPhysGameTime` isn't on the page (never on an entry); `PhysicsState`'s two fields
+    are.
+  - The ids: engine 6's headings take the plain slugs, so engine 5's "Before you start" is
+    `before-you-start-2` (nothing linked it). **`engine6.test.ts`' new test** reads `intro.md` and
+    `engine-6.md`, slugs their headings with the Hub's `slugify` (code blocks skipped, backticks
+    dropped) and expects every rule's anchor among `engine-6.md`'s slugs that no intro heading
+    took; all eleven are. 104 tests.
+  - `intro.md` rewritten (each section's "Before you start", the codemods, the reports naming
+    their subsections, a minor deprecates), the page's `aek:tags` grew the reshaped names, and the
+    root `CLAUDE.md`'s codemod command line names the reshapes and the `typeof`. The rest of the
+    root (Bootstrap flow, Physics, the map, Coding standards), the nested `CLAUDE.md`s and the
+    readme were current from Phases 1-7: nothing else changed.
+  - The tables are aligned with `prettier --embedded-language-formatting=off` (so the `[!code]`
+    lines stay as written). `yarn test` 2640 passed; `yarn hub:build` clean but the search index's
+    size warning (484 → 493 KiB, the page's text).
 - **Section 2, the upgrade rehearsal:** a scratch copy of the template at `main` (`git worktree`
   under the scratchpad), the branch's engine, toolkit and `devTools/` copied over it, then the
   codemod, `yarn build` and `yarn lint`: what's left must be exactly the reports. Fix the codemod
