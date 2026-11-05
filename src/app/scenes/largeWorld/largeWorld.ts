@@ -588,7 +588,7 @@ const syncSceneLightsWithSky = (world: ECSWorld) => {
     const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
     for (const appId of ['largeWorldSun', 'largeWorldAmbient']) {
       const lightId = getEntityIdByAppId(appId, world);
-      if (lightId !== undefined) setLightEnabled(lightId, !hasSkySun, world);
+      if (lightId !== undefined) setLightEnabled(world, lightId, !hasSkySun);
     }
   };
   registerOnSceneEnter(LARGE_WORLD_SCENE_ID, syncSceneLights);

@@ -819,6 +819,36 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     8's migration subsection.
 - **Section 2:** `getScene`, `createSceneLoader` and the light setters; the codemod rules and run;
   `src/index.ts`, the readme's `createSceneLoader` example, the UI kit guide's block.
+
+  As built (section 2):
+
+  - `getScene(id, opts?)` and `createSceneLoader(sceneLoader, opts?)` take their options inline
+    (each key documented); `setLightEnabled(world, lightId, enabled)` on `aekasha`, and the two
+    `@internal` ones (`setLightFrustumCullingEnabled`, `setLightObjectCullingEnabled`) the same,
+    their five engine calls moved by hand (the codemod's rules follow entry functions only).
+    Nothing outside the engine passed `getScene`'s flags or `isCurrent` (only its `@example` and
+    the debugger's loader, `false`), so `src/index.ts`, the readme and the UI kit guide didn't
+    change; the `@example`s of `getScene`, `setLightEnabled` and `SkyLights.ts` by hand.
+  - **The codemod's frame grew two things** (Phase 3's note): `ReshapeRule.oldType` (an old
+    boolean or number where the options object goes now, `undefined` aside, `any` reported;
+    `getScene`, `createSceneLoader`, and Phase 6's sky box index) and **the reorder check**: new
+    arguments may name the old ones out of order, and per call two arguments that change places
+    must both be pure (`isPure`: reads, literals, operators, closures, object and array literals
+    of those, no assignment, `++`, `new` or call but of `PURE_CALLS`: `getECSWorld`) or one a
+    literal, else the call is reported and left. `setLightEnabled`'s old shape is
+    `newHas: { index: 0, member: 'addComponent' }` (the world's type has it, an id doesn't).
+    Anchors `the-scene-functions` and `the-light-setters` (**Phase 8 writes those headings**).
+    Phase 6's omitted-world default (`getECSWorld()` with its import) isn't built: the light
+    setters' world is required.
+  - **The codemod's modules split** at the size rule (`engine6.ts` was 984 lines before this
+    phase, 1123 with the check): `engine6Reshape.ts` (kind 3's reshape) and `engine6Calls.ts`
+    (`calleeOf`, `resolveAlias`, `isLiteral`, `isPure`); the tests likewise,
+    `engine6Reshape.test.ts` and the shared `engine6TestHarness.ts`. 72 tests.
+  - The run over `src hub/_assets/ts`: 5 modules (`Light.ts`, the two light debug modules, the
+    debugger's scene loader, `largeWorld`), nothing reported; a second `--check` finds nothing.
+  - `yarn verify:baselines` unchanged (signatures aren't in `api.json`); `yarn hub:build` clean;
+    `yarn verify:scenes` 114 passed, every hash unchanged (the `debugger` runs use the debugger's
+    loader, now `{ isCurrent: false }`).
 - **Section 3:** D2 into the coding standards page (`hub/pages/documentation/coding-standards/
   intro.md`) and its one line in the root `CLAUDE.md`'s Coding standards.
 
@@ -880,6 +910,11 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
 
 - **`bindLineToEntity` and `addGravityBody`** stay under D2 although the stub listed them; reshape
   them anyway if a uniform "every creator and binder takes an options object" reads better.
+- **A required world that isn't first** (found in Phase 5 section 2 by an audit of the entries'
+  signatures): `getLightTargetId(lightId, world)` (`aekasha`) and `getLodWorldSphere(entityId,
+  lod, world, out)` (`aekasha/lod`) break D2's "a required `world` comes first", and neither D4
+  nor D5 lists them. Reshape them (Phase 5 section 3 and Phase 6 section 1, with a reorder rule
+  each), or write them into D2 as exceptions.
 
 ## Done when
 

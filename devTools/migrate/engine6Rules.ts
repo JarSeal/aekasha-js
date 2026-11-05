@@ -109,8 +109,10 @@ export type ReshapeProp = { key: string; param: string } | { spread: string };
 /**
  * D10 kind 3, by the callee's declaration: a call of an entry's function in its old shape gets
  * the new one. An old argument that's left out or `undefined` is dropped, a trailing new
- * argument left empty too; an object of a single spread is that argument as it was. The new
- * arguments name the old ones in their order, so the evaluation order stays.
+ * argument left empty too; an object of a single spread is that argument as it was. New
+ * arguments that name the old ones out of their order (the world moved first) are checked per
+ * call: two arguments that change places must both be free of side effects (`PURE_CALLS` aside,
+ * no call), or one of them a literal, else the call is reported.
  */
 export type ReshapeRule = {
   kind: 'reshape';
@@ -125,9 +127,16 @@ export type ReshapeRule = {
   /** A call whose argument at `index` has no `member` is in the old shape too (the new props
    * have it); one of type `any` is reported */
   newHas?: { index: number; member: string };
+  /** A call whose argument at `index` is of this type (`undefined` aside) is in the old shape
+   * too: an old flag or index where the options object goes now; one of type `any` is reported */
+  oldType?: { index: number; type: 'boolean' | 'number' };
   decision: string;
   anchor: string;
 };
+
+/** Entry functions whose call has no side effects (a read), so a reshape may move it past the
+ * other arguments */
+export const PURE_CALLS: readonly EntryName[] = [{ entry: 'aekasha', name: 'getECSWorld' }];
 
 export type Engine6Rule =
   | ImportRule
@@ -157,6 +166,8 @@ const UI_KIT = 'the-ui-kit-s-names';
 const DEBUG = 'the-debug-entry-s-names';
 const TOOLKIT = 'toolkit-3-0-0';
 const CREATORS = 'the-entity-creators-and-createphysicsentity';
+const SCENES = 'the-scene-functions';
+const LIGHTS = 'the-light-setters';
 const PHYSICS = 'the-physics-leftovers';
 const TIERS = 'physicstiers';
 
@@ -484,6 +495,48 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     newArgCount: 1,
     decision: 'p622 D4',
     anchor: CREATORS,
+  },
+  {
+    kind: 'reshape',
+    id: 'reshape:getScene',
+    callee: { entry: 'aekasha', name: 'getScene' },
+    params: ['id', 'silent', 'throwOnError'],
+    args: [
+      { param: 'id' },
+      {
+        props: [
+          { key: 'silent', param: 'silent' },
+          { key: 'throwOnError', param: 'throwOnError' },
+        ],
+      },
+    ],
+    newArgCount: 2,
+    oldType: { index: 1, type: 'boolean' },
+    decision: 'p622 D4',
+    anchor: SCENES,
+  },
+  {
+    kind: 'reshape',
+    id: 'reshape:createSceneLoader',
+    callee: { entry: 'aekasha', name: 'createSceneLoader' },
+    params: ['sceneLoader', 'isCurrent'],
+    args: [{ param: 'sceneLoader' }, { props: [{ key: 'isCurrent', param: 'isCurrent' }] }],
+    newArgCount: 2,
+    oldType: { index: 1, type: 'boolean' },
+    decision: 'p622 D4',
+    anchor: SCENES,
+  },
+  {
+    kind: 'reshape',
+    id: 'reshape:setLightEnabled',
+    callee: { entry: 'aekasha', name: 'setLightEnabled' },
+    params: ['lightId', 'enabled', 'world'],
+    args: [{ param: 'world' }, { param: 'lightId' }, { param: 'enabled' }],
+    newArgCount: 3,
+    // The world's type has it, the light's id doesn't
+    newHas: { index: 0, member: 'addComponent' },
+    decision: 'p622 D4',
+    anchor: LIGHTS,
   },
   {
     kind: 'import',

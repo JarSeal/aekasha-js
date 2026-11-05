@@ -425,15 +425,15 @@ export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpt
   }
 
   if (props.enabled === false) {
-    setLightEnabled(entityId, false, world);
+    setLightEnabled(world, entityId, false);
   }
 
   if ('frustumCullingEnabled' in props && props.frustumCullingEnabled) {
-    setLightFrustumCullingEnabled(entityId, true, world);
+    setLightFrustumCullingEnabled(world, entityId, true);
   }
 
   if ('objectCullingEnabled' in props && props.objectCullingEnabled) {
-    setLightObjectCullingEnabled(entityId, true, world);
+    setLightObjectCullingEnabled(world, entityId, true);
   }
 
   // Opt-in, not opt-out (docs/plans/_DONE_p050_spatial-index.md §3): ambient/hemisphere lights are
@@ -473,10 +473,10 @@ export const getLightTargetId = (lightId: number, world: ECSWorld): number | und
  * import { getECSWorld, getEntityIdByAppId, setLightEnabled } from 'aekasha';
  *
  * const lampId = getEntityIdByAppId('lamp');
- * if (lampId !== undefined) setLightEnabled(lampId, false, getECSWorld());
+ * if (lampId !== undefined) setLightEnabled(getECSWorld(), lampId, false);
  * ```
  */
-export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWorld) => {
+export const setLightEnabled = (world: ECSWorld, lightId: number, enabled: boolean) => {
   if (enabled) {
     world.removeComponent(lightId, ComponentType.DISABLED);
   } else {
@@ -493,9 +493,9 @@ export const setLightEnabled = (lightId: number, enabled: boolean, world: ECSWor
 // → ECSCoreSystems.ts → Light.ts is an import cycle, and an alias would read the import while
 // this module loads, possibly before ObjectFrustumCullingSystem.ts has defined it
 export const setLightFrustumCullingEnabled = (
+  world: ECSWorld,
   entityId: number,
-  enabled: boolean,
-  world: ECSWorld
+  enabled: boolean
 ) => setFrustumCullingEnabled(entityId, enabled, world);
 
 /**
@@ -504,9 +504,9 @@ export const setLightFrustumCullingEnabled = (
  * @internal
  */
 export const setLightObjectCullingEnabled = (
+  world: ECSWorld,
   lightId: number,
-  enabled: boolean,
-  world: ECSWorld
+  enabled: boolean
 ) => {
   if (enabled) {
     world.addComponent(lightId, ComponentType.OBJECT_CULLING_ENABLED, true);

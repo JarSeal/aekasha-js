@@ -653,7 +653,7 @@ export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) 
  * const removeListener = onSkyBoxChange(() => {
  *   const hasSkySun = getSkyLightIds().suns.some((id) => id !== null);
  *   const sunId = getEntityIdByAppId('mySun');
- *   if (sunId !== undefined) setLightEnabled(sunId, !hasSkySun, getECSWorld());
+ *   if (sunId !== undefined) setLightEnabled(getECSWorld(), sunId, !hasSkySun);
  * });
  * ```
  */
