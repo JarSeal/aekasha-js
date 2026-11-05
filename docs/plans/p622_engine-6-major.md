@@ -719,6 +719,38 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   and exit hook, the "needs `physicsTiers()`" errors and warning, the template's `features` (right
   after `physics()`), the codemod's report rule. Read the exit order change: a policy's delete
   must not need its members' bodies.
+
+  As built (section 1):
+
+  - `physicsTiers()` (`PhysicsTiersFeature.ts`, id **`physicstiers`**: the ids are the factory
+    names lowercased, `skybox`, `postfx`; `requires: ['physics']`) installs the tiers, the policy
+    and its own exit hook (`physicsTiersSceneHooks`: `deleteScenePhysicsTierPolicies`), and sets
+    **`facade.tiersInstalled`** (`PhysicsState.ts`, the facade's leaf), which
+    `createPhysicsEntity` reads without importing either module. `physics()`' exit is
+    `deleteAllPhysicsEntities()` alone. `ENGINE_FEATURE_FACTORIES` has the new id;
+    `FeatureFactories.test.ts` no longer assumes one feature per entry (every entry has one or
+    more).
+  - Without it: `requestPhysicsTier`, `setPhysicsTierPolicy` (also with `null`) and
+    `setPhysicsTierPolicyMember` throw through `assertPhysicsTiersInstalled` (logged, naming the
+    feature and where to list it); `tierPolicy: true` warns once in every build and adds no
+    component. The getters need no check: with nothing installed no entity gets
+    `PHYSICS_SIM_TIER` and no policy is set, so `getPhysicsTier` answers **`FULL`** (D8's
+    "`ACTIVE`" was a slip) and the policy getters `null`. The internal freeze functions (the
+    probe's, the debug tab's) stay unguarded.
+  - **The exit order, read:** `deletePolicy` drops the policy's measurements
+    (`releaseMeasurement`: the step gate released, the positions dropped) and reads no member's
+    body or component, so deleting the policies before the physics entities changes nothing.
+  - The codemod: no new rule kind. `RemovedImportRule` and `CallArgRule` take an optional
+    `withoutFeature` (an entry's factory): such a rule reports only when no module of the program
+    (declarations, libraries and `*.test.ts` aside) calls it (`createFeatureCalls`, by the
+    checker). The rules: `requires:physicsTiers` (the three setters' imports) and
+    `requires:physicsTiersOption` (`createPhysicsEntity`'s second argument's `tierPolicy`), anchor
+    **`physicstiers`** (a "`physicsTiers()`" heading: **Phase 8 writes it**). The repo check
+    expects a `withoutFeature` rule's names and feature to be exported. 59 tests; `--check src
+    hub/_assets/ts` (958 modules) migrates and reports nothing, `src/index.ts` listing the
+    feature; `--report src/app/scenes/physicsTiers` alone gives both reports (its program has no
+    boot module: the CLI's program is the targets and their imports, `devTools/migrate/CLAUDE.md`
+    says so).
 - **Section 2:** `yarn verify:scenes` (all scenes, the system order baseline unchanged, the
   `physicsTiers` scene's hashes unchanged), `yarn sbp` against Phase 0's report: the initial load
   about 4 KiB smaller for an app without the feature (measure with a scratch `features` list

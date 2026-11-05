@@ -2,9 +2,9 @@
 // _DONE_p343_deterministic-physics-tier-policy.md): each member entity (PHYSICS_TIER_POLICY)
 // gets the tier of the ring around the focus it's in, through requestPhysicsTier. With the STEPS
 // cadence (default) it measures on a fixed physics step and applies `interval` steps later, so
-// it's deterministic; with FRAMES it runs every N frames at APP_LOGIC. The physics feature
-// installs its systems (installPhysicsTierPolicy); without a policy they return at once
-// (createPhysicsEntity's `tierPolicy` option only adds the component).
+// it's deterministic; with FRAMES it runs every N frames at APP_LOGIC. The physicsTiers() feature
+// installs its systems (installPhysicsTierPolicy, PhysicsTiersFeature.ts); without a policy they
+// return at once (createPhysicsEntity's `tierPolicy` option only adds the component).
 
 import * as THREE from 'three/webgpu';
 
@@ -24,7 +24,7 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import { readBodyPositionsAtStep, readBodyPositionsSync } from './PhysicsBodies';
 import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
-import { getPhysicsState } from './PhysicsState';
+import { assertPhysicsTiersInstalled, getPhysicsState } from './PhysicsState';
 import {
   addPhysicsStepGate,
   getPhysicsSimHistoryEpoch,
@@ -208,7 +208,8 @@ const deletePolicy = (world: ECSWorld) => {
  * only checks the ring order, not that margin.
  *
  * Removing the policy, or an entity from it, leaves its tier as it is. The determinism probe
- * freezes a `FRAMES` policy, and tests a `STEPS` one.
+ * freezes a `FRAMES` policy, and tests a `STEPS` one. Throws without the `physicsTiers()` feature
+ * in `InitEngine`'s `features`.
  * @example
  * ```ts
  * import { setPhysicsTierPolicy } from 'aekasha/physics';
@@ -225,6 +226,7 @@ const deletePolicy = (world: ECSWorld) => {
  * ```
  */
 export const setPhysicsTierPolicy = (policy: PhysicsTierPolicy | null, ecsWorld?: ECSWorld) => {
+  assertPhysicsTiersInstalled('setPhysicsTierPolicy');
   const world = getWorld(ecsWorld, 'setPhysicsTierPolicy');
   if (!policy) {
     deletePolicy(world);
@@ -250,7 +252,8 @@ export const setPhysicsTierPolicy = (policy: PhysicsTierPolicy | null, ecsWorld?
 };
 
 /**
- * `world`'s physics tier policy as it was set, or null (the debug tab's).
+ * `world`'s physics tier policy as it was set, or null (the debug tab's; always null without the
+ * `physicsTiers()` feature).
  * @internal
  */
 export const getPhysicsTierPolicy = (ecsWorld?: ECSWorld): Readonly<PhysicsTierPolicy> | null =>
@@ -276,7 +279,8 @@ export const getPhysicsTierPolicyStatus = (ecsWorld?: ECSWorld) => {
 /**
  * Makes `entityId`'s tier follow its world's policy, or stops it (its tier stays as it is). For
  * an entity created without createPhysicsEntity's `tierPolicy` option. Returns false (with a
- * debug-env warning) for an entity without a body created DYNAMIC by createPhysicsEntity.
+ * debug-env warning) for an entity without a body created DYNAMIC by createPhysicsEntity. Throws
+ * without the `physicsTiers()` feature in `InitEngine`'s `features`.
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -297,6 +301,7 @@ export const setPhysicsTierPolicyMember = (
   member: boolean,
   ecsWorld?: ECSWorld
 ): boolean => {
+  assertPhysicsTiersInstalled('setPhysicsTierPolicyMember');
   const world = getWorld(ecsWorld, 'setPhysicsTierPolicyMember');
   if (!member) {
     world.removeComponent(entityId, ComponentType.PHYSICS_TIER_POLICY);
@@ -737,7 +742,10 @@ const physicsTierPolicyStepSystem = (world: ECSWorld) => {
 
 /**
  * Deletes the policies scoped to a scene (`PhysicsTierPolicy.sceneId`): a scene-scoped policy goes
- * with its scene. The physics feature's scene exit hook calls it with the scene being left.
+ * with its scene. The `physicsTiers()` feature's scene exit hook calls it with the scene being
+ * left, before physics' own exit deletes the physics entities (exit hooks run in reverse install
+ * order): a policy's delete drops its measurements and releases their step gates, and reads no
+ * member's body.
  * @internal
  */
 export const deleteScenePhysicsTierPolicies = (sceneId: string | undefined) => {
@@ -749,7 +757,7 @@ export const deleteScenePhysicsTierPolicies = (sceneId: string | undefined) => {
 
 /**
  * Installs the policy's systems (both cadences) and drops the policies of deleted worlds (the
- * physics feature's install).
+ * `physicsTiers()` feature's install).
  * @internal
  */
 export const installPhysicsTierPolicy = (ctx: FeatureContext) => {

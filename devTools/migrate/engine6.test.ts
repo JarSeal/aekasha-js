@@ -55,6 +55,10 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
       '  props: PhysicsEntityProps,',
       '  opts?: PhysicsEntityOpts & { world?: object }',
       '): number => 1;',
+      'export const physicsTiers = () => ({ id: "physicsTiers" });',
+      'export const requestPhysicsTier = (id: number, tier: string) => true;',
+      'export const setPhysicsTierPolicy = (policy: object | null) => {};',
+      'export const setPhysicsTierPolicyMember = (id: number, member: boolean) => true;',
     ].join('\n'),
   },
   'aekasha/skybox': {
@@ -251,8 +255,15 @@ describe('the rules', () => {
     }
     for (const rule of REMOVED_IMPORT_RULES) {
       for (const name of Object.keys(rule.names)) {
-        expect(exported(rule.entry), `${rule.id}: ${name}`).not.toContain(name);
+        // A name that needs a feature stays on its entry
+        if (rule.withoutFeature)
+          expect(exported(rule.entry), `${rule.id}: ${name}`).toContain(name);
+        else expect(exported(rule.entry), `${rule.id}: ${name}`).not.toContain(name);
       }
+    }
+    for (const rule of [...REMOVED_IMPORT_RULES, ...CALL_RULES]) {
+      const feature = rule.withoutFeature;
+      if (feature) expect(exported(feature.entry), rule.id).toContain(feature.name);
     }
     for (const rule of [...MEMBER_RULES, ...RENAMED_MEMBER_RULES]) {
       for (const t of rule.types) expect(exported(t.entry), rule.id).toContain(t.name);
@@ -682,6 +693,42 @@ describe('reports', () => {
         "export const b = own('gear', 'small');"
       )
     );
+  });
+});
+
+describe('a feature the project lists', () => {
+  const USES = lines(
+    "import { createPhysicsEntity, requestPhysicsTier } from 'aekasha/physics';",
+    "createPhysicsEntity({ colliders: { type: 'BALL' } }, { id: 'a', tierPolicy: true });",
+    "export const ok = requestPhysicsTier(1, 'STATIC');"
+  );
+  const BOOT = lines(
+    "import { physicsTiers } from 'aekasha/physics';",
+    'export const features = [physicsTiers()];'
+  );
+
+  it("the tiers' API is reported when no module calls `physicsTiers()`", () => {
+    const { reports, anchors } = run({ 'app/a.ts': USES });
+    expect(reports.map((r) => r.slice(0, r.indexOf(':', r.indexOf('`'))))).toEqual([
+      'app/a.ts:1 `requestPhysicsTier` (aekasha/physics)',
+      "app/a.ts:2 `createPhysicsEntity`'s `tierPolicy`",
+    ]);
+    expect(anchors).toEqual(['physicstiers', 'physicstiers']);
+  });
+
+  it('nothing is reported when one does, in another module; a test or a mention does not count', () => {
+    expect(run({ 'app/a.ts': USES, 'app/boot.ts': BOOT }).reports).toEqual([]);
+    const notCalled = run({
+      'app/a.ts': USES,
+      'app/boot.test.ts': BOOT,
+      'app/other.ts': lines(
+        "import { physicsTiers } from 'aekasha/physics';",
+        'export const later = physicsTiers;',
+        'const own = { physicsTiers: () => 1 };',
+        'own.physicsTiers();'
+      ),
+    });
+    expect(notCalled.reports).toHaveLength(2);
   });
 });
 

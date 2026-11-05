@@ -23,7 +23,9 @@
  *   name an entry no longer exports (`RemovedImportRule`), a member an entry's type lost, read or
  *   written in an object literal of that contextual type (`RemovedMemberRule`), and an argument of
  *   an entry's function (`CallArgRule`, which also rewrites a renamed string option). An entry's
- *   exports are found through any module of the program that imports it.
+ *   exports are found through any module of the program that imports it. A rule with
+ *   `withoutFeature` (a name that needs a feature, `physicsTiers()`) reports only when no module
+ *   of the program, tests aside, calls that feature's factory.
  * - A module with an error is left as it was, and every error is listed: a renamed reference that
  *   would resolve to another declaration (shadowed, or a name the module declares itself), two
  *   edits on the same code.
@@ -666,6 +668,42 @@ const calleeOf = (checker: ts.TypeChecker, call: ts.CallExpression) => {
 
 type CallRuleTargets = { rule: CallArgRule; target: ts.Symbol };
 
+/** Whether a module of the program (not a declaration, a library or a test) calls the feature's
+ * factory: a rule's `withoutFeature`. A feature the entry doesn't export counts as not called. */
+const createFeatureCalls = (
+  program: ts.Program,
+  checker: ts.TypeChecker,
+  exportsOf: EntryExports
+) => {
+  const cache = new Map<string, boolean>();
+  const find = (feature: EntryName) => {
+    const target = exportsOf(feature.entry).get(feature.name);
+    if (!target) return false;
+    for (const sf of program.getSourceFiles()) {
+      if (sf.isDeclarationFile || program.isSourceFileFromExternalLibrary(sf)) continue;
+      if (sf.fileName.endsWith('.test.ts') || !sf.text.includes(feature.name)) continue;
+      let found = false;
+      const visit = (node: ts.Node) => {
+        if (found) return;
+        if (ts.isCallExpression(node) && calleeOf(checker, node) === target) found = true;
+        else ts.forEachChild(node, visit);
+      };
+      visit(sf);
+      if (found) return true;
+    }
+    return false;
+  };
+  return (feature: EntryName) => {
+    const key = `${feature.entry}#${feature.name}`;
+    let called = cache.get(key);
+    if (called === undefined) {
+      called = find(feature);
+      cache.set(key, called);
+    }
+    return called;
+  };
+};
+
 /** The argument rules on each call of their entry functions */
 const applyCallArgRules = (m: ModuleState, rules: readonly CallRuleTargets[]) => {
   if (!rules.length) return;
@@ -886,11 +924,17 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
   const errors: MigrationFinding[] = [];
   const reports: MigrationFinding[] = [];
   const exportsOf = createEntryExports(program, checker);
+  const isFeatureCalled = createFeatureCalls(program, checker, exportsOf);
+  // A rule for a feature the project lists has nothing to report
+  const activeRules = rules.filter(
+    (rule) =>
+      !('withoutFeature' in rule && rule.withoutFeature && isFeatureCalled(rule.withoutFeature))
+  );
   const memberRules: MemberRuleTargets[] = [];
   const callRules: CallRuleTargets[] = [];
   const reshapeRules: ReshapeRuleTargets[] = [];
   const renameRules: RenameRuleTargets[] = [];
-  for (const rule of rules) {
+  for (const rule of activeRules) {
     if (rule.kind === 'removedMember') {
       memberRules.push({ rule, targets: symbolsOf(exportsOf, rule.types) });
     } else if (rule.kind === 'renamedMember') {
@@ -919,7 +963,7 @@ export const migrateEngine6 = ({ program, files, rules }: Engine6Input): Engine6
     const report = (at: ts.Node, message: string, anchor: string) =>
       fileReports.push({ file, line: lineOf(at), message, anchor });
     const m = readModule(file, sf, checker, error, report);
-    for (const rule of rules) {
+    for (const rule of activeRules) {
       if (rule.kind === 'import') applyImportRule(m, rule);
       else if (rule.kind === 'removedImport') applyRemovedImportRule(m, rule);
     }

@@ -212,6 +212,7 @@ export const checkFeatures = (features: readonly EngineFeature[]) => {
  */
 export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   physics: "physics() from 'aekasha/physics'",
+  physicstiers: "physicsTiers() from 'aekasha/physics'",
   character: "character() from 'aekasha/character'",
   skybox: "skyBox() from 'aekasha/skybox'",
   lod: "lod() from 'aekasha/lod'",

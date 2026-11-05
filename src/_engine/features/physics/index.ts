@@ -60,3 +60,4 @@ export type { PhysicsEntityOpts, PhysicsEntityProps } from './PhysicsEntity';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from './PhysicsTierPolicy';
 export { getPhysicsTier, requestPhysicsTier } from './PhysicsTiers';
 export { physics } from './PhysicsFeature';
+export { physicsTiers } from './PhysicsTiersFeature';

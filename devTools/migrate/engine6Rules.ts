@@ -27,7 +27,8 @@ export type ImportRule = {
 
 /**
  * D10 kind 4, by import: a name the entry no longer exports, with nothing to put in its place
- * mechanically. Each import of it (and each `ns.Name` through a namespace import) is reported.
+ * mechanically, or one that needs a feature the project doesn't list (`withoutFeature`). Each
+ * import of it (and each `ns.Name` through a namespace import) is reported.
  */
 export type RemovedImportRule = {
   kind: 'removedImport';
@@ -35,6 +36,9 @@ export type RemovedImportRule = {
   entry: string;
   /** Each removed name → what to do instead */
   names: Readonly<Record<string, string>>;
+  /** A feature's factory: the names stay on the entry but need that feature, so they're reported
+   * only in a project none of whose modules (tests aside) calls it (`physicsTiers()`, p622 D8) */
+  withoutFeature?: EntryName;
   decision: string;
   anchor: string;
 };
@@ -73,6 +77,9 @@ export type CallArgRule = {
   members?: readonly string[];
   /** What to do instead (a report's text) */
   advice: string;
+  /** Reported only in a project none of whose modules calls this feature's factory, as
+   * `RemovedImportRule.withoutFeature` */
+  withoutFeature?: EntryName;
   decision: string;
   anchor: string;
 };
@@ -151,6 +158,7 @@ const DEBUG = 'the-debug-entry-s-names';
 const TOOLKIT = 'toolkit-3-0-0';
 const CREATORS = 'the-entity-creators-and-createphysicsentity';
 const PHYSICS = 'the-physics-leftovers';
+const TIERS = 'physicstiers';
 
 /** Each name → the same advice */
 const each = (names: readonly string[], advice: string) =>
@@ -160,6 +168,9 @@ const type = (entry: string, ...names: string[]) => names.map((name) => ({ entry
 
 const BRAIN = 'give the character a brain (`brain: { kind, params: { bindings } }`)';
 const CONTROLLER_DATA = "read the controller's `state`, `config.values` and `internal`";
+const TIERS_FEATURE = { entry: 'aekasha/physics', name: 'physicsTiers' };
+const ADD_TIERS =
+  "add `physicsTiers()` (aekasha/physics) to `InitEngine`'s `features`, right after `physics()`";
 const DEV_FILES =
   "now internal (the dev server's protocol): use `writeDevFiles`, `readDevFile` and `onDevDataGathered`";
 
@@ -416,6 +427,30 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
     },
     decision: 'p622 D7',
     anchor: PHYSICS,
+  },
+  // Phase 4: the tiers, a feature of their own (no module of the project calls `physicsTiers()`)
+  {
+    kind: 'removedImport',
+    id: 'requires:physicsTiers',
+    entry: 'aekasha/physics',
+    names: each(
+      ['requestPhysicsTier', 'setPhysicsTierPolicy', 'setPhysicsTierPolicyMember'],
+      `throws without the \`physicsTiers()\` feature: ${ADD_TIERS}`
+    ),
+    withoutFeature: TIERS_FEATURE,
+    decision: 'p622 D8',
+    anchor: TIERS,
+  },
+  {
+    kind: 'callArg',
+    id: 'requires:physicsTiersOption',
+    callee: { entry: 'aekasha/physics', name: 'createPhysicsEntity' },
+    index: 1,
+    members: ['tierPolicy'],
+    advice: `ignored without the \`physicsTiers()\` feature: ${ADD_TIERS}`,
+    withoutFeature: TIERS_FEATURE,
+    decision: 'p622 D8',
+    anchor: TIERS,
   },
   {
     kind: 'import',

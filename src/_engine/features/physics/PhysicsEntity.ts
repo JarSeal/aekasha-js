@@ -25,7 +25,7 @@ import {
 } from './PhysicsInterpolation';
 import { endPhysicsRayStatsFrame } from './PhysicsQueryStats';
 import { setBodyMovedListener } from './PhysicsRegistry';
-import { getPhysicsState } from './PhysicsState';
+import { facade, getPhysicsState } from './PhysicsState';
 import { getPhysicsSnapshotStepIndex, getPhysicsWriteVisibleStep } from './PhysicsStepping';
 import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
@@ -39,6 +39,8 @@ import {
 import { readStatsClock } from '../../utils/StatsClock';
 
 let debugPhysicsDraw: DebugModuleRef<typeof import('./debug/_dbg__PhysicsDebugDraw')> | null = null;
+/** createPhysicsEntity's `tierPolicy` without physicsTiers() warns once. */
+let isTierPolicyWithoutFeatureWarned = false;
 
 /**
  * Installs the physics entities' side (the physics feature's install): the transform reset
@@ -149,7 +151,8 @@ export type PhysicsEntityProps = {
  * `target` entity too. */
 export type PhysicsEntityOpts = CoreEntityOpts & {
   /** Code only: the entity's simulation tier follows its world's distance policy
-   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only. */
+   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only, and only with the
+   * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
 };
 
@@ -347,10 +350,17 @@ const createPhysicsEntityNow = async (
     world.addComponent(entityId, bucket, rb!);
   }
 
-  // Data only: the policy's system comes with PhysicsTierPolicy.ts, so an app that never sets a
-  // policy pays nothing
+  // Data only: the policy's systems come with physicsTiers() (PhysicsTiersFeature.ts), so an app
+  // without it doesn't download them
   if (entityOpts?.tierPolicy) {
-    if (rigidBodyParams?.rigidType === 'DYNAMIC') {
+    if (!facade.tiersInstalled) {
+      if (!isTierPolicyWithoutFeatureWarned) {
+        isTierPolicyWithoutFeatureWarned = true;
+        lwarn(
+          "createPhysicsEntity: `tierPolicy` needs the physics tiers feature: add `physicsTiers()` (from 'aekasha/physics') to InitEngine's `features`, right after `physics()`. Ignored."
+        );
+      }
+    } else if (rigidBodyParams?.rigidType === 'DYNAMIC') {
       world.addComponent(entityId, ComponentType.PHYSICS_TIER_POLICY, {
         refusedTier: null,
         placed: false,

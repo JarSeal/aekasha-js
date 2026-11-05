@@ -3,8 +3,9 @@ import { ENGINE_FEATURE_FACTORIES, type EngineFeature } from './Features';
 
 // ENGINE_FEATURE_FACTORIES is a hand list (the scene check's error names the factory to list):
 // it must name every engine feature's factory, by the id the factory gives, as its entry exports
-// it. Each features/<name>/ folder is an entry, `aekasha/<name>`, whose <Name>Feature.ts exports
-// the factory as its only function (the rest are objects), so calling them runs nothing.
+// it. Each features/<name>/ folder is an entry, `aekasha/<name>`, with one <Name>Feature.ts or
+// more (physics has two: `physics()` and `physicsTiers()`), each exporting its factory as its only
+// function (the rest are objects), so calling them runs nothing.
 const factoryModules = import.meta.glob<Record<string, unknown>>('../../features/*/*Feature.ts');
 const entryModules = import.meta.glob<Record<string, unknown>>('../../features/*/index.ts');
 
@@ -37,6 +38,9 @@ test('ENGINE_FEATURE_FACTORIES names every feature entry factory by its id', asy
     }
   }
   expect(problems).toEqual([]);
-  expect(Object.keys(found).length).toBe(Object.keys(entryModules).length);
+  // Every entry has a feature
+  expect([...new Set(Object.keys(factoryModules).map(folderOf))].sort()).toEqual(
+    Object.keys(entryModules).map(folderOf).sort()
+  );
   expect(ENGINE_FEATURE_FACTORIES).toEqual(found);
 });
