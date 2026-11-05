@@ -53,6 +53,10 @@ describe('the rules', () => {
     };
     for (const rule of IMPORT_RULES) {
       expect(exported(rule.to.entry), `${rule.id} → ${rule.to.entry}`).toContain(rule.to.name);
+      // The old name is gone from its entry (toolkit 3.0.0's were the last, p622 Phase 7)
+      expect(exported(rule.from.entry), `${rule.id}: ${rule.from.entry}`).not.toContain(
+        rule.from.name
+      );
     }
     for (const rule of REMOVED_IMPORT_RULES) {
       for (const name of Object.keys(rule.names)) {

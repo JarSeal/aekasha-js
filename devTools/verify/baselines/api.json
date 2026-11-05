@@ -4067,13 +4067,11 @@
     },
     "src/toolkit/ecs/gameplay/movingPlatform/MovingPlatform.ts": {
       "createMovingPlatform": "Function",
-      "DeleteMeshOptions": "Interface",
       "MovingPlatformControls": "Interface",
       "MovingPlatformOptions": "Interface",
       "MovingPlatformParams": "Interface",
       "MovingPlatformPhysicsParams": "Interface",
       "MovingPlatformReturn": "Interface",
-      "PhysicsParams": "TypeAlias",
       "registerMovingPlatformSystem": "Function"
     },
     "src/toolkit/ecs/gameplay/movingPlatform/PlatformPath.ts": {
@@ -4123,9 +4121,6 @@
       "ScatterPlacement": "Interface",
       "spawnScatterAsMeshEntities": "Function",
       "SpawnScatterMeshOptions": "Interface"
-    },
-    "src/toolkit/geometry/SeededRandom.ts": {
-      "createSeededRandom": "Function"
     },
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
@@ -4906,7 +4901,6 @@
       "validateSpatialGridQuery"
     ],
     "aekasha/toolkit/ecs": [
-      "DeleteMeshOptions",
       "FollowObjectCameraParams",
       "FollowToolComponentType",
       "FollowToolData",
@@ -4920,7 +4914,6 @@
       "MovingPlatformPoint",
       "MovingPlatformReturn",
       "MutualGravityConfig",
-      "PhysicsParams",
       "SunShadowFitComponentType",
       "SunShadowFitData",
       "WorldAnchorComponentType",
@@ -4958,7 +4951,6 @@
       "TerrainOptions",
       "TreeGeometryOptions",
       "bakeScatterToInstancedMesh",
-      "createSeededRandom",
       "generateAsteroid",
       "generateBushGeometry",
       "generateTerrain",

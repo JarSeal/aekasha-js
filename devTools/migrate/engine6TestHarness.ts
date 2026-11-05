@@ -173,7 +173,10 @@ const ENTRIES: Record<string, { file: string; text: string }> = {
   },
   'aekasha/toolkit/ecs': {
     file: 'toolkit/ecs.ts',
-    text: 'export type MovingPlatformPhysicsParams = { mass: number };',
+    text: [
+      'export type MovingPlatformPhysicsParams = { mass: number };',
+      'export type MovingPlatformOptions = { isPlayingFromStart?: boolean };',
+    ].join('\n'),
   },
   'aekasha/toolkit/geometry': {
     file: 'toolkit/geometry.ts',

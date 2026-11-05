@@ -942,6 +942,35 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   rules (the `PhysicsParams` rename and the `createSeededRandom` move are Phase 1's; here the
   `typeof` rule) and run; `yarn verify:baselines --update`. Done when no `@deprecated` in
   `src/toolkit` names 3.0.0.
+- **Section 1, the removals:** `geometry/SeededRandom.ts` with its entry line and layout rule,
+  `PhysicsParams`, `DeleteMeshOptions` and `MovingPlatformOptions.deleteMeshOptions`; the
+  codemod's report rules for the last two, and Phase 2's held-back repo check (a rename's or a
+  move's old name gone from its entry).
+
+  As built (section 1):
+
+  - Gone: the toolkit's `createSeededRandom` copy (the file, the geometry entry's line and
+    `layoutRules.ts`' rule), `PhysicsParams`, `DeleteMeshOptions` and `deleteMeshOptions`
+    (`MovingPlatform.ts` and the ecs entry). Nothing read them: the template imports
+    `createSeededRandom` from `aekasha` already, and no module named the other three.
+  - The codemod: `removed:deleteMeshOptions` (`removedImport`, `DeleteMeshOptions` on
+    `aekasha/toolkit/ecs`) and `removed:movingPlatformMembers` (`removedMember`,
+    `MovingPlatformOptions.deleteMeshOptions`), anchor `toolkit-3-0-0`; the harness's toolkit
+    stand-in grew `MovingPlatformOptions`. The repo check now also expects each import rule's old
+    name gone from its old entry (every rename's and the move's are). 120 tests in
+    `devTools/migrate` and `devTools/layout`; `--check src hub/_assets/ts` (957 modules) migrates
+    and reports nothing.
+  - Docs: the toolkit guide's `createSeededRandom` sentence, the root `CLAUDE.md`'s geometry line,
+    `devTools/migrate/CLAUDE.md`'s repo check.
+  - `yarn verify:baselines`: the API diff is the five removals (three names, two entry lines), the
+    bundles and the embeds unchanged, no debug code; recorded. `yarn hub:build` clean. `yarn
+    verify:scenes` not run (types and an unused re-export only; section 2 runs it).
+- **Section 2, the component keys:** `HoverToolComponentType`, `FollowToolComponentType`,
+  `SunShadowFitComponentType` and `WorldAnchorComponentType` as `as const` objects; the codemod's
+  `typeof` rule for them and the engine's `ComponentType` (Phase 2 section 1's note) with
+  fixtures and the run; `kernel/ecs/CLAUDE.md` and the Hub's ECS pages where they say enum;
+  `yarn verify:baselines --update` (the kind changes from `Enum`), `yarn verify:scenes` over the
+  scenes that use the keys.
 
 ### Phase 8 — The migration page, the docs, the full check
 

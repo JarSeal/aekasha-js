@@ -49,12 +49,6 @@ export interface MovingPlatformPhysicsParams {
   rigidBody?: RigidBodyParams;
 }
 
-/**
- * The old name of {@link MovingPlatformPhysicsParams}.
- * @deprecated Use {@link MovingPlatformPhysicsParams} (removed in toolkit 3.0.0).
- */
-export type PhysicsParams = MovingPlatformPhysicsParams;
-
 // One shared system drives every platform, each tick owned by its platform's entity: it runs only
 // for that entity's world, and is dropped once the entity is gone (eg. deleted with its scene).
 type PlatformTick = { world: ECSWorld; entityId: number; tick: (dt: number) => void };
@@ -89,22 +83,6 @@ export const registerMovingPlatformSystem = (world: ECSWorld) => {
   );
   return world;
 };
-
-/**
- * What to delete with a platform's mesh.
- * @deprecated Never read: {@link MovingPlatformControls}' `delete` deletes the platform's entity
- * (its mesh and its body) and nothing else. Removed in toolkit 3.0.0.
- */
-export interface DeleteMeshOptions {
-  /** Delete the mesh's geometries. */
-  deleteGeometries?: boolean;
-  /** Delete the mesh's materials. */
-  deleteMaterials?: boolean;
-  /** Delete the materials' textures. */
-  deleteTextures?: boolean;
-  /** Delete all of the above. */
-  deleteAll?: boolean;
-}
 
 /**
  * Playback controls of a platform made by {@link createMovingPlatform}.
@@ -173,11 +151,6 @@ export interface MovingPlatformReturn {
 export interface MovingPlatformOptions extends MovingPlatformPathOptions {
   /** Whether it moves from the first physics step (default true); false waits for `play()`. */
   isPlayingFromStart?: boolean;
-  /**
-   * What to delete with the mesh.
-   * @deprecated Never read (see {@link DeleteMeshOptions}); removed in toolkit 3.0.0.
-   */
-  deleteMeshOptions?: DeleteMeshOptions;
 }
 
 /**

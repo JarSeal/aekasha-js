@@ -9,13 +9,11 @@ export {
   registerMovingPlatformSystem,
 } from './gameplay/movingPlatform/MovingPlatform';
 export type {
-  DeleteMeshOptions,
   MovingPlatformControls,
   MovingPlatformOptions,
   MovingPlatformParams,
   MovingPlatformPhysicsParams,
   MovingPlatformReturn,
-  PhysicsParams,
 } from './gameplay/movingPlatform/MovingPlatform';
 export type {
   MovingPlatformPathOptions,

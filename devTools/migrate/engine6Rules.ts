@@ -262,6 +262,8 @@ const CONTROLLER_DATA = "read the controller's `state`, `config.values` and `int
 const TIERS_FEATURE = { entry: 'aekasha/physics', name: 'physicsTiers' };
 const ADD_TIERS =
   "add `physicsTiers()` (aekasha/physics) to `InitEngine`'s `features`, right after `physics()`";
+const DELETE_MESH_OPTIONS =
+  "never read: delete it (the platform's `controls.delete()` deletes its entity, its mesh and its body)";
 const DEV_FILES =
   "now internal (the dev server's protocol): use `writeDevFiles`, `readDevFile` and `onDevDataGathered`";
 
@@ -646,6 +648,23 @@ export const ENGINE6_RULES: readonly Engine6Rule[] = [
   skyBody('getMoonDirection', ['out']),
   skyBody('getSunElevation', []),
   skyBody('getMoonPhase', []),
+  // Phase 7: toolkit 3.0.0
+  {
+    kind: 'removedImport',
+    id: 'removed:deleteMeshOptions',
+    entry: 'aekasha/toolkit/ecs',
+    names: { DeleteMeshOptions: DELETE_MESH_OPTIONS },
+    decision: 'p620 D5',
+    anchor: TOOLKIT,
+  },
+  {
+    kind: 'removedMember',
+    id: 'removed:movingPlatformMembers',
+    types: type('aekasha/toolkit/ecs', 'MovingPlatformOptions'),
+    members: { deleteMeshOptions: DELETE_MESH_OPTIONS },
+    decision: 'p620 D5',
+    anchor: TOOLKIT,
+  },
   {
     kind: 'import',
     id: 'move:createSeededRandom',
