@@ -74,7 +74,8 @@ export const SkyBoxBaseSchema = z.discriminatedUnion('type', [
 
 // Env layer
 
-/** The environment bake's cube size in texels (`env.size`, `env.nebulaSize`). */
+/** The environment bake's cube size in texels (`env.size`). 64 and 128 are deprecated (they
+ * bake at 256 since three r187, see `DEPRECATED_ENV_SIZES` in `layers/Base.ts`). */
 export const SkyBoxEnvSizeSchema = z.union([
   z.literal(64),
   z.literal(128),
@@ -94,9 +95,10 @@ export const SkyBoxEnvSchema = z.object({
 
   // Environment bake settings: used by sky boxes on the composite path (procedural layers),
   // which bake their environment. A texture-only or colour-only sky box has no bake.
-  /** The bake's cube face size, fixed per activation. Default 256, or 128 with day-night. Since
-   * three r187 a bake is at least 256 per face, so 64 and 128 bake at 256. 512 gives sharper
-   * mirror reflections for 4× the memory (a 512² half-float cube with its prefiltered mips). */
+  /** The bake's cube face size, fixed per activation: 256 (default) or 512, which gives sharper
+   * mirror reflections for 4× the memory (a 512² half-float cube with its prefiltered mips) and
+   * costs about twice the bake time. 64 and 128 are deprecated (removed in engine 7.0.0): since
+   * three r187 a bake is at least 256 per face, so they bake at 256. */
   size: SkyBoxEnvSizeSchema.optional(),
   /** Whether value changes and the day-night cycle re-bake the environment. False: only
    * activation, a rebuild and `bakeEnvironment()` do (reflections lag, the rest animates).

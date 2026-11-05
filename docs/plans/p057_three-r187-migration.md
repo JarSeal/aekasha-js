@@ -266,12 +266,27 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
   same and 512 less; 64 and 128 cost exactly 256's. The re-bake rate doesn't change with three:
   0.95 / s at ×1 and 1.0 / s at ×100 on `skyShowcase` (its 5-minute day turns the sun 1.2° / s,
   so the 1 / s cap binds at ×1 too; the default 20-minute day bakes every ~3.3 s).
+- Step 1 decided (option B, 2026-11-05): 256 is the default with or without day-night, and
+  `env.size` 64 and 128 are deprecated for engine 7.0.0. As built:
+  - `getEnvSize` (`SkyComposite.ts`) gives the face size: the definition's (default 256) and at
+    least `ENV_BAKE_MIN_SIZE` (256, now exported from `SkyEnvironment.ts`, which no longer clamps
+    itself); `DAY_NIGHT_ENV_SIZE` is gone. So a change between 64 / 128 and 256 is no rebuild.
+  - `DEPRECATED_ENV_SIZES` (`layers/Base.ts`, not the schema file: the warning imports it, and
+    the schema file loads zod) carries the `@deprecated` tag for the 7.0.0 sweep; the schema's
+    literals and the generated JSON schema stay (removing them is the breaking change). The
+    schema's `size` doc and `SkyBoxEnvSizeSchema`'s say deprecated.
+  - The debug env warns once per `registerSkyBox` and per applied `updateSkyBox` naming 64 or 128.
+    The Environment folder offers 256 and 512, and `getDefValue` shows a deprecated size as 256.
+  - Tests: `getEnvSize`'s cases (`SkyComposite.test.ts`); `SkyBox.test.ts`' rebuild case is 512
+    now, and a deprecated size and day-night are uniform writes.
+  - The sky box `CLAUDE.md` and the Hub's sky box guide say so (Phase 5's sky box line, done).
+  - Not r187's, left open: the bake stats' GPU ms is unusable on Apple Silicon (above).
 
 1. **`env.size` below 256** (D1). Measure a day-night bake at 256 against r186's 128 (the
    Environment folder's bake stats, GPU ms, on `skyShowcase`; p110's numbers are r186's) and the
    re-bake rate (`env.maxUpdatesPerSec`). Then decide: keep 64 / 128 as documented aliases of 256
    (today), or make the day-night default 256 explicitly and deprecate 64 / 128 for the next
-   major (`@deprecated` in the schema, a warning in the debug env).
+   major (`@deprecated` in the schema, a warning in the debug env). Done: the second (above).
 2. **The first-render workarounds** (D5): drop `initEnvBakeTarget`, `SkyStaticLayers`'
    `initTarget` and the sky light's forced first shadow render one at a time, each with a
    `verify:scenes` run on WebGPU (`skyShowcase`, `space`, `largeWorld`) watching for "Destroyed
@@ -311,8 +326,9 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
 1. The Hub's rendering guide (`hub/pages/features/rendering/guide.md`, Known issues): the light
    leak and the instance attribute leak are fixed with r187 (link the closed issues); the sky box
    page's `env.size` (the 256 floor).
-2. `CHANGELOG.md`: Engine (three r187; the PMREM change and its look; `env.size` below 256 bakes at
-   256; the LOD fade and impostor build fix; the PostFX pre-pass MRT; smaller first download),
+2. `CHANGELOG.md`: Engine (three r187; the PMREM change and its look; `env.size` 64 and 128
+   deprecated, removed in 7.0.0: they bake at 256, the day-night default is 256, and a day-night
+   bake costs ~1.8× r186's (Phase 3's table); the LOD fade and impostor build fix; the PostFX pre-pass MRT; smaller first download),
    Project (the baselines, the SBP budgets, the dev files self-check's `/@fs/` probe on macOS).
 3. Versions: an engine minor (6.1.0: a dependency upgrade that changes rendered output and
    `env.size`'s cost), the project version with it; the toolkit and app keep theirs unless Phase 3

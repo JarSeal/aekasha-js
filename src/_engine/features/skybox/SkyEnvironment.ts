@@ -100,24 +100,23 @@ export const _setEnvBakeHooks = (hooks: EnvBakeHooks | null) => {
   bakeHooks = hooks;
 };
 
-/** three's smallest PMREM face (`MIN_SIZE` in PMREMGenerator.js, three r187): `fromScene` bakes
- * a smaller `size` at this one. */
-const PMREM_MIN_SIZE = 256;
+/**
+ * three's smallest PMREM face (`MIN_SIZE` in PMREMGenerator.js, three r187): `fromScene` bakes a
+ * smaller `size` at this one, so the sky box never asks for less (getEnvSize).
+ * @internal
+ */
+export const ENV_BAKE_MIN_SIZE = 256;
 /** The face size of a PMREM's smallest prefiltered mip, as a power of two (`LOD_MIN`, r187). */
 const PMREM_LOD_MIN = 3;
 
-/** The cube face size an env bake of `size` gets: three r187 bakes at least 256 (64 and 128
- * bake at 256). */
-const getEnvBakeFaceSize = (size: SkyBoxEnvSize) => Math.max(PMREM_MIN_SIZE, size);
-
 /**
- * A PMREM target like the one `PMREMGenerator.fromScene` allocates for `size` (`_allocateTarget`
- * and `_createRenderTarget` in PMREMGenerator.js, three r187: a cube target with only the
- * prefiltered mips, down to 8 texels). Allocated here, not by the first bake, so the environment
- * node exists from activation on: activation runs while the scene loads, and bakes never do.
+ * A PMREM target like the one `PMREMGenerator.fromScene` allocates for `faceSize`
+ * (`_allocateTarget` and `_createRenderTarget` in PMREMGenerator.js, three r187: a cube target
+ * with only the prefiltered mips, down to 8 texels; `faceSize` is at least ENV_BAKE_MIN_SIZE).
+ * Allocated here, not by the first bake, so the environment node exists from activation on:
+ * activation runs while the scene loads, and bakes never do.
  */
-const createEnvBakeTarget = (size: SkyBoxEnvSize) => {
-  const faceSize = getEnvBakeFaceSize(size);
+const createEnvBakeTarget = (faceSize: SkyBoxEnvSize) => {
   const target = new THREE.CubeRenderTarget(faceSize, {
     minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: false,
@@ -161,7 +160,7 @@ const disposeBakeScene = (scene: THREE.Scene) => {
 };
 
 /**
- * The env bake for `size`, with `source` (the ENV_BAKE composite) as what it bakes, and a bake
+ * The env bake for `size` (getEnvSize's face size, at least ENV_BAKE_MIN_SIZE), with `source` (the ENV_BAKE composite) as what it bakes, and a bake
  * requested (the activation and every composite rebuild). Keeps the current target, generator
  * and environment node when the size is the same; a new size replaces all three (one
  * lit-material rebuild).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SkyBoxDef } from './SkyBoxTypes';
-import { getCompositeSignature, hasProceduralLayer } from './SkyComposite';
+import { getCompositeSignature, getEnvSize, hasProceduralLayer } from './SkyComposite';
 
 const BASE: SkyBoxDef['base'] = { type: 'COLOR', color: '#000000' };
 
@@ -104,5 +104,18 @@ describe('hasProceduralLayer', () => {
     ['a nebula', { nebulae: [{}] }],
   ])('is true with %s', (_, change) => {
     expect(hasProceduralLayer({ id: 'sky', base: BASE, ...change })).toBe(true);
+  });
+});
+
+describe('getEnvSize', () => {
+  it.each<[string, Partial<SkyBoxDef>, number]>([
+    ['no env.size', {}, 256],
+    ['day-night without an env.size', { dayNight: {} }, 256],
+    ['512', { env: { size: 512 } }, 512],
+    // three r187's smallest PMREM face is 256: the deprecated sizes bake at it
+    ['the deprecated 64', { env: { size: 64 } }, 256],
+    ['the deprecated 128 with day-night', { env: { size: 128 }, dayNight: {} }, 256],
+  ])('gives the face size for %s', (_, change, size) => {
+    expect(getEnvSize({ id: 'sky', base: BASE, ...change })).toBe(size);
   });
 });

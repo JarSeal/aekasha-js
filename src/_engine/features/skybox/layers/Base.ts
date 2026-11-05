@@ -39,7 +39,7 @@ export const BASE_STRUCTURAL_KEYS = [
  */
 export const BASE_DEFAULTS = { rotate: 0, intensity: 1, flipY: false };
 /**
- * The env layer's defaults; `size` is 128 instead with day-night (SkyComposite.ts' getEnvSize).
+ * The env layer's defaults (`size` with or without day-night: SkyComposite.ts' getEnvSize).
  * @internal
  */
 export const ENV_DEFAULTS = {
@@ -52,6 +52,15 @@ export const ENV_DEFAULTS = {
   maxUpdatesPerSec: 1,
   nebulaSize: 512 as SkyBoxNebulaSize,
 };
+
+/**
+ * The `env.size` values below three r187's smallest PMREM face (256): they bake at 256, so they
+ * cost what 256 does. Internal to the sky box's debug-env warning (SkyBox.ts).
+ * @internal
+ * @deprecated `env.size` 64 and 128: use 256, what they bake at. Removed in engine 7.0.0 with their
+ * two literals in `SkyBoxEnvSizeSchema` (p057).
+ */
+export const DEPRECATED_ENV_SIZES: readonly number[] = [64, 128];
 
 /**
  * The base layer's uniforms, created once per activation and kept across node rebuilds.

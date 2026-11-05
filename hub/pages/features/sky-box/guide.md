@@ -61,7 +61,9 @@ Each layer is on when its key is there, unless it has `enabled: false`:
 A sky with only a `base` is drawn straight from its texture. One with procedural layers is drawn
 as one combined node, and baked into the environment map that lights the scene. While the
 day-night time moves, it bakes again once the sun or a moon has turned a degree, at most once a
-second (`env.updateAngleDeg`, `env.maxUpdatesPerSec`).
+second (`env.updateAngleDeg`, `env.maxUpdatesPerSec`). `env.size` is the environment map's face
+size: 256 (the default) or 512, for sharper mirror reflections at four times the memory and about
+twice the bake time. 64 and 128 are deprecated: they bake at 256 (three's smallest).
 
 ## Day and night
 

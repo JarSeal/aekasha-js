@@ -13,7 +13,8 @@ const isNotComposite = () => !getActiveSkyBox()?.isComposite;
 /** The re-bake budget only applies to the day-night cycle's movement. */
 const isNotDayNight = () => !isDayNightEnabled(getActiveSkyBox()?.def);
 
-const SIZE_OPTIONS = [64, 128, 256, 512].map((size) => ({ text: String(size), value: size }));
+/** 64 and 128 are deprecated (they bake at 256 since three r187), so not offered. */
+const SIZE_OPTIONS = [256, 512].map((size) => ({ text: String(size), value: size }));
 
 const buildBakeFolder = (): DebuggerPaneItem => {
   const target = skyBoxProxy.env;
