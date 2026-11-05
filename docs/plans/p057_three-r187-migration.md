@@ -199,8 +199,10 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
   (mean 4.7, max 59, 0.5 % of the pixels, on edges: GTAO and shadows), topDown mean 2.4. Debugger
   shots: `window.about` (three's version), `profiler.gpuMemory` (the env bake's sizes, D1),
   `stats.panels` (only the masked TFPS figure's width: a run-to-run number, not r187), and
-  `drawer.assetCompare` a note (its load order). Not yet recorded with `--update`: the local
-  baselines are still `main`'s.
+  `drawer.assetCompare` a note (its load order). Recorded with `--update` on this branch (114
+  recorded, nothing but allowed errors), then the plain run: 114 passed, 0 failed, 13 snapshots
+  within tolerance (mean ≤ 0.1), `drawer.assetCompare`'s load-order note again; no `!` worker
+  target note this time.
 - Step 3 done: the issue's round trip is flat (62 attributes, 1.51 MB on all four `largeWorld`
   visits); the issue is closed, and the Hub's rendering guide says both leaks are fixed (Phase 5's
   step 1, done early).
