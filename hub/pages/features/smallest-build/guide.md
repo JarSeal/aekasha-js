@@ -7,7 +7,7 @@ rest of the build's files load later, or never.
 | Build                                            | Before the first frame | Later, when needed                                    |
 | ------------------------------------------------ | ---------------------- | ----------------------------------------------------- |
 | The banner: the kernel alone, one scene          | {{sbp:banner.initial}} | {{sbp:banner.lazy}} in {{sbp:banner.lazyFiles}} files |
-| The template app: all nine features, every scene | {{sbp:app.initial}}    | {{sbp:app.lazy}} in {{sbp:app.lazyFiles}} files       |
+| The template app: all ten features, every scene  | {{sbp:app.initial}}    | {{sbp:app.lazy}} in {{sbp:app.lazyFiles}} files       |
 
 ### Where the floor comes from
 

@@ -1009,6 +1009,7 @@
     },
     "src/_engine/features/physics/PhysicsState.ts": {
       "assertMainThread": "Function",
+      "assertPhysicsTiersInstalled": "Function",
       "assertWorldCreated": "Function",
       "facade": "Variable",
       "getPhysicsState": "Function",
@@ -1074,6 +1075,10 @@
       "getPhysicsTier": "Function",
       "installPhysicsTiers": "Function",
       "requestPhysicsTier": "Function"
+    },
+    "src/_engine/features/physics/PhysicsTiersFeature.ts": {
+      "physicsTiers": "Function",
+      "physicsTiersSceneHooks": "Variable"
     },
     "src/_engine/features/physics/PhysicsTierTypes.ts": {
       "PhysicsSimTierData": "TypeAlias",
@@ -4745,6 +4750,7 @@
       "getPhysicsWorld",
       "getRigidBody",
       "physics",
+      "physicsTiers",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
       "setPhysicsTierPolicy",

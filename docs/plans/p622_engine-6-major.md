@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Refactoring, API
 Related: `docs/issues/physics-unused-rapier-enums.md` and `docs/issues/physics-ccd-substeps-setting.md` (closed by Phase 3), `hub/pages/documentation/migration/engine-6.md` and `CHANGELOG.md`'s "Unreleased — engine-6" entry (what this major finishes)
 
@@ -713,7 +713,7 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
     fails it. Not filed yet (p428 owns the cause); an issue file or a snapshot skip for those two
     configurations would stop it reading as a regression.
 
-### Phase 4 — `physicsTiers()` (D8)
+### Phase 4 — `physicsTiers()` (D8) — done
 
 - **Section 1:** `PhysicsTiersFeature.ts`, its entry line, `physics()` without the tiers' installs
   and exit hook, the "needs `physicsTiers()`" errors and warning, the template's `features` (right
@@ -757,6 +757,32 @@ nested `CLAUDE.md` mentions, then `yarn verify:baselines --update` for `api.json
   without it; the template keeps it, so its own number moves only by the lazy chunk). Record the
   numbers under the phase. `kernel/init/CLAUDE.md`, the physics `CLAUDE.md`, the root's Bootstrap
   flow (ten features), the readme's Features and the physics feature page.
+
+  As built (section 2, 2026-11-05, on `ea610dc3`):
+
+  - `yarn verify:scenes` (macOS, WebGPU): 114 passed, 0 failed, the system orders and every hash
+    unchanged (`physicsTiers` `49157b8f` in all three targets, the gym's character paths
+    `26f43551`). A comment-only `InitEngine.ts` edit reloaded the dev server's page once during
+    the run (after `exampleLod`); every scene still passed. The gym's `workerMsg` snapshot passed
+    this time.
+  - `yarn sbp`, the template (with `physicsTiers()`): initial **385.7 kB gzip** (Phase 0's 387.0;
+    Phases 2-3's removals), `_engine/features/physics` 23.8 kB initial (+0.3: the feature module
+    and the guard) / 31.6 kB lazy. **A scratch build without `physicsTiers()`** (`src/index.ts`
+    only, restored after): initial **381.0 kB (−4.7 kB, −1.2 %)**, the physics group 19.2 kB
+    initial / 32.4 kB lazy, the `physicsTiers` scene's chunk 2.59 → 3.28 kB (the tiers' modules
+    moved into it). The reports are `.cache/p622/sbp-phase4-with-report.json` and
+    `-without-report.json`.
+  - `yarn verify:baselines`: the API diff is `physicsTiers` (on `aekasha/physics`),
+    `physicsTiersSceneHooks` and `assertPhysicsTiersInstalled` (both `@internal`), the main chunk
+    +0.3 kB, the embeds unchanged, no debug code; recorded. `yarn hub:build` clean but the search
+    index's size warning (484 KiB).
+  - Docs: the physics feature page (Installing it, Simulation tiers with the `features` line and
+    what happens without it, Key APIs), the Hub's architecture guide, documentation intro, quick
+    start and SBP table ("ten features"), the readme's Feature modules and Physics simulation
+    tiers lines, `InitEngine`'s JSDoc and `@example`, the root `CLAUDE.md` (Three-folder split,
+    Bootstrap flow, Physics), `kernel/init/CLAUDE.md` (the ten features, the ids, the exit order,
+    the throws and warnings) and the physics `CLAUDE.md` (the feature's bullet in Simulation
+    tiers). `migration/engine-5.md`'s "all nine" stays (engine 5's list).
 
 ### Phase 5 — The kernel's reshapes (D2, D4)
 
