@@ -12,6 +12,7 @@
 // unloading hands the bodies that moved into another loaded cell to that cell (p353 Phase 4 D1).
 import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/AssetOwners';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
+import { runInPhysicsCreationScope } from '../../kernel/ecs/PhysicsTierAccess';
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
 import { type StreamingBodies, deleteAdoptedBodies, handOverMovedBodies } from './StreamingBodies';
 import { lerror } from '../../utils/Logger';
@@ -410,10 +411,19 @@ const cancelPrime = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.primeJob = null;
 };
 
-/** Holds a finished unit's entities from drawing while its cell's load is primed. */
-const holdUnit = (rt: StreamingRuntime, cell: StreamingCell, entityIds: readonly number[]) => {
+/** A unit finished with `entityIds`: they're held from drawing while its cell's load is primed,
+ * and its bodies get the cell's tier. */
+const finishUnit = (rt: StreamingRuntime, cell: StreamingCell, entityIds: readonly number[]) => {
   if (cell.primes && rt.primer) rt.primer.hold(rt.world, entityIds);
+  rt.bodies?.unitLoaded?.(rt, cell, entityIds);
 };
+
+/** Runs `fn` in the cell's scopes: its asset owner key (what it registers is the cell's) and its
+ * physics creation scope (the bodies it creates start in the cell's tier). */
+const runInCellScopes = <T>(rt: StreamingRuntime, cell: StreamingCell, fn: () => T): T =>
+  runInAssetOwnerScope(cell.ownerKey, () =>
+    runInPhysicsCreationScope(rt.bodies?.getCreationScope?.(rt, cell) ?? null, fn)
+  );
 
 const finishPrime = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.primeJob = null;
@@ -475,7 +485,7 @@ const createCellContext = (
   cellSize: rt.settings.cellSize,
   world: rt.world,
   isCurrent: () => cell.generation === generation,
-  runOwned: (fn) => runInAssetOwnerScope(cell.ownerKey, fn),
+  runOwned: (fn) => runInCellScopes(rt, cell, fn),
 });
 
 /** Starts a cell's load; `primes`: hold its content and prime it before it's shown. */
@@ -533,8 +543,9 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
   const generation = cell.generation;
   let result: readonly number[] | Promise<readonly number[]>;
   try {
-    // What it registers (or gets from the cache) before its first await is the cell's
-    result = runInAssetOwnerScope(cell.ownerKey, () => unit.content.load(ctx));
+    // What it registers (or gets from the cache) and the bodies it creates before its first
+    // await are the cell's
+    result = runInCellScopes(rt, cell, () => unit.content.load(ctx));
   } catch (err) {
     failUnit(rt, cell, unit, err);
     return null;
@@ -546,7 +557,7 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
     }
     unit.state = UNIT_DONE;
     unit.entityIds = result.slice();
-    holdUnit(rt, cell, unit.entityIds);
+    finishUnit(rt, cell, unit.entityIds);
     return null;
   }
   unit.state = UNIT_IN_FLIGHT;
@@ -566,7 +577,7 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
       if (isIds) {
         unit.state = UNIT_DONE;
         unit.entityIds = ids.slice();
-        holdUnit(rt, cell, unit.entityIds);
+        finishUnit(rt, cell, unit.entityIds);
       } else {
         failUnit(rt, cell, unit, notIdsError(ids));
       }
@@ -590,6 +601,10 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
 const setCellLevel = (rt: StreamingRuntime, cell: StreamingCell, level: StreamingLevel) => {
   cell.level = level;
   if (isLoadedLevel(level)) {
+    // Its bodies take the level's tier (p353 Phase 4 D2)
+    if (cell.phase === 'LOADING' || cell.phase === 'PRIMING' || cell.phase === 'LOADED') {
+      rt.bodies?.levelChanged?.(rt, cell);
+    }
     notify(rt, cell);
     return;
   }

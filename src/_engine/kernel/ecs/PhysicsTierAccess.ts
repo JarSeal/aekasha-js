@@ -37,10 +37,10 @@ export type PhysicsTierAccess = {
 let access: PhysicsTierAccess | null = null;
 
 /**
- * Sets the physics tiers' functions (`physicsTiers()`'s install).
+ * Sets the physics tiers' functions (`physicsTiers()`'s install; null: none, a test's reset).
  * @internal
  */
-export const setPhysicsTierAccess = (next: PhysicsTierAccess) => {
+export const setPhysicsTierAccess = (next: PhysicsTierAccess | null) => {
   access = next;
 };
 

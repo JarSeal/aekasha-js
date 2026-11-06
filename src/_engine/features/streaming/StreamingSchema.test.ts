@@ -25,4 +25,11 @@ describe('SceneStreamingSchema', () => {
     expect(isValid({ cellSize: 64, cellsize: 32 })).toBe(false);
     expect(isValid({ cellSize: 64, rings: { resident: 1, near: 2 } })).toBe(false);
   });
+
+  test("takes a NEARBY cell's physics tier of STATIC or DISABLED (p353 Phase 4 D7)", () => {
+    expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'STATIC' })).toBe(true);
+    expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'DISABLED' })).toBe(true);
+    expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'REMOVED' })).toBe(false);
+    expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'FULL' })).toBe(false);
+  });
 });

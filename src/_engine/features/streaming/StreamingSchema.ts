@@ -4,6 +4,7 @@ import {
   getStreamingSettingsProblem,
   isStreamingCellSize,
   STREAMING_MIN_CELL_SIZE,
+  STREAMING_NEARBY_PHYSICS_TIERS,
 } from './StreamingSettings';
 
 const RingSchema = z.number().int().min(0);
@@ -56,6 +57,14 @@ export const SceneStreamingSchema = z
       .min(0)
       .optional()
       .describe('Metres past a ring before a cell is demoted. Default cellSize / 4.'),
+    /** The physics tier of the dynamic bodies a `NEARBY` cell holds (needs `physicsTiers()`):
+     * `STATIC` (default) still collides, so a thrown object or an NPC can reach them; `DISABLED`
+     * keeps their velocities, but nothing collides with them. A `RESIDENT` cell's bodies are
+     * `FULL`, or their tier policy's. */
+    nearbyPhysicsTier: z
+      .enum(STREAMING_NEARBY_PHYSICS_TIERS)
+      .optional()
+      .describe("A NEARBY cell's dynamic bodies' physics tier: STATIC (default) or DISABLED."),
     /** Build time only (the gather's cell manifest): the mesh and light app ids and the asset ids
      * kept in the scene's base, loaded with the scene and never unloaded, instead of in the cell
      * their position is in (an asset: instead of with the cells that use it). Scene code gets only

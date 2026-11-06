@@ -6,6 +6,7 @@ import * as THREE from 'three/webgpu';
 import { countReleasedAssets, releaseCellOwnedAssets } from '../../kernel/assets/SceneAssetRelease';
 import { getMainCamera } from '../../kernel/camera/Camera';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../kernel/config/Config';
+import { isDeterminismProbeArmed } from '../../kernel/config/DeterminismProbe';
 import {
   type DebugModuleRef,
   loadDebugModuleAsync,
@@ -62,8 +63,6 @@ const primeBudgets: StreamingPrimeBudgets = {
 };
 /** Primes the cells streamed in during play (StreamingPriming.ts), its budgets read every frame */
 const primer = createStreamingPrimer(primeBudgets);
-/** The cells' bodies (StreamingBodies.ts): the ones that moved go to the cell they're in */
-const bodies = createStreamingBodies();
 
 /** The gathered scenes' settings, by scene id */
 const dataSettings = new Map<string, SceneStreamingSettings>();
@@ -358,7 +357,9 @@ export const registerStreamingDebugGUI = async () => {
 
 const streamingSystem = (world: ECSWorld) => {
   if (!runtime || isSceneLoading || world.id !== DEFAULT_ECS_WORLD_ID) return;
-  if (--framesToDecision <= 0) {
+  // An armed determinism probe holds the cells where the scene's load put them: a probe run
+  // streams nothing (its hash would depend on frame timing, p353 §6)
+  if (--framesToDecision <= 0 && !(IS_DEBUG_ENV && isDeterminismProbeArmed())) {
     framesToDecision = updateIntervalFrames;
     const at = readFocus(world);
     if (at) decideStreamingCells(runtime, at.x, at.z);
@@ -400,7 +401,8 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     createCellRelease(sceneId),
     primer
   );
-  rt.bodies = bodies;
+  // Its cells' bodies (StreamingBodies.ts): their tiers, and the hand-over of the ones that moved
+  rt.bodies = createStreamingBodies();
   if (manifest && dataModule) {
     const content = dataModule.createStreamingDataContent(sceneId, manifest);
     dataContent = content;

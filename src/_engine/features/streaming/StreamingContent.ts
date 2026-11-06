@@ -31,7 +31,9 @@ export type StreamingCellContext = {
    * asset load it starts there (`loadTextureAsync`, `importAssetAsync`) stays the cell's: what a
    * `load` registers after an `await` goes in `runOwned`, or it's the scene's and stays until the
    * scene is left. A cell's assets are released when it unloads, those another cell or the scene
-   * holds too and those still in use excepted. */
+   * holds too and those still in use excepted. The `DYNAMIC` bodies `fn` creates
+   * (`createPhysicsEntity`, with `physicsTiers()`) start in the cell's physics tier, as the ones a
+   * `load` creates before its first `await` do. */
   runOwned<T>(fn: () => T): T;
 };
 

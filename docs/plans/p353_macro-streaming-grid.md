@@ -987,6 +987,45 @@ As built (section 2):
   unloading in one decision; non-bodies stay; the scene exit) and `StreamingBodies.test.ts` (the
   component keys, whatever the tier).
 
+As built (section 3):
+
+- **`StreamingBodies`** grows optional hooks the machine calls (a machine test's stand-in has
+  only `locateMover`): `getCreationScope`, `unitLoaded`, `levelChanged`, `adopted`, `forgetCell`,
+  `count` (for section 4's tab). `createStreamingBodies()` is now per scene's machine (`Streaming.ts`
+  makes one in `created`): a map body → its cell (a unit's dynamic bodies when it finishes, a
+  handed-over body's new cell; a cell's are forgotten when its unload starts, after the
+  hand-over) and the set of its bodies that want the policy (a member when its unit finished, or
+  held out by the scope).
+- **The tiers:** one batch per event through `PhysicsTierAccess.requestTiers`: a unit finishing
+  (its ids), a cell with content getting another loaded level (`setCellLevel`, every body the cell
+  holds) and a hand-over (the body). A body's want is its cell's: `RESIDENT` `FULL`, or `POLICY` for
+  a policy body; otherwise the scene's `nearbyPhysicsTier`. Before the batch, the policy bodies of
+  the cell go out of the policy (not `RESIDENT`) or back in (`RESIDENT`) through
+  `setPolicyMember`. A body whose tier already matches costs a no-op request. Without
+  `physicsTiers()`: no scope, no request, one warning when a cell that isn't `RESIDENT` holds a
+  body.
+- **The scope:** the machine runs each unit's `load` and `ctx.runOwned` in both scopes
+  (`runInCellScopes`: the asset owner key, then `runInPhysicsCreationScope` with
+  `getCreationScope`): `RESIDENT` `{ tier: 'FULL', holdPolicyMember: null }`, otherwise the scene's
+  `nearbyPhysicsTier` with a holder that records the body (and puts it in the policy at once when
+  the cell became `RESIDENT` meanwhile). A scope object per unit run.
+- **`nearbyPhysicsTier`** (D7): `STREAMING_NEARBY_PHYSICS_TIERS` (`STATIC`, `DISABLED`) in
+  `StreamingSettings.ts`, checked by `getStreamingSettingsProblem`, resolved (`STATIC`), the
+  schema's enum.
+- **The probe:** `streamingSystem` skips its decisions while `IS_DEBUG_ENV &&
+  isDeterminismProbeArmed()` (the pump goes on, so loads in flight finish); a scene load still
+  loads around its focus in `created`, so a probe run sees the same cells on every load.
+- **Limit:** a unit has to return its entities once their `createPhysicsEntity` calls have
+  resolved (an entity without its body yet isn't a body to the cell); the scope covers the creates
+  either way.
+- **Tests:** `StreamingBodies.test.ts`' tier block (the machine on the real bodies, a recording
+  tier access): the scopes' tiers and a request per cell, following the level both ways; the
+  `DISABLED` setting; a policy body held out by its `NEARBY` scope, in on `RESIDENT`, a `RESIDENT`
+  member out when its cell goes `NEARBY`; a handed-over body taking its new cell's tier; no
+  `physicsTiers()`. `StreamingSchema.test.ts`: the setting.
+- **Section 4 to check:** the streaming group's first download against its 6 KiB budget (`yarn
+  sbp`: `StreamingBodies.ts` loads with the feature).
+
 ### Phase 5 — Far representations
 
 `FAR` content (§3.3) with p348 and p351.
