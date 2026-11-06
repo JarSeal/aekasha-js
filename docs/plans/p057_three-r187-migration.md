@@ -456,6 +456,16 @@ Results so far:
   #34705), so the report is r187's. `dev`'s `RenderList.clear()` and `RenderContexts` are r187's.
   A trap for the method: the loop in the module's top level kept its last visit (the suspended
   async frame), which read as a retainer in three; the page runs the visits in a function.
+- Step 2 done (2026-11-06): `docs/issues/three-cube-render-target-texture-link.md`, `not filed
+  yet`. Its page (r187.0, the same machine): a PMREM target allocated as `_allocateTarget` does,
+  the scene's `environmentNode` for 3 frames, then one `fromScene` bake into it: the backend
+  creates the texture at the first sample, the bake destroys and creates it (`updateRenderTarget`
+  sets `textureNeedsUpdate` on a target's first setup), and all 10 frames after fail with
+  "Destroyed texture … used in a submit". `texture.renderTarget = target` first (the suggested
+  fix): one create, no error; the clear (our workaround): the same. As a material's `envNode` the
+  texture is destroyed and created the same way but its bind group is refreshed: no error (why
+  the scene environment's isn't is untraced; the report says so). `dev`'s constructor and setter
+  are r187's. r186.1 isn't comparable (CubeUV PMREMs).
 
 1. An issue file, `docs/issues/three-render-list-keeps-lights.md`, in the form of
    `three-bind-group-cache-light-leak.md` (the report's text, a standalone page as the repro): an
