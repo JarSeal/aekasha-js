@@ -81,7 +81,11 @@ const releaseOwnedAssets = (isReleased: OwnerMatcher): ReleasedAssets => {
   return released;
 };
 
-const countReleased = (released: ReleasedAssets) =>
+/**
+ * How many assets a release freed.
+ * @internal
+ */
+export const countReleasedAssets = (released: ReleasedAssets) =>
   released.imports.length +
   released.materials.length +
   released.geometries.length +
@@ -106,7 +110,7 @@ const countReleased = (released: ReleasedAssets) =>
 export const releaseSceneOwnedAssets = (sceneId: string) => {
   const released = releaseOwnedAssets((owner) => isSceneOwnerKey(owner, sceneId));
   if (IS_DEBUG_ENV) {
-    const count = countReleased(released);
+    const count = countReleasedAssets(released);
     if (count) llog(`[Assets] Released ${count} assets of scene "${sceneId}":`, released);
   }
   return released;

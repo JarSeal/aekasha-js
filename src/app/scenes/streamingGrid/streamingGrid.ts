@@ -7,7 +7,6 @@ import {
   createMeshEntity,
   createSceneAppLooper,
   createSeededRandom,
-  deleteGeometry,
   getECSWorld,
   getEntityIdByAppId,
   lwarn,
@@ -21,10 +20,10 @@ import {
   type StreamingCellContext,
 } from 'aekasha/streaming';
 
-// World streaming's test scene (docs/plans/p353_macro-streaming-grid.md Phase 1): 16 × 16 cells of
-// 64 m (the scene JSON's `streaming`), each three units of code content: a terrain block (its own
-// geometry, made on load and deleted on unload) and two sets of scattered props (shared geometry
-// and materials, so a cell compiles no new shader). The heights come from one world-space noise, so
+// World streaming's test scene (docs/plans/p353_macro-streaming-grid.md Phases 1-2): 16 × 16 cells
+// of 64 m (the scene JSON's `streaming`), each three units of code content: a terrain block (its own
+// geometry, made on load, the cell's asset, so it goes when the cell unloads) and two sets of
+// scattered props (shared geometry and materials, so a cell compiles no new shader). The heights come from one world-space noise, so
 // the blocks meet at their edges. The main camera (the streaming focus) flies across the grid, or
 // hovers on a cell boundary, or stays still: the scene's debug tab switches it.
 
@@ -103,7 +102,7 @@ const createSharedAssets = () => {
 
 const getTerrainGeometryId = (cx: number, cz: number) => `streamingGridTerrain_${cx}_${cz}`;
 
-/** A cell's terrain block: its own geometry, deleted with it */
+/** A cell's terrain block: its own geometry, registered in the cell's load, so the cell owns it */
 const loadTerrain =
   (getHeight: (x: number, z: number) => number) => (ctx: StreamingCellContext) => {
     const { cx, cz, cellSize } = ctx;
@@ -128,11 +127,6 @@ const loadTerrain =
       }),
     ];
   };
-
-const unloadTerrain = (entityIds: readonly number[], ctx: StreamingCellContext) => {
-  for (const id of entityIds) ctx.world.deleteEntity(id);
-  deleteGeometry(getTerrainGeometryId(ctx.cx, ctx.cz));
-};
 
 /** A set of props scattered over a cell, on the world's heights */
 const loadProps =
@@ -164,12 +158,7 @@ const registerCells = (getHeight: (x: number, z: number) => number) => {
     for (let cx = -GRID_HALF; cx < GRID_HALF; cx++) {
       const cellKey = getStreamingCellKey(cx, cz);
       const sceneId = STREAMING_GRID_SCENE_ID;
-      registerStreamingCellContent({
-        sceneId,
-        cellKey,
-        load: loadTerrain(getHeight),
-        unload: unloadTerrain,
-      });
+      registerStreamingCellContent({ sceneId, cellKey, load: loadTerrain(getHeight) });
       registerStreamingCellContent({
         sceneId,
         cellKey,

@@ -6,7 +6,7 @@ import { createRootScene } from '../scene/Scene';
 import { saveMaterial } from '../assets/Material';
 import { runCompileAsync } from '../render/CompileQueue';
 import { setRenderPipeline } from '../render/RenderHooks';
-import { createMeshEntity, preWarmMesh } from './Mesh';
+import { createMeshEntity, disposeMesh, preWarmMesh } from './Mesh';
 
 // Resolves once every pre-warm queued so far has ended
 const flushCompilesAsync = () => runCompileAsync(async () => undefined);
@@ -42,6 +42,19 @@ describe('createMeshEntity', () => {
       appId: 'meshTestMesh',
     });
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+    expect(mesh.material).toBe(material);
+    world.deleteEntity(entityId);
+  });
+
+  test('a deleted mesh entity disposes its mesh, so three frees its render objects', () => {
+    const material = saveMaterial(new THREE.MeshBasicNodeMaterial(), 'meshTestShared');
+    const entityId = createMeshEntity({ geo: new THREE.BoxGeometry(), mat: 'meshTestShared' });
+    const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+    const onDispose = vi.fn();
+    mesh.addEventListener('dispose', onDispose);
+    disposeMesh(entityId, world);
+    expect(onDispose).toHaveBeenCalledOnce();
+    expect(mesh.parent).toBeNull();
     expect(mesh.material).toBe(material);
     world.deleteEntity(entityId);
   });

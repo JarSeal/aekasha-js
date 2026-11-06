@@ -507,6 +507,57 @@ set the per-frame count from it.
 
 **Exit:** p345's snapshot after flying out and back is within noise of the snapshot before.
 
+Sections: 1. the kernel's owner sets, 2. streaming's per-cell ownership and release (with the
+exit check), 3. the WebGL2 first-draw measurement, 4. priming. As built so far (sections 1-2):
+
+- **Owner sets** (`kernel/assets/AssetOwners.ts`; the notes: `src/_engine/kernel/scene/CLAUDE.md`'s
+  Asset ownership). One owner key (a string) or several (an array, the latest last) per asset; a
+  cache hit adds the current owner instead of replacing it, which frees exactly what the single
+  owner did for scenes. The current owner is the owner scope's (`runInAssetOwnerScope`,
+  synchronous) or the scene's. Async loaders capture the scope at their call and register in it
+  after their awaits: `loadTextureAsync` (arrays, atlas slots), `buildTextureArray` (a shared
+  build's second caller gets the array too) and `importAssetAsync`. Without a scope nothing
+  changed: a late registration takes the scene owner of its moment.
+- **Release** (`SceneAssetRelease.ts`): `releaseAssetOwners` drops the released keys from an
+  asset others hold too; one the released keys alone hold is freed when unused, else keeps them
+  for their next release. `releaseSceneOwnedAssets` takes the scene's key and its cells'
+  (`isSceneOwnerKey`), `releaseCellOwnedAssets(sceneId, cellKey)` one cell's (no log). The import
+  registry's release takes the same matcher.
+- **Cells** (`StreamingCells.ts`): `cell.ownerKey`; a unit's `load` runs in it up to its first
+  `await`, and the public `ctx.runOwned(fn)` runs code after one in it (an engine minor). A
+  finished unload releases the cell (`releaseCellAssets`, injected by `Streaming.ts`, so the
+  machine stays engine-free in its tests), unless a cancelled load's async units are still out
+  (`lateUnits`, the last to settle releases) or another cell object tracks the key. The scene's
+  exit releases nothing (SceneLoader's scene release takes the cell keys); a reload of the same
+  scene, which SceneLoader doesn't release, has `created` release the dropped cells it didn't load
+  again. A release scans every registry: 3-5 µs per call at `streamingGrid`'s 17 assets, linear in
+  the registered assets, so a world with thousands may want an owner → assets index (measure
+  first).
+- **Found: `disposeMesh` leaked three's render objects.** A deleted mesh entity was detached and
+  its refs released, but its mesh never fired `dispose`, so three (r187) kept its render objects
+  (uniform buffers, bindings) while its geometry and material lived, which shared ones always do:
+  +2,380 uniform buffers (571 KB) per flight out and back across `streamingGrid`, growing. Fixed in
+  `kernel/mesh/Mesh.ts` (`mesh.dispose()`), an engine-wide fix (any app deleting meshes on shared
+  assets leaked).
+- **Ref counts already free most of a code unit's assets** (a mesh's geometry and material on
+  their last ref, and the material's registered textures with it), so `streamingGrid` frees
+  nothing through the cell release (`assetsReleased` 0): the release is for what no entity holds,
+  tested in `StreamingCells.test.ts` with the real registries (a texture a cancelled async unit
+  registered before bailing out). `streamingGrid`'s terrain unit lost its own `unload`.
+- **Debug.** The tab counts cell releases and assets freed, and shows the cells' GPU memory (a
+  row's subtitle, the total and the largest); the cell window its GPU memory and the assets its
+  owner key is on (`_dbg__StreamingMemory.ts`, the GPU memory tab's `collectGPUAssets` and its
+  `getMemoryOwner`: an asset several cells share counts under the scene).
+
+**Measured** (2026-11-06, Apple M2, Chrome 156 headless, `streamingGrid` on the dev server with
+`?isDebug=true&aekTest=true`; the flight frozen, the focus override moved 2 m a frame from
+x = -455.5 to +455.5 and back, three times, 180 frames at home after each; p345's snapshot at home
+before the first): the registries (12 geometries, 4 materials, 1 texture), the entities (175) and
+`renderer.info.memory` are the same after each of the three trips (510 unloads), on WebGPU and
+WebGL2, and the snapshot diff names nothing left behind. Against the snapshot: +38 KB (two
+terrain blocks and 75 uniform buffers of the start's cells that hadn't been drawn when it was
+taken, the same after every trip). Before the `disposeMesh` fix: +571 KB per trip.
+
 ### Phase 3 — Build-time manifest
 
 Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1–3.2).

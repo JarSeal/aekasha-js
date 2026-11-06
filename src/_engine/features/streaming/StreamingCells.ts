@@ -2,8 +2,11 @@
 // UNLOADING → UNLOADED. `decideStreamingCells` sets each cell's level from the focus (every N
 // frames), `pumpStreamingCells` does the loading and unloading under the budgets (every frame),
 // `loadStreamingCellsNowAsync` loads the wanted cells at once (inside a scene load) and
-// `dropStreamingCells` takes everything down (the scene's exit). No engine state: Streaming.ts
-// holds the runtime and calls these, and the tests drive them with their own clock.
+// `dropStreamingCells` takes everything down (the scene's exit). A cell's content units run in its
+// asset owner scope (`sceneId#cellKey`, kernel/assets/AssetOwners.ts), and once its unload is done
+// the runtime's `releaseCellAssets` frees what the cell alone held (p353 §4.2). No engine state:
+// Streaming.ts holds the runtime and calls these, and the tests drive them with their own clock.
+import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/AssetOwners';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
 import { lerror } from '../../utils/Logger';
@@ -72,6 +75,10 @@ export type StreamingCell = {
   lastLoadMs: number;
   /** The context its current load's units get. */
   ctx: StreamingCellContext | null;
+  /** Its asset owner key, `sceneId#cellKey`: what its units register belongs to it. */
+  ownerKey: string;
+  /** Async units of cancelled loads not settled yet: its assets are released once they have. */
+  lateUnits: number;
 };
 
 /**
@@ -91,6 +98,10 @@ export type StreamingStats = {
   unitErrors: number;
   /** Async results that came back after their load was cancelled (unloaded at once). */
   lateResults: number;
+  /** Cell asset releases run (one per finished unload, once its late units settled). */
+  assetReleases: number;
+  /** Assets those releases freed. */
+  assetsReleased: number;
 };
 
 /**
@@ -133,6 +144,11 @@ export type StreamingRuntime = {
   focusCz: number;
   /** The counters. */
   stats: StreamingStats;
+  /** Frees what a cell alone holds and nothing uses (`releaseCellOwnedAssets`), returning how
+   * many assets went. */
+  releaseCellAssets: (cellKey: number) => number;
+  /** Set by {@link dropStreamingCells}: the scene's release takes its cells' assets from there. */
+  isDropped: boolean;
 };
 
 /**
@@ -143,12 +159,15 @@ export const createStreamingRuntime = (
   sceneId: string,
   settings: ResolvedStreamingSettings,
   world: ECSWorld,
-  now: () => number
+  now: () => number,
+  releaseCellAssets: (cellKey: number) => number
 ): StreamingRuntime => ({
   sceneId,
   settings,
   world,
   now,
+  releaseCellAssets,
+  isDropped: false,
   cells: new Map(),
   order: [],
   focusX: NaN,
@@ -162,6 +181,8 @@ export const createStreamingRuntime = (
     unloadsFinished: 0,
     unitErrors: 0,
     lateResults: 0,
+    assetReleases: 0,
+    assetsReleased: 0,
   },
 });
 
@@ -197,7 +218,7 @@ export const getStreamingCellEntityIds = (cell: StreamingCell): number[] => {
   return ids;
 };
 
-const createCell = (key: number, cx: number, cz: number): StreamingCell => ({
+const createCell = (rt: StreamingRuntime, key: number, cx: number, cz: number): StreamingCell => ({
   key,
   cx,
   cz,
@@ -212,6 +233,8 @@ const createCell = (key: number, cx: number, cz: number): StreamingCell => ({
   loadStartedAt: 0,
   lastLoadMs: -1,
   ctx: null,
+  ownerKey: getCellOwnerKey(rt.sceneId, key),
+  lateUnits: 0,
 });
 
 // --- Unloading -------------------------------------------------------------------------------
@@ -241,12 +264,24 @@ const unloadUnit = (rt: StreamingRuntime, cell: StreamingCell, unit: CellUnit) =
   if (ids && cell.ctx) unloadUnitContent(rt, unit.content, ids, cell.ctx);
 };
 
+/** Frees the cell's assets once it's unloaded and no late unit can still register any: not for a
+ * cell another object has replaced under its key (a load of it may be running), nor after the
+ * scene's exit dropped the cells. */
+const releaseCellAssetsIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
+  if (rt.isDropped || cell.phase !== 'UNLOADED' || cell.lateUnits > 0) return;
+  const tracked = rt.cells.get(cell.key);
+  if (tracked && tracked !== cell) return;
+  rt.stats.assetReleases++;
+  rt.stats.assetsReleased += rt.releaseCellAssets(cell.key);
+};
+
 /** Starts taking a cell's content down; a load in flight is cancelled (its units not started
  * are skipped, a late one unloads when it comes back). */
 const beginUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
   if (cell.phase === 'LOADING') {
     rt.stats.loadsCancelled++;
     cell.generation++;
+    cell.lateUnits += cell.inFlight;
     cell.inFlight = 0;
   }
   cell.phase = 'UNLOADING';
@@ -262,6 +297,7 @@ const finishUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.units = [];
   cell.nextUnit = 0;
   if (!isLoadedLevel(cell.level)) rt.cells.delete(cell.key);
+  releaseCellAssetsIfDone(rt, cell);
   notify(rt, cell);
 };
 
@@ -291,6 +327,7 @@ const createCellContext = (
   cellSize: rt.settings.cellSize,
   world: rt.world,
   isCurrent: () => cell.generation === generation,
+  runOwned: (fn) => runInAssetOwnerScope(cell.ownerKey, fn),
 });
 
 const beginLoad = (rt: StreamingRuntime, cell: StreamingCell) => {
@@ -316,6 +353,12 @@ const failUnit = (rt: StreamingRuntime, cell: StreamingCell, unit: CellUnit, err
   lerror(`Streaming: a content load of cell ${cell.cx},${cell.cz} failed.`, err);
 };
 
+/** A cancelled load's async unit has settled: the cell's assets go once the last one has. */
+const settleLateUnit = (rt: StreamingRuntime, cell: StreamingCell) => {
+  cell.lateUnits--;
+  releaseCellAssetsIfDone(rt, cell);
+};
+
 const notIdsError = (value: unknown) =>
   new Error(`its load returned ${typeof value}, not the array of entity ids it created`);
 
@@ -330,7 +373,8 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
   const generation = cell.generation;
   let result: readonly number[] | Promise<readonly number[]>;
   try {
-    result = unit.content.load(ctx);
+    // What it registers (or gets from the cache) before its first await is the cell's
+    result = runInAssetOwnerScope(cell.ownerKey, () => unit.content.load(ctx));
   } catch (err) {
     failUnit(rt, cell, unit, err);
     return null;
@@ -354,6 +398,7 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
         unit.state = UNIT_UNLOADED;
         rt.stats.lateResults++;
         if (isIds) unloadUnitContent(rt, unit.content, ids, ctx);
+        settleLateUnit(rt, cell);
         return;
       }
       cell.inFlight--;
@@ -366,9 +411,13 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
       finishLoadIfDone(rt, cell);
     },
     (err: unknown) => {
-      if (cell.generation === generation) cell.inFlight--;
       failUnit(rt, cell, unit, err);
-      if (cell.generation === generation) finishLoadIfDone(rt, cell);
+      if (cell.generation !== generation) {
+        settleLateUnit(rt, cell);
+        return;
+      }
+      cell.inFlight--;
+      finishLoadIfDone(rt, cell);
     }
   );
 };
@@ -424,7 +473,7 @@ export const decideStreamingCells = (rt: StreamingRuntime, x: number, z: number)
       const edgeDistance = getCellEdgeDistance(cx, cz, cellSize, x, z);
       const level = decideStreamingLevel(StreamingLevel.UNLOADED, ring, edgeDistance, settings);
       if (!isLoadedLevel(level)) continue;
-      const cell = createCell(key, cx, cz);
+      const cell = createCell(rt, key, cx, cz);
       cell.level = level;
       cell.ring = ring;
       cell.edgeDistance = edgeDistance;
@@ -508,10 +557,13 @@ export const loadStreamingCellsNowAsync = async (rt: StreamingRuntime) => {
 
 /**
  * Takes every cell's content down at once and forgets every cell: the scene's exit. A load in
- * flight is cancelled (what it returns later is unloaded when it comes back).
+ * flight is cancelled (what it returns later is unloaded when it comes back). The cells' assets
+ * aren't released here: the scene's release takes its cells' owner keys, and Streaming.ts
+ * releases the dropped cells when the same scene loads again.
  * @internal
  */
 export const dropStreamingCells = (rt: StreamingRuntime) => {
+  rt.isDropped = true;
   for (const cell of rt.cells.values()) {
     cell.generation++;
     for (let i = 0; i < cell.units.length; i++) {

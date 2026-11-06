@@ -26,6 +26,13 @@ export type StreamingCellContext = {
    * an async `load` checks it after every `await` and stops creating. What it returns anyway is
    * unloaded at once. */
   isCurrent(): boolean;
+  /** Runs `fn` with this cell as the owner of the assets it registers or gets from the cache, and
+   * returns what it returns. A unit's `load` already runs so up to its first `await`, and an
+   * asset load it starts there (`loadTextureAsync`, `importAssetAsync`) stays the cell's: what a
+   * `load` registers after an `await` goes in `runOwned`, or it's the scene's and stays until the
+   * scene is left. A cell's assets are released when it unloads, those another cell or the scene
+   * holds too and those still in use excepted. */
+  runOwned<T>(fn: () => T): T;
 };
 
 /**

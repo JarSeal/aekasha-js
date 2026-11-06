@@ -1,9 +1,10 @@
 // The Streaming tab's cell window (docs/plans/p353_macro-streaming-grid.md §7): one cell's state,
-// ring, load time, content units, entities and its last transitions, and a button that teleports
-// the focus to it. A window kind keyed by the cell; cells don't outlive a scene, so the windows are
+// ring, load time, content units, entities, GPU memory and assets, its last transitions, and a
+// button that teleports the focus to it. A window kind keyed by the cell; cells don't outlive a scene, so the windows are
 // removed on a scene change and not saved. The transitions are recorded here, from the machine's
 // transition listener, for every tracked cell of the current scene.
 import { createDebugWindowGrid, getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
+import { formatBytes } from '../../../kernel/assets/debug/_dbg__AssetStats';
 import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
 import {
   getDraggableWindowsOfKind,
@@ -19,6 +20,7 @@ import {
   setStreamingTransitionListener,
 } from '../StreamingCells';
 import { StreamingLevel } from '../StreamingRings';
+import { getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
 const CELL_WIN_KIND = 'streamingCellWindow';
 const REFRESH_MS = 250;
@@ -72,10 +74,20 @@ const formatEntities = (cell: StreamingCell | undefined) => {
     : shown;
 };
 
+/** A cell's owned asset ids, one kind a line (empty kinds left out). */
+const formatAssets = (ownerKey: string) => {
+  const ids = getOwnedAssetIds(ownerKey);
+  return Object.entries(ids)
+    .filter(([, list]) => list.length)
+    .map(([kind, list]) => `${kind}: ${list.join(', ')}`)
+    .join('\n');
+};
+
 const createCellWindowContent = (data?: Record<string, unknown>) => {
   const cellKey = Number(data?.cellKey);
   const cx = Number(data?.cx);
   const cz = Number(data?.cz);
+  const ownerKey = String(data?.ownerKey);
   const live = (label: string, get: () => string): PropertyGridItem => ({
     label,
     get,
@@ -108,6 +120,18 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       rows: 3,
       interval: REFRESH_MS,
     },
+    live('GPU memory', () => formatBytes(getOwnerGPUBytes().get(ownerKey) ?? 0)),
+    {
+      label: 'Its assets',
+      get: () => formatAssets(ownerKey),
+      readonly: true,
+      multiline: true,
+      rows: 3,
+      interval: REFRESH_MS,
+    },
+    getNoteItem(
+      'Its assets: those its owner key is on (what its content registered, or got from the cache). Those it holds alone and nothing uses are freed when it unloads.'
+    ),
     {
       label: 'Transitions',
       get: () => (history.get(cellKey) ?? []).join('\n'),
@@ -137,10 +161,10 @@ export const toggleStreamingCellWindow = (cell: StreamingCell) => {
     kind: CELL_WIN_KIND,
     title: `Cell ${cell.cx}, ${cell.cz}`,
     icon: 'streaming',
-    data: { cellKey: cell.key, cx: cell.cx, cz: cell.cz },
+    data: { cellKey: cell.key, cx: cell.cx, cz: cell.cz, ownerKey: cell.ownerKey },
     isDebugWindow: true,
     removeOnSceneChange: true,
-    size: { w: 360, h: 460 },
+    size: { w: 360, h: 580 },
   });
 };
 

@@ -1,4 +1,12 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import * as THREE from 'three/webgpu';
+import {
+  getAssetOwnerScope,
+  getAssetOwners,
+  getCellOwnerKey,
+} from '../../kernel/assets/AssetOwners';
+import { countReleasedAssets, releaseCellOwnedAssets } from '../../kernel/assets/SceneAssetRelease';
+import { getTexture, saveTexture } from '../../kernel/assets/Texture';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { packCellKey } from '../../utils/CellKey';
 import * as Logger from '../../utils/Logger';
@@ -31,18 +39,23 @@ const setup = (budgets: Partial<StreamingBudgets> = {}) => {
   sceneIds.push(id);
   const world = new ECSWorld({ id, maxEntities: 10_000, applyGlobalPlugins: false });
   const clock = { ms: 0 };
+  const releases: number[] = [];
   const rt = createStreamingRuntime(
     id,
     resolveStreamingSettings({ cellSize: 64 }),
     world,
-    () => clock.ms
+    () => clock.ms,
+    (cellKey) => {
+      releases.push(cellKey);
+      return 0;
+    }
   );
   const fullBudgets: StreamingBudgets = {
     maxConcurrentLoads: 100,
     maxCreateMsPerFrame: 1000,
     ...budgets,
   };
-  return { rt, world, clock, pump: () => pumpStreamingCells(rt, fullBudgets) };
+  return { rt, world, clock, releases, pump: () => pumpStreamingCells(rt, fullBudgets) };
 };
 
 type Unit = Pick<StreamingCellContent, 'load' | 'unload'>;
@@ -286,5 +299,131 @@ describe('loadStreamingCellsNowAsync and dropStreamingCells', () => {
     dropStreamingCells(rt);
     expect(rt.cells.size).toBe(0);
     expect(world.getEntityCount()).toBe(0);
+  });
+});
+
+describe('cell asset ownership', () => {
+  const KEY = packCellKey(0, 0, 0);
+  /** Two ticks: a resolved unit's handler has run */
+  const settle = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  test("a unit's load runs in its cell's owner scope up to its first await, runOwned after", async () => {
+    const { rt, world, pump } = setup();
+    const scopes: unknown[] = [];
+    add(rt, KEY, {
+      load: async (ctx) => {
+        scopes.push(getAssetOwnerScope());
+        await Promise.resolve();
+        scopes.push(getAssetOwnerScope());
+        scopes.push(ctx.runOwned(getAssetOwnerScope));
+        return [world.createEntity()];
+      },
+    });
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    await settle();
+    const cellOwner = getCellOwnerKey(rt.sceneId, KEY);
+    expect(scopes).toEqual([cellOwner, undefined, cellOwner]);
+    expect(getAssetOwnerScope()).toBeUndefined();
+  });
+
+  test('releases a cell once per finished unload, not when the scene exit drops it', () => {
+    const { rt, world, clock, releases, pump } = setup();
+    fillCells(rt, 3, () => entitiesContent(world, clock));
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    expect(releases).toHaveLength(25);
+    expect(new Set(releases).size).toBe(25);
+    expect(rt.stats.assetReleases).toBe(25);
+
+    // The cells around (1000, 1000) unload too
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    expect(releases).toHaveLength(50);
+    dropStreamingCells(rt);
+    expect(releases).toHaveLength(50);
+  });
+
+  test("a cancelled load's cell is released once its late units have settled", async () => {
+    const { rt, world, releases, pump } = setup();
+    const pending: { resolve: (ids: number[]) => void; reject: (err: Error) => void }[] = [];
+    for (let i = 0; i < 2; i++) {
+      add(rt, KEY, {
+        load: () => new Promise<number[]>((resolve, reject) => pending.push({ resolve, reject })),
+      });
+    }
+    vi.spyOn(Logger, 'lerror').mockImplementation(() => {});
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    expect(cellAt(rt, 0, 0)).toBeUndefined();
+    expect(releases).not.toContain(KEY);
+    pending[0].resolve([world.createEntity()]);
+    await settle();
+    expect(releases).not.toContain(KEY);
+    pending[1].reject(new Error('late failure'));
+    await settle();
+    expect(releases.filter((key) => key === KEY)).toEqual([KEY]);
+    expect(world.getEntityCount()).toBe(0);
+  });
+
+  test('a late unit of a cell loading again leaves its release to its next unload', async () => {
+    const { rt, world, clock, releases, pump } = setup();
+    let resolveFirst: (ids: number[]) => void = () => {};
+    let calls = 0;
+    add(rt, KEY, {
+      load: () => {
+        calls++;
+        if (calls > 1) return [world.createEntity()];
+        return new Promise<number[]>((resolve) => (resolveFirst = resolve));
+      },
+    });
+    add(rt, KEY, entitiesContent(world, clock));
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+    resolveFirst([world.createEntity()]);
+    await settle();
+    expect(releases).not.toContain(KEY);
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    expect(releases.filter((key) => key === KEY)).toEqual([KEY]);
+  });
+
+  test('frees what a cancelled async unit registered for its cell before bailing out', async () => {
+    const { rt, world, pump } = setup();
+    let resolveFile: () => void = () => {};
+    let texture: THREE.Texture | null = null;
+    rt.releaseCellAssets = (cellKey) =>
+      countReleasedAssets(releaseCellOwnedAssets(rt.sceneId, cellKey));
+    add(rt, KEY, {
+      load: async (ctx) => {
+        await new Promise<void>((resolve) => (resolveFile = resolve));
+        texture = ctx.runOwned(() => saveTexture(new THREE.Texture(), `${rt.sceneId}-detail`));
+        if (!ctx.isCurrent()) return [];
+        return [world.createEntity()];
+      },
+    });
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    resolveFile();
+    await settle();
+    await settle();
+    expect(texture).not.toBeNull();
+    expect(getAssetOwners(texture!)).toEqual([getCellOwnerKey(rt.sceneId, KEY)]);
+    expect(getTexture(`${rt.sceneId}-detail`)).toBeUndefined();
+    expect(rt.stats.assetsReleased).toBe(1);
   });
 });

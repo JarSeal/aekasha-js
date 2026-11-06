@@ -3,6 +3,7 @@
 // scene hooks that load the cells around the focus inside a scene load and drop them on its exit.
 // The streaming() feature (StreamingFeature.ts) installs it.
 import * as THREE from 'three/webgpu';
+import { countReleasedAssets, releaseCellOwnedAssets } from '../../kernel/assets/SceneAssetRelease';
 import { getMainCamera } from '../../kernel/camera/Camera';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../kernel/config/Config';
 import {
@@ -60,10 +61,29 @@ let focus: StreamingFocus | null = null;
 /** The debug tools' focus (frozen, teleported, `?streamingFocus`): over `focus` while set */
 let focusOverride: { x: number; z: number } | null = null;
 let runtime: StreamingRuntime | null = null;
+/** The cells the last exit dropped: released after a load of the same scene (SceneLoader releases
+ * nothing then), once the cells it loads again have claimed what they share */
+let droppedCells: { sceneId: string; keys: number[] } | null = null;
 let isSceneLoading = false;
 let framesToDecision = 0;
 
 const now = () => performance.now();
+
+/** A runtime's release of one of its cells' assets */
+const createCellRelease = (sceneId: string) => (cellKey: number) =>
+  countReleasedAssets(releaseCellOwnedAssets(sceneId, cellKey));
+
+/** After a load of the scene the last exit dropped cells of: releases the dropped cells it didn't
+ * load again (a cell loaded again keeps its owner key, for its own next unload). Another scene's
+ * load has SceneLoader release them with their scene. */
+const releaseDroppedCells = (sceneId: string) => {
+  const dropped = droppedCells;
+  droppedCells = null;
+  if (dropped?.sceneId !== sceneId) return;
+  for (const key of dropped.keys) {
+    if (!runtime?.cells.has(key)) releaseCellOwnedAssets(sceneId, key);
+  }
+};
 const _focus = new THREE.Vector3();
 
 const assertInstalled = (fn: string) => {
@@ -306,6 +326,27 @@ const streamingSystem = (world: ECSWorld) => {
   pumpStreamingCells(runtime, budgets);
 };
 
+/** The `created` hook's load: the scene's machine, and its cells around the focus at once. */
+const loadSceneCellsAsync = async (sceneId: string) => {
+  const settings = getSceneSettings(sceneId);
+  if (!settings) return;
+  const problem = getStreamingSettingsProblem(settings);
+  if (problem) throw new Error(`The scene '${sceneId}' can't stream: ${problem}`);
+  const world = getECSWorld();
+  const rt = createStreamingRuntime(
+    sceneId,
+    resolveStreamingSettings(settings),
+    world,
+    now,
+    createCellRelease(sceneId)
+  );
+  runtime = rt;
+  const at = readFocus(world);
+  if (!at) return;
+  decideStreamingCells(rt, at.x, at.z);
+  await loadStreamingCellsNowAsync(rt);
+};
+
 /**
  * Streaming's part of a scene load: the previous scene's cells go first on the exit (reverse
  * install order: before physics' entities), and the next scene's cells around the focus load in
@@ -320,23 +361,17 @@ export const streamingSceneHooks: SceneHooks = {
     isSceneLoading = true;
   },
   exit: (prevSceneId) => {
-    if (runtime) dropStreamingCells(runtime);
+    if (runtime) {
+      droppedCells = { sceneId: runtime.sceneId, keys: [...runtime.cells.keys()] };
+      dropStreamingCells(runtime);
+    }
     runtime = null;
     // Its code registers its content again on its next load
     if (prevSceneId !== undefined) clearSceneStreamingContent(prevSceneId);
   },
   created: async (sceneId) => {
-    const settings = getSceneSettings(sceneId);
-    if (!settings) return;
-    const problem = getStreamingSettingsProblem(settings);
-    if (problem) throw new Error(`The scene '${sceneId}' can't stream: ${problem}`);
-    const world = getECSWorld();
-    const rt = createStreamingRuntime(sceneId, resolveStreamingSettings(settings), world, now);
-    runtime = rt;
-    const at = readFocus(world);
-    if (!at) return;
-    decideStreamingCells(rt, at.x, at.z);
-    await loadStreamingCellsNowAsync(rt);
+    await loadSceneCellsAsync(sceneId);
+    releaseDroppedCells(sceneId);
   },
   loadSettled: () => {
     isSceneLoading = false;

@@ -6,6 +6,7 @@ import {
   updateDebuggerTab,
 } from '../../../debug/DebuggerGUI';
 import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
+import { formatBytes } from '../../../kernel/assets/debug/_dbg__AssetStats';
 import {
   getStreamingBudgets,
   getStreamingFocus,
@@ -28,6 +29,7 @@ import {
   setStreamingOverlayEnabled,
   setStreamingOverlayHeight,
 } from './_dbg__StreamingOverlay';
+import { getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
 // The Streaming tab (docs/plans/p353_macro-streaming-grid.md §7): the current scene's settings,
 // the focus and its cell, the cells per state, the machine's counters, the focus tools (freeze,
@@ -43,7 +45,10 @@ const MAX_LIST_ROWS = 200;
 type Item = DebuggerPaneItem<object>;
 
 /** The figures the tab's monitors show, written on every refresh */
-type Readouts = { scene: string; focus: string; cells: string; counters: string };
+type Readouts = { scene: string; focus: string; cells: string; counters: string; memory: string };
+
+/** The cells' GPU bytes by owner key, read once per refresh (it walks every asset) */
+let cellBytes = new Map<string, number>();
 
 const COUNTED_STATES = ['RESIDENT', 'NEARBY', 'QUEUED', 'LOADING', 'UNLOADING'] as const;
 
@@ -87,7 +92,22 @@ const formatCounters = (rt: StreamingRuntime | null) => {
     `unloads: ${s.unloadsFinished}`,
     `late results: ${s.lateResults}`,
     `content errors: ${s.unitErrors}`,
+    `cell releases: ${s.assetReleases}`,
+    `assets freed: ${s.assetsReleased}`,
   ].join('\n');
+};
+
+/** The tracked cells' GPU bytes together, and the largest cell's. */
+const formatMemory = (rt: StreamingRuntime | null) => {
+  if (!rt) return '';
+  let total = 0;
+  let largest = 0;
+  for (const cell of rt.cells.values()) {
+    const bytes = cellBytes.get(cell.ownerKey) ?? 0;
+    total += bytes;
+    largest = Math.max(largest, bytes);
+  }
+  return `${formatBytes(total)} in cells, the largest ${formatBytes(largest)}`;
 };
 
 /** The tracked cells nearest first (the last decision's order), the first MAX_LIST_ROWS. */
@@ -107,10 +127,11 @@ export const getStreamingCellListData = (rt: StreamingRuntime | null): DebuggerL
       break;
     }
     const loadMs = cell.lastLoadMs < 0 ? '' : `, ${cell.lastLoadMs.toFixed(1)} ms`;
+    const bytes = cellBytes.get(cell.ownerKey);
     items.push({
       itemId: String(cell.key),
       title: `Cell ${cell.cx}, ${cell.cz}`,
-      subTitle: `ring ${cell.ring}`,
+      subTitle: `ring ${cell.ring}${bytes ? `, ${formatBytes(bytes)}` : ''}`,
       suffix: `${getCellStateLabel(cell).toLowerCase()}${loadMs}`,
     });
   }
@@ -216,7 +237,7 @@ const getOverlayFolder = (): Item => ({
  * which `registerStreamingDebugGUI` loads. */
 export const _createStreamingDebugGUI = () => {
   startStreamingTransitionHistory();
-  const readouts: Readouts = { scene: '', focus: '', cells: '', counters: '' };
+  const readouts: Readouts = { scene: '', focus: '', cells: '', counters: '', memory: '' };
   const teleport = { cx: 0, cz: 0 };
 
   createDebuggerTab({
@@ -232,6 +253,8 @@ export const _createStreamingDebugGUI = () => {
       readouts.focus = formatFocus(rt);
       readouts.cells = formatCells(rt);
       readouts.counters = formatCounters(rt);
+      cellBytes = rt ? getOwnerGPUBytes() : new Map();
+      readouts.memory = formatMemory(rt);
     },
     content: () => [
       {
@@ -254,9 +277,19 @@ export const _createStreamingDebugGUI = () => {
             label: 'Since the load',
             readonly: true,
             multiline: true,
-            rows: 6,
+            rows: 8,
             interval: 'refresh',
           },
+          {
+            key: 'memory',
+            target: readouts,
+            label: 'GPU memory',
+            readonly: true,
+            interval: 'refresh',
+          },
+          getNoteItem(
+            'A cell’s GPU memory is what its content alone holds: what several cells or the scene share is the scene’s (the profiler’s GPU memory tab).'
+          ),
           getFocusFolder(teleport),
           getBudgetsFolder(),
           getOverlayFolder(),

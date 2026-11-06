@@ -33,7 +33,7 @@ player standing on a boundary doesn't load and unload the cells beside it every 
 
 What a cell holds is code you register per cell: `load` creates it and returns the entities it
 made, and `unload` takes it down (by default the entities are deleted). The test scene gives
-every cell a terrain block, made and deleted with its own geometry, and two sets of props:
+every cell a terrain block with its own geometry, and two sets of props on shared ones:
 
 <<< src/app/scenes/streamingGrid/streamingGrid.ts#streaming-cells
 
@@ -46,6 +46,12 @@ every cell a terrain block, made and deleted with its own geometry, and two sets
 - **`load` can be async.** Check `ctx.isCurrent()` after every `await`: it's false once the cell
   is no longer wanted (or its scene was left), and what a cancelled load returns is unloaded as
   soon as it comes back.
+- **What a cell loads is the cell's.** The assets a `load` registers or takes from the cache
+  belong to its cell, as a scene's belong to the scene, and when the cell unloads, what it alone
+  held and nothing uses is released: an asset another cell or the scene's own code holds stays.
+  That's counted up to the `load`'s first `await` (an asset load started there stays the cell's
+  too); code after an `await` that creates assets runs in `ctx.runOwned(() => …)`, or they're the
+  scene's until it's left.
 - **The cells around the focus are part of the scene load.** They load before the scene is
   entered, all at once and awaited, inside the physics hold, so a scene starts the same on every
   visit. Only the cells reached during play stream in over frames.
@@ -59,25 +65,24 @@ every decision (a `Vector3` you keep moving). The cells' states are decided ever
 
 ## The debug tab
 
-The drawer's Streaming tab shows the focus and its cell, the cells per state, the loads, unloads
-and cancellations, and the budgets to try out live. Its overlay draws every tracked cell's outline
-in its state's colour, and a row per cell opens its window: its state, load time, entities and
-last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
+The drawer's Streaming tab shows the focus and its cell, the cells per state, the loads, unloads,
+cancellations and asset releases, the cells' GPU memory, and the budgets to try out live. Its
+overlay draws every tracked cell's outline in its state's colour, and a row per cell opens its
+window: its state, load time, entities, GPU memory, assets and last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
 cell** (or start with `?streamingFocus=x,z` in the debug env).
 
 ::: dev-only Measured
 `streamingGrid` on an M2, with the test bridge's fixed frame step (`?aekTest=true`): flying at 30
 and 60 m/s, no frame over 33 ms on WebGPU or WebGL 2 (the main thread's longest block 5-12 ms),
-and 10 s hovering across a cell boundary loaded and unloaded nothing. The plan's
+and 10 s hovering across a cell boundary loaded and unloaded nothing. Three flights out across the
+grid and back (510 cell unloads) leave the GPU memory where it was, on both backends. The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
-has the numbers.
+and Phase 2 have the numbers.
 :::
 
 ## Not yet
 
-World streaming is being built in phases. Cells don't release their assets on their own yet (a
-cell's `unload` frees what it made, as the test scene's terrain does), nothing is primed before
-it's first drawn, `FAR` cells show nothing, scene JSON objects aren't assigned to cells, and
+World streaming is being built in phases. Nothing is primed before it's first drawn, `FAR` cells show nothing, scene JSON objects aren't assigned to cells, and
 physics bodies keep their own tiers (see
 [the plan](repo:docs/plans/p353_macro-streaming-grid.md)).
 

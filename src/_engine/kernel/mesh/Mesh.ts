@@ -453,8 +453,10 @@ export const removeMeshLod = (entityId: number, ecsWorld?: ECSWorld) => {
 };
 
 /**
- * A mesh entity's deletion hook: detaches its mesh and releases its geometry's and materials'
- * refs (the registries dispose what no one holds any more).
+ * A mesh entity's deletion hook: detaches its mesh, disposes it (its `dispose` event: three (r186,
+ * r187) keeps an object's render objects, its uniform buffers and bindings, until then, or until
+ * its geometry or material is disposed, which a shared one never is) and releases its geometry's
+ * and materials' refs (the registries dispose what no one holds any more).
  * @internal
  */
 export const disposeMesh = (entityId: number, ecsWorld?: ECSWorld) => {
@@ -466,6 +468,7 @@ export const disposeMesh = (entityId: number, ecsWorld?: ECSWorld) => {
   const mesh = meshComp.value as THREE.Mesh;
 
   mesh.removeFromParent();
+  mesh.dispose();
 
   const geoId = mesh.geometry?.userData.id;
   if (geoId) decGeometryRef(geoId);
