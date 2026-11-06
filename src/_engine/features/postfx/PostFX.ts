@@ -17,6 +17,7 @@ import * as THREE from 'three/webgpu';
 import { mrt, normalView, pass } from 'three/tsl';
 import { getConfig, IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { FeatureContext } from '../../kernel/init/Features';
+import type { RenderPipelineCompiler } from '../../kernel/render/RenderHooks';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { getGeneratedAppData, getRootScene, getSceneOpts } from '../../kernel/scene/Scene';
 import { getActiveCamera } from '../../kernel/camera/Camera';
@@ -288,6 +289,61 @@ export const getActivePostFxPipeline = () => {
   }
   updatePostFxSize(renderer);
   return pipeline;
+};
+
+const compileSize = new THREE.Vector2();
+
+/** Compiles in one scene pass's target and MRT, configured as its render configures them
+ * (three's `PassNode.compileAsync`, `setup` and `updateBefore`), so the pipelines match the
+ * frame's. The target and MRT stay set until `compile` ends (RenderPipelineCompiler's remarks). */
+const compileInScenePassAsync = async (
+  renderer: THREE.WebGPURenderer,
+  passNode: THREE.PassNode,
+  compile: (camera: THREE.Camera) => Promise<void>
+) => {
+  const prevTarget = renderer.getRenderTarget();
+  const prevCubeFace = renderer.getActiveCubeFace();
+  const prevMipmapLevel = renderer.getActiveMipmapLevel();
+  const prevMRT = renderer.getMRT() as THREE.MRTNode | null;
+  const target = passNode.renderTarget;
+  target.samples = passNode.options.samples ?? renderer.samples;
+  target.texture.type = renderer.getOutputBufferType();
+  if (renderer.reversedDepthBuffer && target.depthTexture) {
+    target.depthTexture.type = THREE.FloatType;
+  }
+  renderer.getDrawingBufferSize(compileSize);
+  passNode.setSize(compileSize.width, compileSize.height);
+  renderer.setRenderTarget(target);
+  renderer.setMRT(passNode.getMRT());
+  try {
+    await compile(passNode.camera);
+  } finally {
+    renderer.setRenderTarget(prevTarget, prevCubeFace, prevMipmapLevel);
+    renderer.setMRT(prevMRT);
+  }
+};
+
+/**
+ * PostFX's render pipeline compiler (`RenderPipelineCompiler`, the `postFx()` feature's
+ * `setRenderPipeline`): a pre-warm compiles in the scene pass's target, then, when a PostFX pass
+ * reads depth or normals, in the pre-pass's (its MRT). Null while the chain is off; builds the
+ * chain when the next frame would. Without it, a pre-warmed mesh compiled for the direct render
+ * and its first PostFX frame compiled again (p057 Phase 3: the pipelines' colour space differs,
+ * and the pre-pass has its own build).
+ * @internal
+ */
+export const compilePostFxScenePasses: RenderPipelineCompiler = (compile) => {
+  const renderer = getRenderer();
+  if (!renderer || !getActivePostFxPipeline() || !scenePass) return null;
+  const builtScenePass = scenePass;
+  return (async () => {
+    await compileInScenePassAsync(renderer, builtScenePass, compile);
+    // A chain rebuilt meanwhile (a scene load, a camera change) has new passes: the old pre-pass
+    // is disposed, and the next pre-warm compiles for the new ones
+    if (scenePass === builtScenePass && prePass) {
+      await compileInScenePassAsync(renderer, prePass, compile);
+    }
+  })();
 };
 
 /**

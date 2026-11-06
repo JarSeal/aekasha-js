@@ -28,6 +28,7 @@ import { texture, unpremultiplyAlpha } from 'three/tsl';
 import { getActiveCamera } from '../camera/Camera';
 import { renderFrameNow } from '../loop/MainLoop';
 import { getRenderPipeline } from './RenderHooks';
+import { runWithClearRenderState } from './CompileQueue';
 import { getRenderer } from './Renderer';
 import { getRootScene } from '../scene/Scene';
 import { isDebugHelperObject } from './Object3DHelpers';
@@ -263,9 +264,6 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
   const postFxPipeline = isPostFx ? getRenderPipeline() : null;
 
   // Saved state (restored below, before the readback)
-  const prevTarget = renderer.getRenderTarget();
-  const prevCubeFace = renderer.getActiveCubeFace();
-  const prevMipmapLevel = renderer.getActiveMipmapLevel();
   const prevClearColor = renderer.getClearColor(new THREE.Color());
   const prevClearAlpha = renderer.getClearAlpha();
   const prevSize = renderer.getSize(new THREE.Vector2());
@@ -280,45 +278,51 @@ export const takeSnapshotAsync = async (opts: SnapshotOpts): Promise<Snapshot> =
   }
 
   const output = createOutputTarget(width, height);
-  let restoreCamera: (() => void) | null = null;
-  try {
-    for (const obj of hidden) obj.visible = false;
-    if (transparent) {
-      scene.background = null;
-      scene.backgroundNode = null;
+  // With no target or MRT an engine compile may hold (kernel/render/CompileQueue.ts)
+  runWithClearRenderState(renderer, () => {
+    const prevTarget = renderer.getRenderTarget();
+    const prevCubeFace = renderer.getActiveCubeFace();
+    const prevMipmapLevel = renderer.getActiveMipmapLevel();
+    let restoreCamera: (() => void) | null = null;
+    try {
+      for (const obj of hidden) obj.visible = false;
+      if (transparent) {
+        scene.background = null;
+        scene.backgroundNode = null;
+      }
+      restoreCamera = fitCamera(camera, width / height);
+      advanceNodeFrame(renderer);
+      if (postFxPipeline) {
+        renderer.setPixelRatio(1);
+        renderer.setSize(width, height, false);
+        // Sizes the passes to the snapshot; the pipeline stays the scene's
+        getRenderPipeline();
+        renderer.setRenderTarget(output);
+        postFxPipeline.render();
+      } else {
+        const samples = opts.samples ?? (renderer.samples > 0 ? 4 : 0);
+        renderDirect(renderer, scene, camera, output, samples, transparent);
+      }
+    } catch (err) {
+      output.dispose();
+      throw err;
+    } finally {
+      renderer.setRenderTarget(prevTarget, prevCubeFace, prevMipmapLevel);
+      renderer.setClearColor(prevClearColor, prevClearAlpha);
+      restoreCamera?.();
+      if (transparent) {
+        scene.background = prevBackground;
+        scene.backgroundNode = prevBackgroundNode;
+      }
+      for (const obj of hidden) obj.visible = true;
+      if (postFxPipeline) {
+        renderer.setPixelRatio(prevPixelRatio);
+        renderer.setSize(prevSize.x, prevSize.y, false);
+        // The resize cleared the canvas: draw the frame again before the browser shows it
+        renderFrameNow();
+      }
     }
-    restoreCamera = fitCamera(camera, width / height);
-    advanceNodeFrame(renderer);
-    if (postFxPipeline) {
-      renderer.setPixelRatio(1);
-      renderer.setSize(width, height, false);
-      // Sizes the passes to the snapshot; the pipeline stays the scene's
-      getRenderPipeline();
-      renderer.setRenderTarget(output);
-      postFxPipeline.render();
-    } else {
-      const samples = opts.samples ?? (renderer.samples > 0 ? 4 : 0);
-      renderDirect(renderer, scene, camera, output, samples, transparent);
-    }
-  } catch (err) {
-    output.dispose();
-    throw err;
-  } finally {
-    renderer.setRenderTarget(prevTarget, prevCubeFace, prevMipmapLevel);
-    renderer.setClearColor(prevClearColor, prevClearAlpha);
-    restoreCamera?.();
-    if (transparent) {
-      scene.background = prevBackground;
-      scene.backgroundNode = prevBackgroundNode;
-    }
-    for (const obj of hidden) obj.visible = true;
-    if (postFxPipeline) {
-      renderer.setPixelRatio(prevPixelRatio);
-      renderer.setSize(prevSize.x, prevSize.y, false);
-      // The resize cleared the canvas: draw the frame again before the browser shows it
-      renderFrameNow();
-    }
-  }
+  });
 
   try {
     return {

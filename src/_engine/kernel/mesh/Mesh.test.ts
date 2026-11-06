@@ -4,7 +4,12 @@ import { ECSWorld } from '../ecs/ECS';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { createRootScene } from '../scene/Scene';
 import { saveMaterial } from '../assets/Material';
+import { runCompileAsync } from '../render/CompileQueue';
+import { setRenderPipeline } from '../render/RenderHooks';
 import { createMeshEntity, preWarmMesh } from './Mesh';
+
+// Resolves once every pre-warm queued so far has ended
+const flushCompilesAsync = () => runCompileAsync(async () => undefined);
 
 // The renderer (only its compileAsync) and the warning log are stand-ins
 const fns = vi.hoisted(() => ({
@@ -13,7 +18,7 @@ const fns = vi.hoisted(() => ({
 }));
 vi.mock(import('../render/Renderer'), async (importOriginal) => ({
   ...(await importOriginal()),
-  getRenderer: (() => ({ compileAsync: fns.compileAsync })) as never,
+  getRenderer: (() => ({ compileAsync: fns.compileAsync, init: async () => undefined })) as never,
 }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -61,14 +66,84 @@ describe('preWarmMesh', () => {
     );
   });
 
-  test('compiles with one camera across calls', () => {
+  test('compiles with one camera across calls', async () => {
     fns.compileAsync.mockResolvedValue(undefined);
     fns.compileAsync.mockClear();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicNodeMaterial());
     preWarmMesh(mesh, 'a');
     preWarmMesh(mesh, 'b');
+    await flushCompilesAsync();
     const [first, second] = fns.compileAsync.mock.calls;
     expect(first[1]).toBeInstanceOf(THREE.Camera);
     expect(second[1]).toBe(first[1]);
+  });
+
+  test('compiles unculled (its camera is at the origin), and puts the flag back', async () => {
+    const culled: boolean[] = [];
+    fns.compileAsync.mockImplementation(async (mesh) => {
+      culled.push((mesh as THREE.Mesh).frustumCulled);
+    });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicNodeMaterial());
+    mesh.position.set(0, 0, 50);
+    preWarmMesh(mesh, 'farMesh');
+    await flushCompilesAsync();
+    expect(culled).toEqual([false]);
+    expect(mesh.frustumCulled).toBe(true);
+    fns.compileAsync.mockReset();
+  });
+
+  test("compiles one pre-warm at a time, and in the render pipeline's targets while it's on", async () => {
+    const calls: string[] = [];
+    let release = () => {};
+    fns.compileAsync.mockImplementation(async (mesh) => {
+      calls.push(`start ${(mesh as THREE.Mesh).name}`);
+      await new Promise<void>((resolve) => (release = resolve));
+      calls.push(`end ${(mesh as THREE.Mesh).name}`);
+    });
+    // The pipeline's compiler: two targets, each with the camera it renders with
+    const passCamera = new THREE.PerspectiveCamera();
+    let isPipelineOn = false;
+    setRenderPipeline(
+      () => null,
+      (compile) =>
+        isPipelineOn
+          ? (async () => {
+              calls.push('target A');
+              await compile(passCamera);
+              calls.push('target B');
+              await compile(passCamera);
+            })()
+          : null
+    );
+
+    const a = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicNodeMaterial());
+    a.name = 'a';
+    const b = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicNodeMaterial());
+    b.name = 'b';
+    isPipelineOn = true;
+    preWarmMesh(a, 'a');
+    preWarmMesh(b, 'b');
+    const countStarts = () => calls.filter((call) => call.startsWith('start')).length;
+    for (let i = 1; i <= 4; i++) {
+      await vi.waitFor(() => expect(countStarts()).toBe(i));
+      release();
+    }
+    await flushCompilesAsync();
+    expect(calls).toEqual([
+      'target A',
+      'start a',
+      'end a',
+      'target B',
+      'start a',
+      'end a',
+      'target A',
+      'start b',
+      'end b',
+      'target B',
+      'start b',
+      'end b',
+    ]);
+    expect(fns.compileAsync.mock.calls.every((call) => call[1] === passCamera)).toBe(true);
+    fns.compileAsync.mockReset();
   });
 });

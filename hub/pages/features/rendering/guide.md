@@ -57,6 +57,11 @@ The homepage image above has one pass, a bloom:
 - A change to the set of enabled passes recompiles the chain, a one-frame hitch, and so does a
   change of the active camera (see [Known issues](#known-issues)). A disabled pass costs nothing,
   and switching the whole chain off keeps it compiled.
+- A mesh created with `preWarm` (and every level of its LOD) compiles in the background for the
+  chain's own scene renders while the chain is on, so its first frame doesn't stall: compiled for
+  the direct render, it would compile again for the chain's targets. The engine's compiles run
+  one at a time, so a pre-warm can end a few frames after the mesh is created; a mesh drawn before
+  then compiles on that frame, as without one.
 
 The app has another pass to start from: ambient occlusion (GTAO) in `src/app/postFx/`.
 

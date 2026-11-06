@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { pmremTexture } from 'three/tsl';
 import { getRenderer } from '../../kernel/render/Renderer';
+import { runWithClearRenderState } from '../../kernel/render/CompileQueue';
 import type { SkyBoxEnvSize } from './SkyBoxTypes';
 
 /**
@@ -45,9 +46,13 @@ export const getPMREMTexture = (texture: THREE.Texture) => {
   // A generator per bake, disposed right after: its working set (a source cube target as large
   // as the PMREM, its box mesh and materials) would otherwise stay on the GPU.
   const generator = new THREE.PMREMGenerator(renderer);
-  const target = (texture as THREE.CubeTexture).isCubeTexture
-    ? generator.fromCubemap(texture, cached?.target)
-    : generator.fromEquirectangular(texture, cached?.target);
+  // Outside a frame (a sky box's registration): without the target and MRT an engine compile
+  // may hold (kernel/render/CompileQueue.ts)
+  const target = runWithClearRenderState(renderer, () =>
+    (texture as THREE.CubeTexture).isCubeTexture
+      ? generator.fromCubemap(texture, cached?.target)
+      : generator.fromEquirectangular(texture, cached?.target)
+  );
   generator.dispose();
   if (!cached) {
     const onDispose = () => {

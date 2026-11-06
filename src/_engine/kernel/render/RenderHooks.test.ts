@@ -3,6 +3,7 @@ import type { RenderPipeline, Renderer } from 'three/webgpu';
 import {
   addAfterRender,
   getRenderPipeline,
+  getRenderPipelineCompiler,
   runAfterRenderHooks,
   setRenderPipeline,
 } from './RenderHooks';
@@ -18,7 +19,15 @@ describe('render hooks', () => {
     expect(getRenderPipeline()).toBeNull();
     isOn = true;
     expect(getRenderPipeline()).toBe(pipeline);
-    expect(() => setRenderPipeline(() => null)).toThrow(/already set/);
+    // A provider without a compiler: pre-warms compile for the direct render
+    expect(getRenderPipelineCompiler()).toBeNull();
+    expect(() =>
+      setRenderPipeline(
+        () => null,
+        () => null
+      )
+    ).toThrow(/already set/);
+    expect(getRenderPipelineCompiler()).toBeNull();
   });
 
   it('runs the after-render hooks in the order added, until removed', () => {

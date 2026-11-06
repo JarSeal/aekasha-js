@@ -19,6 +19,8 @@ import type { ECSWorld } from '../ecs/ECS';
 import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { getRootScene } from '../scene/Scene';
 import { getRenderer } from '../render/Renderer';
+import { runCompileAsync } from '../render/CompileQueue';
+import { getRenderPipelineCompiler } from '../render/RenderHooks';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { setTransformFromProps } from '../ecs/ECSHelpers';
 import { lerror, lwarn } from '../../utils/Logger';
@@ -96,27 +98,15 @@ const warnIfUnregistered = (
   }
 };
 
-// The camera compileAsync takes: the shaders and pipelines it compiles are cached by their key,
-// not per camera, so one camera serves every call
+// The camera compileAsync takes for the direct render: the shaders and pipelines it compiles are
+// cached by their key, not per camera, so one camera serves every call
 let preWarmCamera: THREE.PerspectiveCamera | null = null;
 const getPreWarmCamera = () => (preWarmCamera ??= new THREE.PerspectiveCamera());
 
-/**
- * Compiles a mesh's pipelines ahead of its first draw (`renderer.compileAsync`), so the frame it
- * first shows in doesn't stall on it. Used by `createMeshEntity`'s `preWarm` and for every level
- * of a pre-warmed mesh's LOD.
- * @internal
- * @param mesh the mesh, or a stand-in with the geometry and material to compile
- * @param label names the mesh in the warning
- */
-export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
-  const renderer = getRenderer();
-  const rootScene = getRootScene();
-  if (!renderer || !rootScene) return;
-
-  // Check if we have any valid shadow maps in the scene
-  // WebGPU TSL needs a valid texture instance to compile a shadow-receiving shader.
-  const hasInitializedShadows = rootScene.children.some(
+/** Whether a shadow-casting light in the scene has its map: a shadow-receiving node material
+ * needs the map's texture to compile */
+const hasInitializedShadows = (rootScene: THREE.Scene) =>
+  rootScene.children.some(
     (child) =>
       child instanceof THREE.Light &&
       child.castShadow &&
@@ -124,17 +114,56 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
       (child as { shadow: { map?: unknown } }).shadow?.map
   );
 
-  // Only compile if it's "safe"
-  if (!mesh.receiveShadow || hasInitializedShadows) {
-    // A failed compile leaves the work to the first draw, like a skipped one
-    renderer.compileAsync(mesh, getPreWarmCamera(), rootScene).catch((err) => {
-      lwarn(`Pre-warming ${label} failed: it compiles on its first draw.`, err);
-    });
-  } else {
-    // If we can't pre-warm now, the renderer will just compile it
-    // on the first actual draw call (standard behavior).
-    lwarn(`Skipping preWarm for ${label} - ShadowMap not ready.`);
+/** `compileAsync` culls against its camera (a mesh outside it compiles nothing), in the call's
+ * synchronous part once the renderer has initialized: culling is off for that part only */
+const compileUnculledAsync = (
+  renderer: THREE.Renderer,
+  mesh: THREE.Mesh,
+  camera: THREE.Camera,
+  rootScene: THREE.Scene
+) => {
+  const wasCulled = mesh.frustumCulled;
+  mesh.frustumCulled = false;
+  try {
+    return renderer.compileAsync(mesh, camera, rootScene);
+  } finally {
+    mesh.frustumCulled = wasCulled;
   }
+};
+
+/**
+ * Compiles a mesh's pipelines ahead of its first draw (`renderer.compileAsync`), so the frame it
+ * first shows in doesn't stall on it: for the render pipeline's scene renders while one is on
+ * (PostFX's scene pass and pre-pass: `RenderPipelineCompiler`), else for the direct render.
+ * Used by `createMeshEntity`'s `preWarm` and for every level of a pre-warmed mesh's LOD.
+ * @internal
+ * @param mesh the mesh, or a stand-in with the geometry and material to compile
+ * @param label names the mesh in the warning
+ * @remarks Runs in the engine's compile queue (`runCompileAsync`, one compile at a time), so it
+ * may start frames later; a draw before it ends compiles as without it. The shadow pass isn't
+ * compiled (its depth-only pipeline is cheap). A pipeline switched on or off after it compiles
+ * on its first frame.
+ */
+export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
+  if (!getRenderer() || !getRootScene()) return;
+  // A failed compile leaves the work to the first draw, like a skipped one
+  runCompileAsync(async () => {
+    const renderer = getRenderer();
+    const rootScene = getRootScene();
+    if (!renderer || !rootScene) return;
+    // The compile runs the projection synchronously only once the renderer has initialized
+    await renderer.init();
+    if (mesh.receiveShadow && !hasInitializedShadows(rootScene)) {
+      // The first draw compiles it (standard behaviour)
+      lwarn(`Skipping preWarm for ${label} - ShadowMap not ready.`);
+      return;
+    }
+    const compile = (camera: THREE.Camera) =>
+      compileUnculledAsync(renderer, mesh, camera, rootScene);
+    await (getRenderPipelineCompiler()?.(compile) ?? compile(getPreWarmCamera()));
+  }).catch((err) => {
+    lwarn(`Pre-warming ${label} failed: it compiles on its first draw.`, err);
+  });
 };
 
 /**

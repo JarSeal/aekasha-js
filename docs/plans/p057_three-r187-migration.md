@@ -302,6 +302,73 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
     `syncSkyLights`), the sky box `CLAUDE.md`'s "Two traps" and p304's Context line say so.
     `syncSkyLights`' other trap (the `castShadow` crash under PostFX) keeps "three r186" for
     step 4.
+- Step 3 measured (2026-11-06, Chromium headless, WebGPU, the dev build, `?isDebug=true`; the
+  r186 worktree removed: no control needed). A probe (scratchpad `prewarmProbe.mts`) adds a new
+  mesh to the Gym (PostFX `ambientOcclusion`: the MSAA scene pass and the depth / normal pre-pass
+  with its MRT), a fresh `MeshStandardNodeMaterial` casting and receiving shadows, 4 m in front
+  of the camera, and counts the node builds (`NodeManager._createNodeBuilder`) and render
+  pipelines (`backend.createRenderPipeline`) made in the frames after the add:
+
+  | Pre-warm before the add | First frames: builds / pipelines | Hitch |
+  | --- | --- | --- |
+  | none | 3 / 3 (scene pass, pre-pass MRT, shadow) | a 600 ms frame |
+  | `preWarmMesh` as it is | 3 / 3: it compiled nothing (finding 1) | 254 ms |
+  | depth 0, not frustum culled | 2 / 3 (pre-pass MRT, shadow; the scene pass's pipeline again) | 236 ms |
+  | each scene pass's target and MRT (after depth 0, or alone) | 1 / 1 (the shadow) | none |
+  | PostFX off, depth 0, not culled (the control) | 1 / 1 (the shadow) | none |
+
+  Findings:
+  1. **`preWarmMesh` is frustum culled**: `compileAsync` projects against its own camera (a
+     default `PerspectiveCamera` at the origin looking down -z), so a mesh outside that frustum
+     compiles nothing. Not r187's: since `preWarm` was written. The LOD stand-ins aren't culled
+     (`createStandIn` sets `frustumCulled = false`); `createMeshEntity`'s own mesh is.
+  2. **#35014 works, but doesn't save the hitch**: the scene pass reuses the depth-0 node build,
+     but its pipeline key differs from depth 0's by the colour space alone (`srgb-linear` for the
+     frame buffer target, empty for the pass's target), so the pipeline is made again; the
+     pre-pass needs its own MRT build and pipeline. A depth-0 pre-warm under PostFX saves no
+     hitch, with or without a pre-pass.
+  3. The shadow pass's build is never pre-warmed (either path); no measurable hitch from it.
+  4. **Compiling through a pass leaks its state into the frames**: a pass compile (three's
+     `PassNode.compileAsync`, or the same target and MRT set around `renderer.compileAsync`)
+     holds the renderer's target and MRT for the whole async compile. Three's
+     `_finishPreCompile` puts back the MRT current at the call between its 8 ms slices, and node
+     builds read the global target (`MRTNode.setup`, `NodeBuilder.getOutputType`,
+     `isToneMappingState`), so neither can be restored early. Frames rendered meanwhile use the
+     pass's target and MRT: the probe saw the PostFX output quad built with the pre-pass's MRT
+     into the scene pass's target. A three report candidate (Phase 4).
+- Step 3 decided (2026-11-06): the full fix. As built (`src/_engine/kernel/render/CLAUDE.md`'s
+  Pre-warm compiles):
+  - `kernel/render/CompileQueue.ts` (new, `@internal`): `runCompileAsync` runs the engine's
+    compiles one at a time; `runWithClearRenderState` runs a render with no target and no MRT
+    set and puts back what was (free when nothing is), around `MainLoop`'s whole `runFrame`,
+    `renderScene` outside a frame, snapshots (`Snapshot.ts` saves its own previous target inside
+    it), the impostor bakes (`withBakeRendererState`) and `getPMREMTexture`'s bakes.
+  - The render seam: `RenderPipelineCompiler` (public type on `aekasha`, `api.json` gains it),
+    `FeatureContext.setRenderPipeline(provider, compiler?)`, `getRenderPipelineCompiler`.
+    PostFX's `compilePostFxScenePasses` compiles in the scene pass's target, then the
+    pre-pass's with its MRT, configured as `PassNode.compileAsync` and `setup` configure them
+    (samples, the output buffer type, the reversed depth type, the drawing buffer size), and
+    skips the pre-pass when the chain was rebuilt meanwhile.
+  - `preWarmMesh`: queued, awaits `renderer.init()`, the shadow check at its turn, unculled for
+    the call's synchronous part, through the compiler while it returns a promise, else depth 0
+    as before. `prewarmGeometry`: queued, its stand-in unculled.
+  - Measured with the probe (fresh shaders per run, so the Metal shader cache doesn't hide the
+    hitch; two runs): no pre-warm 440-640 ms of hitch, depth 0 ~200 ms, the engine's pre-warm
+    through the passes none; the compile takes ~500-570 ms in the background with every frame
+    16-18 ms, and no other object is built meanwhile (no state leaked into the frames).
+  - Tests: `CompileQueue.test.ts` (new), `Mesh.test.ts` (the queue, the cull flag, the compiler's
+    targets and camera), `Geometry.test.ts` (the stand-in unculled), `RenderHooks.test.ts`.
+  - The Hub's rendering guide (a Post effects bullet; `aek:covers` gains Pre-warm compiles) and
+    `kernel/init/CLAUDE.md`'s `setRenderPipeline`.
+  - Left as is: the shadow pass's build isn't pre-warmed (no measurable hitch); a chain switched
+    on or off after a pre-warm compiles on its first frame; no app scene uses `preWarm` today.
+  - Checked: `tsc`, `tsc -p hub`, lint, `yarn test` (301 files, 2,653 tests), `yarn verify:scenes`
+    (113 passed; the Gym's `workerMsg` snapshot failed once with scattered single pixels, mean
+    0.5, the hash unchanged, and passed twice on rerun: the known worker target flake), `yarn
+    build` (every SBP budget within, the Hub built), `yarn verify:baselines` recorded: first
+    download +0.5 kB gzip in the app (`postfx` +0.2, `kernel/mesh` +0.1, `kernel/render` +0.2),
+    +0.3 kB in each embed; `api.json` gains this step's exports and step 1's
+    `DEPRECATED_ENV_SIZES` and `ENV_BAKE_MIN_SIZE` (not recorded then); no debug code.
 
 1. **`env.size` below 256** (D1). Measure a day-night bake at 256 against r186's 128 (the
    Environment folder's bake stats, GPU ms, on `skyShowcase`; p110's numbers are r186's) and the
@@ -345,9 +412,19 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
    then rendered into by `PMREMGenerator.fromScene`. Suggested fix: the setter (or
    `CubeRenderTarget`'s constructor) setting `value.renderTarget = this`. Once fixed upstream,
    `initEnvBakeTarget` and `initTarget` can go.
-3. The user posts them upstream (an outward action) and their numbers go here and in the issue
+3. A third issue file, `docs/issues/three-pass-compile-holds-renderer-state.md` (Phase 3 step
+   3): `PassNode.compileAsync` sets the renderer's target and MRT and restores them only after
+   `renderer.compileAsync` resolves, which yields to the next frame every 8 ms
+   (`_finishPreCompile` puts back the MRT current at the call), so an app's animation loop
+   renders those frames into the pass's target with its MRT. Node builds read the global target
+   (`MRTNode.setup`, `NodeBuilder.getOutputType`), so the caller can't restore it early. Repro:
+   a `RenderPipeline` with an MRT pass, a new material compiled with the pass's
+   `compileAsync` while the loop runs. Suggested fix: carry the target in the per-item
+   precompilation state (as the MRT is) and restore the pre-call target and MRT at every yield.
+   The engine's guard (`CompileQueue.ts`) stays until then.
+4. The user posts them upstream (an outward action) and their numbers go here and in the issue
    files. D4 stays either way.
-4. ~~Add the r187 findings to `renderer-custom-tone-mapping.md` and
+5. ~~Add the r187 findings to `renderer-custom-tone-mapping.md` and
    `three-animation-classes-in-builds-without-models.md`~~ (done with Phase 1: a "three r187"
    section in each).
 
@@ -358,7 +435,10 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
    page's `env.size` (the 256 floor).
 2. `CHANGELOG.md`: Engine (three r187; the PMREM change and its look; `env.size` 64 and 128
    deprecated, removed in 7.0.0: they bake at 256, the day-night default is 256, and a day-night
-   bake costs ~1.8× r186's (Phase 3's table); the LOD fade and impostor build fix; the PostFX pre-pass MRT; smaller first download),
+   bake costs ~1.8× r186's (Phase 3's table); the LOD fade and impostor build fix; the PostFX pre-pass MRT; a pre-warm compiles for the PostFX
+   scene passes and is no longer frustum culled, `FeatureContext.setRenderPipeline`'s `compiler`
+   and `RenderPipelineCompiler`, the engine's compiles one at a time and every render without a
+   held target or MRT; smaller first download),
    Project (the baselines, the SBP budgets, the dev files self-check's `/@fs/` probe on macOS).
 3. Versions: an engine minor (6.1.0: a dependency upgrade that changes rendered output and
    `env.size`'s cost), the project version with it; the toolkit and app keep theirs unless Phase 3

@@ -2,6 +2,7 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import {
   buildPostFxForScene,
+  compilePostFxScenePasses,
   createPostFXDebugGUI,
   disposePostFx,
   getActivePostFxPipeline,
@@ -43,7 +44,7 @@ export const postFx = (): EngineFeature => ({
   id: 'postfx',
   install: (ctx) => {
     installPostFx(ctx);
-    ctx.setRenderPipeline(getActivePostFxPipeline);
+    ctx.setRenderPipeline(getActivePostFxPipeline, compilePostFxScenePasses);
     ctx.addSceneHooks(postFxSceneHooks);
     // The flag here too (the hooks run only in the debug env): Rollup keeps a closure handed to
     // the context, so a production build would keep the profiler's loader without it

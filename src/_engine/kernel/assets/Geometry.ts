@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { getRenderer } from '../render/Renderer';
+import { runCompileAsync } from '../render/CompileQueue';
 import { getRootScene } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
@@ -189,30 +190,34 @@ let preWarmCamera: THREE.PerspectiveCamera | null = null;
 
 /**
  * Uploads a registered geometry's buffers to the GPU ahead of its first draw, by compiling a
- * stand-in mesh with it (`renderer.compileAsync`, which creates the buffers without drawing). Run
- * by `createGeometry` and `saveBufferGeometry` for `preWarm`. Does nothing without a renderer or
- * the root scene, and a failed compile only warns: the first draw uploads them, as without a
+ * stand-in mesh with it (`renderer.compileAsync`, which creates the buffers without drawing), in
+ * the engine's compile queue (`runCompileAsync`). Run by `createGeometry` and `saveBufferGeometry`
+ * for `preWarm`. Does nothing without a renderer or the root scene, or for a geometry removed
+ * before its turn, and a failed compile only warns: the first draw uploads them, as without a
  * pre-warm.
  * @internal
  */
-export const prewarmGeometry = async (id: string) => {
-  const entry = geometries[id];
-  const renderer = getRenderer();
-  const rootScene = getRootScene();
-  if (!entry || !renderer || !rootScene) return;
-  preWarmMaterial ??= new THREE.MeshBasicNodeMaterial();
-  preWarmCamera ??= new THREE.PerspectiveCamera();
-  const stagingMesh = new THREE.Mesh(entry.resource, preWarmMaterial);
-  try {
-    await renderer.compileAsync(stagingMesh, preWarmCamera, rootScene);
-  } catch (err) {
-    lwarn(`Pre-warming geometry "${id}" failed: its buffers upload on its first draw.`, err);
-  } finally {
-    // The renderer keeps an object's render objects until it's disposed: the stand-in's go (its
-    // geometry's buffers stay, they're the geometry's)
-    stagingMesh.dispose();
-  }
-};
+export const prewarmGeometry = (id: string) =>
+  runCompileAsync(async () => {
+    const entry = geometries[id];
+    const renderer = getRenderer();
+    const rootScene = getRootScene();
+    if (!entry || !renderer || !rootScene) return;
+    preWarmMaterial ??= new THREE.MeshBasicNodeMaterial();
+    preWarmCamera ??= new THREE.PerspectiveCamera();
+    const stagingMesh = new THREE.Mesh(entry.resource, preWarmMaterial);
+    // compileAsync culls against its camera: a geometry away from the origin would compile nothing
+    stagingMesh.frustumCulled = false;
+    try {
+      await renderer.compileAsync(stagingMesh, preWarmCamera, rootScene);
+    } catch (err) {
+      lwarn(`Pre-warming geometry "${id}" failed: its buffers upload on its first draw.`, err);
+    } finally {
+      // The renderer keeps an object's render objects until it's disposed: the stand-in's go
+      // (its geometry's buffers stay, they're the geometry's)
+      stagingMesh.dispose();
+    }
+  });
 
 /**
  * Creates and registers a three geometry from its props: owned by the scene loading (or current),

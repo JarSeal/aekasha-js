@@ -1,4 +1,4 @@
-Notes for the render area (`src/_engine/kernel/render/`): snapshots and the views, moved from the root; the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
+Notes for the render area (`src/_engine/kernel/render/`): snapshots, pre-warm compiles and the views, moved from the root; the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
 
 ## Snapshots
 
@@ -8,6 +8,16 @@ Notes for the render area (`src/_engine/kernel/render/`): snapshots and the view
 - PostFX path (the root scene with the active camera, its pipeline on): three's `pass()` sizes itself from the drawing buffer, so the renderer is resized to the snapshot (pixel ratio 1) for the render and put back, and `renderFrameNow()` (`MainLoop.ts`) draws the canvas again in the same task, so the browser never shows it cleared.
 - Both start a new node frame first: three r186 updates `FRAME` nodes (a `pass()`, a shadow map) once per node frame, so a snapshot after the frame's own render would reuse them at the canvas's size and aspect (the PostFX snapshot came out stretched).
 - The camera's aspect (an orthographic camera's width, keeping its height) is set for the snapshot and put back, like everything else it changes, before the readback starts.
+
+## Pre-warm compiles
+
+`preWarmMesh` (`kernel/mesh/Mesh.ts`: `createMeshEntity`'s `preWarm`, every level of a pre-warmed mesh's LOD) and `prewarmGeometry` (`kernel/assets/Geometry.ts`) compile with three's `renderer.compileAsync` ahead of the first draw (p057 Phase 3 step 3).
+
+- Unculled: `compileAsync` culls against its camera, and the pre-warm camera is a default `PerspectiveCamera` at the origin, so a mesh elsewhere compiled nothing. `frustumCulled` is off for the call's synchronous part (the projection; the job awaits `renderer.init()` first so it is synchronous), the geometry's stand-in always.
+- Under a render pipeline: while the pipeline provider's compiler (`RenderPipelineCompiler`, `FeatureContext.setRenderPipeline`'s second argument) returns a promise, the mesh compiles for the pipeline's own scene renders instead of the direct one. PostFX's (`compilePostFxScenePasses`) compiles in the scene pass's target, then the pre-pass's with its MRT, configured as their renders configure them. A depth-0 compile doesn't serve them: three r187 shares the node build across call depths (#35014), but the pipeline key differs by colour space (`srgb-linear` for the frame buffer target, none for a pass's) and the pre-pass has its own MRT build. Measured on the Gym (fresh shaders): no pre-warm 440-640 ms of hitch, depth 0 ~200 ms, through the passes none, with 16-18 ms frames during the ~500 ms compile. The shadow pass is never pre-warmed (its depth-only pipeline is cheap), and a chain switched on or off after the pre-warm compiles on its first frame.
+- **The renderer state trap** (`CompileQueue.ts`): node builds read the renderer's global render target and MRT (`MRTNode.setup`, `NodeBuilder.getOutputType`), and `compileAsync` yields to the next frame every 8 ms, putting back the MRT that was set at its call (not a non-canvas target: that one simply stays). So a compile in a pass's target holds that target and MRT on the renderer across frames; three's own `PassNode.compileAsync` too. Two rules follow:
+  - Engine compiles run one at a time (`runCompileAsync`): one started while another holds a target compiles for it, and its end puts that MRT back after the other has cleared it.
+  - Every engine render runs with no target and no MRT set (`runWithClearRenderState`, free when nothing is set): `MainLoop`'s `runFrame` (the scene, the sky's env and static layer bakes, the viewports) and `renderScene` outside a frame, snapshots, the impostor bakes (`withBakeRendererState`, the texture preview's too) and the sky box's PMREM bakes at registration. A render that sets its own target still reads the MRT: during a pre-pass compile it would write normals into its colour. A new render outside a frame goes through it too. It saves its own previous target inside the call, or it would put the held one back mid-render.
 
 ## Views
 

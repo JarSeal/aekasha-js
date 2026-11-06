@@ -3,7 +3,7 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1246
+      "gzip": 1247
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 149838,
@@ -59,7 +59,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7636,
-      "gzip": 3100
+      "gzip": 3098
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4096,
@@ -67,7 +67,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47085,
-      "gzip": 14018
+      "gzip": 14019
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
@@ -142,8 +142,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 966416,
-      "gzip": 269400
+      "bytes": 967211,
+      "gzip": 269735
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -151,7 +151,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16883
+      "gzip": 16879
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -159,7 +159,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19021
+      "gzip": 19019
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -167,7 +167,7 @@
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 47693,
-      "gzip": 18056
+      "gzip": 18057
     },
     "assets/uiKitEmbedGame.css": {
       "bytes": 13897,
@@ -175,24 +175,24 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8593
+      "gzip": 8595
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 209
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
-    "modules": 65,
-    "minified": 990262,
-    "gzip": 275666
+    "modules": 66,
+    "minified": 991137,
+    "gzip": 276015
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 12,
-      "minified": 27616,
-      "gzip": 9608
+      "minified": 27655,
+      "gzip": 9628
     },
     "_engine/kernel/camera": {
       "modules": 1,
@@ -226,18 +226,18 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "minified": 4526,
-      "gzip": 1978
+      "minified": 4666,
+      "gzip": 2025
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3571,
-      "gzip": 1543
+      "minified": 3847,
+      "gzip": 1649
     },
     "_engine/kernel/render": {
-      "modules": 6,
-      "minified": 3301,
-      "gzip": 1564
+      "modules": 7,
+      "minified": 3721,
+      "gzip": 1740
     },
     "_engine/kernel/scene": {
       "modules": 7,
