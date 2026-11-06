@@ -318,7 +318,8 @@ export const createFrameTarget = (width: number, height: number) => {
 /**
  * An atlas target for `pass`: RGBA8 with mipmaps, sRGB for albedo (hardware-encoded on write) and
  * linear for normals. Disposing its texture (eg. the scene asset release deleting the registered
- * texture) disposes the whole target.
+ * texture) disposes the whole target. Its mips aren't generated until `finishAtlasMips`: three
+ * regenerates a mipped target's whole chain after every render into it, once per frame and pass.
  * For the generators' bakes.
  * @internal
  */
@@ -340,6 +341,7 @@ export const createAtlasTarget = (
     depthBuffer: false,
   });
   target.texture.name = name;
+  target.texture.mipmapsAutoUpdate = false;
   // three (r186, r187) destroys a render target's textures with the target
   // (Textures._destroyRenderTarget), never through texture.dispose(), so this can't recurse
   const onDispose = () => {
@@ -348,6 +350,17 @@ export const createAtlasTarget = (
   };
   target.texture.addEventListener('dispose', onDispose);
   return target;
+};
+
+/**
+ * Lets the next render into an atlas target generate its mips: call it right before the bake's
+ * last copy into it, so the chain is built once per atlas (three r187's `mipmapsAutoUpdate`,
+ * docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md D3).
+ * For the generators' bakes.
+ * @internal
+ */
+export const finishAtlasMips = (atlas: THREE.RenderTarget) => {
+  atlas.texture.mipmapsAutoUpdate = true;
 };
 
 /**

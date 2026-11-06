@@ -25,6 +25,7 @@ import { deleteTexture, doesTextureExist, saveTexture } from '../../../kernel/as
 import {
   clearBakeTarget,
   createAtlasTarget,
+  finishAtlasMips,
   createBakeMaterials,
   createDilateCopy,
   createFrameTarget,
@@ -485,6 +486,7 @@ export const bakeCrossQuadsAtlases = (
           mesh.material = bakeMaterials[pass]!;
           clearBakeTarget(renderer, frame);
           renderer.render(scene, camera);
+          if (i === planes - 1) finishAtlasMips(atlases[pass]!);
           dilate.copy(renderer, atlases[pass]!, i * cellWidth, 0, cellWidth, cellHeight);
         }
       }

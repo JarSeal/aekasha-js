@@ -8,28 +8,18 @@
 //
 // Level materials are shared (between a pool's level meshes, and with other meshes), so the fade
 // can't be a fixed input of the material. Every dither-enabled material uses one mask node that
-// resolves the fade of the object being drawn when its shader is built: an InstancedMesh's
-// per-instance `lodFade` attribute (createLodFadeAttribute), else a per-object value
-// (setLodObjectFade). three r187 shares one build between InstancedMeshes with the same material
-// and attributes (its render object's cache key no longer has the mesh's uuid), and looks a cached
-// build up before any setup runs, so the mask marks an InstancedMesh's build object-specific
-// (`NodeBuilder.objectSpecific`: never cached): each one binds its own fade attribute, and one
-// without a fade never lends its build to one with. Plain meshes share their builds, so all of
-// them take the per-object path. The shadow pass reads `maskNode` too: shadows dither with the
+// reads the fade of the object being drawn: an InstancedMesh's per-instance `lodFade` attribute
+// (createLodFadeAttribute), else a per-object value (setLodObjectFade). Both bind per object at
+// draw time, so meshes on one material share one build: three r187 shares a build between
+// InstancedMeshes with the same material and attributes and looks it up before any setup runs
+// (#35007), and binds each one's attributes through `ReferenceAttributeNode.getAttribute(object)`.
+// An InstancedMesh without a fade of its own binds an opaque one (`getDrawnFadeAttribute`), so
+// the shared build always finds an attribute (docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md
+// D2), and it reads the per-object uniform too (an InstancedMesh entity fades as a whole). Plain
+// meshes take the uniform alone. The shadow pass reads `maskNode` too: shadows dither with the
 // same split.
 import * as THREE from 'three/webgpu';
-import {
-  bool,
-  dot,
-  float,
-  Fn,
-  fract,
-  instancedBufferAttribute,
-  screenCoordinate,
-  select,
-  uniform,
-  vec2,
-} from 'three/tsl';
+import { bool, dot, float, Fn, fract, screenCoordinate, select, uniform, vec2 } from 'three/tsl';
 
 type MaskableMaterial = THREE.Material & { maskNode?: THREE.Node | null };
 
@@ -57,7 +47,8 @@ export const lodDither = (fade: THREE.Node) => {
 // --- WHERE A DRAWN OBJECT'S FADE COMES FROM ---
 
 const fadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribute>();
-const fadeAttributeNodes = new WeakMap<THREE.InstancedBufferAttribute, THREE.Node>();
+/** The fade an InstancedMesh without `createLodFadeAttribute` draws with: every instance whole. */
+const opaqueFadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribute>();
 const objectFades = new WeakMap<THREE.Object3D, number>();
 
 /** The per-object fade, written before each draw of an object (three's object uniform group). */
@@ -67,9 +58,10 @@ const objectFade = uniform(LOD_FADE_OPAQUE).onObjectUpdate(
 
 /**
  * Gives `mesh` a per-instance fade (`lodFade`), every instance at {@link LOD_FADE_OPAQUE}: its
- * dither-enabled materials then read each instance's own fade. Call it before the mesh is first
- * drawn (the attribute is bound when its shader is built). The attribute isn't on the geometry,
- * which is shared, and three frees its GPU buffer with the geometry's, like the instance matrix.
+ * dither-enabled materials then read each instance's own fade. It can be called after the mesh
+ * was first drawn: the fade binds per drawn object, and the mesh's builds are shared with the
+ * other InstancedMeshes on its materials. The attribute isn't on the geometry, which is shared, and
+ * three frees its GPU buffer with the mesh's render objects, like the instance matrix.
  * Moving an instance between slots moves its fade too; set `needsUpdate` after writing.
  * @param mesh the instanced mesh
  * @returns the attribute, `maxInstances` (the mesh's capacity) long
@@ -91,14 +83,30 @@ const objectFade = uniform(LOD_FADE_OPAQUE).onObjectUpdate(
 export const createLodFadeAttribute = (mesh: THREE.InstancedMesh) => {
   const existing = fadeAttributes.get(mesh);
   if (existing) return existing;
-  const capacity = mesh.instanceMatrix.count;
+  // The opaque one a shared build already bound becomes the mesh's own: no rebinding
+  const attribute = opaqueFadeAttributes.get(mesh) ?? createOpaqueFadeAttribute(mesh);
+  opaqueFadeAttributes.delete(mesh);
+  attribute.setUsage(THREE.DynamicDrawUsage);
+  fadeAttributes.set(mesh, attribute);
+  return attribute;
+};
+
+const createOpaqueFadeAttribute = (mesh: THREE.InstancedMesh) => {
   const attribute = new THREE.InstancedBufferAttribute(
-    new Float32Array(capacity).fill(LOD_FADE_OPAQUE),
+    new Float32Array(mesh.instanceMatrix.count).fill(LOD_FADE_OPAQUE),
     1
   );
   attribute.name = 'lodFade';
-  attribute.setUsage(THREE.DynamicDrawUsage);
-  fadeAttributes.set(mesh, attribute);
+  return attribute;
+};
+
+/** The fade attribute a dithered InstancedMesh binds: its own, else an opaque one made once. */
+const getDrawnFadeAttribute = (mesh: THREE.InstancedMesh) => {
+  let attribute = fadeAttributes.get(mesh) ?? opaqueFadeAttributes.get(mesh);
+  if (!attribute) {
+    attribute = createOpaqueFadeAttribute(mesh);
+    opaqueFadeAttributes.set(mesh, attribute);
+  }
   return attribute;
 };
 
@@ -120,6 +128,23 @@ export const clearLodObjectFade = (object: THREE.Object3D) => {
   objectFades.delete(object);
 };
 
+/** An InstancedMesh's per-instance fade, bound per drawn object, so its build is shared. */
+class LodFadeAttributeNode extends THREE.ReferenceAttributeNode {
+  static get type() {
+    return 'LodFadeAttributeNode';
+  }
+
+  constructor() {
+    super('lodFade', 'float');
+  }
+
+  getAttribute(object: THREE.Object3D) {
+    return getDrawnFadeAttribute(object as THREE.InstancedMesh);
+  }
+}
+
+const instanceFade = new LodFadeAttributeNode() as unknown as THREE.Node<'float'>;
+
 /** The mask every dither-enabled material shares: the drawn object's fade through lodDither. */
 class LodFadeMaskNode extends THREE.Node {
   static get type() {
@@ -131,18 +156,13 @@ class LodFadeMaskNode extends THREE.Node {
   }
 
   setup(builder: THREE.NodeBuilder) {
-    // A shared InstancedMesh build would bind the first mesh's fade attribute (or none) for all
-    if ((builder.object as THREE.InstancedMesh | null)?.isInstancedMesh) {
-      (builder as THREE.NodeBuilder & { objectSpecific: boolean }).objectSpecific = true;
-    }
-    const attribute = builder.object && fadeAttributes.get(builder.object);
-    if (!attribute) return lodDither(objectFade);
-    let fade = fadeAttributeNodes.get(attribute);
-    if (!fade) {
-      fade = instancedBufferAttribute(attribute) as unknown as THREE.Node;
-      fadeAttributeNodes.set(attribute, fade);
-    }
-    return lodDither(fade);
+    // An InstancedMesh's build key differs from a plain mesh's (its instance data), so each kind
+    // keeps the path it was built with. An InstancedMesh takes both fades: a pool level's per
+    // instance, an InstancedMesh entity's (its fade copy, its cull fade) per object; the other one
+    // stays opaque, which lets every pixel through.
+    const isInstanced = (builder.object as THREE.InstancedMesh | null)?.isInstancedMesh === true;
+    if (!isInstanced) return lodDither(objectFade);
+    return lodDither(instanceFade).and(lodDither(objectFade));
   }
 }
 

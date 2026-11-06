@@ -10,11 +10,11 @@
 //
 // The billboard needs each instance's centre and rotation, but three (r186, r187) multiplies
 // `positionLocal` by the instance matrix before `positionNode` runs (`NodeMaterial.setupPosition`,
-// `Instance.js`) and keeps the matrix to itself. So the material binds the instance matrix a
-// second time: `impostorInstanceMatrix` resolves the drawn object's when its shader is built
-// (marking an InstancedMesh's build object-specific, as LodFade.ts does: three r187 shares
-// instanced builds), and reads `positionGeometry`, the quad's corners before any transform. On a
-// plain mesh it's the identity.
+// `Instance.js`). So the material reads the instance matrix a second time: `impostorInstanceMatrix`
+// is three r187's `referenceAttribute('instanceMatrix', 'mat4')`, bound per drawn mesh (so
+// impostor InstancedMeshes on one material share a build,
+// docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), and reads
+// `positionGeometry`, the quad's corners before any transform. On a plain mesh it's the identity.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):
 // there the quad faces the light and shows the frames seen from it, so the impostor casts its own
@@ -35,14 +35,13 @@ import {
   float,
   floor,
   Fn,
-  instancedDynamicBufferAttribute,
   mat3,
   mat4,
   max,
   min,
   modelWorldMatrix,
-  NodeUpdateType,
   positionGeometry,
+  referenceAttribute,
   select,
   smoothstep,
   texture,
@@ -64,34 +63,19 @@ import {
 import type { ImpostorAtlasVOrigin } from './ImpostorFormat';
 import type { OctahedralImpostorLayout } from './OctahedralImpostor';
 
-// --- THE INSTANCE MATRIX, BOUND A SECOND TIME ---
+// --- THE INSTANCE MATRIX, READ A SECOND TIME ---
 
-/** A second GPU buffer over each instance matrix's array (three's own binding is private), kept at
- * its version: it re-uploads whenever the pool marks the matrices changed. */
-const instanceMatrixBuffers = new WeakMap<
-  THREE.InstancedBufferAttribute,
-  THREE.InstancedInterleavedBuffer
->();
-const instanceMatrixNodes = new WeakMap<THREE.InstancedInterleavedBuffer, THREE.Node>();
 const IDENTITY = new THREE.Matrix4();
-
-const getInstanceMatrixBuffer = (matrices: THREE.InstancedBufferAttribute) => {
-  let buffer = instanceMatrixBuffers.get(matrices);
-  if (!buffer) {
-    buffer = new THREE.InstancedInterleavedBuffer(matrices.array as Float32Array, 16, 1);
-    buffer.setUsage(THREE.DynamicDrawUsage);
-    buffer.version = matrices.version;
-    instanceMatrixBuffers.set(matrices, buffer);
-  }
-  return buffer;
-};
+/** three's own per-object binding of an InstancedMesh's matrices (r187), so builds are shared. */
+const instanceMatrixReference = referenceAttribute('instanceMatrix', 'mat4');
 
 /**
  * The drawn object's instance matrix: an InstancedMesh's per instance, else the identity.
  * @remarks three (r186, r187) multiplies `positionLocal` by the instance matrix before
- * `positionNode` runs (`NodeMaterial.setupPosition`) and keeps its binding private, so the
- * billboard reads the matrix through a second binding over the same array, version-synced before
- * each draw.
+ * `positionNode` runs (`NodeMaterial.setupPosition`), so the billboard reads the matrix again
+ * through three's `referenceAttribute`, which binds the drawn mesh's own `instanceMatrix` at draw
+ * time: every InstancedMesh on the material shares one build. A plain mesh's build key differs
+ * from an InstancedMesh's (its instance data), so each keeps the branch it was built with.
  */
 class ImpostorInstanceMatrixNode extends THREE.Node {
   static get type() {
@@ -100,36 +84,11 @@ class ImpostorInstanceMatrixNode extends THREE.Node {
 
   constructor() {
     super('mat4');
-    // Before the object's attributes are uploaded (Renderer._renderObjectDirect)
-    this.updateBeforeType = NodeUpdateType.OBJECT;
   }
 
   setup(builder: THREE.NodeBuilder) {
     const mesh = builder.object as THREE.InstancedMesh | null;
-    if (!mesh?.isInstancedMesh) return mat4(IDENTITY);
-    // A shared build (three r187) would bind the first mesh's matrices for every mesh
-    (builder as THREE.NodeBuilder & { objectSpecific: boolean }).objectSpecific = true;
-    const buffer = getInstanceMatrixBuffer(mesh.instanceMatrix);
-    let node = instanceMatrixNodes.get(buffer);
-    if (!node) {
-      const column = (offset: number) =>
-        instancedDynamicBufferAttribute(
-          buffer,
-          'vec4',
-          16,
-          offset
-        ) as unknown as THREE.Node<'vec4'>;
-      node = mat4(column(0), column(4), column(8), column(12)) as unknown as THREE.Node;
-      instanceMatrixNodes.set(buffer, node);
-    }
-    return node;
-  }
-
-  updateBefore({ object }: THREE.NodeFrame) {
-    const matrices = (object as THREE.InstancedMesh | null)?.instanceMatrix;
-    const buffer = matrices && instanceMatrixBuffers.get(matrices);
-    if (buffer && buffer.version !== matrices.version) buffer.version = matrices.version;
-    return undefined;
+    return mesh?.isInstancedMesh ? instanceMatrixReference : mat4(IDENTITY);
   }
 }
 

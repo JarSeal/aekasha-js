@@ -534,6 +534,7 @@
       "decodeImpostorDepth": "Function",
       "disposeBakeMaterials": "Function",
       "encodeImpostorDepth": "Function",
+      "finishAtlasMips": "Function",
       "getBakeRenderer": "Function",
       "getDominantMaterial": "Function",
       "getShadingProps": "Function",

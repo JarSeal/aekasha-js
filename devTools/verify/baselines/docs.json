@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3132,
-      "total": 3132
+      "documented": 3133,
+      "total": 3133
     },
     "members": {
       "documented": 1042,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3049,
-        "total": 3049
+        "documented": 3050,
+        "total": 3050
       },
       "members": {
         "documented": 888,
@@ -147,8 +147,8 @@
     },
     "engine/features/lod/impostors": {
       "exports": {
-        "documented": 73,
-        "total": 73
+        "documented": 74,
+        "total": 74
       },
       "members": {
         "documented": 0,

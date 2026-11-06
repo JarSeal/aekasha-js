@@ -1,6 +1,6 @@
-Status: epic, in progress | Tiers 0-1 and p351 implemented; p353 and p354 open
+Status: epic, in progress | Tiers 0-1 and p351 implemented; p058, p353 and p354 open
 Category: Rendering, LOD
-Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, p353_macro-streaming-grid.md, p354_gpu-driven-culling.md
+Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, p058_shared-instanced-builds-for-lod-fades-and-impostors.md, p353_macro-streaming-grid.md, p354_gpu-driven-culling.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)
 
 # LOD System — Research & Epic
@@ -16,7 +16,9 @@ selection, cross-fades, the `lodShowcase` scene), `features/lod/impostors/CLAUDE
 `features/spatial/CLAUDE.md`, `features/instancing/CLAUDE.md`, `features/lines/CLAUDE.md`,
 `features/physics/CLAUDE.md` (simulation tiers and the tier policy), `src/_engine/debug/CLAUDE.md`
 (GPU memory) and the Hub's LOD and Spatial index feature pages (`hub/pages/features/lod/`,
-`spatial-index/`). Open: p353 (streaming) and p354 (GPU culling, a stub), then Tier 4's research.
+`spatial-index/`). Open: p058 (shared instanced shader builds for fades and impostors, added
+2026-11-06 after the three r187 upgrade), p353 (streaming) and p354 (GPU culling, a stub), then
+Tier 4's research.
 
 The short version: `THREE.LOD` is the wrong foundation. LOD is a _selection decision made by an
 ECS system_ that feeds the instancing/batching layer. Large worlds also need several spatial
@@ -258,7 +260,7 @@ first part.
 ## 8. Roadmap
 
 Child plans, in the order they should run. Each is independently useful. Done: every `_DONE_`
-row (2026-11-04); open: p353, p354 and Tier 4. p349 (scene-scoped spatial domains) and p343 (the
+row (2026-11-04); open: p058, p353, p354 and Tier 4. p349 (scene-scoped spatial domains) and p343 (the
 tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 
 | Tier | Plan                                           | What it delivers                                                                                                  | Depends on                               |
@@ -268,6 +270,7 @@ tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 | 1    | `_DONE_p347_lod-chain-generation`              | meshoptimizer LOD chains: runtime (worker) for procedural geometry, build time for GLBs                           | p300 Phase 2 (build-time part only)      |
 | 1    | `_DONE_p352_physics-simulation-tiers`          | Slot-less static bodies, no throw on capacity, then `STATIC`/`DISABLED`/`REMOVED` tiers                           | — (cell driving moved to p353 Phase 4)   |
 | 1    | `_DONE_p348_ecs-lod-selection`                 | Screen-size selection with hysteresis; apply to meshes, instanced pools, static cells                             | p347 (for generated chains), p346 (soft) |
+| 2    | `p058_shared-instanced-builds-for-lod-fades-and-impostors` | Dithered and impostor `InstancedMesh`es share shader builds again (three r187); the impostor bake mips once | p351; three r187 (`_DONE_p057`) |
 | 2    | `p353_macro-streaming-grid`                    | Cell residency state machine, per-cell asset ownership, build-time manifest, priming, per-cell physics tiers      | p346 Phase 1; p352 for its physics phase |
 | 2    | `_DONE_p351_impostor-billboard-lod`            | Cross-quads, dithered cross-fade, octahedral impostors                                                            | p348 Phase 3                             |
 | 3    | `p354_gpu-driven-culling` (stub)               | Compute frustum culling, indirect draws, per-instance LOD on the GPU                                              | p348, p346                               |
@@ -300,6 +303,9 @@ Written after the rule, from what the children did: each child plan has its own 
 `main` and merges into `main` with its own bump; no integration branch, since no two children
 share a major. The open ones:
 
+- **p058:** its own branch (`p058-shared-instanced-builds`) into `main`, an engine patch. It runs
+  before p353: a cell's content fades in (p353 §3.3), and with object-specific builds every
+  streamed dithered pool pays its own shader build (11-14 ms on r186).
 - **p353:** its own branch (or one per phase: its §10 bumps the engine minor for each phase that
   adds API, and each bump is a merge to `main`). A PR when its last phase in the branch is done.
 - **p354:** written as a real plan first (it's a stub); then its own branch into `main`.

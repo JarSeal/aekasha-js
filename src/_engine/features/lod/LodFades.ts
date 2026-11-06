@@ -81,10 +81,9 @@ export const createStandIn = (mesh: THREE.Mesh, level: LodResolvedLevel) => {
 //
 // A level change draws the previous level through a temporary copy of the mesh: a child of it, so
 // it follows the mesh and hides with it (frustum culling, DISABLED). The copy is disposed when the
-// fade ends, as three (r186, r187) keeps an object's render objects until it is. A plain mesh's
-// copy shares the mesh's shader builds; an InstancedMesh's builds its own (three r186 keyed its
-// builds by uuid; r187 shares them, but the fade mask makes a dithered InstancedMesh's build
-// object-specific, kernel/render/LodFade.ts). Hiding and showing fade the mesh itself: a LOD-culled
+// fade ends, as three (r186, r187) keeps an object's render objects until it is. The copy shares
+// the mesh's shader builds, an InstancedMesh's too since three r187 and p058 (the fade binds per
+// drawn object, kernel/render/LodFade.ts). Hiding and showing fade the mesh itself: a LOD-culled
 // mesh stays visible while it fades out (reconcileObject3DVisibility). Both copies take the
 // per-object fade (setLodObjectFade).
 
