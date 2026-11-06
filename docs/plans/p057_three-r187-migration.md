@@ -444,6 +444,19 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
 
 ### Phase 4: Upstream report
 
+Results so far:
+
+- Step 1 done (2026-11-06): `docs/issues/three-render-list-keeps-lights.md`, `not filed yet`. Its
+  standalone page (Chrome 156 headless, Apple M2, macOS 26.5, `--expose-gc`; the run script in the
+  scratchpad) on r187.0, 10 visits of a camera, two lights and a mesh through a new
+  `RenderPipeline` with an MRT scene pass: 0 / 20 lights and 0 / 10 cameras collected, 13 cached
+  contexts; `RenderList.clear()` patched to empty `lightsArray` 20 / 20 lights, 0 / 10 cameras;
+  the contexts' `camera` nulled 20 / 20 and 10 / 10; one shared MRT node (D4's workaround) 20 / 20
+  and 10 / 10 with 3 contexts. r186.1 keeps every light in every variant (`_bindingGroupsCache`,
+  #34705), so the report is r187's. `dev`'s `RenderList.clear()` and `RenderContexts` are r187's.
+  A trap for the method: the loop in the module's top level kept its last visit (the suspended
+  async frame), which read as a retainer in three; the page runs the visits in a function.
+
 1. An issue file, `docs/issues/three-render-list-keeps-lights.md`, in the form of
    `three-bind-group-cache-light-leak.md` (the report's text, a standalone page as the repro): an
    idle `RenderList`'s `clear()` keeps `lightsArray`, and `RenderContexts` keeps a context per MRT
