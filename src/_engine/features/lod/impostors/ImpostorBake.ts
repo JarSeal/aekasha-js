@@ -5,7 +5,8 @@
 //
 // A bake runs synchronously and restores the renderer state it touched, so it can run between
 // frames (eg. in a scene's load). Every atlas is cleared before its first cell is written and
-// sampled only after its bake, so the r186 destroyed-texture trap (CLAUDE.md, Sky box) can't hit it.
+// sampled only after its bake, so the destroyed-texture trap (CLAUDE.md, Sky box) can't hit it (on
+// three r186: r187 creates a sampled 2D target's texture with the target, #35204).
 import * as THREE from 'three/webgpu';
 import {
   bool,
@@ -339,8 +340,8 @@ export const createAtlasTarget = (
     depthBuffer: false,
   });
   target.texture.name = name;
-  // three r186 destroys a render target's textures with the target (Textures._destroyRenderTarget),
-  // never through texture.dispose(), so this can't recurse
+  // three (r186, r187) destroys a render target's textures with the target
+  // (Textures._destroyRenderTarget), never through texture.dispose(), so this can't recurse
   const onDispose = () => {
     target.texture.removeEventListener('dispose', onDispose);
     target.dispose();

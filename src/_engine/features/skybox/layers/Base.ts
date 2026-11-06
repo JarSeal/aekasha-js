@@ -305,7 +305,7 @@ export const baseNode = (
  * load (null) gives the black background of a COLOR base and no environment node.
  * @internal
  * @remarks
- * Two three r186 direction traps:
+ * Two three (r186, r187) direction traps:
  * - The background's lookup is its view direction, `normalWorldGeometry` of the back-side
  *   background box, not `normalWorld`, which is negated on back sides.
  * - PMREMNode applies `scene.environmentRotation` (set by SkyBox.ts) to the environment, but

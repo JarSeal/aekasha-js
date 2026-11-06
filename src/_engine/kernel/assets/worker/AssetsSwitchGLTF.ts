@@ -56,7 +56,7 @@ const getGLTFLoader = (draco: DracoWorkerSettings) => {
     dracoLoader?.dispose();
     dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath(draco.decoderPath);
-    // WASM is the default and setDecoderConfig() is deprecated (warns since r186)
+    // WASM is the default and setDecoderConfig() is deprecated (warns since r186, removed in r194)
     if (draco.decoderType === 'js') dracoLoader.setDecoderConfig({ type: 'js' });
     dracoKey = key;
     gltfLoader = null;

@@ -43,8 +43,8 @@ const setDecoder = (loader: DRACOLoader) => {
   const prevDecoderType = activeDecoder?.decoderType;
   activeDecoder = getConfiguredDecoder();
   loader.setDecoderPath(activeDecoder.decoderPath);
-  // DRACOLoader uses WASM by default and setDecoderConfig() is deprecated (warns since r186), so
-  // it's only called to switch to the 'js' decoder or back from it.
+  // DRACOLoader uses WASM by default and setDecoderConfig() is deprecated (warns since r186,
+  // removed in r194), so it's only called to switch to the 'js' decoder or back from it.
   if (activeDecoder.decoderType === 'js' || prevDecoderType === 'js') {
     loader.setDecoderConfig({ type: activeDecoder.decoderType });
   }

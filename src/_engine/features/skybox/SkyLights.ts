@@ -14,9 +14,10 @@
  * changes only when the definition changes it (it rebuilds every lit material), never to fade.
  *
  * A `castShadow` change re-creates the disc light instead of setting the flag: with PostFX on
- * (WebGPU, three r186), turning a light's shadow back on after it was off crashes the frame
- * ("Texture 'output' ... writable usage and another usage in the same synchronization scope"),
- * while a new light with `castShadow: true` renders fine. The cost is the same one lit-material
+ * (WebGPU, three r186, 2026-09-30), turning a light's shadow back on after it was off crashed the
+ * frame ("Texture 'output' ... writable usage and another usage in the same synchronization
+ * scope"), while a new light with `castShadow: true` rendered fine. p057 couldn't reproduce it on
+ * r186 or r187 (syncSkyLights' remarks), so the guard stays: the cost is the same one lit-material
  * rebuild either way.
  *
  * Internal to the sky box and its debug tab, but getSkyLightIds (on the entry).
@@ -596,11 +597,15 @@ export const deleteSkyLights = () => {
  * skyBoxSystem tick.
  * @internal
  * @remarks
- * A three r186 trap (WebGPU), guarded here: a `castShadow` change deletes the light and creates
- * a new one, never sets the flag: with PostFX on, a light whose shadow is turned back on after
- * it was off crashes the frame ("Texture 'output' ... writable usage and another usage in the
- * same synchronization scope"). Something else changing the light's flag is treated the same
- * way.
+ * A three r186 trap (WebGPU, found 2026-09-30), guarded here: a `castShadow` change deletes the
+ * light and creates a new one, never sets the flag: with PostFX on, a light whose shadow was
+ * turned back on after it was off crashed the frame ("Texture 'output' ... writable usage and
+ * another usage in the same synchronization scope"). Something else changing the light's flag is
+ * treated the same way. p057 (Phase 3) didn't reproduce it on r186 or r187 with today's engine
+ * (macOS, Chrome, WebGPU: largeWorld's ambient occlusion with the dayNight sun and the hub hero's
+ * bloom, each shadow-casting light's flag set off and on in place twice, no error on either
+ * version), so it's unknown whether three or the PostFX of then caused it; the guard costs no
+ * more than the toggle and stays.
  *
  * A new shadow-casting light needs no forced first shadow render, even faded out
  * (`shadow.autoUpdate` false): three r187 renders a new map once itself. On three r186 a map

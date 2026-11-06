@@ -12,13 +12,12 @@ rest of the build's files load later, or never.
 ### Where the floor comes from
 
 Most of the banner is three.js. three's `WebGPURenderer` brings its node system (TSL) whatever
-the material, so the same scene in a plain page, without the engine, still needs **237.7 KiB**
-(three r186, measured on 2026-10-14). The rest is the kernel every app runs: the ECS, the scenes,
-the asset registry, the loop, cameras and lights, and the HUD's root. The glTF import path loads
-with the first scene that imports a model, and the UI kit's windows are in a build only when the
-app uses one. One
-part a build without a model still carries: three's animation classes, which three's own glTF
-loader names, sit in three's core chunk
+the material, so the same scene in a plain page, without the engine, still needs **215.5 KiB**
+(three r187, measured on 2026-11-06; 237.7 KiB on r186). The rest is the kernel every app runs:
+the ECS, the scenes, the asset registry, the loop, cameras and lights, and the HUD's root. The
+glTF import path loads with the first scene that imports a model, and the UI kit's windows are in
+a build only when the app uses one. One part a build without a model still carries: three's
+animation classes, which three's own glTF loader names, sit in three's core chunk
 ([the issue](hub:issues/three-animation-classes-in-builds-without-models)).
 
 ### Each feature's share

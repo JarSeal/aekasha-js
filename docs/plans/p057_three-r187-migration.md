@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Rendering, Dependencies
 Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
 
@@ -242,7 +242,7 @@ Results so far (2026-11-05, macOS, Chromium, WebGPU):
    budgets `yarn sbp` flags as well under (`sbp.config.ts`: the `three` groups, the embeds'
    initial and main chunk budgets), in the same commit.
 
-### Phase 3: Clean-ups r187 allows
+### Phase 3: Clean-ups r187 allows — done
 
 Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev build):
 
@@ -369,6 +369,54 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
     download +0.5 kB gzip in the app (`postfx` +0.2, `kernel/mesh` +0.1, `kernel/render` +0.2),
     +0.3 kB in each embed; `api.json` gains this step's exports and step 1's
     `DEPRECATED_ENV_SIZES` and `ENV_BAKE_MIN_SIZE` (not recorded then); no debug code.
+- Step 4 done (2026-11-06): each of the 62 "r186" mentions under `src/`, `hub/` and `devTools/`
+  checked against r187's source, diffed against r186.1's (`npm pack three@0.186.1` in the
+  scratchpad). `devTools/` has none.
+  - Still true, now "three (r186, r187)": render objects kept until the object's `dispose`
+    (`LodFades.ts`, the LOD `CLAUDE.md`), a disposed geometry's attributes deleted on the GPU
+    (`LodChains.ts`, `TextureAtlas.ts`), the impostor atlas's v origin, the instance matrix
+    applied before `positionNode` (`OctahedralImpostorMaterial.ts`), `normalLocal` rotated per
+    instance and `tangentLocal` not, double-sided normal maps (`CrossQuads.ts`; `Tangent.js`
+    unchanged, `Normal.js` lost only deprecated exports), a render target's textures destroyed
+    with it (`ImpostorBake.ts`: a render target texture registers no `dispose` listener), VSM
+    drawing receivers and a shadow map once per camera and node frame, `FRAME` nodes
+    (`Snapshot.ts`), the background's direction traps (`layers/Base.ts`: `materialEnvRotation`
+    unchanged), the canvas alpha mode, `needsUpdate`, the GPU memory sizer (compressed 1 B, cube
+    faces 1×1), the VSM blur targets and `_frameBufferTargets`, the test bridge's `NodeFrame`
+    (`NodeFrame.js` identical), the GLTFParser's image loader test, DRACOLoader's
+    `setDecoderConfig` (now "removed in r194"), and Moon's vec2 cast (`tsc` fails without it).
+    `ambientOcclusion.postFx.json`'s "no effect since three r186" holds as written: both uniforms
+    are still `@deprecated since r186` and unused by r187's GTAO. Ported-from-r186 provenance
+    (`Atmosphere.ts`, `Clouds.ts`, `Sun.ts`) and dated r186 findings stay as they are (r187's
+    SkyMesh changes are docs and `Fn` layouts only).
+  - Corrected: `ImpostorSourceHash.ts` and the impostors `CLAUDE.md` (r187 widens an 8 or 16-bit
+    attribute to 32 bits but an index only to 16, a 16-bit one kept; the hash still hashes the
+    32-bit form, stable on both, so existing fingerprints stay); `NodeMaterial.clone()` keeps
+    `alphaTest` on r187 (a Node check: 0 on r186, 0.5 on r187; r187's `copy` walks the prototype
+    chain's setters), in `OctahedralImpostor.ts` and the impostors `CLAUDE.md`; `LodFades.ts`'
+    "three keys its builds by uuid" (r186 only: D3); `ImpostorBake.ts`' destroyed-texture note
+    (r186 only for 2D targets); the census (`_dbg__Census.ts`, the debug `CLAUDE.md`: r187's
+    `StandardDrawingPipeline.project` / `isCulled`, the same rules but a `BundleGroup`'s children
+    never culled, which the engine has none of); the frame order in `_dbg__GPUMemory.ts`,
+    `_dbg__ProfilerSources.ts` and the debug `CLAUDE.md` (three's own animation frame ran before
+    the engine's on r186, started by `init()`, and after it on r187, started by the first
+    `render()`; the `LATE_MAIN` sampling is right either way); the smallest-build guide's floor:
+    the p611 §7 probe page `webgpuTsl` (`.cache/probe/lite/`) rebuilt on r187 is 215.5 KiB gzip
+    (237.7 on r186; `webgpuStandard` 215.2, so the banner's TSL functions now add 0.3 KiB, not
+    29).
+  - Not re-tested, said so: `layers/Stars.ts`' TSL `If` caching trap (r187 reworked TSL's
+    temporary caching, `Node.isCacheable` and assignable nodes; the var stays).
+  - `SkyLights.ts`' `castShadow` crash under PostFX: not reproduced on r186 (a detached `main`
+    worktree, the control) or r187 with today's engine. Probe (scratchpad `castShadowProbe.mjs`:
+    macOS, Chrome, WebGPU, `?isDebug=true&aekTest=true`): every shadow-casting
+    `DirectionalLight`'s `castShadow` set false for 30 frames and true for 90, twice, on
+    largeWorld (ambientOcclusion, the dayNight sun) and exampleHubHero (heroBloom); PostFX on
+    throughout, no WebGPU error on either version. The finding (2026-09-30, three 0.186.1,
+    `68e93e89`) predates later PostFX changes. The guard stays (it costs the same one material
+    rebuild as a toggle); its remarks and the sky box `CLAUDE.md` say what was and wasn't
+    reproduced.
+  - Checked: `tsc`, `tsc -p hub`, lint on the changed files, `yarn test` (301 files, 2,653
+    tests), `yarn verify:baselines --docs` (unchanged), `yarn hub:build`.
 
 1. **`env.size` below 256** (D1). Measure a day-night bake at 256 against r186's 128 (the
    Environment folder's bake stats, GPU ms, on `skyShowcase`; p110's numbers are r186's) and the

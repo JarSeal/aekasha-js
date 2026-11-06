@@ -164,13 +164,15 @@ type PMREMGeneratorInternals = {
   _boxMesh: THREE.Mesh | null;
 };
 
-/** A shadow map's VSM blur targets, kept on the map when it's an array (three r186, ShadowNode). */
+/** A shadow map's VSM blur targets, kept on the map when it's an array (three r186, r187:
+ * ShadowNode). */
 type ShadowMapInternals = {
   _vsmShadowMapVertical?: THREE.RenderTarget;
   _vsmShadowMapHorizontal?: THREE.RenderTarget;
 };
 
-/** A ShadowNode's targets (three r186): a VSM shadow keeps its blur pair here, not on the map. */
+/** A ShadowNode's targets (three r186, r187): a VSM shadow keeps its blur pair here, not on the
+ * map. */
 type ShadowNodeInternals = {
   shadowMap: THREE.RenderTarget | null;
   vsmShadowMapVertical: THREE.RenderTarget | null;
@@ -242,7 +244,7 @@ export const registerEngineGPUMemorySources = () => {
   registerGPUMemorySource({
     id: 'renderer.output',
     label: 'Renderer output target (MSAA, output pass)',
-    // The renderer's own full-canvas target, per output target (three r186, private)
+    // The renderer's own full-canvas target, per output target (three r186, r187, private)
     getResources: () =>
       (
         getRenderer() as unknown as {

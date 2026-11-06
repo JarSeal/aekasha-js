@@ -105,8 +105,8 @@ const fitCamera = (camera: THREE.Camera, aspect: number) => {
 };
 
 /**
- * Starts a new node frame. three r186 updates `FRAME` nodes (a PostFX `pass()`, a shadow map)
- * once per node frame, so a snapshot rendered after the frame's own render would reuse them as
+ * Starts a new node frame. three (r186, r187) updates `FRAME` nodes (a PostFX `pass()`, a shadow
+ * map) once per node frame, so a snapshot rendered after the frame's own render would reuse them as
  * the canvas drew them (its size, its camera's aspect). The next animation frame counts on.
  */
 const advanceNodeFrame = (renderer: THREE.WebGPURenderer) => {

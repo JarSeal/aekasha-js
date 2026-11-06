@@ -124,7 +124,7 @@ const getPlaneAxes = (i: number, planes: number, dir: THREE.Vector3, right: THRE
  * and its geometry normal. On the back face only the out component flips, which mirrors the
  * normal through the plane. Up is along -v on a bake's atlas (v runs down the image), along +v on
  * a loaded one (`vOrigin`).
- * @remarks Not three's normal map: r186 rotates `normalLocal` per instance but not
+ * @remarks Not three's normal map: three (r186, r187) rotates `normalLocal` per instance but not
  * `tangentLocal`, and its double-sided normal maps negate the whole frame on a back face, which
  * would light a plane seen from behind from below.
  */

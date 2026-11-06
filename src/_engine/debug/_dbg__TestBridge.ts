@@ -105,7 +105,8 @@ const freeze: AekTestBridge['freeze'] = async () => {
 // (SwiftShader frames take anything from 20 ms to seconds). The main loop and physics take the
 // fixed delta (and with it the sky box's clock: its clouds and bake schedules); three's TSL
 // `time` (the stars' twinkle) advances in `NodeFrame.update()` from `performance.now()`, once per
-// animation frame, so that method is replaced (three r186's fields, re-check on a three upgrade).
+// animation frame, so that method is replaced (three r186's and r187's fields, re-check on a
+// three upgrade).
 const useTestClock = () => {
   setFixedFrameDelta(TEST_FRAME_DELTA);
   NodeFrame.prototype.update = function (this: NodeFrame) {

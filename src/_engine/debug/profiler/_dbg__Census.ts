@@ -7,9 +7,12 @@ import { getActiveView, getActiveViewCamera, isRuntimeViewActive } from '../../k
 import { isDebugHelperObject } from '../../kernel/render/Object3DHelpers';
 
 /**
- * The "in view" census (§2.7): a walk of the root scene that repeats three r186's culling rules
- * (WebGPU `Renderer._projectObject`) against the active camera, because three exposes no
- * per-object culling result. Sampled at the profiler's update rate, never per frame.
+ * The "in view" census (§2.7): a walk of the root scene that repeats three's culling rules (WebGPU:
+ * r186's `Renderer._projectObject`, r187's `StandardDrawingPipeline.project` and `isCulled`, the
+ * same rules) against the active camera, because three exposes no per-object culling result.
+ * r187 also never culls a `BundleGroup`'s children, and an app can swap the drawing pipeline
+ * (`renderer.drawingPipeline`): the engine uses neither, and the census handles neither. Sampled
+ * at the profiler's update rate, never per frame.
  *
  * - An invisible object skips its whole subtree; the layer test only gates the object itself
  *   (its children are still walked), like three.

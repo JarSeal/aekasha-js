@@ -6,7 +6,7 @@ Notes for the render area (`src/_engine/kernel/render/`): snapshots, pre-warm co
 
 - Direct path (any scene and camera, PostFX off, or `transparent`): the scene renders into a HalfFloat target, then a quad with `renderOutput()` and the renderer's tone mapping and output colour space (the viewports' contract) into an RGBA8 target. The canvas isn't touched. `transparent` clears to alpha 0 and leaves the scene's background out for the render.
 - PostFX path (the root scene with the active camera, its pipeline on): three's `pass()` sizes itself from the drawing buffer, so the renderer is resized to the snapshot (pixel ratio 1) for the render and put back, and `renderFrameNow()` (`MainLoop.ts`) draws the canvas again in the same task, so the browser never shows it cleared.
-- Both start a new node frame first: three r186 updates `FRAME` nodes (a `pass()`, a shadow map) once per node frame, so a snapshot after the frame's own render would reuse them at the canvas's size and aspect (the PostFX snapshot came out stretched).
+- Both start a new node frame first: three (r186, r187) updates `FRAME` nodes (a `pass()`, a shadow map) once per node frame, so a snapshot after the frame's own render would reuse them at the canvas's size and aspect (the PostFX snapshot came out stretched).
 - The camera's aspect (an orthographic camera's width, keeping its height) is set for the snapshot and put back, like everything else it changes, before the readback starts.
 
 ## Pre-warm compiles

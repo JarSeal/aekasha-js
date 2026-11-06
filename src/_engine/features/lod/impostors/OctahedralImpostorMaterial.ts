@@ -8,7 +8,7 @@
 // the view direction's barycentric coordinates in its grid triangle, continuous across frames, so
 // nothing pops as the camera moves.
 //
-// The billboard needs each instance's centre and rotation, but three r186 multiplies
+// The billboard needs each instance's centre and rotation, but three (r186, r187) multiplies
 // `positionLocal` by the instance matrix before `positionNode` runs (`NodeMaterial.setupPosition`,
 // `Instance.js`) and keeps the matrix to itself. So the material binds the instance matrix a
 // second time: `impostorInstanceMatrix` resolves the drawn object's when its shader is built
@@ -88,9 +88,10 @@ const getInstanceMatrixBuffer = (matrices: THREE.InstancedBufferAttribute) => {
 
 /**
  * The drawn object's instance matrix: an InstancedMesh's per instance, else the identity.
- * @remarks three r186 multiplies `positionLocal` by the instance matrix before `positionNode` runs
- * (`NodeMaterial.setupPosition`) and keeps its binding private, so the billboard reads the matrix
- * through a second binding over the same array, version-synced before each draw.
+ * @remarks three (r186, r187) multiplies `positionLocal` by the instance matrix before
+ * `positionNode` runs (`NodeMaterial.setupPosition`) and keeps its binding private, so the
+ * billboard reads the matrix through a second binding over the same array, version-synced before
+ * each draw.
  */
 class ImpostorInstanceMatrixNode extends THREE.Node {
   static get type() {
