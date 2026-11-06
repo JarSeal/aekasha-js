@@ -36,7 +36,7 @@ import {
   getPhysicsEntityByAppId,
 } from './PhysicsEntity';
 import { createJointSync, deleteJoint, deleteJointSync } from './PhysicsJoints';
-import { requestPhysicsTierWants } from './PhysicsTiers';
+import { onPhysicsJointCreated, requestPhysicsTier, requestPhysicsTierWants } from './PhysicsTiers';
 import type { PhysicsTier } from './PhysicsTierTypes';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
@@ -244,6 +244,44 @@ describe('the facade (MAIN_THREAD)', () => {
       requestPhysicsTierWants(world, [a], wantOf);
       expect([a, b, c].map((id) => targetOf(world, id))).toEqual(['STATIC', 'STATIC', 'STATIC']);
       for (const j of joints) deleteJointSync(j.id);
+    } finally {
+      facade.tiersInstalled = false;
+    }
+  });
+
+  it('p353: a jointed body is STATIC where DISABLED is asked for, and a new joint makes it so', async () => {
+    // docs/issues/rapier-joint-on-disabled-bodies-panics.md: disabled bodies with joints corrupt
+    // Rapier's solving of other joints
+    const world = new ECSWorld({ id: 'p353-joint-safe-tier' });
+    facade.tiersInstalled = true;
+    try {
+      const [a, b, lone, c, d] = await Promise.all(
+        [0, 2, 4, 6, 8].map((x) => createBall(world, x))
+      );
+      const body = (id: number) => world.getRigidBody(id)!;
+      const spherical = (id1: number, id2: number) =>
+        createJointSync({
+          type: 'SPHERICAL',
+          body1Id: body(id1).id,
+          body2Id: body(id2).id,
+          anchor1: { x: 1, y: 0, z: 0 },
+          anchor2: { x: -1, y: 0, z: 0 },
+        });
+      const ab = spherical(a, b);
+      expect(requestPhysicsTier(a, 'DISABLED', world)).toBe(true);
+      expect([a, b].map((id) => targetOf(world, id))).toEqual(['STATIC', 'STATIC']);
+      expect(requestPhysicsTier(lone, 'DISABLED', world)).toBe(true);
+      expect(targetOf(world, lone)).toBe('DISABLED');
+      requestPhysicsTierWants(world, [lone], () => 'DISABLED');
+      expect(targetOf(world, lone)).toBe('DISABLED');
+
+      // c and d DISABLED, then joined: the listener moves them to STATIC
+      requestPhysicsTier(c, 'DISABLED', world);
+      requestPhysicsTier(d, 'DISABLED', world);
+      const cd = spherical(c, d);
+      onPhysicsJointCreated(body(c).id, body(d).id);
+      expect([c, d].map((id) => targetOf(world, id))).toEqual(['STATIC', 'STATIC']);
+      for (const j of [ab, cd]) deleteJointSync(j.id);
     } finally {
       facade.tiersInstalled = false;
     }

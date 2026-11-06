@@ -121,6 +121,7 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
           }
           return true;
         },
+        isJointed: () => false,
       });
     }
     const budgets = { maxConcurrentLoads: 100, maxCreateMsPerFrame: 1000 };
@@ -142,10 +143,12 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     addStreamingCellContent({
       sceneId: rt.sceneId,
       cellKey,
-      load: ({ world }) => {
+      load: ({ world, cx, cz, cellSize }) => {
         const scope = getPhysicsCreationScope();
         opts.scopes?.push(scope);
         const bodyId = world.createEntity();
+        // In its own cell: a body goes to the cell it's in on every decision
+        world.getPosition(bodyId)!.set((cx + 0.5) * cellSize, 0, (cz + 0.5) * cellSize);
         world.addComponent(bodyId, ComponentType.BODY_DYNAMIC_HEADLESS, {} as never);
         // What createPhysicsEntity does with `tierPolicy`: joins, or reports to a holding scope
         if (opts.isMember && scope?.holdPolicyMember) scope.holdPolicyMember(world, bodyId);
@@ -190,6 +193,22 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
       target: 'FULL',
     } as never);
     expect(rt.bodies?.summarize?.(rt.world).offTier).toBe(1);
+  });
+
+  test("a body pushed into another cell takes that cell's tier at the next decision", () => {
+    // Made by the home cell, pushed into cell (2, 0); from (160, 32) the home cell is NEARBY and
+    // cell (2, 0) RESIDENT: the body is FULL (the cell it's in), not the home cell's STATIC
+    const { rt, world, tiers, goTo } = setup();
+    const ids = bodyUnit(rt, HOME);
+    goTo(32);
+    const [bodyId] = ids;
+    world.getPosition(bodyId)!.set(160, 0, 32);
+    goTo(160);
+    expect(rt.cells.get(NEAR)?.adopted).toEqual([bodyId]);
+    expect(rt.cells.get(HOME)?.level).not.toBe(rt.cells.get(NEAR)?.level);
+    expect(tiers.get(bodyId)).toBe('FULL');
+    expect(rt.stats.bodiesAdopted).toBe(1);
+    expect(rt.bodies?.summarize?.(rt.world).offTier).toBe(0);
   });
 
   test("the scene's nearbyPhysicsTier is a NEARBY cell's", () => {

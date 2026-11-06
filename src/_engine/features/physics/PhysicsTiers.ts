@@ -17,7 +17,12 @@ import {
   reattachRigidBody,
   reattachRigidBodySync,
 } from './PhysicsBodies';
-import { forEachJointBodyPair, hasJoints, isBodyJointed } from './PhysicsJoints';
+import {
+  forEachJointBodyPair,
+  hasJoints,
+  isBodyJointed,
+  setJointCreatedListener,
+} from './PhysicsJoints';
 import { assertPhysicsTiersInstalled, getPhysicsState } from './PhysicsState';
 import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
@@ -118,7 +123,9 @@ const resolveTierGroup = (
  * - `STATIC`: switched to `FIXED`. It still collides, but nothing moves or wakes it. Rapier
  *   zeroes its velocities, so it resumes from rest.
  * - `DISABLED`: out of the broad phase, contacts and queries (rays miss it), so only where
- *   nothing can reach it. It keeps its pose and velocities exactly.
+ *   nothing can reach it. It keeps its pose and velocities exactly. A body with joints (its whole
+ *   group) gets `STATIC` instead, and so does a `DISABLED` one a joint is created on, before the
+ *   next step: Rapier (0.19.3) mishandles joints on disabled bodies.
  * - `REMOVED`: the body and its colliders leave the physics world and free their
  *   transform-buffer slot; the entity and its visual stay. Their state is kept, with their ids
  *   (references to the body and colliders work again once it's back). A body at rest comes back
@@ -166,9 +173,35 @@ export const requestPhysicsTier = (
     }
     return false;
   }
-  setGroupTarget(world, group, tier);
+  setGroupTarget(world, group, toJointSafeTier(world, group, tier));
   return true;
 };
+
+/** Whether any member of a resolved group has a joint (a group of one can be jointed to a fixed
+ * body). */
+const isGroupJointed = (world: ECSWorld, group: readonly number[]) => {
+  if (!hasJoints()) return false;
+  for (let i = 0; i < group.length; i++) {
+    const body = getPhysicsEntityBody(world, group[i]);
+    if (body && isBodyJointed(body.id)) return true;
+  }
+  return false;
+};
+
+/**
+ * Whether the entity's body has a joint (also one requested from the worker, not replied yet).
+ * @internal
+ */
+export const isPhysicsEntityJointed = (world: ECSWorld, entityId: number) => {
+  const body = getPhysicsEntityBody(world, entityId);
+  return !!body && hasJoints() && isBodyJointed(body.id);
+};
+
+/** `DISABLED` is `STATIC` for a jointed group: Rapier (0.19.3) mishandles joints on disabled
+ * bodies (a joint inserted between them panics, and stepping them corrupts other joints' solving:
+ * docs/issues/rapier-joint-on-disabled-bodies-panics.md). */
+const toJointSafeTier = (world: ECSWorld, group: readonly number[], tier: PhysicsTier) =>
+  tier === 'DISABLED' && isGroupJointed(world, group) ? 'STATIC' : tier;
 
 /** Makes `tier` the target of every entity of a resolved group (resolveTierGroup), queued for the
  * next APP_PHYSICS_STEP sub-step. */
@@ -236,7 +269,8 @@ export const requestPhysicsTierWants = (
     }
     if (tier === 'POLICY') continue;
     const group = resolveTierGroup(world, entityId, tier);
-    if (typeof group !== 'string') setGroupTarget(world, group, tier);
+    if (typeof group !== 'string')
+      setGroupTarget(world, group, toJointSafeTier(world, group, tier));
   }
 };
 
@@ -396,6 +430,8 @@ const returnToWorld = (
  * returnToWorld).
  */
 const applyTier = (world: ECSWorld, entityId: number, data: PhysicsSimTierData) => {
+  // A joint made since the request: DISABLED is STATIC for it (toJointSafeTier)
+  if (data.target === 'DISABLED' && isBodyJointed(data.body.id)) data.target = 'STATIC';
   const from = data.tier;
   const to = data.target;
   if (from === to) return;
@@ -444,11 +480,30 @@ const physicsTierSystem = (world: ECSWorld) => {
 };
 
 /**
- * Installs the tiers' `APP_PHYSICS_STEP` system and the `PHYSICS_SIM_TIER` hooks (the
- * `physicsTiers()` feature's install).
+ * A joint is being created between the two bodies: one in the `DISABLED` tier (or on its way
+ * there) goes `STATIC` with its group before the next step (toJointSafeTier). The joint's own
+ * insert is safe either way (the backend's `createImpulseJointOnDisabled`). The tiers' listener
+ * (`setJointCreatedListener`).
+ * @internal
+ */
+export const onPhysicsJointCreated = (body1Id: number, body2Id: number) => {
+  for (const bodyId of [body1Id, body2Id]) {
+    const owner = getPhysicsBodyOwner(bodyId);
+    if (!owner) continue;
+    const data = owner.world.getComponent(owner.entityId, ComponentType.PHYSICS_SIM_TIER);
+    if (data?.target !== 'DISABLED' && data?.tier !== 'DISABLED') continue;
+    const group = resolveTierGroup(owner.world, owner.entityId, 'STATIC');
+    if (typeof group !== 'string') setGroupTarget(owner.world, group, 'STATIC');
+  }
+};
+
+/**
+ * Installs the tiers' `APP_PHYSICS_STEP` system, the `PHYSICS_SIM_TIER` hooks and the joint
+ * listener (the `physicsTiers()` feature's install).
  * @internal
  */
 export const installPhysicsTiers = (ctx: FeatureContext) => {
+  setJointCreatedListener(onPhysicsJointCreated);
   ctx.registerPlugin((world) => {
     world.addSystem(
       ECSSystemStage.APP_PHYSICS_STEP,

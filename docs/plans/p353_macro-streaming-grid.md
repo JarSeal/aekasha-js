@@ -668,7 +668,9 @@ wall from its JSON, its units getting their shared assets in their own `load`. `
 World streaming Features entry. Phase 4: engine minor: `PhysicsEntityOpts.initialTier`,
 `streaming.nearbyPhysicsTier`, the cells' bodies taking their cell's tier and handed to the cell
 they moved into, the probe holding the cells, the Streaming tab's Bodies; fixed: a joint created
-between disabled bodies (the `DISABLED` tier) killed the Rapier world on the next step. App minor:
+between disabled bodies (the `DISABLED` tier) killed the Rapier world on the next step; changed:
+a jointed body gets `STATIC` where `DISABLED` is asked for (Rapier mis-solves joints on disabled
+bodies). App minor:
 the `streamingPhysics` scene. `readme.md`: the World streaming entry's physics sentence.
 
 ### Phase 3 — Build-time manifest — done
@@ -1069,27 +1071,63 @@ As built (section 4):
   section, its table, the pile's code; Not yet) and Physics page (`initialTier`), `readme.md`'s
   World streaming entry.
 
-**Measured** (2026-11-06, Apple M2, Chrome 156 headless, the dev server with
-`?isDebug=true&aekTest=true&startScene=streamingPhysics`, the test bridge's fixed frame step; the
-plough at 24 m/s for 3,600 frames, from x = -344 along row 0 to +344 and partway back; a step
-system after the tiers' and the policy's checking every sub-step, a sample every 20 frames):
+As built (after review: the user saw crates turn grey as the plough passed them, and a chain
+link fly off about 20 s in; both reproduced, in all three targets for the first, in
+`WORKER_THREAD` only for the second):
 
-| target                    | steps | `FULL` in a non-`RESIDENT` cell | members outside `RESIDENT` | off tier | handed over | outlived their cell | bodies (max) | errors |
-| ------------------------- | ----- | ------------------------------- | -------------------------- | -------- | ----------- | ------------------- | ------------ | ------ |
-| `WORKER_THREAD`, SAB      | 3,628 | 0                               | 0                          | 0        | 238         | 0                   | 474          | none   |
-| `WORKER_THREAD`, messages | 3,614 | 0                               | 0                          | 0        | 244         | 0                   | 471          | none   |
-| `MAIN_THREAD`             | 3,600 | 0                               | 0                          | 0        | 237         | 0                   | 471          | none   |
+- **A body's tier is the cell it's in (D1 extended).** The plough pushes crates along like a
+  bulldozer; a pushed crate stayed its pile's cell's (ownership changed only at an unload), so
+  when that cell, behind the plough, went `NEARBY`, the crate went `DISABLED` beside it and the
+  plough passed through it (26-27 crates a run within 12 m of it). Now every decision starts with
+  the bodies' `rebalance`: each body the cells hold goes to the loaded cell it's in (the cell's
+  `adopted`) and takes its tier, and the cell it's in unloads it. The hand-over at unload stays,
+  for the moves since the last decision. §4.3's "only when a cell is about to unload" was for a
+  spatial rebuild's cost; reading a few hundred positions every 10 frames costs microseconds.
+- **A jointed body is never `DISABLED`.** A chain whose links had been `DISABLED`, joined and then
+  enabled, with other chains disabled and deleted meanwhile, started rising untouched about 80
+  steps after it was enabled and was flung to 50-75 m/s. It happened only in `WORKER_THREAD` timing:
+  the same moment on `MAIN_THREAD` was calm, and every Rapier call in the worker was logged, none
+  touching the chain. The world's snapshot from 40 steps before, restored in Node, stepped calmly,
+  so the live world's islands or joint graph were corrupted, which a restore rebuilds. With the
+  chains `STATIC` instead (`nearbyPhysicsTier: 'STATIC'`), three runs were calm. So the physics
+  tiers give a jointed group `STATIC` for `DISABLED` (`toJointSafeTier`; `applyTier` checks again),
+  `createJoint` tells the tiers at its call (`setJointCreatedListener`, `onPhysicsJointCreated`: a
+  `DISABLED` group goes `STATIC` before the next step), and a `WORKER_THREAD` joint's bodies count
+  as jointed until its reply. The insert workaround stays for that moment. A p352 behaviour change
+  for jointed bodies, in the tiers' JSDoc, the Hub's Physics page and the issue file.
+- **Joint groups across cells** (D6, now visible): a chain lying across a cell edge is in two cells
+  once its links rebalance, and its group takes the finest want, so a chain lying into a `NEARBY`
+  cell simulates with its `RESIDENT` half. The seam's `isJointed` (`isPhysicsEntityJointed`) lets
+  `summarize` leave jointed bodies out of "off tier", and `STATIC` counts as a `DISABLED` cell's.
+- **Tests:** `StreamingBodies.test.ts` (a body pushed into another cell takes its tier at the next
+  decision; the units' bodies placed in their own cells), `PhysicsFacade.test.ts` (a jointed group
+  `STATIC` for `DISABLED`, a lone body still `DISABLED`, a joint created on `DISABLED` bodies
+  moving them `STATIC`).
 
-"`FULL` in a non-`RESIDENT` cell" counts every sub-step a body in a dynamic bucket (`FULL`, no
-other tier pending) is a non-`RESIDENT` cell's, or is unowned yet in such a cell's load: a crate
-created into a `NEARBY` cell never simulated a step `FULL`. No capacity refusal at the default
-`maxBodies` (2,048), no unit error, no tier warning. The cells' tier counts (`summarize`) matched
-every dynamic body's tier in the world (what the Physics API tab counts) in 173-180 of 180
-samples; the others each had two cells `UNLOADING`, whose bodies the cells have forgotten while
-their units unload over the next frames (28 crates: two piles). The probe hash (`yarn
-verify:scenes`) is the same in all three targets (`a2f331ff`: a scene load, the cells held), and
-`physicsTiers`' is unchanged (its system order differs from `main`'s baseline by Phase 1's
-`streamingSystem`).
+**Measured** (2026-11-06, after the review's fixes; Apple M2, Chrome 156 headless, the dev server
+with `?isDebug=true&aekTest=true&startScene=streamingPhysics`, the test bridge's fixed frame step;
+the plough at 24 m/s for 3,600 frames, along row 0 from x = -344 to +344 and back to about -340;
+a step system after the tiers' and the policy's checking every sub-step, a sample every 20
+frames):
+
+| target                    | steps | non-jointed `FULL` in a non-`RESIDENT` cell | jointed ones (their group's) | members outside `RESIDENT` | off tier | moved to the cell they're in | outlived their cell | bodies (max) | errors |
+| ------------------------- | ----- | ------------------------------------------- | ---------------------------- | -------------------------- | -------- | ---------------------------- | ------------------- | ------------ | ------ |
+| `WORKER_THREAD`, SAB      | 3,617 | 0                                           | 7,094                        | 0                          | 0        | 389                          | 0                   | 470          | none   |
+| `WORKER_THREAD`, messages | 3,600 | 0                                           | 7,364                        | 0                          | 0        | 413                          | 0                   | 476          | none   |
+| `MAIN_THREAD`             | 3,602 | 0                                           | 8,374                        | 0                          | 0        | 400                          | 0                   | 470          | none   |
+
+The first count is body-steps: every sub-step a body in a dynamic bucket (`FULL`, no other tier
+pending) is a non-`RESIDENT` cell's, or is unowned yet in such a cell's load (a crate created into
+a `NEARBY` cell never simulated a step `FULL`). The jointed ones are the chains' links lying in a
+`NEARBY` cell with their `RESIDENT` half (D6). No capacity refusal at the default `maxBodies`
+(2,048), no unit error, no tier warning. The cells' tier counts matched every dynamic body's tier
+in the world (the Physics API tab's) in 173-180 of 180 samples; the others each had cells
+`UNLOADING`, whose bodies the cells have forgotten while their units unload over the next frames.
+The review's own checks, 1,800 frames at the scene's 12 m/s in `WORKER_THREAD`, three runs: no
+`DISABLED` crate within 12 m of the plough (26-27 before), no chain link over 15 m/s (the fastest
+11 m/s, a crate's push; 50-75 m/s before). The probe hash (`yarn verify:scenes`) is the same in
+all three targets (`07287c06`: a scene load, the cells held; `a2f331ff` before the review, when the chains loaded into `NEARBY` cells were `DISABLED`), and `physicsTiers`' is unchanged
+(its system order differs from `main`'s baseline by Phase 1's `streamingSystem`).
 
 ### Phase 5 — Far representations
 

@@ -3,6 +3,7 @@
 // one.
 
 import { existsOrThrow } from '../../utils/Assert';
+import { lerror } from '../../utils/Logger';
 import { messageWorkerAsync, toWireJointParams } from './PhysicsMessaging';
 import { checkDeletedId, forgetJoint, joints } from './PhysicsRegistry';
 import { assertMainThread, assertWorldCreated, facade, isWorkerTarget } from './PhysicsState';
@@ -11,6 +12,41 @@ import type { CreateJointResponse, DeleteJointResponse } from './protocol/Physic
 import { JointProxyAPI } from './proxies/JointProxyAPI';
 import type { JointAPI, JointParams } from './types/PhysicsJointTypes';
 
+/** Told the two body ids of every joint `createJoint` makes, at its call (the physics tiers: a
+ * jointed body leaves the `DISABLED` tier, p353 Phase 4). */
+let jointCreatedListener: ((body1Id: number, body2Id: number) => void) | null = null;
+
+/**
+ * Sets (or clears, with null) the one listener told the two body ids of every joint
+ * {@link createJoint} makes, at its call (before a `WORKER_THREAD` reply): `physicsTiers()`'s.
+ * @internal
+ */
+export const setJointCreatedListener = (
+  listener: ((body1Id: number, body2Id: number) => void) | null
+) => {
+  jointCreatedListener = listener;
+};
+
+const notifyJointCreated = (params: JointParams) => {
+  try {
+    jointCreatedListener?.(params.body1Id, params.body2Id);
+  } catch (err) {
+    lerror('Physics: the joint-created listener threw.', err);
+  }
+};
+
+/** WORKER_THREAD: the bodies of joints requested and not replied yet, by body id (a count), so
+ * {@link isBodyJointed} sees them before the joint is in the registry. */
+const bodiesOfJointsInFlight = new Map<number, number>();
+
+const countJointInFlight = (params: JointParams, delta: 1 | -1) => {
+  for (const bodyId of [params.body1Id, params.body2Id]) {
+    const count = (bodiesOfJointsInFlight.get(bodyId) ?? 0) + delta;
+    if (count > 0) bodiesOfJointsInFlight.set(bodyId, count);
+    else bodiesOfJointsInFlight.delete(bodyId);
+  }
+};
+
 /**
  * Creates an impulse joint connecting two rigid bodies (by id). Rejects without a world, and when
  * either body doesn't exist.
@@ -18,10 +54,17 @@ import type { JointAPI, JointParams } from './types/PhysicsJointTypes';
 export const createJoint = async (params: JointParams): Promise<JointAPI> => {
   if (!isWorkerTarget()) return createJointSync(params);
   assertWorldCreated('a joint');
-  const res = await messageWorkerAsync<CreateJointResponse>({
-    type: PhysicsProtocolType.CREATE_JOINT,
-    params: toWireJointParams(params),
-  });
+  countJointInFlight(params, 1);
+  notifyJointCreated(params);
+  let res: CreateJointResponse;
+  try {
+    res = await messageWorkerAsync<CreateJointResponse>({
+      type: PhysicsProtocolType.CREATE_JOINT,
+      params: toWireJointParams(params),
+    });
+  } finally {
+    countJointInFlight(params, -1);
+  }
   const jointProxy = new JointProxyAPI(res.id, params.body1Id, params.body2Id, params.userData);
   joints.set(res.id, jointProxy);
   return jointProxy;
@@ -39,6 +82,7 @@ export const createJointSync = (params: JointParams): JointAPI => {
     `Could not create a joint ("MAIN_THREAD"). Params: ${JSON.stringify(params)}`
   );
   joints.set(joint.id, joint);
+  notifyJointCreated(params);
   return joint;
 };
 
@@ -79,10 +123,12 @@ export const forEachJointBodyPair = (fn: (body1Id: number, body2Id: number) => v
 };
 
 /**
- * Whether a live impulse joint is attached to the body: the walk stops at the first one.
+ * Whether a live impulse joint is attached to the body, or one requested from the worker and not
+ * replied yet: the walk stops at the first one.
  * @internal
  */
 export const isBodyJointed = (bodyId: number) => {
+  if (bodiesOfJointsInFlight.has(bodyId)) return true;
   for (const joint of joints.values()) {
     if (joint.body1IdSync() === bodyId || joint.body2IdSync() === bodyId) return true;
   }

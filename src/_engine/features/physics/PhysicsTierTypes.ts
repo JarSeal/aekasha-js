@@ -9,6 +9,7 @@ import type { PhysVector } from './types/PhysicsCommonTypes';
  *   zeroes its velocities, so it resumes from rest when it goes back to `FULL`.
  * - `DISABLED`: `setEnabled(false)`: out of the broad phase, the contacts and the queries (rays
  *   miss it), so only safe where nothing can reach it. It keeps its pose and velocities exactly.
+ *   A body with joints gets `STATIC` instead (Rapier mishandles joints on disabled bodies).
  * - `REMOVED`: the body and its colliders are out of the physics world and its transform-buffer
  *   slot is free; their state is kept engine side, with their ids, and they come back with it.
  */

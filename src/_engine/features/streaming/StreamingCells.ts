@@ -635,6 +635,8 @@ const compareCells = (a: StreamingCell, b: StreamingCell) =>
 export const decideStreamingCells = (rt: StreamingRuntime, x: number, z: number) => {
   const { settings, cells, order } = rt;
   const { cellSize, invCellSize } = settings;
+  // Bodies first go to the cells they're in, so the levels decided next reach the right ones
+  rt.bodies?.rebalance?.(rt);
   const fcx = worldToCell(x, invCellSize);
   const fcz = worldToCell(z, invCellSize);
   rt.focusX = x;

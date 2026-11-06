@@ -18,7 +18,7 @@ import {
 } from '../../kernel/ecs/PhysicsTierAccess';
 import { lwarn } from '../../utils/Logger';
 import type { StreamingCell, StreamingRuntime } from './StreamingCells';
-import { handOverMovedBodies } from './StreamingHandOver';
+import { findAdopter, handOverMovedBodies, takeBodyFromCell } from './StreamingHandOver';
 import { StreamingLevel } from './StreamingRings';
 
 /**
@@ -33,6 +33,9 @@ export type StreamingBodies = {
   /** `cell` starts unloading: its bodies that moved into another loaded cell go to it
    * (StreamingHandOver.ts' `handOverMovedBodies`). Without it nothing is handed over. */
   handOver?(rt: StreamingRuntime, cell: StreamingCell): void;
+  /** A decision starts: every body the cells hold that is inside another loaded cell goes to it,
+   * and takes its tier, so a body's tier is the cell it's in, not the one that made it. */
+  rebalance?(rt: StreamingRuntime): void;
   /** The creation scope a cell's content runs in (its tier, and whether policy members are held
    * out), or null without physics tiers. */
   getCreationScope?(rt: StreamingRuntime, cell: StreamingCell): PhysicsCreationScope | null;
@@ -61,8 +64,8 @@ export type StreamingBodiesSummary = {
   byTier: Record<string, number>;
   /** Bodies with no tier request pending whose tier isn't their cell's: a non-policy body of a
    * `RESIDENT` cell that isn't `FULL`, or another cell's not in its `nearbyPhysicsTier`
-   * (characters left out: their tiers aren't the cells'). Without `physicsTiers()`, every body
-   * of a cell that isn't `RESIDENT`. */
+   * (characters and jointed bodies left out: their tiers aren't the cell's, but p420's and their
+   * joint group's). Without `physicsTiers()`, every body of a cell that isn't `RESIDENT`. */
   offTier: number;
 };
 
@@ -152,6 +155,30 @@ export const createStreamingBodies = (
 
     handOver: handOverMovedBodies,
 
+    rebalance: (rt) => {
+      if (!bodyCells.size) return;
+      const { world } = rt;
+      let moved: Map<StreamingCell, number[]> | null = null;
+      for (const [entityId, cell] of bodyCells) {
+        if (!world.isAlive(entityId)) {
+          bodyCells.delete(entityId);
+          policyBodies.delete(entityId);
+          continue;
+        }
+        const target = findAdopter(rt, cell, entityId);
+        if (!target) continue;
+        takeBodyFromCell(cell, entityId);
+        target.adopted.push(entityId);
+        rt.stats.bodiesAdopted++;
+        bodyCells.set(entityId, target);
+        moved ??= new Map();
+        const ids = moved.get(target);
+        if (ids) ids.push(entityId);
+        else moved.set(target, [entityId]);
+      }
+      if (moved) for (const [cell, ids] of moved) syncBodies(rt, cell, ids);
+    },
+
     getCreationScope: (rt, cell) => {
       if (!getPhysicsTierAccess()) return null;
       if (cell.level === StreamingLevel.RESIDENT) return { tier: 'FULL', holdPolicyMember: null };
@@ -214,7 +241,11 @@ export const createStreamingBodies = (
         if (isPolicy && !isResident) summary.heldOutOfPolicy++;
         if (data && data.target !== data.tier) continue;
         if (world.hasComponent(entityId, ComponentType.TAG_IS_CHARACTER)) continue;
-        if (isResident ? !isPolicy && tier !== 'FULL' : tier !== nearbyTier) {
+        if (getPhysicsTierAccess()?.isJointed(world, entityId)) continue;
+        // A jointed body is STATIC where DISABLED is asked for (physics' toJointSafeTier)
+        const isNearbyTier =
+          tier === nearbyTier || (nearbyTier === 'DISABLED' && tier === 'STATIC');
+        if (isResident ? !isPolicy && tier !== 'FULL' : !isNearbyTier) {
           summary.offTier++;
         }
       }

@@ -162,7 +162,8 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
    * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
   /** Code only: the tier a `DYNAMIC` body starts in (p353 Phase 4), as if `requestPhysicsTier`
-   * had applied before its first step: `STATIC` (made `FIXED`) or `DISABLED`. Default `FULL`, or
+   * had applied before its first step: `STATIC` (made `FIXED`) or `DISABLED` (`STATIC` once a
+   * joint is created on it). Default `FULL`, or
    * inside a streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
    * installed (without it, ignored with one warning). */
   initialTier?: 'FULL' | 'STATIC' | 'DISABLED';

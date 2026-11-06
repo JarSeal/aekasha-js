@@ -7,7 +7,11 @@ import {
   installPhysicsTierPolicy,
   setPhysicsTierPolicyMember,
 } from './PhysicsTierPolicy';
-import { installPhysicsTiers, requestPhysicsTierWants } from './PhysicsTiers';
+import {
+  installPhysicsTiers,
+  isPhysicsEntityJointed,
+  requestPhysicsTierWants,
+} from './PhysicsTiers';
 
 /**
  * The physics tiers' part of a scene load: the left scene's scene-scoped tier policies go. Exit
@@ -48,6 +52,7 @@ export const physicsTiers = (): EngineFeature => ({
       requestTiers: requestPhysicsTierWants,
       setPolicyMember: (world, entityId, member) =>
         setPhysicsTierPolicyMember(entityId, member, world),
+      isJointed: isPhysicsEntityJointed,
     });
   },
 });

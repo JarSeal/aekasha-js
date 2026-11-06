@@ -32,6 +32,9 @@ export type PhysicsTierAccess = {
   /** Puts the entity in its world's tier policy, or takes it out (its tier stays as it is). False
    * when it has no `DYNAMIC` `createPhysicsEntity` body. */
   setPolicyMember: (world: ECSWorld, entityId: number, member: boolean) => boolean;
+  /** Whether the entity's body has a joint: its tier is its joint group's (the finest want of its
+   * members), not its own. */
+  isJointed: (world: ECSWorld, entityId: number) => boolean;
 };
 
 let access: PhysicsTierAccess | null = null;

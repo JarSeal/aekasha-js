@@ -127,6 +127,7 @@ A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
 | ---------- | ---------------------------------------------------------------------------- |
 | `RESIDENT` | `FULL`, or their tier policy's if they're in it.                             |
 | `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.   |
+|            | A body with joints is `STATIC` for `DISABLED`.                               |
 | unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time). |
 
 ```json
@@ -140,11 +141,12 @@ A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
 - **The cell wins over the tier policy.** A body created with `tierPolicy: true` follows the
   policy only while its cell is `RESIDENT`: out of it, it has the cell's tier, and it's back in the
   policy when the cell is `RESIDENT` again. Bodies joined by joints change tier together, taking
-  the nearest cell's.
-- **Bodies that move change cells.** A crate that rolled into the next cell stays when its own
-  cell unloads, if that cell is loaded: the cell it's in takes it over (also from your `unload`,
-  which never sees it) and deletes it when it unloads itself. One somewhere nothing is loaded goes
-  with its cell.
+  the nearest cell's: a chain lying across into a `NEARBY` cell simulates with its `RESIDENT`
+  half.
+- **A body's cell is the one it's in.** A crate that rolled or was pushed into another loaded cell
+  belongs to that cell from the next decision on: it takes that cell's tier, stays when its own
+  cell unloads (your `unload` never sees it), and goes when the cell it's in unloads. One
+  somewhere nothing is loaded stays with its cell.
 - **Return a unit's bodies once they exist.** Await their `createPhysicsEntity` calls before `load`
   returns their ids: an entity without its body yet isn't one to the cell.
 - **Tier changes follow the frames.** Cells are decided every few frames and stream in over frames,
@@ -183,10 +185,11 @@ registries and entities exactly as they were, and the wall is there on exactly t
 its cells is. Three flights out across the
 grid and back (510 cell unloads) leave the GPU memory where it was, on both backends, and flying
 with a new shader in every cell (the scene tab's "A shader per cell") misses no frame primed, where
-unprimed it does. `streamingPhysics`, its plough mowing the 768 m row at 24 m/s for 3,600 steps,
-in all three physics targets: no body of a `NEARBY` cell ran a step `FULL`, no policy member was
-outside a `RESIDENT` cell, no body off its cell's tier, 237-244 bodies handed over and none left
-behind, at most 474 bodies (no capacity refusal). The plan's
+unprimed it does. `streamingPhysics`, its plough mowing the 688 m row at 24 m/s for 3,600 steps,
+in all three physics targets: no body of a `NEARBY` cell ran a step `FULL` (but chains kept
+`FULL` by their `RESIDENT` half), no policy member was outside a `RESIDENT` cell, no body off its
+cell's tier, 389-413 bodies moved to the cell they were in and none left behind, at most 476
+bodies (no capacity refusal). The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
 and Phases 2 to 4 have the numbers.
 :::

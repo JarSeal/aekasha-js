@@ -1,6 +1,7 @@
 // The streaming machine's hand-over of the bodies that moved (p353 Phase 4 D1): when a cell starts
 // unloading, each body it holds that is inside another loaded cell goes to that cell, which
-// deletes it when it unloads itself. The runtime's bodies (StreamingBodies.ts, loaded on demand)
+// deletes it when it unloads itself (StreamingBodies.ts' `rebalance` does the same on every
+// decision, with these helpers). The runtime's bodies (StreamingBodies.ts, loaded on demand)
 // run it as their `handOver`, and say which entities are bodies and where they are; without them
 // nothing moves. A module of its own so the machine's tests can hand it to their stand-in.
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
@@ -8,10 +9,13 @@ import type { StreamingCell, StreamingRuntime } from './StreamingCells';
 
 const _at = { x: 0, z: 0 };
 
-/** The cell a body of `cell`'s has moved into, when that cell has content to keep it with
+/**
+ * The cell a body of `cell`'s has moved into, when that cell has content to keep it with
  * (`LOADING`, `PRIMING` or `LOADED`); null when it's still in `cell`, isn't a body that moves, or
- * is somewhere nothing is loaded (it goes with `cell`). */
-const findAdopter = (
+ * is somewhere nothing is loaded (it stays with `cell`).
+ * @internal
+ */
+export const findAdopter = (
   rt: StreamingRuntime,
   cell: StreamingCell,
   entityId: number
@@ -25,6 +29,26 @@ const findAdopter = (
   if (!target || target === cell) return null;
   const { phase } = target;
   return phase === 'LOADING' || phase === 'PRIMING' || phase === 'LOADED' ? target : null;
+};
+
+/**
+ * Takes a body out of `cell`'s lists (a unit's ids, a new array for that unit only, or its
+ * adopted ones), for another cell to take it.
+ * @internal
+ */
+export const takeBodyFromCell = (cell: StreamingCell, entityId: number) => {
+  const adoptedAt = cell.adopted.indexOf(entityId);
+  if (adoptedAt >= 0) {
+    cell.adopted.splice(adoptedAt, 1);
+    return;
+  }
+  for (let i = 0; i < cell.units.length; i++) {
+    const ids = cell.units[i].entityIds;
+    if (ids?.includes(entityId)) {
+      cell.units[i].entityIds = ids.filter((id) => id !== entityId);
+      return;
+    }
+  }
 };
 
 const adoptBody = (rt: StreamingRuntime, target: StreamingCell, entityId: number) => {

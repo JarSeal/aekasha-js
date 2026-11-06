@@ -150,7 +150,9 @@ With it, a `DYNAMIC` body made by `createPhysicsEntity` can change its tier with
 | `REMOVED`  | Taken out of the physics world, its state kept, and its transform buffer slot free. |
 
 A request applies at the next physics step, and a body comes back where it left off. Bodies
-joined by joints change tier together, and can't be `REMOVED`.
+joined by joints change tier together, can't be `REMOVED`, and are `STATIC` where `DISABLED` is
+asked for (Rapier mishandles joints on disabled bodies; a joint created on a `DISABLED` body makes
+its group `STATIC` too).
 
 A body can also start in a tier: `createPhysicsEntity`'s `initialTier` (`STATIC` or `DISABLED`)
 switches it in its own create, before the first step, so it never simulates one `FULL`:
