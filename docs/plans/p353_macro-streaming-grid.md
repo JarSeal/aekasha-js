@@ -198,9 +198,10 @@ detail:
   (`preWarmMesh`'s path), or its first visible frame compiles again (§1, finding 3). three r187's
   own 8 ms slicing keeps each frame's block at ≤ 17 ms, and one call is 2.5-3× faster than one per
   frame (finding 4), so no ms budget applies to compiles.
-- On WebGL2 under PostFX, a cell's new structures first draw a few per frame even when primed
-  (finding 7: 8 at once cost a 67-183 ms frame in the GPU process). Phase 2 measures how many per
-  frame.
+- On WebGL2, a cell's new structures first draw a few per frame even when primed (finding 7:
+  8 at once cost a 67-183 ms frame in the GPU process). Phase 2 section 3 measured it: one per
+  frame under PostFX (about 10 ms of GPU-process work each, so two a frame in a row already miss
+  frames), and on WebGPU 8 at once draw clean.
 - A cell is promoted to `RESIDENT` only once primed. If the focus outruns priming (a fast vehicle),
   the cell is promoted anyway and the stall is counted in the debug tab, which is the signal to
   widen the rings.
@@ -557,6 +558,44 @@ before the first): the registries (12 geometries, 4 materials, 1 texture), the e
 WebGL2, and the snapshot diff names nothing left behind. Against the snapshot: +38 KB (two
 terrain blocks and 75 uniform buffers of the start's cells that hadn't been drawn when it was
 taken, the same after every trip). Before the `disposeMesh` fix: +571 KB per trip.
+
+**Section 3, measured** (Phase 0 finding 7; 2026-11-06, Apple M2, Chrome 156 headless, the dev
+server with `?isProdTest=true&aekTest=true&startScene=largeWorld`, WebGL2 as Phase 0's, ANGLE on
+Metal): N meshes (32×16 spheres, cast and receive shadows, side by side 12 m in front of the main
+camera), each its own new structure (Phase 0's unique literal in `positionNode` and
+`opacityNode`), primed in one `compileAsync` of their group through the pipeline's compiler in
+the compile queue (what section 4 will do), out of the scene; 20 frames later added to the scene
+N at once or k a frame, the longest `requestAnimationFrame` interval of the next 40 (headless
+frames run at ~18 ms, so a clean frame reads 18-20). Three trials each:
+
+| shown              | WebGL2, PostFX on | WebGL2, PostFX off | WebGPU, PostFX on |
+| ------------------ | ----------------- | ------------------ | ----------------- |
+| 1 at once          | 19 / 20 / 27      | 19 / 18 / 18       | 19 / 19 / 19      |
+| 2 at once          | 19 / 18 / 18      | 18 / 22 / 19       | 18 / 19 / 18      |
+| 3 at once          | 25 / 25 / 26      | 18 / 18 / 19       | 19 / 19 / 19      |
+| 4 at once          | 25 / 50 / 47      | 21 / 19 / 21       | 19 / 18 / 19      |
+| 6 at once          | 73 / 70 / 57      | 37 / 36 / 28       | 19 / 19 / 19      |
+| 8 at once          | 89 / 103 / 88     | 41 / 60 / 42       | 20 / 19 / 19      |
+| 8, 1 a frame       | 19 / 20 / 19      | 19 / 18 / 20       | 18 / 19 / 19      |
+| 8, 2 a frame       | 34 / 34 / 39 (×3) | 18 / 47 / 19       | 19 / 18 / 18      |
+| 8, 4 a frame       | 63 / 63 / 66 (×2) | 33 / 39 / 34       | 28 / 18 / 18      |
+| 4 cold, at once    | 1,652 / 1,674     | 1,025 / 974        | 2,441 / 2,330     |
+| prime of 8 (wall)  | 1.2-2.0 s         | 0.6-0.8 s          | 1.5-1.6 s         |
+
+Findings, which section 4 follows:
+
+1. **WebGL2 pays about 10 ms of GPU-process work per primed new structure on its first draw**
+   (8 at once: +70-85 ms under PostFX, +25-40 ms without). A single frame of 2 hides in the
+   frame's slack, but 2 a frame in a row miss a frame each: **one new structure a frame on
+   WebGL2**, PostFX on or off (off tolerates 2 to 4, but the same rule keeps a runtime PostFX
+   switch out of it). Phase 0's "PostFX off draws 8 clean" didn't hold here: its cell drew its 8
+   behind each other, these side by side, all in view and in the shadow map.
+2. **WebGPU draws 8 primed new structures at once clean** (Phase 0 finding 6 again): no spreading,
+   a cap only so a cell of dozens doesn't test it (8 a frame).
+3. **Priming is what matters:** 4 cold structures at once stall 1-2.4 s on every backend.
+4. **The rule is per new structure, not per mesh:** a mesh of a structure drawn before costs
+   nothing (Phase 0 finding 1), so a cell's meshes of known structures show at once and only
+   the ones bringing a new structure queue, one (WebGL2) or 8 (WebGPU) a frame.
 
 ### Phase 3 — Build-time manifest
 
