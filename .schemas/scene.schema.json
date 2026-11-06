@@ -84,7 +84,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema509"
+          "$ref": "#/definitions/__schema513"
         }
       ]
     }
@@ -6583,6 +6583,12 @@
         },
         "margin": {
           "$ref": "#/definitions/__schema507"
+        },
+        "base": {
+          "$ref": "#/definitions/__schema509"
+        },
+        "radii": {
+          "$ref": "#/definitions/__schema511"
         }
       },
       "required": [
@@ -6650,6 +6656,38 @@
       "minimum": 0
     },
     "__schema509": {
+      "description": "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema510"
+        }
+      ]
+    },
+    "__schema510": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema511": {
+      "description": "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema512"
+        }
+      ]
+    },
+    "__schema512": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "__schema513": {
       "type": "object",
       "propertyNames": {
         "type": "string"

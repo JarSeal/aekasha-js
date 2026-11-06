@@ -56,6 +56,27 @@ export const SceneStreamingSchema = z
       .min(0)
       .optional()
       .describe('Metres past a ring before a cell is demoted. Default cellSize / 4.'),
+    /** Build time only (the gather's cell manifest): the mesh and light app ids and the asset ids
+     * kept in the scene's base, loaded with the scene and never unloaded, instead of in the cell
+     * their position is in (an asset: instead of with the cells that use it). Scene code gets only
+     * base assets, so an asset it needs goes here. Cameras, sky boxes and the ambient, hemisphere
+     * and directional lights are base anyway. */
+    base: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell."
+      ),
+    /** Build time only: bounding radii in metres by mesh app id, for meshes whose geometry the
+     * gather can't measure (an import's): over `cellSize / 2`, a mesh goes into every cell it
+     * overlaps and stays while any of them is loaded. A primitive geometry's radius comes from
+     * its params. */
+    radii: z
+      .record(z.string(), z.number().min(0))
+      .optional()
+      .describe(
+        "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's)."
+      ),
   })
   .strict()
   .superRefine((settings, ctx) => {

@@ -21,6 +21,7 @@ import type { ImpostorDef } from '../../features/lod/impostors/ImpostorSchema';
 import type { MeshProps } from '../mesh/Mesh';
 import type { PostFxPassProps } from '../../features/postfx/PostFXTypes';
 import type { SceneStreamingSettings } from '../../features/streaming/StreamingSchema';
+import type { StreamingManifest } from '../../features/streaming/StreamingManifest';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -79,6 +80,9 @@ export type SceneData = {
   impostors?: ImpostorDef[];
   /** Cuts the scene into cells loaded by their distance to the focus (the `streaming()` feature). */
   streaming?: SceneStreamingSettings;
+  /** A streaming scene's cell manifest (the gatherer's, p353 §3.2): the JSON content its cells
+   * hold, which the `streaming()` feature loads per cell. The lists above hold only its base. */
+  __streaming?: StreamingManifest;
   /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];

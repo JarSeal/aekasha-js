@@ -47,6 +47,10 @@ export {
   StreamingRingsSchema,
   streamingSchemaPart,
 } from '../features/streaming/StreamingSchema';
+export type {
+  StreamingManifest,
+  StreamingManifestCell,
+} from '../features/streaming/StreamingManifest';
 export {
   applySkyBoxSaveEntry,
   SkyBoxAssetSchema,

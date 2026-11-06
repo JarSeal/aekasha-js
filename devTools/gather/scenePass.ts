@@ -4,15 +4,20 @@
  * their names, descriptions and notes.
  */
 import path from 'path';
+import type { StreamingManifest } from '../../src/_engine/schemas';
 import type { GatherContext, GatheredScene, Registries } from './context';
 import { getSceneFeatureIds } from './engineSchemas';
 import { getSaveEntry } from './saveEntries';
 import { resolveSceneAssets, type SceneJSON } from './sceneAssets';
 import type { ShipChecks } from './shipChecks';
 import { getTopFolder, resolveCodeFile } from './sources';
+import { buildStreamingManifest } from './streamingManifest';
 
 /** A resolved scene, with the features its data needs (p607 D10) */
-export type ResolvedScene = SceneJSON & { __features: string[] };
+export type ResolvedScene = SceneJSON & {
+  __features: string[];
+  __streaming?: StreamingManifest;
+};
 
 /** The scene pass's result */
 export type SceneOutput = {
@@ -81,8 +86,9 @@ const resolveScene = (
     delete scene.__sourcePath;
   }
   // The scene manifest: the features its data needs, which InitEngine checks against its
-  // `features` (always written: no list is data from before the manifest)
-  return { ...scene, __features: getSceneFeatureIds(scene) };
+  // `features` (always written: no list is data from before the manifest), from the whole scene;
+  // then a streaming scene's content cut into its cells (p353 Phase 3)
+  return buildStreamingManifest(ctx, sceneId, { ...scene, __features: getSceneFeatureIds(scene) });
 };
 
 /** Every registered scene resolved, in the walk's order */

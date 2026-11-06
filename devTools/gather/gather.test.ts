@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { gatherSceneData } from '../gatherAppData';
+import { packCellKey } from '../../src/_engine/utils/CellKey';
 import { ROOT } from '../paths';
 import { GENERATED_APP_DATA_FILENAME, GENERATED_APP_FNS_FILENAME } from './output';
 
@@ -252,5 +253,56 @@ describe('G13: a mesh save entry’s geo and mat', () => {
       'app/g.geometry.json': { geoProps: { id: 'g', ...box } },
     };
     expect(gather(files).isGathered).toBe(false);
+  });
+});
+
+describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
+  const crate = {
+    'app/crate.mesh.json': {
+      props: { geo: 'crateBox', mat: 'crateMat', position: { x: 10, y: 0, z: 10 } },
+      // This scene's save entry moves it into the next cell along x
+      __saveData: { w: [{ position: { x: 70, y: 0, z: 10 } }] },
+    },
+    'app/crateBox.geometry.json': { geoProps: { id: 'crateBox', type: 'BOX' } },
+    'app/crateMat.material.json': material('crateMat'),
+  };
+  const streamingScene = (fields: Record<string, unknown> = {}) =>
+    scene('w', {
+      geometries: ['crateBox'],
+      materials: ['crateMat'],
+      meshes: ['crate'],
+      streaming: { cellSize: 64, base: [], radii: {} },
+      ...fields,
+    });
+
+  it('cuts the resolved meshes (save entries applied) and their cell-only assets into cells', () => {
+    const { isGathered, scene: getScene } = gather({ ...streamingScene(), ...crate });
+    expect(isGathered).toBe(true);
+    const out = getScene('w') as OutputScene & { __streaming?: Record<string, unknown> };
+    expect(out.meshes).toBeUndefined();
+    expect(out.materials).toBeUndefined();
+    expect(out.geometries).toBeUndefined();
+    expect(out.streaming).toEqual({ cellSize: 64 });
+    expect(out.__features).toEqual(['streaming']);
+    const manifest = out.__streaming as {
+      meshes: { props: { appId: string } }[];
+      cells: Record<string, { meshes: number[]; materials: number[] }>;
+    };
+    expect(manifest.meshes[0].props.appId).toBe('crate');
+    expect(manifest.cells).toEqual({
+      [String(packCellKey(1, 0, 0))]: expect.objectContaining({
+        meshes: [0],
+        materials: [0],
+        geometries: [0],
+      }),
+    });
+  });
+
+  it('keeps what streaming.base names in the base', () => {
+    const files = { ...streamingScene({ streaming: { cellSize: 64, base: ['crate'] } }), ...crate };
+    const out = gather(files).scene('w') as OutputScene & { __streaming?: unknown };
+    expect(out.meshes?.[0]?.props.appId).toBe('crate');
+    expect(out.materials).toHaveLength(1);
+    expect(out.__streaming).toBeUndefined();
   });
 });

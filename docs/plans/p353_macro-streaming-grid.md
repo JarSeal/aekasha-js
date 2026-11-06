@@ -665,6 +665,86 @@ minor: `streamingGrid`'s terrain unit without its own `unload`, its "A shader pe
 
 Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1–3.2).
 
+**Decisions** (2026-11-06, before section 1):
+
+- **D1. What streams.** A streaming scene's resolved (save entries applied) `meshes` and its
+  `POINT` / `SPOT` lights go into cells by their `position` (x/z; no position is the origin).
+  Cameras, sky boxes, PostFX, `AMBIENT` / `HEMISPHERE` / `DIRECTIONAL` lights and everything
+  `streaming.base` names stay in the scene's base (its own lists, loaded with the scene as today).
+  Physics objects aren't in the schema yet; imported assets register only assets, no entities.
+- **D2. Cell-only assets move into the cells** (the user's choice over "all assets stay base").
+  An asset the scene lists (texture, material, geometry, imported asset) that only cell content
+  references moves out of the scene's lists into every cell that references it, and loads with
+  each under the cell's owner key (Phase 2: the second cell's load is a cache hit that adds its
+  key). One that base content references, `backgroundTexture` names, or nothing references (scene
+  code may use it: the impostors' atlas slots, say) stays base. References are explicit fields,
+  not a string scan: a mesh's `geo`, `mat`, `lod.levels[].geo` / `.mat` and its inline material's
+  and `matOverrides`' param and node values; a material's `params` and `nodes` values that are a
+  listed texture id; a geometry id `<importId>/<node>` names its import (and `<geo>#lod<n>` its
+  base). So a streaming scene's code gets only its base assets: an asset it needs goes in
+  `streaming.base`.
+- **D3. The base list is scene-level** (the user's choice over the plan's per-entry
+  `streaming: 'ALWAYS'`): `streaming: { …, base?: string[] }`, mesh and light app ids and asset
+  ids. Per scene (a mesh JSON can be base in one scene and cell content in another), and lights
+  and assets need no schema part of their own. Build time only: the gather reads it and drops it
+  from the output, and `setSceneStreamingSettings` ignores it (warned once).
+- **D4. Oversized content** (§3.1): a mesh whose bounding radius is over `cellSize / 2` goes into
+  every cell its x/z square (position ± radius) overlaps, and the runtime ref-counts it across
+  them: created by the first of them to load, deleted when the last unloads. The radius comes from
+  a primitive geometry's params (`BOX`, `SPHERE`, `CYLINDER`, `CAPSULE`, `CONE`: the bounding
+  sphere, so rotation doesn't matter). An imported (or otherwise unknown) geometry counts as a
+  point unless `streaming.radii: { [appId]: metres }` gives it one (the user's choice over reading
+  the GLB's bounds; that's a follow-up). Meshes have no scale field, so none applies.
+- **D5. The manifest** is the resolved scene's `__streaming` (so `sceneRegistered`'s data carries
+  it), each entry and asset written once and the cells holding indices, so a world's data isn't
+  multiplied by its cells (it's in the first download):
+  `{ cellSize, meshes: [mesh entries], lights: [light entries], assets: { textures, materials,
+  geometries, importedAssets }, cells: { [cellKey]: { meshes?: [i], lights?: [i], textures?: [i],
+  materials?: [i], geometries?: [i], importedAssets?: [i], bounds: [minX, minZ, maxX, maxZ],
+  bytesEstimate } } }`. The plan's `base: [assetIds]` is the scene's own lists, not repeated.
+  `bounds` is the cell's content's x/z box (positions ± radii); `bytesEstimate` sums the cell's
+  cell-only textures' and imports' `__vramBytes.out` where present (base assets are loaded
+  already). Its types are the feature's (`StreamingManifest`), `import type`d by the kernel's
+  `SceneData`. The feature manifest (`__features`) is computed before the split.
+- **D6. Settings in code vs the manifest.** A scene with a manifest streams at the manifest's
+  `cellSize`: `setSceneStreamingSettings` with another one fails the scene's load (its `created`
+  hook throws, naming both), and `null` (off) warns that its cell content won't load. Rings and
+  margin can change freely.
+- **D7. Loading a cell's JSON content** is units the machine runs like code units, ahead of them:
+  one async unit for its cell-only assets (the kernel's scene asset loader on a subset, its
+  registrations after its awaits in the cell's owner scope), then its lights and meshes in small
+  units under `maxCreateMsPerFrame`, the first of them waiting for the asset unit (a new internal
+  barrier: the machine doesn't start a waiting unit while the cell has units in flight). An
+  oversized mesh is a unit of its own, ref-counted per scene by its manifest index.
+
+Sections: 1. the gather (the `base` and `radii` fields, the assignment, cell-only assets,
+oversized entries, `__streaming`, its types; tests on small trees). 2. the kernel's loaders on a
+subset (`SceneDataLoader.ts`: assets with an owner key, lights and meshes returning their ids;
+`@internal`). 3. the runtime (the data units, the barrier, the shared entries, D6; tests).
+4. `streamingGrid`'s JSON content (props per cell and an oversized landmark), the debug tab (a
+cell's `bytesEstimate` and manifest entries before it loads), the docs (the feature's and the
+gather's `CLAUDE.md`, the Hub page, `readme.md`'s Features entry, §10) and the measurement.
+
+As built (section 1):
+
+- **The gather** is `devTools/gather/streamingManifest.ts`' `buildStreamingManifest`, the scene
+  pass's last step (`scenePass.ts`, after `__features`, which so still sees every mesh). A scene
+  whose entries all stay base gets no `__streaming`, only its `streaming` without `base` and
+  `radii`. A list left empty by the split is dropped from the scene. An id in `base` or `radii`
+  the scene has nothing for warns; an entry outside the cell keys' range fails the gather.
+  `CellKey.ts` is on `devTools/engineImports.test.ts`' list (the runtime's keys).
+- **A material that stays base keeps its textures base** (it's created with the scene, and
+  `resolveTextureParams` would find no cell texture then), so also a material nothing references.
+- **The types** (`StreamingManifest`, `StreamingManifestCell`, `StreamingManifest.ts`) are public on
+  `aekasha/schemas`: `SceneData` is public, and its `__streaming` names them.
+- **Embed profiles** take a cell-only TSL material's loader from the manifest (`output.ts`).
+- Until section 3, the runtime ignores `__streaming`: a streaming scene's JSON cell content doesn't
+  load (only `streamingGrid` streams, and it has none yet).
+
+**Exit:** `streamingGrid`'s JSON cell content streams as its code content does, its oversized
+landmark stays while any of its cells is loaded, the generated base holds none of the cell
+content, and Phase 2's flight out and back leaves the registries and p345's snapshot as before.
+
 ### Phase 4 — Moving entities and physics
 
 The `STREAMING` domain and re-owning (§4.3), per-cell tiers with p352 (§6.1, which took over
