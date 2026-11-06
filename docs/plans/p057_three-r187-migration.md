@@ -525,6 +525,10 @@ Results so far:
   (Phase 3 step 1) were in already; the rendering guide's Known issues now also links Phase 4's
   three issue files, each with the engine's workaround (and that a pass compile of an app's own
   still meets the third).
+- Step 2 done (2026-11-06): `CHANGELOG.md`'s `upgrade-three-js-to-r187` entry, Engine 6.1.0
+  (Sunset) and Project. The toolkit and the app have no changes on the branch, so no sections.
+  The sizes are the committed baselines' main chunks (gzip KiB, `main` against this branch), not
+  the Context's first-download figures, which include the other initial files.
 
 1. The Hub's rendering guide (`hub/pages/features/rendering/guide.md`, Known issues): the light
    leak and the instance attribute leak are fixed with r187 (link the closed issues); the sky box

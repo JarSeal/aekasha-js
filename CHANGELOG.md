@@ -4,6 +4,49 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-06 — upgrade-three-js-to-r187
+
+three r187 (p057): `three` and `@types/three` 0.186.1 → 0.187.0. r187 fixes the two r186 leaks that kept memory after a scene was gone, the disposed lights (p056) and a removed `InstancedMesh`'s instance attributes. It also makes `three/tsl` tree-shakeable, so every first download is smaller. The rendered look moves slightly: the PMREM rewrite changes image-based lighting, and the ACES Filmic fit, physical specular in direct light, GTAO and shadows all changed. The scene runner's probe hashes, system order and character paths are unchanged, in Chromium and in Firefox. Three engine changes were needed for r187, and a fourth came out of re-measuring the pre-warm: it now compiles for the PostFX scene passes. Nothing breaks. `env.size` 64 and 128 are deprecated.
+
+### Engine 6.1.0 (Sunset)
+
+**Changed**
+
+- three r187. PMREMs are cube render targets (#34585), and a face is at least 256. The sky box's environment bake target is allocated as three's generator allocates its own. Lit materials and blurred backgrounds look slightly different (better PMREM quality, upstream says; environment sampling 16-25 % faster).
+- The sky box's environment map is 256 by default with or without `dayNight` (128 with it before), and `env.size` 64 and 128 bake at 256, three's smallest face. A day-night bake costs about 1.8× r186's 128 (5.8-6.0 ms against 3.2-3.3 on an Apple M2, frame time with CPU and GPU together). 256 costs the same as on r186, and 512 less (11.4-11.9 ms against 14.6). The re-bake rate doesn't change. A day-night sky's environment map costs ~2.6 MB more (HalfFloat with mips: ~4.2 MB at 256); every other size costs less (~16.8 MB at 512, 25 MB before). A change between 64 / 128 and 256 is no longer a rebuild.
+- `getPMREMTexture` returns its source texture until the renderer has initialized: r187's `fromEquirectangular` / `fromCubemap` throw before `renderer.init()`.
+- The sky light's forced first shadow render is gone: r187 sets `needsUpdate` in `setupShadow`. The sky box's cube target clears stay, because a `CubeRenderTarget`'s texture has no `renderTarget` link in r187 (`docs/issues/three-cube-render-target-texture-link.md`, not filed yet).
+- Smaller first downloads (gzip, the main chunk; the committed bundle baselines): the app 391.6 → 377.1 KiB (its `three` group 254.5 → 239.3), the banner embed 290.6 → 270.3 (251.7 → 231.1), the uiKit embed 289.9 → 269.5 (250.7 → 230.0). The lazy `GLTFLoader` chunk grew 0.2 KiB and `ambientOcclusion.tsl` 0.1 KiB.
+
+**Added**
+
+- `RenderPipelineCompiler` (on `aekasha`) and `FeatureContext.setRenderPipeline(provider, compiler?)`: a render pipeline can compile a mesh in its own scene passes. PostFX's compiles in the scene pass's target, then in the depth / normal pre-pass's with its MRT. It skips the pre-pass when the chain was rebuilt meanwhile.
+- A pre-warm compiles through the PostFX scene passes. `createMeshEntity`'s `preWarm` and the LOD pre-warm then cost no hitch on a PostFX scene: 440-640 ms without a pre-warm and ~200 ms with r186's depth-0 compile, on the Gym, measured with fresh shaders. The compile runs in the background, every frame 16-18 ms.
+- The engine's compiles run one at a time (`kernel/render/CompileQueue.ts`), and every engine render runs with no render target or MRT held: the frame, `renderScene`, snapshots, the impostor bakes and the PMREM bakes. In r187 a compile in a pass's target and MRT keeps them set across the frames it yields to, so those frames drew into the pass's target (`docs/issues/three-pass-compile-holds-renderer-state.md`, fixed on three's `dev` by #35359).
+
+**Fixed**
+
+- A pre-warm compiled nothing for a mesh outside a default camera's view: `compileAsync` culled it against its own camera at the origin. The mesh is unculled for the call (`preWarmMesh`, and `prewarmGeometry`'s stand-in).
+- Instanced meshes with LOD fades or octahedral impostors drew with another mesh's fades or instance matrices. r187 shares a node build between `InstancedMesh`es with the same material and attributes (#35007), and `LodFadeMaskNode` and `ImpostorInstanceMatrixNode` bind a per-mesh buffer in `setup`. In `lodShowcase`, 4 of the 8 fading meshes drew wrong. Both nodes now mark an `InstancedMesh`'s build object-specific (r186's behaviour for these meshes only). p058 plans the fix that keeps the sharing.
+- The disposed light leak (p056): fixed by r187 (#34707) and by one PostFX pre-pass MRT for every chain build (`prePassMRT`). A new MRT per build added a render context per Gym visit, and each context kept that visit's camera and, through its render list, the visit's lights. Now the lights of at most two visits stay: the first and the latest (`docs/issues/three-render-list-keeps-lights.md`, not filed yet). The light scene's geometries stay flat across visits.
+- The instance attribute leak: fixed by r187 (#34603, #34690). `largeWorld` ↔ `skyShowcase` keeps 62 attributes, 1.51 MB, on all four visits.
+- The GPU memory tab's environment bake source reads r187's PMREM generator fields (`_sourceTarget`, `_boxMesh`), so the generator's working set is tracked again.
+
+**Deprecated**
+
+- `env.size` 64 and 128, removed in 7.0.0: they bake at 256. The schema still takes them. In the debug env, `registerSkyBox` and an applied `updateSkyBox` warn once naming them. The Environment folder offers 256 and 512 and shows a deprecated size as 256.
+
+### Project
+
+**Changed**
+
+- The baselines on r187: the scene runner's snapshots (an even IBL shift everywhere; the Gym moved most, mean 4.7 levels on 0.5 % of its pixels, on edges), the about and GPU memory debugger shots, and the bundle and API baselines (`api.json` gains the compile seam's exports and the sky box's `DEPRECATED_ENV_SIZES` and `ENV_BAKE_MIN_SIZE`).
+- The SBP budgets lowered to `suggestBudget` of r187's sizes: the app's initial 404 → 385 KiB, `assets/index.js` 401 → 380 and `three` 265 → 249; the banner's 313 / 311 / 262 → 277 / 275 / 241; the uiKit's 298 / 296 / 261 → 276 / 274 / 240.
+- `yarn verify:devFiles` checks the `/@fs/` refusal with `/etc/hosts`. macOS has no `/etc/hostname`, and Vite answers a missing file with its SPA fallback (a 200), so the check failed there.
+- The Hub: the rendering guide's Known issues (the two r186 leaks fixed, the r187 issues the engine works around) and its pre-warm under PostFX; the sky box guide's `env.size`; the smallest-build guide's floor on r187 (215.5 KiB gzip, 237.7 on r186).
+- Issue files: `three-render-list-keeps-lights`, `three-cube-render-target-texture-link` (both not filed yet) and `three-pass-compile-holds-renderer-state` (fixed on three's `dev`), new. `three-bind-group-cache-light-leak` and `three-instanced-node-attribute-leak` are fixed. `renderer-custom-tone-mapping` and `three-animation-classes-in-builds-without-models` have a three r187 section.
+- The plans: p057 (this upgrade) and p058 (shared instanced builds for the fades and impostors) and p311 (KTX2 cube sky boxes) are new; r187's features noted in p302, p304, p307, p350, p353, p354, p370, p374, p375, p427 and p990; p056 is `_DONE_`.
+
 ## 2026-11-05 — p622_engine-6-major
 
 Engine 6.0.0 "Sunset" and toolkit 3.0.0 "Gibbous", released together with the app's 1.19.0. The major holds four branches: the debugger migration (p806), the stats and profiler graphs (p807) and the game UI components (p808), which merged into `main` ahead of the release with their sections here and no version bump, and p622, which releases them.
