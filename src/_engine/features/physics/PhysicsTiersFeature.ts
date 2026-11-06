@@ -1,8 +1,13 @@
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
+import { setPhysicsTierAccess } from '../../kernel/ecs/PhysicsTierAccess';
 import { facade } from './PhysicsState';
-import { deleteScenePhysicsTierPolicies, installPhysicsTierPolicy } from './PhysicsTierPolicy';
-import { installPhysicsTiers } from './PhysicsTiers';
+import {
+  deleteScenePhysicsTierPolicies,
+  installPhysicsTierPolicy,
+  setPhysicsTierPolicyMember,
+} from './PhysicsTierPolicy';
+import { installPhysicsTiers, requestPhysicsTierWants } from './PhysicsTiers';
 
 /**
  * The physics tiers' part of a scene load: the left scene's scene-scoped tier policies go. Exit
@@ -38,5 +43,11 @@ export const physicsTiers = (): EngineFeature => ({
     installPhysicsTierPolicy(ctx);
     ctx.addSceneHooks(physicsTiersSceneHooks);
     facade.tiersInstalled = true;
+    // For a feature owning physics entities (streaming()'s cells), which can't import physics
+    setPhysicsTierAccess({
+      requestTiers: requestPhysicsTierWants,
+      setPolicyMember: (world, entityId, member) =>
+        setPhysicsTierPolicyMember(entityId, member, world),
+    });
   },
 });

@@ -21,6 +21,7 @@ import { forEachJointBodyPair, hasJoints, isBodyJointed } from './PhysicsJoints'
 import { assertPhysicsTiersInstalled, getPhysicsState } from './PhysicsState';
 import { type RigidBodyPose, RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
+import type { PhysicsTierWant } from '../../kernel/ecs/PhysicsTierAccess';
 import { getPhysicsBodyOwner, getPhysicsEntityBody, queueStaticBodySync } from './PhysicsEntity';
 import { resetPhysicsInterpolationHistory } from './PhysicsInterpolation';
 
@@ -165,7 +166,13 @@ export const requestPhysicsTier = (
     }
     return false;
   }
+  setGroupTarget(world, group, tier);
+  return true;
+};
 
+/** Makes `tier` the target of every entity of a resolved group (resolveTierGroup), queued for the
+ * next APP_PHYSICS_STEP sub-step. */
+const setGroupTarget = (world: ECSWorld, group: readonly number[], tier: PhysicsTier) => {
   const pending = getPending(world);
   for (const memberId of group) {
     let data = world.getComponent(memberId, ComponentType.PHYSICS_SIM_TIER);
@@ -188,7 +195,49 @@ export const requestPhysicsTier = (
     if (data.target === data.tier) pending.delete(memberId);
     else pending.add(memberId);
   }
-  return true;
+};
+
+/** A tier's coarseness: a joint group takes its members' finest want. */
+const TIER_RANK: Record<PhysicsTier, number> = { FULL: 0, STATIC: 1, DISABLED: 2, REMOVED: 3 };
+
+/**
+ * Requests tiers for a batch of entities by what the caller wants for each (p353 Phase 4 D6; the
+ * kernel's `PhysicsTierAccess.requestTiers`, which `physicsTiers()` sets): an entity that can't
+ * have tiers, or whose group can't take the tier, is skipped without a warning (the caller asks
+ * for whatever its entities are). A joint group takes the finest want of its members, asking
+ * `wantOf` for the unlisted ones too, and a `POLICY` member leaves the group to the policy. Each
+ * group is requested once per batch.
+ * @internal
+ */
+export const requestPhysicsTierWants = (
+  world: ECSWorld,
+  entityIds: readonly number[],
+  wantOf: (entityId: number) => PhysicsTierWant | null
+) => {
+  const isJointed = hasJoints();
+  const handled = isJointed ? new Set<number>() : null;
+  for (let i = 0; i < entityIds.length; i++) {
+    const entityId = entityIds[i];
+    if (handled?.has(entityId)) continue;
+    const want = wantOf(entityId);
+    if (want === null) continue;
+    let tier: PhysicsTierWant = want;
+    if (handled) {
+      // The whole joint group, whatever the tier (a REMOVED want is refused below)
+      const group = resolveTierGroup(world, entityId, 'FULL');
+      if (typeof group === 'string') continue;
+      for (let j = 0; j < group.length && tier !== 'POLICY'; j++) {
+        const memberId = group[j];
+        const memberWant = memberId === entityId ? want : wantOf(memberId);
+        if (memberWant === 'POLICY') tier = 'POLICY';
+        else if (memberWant !== null && TIER_RANK[memberWant] < TIER_RANK[tier]) tier = memberWant;
+      }
+      for (let j = 0; j < group.length; j++) handled.add(group[j]);
+    }
+    if (tier === 'POLICY') continue;
+    const group = resolveTierGroup(world, entityId, tier);
+    if (typeof group !== 'string') setGroupTarget(world, group, tier);
+  }
 };
 
 /**

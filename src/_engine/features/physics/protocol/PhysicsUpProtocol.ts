@@ -172,6 +172,9 @@ export type PhysicsUpProtocol =
         rigidBody?: RigidBodyParams;
         /** Their parentId is set to the new body's id by the worker, when there is a body */
         colliders: ColliderParams[];
+        /** A DYNAMIC body's create-time tier (p353 Phase 4 D3): switched to before the reply, so
+         * it never takes a step as created. */
+        tier?: 'STATIC' | 'DISABLED';
       }
     | { type: PhysicsProtocolType.CREATE_RIGID_BODIES; params: RigidBodyParams[] }
     | { type: PhysicsProtocolType.DELETE_RIGID_BODY; id: number }

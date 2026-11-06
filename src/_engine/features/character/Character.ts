@@ -164,7 +164,8 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
 
   await createPhysicsEntity(
     { colliders: physicsParams.colliders, body: physicsParams.rigidBody, target: entityId },
-    { world: ecsWorld }
+    // FULL over a streaming cell's creation scope: characters have no tiers (p420 owns theirs)
+    { world: ecsWorld, initialTier: 'FULL' }
   );
 
   const char: CharacterObject = {

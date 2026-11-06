@@ -861,6 +861,108 @@ crates take their cell's tier and a policy member follows the policy only while 
 into a neighbouring cell is re-owned and unloads with it; no capacity refusal at default
 `maxBodies`; the Physics API tab's tier counts match the cells' states, in all three targets.
 
+**Decisions** (2026-11-06, before section 1; D1-D4 the user's choices, each the recommended one):
+
+- **D1. Re-owning by position, not a `STREAMING` domain** (replaces §4.3's mechanism, keeps its
+  three rules). When a cell starts unloading, each entity with a dynamic body that it holds (its
+  units' ids and the ones it adopted; "dynamic": `BODY_DYNAMIC_VISUAL`, `BODY_DYNAMIC_HEADLESS` or
+  `PHYSICS_SIM_TIER`, kernel component keys) is placed by its `TRANSFORM` x/z (a `REMOVED` one's
+  is the pose it was removed at, §6.1 7). In this cell, or in a cell that isn't loaded (untracked
+  or `UNLOADING`): it goes with this cell. In another tracked cell that is `LOADING`, `PRIMING` or
+  `LOADED`: that cell adopts it (it leaves its unit's ids before the unit's `unload` runs, so a
+  custom `unload` never sees it). An adopted entity is deleted on its new cell's unload, after
+  the same check (it can move on). The third rule falls out: a body inside this cell that another
+  cell spawned is its owner's to check. No `spatial()` dependency and no rebuild; the cost is the
+  cell's own dynamic bodies, once per unload. Entities without a dynamic body (meshes, fixed
+  colliders, shared oversized meshes) never change cells. The scene's exit drops all without
+  checks.
+- **D2. Tiers on the frame path** (§6): a cell's bodies get their tier when its units' ids
+  arrive, when its level changes (`decideStreamingCells`, every N frames) and when it adopts one;
+  the requests apply on the next sub-step, so their timing follows the frames, like the policy's
+  `FRAMES` cadence. Documented as not deterministic. The step path would need the focus read on a
+  fixed step (for a body focus in `WORKER_THREAD`, the policy's worker read and gate through a
+  seam), and content creation is frame-timed anyway.
+- **D3. A create-time tier, by scope and option.** `PhysicsEntityOpts.initialTier?: 'FULL' |
+  'STATIC' | 'DISABLED'` (public, engine minor; `REMOVED` stays a request, Phase 5 decides).
+  `DYNAMIC` only, needs `physicsTiers()` (without it ignored with one warning, as `tierPolicy`).
+  Applied in the create's own message: the worker (or the `MAIN_THREAD` sync path) makes the body
+  as its params say, slot included, then switches it before replying, so it never takes a step
+  `FULL`; the entity gets `PHYSICS_SIM_TIER` and `BODY_STATIC` as a requested tier leaves it.
+  Its default is a kernel creation scope (`kernel/ecs/PhysicsTierAccess.ts`, `@internal`):
+  streaming runs each unit's `load` up to its first `await`, and `ctx.runOwned`, in its cell's
+  tier, the way Phase 2's asset owner scope works; `createPhysicsEntity` reads it at its call.
+  An explicit `initialTier` wins.
+- **D4. The test scene is a new app scene, `streamingPhysics`**: crate piles as code-registered
+  cell content, a plough, a jointed chain across a cell boundary, the tier policy on.
+  `physicsTiers` stays the unchanged verification scene.
+- **D5. Cell over policy** (§6.1 constraint 1, the preferred way): a policy member in a cell that
+  isn't `RESIDENT` is out of the policy (its `PHYSICS_TIER_POLICY` removed through the seam:
+  `setPhysicsTierPolicyMember(id, false)`'s effect), and goes back in on `RESIDENT` (the policy
+  places it from its current `target`). Streaming keeps the set of its cells' entities that want
+  the policy: those it took out, and those a scope kept out at their create (`tierPolicy` in a
+  non-`RESIDENT` scope joins nothing and reports the entity to the scope instead), so a member
+  created into a `NEARBY` cell never meets a policy pass.
+- **D6. Joint groups** (§6.1 constraint 3): streaming hands its tier wants as one batch to the
+  seam, and physics gives each joint group the finest want of its members (`FULL` < `STATIC` <
+  `DISABLED` < `REMOVED`; a policy member in a `RESIDENT` cell counts as `FULL`), which is the
+  member in the cell nearest the focus. `REMOVED` and its `DISABLED` fallback for jointed bodies
+  come with Phase 5's `FAR` content (until then a loaded cell is `RESIDENT` or `NEARBY`, so
+  constraints 5 and 6 don't arise yet).
+- **D7. `NEARBY`'s tier is a scene setting**: `streaming.nearbyPhysicsTier?: 'STATIC' |
+  'DISABLED'` (default `STATIC`), in the schema part and `setSceneStreamingSettings`.
+- **D8. The seams** (`@internal`, kernel; a feature imports no other's code): `PhysicsTierAccess`
+  in `kernel/ecs/PhysicsTierAccess.ts` (like `SpatialMembership.ts`), set by `physicsTiers()`'s
+  install: the batch request (D6), policy membership out and in, whether an entity has a
+  tierable body; null without the feature, and then streaming requests nothing (a `NEARBY` cell's
+  bodies simulate `FULL`, warned once). The probe's arm state in
+  `kernel/config/DeterminismProbe.ts` (a flag and listeners): the probe sets it when it arms and
+  disarms, and streaming, in the debug env only, stops deciding while it's armed (the cells keep
+  their states; a scene load still loads around its focus), so a probe run streams nothing.
+- **D9. Code layout.** `StreamingCells.ts` is at ~750 lines: the bodies' side is a new
+  `StreamingBodies.ts`, injected into the machine like the primer (an `rt.bodies` with the
+  unit-loaded, level-changed and unload-check hooks), so the machine's tests stay engine-free.
+
+Sections: 1. physics and the kernel seams (`initialTier` in both targets and its protocol field,
+`PhysicsTierAccess` with the batch request and policy membership, the creation scope read by
+`createPhysicsEntity`, the probe's arm seam; tests in `PhysicsFacade.test.ts` and
+`PhysicsWorkerRequests.test.ts`). 2. re-owning (D1: the machine's unload check and adoption,
+`StreamingBodies.ts`; tests). 3. per-cell tiers (D2, D3's scope, D5-D7, the probe freeze; tests
+on the real `MAIN_THREAD` physics). 4. `streamingPhysics`, the Streaming tab's bodies readout
+(per tier, adopted, held out of the policy), the docs (the feature's, physics' and the kernel's
+`CLAUDE.md`, the Hub's streaming and physics tiers pages) and the exit check in the three targets.
+
+As built (section 1):
+
+- **`initialTier`** (`PhysicsEntityOpts`, public): `createPhysicsEntity` resolves it at its call
+  (`resolveCreateTier`: the option, else the creation scope's tier; none for `FULL`, a body not
+  `DYNAMIC` (the option warns in the debug env) or without `physicsTiers()` (the option warns
+  once, the scope is quietly ignored)) and hands it to `createRigidBodyWithColliders(…, tier)`
+  (`CreateTier`, `@internal`). `WORKER_THREAD`: `CREATE_PHYSICS_ENTITY`'s new `tier` field; the
+  worker switches the body (`setBodyType(FIXED)` / `setEnabled(false)`) after its slot and
+  colliders, before the reply, and the proxy is registered with the resulting type and enabled
+  state (its slot kept, as a requested `STATIC` keeps it). `MAIN_THREAD`: the same in
+  `createRigidBodyWithCollidersSync`. The entity gets `PHYSICS_SIM_TIER` (`tier` = `target`, its
+  dynamic `bucket`) and `BODY_STATIC`, synced once (`queueStaticBodySync`): where `applyTier`
+  leaves a requested tier, so `requestPhysicsTier(id, 'FULL')` brings it back as usual.
+- **Characters** pass `initialTier: 'FULL'` (`Character.ts`): a character created inside a cell's
+  load keeps out of the scope (p420 owns their tiers).
+- **The seam** (`kernel/ecs/PhysicsTierAccess.ts`): `PhysicsTierAccess` (`requestTiers`,
+  `setPolicyMember`), set in `physicsTiers()`'s install; `PhysicsTierWant` (a tier or `POLICY`);
+  `runInPhysicsCreationScope(scope, fn)` / `getPhysicsCreationScope()` with
+  `PhysicsCreationScope` (`tier`, `holdPolicyMember`: set, a `tierPolicy` entity created in the
+  scope joins no policy and is reported once its body exists, so a cell learns of it before any
+  policy pass). The batch is `PhysicsTiers.ts`' `requestPhysicsTierWants` (`requestPhysicsTier`'s
+  target-setting shared as `setGroupTarget`): refusals are skipped without a warning, a joint
+  group's members are asked even when unlisted, and each group is requested once per batch.
+- **The probe's flag** (`kernel/config/DeterminismProbe.ts`, `setDeterminismProbeArmed` /
+  `isDeterminismProbeArmed`): set where the probe freezes the policy (arm, disarm, `?physicsProbe`).
+  A flag the reader polls, no listeners: streaming checks it where it decides.
+- **Tests:** `PhysicsFacade.test.ts` (the option in both tiers, a `FIXED` body and no feature
+  ignoring it; the scope's tier, a held policy member, the option winning; the batch's joint group
+  taking its finest want, a `POLICY` member leaving it alone, a `FIXED` body skipped) and
+  `PhysicsWorkerRequests.test.ts` (the message's `tier`, the worker's body switched, the proxy's
+  slot and cached type).
+
 ### Phase 5 — Far representations
 
 `FAR` content (§3.3) with p348 and p351.

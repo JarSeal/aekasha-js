@@ -5,8 +5,10 @@
 // Arm with `?physicsProbe=N` (armed from the first scene on) or from the Physics API debug tab.
 // Once armed, it re-runs on every scene enter until disarmed. While armed, a FRAMES physics tier
 // policy (PhysicsTierPolicy.ts) is frozen: it runs on frames and often follows the camera. A STEPS
-// one isn't: it's deterministic, so the probe tests it (p343).
+// one isn't: it's deterministic, so the probe tests it (p343). The kernel's arm flag
+// (kernel/config/DeterminismProbe.ts) tells other features: streaming() stops moving its cells.
 
+import { setDeterminismProbeArmed } from '../../../kernel/config/DeterminismProbe';
 import { getECSWorld, getStableAppId } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../../kernel/ecs/ECSComponentStorage';
@@ -332,6 +334,7 @@ const startRun = (steps: number) => {
 export const armPhysicsDeterminismProbe = (steps: number) => {
   armedSteps = steps;
   setPhysicsTierPolicyFrozen(true, DETERMINISM_PROBE_FREEZE_SOURCE, getECSWorld());
+  setDeterminismProbeArmed(true);
   startRun(steps);
 };
 
@@ -339,6 +342,7 @@ export const armPhysicsDeterminismProbe = (steps: number) => {
 export const disarmPhysicsDeterminismProbe = () => {
   armedSteps = null;
   setPhysicsTierPolicyFrozen(false, DETERMINISM_PROBE_FREEZE_SOURCE, getECSWorld());
+  setDeterminismProbeArmed(false);
   stopRun();
 };
 
@@ -350,6 +354,7 @@ export const _initPhysicsDeterminismProbe = () => {
   if (Number.isFinite(steps) && steps > 0) {
     armedSteps = steps;
     setPhysicsTierPolicyFrozen(true, DETERMINISM_PROBE_FREEZE_SOURCE, getECSWorld());
+    setDeterminismProbeArmed(true);
   }
 
   registerOnAllSceneEnters('physicsDeterminismProbe', () => {

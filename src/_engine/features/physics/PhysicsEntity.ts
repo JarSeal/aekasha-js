@@ -11,13 +11,17 @@ import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import {
+  type PhysicsCreationScope,
+  getPhysicsCreationScope,
+} from '../../kernel/ecs/PhysicsTierAccess';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import {
   createRigidBodyWithColliders,
   createRigidBodyWithCollidersSync,
   deleteRigidBody,
 } from './PhysicsBodies';
-import type { RigidBodyWithColliders } from './PhysicsBodies';
+import type { CreateTier, RigidBodyWithColliders } from './PhysicsBodies';
 import { deleteColliders } from './PhysicsColliders';
 import {
   onPhysicsTransformReset,
@@ -42,6 +46,8 @@ import { readStatsClock } from '../../utils/StatsClock';
 let debugPhysicsDraw: DebugModuleRef<typeof import('./debug/_dbg__PhysicsDebugDraw')> | null = null;
 /** createPhysicsEntity's `tierPolicy` without physicsTiers() warns once. */
 let isTierPolicyWithoutFeatureWarned = false;
+/** createPhysicsEntity's `initialTier` without physicsTiers() warns once. */
+let isInitialTierWithoutFeatureWarned = false;
 
 /**
  * Installs the physics entities' side (the physics feature's install): the transform reset
@@ -155,6 +161,11 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
    * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only, and only with the
    * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
+  /** Code only: the tier a `DYNAMIC` body starts in (p353 Phase 4), as if `requestPhysicsTier`
+   * had applied before its first step: `STATIC` (made `FIXED`) or `DISABLED`. Default `FULL`, or
+   * inside a streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
+   * installed (without it, ignored with one warning). */
+  initialTier?: 'FULL' | 'STATIC' | 'DISABLED';
 };
 
 /**
@@ -200,7 +211,9 @@ export const createPhysicsEntity = (
     props.body,
     props.target,
     entityOpts,
-    world
+    world,
+    // Read at the call: a streaming cell's load runs its creates in its scope up to its first await
+    getPhysicsCreationScope()
   );
   pendingPhysicsEntityCreates.add(creation);
   const untrack = () => pendingPhysicsEntityCreates.delete(creation);
@@ -213,10 +226,12 @@ const createPhysicsEntityNow = async (
   rigidBodyParams?: RigidBodyParams,
   target?: THREE.Object3D | number,
   entityOpts?: PhysicsEntityOpts,
-  ecsWorld?: ECSWorld
+  ecsWorld?: ECSWorld,
+  scope?: PhysicsCreationScope | null
 ): Promise<number> => {
   const world =
     ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createPhysicsEntity.');
+  const createTier = resolveCreateTier(entityOpts, rigidBodyParams, scope);
 
   const object3D = target instanceof THREE.Object3D ? target : undefined;
   const entityId = typeof target === 'number' ? target : world.createEntity(entityOpts);
@@ -271,8 +286,8 @@ const createPhysicsEntityNow = async (
   let created: RigidBodyWithColliders;
   try {
     created = isWorkerThread
-      ? await createRigidBodyWithColliders(rigidBodyParams, paramsArray)
-      : createRigidBodyWithCollidersSync(rigidBodyParams, paramsArray);
+      ? await createRigidBodyWithColliders(rigidBodyParams, paramsArray, createTier)
+      : createRigidBodyWithCollidersSync(rigidBodyParams, paramsArray, createTier);
   } catch (err) {
     // Refused (PhysicsCapacityError) or failed: nothing physics-side exists, so the entity
     // goes back to how it was handed in (a new one is deleted, an existing one loses the tag).
@@ -341,6 +356,20 @@ const createPhysicsEntityNow = async (
   if (rb) bodyOwners.set(rb.id, { world, entityId, rigidType: rigidBodyParams!.rigidType });
   if (isStatic) {
     if (rb) world.addComponent(entityId, ComponentType.BODY_STATIC, rb);
+  } else if (createTier) {
+    // Where a requested STATIC or DISABLED tier leaves a body (PhysicsTiers.ts' applyTier): in
+    // BODY_STATIC, with its tier data, synced once
+    world.addComponent(entityId, ComponentType.PHYSICS_SIM_TIER, {
+      tier: createTier,
+      target: createTier,
+      bucket: hasVisual ? 'BODY_DYNAMIC_VISUAL' : 'BODY_DYNAMIC_HEADLESS',
+      body: rb!,
+      colliders: null,
+      inFlight: false,
+      removalSeq: 0,
+    });
+    world.addComponent(entityId, ComponentType.BODY_STATIC, rb!);
+    queueStaticBodySync(world, entityId);
   } else {
     const bucket = hasVisual
       ? ComponentType.BODY_DYNAMIC_VISUAL
@@ -349,8 +378,11 @@ const createPhysicsEntityNow = async (
   }
 
   // Data only: the policy's systems come with physicsTiers() (PhysicsTiersFeature.ts), so an app
-  // without it doesn't download them
-  if (entityOpts?.tierPolicy) {
+  // without it doesn't download them. A scope holding its entities out of the policy (a streaming
+  // cell that isn't RESIDENT) gets the member reported instead.
+  if (entityOpts?.tierPolicy && scope?.holdPolicyMember && facade.tiersInstalled && !isStatic) {
+    scope.holdPolicyMember(world, entityId);
+  } else if (entityOpts?.tierPolicy) {
     if (!facade.tiersInstalled) {
       if (!isTierPolicyWithoutFeatureWarned) {
         isTierPolicyWithoutFeatureWarned = true;
@@ -371,6 +403,35 @@ const createPhysicsEntityNow = async (
   }
 
   return entityId;
+};
+
+/** The create-time tier of a `DYNAMIC` body (p353 Phase 4 D3): the option's, else the creation
+ * scope's (a streaming cell's); none for `FULL`, another body type or without physicsTiers()
+ * (the option then warns once, the scope is quietly ignored). */
+const resolveCreateTier = (
+  entityOpts: PhysicsEntityOpts | undefined,
+  rigidBodyParams: RigidBodyParams | undefined,
+  scope: PhysicsCreationScope | null | undefined
+): CreateTier | undefined => {
+  const explicit = entityOpts?.initialTier;
+  const tier = explicit ?? scope?.tier;
+  if (!tier || tier === 'FULL') return undefined;
+  if (!facade.tiersInstalled) {
+    if (explicit && !isInitialTierWithoutFeatureWarned) {
+      isInitialTierWithoutFeatureWarned = true;
+      lwarn(
+        "createPhysicsEntity: `initialTier` needs the physics tiers feature: add `physicsTiers()` (from 'aekasha/physics') to InitEngine's `features`, right after `physics()`. Ignored."
+      );
+    }
+    return undefined;
+  }
+  if (rigidBodyParams?.rigidType !== 'DYNAMIC') {
+    if (explicit && IS_DEBUG_ENV) {
+      lwarn(`createPhysicsEntity: initialTier ignored: only DYNAMIC bodies have physics tiers.`);
+    }
+    return undefined;
+  }
+  return tier;
 };
 
 /** Deletes what a create made for an entity deleted before it finished (createPhysicsEntityNow).
