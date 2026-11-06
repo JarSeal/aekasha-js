@@ -1,6 +1,12 @@
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
-import { CELL_AXIS_OFFSET, cellBounds, isCellInRange, packCellKey, worldToCell } from './CellKey';
+import {
+  CELL_AXIS_OFFSET,
+  cellBounds,
+  isCellInRange,
+  packCellKey,
+  worldToCell,
+} from '../../utils/CellKey';
 
 // The spatial grid (docs/plans/_DONE_p050_spatial-index.md for the design): a standalone
 // "what's near this point or volume" structure with no ECS of its own. Positions and radii are
@@ -86,7 +92,7 @@ export class SpatialGrid {
    * (NaN for a member in no cell: oversized at the rebuild, or added since). `removeMember`
    * finds the entries it patches through it, and moves it with the slot. A plain number, not a
    * fixed-width typed array, because the packed key intentionally exceeds 32 bits (see
-   * CELL_AXIS_BITS in CellKey.ts).
+   * CELL_AXIS_BITS in utils/CellKey.ts).
    */
   private readonly lastCell: number[];
 

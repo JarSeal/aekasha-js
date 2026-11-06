@@ -46,6 +46,7 @@ export type InitEngineOptions = {
  * import { postFx } from 'aekasha/postfx';
  * import { skyBox } from 'aekasha/skybox';
  * import { spatial } from 'aekasha/spatial';
+ * import { streaming } from 'aekasha/streaming';
  * import { viewports } from 'aekasha/viewports';
  * import { appData } from './generated';
  * import { appECSPlugins } from './AppECSPlugins';
@@ -64,6 +65,7 @@ export type InitEngineOptions = {
  *     lines(),
  *     postFx(),
  *     viewports(),
+ *     streaming(),
  *     appECSPlugins,
  *   ],
  *   start: async () => {

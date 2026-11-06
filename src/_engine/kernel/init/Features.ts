@@ -224,6 +224,7 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   lines: "lines() from 'aekasha/lines'",
   postfx: "postFx() from 'aekasha/postfx'",
   viewports: "viewports() from 'aekasha/viewports'",
+  streaming: "streaming() from 'aekasha/streaming'",
 };
 
 /**

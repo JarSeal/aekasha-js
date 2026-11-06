@@ -21,6 +21,7 @@ export const ENTRY_FILES = {
   'aekasha/postfx': 'src/_engine/features/postfx/index.ts',
   'aekasha/skybox': 'src/_engine/features/skybox/index.ts',
   'aekasha/spatial': 'src/_engine/features/spatial/index.ts',
+  'aekasha/streaming': 'src/_engine/features/streaming/index.ts',
   'aekasha/viewports': 'src/_engine/features/viewports/index.ts',
   'aekasha/ui': 'src/_engine/ui/index.ts',
   'aekasha/ui/fonts': 'src/_engine/ui/fonts/index.ts',

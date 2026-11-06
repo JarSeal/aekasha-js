@@ -62,6 +62,9 @@
     "impostors": {
       "$ref": "#/definitions/__schema500"
     },
+    "streaming": {
+      "$ref": "#/definitions/__schema502"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -81,7 +84,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema502"
+          "$ref": "#/definitions/__schema509"
         }
       ]
     }
@@ -6571,6 +6574,83 @@
     },
     "__schema502": {
       "type": "object",
+      "properties": {
+        "cellSize": {
+          "$ref": "#/definitions/__schema503"
+        },
+        "rings": {
+          "$ref": "#/definitions/__schema504"
+        },
+        "margin": {
+          "$ref": "#/definitions/__schema507"
+        }
+      },
+      "required": [
+        "cellSize"
+      ],
+      "additionalProperties": false
+    },
+    "__schema503": {
+      "type": "number",
+      "description": "The cell side in metres: a power of two, at least 32."
+    },
+    "__schema504": {
+      "description": "Each state's outermost ring, in cells from the focus cell.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema505"
+        }
+      ]
+    },
+    "__schema505": {
+      "type": "object",
+      "properties": {
+        "resident": {
+          "description": "The outermost RESIDENT ring, in cells from the focus cell. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        },
+        "nearby": {
+          "description": "The outermost NEARBY ring, in cells from the focus cell. Default 2.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        },
+        "far": {
+          "description": "The outermost FAR ring, in cells from the focus cell; beyond it a cell is unloaded. Default 5.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema506": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema507": {
+      "description": "Metres past a ring before a cell is demoted. Default cellSize / 4.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema508"
+        }
+      ]
+    },
+    "__schema508": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema509": {
+      "type": "object",
       "propertyNames": {
         "type": "string"
       },
@@ -6645,6 +6725,9 @@
             },
             "impostors": {
               "$ref": "#/definitions/__schema500"
+            },
+            "streaming": {
+              "$ref": "#/definitions/__schema502"
             }
           },
           "additionalProperties": false

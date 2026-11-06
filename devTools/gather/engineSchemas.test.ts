@@ -42,8 +42,9 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       postFx: ['bloom'],
       skyboxes: ['day'],
       spatialDomains: [{ id: 'DEFAULT' }],
+      streaming: { cellSize: 64 },
     };
-    expect(getSceneFeatureIds(scene)).toEqual(['skybox', 'postfx', 'spatial', 'lod']);
+    expect(getSceneFeatureIds(scene)).toEqual(['skybox', 'postfx', 'spatial', 'lod', 'streaming']);
   });
 
   it('lists a feature whose mesh field one of the scene’s meshes uses', () => {
@@ -73,6 +74,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'spatialDomains',
       'impostors',
       'lod',
+      'streaming',
     ]);
   });
 });

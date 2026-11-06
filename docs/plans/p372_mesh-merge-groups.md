@@ -51,8 +51,8 @@ overrides?)` sets `.visible` from `DISABLED`, `TAG_FRUSTUM_CULLED`, `TAG_OBJECT_
 - **Render-sync order** (`APP_RENDER_SYNC_ORDER`, `kernel/loop/SystemStages.ts`, on `aekasha`):
   `POSE_PRODUCERS` 0, `POSE_CONSUMERS` -0.5, `SHADOW_FIT` -0.75, `FRUSTUM_CULLING` -1,
   `LOD_SELECTION` -1.5, `LIGHT_CULLING` -2 (higher runs earlier).
-- **Cell maths** (`features/spatial/CellKey.ts`, `@internal`): `worldToCell`, `packCellKey`,
-  `cellBounds`; `spatial()`'s, so it moves to `src/_engine/utils/` for this plan (p370 §13).
+- **Cell maths** (`src/_engine/utils/CellKey.ts`, `@internal`, pure): `worldToCell`, `packCellKey`,
+  `cellBounds`; moved out of `spatial()` by p353 Phase 1 (p370 §13), so this plan imports it.
 - **Imported assets** share one engine material per asset (`SpawnImportedParams.material`), and
   Blender custom props already group physics nodes (`index`, `kernel/assets/import/CustomProps.ts`,
   `ImportTypes.ts`).

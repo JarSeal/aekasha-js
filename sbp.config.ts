@@ -54,6 +54,8 @@ const profiles: SbpProfile[] = [
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,
         '_engine/features/spatial': 7 * KIB,
+        // p353 Phase 1: the feature's skeleton (set again from the report once its code lands)
+        '_engine/features/streaming': 1 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
         '_engine/kernel/assets': 13 * KIB,
