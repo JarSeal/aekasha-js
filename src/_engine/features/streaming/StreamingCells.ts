@@ -274,6 +274,9 @@ const failUnit = (rt: StreamingRuntime, cell: StreamingCell, unit: CellUnit, err
   lerror(`Streaming: a content load of cell ${cell.cx},${cell.cz} failed.`, err);
 };
 
+const notIdsError = (value: unknown) =>
+  new Error(`its load returned ${typeof value}, not the array of entity ids it created`);
+
 const isPromise = (value: unknown): value is Promise<readonly number[]> =>
   !!value && typeof (value as Promise<unknown>).then === 'function';
 
@@ -291,6 +294,10 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
     return null;
   }
   if (!isPromise(result)) {
+    if (!Array.isArray(result)) {
+      failUnit(rt, cell, unit, notIdsError(result));
+      return null;
+    }
     unit.state = UNIT_DONE;
     unit.entityIds = result.slice();
     return null;
@@ -299,16 +306,21 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
   cell.inFlight++;
   return result.then(
     (ids) => {
+      const isIds = Array.isArray(ids);
       if (cell.generation !== generation) {
         // Cancelled (or the scene left) meanwhile: what it made goes at once
         unit.state = UNIT_UNLOADED;
         rt.stats.lateResults++;
-        unloadUnitContent(rt, unit.content, ids, ctx);
+        if (isIds) unloadUnitContent(rt, unit.content, ids, ctx);
         return;
       }
-      unit.state = UNIT_DONE;
-      unit.entityIds = ids.slice();
       cell.inFlight--;
+      if (isIds) {
+        unit.state = UNIT_DONE;
+        unit.entityIds = ids.slice();
+      } else {
+        failUnit(rt, cell, unit, notIdsError(ids));
+      }
       finishLoadIfDone(rt, cell);
     },
     (err: unknown) => {

@@ -45,13 +45,13 @@ const setup = (budgets: Partial<StreamingBudgets> = {}) => {
   return { rt, world, clock, pump: () => pumpStreamingCells(rt, fullBudgets) };
 };
 
+type Unit = Pick<StreamingCellContent, 'load' | 'unload'>;
+
+const add = (rt: StreamingRuntime, cellKey: number, unit: Unit) =>
+  addStreamingCellContent({ sceneId: rt.sceneId, cellKey, ...unit });
+
 /** Content creating `count` entities, each costing `msEach` on the clock */
-const entitiesContent = (
-  world: ECSWorld,
-  clock: { ms: number },
-  count = 1,
-  msEach = 0
-): StreamingCellContent => ({
+const entitiesContent = (world: ECSWorld, clock: { ms: number }, count = 1, msEach = 0): Unit => ({
   load: () => {
     clock.ms += msEach;
     return Array.from({ length: count }, () => world.createEntity());
@@ -59,10 +59,9 @@ const entitiesContent = (
 });
 
 /** Registers `content` for every cell in [-r, r]² */
-const fillCells = (rt: StreamingRuntime, r: number, make: () => StreamingCellContent) => {
+const fillCells = (rt: StreamingRuntime, r: number, make: () => Unit) => {
   for (let cz = -r; cz <= r; cz++) {
-    for (let cx = -r; cx <= r; cx++)
-      addStreamingCellContent(rt.sceneId, packCellKey(cx, 0, cz), make());
+    for (let cx = -r; cx <= r; cx++) add(rt, packCellKey(cx, 0, cz), make());
   }
 };
 
@@ -128,9 +127,9 @@ describe('pumpStreamingCells', () => {
     const { rt, world, clock, pump } = setup({ maxCreateMsPerFrame: 2 });
     const key = packCellKey(0, 0, 0);
     // A unit over the whole budget still runs, alone
-    addStreamingCellContent(rt.sceneId, key, entitiesContent(world, clock, 1, 10));
+    add(rt, key, entitiesContent(world, clock, 1, 10));
     for (let i = 0; i < 5; i++) {
-      addStreamingCellContent(rt.sceneId, key, entitiesContent(world, clock, 1, 1));
+      add(rt, key, entitiesContent(world, clock, 1, 1));
     }
     decideStreamingCells(rt, 32, 32);
     const counts: number[] = [];
@@ -166,7 +165,7 @@ describe('pumpStreamingCells', () => {
     const { rt, world, pump } = setup();
     const unload = vi.fn();
     const ids = [world.createEntity(), world.createEntity()];
-    addStreamingCellContent(rt.sceneId, packCellKey(0, 0, 0), { load: () => ids, unload });
+    add(rt, packCellKey(0, 0, 0), { load: () => ids, unload });
     decideStreamingCells(rt, 32, 32);
     pump();
     decideStreamingCells(rt, 1000, 1000);
@@ -180,7 +179,7 @@ describe('pumpStreamingCells', () => {
     const { rt, world, pump } = setup();
     let resolveLoad: (ids: number[]) => void = () => {};
     let isCurrent: () => boolean = () => true;
-    addStreamingCellContent(rt.sceneId, packCellKey(0, 0, 0), {
+    add(rt, packCellKey(0, 0, 0), {
       load: (ctx) => {
         isCurrent = ctx.isCurrent;
         return new Promise((resolve) => (resolveLoad = resolve));
@@ -205,7 +204,7 @@ describe('pumpStreamingCells', () => {
     const { rt, world, clock, pump } = setup({ maxCreateMsPerFrame: 1 });
     const key = packCellKey(0, 0, 0);
     for (let i = 0; i < 3; i++) {
-      addStreamingCellContent(rt.sceneId, key, {
+      add(rt, key, {
         ...entitiesContent(world, clock, 1, 1),
         unload: (ids) => {
           clock.ms += 1;
@@ -232,18 +231,35 @@ describe('pumpStreamingCells', () => {
     const { rt, world, clock, pump } = setup();
     const error = vi.spyOn(Logger, 'lerror').mockImplementation(() => {});
     const key = packCellKey(0, 0, 0);
-    addStreamingCellContent(rt.sceneId, key, {
+    add(rt, key, {
       load: () => {
         throw new Error('no');
       },
     });
-    addStreamingCellContent(rt.sceneId, key, entitiesContent(world, clock));
+    add(rt, key, entitiesContent(world, clock));
     decideStreamingCells(rt, 32, 32);
     pump();
     expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
     expect(world.getEntityCount()).toBe(1);
     expect(rt.stats.unitErrors).toBe(1);
     expect(error).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a load that returns no ids', () => {
+  test('fails its unit, sync or async, and the cell still loads', async () => {
+    const { rt, pump } = setup();
+    const error = vi.spyOn(Logger, 'lerror').mockImplementation(() => {});
+    add(rt, packCellKey(0, 0, 0), { load: () => undefined as never });
+    add(rt, packCellKey(1, 0, 0), { load: async () => 5 as never });
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+    expect(cellAt(rt, 1, 0)?.phase).toBe('LOADED');
+    expect(rt.stats.unitErrors).toBe(2);
+    expect(String(error.mock.calls[0][1])).toMatch(/not the array of entity ids/);
   });
 });
 

@@ -17,7 +17,13 @@ import {
   loadStreamingCellsNowAsync,
   pumpStreamingCells,
 } from './StreamingCells';
-import { clearSceneStreamingContent } from './StreamingContent';
+import {
+  type StreamingCellContent,
+  addStreamingCellContent,
+  clearSceneStreamingContent,
+  isStreamingCellKey,
+  removeStreamingCellContent,
+} from './StreamingContent';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
 
@@ -130,6 +136,88 @@ export const setSceneStreamingSettings = (
     sceneId,
     settings && { ...settings, rings: settings.rings && { ...settings.rings } }
   );
+};
+
+/**
+ * A streaming cell's state: where its content is. `RESIDENT`, `NEARBY` and `FAR` are loaded
+ * (`FAR` loads nothing until far representations exist, p353 Phase 5).
+ */
+export type StreamingCellState =
+  | 'UNLOADED'
+  | 'LOADING'
+  | 'RESIDENT'
+  | 'NEARBY'
+  | 'FAR'
+  | 'UNLOADING';
+
+const LOADED_STATES: readonly StreamingCellState[] = ['RESIDENT', 'NEARBY', 'FAR', 'UNLOADED'];
+
+/**
+ * Registers a unit of a scene's cell's content: `load` runs when the cell loads (with the scene,
+ * when it's around the focus then, else when the focus comes within its rings), `unload` when it
+ * unloads (by default the entities `load` returned are deleted). A scene's registrations go when
+ * the scene is left, so register them from its scene code, which runs on every load before its
+ * cells do. A cell already loading or loaded takes the unit the next time it loads. Throws on an
+ * invalid key or a `load` that isn't a function, and without the `streaming()` feature.
+ * @remarks Keep the object: {@link unregisterStreamingCellContent} takes the same one.
+ * @example
+ * ```ts
+ * import { createMeshEntity } from 'aekasha';
+ * import { getStreamingCellKey, registerStreamingCellContent } from 'aekasha/streaming';
+ *
+ * for (let cz = -8; cz < 8; cz++) {
+ *   for (let cx = -8; cx < 8; cx++) {
+ *     registerStreamingCellContent({
+ *       sceneId: 'myWorld',
+ *       cellKey: getStreamingCellKey(cx, cz),
+ *       load: ({ cellSize }) => [
+ *         createMeshEntity({
+ *           appId: `ground_${cx}_${cz}`,
+ *           geo: 'groundBlock',
+ *           mat: 'grass',
+ *           position: { x: (cx + 0.5) * cellSize, y: 0, z: (cz + 0.5) * cellSize },
+ *         }),
+ *       ],
+ *     });
+ *   }
+ * }
+ * ```
+ */
+export const registerStreamingCellContent = (content: StreamingCellContent) => {
+  const fn = 'registerStreamingCellContent';
+  assertInstalled(fn);
+  if (typeof content.sceneId !== 'string' || !content.sceneId) {
+    throw new Error(`${fn}: the content needs its sceneId.`);
+  }
+  if (!isStreamingCellKey(content.cellKey)) {
+    throw new Error(
+      `${fn}: ${String(content.cellKey)} isn't a streaming cell key (getStreamingCellKey makes one).`
+    );
+  }
+  if (typeof content.load !== 'function')
+    throw new Error(`${fn}: the content needs a load function.`);
+  if (content.unload !== undefined && typeof content.unload !== 'function') {
+    throw new Error(`${fn}: the content's unload isn't a function.`);
+  }
+  addStreamingCellContent(content);
+};
+
+/**
+ * Unregisters a unit of cell content {@link registerStreamingCellContent} registered (the same
+ * object). What a loaded cell made of it stays until the cell unloads. Returns whether it was
+ * registered.
+ */
+export const unregisterStreamingCellContent = (content: StreamingCellContent) =>
+  removeStreamingCellContent(content);
+
+/**
+ * A cell's state in the current scene: `UNLOADED` for a cell it doesn't track, and for every cell
+ * when the scene doesn't stream.
+ */
+export const getStreamingCellState = (cellKey: number): StreamingCellState => {
+  const cell = runtime?.cells.get(cellKey);
+  if (!cell) return 'UNLOADED';
+  return cell.phase === 'LOADED' ? LOADED_STATES[cell.level] : cell.phase;
 };
 
 /**
