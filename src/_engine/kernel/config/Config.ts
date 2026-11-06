@@ -215,6 +215,18 @@ export type AppConfig = {
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
   };
+  /** World streaming's budgets (`streaming()`: features/streaming/, docs/plans/p353_macro-streaming-grid.md).
+   * A scene's cells and rings are its own (`streaming` in its JSON, or setSceneStreamingSettings()). */
+  streaming?: {
+    /** How often the cells' states are decided from the focus, in frames. Default 10. */
+    updateIntervalFrames?: number;
+    /** The most cells loading at once. Default 2. */
+    maxConcurrentLoads?: number;
+    /** The milliseconds per frame cell content may take to load, and again to unload, checked
+     * before each content unit: a frame always runs at least one unit of each, and a unit started
+     * under the budget runs to its end, so a frame can go over by one unit. Default 2. */
+    maxCreateMsPerFrame?: number;
+  };
   /** The default ECS world's storage (read when it's created, in the boot). */
   ecs?: {
     /** Build-time-selectable ECS component storage backend. Default 'MAP'. */

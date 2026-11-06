@@ -1,27 +1,17 @@
 import { z } from 'zod';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
-
-/**
- * The smallest streaming cell size, in metres: a cell is a power of two of at least this, so
- * p306's terrain blocks (32-256 m) tile it exactly.
- */
-export const STREAMING_MIN_CELL_SIZE = 32;
-
-/**
- * The rings a scene's `streaming` leaves out: the outermost ring (Chebyshev distance in cells from
- * the focus cell) of each loaded state. A cell beyond `far` is unloaded.
- */
-export const DEFAULT_STREAMING_RINGS = { resident: 1, nearby: 2, far: 5 } as const;
-
-const isStreamingCellSize = (size: number) =>
-  size >= STREAMING_MIN_CELL_SIZE && Number.isInteger(Math.log2(size));
+import {
+  getStreamingSettingsProblem,
+  isStreamingCellSize,
+  STREAMING_MIN_CELL_SIZE,
+} from './StreamingSettings';
 
 const RingSchema = z.number().int().min(0);
 
 /**
  * A scene's streaming rings (`streaming.rings`): each state's outermost ring, in cells
  * (Chebyshev distance from the focus cell), `resident <= nearby <= far`. A ring equal to the one
- * before it gives its state no cells. Each one left out is {@link DEFAULT_STREAMING_RINGS}'.
+ * before it gives its state no cells. Each one left out is `DEFAULT_STREAMING_RINGS`'.
  */
 export const StreamingRingsSchema = z
   .object({
@@ -69,16 +59,10 @@ export const SceneStreamingSchema = z
   })
   .strict()
   .superRefine((settings, ctx) => {
-    const resident = settings.rings?.resident ?? DEFAULT_STREAMING_RINGS.resident;
-    const nearby = settings.rings?.nearby ?? DEFAULT_STREAMING_RINGS.nearby;
-    const far = settings.rings?.far ?? DEFAULT_STREAMING_RINGS.far;
-    if (resident > nearby || nearby > far) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['rings'],
-        message: `streaming.rings must be resident <= nearby <= far (with the defaults: ${resident}, ${nearby}, ${far}).`,
-      });
-    }
+    // The cell size has its own refine; the rest is the runtime's check
+    if (!isStreamingCellSize(settings.cellSize)) return;
+    const problem = getStreamingSettingsProblem(settings);
+    if (problem) ctx.addIssue({ code: 'custom', path: ['rings'], message: problem });
   });
 
 /** A scene's streaming settings (`*.scene.json`'s `streaming`, or set in code before its load). */
