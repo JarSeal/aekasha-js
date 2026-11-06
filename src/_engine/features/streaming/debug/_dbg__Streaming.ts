@@ -53,6 +53,7 @@ type Readouts = {
   cells: string;
   counters: string;
   priming: string;
+  bodies: string;
   memory: string;
   data: string;
 };
@@ -64,8 +65,8 @@ const COUNTED_STATES = ['RESIDENT', 'NEARBY', 'QUEUED', 'LOADING', 'PRIMING', 'U
 
 const formatScene = (rt: StreamingRuntime | null) => {
   if (!rt) return 'This scene doesn’t stream.';
-  const { cellSize, rings, margin } = rt.settings;
-  return `${rt.sceneId}: ${cellSize} m cells, rings ${rings.join(' / ')}, margin ${margin} m`;
+  const { cellSize, rings, margin, nearbyPhysicsTier } = rt.settings;
+  return `${rt.sceneId}: ${cellSize} m cells, rings ${rings.join(' / ')}, margin ${margin} m, NEARBY bodies ${nearbyPhysicsTier}`;
 };
 
 const formatFocus = (rt: StreamingRuntime | null) => {
@@ -117,6 +118,21 @@ const formatPriming = (rt: StreamingRuntime | null) => {
     `oversized uploads: ${s.oversizedUploads}`,
     `compiles: ${s.compiles}`,
     `new materials shown: ${s.structuresShown}`,
+  ].join('\n');
+};
+
+const BODY_TIERS = ['FULL', 'STATIC', 'DISABLED', 'REMOVED'] as const;
+
+/** The cells' bodies by tier (p353 Phase 4): what the Physics API tab's tier counts should match
+ * for the cells' content. */
+const formatBodies = (rt: StreamingRuntime | null) => {
+  const summary = rt?.bodies?.summarize?.(rt.world);
+  if (!rt || !summary) return '';
+  return [
+    `bodies: ${summary.bodies}, handed over: ${rt.stats.bodiesAdopted}`,
+    BODY_TIERS.map((tier) => `${tier.toLowerCase()} ${summary.byTier[tier] ?? 0}`).join(', '),
+    `held out of the policy: ${summary.heldOutOfPolicy}`,
+    `off their cell's tier: ${summary.offTier}`,
   ].join('\n');
 };
 
@@ -306,6 +322,7 @@ export const _createStreamingDebugGUI = () => {
     cells: '',
     counters: '',
     priming: '',
+    bodies: '',
     memory: '',
     data: '',
   };
@@ -325,6 +342,7 @@ export const _createStreamingDebugGUI = () => {
       readouts.cells = formatCells(rt);
       readouts.counters = formatCounters(rt);
       readouts.priming = formatPriming(rt);
+      readouts.bodies = formatBodies(rt);
       cellBytes = rt ? getOwnerGPUBytes() : new Map();
       readouts.memory = formatMemory(rt);
       readouts.data = formatDataContent(rt);
@@ -364,6 +382,18 @@ export const _createStreamingDebugGUI = () => {
           },
           getNoteItem(
             'A cell streamed in during play is held unseen while its textures upload and its new shaders compile, then shown a few new materials a frame. A stall: the focus reached it first (widen the rings). An oversized upload: an uncompressed texture over 1024² (ship KTX2).'
+          ),
+          {
+            key: 'bodies',
+            target: readouts,
+            label: 'Bodies',
+            readonly: true,
+            multiline: true,
+            rows: 4,
+            interval: 'refresh',
+          },
+          getNoteItem(
+            'The dynamic bodies the cells hold take their cell’s physics tier: a RESIDENT cell’s FULL, or their tier policy’s; another’s the scene’s nearbyPhysicsTier, out of the policy. One that moved into another loaded cell is handed to it when its own cell unloads. Off their tier: none, unless a tier is set outside the cells (or without physicsTiers()).'
           ),
           {
             key: 'memory',

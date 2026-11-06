@@ -249,6 +249,52 @@ describe('the facade (MAIN_THREAD)', () => {
     }
   });
 
+  it('a joint created between disabled bodies after a step steps (Rapier 0.19.3 panicked)', async () => {
+    // docs/issues/rapier-joint-on-disabled-bodies-panics.md: both disabled, and disabled to fixed
+    const world = new ECSWorld({ id: 'p353-joint-on-disabled' });
+    facade.tiersInstalled = true;
+    try {
+      const [a, b, c] = await Promise.all(
+        [0, 2, 4].map((x) => createBall(world, x, { initialTier: 'DISABLED' }))
+      );
+      const fixedId = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'FIXED', translation: { x: 6, y: 5, z: 0 } } },
+        { world }
+      );
+      const pw = getPhysicsWorld();
+      pw.step();
+      const body = (id: number) => world.getRigidBody(id)!;
+      const joints = [
+        createJointSync({
+          type: 'SPHERICAL',
+          body1Id: body(a).id,
+          body2Id: body(b).id,
+          anchor1: { x: 1, y: 0, z: 0 },
+          anchor2: { x: -1, y: 0, z: 0 },
+        }),
+        createJointSync({
+          type: 'SPHERICAL',
+          body1Id: body(c).id,
+          body2Id: body(fixedId).id,
+          anchor1: { x: 1, y: 0, z: 0 },
+          anchor2: { x: -1, y: 0, z: 0 },
+        }),
+      ];
+      expect(() => {
+        for (let i = 0; i < 10; i++) pw.step();
+      }).not.toThrow();
+      // Still disabled, where they were
+      for (const id of [a, b, c]) {
+        const rb = getRigidBodyAPIWithId(body(id).id)!;
+        expect(rb.isEnabledSync()).toBe(false);
+        expect(rb.translation().y).toBe(5);
+      }
+      for (const j of joints) deleteJointSync(j.id);
+    } finally {
+      facade.tiersInstalled = false;
+    }
+  });
+
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
     expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(3);
     getPhysicsWorld().setMaxCcdSubsteps(5);

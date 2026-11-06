@@ -876,6 +876,7 @@
       "createRigidBodySync": "Function",
       "createRigidBodyWithColliders": "Function",
       "createRigidBodyWithCollidersSync": "Function",
+      "CreateTier": "TypeAlias",
       "deleteRigidBodies": "Function",
       "deleteRigidBodiesSync": "Function",
       "deleteRigidBody": "Function",
@@ -1075,7 +1076,8 @@
     "src/_engine/features/physics/PhysicsTiers.ts": {
       "getPhysicsTier": "Function",
       "installPhysicsTiers": "Function",
-      "requestPhysicsTier": "Function"
+      "requestPhysicsTier": "Function",
+      "requestPhysicsTierWants": "Function"
     },
     "src/_engine/features/physics/PhysicsTiersFeature.ts": {
       "physicsTiers": "Function",
@@ -1758,6 +1760,11 @@
       "streamingSceneHooks": "Variable",
       "unregisterStreamingCellContent": "Function"
     },
+    "src/_engine/features/streaming/StreamingBodies.ts": {
+      "createStreamingBodies": "Function",
+      "StreamingBodies": "TypeAlias",
+      "StreamingBodiesSummary": "TypeAlias"
+    },
     "src/_engine/features/streaming/StreamingCells.ts": {
       "createStreamingRuntime": "Function",
       "decideStreamingCells": "Function",
@@ -1794,6 +1801,9 @@
     "src/_engine/features/streaming/StreamingFeature.ts": {
       "streaming": "Function"
     },
+    "src/_engine/features/streaming/StreamingHandOver.ts": {
+      "handOverMovedBodies": "Function"
+    },
     "src/_engine/features/streaming/StreamingManifest.ts": {
       "StreamingManifest": "TypeAlias",
       "StreamingManifestCell": "TypeAlias"
@@ -1822,7 +1832,8 @@
       "isStreamingCellSize": "Function",
       "ResolvedStreamingSettings": "TypeAlias",
       "resolveStreamingSettings": "Function",
-      "STREAMING_MIN_CELL_SIZE": "Variable"
+      "STREAMING_MIN_CELL_SIZE": "Variable",
+      "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
     },
     "src/_engine/features/viewports/Viewports.ts": {
       "createViewport": "Function",
@@ -2161,6 +2172,10 @@
       "loadDebugModuleAsync": "Function",
       "useDebug": "Function"
     },
+    "src/_engine/kernel/config/DeterminismProbe.ts": {
+      "isDeterminismProbeArmed": "Function",
+      "setDeterminismProbeArmed": "Function"
+    },
     "src/_engine/kernel/ecs/ECS.ts": {
       "ComponentHook": "TypeAlias",
       "DEFAULT_ECS_WORLD_ID": "Variable",
@@ -2249,6 +2264,15 @@
       "MAX_SPOT_ANGLE": "Variable",
       "objectFrustumCullingSystem": "Function",
       "setFrustumCullingEnabled": "Function"
+    },
+    "src/_engine/kernel/ecs/PhysicsTierAccess.ts": {
+      "getPhysicsCreationScope": "Function",
+      "getPhysicsTierAccess": "Function",
+      "PhysicsCreationScope": "TypeAlias",
+      "PhysicsTierAccess": "TypeAlias",
+      "PhysicsTierWant": "TypeAlias",
+      "runInPhysicsCreationScope": "Function",
+      "setPhysicsTierAccess": "Function"
     },
     "src/_engine/kernel/ecs/SpatialMembership.ts": {
       "findSpatialRadiusProvider": "Function",

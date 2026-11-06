@@ -90,15 +90,23 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
       () => 0,
       () => 0
     );
-    rt.bodies = createStreamingBodies();
+    rt.bodies = createStreamingBodies(rt.settings.nearbyPhysicsTier);
     const tiers = new Map<number, PhysicsTierWant>();
     const memberships: [number, boolean][] = [];
     if (withAccess) {
       setPhysicsTierAccess({
-        requestTiers: (_world, entityIds, wantOf) => {
+        requestTiers: (w, entityIds, wantOf) => {
           for (const id of entityIds) {
             const want = wantOf(id);
-            if (want !== null) tiers.set(id, want);
+            if (want === null) continue;
+            tiers.set(id, want);
+            // What a request leaves once applied (the policy's own requests aren't modelled)
+            if (want !== 'POLICY') {
+              w.addComponent(id, ComponentType.PHYSICS_SIM_TIER, {
+                tier: want,
+                target: want,
+              } as never);
+            }
           }
         },
         setPolicyMember: (w, entityId, member) => {
@@ -170,7 +178,18 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     expect(tiers.get(near)).toBe('FULL');
     goTo(32);
     expect(tiers.get(near)).toBe('STATIC');
-    expect(rt.bodies?.count?.()).toEqual({ bodies: 2, heldOutOfPolicy: 0 });
+    expect(rt.bodies?.summarize?.(rt.world)).toEqual({
+      bodies: 2,
+      heldOutOfPolicy: 0,
+      byTier: { FULL: 1, STATIC: 1 },
+      offTier: 0,
+    });
+    // A tier no request asked for (eg. another caller's): off its cell's
+    rt.world.addComponent(near, ComponentType.PHYSICS_SIM_TIER, {
+      tier: 'FULL',
+      target: 'FULL',
+    } as never);
+    expect(rt.bodies?.summarize?.(rt.world).offTier).toBe(1);
   });
 
   test("the scene's nearbyPhysicsTier is a NEARBY cell's", () => {
@@ -193,7 +212,7 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     expect(world.hasComponent(near, ComponentType.PHYSICS_TIER_POLICY)).toBe(false);
     expect(tiers.get(near)).toBe('STATIC');
     expect(tiers.get(home)).toBe('POLICY');
-    expect(rt.bodies?.count?.()).toEqual({ bodies: 2, heldOutOfPolicy: 1 });
+    expect(rt.bodies?.summarize?.(rt.world)).toMatchObject({ bodies: 2, heldOutOfPolicy: 1 });
 
     goTo(96);
     expect(memberships).toEqual([[near, true]]);

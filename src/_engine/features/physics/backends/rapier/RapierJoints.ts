@@ -10,6 +10,29 @@ import { backend, getRigidBody, handleToJointId, jointAPIs, joints } from './Rap
 // The running id (see RapierState.ts' maps)
 let nextJointId = 0;
 
+/** Rapier 0.19.3 panics (`unreachable`, in the next step) on a joint inserted when neither body is
+ * an enabled dynamic one and they've been stepped so (two disabled bodies, or a disabled one and
+ * a fixed one: the DISABLED physics tier's, docs/issues/rapier-joint-on-disabled-bodies-panics.md).
+ * A disabled body is enabled for the insert and disabled again: it stays where it was, with its
+ * velocities. */
+const createImpulseJointOnDisabled = (
+  jointData: Rapier.JointData,
+  body1: Rapier.RigidBody,
+  body2: Rapier.RigidBody,
+  wakeUp: boolean
+) => {
+  const isOff1 = !body1.isEnabled();
+  const isOff2 = !body2.isEnabled();
+  if (isOff1) body1.setEnabled(true);
+  if (isOff2) body2.setEnabled(true);
+  try {
+    return backend.world.createImpulseJoint(jointData, body1, body2, wakeUp);
+  } finally {
+    if (isOff1) body1.setEnabled(false);
+    if (isOff2) body2.setEnabled(false);
+  }
+};
+
 /**
  * Creates an impulse joint between two live bodies (throws naming a missing one) and returns its
  * API object.
@@ -67,7 +90,7 @@ export const createJoint = (params: JointParams) => {
   }
 
   const wakeUp = params.wakeUp !== false;
-  const joint = backend.world.createImpulseJoint(jointData, body1, body2, wakeUp);
+  const joint = createImpulseJointOnDisabled(jointData, body1, body2, wakeUp);
   const id = nextJointId;
   nextJointId += 1;
   joints.set(id, joint.handle);

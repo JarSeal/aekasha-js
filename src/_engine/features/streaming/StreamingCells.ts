@@ -14,7 +14,7 @@ import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/Asset
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { runInPhysicsCreationScope } from '../../kernel/ecs/PhysicsTierAccess';
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
-import { type StreamingBodies, deleteAdoptedBodies, handOverMovedBodies } from './StreamingBodies';
+import type { StreamingBodies } from './StreamingBodies';
 import { lerror } from '../../utils/Logger';
 import {
   type StreamingCellContent,
@@ -375,11 +375,18 @@ const releaseCellAssetsIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
   rt.stats.assetsReleased += rt.releaseCellAssets(cell.key);
 };
 
+/** Deletes the bodies a cell adopted (its unload, or the scene's exit; p353 Phase 4 D1). */
+const deleteAdoptedBodies = (rt: StreamingRuntime, cell: StreamingCell) => {
+  const { adopted } = cell;
+  for (let i = 0; i < adopted.length; i++) rt.world.deleteEntity(adopted[i]);
+  adopted.length = 0;
+};
+
 /** Starts taking a cell's content down; a load in flight is cancelled (its units not started
  * are skipped, a late one unloads when it comes back). Its bodies that moved into another loaded
  * cell go to that cell first. */
 const beginUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
-  handOverMovedBodies(rt, cell);
+  rt.bodies?.handOver?.(rt, cell);
   cancelPrime(rt, cell);
   if (cell.phase === 'LOADING') {
     rt.stats.loadsCancelled++;

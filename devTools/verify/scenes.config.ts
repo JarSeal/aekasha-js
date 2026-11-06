@@ -330,6 +330,17 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
       },
     },
   },
+  // World streaming with physics (p353 Phase 4): the plough moves on steps, and the probe holds
+  // the cells where the scene's load put them, so the hash and the snapshot are the load's
+  streamingPhysics: {
+    debugger: {
+      tabs: ['streamingControls', 'streamingPhysicsDemo'],
+      unstableShots: {
+        shots: ['drawer.streamingControls'],
+        reason: "live readouts of the moving focus, the cells per state and their bodies' tiers",
+      },
+    },
+  },
   lodShowcase: {
     debugger: {
       tabs: ['lodShowcaseDemo', 'exampleHub'],

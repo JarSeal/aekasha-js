@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -665,7 +665,11 @@ and `StreamingManifestCell` on `aekasha/schemas`), `streaming.base` and `streami
 cell content loaded per cell (on demand, `StreamingDataContent.js`), the Streaming tab's and cell
 window's JSON content; the streaming budget 5 → 6 KiB. App minor: `streamingGrid`'s beacons and
 wall from its JSON, its units getting their shared assets in their own `load`. `readme.md`: the
-World streaming Features entry.
+World streaming Features entry. Phase 4: engine minor: `PhysicsEntityOpts.initialTier`,
+`streaming.nearbyPhysicsTier`, the cells' bodies taking their cell's tier and handed to the cell
+they moved into, the probe holding the cells, the Streaming tab's Bodies; fixed: a joint created
+between disabled bodies (the `DISABLED` tier) killed the Rapier world on the next step. App minor:
+the `streamingPhysics` scene. `readme.md`: the World streaming entry's physics sentence.
 
 ### Phase 3 — Build-time manifest — done
 
@@ -841,7 +845,7 @@ column x = -5 loaded (its edge 135.5 m from the focus, under ring 2's 144 m), 5 
 entities. 505 loads, 480 unloads, 6 priming stalls (the focus at 120 m/s), 11-12 compiles, 2
 texture uploads per run. The only console line is Rapier's own wasm-bindgen init warning.
 
-### Phase 4 — Moving entities and physics
+### Phase 4 — Moving entities and physics — done
 
 The `STREAMING` domain and re-owning (§4.3), per-cell tiers with p352 (§6.1, which took over
 p352's Phase 5): the cell-over-policy rule, joint group owners, the create-time tier, and the step
@@ -1024,7 +1028,68 @@ As built (section 3):
   member out when its cell goes `NEARBY`; a handed-over body taking its new cell's tier; no
   `physicsTiers()`. `StreamingSchema.test.ts`: the setting.
 - **Section 4 to check:** the streaming group's first download against its 6 KiB budget (`yarn
-  sbp`: `StreamingBodies.ts` loads with the feature).
+  sbp`: `StreamingBodies.ts` loads with the feature). Done in section 4: it went to 6.9 KiB, so
+  `StreamingBodies.ts` loads on demand.
+
+As built (section 4):
+
+- **Bodies on demand** (`yarn sbp` first had the streaming group at 6.9 KiB, over its 6 KiB):
+  `created` loads `StreamingBodies.ts` with an `import()` for a scene that streams, next to
+  `StreamingDataContent.ts`'s (1.5 KiB on demand), and the hand-over is a module of its own,
+  `StreamingHandOver.ts`, run as the bodies' `handOver` hook (so it's in that chunk too; the
+  machine's tests hand it to their stand-in), with the three-line `deleteAdoptedBodies` back in the
+  machine. The group's first download: 5.5 → 5.9 KiB, within the budget unchanged.
+  `createStreamingBodies(nearbyTier)` takes the scene's `NEARBY` tier (one per machine).
+- **Found: Rapier 0.19.3 panics on a joint between disabled bodies.** `createImpulseJoint` with no
+  enabled dynamic body on either side (two disabled bodies, or a disabled one and a fixed one),
+  once they've been stepped so, makes the next step panic (`unreachable`), and every call after
+  throws ("recursive use of an object"): the world is dead, in both targets. `streamingPhysics`
+  met it at the plough's first cell crossing: a chain streamed into a `NEARBY` cell is created
+  `DISABLED` (its `nearbyPhysicsTier`), a step runs, then its `createJoint` calls land. Found by
+  replaying the Rapier snapshot taken before the step that panicked in Node and taking parts out.
+  Fixed in the backend (`RapierJoints.ts`' `createImpulseJointOnDisabled`: a disabled body is
+  enabled for the insert and disabled again, staying where it was), an engine fix for any app
+  joining `DISABLED`-tier bodies; `docs/issues/rapier-joint-on-disabled-bodies-panics.md` (not
+  filed upstream yet), tested in `PhysicsFacade.test.ts`.
+- **`streamingPhysics`** (D4; `src/app/scenes/streamingPhysics/`, on the simulation lint): 12 × 12
+  cells of 64 m, rings 1 / 2 / 2, `nearbyPhysicsTier: 'DISABLED'`; per cell a ground slab (a
+  `FIXED` collider), a 14-crate pile in the tier policy 14 m short of the cell's +x edge and, on
+  row 0 (but the last cell), a four-link `SPHERICAL` chain lying across that edge. A kinematic
+  plough mows row 0 on fixed steps (12 m/s; the streaming focus, reset to the main camera on exit,
+  and the policy's: `FULL` within 40 m, else `STATIC`), the camera follows it. A tint system shows
+  each crate's tier (orange `FULL`, blue `STATIC`, grey `DISABLED`), skipping held ones. Its tab
+  (`streamingPhysicsDemo`): the plough's speed and a stop, buttons to the Streaming and Physics
+  API tabs. `scenes.config.ts`: its debugger tabs, the Streaming tab's shot unstable. No Hub image:
+  the Streaming page names it and shows its pile's code (`#region streaming-physics-pile`).
+- **The Streaming tab's "Bodies"**: the cells' bodies per tier, handed over, held out of the
+  policy, and off their cell's tier (`summarize`, which replaced section 3's `count`); the scene
+  line shows `nearbyPhysicsTier`.
+- **Docs:** the feature's and physics' `CLAUDE.md` (Bodies; the create-time tier, the seam, the
+  Rapier workaround, the probe's flag), the root's map line, the Hub's Streaming page (a Physics
+  section, its table, the pile's code; Not yet) and Physics page (`initialTier`), `readme.md`'s
+  World streaming entry.
+
+**Measured** (2026-11-06, Apple M2, Chrome 156 headless, the dev server with
+`?isDebug=true&aekTest=true&startScene=streamingPhysics`, the test bridge's fixed frame step; the
+plough at 24 m/s for 3,600 frames, from x = -344 along row 0 to +344 and partway back; a step
+system after the tiers' and the policy's checking every sub-step, a sample every 20 frames):
+
+| target                    | steps | `FULL` in a non-`RESIDENT` cell | members outside `RESIDENT` | off tier | handed over | outlived their cell | bodies (max) | errors |
+| ------------------------- | ----- | ------------------------------- | -------------------------- | -------- | ----------- | ------------------- | ------------ | ------ |
+| `WORKER_THREAD`, SAB      | 3,628 | 0                               | 0                          | 0        | 238         | 0                   | 474          | none   |
+| `WORKER_THREAD`, messages | 3,614 | 0                               | 0                          | 0        | 244         | 0                   | 471          | none   |
+| `MAIN_THREAD`             | 3,600 | 0                               | 0                          | 0        | 237         | 0                   | 471          | none   |
+
+"`FULL` in a non-`RESIDENT` cell" counts every sub-step a body in a dynamic bucket (`FULL`, no
+other tier pending) is a non-`RESIDENT` cell's, or is unowned yet in such a cell's load: a crate
+created into a `NEARBY` cell never simulated a step `FULL`. No capacity refusal at the default
+`maxBodies` (2,048), no unit error, no tier warning. The cells' tier counts (`summarize`) matched
+every dynamic body's tier in the world (what the Physics API tab counts) in 173-180 of 180
+samples; the others each had two cells `UNLOADING`, whose bodies the cells have forgotten while
+their units unload over the next frames (28 crates: two piles). The probe hash (`yarn
+verify:scenes`) is the same in all three targets (`a2f331ff`: a scene load, the cells held), and
+`physicsTiers`' is unchanged (its system order differs from `main`'s baseline by Phase 1's
+`streamingSystem`).
 
 ### Phase 5 — Far representations
 

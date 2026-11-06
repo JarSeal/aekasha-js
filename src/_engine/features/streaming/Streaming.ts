@@ -16,7 +16,6 @@ import { DEFAULT_ECS_WORLD_ID, type ECSWorld, getECSWorld } from '../../kernel/e
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
-import { createStreamingBodies } from './StreamingBodies';
 import {
   type StreamingBudgets,
   type StreamingRuntime,
@@ -388,10 +387,13 @@ const loadSceneCellsAsync = async (sceneId: string) => {
       `The scene '${sceneId}' can't stream at a cellSize of ${settings.cellSize}: its JSON content was cut into cells of ${manifest.cellSize} (set in code, the JSON's is the gathered one).`
     );
   }
-  // Only for a scene whose JSON content is in cells: an app streaming code content alone never
-  // loads it (the import registry's pattern, p613 D4). Before any state is set, so nothing changes
-  // across the await.
-  const dataModule = manifest ? await import('./StreamingDataContent') : null;
+  // On demand (the import registry's pattern, p613 D4): the cells' bodies for a scene that streams,
+  // the JSON content only for one whose JSON content is in cells. Before any state is set, so
+  // nothing changes across the await.
+  const [bodiesModule, dataModule] = await Promise.all([
+    import('./StreamingBodies'),
+    manifest ? import('./StreamingDataContent') : null,
+  ]);
   const world = getECSWorld();
   const rt = createStreamingRuntime(
     sceneId,
@@ -402,7 +404,7 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     primer
   );
   // Its cells' bodies (StreamingBodies.ts): their tiers, and the hand-over of the ones that moved
-  rt.bodies = createStreamingBodies();
+  rt.bodies = bodiesModule.createStreamingBodies(rt.settings.nearbyPhysicsTier);
   if (manifest && dataModule) {
     const content = dataModule.createStreamingDataContent(sceneId, manifest);
     dataContent = content;

@@ -26,6 +26,7 @@ import {
   addStreamingCellContent,
   clearSceneStreamingContent,
 } from './StreamingContent';
+import { handOverMovedBodies } from './StreamingHandOver';
 import { StreamingLevel } from './StreamingRings';
 import { resolveStreamingSettings } from './StreamingSettings';
 
@@ -634,6 +635,7 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     const env = setup();
     const positions = new Map<number, { x: number; z: number }>();
     env.rt.bodies = {
+      handOver: handOverMovedBodies,
       locateMover: (world, entityId, out) => {
         const at = positions.get(entityId);
         if (!at || !world.isAlive(entityId)) return false;

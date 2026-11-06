@@ -152,6 +152,19 @@ With it, a `DYNAMIC` body made by `createPhysicsEntity` can change its tier with
 A request applies at the next physics step, and a body comes back where it left off. Bodies
 joined by joints change tier together, and can't be `REMOVED`.
 
+A body can also start in a tier: `createPhysicsEntity`'s `initialTier` (`STATIC` or `DISABLED`)
+switches it in its own create, before the first step, so it never simulates one `FULL`:
+
+```ts
+await createPhysicsEntity(
+  { colliders: { type: 'BOX' }, body: { rigidType: 'DYNAMIC' }, target: crateId },
+  { initialTier: 'STATIC' }
+);
+```
+
+World streaming gives a cell's bodies the cell's tier this way, and keeps them out of the policy
+while the cell isn't `RESIDENT` (see [World streaming](hub:features/streaming#physics)).
+
 A distance policy picks the tiers for you, from rings around a focus (the main camera by
 default, an entity or a point). Its members are the bodies created with `tierPolicy: true`:
 
@@ -173,7 +186,8 @@ The app's `physicsTiers` scene is its demo: open it with `?isDebug=true&startSce
 
 An app without `physicsTiers()` doesn't download the tiers' code. There `requestPhysicsTier`,
 `setPhysicsTierPolicy` and `setPhysicsTierPolicyMember` throw naming the feature, `tierPolicy:
-true` is ignored with one warning, and `getPhysicsTier` answers `FULL` for every body.
+true` and `initialTier` are ignored with one warning, and `getPhysicsTier` answers `FULL` for
+every body.
 
 ## Key APIs
 

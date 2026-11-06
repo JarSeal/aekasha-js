@@ -14652,6 +14652,114 @@
         }
       }
     },
+    "streamingPhysics": {
+      "name": "Streaming physics",
+      "description": "World streaming with physics (p353 Phase 4): 12 × 12 cells of 64 m, each a ground slab, a pile of 14 crates in the tier policy and, along the middle row, a jointed chain lying across the cell's edge, all code content. A kinematic plough, the streaming and the policy focus, mows along the middle row on fixed steps and pushes crates over the cells' edges. Crates are tinted by tier: orange FULL (the policy, near the plough), blue STATIC (the policy, further off in a RESIDENT cell), grey DISABLED (a NEARBY cell's: the scene's nearbyPhysicsTier).",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.5,
+            "far": 1500,
+            "position": {
+              "x": -300,
+              "y": 70,
+              "z": 120
+            },
+            "lookAtPoint": {
+              "x": -300,
+              "y": 0,
+              "z": 32
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsCamera",
+            "debugData": {
+              "name": "Streaming physics camera",
+              "description": "Follows the plough (a FOLLOW component, added in streamingPhysics.ts). The streaming focus is the plough, not this camera."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#dfe8ff",
+            "intensity": 0.6
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsAmbient"
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 2.5,
+            "position": {
+              "x": 40,
+              "y": 60,
+              "z": 30
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowPreset": "HIGH",
+            "shadowCameraNearFar": [
+              1,
+              160
+            ],
+            "shadowCameraFrustum": [
+              -60,
+              60,
+              60,
+              -60
+            ],
+            "shadowIntensity": 0.7
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsSun",
+            "debugData": {
+              "name": "Streaming physics sun",
+              "description": "Only its direction is kept: streamingPhysics.ts fits its shadow to the main camera's view on scene enter (SUN_SHADOW_FIT)."
+            }
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "id": "basicSkybox",
+          "base": {
+            "type": "EQUIRECTANGULAR",
+            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
+            "textureId": "equiRectEmptyId",
+            "colorSpace": "srgb",
+            "rotate": 3.141592653589793
+          }
+        }
+      ],
+      "streaming": {
+        "cellSize": 64,
+        "rings": {
+          "resident": 1,
+          "nearby": 2,
+          "far": 2
+        },
+        "nearbyPhysicsTier": "DISABLED"
+      },
+      "id": "streamingPhysics",
+      "sceneFile": "./scenes/streamingPhysics/streamingPhysics.ts",
+      "__features": [
+        "skybox",
+        "streaming"
+      ]
+    },
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",

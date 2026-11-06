@@ -118,6 +118,46 @@ drawn, even compiled) and eight on WebGPU. Without it, a new shader drawn cold s
 - The cells around the focus at a scene load aren't primed: they appear with the scene, behind its
   loading screen, like the rest of its content.
 
+## Physics
+
+A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
+[`physicsTiers()`](hub:features/physics#simulation-tiers) installed:
+
+| Cell       | Its dynamic bodies                                                           |
+| ---------- | ---------------------------------------------------------------------------- |
+| `RESIDENT` | `FULL`, or their tier policy's if they're in it.                             |
+| `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.   |
+| unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time). |
+
+```json
+{ "streaming": { "cellSize": 64, "nearbyPhysicsTier": "DISABLED" } }
+```
+
+- **A body starts in its cell's tier.** The bodies a `load` creates before its first `await` (or in
+  `ctx.runOwned`) are made in the cell's tier, so a crate created into a `NEARBY` cell never
+  simulates a step: as if [`requestPhysicsTier`](api:requestPhysicsTier) had applied before its
+  first one. `createPhysicsEntity`'s `initialTier` does the same anywhere, and wins inside a cell.
+- **The cell wins over the tier policy.** A body created with `tierPolicy: true` follows the
+  policy only while its cell is `RESIDENT`: out of it, it has the cell's tier, and it's back in the
+  policy when the cell is `RESIDENT` again. Bodies joined by joints change tier together, taking
+  the nearest cell's.
+- **Bodies that move change cells.** A crate that rolled into the next cell stays when its own
+  cell unloads, if that cell is loaded: the cell it's in takes it over (also from your `unload`,
+  which never sees it) and deletes it when it unloads itself. One somewhere nothing is loaded goes
+  with its cell.
+- **Return a unit's bodies once they exist.** Await their `createPhysicsEntity` calls before `load`
+  returns their ids: an entity without its body yet isn't one to the cell.
+- **Tier changes follow the frames.** Cells are decided every few frames and stream in over frames,
+  so the steps a tier change lands on depend on frame timing: a scene's load is deterministic, but
+  streaming during play isn't. The determinism probe holds the cells where the load put them.
+- The Streaming tab counts the cells' bodies per tier, those held out of the policy and those
+  handed to another cell, and any off their cell's tier (none, unless something else sets one).
+
+The `streamingPhysics` scene (`?startScene=streamingPhysics`) is a 12 × 12 grid of crate piles
+that a plough mows through, its piles and jointed chains code content:
+
+<<< src/app/scenes/streamingPhysics/streamingPhysics.ts#streaming-physics-pile
+
 ## The focus
 
 The distance is measured from the main camera unless you set a focus:
@@ -128,8 +168,8 @@ every decision (a `Vector3` you keep moving). The cells' states are decided ever
 ## The debug tab
 
 The drawer's Streaming tab shows the focus and its cell, the cells per state, the loads, unloads,
-cancellations and asset releases, the primings (stalls, uploads, compiles), the cells' GPU memory,
-and the budgets to try out live. Its
+cancellations and asset releases, the primings (stalls, uploads, compiles), the cells' bodies by
+tier, the cells' GPU memory, and the budgets to try out live. Its
 overlay draws every tracked cell's outline in its state's colour, and a row per cell opens its
 window: its state, load and priming times, entities, GPU memory, assets and last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
 cell** (or start with `?streamingFocus=x,z` in the debug env).
@@ -143,16 +183,19 @@ registries and entities exactly as they were, and the wall is there on exactly t
 its cells is. Three flights out across the
 grid and back (510 cell unloads) leave the GPU memory where it was, on both backends, and flying
 with a new shader in every cell (the scene tab's "A shader per cell") misses no frame primed, where
-unprimed it does. The plan's
+unprimed it does. `streamingPhysics`, its plough mowing the 768 m row at 24 m/s for 3,600 steps,
+in all three physics targets: no body of a `NEARBY` cell ran a step `FULL`, no policy member was
+outside a `RESIDENT` cell, no body off its cell's tier, 237-244 bodies handed over and none left
+behind, at most 474 bodies (no capacity refusal). The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
-and Phases 2 and 3 have the numbers.
+and Phases 2 to 4 have the numbers.
 :::
 
 ## Not yet
 
-World streaming is being built in phases. `FAR` cells show nothing, an imported model's size
-isn't measured (`streaming.radii`), and physics bodies keep their own tiers (see
-[the plan](repo:docs/plans/p353_macro-streaming-grid.md)).
+World streaming is being built in phases. `FAR` cells show nothing (so no body is `REMOVED` by
+its cell yet), and an imported model's size isn't measured (`streaming.radii`); see
+[the plan](repo:docs/plans/p353_macro-streaming-grid.md).
 
 ## Key APIs
 
