@@ -34,7 +34,17 @@ entities does this cell own".
   (`kernel/assets/SceneAssetRelease.ts`) frees what an exited scene still owns and nothing uses
   (ref count 0, no material using it, not a feature's `retainedTextures`, eg. the sky box's).
 - **Priming:** `renderer.initTexture(texture)` uploads synchronously (r186); `compileAsync`
-  compiles pipelines and is used for mesh `preWarm` (p350 §4).
+  compiles pipelines and is used for mesh `preWarm` (p350 §4). Since three r187 `compileAsync`
+  builds up to 16 pipelines at once and yields to the next frame after a fixed 8 ms
+  (`_compileYieldInterval`, not configurable, #34816), and node builds are shared across call
+  depths (#35014), but GPU pipelines are keyed by the target's sample count, formats and colour
+  space, and the PostFX pre-pass has its own MRT build, so a depth-0 compile doesn't spare the
+  first PostFX frame (p057 Phase 3 measured ~200 ms on the Gym). `preWarmMesh` therefore compiles
+  through the render pipeline's compiler (PostFX: the scene pass's and pre-pass's targets) in
+  the engine's compile queue, and every engine render runs with no held target or MRT
+  (`src/_engine/kernel/render/CLAUDE.md`'s Pre-warm compiles). Not three's
+  `PassNode.compileAsync` (#35168): it holds the pass's target and MRT across the compile's
+  yields, so the frames meanwhile render into the pass.
 - **Asset worker** (`kernel/assets/AssetsAPI.ts`, the worker in `kernel/assets/worker/`):
   textures and GLTFs load off the main thread when `assets.workerTarget` is `WORKER_THREAD`.
 - **p306:** terrain blocks are self-contained square units, 32–256 m, power of two.
@@ -179,7 +189,11 @@ A cell's textures and pipelines are primed while it's `NEARBY`, before it's clos
 detail:
 
 - `initTexture` per new texture and `compileAsync` per new material, spread over frames by
-  `maxPrimeMsPerFrame` (default 2 ms), measured, not assumed (Phase 0).
+  `maxPrimeMsPerFrame` (default 2 ms), measured, not assumed (Phase 0). three r187's
+  `compileAsync` slices itself at 8 ms, so a 2 ms budget means compiling a cell's materials one
+  `compileAsync` call (one material's stand-in) per frame, not one call per cell; under PostFX the
+  cell compiles through the render pipeline's compiler in the compile queue (`preWarmMesh`'s
+  path), or its first visible frame compiles again (§1).
 - A cell is promoted to `RESIDENT` only once primed. If the focus outruns priming (a fast vehicle),
   the cell is promoted anyway and the stall is counted in the debug tab, which is the signal to
   widen the rings.
@@ -283,7 +297,8 @@ prod test mode, so a production build never reads it).
 ### Phase 0 — Measure (half a day)
 
 `initTexture` and `compileAsync` cost per texture size and material type on WebGPU and the WebGL2
-fallback, in `largeWorld`. Record the numbers here; they set §5's defaults.
+fallback, in `largeWorld`, with PostFX on and off (three r187's slicing and pass compile, §1).
+Record the numbers here; they set §5's defaults.
 
 ### Phase 1 — Cells and the state machine (code content)
 

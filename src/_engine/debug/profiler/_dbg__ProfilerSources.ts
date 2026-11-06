@@ -71,7 +71,8 @@ const PHYSICS_OFF = 'physics off';
 
 // --- FRAME SAMPLER ---
 // One LATE_MAIN system on the default world (right after the frame's renderScene(), the p345
-// reason: three resets `info.render` at the start of its own animation frame), added while a
+// reason: three resets `info.render` at the start of its own animation frame, which runs after the
+// engine's on three r187 and ran before it on r186: _dbg__GPUMemory.ts), added while a
 // per-frame source is acquired and removed with the last one. In an editor view (Views.ts)
 // the scene's stages don't run, so an 'AFTER_RENDER' view frame listener samples there.
 

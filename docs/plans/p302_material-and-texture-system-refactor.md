@@ -57,6 +57,9 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
 - **Add at top level:** `isPersistent` (`TEXTURE_FIELDS`, so a save entry takes it too). The relative `fileName`, `optimize` and `pack` are there since p300.
 - **Named enums.** Accept string names next to the numbers: `"wrapS": "REPEAT"`, `"minFilter": "LINEAR_MIPMAP_LINEAR"`. They map in one table, and the existing numeric JSON still validates. `colorSpace` is a string already (`"srgb"`, `"srgb-linear"`, `""`: `ColorSpaceSchema`, `schemas/_HelperSchemas.ts`), so it keeps three's names; the plans' `"SRGB"` examples read `"srgb"`.
 - **Fix `setTextureOpts`** to apply every defined value, not only truthy ones.
+- **Live edits:** since three r187 the material observer tracks a texture's `offset`, `repeat`,
+  `rotation` and matrix (#35062), so these fields changed after the first render (the material
+  editor, a variant) take effect without a rebuild. Before r187 they didn't.
 
 ### D2 — Multi-socket `setup` entry
 
@@ -70,6 +73,25 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
 - **The gather:** nothing to emit. The generated loader imports the whole TSL module (Context), so `createMaterial` finds `setup` among its exports and runs it when it's there (a file without one is a per-socket file as today); no `"tslEntry"` flag.
 - **Schema:** `inputs` on the TSL branch of `MaterialAssetSchema`; `inputs` in `MaterialOverridesSchema` and `MaterialVariantOverridesSchema`.
 - **Variants:** `getMaterialVariant` merges `inputs` shallowly. `staticDefines` stay shallow, and that is documented: an override of a nested define object replaces the whole object.
+
+- **Variants as material instances (three r187, to decide in Phase 3).** r187's
+  `NodeMaterialInstance` (core, `materials/nodes/NodeMaterialInstance.js`, on `three/webgpu`, both
+  backends; #34684, renamed from `ProxyNodeMaterial` in #35269) wraps a base `NodeMaterial`: every
+  instance shares the base's one node build (`customProgramCacheKey` is the base's uuid and
+  version), its node sockets are the base's (read-only), and its plain properties (`color`,
+  `roughness`, `map`, any custom property) are its own, read by the shared graph through
+  `materialReference(name, type)`, textures included. Upstream's first-render benchmark: 2,038 →
+  161 ms. Today `getMaterialVariant` (`kernel/assets/Material.ts`) calls `createMaterial` again
+  with fresh `uniform()` nodes, a full node build per variant. With instances, D2's `inputs` (and
+  the per-socket inputs) become material properties read through
+  `materialReference('<socket>_<input>')` instead of captured `uniform()`s, and a variant that
+  changes only `params` or input values is `new NodeMaterialInstance(base)` with those
+  properties; a `staticDefines` or `nodes` override still makes a new material. Limits: instances
+  still split builds where the render object's key does (a texture's presence, sampler settings,
+  enums, numbers reduced to zero / non-zero: `RenderObject.getMaterialCacheKey`), `userData` is
+  cloned one level deep (so `userData.uniforms` would be shared between instances: the material
+  editor would edit instance properties instead), and the API is young (renamed within r187, a
+  UBO cost still open in its PR).
 
 ### D3 — Runtime TSL registration
 
@@ -202,6 +224,9 @@ now that the unit test covers the cached params: run it with Phase 1's exit chec
 - A `setup` material sets 3 sockets from one graph.
 - The generated WGSL samples each texture once. Check it in the browser devtools shader source, or with `renderer.debug.getShaderAsync` if available in r186.
 - `getMaterialVariant` overriding an input works.
+- **Spike (D2's variants as instances):** count node builds and pipelines for 10 variants of one
+  `setup` material made with `createMaterial` (today) and as `NodeMaterialInstance`s; decide
+  whether variants become instances in this plan or a follow-up.
 
 ### Phase 4 — Input resolvers (D4)
 
@@ -235,6 +260,6 @@ now that the unit test covers the cached params: run it with Phase 1's exit chec
 | Risk                                                                          | Mitigation                                                                                                                                                                                                                                                                       |
 | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `setup` and per-socket functions both set the same socket                     | Documented order (setup first, sockets override), plus a dev warning when a socket is overwritten                                                                                                                                                                                |
-| Variants differing only by textures compile separate pipelines                | Three caches programs by node graph structure; verify in Phase 3 that two variants with different texture ids share one pipeline (count pipelines via `renderer.info` / WebGPU devtools). If not, note it in p305 (a per-block splat map would then cost one pipeline per block) |
+| Variants differing only by textures compile separate pipelines                | Three caches programs by node graph structure; verify in Phase 3 that two variants with different texture ids share one pipeline (count pipelines via `renderer.info` / WebGPU devtools). If not, three r187's `NodeMaterialInstance` shares one build across them (D2's variants as instances), which also answers p305's per-block splat map |
 | The resolver dependency mirror in `devTools` drifts from the runtime resolver | Each resolver ships its dependency function in a side-effect-free module that both the gatherer and the runtime import (listed in `devTools/engineImports.test.ts` with its reason)                                                                                              |
 | The material editor assumes `${socket}_${input}` keys                         | `setup_${key}` follows the same pattern; Phase 3 makes the Params tab list them and updates `src/_engine/debug/editors/CLAUDE.md`                                                                                                                                                |

@@ -213,9 +213,10 @@ const checkInPlaceAttribute = (attr: THREE.BufferAttribute | THREE.InterleavedBu
  * space (Blender) nothing is needed; to keep the geometry as it is, sample with
  * {@link sampleAtlasCell} instead.
  *
- * By default it returns a registered deep clone with float UVs: three r186 frees a geometry's GPU
- * buffers when it is disposed, so a clone sharing attributes with its source would lose them when
- * either goes. `inPlace` rewrites the given geometry's attribute instead (and flags it for upload).
+ * By default it returns a registered deep clone with float UVs: three (r186, r187) frees a
+ * geometry's GPU buffers when it is disposed, so a clone sharing attributes with its source would
+ * lose them when either goes. `inPlace` rewrites the given geometry's attribute instead (and flags
+ * it for upload).
  *
  * UVs outside 0..1 reach past the cell's content into its padding (its edge extended), then its
  * neighbours. A cell can't tile: UVs reaching more than half the padding past it (the other half is

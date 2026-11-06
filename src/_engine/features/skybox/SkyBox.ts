@@ -13,6 +13,7 @@ import {
   BASE_DEFAULTS,
   BASE_STRUCTURAL_KEYS,
   buildBaseLayer,
+  DEPRECATED_ENV_SIZES,
   ENV_DEFAULTS,
   loadBaseTexture,
 } from './layers/Base';
@@ -196,6 +197,7 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
       `Sky box "${def.id}" still has a preset, which is ignored here: pass the definition through resolveSkyBoxPreset (aekasha/skybox) first (JSON sky boxes are resolved at build time).`
     );
   }
+  if (IS_DEBUG_ENV) warnDeprecatedEnvSize(def.id, def.env?.size);
   let sceneDefs = registry.get(targetSceneId);
   if (!sceneDefs) {
     sceneDefs = new Map();
@@ -209,6 +211,14 @@ export const registerSkyBox = (def: SkyBoxDef, sceneId?: string) => {
   }
   createSkyBoxDebugGUI();
   return targetSceneId;
+};
+
+/** Debug env: a deprecated `env.size` (64 or 128) warns, naming the 256 it bakes at. */
+const warnDeprecatedEnvSize = (id: string, size: number | undefined) => {
+  if (size === undefined || !DEPRECATED_ENV_SIZES.includes(size)) return;
+  lwarn(
+    `Sky box "${id}": env.size ${size} is deprecated (removed in engine 7.0.0). Since three r187 an env bake is at least 256 per face, so it bakes at 256: use 256.`
+  );
 };
 
 /**
@@ -558,6 +568,7 @@ const applyQueuedUpdates = () => {
 
 const applyUpdate = async (id: string, update: SkyBoxUpdate) => {
   if (!active || active.id !== id) return active;
+  if (IS_DEBUG_ENV) warnDeprecatedEnvSize(id, update.env?.size);
   const current = active;
   const def = mergeSkyBoxDef(current.def, update);
   if (update.dayNight) {

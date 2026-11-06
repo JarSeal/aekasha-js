@@ -57,6 +57,11 @@ The homepage image above has one pass, a bloom:
 - A change to the set of enabled passes recompiles the chain, a one-frame hitch, and so does a
   change of the active camera (see [Known issues](#known-issues)). A disabled pass costs nothing,
   and switching the whole chain off keeps it compiled.
+- A mesh created with `preWarm` (and every level of its LOD) compiles in the background for the
+  chain's own scene renders while the chain is on, so its first frame doesn't stall: compiled for
+  the direct render, it would compile again for the chain's targets. The engine's compiles run
+  one at a time, so a pre-warm can end a few frames after the mesh is created; a mesh drawn before
+  then compiles on that frame, as without one.
 
 The app has another pass to start from: ambient occlusion (GTAO) in `src/app/postFx/`.
 
@@ -95,11 +100,22 @@ touched.
 
 ## Known issues
 
-Two three.js r186 issues of the WebGPU renderer keep memory after a scene is gone. Neither has a
-workaround in the engine yet:
+Two three.js r186 issues of the WebGPU renderer that kept memory after a scene was gone are fixed
+with three r187:
 
-- [Disposed lights stay in memory](hub:issues/three-bind-group-cache-light-leak).
-- [A removed `InstancedMesh` leaks its instance attributes](hub:issues/three-instanced-node-attribute-leak).
+- [Disposed lights stayed in memory](hub:issues/three-bind-group-cache-light-leak) (and the
+  engine's PostFX pre-pass now reuses one MRT, so at most two scene visits' lights remain).
+- [A removed `InstancedMesh` leaked its instance attributes](hub:issues/three-instanced-node-attribute-leak).
+
+Three r187 issues the engine works around, so a scene needs nothing for them:
+
+- [A render context per MRT keeps its last camera and lights](hub:issues/three-render-list-keeps-lights):
+  the PostFX pre-pass's one MRT is the workaround above.
+- [A cube render target sampled before its first render loses its texture](hub:issues/three-cube-render-target-texture-link):
+  the sky box clears its cube targets once when it makes them.
+- [A pass compile keeps the renderer's target and MRT across frames](hub:issues/three-pass-compile-holds-renderer-state):
+  the engine's compiles run one at a time and its renders without a held target. Fixed on three's
+  `dev`. An app that calls `PassNode.compileAsync` itself still meets it.
 
 One of the engine's own:
 

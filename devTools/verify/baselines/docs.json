@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3125,
-      "total": 3125
+      "documented": 3132,
+      "total": 3132
     },
     "members": {
       "documented": 1042,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3042,
-        "total": 3042
+        "documented": 3049,
+        "total": 3049
       },
       "members": {
         "documented": 888,
@@ -315,8 +315,8 @@
     },
     "engine/features/postfx": {
       "exports": {
-        "documented": 29,
-        "total": 29
+        "documented": 30,
+        "total": 30
       },
       "members": {
         "documented": 0,
@@ -329,8 +329,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 173,
-        "total": 173
+        "documented": 174,
+        "total": 174
       },
       "members": {
         "documented": 0,
@@ -343,8 +343,8 @@
     },
     "engine/features/skybox/layers": {
       "exports": {
-        "documented": 78,
-        "total": 78
+        "documented": 79,
+        "total": 79
       },
       "members": {
         "documented": 0,
@@ -539,8 +539,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 88,
-        "total": 88
+        "documented": 92,
+        "total": 92
       },
       "members": {
         "documented": 0,

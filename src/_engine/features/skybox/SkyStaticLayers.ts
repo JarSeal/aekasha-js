@@ -115,6 +115,11 @@ const createTarget = (resolution: StaticLayersResolution) => {
  * target setup, as a render would). The cube is sampled for the whole scene load, and bakes wait
  * for the load to end: without this, the first bake destroys the placeholder GPU texture the
  * bind groups already sample (the env bake target has the same fix, see SkyEnvironment.ts).
+ * Kept with three r187: it's a `CubeRenderTarget` like the env bake's, whose missing texture
+ * back-link keeps the trap (initEnvBakeTarget). The scene runner never caught this one, even on
+ * three r186 with the clear removed (p057 Phase 3: `skyShowcase` and `space`), so a run without
+ * it proves nothing. Reported in docs/issues/three-cube-render-target-texture-link.md: this clear
+ * can go once three links the texture.
  */
 const initTarget = (renderer: THREE.Renderer, target: THREE.CubeRenderTarget) => {
   if (!renderer.hasInitialized()) return;
@@ -164,7 +169,7 @@ const disposeMesh = (mesh: THREE.Mesh<THREE.SphereGeometry, THREE.NodeMaterial>)
  * @remarks
  * A new target's faces are cleared right away (initTarget), for the trap setEnvBake's remarks
  * describe: the composite samples the cube for the whole scene load, before the first bake, and
- * three r186's first render into it would destroy the placeholder GPU texture the bind groups
+ * three's (r186, r187) first render into it would destroy the placeholder GPU texture the bind groups
  * sample. It needs an initialized renderer, which every path has (see setEnvBake).
  */
 export const setStaticLayers = (source: StaticLayersSource): StaticLayersBake => {

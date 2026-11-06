@@ -162,8 +162,9 @@ export const _createRendererDebugGUI = async (
             ],
             onChange: undoableChange('outputColorSpace'),
           },
-          // The canvas' alpha mode is set when the renderer is made (three r186's WebGPU backend),
-          // so a change only shows after a reload: not recorded to undo, like the others here
+          // The canvas' alpha mode is set when the renderer is made (three r186, r187: the WebGPU
+          // backend), so a change only shows after a reload: not recorded to undo, like the
+          // others here
           { key: 'alpha', label: 'Enable alpha (reloads)', onChange: () => location.reload() },
           {
             key: 'enableShadows',

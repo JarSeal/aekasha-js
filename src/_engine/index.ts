@@ -225,7 +225,11 @@ export {
   setMeshMaterial,
 } from './kernel/mesh/Mesh';
 export type { MeshProps } from './kernel/mesh/Mesh';
-export type { AfterRenderHook, RenderPipelineProvider } from './kernel/render/RenderHooks';
+export type {
+  AfterRenderHook,
+  RenderPipelineCompiler,
+  RenderPipelineProvider,
+} from './kernel/render/RenderHooks';
 export {
   createRenderer,
   deleteRenderer,

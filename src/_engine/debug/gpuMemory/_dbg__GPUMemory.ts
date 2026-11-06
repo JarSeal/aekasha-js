@@ -38,10 +38,12 @@ import {
  * created, not a driver measurement: browsers expose no real VRAM figure.
  *
  * `info.render` is not reset per render() call but at the start of three's own animation frame,
- * which runs next to the engine's main loop. So the frame counters are read by a LATE_MAIN
- * system, right after the frame's renderScene() (MainLoop.ts), and never from the tab's refresh
- * interval: that would read 0 whenever three's reset ran last, the loop is paused or the FPS
- * limiter skipped the frame. The same system tracks the memory peaks and the budget, so they are
+ * a requestAnimationFrame callback of its own next to the engine's main loop: on three r186 it
+ * ran before the engine's frame (started by `init()`), on r187 after it (started by the first
+ * `render()`, which requests it after the main loop has requested its next frame). So the frame
+ * counters are read by a LATE_MAIN system, right after the frame's renderScene() (MainLoop.ts),
+ * and never from the tab's refresh interval: that would read 0 whenever three's reset ran last
+ * (on r187, after every rendered frame), the loop is paused or the FPS limiter skipped the frame. The same system tracks the memory peaks and the budget, so they are
  * caught while the tab is closed too.
  *
  * The sections are the UI kit's tables and stacked bar (p807 D8: the live ones in

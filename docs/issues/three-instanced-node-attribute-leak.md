@@ -1,8 +1,22 @@
 **Title:** WebGPURenderer (three r186): a removed `InstancedMesh`'s instance attributes are never deleted, so `renderer.info.memory` grows by ~3.7 MB on every visit to a scene with instanced meshes
 
-Status: open | fixed upstream on `dev` (three r187 milestone), not in a release yet
+Status: fixed | three r187 (#34603, #34690), checked 2026-11-05 in p057 (see Fixed)
 Category: Bug, Rendering, Memory
 Found: 2026-10-03, while building the GPU memory tab (p345 Phase 2), three 0.186.1, Chrome, macOS, WebGPU backend
+
+## Fixed (2026-11-05, three r187)
+
+The console round trip below on three 0.187.0 (Chromium, macOS, WebGPU, no `?isDebug=true`), from
+`skyShowcase`:
+
+| `largeWorld` visit | 1 | 2 | 3 | 4 |
+| --- | --- | --- | --- | --- |
+| Attributes (count) | 62 | 62 | 62 | 62 |
+| Attributes + index | 1.51 MB | 1.51 MB | 1.51 MB | 1.51 MB |
+| Geometries (count) | 23 | 23 | 23 | 23 |
+
+`skyShowcase` read 40 attributes and 0.73 MB on every visit. The sizes are smaller than r186's
+first visit (4.63 MB) because #34690 counts an interleaved buffer once.
 
 ## Summary
 

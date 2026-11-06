@@ -220,11 +220,12 @@ export const resolveOctahedralImpostorOptions = (
  *
  * Bakes synchronously with the renderer (after `InitEngine`), restoring its target and clear
  * state. Frames are in the object's local space, so they're used with its instance transforms.
- * @remarks three r186 traps around its material: `NodeMaterial.clone()` loses `alphaTest`
- * (`NodeMaterial.copy` skips `_alphaTest`), so set it again on a clone; `VSMShadowMap` draws every
- * object that receives shadows into the shadow map whatever its `castShadow`; and a shadow map
- * renders once per camera and node frame (`ShadowNode.updateBefore`), so two renders in one task
- * share it (a harness bumps `renderer._nodes.nodeFrame.frameId` between them).
+ * @remarks three (r186, r187) traps around its material: `VSMShadowMap` draws every object that
+ * receives shadows into the shadow map whatever its `castShadow`; and a shadow map renders once
+ * per camera and node frame (`ShadowNode.updateBefore`), so two renders in one task share it (a
+ * harness bumps `renderer._nodes.nodeFrame.frameId` between them). On r186 `NodeMaterial.clone()`
+ * also lost `alphaTest` (`NodeMaterial.copy` skipped `_alphaTest`); r187's copies every setter of
+ * the prototype chain and keeps it.
  */
 export const generateOctahedralImpostor = (
   geometry: THREE.BufferGeometry,

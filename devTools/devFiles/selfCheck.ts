@@ -414,8 +414,9 @@ const run = async (hasFaults: boolean) => {
 
   await runSaveDataChecks();
 
-  // /@fs/ outside the repo
-  res = await request({ method: 'GET', route: '/@fs/etc/hostname', isRaw: true });
+  // /@fs/ outside the repo: a file that exists on Linux, WSL2 and macOS (macOS has no
+  // /etc/hostname, and a missing file gets Vite's SPA fallback, a 200, not the 403)
+  res = await request({ method: 'GET', route: '/@fs/etc/hosts', isRaw: true });
   check('/@fs/ outside the repo is refused', res.status === 403, `HTTP ${res.status}`);
   res = await request({ method: 'GET', route: `/@fs${ROOT}/package.json`, isRaw: true });
   check('/@fs/ inside the repo is served', res.status === 200, `HTTP ${res.status}`);

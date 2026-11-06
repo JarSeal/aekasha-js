@@ -178,3 +178,7 @@ Engine minor (asset type, merge material, group palettes).
    use case.
 2. Should palettes be generated automatically per scene from `merge: "AUTO"` meshes? It would need
    build-time scene analysis (and a rebuild when a scene changes); explicit palettes first.
+3. **A shared-shader tier for what can't merge** (three r187's `NodeMaterialInstance`, p302 D2's
+   variants as instances): meshes whose materials differ only in values could share one node
+   build without merging. Fewer builds and pipelines, the same draw count. Decide once p302's
+   Phase 3 spike has counted it.

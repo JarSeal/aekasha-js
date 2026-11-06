@@ -313,11 +313,12 @@ const milkyWay = (s: THREE.Node<'vec3'>, u: StarsUniforms) => {
  * @internal
  * @param boost the nebulae's star boost (their cube), or null without nebulae
  * @remarks
- * A three r186 TSL trap: a node's value is cached where it's first built, so a node other
+ * A TSL trap found on three r186: a node's value is cached where it's first built, so a node other
  * layers share (here, the lookup direction from `dir`) must not be built first inside an `If`.
  * Built in the night-only branch, it was unassigned whenever the branch was skipped (a COLOR
  * base doesn't build `dir` before the stars), and by day the whole sky became one flat colour.
- * So the rotated direction is built, as a var, before the branch.
+ * So the rotated direction is built, as a var, before the branch. r187 reworked TSL's temporary
+ * caching (`Node.isCacheable`, assignable nodes); not re-tested without the var, which stays.
  */
 export const starsNode = (
   dir: THREE.Node<'vec3'>,

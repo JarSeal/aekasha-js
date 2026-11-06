@@ -248,6 +248,9 @@ describe('updateSkyBox: new nodes or uniform writes', () => {
       { env: { backgroundRoughness: 0.5 } },
     ],
     ['the env intensities', { base: black, stars: {} }, { env: { environmentIntensity: 0.3 } }],
+    // A deprecated size bakes at 256 (three r187's smallest PMREM face): the same bake
+    ['a deprecated env.size below 256', { base: black, stars: {} }, { env: { size: 64 } }],
+    ['day-night (the same 256 default)', { base: black, stars: {} }, { dayNight: {} }],
   ])('writes uniforms for %s', async (_, def, change) => {
     expect(await update(def, change)).toEqual({ rebuilt: false, keptUniforms: true });
   });
@@ -261,9 +264,7 @@ describe('updateSkyBox: new nodes or uniform writes', () => {
     ],
     ['a layer added (the signature)', { base: black, atmosphere: {} }, { clouds: {} }],
     ['a sun added', { base: black, suns: [{}] }, { suns: [{}, {}] }],
-    ['env.size', { base: black, stars: {} }, { env: { size: 64 } }],
-    // Day-night's default env size is 128, not 256
-    ['day-night without an env.size', { base: black, stars: {} }, { dayNight: {} }],
+    ['env.size', { base: black, stars: {} }, { env: { size: 512 } }],
     [
       'the background blur leaving 0 (the background samples the bake)',
       { base: black, stars: {} },

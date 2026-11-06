@@ -17,6 +17,7 @@ import { getActiveCamera } from '../camera/Camera';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getRenderPipeline, runAfterRenderHooks } from '../render/RenderHooks';
+import { runWithClearRenderState } from '../render/CompileQueue';
 import { updateDebuggerTab } from '../../debug/DebuggerGUI';
 import { getActiveView, runActiveViewAfterRender, runActiveViewFrame } from '../render/Views';
 
@@ -346,10 +347,22 @@ export const advanceElapsedClock = (
   clock.elapsed += frameDelta;
 };
 
+// The frame's renderer, for renderSceneWithRenderer (a module binding: no closure per frame)
+let frameRenderer: Renderer | null = null;
+
 const renderScene = () => {
   const renderer = getRenderer() as Renderer | undefined;
   // A plain check: the message is built only when it fails, not every frame
   if (!renderer) throw new Error('Error in renderScene: no renderer (createRenderer).');
+  // Outside a frame (renderFrameNow, the first render), an engine compile may hold a target
+  // (kernel/render/CompileQueue.ts); inside one, runFrame has cleared it already
+  frameRenderer = renderer;
+  runWithClearRenderState(renderer, renderSceneWithRenderer);
+  frameRenderer = null;
+};
+
+const renderSceneWithRenderer = () => {
+  const renderer = frameRenderer as Renderer;
 
   if (loopState.isSceneSuspended) {
     // An editor view: its own scene and camera, without the scene's render pipeline (PostFX's,
@@ -404,6 +417,18 @@ export const requestMainLoopFrame = () => {
 const runFrame = () => {
   isFrameRequested = false;
   if (isMainLoopStopped) return;
+  // An engine compile in flight may hold its target and MRT on the renderer (a PostFX scene
+  // pass's, kernel/render/CompileQueue.ts): the whole frame renders without them (the scene, the
+  // sky's env bake, the viewports), and they're put back for the compile's next slice
+  const renderer = getRenderer() as Renderer | undefined;
+  if (renderer) {
+    runWithClearRenderState(renderer, runFrameWork);
+  } else {
+    runFrameWork();
+  }
+};
+
+const runFrameWork = () => {
   frameProbe?.begin(performance.now());
   if (IS_DEBUG_ENV) startCustomMeasurements();
 

@@ -37,7 +37,9 @@ describe('prewarmGeometry', () => {
   test('compiles with one material and camera across calls, and disposes its stand-in', async () => {
     fns.compileAsync.mockClear();
     const disposed: THREE.Object3D[] = [];
+    const culled: boolean[] = [];
     fns.compileAsync.mockImplementation(async (mesh) => {
+      culled.push((mesh as THREE.Mesh).frustumCulled);
       (mesh as THREE.Mesh).addEventListener('dispose', () => disposed.push(mesh as THREE.Mesh));
     });
     const geometry = createGeometry({ id: 'geometryTestWarm', type: 'SPHERE' });
@@ -49,6 +51,8 @@ describe('prewarmGeometry', () => {
     expect(second[0].material).toBe(first[0].material);
     expect(second[1]).toBe(first[1]);
     expect(disposed).toEqual([first[0], second[0]]);
+    // compileAsync culls against its camera at the origin: the stand-in never is
+    expect(culled).toEqual([false, false]);
   });
 
   test('warns on a failed compile instead of rejecting', async () => {

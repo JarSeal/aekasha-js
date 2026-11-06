@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { pmremTexture } from 'three/tsl';
 import { getRenderer } from '../../kernel/render/Renderer';
+import { runWithClearRenderState } from '../../kernel/render/CompileQueue';
 import type { SkyBoxEnvSize } from './SkyBoxTypes';
 
 /**
@@ -10,7 +11,7 @@ import type { SkyBoxEnvSize } from './SkyBoxTypes';
  */
 
 /** Baked PMREMs by source texture, disposed with the source texture. */
-const pmrems = new WeakMap<THREE.Texture, { target: THREE.RenderTarget; version: number }>();
+const pmrems = new WeakMap<THREE.Texture, { target: THREE.CubeRenderTarget; version: number }>();
 
 /**
  * Whether a texture can be baked into a PMREM yet: PMREMNode's own checks
@@ -32,23 +33,27 @@ export const isPMREMSourceReady = (texture: THREE.Texture) => {
  * version), disposed when its source texture is disposed. A PMREMNode given the source texture
  * itself bakes it with a PMREMGenerator of its own, and nothing ever disposes either. A source
  * that isn't ready (eg. a failed load) is returned as is, for PMREMNode to bake once it is.
- * Without a renderer, the source is returned as is too.
+ * Without an initialized renderer, the source is returned as is too (three r187's generator
+ * throws before `renderer.init()`; r186 baked asynchronously).
  * @internal
  */
 export const getPMREMTexture = (texture: THREE.Texture) => {
   const renderer = getRenderer();
-  if (!renderer || !isPMREMSourceReady(texture)) return texture;
+  if (!renderer?.hasInitialized() || !isPMREMSourceReady(texture)) return texture;
   const cached = pmrems.get(texture);
   if (cached?.version === texture.pmremVersion) return cached.target.texture;
 
-  // A generator per bake, disposed right after: its working set (a ping-pong target as large as
-  // the PMREM, LOD planes, blur materials) would otherwise stay on the GPU. Before the renderer
-  // has initialized, the generator bakes asynchronously, so it can't be disposed here.
+  // A generator per bake, disposed right after: its working set (a source cube target as large
+  // as the PMREM, its box mesh and materials) would otherwise stay on the GPU.
   const generator = new THREE.PMREMGenerator(renderer);
-  const target = (texture as THREE.CubeTexture).isCubeTexture
-    ? generator.fromCubemap(texture, cached?.target)
-    : generator.fromEquirectangular(texture, cached?.target);
-  if (renderer.hasInitialized()) generator.dispose();
+  // Outside a frame (a sky box's registration): without the target and MRT an engine compile
+  // may hold (kernel/render/CompileQueue.ts)
+  const target = runWithClearRenderState(renderer, () =>
+    (texture as THREE.CubeTexture).isCubeTexture
+      ? generator.fromCubemap(texture, cached?.target)
+      : generator.fromEquirectangular(texture, cached?.target)
+  );
+  generator.dispose();
   if (!cached) {
     const onDispose = () => {
       texture.removeEventListener('dispose', onDispose);
@@ -70,13 +75,13 @@ export const getPMREMTexture = (texture: THREE.Texture) => {
  */
 export type EnvBake = {
   size: SkyBoxEnvSize;
-  /** The PMREM (CubeUV) target every bake re-renders. */
-  target: THREE.RenderTarget;
+  /** The PMREM (a cube target with its prefiltered mips) every bake re-renders. */
+  target: THREE.CubeRenderTarget;
   /** `pmremTexture(target.texture)`: the root scene's environmentNode. Created with the target,
    * and never re-pointed (a `.value` swap to a new target left stale bindings on WebGL2). */
   environmentNode: THREE.Node;
-  /** Long-lived: its working set (ping-pong target, LOD planes, GGX material) is reused while
-   * the size stays the same. */
+  /** Long-lived: its working set (the source cube target, its box mesh, the GGX materials) is
+   * reused while the size stays the same. */
   generator: THREE.PMREMGenerator;
   /** Private: holds only the ENV_BAKE composite as its backgroundNode. */
   scene: THREE.Scene;
@@ -101,27 +106,38 @@ export const _setEnvBakeHooks = (hooks: EnvBakeHooks | null) => {
 };
 
 /**
- * A CubeUV target like the one `PMREMGenerator.fromScene` allocates for `size` (`_allocateTarget`
- * and `_createRenderTarget` in PMREMGenerator.js, three r186). Allocated here, not by the first
- * bake, so the environment node exists from activation on: activation runs while the scene
- * loads, and bakes never do.
+ * three's smallest PMREM face (`MIN_SIZE` in PMREMGenerator.js, three r187): `fromScene` bakes a
+ * smaller `size` at this one, so the sky box never asks for less (getEnvSize).
+ * @internal
  */
-const createEnvBakeTarget = (size: SkyBoxEnvSize) => {
-  const cubeSize = 2 ** Math.floor(Math.log2(size));
-  const target = new THREE.RenderTarget(3 * Math.max(cubeSize, 16 * 7), 4 * cubeSize, {
-    magFilter: THREE.LinearFilter,
-    minFilter: THREE.LinearFilter,
+export const ENV_BAKE_MIN_SIZE = 256;
+/** The face size of a PMREM's smallest prefiltered mip, as a power of two (`LOD_MIN`, r187). */
+const PMREM_LOD_MIN = 3;
+
+/**
+ * A PMREM target like the one `PMREMGenerator.fromScene` allocates for `faceSize`
+ * (`_allocateTarget` and `_createRenderTarget` in PMREMGenerator.js, three r187: a cube target
+ * with only the prefiltered mips, down to 8 texels; `faceSize` is at least ENV_BAKE_MIN_SIZE).
+ * Allocated here, not by the first bake, so the environment node exists from activation on:
+ * activation runs while the scene loads, and bakes never do.
+ */
+const createEnvBakeTarget = (faceSize: SkyBoxEnvSize) => {
+  const target = new THREE.CubeRenderTarget(faceSize, {
+    minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: false,
     type: THREE.HalfFloatType,
-    format: THREE.RGBAFormat,
     colorSpace: THREE.LinearSRGBColorSpace,
-    depthBuffer: true,
+    depthBuffer: false,
   });
-  target.texture.mapping = THREE.CubeUVReflectionMapping;
+  // Size-only entries, as three's: they allocate the mips, which the bakes render (the types
+  // declare only image mipmaps)
+  const mipmaps = target.texture.mipmaps as unknown as { width: number; height: number }[];
+  const maxLod = Math.log2(faceSize) - PMREM_LOD_MIN;
+  for (let lod = 0; lod <= maxLod; lod++)
+    mipmaps.push({ width: faceSize >> lod, height: faceSize >> lod });
   target.texture.name = 'SkyBox.envBake';
   // What makes pmremTexture() sample it as is (the types don't declare the flag)
   (target.texture as THREE.Texture & { isPMREMTexture: boolean }).isPMREMTexture = true;
-  target.scissorTest = true;
   return target;
 };
 
@@ -130,8 +146,14 @@ const createEnvBakeTarget = (size: SkyBoxEnvSize) => {
  * setup, as a render would). Without it, the target is first sampled (by every lit material,
  * for the whole scene load: bakes wait for it to end) before anything renders into it, so three
  * gives it a placeholder GPU texture, and the first bake's render target setup destroys that
- * one in place (Textures.updateTexture, three r186) without invalidating the bind groups that
- * sample it: a "Destroyed texture used in a submit" on every frame after that (WebGPU).
+ * one in place (Textures.updateTexture) without invalidating the bind groups that sample it: a
+ * "Destroyed texture used in a submit" on every frame after that (WebGPU). Still needed with
+ * three r187: its fix (#35204, a sampled render target texture is created with its target) goes
+ * through `texture.renderTarget`, which a `CubeRenderTarget`'s cube texture doesn't have (its
+ * constructor swaps the texture in through the setter, which sets no back-link; p057 Phase 3
+ * measured the error without this clear on r187). Reported in
+ * docs/issues/three-cube-render-target-texture-link.md: this clear can go once three links the
+ * texture.
  */
 const initEnvBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
   if (!renderer.hasInitialized()) return;
@@ -149,16 +171,17 @@ const disposeBakeScene = (scene: THREE.Scene) => {
 };
 
 /**
- * The env bake for `size`, with `source` (the ENV_BAKE composite) as what it bakes, and a bake
+ * The env bake for `size` (getEnvSize's face size, at least ENV_BAKE_MIN_SIZE), with `source` (the ENV_BAKE composite) as what it bakes, and a bake
  * requested (the activation and every composite rebuild). Keeps the current target, generator
  * and environment node when the size is the same; a new size replaces all three (one
  * lit-material rebuild).
  * @internal
  * @remarks
  * A new target is cleared right away (initEnvBakeTarget): every lit material samples it for
- * the whole scene load, before the first bake, and three r186 destroys a target's placeholder
- * GPU texture in place on its first render without invalidating the bind groups that sample it
- * (WebGPU: "Destroyed texture used in a submit" on every frame). That needs an initialized
+ * the whole scene load, before the first bake, and three (r186, r187: a cube target's texture has
+ * no `renderTarget` link) destroys a target's placeholder GPU texture in place on its first
+ * render without invalidating the bind groups that sample it (WebGPU: "Destroyed texture used in
+ * a submit" on every frame). That needs an initialized
  * renderer: activated before `createRenderer` has resolved, the clear is skipped and the
  * generator gets no renderer. No path does (the boot and `mountAekasha` create the renderer
  * before the first scene loads), so it isn't guarded.

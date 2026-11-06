@@ -174,13 +174,13 @@ export const getSkyBoxDef = (sceneId: string, skyBoxId: string) =>
 /** The value a path has when nothing overrides it: the definition's, else the layer default.
  * A procedural layer's `enabled` defaults to whether the definition has that layer at all. */
 export const getDefValue = (def: SkyBoxDef | undefined, path: string) => {
+  // The bake's face size: a deprecated 64 or 128 shows as the 256 it bakes at
+  if (path === 'env.size') return getEnvSize(def);
   const value = getPath(def, path);
   if (value !== undefined) return value;
   if (path.endsWith('.enabled') && path !== 'enabled') {
     return getPath(def, path.slice(0, -'.enabled'.length)) !== undefined;
   }
-  // The env bake's default size depends on day-night
-  if (path === 'env.size') return getEnvSize(def);
   // A definition without a list has none (the defaults tree's entry is for its entries' keys)
   if (path === 'suns' || path === 'moons' || path === 'nebulae') return [];
   if (EXTRA_SUN_CAST_SHADOW_PATH.test(path)) return EXTRA_SUN_LIGHT_DEFAULTS.castShadow;

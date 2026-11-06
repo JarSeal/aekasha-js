@@ -31,7 +31,7 @@ export type MaterialParamDef = {
   max?: number;
   step?: number;
   /** Whether going from `prev` to `next` changes the render pipeline, so the material needs
-   * `needsUpdate` (three r186). */
+   * `needsUpdate` (three r186, r187). */
   needsUpdate?: (prev: unknown, next: unknown) => boolean;
   /** Limits the param to some material types, when the key alone doesn't (eg. a sprite also has
    * `sizeAttenuation`). */

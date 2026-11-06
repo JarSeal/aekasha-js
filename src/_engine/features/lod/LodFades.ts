@@ -81,10 +81,12 @@ export const createStandIn = (mesh: THREE.Mesh, level: LodResolvedLevel) => {
 //
 // A level change draws the previous level through a temporary copy of the mesh: a child of it, so
 // it follows the mesh and hides with it (frustum culling, DISABLED). The copy is disposed when the
-// fade ends, as three r186 keeps an object's render objects until it is. A plain mesh's copy shares
-// the mesh's shader builds; an InstancedMesh's builds its own (three keys its builds by uuid).
-// Hiding and showing fade the mesh itself: a LOD-culled mesh stays visible while it fades out
-// (reconcileObject3DVisibility). Both copies take the per-object fade (setLodObjectFade).
+// fade ends, as three (r186, r187) keeps an object's render objects until it is. A plain mesh's
+// copy shares the mesh's shader builds; an InstancedMesh's builds its own (three r186 keyed its
+// builds by uuid; r187 shares them, but the fade mask makes a dithered InstancedMesh's build
+// object-specific, kernel/render/LodFade.ts). Hiding and showing fade the mesh itself: a LOD-culled
+// mesh stays visible while it fades out (reconcileObject3DVisibility). Both copies take the
+// per-object fade (setLodObjectFade).
 
 /** A copy of what `mesh` shows now, for a fade's outgoing level: added to the mesh, never picked by
  * raycasts, holding no registry refs (the LOD component holds every level's). */
@@ -145,8 +147,8 @@ const setMeshCulled = (
  * Draws a plain mesh's fade at `progress`; 1 ends it (the copy goes, the mesh is drawn whole).
  * @internal
  * @remarks Ending a fade disposes the outgoing copy, and so does the `LOD` delete hook through
- * this: three r186 keeps an object's render objects until it fires `dispose`, so a copy only
- * removed from its parent would leak them.
+ * this: three (r186, r187) keeps an object's render objects until it fires `dispose`, so a copy
+ * only removed from its parent would leak them.
  */
 export const setMeshFade = (lod: LodData, progress: number) => {
   const fadeIn = lod._fadeIn;

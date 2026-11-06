@@ -157,20 +157,22 @@ export const collectGPUMemorySources = (
 
 // --- ENGINE SOURCES ---
 
-/** PMREMGenerator's working set (private in three r186): what a long-lived generator keeps. */
+/** PMREMGenerator's working set (private in three r187: the source cube target and the box it
+ * renders): what a long-lived generator keeps. */
 type PMREMGeneratorInternals = {
-  _pingPongRenderTarget: THREE.RenderTarget | null;
-  _lodMeshes: THREE.Mesh[];
-  _backgroundBox: THREE.Mesh | null;
+  _sourceTarget: THREE.CubeRenderTarget | null;
+  _boxMesh: THREE.Mesh | null;
 };
 
-/** A shadow map's VSM blur targets, kept on the map when it's an array (three r186, ShadowNode). */
+/** A shadow map's VSM blur targets, kept on the map when it's an array (three r186, r187:
+ * ShadowNode). */
 type ShadowMapInternals = {
   _vsmShadowMapVertical?: THREE.RenderTarget;
   _vsmShadowMapHorizontal?: THREE.RenderTarget;
 };
 
-/** A ShadowNode's targets (three r186): a VSM shadow keeps its blur pair here, not on the map. */
+/** A ShadowNode's targets (three r186, r187): a VSM shadow keeps its blur pair here, not on the
+ * map. */
 type ShadowNodeInternals = {
   shadowMap: THREE.RenderTarget | null;
   vsmShadowMapVertical: THREE.RenderTarget | null;
@@ -242,7 +244,7 @@ export const registerEngineGPUMemorySources = () => {
   registerGPUMemorySource({
     id: 'renderer.output',
     label: 'Renderer output target (MSAA, output pass)',
-    // The renderer's own full-canvas target, per output target (three r186, private)
+    // The renderer's own full-canvas target, per output target (three r186, r187, private)
     getResources: () =>
       (
         getRenderer() as unknown as {
@@ -303,9 +305,8 @@ export const registerEngineGPUMemorySources = () => {
       if (!bake) return;
       yield bake.target;
       const generator = bake.generator as unknown as PMREMGeneratorInternals;
-      yield generator._pingPongRenderTarget;
-      for (const mesh of generator._lodMeshes) yield mesh.geometry;
-      yield generator._backgroundBox?.geometry;
+      yield generator._sourceTarget;
+      yield generator._boxMesh?.geometry;
     },
   });
 

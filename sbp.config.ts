@@ -24,11 +24,13 @@ const profiles: SbpProfile[] = [
     // The template app: `src/index.html`, every scene
     id: 'app',
     entry: 'src/index.html',
-    // Set from p611 Phase 1's report (initial 387.7 KiB gzip)
+    // Set from p611 Phase 1's report (initial 387.7 KiB gzip); p057 (three r187, `three/tsl`
+    // tree-shakeable, unused maths classes dropped) lowered the initial and `assets/index.js` to
+    // `suggestBudget` of 369.5 and 365.3 KiB
     budgets: {
-      initial: 404 * KIB,
+      initial: 385 * KIB,
       chunks: {
-        'assets/index.js': 401 * KIB,
+        'assets/index.js': 380 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -41,9 +43,9 @@ const profiles: SbpProfile[] = [
         'assets/AssetsSwitchGLTF.js': 53 * KIB,
       },
       // Set from p619's report (the modules minified, a group's code gzipped per chunk; three
-      // 254.5 KiB, physics 23.5 KiB)
+      // 254.5 KiB, physics 23.5 KiB); p057 lowered three to `suggestBudget` of r187's 239.3 KiB
       groups: {
-        three: 265 * KIB,
+        three: 249 * KIB,
         '_engine/features/character': 5 * KIB,
         '_engine/features/instancing': 4 * KIB,
         '_engine/features/lines': 6 * KIB,
@@ -88,20 +90,22 @@ const profiles: SbpProfile[] = [
     id: 'banner',
     entry: 'src/app/profiles/banner/banner.embed.ts',
     scenes: ['banner'],
-    // Set from p611 Phase 4's report (initial 300.6 KiB gzip): the measured floor
+    // Set from p611 Phase 4's report (initial 300.6 KiB gzip): the measured floor; p057 (three
+    // r187) lowered the initial, the shared chunk and three to `suggestBudget` of 265.8, 263.7 and
+    // 231.1 KiB
     budgets: {
-      initial: 313 * KIB,
+      initial: 277 * KIB,
       chunks: {
         // The entry only re-exports `mount` from the shared chunk
         'banner.embed.js': 2 * KIB,
-        'assets/banner.embed.js': 311 * KIB,
+        'assets/banner.embed.js': 275 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens took it from 0.1 to 1.5 KiB
         'assets/banner.css': 3 * KIB,
       },
       // Set from p619's report (the modules minified, as the app's)
       groups: {
-        three: 262 * KIB,
+        three: 241 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
         '_engine/kernel/assets': 11 * KIB,
         '_engine/kernel/ecs': 8 * KIB,
@@ -132,13 +136,14 @@ const profiles: SbpProfile[] = [
     scenes: ['uiKitEmbed'],
     // Set from p801 Phase 3's report (initial 285.8 KiB gzip): the banner's floor, the kit lazy;
     // p803 Phase 7 checked each against `suggestBudget` (initial 286.3 KiB): only the scene's two
-    // chunks changed
+    // chunks changed; p057 (three r187) lowered the initial, the shared chunk and three to
+    // `suggestBudget` of 265.2, 263.1 and 230.0 KiB
     budgets: {
-      initial: 298 * KIB,
+      initial: 276 * KIB,
       chunks: {
         // The entry only re-exports `mount` from the shared chunk
         'uiKit.embed.js': 2 * KIB,
-        'assets/uiKit.embed.js': 296 * KIB,
+        'assets/uiKit.embed.js': 274 * KIB,
         'assets/uiKit.css': 3 * KIB,
         // The scene's chunk: the kit's window, dialog, toaster, tooltip and button and their
         // styles, loaded with the scene: what a HUD of those costs an app (p800 D10). Set by p803
@@ -184,7 +189,7 @@ const profiles: SbpProfile[] = [
         'assets/Announcer.js': 3 * KIB,
       },
       groups: {
-        three: 261 * KIB,
+        three: 240 * KIB,
         '_engine/kernel/assets': 11 * KIB,
         '_engine/kernel/ecs': 8 * KIB,
         '_engine/kernel/scene': 5 * KIB,

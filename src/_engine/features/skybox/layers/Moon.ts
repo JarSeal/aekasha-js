@@ -235,7 +235,7 @@ const sampleMoonTexture = (
             .add(0.5),
           asin(y.clamp(-1, 1)).div(Math.PI).add(0.5)
         );
-  // TSL's typings don't take a built vec2 here (three r186)
+  // TSL's typings don't take a built vec2 here (three r186, r187)
   const uvNode = uv as unknown as Parameters<typeof textureNode>[1];
   return textureNode(map, uvNode).rgb as unknown as THREE.Node<'vec3'>;
 };

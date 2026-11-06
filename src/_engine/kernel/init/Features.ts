@@ -11,6 +11,7 @@ import { type FixedStepDriver, setFixedStepDriver } from '../loop/MainLoop';
 import {
   addAfterRender,
   type AfterRenderHook,
+  type RenderPipelineCompiler,
   type RenderPipelineProvider,
   setRenderPipeline,
 } from '../render/RenderHooks';
@@ -60,8 +61,10 @@ export type FeatureContext = {
    * One per page; a second throws. */
   setFixedStepDriver: (driver: FixedStepDriver) => void;
   /** Renders every frame through the provider's pipeline when it returns one
-   * ({@link RenderPipelineProvider}): PostFX. One per page; a second throws. */
-  setRenderPipeline: (provider: RenderPipelineProvider) => void;
+   * ({@link RenderPipelineProvider}): PostFX. With `compiler`, a mesh's pre-warm compiles
+   * for the pipeline's own scene renders while it's on ({@link RenderPipelineCompiler}). One per
+   * page; a second throws. */
+  setRenderPipeline: (provider: RenderPipelineProvider, compiler?: RenderPipelineCompiler) => void;
   /** Draws over every finished frame ({@link AfterRenderHook}): viewports. Returns the remover. */
   addAfterRender: (hook: AfterRenderHook) => () => void;
   /**

@@ -1,11 +1,11 @@
 {
   "name": "aekasha-js",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "High-performance WebGPU application powered by the Ækasha framework.",
   "repository": "https://github.com/JarSeal/aekasha-js.git",
   "author": "JarSeal",
   "engine_metadata": {
-    "version": "6.0.0",
+    "version": "6.1.0",
     "codename": "Sunset",
     "name": "Ækasha",
     "fullName": "Ækasha Framework",
@@ -82,7 +82,7 @@
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.3",
     "meshoptimizer": "1.1.1",
-    "three": "0.186.1",
+    "three": "0.187.0",
     "vanilla-colorful": "0.7.2"
   },
   "devDependencies": {
@@ -93,7 +93,7 @@
     "@shikijs/transformers": "4.5.0",
     "@types/markdown-it": "14.1.2",
     "@types/node": "22.10.6",
-    "@types/three": "0.186.0",
+    "@types/three": "0.187.0",
     "@typescript-eslint/eslint-plugin": "8.70.0",
     "@typescript-eslint/parser": "8.70.0",
     "@vitejs/plugin-basic-ssl": "2.3.0",

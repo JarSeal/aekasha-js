@@ -24,3 +24,13 @@ created (and again if it's recreated), so "Custom" means the app's curve; the Re
 "Custom" only when one is registered. Until then, the tab could leave the option out. Check the
 places that copy `renderer.toneMapping` into their own output (`Snapshot.ts`' `renderOutput`, the
 viewports' `toneMapping: 'RENDERER'`, PostFX's output) render the custom curve the same way.
+
+## three r187 (checked 2026-11-05, p057)
+
+Unchanged: r187 still registers nothing for `CustomToneMapping` (`StandardNodeLibrary.js`,
+`BasicNodeLibrary.js`), `ToneMappingNode` still logs "Unsupported", and
+`renderer.library.addToneMapping` is the same (per renderer; `addType` keeps the first
+registration and warns "Redefinition" on a second, so a curve is registered once per renderer and
+can't be swapped without a new one). The built-in curves are now written in the layout form,
+`Fn(fn, { color: 'vec3', exposure: 'float', return: 'vec3' })`: the form an app's curve takes. The
+ACES Filmic fit's denominator was fixed (#35110), so ACES output changed with r187.

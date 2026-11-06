@@ -10,10 +10,12 @@ The merge path for content a baked merge can't take: members that move, or that 
 culling, visibility or LOD. A `BatchedMesh` holds many geometries with one material and a matrix
 per member.
 
-**It is spike-gated.** On WebGPU, three r186 draws a `BatchedMesh` as one draw call per visible
-member (p370 §2.1), so it doesn't lower the draw count; it lowers CPU cost (one render object, one
-pipeline, one bind group, no per-object render-list work). This plan is adopted only if Phase 0
-measures a CPU win that matters.
+**It is spike-gated.** On WebGPU, three r186 drew a `BatchedMesh` as one draw call per visible
+member (p370 §2.1), so it lowered only CPU cost (one render object, one pipeline, one bind group,
+no per-object render-list work). three r187 merges consecutive draws that share a geometry range
+into one `drawIndexed` with an instance count (#35259), so a batch whose members are drawn grouped
+by geometry lowers the draw count too: to about one draw per geometry (or per geometry and level).
+This plan is adopted only if Phase 0 measures a CPU or draw-count win that matters.
 
 ---
 
@@ -22,6 +24,18 @@ measures a CPU win that matters.
 - **r186 WebGPU draw loop** (`renderers/webgpu/WebGPUBackend.js:2124-2145`): one `drawIndexed`
   per entry of `_multiDrawStarts` / `_multiDrawCounts`, `firstInstance = i` as the member index,
   each counted in `info.render.drawCalls`.
+- **r187 merged draws** (#35259; `objects/BatchedMesh.js` `_updateDrawParameters(…, 'merged')`
+  builds `_mergedDrawStarts` / `Counts` / `InstanceCounts`, `WebGPUBackend.js` ~2146 issues one
+  `drawIndexed(count, instanceCount, …)` per run, driven from `nodes/accessors/Batch.js` through
+  `OnObjectUpdate`, so a shadow pass culls against its own camera, #34829). Only *adjacent*
+  entries merge: the default `sortObjects = true` sorts opaque members by depth and interleaves
+  geometries (the PR's numbers: three alternating geometries 18,019 → 12,133 draws; added per
+  geometry with `sortObjects = false`, 18,014 → 4). So a batch adds its members grouped by
+  geometry and draws with `sortObjects = false`, or a `customSort` by geometry range first, then
+  depth. Also in r187: the sort corruption fix (#34828), draw ranges after `setGeometrySize()`
+  (#34983), the previous-matrix leak (#35272) and precise `Box3` bounds (#34863).
+- The WebGPU path no longer sets draw parameters in `onBeforeRender`, which
+  `@three.ez/batched-mesh-extensions` overrides: the extension (item 7) is even less usable.
 - `BatchedMesh` keeps member matrices in a data texture, supports per-member visibility, colour,
   `perObjectFrustumCulled` and `sortObjects`, and geometry slots that can be freed and reused.
 - **No `BatchedMesh` in the engine** (checked 2026-11-04). The profiler census counts one as a
@@ -37,7 +51,9 @@ In a test scene, 2 000 members of 20 geometries with one material, three ways: s
 baked p372 group, a `BatchedMesh`. Both backends. Measure (profiler):
 
 1. CPU frame time (render-list build, `renderer.render`) and GPU time;
-2. draw calls as counted;
+2. draw calls as counted, with the members added in random order and `sortObjects` on (the
+   default), and grouped by geometry with `sortObjects = false` or a `customSort` by range then
+   depth (r187's merged draws, §1);
 3. per-member matrix updates for 10% / 100% of members per frame;
 4. per-instance colour and visibility on WebGPU (p309's risk);
 5. `perObjectFrustumCulled` cost vs. benefit;
@@ -48,8 +64,8 @@ baked p372 group, a `BatchedMesh`. Both backends. Measure (profiler):
    instanced LOD pool for 2,000 instances of one geometry (and 2,000 draws instead of 3).
 
 Record the numbers here, in p348 §4.4 and in p309's risk row. **Gate:** continue only if
-`BatchedMesh` beats separate meshes on CPU frame time by a margin worth a new code path (proposed:
-≥ 30% at 2 000 members) and works on both backends.
+`BatchedMesh` beats separate meshes on CPU frame time or draw count by a margin worth a new code
+path (proposed: ≥ 30% at 2 000 members) and works on both backends.
 
 ## 3. Design (if the gate passes)
 
@@ -90,7 +106,8 @@ Record the numbers here, in p348 §4.4 and in p309's risk row. **Gate:** continu
 | --------------------------------------------- | --------------------------------------------------------------------------------- |
 | No CPU win worth the code on WebGPU           | The gate; the spike's numbers stay recorded, and p372/instancing cover the cases  |
 | Per-instance features differ between backends | Spike items 4–6 on both backends                                                  |
-| WebGPU gains multi-draw-indirect later        | Then batches become a draw-count win too; re-run the spike (p370 open question 4) |
+| Merged draws need grouped members (r187)      | The sync keeps members grouped by geometry and the batch's sort by range (§1)     |
+| WebGPU gains multi-draw-indirect later        | Fewer draws still for interleaved members; re-run the spike (p370 open question 4) |
 
 ## 6. Open questions
 

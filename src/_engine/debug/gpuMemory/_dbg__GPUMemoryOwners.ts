@@ -51,13 +51,13 @@ const entryBytes = (entry: MemoryMapEntry | undefined) =>
 type TextureSizer = { _getTextureMemorySize: (texture: THREE.Texture) => number };
 
 /**
- * three r186 sizes every compressed texture as 1 B (`Info._getTextureMemorySize`). This replaces
- * the sizer on the renderer's `info` with one that counts a compressed texture's uploaded bytes
- * ({@link getCompressedTextureByteSize}) and leaves everything else to three. So `info.memory`,
- * `info.memoryMap` and everything read from them (totals, owners, snapshots, peaks, budget, the
- * profiler's GPU memory figure) count KTX2 textures at their real size, where the profiler loads.
- * Call before renderer.init(), like the allocation tracker: three sizes a texture once, when it
- * creates it, and frees what it counted then.
+ * three (r186, r187) sizes every compressed texture as 1 B (`Info._getTextureMemorySize`). This
+ * replaces the sizer on the renderer's `info` with one that counts a compressed texture's uploaded
+ * bytes ({@link getCompressedTextureByteSize}) and leaves everything else to three. So
+ * `info.memory`, `info.memoryMap` and everything read from them (totals, owners, snapshots, peaks,
+ * budget, the profiler's GPU memory figure) count KTX2 textures at their real size, where the
+ * profiler loads. Call before renderer.init(), like the allocation tracker: three sizes a texture
+ * once, when it creates it, and frees what it counted then.
  */
 export const installCompressedTextureSizer = (renderer: Renderer) => {
   const info = renderer.info as unknown as TextureSizer;
@@ -67,11 +67,11 @@ export const installCompressedTextureSizer = (renderer: Renderer) => {
 };
 
 /**
- * What three r186 leaves out of a cube texture: it sizes a texture by its image, and a cube's image
- * is an array of faces (or nothing, on a CubeRenderTarget), so it counts each face as 1×1. The
- * size three's own formula gives at the real face size (a render target's, or the first face's),
- * minus the `counted` bytes. 0 for anything else, compressed cubes included (counted in full by
- * {@link installCompressedTextureSizer}).
+ * What three (r186, r187) leaves out of a cube texture: it sizes a texture by its image, and a
+ * cube's image is an array of faces (or nothing, on a CubeRenderTarget), so it counts each face as
+ * 1×1. The size three's own formula gives at the real face size (a render target's, or the first
+ * face's), minus the `counted` bytes. 0 for anything else, compressed cubes included (counted in
+ * full by {@link installCompressedTextureSizer}).
  */
 export const getUncountedCubeBytes = (
   renderer: Renderer,

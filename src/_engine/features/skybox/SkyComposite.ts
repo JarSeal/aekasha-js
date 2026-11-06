@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { cubeTexture, float, uniform, vec3 } from 'three/tsl';
-import type { SkyBoxDef } from './SkyBoxTypes';
+import type { SkyBoxDef, SkyBoxEnvSize } from './SkyBoxTypes';
+import { ENV_BAKE_MIN_SIZE } from './SkyEnvironment';
 import {
   applyBaseUniforms,
   baseNode,
@@ -255,13 +256,15 @@ export const getStaticLayersSourceOf = (
 export const isDayNightEnabled = (def: SkyBoxDef | undefined) => isOn(def?.dayNight);
 
 /**
- * The env bake's size (`env.size`): 256 by default, 128 with day-night (it re-bakes as the sun
- * moves).
+ * The env bake's face size a definition gets: its `env.size` (default 256), at least
+ * `ENV_BAKE_MIN_SIZE` (the deprecated 64 and 128 bake at 256). So a change between those and 256
+ * is no rebuild, and the debug tab shows 256 for them.
  * @internal
  */
-export const getEnvSize = (def: SkyBoxDef | undefined) =>
-  def?.env?.size ?? (isDayNightEnabled(def) ? DAY_NIGHT_ENV_SIZE : ENV_DEFAULTS.size);
-const DAY_NIGHT_ENV_SIZE = 128;
+export const getEnvSize = (def: SkyBoxDef | undefined): SkyBoxEnvSize => {
+  const size = def?.env?.size ?? ENV_DEFAULTS.size;
+  return size < ENV_BAKE_MIN_SIZE ? ENV_BAKE_MIN_SIZE : size;
+};
 
 /**
  * Every layer's uniforms for an activation, with the definition's values and `time`'s

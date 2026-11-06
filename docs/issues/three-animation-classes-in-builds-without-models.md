@@ -29,3 +29,12 @@ entry's `importAssetAsync` still imports the registry statically for an app that
 such a profile must not call it either: the build would then keep the classes, which is correct.
 
 Measure it with `yarn sbp --profile banner` against the committed baseline.
+
+## three r187 (checked 2026-11-05, p057)
+
+Unchanged: `Interpolant`, `KeyframeTrack`, `AnimationClip`, `PropertyBinding` and `AnimationMixer`
+are still in `build/three.core.js`, which the first download needs, and #34619 only drops maths
+classes nothing uses. The banner's `three` group shrank anyway (251.7 → 231.1 kB gzip, `three/tsl`
+made tree-shakeable, #34533), so the byte figures above need measuring again. The same mechanism
+now applies to TSL: a TSL function only a lazy chunk uses still lives in `three.tsl.js`, which
+`three.webgpu.js` imports statically, so it ships in the first download.

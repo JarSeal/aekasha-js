@@ -97,7 +97,13 @@ if (object.isBatchedMesh === true) {
 WebGPU core has no multi-draw-indirect, so a `BatchedMesh` is **one draw call per visible member**,
 and `renderer.info.render.drawCalls` counts each. What it does save: one render object, one
 pipeline, one bind group, no per-object render-list work. A mesh with geometry groups and a
-material array is likewise one render object per group. Neither lowers the draw count. Only one
+material array is likewise one render object per group. Neither lowers the draw count.
+
+**three r187** (2026-10-30) merges consecutive `BatchedMesh` draws that share a geometry range into
+one `drawIndexed` with an instance count (#35259): a batch whose members are drawn grouped by
+geometry (`sortObjects = false`, or a `customSort` by range) costs about one draw per geometry. The
+default depth sort interleaves geometries and merges little. p375 §1 has the detail; the table's
+`BatchedMesh` row below is r186's. Only one
 geometry drawn with one material does.
 
 ## 3. The batching tools and when each wins
@@ -259,7 +265,9 @@ Heightfield blocks themselves gain little: each is already one mesh.
 3. **Indirect draws.** p354's compute culling plus `drawIndexedIndirect` could cull inside a merged
    group per member range. Only if p354 lands and merged groups prove too coarse.
 4. **Multi-draw-indirect.** If WebGPU ships it (or three uses Chrome's experimental extension),
-   `BatchedMesh` becomes a real draw-count win and p375's trade-off changes.
+   `BatchedMesh` becomes a draw-count win for interleaved members too. Partly answered by three
+   r187: grouped members already merge into one draw per geometry (§2.1), so p375's trade-off
+   changed (its spike measures both).
 
 ## 13. Placement (SBP and layering)
 

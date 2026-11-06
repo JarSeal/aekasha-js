@@ -5,9 +5,9 @@
 // Memory and lifetime: a level shares the base's vertex attributes (the same BufferAttribute
 // objects) and only has its own index, unless the chain was generated with `compactVertices`. The
 // chain holds one ref on each level and releases them when the base geometry is deleted. Disposing
-// any geometry of a chain frees the shared vertex buffers on the GPU (three r186 deletes a disposed
-// geometry's attributes), so a geometry of the chain still drawn after that re-uploads them on its
-// next render.
+// any geometry of a chain frees the shared vertex buffers on the GPU (three (r186, r187) deletes a
+// disposed geometry's attributes), so a geometry of the chain still drawn after that re-uploads
+// them on its next render.
 import * as THREE from 'three/webgpu';
 import { llog, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
@@ -285,9 +285,10 @@ const runGeneration = async (geometryId: string, options: ResolvedLodChainOption
  * @param opts {@link LodChainOptions}
  * @returns the chain, or null when it was refused (warned) or the geometry was deleted meanwhile
  * @remarks The levels share the base's `BufferAttribute`s (unless `compactVertices`), and three
- * r186 deletes a disposed geometry's attributes on the GPU: disposing any geometry of the chain
- * frees the shared buffers, and a geometry of it still drawn re-uploads them on its next render.
- * Release levels through the registry (the chain's refs go with its base), never by `dispose()`.
+ * (r186, r187) deletes a disposed geometry's attributes on the GPU: disposing any geometry of the
+ * chain frees the shared buffers, and a geometry of it still drawn re-uploads them on its next
+ * render. Release levels through the registry (the chain's refs go with its base), never by
+ * `dispose()`.
  */
 export const generateLodChain = (
   geometryId: string,
