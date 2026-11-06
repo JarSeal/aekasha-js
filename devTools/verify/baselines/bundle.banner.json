@@ -26,12 +26,12 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 968999,
-      "gzip": 270338
+      "bytes": 969987,
+      "gzip": 270714
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -67,7 +67,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3100
+      "gzip": 3101
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4096,
@@ -75,18 +75,18 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47086,
-      "gzip": 14016
+      "gzip": 14019
     },
     "assets/HDRLoader.js": {
-      "bytes": 3405,
-      "gzip": 1627
+      "bytes": 3407,
+      "gzip": 1632
     },
     "assets/ImportRegistry.js": {
-      "bytes": 16557,
-      "gzip": 6660
+      "bytes": 16663,
+      "gzip": 6708
     },
     "assets/KTX2Loader.js": {
-      "bytes": 60311,
+      "bytes": 60312,
       "gzip": 24496
     },
     "assets/LodChainGLTF.js": {
@@ -125,14 +125,14 @@
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 993105,
-    "gzip": 276755
+    "minified": 994179,
+    "gzip": 277129
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 12,
-      "minified": 27680,
-      "gzip": 9636
+      "minified": 28305,
+      "gzip": 9878
     },
     "_engine/kernel/camera": {
       "modules": 1,
@@ -146,8 +146,8 @@
     },
     "_engine/kernel/ecs": {
       "modules": 6,
-      "minified": 24553,
-      "gzip": 6999
+      "minified": 24858,
+      "gzip": 7045
     },
     "_engine/kernel/init": {
       "modules": 5,
@@ -171,8 +171,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3847,
-      "gzip": 1649
+      "minified": 3859,
+      "gzip": 1657
     },
     "_engine/kernel/render": {
       "modules": 7,
@@ -181,8 +181,8 @@
     },
     "_engine/kernel/scene": {
       "modules": 7,
-      "minified": 10716,
-      "gzip": 3976
+      "minified": 10848,
+      "gzip": 4054
     },
     "_engine/ui": {
       "modules": 3,

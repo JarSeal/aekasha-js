@@ -13599,7 +13599,7 @@
     },
     "streamingGrid": {
       "name": "Streaming grid",
-      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m, each a procedural terrain block with scattered rocks and crates registered as code content. The camera flies across it and the cells around it load and unload; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m, each a procedural terrain block with scattered rocks and crates registered as code content, and JSON content the gather cuts into cells (Phase 3): a beacon in every fourth cell, whose textured material and geometries only the cells load, and a 320 m wall across six cells, loaded while any of them is. The camera flies across it and the cells around it load and unload; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
       "cameras": [
         {
           "camProps": {
@@ -13686,7 +13686,971 @@
       "__features": [
         "skybox",
         "streaming"
-      ]
+      ],
+      "__streaming": {
+        "cellSize": 64,
+        "meshes": [
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_-6_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_-6_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_-2_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_-2_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_2_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_2_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_6_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_6_-6"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_-6_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_-6_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_-2_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_-2_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_2_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_2_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_6_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_6_-2"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_-6_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_-6_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_-2_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_-2_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_2_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_2_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_6_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_6_1"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_-6_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_-6_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_-2_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_-2_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_2_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_2_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_6_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_6_5"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridWall",
+              "mat": "streamingGridWall",
+              "castShadow": true,
+              "receiveShadow": true,
+              "position": {
+                "x": 0,
+                "y": 2,
+                "z": -100
+              },
+              "appId": "streamingGridWall"
+            }
+          }
+        ],
+        "lights": [],
+        "assets": {
+          "textures": [
+            {
+              "id": "testTexture",
+              "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "__fileSize": 967035,
+              "__sourceUrl": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+              "__url": "/aek-assets/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.316c3c57.ktx2",
+              "__bytes": {
+                "in": 967035,
+                "out": 1122854
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc"
+            }
+          ],
+          "materials": [
+            {
+              "id": "streamingGridPillar",
+              "params": {
+                "map": "testTexture",
+                "roughness": 0.7
+              },
+              "type": "STANDARD"
+            },
+            {
+              "id": "streamingGridCap",
+              "params": {
+                "color": "#ffd36b"
+              },
+              "type": "BASIC"
+            },
+            {
+              "id": "streamingGridWall",
+              "params": {
+                "color": "#7b8496",
+                "roughness": 0.9
+              },
+              "type": "STANDARD"
+            }
+          ],
+          "geometries": [
+            {
+              "id": "streamingGridPillar",
+              "type": "CYLINDER",
+              "params": {
+                "radiusTop": 1,
+                "radiusBottom": 1.4,
+                "height": 40,
+                "radialSegments": 12
+              }
+            },
+            {
+              "id": "streamingGridCap",
+              "type": "SPHERE",
+              "params": {
+                "radius": 2.5,
+                "widthSegments": 12,
+                "heightSegments": 8
+              }
+            },
+            {
+              "id": "streamingGridWall",
+              "type": "BOX",
+              "params": {
+                "width": 320,
+                "height": 10,
+                "depth": 3
+              }
+            }
+          ],
+          "importedAssets": []
+        },
+        "cells": {
+          "1125805417627642": {
+            "bounds": [
+              -372.0489401216124,
+              -372.0489401216124,
+              -331.9510598783876,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              0,
+              1
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125805417627646": {
+            "bounds": [
+              -372.0489401216124,
+              -116.04894012161242,
+              -331.9510598783876,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              8,
+              9
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125805417627649": {
+            "bounds": [
+              -372.0489401216124,
+              75.95105987838758,
+              -331.9510598783876,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              16,
+              17
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125805417627653": {
+            "bounds": [
+              -372.0489401216124,
+              331.9510598783876,
+              -331.9510598783876,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              24,
+              25
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125856957235198": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              32
+            ],
+            "materials": [
+              2
+            ],
+            "geometries": [
+              2
+            ]
+          },
+          "1125874137104378": {
+            "bounds": [
+              -116.04894012161242,
+              -372.0489401216124,
+              -75.95105987838758,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              2,
+              3
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125874137104382": {
+            "bounds": [
+              -160,
+              -116.04894012161242,
+              160,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              10,
+              11,
+              32
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1,
+              2
+            ],
+            "geometries": [
+              0,
+              1,
+              2
+            ]
+          },
+          "1125874137104385": {
+            "bounds": [
+              -116.04894012161242,
+              75.95105987838758,
+              -75.95105987838758,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              18,
+              19
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125874137104389": {
+            "bounds": [
+              -116.04894012161242,
+              331.9510598783876,
+              -75.95105987838758,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              26,
+              27
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125891316973566": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              32
+            ],
+            "materials": [
+              2
+            ],
+            "geometries": [
+              2
+            ]
+          },
+          "1125908496842750": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              32
+            ],
+            "materials": [
+              2
+            ],
+            "geometries": [
+              2
+            ]
+          },
+          "1125925676711934": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              32
+            ],
+            "materials": [
+              2
+            ],
+            "geometries": [
+              2
+            ]
+          },
+          "1125942856581114": {
+            "bounds": [
+              139.95105987838758,
+              -372.0489401216124,
+              180.04894012161242,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              4,
+              5
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125942856581118": {
+            "bounds": [
+              -160,
+              -116.04894012161242,
+              180.04894012161242,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              12,
+              13,
+              32
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1,
+              2
+            ],
+            "geometries": [
+              0,
+              1,
+              2
+            ]
+          },
+          "1125942856581121": {
+            "bounds": [
+              139.95105987838758,
+              75.95105987838758,
+              180.04894012161242,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              20,
+              21
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1125942856581125": {
+            "bounds": [
+              139.95105987838758,
+              331.9510598783876,
+              180.04894012161242,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              28,
+              29
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1126011576057850": {
+            "bounds": [
+              395.9510598783876,
+              -372.0489401216124,
+              436.0489401216124,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              6,
+              7
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1126011576057854": {
+            "bounds": [
+              395.9510598783876,
+              -116.04894012161242,
+              436.0489401216124,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              14,
+              15
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1126011576057857": {
+            "bounds": [
+              395.9510598783876,
+              75.95105987838758,
+              436.0489401216124,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              22,
+              23
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          },
+          "1126011576057861": {
+            "bounds": [
+              395.9510598783876,
+              331.9510598783876,
+              436.0489401216124,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              30,
+              31
+            ],
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1
+            ]
+          }
+        }
+      }
     },
     "testDebugScene": {
       "isDebugScene": true,

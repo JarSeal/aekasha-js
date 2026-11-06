@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3189,
-      "total": 3189
+      "documented": 3215,
+      "total": 3215
     },
     "members": {
-      "documented": 1042,
-      "total": 1042
+      "documented": 1043,
+      "total": 1043
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3106,
-        "total": 3106
+        "documented": 3132,
+        "total": 3132
       },
       "members": {
-        "documented": 888,
-        "total": 888
+        "documented": 889,
+        "total": 889
       }
     },
     "toolkit": {
@@ -371,8 +371,8 @@
     },
     "engine/features/streaming": {
       "exports": {
-        "documented": 56,
-        "total": 56
+        "documented": 68,
+        "total": 68
       },
       "members": {
         "documented": 0,
@@ -399,8 +399,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 125,
-        "total": 125
+        "documented": 134,
+        "total": 134
       },
       "members": {
         "documented": 0,
@@ -473,8 +473,8 @@
         "total": 82
       },
       "members": {
-        "documented": 159,
-        "total": 159
+        "documented": 160,
+        "total": 160
       },
       "undocumented": {
         "exports": [],
@@ -539,8 +539,8 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 12,
-        "total": 12
+        "documented": 13,
+        "total": 13
       },
       "members": {
         "documented": 0,
@@ -567,8 +567,8 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 72,
-        "total": 72
+        "documented": 76,
+        "total": 76
       },
       "members": {
         "documented": 1,

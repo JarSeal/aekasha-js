@@ -26,7 +26,8 @@ import {
 // World streaming's test scene (docs/plans/p353_macro-streaming-grid.md Phases 1-2): 16 × 16 cells
 // of 64 m (the scene JSON's `streaming`), each three units of code content: a terrain block (its own
 // geometry, made on load, the cell's asset, so it goes when the cell unloads) and two sets of
-// scattered props (shared geometry and materials, so a cell compiles no new shader). The heights come from one world-space noise, so
+// scattered props (shared geometry and materials, so a cell compiles no new shader; each unit gets
+// them by id in its load, since an asset goes on its last ref). The heights come from one world-space noise, so
 // the blocks meet at their edges. The main camera (the streaming focus) flies across the grid, or
 // hovers on a cell boundary, or stays still: the scene's debug tab switches it. For priming tests
 // (Phase 2), each cell's crates can have a material of their own shader structure.
@@ -78,7 +79,11 @@ const createHeightField = (seed: number) => {
 const getCellSeed = (cx: number, cz: number) =>
   (Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663)) >>> 0;
 
-const createSharedAssets = () => {
+/** The props' and the terrain's shared materials and geometries, by id: a cache hit while they
+ * exist (adding the calling cell as an owner). Each unit gets them in its own load, not only the
+ * scene code: an asset is deleted on its last ref, so once no cell holds them they're gone, and the
+ * next cell's load makes them again. */
+const getSharedAssets = () => {
   createMaterial({
     id: 'streamingGridGroundA',
     type: 'STANDARD',
@@ -117,6 +122,7 @@ const getTerrainGeometryId = (cx: number, cz: number) => `streamingGridTerrain_$
 const loadTerrain =
   (getHeight: (x: number, z: number) => number) => (ctx: StreamingCellContext) => {
     const { cx, cz, cellSize } = ctx;
+    getSharedAssets();
     const ox = (cx + 0.5) * cellSize;
     const oz = (cz + 0.5) * cellSize;
     const terrain = generateTerrain({
@@ -158,6 +164,7 @@ const getCellCrateMaterial = (cx: number, cz: number) => {
 const loadProps =
   (getHeight: (x: number, z: number) => number, kind: 'Rock' | 'Crate', count: number) =>
   (ctx: StreamingCellContext) => {
+    getSharedAssets();
     const random = createSeededRandom(getCellSeed(ctx.cx, ctx.cz) + (kind === 'Rock' ? 1 : 2));
     const mat =
       kind === 'Crate' && streamingGridContent.uniqueCrateShaders
@@ -239,7 +246,7 @@ const startFlight = (world: ECSWorld, cameraId: number) => {
 export const scene = async () => {
   const world = getECSWorld();
   const getHeight = createHeightField(53);
-  createSharedAssets();
+  getSharedAssets();
   // Registered on every load (a scene's registrations go when it's left); the cells around the
   // camera load after this function, inside the load
   registerCells(getHeight);

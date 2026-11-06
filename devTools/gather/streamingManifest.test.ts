@@ -75,8 +75,8 @@ describe('buildStreamingManifest', () => {
     expect(Object.keys(manifest?.cells ?? {})).toEqual([key(0, 0), key(-1, 0)].sort());
     const cell = manifest?.cells[key(0, 0)];
     expect(cell?.meshes).toEqual([0, 2]);
-    const r = Math.sqrt(3);
-    expect(cell?.bounds).toEqual([10 - r, 20 - r, 30 + r, 50 + r]);
+    // An unrotated box's own half sides (1 m)
+    expect(cell?.bounds).toEqual([9, 19, 31, 51]);
     expect(manifest?.cells[key(-1, 0)]?.meshes).toEqual([1]);
     expect(warnings).toEqual([]);
     expect(errors).toEqual([]);
@@ -175,27 +175,37 @@ describe('buildStreamingManifest', () => {
 
   it('puts an oversized mesh into every cell it overlaps', () => {
     const scene = baseScene({
-      geometries: [{ id: 'bridge', type: 'BOX', params: { width: 100, height: 2, depth: 4 } }],
+      geometries: [
+        { id: 'wall', type: 'BOX', params: { width: 100, height: 2, depth: 4 } },
+        { id: 'tower', type: 'BOX', params: { width: 60, height: 2, depth: 60 } },
+      ],
       meshes: [
-        mesh('bridge', 64, 10, { geo: 'bridge' }),
+        mesh('wall', 64, 10, { geo: 'wall' }),
+        mesh('turned', 64, 200, { geo: 'tower', rotation: { x: 0, y: 0.5, z: 0 } }),
         mesh('hall', 300, 300, { geo: 'statue/hall' }),
-        mesh('statue', 200, 200, { geo: 'statue/body' }),
+        mesh('statue', 200, 400, { geo: 'statue/body' }),
       ],
       streaming: { cellSize: 64, radii: { hall: 40, missing: 3 } },
     });
     const { out, warnings } = build(scene);
     const cells = out.__streaming?.cells ?? {};
-    const r = Math.hypot(100, 2, 4) / 2;
-    // x 64 ± ~50 spans cells 0 and 1; z 10 ± ~50 spans cells -1 and 0
+    const meshesIn = (cx: number, cz: number) => cells[key(cx, cz)]?.meshes;
+    // An unrotated box reaches along its sides: x 64 ± 50 spans cells 0 and 1, z 10 ± 2 one row
+    expect(meshesIn(0, 0)).toEqual([0]);
+    expect(meshesIn(1, 0)).toEqual([0]);
+    expect(meshesIn(0, -1)).toBeUndefined();
+    expect(cells[key(0, 0)]?.bounds).toEqual([14, 8, 114, 12]);
+    // A rotated one by its bounding sphere: 64 ± 42.4 and 200 ± 42.4, cells 0-1 by 2-3
+    const r = Math.hypot(60, 2, 60) / 2;
     for (const [cx, cz] of [
-      [0, -1],
-      [1, -1],
-      [0, 0],
-      [1, 0],
+      [0, 2],
+      [1, 2],
+      [0, 3],
+      [1, 3],
     ]) {
-      expect(cells[key(cx, cz)]?.meshes).toEqual([0]);
-      expect(cells[key(cx, cz)]?.bounds).toEqual([64 - r, 10 - r, 64 + r, 10 + r]);
+      expect(meshesIn(cx, cz)).toEqual([1]);
     }
+    expect(cells[key(0, 2)]?.bounds).toEqual([64 - r, 200 - r, 64 + r, 200 + r]);
     // radii's 40 makes the import mesh oversized: 300 ± 40 → cells 4 and 5 on each axis
     for (const [cx, cz] of [
       [4, 4],
@@ -203,11 +213,11 @@ describe('buildStreamingManifest', () => {
       [4, 5],
       [5, 5],
     ]) {
-      expect(cells[key(cx, cz)]?.meshes).toEqual([1]);
+      expect(meshesIn(cx, cz)).toEqual([2]);
     }
     // An unmeasured geometry is a point
-    expect(cells[key(3, 3)]?.meshes).toEqual([2]);
-    expect(cells[key(3, 3)]?.bounds).toEqual([200, 200, 200, 200]);
+    expect(meshesIn(3, 6)).toEqual([3]);
+    expect(cells[key(3, 6)]?.bounds).toEqual([200, 400, 200, 400]);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('"missing"');
   });

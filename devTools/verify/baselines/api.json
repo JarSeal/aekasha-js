@@ -1740,8 +1740,10 @@
     "src/_engine/features/streaming/Streaming.ts": {
       "getStreamingBudgets": "Function",
       "getStreamingCellState": "Function",
+      "getStreamingDataContent": "Function",
       "getStreamingFocus": "Function",
       "getStreamingFocusOverride": "Function",
+      "getStreamingPrimeBudgets": "Function",
       "getStreamingRuntime": "Function",
       "getStreamingUpdateInterval": "Function",
       "installStreaming": "Function",
@@ -1767,6 +1769,9 @@
       "StreamingBudgets": "TypeAlias",
       "StreamingCell": "TypeAlias",
       "StreamingCellPhase": "TypeAlias",
+      "StreamingCellUnitSource": "TypeAlias",
+      "StreamingPrimeJob": "TypeAlias",
+      "StreamingPrimer": "TypeAlias",
       "StreamingRuntime": "TypeAlias",
       "StreamingStats": "TypeAlias",
       "StreamingTransitionListener": "TypeAlias"
@@ -1782,8 +1787,21 @@
       "StreamingCellContent": "TypeAlias",
       "StreamingCellContext": "TypeAlias"
     },
+    "src/_engine/features/streaming/StreamingDataContent.ts": {
+      "createStreamingDataContent": "Function",
+      "StreamingDataContent": "TypeAlias"
+    },
     "src/_engine/features/streaming/StreamingFeature.ts": {
       "streaming": "Function"
+    },
+    "src/_engine/features/streaming/StreamingManifest.ts": {
+      "StreamingManifest": "TypeAlias",
+      "StreamingManifestCell": "TypeAlias"
+    },
+    "src/_engine/features/streaming/StreamingPriming.ts": {
+      "createStreamingPrimer": "Function",
+      "resetStreamingPrimer": "Function",
+      "StreamingPrimeBudgets": "TypeAlias"
     },
     "src/_engine/features/streaming/StreamingRings.ts": {
       "decideStreamingLevel": "Function",
@@ -1834,8 +1852,14 @@
     "src/_engine/kernel/assets/AssetOwners.ts": {
       "copyAssetOwner": "Function",
       "getAssetOwner": "Function",
+      "getAssetOwners": "Function",
+      "getAssetOwnerScope": "Function",
+      "getCellOwnerKey": "Function",
+      "isSceneOwnerKey": "Function",
       "recordAssetOwner": "Function",
+      "releaseAssetOwners": "Function",
       "retagAssetOwner": "Function",
+      "runInAssetOwnerScope": "Function",
       "setAssetOwnerScene": "Function"
     },
     "src/_engine/kernel/assets/AssetsAPI.ts": {
@@ -2026,6 +2050,9 @@
       "TextureMapKeys": "TypeAlias"
     },
     "src/_engine/kernel/assets/SceneAssetRelease.ts": {
+      "countReleasedAssets": "Function",
+      "releaseCellOwnedAssets": "Function",
+      "ReleasedAssets": "TypeAlias",
       "releaseSceneOwnedAssets": "Function",
       "setSceneImportRelease": "Function"
     },
@@ -2515,6 +2542,7 @@
       "installMeshes": "Function",
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
+      "preWarmObjectsAsync": "Function",
       "removeMeshLod": "Function",
       "setAutoLodResolverLoader": "Function",
       "setMeshGeometry": "Function",
@@ -2694,7 +2722,11 @@
     "src/_engine/kernel/scene/SceneDataLoader.ts": {
       "createCameras": "Function",
       "createNextSceneObject3Ds": "Function",
-      "loadNextSceneAssets": "Function"
+      "createSceneObject3Ds": "Function",
+      "loadNextSceneAssets": "Function",
+      "loadSceneAssetsAsync": "Function",
+      "SceneAssetLists": "TypeAlias",
+      "SceneObject3DLists": "TypeAlias"
     },
     "src/_engine/kernel/scene/SceneHooks.ts": {
       "addSceneHooks": "Function",
@@ -4894,6 +4926,8 @@
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
       "SkyBoxDefSchema",
+      "StreamingManifest",
+      "StreamingManifestCell",
       "StreamingRingsSchema",
       "TEXTURE_SLOTS",
       "TextureArrayAsset",

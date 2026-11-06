@@ -9,6 +9,7 @@ import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
 import { formatBytes } from '../../../kernel/assets/debug/_dbg__AssetStats';
 import {
   getStreamingBudgets,
+  getStreamingDataContent,
   getStreamingFocus,
   getStreamingFocusOverride,
   getStreamingPrimeBudgets,
@@ -53,6 +54,7 @@ type Readouts = {
   counters: string;
   priming: string;
   memory: string;
+  data: string;
 };
 
 /** The cells' GPU bytes by owner key, read once per refresh (it walks every asset) */
@@ -129,6 +131,23 @@ const formatMemory = (rt: StreamingRuntime | null) => {
     largest = Math.max(largest, bytes);
   }
   return `${formatBytes(total)} in cells, the largest ${formatBytes(largest)}`;
+};
+
+/** The scene's JSON cell content (the gather's manifest): its cells and entries, the estimated
+ * GPU memory of the tracked cells' cell-only assets, and the oversized meshes alive. */
+const formatDataContent = (rt: StreamingRuntime | null) => {
+  const content = getStreamingDataContent();
+  if (!rt || !content) return 'none (code content only)';
+  const { manifest } = content;
+  let estimate = 0;
+  for (const cell of rt.cells.values()) {
+    estimate += manifest.cells[String(cell.key)]?.bytesEstimate ?? 0;
+  }
+  return [
+    `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.lights.length} lights`,
+    `estimated for the tracked cells: ${formatBytes(estimate)}`,
+    `oversized meshes alive: ${content.shared.size}`,
+  ].join('\n');
 };
 
 /** The tracked cells nearest first (the last decision's order), the first MAX_LIST_ROWS. */
@@ -288,6 +307,7 @@ export const _createStreamingDebugGUI = () => {
     counters: '',
     priming: '',
     memory: '',
+    data: '',
   };
   const teleport = { cx: 0, cz: 0 };
 
@@ -307,6 +327,7 @@ export const _createStreamingDebugGUI = () => {
       readouts.priming = formatPriming(rt);
       cellBytes = rt ? getOwnerGPUBytes() : new Map();
       readouts.memory = formatMemory(rt);
+      readouts.data = formatDataContent(rt);
     },
     content: () => [
       {
@@ -353,6 +374,18 @@ export const _createStreamingDebugGUI = () => {
           },
           getNoteItem(
             'A cell’s GPU memory is what its content alone holds: what several cells or the scene share is the scene’s (the profiler’s GPU memory tab).'
+          ),
+          {
+            key: 'data',
+            target: readouts,
+            label: 'JSON content',
+            readonly: true,
+            multiline: true,
+            rows: 3,
+            interval: 'refresh',
+          },
+          getNoteItem(
+            'The scene JSON’s content the gather cut into cells: an asset only cells use loads with them (the estimate sums their textures’ and imports’ encoded GPU size), an oversized mesh while any of its cells is loaded.'
           ),
           getFocusFolder(teleport),
           getBudgetsFolder(),

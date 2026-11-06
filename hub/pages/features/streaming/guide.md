@@ -52,9 +52,49 @@ every cell a terrain block with its own geometry, and two sets of props on share
   That's counted up to the `load`'s first `await` (an asset load started there stays the cell's
   too); code after an `await` that creates assets runs in `ctx.runOwned(() => …)`, or they're the
   scene's until it's left.
+- **Get shared assets in each `load`.** A geometry or material goes when its last user does, so
+  one the scene's code makes once and only cells use is gone once no cell holds it. Ask for it by
+  id in each `load` (`createMaterial` and `createGeometry` with an id return the registered one, or
+  make it again), as the test scene does. The scene JSON's content doesn't need this.
 - **The cells around the focus are part of the scene load.** They load before the scene is
   entered, all at once and awaited, inside the physics hold, so a scene starts the same on every
   visit. Only the cells reached during play stream in over frames.
+
+## Content from the scene JSON
+
+A streaming scene's JSON content goes into cells on its own: when the scene is gathered, each of
+its meshes and point and spot lights is put into the cell its `position` is in, and loads and
+unloads with it as code content does. Cameras, sky boxes and the ambient, hemisphere and
+directional lights stay with the scene.
+
+```json
+{
+  "streaming": { "cellSize": 64, "base": ["tower"], "radii": { "castle": 90 } },
+  "meshes": [
+    { "props": { "appId": "tower", "geo": "towerGeo", "mat": "stone", "position": { "x": 8, "y": 0, "z": 8 } } }
+  ]
+}
+```
+
+- **Assets go with the content that uses them.** A texture, material, geometry or import that only
+  cell content names (by id: a mesh's `geo` and `mat`, its LOD levels, a material's texture maps)
+  loads with each cell that names it and is released when the last of them unloads. One the
+  scene's own content uses, or that nothing names, loads with the scene. So the scene's code gets
+  only those: list an asset it needs in `streaming.base`.
+- **`streaming.base`** keeps meshes, lights (by app id) and assets (by id) with the scene: loaded
+  with it, never unloaded.
+- **Big content is in every cell it reaches.** A mesh more than half a cell across (a bridge, a
+  wall, a large building) goes into every cell it overlaps and stays while any of them is loaded.
+  A box, sphere, cylinder, capsule or cone is measured from its geometry; an imported model isn't,
+  so give it a radius in `streaming.radii`.
+- `base` and `radii` are read when the scene is gathered: setting them in code changes nothing.
+  A cell size set in code has to be the JSON's, which the content was cut at.
+- The Streaming tab shows each cell's JSON content and the estimated GPU memory of its own
+  assets before it loads.
+
+The test scene's beacons and wall are JSON: each beacon's textured material and geometries load
+with the cells that have a beacon, and the wall, 320 m long, stays while any of its six cells is
+loaded.
 
 ## Priming
 
@@ -97,18 +137,21 @@ cell** (or start with `?streamingFocus=x,z` in the debug env).
 ::: dev-only Measured
 `streamingGrid` on an M2, with the test bridge's fixed frame step (`?aekTest=true`): flying at 30
 and 60 m/s, no frame over 33 ms on WebGPU or WebGL 2 (the main thread's longest block 5-12 ms),
-and 10 s hovering across a cell boundary loaded and unloaded nothing. Three flights out across the
+and 10 s hovering across a cell boundary loaded and unloaded nothing. With the JSON content, three
+flights out and back and a trip off the grid (where every cell-only asset is released) leave the
+registries and entities exactly as they were, and the wall is there on exactly the frames one of
+its cells is. Three flights out across the
 grid and back (510 cell unloads) leave the GPU memory where it was, on both backends, and flying
 with a new shader in every cell (the scene tab's "A shader per cell") misses no frame primed, where
 unprimed it does. The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
-and Phase 2 have the numbers.
+and Phases 2 and 3 have the numbers.
 :::
 
 ## Not yet
 
-World streaming is being built in phases. `FAR` cells show nothing, scene JSON objects aren't
-assigned to cells, and physics bodies keep their own tiers (see
+World streaming is being built in phases. `FAR` cells show nothing, an imported model's size
+isn't measured (`streaming.radii`), and physics bodies keep their own tiers (see
 [the plan](repo:docs/plans/p353_macro-streaming-grid.md)).
 
 ## Key APIs

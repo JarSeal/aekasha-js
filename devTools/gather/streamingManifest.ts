@@ -157,18 +157,46 @@ const getLightAppId = (light: LightEntry) =>
     ? light
     : (light.lightProps as { appId?: string }).appId ?? light.entityOpts?.appId;
 
-/** A mesh's bounding radius: `streaming.radii`'s, else its primitive geometry's, else 0 (a point) */
-const getMeshRadius = (
+/** An entry's half extents on x and z, in metres */
+type Extent = { hx: number; hz: number };
+
+const NO_EXTENT: Extent = { hx: 0, hz: 0 };
+
+/** Whether a mesh has no rotation (none given, all zero, or the identity quaternion) */
+const isUnrotated = (props: Record<string, unknown>) => {
+  const r = props.rotation as Vec3 | undefined;
+  const q = props.quaternion as { x?: number; y?: number; z?: number; w?: number } | undefined;
+  const isZero = (v: number | undefined) => !v;
+  return (
+    (!r || (isZero(r.x) && isZero(r.y) && isZero(r.z))) &&
+    (!q || (isZero(q.x) && isZero(q.y) && isZero(q.z)))
+  );
+};
+
+/** A mesh's half extents on x/z: `streaming.radii`'s radius, an unrotated box's own sides (a long
+ * wall reaches along its length only), else its primitive geometry's bounding sphere, else a
+ * point */
+const getMeshExtent = (
   scene: SceneJSON,
   mesh: Exclude<MeshEntry, string>,
   listed: Listed,
   radii: Record<string, number>
-) => {
+): Extent => {
   const appId = getMeshAppId(mesh);
-  if (appId !== undefined && radii[appId] !== undefined) return radii[appId];
+  if (appId !== undefined && radii[appId] !== undefined) {
+    return { hx: radii[appId], hz: radii[appId] };
+  }
   const geo = mesh.props.geo;
-  const geoDef = typeof geo === 'string' ? getListedEntry(scene, listed, 'geometries', geo) : geo;
-  return geoDef ? getPrimitiveGeometryRadius(geoDef as GeoLike) ?? 0 : 0;
+  const geoDef = (
+    typeof geo === 'string' ? getListedEntry(scene, listed, 'geometries', geo) : geo
+  ) as GeoLike | undefined;
+  if (!geoDef) return NO_EXTENT;
+  if (geoDef.type === 'BOX' && isUnrotated(mesh.props as Record<string, unknown>)) {
+    const p = geoDef.params ?? {};
+    return { hx: num(p.width, 1) / 2, hz: num(p.depth, 1) / 2 };
+  }
+  const radius = getPrimitiveGeometryRadius(geoDef) ?? 0;
+  return { hx: radius, hz: radius };
 };
 
 type CellBuild = { cell: StreamingManifestCell; refs: Refs };
@@ -191,26 +219,29 @@ const getCellBuild = (cells: Map<number, CellBuild>, cellKey: number): CellBuild
   return build;
 };
 
-const growBounds = (cell: StreamingManifestCell, x: number, z: number, radius: number) => {
+const growBounds = (cell: StreamingManifestCell, x: number, z: number, { hx, hz }: Extent) => {
   const b = cell.bounds;
-  b[0] = Math.min(b[0], x - radius);
-  b[1] = Math.min(b[1], z - radius);
-  b[2] = Math.max(b[2], x + radius);
-  b[3] = Math.max(b[3], z + radius);
+  b[0] = Math.min(b[0], x - hx);
+  b[1] = Math.min(b[1], z - hz);
+  b[2] = Math.max(b[2], x + hx);
+  b[3] = Math.max(b[3], z + hz);
 };
 
 const pushIndex = (cell: StreamingManifestCell, key: 'meshes' | 'lights', index: number) => {
   (cell[key] ??= []).push(index);
 };
 
-/** The cell keys an entry at (x, z) with `radius` goes into: its position's cell, or every cell
- * its square overlaps when it's oversized (D4). Null outside the cell keys' range. */
-const getEntryCellKeys = (x: number, z: number, radius: number, cellSize: number) => {
-  const reach = radius > cellSize / 2 ? radius : 0;
-  const minCx = Math.floor((x - reach) / cellSize);
-  const maxCx = Math.floor((x + reach) / cellSize);
-  const minCz = Math.floor((z - reach) / cellSize);
-  const maxCz = Math.floor((z + reach) / cellSize);
+/** The cell keys an entry at (x, z) with `extent` goes into: its position's cell, or every cell
+ * its box overlaps when it's oversized (D4: a half extent over `cellSize / 2`). Null outside the
+ * cell keys' range. */
+const getEntryCellKeys = (x: number, z: number, { hx, hz }: Extent, cellSize: number) => {
+  const isOversized = Math.max(hx, hz) > cellSize / 2;
+  const reachX = isOversized ? hx : 0;
+  const reachZ = isOversized ? hz : 0;
+  const minCx = Math.floor((x - reachX) / cellSize);
+  const maxCx = Math.floor((x + reachX) / cellSize);
+  const minCz = Math.floor((z - reachZ) / cellSize);
+  const maxCz = Math.floor((z + reachZ) / cellSize);
   if (!isCellInRange(minCx, 0, minCz) || !isCellInRange(maxCx, 0, maxCz)) return null;
   const keys: number[] = [];
   for (let cz = minCz; cz <= maxCz; cz++) {
@@ -307,10 +338,10 @@ export const buildStreamingManifest = <S extends SceneJSON>(
     assets: { textures: [], materials: [], geometries: [], importedAssets: [] },
     cells: {},
   };
-  const placeEntry = (key: 'meshes' | 'lights', index: number, at: Vec3, radius: number) => {
+  const placeEntry = (key: 'meshes' | 'lights', index: number, at: Vec3, extent: Extent) => {
     const x = at.x ?? 0;
     const z = at.z ?? 0;
-    const keys = getEntryCellKeys(x, z, radius, cellSize);
+    const keys = getEntryCellKeys(x, z, extent, cellSize);
     if (!keys) {
       ctx.log.error(
         `Scene "${sceneId}": a streamed ${key === 'meshes' ? 'mesh' : 'light'} at (${x}, ${z}) is outside the cell keys' range (±65,536 cells of ${cellSize} m).`
@@ -320,14 +351,14 @@ export const buildStreamingManifest = <S extends SceneJSON>(
     const builds = keys.map((cellKey) => getCellBuild(cells, cellKey));
     for (const build of builds) {
       pushIndex(build.cell, key, index);
-      growBounds(build.cell, x, z, radius);
+      growBounds(build.cell, x, z, extent);
     }
     return builds;
   };
   cellMeshes.forEach((mesh, index) => {
     manifest.meshes.push(mesh as StreamingManifest['meshes'][number]);
-    const radius = getMeshRadius(scene, mesh, listed, radii);
-    const builds = placeEntry('meshes', index, (mesh.props.position ?? {}) as Vec3, radius);
+    const extent = getMeshExtent(scene, mesh, listed, radii);
+    const builds = placeEntry('meshes', index, (mesh.props.position ?? {}) as Vec3, extent);
     for (const build of builds) addMeshRefs(scene, mesh, listed, build.refs, false);
   });
   cellLights.forEach((light, index) => {
@@ -336,7 +367,7 @@ export const buildStreamingManifest = <S extends SceneJSON>(
       'lights',
       index,
       ((light.lightProps as { position?: Vec3 }).position ?? {}) as Vec3,
-      0
+      NO_EXTENT
     );
   });
 

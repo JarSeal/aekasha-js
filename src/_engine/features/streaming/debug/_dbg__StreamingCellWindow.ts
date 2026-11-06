@@ -12,13 +12,18 @@ import {
   registerDraggableWindowKind,
   toggleDraggableWindow,
 } from '../../../ui/overlays/windows/DraggableWindow';
-import { getStreamingRuntime, setStreamingFocusOverride } from '../Streaming';
+import {
+  getStreamingDataContent,
+  getStreamingRuntime,
+  setStreamingFocusOverride,
+} from '../Streaming';
 import {
   type StreamingCell,
   type StreamingRuntime,
   getStreamingCellEntityIds,
   setStreamingTransitionListener,
 } from '../StreamingCells';
+import type { StreamingManifest } from '../StreamingManifest';
 import { StreamingLevel } from '../StreamingRings';
 import { getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
@@ -74,6 +79,24 @@ const formatEntities = (cell: StreamingCell | undefined) => {
     : shown;
 };
 
+/** A cell's JSON content from the manifest (known before it loads): its entries, its cell-only
+ * assets and their estimated GPU size; empty for a cell without any. */
+const formatDataContent = (cellKey: number) => {
+  const manifest = getStreamingDataContent()?.manifest;
+  const entry = manifest?.cells[String(cellKey)];
+  if (!manifest || !entry) return 'none';
+  const ids = (kind: keyof StreamingManifest['assets'], indices: number[] | undefined) =>
+    (indices ?? []).map((index) => manifest.assets[kind][index]?.id ?? `#${index}`);
+  const assets = (['textures', 'materials', 'geometries', 'importedAssets'] as const)
+    .map((kind) => [kind, ids(kind, entry[kind])] as const)
+    .filter(([, list]) => list.length)
+    .map(([kind, list]) => `${kind}: ${list.join(', ')}`);
+  return [
+    `${entry.meshes?.length ?? 0} meshes, ${entry.lights?.length ?? 0} lights, est. ${formatBytes(entry.bytesEstimate)}`,
+    ...assets,
+  ].join('\n');
+};
+
 /** A cell's owned asset ids, one kind a line (empty kinds left out). */
 const formatAssets = (ownerKey: string) => {
   const ids = getOwnedAssetIds(ownerKey);
@@ -123,6 +146,13 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       multiline: true,
       rows: 3,
       interval: REFRESH_MS,
+    },
+    {
+      label: 'JSON content',
+      get: () => formatDataContent(cellKey),
+      readonly: true,
+      multiline: true,
+      rows: 3,
     },
     live('GPU memory', () => formatBytes(getOwnerGPUBytes().get(ownerKey) ?? 0)),
     {

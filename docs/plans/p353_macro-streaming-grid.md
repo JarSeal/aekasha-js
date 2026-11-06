@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -660,8 +660,14 @@ whichever comes first): engine minor (6.2.0 if nothing else bumps it first): `ct
 `maxNewStructuresPerFrame`, `ComponentType.TAG_DRAW_HELD`; fixed: `disposeMesh` leaked three's
 render objects (uniform buffers) of every deleted mesh on a shared geometry and material. App
 minor: `streamingGrid`'s terrain unit without its own `unload`, its "A shader per cell" option.
+Phase 3: engine minor: the gather's cell manifest (`SceneData.__streaming`, `StreamingManifest`
+and `StreamingManifestCell` on `aekasha/schemas`), `streaming.base` and `streaming.radii`, JSON
+cell content loaded per cell (on demand, `StreamingDataContent.js`), the Streaming tab's and cell
+window's JSON content; the streaming budget 5 → 6 KiB. App minor: `streamingGrid`'s beacons and
+wall from its JSON, its units getting their shared assets in their own `load`. `readme.md`: the
+World streaming Features entry.
 
-### Phase 3 — Build-time manifest
+### Phase 3 — Build-time manifest — done
 
 Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1–3.2).
 
@@ -790,6 +796,50 @@ As built (section 3):
 **Exit:** `streamingGrid`'s JSON cell content streams as its code content does, its oversized
 landmark stays while any of its cells is loaded, the generated base holds none of the cell
 content, and Phase 2's flight out and back leaves the registries and p345's snapshot as before.
+
+As built (section 4):
+
+- **D4 refined:** an unrotated `BOX` reaches by its own half sides on x/z, not its bounding
+  sphere, so a 320 × 3 m wall is in one row of cells, not the rows 160 m to either side; a rotated
+  one, and the other primitives, by the sphere. `bounds` use the same extents.
+- **`streamingGrid`'s JSON content:** a beacon (a `CYLINDER` pillar with `testTexture` as its map,
+  a glowing `SPHERE` cap) at the centre of every fourth cell (x cells -6, -2, 2, 6; z cells -6,
+  -2, 1, 5) and a 320 m wall (`BOX` 320 × 10 × 3 at z = -100, cells x -3..2 of row -2). The gather
+  gives 20 cells, 33 meshes; the three materials, three geometries and `testTexture` all move into
+  the cells (each beacon cell `bytesEstimate` 1.4 MB, the UASTC texture), and the scene's lists
+  keep no mesh. No cell lights: adding or removing a light changes three's lighting of every lit
+  material, a recompile not measured here.
+- **Found: code content's shared assets went with their last ref.** `streamingGrid` made its
+  props' and terrain's materials and geometries once in its scene code; with the focus off the
+  grid every cell unloaded, their last refs went (`decGeometryRef`, the material's count: the
+  kernel deletes a non-persistent asset on its last ref), and every later cell's code units failed
+  (45 unit errors). Phases 1-2 never emptied the grid. Not Phase 3's (JSON cell-only assets reload
+  with each cell), but every code-content app meets it: the units now get them by id in their own
+  `load` (`getSharedAssets`, cache hits while they exist), and the feature's `CLAUDE.md` and the Hub
+  page say so.
+- **Debug:** the tab's "JSON content" (the manifest's cells and entries, the tracked cells'
+  estimate, the oversized meshes alive) and the cell window's (its entries, cell-only assets and
+  estimate, from the manifest, so before the cell loads).
+
+**Measured** (2026-11-06, Apple M2, Chrome 156 headless, the dev server with
+`?isDebug=true&aekTest=true&startScene=streamingGrid`; the flight frozen, the focus override moved
+2 m a frame along z = 32 from x = -455.5 to +455.5 and back, three times, 180 frames at home after
+each, then to (3000, 3000) and back home, 180 frames each):
+
+| backend | frames over 33 ms | longest | wall frames / mismatches | home before → after the grid | unit errors |
+| ------- | ----------------- | ------- | ------------------------ | ---------------------------- | ----------- |
+| WebGPU  | 0                 | 26 ms   | 1,965 / 0                | 264 entities, 19 geometries → the same | 0 |
+| WebGL2  | 1                 | 38 ms   | 1,962 / 0                | 264, 19 → the same          | 0           |
+
+A "mismatch" is a frame where the wall's entity exists and none of its cells is loaded (`PRIMING`
+or `LOADED`), or the other way round (frames with a wall cell `LOADING` or `UNLOADING` skipped);
+at most one wall entity existed. Off the grid every cell-only asset is gone (`testTexture`, the
+pillar material: the registries hold only the sky's empty texture) and back home all is as before;
+the materials of the props and the terrain, made again by the first cell's units. Each trip's home
+snapshot is 349 entities and 24 geometries, the same after every trip: arriving from +x keeps the
+column x = -5 loaded (its edge 135.5 m from the focus, under ring 2's 144 m), 5 cells × 17
+entities. 505 loads, 480 unloads, 6 priming stalls (the focus at 120 m/s), 11-12 compiles, 2
+texture uploads per run. The only console line is Rapier's own wasm-bindgen init warning.
 
 ### Phase 4 — Moving entities and physics
 
