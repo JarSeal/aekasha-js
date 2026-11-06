@@ -2,7 +2,7 @@
 
 Status: open | fixed upstream on dev ([#35359](https://github.com/mrdoob/three.js/pull/35359), 2026-11-05), not in a release yet: no report to file
 Category: Bug, Rendering, Dependencies
-Found: 2026-11-06, p057 Phase 3 step 3 (finding 4: the PostFX output quad built with the pre-pass's MRT into the scene pass's target, `docs/plans/p057_three-r187-migration.md`)
+Found: 2026-11-06, p057 Phase 3 step 3 (finding 4: the PostFX output quad built with the pre-pass's MRT into the scene pass's target, `docs/plans/_DONE_p057_three-r187-migration.md`)
 Our workaround: the engine's compiles run one at a time and every engine render runs with no target and no MRT set (`src/_engine/kernel/render/CompileQueue.ts`, `src/_engine/kernel/render/CLAUDE.md`'s Pre-warm compiles)
 
 ### What happens (three r187)

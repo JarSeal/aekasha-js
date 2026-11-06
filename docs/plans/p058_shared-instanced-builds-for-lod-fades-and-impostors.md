@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Rendering, LOD, Performance
-Related: p057_three-r187-migration.md (D3: the fix this replaces), \_DONE_p351_impostor-billboard-lod.md, p354_gpu-driven-culling.md (its per-instance buffers bind the same way), p302_material-and-texture-system-refactor.md (`NodeMaterialInstance`)
+Related: \_DONE_p057_three-r187-migration.md (D3: the fix this replaces), \_DONE_p351_impostor-billboard-lod.md, p354_gpu-driven-culling.md (its per-instance buffers bind the same way), p302_material-and-texture-system-refactor.md (`NodeMaterialInstance`)
 
 # Shared Instanced Builds for LOD Fades and Impostors — Plan
 

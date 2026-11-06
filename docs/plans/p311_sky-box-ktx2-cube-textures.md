@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Sky box, Assets, Textures
-Related: p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), p299_texture-arrays-and-atlases.md
+Related: \_DONE_p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), p299_texture-arrays-and-atlases.md
 
 # Sky Box KTX2 Cube Textures and Pre-filtered Environments — Plan
 

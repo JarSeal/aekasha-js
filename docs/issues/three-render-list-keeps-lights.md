@@ -3,7 +3,7 @@
 Status: not filed yet
 File at: https://github.com/mrdoob/three.js/issues/new?template=bug_report.yml
 Category: Bug, Rendering, Dependencies
-Found: 2026-11-05, p057 D4 (with three's #34707 in, the app still kept every Gym visit's lights: `docs/plans/p057_three-r187-migration.md`)
+Found: 2026-11-05, p057 D4 (with three's #34707 in, the app still kept every Gym visit's lights: `docs/plans/_DONE_p057_three-r187-migration.md`)
 Our workaround: one pre-pass MRT node for every PostFX build (`prePassMRT`, `src/_engine/features/postfx/PostFX.ts`), so the render contexts stay bounded; the lights of the first and the latest Gym visit stay (p057 D4's table)
 
 Everything below is the report, in the repository's bug report template.

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented (Phase 4 step 4 left for later), Phase 5 in progress
+Status: implemented (Phases 1-5; Phase 4 step 4, posting the two upstream reports, left: p990)
 Category: Rendering, Dependencies
 Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
 
@@ -442,7 +442,7 @@ Results so far (2026-11-05, macOS, Apple M2, Chrome, WebGPU, headed, the dev bui
    `src/_engine/debug/CLAUDE.md`, and the profiler census's "repeats three r186's
    `_projectObject`" (r187 moved it into `StandardDrawingPipeline.project`, same rules).
 
-### Phase 4: Upstream report
+### Phase 4: Upstream report — done (step 4 left: p990)
 
 Results so far:
 
@@ -517,7 +517,7 @@ Results so far:
    `three-animation-classes-in-builds-without-models.md`~~ (done with Phase 1: a "three r187"
    section in each).
 
-### Phase 5: Hub, docs and versioning
+### Phase 5: Hub, docs and versioning — done
 
 Results so far:
 
@@ -534,6 +534,11 @@ Results so far:
   `yarn checkVersions --against main` passes. The scene runner's `debugger` shot
   `window.about` shows the engine version, so it moves with this bump: its baseline is local
   (`.cache/verify/scenes/`), recorded again with the next `--update`.
+- Step 4 done (2026-11-06): the plan is `_DONE_` (status `implemented`, Phase 4 step 4 left,
+  the user's call); posting the two reports is an item in p990's Rendering section. The plan's
+  file name updated in p058's and p311's Related lines, `_DONE_p056`'s status and the issue
+  files; the code and the `CLAUDE.md` files name it only as "p057". Time for the PR:
+  `upgrade-three-js-to-r187` into `main`.
 
 1. The Hub's rendering guide (`hub/pages/features/rendering/guide.md`, Known issues): the light
    leak and the instance attribute leak are fixed with r187 (link the closed issues); the sky box

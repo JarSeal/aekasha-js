@@ -3,7 +3,7 @@
 Status: not filed yet
 File at: https://github.com/mrdoob/three.js/issues/new?template=bug_report.yml
 Category: Bug, Rendering, Dependencies
-Found: 2026-11-05, p057 Phase 3 step 2 (`skyShowcase` without `initEnvBakeTarget` on r187: 100-104 × "Destroyed texture [Texture "SkyBox.envBake"] used in a submit", as on r186: `docs/plans/p057_three-r187-migration.md`)
+Found: 2026-11-05, p057 Phase 3 step 2 (`skyShowcase` without `initEnvBakeTarget` on r187: 100-104 × "Destroyed texture [Texture "SkyBox.envBake"] used in a submit", as on r186: `docs/plans/_DONE_p057_three-r187-migration.md`)
 Our workaround: a new cube target is cleared once before anything samples it (`initEnvBakeTarget` in `src/_engine/features/skybox/SkyEnvironment.ts`, `initTarget` in `SkyStaticLayers.ts`); both can go once three links the texture
 
 Everything below is the report, in the repository's bug report template.
