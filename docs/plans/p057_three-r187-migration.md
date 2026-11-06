@@ -465,7 +465,25 @@ Results so far:
   fix): one create, no error; the clear (our workaround): the same. As a material's `envNode` the
   texture is destroyed and created the same way but its bind group is refreshed: no error (why
   the scene environment's isn't is untraced; the report says so). `dev`'s constructor and setter
-  are r187's. r186.1 isn't comparable (CubeUV PMREMs).
+  are r187's. r186.1 isn't comparable (CubeUV PMREMs). The remarks on `initEnvBakeTarget` and
+  `initTarget` and the sky box `CLAUDE.md`'s "Two traps" name the issue file.
+- Step 3 done (2026-11-06): **already fixed on three's `dev`** by #35359 ("WebGPURenderer: Rewrite
+  `compileAsync()`", merged 2026-11-05, after r187), so
+  `docs/issues/three-pass-compile-holds-renderer-state.md` is a record, not a report (`open |
+  fixed upstream on dev`). Its page (a `RenderPipeline` with an MRT scene pass in
+  `setAnimationLoop`, 40 new materials pre-warmed through the pass): on r187 every frame during
+  the compile starts with the pass's target and MRT, the output quad gets a build in them and
+  renders into the pass's own texture while sampling it (2 validation errors a frame, nothing
+  drawn); the engine's per-frame guard: none of that. On #35359's sources (a sparse checkout of
+  `src/` at `7d4a7890fc`, served locally: jsDelivr refuses three's repo): `PassNode.compileAsync`
+  clean; state set by hand and restored right after the synchronous call clean; held until the
+  compile resolves (the engine's `compileInScenePassAsync` pattern) still leaks. So for the
+  release with #35359: `compileInScenePassAsync` restores right after the call, then
+  `runWithClearRenderState` can go after a re-measure, and `runCompileAsync` gets its own check
+  (the issue file's last section; `CompileQueue.ts`' header and the render `CLAUDE.md` name it).
+  On r187, restoring right after the call doesn't help (each yield puts the pass's MRT back).
+- Step 4 is left for later (the user's call, 2026-11-06): steps 1 and 2's files stay `not filed
+  yet`; nothing in the engine waits on them (D4 and the clears stay until three ships fixes).
 
 1. An issue file, `docs/issues/three-render-list-keeps-lights.md`, in the form of
    `three-bind-group-cache-light-leak.md` (the report's text, a standalone page as the repro): an

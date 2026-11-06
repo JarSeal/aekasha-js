@@ -12,6 +12,8 @@ import type { Renderer } from 'three/webgpu';
 // - Every engine render runs with no target and no MRT set (`runWithClearRenderState`): a
 //   frame, a snapshot, a bake. A render that sets its own target still reads the MRT, so a bake
 //   during a pre-pass compile would write normals into its colour.
+// Fixed on three's dev by #35359 (after r187): what changes in the engine with the release that
+// has it is in docs/issues/three-pass-compile-holds-renderer-state.md.
 
 let compileTail: Promise<void> = Promise.resolve();
 

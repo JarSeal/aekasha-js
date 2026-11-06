@@ -118,7 +118,8 @@ const createTarget = (resolution: StaticLayersResolution) => {
  * Kept with three r187: it's a `CubeRenderTarget` like the env bake's, whose missing texture
  * back-link keeps the trap (initEnvBakeTarget). The scene runner never caught this one, even on
  * three r186 with the clear removed (p057 Phase 3: `skyShowcase` and `space`), so a run without
- * it proves nothing.
+ * it proves nothing. Reported in docs/issues/three-cube-render-target-texture-link.md: this clear
+ * can go once three links the texture.
  */
 const initTarget = (renderer: THREE.Renderer, target: THREE.CubeRenderTarget) => {
   if (!renderer.hasInitialized()) return;
