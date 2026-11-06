@@ -107,6 +107,10 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       const ms = getCell(cellKey)?.lastLoadMs ?? -1;
       return ms < 0 ? '–' : ms.toFixed(1);
     }),
+    live('Last priming (ms)', () => {
+      const ms = getCell(cellKey)?.lastPrimeMs ?? -1;
+      return ms < 0 ? '–' : ms.toFixed(1);
+    }),
     live('Content units', () => String(getCell(cellKey)?.units.length ?? 0)),
     live('Entities', () => {
       const cell = getCell(cellKey);

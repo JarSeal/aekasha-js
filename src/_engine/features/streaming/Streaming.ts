@@ -31,6 +31,7 @@ import {
   isStreamingCellKey,
   removeStreamingCellContent,
 } from './StreamingContent';
+import { createStreamingPrimer, type StreamingPrimeBudgets } from './StreamingPriming';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
 import { lwarn } from '../../utils/Logger';
@@ -44,6 +45,7 @@ export type StreamingFocus = number | { readonly x: number; readonly z: number }
 const DEFAULT_UPDATE_INTERVAL_FRAMES = 10;
 const DEFAULT_MAX_CONCURRENT_LOADS = 2;
 const DEFAULT_MAX_CREATE_MS_PER_FRAME = 2;
+const DEFAULT_MAX_PRIME_MS_PER_FRAME = 2;
 
 let isInstalled = false;
 let updateIntervalFrames = DEFAULT_UPDATE_INTERVAL_FRAMES;
@@ -51,6 +53,12 @@ const budgets: StreamingBudgets = {
   maxConcurrentLoads: DEFAULT_MAX_CONCURRENT_LOADS,
   maxCreateMsPerFrame: DEFAULT_MAX_CREATE_MS_PER_FRAME,
 };
+const primeBudgets: StreamingPrimeBudgets = {
+  maxPrimeMsPerFrame: DEFAULT_MAX_PRIME_MS_PER_FRAME,
+  maxNewStructuresPerFrame: null,
+};
+/** Primes the cells streamed in during play (StreamingPriming.ts), its budgets read every frame */
+const primer = createStreamingPrimer(primeBudgets);
 
 /** The gathered scenes' settings, by scene id */
 const dataSettings = new Map<string, SceneStreamingSettings>();
@@ -170,11 +178,14 @@ export const setSceneStreamingSettings = (
 
 /**
  * A streaming cell's state: where its content is. `RESIDENT`, `NEARBY` and `FAR` are loaded
- * (`FAR` loads nothing until far representations exist, p353 Phase 5).
+ * (`FAR` loads nothing until far representations exist, p353 Phase 5). `PRIMING`: a cell streamed
+ * in during play is loaded but not shown yet, while its textures upload and its new shaders
+ * compile.
  */
 export type StreamingCellState =
   | 'UNLOADED'
   | 'LOADING'
+  | 'PRIMING'
   | 'RESIDENT'
   | 'NEARBY'
   | 'FAR'
@@ -263,6 +274,12 @@ export const getStreamingRuntime = (): StreamingRuntime | null => runtime;
 export const getStreamingBudgets = (): StreamingBudgets => budgets;
 
 /**
+ * The priming budgets in use (the debug tab edits them).
+ * @internal
+ */
+export const getStreamingPrimeBudgets = (): StreamingPrimeBudgets => primeBudgets;
+
+/**
  * How often the cells' states are decided, in frames (the debug tab edits it).
  * @internal
  */
@@ -338,7 +355,8 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     resolveStreamingSettings(settings),
     world,
     now,
-    createCellRelease(sceneId)
+    createCellRelease(sceneId),
+    primer
   );
   runtime = rt;
   const at = readFocus(world);
@@ -395,6 +413,8 @@ export const installStreaming = (ctx: FeatureContext) => {
     config?.maxConcurrentLoads ?? DEFAULT_MAX_CONCURRENT_LOADS
   );
   budgets.maxCreateMsPerFrame = config?.maxCreateMsPerFrame ?? DEFAULT_MAX_CREATE_MS_PER_FRAME;
+  primeBudgets.maxPrimeMsPerFrame = config?.maxPrimeMsPerFrame ?? DEFAULT_MAX_PRIME_MS_PER_FRAME;
+  primeBudgets.maxNewStructuresPerFrame = config?.maxNewStructuresPerFrame ?? null;
   ctx.registerPlugin((world) => {
     world.addSystem(ECSSystemStage.MAIN, 'streamingSystem', streamingSystem);
   });

@@ -12,6 +12,8 @@ import { packCellKey } from '../../utils/CellKey';
 import * as Logger from '../../utils/Logger';
 import {
   type StreamingBudgets,
+  type StreamingPrimeJob,
+  type StreamingPrimer,
   type StreamingRuntime,
   createStreamingRuntime,
   decideStreamingCells,
@@ -425,5 +427,107 @@ describe('cell asset ownership', () => {
     expect(getAssetOwners(texture!)).toEqual([getCellOwnerKey(rt.sceneId, KEY)]);
     expect(getTexture(`${rt.sceneId}-detail`)).toBeUndefined();
     expect(rt.stats.assetsReleased).toBe(1);
+  });
+});
+
+describe('priming', () => {
+  const KEY = packCellKey(0, 0, 0);
+
+  /** A primer whose jobs finish when the test says so; it records what it was asked */
+  const createFakePrimer = () => {
+    const log: string[] = [];
+    const held = new Set<number>();
+    const jobs: { ids: readonly number[]; isDone: boolean }[] = [];
+    const primer: StreamingPrimer = {
+      beginFrame: () => {},
+      hold: (_world, ids) => ids.forEach((id) => held.add(id)),
+      release: (_world, ids) => ids.forEach((id) => held.delete(id)),
+      start: (_world, ids) => {
+        const job = { ids, isDone: false };
+        jobs.push(job);
+        log.push(`start ${ids.length}`);
+        return job;
+      },
+      step: (job: StreamingPrimeJob) => (job as { isDone: boolean }).isDone,
+      finish: () => log.push('finish'),
+      cancel: () => log.push('cancel'),
+    };
+    return { primer, log, held, jobs };
+  };
+
+  const setupPrimed = () => {
+    const base = setup();
+    const fake = createFakePrimer();
+    base.rt.primer = fake.primer;
+    return { ...base, ...fake };
+  };
+
+  test('holds each unit as it loads, primes the cell, and shows it once the priming is done', () => {
+    const { rt, world, clock, pump, held, jobs, log } = setupPrimed();
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    add(rt, KEY, entitiesContent(world, clock, 3));
+    // From two cells off: nearby, not resident
+    decideStreamingCells(rt, 32 + 128, 32);
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('PRIMING');
+    expect(held.size).toBe(5);
+    expect(log).toContain('start 5');
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('PRIMING');
+    jobs.forEach((job) => (job.isDone = true));
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+    expect(rt.stats.primesFinished).toBeGreaterThan(0);
+    expect(rt.stats.primingStalls).toBe(0);
+  });
+
+  test('a cell the focus reaches while it primes is shown at once, as a stall', () => {
+    const { rt, world, clock, pump, log } = setupPrimed();
+    add(rt, KEY, entitiesContent(world, clock));
+    decideStreamingCells(rt, 32 + 128, 32);
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('PRIMING');
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+    expect(log).toContain('finish');
+    expect(rt.stats.primingStalls).toBeGreaterThan(0);
+  });
+
+  test('a priming cell no longer wanted cancels its priming and unloads', () => {
+    const { rt, world, clock, pump, log } = setupPrimed();
+    add(rt, KEY, entitiesContent(world, clock));
+    decideStreamingCells(rt, 32 + 128, 32);
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    expect(log).toContain('cancel');
+    expect(cellAt(rt, 0, 0)).toBeUndefined();
+    expect(world.getEntityCount()).toBe(0);
+  });
+
+  test("lets go of what a content's own unload leaves alive", () => {
+    const { rt, world, pump, held, jobs } = setupPrimed();
+    const kept = world.createEntity();
+    add(rt, KEY, { load: () => [kept], unload: () => {} });
+    decideStreamingCells(rt, 32 + 128, 32);
+    pump();
+    expect(held.has(kept)).toBe(true);
+    jobs.forEach((job) => (job.isDone = true));
+    pump();
+    decideStreamingCells(rt, 1000, 1000);
+    pump();
+    expect(world.isAlive(kept)).toBe(true);
+    expect(held.has(kept)).toBe(false);
+  });
+
+  test("a scene load's cells load without priming, shown with the scene", async () => {
+    const { rt, world, clock, held, log } = setupPrimed();
+    add(rt, KEY, entitiesContent(world, clock));
+    decideStreamingCells(rt, 32, 32);
+    await loadStreamingCellsNowAsync(rt);
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+    expect(held.size).toBe(0);
+    expect(log).toEqual([]);
   });
 });

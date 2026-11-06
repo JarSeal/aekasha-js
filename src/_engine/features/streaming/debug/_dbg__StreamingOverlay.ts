@@ -14,15 +14,16 @@ import type { StreamingCell } from '../StreamingCells';
 import { StreamingLevel } from '../StreamingRings';
 
 /** What a line draws: a state's cells, or the focus */
-type OverlayLine = 'RESIDENT' | 'NEARBY' | 'QUEUED' | 'LOADING' | 'UNLOADING' | 'FOCUS';
+type OverlayLine = 'RESIDENT' | 'NEARBY' | 'QUEUED' | 'LOADING' | 'PRIMING' | 'UNLOADING' | 'FOCUS';
 
 /** Each line's colour: loaded green / yellow (the LOD overlay's level 0 and 1), queued grey,
- * loading blue, unloading red, the focus white. */
+ * loading blue, priming purple, unloading red, the focus white. */
 export const STREAMING_OVERLAY_COLORS: Record<OverlayLine, number> = {
   RESIDENT: 0x30c040,
   NEARBY: 0xe0c020,
   QUEUED: 0x808080,
   LOADING: 0x4080f0,
+  PRIMING: 0xa060e0,
   UNLOADING: 0xd03020,
   FOCUS: 0xffffff,
 };
@@ -32,9 +33,20 @@ const LINE_ORDER: readonly OverlayLine[] = [
   'NEARBY',
   'QUEUED',
   'LOADING',
+  'PRIMING',
   'UNLOADING',
   'FOCUS',
 ];
+const lineIndex = (name: OverlayLine) => LINE_ORDER.indexOf(name);
+const LINE = {
+  RESIDENT: lineIndex('RESIDENT'),
+  NEARBY: lineIndex('NEARBY'),
+  QUEUED: lineIndex('QUEUED'),
+  LOADING: lineIndex('LOADING'),
+  PRIMING: lineIndex('PRIMING'),
+  UNLOADING: lineIndex('UNLOADING'),
+  FOCUS: lineIndex('FOCUS'),
+};
 
 /** Cells per line at most (4 segments each). Past it the FIXED line drops the rest, with its own
  * warning: a far ring of 15 is 961 cells. */
@@ -70,13 +82,15 @@ const createOverlayLine = (name: OverlayLine) => {
 const getCellLine = (cell: StreamingCell): number => {
   switch (cell.phase) {
     case 'LOADING':
-      return 3;
+      return LINE.LOADING;
+    case 'PRIMING':
+      return LINE.PRIMING;
     case 'UNLOADING':
-      return 4;
+      return LINE.UNLOADING;
     case 'UNLOADED':
-      return 2;
+      return LINE.QUEUED;
     default:
-      return cell.level === StreamingLevel.RESIDENT ? 0 : 1;
+      return cell.level === StreamingLevel.RESIDENT ? LINE.RESIDENT : LINE.NEARBY;
   }
 };
 
@@ -108,10 +122,10 @@ const streamingOverlaySystem = (world: ECSWorld) => {
     }
     if (!Number.isNaN(rt.focusX)) {
       const r = cellSize * 0.1;
-      const focus = writers[5];
+      const focus = writers[LINE.FOCUS];
       focus.segment(rt.focusX - r, height, rt.focusZ, rt.focusX + r, height, rt.focusZ);
       focus.segment(rt.focusX, height, rt.focusZ - r, rt.focusX, height, rt.focusZ + r);
-      counts[5] = 2;
+      counts[LINE.FOCUS] = 2;
     }
   }
   for (let i = 0; i < lines.length; i++) {

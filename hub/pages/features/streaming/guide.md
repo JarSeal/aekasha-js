@@ -56,6 +56,28 @@ every cell a terrain block with its own geometry, and two sets of props on share
   entered, all at once and awaited, inside the physics hold, so a scene starts the same on every
   visit. Only the cells reached during play stream in over frames.
 
+## Priming
+
+A cell reached during play is never drawn before it's ready. Its content is created hidden, then
+primed: its textures upload a few a frame (`AppConfig.streaming.maxPrimeMsPerFrame`, 2 ms), the
+shaders of materials it's the first to show compile in one go, and then it appears. The meshes of
+materials drawn before show at once; each new material's take a frame, one at a time on WebGL 2
+(`maxNewStructuresPerFrame`: a new shader still costs WebGL 2 about 10 ms of GPU time when first
+drawn, even compiled) and eight on WebGPU. Without it, a new shader drawn cold stalls a frame for
+100 to 500 ms, and several at once for seconds.
+
+- **Draw from a shared set of materials.** A cell of materials already shown costs nothing to
+  prime but its textures; every new one costs a compile, and on WebGL 2 a frame.
+- **Ship textures as KTX2** (`yarn assets`). An uncompressed texture over 1024² can't be split and
+  costs WebGL 2 35 to 140 ms: it gets a frame of its own, and the debug tab counts it.
+- **Rings set how much time priming has.** A cell is primed while it's in the `NEARBY` ring; one
+  the focus reaches first is shown unprimed, and the tab counts the stall. A cell bringing eight
+  new shaders takes up to 2 s, about one 64 m cell at 30 m/s: a faster focus wants wider rings.
+- **Create an async `load`'s entities at its end.** Its entities are hidden when it resolves, so
+  one that creates entities and then awaits more could show them unprimed.
+- The cells around the focus at a scene load aren't primed: they appear with the scene, behind its
+  loading screen, like the rest of its content.
+
 ## The focus
 
 The distance is measured from the main camera unless you set a focus:
@@ -66,24 +88,27 @@ every decision (a `Vector3` you keep moving). The cells' states are decided ever
 ## The debug tab
 
 The drawer's Streaming tab shows the focus and its cell, the cells per state, the loads, unloads,
-cancellations and asset releases, the cells' GPU memory, and the budgets to try out live. Its
+cancellations and asset releases, the primings (stalls, uploads, compiles), the cells' GPU memory,
+and the budgets to try out live. Its
 overlay draws every tracked cell's outline in its state's colour, and a row per cell opens its
-window: its state, load time, entities, GPU memory, assets and last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
+window: its state, load and priming times, entities, GPU memory, assets and last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
 cell** (or start with `?streamingFocus=x,z` in the debug env).
 
 ::: dev-only Measured
 `streamingGrid` on an M2, with the test bridge's fixed frame step (`?aekTest=true`): flying at 30
 and 60 m/s, no frame over 33 ms on WebGPU or WebGL 2 (the main thread's longest block 5-12 ms),
 and 10 s hovering across a cell boundary loaded and unloaded nothing. Three flights out across the
-grid and back (510 cell unloads) leave the GPU memory where it was, on both backends. The plan's
+grid and back (510 cell unloads) leave the GPU memory where it was, on both backends, and flying
+with a new shader in every cell (the scene tab's "A shader per cell") misses no frame primed, where
+unprimed it does. The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
 and Phase 2 have the numbers.
 :::
 
 ## Not yet
 
-World streaming is being built in phases. Nothing is primed before it's first drawn, `FAR` cells show nothing, scene JSON objects aren't assigned to cells, and
-physics bodies keep their own tiers (see
+World streaming is being built in phases. `FAR` cells show nothing, scene JSON objects aren't
+assigned to cells, and physics bodies keep their own tiers (see
 [the plan](repo:docs/plans/p353_macro-streaming-grid.md)).
 
 ## Key APIs

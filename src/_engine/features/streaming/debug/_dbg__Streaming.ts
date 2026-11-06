@@ -11,6 +11,7 @@ import {
   getStreamingBudgets,
   getStreamingFocus,
   getStreamingFocusOverride,
+  getStreamingPrimeBudgets,
   getStreamingRuntime,
   getStreamingUpdateInterval,
   setStreamingFocusOverride,
@@ -45,12 +46,19 @@ const MAX_LIST_ROWS = 200;
 type Item = DebuggerPaneItem<object>;
 
 /** The figures the tab's monitors show, written on every refresh */
-type Readouts = { scene: string; focus: string; cells: string; counters: string; memory: string };
+type Readouts = {
+  scene: string;
+  focus: string;
+  cells: string;
+  counters: string;
+  priming: string;
+  memory: string;
+};
 
 /** The cells' GPU bytes by owner key, read once per refresh (it walks every asset) */
 let cellBytes = new Map<string, number>();
 
-const COUNTED_STATES = ['RESIDENT', 'NEARBY', 'QUEUED', 'LOADING', 'UNLOADING'] as const;
+const COUNTED_STATES = ['RESIDENT', 'NEARBY', 'QUEUED', 'LOADING', 'PRIMING', 'UNLOADING'] as const;
 
 const formatScene = (rt: StreamingRuntime | null) => {
   if (!rt) return 'This scene doesn’t stream.';
@@ -94,6 +102,19 @@ const formatCounters = (rt: StreamingRuntime | null) => {
     `content errors: ${s.unitErrors}`,
     `cell releases: ${s.assetReleases}`,
     `assets freed: ${s.assetsReleased}`,
+  ].join('\n');
+};
+
+const formatPriming = (rt: StreamingRuntime | null) => {
+  if (!rt) return '';
+  const s = rt.stats;
+  return [
+    `primes finished: ${s.primesFinished}`,
+    `stalls (shown unprimed): ${s.primingStalls}`,
+    `textures uploaded: ${s.texturesUploaded}`,
+    `oversized uploads: ${s.oversizedUploads}`,
+    `compiles: ${s.compiles}`,
+    `new materials shown: ${s.structuresShown}`,
   ].join('\n');
 };
 
@@ -176,6 +197,7 @@ const getFocusFolder = (teleport: { cx: number; cz: number }): Item => ({
 
 const getBudgetsFolder = (): Item => {
   const budgets = getStreamingBudgets();
+  const primeBudgets = getStreamingPrimeBudgets();
   return {
     type: 'folder',
     title: 'Budgets',
@@ -207,6 +229,28 @@ const getBudgetsFolder = (): Item => {
         step: 0.25,
         interval: 'refresh',
       },
+      {
+        label: 'Prime ms per frame',
+        target: primeBudgets,
+        key: 'maxPrimeMsPerFrame',
+        min: 0,
+        max: 16,
+        step: 0.25,
+        interval: 'refresh',
+      },
+      {
+        label: 'New materials per frame',
+        get: () => primeBudgets.maxNewStructuresPerFrame ?? 0,
+        set: (count: unknown) => {
+          const n = Math.round(Number(count));
+          primeBudgets.maxNewStructuresPerFrame = n > 0 ? n : null;
+        },
+        min: 0,
+        max: 16,
+        step: 1,
+        interval: 'refresh',
+      },
+      getNoteItem('New materials per frame 0: by the backend (WebGL2 1, WebGPU 8).'),
     ],
   };
 };
@@ -237,7 +281,14 @@ const getOverlayFolder = (): Item => ({
  * which `registerStreamingDebugGUI` loads. */
 export const _createStreamingDebugGUI = () => {
   startStreamingTransitionHistory();
-  const readouts: Readouts = { scene: '', focus: '', cells: '', counters: '', memory: '' };
+  const readouts: Readouts = {
+    scene: '',
+    focus: '',
+    cells: '',
+    counters: '',
+    priming: '',
+    memory: '',
+  };
   const teleport = { cx: 0, cz: 0 };
 
   createDebuggerTab({
@@ -253,6 +304,7 @@ export const _createStreamingDebugGUI = () => {
       readouts.focus = formatFocus(rt);
       readouts.cells = formatCells(rt);
       readouts.counters = formatCounters(rt);
+      readouts.priming = formatPriming(rt);
       cellBytes = rt ? getOwnerGPUBytes() : new Map();
       readouts.memory = formatMemory(rt);
     },
@@ -280,6 +332,18 @@ export const _createStreamingDebugGUI = () => {
             rows: 8,
             interval: 'refresh',
           },
+          {
+            key: 'priming',
+            target: readouts,
+            label: 'Priming',
+            readonly: true,
+            multiline: true,
+            rows: 6,
+            interval: 'refresh',
+          },
+          getNoteItem(
+            'A cell streamed in during play is held unseen while its textures upload and its new shaders compile, then shown a few new materials a frame. A stall: the focus reached it first (widen the rings). An oversized upload: an uncompressed texture over 1024² (ship KTX2).'
+          ),
           {
             key: 'memory',
             target: readouts,

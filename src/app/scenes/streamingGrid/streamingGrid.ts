@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { float, positionLocal, vec3 } from 'three/tsl';
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import {
   IS_DEBUG_ENV,
@@ -9,8 +10,10 @@ import {
   createSeededRandom,
   getECSWorld,
   getEntityIdByAppId,
+  getMaterial,
   lwarn,
   saveBufferGeometry,
+  saveMaterial,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
@@ -25,7 +28,8 @@ import {
 // geometry, made on load, the cell's asset, so it goes when the cell unloads) and two sets of
 // scattered props (shared geometry and materials, so a cell compiles no new shader). The heights come from one world-space noise, so
 // the blocks meet at their edges. The main camera (the streaming focus) flies across the grid, or
-// hovers on a cell boundary, or stays still: the scene's debug tab switches it.
+// hovers on a cell boundary, or stays still: the scene's debug tab switches it. For priming tests
+// (Phase 2), each cell's crates can have a material of their own shader structure.
 
 export const STREAMING_GRID_SCENE_ID = 'streamingGrid';
 const CAMERA_APP_ID = 'streamingGridCamera';
@@ -55,6 +59,13 @@ export const streamingGridFlight = {
   mode: 'FLY' as StreamingGridFlightMode,
   /** Metres per second */
   speed: 30,
+};
+
+/** What the cells hold, which the scene's debug tab edits (read when a cell loads) */
+export const streamingGridContent = {
+  /** Each cell's crates get a material of a shader structure of their own (a cell-unique literal
+   * in its TSL), so every cell streamed in brings a new shader to prime (p353 Phase 2) */
+  uniqueCrateShaders: false,
 };
 
 const createHeightField = (seed: number) => {
@@ -128,11 +139,30 @@ const loadTerrain =
     ];
   };
 
+/** A cell's own crate material, of a shader structure no other cell's has: registered in the
+ * cell's load, so it's the cell's, and released with its crates (their last ref) */
+const getCellCrateMaterial = (cx: number, cz: number) => {
+  const id = `streamingGridCrate_${cx}_${cz}`;
+  const existing = getMaterial(id);
+  if (existing) return id;
+  const material = new THREE.MeshStandardNodeMaterial({ color: 0xb07a3c, roughness: 0.8 });
+  // A literal of its own in both shader stages (three caches the two by their code): a few µm
+  const k = 1e-5 * ((cx + GRID_HALF) * 2 * GRID_HALF + cz + GRID_HALF + 1);
+  material.positionNode = positionLocal.add(vec3(0, float(k), 0));
+  material.opacityNode = float(1 - k);
+  saveMaterial(material, id);
+  return id;
+};
+
 /** A set of props scattered over a cell, on the world's heights */
 const loadProps =
   (getHeight: (x: number, z: number) => number, kind: 'Rock' | 'Crate', count: number) =>
   (ctx: StreamingCellContext) => {
     const random = createSeededRandom(getCellSeed(ctx.cx, ctx.cz) + (kind === 'Rock' ? 1 : 2));
+    const mat =
+      kind === 'Crate' && streamingGridContent.uniqueCrateShaders
+        ? getCellCrateMaterial(ctx.cx, ctx.cz)
+        : `streamingGrid${kind}`;
     const ids: number[] = [];
     for (let i = 0; i < count; i++) {
       const x = (ctx.cx + 0.05 + random() * 0.9) * ctx.cellSize;
@@ -141,7 +171,7 @@ const loadProps =
       ids.push(
         createMeshEntity({
           geo: `streamingGrid${kind}`,
-          mat: `streamingGrid${kind}`,
+          mat,
           position: { x, y: getHeight(x, z) + 0.5 * scale, z },
           rotation: { x: 0, y: random() * Math.PI * 2, z: 0 },
           scale: { x: scale, y: scale, z: scale },

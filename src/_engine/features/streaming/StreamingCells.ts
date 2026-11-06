@@ -6,6 +6,9 @@
 // asset owner scope (`sceneId#cellKey`, kernel/assets/AssetOwners.ts), and once its unload is done
 // the runtime's `releaseCellAssets` frees what the cell alone held (p353 §4.2). No engine state:
 // Streaming.ts holds the runtime and calls these, and the tests drive them with their own clock.
+// A cell streamed in during play is primed before it's drawn (§5): its units' entities are held
+// as they're made, and once they're all in, the runtime's primer (StreamingPriming.ts) uploads its
+// textures, compiles its new shaders and shows it (`PRIMING`, then `LOADED`).
 import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/AssetOwners';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
@@ -28,7 +31,7 @@ import type { ResolvedStreamingSettings } from './StreamingSettings';
  * Where a cell's content is: `LOADED` cells are at their `level`.
  * @internal
  */
-export type StreamingCellPhase = 'UNLOADED' | 'LOADING' | 'LOADED' | 'UNLOADING';
+export type StreamingCellPhase = 'UNLOADED' | 'LOADING' | 'PRIMING' | 'LOADED' | 'UNLOADING';
 
 const UNIT_PENDING = 0;
 const UNIT_IN_FLIGHT = 1;
@@ -79,6 +82,42 @@ export type StreamingCell = {
   ownerKey: string;
   /** Async units of cancelled loads not settled yet: its assets are released once they have. */
   lateUnits: number;
+  /** Whether its current load is primed before it's shown (not a scene load's cells). */
+  primes: boolean;
+  /** Its priming while `PRIMING`. */
+  primeJob: StreamingPrimeJob | null;
+  /** When its priming started (the runtime's clock). */
+  primeStartedAt: number;
+  /** How long its last finished priming took, in ms (-1 before one). */
+  lastPrimeMs: number;
+};
+
+/**
+ * A cell's priming, the primer's own (opaque to the machine).
+ * @internal
+ */
+export type StreamingPrimeJob = object;
+
+/**
+ * What primes a streamed cell's content before it's drawn (StreamingPriming.ts; none in the
+ * machine's tests, which then load straight to `LOADED`).
+ * @internal
+ */
+export type StreamingPrimer = {
+  /** A frame starts: the per-frame budgets restart (the pump's first call). */
+  beginFrame(): void;
+  /** Holds a finished unit's entities from drawing. */
+  hold(world: ECSWorld, entityIds: readonly number[]): void;
+  /** Lets go of entities a content's own `unload` left alive. */
+  release(world: ECSWorld, entityIds: readonly number[]): void;
+  /** Starts priming a loaded cell's held entities. */
+  start(world: ECSWorld, entityIds: readonly number[], stats: StreamingStats): StreamingPrimeJob;
+  /** A frame of a priming under the frame's budgets: true once it's done, everything shown. */
+  step(job: StreamingPrimeJob): boolean;
+  /** Shows everything now, primed or not (the focus outran the priming). */
+  finish(job: StreamingPrimeJob): void;
+  /** The cell unloads: drops the priming (its held entities go with the cell). */
+  cancel(job: StreamingPrimeJob): void;
 };
 
 /**
@@ -102,6 +141,19 @@ export type StreamingStats = {
   assetReleases: number;
   /** Assets those releases freed. */
   assetsReleased: number;
+  /** Primings that finished (their cells shown). */
+  primesFinished: number;
+  /** Cells shown before their priming finished: the focus reached their `RESIDENT` ring first (a
+   * fast focus: widen the rings). */
+  primingStalls: number;
+  /** Textures the primings uploaded. */
+  texturesUploaded: number;
+  /** Uncompressed textures over 1024² uploaded (a frame each; ship them as KTX2). */
+  oversizedUploads: number;
+  /** Compiles the primings ran (one per cell that brought a material not drawn before). */
+  compiles: number;
+  /** Materials first shown by the primings, a few a frame (`maxNewStructuresPerFrame`). */
+  structuresShown: number;
 };
 
 /**
@@ -149,6 +201,8 @@ export type StreamingRuntime = {
   releaseCellAssets: (cellKey: number) => number;
   /** Set by {@link dropStreamingCells}: the scene's release takes its cells' assets from there. */
   isDropped: boolean;
+  /** Primes the cells streamed in during play, or null (shown as soon as they're loaded). */
+  primer: StreamingPrimer | null;
 };
 
 /**
@@ -160,13 +214,15 @@ export const createStreamingRuntime = (
   settings: ResolvedStreamingSettings,
   world: ECSWorld,
   now: () => number,
-  releaseCellAssets: (cellKey: number) => number
+  releaseCellAssets: (cellKey: number) => number,
+  primer: StreamingPrimer | null = null
 ): StreamingRuntime => ({
   sceneId,
   settings,
   world,
   now,
   releaseCellAssets,
+  primer,
   isDropped: false,
   cells: new Map(),
   order: [],
@@ -183,6 +239,12 @@ export const createStreamingRuntime = (
     lateResults: 0,
     assetReleases: 0,
     assetsReleased: 0,
+    primesFinished: 0,
+    primingStalls: 0,
+    texturesUploaded: 0,
+    oversizedUploads: 0,
+    compiles: 0,
+    structuresShown: 0,
   },
 });
 
@@ -235,6 +297,10 @@ const createCell = (rt: StreamingRuntime, key: number, cx: number, cz: number): 
   ctx: null,
   ownerKey: getCellOwnerKey(rt.sceneId, key),
   lateUnits: 0,
+  primes: false,
+  primeJob: null,
+  primeStartedAt: 0,
+  lastPrimeMs: -1,
 });
 
 // --- Unloading -------------------------------------------------------------------------------
@@ -252,6 +318,7 @@ const unloadUnitContent = (
       rt.stats.unitErrors++;
       lerror(`Streaming: a content unload of cell ${ctx.cx},${ctx.cz} threw.`, err);
     }
+    rt.primer?.release(rt.world, entityIds);
     return;
   }
   for (let i = 0; i < entityIds.length; i++) rt.world.deleteEntity(entityIds[i]);
@@ -278,6 +345,7 @@ const releaseCellAssetsIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
 /** Starts taking a cell's content down; a load in flight is cancelled (its units not started
  * are skipped, a late one unloads when it comes back). */
 const beginUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
+  cancelPrime(rt, cell);
   if (cell.phase === 'LOADING') {
     rt.stats.loadsCancelled++;
     cell.generation++;
@@ -301,6 +369,44 @@ const finishUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
   notify(rt, cell);
 };
 
+// --- Priming ---------------------------------------------------------------------------------
+
+const cancelPrime = (rt: StreamingRuntime, cell: StreamingCell) => {
+  if (cell.primeJob) rt.primer?.cancel(cell.primeJob);
+  cell.primeJob = null;
+};
+
+/** Holds a finished unit's entities from drawing while its cell's load is primed. */
+const holdUnit = (rt: StreamingRuntime, cell: StreamingCell, entityIds: readonly number[]) => {
+  if (cell.primes && rt.primer) rt.primer.hold(rt.world, entityIds);
+};
+
+const finishPrime = (rt: StreamingRuntime, cell: StreamingCell) => {
+  cell.primeJob = null;
+  cell.phase = 'LOADED';
+  cell.lastPrimeMs = rt.now() - cell.primeStartedAt;
+  rt.stats.primesFinished++;
+  notify(rt, cell);
+};
+
+/** A frame of the primings, nearest first: a cell the focus has reached (`RESIDENT`) is shown
+ * now, primed or not, and counted as a stall. */
+const pumpPrimes = (rt: StreamingRuntime) => {
+  const { order, primer } = rt;
+  if (!primer) return;
+  for (let i = 0; i < order.length; i++) {
+    const cell = order[i];
+    if (cell.phase !== 'PRIMING' || !cell.primeJob) continue;
+    if (cell.level === StreamingLevel.RESIDENT) {
+      primer.finish(cell.primeJob);
+      rt.stats.primingStalls++;
+      finishPrime(rt, cell);
+    } else if (primer.step(cell.primeJob)) {
+      finishPrime(rt, cell);
+    }
+  }
+};
+
 // --- Loading ---------------------------------------------------------------------------------
 
 /** Whether a cell is loading: a call, so a check after one that changes the phase isn't narrowed
@@ -309,9 +415,17 @@ const isCellLoading = (cell: StreamingCell) => cell.phase === 'LOADING';
 
 const finishLoadIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
   if (cell.phase !== 'LOADING' || cell.nextUnit < cell.units.length || cell.inFlight > 0) return;
-  cell.phase = 'LOADED';
   cell.lastLoadMs = rt.now() - cell.loadStartedAt;
   rt.stats.loadsFinished++;
+  const entityIds = cell.primes && rt.primer ? getStreamingCellEntityIds(cell) : null;
+  if (rt.primer && entityIds?.length) {
+    cell.phase = 'PRIMING';
+    cell.primeStartedAt = rt.now();
+    cell.primeJob = rt.primer.start(rt.world, entityIds, rt.stats);
+  } else {
+    // Nothing to prime: an empty cell, or a scene load's
+    cell.phase = 'LOADED';
+  }
   notify(rt, cell);
 };
 
@@ -330,7 +444,8 @@ const createCellContext = (
   runOwned: (fn) => runInAssetOwnerScope(cell.ownerKey, fn),
 });
 
-const beginLoad = (rt: StreamingRuntime, cell: StreamingCell) => {
+/** Starts a cell's load; `primes`: hold its content and prime it before it's shown. */
+const beginLoad = (rt: StreamingRuntime, cell: StreamingCell, primes: boolean) => {
   cell.generation++;
   cell.phase = 'LOADING';
   cell.units = getStreamingCellContent(rt.sceneId, cell.key).map((content) => ({
@@ -341,6 +456,7 @@ const beginLoad = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.nextUnit = 0;
   cell.inFlight = 0;
   cell.loadStartedAt = rt.now();
+  cell.primes = primes && rt.primer !== null;
   cell.ctx = createCellContext(rt, cell, cell.generation);
   rt.stats.loadsStarted++;
   notify(rt, cell);
@@ -386,6 +502,7 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
     }
     unit.state = UNIT_DONE;
     unit.entityIds = result.slice();
+    holdUnit(rt, cell, unit.entityIds);
     return null;
   }
   unit.state = UNIT_IN_FLIGHT;
@@ -405,6 +522,7 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
       if (isIds) {
         unit.state = UNIT_DONE;
         unit.entityIds = ids.slice();
+        holdUnit(rt, cell, unit.entityIds);
       } else {
         failUnit(rt, cell, unit, notIdsError(ids));
       }
@@ -431,7 +549,7 @@ const setCellLevel = (rt: StreamingRuntime, cell: StreamingCell, level: Streamin
     notify(rt, cell);
     return;
   }
-  if (cell.phase === 'LOADING' || cell.phase === 'LOADED') {
+  if (cell.phase === 'LOADING' || cell.phase === 'PRIMING' || cell.phase === 'LOADED') {
     beginUnload(rt, cell);
     return;
   }
@@ -490,13 +608,15 @@ export const decideStreamingCells = (rt: StreamingRuntime, x: number, z: number)
 
 /**
  * One frame of loading and unloading, under `budgets`: starts the queued cells' loads nearest
- * first (up to `maxConcurrentLoads` loading), runs their content units nearest first, then
- * unloads the farthest first. Loads and unloads share `maxCreateMsPerFrame`, but a frame always
- * runs at least one unit of each, so neither starves.
+ * first (up to `maxConcurrentLoads` loading; a priming cell doesn't count), runs their content
+ * units nearest first, a frame of the primings (the primer's own budgets), then unloads the
+ * farthest first. Loads and unloads share `maxCreateMsPerFrame`, but a frame always runs at least
+ * one unit of each, so neither starves.
  * @internal
  */
 export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudgets) => {
   const { order } = rt;
+  rt.primer?.beginFrame();
   let loading = 0;
   for (let i = 0; i < order.length; i++) if (order[i].phase === 'LOADING') loading++;
   for (let i = 0; i < order.length && loading < budgets.maxConcurrentLoads; i++) {
@@ -504,7 +624,7 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
     if (cell.phase !== 'UNLOADED' || !isLoadedLevel(cell.level)) continue;
     // A cell dropped since the decision (forgotten after an unload) isn't started again
     if (rt.cells.get(cell.key) !== cell) continue;
-    beginLoad(rt, cell);
+    beginLoad(rt, cell, true);
     if (isCellLoading(cell)) loading++;
   }
 
@@ -520,6 +640,8 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
     }
     finishLoadIfDone(rt, cell);
   }
+
+  pumpPrimes(rt);
 
   hasWorked = false;
   unloads: for (let i = order.length - 1; i >= 0; i--) {
@@ -545,7 +667,8 @@ export const loadStreamingCellsNowAsync = async (rt: StreamingRuntime) => {
   const pending: Promise<void>[] = [];
   for (const cell of rt.order) {
     if (cell.phase !== 'UNLOADED' || !isLoadedLevel(cell.level)) continue;
-    beginLoad(rt, cell);
+    // Shown with the scene, like its other content (the load screen hides the first draws)
+    beginLoad(rt, cell, false);
     while (isCellLoading(cell) && cell.nextUnit < cell.units.length) {
       const promise = runNextUnit(rt, cell);
       if (promise) pending.push(promise);
@@ -565,6 +688,7 @@ export const loadStreamingCellsNowAsync = async (rt: StreamingRuntime) => {
 export const dropStreamingCells = (rt: StreamingRuntime) => {
   rt.isDropped = true;
   for (const cell of rt.cells.values()) {
+    cancelPrime(rt, cell);
     cell.generation++;
     for (let i = 0; i < cell.units.length; i++) {
       if (cell.units[i].state === UNIT_DONE) unloadUnit(rt, cell, cell.units[i]);

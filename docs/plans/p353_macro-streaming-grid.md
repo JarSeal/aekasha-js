@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -185,16 +185,18 @@ about 0.1 µs per member (p616 measured `FOLIAGE`'s 1,500 at 113-158 µs), once 
 
 ## 5. Priming
 
-A cell's textures and pipelines are primed while it's `NEARBY`, before it's close enough to see in
-detail:
+A cell's textures and pipelines are primed while it's `NEARBY` (a ring ahead of the focus), and
+its content is held unseen until they are (Phase 2 as built: a `NEARBY` cell is in view, and a cold
+new structure costs 100-480 ms, seconds for several):
 
 - `initTexture` per new texture, spread over frames by `maxPrimeMsPerFrame` (default 2 ms,
   Phase 0 finding 5): textures upload one after another while the frame is under budget, and one
   over it (an uncompressed texture over 1024² on WebGL2: 35-141 ms, the call can't be split) gets
   a frame of its own and is counted in the debug tab.
 - `compileAsync` for the cell's **new material structures** only (finding 1: a material whose
-  structure is compiled costs ~nothing), all in **one** call per cell (one stand-in per
-  structure) in the compile queue, through the render pipeline's compiler under PostFX
+  structure is compiled costs ~nothing), all in **one** call per cell (its real held objects,
+  never stand-ins: three releases a pipeline with its last render object) in the compile queue,
+  through the render pipeline's compiler under PostFX
   (`preWarmMesh`'s path), or its first visible frame compiles again (§1, finding 3). three r187's
   own 8 ms slicing keeps each frame's block at ≤ 17 ms, and one call is 2.5-3× faster than one per
   frame (finding 4), so no ms budget applies to compiles.
@@ -202,8 +204,8 @@ detail:
   8 at once cost a 67-183 ms frame in the GPU process). Phase 2 section 3 measured it: one per
   frame under PostFX (about 10 ms of GPU-process work each, so two a frame in a row already miss
   frames), and on WebGPU 8 at once draw clean.
-- A cell is promoted to `RESIDENT` only once primed. If the focus outruns priming (a fast vehicle),
-  the cell is promoted anyway and the stall is counted in the debug tab, which is the signal to
+- A cell is shown only once primed. If the focus outruns priming (a fast vehicle) and reaches a
+  cell's `RESIDENT` ring first, it's shown anyway and the stall is counted in the debug tab, which is the signal to
   widen the rings.
 
 ## 6. Physics
@@ -500,7 +502,7 @@ creation's JS), and the cells bring no new material structure (Phase 0 finding 1
 cells are cheap (17 entities and one 16 × 16 terrain block each; WebGPU's ranges are three runs, WebGL2's one), so the budgets were never the
 bound; Phase 2's priming is what heavier cells will need.
 
-### Phase 2 — Ownership and release
+### Phase 2 — Ownership and release — done
 
 `AssetOwners` owner sets, `releaseCellOwnedAssets` (§4.2), priming (§5): first measure how many
 primed new structures can first draw in one frame on WebGL2 under PostFX (Phase 0 finding 7) and
@@ -509,7 +511,8 @@ set the per-frame count from it.
 **Exit:** p345's snapshot after flying out and back is within noise of the snapshot before.
 
 Sections: 1. the kernel's owner sets, 2. streaming's per-cell ownership and release (with the
-exit check), 3. the WebGL2 first-draw measurement, 4. priming. As built so far (sections 1-2):
+exit check), 3. the WebGL2 first-draw measurement, 4. priming. As built (sections 1-2; section 4's
+after section 3's measurements):
 
 - **Owner sets** (`kernel/assets/AssetOwners.ts`; the notes: `src/_engine/kernel/scene/CLAUDE.md`'s
   Asset ownership). One owner key (a string) or several (an array, the latest last) per asset; a
@@ -596,6 +599,67 @@ Findings, which section 4 follows:
 4. **The rule is per new structure, not per mesh:** a mesh of a structure drawn before costs
    nothing (Phase 0 finding 1), so a cell's meshes of known structures show at once and only
    the ones bringing a new structure queue, one (WebGL2) or 8 (WebGPU) a frame.
+
+As built (section 4, priming; the notes: `src/_engine/features/streaming/CLAUDE.md`'s Priming):
+
+- **Held, not just early.** A cold new structure drawn costs 1-2.4 s for four (section 3), so a
+  cell's content is never drawn before it's primed, whatever its level (§5's "primed while it's
+  `NEARBY`" assumed a `NEARBY` cell unseen; it's in view). The kernel's draw hold: a tag
+  `TAG_DRAW_HELD` (public `ComponentType` key, runtime-only) in `reconcileObject3DVisibility`'s
+  AND with its add / remove hooks in `installCoreSystems`, so culling and LOD can't show a held
+  entity. Not `DISABLED`: that stops systems and physics too.
+- **The machine** gains `PRIMING` between `LOADING` and `LOADED` (and the public
+  `StreamingCellState`), driven by an injected `StreamingPrimer` (`hold`, `release`, `start`,
+  `step`, `finish`, `cancel`, `beginFrame`), so its tests stay engine-free. A finished unit's
+  entities are held as it finishes; a cell with entities, streamed during play, starts priming
+  once its units are in. A scene load's cells (`loadStreamingCellsNowAsync`) and empty cells skip
+  it. A cell decided `RESIDENT` while it primes is shown at once (`primer.finish`) and counted
+  (`primingStalls`). Unloading cancels it. A content's own `unload` that leaves entities alive
+  gets them let go (`primer.release`).
+- **The primer** (`StreamingPriming.ts`): the held meshes' textures (map slots and TSL texture
+  uniforms) not uploaded by a priming before, `initTexture` while the frame is under
+  `maxPrimeMsPerFrame` (an uncompressed one over 1024² alone in its frame, `oversizedUploads`);
+  then, when a held mesh has a material no priming showed, one `preWarmObjectsAsync` (new in
+  `kernel/mesh/Mesh.ts`: the real objects, visible and unculled for the call's synchronous part,
+  in one `compileAsync` of the root scene through the pipeline's compiler; never stand-ins,
+  because three r187 releases a pipeline with its last render object, `Pipelines.usedTimes`); then
+  the shown materials' meshes at once and the others a group per first new material,
+  `maxNewStructuresPerFrame` groups a frame across the cells (null: WebGL2 1, WebGPU 8). A group's
+  cost is counted when it's shown, so a material another cell showed meanwhile costs none. "New"
+  is by material object (a WeakSet), not shader structure: no public three test for one.
+- **Config:** `AppConfig.streaming.maxPrimeMsPerFrame` (2) and `maxNewStructuresPerFrame` (by the
+  backend); the tab edits both live.
+- **Limit:** an async unit's entities are held when it resolves, so entities it creates before a
+  later `await` can draw cold (documented: create them at its end). A kernel creation scope
+  (hold at `createEntity` while a cell's unit runs) would close it; not needed by any content yet.
+- **Debug:** the tab's Priming readout (primes, stalls, textures, oversized uploads, compiles, new
+  materials shown) and the two budgets, `PRIMING` in the cell counts and the overlay (purple), the
+  cell window's last priming time.
+- **Test content:** `streamingGrid`'s `streamingGridContent.uniqueCrateShaders` (its scene tab's
+  "A shader per cell"): each cell's crates get a material of their own structure (a cell-unique
+  literal in `positionNode` and `opacityNode`), registered in the cell's load.
+
+**Section 4, measured** (2026-11-06, as section 2: `streamingGrid`, its own flight at 30 m/s for
+15 s, 900 frames, no PostFX in the scene; frames over 33 ms / the longest frame / the longest
+main-thread block):
+
+| content                    | WebGPU primed  | WebGPU unprimed | WebGL2 primed  | WebGL2 unprimed |
+| -------------------------- | -------------- | --------------- | -------------- | --------------- |
+| a shader per cell (35 new) | 0 / 26 / 9 ms  | 1 / 308 / 10 ms | 0 / 32 / 18 ms | 5 / 47 / 31 ms  |
+| shared shaders             | 1 / 33 / 18 ms | -               | 0 / 22 / 11 ms | -               |
+
+No stall in any run (the cells primed within their `NEARBY` ring). "Unprimed" is the runtime's
+primer set to null. Its numbers are milder than Phase 0's cold ones because the literals are the
+same on every run, so Chrome's GPU shader disk cache serves programs an earlier run compiled; a
+first visit pays Phase 0's. The streamed cells show as before once primed (a screenshot after the
+flight).
+
+**For the PR** (the branch's CHANGELOG entry and versions, at the plan's end or the branch's PR,
+whichever comes first): engine minor (6.2.0 if nothing else bumps it first): `ctx.runOwned`,
+`StreamingCellState`'s `PRIMING`, `AppConfig.streaming.maxPrimeMsPerFrame` and
+`maxNewStructuresPerFrame`, `ComponentType.TAG_DRAW_HELD`; fixed: `disposeMesh` leaked three's
+render objects (uniform buffers) of every deleted mesh on a shared geometry and material. App
+minor: `streamingGrid`'s terrain unit without its own `unload`, its "A shader per cell" option.
 
 ### Phase 3 — Build-time manifest
 
