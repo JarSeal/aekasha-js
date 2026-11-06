@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented (Phase 4 step 4 left for later), Phase 5 in progress
 Category: Rendering, Dependencies
 Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
 
@@ -518,6 +518,13 @@ Results so far:
    section in each).
 
 ### Phase 5: Hub, docs and versioning
+
+Results so far:
+
+- Step 1 done (2026-11-06): the leaks' lines (Phase 2 step 3) and the sky box guide's `env.size`
+  (Phase 3 step 1) were in already; the rendering guide's Known issues now also links Phase 4's
+  three issue files, each with the engine's workaround (and that a pass compile of an app's own
+  still meets the third).
 
 1. The Hub's rendering guide (`hub/pages/features/rendering/guide.md`, Known issues): the light
    leak and the instance attribute leak are fixed with r187 (link the closed issues); the sky box

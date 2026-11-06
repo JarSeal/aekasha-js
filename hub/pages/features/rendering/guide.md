@@ -107,6 +107,16 @@ with three r187:
   engine's PostFX pre-pass now reuses one MRT, so at most two scene visits' lights remain).
 - [A removed `InstancedMesh` leaked its instance attributes](hub:issues/three-instanced-node-attribute-leak).
 
+Three r187 issues the engine works around, so a scene needs nothing for them:
+
+- [A render context per MRT keeps its last camera and lights](hub:issues/three-render-list-keeps-lights):
+  the PostFX pre-pass's one MRT is the workaround above.
+- [A cube render target sampled before its first render loses its texture](hub:issues/three-cube-render-target-texture-link):
+  the sky box clears its cube targets once when it makes them.
+- [A pass compile keeps the renderer's target and MRT across frames](hub:issues/three-pass-compile-holds-renderer-state):
+  the engine's compiles run one at a time and its renders without a held target. Fixed on three's
+  `dev`. An app that calls `PassNode.compileAsync` itself still meets it.
+
 One of the engine's own:
 
 - [A camera cut rebuilds the PostFX chain](hub:issues/postfx-rebuilds-on-camera-change), a
