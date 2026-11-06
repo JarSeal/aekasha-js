@@ -963,6 +963,30 @@ As built (section 1):
   `PhysicsWorkerRequests.test.ts` (the message's `tier`, the worker's body switched, the proxy's
   slot and cached type).
 
+As built (section 2):
+
+- **The machine** (`StreamingCells.ts`): `cell.adopted` (the bodies handed to it), `rt.bodies`
+  (`StreamingBodies`, null in the machine's tests unless one sets a stand-in), the counter
+  `bodiesAdopted`. `beginUnload` hands the moved bodies over first, so a cancelled `LOADING` cell
+  does too; the unload pump deletes the cell's adopted bodies after its units, before
+  `finishUnload` (not budgeted: a delete each), and `dropStreamingCells` deletes them with the rest.
+- **`StreamingBodies.ts`**: `createStreamingBodies()` (`locateMover`: a live entity in
+  `BODY_DYNAMIC_VISUAL`, `BODY_DYNAMIC_HEADLESS` or with `PHYSICS_SIM_TIER`, at its `TRANSFORM`'s
+  x/z), set as `rt.bodies` by `Streaming.ts`; and the hand-over, `handOverMovedBodies` /
+  `deleteAdoptedBodies`, there rather than in the machine (it had grown to 835 lines; 763 now). A
+  unit's moved body leaves its `entityIds` (a new array only for a unit that loses one); an adopted
+  body deleted meanwhile is dropped from the list. A `LOADING` cell can adopt; a cell in the same
+  decision's unloads that adopts one checks it again when its own unload starts, so a body in two
+  unloading cells goes.
+- **Assets:** an adopted body keeps its meshes' geometry and material refs, so its old cell's
+  release doesn't free them (they keep that cell's owner key); deleting the body drops the last
+  ref, which frees a non-persistent asset as before (Phase 3's finding).
+- **Tests:** `StreamingCells.test.ts`' "bodies that move" (a body handed to the loaded cell it
+  rolled into and deleted with it, a custom `unload` seeing only what stayed; one still in its
+  cell or off the loaded cells deleted with it; handed on again, a deleted one dropped; two cells
+  unloading in one decision; non-bodies stay; the scene exit) and `StreamingBodies.test.ts` (the
+  component keys, whatever the tier).
+
 ### Phase 5 — Far representations
 
 `FAR` content (§3.3) with p348 and p351.

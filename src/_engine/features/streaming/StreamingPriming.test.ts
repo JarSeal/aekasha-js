@@ -47,6 +47,7 @@ const createStats = (): StreamingStats => ({
   oversizedUploads: 0,
   compiles: 0,
   structuresShown: 0,
+  bodiesAdopted: 0,
 });
 
 /** A mesh entity of `material` */

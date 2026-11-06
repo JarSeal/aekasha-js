@@ -8,10 +8,12 @@
 // Streaming.ts holds the runtime and calls these, and the tests drive them with their own clock.
 // A cell streamed in during play is primed before it's drawn (§5): its units' entities are held
 // as they're made, and once they're all in, the runtime's primer (StreamingPriming.ts) uploads its
-// textures, compiles its new shaders and shows it (`PRIMING`, then `LOADED`).
+// textures, compiles its new shaders and shows it (`PRIMING`, then `LOADED`). A cell that starts
+// unloading hands the bodies that moved into another loaded cell to that cell (p353 Phase 4 D1).
 import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/AssetOwners';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
+import { type StreamingBodies, deleteAdoptedBodies, handOverMovedBodies } from './StreamingBodies';
 import { lerror } from '../../utils/Logger';
 import {
   type StreamingCellContent,
@@ -105,6 +107,9 @@ export type StreamingCell = {
   primeStartedAt: number;
   /** How long its last finished priming took, in ms (-1 before one). */
   lastPrimeMs: number;
+  /** Bodies other cells' content made that moved into it and were handed to it when their cell
+   * unloaded (p353 Phase 4 D1): deleted with it, unless they moved on by then. */
+  adopted: number[];
 };
 
 /**
@@ -169,6 +174,8 @@ export type StreamingStats = {
   compiles: number;
   /** Materials first shown by the primings, a few a frame (`maxNewStructuresPerFrame`). */
   structuresShown: number;
+  /** Bodies handed to another cell because they had moved into it when their cell unloaded. */
+  bodiesAdopted: number;
 };
 
 /**
@@ -221,6 +228,9 @@ export type StreamingRuntime = {
   /** A cell's units from the scene's data (its JSON content), run before the code-registered
    * ones; null without any. */
   dataContent: ((cellKey: number) => readonly StreamingCellUnitSource[]) | null;
+  /** The cells' bodies (StreamingBodies.ts): which entities can leave their cell, and where they
+   * are. Null: nothing moves (the machine's own tests). */
+  bodies: StreamingBodies | null;
 };
 
 /**
@@ -242,6 +252,7 @@ export const createStreamingRuntime = (
   releaseCellAssets,
   primer,
   dataContent: null,
+  bodies: null,
   isDropped: false,
   cells: new Map(),
   order: [],
@@ -264,6 +275,7 @@ export const createStreamingRuntime = (
     oversizedUploads: 0,
     compiles: 0,
     structuresShown: 0,
+    bodiesAdopted: 0,
   },
 });
 
@@ -320,6 +332,7 @@ const createCell = (rt: StreamingRuntime, key: number, cx: number, cz: number): 
   primeJob: null,
   primeStartedAt: 0,
   lastPrimeMs: -1,
+  adopted: [],
 });
 
 // --- Unloading -------------------------------------------------------------------------------
@@ -362,8 +375,10 @@ const releaseCellAssetsIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
 };
 
 /** Starts taking a cell's content down; a load in flight is cancelled (its units not started
- * are skipped, a late one unloads when it comes back). */
+ * are skipped, a late one unloads when it comes back). Its bodies that moved into another loaded
+ * cell go to that cell first. */
 const beginUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
+  handOverMovedBodies(rt, cell);
   cancelPrime(rt, cell);
   if (cell.phase === 'LOADING') {
     rt.stats.loadsCancelled++;
@@ -685,6 +700,7 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
       unloadUnit(rt, cell, unit);
       hasWorked = true;
     }
+    deleteAdoptedBodies(rt, cell);
     finishUnload(rt, cell);
   }
 };
@@ -738,6 +754,7 @@ export const dropStreamingCells = (rt: StreamingRuntime) => {
     for (let i = 0; i < cell.units.length; i++) {
       if (cell.units[i].state === UNIT_DONE) unloadUnit(rt, cell, cell.units[i]);
     }
+    deleteAdoptedBodies(rt, cell);
     cell.phase = 'UNLOADED';
     cell.level = StreamingLevel.UNLOADED;
   }

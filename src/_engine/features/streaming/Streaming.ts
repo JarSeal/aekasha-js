@@ -15,6 +15,7 @@ import { DEFAULT_ECS_WORLD_ID, type ECSWorld, getECSWorld } from '../../kernel/e
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
+import { createStreamingBodies } from './StreamingBodies';
 import {
   type StreamingBudgets,
   type StreamingRuntime,
@@ -61,6 +62,8 @@ const primeBudgets: StreamingPrimeBudgets = {
 };
 /** Primes the cells streamed in during play (StreamingPriming.ts), its budgets read every frame */
 const primer = createStreamingPrimer(primeBudgets);
+/** The cells' bodies (StreamingBodies.ts): the ones that moved go to the cell they're in */
+const bodies = createStreamingBodies();
 
 /** The gathered scenes' settings, by scene id */
 const dataSettings = new Map<string, SceneStreamingSettings>();
@@ -397,6 +400,7 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     createCellRelease(sceneId),
     primer
   );
+  rt.bodies = bodies;
   if (manifest && dataModule) {
     const content = dataModule.createStreamingDataContent(sceneId, manifest);
     dataContent = content;

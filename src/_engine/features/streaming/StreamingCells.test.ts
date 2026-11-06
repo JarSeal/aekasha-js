@@ -620,3 +620,136 @@ describe('data units and the barrier (p353 Phase 3)', () => {
     expect(rt.cells.has(KEY)).toBe(false);
   });
 });
+
+describe('bodies that move (p353 Phase 4 D1)', () => {
+  // The focus starts in cell (0, 0), which loads cells -2..2; at x = 96 (cell 1, 0) column -2 is
+  // over ring 2's 144 m from its edge and unloads, column -1 stays
+  const START_X = 32;
+  const FAR_X = 96;
+  const A = { cx: -2, x: -96 };
+  const B = { cx: -1, x: -32 };
+
+  /** Bodies at the positions the test sets (any other entity doesn't move) */
+  const setupBodies = () => {
+    const env = setup();
+    const positions = new Map<number, { x: number; z: number }>();
+    env.rt.bodies = {
+      locateMover: (world, entityId, out) => {
+        const at = positions.get(entityId);
+        if (!at || !world.isAlive(entityId)) return false;
+        out.x = at.x;
+        out.z = at.z;
+        return true;
+      },
+    };
+    return { ...env, positions };
+  };
+
+  /** Content in cell (cx, 0) making a body at (x, 32) and a static entity; `log` gets the ids each
+   * `unload` is handed */
+  const bodyContent = (
+    world: ECSWorld,
+    positions: Map<number, { x: number; z: number }>,
+    x: number,
+    log?: number[][]
+  ): Unit => ({
+    load: () => {
+      const bodyId = world.createEntity();
+      positions.set(bodyId, { x, z: 32 });
+      return [bodyId, world.createEntity()];
+    },
+    unload: log
+      ? (ids) => {
+          log.push([...ids]);
+          for (const id of ids) world.deleteEntity(id);
+        }
+      : undefined,
+  });
+
+  const loadAround = (rt: StreamingRuntime, pump: () => void, x: number) => {
+    decideStreamingCells(rt, x, 32);
+    pump();
+  };
+
+  test('a body that rolled into a loaded cell goes to it, and is deleted with it', () => {
+    const { rt, world, positions, pump } = setupBodies();
+    const unloaded: number[][] = [];
+    add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x, unloaded));
+    loadAround(rt, pump, START_X);
+    const [bodyId, staticId] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    positions.set(bodyId, { x: B.x, z: 32 });
+
+    loadAround(rt, pump, FAR_X);
+    expect(rt.cells.has(packCellKey(A.cx, 0, 0))).toBe(false);
+    // The custom unload got only what stayed
+    expect(unloaded).toEqual([[staticId]]);
+    expect(world.isAlive(bodyId)).toBe(true);
+    expect(cellAt(rt, B.cx, 0)!.adopted).toEqual([bodyId]);
+    expect(rt.stats.bodiesAdopted).toBe(1);
+
+    // Far enough that B unloads too: the adopted body goes with it
+    loadAround(rt, pump, FAR_X + 64);
+    expect(world.isAlive(bodyId)).toBe(false);
+  });
+
+  test('a body still in its cell, or where nothing is loaded, goes with its cell', () => {
+    const { rt, world, positions, pump } = setupBodies();
+    add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
+    add(rt, packCellKey(A.cx, 0, 1), bodyContent(world, positions, A.x));
+    loadAround(rt, pump, START_X);
+    const [stays] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    const [outside] = cellAt(rt, A.cx, 1)!.units[0].entityIds!;
+    // Off the grid's loaded cells (x cell -4)
+    positions.set(outside, { x: -230, z: 32 });
+
+    loadAround(rt, pump, FAR_X);
+    expect(world.isAlive(stays)).toBe(false);
+    expect(world.isAlive(outside)).toBe(false);
+    expect(rt.stats.bodiesAdopted).toBe(0);
+  });
+
+  test('a body moving on is handed over again; one deleted meanwhile is dropped', () => {
+    const { rt, world, positions, pump } = setupBodies();
+    add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
+    add(rt, packCellKey(A.cx, 0, 1), bodyContent(world, positions, A.x));
+    loadAround(rt, pump, START_X);
+    const [rolling] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    const [deleted] = cellAt(rt, A.cx, 1)!.units[0].entityIds!;
+    positions.set(rolling, { x: B.x, z: 32 });
+    positions.set(deleted, { x: B.x, z: 32 });
+    loadAround(rt, pump, FAR_X);
+    expect(cellAt(rt, B.cx, 0)!.adopted).toEqual([rolling, deleted]);
+
+    world.deleteEntity(deleted);
+    // On into column 0 before column -1 unloads
+    positions.set(rolling, { x: 32, z: 32 });
+    loadAround(rt, pump, FAR_X + 64);
+    expect(cellAt(rt, 0, 0)!.adopted).toEqual([rolling]);
+    expect(world.isAlive(rolling)).toBe(true);
+    expect(rt.stats.bodiesAdopted).toBe(3);
+  });
+
+  test('a body in a cell that unloads in the same decision goes with that cell', () => {
+    const { rt, world, positions, pump } = setupBodies();
+    add(rt, packCellKey(B.cx, 0, 0), bodyContent(world, positions, B.x));
+    loadAround(rt, pump, START_X);
+    const [bodyId] = cellAt(rt, B.cx, 0)!.units[0].entityIds!;
+    positions.set(bodyId, { x: A.x, z: 32 });
+    // Columns -2 and -1 both unload in one decision, whichever starts first
+    loadAround(rt, pump, FAR_X + 64);
+    expect(world.isAlive(bodyId)).toBe(false);
+  });
+
+  test("entities that aren't bodies stay with their cell; the scene exit deletes the adopted", () => {
+    const { rt, world, positions, pump } = setupBodies();
+    add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
+    loadAround(rt, pump, START_X);
+    const [bodyId, staticId] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    positions.set(bodyId, { x: B.x, z: 32 });
+    loadAround(rt, pump, FAR_X);
+    expect(world.isAlive(staticId)).toBe(false);
+    expect(world.isAlive(bodyId)).toBe(true);
+    dropStreamingCells(rt);
+    expect(world.isAlive(bodyId)).toBe(false);
+  });
+});
