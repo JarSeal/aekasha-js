@@ -52,6 +52,7 @@ export type BuiltInIconName =
   | 'spatialGrid'
   | 'speedometer'
   | 'stop'
+  | 'streaming'
   | 'texture'
   | 'thrash'
   | 'tools'
@@ -104,6 +105,7 @@ const BUILT_IN_ICONS = {
   spatialGrid: builtIn.spatialGridIcon,
   speedometer: builtIn.speedometerIcon,
   stop: builtIn.stopIcon,
+  streaming: builtIn.streamingIcon,
   texture: builtIn.textureIcon,
   thrash: builtIn.thrashIcon,
   tools: builtIn.toolsIcon,

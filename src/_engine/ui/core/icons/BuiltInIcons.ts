@@ -62,6 +62,7 @@ export { default as runtimeIcon } from './svg/runtime-view.svg?raw';
 export { default as spatialGridIcon } from './svg/spatial-grid.svg?raw';
 export { default as speedometerIcon } from './svg/speedometer.svg?raw';
 export { default as stopIcon } from './svg/stop-fill.svg?raw';
+export { default as streamingIcon } from './svg/streaming-cells.svg?raw';
 export { default as textureIcon } from './svg/texture-image.svg?raw';
 export { default as thrashIcon } from './svg/trash3-fill.svg?raw';
 export { default as toolsIcon } from './svg/tools.svg?raw';

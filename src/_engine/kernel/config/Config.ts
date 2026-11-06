@@ -32,6 +32,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'ecsControls',
   'spatialGridControls',
   'lodControls',
+  'streamingControls',
 ];
 
 /**

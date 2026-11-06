@@ -4,6 +4,12 @@
 // The streaming() feature (StreamingFeature.ts) installs it.
 import * as THREE from 'three/webgpu';
 import { getMainCamera } from '../../kernel/camera/Camera';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../../kernel/config/Config';
+import {
+  type DebugModuleRef,
+  loadDebugModuleAsync,
+  useDebug,
+} from '../../kernel/config/DebugModules';
 import { DEFAULT_ECS_WORLD_ID, type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
@@ -26,6 +32,7 @@ import {
 } from './StreamingContent';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
+import { lwarn } from '../../utils/Logger';
 
 /**
  * What the streaming cells measure their distance from: an entity (its `TRANSFORM` position), or
@@ -50,6 +57,8 @@ const dataSettings = new Map<string, SceneStreamingSettings>();
 const codeSettings = new Map<string, SceneStreamingSettings | null>();
 
 let focus: StreamingFocus | null = null;
+/** The debug tools' focus (frozen, teleported, `?streamingFocus`): over `focus` while set */
+let focusOverride: { x: number; z: number } | null = null;
 let runtime: StreamingRuntime | null = null;
 let isSceneLoading = false;
 let framesToDecision = 0;
@@ -68,6 +77,7 @@ const assertInstalled = (fn: string) => {
 /** The focus's x/z into `_focus`, or null when there's none to measure from (its entity is gone,
  * or no main camera). */
 const readFocus = (world: ECSWorld): THREE.Vector3 | null => {
+  if (focusOverride) return _focus.set(focusOverride.x, 0, focusOverride.z);
   if (focus === null) {
     const camera = getMainCamera();
     return camera ? camera.getWorldPosition(_focus) : null;
@@ -232,6 +242,60 @@ export const getStreamingRuntime = (): StreamingRuntime | null => runtime;
  */
 export const getStreamingBudgets = (): StreamingBudgets => budgets;
 
+/**
+ * How often the cells' states are decided, in frames (the debug tab edits it).
+ * @internal
+ */
+export const getStreamingUpdateInterval = () => updateIntervalFrames;
+
+/**
+ * Sets how often the cells' states are decided, in frames (at least 1).
+ * @internal
+ */
+export const setStreamingUpdateInterval = (frames: number) => {
+  updateIntervalFrames = Math.max(1, Math.round(frames));
+};
+
+/**
+ * The debug tools' focus, over the app's while set: "Freeze focus", "Teleport focus to cell" and
+ * `?streamingFocus=x,z`. `null` gives the focus back to the app's.
+ * @internal
+ */
+export const setStreamingFocusOverride = (at: { x: number; z: number } | null) => {
+  focusOverride = at && { x: at.x, z: at.z };
+  // Decided on the next frame, not up to an interval later
+  framesToDecision = 0;
+};
+
+/**
+ * The debug tools' focus, or null while the app's is used.
+ * @internal
+ */
+export const getStreamingFocusOverride = (): { readonly x: number; readonly z: number } | null =>
+  focusOverride;
+
+/** `?streamingFocus=x,z`: the focus frozen at that point from the first scene on (read only in the
+ * debug env and prod test mode, so a production build never reads it). */
+const applyFocusQueryParam = () => {
+  const param = new URLSearchParams(window.location.search).get('streamingFocus');
+  if (!param) return;
+  const [x, z] = param.split(',').map(Number);
+  if (Number.isFinite(x) && Number.isFinite(z)) setStreamingFocusOverride({ x, z });
+  else lwarn(`?streamingFocus=${param} isn't a point: it takes x,z in metres (eg. 512,-256).`);
+};
+
+type StreamingDebugModule = typeof import('./debug/_dbg__Streaming');
+let debugGUI: DebugModuleRef<StreamingDebugModule> | null = null;
+
+/**
+ * Loads and builds the Streaming debug tab: the `streaming()` feature's `onDebug` hook.
+ * @internal
+ */
+export const registerStreamingDebugGUI = async () => {
+  debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__Streaming'));
+  useDebug(debugGUI)?._createStreamingDebugGUI();
+};
+
 const streamingSystem = (world: ECSWorld) => {
   if (!runtime || isSceneLoading || world.id !== DEFAULT_ECS_WORLD_ID) return;
   if (--framesToDecision <= 0) {
@@ -301,4 +365,6 @@ export const installStreaming = (ctx: FeatureContext) => {
   });
   ctx.addSceneHooks(streamingSceneHooks);
   isInstalled = true;
+  // Before the first scene load, so its cells load around that point
+  if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) applyFocusQueryParam();
 };

@@ -123,6 +123,10 @@ export type StreamingRuntime = {
   /** The tracked cells nearest first, as the last decision sorted them (may hold a cell dropped
    * since, in `UNLOADED`, until the next decision). */
   order: StreamingCell[];
+  /** The focus's x at the last decision (NaN before one). */
+  focusX: number;
+  /** The focus's z at the last decision (NaN before one). */
+  focusZ: number;
   /** The focus cell at the last decision. */
   focusCx: number;
   /** The focus cell at the last decision. */
@@ -147,6 +151,8 @@ export const createStreamingRuntime = (
   now,
   cells: new Map(),
   order: [],
+  focusX: NaN,
+  focusZ: NaN,
   focusCx: 0,
   focusCz: 0,
   stats: {
@@ -158,6 +164,38 @@ export const createStreamingRuntime = (
     lateResults: 0,
   },
 });
+
+/**
+ * Called after a cell's phase or level changed (the debug tab's cell history). One listener; the
+ * machine pays a null check without one.
+ * @internal
+ */
+export type StreamingTransitionListener = (rt: StreamingRuntime, cell: StreamingCell) => void;
+
+let transitionListener: StreamingTransitionListener | null = null;
+
+/**
+ * Sets the transition listener (`null` removes it).
+ * @internal
+ */
+export const setStreamingTransitionListener = (listener: StreamingTransitionListener | null) => {
+  transitionListener = listener;
+};
+
+const notify = (rt: StreamingRuntime, cell: StreamingCell) => transitionListener?.(rt, cell);
+
+/**
+ * The entities a cell's content units created and still hold (a new array: the debug tab's).
+ * @internal
+ */
+export const getStreamingCellEntityIds = (cell: StreamingCell): number[] => {
+  const ids: number[] = [];
+  for (let i = 0; i < cell.units.length; i++) {
+    const unitIds = cell.units[i].entityIds;
+    if (unitIds) for (let j = 0; j < unitIds.length; j++) ids.push(unitIds[j]);
+  }
+  return ids;
+};
 
 const createCell = (key: number, cx: number, cz: number): StreamingCell => ({
   key,
@@ -213,6 +251,7 @@ const beginUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
   }
   cell.phase = 'UNLOADING';
   cell.nextUnit = 0;
+  notify(rt, cell);
 };
 
 /** The cell's content is down: it waits to load again when it's still wanted, else it's
@@ -223,6 +262,7 @@ const finishUnload = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.units = [];
   cell.nextUnit = 0;
   if (!isLoadedLevel(cell.level)) rt.cells.delete(cell.key);
+  notify(rt, cell);
 };
 
 // --- Loading ---------------------------------------------------------------------------------
@@ -236,6 +276,7 @@ const finishLoadIfDone = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.phase = 'LOADED';
   cell.lastLoadMs = rt.now() - cell.loadStartedAt;
   rt.stats.loadsFinished++;
+  notify(rt, cell);
 };
 
 const createCellContext = (
@@ -265,6 +306,7 @@ const beginLoad = (rt: StreamingRuntime, cell: StreamingCell) => {
   cell.loadStartedAt = rt.now();
   cell.ctx = createCellContext(rt, cell, cell.generation);
   rt.stats.loadsStarted++;
+  notify(rt, cell);
   finishLoadIfDone(rt, cell);
 };
 
@@ -336,9 +378,16 @@ const runNextUnit = (rt: StreamingRuntime, cell: StreamingCell): Promise<void> |
 /** Applies a decided level: a cell no longer wanted loaded starts unloading (or is forgotten). */
 const setCellLevel = (rt: StreamingRuntime, cell: StreamingCell, level: StreamingLevel) => {
   cell.level = level;
-  if (isLoadedLevel(level)) return;
-  if (cell.phase === 'LOADING' || cell.phase === 'LOADED') beginUnload(rt, cell);
-  else if (cell.phase === 'UNLOADED') rt.cells.delete(cell.key);
+  if (isLoadedLevel(level)) {
+    notify(rt, cell);
+    return;
+  }
+  if (cell.phase === 'LOADING' || cell.phase === 'LOADED') {
+    beginUnload(rt, cell);
+    return;
+  }
+  if (cell.phase === 'UNLOADED') rt.cells.delete(cell.key);
+  notify(rt, cell);
 };
 
 const compareCells = (a: StreamingCell, b: StreamingCell) =>
@@ -355,6 +404,8 @@ export const decideStreamingCells = (rt: StreamingRuntime, x: number, z: number)
   const { cellSize, invCellSize } = settings;
   const fcx = worldToCell(x, invCellSize);
   const fcz = worldToCell(z, invCellSize);
+  rt.focusX = x;
+  rt.focusZ = z;
   rt.focusCx = fcx;
   rt.focusCz = fcz;
   for (const cell of cells.values()) {
@@ -378,6 +429,7 @@ export const decideStreamingCells = (rt: StreamingRuntime, x: number, z: number)
       cell.ring = ring;
       cell.edgeDistance = edgeDistance;
       cells.set(key, cell);
+      notify(rt, cell);
     }
   }
   order.length = 0;
