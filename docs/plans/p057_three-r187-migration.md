@@ -529,6 +529,11 @@ Results so far:
   (Sunset) and Project. The toolkit and the app have no changes on the branch, so no sections.
   The sizes are the committed baselines' main chunks (gzip KiB, `main` against this branch), not
   the Context's first-download figures, which include the other initial files.
+- Step 3 done (2026-11-06): `version` and `engine_metadata.version` 6.0.0 → 6.1.0 (Sunset
+  kept); toolkit 3.0.0 and app 1.19.0 unchanged (no changes on the branch).
+  `yarn checkVersions --against main` passes. The scene runner's `debugger` shot
+  `window.about` shows the engine version, so it moves with this bump: its baseline is local
+  (`.cache/verify/scenes/`), recorded again with the next `--update`.
 
 1. The Hub's rendering guide (`hub/pages/features/rendering/guide.md`, Known issues): the light
    leak and the instance attribute leak are fixed with r187 (link the closed issues); the sky box
