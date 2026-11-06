@@ -9,7 +9,12 @@ import {
   runAssetTask,
 } from './AssetsAPI';
 import type { AssetLoadReport } from './AssetsAPITypes';
-import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
+import {
+  getAssetOwnerScope,
+  recordAssetOwner,
+  retagAssetOwner,
+  runInAssetOwnerScope,
+} from './AssetOwners';
 import { resolveAssetUrl, resolveFileUrl, type GeneratedAssetUrls } from './AssetUrl';
 import { loadKTX2Texture } from './import/KTX2';
 import type { TextureArrayInfo } from './TextureArray';
@@ -151,16 +156,20 @@ export const saveLoadedTexture = <T extends THREE.Texture>(
   return saved;
 };
 
-/** saveLoadedTexture() plus the load's report (with the file's URL) for the debug tooling, kept
+/** saveLoadedTexture() in the owner scope the load was called in (AssetOwners: it registers after
+ * the load's awaits), plus the load's report (with the file's URL) for the debug tooling, kept
  * only when this load's texture is the one registered. */
 const saveAndReport = <T extends THREE.Texture>(
   texture: T,
   id: string | undefined,
   isPersistent: boolean | undefined,
   report: AssetLoadReport,
-  sourceUrl: string
+  sourceUrl: string,
+  ownerScope: string | null | undefined
 ): T => {
-  const saved = saveLoadedTexture(texture, id, isPersistent);
+  const saved = runInAssetOwnerScope(ownerScope, () =>
+    saveLoadedTexture(texture, id, isPersistent)
+  );
   if (saved === texture) {
     recordAssetLoadReport(`texture:${saved.userData.id}`, { ...report, sourceUrl });
   }
@@ -346,16 +355,19 @@ const toCompressedArrayTexture = (texture: THREE.Texture, layers: string[]) => {
  * fails. It has no source file to fall back to. Its `userData.textureArray` describes it like a
  * runtime array's (`getTextureArrayInfo`).
  */
-const loadTextureArrayAssetAsync = async ({
-  id,
-  texOpts,
-  throwOnError,
-  isPersistent,
-  userData,
-  debugData,
-  __url,
-  __layers: layers,
-}: TextureProps & { __layers: string[] }) => {
+const loadTextureArrayAssetAsync = async (
+  {
+    id,
+    texOpts,
+    throwOnError,
+    isPersistent,
+    userData,
+    debugData,
+    __url,
+    __layers: layers,
+  }: TextureProps & { __layers: string[] },
+  ownerScope: string | null | undefined
+) => {
   let url: string | undefined;
   try {
     if (!__url) {
@@ -380,7 +392,7 @@ const loadTextureArrayAssetAsync = async ({
       cpuDataReleased: false,
     };
     array.userData.textureArray = info;
-    return saveAndReport(array, id, isPersistent, report, url);
+    return saveAndReport(array, id, isPersistent, report, url, ownerScope);
   } catch (err) {
     const errorMsg = `Could not load texture array "${id}" in loadTextureAsync${url ? ` (url: "${url}")` : ''}: ${(err as Error).message}`;
     lerror(errorMsg);
@@ -430,16 +442,19 @@ const getAtlasSlotInfo = (texture: THREE.Texture, atlas: TextureAtlasSlotInfo) =
  * `throwOnError`) an empty texture when there is none or it fails. A slot has no source file to
  * fall back to. Its `userData.textureAtlas` has the cell table (`getTextureAtlasInfo`).
  */
-const loadTextureAtlasSlotAsync = async ({
-  id,
-  texOpts,
-  throwOnError,
-  isPersistent,
-  userData,
-  debugData,
-  __url,
-  __atlas: atlas,
-}: TextureProps & { __atlas: TextureAtlasSlotInfo }) => {
+const loadTextureAtlasSlotAsync = async (
+  {
+    id,
+    texOpts,
+    throwOnError,
+    isPersistent,
+    userData,
+    debugData,
+    __url,
+    __atlas: atlas,
+  }: TextureProps & { __atlas: TextureAtlasSlotInfo },
+  ownerScope: string | null | undefined
+) => {
   let url: string | undefined;
   try {
     if (!__url) {
@@ -452,7 +467,7 @@ const loadTextureAtlasSlotAsync = async ({
     const info = getAtlasSlotInfo(texture, atlas);
     setTextureOpts(texture, texOpts, userData, debugData);
     texture.userData.textureAtlas = info;
-    return saveAndReport(texture, id, isPersistent, report, url);
+    return saveAndReport(texture, id, isPersistent, report, url, ownerScope);
   } catch (err) {
     const errorMsg = `Could not load texture atlas slot "${id}" in loadTextureAsync${url ? ` (url: "${url}")` : ''}: ${(err as Error).message}`;
     lerror(errorMsg);
@@ -508,8 +523,10 @@ export const loadTextureAsync = async (props: TextureProps) => {
     retagAssetOwner(textures[id].resource);
     return textures[id].resource;
   }
-  if (__layers) return loadTextureArrayAssetAsync({ ...props, __layers });
-  if (__atlas) return loadTextureAtlasSlotAsync({ ...props, __atlas });
+  // Before the first await: the texture registers in its caller's owner scope (AssetOwners)
+  const ownerScope = getAssetOwnerScope();
+  if (__layers) return loadTextureArrayAssetAsync({ ...props, __layers }, ownerScope);
+  if (__atlas) return loadTextureAtlasSlotAsync({ ...props, __atlas }, ownerScope);
 
   // A packed texture (p300 DD5) has no fileName, only its output
   if (!fileName && !__url) return getNoFileTexture(texOpts);
@@ -523,7 +540,7 @@ export const loadTextureAsync = async (props: TextureProps) => {
       loaderType = getTextureFileLoaderType(url, useHDRLoader);
       const { texture: result, report } = await loadTextureFileAsync(url, useHDRLoader);
       const loadedTexture = setTextureOpts(result, texOpts, userData, debugData);
-      return saveAndReport(loadedTexture, id, isPersistent, report, url);
+      return saveAndReport(loadedTexture, id, isPersistent, report, url, ownerScope);
     } else {
       // Cube texture (always loaded on the main thread)
       if (fileName.length !== 6) {
@@ -539,7 +556,9 @@ export const loadTextureAsync = async (props: TextureProps) => {
         userData,
         debugData
       );
-      return saveLoadedTexture(loadedTexture, id, isPersistent) as THREE.CubeTexture;
+      return runInAssetOwnerScope(ownerScope, () =>
+        saveLoadedTexture(loadedTexture, id, isPersistent)
+      ) as THREE.CubeTexture;
     }
   } catch (err) {
     const errorMsg = `Could not load texture in loadTextureAsync (id: "${id}", fileName: "${Array.isArray(fileName) ? fileName.join(', ') : fileName ?? ''}", ${path ? `path: "${path}", ` : ''}${url ? `url: "${url}", ` : ''}loaderType: "${loaderType}")`;

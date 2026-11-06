@@ -8,7 +8,7 @@ import {
   type Materials,
 } from '../../kernel/assets/Material';
 import { getTextureRegistry } from '../../kernel/assets/Texture';
-import { getAssetOwner } from '../../kernel/assets/AssetOwners';
+import { getAssetOwners, isSceneOwnerKey } from '../../kernel/assets/AssetOwners';
 import { getCompressedTextureByteSize } from '../../kernel/assets/debug/_dbg__AssetStats';
 
 /**
@@ -22,6 +22,20 @@ import { getCompressedTextureByteSize } from '../../kernel/assets/debug/_dbg__As
 /** The owner of assets registered before the first scene load (AssetOwners stores none). */
 export const BOOT_OWNER = 'boot';
 
+/**
+ * The owner an asset's bytes are listed under: its only owner, or for one several hold, the scene
+ * they're all of (an asset two streaming cells share is their scene's, not either cell's), else
+ * the latest of them (AssetOwners).
+ */
+export const getMemoryOwner = (asset: object): string => {
+  const owners = getAssetOwners(asset);
+  if (owners.length < 2) return owners[0] ?? BOOT_OWNER;
+  const latest = owners[owners.length - 1];
+  const hashAt = latest.indexOf('#');
+  const sceneId = hashAt < 0 ? latest : latest.slice(0, hashAt);
+  return owners.every((owner) => isSceneOwnerKey(owner, sceneId)) ? sceneId : latest;
+};
+
 export type GPUAssetKind = 'texture' | 'geometry';
 
 export type GPUAssetRow = {
@@ -30,7 +44,8 @@ export type GPUAssetRow = {
   kind: GPUAssetKind;
   /** Readable id: the registry id, or `materialId › slot` for a texture a material holds alone */
   id: string;
-  /** AssetOwners key: a scene id (later `sceneId#cellKey`, p353), or {@link BOOT_OWNER} */
+  /** AssetOwners key: a scene id or a streaming cell's `sceneId#cellKey` ({@link getMemoryOwner}),
+   * or {@link BOOT_OWNER} */
   owner: string;
   /** three's counted bytes, 0 when not on the GPU */
   bytes: number;
@@ -141,7 +156,7 @@ export const collectGPUAssets = (
       key: `texture:${id}`,
       kind: 'texture',
       id,
-      owner: getAssetOwner(entry.resource) ?? BOOT_OWNER,
+      owner: getMemoryOwner(entry.resource),
       bytes,
       uncounted: uncountedOf(entry.resource, bytes),
     });
@@ -156,7 +171,7 @@ export const collectGPUAssets = (
       key: `geometry:${id}`,
       kind: 'geometry',
       id,
-      owner: getAssetOwner(geometry) ?? BOOT_OWNER,
+      owner: getMemoryOwner(geometry),
       bytes,
       uncounted: 0,
     });
@@ -164,7 +179,7 @@ export const collectGPUAssets = (
 
   // After the registered textures, so a registered one a material holds is already counted
   for (const [materialId, entry] of Object.entries(getMaterialRegistry())) {
-    const owner = getAssetOwner(entry.resource) ?? BOOT_OWNER;
+    const owner = getMemoryOwner(entry.resource);
     forEachMaterialTexture(entry.resource, (texture, slot) => {
       if (counted.has(texture)) return;
       const bytes = bytesOf(texture);
@@ -200,7 +215,7 @@ export type OwnerSums = OwnerItem & {
 };
 
 export type OwnerGroup = OwnerSums & {
-  /** Per-cell sums (`sceneId#cellKey` owners, p353), largest first; empty until streaming lands */
+  /** Per-cell sums (streaming cells' `sceneId#cellKey` owners, p353), largest first */
   cells: OwnerSums[];
 };
 

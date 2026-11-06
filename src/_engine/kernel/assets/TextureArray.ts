@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { int, texture } from 'three/tsl';
-import { retagAssetOwner } from './AssetOwners';
+import { getAssetOwnerScope, retagAssetOwner, runInAssetOwnerScope } from './AssetOwners';
 import { hashStringFNV1a } from '../../utils/Hash';
 import { getRenderer } from '../render/Renderer';
 import { getGeneratedAppData } from '../scene/Scene';
@@ -342,7 +342,12 @@ const loadMembers = async (members: TextureArrayMember[]) => {
   throw failed.reason;
 };
 
-const build = async (id: string, props: BuildTextureArrayProps, keys: string[]) => {
+const build = async (
+  id: string,
+  props: BuildTextureArrayProps,
+  keys: string[],
+  ownerScope: string | null | undefined
+) => {
   const members = await loadMembers(props.members);
   try {
     const spec = getLayerSpec(members[0]);
@@ -378,7 +383,10 @@ const build = async (id: string, props: BuildTextureArrayProps, keys: string[]) 
     setTextureOpts(array, props.texOpts, { textureArray: info }, props.debugData);
     array.needsUpdate = true;
 
-    const saved = saveTexture(array, id, props.isPersistent);
+    // After the members' loads: registered in the build's owner scope (AssetOwners)
+    const saved = runInAssetOwnerScope(ownerScope, () =>
+      saveTexture(array, id, props.isPersistent)
+    );
     if (saved !== array) {
       array.dispose();
       return saved as TextureArray;
@@ -427,12 +435,20 @@ export const buildTextureArray = async (props: BuildTextureArrayProps): Promise<
   const registered = getRegisteredArray(id);
   if (registered) return registered;
 
+  const ownerScope = getAssetOwnerScope();
   let pending = pendingBuilds.get(id);
   if (!pending) {
-    pending = build(id, props, keys).finally(() => pendingBuilds.delete(id));
+    pending = build(id, props, keys, ownerScope).finally(() => pendingBuilds.delete(id));
     pendingBuilds.set(id, pending);
+    return pending;
   }
-  return pending;
+  // A shared build: the array goes to this call's owner too
+  return pending.then((array) =>
+    runInAssetOwnerScope(ownerScope, () => {
+      retagAssetOwner(array);
+      return array;
+    })
+  );
 };
 
 /**
