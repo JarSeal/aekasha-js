@@ -1665,19 +1665,6 @@
       "turnWithSky": "Function",
       "wrap24": "Function"
     },
-    "src/_engine/features/spatial/CellKey.ts": {
-      "CELL_AXIS_BITS": "Variable",
-      "CELL_AXIS_MAX": "Variable",
-      "CELL_AXIS_MIN": "Variable",
-      "CELL_AXIS_OFFSET": "Variable",
-      "CELL_AXIS_SIZE": "Variable",
-      "cellBounds": "Function",
-      "CellCoords": "Interface",
-      "isCellInRange": "Function",
-      "packCellKey": "Function",
-      "unpackCellKey": "Function",
-      "worldToCell": "Function"
-    },
     "src/_engine/features/spatial/LightObjectCullingSystem.ts": {
       "installLightObjectCulling": "Function",
       "lightObjectCullingSystem": "Function"
@@ -1749,6 +1736,75 @@
     },
     "src/_engine/features/spatial/SpatialSchema.ts": {
       "spatialSchemaPart": "Variable"
+    },
+    "src/_engine/features/streaming/Streaming.ts": {
+      "getStreamingBudgets": "Function",
+      "getStreamingCellState": "Function",
+      "getStreamingFocus": "Function",
+      "getStreamingFocusOverride": "Function",
+      "getStreamingRuntime": "Function",
+      "getStreamingUpdateInterval": "Function",
+      "installStreaming": "Function",
+      "registerStreamingCellContent": "Function",
+      "registerStreamingDebugGUI": "Function",
+      "setSceneStreamingSettings": "Function",
+      "setStreamingFocus": "Function",
+      "setStreamingFocusOverride": "Function",
+      "setStreamingUpdateInterval": "Function",
+      "StreamingCellState": "TypeAlias",
+      "StreamingFocus": "TypeAlias",
+      "streamingSceneHooks": "Variable",
+      "unregisterStreamingCellContent": "Function"
+    },
+    "src/_engine/features/streaming/StreamingCells.ts": {
+      "createStreamingRuntime": "Function",
+      "decideStreamingCells": "Function",
+      "dropStreamingCells": "Function",
+      "getStreamingCellEntityIds": "Function",
+      "loadStreamingCellsNowAsync": "Function",
+      "pumpStreamingCells": "Function",
+      "setStreamingTransitionListener": "Function",
+      "StreamingBudgets": "TypeAlias",
+      "StreamingCell": "TypeAlias",
+      "StreamingCellPhase": "TypeAlias",
+      "StreamingRuntime": "TypeAlias",
+      "StreamingStats": "TypeAlias",
+      "StreamingTransitionListener": "TypeAlias"
+    },
+    "src/_engine/features/streaming/StreamingContent.ts": {
+      "addStreamingCellContent": "Function",
+      "clearSceneStreamingContent": "Function",
+      "getStreamingCellContent": "Function",
+      "getStreamingCellKey": "Function",
+      "getStreamingCellKeyAt": "Function",
+      "isStreamingCellKey": "Function",
+      "removeStreamingCellContent": "Function",
+      "StreamingCellContent": "TypeAlias",
+      "StreamingCellContext": "TypeAlias"
+    },
+    "src/_engine/features/streaming/StreamingFeature.ts": {
+      "streaming": "Function"
+    },
+    "src/_engine/features/streaming/StreamingRings.ts": {
+      "decideStreamingLevel": "Function",
+      "DEEPEST_LOADED_LEVEL": "Variable",
+      "getCellEdgeDistance": "Function",
+      "isLoadedLevel": "Function",
+      "StreamingLevel": "TypeAlias, Variable"
+    },
+    "src/_engine/features/streaming/StreamingSchema.ts": {
+      "SceneStreamingSchema": "Variable",
+      "SceneStreamingSettings": "TypeAlias",
+      "StreamingRingsSchema": "Variable",
+      "streamingSchemaPart": "Variable"
+    },
+    "src/_engine/features/streaming/StreamingSettings.ts": {
+      "DEFAULT_STREAMING_RINGS": "Variable",
+      "getStreamingSettingsProblem": "Function",
+      "isStreamingCellSize": "Function",
+      "ResolvedStreamingSettings": "TypeAlias",
+      "resolveStreamingSettings": "Function",
+      "STREAMING_MIN_CELL_SIZE": "Variable"
     },
     "src/_engine/features/viewports/Viewports.ts": {
       "createViewport": "Function",
@@ -2990,6 +3046,7 @@
       "spatialGridIcon": "Reference",
       "speedometerIcon": "Reference",
       "stopIcon": "Reference",
+      "streamingIcon": "Reference",
       "textureIcon": "Reference",
       "thrashIcon": "Reference",
       "toolsIcon": "Reference",
@@ -3968,6 +4025,19 @@
       "isNotUndefinedNorNullOrThrow": "Function",
       "isNotUndefinedNorNullOrWarn": "Function"
     },
+    "src/_engine/utils/CellKey.ts": {
+      "CELL_AXIS_BITS": "Variable",
+      "CELL_AXIS_MAX": "Variable",
+      "CELL_AXIS_MIN": "Variable",
+      "CELL_AXIS_OFFSET": "Variable",
+      "CELL_AXIS_SIZE": "Variable",
+      "cellBounds": "Function",
+      "CellCoords": "Interface",
+      "isCellInRange": "Function",
+      "packCellKey": "Function",
+      "unpackCellKey": "Function",
+      "worldToCell": "Function"
+    },
     "src/_engine/utils/Constants.ts": {
       "FOUR_PX_TO_8K_LIST": "Variable",
       "textureMapKeys": "Variable"
@@ -4819,10 +4889,12 @@
       "PostFxParamMeta",
       "SceneAsset",
       "SceneSpatialDomainEntry",
+      "SceneStreamingSchema",
       "ShadowQuality",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
       "SkyBoxDefSchema",
+      "StreamingRingsSchema",
       "TEXTURE_SLOTS",
       "TextureArrayAsset",
       "TextureArrayAssetSchema",
@@ -4849,7 +4921,8 @@
       "lodSchemaPart",
       "postFxSchemaPart",
       "skyBoxSchemaPart",
-      "spatialSchemaPart"
+      "spatialSchemaPart",
+      "streamingSchemaPart"
     ],
     "aekasha/skybox": [
       "SKYBOX_PRESET_NAMES",
@@ -4910,6 +4983,24 @@
       "spatial",
       "unregisterSpatialDomain",
       "validateSpatialGridQuery"
+    ],
+    "aekasha/streaming": [
+      "DEFAULT_STREAMING_RINGS",
+      "STREAMING_MIN_CELL_SIZE",
+      "SceneStreamingSettings",
+      "StreamingCellContent",
+      "StreamingCellContext",
+      "StreamingCellState",
+      "StreamingFocus",
+      "getStreamingCellKey",
+      "getStreamingCellKeyAt",
+      "getStreamingCellState",
+      "getStreamingFocus",
+      "registerStreamingCellContent",
+      "setSceneStreamingSettings",
+      "setStreamingFocus",
+      "streaming",
+      "unregisterStreamingCellContent"
     ],
     "aekasha/toolkit/ecs": [
       "FollowObjectCameraParams",

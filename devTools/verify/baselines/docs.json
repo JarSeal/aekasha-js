@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3133,
-      "total": 3133
+      "documented": 3189,
+      "total": 3189
     },
     "members": {
       "documented": 1042,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3050,
-        "total": 3050
+        "documented": 3106,
+        "total": 3106
       },
       "members": {
         "documented": 888,
@@ -357,12 +357,26 @@
     },
     "engine/features/spatial": {
       "exports": {
-        "documented": 69,
-        "total": 69
+        "documented": 58,
+        "total": 58
       },
       "members": {
-        "documented": 40,
-        "total": 40
+        "documented": 37,
+        "total": 37
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/streaming": {
+      "exports": {
+        "documented": 56,
+        "total": 56
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
       },
       "undocumented": {
         "exports": [],
@@ -861,12 +875,12 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 44,
-        "total": 44
+        "documented": 55,
+        "total": 55
       },
       "members": {
-        "documented": 6,
-        "total": 6
+        "documented": 9,
+        "total": 9
       },
       "undocumented": {
         "exports": [],

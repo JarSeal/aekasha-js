@@ -3,7 +3,7 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1247
+      "gzip": 1248
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 149838,
@@ -59,7 +59,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7636,
-      "gzip": 3098
+      "gzip": 3101
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4096,
@@ -71,7 +71,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3405,
-      "gzip": 1631
+      "gzip": 1632
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -103,11 +103,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 16540,
-      "gzip": 6653
+      "gzip": 6656
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
-      "gzip": 24496
+      "gzip": 24497
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -142,8 +142,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 967211,
-      "gzip": 269735
+      "bytes": 967260,
+      "gzip": 269750
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -151,7 +151,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16879
+      "gzip": 16885
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -159,7 +159,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19019
+      "gzip": 19022
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -175,7 +175,7 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8595
+      "gzip": 8594
     },
     "uiKit.embed.js": {
       "bytes": 249,
@@ -185,8 +185,8 @@
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
-    "minified": 991137,
-    "gzip": 276015
+    "minified": 991186,
+    "gzip": 276031
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -202,7 +202,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2376,
-      "gzip": 1068
+      "gzip": 1071
     },
     "_engine/kernel/ecs": {
       "modules": 6,
@@ -211,8 +211,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7337,
-      "gzip": 3153
+      "minified": 7386,
+      "gzip": 3166
     },
     "_engine/kernel/input": {
       "modules": 1,

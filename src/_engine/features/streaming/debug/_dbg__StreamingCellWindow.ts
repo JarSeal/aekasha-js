@@ -76,7 +76,7 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
   const cellKey = Number(data?.cellKey);
   const cx = Number(data?.cx);
   const cz = Number(data?.cz);
-  const live = (label: string, get: () => string | number): PropertyGridItem => ({
+  const live = (label: string, get: () => string): PropertyGridItem => ({
     label,
     get,
     readonly: true,
@@ -88,17 +88,17 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       const cell = getCell(cellKey);
       return cell ? getCellStateLabel(cell) : 'UNLOADED';
     }),
-    live('Ring', () => getCell(cellKey)?.ring ?? '–'),
+    live('Ring', () => String(getCell(cellKey)?.ring ?? '–')),
     live('Edge distance (m)', () => getCell(cellKey)?.edgeDistance.toFixed(1) ?? '–'),
-    live('Load generation', () => getCell(cellKey)?.generation ?? '–'),
+    live('Load generation', () => String(getCell(cellKey)?.generation ?? '–')),
     live('Last load (ms)', () => {
       const ms = getCell(cellKey)?.lastLoadMs ?? -1;
       return ms < 0 ? '–' : ms.toFixed(1);
     }),
-    live('Content units', () => getCell(cellKey)?.units.length ?? 0),
+    live('Content units', () => String(getCell(cellKey)?.units.length ?? 0)),
     live('Entities', () => {
       const cell = getCell(cellKey);
-      return cell ? getStreamingCellEntityIds(cell).length : 0;
+      return String(cell ? getStreamingCellEntityIds(cell).length : 0);
     }),
     {
       label: 'Entity ids',

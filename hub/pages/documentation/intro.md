@@ -32,6 +32,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 | [`aekasha/skybox`](hub:documentation/aekasha/skybox)                       | Sky boxes, the day-night cycle and environment bakes.                                                                                                                                                                                                             |
 | [`aekasha/lod`](hub:documentation/aekasha/lod)                             | Levels of detail, LOD chains and impostors.                                                                                                                                                                                                                       |
 | [`aekasha/spatial`](hub:documentation/aekasha/spatial)                     | The spatial index and its domains.                                                                                                                                                                                                                                |
+| [`aekasha/streaming`](hub:documentation/aekasha/streaming)                 | World streaming: a scene's cells, loaded and unloaded around a focus.                                                                                                                                                                                             |
 | [`aekasha/instancing`](hub:documentation/aekasha/instancing)               | Instanced mesh pools.                                                                                                                                                                                                                                             |
 | [`aekasha/lines`](hub:documentation/aekasha/lines)                         | Lines and their segment builders.                                                                                                                                                                                                                                 |
 | [`aekasha/postfx`](hub:documentation/aekasha/postfx)                       | PostFX passes.                                                                                                                                                                                                                                                    |
@@ -46,7 +47,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 
 - Each feature's entry exports its factory, named after it: `physics()` (with
   `physicsTiers()`, the simulation tiers), `character()`, `skyBox()`, `lod()`, `spatial()`,
-  `instancing()`, `lines()`, `postFx()` and `viewports()`. A
+  `instancing()`, `lines()`, `postFx()`, `viewports()` and `streaming()`. A
   feature is installed only when [`InitEngine`](api:InitEngine)'s `features` lists it (see
   [How the app starts](hub:examples/quick-start#how-the-app-starts)), and a production build holds
   only what's listed.

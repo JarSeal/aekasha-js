@@ -81,9 +81,12 @@ const formatCounters = (rt: StreamingRuntime | null) => {
   if (!rt) return '';
   const s = rt.stats;
   return [
-    `loads: ${s.loadsStarted} started, ${s.loadsFinished} finished, ${s.loadsCancelled} cancelled`,
+    `loads started: ${s.loadsStarted}`,
+    `loads finished: ${s.loadsFinished}`,
+    `loads cancelled: ${s.loadsCancelled}`,
     `unloads: ${s.unloadsFinished}`,
-    `late results: ${s.lateResults}, content errors: ${s.unitErrors}`,
+    `late results: ${s.lateResults}`,
+    `content errors: ${s.unitErrors}`,
   ].join('\n');
 };
 
@@ -251,7 +254,7 @@ export const _createStreamingDebugGUI = () => {
             label: 'Since the load',
             readonly: true,
             multiline: true,
-            rows: 3,
+            rows: 6,
             interval: 'refresh',
           },
           getFocusFolder(teleport),

@@ -44,6 +44,8 @@ const INSET = 0.03;
 
 const lines: LineObject[] = [];
 const writers: LineWriter[] = [];
+/** Segments written into each line this frame: an empty line is hidden (a draw of no vertices) */
+const counts: number[] = [];
 let isEnabled = false;
 let isSystemRegistered = false;
 let height = 0.5;
@@ -60,6 +62,8 @@ const createOverlayLine = (name: OverlayLine) => {
     persistent: true,
   });
   markDebugHelper(line.object3D);
+  // Shown by the system once it has written something (an empty line would draw no vertices)
+  line.setVisible(false);
   return line;
 };
 
@@ -90,21 +94,30 @@ const writeCell = (writer: LineWriter, cell: StreamingCell, cellSize: number, y:
 
 const streamingOverlaySystem = (world: ECSWorld) => {
   if (!isEnabled || world !== getECSWorld()) return;
-  for (let i = 0; i < lines.length; i++) writers[i] = lines[i].beginWrite();
+  for (let i = 0; i < lines.length; i++) {
+    writers[i] = lines[i].beginWrite();
+    counts[i] = 0;
+  }
   const rt = getStreamingRuntime();
   if (rt) {
     const { cellSize } = rt.settings;
     for (const cell of rt.cells.values()) {
-      writeCell(writers[getCellLine(cell)], cell, cellSize, height);
+      const line = getCellLine(cell);
+      writeCell(writers[line], cell, cellSize, height);
+      counts[line] += 4;
     }
     if (!Number.isNaN(rt.focusX)) {
       const r = cellSize * 0.1;
       const focus = writers[5];
       focus.segment(rt.focusX - r, height, rt.focusZ, rt.focusX + r, height, rt.focusZ);
       focus.segment(rt.focusX, height, rt.focusZ - r, rt.focusX, height, rt.focusZ + r);
+      counts[5] = 2;
     }
   }
-  for (let i = 0; i < lines.length; i++) lines[i].endWrite();
+  for (let i = 0; i < lines.length; i++) {
+    lines[i].endWrite();
+    lines[i].setVisible(counts[i] > 0);
+  }
 };
 
 /** Whether the overlay is on. */
@@ -126,7 +139,8 @@ export const setStreamingOverlayEnabled = (enabled: boolean) => {
   if (enabled && !lines.length) {
     for (const name of LINE_ORDER) lines.push(createOverlayLine(name));
   }
-  for (let i = 0; i < lines.length; i++) lines[i].setVisible(enabled);
+  // Shown by the system once it has written something; hidden at once when turned off
+  if (!enabled) for (let i = 0; i < lines.length; i++) lines[i].setVisible(false);
   if (enabled && !isSystemRegistered) {
     isSystemRegistered = true;
     ECSWorld.registerPlugin((w) => {

@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "streamingGrid",
+  "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
+  "name": "Streaming grid",
+  "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m, each a procedural terrain block with scattered rocks and crates registered as code content. The camera flies across it and the cells around it load and unload; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+  "cameras": [
+    {
+      "camProps": {
+        "type": "PERSPECTIVE",
+        "fov": 55,
+        "near": 0.5,
+        "far": 1500,
+        "position": { "x": -560, "y": 60, "z": 32 },
+        "lookAtPoint": { "x": -460, "y": 20, "z": 32 },
+        "active": true
+      },
+      "entityOpts": {
+        "appId": "streamingGridCamera",
+        "debugData": {
+          "name": "Streaming grid flight camera",
+          "description": "The main camera, so the streaming focus: streamingGrid.ts flies it across the grid (or hovers it on a cell boundary). Watch from the debug camera to see the cells load around it."
+        }
+      }
+    }
+  ],
+  "lights": [
+    {
+      "lightProps": { "type": "AMBIENT", "color": "#dfe8ff", "intensity": 0.6 },
+      "entityOpts": { "appId": "streamingGridAmbient" }
+    },
+    {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 2.2,
+        "position": { "x": 40, "y": 60, "z": 30 },
+        "targetPos": { "x": 0, "y": 0, "z": 0 },
+        "castShadow": false
+      },
+      "entityOpts": { "appId": "streamingGridSun" }
+    }
+  ],
+  "skyboxes": ["basicSkybox"],
+  "streaming": { "cellSize": 64, "rings": { "resident": 1, "nearby": 2, "far": 4 } }
+}

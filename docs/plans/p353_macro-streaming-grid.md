@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -111,9 +111,9 @@ Mesh merge groups (p372) never cross a cell: `AUTO` group cell sizes divide `cel
 explicit group whose members span cells is warned about, so a cell unloads its groups whole. A
 cell's groups are what p376's HLOD proxies simplify for the `FAR` state (§3.3).
 
-Code-defined content registers per cell: `registerStreamingCellContent(sceneId, cellKey, { load,
-unload })`, where `load` returns the created entity ids. That's Phase 1's whole content model,
-before the JSON path exists.
+Code-defined content registers per cell: `registerStreamingCellContent({ sceneId, cellKey, load,
+unload? })` (one object, the coding standards' options rule; Phase 1 as built), where `load`
+returns the created entity ids. That's Phase 1's whole content model, before the JSON path exists.
 
 ### 3.2 Build-time manifest
 
@@ -402,7 +402,7 @@ Findings, which §5 now follows:
    textures. These numbers are the dev build's; the GPU side doesn't change in production, and the
    JS node builds can only get faster.
 
-### Phase 1 — Cells and the state machine (code content)
+### Phase 1 — Cells and the state machine (code content) — done
 
 1. The `streaming()` feature (its install, entry, schema part, a `sbp.config.ts` budget line) and
    the cell maths in `src/_engine/utils/` unless p372 moved it (§1).
@@ -414,6 +414,90 @@ Findings, which §5 now follows:
 **Exit:** a test scene with a 16 × 16 grid of code-registered cells (procedural terrain blocks
 with scattered props) streams while flying across it, with no frame over 33 ms caused by
 streaming and no thrashing when hovering on a boundary.
+
+As built (the feature's notes: `src/_engine/features/streaming/CLAUDE.md`; the Hub's Streaming
+feature page, `hub/pages/features/streaming/`):
+
+- **Files.** `StreamingFeature.ts` (`streaming()`, listed last in the template, after
+  `viewports()`, so `isInstalled` sees `spatial()`, `lod()` and `lines()`), `StreamingSchema.ts`
+  (`streamingSchemaPart`, on `aekasha/schemas`; zod), `StreamingSettings.ts` (the defaults and
+  checks without zod: the schema's refine and `setSceneStreamingSettings` share them, so a build
+  ships no schema), `StreamingRings.ts` (pure level maths), `StreamingCells.ts` (the machine, no
+  engine state, tested with its own clock), `StreamingContent.ts` (the registry and the cell keys),
+  `Streaming.ts` (the system, the scene hooks, the focus, the public API), `debug/`. The cell maths
+  moved to `src/_engine/utils/CellKey.ts` (p372 hadn't). `SceneData.streaming` is typed with
+  `import type`.
+- **Settings.** `streaming: { cellSize, rings?: { resident, nearby, far }, margin? }`, each ring
+  a state's outermost ring in cells (defaults 1, 2, 5), `resident <= nearby <= far` (equal rings
+  give the state between no cells), unknown fields rejected. In code:
+  `setSceneStreamingSettings(sceneId, settings | null | undefined)`, over the JSON's, kept across
+  loads (read in the `created` hook, so the scene's code can set them). The budgets are a new
+  `AppConfig.streaming` (`updateIntervalFrames` 10, `maxConcurrentLoads` 2, `maxCreateMsPerFrame`
+  2), read at the install; the debug tab edits them live.
+- **Thresholds.** A cell is promoted to the nearest level whose ring holds it (`ring <=
+rings[level]`) and demoted once the focus is more than `rings[level] × cellSize + margin` from
+  its edge (Chebyshev, metres), to the nearest level that still keeps it. `FAR` loads nothing
+  until Phase 5 (`DEEPEST_LOADED_LEVEL = NEARBY`, one constant): a cell wanted `FAR` unloads.
+- **Budgets.** `maxCreateMsPerFrame` is checked before each content unit, for loads and again for
+  unloads; a frame always runs at least one of each (neither starves), and a unit started under
+  budget runs to its end, so a frame can go over by one unit. Loads go nearest first, unloads
+  farthest first.
+- **Cancellation.** A `LOADING` cell no longer wanted skips its units not started and unloads what
+  finished; an async unit that resolves after (a stale generation) is unloaded at once and counted
+  (`lateResults`). `ctx.isCurrent()` lets a `load` stop after an `await`. A cell wanted again while
+  it unloads finishes the unload, then loads again. A `load` that throws, rejects or returns no id
+  array fails its unit (`unitErrors`), and the cell still loads.
+- **Content.** `registerStreamingCellContent({ sceneId, cellKey, load, unload? })` and
+  `unregisterStreamingCellContent(content)` (the same object); `getStreamingCellKey(cx, cz)`,
+  `getStreamingCellKeyAt(x, z, cellSize)`, `getStreamingCellState(cellKey)`. A scene's
+  registrations are dropped on its exit (its code registers them on every load). Without `unload`
+  the returned entities are deleted.
+- **Focus.** `setStreamingFocus(entityId | { x, z } | null)`, the main camera by default, kept
+  across loads; while its entity doesn't exist the cells keep their states.
+- **Scene loads.** The `created` hook builds the machine and loads every wanted cell with no
+  budget, awaited; `exit` (reverse install order, so before physics' entities) unloads every
+  cell and drops the scene's registrations. Nothing streams between `loadStart` and `loadSettled`.
+- **Debug.** The Streaming tab, cell window and overlay as §7, a new built-in icon `streaming`
+  (`streaming-cells.svg`: no existing one fit, and the spatial index's would put two identical
+  icons on the rail), a debug-only focus override (`setStreamingFocusOverride`: Freeze focus,
+  Teleport focus to cell and `?streamingFocus=x,z`, read in the install in the debug env and prod
+  test mode) and a transition listener on the machine (the cell window's history; production
+  code keeps none). Not yet: the priming stalls and oversized uploads rows (Phase 2, nothing to
+  count before priming exists), and per-cell memory (Phase 2's owner keys).
+- **The determinism probe doesn't freeze the focus yet** (§6): the probe is physics' debug code,
+  and freezing a `streaming()` focus from it needs a kernel seam (a feature imports no other
+  feature's code). Phase 1's content has no physics, so it moved to Phase 4.
+- **The test scene** is the app's `streamingGrid` (`src/app/scenes/streamingGrid/`, in
+  `OTHER_HUB_SCENES` for its Hub image, the feature page's example): 16 × 16 cells of 64 m, rings
+  1 / 2 / 4, each three units: a terrain block (`generateTerrain` with the world's height field as
+  its `heightModifier`, so neighbours share their edges; its own geometry, deleted by the unit's
+  `unload`) and two units of scattered rocks and crates on shared geometries and materials. The
+  main camera flies along row 0, hovers across the x = 128 boundary or stays (its scene tab,
+  `streamingGridDemo`). `scenes.config.ts`: no snapshot (which cells have their props depends on
+  frame timing), and the debugger configuration shoots the Streaming tab and a cell window
+  (unstable shots: live readouts).
+
+**Measured** (2026-11-06, Apple M2, Chrome 156 headless, the dev server with
+`?isDebug=true&aekTest=true&startScene=streamingGrid`: the test bridge's fixed 1/60 s frame step,
+so a speed is per frame; frames from `requestAnimationFrame`, main-thread blocks from a
+`MessageChannel` ping loop, as Phase 0):
+
+| backend | mode                           | frames over 33 ms | longest frame | longest main-thread block | loads / unloads |
+| ------- | ------------------------------ | ----------------- | ------------- | ------------------------- | --------------- |
+| WebGPU  | still, 5 s                     | 0                 | 16.7 ms       | 1-1.3 ms                  | 0 / 0           |
+| WebGPU  | flying 30 m/s, 15 s            | 0                 | 16.7 ms       | 4.5-12.2 ms               | 35 / 35         |
+| WebGPU  | flying 60 m/s, 15 s            | 0                 | 16.7 ms       | 3.1-8.3 ms                | 65-70 / 65      |
+| WebGPU  | hovering ±6 m on x = 128, 10 s | 0                 | 16.7 ms       | 0.7-7.2 ms                | 0 / 0           |
+| WebGL2  | still, 5 s                     | 0                 | 16.7 ms       | 3 ms                      | 0 / 0           |
+| WebGL2  | flying 30 m/s, 15 s            | 0                 | 33.3 ms (one) | 5.4 ms                    | 35 / 35         |
+| WebGL2  | flying 60 m/s, 15 s            | 0                 | 16.7 ms       | 4.6 ms                    | 65 / 65         |
+| WebGL2  | hovering ±6 m on x = 128, 10 s | 0                 | 16.7 ms       | 3.4 ms                    | 0 / 0           |
+
+The scene load creates the 25 cells around the camera. No load was cancelled and no unit failed.
+WebGL2's one two-vsync frame came with no main-thread block over 5.4 ms (so not the cell
+creation's JS), and the cells bring no new material structure (Phase 0 finding 1). The scene's
+cells are cheap (17 entities and one 16 × 16 terrain block each; WebGPU's ranges are three runs, WebGL2's one), so the budgets were never the
+bound; Phase 2's priming is what heavier cells will need.
 
 ### Phase 2 — Ownership and release
 
@@ -432,6 +516,11 @@ Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1
 The `STREAMING` domain and re-owning (§4.3), per-cell tiers with p352 (§6.1, which took over
 p352's Phase 5): the cell-over-policy rule, joint group owners, the create-time tier, and the step
 or frame decision (§6).
+
+Also (moved from Phase 1): the determinism probe freezes the streaming focus (§6). The probe is
+`physics()`'s debug code and can't import `streaming()`, so it needs a kernel seam, eg. a small
+`@internal` registry of freeze callbacks in `kernel/` that the probe calls when it arms and
+disarms and `streaming()` adds one to (holding `focusOverride` at the last decided focus).
 
 Needs only Phase 1 (cells and code-registered content); Phases 2-3 aren't prerequisites, so this
 phase can run right after Phase 1 if the physics side is wanted first.

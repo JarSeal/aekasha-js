@@ -159,6 +159,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 | `?isProdTest=true`      | Production behavior with a subset of the debug tools.                                                                            |
 | `?startScene=<sceneId>` | With either of the above, starts in that scene instead of the usual start scene (eg. `?isDebug=true&startScene=examplePhysics`). |
 | `?physicsProbe=N`       | Freezes physics N steps after each scene load and logs a state hash diff.                                                        |
+| `?streamingFocus=x,z`   | With either of the first two, holds a streaming scene's focus at that point (metres) from its first load.                        |
 | `?aekTest=true`         | Installs the test bridge (`window.__AEK_TEST__`) that `yarn verify:scenes` drives, and a fixed 1/60 s frame clock.               |
 
 ---
@@ -176,7 +177,7 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   │                   # lights, meshes, input
 │   │   ├── features/       # A folder per opt-in feature, with its entry (aekasha/physics,
 │   │   │                   # …), worker and debug/: physics, character, skybox, lod,
-│   │   │                   # spatial, instancing, lines, postfx, viewports
+│   │   │                   # spatial, instancing, lines, postfx, viewports, streaming
 │   │   ├── ui/             # The UI kit (aekasha/ui): core/ (CMP, HUD, icons), components/,
 │   │   │                   # overlays/ (windows, dialogs, toasts, tooltips, menus, the
 │   │   │                   # command palette), forms/ (fields, value editors, property

@@ -29,7 +29,7 @@ export type StreamingCellContext = {
 };
 
 /**
- * A unit of a scene's cell's content ({@link registerStreamingCellContent}): `load` creates it
+ * A unit of a scene's cell's content (`registerStreamingCellContent`): `load` creates it
  * when the cell loads and returns the ids of the entities it created, `unload` takes it down when
  * the cell unloads. Without `unload`, the entities `load` returned are deleted.
  */
@@ -47,7 +47,7 @@ export type StreamingCellContent = {
 };
 
 /**
- * A streaming cell's key from its indices: the key {@link registerStreamingCellContent} takes.
+ * A streaming cell's key from its indices: the key `registerStreamingCellContent` takes.
  * A cell spans `[cx × cellSize, (cx + 1) × cellSize)` on x, and the same on z. Throws outside
  * ±65,536 cells.
  * @example
