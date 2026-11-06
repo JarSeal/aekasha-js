@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -188,12 +188,19 @@ about 0.1 µs per member (p616 measured `FOLIAGE`'s 1,500 at 113-158 µs), once 
 A cell's textures and pipelines are primed while it's `NEARBY`, before it's close enough to see in
 detail:
 
-- `initTexture` per new texture and `compileAsync` per new material, spread over frames by
-  `maxPrimeMsPerFrame` (default 2 ms), measured, not assumed (Phase 0). three r187's
-  `compileAsync` slices itself at 8 ms, so a 2 ms budget means compiling a cell's materials one
-  `compileAsync` call (one material's stand-in) per frame, not one call per cell; under PostFX the
-  cell compiles through the render pipeline's compiler in the compile queue (`preWarmMesh`'s
-  path), or its first visible frame compiles again (§1).
+- `initTexture` per new texture, spread over frames by `maxPrimeMsPerFrame` (default 2 ms,
+  Phase 0 finding 5): textures upload one after another while the frame is under budget, and one
+  over it (an uncompressed texture over 1024² on WebGL2: 35-141 ms, the call can't be split) gets
+  a frame of its own and is counted in the debug tab.
+- `compileAsync` for the cell's **new material structures** only (finding 1: a material whose
+  structure is compiled costs ~nothing), all in **one** call per cell (one stand-in per
+  structure) in the compile queue, through the render pipeline's compiler under PostFX
+  (`preWarmMesh`'s path), or its first visible frame compiles again (§1, finding 3). three r187's
+  own 8 ms slicing keeps each frame's block at ≤ 17 ms, and one call is 2.5-3× faster than one per
+  frame (finding 4), so no ms budget applies to compiles.
+- On WebGL2 under PostFX, a cell's new structures first draw a few per frame even when primed
+  (finding 7: 8 at once cost a 67-183 ms frame in the GPU process). Phase 2 measures how many per
+  frame.
 - A cell is promoted to `RESIDENT` only once primed. If the focus outruns priming (a fast vehicle),
   the cell is promoted anyway and the stall is counted in the debug tab, which is the signal to
   widen the rings.
@@ -270,7 +277,8 @@ Constraints from p352 as built (each needs an answer in Phase 4):
 A "Streaming" drawer tab (`features/streaming/debug/_dbg__Streaming.ts`, registered from the
 feature's install with `if (IS_DEBUG_ENV) ctx.onDebug(…)` as `lod()` does; a `streamingControls`
 id in `DEFAULT_DEBUG_DRAWER_TAB_ORDER`): `createDebuggerTab` with a pane (the kit's property grid)
-for the focus cell, per-state cell counts, the queue, loads in flight, priming stalls and the
+for the focus cell, per-state cell counts, the queue, loads in flight, priming stalls, oversized
+uploads (an uncompressed texture over 1024² in cell content, Phase 0 finding 5) and the
 settings, and a `debuggerListCMP` of cells (state, last load time, per-cell memory from the GPU
 memory tab's owners, §4.2). A cell row opens a cell window (a window kind,
 `registerDraggableWindowKind` at the `_dbg__` module's load, its grid `createDebugWindowGrid`):
@@ -294,11 +302,105 @@ prod test mode, so a production build never reads it).
 
 ## 9. Phases
 
-### Phase 0 — Measure (half a day)
+### Phase 0 — Measure (half a day) — done
 
 `initTexture` and `compileAsync` cost per texture size and material type on WebGPU and the WebGL2
 fallback, in `largeWorld`, with PostFX on and off (three r187's slicing and pass compile, §1).
 Record the numbers here; they set §5's defaults.
+
+**Setup** (2026-11-06): Apple M2, macOS 26.5, Chrome 156 headless, vsync at 60 Hz, three r187,
+engine 6.1.1, the dev server with `?isProdTest=true&aekTest=true&startScene=largeWorld` (its frame:
+16.67 ms, no frame missed, the main thread busy ≤ 6-9 ms of it). WebGL2 is the same Chrome with
+`navigator.gpu` hidden, so ANGLE on Metal, not SwiftShader. A page probe on the app's own module
+instances: frames from `requestAnimationFrame`, main-thread blocks from a `MessageChannel` ping
+loop (vsync hides a block that fits in a frame's slack; the ping loop doesn't), 3 repeats each.
+A "new structure" carries a unique literal in its `positionNode` and its `opacityNode`, because
+three caches the vertex and fragment modules separately by their code (`Pipelines.js`): a literal
+in one stage only leaves the other shared and measures a third to a half of the cost. The
+pre-warm is `preWarmMesh`'s path (`runCompileAsync`, the pipeline's compiler under PostFX).
+Uncapped frames (`--disable-gpu-vsync`) don't work as a measure: the GPU queue backs up and
+`compileAsync`, which yields once a frame, takes 3-4× as long.
+
+**`initTexture`**, the call's main-thread ms (range of 3; with mips, without them ±30%):
+
+| size  | WebGPU RGBA8 | WebGPU ImageBitmap | WebGL2 RGBA8 | WebGL2 ImageBitmap |
+| ----- | ------------ | ------------------ | ------------ | ------------------ |
+| 256²  | 0.4-0.6      | 0.2-0.5            | 0.1          | 0.1-0.2            |
+| 512²  | 1-1.2        | 0.5-0.7            | 0.1-0.2      | 0.5-0.6            |
+| 1024² | 0.8-1.5      | 0.8-1.3            | 0.2-1.1      | 1.4-2.5            |
+| 2048² | 2-4.5        | 1.9-4.7            | 44-46        | 34-40              |
+| 4096² | 7.5-13.5     | 6-13.5             | 107-116      | 129-141            |
+
+KTX2 (the asset pipeline's UASTC, transcoded to ASTC 4×4): 864², 10 mips: WebGPU 0.8-1.2 ms,
+WebGL2 0.1-0.2 ms. No WebGPU upload missed a frame; every WebGL2 upload of 2048² and up did (one
+33-50 ms frame at 2048², a 100-133 ms one at 4096²). One call can't be split.
+
+**Compiles**, one material on a 32×16 sphere, cast and receive shadows, in view (median ms). "Cold":
+the longest frame when it's first drawn without a pre-warm. "Pre-warm": the pre-warm's wall time.
+"Depth 0": the longest first-draw frame after a direct compile only, under PostFX.
+
+| material             | WebGPU PostFX on: cold / pre-warm / depth 0 | WebGPU off: cold / pre-warm | WebGL2 PostFX on: cold / pre-warm / depth 0 | WebGL2 off: cold / pre-warm |
+| -------------------- | ------------------------------------------- | --------------------------- | ------------------------------------------- | --------------------------- |
+| basic                | 83 / 166 / 17                               | 33 / 69                     | 100 / 117 / 50                              | 33 / 50                     |
+| Lambert              | 317 / 396 / 117                             | 167 / 219                   | 233 / 267 / 117                             | 100 / 133                   |
+| Phong (flat)         | 167 / 388 / 117                             | 183 / 219                   | 250 / 300 / 117                             | 133 / 150                   |
+| standard             | 283 / 617 / 217                             | 283 / 346                   | 383 / 433 / 183                             | 183 / 233                   |
+| standard, 3 maps     | 300 / 643 / 250                             | 300 / 355                   | 400 / 466 / 200                             | 200 / 234                   |
+| physical (clearcoat) | 317 / 735 / 250                             | 333 / 380                   | 467 / 550 / 233                             | 233 / 267                   |
+| standard, TSL noise  | 283 / 650 / 233                             | 300 / 345                   | 400 / 450 / 200                             | 183 / 251                   |
+| standard, instanced  | 283 / 555 / 267                             | 300 / 353                   | 383 / 433 / 200                             | 183 / 217                   |
+| standard, known      | 17 / 12 / 17                                | 17 / 6.5                    | 17 / 50 / 17                                | 17 / 17                     |
+
+("Known": a new material of a structure already compiled, another colour.) After a pre-warm every
+row's first draw is clean (16.7 ms), shadows included, and no frame is missed during it: the
+longest main-thread block is ≤ 11 ms (physical), ≤ 7.6 ms for the rest.
+
+**A cell**: 8 new structures (4 standard, 4 standard with 3 maps), pre-warmed together:
+
+| backend | PostFX | one `compileAsync` call  | one call per material, one per frame | first draw after    |
+| ------- | ------ | ------------------------ | ------------------------------------ | ------------------- |
+| WebGPU  | on     | 2.0-3.0 s, block ≤ 17 ms | 5.4-6.3 s, block ≤ 14 ms             | clean               |
+| WebGPU  | off    | 1.0-1.5 s, block ≤ 10 ms | 3.0 s, block ≤ 7 ms                  | clean               |
+| WebGL2  | on     | 1.4-1.5 s, block ≤ 13 ms | 3.9-4.6 s, block ≤ 8 ms              | one 67-183 ms frame |
+| WebGL2  | off    | 0.7-0.8 s, block ≤ 10 ms | 2.0-2.6 s, block ≤ 7 ms              | clean               |
+
+No frame was missed during any of them but one (a 34 ms block, WebGPU, PostFX off, once in 3).
+
+Findings, which §5 now follows:
+
+1. **The cost is per new shader structure, not per material.** A material of a known structure
+   costs 6-50 ms and no hitch, so a world drawing from a shared material set compiles almost
+   nothing when it streams; a cell's priming is about the structures it brings first.
+2. **A new structure must never be drawn cold:** 100-480 ms. On WebGPU the main thread is busy
+   only 5-20 ms of it (the stall is in the GPU process: three creates a render pipeline
+   synchronously on a draw), on WebGL2 all of it (GL compile and link). A main-thread budget like
+   `maxCreateMsPerFrame` sees WebGL2's stall but not WebGPU's.
+3. **Under PostFX the pre-warm has to go through the pipeline's compiler** (as §1 says): a depth-0
+   compile alone leaves a 117-267 ms first draw on WebGPU, 50-233 ms on WebGL2. Through the passes
+   it takes 1.1-2× the direct compile's wall time.
+4. **A ms budget can't slice compiles; three's 8 ms slice already does.** During a pre-warm the
+   main thread blocks ≤ 11 ms per material, ≤ 17 ms for a cell's 8 in one call, missing no frame
+   at 60 Hz. Compiling one material per frame doesn't lower that much, and takes 2.5-3× as long
+   (three builds up to 16 pipelines at once only inside one call). So a cell compiles its new
+   structures in **one** call, and `maxPrimeMsPerFrame` budgets textures only.
+5. **Textures:** under 2 ms up to 1024² on both backends, which fits a 2 ms budget. Above that,
+   WebGPU stays at 2-14 ms, and WebGL2 can't avoid a stall (35-141 ms, one call). KTX2 costs
+   ≤ 1.2 ms, so cell content should ship KTX2 (`yarn assets`), and the Streaming tab flags an
+   uncompressed texture over 1024².
+6. **The shadow pass, never pre-warmed, costs nothing visible on WebGPU:** a cell's 8 new
+   structures draw clean the first time.
+7. **WebGL2 under PostFX: a cell of 8 pre-warmed new structures still costs one 67-183 ms frame
+   when they first draw together.** The main thread is busy only ~2 ms of it, with shadows on or
+   off. Each structure alone draws clean, and so does the cell with PostFX off. So the GPU process
+   does something on the first draw into the PostFX targets that `compileAsync` doesn't prime.
+   Likely ANGLE's Metal backend building its pipeline state per program and target format; not
+   verified. Phase 2 measures how many new structures can first draw in one frame on WebGL2, and
+   spreads them.
+8. **Speed bound:** priming must end while the focus crosses the `NEARBY` ring (one cell). A cell
+   bringing 8 new structures takes up to 3 s (WebGPU, PostFX on), so at a 64 m `cellSize` the focus
+   can move ~21 m/s (75 km/h) without a stall. A cell of known structures costs only its
+   textures. These numbers are the dev build's; the GPU side doesn't change in production, and the
+   JS node builds can only get faster.
 
 ### Phase 1 — Cells and the state machine (code content)
 
@@ -315,7 +417,9 @@ streaming and no thrashing when hovering on a boundary.
 
 ### Phase 2 — Ownership and release
 
-`AssetOwners` owner sets, `releaseCellOwnedAssets` (§4.2), priming (§5).
+`AssetOwners` owner sets, `releaseCellOwnedAssets` (§4.2), priming (§5): first measure how many
+primed new structures can first draw in one frame on WebGL2 under PostFX (Phase 0 finding 7) and
+set the per-frame count from it.
 
 **Exit:** p345's snapshot after flying out and back is within noise of the snapshot before.
 
