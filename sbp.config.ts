@@ -55,8 +55,11 @@ const profiles: SbpProfile[] = [
         '_engine/features/skybox': 19 * KIB,
         '_engine/features/spatial': 7 * KIB,
         // p353 Phase 1: the cells, the state machine and code content (3.2 KiB gzip, six modules;
-        // the template lists every feature, so it's in the first download)
-        '_engine/features/streaming': 5 * KIB,
+        // the template lists every feature, so it's in the first download). Phase 2's priming
+        // (1.4 KiB, needed by every streaming scene in play) and Phase 3's data-unit barrier took
+        // it to 5.5 KiB: 5 → 6 KiB. Phase 3's JSON cell content loads on demand
+        // (`StreamingDataContent.js`, 0.8 KiB, only for a scene with a cell manifest).
+        '_engine/features/streaming': 6 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
         '_engine/kernel/assets': 13 * KIB,

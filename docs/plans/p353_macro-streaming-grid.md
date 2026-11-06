@@ -753,6 +753,40 @@ registries in `SceneDataLoader.test.ts`):
   `createNextSceneObject3Ds`' body, returning the created entity ids (lights first); the old name
   calls it.
 
+As built (section 3):
+
+- **The machine** (`StreamingCells.ts`): `rt.dataContent` (null by default; the tests set their
+  own) gives a cell's data units as `StreamingCellUnitSource`s (`{ content, waits }`), put ahead
+  of its code units in `beginLoad`. A unit with `waits` isn't started while the cell has units in
+  flight: the pump goes on to the next cell (no budget spent) and comes back on a later frame;
+  `loadStreamingCellsNowAsync` now loads each cell as its own async run (the cells side by side),
+  awaiting the units before a waiting one. A load cancelled meanwhile never runs it.
+- **The data units** (`StreamingDataContent.ts`, `createStreamingDataContent(sceneId, manifest)`,
+  built per scene load in `created`, a cell's units on its first load and kept): an async asset
+  unit (`loadSceneAssetsAsync` with the cell's owner key; returns no entities) when the cell has
+  cell-only assets, then its lights and its own meshes 8 entries a unit (`createSceneObject3Ds`),
+  the first waiting for the assets, then a unit per shared mesh. "Shared" is a mesh index more
+  than one cell lists (the gather's oversized meshes). Its unit counts holders per scene
+  (`shared`): the first holder creates it and gets its id (so that cell holds and primes it), the
+  others get none, and every unload (a custom `unload`, so a holder with no ids is called too)
+  counts down, the last deleting the entity. A holder that unloads first lets go of its draw hold
+  (`primer.release`).
+- **On demand:** `Streaming.ts` loads `StreamingDataContent.ts` with an `import()` in `created`,
+  before it sets any state, only for a scene with a manifest (its own chunk, 0.8 KiB gzip). `yarn
+  sbp`: the streaming group's first download is 5.5 KiB (Phase 2's priming, 1.4 KiB, had taken it
+  over Phase 1's 5 KiB budget unnoticed), so its budget is 6 KiB (`sbp.config.ts`, with the
+  reason). The bundle baseline (`yarn verify:baselines --update`) is recorded in section 4.
+- **The runtime** (`Streaming.ts`): `sceneRegistered` keeps each scene's `__streaming`; `created`
+  checks D6 (a different `cellSize` throws, streaming off warns with the cell count) and hands the
+  machine the scene's data units; `getStreamingDataContent()` (`@internal`) for the debug tab.
+  `setSceneStreamingSettings` warns once when given `base` or `radii`.
+- **Tests:** `StreamingCells.test.ts`' barrier (the pump, a scene load's cells, a cancel while a
+  unit waits), `StreamingDataContent.test.ts` on the real kernel (the units' order and waits, a
+  shared mesh across two cells, a cell through the machine: its material in its owner key, its
+  entities deleted, its release run). A bare test world runs no kernel component hooks, so a
+  deleted mesh keeps its refs there: freeing the material is Phase 2's tested path. D6 isn't unit
+  tested (the scene hooks need the install); section 4's scene exercises the `created` path.
+
 **Exit:** `streamingGrid`'s JSON cell content streams as its code content does, its oversized
 landmark stays while any of its cells is loaded, the generated base holds none of the cell
 content, and Phase 2's flight out and back leaves the registries and p345's snapshot as before.

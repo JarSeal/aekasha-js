@@ -31,6 +31,8 @@ import {
   isStreamingCellKey,
   removeStreamingCellContent,
 } from './StreamingContent';
+import type { StreamingDataContent } from './StreamingDataContent';
+import type { StreamingManifest } from './StreamingManifest';
 import { createStreamingPrimer, type StreamingPrimeBudgets } from './StreamingPriming';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
@@ -64,6 +66,11 @@ const primer = createStreamingPrimer(primeBudgets);
 const dataSettings = new Map<string, SceneStreamingSettings>();
 /** Settings set in code, by scene id: over the data's; null turns a scene's streaming off */
 const codeSettings = new Map<string, SceneStreamingSettings | null>();
+/** The gathered scenes' cell manifests (their JSON cell content), by scene id */
+const manifests = new Map<string, StreamingManifest>();
+/** The current scene's JSON cell content, or null */
+let dataContent: StreamingDataContent | null = null;
+let hasWarnedBuildTimeFields = false;
 
 let focus: StreamingFocus | null = null;
 /** The debug tools' focus (frozen, teleported, `?streamingFocus`): over `focus` while set */
@@ -169,6 +176,12 @@ export const setSceneStreamingSettings = (
   if (settings) {
     const problem = getStreamingSettingsProblem(settings);
     if (problem) throw new Error(`setSceneStreamingSettings('${sceneId}'): ${problem}`);
+    if ((settings.base || settings.radii) && !hasWarnedBuildTimeFields) {
+      hasWarnedBuildTimeFields = true;
+      lwarn(
+        `setSceneStreamingSettings('${sceneId}'): base and radii are read by the gather only (they cut the scene JSON's content into cells); ignored here.`
+      );
+    }
   }
   codeSettings.set(
     sceneId,
@@ -268,6 +281,13 @@ export const getStreamingCellState = (cellKey: number): StreamingCellState => {
 export const getStreamingRuntime = (): StreamingRuntime | null => runtime;
 
 /**
+ * The current scene's JSON cell content (its manifest and shared meshes), or null (the debug tab
+ * reads it).
+ * @internal
+ */
+export const getStreamingDataContent = (): StreamingDataContent | null => dataContent;
+
+/**
  * The loading budgets in use (the debug tab edits them).
  * @internal
  */
@@ -343,12 +363,31 @@ const streamingSystem = (world: ECSWorld) => {
   pumpStreamingCells(runtime, budgets);
 };
 
-/** The `created` hook's load: the scene's machine, and its cells around the focus at once. */
+/** The `created` hook's load: the scene's machine with its JSON cell content, and its cells
+ * around the focus at once. A scene whose JSON content was cut into cells streams at the cell size
+ * it was cut at (p353 Phase 3 D6). */
 const loadSceneCellsAsync = async (sceneId: string) => {
   const settings = getSceneSettings(sceneId);
-  if (!settings) return;
+  const manifest = manifests.get(sceneId);
+  if (!settings) {
+    if (manifest) {
+      lwarn(
+        `The scene '${sceneId}' has streaming turned off in code, so its JSON content in cells (${Object.keys(manifest.cells).length}) doesn't load.`
+      );
+    }
+    return;
+  }
   const problem = getStreamingSettingsProblem(settings);
   if (problem) throw new Error(`The scene '${sceneId}' can't stream: ${problem}`);
+  if (manifest && manifest.cellSize !== settings.cellSize) {
+    throw new Error(
+      `The scene '${sceneId}' can't stream at a cellSize of ${settings.cellSize}: its JSON content was cut into cells of ${manifest.cellSize} (set in code, the JSON's is the gathered one).`
+    );
+  }
+  // Only for a scene whose JSON content is in cells: an app streaming code content alone never
+  // loads it (the import registry's pattern, p613 D4). Before any state is set, so nothing changes
+  // across the await.
+  const dataModule = manifest ? await import('./StreamingDataContent') : null;
   const world = getECSWorld();
   const rt = createStreamingRuntime(
     sceneId,
@@ -358,6 +397,11 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     createCellRelease(sceneId),
     primer
   );
+  if (manifest && dataModule) {
+    const content = dataModule.createStreamingDataContent(sceneId, manifest);
+    dataContent = content;
+    rt.dataContent = content.getUnits;
+  }
   runtime = rt;
   const at = readFocus(world);
   if (!at) return;
@@ -374,6 +418,7 @@ const loadSceneCellsAsync = async (sceneId: string) => {
 export const streamingSceneHooks: SceneHooks = {
   sceneRegistered: (sceneId, data) => {
     if (data.streaming) dataSettings.set(sceneId, data.streaming);
+    if (data.__streaming) manifests.set(sceneId, data.__streaming);
   },
   loadStart: () => {
     isSceneLoading = true;
@@ -384,6 +429,7 @@ export const streamingSceneHooks: SceneHooks = {
       dropStreamingCells(runtime);
     }
     runtime = null;
+    dataContent = null;
     // Its code registers its content again on its next load
     if (prevSceneId !== undefined) clearSceneStreamingContent(prevSceneId);
   },

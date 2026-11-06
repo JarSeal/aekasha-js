@@ -43,6 +43,21 @@ type CellUnit = {
   content: StreamingCellContent;
   state: number;
   entityIds: readonly number[] | null;
+  /** Not started while the cell has units in flight (a JSON cell's entities wait for its assets) */
+  waits: boolean;
+};
+
+/**
+ * A unit of a cell's content from the scene's data (its JSON content, `StreamingDataContent.ts`),
+ * run ahead of the code-registered units: `waits` holds it, and every unit after it, until the
+ * units before it have settled.
+ * @internal
+ */
+export type StreamingCellUnitSource = {
+  /** The unit. */
+  readonly content: StreamingCellContent;
+  /** Whether it waits for the units before it (an async one: the cell's assets). */
+  readonly waits: boolean;
 };
 
 /**
@@ -203,6 +218,9 @@ export type StreamingRuntime = {
   isDropped: boolean;
   /** Primes the cells streamed in during play, or null (shown as soon as they're loaded). */
   primer: StreamingPrimer | null;
+  /** A cell's units from the scene's data (its JSON content), run before the code-registered
+   * ones; null without any. */
+  dataContent: ((cellKey: number) => readonly StreamingCellUnitSource[]) | null;
 };
 
 /**
@@ -223,6 +241,7 @@ export const createStreamingRuntime = (
   now,
   releaseCellAssets,
   primer,
+  dataContent: null,
   isDropped: false,
   cells: new Map(),
   order: [],
@@ -448,11 +467,17 @@ const createCellContext = (
 const beginLoad = (rt: StreamingRuntime, cell: StreamingCell, primes: boolean) => {
   cell.generation++;
   cell.phase = 'LOADING';
-  cell.units = getStreamingCellContent(rt.sceneId, cell.key).map((content) => ({
-    content,
-    state: UNIT_PENDING,
-    entityIds: null,
-  }));
+  const units: CellUnit[] = [];
+  const dataUnits = rt.dataContent?.(cell.key);
+  if (dataUnits) {
+    for (const { content, waits } of dataUnits) {
+      units.push({ content, waits, state: UNIT_PENDING, entityIds: null });
+    }
+  }
+  for (const content of getStreamingCellContent(rt.sceneId, cell.key)) {
+    units.push({ content, waits: false, state: UNIT_PENDING, entityIds: null });
+  }
+  cell.units = units;
   cell.nextUnit = 0;
   cell.inFlight = 0;
   cell.loadStartedAt = rt.now();
@@ -480,6 +505,10 @@ const notIdsError = (value: unknown) =>
 
 const isPromise = (value: unknown): value is Promise<readonly number[]> =>
   !!value && typeof (value as Promise<unknown>).then === 'function';
+
+/** Whether the cell's next unit has to wait for the units in flight before it. */
+const isNextUnitWaiting = (cell: StreamingCell) =>
+  cell.inFlight > 0 && cell.units[cell.nextUnit].waits;
 
 /** Runs the cell's next unit. Returns the promise of an async one (settled either way), else
  * null. */
@@ -634,6 +663,8 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
     const cell = order[i];
     if (cell.phase !== 'LOADING') continue;
     while (cell.phase === 'LOADING' && cell.nextUnit < cell.units.length) {
+      // Its turn comes once the units before it are in (a later frame)
+      if (isNextUnitWaiting(cell)) break;
       if (hasWorked && rt.now() - start >= budgets.maxCreateMsPerFrame) break loads;
       void runNextUnit(rt, cell);
       hasWorked = true;
@@ -658,24 +689,38 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
   }
 };
 
+/** Runs a cell's units with no budget, awaiting its units in flight where a unit waits for
+ * them, and resolves when its async units have settled. */
+const loadCellNowAsync = async (rt: StreamingRuntime, cell: StreamingCell) => {
+  let pending: Promise<void>[] = [];
+  while (isCellLoading(cell) && cell.nextUnit < cell.units.length) {
+    if (isNextUnitWaiting(cell)) {
+      await Promise.all(pending);
+      pending = [];
+      continue;
+    }
+    const promise = runNextUnit(rt, cell);
+    if (promise) pending.push(promise);
+  }
+  finishLoadIfDone(rt, cell);
+  await Promise.all(pending);
+};
+
 /**
  * Loads every cell the last decision wants loaded at once, with no budget, and resolves when
- * their async units have settled: a scene load's cells around the focus (p353 §4.1).
+ * their async units have settled: a scene load's cells around the focus (p353 §4.1). The cells
+ * load side by side; within one, a unit that waits runs once the units before it are in.
  * @internal
  */
 export const loadStreamingCellsNowAsync = async (rt: StreamingRuntime) => {
-  const pending: Promise<void>[] = [];
+  const loads: Promise<void>[] = [];
   for (const cell of rt.order) {
     if (cell.phase !== 'UNLOADED' || !isLoadedLevel(cell.level)) continue;
     // Shown with the scene, like its other content (the load screen hides the first draws)
     beginLoad(rt, cell, false);
-    while (isCellLoading(cell) && cell.nextUnit < cell.units.length) {
-      const promise = runNextUnit(rt, cell);
-      if (promise) pending.push(promise);
-    }
-    finishLoadIfDone(rt, cell);
+    loads.push(loadCellNowAsync(rt, cell));
   }
-  await Promise.all(pending);
+  await Promise.all(loads);
 };
 
 /**

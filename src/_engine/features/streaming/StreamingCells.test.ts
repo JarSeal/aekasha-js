@@ -531,3 +531,92 @@ describe('priming', () => {
     expect(log).toEqual([]);
   });
 });
+
+describe('data units and the barrier (p353 Phase 3)', () => {
+  const KEY = packCellKey(0, 0, 0);
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  /** A cell whose data units are an async "assets" unit the test resolves, then a unit that
+   * waits for it; a code unit follows */
+  const setupData = () => {
+    const env = setup();
+    const { rt, world } = env;
+    const log: string[] = [];
+    let resolveAssets: () => void = () => {};
+    rt.dataContent = (cellKey) =>
+      cellKey !== KEY
+        ? []
+        : [
+            {
+              waits: false,
+              content: {
+                sceneId: rt.sceneId,
+                cellKey,
+                load: async () => {
+                  log.push('assets');
+                  await new Promise<void>((resolve) => (resolveAssets = resolve));
+                  return [];
+                },
+              },
+            },
+            {
+              waits: true,
+              content: {
+                sceneId: rt.sceneId,
+                cellKey,
+                load: () => {
+                  log.push('entities');
+                  return [world.createEntity()];
+                },
+              },
+            },
+          ];
+    add(rt, KEY, {
+      load: () => {
+        log.push('code');
+        return [];
+      },
+    });
+    return { ...env, log, resolve: () => resolveAssets() };
+  };
+
+  test('a waiting unit, and everything after it, starts once the units before it are in', async () => {
+    const { rt, log, pump, resolve } = setupData();
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    pump();
+    expect(log).toEqual(['assets']);
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADING');
+    resolve();
+    await flush();
+    pump();
+    expect(log).toEqual(['assets', 'entities', 'code']);
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+  });
+
+  test('a scene load’s cells wait the same way, and resolve once all is in', async () => {
+    const { rt, log, resolve } = setupData();
+    decideStreamingCells(rt, 32, 32);
+    const loading = loadStreamingCellsNowAsync(rt);
+    await flush();
+    expect(log).toEqual(['assets']);
+    resolve();
+    await loading;
+    expect(log).toEqual(['assets', 'entities', 'code']);
+    expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
+  });
+
+  test('a load cancelled while a unit waits never runs it', async () => {
+    const { rt, log, pump, resolve } = setupData();
+    decideStreamingCells(rt, 32, 32);
+    pump();
+    decideStreamingCells(rt, 5000, 5000);
+    pump();
+    resolve();
+    await flush();
+    pump();
+    expect(log).toEqual(['assets']);
+    expect(rt.stats.lateResults).toBe(1);
+    expect(rt.cells.has(KEY)).toBe(false);
+  });
+});
