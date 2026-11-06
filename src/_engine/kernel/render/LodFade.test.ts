@@ -36,8 +36,8 @@ const createDitheredMaterial = () => {
 const geometry = new THREE.PlaneGeometry();
 
 describe('LodFade', () => {
-  // docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md D2: three r187 shares
-  // one build between InstancedMeshes on a material, so the fade must bind per drawn object
+  // p058 D2 (docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md): three
+  // r187 shares one build between InstancedMeshes on a material, so the fade binds per drawn object
   it('binds an InstancedMesh fade per drawn object, a plain mesh none', () => {
     const material = createDitheredMaterial();
     const plain = new THREE.Mesh(geometry, material);

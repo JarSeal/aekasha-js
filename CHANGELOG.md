@@ -4,6 +4,36 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-06 — p058-shared-instanced-builds
+
+Shared instanced builds for the LOD fades and impostors (p058, a child of the LOD epic p350). three r187 shares one shader build between `InstancedMesh`es with the same material and attributes, but the fade mask and the octahedral impostor bound a per-mesh buffer when the shader was built, so 6.1.0 made their builds object-specific again: every dithered or impostor `InstancedMesh` built its own shaders. Both now bind per drawn object, and those meshes share builds like every other instanced mesh. The impostor bake also generates its atlas mips once instead of after every frame it copies. Nothing breaks.
+
+### Engine 6.1.1 (Sunset)
+
+**Changed**
+
+- The LOD fade mask binds an `InstancedMesh`'s `lodFade` attribute per drawn object (a `ReferenceAttributeNode` subclass, `kernel/render/LodFade.ts`), and the octahedral impostor reads three's own `referenceAttribute('instanceMatrix', 'mat4')`, so neither marks its builds object-specific. `lodShowcase` loads with 49 shader builds instead of 69 (18 instanced instead of 38, none object-specific), and a forced level switch there builds none instead of 3-5. An InstancedMesh entity's fade copy shares the mesh's build. The impostor's second instance-matrix buffer, its version sync and its `updateBefore` are gone.
+- An `InstancedMesh` on a dithered material without a fade of its own binds an opaque one, made once per mesh. It reads the per-object fade (`setLodObjectFade`) too, which an InstancedMesh entity fades by.
+- The impostor bakes generate each atlas's mips once, at the last copy into it (`mipmapsAutoUpdate`), instead of after every frame and pass (286 mip chains fewer per 12 × 12 octahedral bake). `lodShowcase`'s rock bake: about 61 → 57 ms of CPU time.
+
+**Fixed**
+
+- `createLodFadeAttribute` called after the mesh's first draw was ignored: the mesh drew whole. The attribute an earlier build bound becomes the mesh's own.
+- The LOD tab's impostor export no longer writes a plan citation into the exported JSONs' descriptions (`docs/issues/impostor-export-plan-citation.md`).
+
+### App 1.19.1 (Preschooler)
+
+**Changed**
+
+- The four exported impostors' eight JSONs (`largeWorldRockImpostor`, `largeWorldTreeCross`, `lodShowcaseKnotImpostor`, `lodShowcaseTreeCross`) lose the plan citation from their descriptions, as a new export writes them.
+
+### Project
+
+**Changed**
+
+- The bundle and API baselines: `api.json` gains the impostor bake's `@internal` `finishAtlasMips`, and `OctahedralImpostor.js` is 0.2 kB smaller (gzip). The new `LodFade.test.ts` checks the fade's binding rule.
+- The plans: p058 is `_DONE_`, and p350 tracks it. The issue `impostor-export-plan-citation` is fixed.
+
 ## 2026-11-06 — upgrade-three-js-to-r187
 
 three r187 (p057): `three` and `@types/three` 0.186.1 → 0.187.0. r187 fixes the two r186 leaks that kept memory after a scene was gone, the disposed lights (p056) and a removed `InstancedMesh`'s instance attributes. It also makes `three/tsl` tree-shakeable, so every first download is smaller. The rendered look moves slightly: the PMREM rewrite changes image-based lighting, and the ACES Filmic fit, physical specular in direct light, GTAO and shadows all changed. The scene runner's probe hashes, system order and character paths are unchanged, in Chromium and in Firefox. Three engine changes were needed for r187, and a fourth came out of re-measuring the pre-warm: it now compiles for the PostFX scene passes. Nothing breaks. `env.size` 64 and 128 are deprecated.

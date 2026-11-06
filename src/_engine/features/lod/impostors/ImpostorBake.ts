@@ -355,7 +355,7 @@ export const createAtlasTarget = (
 /**
  * Lets the next render into an atlas target generate its mips: call it right before the bake's
  * last copy into it, so the chain is built once per atlas (three r187's `mipmapsAutoUpdate`,
- * docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md D3).
+ * docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D3).
  * For the generators' bakes.
  * @internal
  */

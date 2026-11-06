@@ -1586,7 +1586,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -1620,7 +1620,7 @@
           },
           "debugData": {
             "name": "largeWorldTreeCross (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "CROSS_QUADS",
           "layout": {
@@ -1653,7 +1653,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -3412,7 +3412,7 @@
           "id": "largeWorldRockImpostor.normalDepth",
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -5174,7 +5174,7 @@
           },
           "debugData": {
             "name": "largeWorldTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldTreeCross",
@@ -5241,7 +5241,7 @@
           "id": "largeWorldTreeCross.normal",
           "debugData": {
             "name": "largeWorldTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldTreeCross",
@@ -5495,7 +5495,7 @@
           },
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "CROSS_QUADS",
           "layout": {
@@ -5532,7 +5532,7 @@
           },
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -5566,7 +5566,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -5596,7 +5596,7 @@
           },
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseTreeCross",
@@ -5663,7 +5663,7 @@
           "id": "lodShowcaseTreeCross.normal",
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseTreeCross",
@@ -5733,7 +5733,7 @@
           },
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseKnotImpostor",
@@ -7492,7 +7492,7 @@
           "id": "lodShowcaseKnotImpostor.normalDepth",
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseKnotImpostor",
@@ -9254,7 +9254,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -11013,7 +11013,7 @@
           "id": "largeWorldRockImpostor.normalDepth",
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -16444,7 +16444,7 @@
       },
       "debugData": {
         "name": "largeWorldRockImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",
       "__atlas": {
@@ -18204,7 +18204,7 @@
       "id": "largeWorldRockImpostor.normalDepth",
       "debugData": {
         "name": "largeWorldRockImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",
       "__atlas": {
@@ -19967,7 +19967,7 @@
       },
       "debugData": {
         "name": "largeWorldTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
@@ -20035,7 +20035,7 @@
       "id": "largeWorldTreeCross.normal",
       "debugData": {
         "name": "largeWorldTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
@@ -20106,7 +20106,7 @@
       },
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
@@ -21866,7 +21866,7 @@
       "id": "lodShowcaseKnotImpostor.normalDepth",
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
@@ -23629,7 +23629,7 @@
       },
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
@@ -23697,7 +23697,7 @@
       "id": "lodShowcaseTreeCross.normal",
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
@@ -24970,7 +24970,7 @@
       },
       "debugData": {
         "name": "largeWorldRockImpostor (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "OCTAHEDRAL",
       "layout": {
@@ -25005,7 +25005,7 @@
       },
       "debugData": {
         "name": "largeWorldTreeCross (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "CROSS_QUADS",
       "layout": {
@@ -25043,7 +25043,7 @@
       },
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "OCTAHEDRAL",
       "layout": {
@@ -25078,7 +25078,7 @@
       },
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "CROSS_QUADS",
       "layout": {

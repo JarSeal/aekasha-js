@@ -140,7 +140,7 @@ const getExportPaths = (id: string) => {
 };
 
 const DEBUG_DESCRIPTION =
-  "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file.";
+  "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file.";
 
 /** One impostor's files, ready to write */
 type ImpostorExportFiles = {

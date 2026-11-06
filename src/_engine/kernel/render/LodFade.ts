@@ -14,9 +14,10 @@
 // InstancedMeshes with the same material and attributes and looks it up before any setup runs
 // (#35007), and binds each one's attributes through `ReferenceAttributeNode.getAttribute(object)`.
 // An InstancedMesh without a fade of its own binds an opaque one (`getDrawnFadeAttribute`), so
-// the shared build always finds an attribute (docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md
-// D2), and it reads the per-object uniform too (an InstancedMesh entity fades as a whole). Plain
-// meshes take the uniform alone. The shadow pass reads `maskNode` too: shadows dither with the
+// the shared build always finds an attribute, and it reads the per-object uniform too (an
+// InstancedMesh entity fades as a whole; p058 D2,
+// docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md). Plain meshes take
+// the uniform alone. The shadow pass reads `maskNode` too: shadows dither with the
 // same split.
 import * as THREE from 'three/webgpu';
 import { bool, dot, float, Fn, fract, screenCoordinate, select, uniform, vec2 } from 'three/tsl';

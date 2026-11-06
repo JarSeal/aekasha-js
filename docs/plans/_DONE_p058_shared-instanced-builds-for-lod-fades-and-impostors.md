@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: implemented (Phases 1-4)
 Category: Rendering, LOD, Performance
 Epic: p350_lod-system-research.md (Tier 2, before p353)
 Related: \_DONE_p057_three-r187-migration.md (D3: the fix this replaces), \_DONE_p351_impostor-billboard-lod.md, p354_gpu-driven-culling.md (its per-instance buffers bind the same way), p302_material-and-texture-system-refactor.md (`NodeMaterialInstance`)
@@ -146,7 +146,7 @@ of a render into the target. The one runtime bake in lodShowcase and largeWorld
 58.4, 57.2 and 55.7 ms on the branch (CPU time, four page loads each); the GPU saves
 frames² × passes − 2 mip chains per bake (286 at 12 × 12), not measured.
 
-### Phase 4 — Docs and versioning
+### Phase 4 — Docs and versioning — done
 
 The LOD and impostor `CLAUDE.md`s (the second binding and the object-specific builds go), the
 Hub's LOD page if it mentions either, an engine patch.
@@ -154,5 +154,9 @@ Hub's LOD page if it mentions either, an engine patch.
 Done in Phases 1-3: both `CLAUDE.md`s and `LodFades.ts`' comment; the Hub's LOD pages mention
 neither (their bake times still hold). `devTools/verify/baselines/` recorded (`api.json`: the
 `@internal` `finishAtlasMips`; `bundle.json`: `OctahedralImpostor.js` 0.2 kB smaller gzip;
-`docs.json`). Left: the engine patch (6.1.0 → 6.1.1) and its `CHANGELOG.md` entry, and marking
-the plan done (the `_DONE_` rename and the references in p350, p057 and the two `CLAUDE.md`s).
+`docs.json`).
+
+As built: engine 6.1.0 → 6.1.1 and, for the exported impostors' JSONs, app 1.19.0 → 1.19.1, with
+the branch's `CHANGELOG.md` entry. The issue `docs/issues/impostor-export-plan-citation.md` is
+fixed here: the LOD tab's export string and the four exports' eight descriptions edited by hand
+(the asset lock's keys don't read a description: the gather reports every asset up to date).

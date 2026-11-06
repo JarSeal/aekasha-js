@@ -13,7 +13,7 @@
 // `Instance.js`). So the material reads the instance matrix a second time: `impostorInstanceMatrix`
 // is three r187's `referenceAttribute('instanceMatrix', 'mat4')`, bound per drawn mesh (so
 // impostor InstancedMeshes on one material share a build,
-// docs/plans/p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), and reads
+// docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), and reads
 // `positionGeometry`, the quad's corners before any transform. On a plain mesh it's the identity.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):
