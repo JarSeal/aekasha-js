@@ -741,6 +741,18 @@ As built (section 1):
 - Until section 3, the runtime ignores `__streaming`: a streaming scene's JSON cell content doesn't
   load (only `streamingGrid` streams, and it has none yet).
 
+As built (section 2, `kernel/scene/SceneDataLoader.ts`, `@internal`, tested on the real
+registries in `SceneDataLoader.test.ts`):
+
+- `loadSceneAssetsAsync(lists, ownerKey?)` (`SceneAssetLists`: textures, materials, geometries,
+  imported assets) is the old `loadNextSceneAssets`' body, which now calls it without a key. With
+  one, every registration and re-tag runs in that owner scope: the loads (`loadTextureAsync`,
+  `importAssetAsync`, which capture it at their call; the import's after the registry's own
+  `import()`) and the materials and geometries created after the loads' await.
+- `createSceneObject3Ds(lists)` (`SceneObject3DLists`: lights, meshes) is
+  `createNextSceneObject3Ds`' body, returning the created entity ids (lights first); the old name
+  calls it.
+
 **Exit:** `streamingGrid`'s JSON cell content streams as its code content does, its oversized
 landmark stays while any of its cells is loaded, the generated base holds none of the cell
 content, and Phase 2's flight out and back leaves the registries and p345's snapshot as before.
