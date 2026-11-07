@@ -7,7 +7,7 @@
 import { getCellOwnerKey } from '../../kernel/assets/AssetOwners';
 import { createSceneObject3Ds, loadSceneAssetsAsync } from '../../kernel/scene/SceneDataLoader';
 import type { StreamingCellUnitSource } from './StreamingCells';
-import type { StreamingCellContent } from './StreamingContent';
+import type { StreamingCellContent, StreamingContentRange } from './StreamingContent';
 import type { StreamingManifest, StreamingManifestCell } from './StreamingManifest';
 
 /** Entries (lights and meshes) per unit: a unit is the slice a frame's budget can't split */
@@ -26,8 +26,9 @@ type SharedEntity = { entityId: number; holders: number };
 export type StreamingDataContent = {
   /** The manifest it's built from. */
   readonly manifest: StreamingManifest;
-  /** The cell's units, run ahead of its code-registered ones (none for a cell without data). */
-  getUnits(cellKey: number): readonly StreamingCellUnitSource[];
+  /** The cell's layer's units, run ahead of its code-registered ones (none for a cell without
+   * data in that layer). */
+  getUnits(cellKey: number, range: StreamingContentRange): readonly StreamingCellUnitSource[];
   /** The shared meshes' entities alive, by manifest mesh index (the debug tab's). */
   readonly shared: ReadonlyMap<number, Readonly<SharedEntity>>;
 };
@@ -144,7 +145,9 @@ export const createStreamingDataContent = (
   return {
     manifest,
     shared,
-    getUnits: (cellKey) => {
+    getUnits: (cellKey, range) => {
+      // Its near content only, until the far and kept layers' entries (p353 Phase 5 section 4)
+      if (range !== 'NEAR') return NO_UNITS;
       let units = unitsByCell.get(cellKey);
       if (!units) {
         units = buildUnits(cellKey);

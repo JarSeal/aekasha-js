@@ -31,7 +31,7 @@ import {
   setStreamingOverlayEnabled,
   setStreamingOverlayHeight,
 } from './_dbg__StreamingOverlay';
-import { getOwnerGPUBytes } from './_dbg__StreamingMemory';
+import { getCellGPUBytes, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
 // The Streaming tab (docs/plans/p353_macro-streaming-grid.md §7): the current scene's settings,
 // the focus and its cell, the cells per state, the machine's counters, the focus tools (freeze,
@@ -142,7 +142,7 @@ const formatMemory = (rt: StreamingRuntime | null) => {
   let total = 0;
   let largest = 0;
   for (const cell of rt.cells.values()) {
-    const bytes = cellBytes.get(cell.ownerKey) ?? 0;
+    const bytes = getCellGPUBytes(cellBytes, cell);
     total += bytes;
     largest = Math.max(largest, bytes);
   }
@@ -182,8 +182,9 @@ export const getStreamingCellListData = (rt: StreamingRuntime | null): DebuggerL
       });
       break;
     }
-    const loadMs = cell.lastLoadMs < 0 ? '' : `, ${cell.lastLoadMs.toFixed(1)} ms`;
-    const bytes = cellBytes.get(cell.ownerKey);
+    const lastLoadMs = Math.max(...cell.layers.map((layer) => layer.lastLoadMs));
+    const loadMs = lastLoadMs < 0 ? '' : `, ${lastLoadMs.toFixed(1)} ms`;
+    const bytes = getCellGPUBytes(cellBytes, cell);
     items.push({
       itemId: String(cell.key),
       title: `Cell ${cell.cx}, ${cell.cz}`,

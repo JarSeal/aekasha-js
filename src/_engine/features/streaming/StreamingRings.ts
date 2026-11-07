@@ -21,11 +21,11 @@ export const StreamingLevel = {
 export type StreamingLevel = (typeof StreamingLevel)[keyof typeof StreamingLevel];
 
 /**
- * The deepest level whose cells have their content loaded. `FAR` has none until p353 Phase 5's
- * far representations (until then `FAR` is `UNLOADED`).
+ * The deepest level whose cells have content loaded: `FAR`, whose cells hold their far and kept
+ * layers (p353 Phase 5 D1).
  * @internal
  */
-export const DEEPEST_LOADED_LEVEL = StreamingLevel.NEARBY;
+export const DEEPEST_LOADED_LEVEL = StreamingLevel.FAR;
 
 /**
  * Whether a cell of `level` has its content loaded.

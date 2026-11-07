@@ -1313,6 +1313,65 @@ As built (section 1):
   leaving the other layer's), `PhysicsFacade.test.ts` (a jointed group `STATIC` for a batch's
   `REMOVED`, a lone body `REMOVED`).
 
+As built (section 2):
+
+- **Files.** `StreamingLayers.ts` (603 lines): `StreamingLayer` (its cell, `index`, `range`,
+  `ownerLayer` and `ownerKey`, and what a cell had: phase, generation, units, in flight, late
+  units, priming, load and priming times, `adopted`, plus `hasUnits`), the unit runner, a layer's
+  load, priming, unload and release, `isRangeWanted` / `isLayerWanted`, `releaseLeavingLayers`,
+  `updateStreamingCellPhase` and the transition listener (moved here from the cells). A cell
+  (`StreamingCells.ts`, 506 lines) keeps its key, indices, level, ring, edge distance, an
+  aggregate `phase` and `layers` (kept, near, far: `STREAMING_LAYER_RANGES`), and the decisions,
+  the pump's order and budgets, the scene load and the drop. `getStreamingCellLayer(cell, range)`.
+- **Empty layers cost nothing visible:** a layer with no units is shown at once with one
+  notification, isn't counted in the stats (loads, unloads, cancels) and isn't released (it ran
+  nothing in its owner key). So a scene with only `NEAR` content counts what it did before, and a
+  cell without content is no longer released at its unload (a release found nothing there).
+- **The wait (D2):** `releaseLeavingLayers` runs when the level changes and when a layer is shown:
+  a leaving layer never shown (`LOADING`, `PRIMING`) unloads at once, a shown one once every layer
+  the level wants is `LOADED`. A leaving layer wanted again before that just stays (its
+  generation unchanged); the incoming one still `LOADING` is cancelled as before.
+- **The state (D3) as built:** the least advanced of the wanted layers (`UNLOADING` counting as
+  `UNLOADED`), so a switching cell whose incoming layer is still queued reads `UNLOADED` (the tab's
+  `QUEUED`) while it shows its leaving layer, then `LOADING` / `PRIMING`; with nothing wanted,
+  `UNLOADING` while a layer has content. `StreamingCellState`'s JSDoc says so.
+- **Budgets:** `maxConcurrentLoads` counts cells with a layer `LOADING`; a cell already loading
+  starts its other queued layers. Loads go nearest cell first, kept before near before far within
+  a cell; unloads farthest first, the other way round.
+- **Content:** `StreamingCellContent.loadedAt` and the public `StreamingContentRange`
+  (`aekasha/streaming`), checked by `registerStreamingCellContent`; `rt.dataContent(cellKey,
+  range)`, `StreamingDataContent.getUnits(cellKey, range)` answering `NEAR` only until section 4.
+- **Releases:** `rt.releaseCellAssets(cellKey, layer?)`; a dropped cell the same scene's next load
+  doesn't load again is released under its three keys.
+- **Bodies (D11):** the hooks take a layer (`forgetCell` is `forgetLayer`), the hand-over and
+  rebalance move a body to the same layer of the cell it's in (`findAdopter` returns a layer,
+  `takeBodyFromLayer`). `getLayerWant`: a layer its cell doesn't want `nearbyTier`, else
+  `RESIDENT` `FULL` / `POLICY`, `FAR` `REMOVED`, otherwise `nearbyTier`; the creation scope gives
+  `DISABLED` where the want is `REMOVED`, with the policy holder. `summarize`'s "off tier" compares
+  each body with its layer's want. The no-tiers warning names `NEARBY` or `FAR`.
+- **The machine loads on demand (D12):** `yarn sbp` had the streaming group at 6.7 KiB with the
+  layers, over its 6 KiB. `Streaming.ts` imports the cells, layers and priming only as types, and
+  `created` loads `StreamingCells.ts` and `StreamingPriming.ts` with `import()` next to the
+  bodies' (the system and the exit act only once a runtime exists, so they reach the machine
+  through the loaded module; the primer is made on the first load and kept). The first download
+  is the API, the registry and the scene hooks: 2.3 KiB, so the budget is 4 KiB (`sbp.config.ts`,
+  with the reason; the report suggested it). The on-demand chunks: `StreamingCells.js` 1.8 KiB,
+  `StreamingLayers.js` 2.3, `StreamingPriming.js` 1.5, `StreamingBodies.js` 1.8 (gzip).
+- **Debug (the minimum; section 5 does the rest):** the cell window's Layers line (each layer's
+  phase, units and generation), its last load and priming times the longest layer's, its GPU
+  memory and assets over the layers' keys (`getCellGPUBytes`, `getOwnedAssetIds(keys)`); the
+  tab's cell bytes summed the same way.
+- **Tests:** `StreamingCells.test.ts`' old cases on rings 1 / 2 / 2 (no `FAR` cells, as they were
+  written) reading the near layer; the release case now expects the content-less cells
+  unreleased. New, on rings 1 / 2 / 4: a `FAR` cell's far and kept content and `NEARBY`'s near and
+  kept, the kept layer never reloaded; the near layer loading while the far one stays drawn, which
+  unloads once the near one is in; a switch cancelled before its layer is in (the near layer kept,
+  the late far result unloaded); each layer's units in its own owner key and its unload releasing
+  that key; near-only content at `FAR` loading nothing; a scene load's cells loading their wanted
+  layers. `StreamingBodies.test.ts`: a kept body in a `FAR` cell created in `DISABLED`, requested
+  `REMOVED`, `STATIC` at `NEARBY`, `FULL` at `RESIDENT` and `REMOVED` again; a leaving `NEAR`
+  layer's body keeping `STATIC` while the far stand-in loads.
+
 ## 10. Versioning, Hub and docs
 
 Engine minor per phase that adds API (Phases 1–4); the `AssetOwners` change in Phase 2 is internal.

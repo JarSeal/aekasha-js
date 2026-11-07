@@ -38,6 +38,24 @@ export type StreamingCellContext = {
 };
 
 /**
+ * Where a unit of cell content is loaded (its cell's level, p353 Phase 5): `NEAR` while the cell
+ * is `RESIDENT` or `NEARBY` (its full content), `FAR` only while it's `FAR` (its stand-ins:
+ * impostors, coarse levels), `NEAR_AND_FAR` from `FAR` in, kept through every level (a cell's
+ * ground, so a far cell has no hole; its bodies are taken out of the physics world while `FAR`).
+ */
+export type StreamingContentRange = 'NEAR' | 'FAR' | 'NEAR_AND_FAR';
+
+/**
+ * The values of {@link StreamingContentRange}.
+ * @internal
+ */
+export const STREAMING_CONTENT_RANGES: readonly StreamingContentRange[] = [
+  'NEAR',
+  'FAR',
+  'NEAR_AND_FAR',
+];
+
+/**
  * A unit of a scene's cell's content (`registerStreamingCellContent`): `load` creates it
  * when the cell loads and returns the ids of the entities it created, `unload` takes it down when
  * the cell unloads. Without `unload`, the entities `load` returned are deleted.
@@ -53,6 +71,10 @@ export type StreamingCellContent = {
   readonly load: (ctx: StreamingCellContext) => readonly number[] | Promise<readonly number[]>;
   /** Takes the content down: what `load` created. Default: deletes `entityIds`. */
   readonly unload?: (entityIds: readonly number[], ctx: StreamingCellContext) => void;
+  /** Where it's loaded: `NEAR` (the default, the cell's full content), `FAR` (a stand-in shown
+   * only while the cell is `FAR`) or `NEAR_AND_FAR` (kept from `FAR` in). A cell switching between
+   * `NEARBY` and `FAR` keeps the content it leaves drawn until the content it gets is shown. */
+  readonly loadedAt?: StreamingContentRange;
 };
 
 /**

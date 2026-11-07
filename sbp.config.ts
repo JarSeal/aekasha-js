@@ -58,8 +58,11 @@ const profiles: SbpProfile[] = [
         // the template lists every feature, so it's in the first download). Phase 2's priming
         // (1.4 KiB, needed by every streaming scene in play) and Phase 3's data-unit barrier took
         // it to 5.5 KiB: 5 → 6 KiB. Phase 3's JSON cell content loads on demand
-        // (`StreamingDataContent.js`, 0.8 KiB, only for a scene with a cell manifest).
-        '_engine/features/streaming': 6 * KIB,
+        // (`StreamingDataContent.js`, 0.8 KiB, only for a scene with a cell manifest). Phase 5's
+        // layers took it to 6.7 KiB, so the machine loads on demand with the first scene that
+        // streams (`StreamingCells.js`, `StreamingLayers.js`, `StreamingPriming.js`, with the
+        // bodies' chunk: 7.4 KiB): the first download is the API and the scene hooks, 2.3 KiB.
+        '_engine/features/streaming': 4 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
         '_engine/kernel/assets': 13 * KIB,

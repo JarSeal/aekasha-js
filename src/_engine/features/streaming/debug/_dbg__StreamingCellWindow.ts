@@ -21,11 +21,11 @@ import {
   type StreamingCell,
   type StreamingRuntime,
   getStreamingCellEntityIds,
-  setStreamingTransitionListener,
 } from '../StreamingCells';
+import { setStreamingTransitionListener } from '../StreamingLayers';
 import type { StreamingManifest } from '../StreamingManifest';
 import { StreamingLevel } from '../StreamingRings';
-import { getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
+import { getCellGPUBytes, getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
 const CELL_WIN_KIND = 'streamingCellWindow';
 const REFRESH_MS = 250;
@@ -60,7 +60,8 @@ const recordTransition = (rt: StreamingRuntime, cell: StreamingCell) => {
     history.set(cell.key, entries);
   }
   const at = (performance.now() / 1000).toFixed(2);
-  entries.push(`${at} s  ${getCellStateLabel(cell)}  (ring ${cell.ring}, gen ${cell.generation})`);
+  const generations = cell.layers.map((layer) => layer.generation).join('/');
+  entries.push(`${at} s  ${getCellStateLabel(cell)}  (ring ${cell.ring}, gen ${generations})`);
   if (entries.length > MAX_HISTORY) entries.shift();
 };
 
@@ -97,9 +98,24 @@ const formatDataContent = (cellKey: number) => {
   ].join('\n');
 };
 
+/** A cell's layers (p353 Phase 5 D1): each one's phase, units and load generation. */
+const formatLayers = (cell: StreamingCell | undefined) =>
+  cell
+    ? cell.layers
+        .map(
+          (layer) =>
+            `${layer.range}: ${layer.phase}, ${layer.units.length} units, gen ${layer.generation}`
+        )
+        .join('\n')
+    : '';
+
+/** The longest of a cell's layers' last load or priming times, in ms (-1 before one). */
+const getLastMs = (cell: StreamingCell | undefined, key: 'lastLoadMs' | 'lastPrimeMs') =>
+  cell ? Math.max(...cell.layers.map((layer) => layer[key])) : -1;
+
 /** A cell's owned asset ids, one kind a line (empty kinds left out). */
-const formatAssets = (ownerKey: string) => {
-  const ids = getOwnedAssetIds(ownerKey);
+const formatAssets = (ownerKeys: readonly string[]) => {
+  const ids = getOwnedAssetIds(ownerKeys);
   return Object.entries(ids)
     .filter(([, list]) => list.length)
     .map(([kind, list]) => `${kind}: ${list.join(', ')}`)
@@ -110,7 +126,7 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
   const cellKey = Number(data?.cellKey);
   const cx = Number(data?.cx);
   const cz = Number(data?.cz);
-  const ownerKey = String(data?.ownerKey);
+  const ownerKeys = (data?.ownerKeys as string[] | undefined) ?? [];
   const live = (label: string, get: () => string): PropertyGridItem => ({
     label,
     get,
@@ -125,16 +141,22 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
     }),
     live('Ring', () => String(getCell(cellKey)?.ring ?? '–')),
     live('Edge distance (m)', () => getCell(cellKey)?.edgeDistance.toFixed(1) ?? '–'),
-    live('Load generation', () => String(getCell(cellKey)?.generation ?? '–')),
+    {
+      label: 'Layers',
+      get: () => formatLayers(getCell(cellKey)),
+      readonly: true,
+      multiline: true,
+      rows: 3,
+      interval: REFRESH_MS,
+    },
     live('Last load (ms)', () => {
-      const ms = getCell(cellKey)?.lastLoadMs ?? -1;
+      const ms = getLastMs(getCell(cellKey), 'lastLoadMs');
       return ms < 0 ? '–' : ms.toFixed(1);
     }),
     live('Last priming (ms)', () => {
-      const ms = getCell(cellKey)?.lastPrimeMs ?? -1;
+      const ms = getLastMs(getCell(cellKey), 'lastPrimeMs');
       return ms < 0 ? '–' : ms.toFixed(1);
     }),
-    live('Content units', () => String(getCell(cellKey)?.units.length ?? 0)),
     live('Entities', () => {
       const cell = getCell(cellKey);
       return String(cell ? getStreamingCellEntityIds(cell).length : 0);
@@ -154,17 +176,20 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       multiline: true,
       rows: 3,
     },
-    live('GPU memory', () => formatBytes(getOwnerGPUBytes().get(ownerKey) ?? 0)),
+    live('GPU memory', () => {
+      const cell = getCell(cellKey);
+      return formatBytes(cell ? getCellGPUBytes(getOwnerGPUBytes(), cell) : 0);
+    }),
     {
       label: 'Its assets',
-      get: () => formatAssets(ownerKey),
+      get: () => formatAssets(ownerKeys),
       readonly: true,
       multiline: true,
       rows: 3,
       interval: REFRESH_MS,
     },
     getNoteItem(
-      'Its assets: those its owner key is on (what its content registered, or got from the cache). Those it holds alone and nothing uses are freed when it unloads.'
+      'Its assets: those its layers’ owner keys are on (what its content registered, or got from the cache). Those a layer holds alone and nothing uses are freed when that layer unloads.'
     ),
     {
       label: 'Transitions',
@@ -195,7 +220,12 @@ export const toggleStreamingCellWindow = (cell: StreamingCell) => {
     kind: CELL_WIN_KIND,
     title: `Cell ${cell.cx}, ${cell.cz}`,
     icon: 'streaming',
-    data: { cellKey: cell.key, cx: cell.cx, cz: cell.cz, ownerKey: cell.ownerKey },
+    data: {
+      cellKey: cell.key,
+      cx: cell.cx,
+      cz: cell.cz,
+      ownerKeys: cell.layers.map((layer) => layer.ownerKey),
+    },
     isDebugWindow: true,
     removeOnSceneChange: true,
     size: { w: 360, h: 580 },

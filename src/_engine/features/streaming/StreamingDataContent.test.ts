@@ -10,6 +10,7 @@ import { packCellKey } from '../../utils/CellKey';
 import {
   createStreamingRuntime,
   decideStreamingCells,
+  getStreamingCellEntityIds,
   pumpStreamingCells,
   type StreamingBudgets,
 } from './StreamingCells';
@@ -77,18 +78,18 @@ const ctxFor = (cellKey: number) => ({ world, cellKey }) as unknown as Streaming
 describe('createStreamingDataContent', () => {
   test('a cell’s units: its assets, then its entries a few a unit (the first waiting), then its shared meshes', () => {
     const content = createStreamingDataContent('dcUnits', manifestFor('dcUnits'));
-    const units = content.getUnits(A);
+    const units = content.getUnits(A, 'NEAR');
     expect(units.map((unit) => unit.waits)).toEqual([false, true, false, false]);
-    expect(content.getUnits(A)).toBe(units);
-    expect(content.getUnits(packCellKey(9, 0, 9))).toEqual([]);
+    expect(content.getUnits(A, 'NEAR')).toBe(units);
+    expect(content.getUnits(packCellKey(9, 0, 9), 'NEAR')).toEqual([]);
   });
 
   test('a shared mesh: the first holder creates it, the last to unload deletes it', async () => {
     const content = createStreamingDataContent('dcShared', manifestFor('dcShared'));
     // Its material first: the cell's asset unit
-    await content.getUnits(A)[0].content.load(ctxFor(A));
+    await content.getUnits(A, 'NEAR')[0].content.load(ctxFor(A));
     const sharedOf = (cellKey: number) => {
-      const units = content.getUnits(cellKey);
+      const units = content.getUnits(cellKey, 'NEAR');
       return units[units.length - 1].content;
     };
     const fromA = sharedOf(A).load(ctxFor(A)) as number[];
@@ -120,7 +121,7 @@ describe('createStreamingDataContent', () => {
     const cell = rt.cells.get(A);
     expect(cell?.phase).toBe('LOADED');
     // 10 meshes and the light, and the bridge
-    const ids = cell?.units.flatMap((unit) => unit.entityIds ?? []) ?? [];
+    const ids = cell ? getStreamingCellEntityIds(cell) : [];
     expect(ids).toHaveLength(12);
     const material = getMaterial(`${sceneId}-mat`);
     expect(material && getAssetOwners(material)).toEqual([getCellOwnerKey(sceneId, A)]);

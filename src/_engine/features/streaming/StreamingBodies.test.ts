@@ -14,13 +14,22 @@ import {
   type StreamingRuntime,
   createStreamingRuntime,
   decideStreamingCells,
+  getStreamingCellLayer,
   pumpStreamingCells,
 } from './StreamingCells';
-import { addStreamingCellContent, clearSceneStreamingContent } from './StreamingContent';
+import {
+  type StreamingContentRange,
+  addStreamingCellContent,
+  clearSceneStreamingContent,
+} from './StreamingContent';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { resolveStreamingSettings } from './StreamingSettings';
 
 const WORLD_ID = 'streaming-bodies-test';
+
+/** A tracked cell's NEAR layer (the content these tests register) */
+const nearLayerOf = (rt: StreamingRuntime, cellKey: number) =>
+  getStreamingCellLayer(rt.cells.get(cellKey)!, 'NEAR');
 
 afterEach(() => {
   ECSWorld.deleteWorld(WORLD_ID);
@@ -85,7 +94,11 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     const world = new ECSWorld({ id: WORLD_ID, applyGlobalPlugins: false });
     const rt = createStreamingRuntime(
       sceneId,
-      resolveStreamingSettings({ cellSize: 64, ...settings }),
+      resolveStreamingSettings({
+        cellSize: 64,
+        rings: { resident: 1, nearby: 2, far: 2 },
+        ...settings,
+      }),
       world,
       () => 0,
       () => 0
@@ -137,12 +150,17 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
   const bodyUnit = (
     rt: StreamingRuntime,
     cellKey: number,
-    opts: { isMember?: boolean; scopes?: (PhysicsCreationScope | null)[] } = {}
+    opts: {
+      isMember?: boolean;
+      scopes?: (PhysicsCreationScope | null)[];
+      loadedAt?: StreamingContentRange;
+    } = {}
   ) => {
     const ids: number[] = [];
     addStreamingCellContent({
       sceneId: rt.sceneId,
       cellKey,
+      loadedAt: opts.loadedAt,
       load: ({ world, cx, cz, cellSize }) => {
         const scope = getPhysicsCreationScope();
         opts.scopes?.push(scope);
@@ -204,7 +222,7 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     const [bodyId] = ids;
     world.getPosition(bodyId)!.set(160, 0, 32);
     goTo(160);
-    expect(rt.cells.get(NEAR)?.adopted).toEqual([bodyId]);
+    expect(nearLayerOf(rt, NEAR).adopted).toEqual([bodyId]);
     expect(rt.cells.get(HOME)?.level).not.toBe(rt.cells.get(NEAR)?.level);
     expect(tiers.get(bodyId)).toBe('FULL');
     expect(rt.stats.bodiesAdopted).toBe(1);
@@ -258,10 +276,54 @@ describe("the cells' physics tiers (p353 Phase 4 D2-D8)", () => {
     // Rolled into (-1, 0), which is RESIDENT
     goTo(32);
     goTo(96);
-    expect(rt.cells.get(packCellKey(-1, 0, 0))?.adopted).toEqual([bodyId]);
+    expect(nearLayerOf(rt, packCellKey(-1, 0, 0)).adopted).toEqual([bodyId]);
     expect(tiers.get(bodyId)).toBe('STATIC');
     goTo(32);
     expect(tiers.get(bodyId)).toBe('FULL');
+  });
+
+  // p353 Phase 5 D11, on rings 1 / 2 / 4: cell (3, 0) is FAR from (32, 32), NEARBY from (96, 32)
+  // and RESIDENT from (160, 32)
+  const FAR_CELL = packCellKey(3, 0, 0);
+  const FAR_RINGS = { rings: { resident: 1, nearby: 2, far: 4 } };
+
+  test("a FAR cell's kept bodies start DISABLED and go REMOVED, and come back with its level", () => {
+    const { rt, tiers, goTo } = setup(FAR_RINGS);
+    const scopes: (PhysicsCreationScope | null)[] = [];
+    const ids = bodyUnit(rt, FAR_CELL, { scopes, loadedAt: 'NEAR_AND_FAR' });
+    goTo(32);
+    const [bodyId] = ids;
+    expect(scopes.map((scope) => scope?.tier)).toEqual(['DISABLED']);
+    expect(scopes[0]?.holdPolicyMember).not.toBeNull();
+    expect(tiers.get(bodyId)).toBe('REMOVED');
+    expect(rt.bodies?.summarize?.(rt.world)).toMatchObject({ byTier: { REMOVED: 1 }, offTier: 0 });
+    goTo(96);
+    expect(tiers.get(bodyId)).toBe('STATIC');
+    goTo(160);
+    expect(tiers.get(bodyId)).toBe('FULL');
+    goTo(96);
+    goTo(32);
+    expect(tiers.get(bodyId)).toBe('REMOVED');
+    expect(rt.bodies?.summarize?.(rt.world).offTier).toBe(0);
+  });
+
+  test("a NEAR layer its cell is leaving keeps its bodies' NEARBY tier until it goes", () => {
+    const { rt, world, tiers, goTo } = setup(FAR_RINGS);
+    const ids = bodyUnit(rt, FAR_CELL);
+    // A far stand-in that never comes in: the near layer waits, drawn
+    addStreamingCellContent({
+      sceneId: rt.sceneId,
+      cellKey: FAR_CELL,
+      loadedAt: 'FAR',
+      load: () => new Promise<number[]>(() => {}),
+    });
+    goTo(96);
+    const [bodyId] = ids;
+    expect(tiers.get(bodyId)).toBe('STATIC');
+    goTo(32);
+    expect(world.isAlive(bodyId)).toBe(true);
+    expect(tiers.get(bodyId)).toBe('STATIC');
+    expect(rt.bodies?.summarize?.(rt.world).offTier).toBe(0);
   });
 
   test('without physicsTiers(): no scope, no request, one warning', () => {

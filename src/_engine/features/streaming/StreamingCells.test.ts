@@ -16,6 +16,7 @@ import {
   type StreamingPrimer,
   type StreamingRuntime,
   createStreamingRuntime,
+  getStreamingCellLayer,
   decideStreamingCells,
   dropStreamingCells,
   loadStreamingCellsNowAsync,
@@ -23,6 +24,7 @@ import {
 } from './StreamingCells';
 import {
   type StreamingCellContent,
+  type StreamingContentRange,
   addStreamingCellContent,
   clearSceneStreamingContent,
 } from './StreamingContent';
@@ -30,26 +32,31 @@ import { handOverMovedBodies } from './StreamingHandOver';
 import { StreamingLevel } from './StreamingRings';
 import { resolveStreamingSettings } from './StreamingSettings';
 
-// A 64 m grid with rings 1, 2 (5: FAR, which loads nothing yet) and a 16 m margin; every test gets
-// its own scene id and world, and a clock it moves by hand
+// A 64 m grid with rings 1, 2 and a 16 m margin, no FAR ring unless a test asks for one (Phase 5's
+// far layers); every test gets its own scene id and world, and a clock it moves by hand
 let seq = 0;
 const worldIds: string[] = [];
 const sceneIds: string[] = [];
 
-const setup = (budgets: Partial<StreamingBudgets> = {}) => {
+const setup = (
+  budgets: Partial<StreamingBudgets> = {},
+  rings: { resident: number; nearby: number; far: number } = { resident: 1, nearby: 2, far: 2 }
+) => {
   const id = `streaming-test-${seq++}`;
   worldIds.push(id);
   sceneIds.push(id);
   const world = new ECSWorld({ id, maxEntities: 10_000, applyGlobalPlugins: false });
   const clock = { ms: 0 };
   const releases: number[] = [];
+  const layerReleases: string[] = [];
   const rt = createStreamingRuntime(
     id,
-    resolveStreamingSettings({ cellSize: 64 }),
+    resolveStreamingSettings({ cellSize: 64, rings }),
     world,
     () => clock.ms,
-    (cellKey) => {
+    (cellKey, layer) => {
       releases.push(cellKey);
+      layerReleases.push(layer ?? 'NEAR');
       return 0;
     }
   );
@@ -58,10 +65,17 @@ const setup = (budgets: Partial<StreamingBudgets> = {}) => {
     maxCreateMsPerFrame: 1000,
     ...budgets,
   };
-  return { rt, world, clock, releases, pump: () => pumpStreamingCells(rt, fullBudgets) };
+  return {
+    rt,
+    world,
+    clock,
+    releases,
+    layerReleases,
+    pump: () => pumpStreamingCells(rt, fullBudgets),
+  };
 };
 
-type Unit = Pick<StreamingCellContent, 'load' | 'unload'>;
+type Unit = Pick<StreamingCellContent, 'load' | 'unload' | 'loadedAt'>;
 
 const add = (rt: StreamingRuntime, cellKey: number, unit: Unit) =>
   addStreamingCellContent({ sceneId: rt.sceneId, cellKey, ...unit });
@@ -83,6 +97,14 @@ const fillCells = (rt: StreamingRuntime, r: number, make: () => Unit) => {
 
 const cellAt = (rt: StreamingRuntime, cx: number, cz: number) =>
   rt.cells.get(packCellKey(cx, 0, cz));
+
+/** A tracked cell's layer of `range` (`NEAR` by default: the content tests register) */
+const layerAt = (
+  rt: StreamingRuntime,
+  cx: number,
+  cz: number,
+  range: StreamingContentRange = 'NEAR'
+) => getStreamingCellLayer(cellAt(rt, cx, cz)!, range);
 
 const phases = (rt: StreamingRuntime) => {
   const counts: Record<string, number> = {};
@@ -240,7 +262,7 @@ describe('pumpStreamingCells', () => {
     expect(cellAt(rt, 0, 0)?.phase).toBe('LOADED');
     expect(world.getEntityCount()).toBe(3);
     // Its second load (a load bumps the generation; an unload of a loaded cell doesn't)
-    expect(cellAt(rt, 0, 0)?.generation).toBe(2);
+    expect(layerAt(rt, 0, 0).generation).toBe(2);
   });
 
   test('a content load that throws is logged, and the cell still loads the rest', () => {
@@ -344,12 +366,14 @@ describe('cell asset ownership', () => {
     expect(new Set(releases).size).toBe(25);
     expect(rt.stats.assetReleases).toBe(25);
 
-    // The cells around (1000, 1000) unload too
+    // The cells around (1000, 1000) unload too, but ran no units: nothing of theirs to release
+    // (p353 Phase 5: an empty layer is neither counted nor released)
     decideStreamingCells(rt, 32, 32);
     pump();
-    expect(releases).toHaveLength(50);
+    expect(releases).toHaveLength(25);
+    expect(rt.stats.unloadsFinished).toBe(25);
     dropStreamingCells(rt);
-    expect(releases).toHaveLength(50);
+    expect(releases).toHaveLength(25);
   });
 
   test("a cancelled load's cell is released once its late units have settled", async () => {
@@ -544,8 +568,8 @@ describe('data units and the barrier (p353 Phase 3)', () => {
     const { rt, world } = env;
     const log: string[] = [];
     let resolveAssets: () => void = () => {};
-    rt.dataContent = (cellKey) =>
-      cellKey !== KEY
+    rt.dataContent = (cellKey, range) =>
+      cellKey !== KEY || range !== 'NEAR'
         ? []
         : [
             {
@@ -678,7 +702,7 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     const unloaded: number[][] = [];
     add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x, unloaded));
     loadAround(rt, pump, START_X);
-    const [bodyId, staticId] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    const [bodyId, staticId] = layerAt(rt, A.cx, 0).units[0].entityIds!;
     positions.set(bodyId, { x: B.x, z: 32 });
 
     loadAround(rt, pump, FAR_X);
@@ -686,7 +710,7 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     // The custom unload got only what stayed
     expect(unloaded).toEqual([[staticId]]);
     expect(world.isAlive(bodyId)).toBe(true);
-    expect(cellAt(rt, B.cx, 0)!.adopted).toEqual([bodyId]);
+    expect(layerAt(rt, B.cx, 0).adopted).toEqual([bodyId]);
     expect(rt.stats.bodiesAdopted).toBe(1);
 
     // Far enough that B unloads too: the adopted body goes with it
@@ -699,8 +723,8 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
     add(rt, packCellKey(A.cx, 0, 1), bodyContent(world, positions, A.x));
     loadAround(rt, pump, START_X);
-    const [stays] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
-    const [outside] = cellAt(rt, A.cx, 1)!.units[0].entityIds!;
+    const [stays] = layerAt(rt, A.cx, 0).units[0].entityIds!;
+    const [outside] = layerAt(rt, A.cx, 1).units[0].entityIds!;
     // Off the grid's loaded cells (x cell -4)
     positions.set(outside, { x: -230, z: 32 });
 
@@ -715,18 +739,18 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
     add(rt, packCellKey(A.cx, 0, 1), bodyContent(world, positions, A.x));
     loadAround(rt, pump, START_X);
-    const [rolling] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
-    const [deleted] = cellAt(rt, A.cx, 1)!.units[0].entityIds!;
+    const [rolling] = layerAt(rt, A.cx, 0).units[0].entityIds!;
+    const [deleted] = layerAt(rt, A.cx, 1).units[0].entityIds!;
     positions.set(rolling, { x: B.x, z: 32 });
     positions.set(deleted, { x: B.x, z: 32 });
     loadAround(rt, pump, FAR_X);
-    expect(cellAt(rt, B.cx, 0)!.adopted).toEqual([rolling, deleted]);
+    expect(layerAt(rt, B.cx, 0).adopted).toEqual([rolling, deleted]);
 
     world.deleteEntity(deleted);
     // On into column 0 before column -1 unloads
     positions.set(rolling, { x: 32, z: 32 });
     loadAround(rt, pump, FAR_X + 64);
-    expect(cellAt(rt, 0, 0)!.adopted).toEqual([rolling]);
+    expect(layerAt(rt, 0, 0).adopted).toEqual([rolling]);
     expect(world.isAlive(rolling)).toBe(true);
     expect(rt.stats.bodiesAdopted).toBe(3);
   });
@@ -735,7 +759,7 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     const { rt, world, positions, pump } = setupBodies();
     add(rt, packCellKey(B.cx, 0, 0), bodyContent(world, positions, B.x));
     loadAround(rt, pump, START_X);
-    const [bodyId] = cellAt(rt, B.cx, 0)!.units[0].entityIds!;
+    const [bodyId] = layerAt(rt, B.cx, 0).units[0].entityIds!;
     positions.set(bodyId, { x: A.x, z: 32 });
     // Columns -2 and -1 both unload in one decision, whichever starts first
     loadAround(rt, pump, FAR_X + 64);
@@ -746,12 +770,172 @@ describe('bodies that move (p353 Phase 4 D1)', () => {
     const { rt, world, positions, pump } = setupBodies();
     add(rt, packCellKey(A.cx, 0, 0), bodyContent(world, positions, A.x));
     loadAround(rt, pump, START_X);
-    const [bodyId, staticId] = cellAt(rt, A.cx, 0)!.units[0].entityIds!;
+    const [bodyId, staticId] = layerAt(rt, A.cx, 0).units[0].entityIds!;
     positions.set(bodyId, { x: B.x, z: 32 });
     loadAround(rt, pump, FAR_X);
     expect(world.isAlive(staticId)).toBe(false);
     expect(world.isAlive(bodyId)).toBe(true);
     dropStreamingCells(rt);
     expect(world.isAlive(bodyId)).toBe(false);
+  });
+});
+
+describe('content layers (p353 Phase 5 D1-D3, D10)', () => {
+  // Rings 1 / 2 / 4: from (32, 32) cell (3, 0) is FAR; from (96, 32) NEARBY (ring 2), and back at
+  // (32, 32) FAR again (160 m from its edge, over ring 2's 144 m)
+  const RINGS = { resident: 1, nearby: 2, far: 4 };
+  const KEY = packCellKey(3, 0, 0);
+  const NEAR_X = 96;
+  const HOME_X = 32;
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  /** A unit whose load waits until the test resolves it, logging its starts */
+  const heldUnit = (world: ECSWorld, loadedAt: StreamingContentRange, log: string[]) => {
+    const pending: (() => void)[] = [];
+    const unit: Unit = {
+      loadedAt,
+      load: () => {
+        log.push(`load ${loadedAt}`);
+        return new Promise<number[]>((resolve) =>
+          pending.push(() => resolve([world.createEntity()]))
+        );
+      },
+      unload: (ids) => {
+        log.push(`unload ${loadedAt}`);
+        for (const id of ids) world.deleteEntity(id);
+      },
+    };
+    return { unit, resolveAll: () => pending.splice(0).forEach((resolve) => resolve()) };
+  };
+
+  const go = (rt: StreamingRuntime, pump: () => void, x: number) => {
+    decideStreamingCells(rt, x, 32);
+    pump();
+  };
+
+  test('a FAR cell loads its far and kept content; NEARBY its near and kept content', () => {
+    const { rt, world, clock, pump } = setup({}, RINGS);
+    add(rt, KEY, { ...entitiesContent(world, clock, 2), loadedAt: 'FAR' });
+    add(rt, KEY, { ...entitiesContent(world, clock, 3), loadedAt: 'NEAR_AND_FAR' });
+    add(rt, KEY, entitiesContent(world, clock, 5));
+    go(rt, pump, HOME_X);
+    expect(rt.cells.size).toBe(81);
+    expect(cellAt(rt, 3, 0)?.level).toBe(StreamingLevel.FAR);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+    expect(world.getEntityCount()).toBe(5);
+    expect(layerAt(rt, 3, 0, 'NEAR').phase).toBe('UNLOADED');
+
+    go(rt, pump, NEAR_X);
+    expect(cellAt(rt, 3, 0)?.level).toBe(StreamingLevel.NEARBY);
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('UNLOADED');
+    // The kept content never moved
+    expect(layerAt(rt, 3, 0, 'NEAR_AND_FAR').generation).toBe(1);
+    expect(world.getEntityCount()).toBe(8);
+
+    go(rt, pump, 5000);
+    expect(rt.cells.has(KEY)).toBe(false);
+    expect(world.getEntityCount()).toBe(0);
+  });
+
+  test('a layer leaving stays drawn until the layer replacing it is shown (D2)', async () => {
+    const { rt, world, pump } = setup({}, RINGS);
+    const log: string[] = [];
+    const far = heldUnit(world, 'FAR', log);
+    const near = heldUnit(world, 'NEAR', log);
+    add(rt, KEY, far.unit);
+    add(rt, KEY, near.unit);
+    go(rt, pump, HOME_X);
+    far.resolveAll();
+    await flush();
+    pump();
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+
+    // NEARBY: the near layer loads while the far one stays
+    go(rt, pump, NEAR_X);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADING');
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('LOADED');
+    pump();
+    expect(log).toEqual(['load FAR', 'load NEAR']);
+    near.resolveAll();
+    await flush();
+    pump();
+    expect(log).toEqual(['load FAR', 'load NEAR', 'unload FAR']);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('UNLOADED');
+  });
+
+  test('a switch cancelled before the replacement is shown keeps the layer it was leaving', async () => {
+    const { rt, world, pump } = setup({}, RINGS);
+    const log: string[] = [];
+    const far = heldUnit(world, 'FAR', log);
+    const near = heldUnit(world, 'NEAR', log);
+    add(rt, KEY, far.unit);
+    add(rt, KEY, near.unit);
+    go(rt, pump, NEAR_X);
+    near.resolveAll();
+    await flush();
+    pump();
+    // FAR: the far layer starts loading; back NEARBY before it's in, it's cancelled
+    go(rt, pump, HOME_X);
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('LOADING');
+    go(rt, pump, NEAR_X);
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('UNLOADED');
+    expect(layerAt(rt, 3, 0, 'NEAR').phase).toBe('LOADED');
+    expect(layerAt(rt, 3, 0, 'NEAR').generation).toBe(1);
+    expect(rt.stats.loadsCancelled).toBe(1);
+    far.resolveAll();
+    await flush();
+    expect(rt.stats.lateResults).toBe(1);
+    expect(log).toEqual(['load NEAR', 'load FAR', 'unload FAR']);
+    expect(world.getEntityCount()).toBe(1);
+  });
+
+  test("a layer's units run in its own owner key, and its unload releases that key", () => {
+    const { rt, world, layerReleases, pump } = setup({}, RINGS);
+    const scopes: unknown[] = [];
+    const scoped = (loadedAt: StreamingContentRange): Unit => ({
+      loadedAt,
+      load: () => {
+        scopes.push(getAssetOwnerScope());
+        return [world.createEntity()];
+      },
+    });
+    add(rt, KEY, scoped('FAR'));
+    add(rt, KEY, scoped('NEAR_AND_FAR'));
+    add(rt, KEY, scoped('NEAR'));
+    go(rt, pump, HOME_X);
+    go(rt, pump, NEAR_X);
+    expect(scopes).toEqual([
+      getCellOwnerKey(rt.sceneId, KEY, 'kept'),
+      getCellOwnerKey(rt.sceneId, KEY, 'far'),
+      getCellOwnerKey(rt.sceneId, KEY),
+    ]);
+    expect(layerReleases).toEqual(['far']);
+    go(rt, pump, 5000);
+    expect(layerReleases.sort()).toEqual(['NEAR', 'far', 'kept']);
+  });
+
+  test('a cell with only near content at FAR holds nothing and costs no load', () => {
+    const { rt, world, clock, pump } = setup({}, RINGS);
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    go(rt, pump, HOME_X);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+    expect(world.getEntityCount()).toBe(0);
+    expect(rt.stats.loadsStarted).toBe(0);
+    go(rt, pump, NEAR_X);
+    expect(world.getEntityCount()).toBe(2);
+    go(rt, pump, HOME_X);
+    expect(world.getEntityCount()).toBe(0);
+    expect(rt.stats).toMatchObject({ loadsStarted: 1, unloadsFinished: 1 });
+  });
+
+  test("a scene load's cells load their wanted layers at once", async () => {
+    const { rt, world, clock } = setup({}, RINGS);
+    add(rt, KEY, { ...entitiesContent(world, clock, 2), loadedAt: 'FAR' });
+    add(rt, KEY, entitiesContent(world, clock, 5));
+    decideStreamingCells(rt, HOME_X, 32);
+    await loadStreamingCellsNowAsync(rt);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+    expect(world.getEntityCount()).toBe(2);
   });
 });

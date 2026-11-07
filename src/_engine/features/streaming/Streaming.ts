@@ -16,17 +16,10 @@ import { DEFAULT_ECS_WORLD_ID, type ECSWorld, getECSWorld } from '../../kernel/e
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
-import {
-  type StreamingBudgets,
-  type StreamingRuntime,
-  createStreamingRuntime,
-  decideStreamingCells,
-  dropStreamingCells,
-  loadStreamingCellsNowAsync,
-  pumpStreamingCells,
-} from './StreamingCells';
+import type { StreamingBudgets, StreamingPrimer, StreamingRuntime } from './StreamingCells';
 import {
   type StreamingCellContent,
+  STREAMING_CONTENT_RANGES,
   addStreamingCellContent,
   clearSceneStreamingContent,
   isStreamingCellKey,
@@ -34,7 +27,7 @@ import {
 } from './StreamingContent';
 import type { StreamingDataContent } from './StreamingDataContent';
 import type { StreamingManifest } from './StreamingManifest';
-import { createStreamingPrimer, type StreamingPrimeBudgets } from './StreamingPriming';
+import type { StreamingPrimeBudgets } from './StreamingPriming';
 import type { SceneStreamingSettings } from './StreamingSchema';
 import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
 import { lwarn } from '../../utils/Logger';
@@ -60,8 +53,13 @@ const primeBudgets: StreamingPrimeBudgets = {
   maxPrimeMsPerFrame: DEFAULT_MAX_PRIME_MS_PER_FRAME,
   maxNewStructuresPerFrame: null,
 };
-/** Primes the cells streamed in during play (StreamingPriming.ts), its budgets read every frame */
-const primer = createStreamingPrimer(primeBudgets);
+/** The cells' machine (StreamingCells.ts and its layers), loaded with the first scene that streams
+ * (p353 Phase 5 D12: a build's first download carries the API and the hooks, not the machine) */
+type StreamingMachine = typeof import('./StreamingCells');
+let machine: StreamingMachine | null = null;
+/** Primes the layers streamed in during play (StreamingPriming.ts, loaded with the machine), its
+ * budgets read every frame */
+let primer: StreamingPrimer | null = null;
 
 /** The gathered scenes' settings, by scene id */
 const dataSettings = new Map<string, SceneStreamingSettings>();
@@ -85,9 +83,12 @@ let framesToDecision = 0;
 
 const now = () => performance.now();
 
-/** A runtime's release of one of its cells' assets */
-const createCellRelease = (sceneId: string) => (cellKey: number) =>
-  countReleasedAssets(releaseCellOwnedAssets(sceneId, cellKey));
+/** A runtime's release of one of its cells' layers' assets */
+const createCellRelease = (sceneId: string) => (cellKey: number, layer?: string) =>
+  countReleasedAssets(releaseCellOwnedAssets(sceneId, cellKey, layer));
+
+/** A cell's owner key layers (`StreamingLayers.ts`' layers: near, far, kept) */
+const CELL_OWNER_LAYERS = [undefined, 'far', 'kept'] as const;
 
 /** After a load of the scene the last exit dropped cells of: releases the dropped cells it didn't
  * load again (a cell loaded again keeps its owner key, for its own next unload). Another scene's
@@ -97,7 +98,8 @@ const releaseDroppedCells = (sceneId: string) => {
   droppedCells = null;
   if (dropped?.sceneId !== sceneId) return;
   for (const key of dropped.keys) {
-    if (!runtime?.cells.has(key)) releaseCellOwnedAssets(sceneId, key);
+    if (runtime?.cells.has(key)) continue;
+    for (const layer of CELL_OWNER_LAYERS) releaseCellOwnedAssets(sceneId, key, layer);
   }
 };
 const _focus = new THREE.Vector3();
@@ -191,10 +193,12 @@ export const setSceneStreamingSettings = (
 };
 
 /**
- * A streaming cell's state: where its content is. `RESIDENT`, `NEARBY` and `FAR` are loaded
- * (`FAR` loads nothing until far representations exist, p353 Phase 5). `PRIMING`: a cell streamed
- * in during play is loaded but not shown yet, while its textures upload and its new shaders
- * compile.
+ * A streaming cell's state: where its content is. `RESIDENT` and `NEARBY` hold its `NEAR` and
+ * `NEAR_AND_FAR` content, `FAR` its `FAR` and `NEAR_AND_FAR` content, each once all of it is
+ * shown. While some of it isn't, the cell is `LOADING`, or `PRIMING` (loaded, not shown yet,
+ * while its textures upload and its new shaders compile), and a cell switching between `NEARBY`
+ * and `FAR` still shows the content it's leaving meanwhile. `UNLOADING`: none of it is wanted and
+ * some is still there.
  */
 export type StreamingCellState =
   | 'UNLOADED'
@@ -210,7 +214,8 @@ const LOADED_STATES: readonly StreamingCellState[] = ['RESIDENT', 'NEARBY', 'FAR
 /**
  * Registers a unit of a scene's cell's content: `load` runs when the cell loads (with the scene,
  * when it's around the focus then, else when the focus comes within its rings), `unload` when it
- * unloads (by default the entities `load` returned are deleted). A scene's registrations go when
+ * unloads (by default the entities `load` returned are deleted). `loadedAt` says at which levels:
+ * the cell's full content (`NEAR`, the default), its stand-ins while `FAR`, or both. A scene's registrations go when
  * the scene is left, so register them from its scene code, which runs on every load before its
  * cells do. A cell already loading or loaded takes the unit the next time it loads. Throws on an
  * invalid key or a `load` that isn't a function, and without the `streaming()` feature.
@@ -253,6 +258,11 @@ export const registerStreamingCellContent = (content: StreamingCellContent) => {
     throw new Error(`${fn}: the content needs a load function.`);
   if (content.unload !== undefined && typeof content.unload !== 'function') {
     throw new Error(`${fn}: the content's unload isn't a function.`);
+  }
+  if (content.loadedAt !== undefined && !STREAMING_CONTENT_RANGES.includes(content.loadedAt)) {
+    throw new Error(
+      `${fn}: loadedAt is ${String(content.loadedAt)}: it takes ${STREAMING_CONTENT_RANGES.join(', ')}.`
+    );
   }
   addStreamingCellContent(content);
 };
@@ -355,15 +365,15 @@ export const registerStreamingDebugGUI = async () => {
 };
 
 const streamingSystem = (world: ECSWorld) => {
-  if (!runtime || isSceneLoading || world.id !== DEFAULT_ECS_WORLD_ID) return;
+  if (!runtime || !machine || isSceneLoading || world.id !== DEFAULT_ECS_WORLD_ID) return;
   // An armed determinism probe holds the cells where the scene's load put them: a probe run
   // streams nothing (its hash would depend on frame timing, p353 §6)
   if (--framesToDecision <= 0 && !(IS_DEBUG_ENV && isDeterminismProbeArmed())) {
     framesToDecision = updateIntervalFrames;
     const at = readFocus(world);
-    if (at) decideStreamingCells(runtime, at.x, at.z);
+    if (at) machine.decideStreamingCells(runtime, at.x, at.z);
   }
-  pumpStreamingCells(runtime, budgets);
+  machine.pumpStreamingCells(runtime, budgets);
 };
 
 /** The `created` hook's load: the scene's machine with its JSON cell content, and its cells
@@ -387,15 +397,19 @@ const loadSceneCellsAsync = async (sceneId: string) => {
       `The scene '${sceneId}' can't stream at a cellSize of ${settings.cellSize}: its JSON content was cut into cells of ${manifest.cellSize} (set in code, the JSON's is the gathered one).`
     );
   }
-  // On demand (the import registry's pattern, p613 D4): the cells' bodies for a scene that streams,
-  // the JSON content only for one whose JSON content is in cells. Before any state is set, so
-  // nothing changes across the await.
-  const [bodiesModule, dataModule] = await Promise.all([
+  // On demand (the import registry's pattern, p613 D4): the machine, its priming and the cells'
+  // bodies for a scene that streams, the JSON content only for one whose JSON content is in
+  // cells. Before any state is set, so nothing changes across the await.
+  const [cellsModule, primingModule, bodiesModule, dataModule] = await Promise.all([
+    import('./StreamingCells'),
+    import('./StreamingPriming'),
     import('./StreamingBodies'),
     manifest ? import('./StreamingDataContent') : null,
   ]);
+  machine = cellsModule;
+  primer ??= primingModule.createStreamingPrimer(primeBudgets);
   const world = getECSWorld();
-  const rt = createStreamingRuntime(
+  const rt = cellsModule.createStreamingRuntime(
     sceneId,
     resolveStreamingSettings(settings),
     world,
@@ -413,8 +427,8 @@ const loadSceneCellsAsync = async (sceneId: string) => {
   runtime = rt;
   const at = readFocus(world);
   if (!at) return;
-  decideStreamingCells(rt, at.x, at.z);
-  await loadStreamingCellsNowAsync(rt);
+  cellsModule.decideStreamingCells(rt, at.x, at.z);
+  await cellsModule.loadStreamingCellsNowAsync(rt);
 };
 
 /**
@@ -432,9 +446,9 @@ export const streamingSceneHooks: SceneHooks = {
     isSceneLoading = true;
   },
   exit: (prevSceneId) => {
-    if (runtime) {
+    if (runtime && machine) {
       droppedCells = { sceneId: runtime.sceneId, keys: [...runtime.cells.keys()] };
-      dropStreamingCells(runtime);
+      machine.dropStreamingCells(runtime);
     }
     runtime = null;
     dataContent = null;

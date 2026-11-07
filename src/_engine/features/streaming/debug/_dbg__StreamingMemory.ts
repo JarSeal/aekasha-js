@@ -8,6 +8,7 @@ import { getGeometryRegistry } from '../../../kernel/assets/Geometry';
 import { getMaterialRegistry } from '../../../kernel/assets/Material';
 import { getTextureRegistry } from '../../../kernel/assets/Texture';
 import { getRenderer } from '../../../kernel/render/Renderer';
+import type { StreamingCell } from '../StreamingCells';
 
 /** GPU bytes per owner key, the cells' among them (empty before the renderer exists). */
 export const getOwnerGPUBytes = (): Map<string, number> => {
@@ -20,10 +21,18 @@ export const getOwnerGPUBytes = (): Map<string, number> => {
   return bytes;
 };
 
-/** The registered assets an owner key is on, by kind: what the cell's release would look at. */
-export const getOwnedAssetIds = (ownerKey: string) => {
+/** A cell's GPU bytes: its layers' owner keys' (p353 Phase 5 D10). */
+export const getCellGPUBytes = (bytes: ReadonlyMap<string, number>, cell: StreamingCell) => {
+  let total = 0;
+  for (const layer of cell.layers) total += bytes.get(layer.ownerKey) ?? 0;
+  return total;
+};
+
+/** The registered assets any of the owner keys is on, by kind: what their releases would look
+ * at. */
+export const getOwnedAssetIds = (ownerKeys: readonly string[]) => {
   const ids = { textures: [] as string[], geometries: [] as string[], materials: [] as string[] };
-  const isOwned = (asset: object) => getAssetOwners(asset).includes(ownerKey);
+  const isOwned = (asset: object) => getAssetOwners(asset).some((key) => ownerKeys.includes(key));
   for (const [id, entry] of Object.entries(getTextureRegistry())) {
     if (isOwned(entry.resource)) ids.textures.push(id);
   }
