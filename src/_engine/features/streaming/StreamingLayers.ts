@@ -136,6 +136,8 @@ export type StreamingLayerFade = {
   direction: 'IN' | 'OUT';
   /** When it started on the runtime's clock, shifted back by a turned-around fade's progress. */
   startedAt: number;
+  /** The entities it fades: a turned-around fade keeps them. */
+  ids: readonly number[];
 };
 
 /**
@@ -263,11 +265,56 @@ const getFader = (rt: StreamingRuntime) => (rt.settings.fadeSeconds > 0 ? rt.fad
 
 const getFadeMs = (rt: StreamingRuntime) => rt.settings.fadeSeconds * 1000;
 
-/** The entities a fade takes: the layer's units' and the bodies it adopted. */
-const getFadedEntityIds = (layer: StreamingLayer) => {
+/** Whether the layer draws a shared entity `holders` hold (D8): its first holder shows it; it's
+ * taken down (`leaving`) only once no other holder's cell still wants its layer of this range, by
+ * the first holder. */
+const isDrawingHolder = (
+  rt: StreamingRuntime,
+  cellKey: number,
+  range: StreamingContentRange,
+  holders: readonly number[],
+  leaving: boolean
+) => {
+  if (holders[0] !== cellKey) return false;
+  if (!leaving) return true;
+  for (let i = 1; i < holders.length; i++) {
+    const holder = rt.cells.get(holders[i]);
+    if (holder && isRangeWanted(range, holder.level)) return false;
+  }
+  return true;
+};
+
+/**
+ * The entities of `ids` the cell's layer of `range` shows (`leaving`: takes down): every one, but a
+ * shared entity (`rt.sharedEntities`, a JSON oversized mesh) only for the holder that draws it, so
+ * a second cell's load doesn't hide it to fade it in again, and one cell leaving doesn't fade out
+ * what the others still show. `ids` itself when none is left out.
+ * @internal
+ */
+export const getDrawnEntityIds = (
+  rt: StreamingRuntime,
+  cellKey: number,
+  range: StreamingContentRange,
+  ids: readonly number[],
+  leaving: boolean
+): readonly number[] => {
+  const shared = rt.sharedEntities;
+  if (!shared) return ids;
+  let out: number[] | null = null;
+  for (let i = 0; i < ids.length; i++) {
+    const holders = shared.getHolders(ids[i]);
+    const isDrawn = !holders || isDrawingHolder(rt, cellKey, range, holders, leaving);
+    if (!isDrawn && !out) out = ids.slice(0, i);
+    else if (isDrawn && out) out.push(ids[i]);
+  }
+  return out ?? ids;
+};
+
+/** The entities a fade takes: the layer's units' and the bodies it adopted, those it draws. */
+const getFadedEntityIds = (rt: StreamingRuntime, layer: StreamingLayer, leaving: boolean) => {
   const ids = getStreamingLayerEntityIds(layer);
   for (let i = 0; i < layer.adopted.length; i++) ids.push(layer.adopted[i]);
-  return ids;
+  return getDrawnEntityIds(rt, layer.cell.key, layer.range, ids, leaving);
 };
 
 /** Starts the layer's fade `direction`, or turns its running one around from where it is.
@@ -283,13 +330,13 @@ const startFade = (rt: StreamingRuntime, layer: StreamingLayer, direction: 'IN' 
     // The other way from where it is: a new job at the turned progress, on the same objects
     fade.direction = direction;
     fade.startedAt = now - (1 - progress) * getFadeMs(rt);
-    fade.job = fader.start(rt.world, getFadedEntityIds(layer), direction, 1 - progress);
+    fade.job = fader.start(rt.world, fade.ids, direction, 1 - progress);
     rt.stats.fadesReversed++;
     return true;
   }
-  const ids = getFadedEntityIds(layer);
+  const ids = getFadedEntityIds(rt, layer, direction === 'OUT');
   if (!ids.length) return false;
-  layer.fade = { job: fader.start(rt.world, ids, direction, 0), direction, startedAt: now };
+  layer.fade = { job: fader.start(rt.world, ids, direction, 0), direction, startedAt: now, ids };
   rt.stats.fadesStarted++;
   return true;
 };
@@ -307,7 +354,7 @@ export const pumpStreamingLayerFade = (rt: StreamingRuntime, layer: StreamingLay
   fader.draw(fade.job, progress);
   if (progress < 1) return;
   layer.fade = null;
-  if (fade.direction === 'OUT') beginStreamingLayerUnload(rt, layer);
+  if (fade.direction === 'OUT') beginStreamingLayerUnload(rt, layer, true);
 };
 
 /**
@@ -337,14 +384,17 @@ const unloadUnitContent = (
   ctx: StreamingCellContext
 ) => {
   if (content.unload) {
+    // What it leaves alive draws whole, but a shared entity another holder draws (asked before
+    // the unload, which lets go of it)
+    const drawn = getDrawnEntityIds(rt, ctx.cellKey, 'NEAR', entityIds, false);
     try {
       content.unload(entityIds, ctx);
     } catch (err) {
       rt.stats.unitErrors++;
       lerror(`Streaming: a content unload of cell ${ctx.cx},${ctx.cz} threw.`, err);
     }
-    rt.primer?.release(rt.world, entityIds);
-    rt.fader?.release(rt.world, entityIds);
+    rt.primer?.release(rt.world, drawn);
+    rt.fader?.release(rt.world, drawn);
     return;
   }
   for (let i = 0; i < entityIds.length; i++) rt.world.deleteEntity(entityIds[i]);
@@ -407,10 +457,18 @@ export const cancelStreamingPrime = cancelPrime;
 /**
  * Starts taking a layer's content down; a load in flight is cancelled (its units not started are
  * skipped, a late one unloads when it comes back). Its bodies that moved into another loaded cell
- * go to that cell first.
+ * go to that cell first. `isFadedOut`: its fade out has just ended; a shown layer with entities
+ * taken down otherwise while fades are on is counted (`unfadedTakeDowns`).
  * @internal
  */
-export const beginStreamingLayerUnload = (rt: StreamingRuntime, layer: StreamingLayer) => {
+export const beginStreamingLayerUnload = (
+  rt: StreamingRuntime,
+  layer: StreamingLayer,
+  isFadedOut = false
+) => {
+  if (!isFadedOut && layer.phase === 'LOADED' && getFader(rt)) {
+    if (getFadedEntityIds(rt, layer, true).length) rt.stats.unfadedTakeDowns++;
+  }
   rt.bodies?.handOver?.(rt, layer);
   cancelPrime(rt, layer);
   // A fade still running goes with the entities (a never-shown layer is held from drawing)
@@ -488,8 +546,10 @@ export const getStreamingLayerEntityIds = (layer: StreamingLayer, out: number[] 
  * the layer's fade in, D6), they're held from drawing while its layer's load is primed, and its
  * bodies get the layer's tier. */
 const finishUnit = (rt: StreamingRuntime, layer: StreamingLayer, entityIds: readonly number[]) => {
-  getFader(rt)?.prepare(rt.world, entityIds, layer.fadesIn);
-  if (layer.primes && rt.primer) rt.primer.hold(rt.world, entityIds);
+  // A shared entity another cell already shows isn't hidden again (D8)
+  const drawn = getDrawnEntityIds(rt, layer.cell.key, layer.range, entityIds, false);
+  getFader(rt)?.prepare(rt.world, drawn, layer.fadesIn);
+  if (layer.primes && rt.primer) rt.primer.hold(rt.world, drawn);
   rt.bodies?.unitLoaded?.(rt, layer, entityIds);
 };
 
@@ -555,7 +615,10 @@ export const finishStreamingLayerLoadIfDone = (rt: StreamingRuntime, layer: Stre
     layer.lastLoadMs = rt.now() - layer.loadStartedAt;
     rt.stats.loadsFinished++;
   }
-  const entityIds = layer.primes && rt.primer ? getStreamingLayerEntityIds(layer) : null;
+  const entityIds =
+    layer.primes && rt.primer
+      ? getDrawnEntityIds(rt, layer.cell.key, layer.range, getStreamingLayerEntityIds(layer), false)
+      : null;
   if (rt.primer && entityIds?.length) {
     layer.phase = 'PRIMING';
     layer.primeStartedAt = rt.now();

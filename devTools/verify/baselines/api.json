@@ -1773,18 +1773,20 @@
       "decideStreamingCells": "Function",
       "dropStreamingCells": "Function",
       "getStreamingCellEntityIds": "Function",
+      "getStreamingCellLayer": "Function",
       "loadStreamingCellsNowAsync": "Function",
       "pumpStreamingCells": "Function",
-      "setStreamingTransitionListener": "Function",
       "StreamingBudgets": "TypeAlias",
       "StreamingCell": "TypeAlias",
       "StreamingCellPhase": "TypeAlias",
       "StreamingCellUnitSource": "TypeAlias",
+      "StreamingFadeJob": "TypeAlias",
+      "StreamingFader": "TypeAlias",
       "StreamingPrimeJob": "TypeAlias",
       "StreamingPrimer": "TypeAlias",
       "StreamingRuntime": "TypeAlias",
-      "StreamingStats": "TypeAlias",
-      "StreamingTransitionListener": "TypeAlias"
+      "StreamingSharedEntities": "TypeAlias",
+      "StreamingStats": "TypeAlias"
     },
     "src/_engine/features/streaming/StreamingContent.ts": {
       "addStreamingCellContent": "Function",
@@ -1794,12 +1796,18 @@
       "getStreamingCellKeyAt": "Function",
       "isStreamingCellKey": "Function",
       "removeStreamingCellContent": "Function",
+      "STREAMING_CONTENT_RANGES": "Variable",
       "StreamingCellContent": "TypeAlias",
-      "StreamingCellContext": "TypeAlias"
+      "StreamingCellContext": "TypeAlias",
+      "StreamingContentRange": "TypeAlias"
     },
     "src/_engine/features/streaming/StreamingDataContent.ts": {
+      "createFarGroupEntity": "Function",
       "createStreamingDataContent": "Function",
       "StreamingDataContent": "TypeAlias"
+    },
+    "src/_engine/features/streaming/StreamingFades.ts": {
+      "createStreamingFader": "Function"
     },
     "src/_engine/features/streaming/StreamingFeature.ts": {
       "streaming": "Function"
@@ -1807,14 +1815,51 @@
     "src/_engine/features/streaming/StreamingHandOver.ts": {
       "findAdopter": "Function",
       "handOverMovedBodies": "Function",
-      "takeBodyFromCell": "Function"
+      "takeBodyFromLayer": "Function"
+    },
+    "src/_engine/features/streaming/StreamingLayers.ts": {
+      "beginStreamingLayerLoad": "Function",
+      "beginStreamingLayerUnload": "Function",
+      "cancelStreamingPrime": "Variable",
+      "createStreamingLayers": "Function",
+      "deleteAdoptedBodies": "Function",
+      "finishStreamingLayerLoadIfDone": "Function",
+      "finishStreamingLayerUnload": "Function",
+      "getDrawnEntityIds": "Function",
+      "getStreamingLayerEntityIds": "Function",
+      "getStreamingLayerOwnerLayer": "Function",
+      "isLayerHolding": "Function",
+      "isLayerWanted": "Function",
+      "isNextStreamingUnitWaiting": "Function",
+      "isRangeWanted": "Function",
+      "isStreamingLayerFadingOut": "Function",
+      "isStreamingLayerLoading": "Function",
+      "isStreamingUnitDone": "Function",
+      "notifyStreamingCell": "Function",
+      "pumpStreamingLayerFade": "Function",
+      "pumpStreamingLayerPrime": "Function",
+      "releaseLeavingLayers": "Function",
+      "runNextStreamingUnit": "Function",
+      "setStreamingTransitionListener": "Function",
+      "showAdoptedBody": "Function",
+      "STREAMING_LAYER_RANGES": "Variable",
+      "StreamingLayer": "TypeAlias",
+      "StreamingLayerFade": "TypeAlias",
+      "StreamingLayerUnit": "TypeAlias",
+      "StreamingTransitionListener": "TypeAlias",
+      "unloadStreamingUnit": "Function",
+      "updateStreamingCellPhase": "Function"
     },
     "src/_engine/features/streaming/StreamingManifest.ts": {
+      "StreamingFarInstance": "TypeAlias",
+      "StreamingFarMesh": "TypeAlias",
       "StreamingManifest": "TypeAlias",
-      "StreamingManifestCell": "TypeAlias"
+      "StreamingManifestCell": "TypeAlias",
+      "StreamingManifestLayer": "TypeAlias"
     },
     "src/_engine/features/streaming/StreamingPriming.ts": {
       "createStreamingPrimer": "Function",
+      "forgetPrimedMaterial": "Function",
       "resetStreamingPrimer": "Function",
       "StreamingPrimeBudgets": "TypeAlias"
     },
@@ -1832,6 +1877,7 @@
       "streamingSchemaPart": "Variable"
     },
     "src/_engine/features/streaming/StreamingSettings.ts": {
+      "DEFAULT_STREAMING_FADE_SECONDS": "Variable",
       "DEFAULT_STREAMING_RINGS": "Variable",
       "getStreamingSettingsProblem": "Function",
       "isStreamingCellSize": "Function",
@@ -2592,13 +2638,17 @@
     },
     "src/_engine/kernel/render/LodFade.ts": {
       "clearLodObjectFade": "Function",
+      "clearObjectVisibilityFade": "Function",
       "createLodFadeAttribute": "Function",
       "enableLodDither": "Function",
       "getLodFadeAttribute": "Function",
+      "getObjectVisibilityFade": "Function",
+      "isDitherShown": "Function",
       "isLodDitherEnabled": "Function",
       "LOD_FADE_OPAQUE": "Variable",
       "lodDither": "Function",
-      "setLodObjectFade": "Function"
+      "setLodObjectFade": "Function",
+      "setObjectVisibilityFade": "Function"
     },
     "src/_engine/kernel/render/Object3DHelpers.ts": {
       "DEBUG_HELPER_USER_DATA_KEY": "Variable",
@@ -4955,8 +5005,11 @@
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
       "SkyBoxDefSchema",
+      "StreamingFarInstance",
+      "StreamingFarMesh",
       "StreamingManifest",
       "StreamingManifestCell",
+      "StreamingManifestLayer",
       "StreamingRingsSchema",
       "TEXTURE_SLOTS",
       "TextureArrayAsset",
@@ -5054,6 +5107,7 @@
       "StreamingCellContent",
       "StreamingCellContext",
       "StreamingCellState",
+      "StreamingContentRange",
       "StreamingFocus",
       "getStreamingCellKey",
       "getStreamingCellKeyAt",

@@ -94,8 +94,8 @@ const objectFadePair = uniform(new THREE.Vector2(LOD_FADE_OPAQUE, LOD_FADE_OPAQU
  * Gives `mesh` a per-instance fade (`lodFade`), every instance at {@link LOD_FADE_OPAQUE}: its
  * dither-enabled materials then read each instance's own fade. It can be called after the mesh
  * was first drawn: the fade binds per drawn object, and the mesh's builds are shared with the
- * other InstancedMeshes on its materials. The attribute isn't on the geometry, which is shared, and
- * three frees its GPU buffer with the mesh's render objects, like the instance matrix.
+ * other InstancedMeshes on its materials. The attribute isn't on the geometry, which is shared: the
+ * mesh's `dispose()` disposes it (its GPU buffer), as three's does the instance matrix.
  * Moving an instance between slots moves its fade too; set `needsUpdate` after writing.
  * @param mesh the instanced mesh
  * @returns the attribute, `maxInstances` (the mesh's capacity) long
@@ -131,6 +131,11 @@ const createOpaqueFadeAttribute = (mesh: THREE.InstancedMesh) => {
     1
   );
   attribute.name = 'lodFade';
+  // Freed with the mesh, as three frees its instance matrix: three binds the attribute through a
+  // node, and a render object's dispose frees only what its build bound (another mesh's, on a
+  // shared build), so a deleted mesh's buffer stayed in three's totals until collected (p353
+  // Phase 5: streamed far groups)
+  mesh.addEventListener('dispose', () => attribute.dispose());
   return attribute;
 };
 

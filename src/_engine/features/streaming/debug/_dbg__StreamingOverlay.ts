@@ -14,13 +14,22 @@ import type { StreamingCell } from '../StreamingCells';
 import { StreamingLevel } from '../StreamingRings';
 
 /** What a line draws: a state's cells, or the focus */
-type OverlayLine = 'RESIDENT' | 'NEARBY' | 'QUEUED' | 'LOADING' | 'PRIMING' | 'UNLOADING' | 'FOCUS';
+type OverlayLine =
+  | 'RESIDENT'
+  | 'NEARBY'
+  | 'FAR'
+  | 'QUEUED'
+  | 'LOADING'
+  | 'PRIMING'
+  | 'UNLOADING'
+  | 'FOCUS';
 
-/** Each line's colour: loaded green / yellow (the LOD overlay's level 0 and 1), queued grey,
- * loading blue, priming purple, unloading red, the focus white. */
+/** Each line's colour: loaded green / yellow (the LOD overlay's level 0 and 1) / orange (far),
+ * queued grey, loading blue, priming purple, unloading red, the focus white. */
 export const STREAMING_OVERLAY_COLORS: Record<OverlayLine, number> = {
   RESIDENT: 0x30c040,
   NEARBY: 0xe0c020,
+  FAR: 0xe07820,
   QUEUED: 0x808080,
   LOADING: 0x4080f0,
   PRIMING: 0xa060e0,
@@ -31,6 +40,7 @@ export const STREAMING_OVERLAY_COLORS: Record<OverlayLine, number> = {
 const LINE_ORDER: readonly OverlayLine[] = [
   'RESIDENT',
   'NEARBY',
+  'FAR',
   'QUEUED',
   'LOADING',
   'PRIMING',
@@ -41,6 +51,7 @@ const lineIndex = (name: OverlayLine) => LINE_ORDER.indexOf(name);
 const LINE = {
   RESIDENT: lineIndex('RESIDENT'),
   NEARBY: lineIndex('NEARBY'),
+  FAR: lineIndex('FAR'),
   QUEUED: lineIndex('QUEUED'),
   LOADING: lineIndex('LOADING'),
   PRIMING: lineIndex('PRIMING'),
@@ -90,7 +101,8 @@ const getCellLine = (cell: StreamingCell): number => {
     case 'UNLOADED':
       return LINE.QUEUED;
     default:
-      return cell.level === StreamingLevel.RESIDENT ? LINE.RESIDENT : LINE.NEARBY;
+      if (cell.level === StreamingLevel.RESIDENT) return LINE.RESIDENT;
+      return cell.level === StreamingLevel.NEARBY ? LINE.NEARBY : LINE.FAR;
   }
 };
 

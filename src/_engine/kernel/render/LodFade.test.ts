@@ -84,6 +84,25 @@ describe('LodFade', () => {
     expect(fade.getAttribute(mesh)).toBe(bound);
   });
 
+  it("disposes a mesh's fade attribute with the mesh, its own or the opaque one", () => {
+    const material = createDitheredMaterial();
+    const withFade = new THREE.InstancedMesh(geometry, material, 2);
+    const without = new THREE.InstancedMesh(geometry, material, 2);
+    const own = createLodFadeAttribute(withFade);
+    const [fade] = findNodes(setUpMask(material, without), 'LodFadeAttributeNode') as [
+      FadeAttributeNode,
+    ];
+    const opaque = fade.getAttribute(without);
+    const disposed: THREE.BufferAttribute[] = [];
+    for (const attribute of [own, opaque]) {
+      attribute.addEventListener('dispose', () => disposed.push(attribute));
+    }
+
+    withFade.dispose();
+    without.dispose();
+    expect(disposed).toEqual([own, opaque]);
+  });
+
   it('reads the per-object fades on an InstancedMesh too (an InstancedMesh entity fades whole)', () => {
     const material = createDitheredMaterial();
     const instanced = new THREE.InstancedMesh(geometry, material, 1);

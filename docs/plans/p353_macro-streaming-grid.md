@@ -1467,6 +1467,81 @@ As built (section 4):
   matrices and bounds, a mesh of its own; the shared mesh through the kept layer; the machine
   releasing the near and kept layers).
 
+As built (section 5):
+
+- **`streamingGrid`** (rings 1 / 2 / 5): its terrain block `NEAR_AND_FAR`, with a hand-made 4 × 4
+  LOD level (`TERRAIN_FAR_SCREEN_SIZE` 0.3, about 300 m), both geometries the kept layer's; its
+  rocks `NEAR` and their `FAR` unit (`loadFarRocks`, `#region streaming-far-rocks`): one
+  `InstancedMesh` of the rock's hemi octahedral impostor (`surfaceDepth: false`) per cell, an
+  instance where each rock is (`getPropPlacements`, the near rocks' seeded placements), a ref on
+  the impostor's geometry and material per mesh; the impostor baked at the scene's load and held
+  by the scene for its life (a bake during play would cost 40-115 ms); its crates `NEAR`. The
+  beacons' pillar and cap have JSON `lod` levels (`streamingGridPillarFar`, 5 sides;
+  `streamingGridCapFar`, 6 × 4): 32 far groups of one instance each (a beacon per cell). The wall
+  is kept.
+- **`streamingPhysics`** (rings 1 / 2 / 4): its slabs, piles and chains `NEAR_AND_FAR`; a `REMOVED`
+  crate is tinted purple.
+- **Found and fixed: a shared entity's fades.** With only the first holder returning the kept
+  mesh's id, the wall faded out when its first cell left, popped back after (the custom
+  `unload`'s release), and the last holder deleted it unfaded. Every holder's unit now returns the
+  id, the data content is the runtime's `sharedEntities` (`getHolders(entityId)`, in load order),
+  and the layers (`getDrawnEntityIds`) let only the first holder prepare, hold, prime, fade in and
+  release it, and fade it out only once no other holder's cell still wants its layer. Left as
+  limits (rare, not counted): a first holder cancelled while priming it shows it unprimed; a fade
+  out that another cell's load overtakes shows it again after the fade.
+- **Found and fixed: a deleted `InstancedMesh`'s `lodFade` buffer** (`kernel/render/LodFade.ts`).
+  three binds the attribute through a node, and a render object's dispose frees only what its
+  build bound (on a shared build, another mesh's), so a deleted far group's buffer stayed in
+  three's totals until it was collected (239 a flight). The attribute is now disposed with its
+  mesh (a `dispose` listener, as three's own `dispose` does the instance matrix);
+  `LodFade.test.ts` checks it.
+- **The GPU memory owner** (`getMemoryOwner`, section 1's finding): an asset only one cell's
+  layers hold is listed under the cell's near key, `sceneId#cellKey`
+  (`_dbg__GPUMemoryOwners.test.ts`).
+- **`unfadedTakeDowns`** (`StreamingStats`): a shown layer with entities taken down during play
+  without its fade out while fades are on, the exit check's count.
+- **Debug:** the tab's cells per state count `FAR`; a Fades readout (running in and out, started,
+  turned around, taken down unfaded); GPU memory per layer (near, far, kept); the far groups alive
+  and their instances (`countFarGroups`); the scene's `fadeSeconds`. The cell window: each layer's
+  phase, units, generation, running fade and progress, owner key and GPU memory, and its far
+  groups. The overlay: `FAR` orange.
+- **Docs:** the feature's `CLAUDE.md` (layers, fades, the far content, owner keys and bodies per
+  layer, the debug, the limits, the scenes), the gather's and physics' `CLAUDE.md`, the Hub's
+  Streaming page (Far representations, the `FAR` rows, Not yet), `readme.md`'s World streaming.
+- **`yarn sbp`:** every budget passes; the streaming group's first download 2.5 KiB (budget 4), on
+  demand `StreamingCells.js` 1.8, `StreamingLayers.js` 2.9, `StreamingPriming.js` 1.5,
+  `StreamingFades.js` 0.6, `StreamingDataContent.js` 1.5 KiB (gzip). The bundle baseline recorded.
+  `yarn hub:build` clean. `yarn verify:scenes` loads both scenes clean in every configuration.
+- **Measured** (M2, headless Chrome, the test bridge's fixed frame step, a harness outside the
+  repo): `streamingGrid` flown out and back (2,240 m) at 30 and 60 m/s, twice, on WebGPU and
+  WebGL 2: 764 layer loads and 764 unloads a flight, 1,528 fades, none turned around, 0 unfaded
+  take-downs, 0 priming stalls, no errors; the streaming system at most 2.4-5.7 ms in a frame (p99
+  2.1); every in-grid `LOADED` `FAR` cell sampled (1,350-2,700 samples a run, up to 96 at once)
+  drew exactly one `InstancedMesh` per far group plus the rocks' and held no near-layer memory; the
+  second flight left three's GPU memory (bytes, geometries, attributes, textures, programs), the
+  registries and the entities exactly as the first did. WebGPU: one frame over 33 ms a flight
+  (38-46 ms, at the 180° turn at the grid's end, 0.1 ms of streaming in it). `streamingPhysics`
+  (the plough at 24 m/s, 3,600 frames) in all three targets: every crate back from `REMOVED`
+  exactly where it was taken out, every chain link sampled in a `FAR` cell `STATIC` (about 600
+  samples), none off its cell's tier at the end, no capacity refusal, the removals per body the
+  same in each target. The probe hash is the same in all three targets (`99126435`; `07287c06`
+  with `far: 2`, section 3's, so the machine's changes leave the simulation as it was).
+- **Open: two exit criteria not met (for the user to decide; the phase isn't marked done):**
+  1. **WebGL 2: 5 frames of 33-37 ms a flight** at 30 and at 60 m/s, each within 3 frames of
+     about 10 layers finishing their priming and starting their fades together (a column of cells
+     changing level as the focus crosses a boundary), the main thread's streaming under 2 ms in
+     them: WebGL 2's GPU-process cost of first draws, which far content makes 2-3× more of per
+     crossing (Phase 2 measured none over 33 ms with near content only). Options: pace the layers
+     shown per frame on WebGL 2 (a budget like `maxNewStructuresPerFrame`, counting shown layers
+     or meshes), or accept it.
+  2. **The far ring changes the near simulation**: after 300 steps, 184 of the near cells' 198
+     bodies are bit-identical with and without it, and the 14 `FULL` crates of the pile being
+     mowed differ by up to 8.5 mm (the same in all three targets). Likely the far cells' ground
+     slabs (`FIXED` colliders, which have no tier, §6.1 constraint 2) and `STATIC` chains in
+     Rapier's broad phase, changing its contact pairs' order. Options: accept and document (the
+     scene stays deterministic, its hash per configuration of rings), or take a far cell's level
+     colliders out of the world (`FIXED` colliders have no tier: a physics change, its own plan).
+
 ## 10. Versioning, Hub and docs
 
 Engine minor per phase that adds API (Phases 1–4); the `AssetOwners` change in Phase 2 is internal.

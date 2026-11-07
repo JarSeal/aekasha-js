@@ -51,6 +51,7 @@ const createStats = (): StreamingStats => ({
   bodiesAdopted: 0,
   fadesStarted: 0,
   fadesReversed: 0,
+  unfadedTakeDowns: 0,
 });
 
 /** A mesh entity of `material` */

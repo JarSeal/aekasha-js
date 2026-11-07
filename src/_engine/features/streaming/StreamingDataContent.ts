@@ -4,8 +4,9 @@
 // one async unit loading its cell-only assets in its owner key, then its entries a few a unit, the
 // first of them waiting for the assets. The near layer's entries are its lights and meshes; the far
 // layer's its meshes' far representations (an `InstancedMesh` per group, a mesh of its own
-// otherwise); the kept layer's the oversized meshes it overlaps, each counted across their cells:
-// the first cell to load creates it, the last to unload deletes it.
+// otherwise); the kept layer's the oversized meshes it overlaps, one entity across their cells:
+// the first cell to load creates it, every holder's unit returns it, the last to unload deletes it,
+// and `getHolders` tells the machine which holder shows and fades it (D8).
 import * as THREE from 'three/webgpu';
 import { getCellOwnerKey } from '../../kernel/assets/AssetOwners';
 import { getGeometry, incGeometryRef } from '../../kernel/assets/Geometry';
@@ -29,8 +30,8 @@ const ENTRIES_PER_UNIT = 8;
 
 const NO_UNITS: readonly StreamingCellUnitSource[] = [];
 
-/** A shared (oversized) mesh's entity and how many of its cells hold it */
-type SharedEntity = { entityId: number; holders: number };
+/** A shared (oversized) mesh's entity and the cells holding it, the first to load first */
+type SharedEntity = { entityId: number; holders: number[] };
 
 /**
  * A scene's JSON cell content: the units per cell and layer, built on a layer's first load and kept
@@ -45,6 +46,9 @@ export type StreamingDataContent = {
   getUnits(cellKey: number, range: StreamingContentRange): readonly StreamingCellUnitSource[];
   /** The shared meshes' entities alive, by manifest mesh index (the debug tab's). */
   readonly shared: ReadonlyMap<number, Readonly<SharedEntity>>;
+  /** The cells holding a shared mesh's entity, the first to load first; null for any other
+   * entity (the machine's `sharedEntities`). */
+  getHolders(entityId: number): readonly number[] | null;
 };
 
 type AssetLists = Pick<
@@ -132,11 +136,13 @@ export const createStreamingDataContent = (
   manifest: StreamingManifest
 ): StreamingDataContent => {
   const shared = new Map<number, SharedEntity>();
+  const sharedByEntity = new Map<number, SharedEntity>();
   const unitsByLayer = new Map<string, readonly StreamingCellUnitSource[]>();
   const farMeshes = manifest.farMeshes ?? [];
 
-  /** A shared (kept) mesh's unit: created by its first holder, which gets its id (and primes it);
-   * the others hold it without one. The last holder's unload deletes it. */
+  /** A shared (kept) mesh's unit: created by its first holder; every holder's unit returns its
+   * id, and the machine asks `getHolders` which of them primes, shows and fades it. The last
+   * holder's unload deletes it. */
   const createSharedMeshUnit = (cellKey: number, index: number): StreamingCellContent => ({
     sceneId,
     cellKey,
@@ -144,18 +150,24 @@ export const createStreamingDataContent = (
     load: () => {
       const alive = shared.get(index);
       if (alive) {
-        alive.holders++;
-        return [];
+        if (!alive.holders.includes(cellKey)) alive.holders.push(cellKey);
+        return [alive.entityId];
       }
       const [entityId] = createSceneObject3Ds({ meshes: [manifest.meshes[index]] });
       if (entityId === undefined) return [];
-      shared.set(index, { entityId, holders: 1 });
+      const entry = { entityId, holders: [cellKey] };
+      shared.set(index, entry);
+      sharedByEntity.set(entityId, entry);
       return [entityId];
     },
     unload: (_entityIds, ctx) => {
       const alive = shared.get(index);
-      if (!alive || --alive.holders > 0) return;
+      if (!alive) return;
+      const at = alive.holders.indexOf(cellKey);
+      if (at !== -1) alive.holders.splice(at, 1);
+      if (alive.holders.length) return;
       shared.delete(index);
+      sharedByEntity.delete(alive.entityId);
       if (ctx.world.isAlive(alive.entityId)) ctx.world.deleteEntity(alive.entityId);
     },
   });
@@ -235,6 +247,7 @@ export const createStreamingDataContent = (
   return {
     manifest,
     shared,
+    getHolders: (entityId) => sharedByEntity.get(entityId)?.holders ?? null,
     getUnits: (cellKey, range) => {
       const key = `${cellKey}/${range}`;
       let units = unitsByLayer.get(key);

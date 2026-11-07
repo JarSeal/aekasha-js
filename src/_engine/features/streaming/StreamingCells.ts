@@ -147,6 +147,18 @@ export type StreamingFader = {
 };
 
 /**
+ * The entities several cells' units hold at once (a scene JSON's oversized mesh, p353 Phase 5 D8:
+ * one entity, returned by the unit of every cell it overlaps), and which of their holders draws
+ * them: the first holder holds it while priming and fades it in, and it fades out only once every
+ * holder is leaving, by the first of them (StreamingLayers.ts' `getDrawnEntityIds`).
+ * @internal
+ */
+export type StreamingSharedEntities = {
+  /** The cells holding the entity, the first to load first; null for an entity one unit holds. */
+  getHolders(entityId: number): readonly number[] | null;
+};
+
+/**
  * The machine's counters since the scene's load, for the debug tab. Loads and unloads count the
  * layers that ran units (an empty layer is neither).
  * @internal
@@ -189,6 +201,9 @@ export type StreamingStats = {
   fadesStarted: number;
   /** Fades turned around (a layer fading out wanted again, or one fading in no longer wanted). */
   fadesReversed: number;
+  /** Shown layers taken down during play without a fade out while fades are on (an exit check of
+   * p353 Phase 5: 0, but for a content's own `unload` that leaves its entities alive). */
+  unfadedTakeDowns: number;
 };
 
 /**
@@ -248,6 +263,8 @@ export type StreamingRuntime = {
   /** The cells' bodies (StreamingBodies.ts): which entities can leave their cell, and where they
    * are. Null: nothing moves (the machine's own tests). */
   bodies: StreamingBodies | null;
+  /** The entities several cells hold (the JSON content's shared meshes), or null. */
+  sharedEntities: StreamingSharedEntities | null;
 };
 
 /**
@@ -271,6 +288,7 @@ export const createStreamingRuntime = (
   fader: null,
   dataContent: null,
   bodies: null,
+  sharedEntities: null,
   isDropped: false,
   cells: new Map(),
   order: [],
@@ -296,6 +314,7 @@ export const createStreamingRuntime = (
     bodiesAdopted: 0,
     fadesStarted: 0,
     fadesReversed: 0,
+    unfadedTakeDowns: 0,
   },
 });
 

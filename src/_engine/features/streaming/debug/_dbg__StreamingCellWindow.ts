@@ -1,9 +1,12 @@
 // The Streaming tab's cell window (docs/plans/p353_macro-streaming-grid.md §7): one cell's state,
-// ring, load time, content units, entities, GPU memory and assets, its last transitions, and a
+// ring, its layers (each one's phase, units, owner key, GPU memory and running fade; p353 Phase 5),
+// load time, entities, far groups, GPU memory and assets, its last transitions, and a
 // button that teleports the focus to it. A window kind keyed by the cell; cells don't outlive a scene, so the windows are
 // removed on a scene change and not saved. The transitions are recorded here, from the machine's
 // transition listener, for every tracked cell of the current scene.
+import * as THREE from 'three/webgpu';
 import { createDebugWindowGrid, getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
+import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { formatBytes } from '../../../kernel/assets/debug/_dbg__AssetStats';
 import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
 import {
@@ -22,7 +25,11 @@ import {
   type StreamingRuntime,
   getStreamingCellEntityIds,
 } from '../StreamingCells';
-import { setStreamingTransitionListener } from '../StreamingLayers';
+import {
+  type StreamingLayer,
+  getStreamingLayerEntityIds,
+  setStreamingTransitionListener,
+} from '../StreamingLayers';
 import type { StreamingManifest, StreamingManifestLayer } from '../StreamingManifest';
 import { StreamingLevel } from '../StreamingRings';
 import { getCellGPUBytes, getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
@@ -111,16 +118,49 @@ const formatDataContent = (cellKey: number) => {
   return lines.join('\n');
 };
 
-/** A cell's layers (p353 Phase 5 D1): each one's phase, units and load generation. */
-const formatLayers = (cell: StreamingCell | undefined) =>
-  cell
-    ? cell.layers
-        .map(
-          (layer) =>
-            `${layer.range}: ${layer.phase}, ${layer.units.length} units, gen ${layer.generation}`
-        )
-        .join('\n')
-    : '';
+/** A layer's running fade's progress (0 → 1), or -1 without one. */
+export const getLayerFadeProgress = (rt: StreamingRuntime, layer: StreamingLayer) => {
+  const { fade } = layer;
+  const ms = rt.settings.fadeSeconds * 1000;
+  if (!fade || ms <= 0) return -1;
+  return Math.min(1, (rt.now() - fade.startedAt) / ms);
+};
+
+/** The far groups (InstancedMesh entities) a cell's far layer holds, and their instances. */
+export const countFarGroups = (rt: StreamingRuntime, cell: StreamingCell) => {
+  const far = cell.layers.find((layer) => layer.range === 'FAR');
+  let groups = 0;
+  let instances = 0;
+  if (!far) return { groups, instances };
+  for (const id of getStreamingLayerEntityIds(far)) {
+    const object = rt.world.getComponent(id, ComponentType.OBJECT3D)?.value;
+    if (!(object instanceof THREE.InstancedMesh)) continue;
+    groups++;
+    instances += object.count;
+  }
+  return { groups, instances };
+};
+
+/** A cell's layers (p353 Phase 5 D1, D10): each one's phase, units, generation and running fade,
+ * then its owner key and GPU memory. */
+const formatLayers = (cell: StreamingCell | undefined) => {
+  const rt = getStreamingRuntime();
+  if (!cell || !rt) return '';
+  const bytes = getOwnerGPUBytes();
+  return cell.layers
+    .map((layer) => {
+      const progress = getLayerFadeProgress(rt, layer);
+      const fade =
+        progress < 0
+          ? ''
+          : `, fading ${layer.fade?.direction.toLowerCase()} ${Math.round(progress * 100)} %`;
+      return [
+        `${layer.range}: ${layer.phase}, ${layer.units.length} units, gen ${layer.generation}${fade}`,
+        `  ${layer.ownerKey}: ${formatBytes(bytes.get(layer.ownerKey) ?? 0)}`,
+      ].join('\n');
+    })
+    .join('\n');
+};
 
 /** The longest of a cell's layers' last load or priming times, in ms (-1 before one). */
 const getLastMs = (cell: StreamingCell | undefined, key: 'lastLoadMs' | 'lastPrimeMs') =>
@@ -159,9 +199,16 @@ const createCellWindowContent = (data?: Record<string, unknown>) => {
       get: () => formatLayers(getCell(cellKey)),
       readonly: true,
       multiline: true,
-      rows: 3,
+      rows: 6,
       interval: REFRESH_MS,
     },
+    live('Far groups', () => {
+      const rt = getStreamingRuntime();
+      const cell = getCell(cellKey);
+      if (!rt || !cell) return '–';
+      const { groups, instances } = countFarGroups(rt, cell);
+      return `${groups} (${instances} instances)`;
+    }),
     live('Last load (ms)', () => {
       const ms = getLastMs(getCell(cellKey), 'lastLoadMs');
       return ms < 0 ? '–' : ms.toFixed(1);
@@ -241,7 +288,7 @@ export const toggleStreamingCellWindow = (cell: StreamingCell) => {
     },
     isDebugWindow: true,
     removeOnSceneChange: true,
-    size: { w: 360, h: 580 },
+    size: { w: 380, h: 660 },
   });
 };
 

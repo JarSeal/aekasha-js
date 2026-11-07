@@ -33,6 +33,7 @@ import {
   setStreamingOverlayHeight,
 } from './_dbg__StreamingOverlay';
 import { getCellGPUBytes, getOwnerGPUBytes } from './_dbg__StreamingMemory';
+import { countFarGroups } from './_dbg__StreamingCellWindow';
 
 // The Streaming tab (docs/plans/p353_macro-streaming-grid.md §7): the current scene's settings,
 // the focus and its cell, the cells per state, the machine's counters, the focus tools (freeze,
@@ -54,6 +55,7 @@ type Readouts = {
   cells: string;
   counters: string;
   priming: string;
+  fades: string;
   bodies: string;
   memory: string;
   data: string;
@@ -62,12 +64,20 @@ type Readouts = {
 /** The cells' GPU bytes by owner key, read once per refresh (it walks every asset) */
 let cellBytes = new Map<string, number>();
 
-const COUNTED_STATES = ['RESIDENT', 'NEARBY', 'QUEUED', 'LOADING', 'PRIMING', 'UNLOADING'] as const;
+const COUNTED_STATES = [
+  'RESIDENT',
+  'NEARBY',
+  'FAR',
+  'QUEUED',
+  'LOADING',
+  'PRIMING',
+  'UNLOADING',
+] as const;
 
 const formatScene = (rt: StreamingRuntime | null) => {
   if (!rt) return 'This scene doesn’t stream.';
-  const { cellSize, rings, margin, nearbyPhysicsTier } = rt.settings;
-  return `${rt.sceneId}: ${cellSize} m cells, rings ${rings.join(' / ')}, margin ${margin} m, NEARBY bodies ${nearbyPhysicsTier}`;
+  const { cellSize, rings, margin, nearbyPhysicsTier, fadeSeconds } = rt.settings;
+  return `${rt.sceneId}: ${cellSize} m cells, rings ${rings.join(' / ')}, margin ${margin} m, NEARBY bodies ${nearbyPhysicsTier}, fades ${fadeSeconds} s`;
 };
 
 const formatFocus = (rt: StreamingRuntime | null) => {
@@ -122,6 +132,25 @@ const formatPriming = (rt: StreamingRuntime | null) => {
   ].join('\n');
 };
 
+/** The layers' fades (p353 Phase 5 D4): running now, and the counters. */
+const formatFades = (rt: StreamingRuntime | null) => {
+  if (!rt) return '';
+  let fadingIn = 0;
+  let fadingOut = 0;
+  for (const cell of rt.cells.values()) {
+    for (const layer of cell.layers) {
+      if (layer.fade?.direction === 'IN') fadingIn++;
+      else if (layer.fade) fadingOut++;
+    }
+  }
+  const s = rt.stats;
+  return [
+    `running: ${fadingIn} in, ${fadingOut} out`,
+    `started: ${s.fadesStarted}, turned around: ${s.fadesReversed}`,
+    `shown layers taken down unfaded: ${s.unfadedTakeDowns}`,
+  ].join('\n');
+};
+
 const BODY_TIERS = ['FULL', 'STATIC', 'DISABLED', 'REMOVED'] as const;
 
 /** The cells' bodies by tier (p353 Phase 4): what the Physics API tab's tier counts should match
@@ -137,17 +166,24 @@ const formatBodies = (rt: StreamingRuntime | null) => {
   ].join('\n');
 };
 
-/** The tracked cells' GPU bytes together, and the largest cell's. */
+/** The tracked cells' GPU bytes together, by layer, and the largest cell's. */
 const formatMemory = (rt: StreamingRuntime | null) => {
   if (!rt) return '';
   let total = 0;
   let largest = 0;
+  const byRange: Record<string, number> = {};
   for (const cell of rt.cells.values()) {
     const bytes = getCellGPUBytes(cellBytes, cell);
     total += bytes;
     largest = Math.max(largest, bytes);
+    for (const layer of cell.layers) {
+      byRange[layer.range] = (byRange[layer.range] ?? 0) + (cellBytes.get(layer.ownerKey) ?? 0);
+    }
   }
-  return `${formatBytes(total)} in cells, the largest ${formatBytes(largest)}`;
+  return [
+    `${formatBytes(total)} in cells, the largest ${formatBytes(largest)}`,
+    `near ${formatBytes(byRange.NEAR ?? 0)}, far ${formatBytes(byRange.FAR ?? 0)}, kept ${formatBytes(byRange.NEAR_AND_FAR ?? 0)}`,
+  ].join('\n');
 };
 
 /** The scene's JSON cell content (the gather's manifest): its cells and entries, the estimated
@@ -165,9 +201,17 @@ const formatDataContent = (rt: StreamingRuntime | null) => {
     estimate += (isFar ? entry.far?.bytesEstimate ?? 0 : entry.bytesEstimate) ?? 0;
     estimate += entry.kept?.bytesEstimate ?? 0;
   }
+  let groups = 0;
+  let instances = 0;
+  for (const cell of rt.cells.values()) {
+    const far = countFarGroups(rt, cell);
+    groups += far.groups;
+    instances += far.instances;
+  }
   return [
     `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.farMeshes?.length ?? 0} far meshes, ${manifest.lights.length} lights`,
     `estimated for the tracked cells: ${formatBytes(estimate)}`,
+    `far groups alive: ${groups} (${instances} instances)`,
     `oversized meshes alive: ${content.shared.size}`,
   ].join('\n');
 };
@@ -314,7 +358,7 @@ const getOverlayFolder = (): Item => ({
       step: 0.1,
     },
     getNoteItem(
-      'Resident green, nearby yellow, queued grey, loading blue, unloading red; the focus a white cross.'
+      'Resident green, nearby yellow, far orange, queued grey, loading blue, priming purple, unloading red; the focus a white cross.'
     ),
   ],
 });
@@ -329,6 +373,7 @@ export const _createStreamingDebugGUI = () => {
     cells: '',
     counters: '',
     priming: '',
+    fades: '',
     bodies: '',
     memory: '',
     data: '',
@@ -349,6 +394,7 @@ export const _createStreamingDebugGUI = () => {
       readouts.cells = formatCells(rt);
       readouts.counters = formatCounters(rt);
       readouts.priming = formatPriming(rt);
+      readouts.fades = formatFades(rt);
       readouts.bodies = formatBodies(rt);
       cellBytes = rt ? getOwnerGPUBytes() : new Map();
       readouts.memory = formatMemory(rt);
@@ -391,6 +437,18 @@ export const _createStreamingDebugGUI = () => {
             'A cell streamed in during play is held unseen while its textures upload and its new shaders compile, then shown a few new materials a frame. A stall: the focus reached it first (widen the rings). An oversized upload: an uncompressed texture over 1024² (ship KTX2).'
           ),
           {
+            key: 'fades',
+            target: readouts,
+            label: 'Fades',
+            readonly: true,
+            multiline: true,
+            rows: 3,
+            interval: 'refresh',
+          },
+          getNoteItem(
+            'A layer streamed in during play dithers in once shown, and a shown one dithers out before it unloads, over the scene’s fadeSeconds; a NEARBY ↔ FAR switch does both at once. Taken down unfaded: none, unless a content’s own unload leaves entities alive.'
+          ),
+          {
             key: 'bodies',
             target: readouts,
             label: 'Bodies',
@@ -407,10 +465,12 @@ export const _createStreamingDebugGUI = () => {
             target: readouts,
             label: 'GPU memory',
             readonly: true,
+            multiline: true,
+            rows: 2,
             interval: 'refresh',
           },
           getNoteItem(
-            'A cell’s GPU memory is what its content alone holds: what several cells or the scene share is the scene’s (the profiler’s GPU memory tab).'
+            'A cell’s GPU memory is what its layers alone hold (near, far and kept, each its own owner key): what several cells or the scene share is the scene’s (the profiler’s GPU memory tab). A FAR cell holds only its far and kept layers’.'
           ),
           {
             key: 'data',
@@ -418,11 +478,11 @@ export const _createStreamingDebugGUI = () => {
             label: 'JSON content',
             readonly: true,
             multiline: true,
-            rows: 3,
+            rows: 4,
             interval: 'refresh',
           },
           getNoteItem(
-            'The scene JSON’s content the gather cut into cells: an asset only cells use loads with them (the estimate sums their textures’ and imports’ encoded GPU size), an oversized mesh while any of its cells is loaded.'
+            'The scene JSON’s content the gather cut into cells: an asset only cells use loads with them (the estimate sums their textures’ and imports’ encoded GPU size), a mesh with LOD levels gives its FAR cell its coarsest level (alike ones one InstancedMesh, a far group), an oversized mesh is kept while any of its cells is loaded.'
           ),
           getFocusFolder(teleport),
           getBudgetsFolder(),

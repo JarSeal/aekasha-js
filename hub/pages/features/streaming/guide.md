@@ -11,19 +11,21 @@ A scene streams once it has a cell size, in its JSON or from code
 ([`setSceneStreamingSettings`](api:setSceneStreamingSettings), over the JSON's):
 
 ```json
-{ "streaming": { "cellSize": 64, "rings": { "resident": 1, "nearby": 2, "far": 4 } } }
+{ "streaming": { "cellSize": 64, "rings": { "resident": 1, "nearby": 2, "far": 5 } } }
 ```
 
 Cells are squares on x and z (height doesn't count), `cellSize` metres wide: a power of two of at
 least 32, so terrain blocks of 32 to 256 m tile them exactly. Each ring is a state's outermost
 ring of cells around the focus's cell:
 
-| State      | Default ring | What the cell has                                              |
-| ---------- | ------------ | -------------------------------------------------------------- |
-| `RESIDENT` | 0–1          | Everything.                                                    |
-| `NEARBY`   | 2            | Everything, loaded a ring ahead of being seen up close.        |
-| `FAR`      | 3–5          | Nothing yet: far stand-ins (impostors, coarse levels) to come. |
-| `UNLOADED` | beyond       | Nothing.                                                       |
+| State      | Default ring | What the cell has                                                       |
+| ---------- | ------------ | ----------------------------------------------------------------------- |
+| `RESIDENT` | 0–1          | Its near and kept content.                                              |
+| `NEARBY`   | 2            | The same, loaded a ring ahead of being seen up close.                   |
+| `FAR`      | 3–5          | Its far content (stand-ins: impostors, coarse levels) and kept content. |
+| `UNLOADED` | beyond       | Nothing.                                                                |
+
+What near, far and kept content are is in [Far representations](#far-representations).
 
 A cell moves to a nearer state as soon as the focus comes within its ring, but back only once the
 focus is `margin` metres past it (a quarter of a cell by default), measured to the cell's edge: a
@@ -32,8 +34,10 @@ player standing on a boundary doesn't load and unload the cells beside it every 
 ## Cell content
 
 What a cell holds is code you register per cell: `load` creates it and returns the entities it
-made, and `unload` takes it down (by default the entities are deleted). The test scene gives
-every cell a terrain block with its own geometry, and two sets of props on shared ones:
+made, and `unload` takes it down (by default the entities are deleted). `loadedAt` says at which
+levels it's loaded ([Far representations](#far-representations)). The test scene gives every cell
+a terrain block with its own geometry, kept from `FAR` in, its rocks near and their impostors
+far, and its crates near:
 
 <<< src/app/scenes/streamingGrid/streamingGrid.ts#streaming-cells
 
@@ -71,7 +75,14 @@ directional lights stay with the scene.
 {
   "streaming": { "cellSize": 64, "base": ["tower"], "radii": { "castle": 90 } },
   "meshes": [
-    { "props": { "appId": "tower", "geo": "towerGeo", "mat": "stone", "position": { "x": 8, "y": 0, "z": 8 } } }
+    {
+      "props": {
+        "appId": "tower",
+        "geo": "towerGeo",
+        "mat": "stone",
+        "position": { "x": 8, "y": 0, "z": 8 }
+      }
+    }
   ]
 }
 ```
@@ -95,6 +106,69 @@ directional lights stay with the scene.
 The test scene's beacons and wall are JSON: each beacon's textured material and geometries load
 with the cells that have a beacon, and the wall, 320 m long, stays while any of its six cells is
 loaded.
+
+## Far representations
+
+A `FAR` cell is seen from far away, so it shows cheap stand-ins instead of its content: a mesh's
+coarsest level, an impostor, a terrain block's coarse level. A unit of content says where it's
+loaded with `loadedAt`:
+
+| `loadedAt`       | Loaded while the cell is            | For                                            |
+| ---------------- | ----------------------------------- | ---------------------------------------------- |
+| `'NEAR'`         | `RESIDENT`, `NEARBY` (the default). | Its full content.                              |
+| `'FAR'`          | `FAR` only.                         | Its stand-ins.                                 |
+| `'NEAR_AND_FAR'` | `RESIDENT`, `NEARBY` and `FAR`.     | What it keeps through every level: its ground. |
+
+So a cell going from `NEARBY` to `FAR` loads its far content and unloads its near content, and its
+kept content stays as it is. The test scene's rocks have a far unit drawing all of a cell's rocks
+as one `InstancedMesh` of the rock's [octahedral impostor](hub:features/lod#impostors), an
+instance where each rock is:
+
+<<< src/app/scenes/streamingGrid/streamingGrid.ts#streaming-far-rocks
+
+- **The cell never goes blank.** The content a cell is leaving stays drawn until the content
+  replacing it is loaded and primed, then they cross-fade. A switch the cell changes its mind
+  about before it's done is undone without a reload.
+- **Everything streamed fades.** An entity a cell shows during play dithers in over the scene's
+  `streaming.fadeSeconds`, and one it takes down dithers out first (its `unload` runs once the
+  fade has ended), with the same screen-space dither as the
+  [LOD cross-fades](hub:features/lod#cross-fades): `AppConfig.lod.fadeSeconds` by default
+  (0.25 s), 0 for no fades. The cells a scene load brings appear with the scene, and leaving the
+  scene takes them down at once.
+- **A material a scene drew before a cell first fades it is built again.** Fading changes a
+  material's shader (it gains the dither), and the change reaches every mesh using it, so a
+  material the scene's own content shows and cells use too costs a compile the first time a cell
+  draws it: call [`enableLodDither`](api:enableLodDither) on it in the scene's code.
+- **Ground goes in `NEAR_AND_FAR`.** A far cell without its ground is a hole in the world. A kept
+  unit's own LOD draws it coarsely far away (the test scene's terrain blocks have a hand-made
+  4 × 4 level).
+
+From the scene JSON, a mesh with LOD `levels` gets a far stand-in on its own: its coarsest level,
+at the mesh's place. A cell's stand-ins with the same geometry, material and shadows are one
+`InstancedMesh`, so a far cell costs a draw call per kind of stand-in:
+
+```json
+{
+  "props": {
+    "geo": "pillar",
+    "mat": "stone",
+    "position": { "x": 160, "y": 8, "z": 96 },
+    "lod": { "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "pillarFar" }] }
+  }
+}
+```
+
+- A mesh whose LOD culls it (`cullScreenSize` over 0) gets none: it's hidden far away anyway. Nor
+  does an `AUTO` one, nor a light.
+- Big content (more than half a cell across) is kept: one entity while any of its cells is loaded
+  at any level, its own LOD drawing it far away. It fades out only when the last of its cells
+  takes it down.
+- The far content's assets load with it: a cell switching to `FAR` loads the coarse geometry, and
+  frees the full one once its near content is gone. The Streaming tab shows each cell's GPU memory
+  per content (near, far, kept).
+
+The test scene's beacons have a coarse level each, so its far cells draw them as far groups, and
+its wall, 320 m long, is kept while any of its six cells is loaded.
 
 ## Priming
 
@@ -123,12 +197,13 @@ drawn, even compiled) and eight on WebGPU. Without it, a new shader drawn cold s
 A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
 [`physicsTiers()`](hub:features/physics#simulation-tiers) installed:
 
-| Cell       | Its dynamic bodies                                                           |
-| ---------- | ---------------------------------------------------------------------------- |
-| `RESIDENT` | `FULL`, or their tier policy's if they're in it.                             |
-| `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.   |
-|            | A body with joints is `STATIC` for `DISABLED`.                               |
-| unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time). |
+| Cell       | Its dynamic bodies                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| `RESIDENT` | `FULL`, or their tier policy's if they're in it.                                             |
+| `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.                   |
+|            | A body with joints is `STATIC` for `DISABLED`.                                               |
+| `FAR`      | Kept content's: `REMOVED` (out of the physics world, its state kept). With joints: `STATIC`. |
+| unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time).                 |
 
 ```json
 { "streaming": { "cellSize": 64, "nearbyPhysicsTier": "DISABLED" } }
@@ -147,6 +222,10 @@ A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
   belongs to that cell from the next decision on: it takes that cell's tier, stays when its own
   cell unloads (your `unload` never sees it), and goes when the cell it's in unloads. One
   somewhere nothing is loaded stays with its cell.
+- **A far cell's bodies wait outside the world.** A kept unit's bodies are `REMOVED` while its cell
+  is `FAR`: they take no part in the simulation and no slot, and come back where they were, with
+  their velocities, when the cell comes near again. So a crate pushed in a cell that then goes far
+  is where it was left. Near content's bodies are deleted with it, as when the cell unloads.
 - **Return a unit's bodies once they exist.** Await their `createPhysicsEntity` calls before `load`
   returns their ids: an entity without its body yet isn't one to the cell.
 - **Tier changes follow the frames.** Cells are decided every few frames and stream in over frames,
@@ -156,7 +235,8 @@ A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
   handed to another cell, and any off their cell's tier (none, unless something else sets one).
 
 The `streamingPhysics` scene (`?startScene=streamingPhysics`) is a 12 × 12 grid of crate piles
-that a plough mows through, its piles and jointed chains code content:
+that a plough mows through, its ground slabs, piles and jointed chains kept code content, so its
+far cells' crates are `REMOVED` (purple) and their chains `STATIC`:
 
 <<< src/app/scenes/streamingPhysics/streamingPhysics.ts#streaming-physics-pile
 
@@ -170,11 +250,14 @@ every decision (a `Vector3` you keep moving). The cells' states are decided ever
 ## The debug tab
 
 The drawer's Streaming tab shows the focus and its cell, the cells per state, the loads, unloads,
-cancellations and asset releases, the primings (stalls, uploads, compiles), the cells' bodies by
-tier, the cells' GPU memory, and the budgets to try out live. Its
-overlay draws every tracked cell's outline in its state's colour, and a row per cell opens its
-window: its state, load and priming times, entities, GPU memory, assets and last transitions. To test a place without going there, **Freeze focus** or **Teleport focus to
-cell** (or start with `?streamingFocus=x,z` in the debug env).
+cancellations and asset releases, the primings (stalls, uploads, compiles), the fades (running,
+turned around, and any shown content taken down without one), the cells' bodies by tier, the
+cells' GPU memory per content (near, far, kept), the far groups and their instances, and the
+budgets to try out live. Its overlay draws every tracked cell's outline in its state's colour,
+and a row per cell opens its window: its state, each content's progress, owner key, GPU memory
+and fade, its far groups, load and priming times, entities, assets and last transitions. To test
+a place without going there, **Freeze focus** or **Teleport focus to cell** (or start with
+`?streamingFocus=x,z` in the debug env).
 
 ::: dev-only Measured
 `streamingGrid` on an M2, with the test bridge's fixed frame step (`?aekTest=true`): flying at 30
@@ -189,16 +272,28 @@ unprimed it does. `streamingPhysics`, its plough mowing the 688 m row at 24 m/s 
 in all three physics targets: no body of a `NEARBY` cell ran a step `FULL` (but chains kept
 `FULL` by their `RESIDENT` half), no policy member was outside a `RESIDENT` cell, no body off its
 cell's tier, 389-413 bodies moved to the cell they were in and none left behind, at most 476
-bodies (no capacity refusal). The plan's
+bodies (no capacity refusal). With far content (rings 1 / 2 / 5), two flights out and back at 30 and 60 m/s on each backend:
+764 layer loads and unloads and 1,528 fades a flight, none taken down unfaded, every far cell
+drawing one instanced mesh per far group and holding no near memory, and the second flight leaving
+the GPU memory, registries and entities exactly as the first; WebGL 2 had 5 frames of 33-37 ms a
+flight where a column of cells changed level at once. `streamingPhysics` with a far ring: every
+crate back from `REMOVED` exactly where it was left, chains `STATIC` far away, in all three
+targets. The plan's
 [Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
-and Phases 2 to 4 have the numbers.
+and Phases 2 to 5 have the numbers.
 :::
 
 ## Not yet
 
-World streaming is being built in phases. `FAR` cells show nothing (so no body is `REMOVED` by
-its cell yet), and an imported model's size isn't measured (`streaming.radii`); see
-[the plan](repo:docs/plans/p353_macro-streaming-grid.md).
+- An `AUTO` LOD gets no far stand-in from the JSON (its levels aren't known when the scene is
+  gathered): give a far unit in code, or explicit levels.
+- An instanced LOD pool's instances don't fade (they share their pool's meshes): stream a pool
+  whole, or keep it out of cells.
+- An imported model's size isn't measured: give a big one a radius in `streaming.radii`.
+- A cell's state isn't saved when it unloads: a crate moved in it is back where it started next
+  time (it keeps its place while the cell is `FAR`).
+
+See [the plan](repo:docs/plans/p353_macro-streaming-grid.md).
 
 ## Key APIs
 

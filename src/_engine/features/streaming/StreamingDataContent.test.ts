@@ -129,7 +129,7 @@ describe('createStreamingDataContent', () => {
     expect(world.getComponent(ownId, ComponentType.OBJECT3D)?.value).toBeInstanceOf(THREE.Mesh);
   });
 
-  test('a shared mesh: the first holder creates it, the last to unload deletes it', async () => {
+  test('a shared mesh: the first holder creates it, every holder gets it, the last to unload deletes it', async () => {
     const content = createStreamingDataContent('dcShared', manifestFor('dcShared'));
     // Its material first: the kept layer's asset unit
     await content.getUnits(A, 'NEAR_AND_FAR')[0].content.load(ctxFor(A));
@@ -139,10 +139,14 @@ describe('createStreamingDataContent', () => {
     };
     const fromA = sharedOf(A).load(ctxFor(A)) as number[];
     expect(fromA).toHaveLength(1);
-    expect(sharedOf(B).load(ctxFor(B))).toEqual([]);
+    // Every holder gets its id; the holders in load order tell the machine who draws it (D8)
+    expect(sharedOf(B).load(ctxFor(B))).toEqual(fromA);
+    expect(content.getHolders(fromA[0])).toEqual([A, B]);
     sharedOf(A).unload?.(fromA, ctxFor(A));
     expect(world.isAlive(fromA[0])).toBe(true);
-    sharedOf(B).unload?.([], ctxFor(B));
+    expect(content.getHolders(fromA[0])).toEqual([B]);
+    sharedOf(B).unload?.(fromA, ctxFor(B));
+    expect(content.getHolders(fromA[0])).toBeNull();
     expect(world.isAlive(fromA[0])).toBe(false);
     expect(content.shared.size).toBe(0);
   });

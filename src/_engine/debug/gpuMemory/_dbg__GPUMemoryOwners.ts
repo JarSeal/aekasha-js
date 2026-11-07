@@ -22,16 +22,28 @@ import { getCompressedTextureByteSize } from '../../kernel/assets/debug/_dbg__As
 /** The owner of assets registered before the first scene load (AssetOwners stores none). */
 export const BOOT_OWNER = 'boot';
 
+/** A cell owner key without its layer (`sceneId#cellKey/far` → `sceneId#cellKey`) */
+const getCellOfOwner = (owner: string) => {
+  const slashAt = owner.indexOf('/', owner.indexOf('#') + 1);
+  return slashAt < 0 ? owner : owner.slice(0, slashAt);
+};
+
 /**
- * The owner an asset's bytes are listed under: its only owner, or for one several hold, the scene
- * they're all of (an asset two streaming cells share is their scene's, not either cell's), else
- * the latest of them (AssetOwners).
+ * The owner an asset's bytes are listed under: its only owner; for one several layers of one
+ * streaming cell hold (its near and far content, p353 Phase 5 D10), that cell's key
+ * (`sceneId#cellKey`, its near layer's: the Streaming tab sums a cell's keys); for one several
+ * cells or a cell and its scene hold, the scene they're all of; else the latest of them
+ * (AssetOwners).
  */
 export const getMemoryOwner = (asset: object): string => {
   const owners = getAssetOwners(asset);
   if (owners.length < 2) return owners[0] ?? BOOT_OWNER;
   const latest = owners[owners.length - 1];
   const hashAt = latest.indexOf('#');
+  if (hashAt >= 0) {
+    const cell = getCellOfOwner(latest);
+    if (owners.every((owner) => getCellOfOwner(owner) === cell)) return cell;
+  }
   const sceneId = hashAt < 0 ? latest : latest.slice(0, hashAt);
   return owners.every((owner) => isSceneOwnerKey(owner, sceneId)) ? sceneId : latest;
 };

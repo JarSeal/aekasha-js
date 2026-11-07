@@ -1052,6 +1052,85 @@ describe('fades (p353 Phase 5 D4)', () => {
     expect(world.getEntityCount()).toBe(0);
   });
 
+  /** One entity the kept layers of cells (3, 0) and (4, 0) both hold (a JSON oversized mesh, D8),
+   * each with one of its own: the first to load creates it, the last to unload deletes it */
+  const addSharedEntity = (env: ReturnType<typeof setupFades>) => {
+    const { rt, world } = env;
+    const holders: number[] = [];
+    let shared = -1;
+    rt.sharedEntities = { getHolders: (id) => (id === shared ? holders : null) };
+    for (const cellKey of [KEY, packCellKey(4, 0, 0)]) {
+      add(rt, cellKey, {
+        loadedAt: 'NEAR_AND_FAR',
+        load: () => {
+          if (!holders.length) shared = world.createEntity();
+          holders.push(cellKey);
+          return [world.createEntity(), shared];
+        },
+        unload: ([own], ctx) => {
+          world.deleteEntity(own);
+          holders.splice(holders.indexOf(ctx.cellKey), 1);
+          if (!holders.length) world.deleteEntity(shared);
+        },
+      });
+    }
+    return { getShared: () => shared };
+  };
+
+  test('a shared entity is shown and faded in by its first holder only', () => {
+    const env = setupFades();
+    addSharedEntity(env);
+    env.go(96);
+    // (3, 0) first (nearer): its own and the shared one; (4, 0) its own
+    expect(env.log).toEqual([
+      'prepare 2 hidden',
+      'start IN 2 at 0',
+      'prepare 1 hidden',
+      'start IN 1 at 0',
+    ]);
+  });
+
+  test('a shared entity fades out with the last of its holders to leave', () => {
+    const env = setupFades();
+    const { getShared } = addSharedEntity(env);
+    const { rt, world, log, go, tick } = env;
+    env.go(96);
+    tick(300);
+    log.length = 0;
+    // (4, 0) leaves: the first holder still shows it
+    go(-32);
+    expect(log).toEqual(['start OUT 1 at 0']);
+    tick(300);
+    expect(world.isAlive(getShared())).toBe(true);
+    log.length = 0;
+    go(5000);
+    expect(log).toEqual(['start OUT 2 at 0']);
+    tick(300);
+    expect(world.isAlive(getShared())).toBe(false);
+    expect(rt.stats.unfadedTakeDowns).toBe(0);
+  });
+
+  test('a shared entity passes to its next holder when its first one leaves', () => {
+    const env = setupFades();
+    const { getShared } = addSharedEntity(env);
+    const { rt, world, log, go, tick } = env;
+    go(96);
+    tick(300);
+    log.length = 0;
+    // (3, 0) leaves, (4, 0) stays: it doesn't fade out what (4, 0) holds
+    go(544);
+    expect(log).toEqual(['start OUT 1 at 0']);
+    tick(300);
+    expect(rt.cells.has(KEY)).toBe(false);
+    expect(world.isAlive(getShared())).toBe(true);
+    log.length = 0;
+    go(5000);
+    expect(log).toEqual(['start OUT 2 at 0']);
+    tick(300);
+    expect(world.isAlive(getShared())).toBe(false);
+    expect(rt.stats.unfadedTakeDowns).toBe(0);
+  });
+
   test('fadeSeconds 0 shows and takes down at once, preparing nothing', () => {
     const { rt, world, clock, log, go } = setupFades();
     rt.settings.fadeSeconds = 0;

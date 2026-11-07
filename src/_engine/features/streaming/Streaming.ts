@@ -440,6 +440,8 @@ const loadSceneCellsAsync = async (sceneId: string) => {
     const content = dataModule.createStreamingDataContent(sceneId, manifest);
     dataContent = content;
     rt.dataContent = content.getUnits;
+    // Its oversized meshes are one entity in several cells: the machine asks which draws it
+    rt.sharedEntities = content;
   }
   runtime = rt;
   const at = readFocus(world);

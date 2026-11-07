@@ -13599,7 +13599,7 @@
     },
     "streamingGrid": {
       "name": "Streaming grid",
-      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m, each a procedural terrain block with scattered rocks and crates registered as code content, and JSON content the gather cuts into cells (Phase 3): a beacon in every fourth cell, whose textured material and geometries only the cells load, and a 320 m wall across six cells, loaded while any of them is. The camera flies across it and the cells around it load and unload; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell is code content: a procedural terrain block kept from FAR in (its ground, with a coarse LOD level), scattered rocks whose FAR stand-in is one InstancedMesh of an octahedral impostor, and crates (near only). And JSON content the gather cuts into cells: a beacon in every fourth cell, whose LOD levels give a FAR cell their coarsest level as far groups, and a 320 m wall across six cells, one entity kept while any of them is loaded. The camera flies across it and the cells around it load, switch between their near and far content and unload, fading in and out; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
       "cameras": [
         {
           "camProps": {
@@ -13678,13 +13678,14 @@
         "rings": {
           "resident": 1,
           "nearby": 2,
-          "far": 4
+          "far": 5
         }
       },
       "id": "streamingGrid",
       "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
       "__features": [
         "skybox",
+        "lod",
         "streaming"
       ],
       "__streaming": {
@@ -13700,7 +13701,18 @@
                 "y": 8,
                 "z": -352
               },
-              "appId": "streamingGridBeacon_-6_-6"
+              "appId": "streamingGridBeacon_-6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13712,7 +13724,18 @@
                 "y": 29,
                 "z": -352
               },
-              "appId": "streamingGridBeaconCap_-6_-6"
+              "appId": "streamingGridBeaconCap_-6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13725,7 +13748,18 @@
                 "y": 8,
                 "z": -352
               },
-              "appId": "streamingGridBeacon_-2_-6"
+              "appId": "streamingGridBeacon_-2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13737,7 +13771,18 @@
                 "y": 29,
                 "z": -352
               },
-              "appId": "streamingGridBeaconCap_-2_-6"
+              "appId": "streamingGridBeaconCap_-2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13750,7 +13795,18 @@
                 "y": 8,
                 "z": -352
               },
-              "appId": "streamingGridBeacon_2_-6"
+              "appId": "streamingGridBeacon_2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13762,7 +13818,18 @@
                 "y": 29,
                 "z": -352
               },
-              "appId": "streamingGridBeaconCap_2_-6"
+              "appId": "streamingGridBeaconCap_2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13775,7 +13842,18 @@
                 "y": 8,
                 "z": -352
               },
-              "appId": "streamingGridBeacon_6_-6"
+              "appId": "streamingGridBeacon_6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13787,7 +13865,18 @@
                 "y": 29,
                 "z": -352
               },
-              "appId": "streamingGridBeaconCap_6_-6"
+              "appId": "streamingGridBeaconCap_6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13800,7 +13889,18 @@
                 "y": 8,
                 "z": -96
               },
-              "appId": "streamingGridBeacon_-6_-2"
+              "appId": "streamingGridBeacon_-6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13812,7 +13912,18 @@
                 "y": 29,
                 "z": -96
               },
-              "appId": "streamingGridBeaconCap_-6_-2"
+              "appId": "streamingGridBeaconCap_-6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13825,7 +13936,18 @@
                 "y": 8,
                 "z": -96
               },
-              "appId": "streamingGridBeacon_-2_-2"
+              "appId": "streamingGridBeacon_-2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13837,7 +13959,18 @@
                 "y": 29,
                 "z": -96
               },
-              "appId": "streamingGridBeaconCap_-2_-2"
+              "appId": "streamingGridBeaconCap_-2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13850,7 +13983,18 @@
                 "y": 8,
                 "z": -96
               },
-              "appId": "streamingGridBeacon_2_-2"
+              "appId": "streamingGridBeacon_2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13862,7 +14006,18 @@
                 "y": 29,
                 "z": -96
               },
-              "appId": "streamingGridBeaconCap_2_-2"
+              "appId": "streamingGridBeaconCap_2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13875,7 +14030,18 @@
                 "y": 8,
                 "z": -96
               },
-              "appId": "streamingGridBeacon_6_-2"
+              "appId": "streamingGridBeacon_6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13887,7 +14053,18 @@
                 "y": 29,
                 "z": -96
               },
-              "appId": "streamingGridBeaconCap_6_-2"
+              "appId": "streamingGridBeaconCap_6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13900,7 +14077,18 @@
                 "y": 8,
                 "z": 96
               },
-              "appId": "streamingGridBeacon_-6_1"
+              "appId": "streamingGridBeacon_-6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13912,7 +14100,18 @@
                 "y": 29,
                 "z": 96
               },
-              "appId": "streamingGridBeaconCap_-6_1"
+              "appId": "streamingGridBeaconCap_-6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13925,7 +14124,18 @@
                 "y": 8,
                 "z": 96
               },
-              "appId": "streamingGridBeacon_-2_1"
+              "appId": "streamingGridBeacon_-2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13937,7 +14147,18 @@
                 "y": 29,
                 "z": 96
               },
-              "appId": "streamingGridBeaconCap_-2_1"
+              "appId": "streamingGridBeaconCap_-2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13950,7 +14171,18 @@
                 "y": 8,
                 "z": 96
               },
-              "appId": "streamingGridBeacon_2_1"
+              "appId": "streamingGridBeacon_2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13962,7 +14194,18 @@
                 "y": 29,
                 "z": 96
               },
-              "appId": "streamingGridBeaconCap_2_1"
+              "appId": "streamingGridBeaconCap_2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13975,7 +14218,18 @@
                 "y": 8,
                 "z": 96
               },
-              "appId": "streamingGridBeacon_6_1"
+              "appId": "streamingGridBeacon_6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -13987,7 +14241,18 @@
                 "y": 29,
                 "z": 96
               },
-              "appId": "streamingGridBeaconCap_6_1"
+              "appId": "streamingGridBeaconCap_6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14000,7 +14265,18 @@
                 "y": 8,
                 "z": 352
               },
-              "appId": "streamingGridBeacon_-6_5"
+              "appId": "streamingGridBeacon_-6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14012,7 +14288,18 @@
                 "y": 29,
                 "z": 352
               },
-              "appId": "streamingGridBeaconCap_-6_5"
+              "appId": "streamingGridBeaconCap_-6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14025,7 +14312,18 @@
                 "y": 8,
                 "z": 352
               },
-              "appId": "streamingGridBeacon_-2_5"
+              "appId": "streamingGridBeacon_-2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14037,7 +14335,18 @@
                 "y": 29,
                 "z": 352
               },
-              "appId": "streamingGridBeaconCap_-2_5"
+              "appId": "streamingGridBeaconCap_-2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14050,7 +14359,18 @@
                 "y": 8,
                 "z": 352
               },
-              "appId": "streamingGridBeacon_2_5"
+              "appId": "streamingGridBeacon_2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14062,7 +14382,18 @@
                 "y": 29,
                 "z": 352
               },
-              "appId": "streamingGridBeaconCap_2_5"
+              "appId": "streamingGridBeaconCap_2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14075,7 +14406,18 @@
                 "y": 8,
                 "z": 352
               },
-              "appId": "streamingGridBeacon_6_5"
+              "appId": "streamingGridBeacon_6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14087,7 +14429,18 @@
                 "y": 29,
                 "z": 352
               },
-              "appId": "streamingGridBeaconCap_6_5"
+              "appId": "streamingGridBeaconCap_6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
             }
           },
           {
@@ -14166,12 +14519,31 @@
               }
             },
             {
+              "id": "streamingGridPillarFar",
+              "type": "CYLINDER",
+              "params": {
+                "radiusTop": 1,
+                "radiusBottom": 1.4,
+                "height": 40,
+                "radialSegments": 5
+              }
+            },
+            {
               "id": "streamingGridCap",
               "type": "SPHERE",
               "params": {
                 "radius": 2.5,
                 "widthSegments": 12,
                 "heightSegments": 8
+              }
+            },
+            {
+              "id": "streamingGridCapFar",
+              "type": "SPHERE",
+              "params": {
+                "radius": 2.5,
+                "widthSegments": 6,
+                "heightSegments": 4
               }
             },
             {
@@ -14199,6 +14571,24 @@
               0,
               1
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                0,
+                1
+              ]
+            },
             "textures": [
               0
             ],
@@ -14208,7 +14598,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125805417627646": {
@@ -14223,6 +14615,24 @@
               8,
               9
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                8,
+                9
+              ]
+            },
             "textures": [
               0
             ],
@@ -14232,7 +14642,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125805417627649": {
@@ -14247,6 +14659,24 @@
               16,
               17
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                16,
+                17
+              ]
+            },
             "textures": [
               0
             ],
@@ -14256,7 +14686,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125805417627653": {
@@ -14271,6 +14703,24 @@
               24,
               25
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                24,
+                25
+              ]
+            },
             "textures": [
               0
             ],
@@ -14280,7 +14730,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125856957235198": {
@@ -14297,7 +14749,7 @@
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14316,6 +14768,24 @@
               2,
               3
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                2,
+                3
+              ]
+            },
             "textures": [
               0
             ],
@@ -14325,7 +14795,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125874137104382": {
@@ -14340,13 +14812,31 @@
               10,
               11
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                10,
+                11
+              ]
+            },
             "kept": {
               "bytesEstimate": 0,
               "materials": [
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14361,7 +14851,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125874137104385": {
@@ -14376,6 +14868,24 @@
               18,
               19
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                18,
+                19
+              ]
+            },
             "textures": [
               0
             ],
@@ -14385,7 +14895,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125874137104389": {
@@ -14400,6 +14912,24 @@
               26,
               27
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                26,
+                27
+              ]
+            },
             "textures": [
               0
             ],
@@ -14409,7 +14939,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125891316973566": {
@@ -14426,7 +14958,7 @@
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14447,7 +14979,7 @@
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14468,7 +15000,7 @@
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14487,6 +15019,24 @@
               4,
               5
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                4,
+                5
+              ]
+            },
             "textures": [
               0
             ],
@@ -14496,7 +15046,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125942856581118": {
@@ -14511,13 +15063,31 @@
               12,
               13
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                12,
+                13
+              ]
+            },
             "kept": {
               "bytesEstimate": 0,
               "materials": [
                 2
               ],
               "geometries": [
-                2
+                4
               ],
               "meshes": [
                 32
@@ -14532,7 +15102,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125942856581121": {
@@ -14547,6 +15119,24 @@
               20,
               21
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                20,
+                21
+              ]
+            },
             "textures": [
               0
             ],
@@ -14556,7 +15146,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1125942856581125": {
@@ -14571,6 +15163,24 @@
               28,
               29
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                28,
+                29
+              ]
+            },
             "textures": [
               0
             ],
@@ -14580,7 +15190,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1126011576057850": {
@@ -14595,6 +15207,24 @@
               6,
               7
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                6,
+                7
+              ]
+            },
             "textures": [
               0
             ],
@@ -14604,7 +15234,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1126011576057854": {
@@ -14619,6 +15251,24 @@
               14,
               15
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                14,
+                15
+              ]
+            },
             "textures": [
               0
             ],
@@ -14628,7 +15278,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1126011576057857": {
@@ -14643,6 +15295,24 @@
               22,
               23
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                22,
+                23
+              ]
+            },
             "textures": [
               0
             ],
@@ -14652,7 +15322,9 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           },
           "1126011576057861": {
@@ -14667,6 +15339,24 @@
               30,
               31
             ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                30,
+                31
+              ]
+            },
             "textures": [
               0
             ],
@@ -14676,15 +15366,563 @@
             ],
             "geometries": [
               0,
-              1
+              1,
+              2,
+              3
             ]
           }
-        }
+        },
+        "farMeshes": [
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          }
+        ]
       }
     },
     "streamingPhysics": {
       "name": "Streaming physics",
-      "description": "World streaming with physics (p353 Phase 4): 12 × 12 cells of 64 m, each a ground slab, a pile of 14 crates in the tier policy and, along the middle row, a jointed chain lying across the cell's edge, all code content. A kinematic plough, the streaming and the policy focus, mows along the middle row on fixed steps and pushes crates over the cells' edges. Crates are tinted by tier: orange FULL (the policy, near the plough), blue STATIC (the policy, further off in a RESIDENT cell), grey DISABLED (a NEARBY cell's: the scene's nearbyPhysicsTier). A crate belongs to the cell it's in, so one pushed along with the plough stays with it; a chain in a NEARBY cell is STATIC (a jointed body is never DISABLED), and one lying across into a NEARBY cell simulates with its RESIDENT half.",
+      "description": "World streaming with physics (p353 Phases 4-5): 12 × 12 cells of 64 m, each a ground slab, a pile of 14 crates in the tier policy and, along the middle row, a jointed chain lying across the cell's edge, all code content. A kinematic plough, the streaming and the policy focus, mows along the middle row on fixed steps and pushes crates over the cells' edges. Crates are tinted by tier: orange FULL (the policy, near the plough), blue STATIC (the policy, further off in a RESIDENT cell), grey DISABLED (a NEARBY cell's: the scene's nearbyPhysicsTier). A crate belongs to the cell it's in, so one pushed along with the plough stays with it; a chain in a NEARBY cell is STATIC (a jointed body is never DISABLED), and one lying across into a NEARBY cell simulates with its RESIDENT half. Every cell's content is kept from FAR in (rings 1 / 2 / 4): in a FAR cell the crates are purple, REMOVED from the physics world with their state kept, and the chains STATIC, so a crate pushed in a cell that goes FAR is where it was left when the plough comes back.",
       "cameras": [
         {
           "camProps": {
@@ -14779,7 +16017,7 @@
         "rings": {
           "resident": 1,
           "nearby": 2,
-          "far": 2
+          "far": 4
         },
         "nearbyPhysicsTier": "DISABLED"
       },

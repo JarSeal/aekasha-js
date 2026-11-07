@@ -28,14 +28,17 @@ import {
   type StreamingCellContext,
 } from 'aekasha/streaming';
 
-// World streaming with physics (docs/plans/p353_macro-streaming-grid.md Phase 4): 12 × 12 cells of
-// 64 m (the scene JSON's `streaming`), each code content of three units: a ground slab (a FIXED
-// collider, deleted with its cell), a pile of crates in the tier policy near the cell's +x edge, and
-// on the middle row a jointed chain lying across that edge. A kinematic plough mows along the
-// middle row on fixed steps: it's the streaming focus and the policy's, and it pushes crates over
-// the cells' edges, where the cell they land in takes them over when theirs unloads. A crate takes
-// its cell's tier: the policy's in a RESIDENT cell (FULL near the plough, STATIC further), the
-// scene's nearbyPhysicsTier (DISABLED) in a NEARBY one; the tint shows which. The plough moves on
+// World streaming with physics (docs/plans/p353_macro-streaming-grid.md Phases 4-5): 12 × 12 cells
+// of 64 m at rings 1 / 2 / 4 (the scene JSON's `streaming`), each code content of three units, all
+// `NEAR_AND_FAR` (kept from FAR in, Phase 5): a ground slab (a FIXED collider, deleted with its
+// cell), a pile of crates in the tier policy near the cell's +x edge, and on the middle row a
+// jointed chain lying across that edge. A kinematic plough mows along the middle row on fixed
+// steps: it's the streaming focus and the policy's, and it pushes crates over the cells' edges,
+// where the cell they land in takes them over when theirs unloads. A crate takes its cell's tier:
+// the policy's in a RESIDENT cell (FULL near the plough, STATIC further), the scene's
+// nearbyPhysicsTier (DISABLED) in a NEARBY one, REMOVED (out of the physics world, its state kept)
+// in a FAR one, where a chain is STATIC (a jointed body is never REMOVED); the tint shows which. So
+// a crate pushed in a cell that goes FAR and comes back is where it was left. The plough moves on
 // steps and the policy decides on them, but cells load on frames, so only a scene load (and a
 // probe run, which holds the cells) plays out the same every time (p353 §6).
 
@@ -62,11 +65,12 @@ const PLOUGH_Z = CELL_SIZE / 2;
 const PLOUGH_REACH = GRID_HALF * CELL_SIZE - 40;
 
 const POLICY_FULL_WITHIN = 40;
-const TIERS: PhysicsTier[] = ['FULL', 'STATIC', 'DISABLED'];
+const TIERS: PhysicsTier[] = ['FULL', 'STATIC', 'DISABLED', 'REMOVED'];
 const TIER_COLORS: Record<string, number> = {
   FULL: 0xd9822b,
   STATIC: 0x3d7bd9,
   DISABLED: 0x7a7a7a,
+  REMOVED: 0x9a62c8,
 };
 
 const STEP_SYSTEM_ID = 'streamingPhysicsPloughSystem';
@@ -248,11 +252,14 @@ const registerCells = () => {
   for (let cz = -GRID_HALF; cz < GRID_HALF; cz++) {
     for (let cx = -GRID_HALF; cx < GRID_HALF; cx++) {
       const cellKey = getStreamingCellKey(cx, cz);
-      registerStreamingCellContent({ sceneId, cellKey, load: loadGround });
-      registerStreamingCellContent({ sceneId, cellKey, load: loadPile });
+      // Kept from FAR in (Phase 5): the ground under a far cell, its bodies out of the physics
+      // world there and back in its state when the cell comes near again
+      const loadedAt = 'NEAR_AND_FAR';
+      registerStreamingCellContent({ sceneId, cellKey, loadedAt, load: loadGround });
+      registerStreamingCellContent({ sceneId, cellKey, loadedAt, load: loadPile });
       // The chain's other half is in the next cell: not past the grid's last one
       if (cz === 0 && cx < GRID_HALF - 1) {
-        registerStreamingCellContent({ sceneId, cellKey, load: loadChain });
+        registerStreamingCellContent({ sceneId, cellKey, loadedAt, load: loadChain });
       }
     }
   }
@@ -276,7 +283,6 @@ const tintSystem = (world: ECSWorld) => {
     const tier = tiers.get(entityId)?.tier ?? 'FULL';
     if (shown[i] === tier || world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) continue;
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    // No tint for REMOVED (nothing here asks for it)
     const material = getMaterial(getTierMaterialId(tier));
     if (!(mesh instanceof THREE.Mesh) || !material) continue;
     shown[i] = tier;
