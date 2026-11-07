@@ -6,7 +6,7 @@ import { createRootScene } from '../scene/Scene';
 import { saveMaterial } from '../assets/Material';
 import { runCompileAsync } from '../render/CompileQueue';
 import { setRenderPipeline } from '../render/RenderHooks';
-import { createMeshEntity, preWarmMesh } from './Mesh';
+import { createMeshEntity, disposeMesh, preWarmMesh } from './Mesh';
 
 // Resolves once every pre-warm queued so far has ended
 const flushCompilesAsync = () => runCompileAsync(async () => undefined);
@@ -43,6 +43,36 @@ describe('createMeshEntity', () => {
     });
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
     expect(mesh.material).toBe(material);
+    world.deleteEntity(entityId);
+  });
+
+  test('a deleted mesh entity disposes its mesh, so three frees its render objects', () => {
+    const material = saveMaterial(new THREE.MeshBasicNodeMaterial(), 'meshTestShared');
+    const entityId = createMeshEntity({ geo: new THREE.BoxGeometry(), mat: 'meshTestShared' });
+    const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+    const onDispose = vi.fn();
+    mesh.addEventListener('dispose', onDispose);
+    disposeMesh(entityId, world);
+    expect(onDispose).toHaveBeenCalledOnce();
+    expect(mesh.parent).toBeNull();
+    expect(mesh.material).toBe(material);
+    world.deleteEntity(entityId);
+  });
+
+  // p353 Phase 5: a streamed cell's meshes are created in MAIN after object3DSyncSystem, and drew
+  // a frame at the origin
+  test('puts its mesh at the creation pose at once, before any object sync', () => {
+    const entityId = createMeshEntity({
+      geo: new THREE.BoxGeometry(),
+      mat: new THREE.MeshBasicNodeMaterial(),
+      position: { x: 300, y: -4, z: 120 },
+      rotation: { y: Math.PI / 2 },
+      scale: { x: 2, y: 2, z: 2 },
+    });
+    const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value;
+    expect(mesh.position.toArray()).toEqual([300, -4, 120]);
+    expect(mesh.rotation.y).toBeCloseTo(Math.PI / 2);
+    expect(mesh.scale.toArray()).toEqual([2, 2, 2]);
     world.deleteEntity(entityId);
   });
 

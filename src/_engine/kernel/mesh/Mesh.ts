@@ -167,6 +167,49 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
 };
 
 /**
+ * Compiles a set of objects already in the root scene in one `renderer.compileAsync` of the root
+ * scene, ahead of their first draw, as {@link preWarmMesh} does one mesh (the render pipeline's
+ * compiler while one is on, the engine's compile queue). The objects are drawn unculled and
+ * visible for the call's synchronous part only, so held objects (`TAG_DRAW_HELD`) compile without
+ * a frame showing them; everything else in view compiles too (what's compiled already costs a
+ * lookup). One call, not one per object: three r187 builds up to 16 pipelines at once only
+ * within a call (p353 Phase 0 finding 4). Resolves when done; a failed compile is logged and
+ * resolves too (the first draw compiles instead). Compiles the real objects, never stand-ins:
+ * three releases a pipeline with its last render object.
+ * @internal
+ * @param objects the objects, each with its descendants
+ * @param label names them in the warning
+ */
+export const preWarmObjectsAsync = (objects: readonly THREE.Object3D[], label: string) => {
+  const renderer = getRenderer();
+  const rootScene = getRootScene();
+  if (!renderer || !rootScene || !objects.length) return Promise.resolve();
+  return runCompileAsync(async () => {
+    // The compile runs the projection synchronously only once the renderer has initialized
+    await renderer.init();
+    const compile = (camera: THREE.Camera) => {
+      const visible = objects.map((object) => object.visible);
+      const culled = objects.map((object) => object.frustumCulled);
+      for (const object of objects) {
+        object.visible = true;
+        object.frustumCulled = false;
+      }
+      try {
+        return renderer.compileAsync(rootScene, camera, rootScene);
+      } finally {
+        for (let i = 0; i < objects.length; i++) {
+          objects[i].visible = visible[i];
+          objects[i].frustumCulled = culled[i];
+        }
+      }
+    };
+    await (getRenderPipelineCompiler()?.(compile) ?? compile(getPreWarmCamera()));
+  }).catch((err) => {
+    lwarn(`Pre-warming ${label} failed: it compiles on its first draw.`, err);
+  });
+};
+
+/**
  * Creates a mesh entity: a `THREE.Mesh` (in the root scene unless `opts.doNotAddToScene`)
  * with an `OBJECT3D` and a transform. It takes a ref on its registered geometry and material,
  * released when the entity is deleted (an unregistered one warns in the debug env: nothing ever
@@ -274,6 +317,8 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
       transform.setDirty();
       world.commitTransform(entityId, transform);
     }
+    // At once, like the pose (setTransformFromProps)
+    mesh.scale.set(props.scale.x, props.scale.y, props.scale.z);
   }
 
   // After the transform is finalized so the spatial index's initial insert
@@ -453,8 +498,10 @@ export const removeMeshLod = (entityId: number, ecsWorld?: ECSWorld) => {
 };
 
 /**
- * A mesh entity's deletion hook: detaches its mesh and releases its geometry's and materials'
- * refs (the registries dispose what no one holds any more).
+ * A mesh entity's deletion hook: detaches its mesh, disposes it (its `dispose` event: three (r186,
+ * r187) keeps an object's render objects, its uniform buffers and bindings, until then, or until
+ * its geometry or material is disposed, which a shared one never is) and releases its geometry's
+ * and materials' refs (the registries dispose what no one holds any more).
  * @internal
  */
 export const disposeMesh = (entityId: number, ecsWorld?: ECSWorld) => {
@@ -466,6 +513,7 @@ export const disposeMesh = (entityId: number, ecsWorld?: ECSWorld) => {
   const mesh = meshComp.value as THREE.Mesh;
 
   mesh.removeFromParent();
+  mesh.dispose();
 
   const geoId = mesh.geometry?.userData.id;
   if (geoId) decGeometryRef(geoId);

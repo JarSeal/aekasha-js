@@ -331,7 +331,7 @@ export const getTextureInfoItems = (
       [importId ? 'Load time (import)' : 'Load time', load.duration],
       ['Used by materials', `${users} (texture ref counts aren't tracked)`],
       ['Persistent', entry.persistent ? 'yes' : 'no'],
-      ['Owner scene', describeOwner(texture)],
+      ['Owners', describeOwner(texture)],
     ]),
     getInfoFolder(
       'texture',

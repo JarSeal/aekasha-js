@@ -1586,7 +1586,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -1620,7 +1620,7 @@
           },
           "debugData": {
             "name": "largeWorldTreeCross (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "CROSS_QUADS",
           "layout": {
@@ -1653,7 +1653,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -3412,7 +3412,7 @@
           "id": "largeWorldRockImpostor.normalDepth",
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -5174,7 +5174,7 @@
           },
           "debugData": {
             "name": "largeWorldTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldTreeCross",
@@ -5241,7 +5241,7 @@
           "id": "largeWorldTreeCross.normal",
           "debugData": {
             "name": "largeWorldTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldTreeCross",
@@ -5495,7 +5495,7 @@
           },
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "CROSS_QUADS",
           "layout": {
@@ -5532,7 +5532,7 @@
           },
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -5566,7 +5566,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "kind": "OCTAHEDRAL",
           "layout": {
@@ -5596,7 +5596,7 @@
           },
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseTreeCross",
@@ -5663,7 +5663,7 @@
           "id": "lodShowcaseTreeCross.normal",
           "debugData": {
             "name": "lodShowcaseTreeCross (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseTreeCross",
@@ -5733,7 +5733,7 @@
           },
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseKnotImpostor",
@@ -7492,7 +7492,7 @@
           "id": "lodShowcaseKnotImpostor.normalDepth",
           "debugData": {
             "name": "lodShowcaseKnotImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "lodShowcaseKnotImpostor",
@@ -9254,7 +9254,7 @@
           },
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -11013,7 +11013,7 @@
           "id": "largeWorldRockImpostor.normalDepth",
           "debugData": {
             "name": "largeWorldRockImpostor (impostor atlas)",
-            "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+            "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
           },
           "__atlas": {
             "id": "largeWorldRockImpostor",
@@ -13595,6 +13595,2437 @@
       "sceneFile": "./scenes/space/space.ts",
       "__features": [
         "skybox"
+      ]
+    },
+    "streamingGrid": {
+      "name": "Streaming grid",
+      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell is code content: a procedural terrain block kept from FAR in (its ground, with a coarse LOD level), scattered rocks whose FAR stand-in is one InstancedMesh of an octahedral impostor, and crates (near only). And JSON content the gather cuts into cells: a beacon in every fourth cell, whose LOD levels give a FAR cell their coarsest level as far groups, and a 320 m wall across six cells, one entity kept while any of them is loaded. The camera flies across it and the cells around it load, switch between their near and far content and unload, fading in and out; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.5,
+            "far": 1500,
+            "position": {
+              "x": -560,
+              "y": 60,
+              "z": 32
+            },
+            "lookAtPoint": {
+              "x": -460,
+              "y": 20,
+              "z": 32
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55
+          },
+          "entityOpts": {
+            "appId": "streamingGridCamera",
+            "debugData": {
+              "name": "Streaming grid flight camera",
+              "description": "The main camera, so the streaming focus: streamingGrid.ts flies it across the grid (or hovers it on a cell boundary). Watch from the debug camera to see the cells load around it."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#dfe8ff",
+            "intensity": 0.6
+          },
+          "entityOpts": {
+            "appId": "streamingGridAmbient"
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 2.2,
+            "position": {
+              "x": 40,
+              "y": 60,
+              "z": 30
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": false
+          },
+          "entityOpts": {
+            "appId": "streamingGridSun"
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "id": "basicSkybox",
+          "base": {
+            "type": "EQUIRECTANGULAR",
+            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
+            "textureId": "equiRectEmptyId",
+            "colorSpace": "srgb",
+            "rotate": 3.141592653589793
+          }
+        }
+      ],
+      "streaming": {
+        "cellSize": 64,
+        "rings": {
+          "resident": 1,
+          "nearby": 2,
+          "far": 5
+        }
+      },
+      "id": "streamingGrid",
+      "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
+      "__features": [
+        "skybox",
+        "lod",
+        "streaming"
+      ],
+      "__streaming": {
+        "cellSize": 64,
+        "meshes": [
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_-6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_-6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_-2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_-2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_2_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": -352
+              },
+              "appId": "streamingGridBeacon_6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": -352
+              },
+              "appId": "streamingGridBeaconCap_6_-6",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_-6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_-6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_-2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_-2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_2_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": -96
+              },
+              "appId": "streamingGridBeacon_6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": -96
+              },
+              "appId": "streamingGridBeaconCap_6_-2",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_-6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_-6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_-2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_-2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_2_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": 96
+              },
+              "appId": "streamingGridBeacon_6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": 96
+              },
+              "appId": "streamingGridBeaconCap_6_1",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -352,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_-6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -352,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_-6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": -96,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_-2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": -96,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_-2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 160,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 160,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_2_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "position": {
+                "x": 416,
+                "y": 8,
+                "z": 352
+              },
+              "appId": "streamingGridBeacon_6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.15
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridPillarFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridCap",
+              "mat": "streamingGridCap",
+              "position": {
+                "x": 416,
+                "y": 29,
+                "z": 352
+              },
+              "appId": "streamingGridBeaconCap_6_5",
+              "lod": {
+                "levels": [
+                  {
+                    "screenSize": 0.02
+                  },
+                  {
+                    "screenSize": 0,
+                    "geo": "streamingGridCapFar"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridWall",
+              "mat": "streamingGridWall",
+              "castShadow": true,
+              "receiveShadow": true,
+              "position": {
+                "x": 0,
+                "y": 2,
+                "z": -100
+              },
+              "appId": "streamingGridWall"
+            }
+          }
+        ],
+        "lights": [],
+        "assets": {
+          "textures": [
+            {
+              "id": "testTexture",
+              "fileName": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "__fileSize": 967035,
+              "__sourceUrl": "/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
+              "__url": "/aek-assets/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.316c3c57.ktx2",
+              "__bytes": {
+                "in": 967035,
+                "out": 1122854
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc"
+            }
+          ],
+          "materials": [
+            {
+              "id": "streamingGridPillar",
+              "params": {
+                "map": "testTexture",
+                "roughness": 0.7
+              },
+              "type": "STANDARD"
+            },
+            {
+              "id": "streamingGridCap",
+              "params": {
+                "color": "#ffd36b"
+              },
+              "type": "BASIC"
+            },
+            {
+              "id": "streamingGridWall",
+              "params": {
+                "color": "#7b8496",
+                "roughness": 0.9
+              },
+              "type": "STANDARD"
+            }
+          ],
+          "geometries": [
+            {
+              "id": "streamingGridPillar",
+              "type": "CYLINDER",
+              "params": {
+                "radiusTop": 1,
+                "radiusBottom": 1.4,
+                "height": 40,
+                "radialSegments": 12
+              }
+            },
+            {
+              "id": "streamingGridPillarFar",
+              "type": "CYLINDER",
+              "params": {
+                "radiusTop": 1,
+                "radiusBottom": 1.4,
+                "height": 40,
+                "radialSegments": 5
+              }
+            },
+            {
+              "id": "streamingGridCap",
+              "type": "SPHERE",
+              "params": {
+                "radius": 2.5,
+                "widthSegments": 12,
+                "heightSegments": 8
+              }
+            },
+            {
+              "id": "streamingGridCapFar",
+              "type": "SPHERE",
+              "params": {
+                "radius": 2.5,
+                "widthSegments": 6,
+                "heightSegments": 4
+              }
+            },
+            {
+              "id": "streamingGridWall",
+              "type": "BOX",
+              "params": {
+                "width": 320,
+                "height": 10,
+                "depth": 3
+              }
+            }
+          ],
+          "importedAssets": []
+        },
+        "cells": {
+          "1125805417627642": {
+            "bounds": [
+              -372.0489401216124,
+              -372.0489401216124,
+              -331.9510598783876,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              0,
+              1
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                0,
+                1
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125805417627646": {
+            "bounds": [
+              -372.0489401216124,
+              -116.04894012161242,
+              -331.9510598783876,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              8,
+              9
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                8,
+                9
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125805417627649": {
+            "bounds": [
+              -372.0489401216124,
+              75.95105987838758,
+              -331.9510598783876,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              16,
+              17
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                16,
+                17
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125805417627653": {
+            "bounds": [
+              -372.0489401216124,
+              331.9510598783876,
+              -331.9510598783876,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              24,
+              25
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                24,
+                25
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125856957235198": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            }
+          },
+          "1125874137104378": {
+            "bounds": [
+              -116.04894012161242,
+              -372.0489401216124,
+              -75.95105987838758,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              2,
+              3
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                2,
+                3
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125874137104382": {
+            "bounds": [
+              -160,
+              -116.04894012161242,
+              160,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              10,
+              11
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                10,
+                11
+              ]
+            },
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125874137104385": {
+            "bounds": [
+              -116.04894012161242,
+              75.95105987838758,
+              -75.95105987838758,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              18,
+              19
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                18,
+                19
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125874137104389": {
+            "bounds": [
+              -116.04894012161242,
+              331.9510598783876,
+              -75.95105987838758,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              26,
+              27
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                26,
+                27
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125891316973566": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            }
+          },
+          "1125908496842750": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            }
+          },
+          "1125925676711934": {
+            "bounds": [
+              -160,
+              -101.5,
+              160,
+              -98.5
+            ],
+            "bytesEstimate": 0,
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            }
+          },
+          "1125942856581114": {
+            "bounds": [
+              139.95105987838758,
+              -372.0489401216124,
+              180.04894012161242,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              4,
+              5
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                4,
+                5
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125942856581118": {
+            "bounds": [
+              -160,
+              -116.04894012161242,
+              180.04894012161242,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              12,
+              13
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                12,
+                13
+              ]
+            },
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                4
+              ],
+              "meshes": [
+                32
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125942856581121": {
+            "bounds": [
+              139.95105987838758,
+              75.95105987838758,
+              180.04894012161242,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              20,
+              21
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                20,
+                21
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1125942856581125": {
+            "bounds": [
+              139.95105987838758,
+              331.9510598783876,
+              180.04894012161242,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              28,
+              29
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                28,
+                29
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1126011576057850": {
+            "bounds": [
+              395.9510598783876,
+              -372.0489401216124,
+              436.0489401216124,
+              -331.9510598783876
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              6,
+              7
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                6,
+                7
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1126011576057854": {
+            "bounds": [
+              395.9510598783876,
+              -116.04894012161242,
+              436.0489401216124,
+              -75.95105987838758
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              14,
+              15
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                14,
+                15
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1126011576057857": {
+            "bounds": [
+              395.9510598783876,
+              75.95105987838758,
+              436.0489401216124,
+              116.04894012161242
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              22,
+              23
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                22,
+                23
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "1126011576057861": {
+            "bounds": [
+              395.9510598783876,
+              331.9510598783876,
+              436.0489401216124,
+              372.0489401216124
+            ],
+            "bytesEstimate": 1398128,
+            "meshes": [
+              30,
+              31
+            ],
+            "far": {
+              "bytesEstimate": 1398128,
+              "textures": [
+                0
+              ],
+              "materials": [
+                0,
+                1
+              ],
+              "geometries": [
+                1,
+                3
+              ],
+              "meshes": [
+                30,
+                31
+              ]
+            },
+            "textures": [
+              0
+            ],
+            "materials": [
+              0,
+              1
+            ],
+            "geometries": [
+              0,
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "farMeshes": [
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": -352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": -96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": 96
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -352,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": -96,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 160,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridPillarFar",
+              "mat": "streamingGridPillar",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 8,
+                  "z": 352
+                }
+              }
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridCapFar",
+              "mat": "streamingGridCap",
+              "castShadow": false,
+              "receiveShadow": false
+            },
+            "instances": [
+              {
+                "position": {
+                  "x": 416,
+                  "y": 29,
+                  "z": 352
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "streamingPhysics": {
+      "name": "Streaming physics",
+      "description": "World streaming with physics (p353 Phases 4-5): 12 × 12 cells of 64 m, each a ground slab, a pile of 14 crates in the tier policy and, along the middle row, a jointed chain lying across the cell's edge, all code content. A kinematic plough, the streaming and the policy focus, mows along the middle row on fixed steps and pushes crates over the cells' edges. Crates are tinted by tier: orange FULL (the policy, near the plough), blue STATIC (the policy, further off in a RESIDENT cell), grey DISABLED (a NEARBY cell's: the scene's nearbyPhysicsTier). A crate belongs to the cell it's in, so one pushed along with the plough stays with it; a chain in a NEARBY cell is STATIC (a jointed body is never DISABLED), and one lying across into a NEARBY cell simulates with its RESIDENT half. Every cell's content is kept from FAR in (rings 1 / 2 / 4): in a FAR cell the crates are purple, REMOVED from the physics world with their state kept, and the chains STATIC, so a crate pushed in a cell that goes FAR is where it was left when the plough comes back.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.5,
+            "far": 1500,
+            "position": {
+              "x": -300,
+              "y": 70,
+              "z": 120
+            },
+            "lookAtPoint": {
+              "x": -300,
+              "y": 0,
+              "z": 32
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsCamera",
+            "debugData": {
+              "name": "Streaming physics camera",
+              "description": "Follows the plough (a FOLLOW component, added in streamingPhysics.ts). The streaming focus is the plough, not this camera."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#dfe8ff",
+            "intensity": 0.6
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsAmbient"
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 2.5,
+            "position": {
+              "x": 40,
+              "y": 60,
+              "z": 30
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": true,
+            "shadowPreset": "HIGH",
+            "shadowCameraNearFar": [
+              1,
+              160
+            ],
+            "shadowCameraFrustum": [
+              -60,
+              60,
+              60,
+              -60
+            ],
+            "shadowIntensity": 0.7
+          },
+          "entityOpts": {
+            "appId": "streamingPhysicsSun",
+            "debugData": {
+              "name": "Streaming physics sun",
+              "description": "Only its direction is kept: streamingPhysics.ts fits its shadow to the main camera's view on scene enter (SUN_SHADOW_FIT)."
+            }
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "id": "basicSkybox",
+          "base": {
+            "type": "EQUIRECTANGULAR",
+            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
+            "textureId": "equiRectEmptyId",
+            "colorSpace": "srgb",
+            "rotate": 3.141592653589793
+          }
+        }
+      ],
+      "streaming": {
+        "cellSize": 64,
+        "rings": {
+          "resident": 1,
+          "nearby": 2,
+          "far": 4
+        },
+        "nearbyPhysicsTier": "DISABLED"
+      },
+      "id": "streamingPhysics",
+      "sceneFile": "./scenes/streamingPhysics/streamingPhysics.ts",
+      "__features": [
+        "skybox",
+        "streaming"
       ]
     },
     "testDebugScene": {
@@ -16444,7 +18875,7 @@
       },
       "debugData": {
         "name": "largeWorldRockImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",
       "__atlas": {
@@ -18204,7 +20635,7 @@
       "id": "largeWorldRockImpostor.normalDepth",
       "debugData": {
         "name": "largeWorldRockImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",
       "__atlas": {
@@ -19967,7 +22398,7 @@
       },
       "debugData": {
         "name": "largeWorldTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
@@ -20035,7 +22466,7 @@
       "id": "largeWorldTreeCross.normal",
       "debugData": {
         "name": "largeWorldTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "__atlas": {
@@ -20106,7 +22537,7 @@
       },
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
@@ -21866,7 +24297,7 @@
       "id": "lodShowcaseKnotImpostor.normalDepth",
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "__atlas": {
@@ -23629,7 +26060,7 @@
       },
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
@@ -23697,7 +26128,7 @@
       "id": "lodShowcaseTreeCross.normal",
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor atlas)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "__atlas": {
@@ -24970,7 +27401,7 @@
       },
       "debugData": {
         "name": "largeWorldRockImpostor (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "OCTAHEDRAL",
       "layout": {
@@ -25005,7 +27436,7 @@
       },
       "debugData": {
         "name": "largeWorldTreeCross (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "CROSS_QUADS",
       "layout": {
@@ -25043,7 +27474,7 @@
       },
       "debugData": {
         "name": "lodShowcaseKnotImpostor (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "OCTAHEDRAL",
       "layout": {
@@ -25078,7 +27509,7 @@
       },
       "debugData": {
         "name": "lodShowcaseTreeCross (impostor)",
-        "description": "Written by the LOD tab's impostor Export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): re-export the impostor instead of editing this file."
+        "description": "Written by the LOD tab's impostor export: re-export the impostor instead of editing this file."
       },
       "kind": "CROSS_QUADS",
       "layout": {

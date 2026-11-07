@@ -376,28 +376,50 @@ export type RigidBodyWithColliders = {
 };
 
 /**
+ * A DYNAMIC body's create-time tier (p353 Phase 4 D3): `STATIC` (made `FIXED`) or `DISABLED`,
+ * switched to before any step, its transform-buffer slot kept (as a requested tier leaves it).
+ * @internal
+ */
+export type CreateTier = 'STATIC' | 'DISABLED';
+
+/** The body params a proxy caches its type and enabled state from, after a create-time tier. */
+const paramsAfterTier = (
+  params: RigidBodyParams,
+  tier: CreateTier | undefined
+): RigidBodyParams => {
+  if (tier === 'STATIC') return { ...params, rigidType: 'FIXED' };
+  if (tier === 'DISABLED') return { ...params, enabled: false };
+  return params;
+};
+
+/**
  * Creates an optional rigid body and its colliders together (with a body, every collider's
  * parentId is set to it), all or nothing: when a collider throws, what was made before it is
  * deleted. In WORKER_THREAD mode this is one message, posted synchronously by this call: the
  * worker creates everything in the order these calls were made (like MAIN_THREAD does), and no
- * step can ever run between a body and its colliders.
+ * step can ever run between a body and its colliders. `tier` switches a `DYNAMIC` body to its
+ * create-time tier in the same message, after its colliders.
  * @internal
  */
 export const createRigidBodyWithColliders = async (
   rigidBodyParams: RigidBodyParams | undefined,
-  colliderParams: ColliderParams[]
+  colliderParams: ColliderParams[],
+  tier?: CreateTier
 ): Promise<RigidBodyWithColliders> => {
-  if (!isWorkerTarget()) return createRigidBodyWithCollidersSync(rigidBodyParams, colliderParams);
+  if (!isWorkerTarget()) {
+    return createRigidBodyWithCollidersSync(rigidBodyParams, colliderParams, tier);
+  }
   assertWorldCreated('a rigid body or colliders');
   const res = await messageWorkerAsync<CreatePhysicsEntityResponse>({
     type: PhysicsProtocolType.CREATE_PHYSICS_ENTITY,
     rigidBody: toWireRigidBodyParams(rigidBodyParams),
     colliders: colliderParams.map(toWireColliderParams),
+    ...(tier && rigidBodyParams ? { tier } : {}),
   });
   throwIfCapacityExceeded(res.capacityExceeded);
   const rigidBody =
     rigidBodyParams && res.id !== undefined
-      ? registerBodyProxy(res.id, res.slot, rigidBodyParams, res.pose)
+      ? registerBodyProxy(res.id, res.slot, paramsAfterTier(rigidBodyParams, tier), res.pose)
       : undefined;
   const colliders = res.colliderIds.map((id, i) =>
     registerColliderProxy(id, rigidBody?.id ?? colliderParams[i].parentId, colliderParams[i])
@@ -412,7 +434,8 @@ export const createRigidBodyWithColliders = async (
  */
 export const createRigidBodyWithCollidersSync = (
   rigidBodyParams: RigidBodyParams | undefined,
-  colliderParams: ColliderParams[]
+  colliderParams: ColliderParams[],
+  tier?: CreateTier
 ): RigidBodyWithColliders => {
   assertWorldCreated('a rigid body or colliders');
   const rigidBody = rigidBodyParams ? createRigidBodySync(rigidBodyParams) : undefined;
@@ -429,5 +452,8 @@ export const createRigidBodyWithCollidersSync = (
     else if (colls.length) deleteCollidersSync(colls.map((c) => c.id));
     throw err;
   }
+  // The create-time tier, after the colliders (their mass), as the worker's switch does
+  if (rigidBody && tier === 'STATIC') rigidBody.setBodyType(RigidBodyTypeAPI.Fixed, false);
+  else if (rigidBody && tier === 'DISABLED') rigidBody.setEnabled(false);
   return { rigidBody, colliders: colls };
 };

@@ -312,6 +312,35 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
   // No physics bodies (an empty hash): the steps only set the frames before the snapshot, and
   // its frames take about 1 s each on SwiftShader
   largeWorld: { probeSteps: 30 },
+  // World streaming's test scene (p353): no physics bodies; the camera flies and the cells load
+  // under per-frame budgets, so what a snapshot shows depends on frame timing
+  streamingGrid: {
+    probeSteps: 30,
+    snapshot: {
+      skip: true,
+      reason:
+        'the cells around the flying camera load over frames under budgets: which have their props depends on frame timing',
+    },
+    debugger: {
+      tabs: ['streamingControls', 'streamingGridDemo'],
+      windows: [{ name: 'streamingCell', tab: 'streamingControls', row: 0 }],
+      unstableShots: {
+        shots: ['drawer.streamingControls', 'window.streamingCell'],
+        reason: 'live readouts of the flying focus, the cells per state and their load times',
+      },
+    },
+  },
+  // World streaming with physics (p353 Phase 4): the plough moves on steps, and the probe holds
+  // the cells where the scene's load put them, so the hash and the snapshot are the load's
+  streamingPhysics: {
+    debugger: {
+      tabs: ['streamingControls', 'streamingPhysicsDemo'],
+      unstableShots: {
+        shots: ['drawer.streamingControls'],
+        reason: "live readouts of the moving focus, the cells per state and their bodies' tiers",
+      },
+    },
+  },
   lodShowcase: {
     debugger: {
       tabs: ['lodShowcaseDemo', 'exampleHub'],

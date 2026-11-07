@@ -67,6 +67,8 @@ export const ComponentType = {
   LOD: 'CORE_LOD', // opt-in, user-authored
   TAG_LOD_CULLED: 'CORE_TAG_LOD_CULLED', // runtime-only, beyond the last level
   TAG_LOD_TRANSITIONING: 'CORE_TAG_LOD_TRANSITIONING', // runtime-only, a LOD cross-fade runs (p351)
+  // Draw hold (docs/plans/_DONE_p353_macro-streaming-grid.md §5) — see features/streaming/StreamingPriming.ts
+  TAG_DRAW_HELD: 'CORE_TAG_DRAW_HELD', // runtime-only, not drawn until its owner lets it
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
   // Debug
@@ -214,6 +216,10 @@ export interface CoreComponentData {
   [ComponentType.TAG_LOD_CULLED]: boolean;
   /** Runtime state: a LOD cross-fade is running on the entity. Don't add it. */
   [ComponentType.TAG_LOD_TRANSITIONING]: boolean;
+  /** Runtime state: the entity's Object3D isn't drawn until the feature that held it lets it
+   * (`streaming()` holds a streamed cell's content until its shaders and textures are primed).
+   * Don't add it. */
+  [ComponentType.TAG_DRAW_HELD]: boolean;
   /** An instanced mesh pool's slot, set by the pool's spawn (`instancing()`). */
   [ComponentType.INSTANCED_MESH_SLOT]: InstancedMeshSlotData;
   // Debug

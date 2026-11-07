@@ -1,9 +1,9 @@
 **Title:** The impostor exporter writes a plan citation into every exported JSON
 
-Status: open | small, for the LOD feature's next change
+Status: fixed | 2026-11-06, p058 (Phase 4): the string and the eight descriptions edited by hand
 Category: LOD, Debug
 Found: 2026-10-22, p620 Phase 5 (J4: the plan citations in user-visible asset descriptions)
-Our workaround: none; the text is harmless, it shows in the asset's description
+Our workaround (until p058): none; the text is harmless, it shows in the asset's description
 
 ## What happens
 

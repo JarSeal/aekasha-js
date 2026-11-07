@@ -313,7 +313,7 @@ export const getGeometryInfoItems = (
         : []),
       ['Ref count', String(entry.count)],
       ['Persistent', entry.persistent ? 'yes' : 'no'],
-      ['Owner scene', describeOwner(geometry)],
+      ['Owners', describeOwner(geometry)],
     ]),
     getInfoFolder('geometry', 'Geometry', [
       ...toInfoRows([

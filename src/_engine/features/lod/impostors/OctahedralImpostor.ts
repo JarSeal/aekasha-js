@@ -31,6 +31,7 @@ import {
 import {
   clearBakeTarget,
   createAtlasTarget,
+  finishAtlasMips,
   createBakeMaterials,
   createDilateCopy,
   createFrameTarget,
@@ -460,6 +461,7 @@ export const bakeOctahedralImpostorAtlases = (
             mesh.material = bakeMaterials[pass];
             clearBakeTarget(renderer, frame);
             renderer.render(scene, camera);
+            if (i === frames - 1 && j === frames - 1) finishAtlasMips(atlases[pass]);
             dilates[pass].copy(
               renderer,
               atlases[pass],

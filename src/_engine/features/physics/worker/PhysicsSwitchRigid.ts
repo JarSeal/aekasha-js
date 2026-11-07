@@ -2,7 +2,7 @@ import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type { PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
-import type { RigidBodyAPI, RigidBodyPose } from '../types/PhysicsBodyTypes';
+import { type RigidBodyAPI, type RigidBodyPose, RigidBodyTypeAPI } from '../types/PhysicsBodyTypes';
 import type { ColliderParams } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { WorldAPI } from '../types/PhysicsWorldTypes';
@@ -46,6 +46,14 @@ const allocateBodySlot = (rb: RigidBodyAPI, transformBuffer?: PhysicsTransformBu
     transformBuffer.setTransform(slot, pose.pos, pose.rot);
   }
   return { slot, pose, refused: false };
+};
+
+/** Switches a body just made to its create-time tier (p353 Phase 4 D3): `STATIC` makes it `FIXED`,
+ * `DISABLED` disables it, as `requestPhysicsTier` would (`createRigidBodyWithCollidersSync` does
+ * the same on MAIN_THREAD). */
+const applyCreateTier = (rb: RigidBodyAPI, tier: 'STATIC' | 'DISABLED' | undefined) => {
+  if (tier === 'STATIC') rb.setBodyType(RigidBodyTypeAPI.Fixed, false);
+  else if (tier === 'DISABLED') rb.setEnabled(false);
 };
 
 const NO_POSE: RigidBodyPose = { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0, w: 1 } };
@@ -125,6 +133,9 @@ export const physicsSwitchRigid = async (
         engAPI.deleteRigidBody(rb.id);
         throw err;
       }
+      // The create-time tier, after the colliders (their mass) and with the slot kept, as a
+      // requested STATIC or DISABLED leaves a body: before any step can run
+      applyCreateTier(rb, data.tier);
       return sendMessage({ type: data.type, id: rb.id, slot, pose, colliderIds }, data);
     }
     case PhysicsProtocolType.CREATE_RIGID_BODIES: {

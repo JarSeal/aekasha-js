@@ -62,6 +62,9 @@
     "impostors": {
       "$ref": "#/definitions/__schema500"
     },
+    "streaming": {
+      "$ref": "#/definitions/__schema502"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -81,7 +84,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema502"
+          "$ref": "#/definitions/__schema517"
         }
       ]
     }
@@ -6571,6 +6574,154 @@
     },
     "__schema502": {
       "type": "object",
+      "properties": {
+        "cellSize": {
+          "$ref": "#/definitions/__schema503"
+        },
+        "rings": {
+          "$ref": "#/definitions/__schema504"
+        },
+        "margin": {
+          "$ref": "#/definitions/__schema507"
+        },
+        "nearbyPhysicsTier": {
+          "$ref": "#/definitions/__schema509"
+        },
+        "fadeSeconds": {
+          "$ref": "#/definitions/__schema511"
+        },
+        "base": {
+          "$ref": "#/definitions/__schema513"
+        },
+        "radii": {
+          "$ref": "#/definitions/__schema515"
+        }
+      },
+      "required": [
+        "cellSize"
+      ],
+      "additionalProperties": false
+    },
+    "__schema503": {
+      "type": "number",
+      "description": "The cell side in metres: a power of two, at least 32."
+    },
+    "__schema504": {
+      "description": "Each state's outermost ring, in cells from the focus cell.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema505"
+        }
+      ]
+    },
+    "__schema505": {
+      "type": "object",
+      "properties": {
+        "resident": {
+          "description": "The outermost RESIDENT ring, in cells from the focus cell. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        },
+        "nearby": {
+          "description": "The outermost NEARBY ring, in cells from the focus cell. Default 2.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        },
+        "far": {
+          "description": "The outermost FAR ring, in cells from the focus cell; beyond it a cell is unloaded. Default 5.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema506"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema506": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema507": {
+      "description": "Metres past a ring before a cell is demoted. Default cellSize / 4.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema508"
+        }
+      ]
+    },
+    "__schema508": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema509": {
+      "description": "A NEARBY cell's dynamic bodies' physics tier: STATIC (default) or DISABLED.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema510"
+        }
+      ]
+    },
+    "__schema510": {
+      "type": "string",
+      "enum": [
+        "STATIC",
+        "DISABLED"
+      ]
+    },
+    "__schema511": {
+      "description": "Seconds a streamed entity dithers in and out (0: at once). Default AppConfig.lod.fadeSeconds.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema512"
+        }
+      ]
+    },
+    "__schema512": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema513": {
+      "description": "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema514"
+        }
+      ]
+    },
+    "__schema514": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema515": {
+      "description": "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema516"
+        }
+      ]
+    },
+    "__schema516": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "__schema517": {
+      "type": "object",
       "propertyNames": {
         "type": "string"
       },
@@ -6645,6 +6796,9 @@
             },
             "impostors": {
               "$ref": "#/definitions/__schema500"
+            },
+            "streaming": {
+              "$ref": "#/definitions/__schema502"
             }
           },
           "additionalProperties": false

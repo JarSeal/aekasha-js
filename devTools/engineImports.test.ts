@@ -47,6 +47,9 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/ui/styles/TokenSheet.ts': {
     reason: 'tokens.css read as data and its contrast pairs, which the Hub’s design document shows',
   },
+  'src/_engine/utils/CellKey.ts': {
+    reason: 'the cell keys the streaming manifest is keyed by, the runtime’s own (p353 Phase 3)',
+  },
   'src/_engine/utils/StableStringify.ts': {
     reason: 'the asset cache keys’ JSON, the engine’s own (material variants, impostor hashes)',
   },

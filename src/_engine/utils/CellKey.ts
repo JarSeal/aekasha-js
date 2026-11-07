@@ -1,6 +1,7 @@
 // Shared cell maths for every cell-keyed spatial structure (docs/plans/_DONE_p346_spatial-domains.md
-// §3.4): SpatialGrid, and later the streaming cells (p353) and static instance cells (p308). For
-// a given cell size, a cell key means the same cell everywhere.
+// §3.4): `spatial()`'s SpatialGrid, the `streaming()` cells (p353) and later the static instance
+// cells (p308) and p372's `AUTO` merge groups. For a given cell size, a cell key means the same
+// cell everywhere. Pure, so it's in utils/ (p353 Phase 1): a feature imports no other feature's code.
 //
 // Keys are packed with multiplication rather than bitwise ops, so the key stays a JS safe integer
 // (<= 2^53) instead of silently wrapping at 32 bits — see docs/plans/_DONE_p050_spatial-index.md

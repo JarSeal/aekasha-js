@@ -12,6 +12,7 @@ import {
   postFxSchemaPart,
   skyBoxSchemaPart,
   spatialSchemaPart,
+  streamingSchemaPart,
 } from '../../src/_engine/schemas';
 
 /** Every engine feature's schema part (`engineSchemas.test.ts` fails on a part missing here: zod
@@ -22,6 +23,7 @@ export const ENGINE_SCHEMA_PARTS = [
   postFxSchemaPart,
   spatialSchemaPart,
   lodSchemaPart,
+  streamingSchemaPart,
 ] as const;
 
 /** The scene schema with every engine feature's fields */

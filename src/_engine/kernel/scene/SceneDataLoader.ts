@@ -11,7 +11,7 @@ import { createLightEntity } from '../light/Light';
 import { createCameraEntity, setActiveCamera } from '../camera/Camera';
 import { createMeshEntity } from '../mesh/Mesh';
 import type { ImportedAssetManifest } from '../assets/import/ImportTypes';
-import { retagAssetOwner } from '../assets/AssetOwners';
+import { retagAssetOwner, runInAssetOwnerScope } from '../assets/AssetOwners';
 
 // What a scene load builds from the scene's data (`SceneData`): its cameras, its assets and its
 // JSON lights and meshes. The load itself, its order and its hooks are SceneLoader.ts'.
@@ -48,24 +48,50 @@ export const createCameras = (sceneData: SceneData) => {
   }
 };
 
+/**
+ * The asset lists of a scene's data that {@link loadSceneAssetsAsync} loads: a scene's, or a part
+ * of one (a streaming cell's assets, p353 Phase 3).
+ * @internal
+ */
+export type SceneAssetLists = Pick<
+  SceneData,
+  'textures' | 'materials' | 'geometries' | 'importedAssets'
+>;
+
+/**
+ * The lights and meshes of a scene's data that {@link createSceneObject3Ds} creates.
+ * @internal
+ */
+export type SceneObject3DLists = Pick<SceneData, 'lights' | 'meshes'>;
+
+/** Runs `fn` in an owner scope when `owner` is given, else as it is (the loading scene owns) */
+type Owned = <T>(fn: () => T) => T;
+
+const createOwned =
+  (owner: string | undefined): Owned =>
+  (fn) =>
+    owner === undefined ? fn() : runInAssetOwnerScope(owner, fn);
+
 /** Imports a scene's imported assets into `importedAssets`, and re-tags the ones it names by id.
  * The import registry (the glTF import path) loads here, only for a scene that names an import
  * (p613 D4): a scene, or an app, without one never loads it. */
 const loadSceneImportsAsync = async (
   assets: SceneData['importedAssets'],
-  importedAssets: ScenePrimitiveAssets['importedAssets']
+  importedAssets: ScenePrimitiveAssets['importedAssets'],
+  owned: Owned
 ) => {
   if (!assets?.length) return;
   const registry = await import('../assets/import/ImportRegistry');
   const importPromises: Promise<ImportedAssetManifest | null>[] = [];
   for (const asset of assets) {
     if (typeof asset === 'string') {
-      registry.retagImportedAsset(asset);
+      owned(() => registry.retagImportedAsset(asset));
       const manifest = registry.getImportedAsset(asset);
       if (manifest) importedAssets[asset] = manifest;
       continue;
     }
-    importPromises.push(registry.importAssetAsync(asset));
+    // The import captures the owner scope at its call (registered after its awaits)
+    importPromises.push(owned(() => registry.importAssetAsync(asset)));
   }
   for (const manifest of await Promise.all(importPromises)) {
     if (manifest) importedAssets[manifest.id] = manifest;
@@ -96,13 +122,28 @@ const resolveTextureParams = (
 };
 
 /**
- * Loads a scene's assets from its data before its code runs: its textures, imported assets and
- * TSL material files in parallel, then its materials (with their texture ids resolved) and its
- * geometries. The ones it names by id are taken from the registries and re-tagged to the scene.
+ * Loads a scene's assets from its data before its code runs (`loadSceneAssetsAsync` with the
+ * loading scene as their owner).
  * @internal
  * @returns what the scene's code gets as `assets`
  */
-export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePrimitiveAssets> => {
+export const loadNextSceneAssets = (sceneData: SceneData): Promise<ScenePrimitiveAssets> =>
+  loadSceneAssetsAsync(sceneData);
+
+/**
+ * Loads asset lists of a scene's data: the textures, imported assets and TSL material files in
+ * parallel, then the materials (with their texture ids resolved) and the geometries. The ones
+ * named by id are taken from the registries and re-tagged. Their owner is `ownerKey` when it's
+ * given (a streaming cell's, `getCellOwnerKey`), for every registration, also those after the
+ * loads' awaits; else the loading or current scene.
+ * @internal
+ * @returns the loaded assets by id
+ */
+export const loadSceneAssetsAsync = async (
+  sceneData: SceneAssetLists,
+  ownerKey?: string
+): Promise<ScenePrimitiveAssets> => {
+  const owned = createOwned(ownerKey);
   const textures: ScenePrimitiveAssets['textures'] = {};
   const materials: ScenePrimitiveAssets['materials'] = {};
   const geometries: ScenePrimitiveAssets['geometries'] = {};
@@ -118,13 +159,14 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
     const tex = sceneTextures[i];
     if (typeof tex === 'string') {
       const texture = getTexture(tex);
-      if (texture) retagAssetOwner(texture);
+      if (texture) owned(() => retagAssetOwner(texture));
       continue;
     }
     const texId = tex.id;
     if (!texId) continue;
     textureIds.push(texId);
-    texturePromises.push(loadTextureAsync(tex));
+    // The load captures the owner scope at its call
+    texturePromises.push(owned(() => loadTextureAsync(tex)));
   }
   // The TSL files load on demand (p607 D11): createMaterial reads them synchronously
   const tslFilePromises: Promise<boolean>[] = [];
@@ -134,7 +176,7 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
   }
   const [loadedTextures] = await Promise.all([
     Promise.all(texturePromises),
-    loadSceneImportsAsync(sceneData.importedAssets, importedAssets),
+    loadSceneImportsAsync(sceneData.importedAssets, importedAssets, owned),
     Promise.all(tslFilePromises),
   ]);
   for (let i = 0; i < loadedTextures.length; i++) {
@@ -148,13 +190,13 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
     if (typeof material === 'string') {
       const mat = getMaterial(material);
       if (mat) {
-        retagAssetOwner(mat);
+        owned(() => retagAssetOwner(mat));
         materials[material] = mat;
       }
       continue;
     }
     const params = resolveTextureParams(material.params, textures);
-    const mat = createMaterial({ ...material, params });
+    const mat = owned(() => createMaterial({ ...material, params }));
     if (mat) materials[material.id || `material-${i}`] = mat;
   }
 
@@ -165,12 +207,12 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
     if (typeof geometry === 'string') {
       const geo = getGeometry(geometry);
       if (geo) {
-        retagAssetOwner(geo);
+        owned(() => retagAssetOwner(geo));
         geometries[geometry] = geo;
       }
       continue;
     }
-    const geo = createGeometry({ ...geometry });
+    const geo = owned(() => createGeometry({ ...geometry }));
     if (geo) geometries[geometry.id || `geometry-${i}`] = geo;
   }
 
@@ -178,17 +220,28 @@ export const loadNextSceneAssets = async (sceneData: SceneData): Promise<ScenePr
 };
 
 /**
- * Creates a scene's JSON lights and meshes, once its code has run and it's current. A mesh whose
- * geometry or material id isn't registered is skipped with an error.
+ * Creates a scene's JSON lights and meshes, once its code has run and it's current.
  * @internal
  */
 export const createNextSceneObject3Ds = (sceneData: SceneData) => {
+  createSceneObject3Ds(sceneData);
+};
+
+/**
+ * Creates the lights and meshes of a scene's data (a scene's, or a streaming cell's), lights
+ * first, in the default world. A mesh whose geometry or material id isn't registered is skipped
+ * with an error.
+ * @internal
+ * @returns the created entities' ids, in creation order
+ */
+export const createSceneObject3Ds = (sceneData: SceneObject3DLists): number[] => {
+  const entityIds: number[] = [];
   // Create lights
   const lightProps = sceneData.lights || [];
   for (let i = 0; i < lightProps.length; i++) {
     const props = lightProps[i];
     if (typeof props === 'string') continue;
-    createLightEntity(props.lightProps, props.entityOpts);
+    entityIds.push(createLightEntity(props.lightProps, props.entityOpts));
   }
 
   // Create meshes
@@ -220,6 +273,7 @@ export const createNextSceneObject3Ds = (sceneData: SceneData) => {
       }
       mat = foundMat;
     }
-    createMeshEntity({ ...props.props, geo, mat }, props.entityOpts);
+    entityIds.push(createMeshEntity({ ...props.props, geo, mat }, props.entityOpts));
   }
+  return entityIds;
 };

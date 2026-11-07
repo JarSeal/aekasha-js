@@ -6,7 +6,7 @@ import { getGeometryRegistry } from '../Geometry';
 import { getTextureRegistry } from '../Texture';
 import { getCurrentSceneId, getGeneratedAppData, getGeneratedSceneData } from '../../scene/Scene';
 import { getImportedAsset } from '../import/ImportRegistry';
-import { getAssetOwner } from '../AssetOwners';
+import { getAssetOwners, isSceneOwnerKey } from '../AssetOwners';
 import { isLoadingSourceFiles, toAppUrl } from '../AssetUrl';
 import type { AssetLoadReport, AssetsWorkerTarget } from '../AssetsAPITypes';
 import type { GeneratedAssetFields } from '../../../schemas/AssetsConfigSchema';
@@ -23,8 +23,8 @@ export type AssetRow = {
   description?: string;
   /** What kind of texture, when the id doesn't say (an array, an atlas slot) */
   variant?: string;
-  /** Owner scene id (see AssetOwners). */
-  owner?: string;
+  /** Its owner keys (see AssetOwners): scene ids and streaming cells' `sceneId#cellKey`. */
+  owners: readonly string[];
 };
 
 // --- Generated data (declared assets, baked file sizes) ---
@@ -119,7 +119,7 @@ export const getAllAssetRows = (): AssetRow[] => {
       name: (t.userData.name as string) || t.name || id,
       description: t.userData.description as string | undefined,
       variant: getTextureVariant(t),
-      owner: getAssetOwner(t),
+      owners: getAssetOwners(t),
     });
   }
   for (const [id, entry] of Object.entries(getGeometryRegistry())) {
@@ -128,7 +128,7 @@ export const getAllAssetRows = (): AssetRow[] => {
       id,
       name: entry.debugData?.name || id,
       description: entry.debugData?.description,
-      owner: getAssetOwner(entry.resource),
+      owners: getAssetOwners(entry.resource),
     });
   }
   return rows.sort((a, b) => a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
@@ -141,7 +141,9 @@ export const getAssetsListState = () => {
   const declared = getSceneDeclaredKeys();
   const sceneId = getCurrentSceneId();
   const inScene = all.filter(
-    (row) => declared.has(rowKey(row.kind, row.id)) || (sceneId && row.owner === sceneId)
+    (row) =>
+      declared.has(rowKey(row.kind, row.id)) ||
+      (sceneId && row.owners.some((owner) => isSceneOwnerKey(owner, sceneId)))
   );
   const rows = assetsUIState.scope === 'ALL' ? all : inScene;
   return { rows, notInSceneCount: all.length - inScene.length };
@@ -279,4 +281,4 @@ export const describePipelineFile = (
 };
 
 export const describeOwner = (asset: object) =>
-  getAssetOwner(asset) ?? '— (registered before the first scene load)';
+  getAssetOwners(asset).join(', ') || '— (registered before the first scene load)';

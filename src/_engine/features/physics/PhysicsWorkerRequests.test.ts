@@ -98,13 +98,18 @@ import { createCollider, createColliders } from './PhysicsColliders';
 import { beginSubStepCapture, endSubStepCapture, messageWorker } from './PhysicsMessaging';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
-import { getPhysicsState, getPhysicsWorld } from './PhysicsState';
+import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
 import { createPhysicsWorld, initPhysics, resetPhysicsWorld, stopPhysics } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 // The worker's own backend module: the in-process worker imports the same instance
-import { getAllRigidBodyIds, getColliderAPIWithId } from './backends/rapier/EngineRapier';
+import {
+  getAllRigidBodyIds,
+  getColliderAPIWithId,
+  getRigidBodyAPIWithId,
+} from './backends/rapier/EngineRapier';
+import type { RigidBodyProxyAPI } from './proxies/RigidBodyProxyAPI';
 
 /** What `promise` did within `ms` (a reply takes a few macrotasks here). */
 const settlesWithin = (promise: Promise<unknown>, ms: number) =>
@@ -236,6 +241,34 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     // The body the create made is deleted again (its DELETE posted after the reply)
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(countBodies()).toBe(bodiesBefore);
+  });
+
+  it('p353 D3: initialTier rides in the create and switches the body before its reply', async () => {
+    const world = new ECSWorld({ id: 'p353-worker-initial-tier' });
+    facade.tiersInstalled = true;
+    try {
+      const create = (initialTier: 'STATIC' | 'DISABLED') =>
+        createPhysicsEntity(
+          { colliders: { type: 'BALL', radius: 0.5 }, body: { rigidType: 'DYNAMIC' } },
+          { world, initialTier }
+        );
+      const staticId = await create('STATIC');
+      expect(lastSent(PhysicsProtocolType.CREATE_PHYSICS_ENTITY)?.tier).toBe('STATIC');
+      const staticProxy = world.getRigidBody(staticId) as RigidBodyProxyAPI;
+      // Its slot kept (a requested STATIC keeps it), its proxy caching the tier's type
+      expect(staticProxy.hasSlot).toBe(true);
+      expect(staticProxy.bodyTypeSync()).toBe(RigidBodyTypeAPI.Fixed);
+      expect(getRigidBodyAPIWithId(staticProxy.id)!.isFixedSync()).toBe(true);
+      expect(world.hasComponent(staticId, ComponentType.BODY_STATIC)).toBe(true);
+      expect(world.getComponent(staticId, ComponentType.PHYSICS_SIM_TIER)?.tier).toBe('STATIC');
+
+      const disabledId = await create('DISABLED');
+      const disabledProxy = world.getRigidBody(disabledId) as RigidBodyProxyAPI;
+      expect(disabledProxy.isEnabledSync()).toBe(false);
+      expect(getRigidBodyAPIWithId(disabledProxy.id)!.isEnabledSync()).toBe(false);
+    } finally {
+      facade.tiersInstalled = false;
+    }
   });
 
   it('A10: createColliders is all or nothing', async () => {

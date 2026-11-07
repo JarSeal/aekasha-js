@@ -32,6 +32,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'ecsControls',
   'spatialGridControls',
   'lodControls',
+  'streamingControls',
 ];
 
 /**
@@ -214,6 +215,31 @@ export type AppConfig = {
      * `src/toolkit/` or `src/public/`). A re-export writes where the impostor's files already are.
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
+  };
+  /** World streaming's budgets (`streaming()`: features/streaming/, docs/plans/_DONE_p353_macro-streaming-grid.md).
+   * A scene's cells and rings are its own (`streaming` in its JSON, or setSceneStreamingSettings()). */
+  streaming?: {
+    /** How often the cells' states are decided from the focus, in frames. Default 10. */
+    updateIntervalFrames?: number;
+    /** The most cells loading at once. Default 2. */
+    maxConcurrentLoads?: number;
+    /** The milliseconds per frame cell content may take to load, and again to unload, checked
+     * before each content unit: a frame always runs at least one unit of each, and a unit started
+     * under the budget runs to its end, so a frame can go over by one unit. Default 2. */
+    maxCreateMsPerFrame?: number;
+    /** The milliseconds per frame a streamed cell's texture uploads may take while it's primed,
+     * across the cells: uploads run one after another while the frame is under it, and an
+     * uncompressed texture over 1024² gets a frame of its own. Default 2. */
+    maxPrimeMsPerFrame?: number;
+    /** How many materials no streamed cell showed before may first draw in one frame, across the
+     * cells: a primed new shader still costs WebGL2 ~10 ms of GPU work on its first draw. Default
+     * by the backend: 1 on WebGL2, 8 on WebGPU. */
+    maxNewStructuresPerFrame?: number;
+    /** How many of a streamed cell's objects may first draw in one frame once it's primed,
+     * across the cells (a cell may show over a few frames, invisible until its fade in starts):
+     * WebGL2's first draw of an object costs GPU time even for a known shader. Default by the
+     * backend: 16 on WebGL2, not paced on WebGPU. */
+    maxShownObjectsPerFrame?: number;
   };
   /** The default ECS world's storage (read when it's created, in the boot). */
   ecs?: {

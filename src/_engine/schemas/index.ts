@@ -43,6 +43,18 @@ export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';
 export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
 export {
+  SceneStreamingSchema,
+  StreamingRingsSchema,
+  streamingSchemaPart,
+} from '../features/streaming/StreamingSchema';
+export type {
+  StreamingFarInstance,
+  StreamingFarMesh,
+  StreamingManifest,
+  StreamingManifestCell,
+  StreamingManifestLayer,
+} from '../features/streaming/StreamingManifest';
+export {
   applySkyBoxSaveEntry,
   SkyBoxAssetSchema,
   SkyBoxDefSchema,

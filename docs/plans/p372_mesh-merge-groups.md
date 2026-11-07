@@ -3,7 +3,7 @@ Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocked by: p371_geometry-merging.md
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
-Related: \_DONE_p346_spatial-domains.md (cell maths, DEFAULT domain), \_DONE_p348_ecs-lod-selection.md (`LOD` members are refused until p376), \_DONE_p352_physics-simulation-tiers.md (static body sync), p353_macro-streaming-grid.md (groups stay inside a cell), p301_terrain-texturing-epic.md (the modular kit terrain page, Phase 5), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
+Related: \_DONE_p346_spatial-domains.md (cell maths, DEFAULT domain), \_DONE_p348_ecs-lod-selection.md (`LOD` members are refused until p376), \_DONE_p352_physics-simulation-tiers.md (static body sync), \_DONE_p353_macro-streaming-grid.md (groups stay inside a cell), p301_terrain-texturing-epic.md (the modular kit terrain page, Phase 5), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
 
 # Mesh Merge Groups
 
@@ -51,8 +51,8 @@ overrides?)` sets `.visible` from `DISABLED`, `TAG_FRUSTUM_CULLED`, `TAG_OBJECT_
 - **Render-sync order** (`APP_RENDER_SYNC_ORDER`, `kernel/loop/SystemStages.ts`, on `aekasha`):
   `POSE_PRODUCERS` 0, `POSE_CONSUMERS` -0.5, `SHADOW_FIT` -0.75, `FRUSTUM_CULLING` -1,
   `LOD_SELECTION` -1.5, `LIGHT_CULLING` -2 (higher runs earlier).
-- **Cell maths** (`features/spatial/CellKey.ts`, `@internal`): `worldToCell`, `packCellKey`,
-  `cellBounds`; `spatial()`'s, so it moves to `src/_engine/utils/` for this plan (p370 §13).
+- **Cell maths** (`src/_engine/utils/CellKey.ts`, `@internal`, pure): `worldToCell`, `packCellKey`,
+  `cellBounds`; moved out of `spatial()` by p353 Phase 1 (p370 §13), so this plan imports it.
 - **Imported assets** share one engine material per asset (`SpawnImportedParams.material`), and
   Blender custom props already group physics nodes (`index`, `kernel/assets/import/CustomProps.ts`,
   `ImportTypes.ts`).

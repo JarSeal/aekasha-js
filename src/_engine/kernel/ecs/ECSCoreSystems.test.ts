@@ -69,3 +69,25 @@ describe('target links', () => {
     expect(world.hasComponent(target, ComponentType.PERSISTENT)).toBe(true);
   });
 });
+
+describe('the draw hold', () => {
+  test('a held entity stays hidden whatever else changes, and shows when let go', () => {
+    const world = createWorld();
+    const id = world.createEntity();
+    const object = new THREE.Object3D();
+    world.addComponent(id, ComponentType.OBJECT3D, { value: object, _lastVersion: -1 });
+
+    world.addComponent(id, ComponentType.TAG_DRAW_HELD, true);
+    expect(object.visible).toBe(false);
+    world.setDisabled(id, true);
+    world.setDisabled(id, false);
+    expect(object.visible).toBe(false);
+
+    world.removeComponent(id, ComponentType.TAG_DRAW_HELD);
+    expect(object.visible).toBe(true);
+    world.setDisabled(id, true);
+    world.addComponent(id, ComponentType.TAG_DRAW_HELD, true);
+    world.removeComponent(id, ComponentType.TAG_DRAW_HELD);
+    expect(object.visible).toBe(false);
+  });
+});

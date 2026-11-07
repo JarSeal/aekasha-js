@@ -9,8 +9,8 @@ import type { FeatureContext } from '../init/Features';
 
 /**
  * Single source of truth for Object3D.visible, recomputed from the full
- * four-way AND
- * whenever any of DISABLED/TAG_FRUSTUM_CULLED/TAG_OBJECT_CULLED/TAG_LOD_CULLED
+ * five-way AND
+ * whenever any of DISABLED/TAG_FRUSTUM_CULLED/TAG_OBJECT_CULLED/TAG_LOD_CULLED/TAG_DRAW_HELD
  * changes, instead of each hook fighting over the flag pairwise.
  *
  * `overrides` lets a hook state the value of the flag IT is toggling
@@ -31,6 +31,7 @@ export function reconcileObject3DVisibility(
     isObjectCulled?: boolean;
     isLodCulled?: boolean;
     isLodTransitioning?: boolean;
+    isDrawHeld?: boolean;
   }>
 ): void {
   const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
@@ -48,12 +49,18 @@ export function reconcileObject3DVisibility(
       world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)
     );
 
-  objComp.value.visible = !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled;
+  const isDrawHeld =
+    overrides?.isDrawHeld ?? world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD);
+
+  objComp.value.visible =
+    !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled && !isDrawHeld;
 }
 
-// The DISABLED hooks' overrides: constants, so a toggle allocates nothing
+// The DISABLED and TAG_DRAW_HELD hooks' overrides: constants, so a toggle allocates nothing
 const IS_DISABLED = Object.freeze({ isDisabled: true });
 const IS_ENABLED = Object.freeze({ isDisabled: false });
+const IS_DRAW_HELD = Object.freeze({ isDrawHeld: true });
+const IS_DRAW_RELEASED = Object.freeze({ isDrawHeld: false });
 
 /**
  * Installs the core ECS plumbing (the kernel, p607): the visibility and persistence hooks, and the
@@ -96,6 +103,12 @@ export const installCoreSystems = (ctx: FeatureContext) => {
         world.removeComponent(targetLink.targetId, ComponentType.DISABLED);
       }
     },
+  });
+
+  ctx.registerComponentHooks(ComponentType.TAG_DRAW_HELD, {
+    onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_DRAW_HELD),
+    onRemoveComponent: (entityId, world) =>
+      reconcileObject3DVisibility(entityId, world, IS_DRAW_RELEASED),
   });
 
   // Register onAddComponent hook for OBJECT3D

@@ -48,7 +48,7 @@ export type GPUMemorySource = {
   label: string;
   /** The objects it holds now. Called only while the GPU memory tab refreshes. */
   getResources: () => Iterable<GPUMemoryResource | null | undefined>;
-  /** An AssetOwners key (a scene id, later `sceneId#cellKey`), or a function for one that
+  /** An AssetOwners key (a scene id, or a streaming cell's `sceneId#cellKey`), or a function for one that
    * changes (eg. the current scene). Without one, the source is listed under "engine". */
   owner?: string | (() => string | null | undefined);
 };

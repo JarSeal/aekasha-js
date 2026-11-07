@@ -184,6 +184,22 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  streamingGrid: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/streamingGrid/streamingGrid.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  streamingPhysics: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/streamingPhysics/streamingPhysics.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   testDebugScene: async ({ sceneData, assets }) => {
     const module = await import('../app/scenes/testDebugScene/testDebugScene.ts');
     await (

@@ -168,8 +168,18 @@ export const selectProfileOutput = (opts: {
       scenes[sceneId] = app.json.scenes[sceneId];
     }
   }
-  const sceneData = Object.values(scenes) as { materials?: unknown; postFx?: unknown }[];
-  const materialIds = new Set(sceneData.flatMap((scene) => listIds(scene.materials)));
+  const sceneData = Object.values(scenes) as {
+    materials?: unknown;
+    postFx?: unknown;
+    __streaming?: { assets?: { materials?: unknown } };
+  }[];
+  // A streaming scene's cell-only materials are in its manifest (p353 Phase 3)
+  const materialIds = new Set(
+    sceneData.flatMap((scene) => [
+      ...listIds(scene.materials),
+      ...listIds(scene.__streaming?.assets?.materials),
+    ])
+  );
   const postFxIds = new Set(sceneData.flatMap((scene) => listIds(scene.postFx)));
   return {
     output: {

@@ -1,0 +1,532 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "streamingGrid",
+  "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
+  "name": "Streaming grid",
+  "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell is code content: a procedural terrain block kept from FAR in (its ground, with a coarse LOD level), scattered rocks whose FAR stand-in is one InstancedMesh of an octahedral impostor, and crates (near only). And JSON content the gather cuts into cells: a beacon in every fourth cell, whose LOD levels give a FAR cell their coarsest level as far groups, and a 320 m wall across six cells, one entity kept while any of them is loaded. The camera flies across it and the cells around it load, switch between their near and far content and unload, fading in and out; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+  "cameras": [
+    {
+      "camProps": {
+        "type": "PERSPECTIVE",
+        "fov": 55,
+        "near": 0.5,
+        "far": 1500,
+        "position": {
+          "x": -560,
+          "y": 60,
+          "z": 32
+        },
+        "lookAtPoint": {
+          "x": -460,
+          "y": 20,
+          "z": 32
+        },
+        "active": true
+      },
+      "entityOpts": {
+        "appId": "streamingGridCamera",
+        "debugData": {
+          "name": "Streaming grid flight camera",
+          "description": "The main camera, so the streaming focus: streamingGrid.ts flies it across the grid (or hovers it on a cell boundary). Watch from the debug camera to see the cells load around it."
+        }
+      }
+    }
+  ],
+  "lights": [
+    {
+      "lightProps": {
+        "type": "AMBIENT",
+        "color": "#dfe8ff",
+        "intensity": 0.6
+      },
+      "entityOpts": {
+        "appId": "streamingGridAmbient"
+      }
+    },
+    {
+      "lightProps": {
+        "type": "DIRECTIONAL",
+        "color": "#fff2d9",
+        "intensity": 2.2,
+        "position": {
+          "x": 40,
+          "y": 60,
+          "z": 30
+        },
+        "targetPos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "castShadow": false
+      },
+      "entityOpts": {
+        "appId": "streamingGridSun"
+      }
+    }
+  ],
+  "textures": ["testTexture"],
+  "geometries": [
+    {
+      "id": "streamingGridPillar",
+      "type": "CYLINDER",
+      "params": {
+        "radiusTop": 1,
+        "radiusBottom": 1.4,
+        "height": 40,
+        "radialSegments": 12
+      }
+    },
+    {
+      "id": "streamingGridPillarFar",
+      "type": "CYLINDER",
+      "params": {
+        "radiusTop": 1,
+        "radiusBottom": 1.4,
+        "height": 40,
+        "radialSegments": 5
+      }
+    },
+    {
+      "id": "streamingGridCap",
+      "type": "SPHERE",
+      "params": {
+        "radius": 2.5,
+        "widthSegments": 12,
+        "heightSegments": 8
+      }
+    },
+    {
+      "id": "streamingGridCapFar",
+      "type": "SPHERE",
+      "params": {
+        "radius": 2.5,
+        "widthSegments": 6,
+        "heightSegments": 4
+      }
+    },
+    {
+      "id": "streamingGridWall",
+      "type": "BOX",
+      "params": {
+        "width": 320,
+        "height": 10,
+        "depth": 3
+      }
+    }
+  ],
+  "materials": [
+    {
+      "id": "streamingGridPillar",
+      "type": "STANDARD",
+      "params": {
+        "map": "testTexture",
+        "roughness": 0.7
+      }
+    },
+    {
+      "id": "streamingGridCap",
+      "type": "BASIC",
+      "params": {
+        "color": "#ffd36b"
+      }
+    },
+    {
+      "id": "streamingGridWall",
+      "type": "STANDARD",
+      "params": {
+        "color": "#7b8496",
+        "roughness": 0.9
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-6_-6",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -352.0, "y": 8, "z": -352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-6_-6",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -352.0, "y": 29, "z": -352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-2_-6",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -96.0, "y": 8, "z": -352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-2_-6",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -96.0, "y": 29, "z": -352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_2_-6",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 160.0, "y": 8, "z": -352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_2_-6",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 160.0, "y": 29, "z": -352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_6_-6",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 416.0, "y": 8, "z": -352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_6_-6",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 416.0, "y": 29, "z": -352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-6_-2",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -352.0, "y": 8, "z": -96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-6_-2",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -352.0, "y": 29, "z": -96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-2_-2",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -96.0, "y": 8, "z": -96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-2_-2",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -96.0, "y": 29, "z": -96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_2_-2",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 160.0, "y": 8, "z": -96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_2_-2",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 160.0, "y": 29, "z": -96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_6_-2",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 416.0, "y": 8, "z": -96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_6_-2",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 416.0, "y": 29, "z": -96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-6_1",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -352.0, "y": 8, "z": 96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-6_1",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -352.0, "y": 29, "z": 96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-2_1",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -96.0, "y": 8, "z": 96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-2_1",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -96.0, "y": 29, "z": 96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_2_1",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 160.0, "y": 8, "z": 96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_2_1",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 160.0, "y": 29, "z": 96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_6_1",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 416.0, "y": 8, "z": 96.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_6_1",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 416.0, "y": 29, "z": 96.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-6_5",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -352.0, "y": 8, "z": 352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-6_5",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -352.0, "y": 29, "z": 352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_-2_5",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": -96.0, "y": 8, "z": 352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_-2_5",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": -96.0, "y": 29, "z": 352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_2_5",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 160.0, "y": 8, "z": 352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_2_5",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 160.0, "y": 29, "z": 352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeacon_6_5",
+        "geo": "streamingGridPillar",
+        "mat": "streamingGridPillar",
+        "position": { "x": 416.0, "y": 8, "z": 352.0 },
+        "castShadow": true,
+        "lod": {
+          "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "streamingGridPillarFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridBeaconCap_6_5",
+        "geo": "streamingGridCap",
+        "mat": "streamingGridCap",
+        "position": { "x": 416.0, "y": 29, "z": 352.0 },
+        "lod": {
+          "levels": [{ "screenSize": 0.02 }, { "screenSize": 0, "geo": "streamingGridCapFar" }]
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "streamingGridWall",
+        "geo": "streamingGridWall",
+        "mat": "streamingGridWall",
+        "position": { "x": 0, "y": 2, "z": -100 },
+        "castShadow": true,
+        "receiveShadow": true
+      }
+    }
+  ],
+  "skyboxes": ["basicSkybox"],
+  "streaming": {
+    "cellSize": 64,
+    "rings": {
+      "resident": 1,
+      "nearby": 2,
+      "far": 5
+    }
+  }
+}

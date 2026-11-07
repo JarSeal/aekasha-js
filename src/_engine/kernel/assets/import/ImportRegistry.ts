@@ -5,7 +5,13 @@ import { isTextureUsedByAnyMaterial } from '../Material';
 import { deleteTexture, doesTextureExist, getTextureRegistry } from '../Texture';
 import { loadGLTFInWorker, recordAssetLoadReport, runAssetTask } from '../AssetsAPI';
 import type { AssetLoadReport } from '../AssetsAPITypes';
-import { getAssetOwner, recordAssetOwner, retagAssetOwner } from '../AssetOwners';
+import {
+  getAssetOwnerScope,
+  recordAssetOwner,
+  releaseAssetOwners,
+  retagAssetOwner,
+  runInAssetOwnerScope,
+} from '../AssetOwners';
 import { setSceneImportRelease } from '../SceneAssetRelease';
 import { resolveAssetUrl } from '../AssetUrl';
 import { getDracoWorkerSettings } from './DracoDecoder';
@@ -126,7 +132,8 @@ const getTextureRegistrationOpts = (params: ImportAssetParams, id: string) => {
 const loadOnMainThread = async (
   params: ImportAssetParams,
   id: string,
-  url: string
+  url: string,
+  ownerScope: string | null | undefined
 ): Promise<LoadOutcome> => {
   const { meshIndex, importTextures } = params;
   let gltf;
@@ -145,9 +152,11 @@ const loadOnMainThread = async (
   }
 
   const textures = importTextures
-    ? registerGLTFTextures(
-        collectGLTFTextures(gltf, extracted.primitives),
-        getTextureRegistrationOpts(params, id)
+    ? runInAssetOwnerScope(ownerScope, () =>
+        registerGLTFTextures(
+          collectGLTFTextures(gltf, extracted.primitives),
+          getTextureRegistrationOpts(params, id)
+        )
       )
     : null;
 
@@ -165,7 +174,8 @@ const loadOnMainThread = async (
 const loadInWorker = async (
   params: ImportAssetParams,
   id: string,
-  url: string
+  url: string,
+  ownerScope: string | null | undefined
 ): Promise<LoadOutcome> => {
   const lodExtension = getImportLodChains();
   const response = await loadGLTFInWorker(url, {
@@ -199,16 +209,18 @@ const loadInWorker = async (
     deserializeTexture(texture, sources[texture.imageIndex])
   );
   const textures = params.importTextures
-    ? registerGLTFTextures(
-        {
-          textures: response.textures.map(({ name, gltfTextureKey }, i) => ({
-            texture: rebuiltTextures[i],
-            name,
-            gltfTextureKey,
-          })),
-          slotsPerPrimitive: response.textureSlotsPerPrimitive,
-        },
-        getTextureRegistrationOpts(params, id)
+    ? runInAssetOwnerScope(ownerScope, () =>
+        registerGLTFTextures(
+          {
+            textures: response.textures.map(({ name, gltfTextureKey }, i) => ({
+              texture: rebuiltTextures[i],
+              name,
+              gltfTextureKey,
+            })),
+            slotsPerPrimitive: response.textureSlotsPerPrimitive,
+          },
+          getTextureRegistrationOpts(params, id)
+        )
       )
     : null;
 
@@ -235,7 +247,8 @@ const loadInWorker = async (
 const runImport = async (
   params: ImportAssetParams,
   id: string,
-  sourceKey: string
+  sourceKey: string,
+  ownerScope: string | null | undefined
 ): Promise<ImportedAssetManifest | null> => {
   const { fileName, isPersistent } = params;
   const fail = (message: string, err?: unknown) => {
@@ -262,8 +275,8 @@ const runImport = async (
   try {
     ({ result: loaded, report } = await runAssetTask(
       'GLTF',
-      () => loadInWorker(params, id, url),
-      () => loadOnMainThread(params, id, url)
+      () => loadInWorker(params, id, url, ownerScope),
+      () => loadOnMainThread(params, id, url, ownerScope)
     ));
   } catch (err) {
     return fail(LOAD_ERROR_MESSAGE, err);
@@ -277,56 +290,60 @@ const runImport = async (
   const geometries: ImportedGeometryInfo[] = [];
   /** Only for a geometry registered by this import: a reused one keeps what it has */
   const prebuiltLodChains: { geometryId: string; chain: ExtractedLodChain }[] = [];
-  for (let i = 0; i < primitives.length; i++) {
-    const { geometry, lodChain } = primitives[i];
-    const info = textures
-      ? { ...primitives[i].info, textureSlots: textures.slotsPerPrimitive[i] }
-      : primitives[i].info;
-    const sharedId = idByGeometry.get(geometry);
-    if (sharedId) {
-      geometries.push({ ...info, geometryId: sharedId });
-      continue;
-    }
+  // After the load's awaits: registered for the owner scope of the import's call (AssetOwners)
+  runInAssetOwnerScope(ownerScope, () => {
+    for (let i = 0; i < primitives.length; i++) {
+      const { geometry, lodChain } = primitives[i];
+      const info = textures
+        ? { ...primitives[i].info, textureSlots: textures.slotsPerPrimitive[i] }
+        : primitives[i].info;
+      const sharedId = idByGeometry.get(geometry);
+      if (sharedId) {
+        geometries.push({ ...info, geometryId: sharedId });
+        continue;
+      }
 
-    const { geometryId, isReused } = resolveGeometryId(info);
-    idByGeometry.set(geometry, geometryId);
-    if (isReused) {
-      // Re-import: keep using the registered geometry (with the new info, eg. now with texture
-      // slots), the freshly parsed one is disposed
-      const reusedInfo = { ...info, geometryId };
-      const reused = getGeometryRegistry()[geometryId].resource;
-      reused.userData.importInfo = reusedInfo;
-      retagAssetOwner(reused);
-      geometries.push(reusedInfo);
-      continue;
-    }
-    if (geometryId !== info.geometryId) {
-      lwarn(
-        `Import "${id}" (${fileName}): geometry id "${info.geometryId}" is already used by another geometry, registered as "${geometryId}" instead.`
-      );
-    }
+      const { geometryId, isReused } = resolveGeometryId(info);
+      idByGeometry.set(geometry, geometryId);
+      if (isReused) {
+        // Re-import: keep using the registered geometry (with the new info, eg. now with texture
+        // slots), the freshly parsed one is disposed
+        const reusedInfo = { ...info, geometryId };
+        const reused = getGeometryRegistry()[geometryId].resource;
+        reused.userData.importInfo = reusedInfo;
+        retagAssetOwner(reused);
+        geometries.push(reusedInfo);
+        continue;
+      }
+      if (geometryId !== info.geometryId) {
+        lwarn(
+          `Import "${id}" (${fileName}): geometry id "${info.geometryId}" is already used by another geometry, registered as "${geometryId}" instead.`
+        );
+      }
 
-    const registeredInfo = { ...info, geometryId };
-    geometry.userData.importInfo = registeredInfo;
-    saveBufferGeometry(geometry, {
-      id: geometryId,
-      isImported: true,
-      isPersistent,
-      debugData: {
-        name: `${params.debugData?.name || id} / ${info.nodeName}`,
-        ...(params.debugData?.description ? { description: params.debugData.description } : {}),
-      },
-    });
-    keepGeometries.add(geometry);
-    geometries.push(registeredInfo);
-    if (lodChain) {
-      prebuiltLodChains.push({ geometryId, chain: lodChain });
-      for (const level of lodChain.levels) keepGeometries.add(level.geometry);
+      const registeredInfo = { ...info, geometryId };
+      geometry.userData.importInfo = registeredInfo;
+      saveBufferGeometry(geometry, {
+        id: geometryId,
+        isImported: true,
+        isPersistent,
+        debugData: {
+          name: `${params.debugData?.name || id} / ${info.nodeName}`,
+          ...(params.debugData?.description ? { description: params.debugData.description } : {}),
+        },
+      });
+      keepGeometries.add(geometry);
+      geometries.push(registeredInfo);
+      if (lodChain) {
+        prebuiltLodChains.push({ geometryId, chain: lodChain });
+        for (const level of lodChain.levels) keepGeometries.add(level.geometry);
+      }
     }
-  }
+  });
   loaded.disposeLeftovers(keepGeometries);
   // Only filled with the LOD extension (it read the chains)
   if (prebuiltLodChains.length) {
+    // Its levels take their base geometry's owners (copyAssetOwner)
     await getImportLodChains()?.registerPrebuilt(id, prebuiltLodChains);
   }
 
@@ -342,7 +359,7 @@ const runImport = async (
     hasTextures: Boolean(textures),
     sourceKey,
   };
-  recordAssetOwner(imports[id]);
+  runInAssetOwnerScope(ownerScope, () => recordAssetOwner(imports[id]));
   // The scene release drops a scene's imports through this, set by the first import: the release
   // doesn't import this module, so the glTF import path loads only with an import (p613 D4)
   setSceneImportRelease(releaseImportsOwnedBy);
@@ -354,6 +371,8 @@ const runImport = async (
 /** importAssetAsync without the LOD chain request: a cached, shared or fresh import. */
 const resolveImport = async (params: ImportAssetParams): Promise<ImportedAssetManifest | null> => {
   const id = params.id || getDefaultImportId(params.fileName || '');
+  // Before the first await: what this call registers or re-tags goes to its caller's scope
+  const ownerScope = getAssetOwnerScope();
 
   const sourceKey = getSourceKey(params);
   const pending = pendingImports.get(id);
@@ -368,7 +387,8 @@ const resolveImport = async (params: ImportAssetParams): Promise<ImportedAssetMa
   if (pending) {
     const result = await pending.promise;
     if (!params.importTextures || imports[id]?.hasTextures) {
-      if (imports[id]) retagImportOwner(imports[id]);
+      const shared = imports[id];
+      if (shared) runInAssetOwnerScope(ownerScope, () => retagImportOwner(shared));
       return result;
     }
     // The pending import had no textures: re-import below (its geometries are reused)
@@ -380,9 +400,13 @@ const resolveImport = async (params: ImportAssetParams): Promise<ImportedAssetMa
     retagImportOwner(record);
     return record.manifest;
   }
-  if (pendingImports.has(id)) return resolveImport(params);
+  if (pendingImports.has(id)) {
+    return runInAssetOwnerScope(ownerScope, () => resolveImport(params));
+  }
 
-  const promise = runImport(params, id, sourceKey).finally(() => pendingImports.delete(id));
+  const promise = runImport(params, id, sourceKey, ownerScope).finally(() =>
+    pendingImports.delete(id)
+  );
   pendingImports.set(id, { promise, sourceKey });
   return promise;
 };
@@ -441,16 +465,16 @@ export const retagImportedAsset = (id: string) => {
 };
 
 /**
- * Drops the manifests of the non-persistent imports a scene owns (see AssetOwners). Their
- * geometries and textures are left to releaseSceneOwnedAssets, which releases them by owner.
+ * Drops the manifests of the non-persistent imports that the owners `isReleased` matches alone
+ * hold (see AssetOwners: one another owner holds too only loses them). Their geometries and
+ * textures are left to SceneAssetRelease.ts, which releases them by owner.
  * @internal
- * @param sceneId owner scene id
  * @returns the released import ids
  */
-export const releaseImportsOwnedBy = (sceneId: string) => {
+export const releaseImportsOwnedBy = (isReleased: (owner: string) => boolean) => {
   const released: string[] = [];
   for (const [id, record] of Object.entries(imports)) {
-    if (record.isPersistent || getAssetOwner(record) !== sceneId) continue;
+    if (record.isPersistent || !releaseAssetOwners(record, isReleased)) continue;
     delete imports[id];
     released.push(id);
   }
