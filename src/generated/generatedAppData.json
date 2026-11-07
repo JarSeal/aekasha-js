@@ -14291,15 +14291,18 @@
               -98.5
             ],
             "bytesEstimate": 0,
-            "meshes": [
-              32
-            ],
-            "materials": [
-              2
-            ],
-            "geometries": [
-              2
-            ]
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            }
           },
           "1125874137104378": {
             "bounds": [
@@ -14335,21 +14338,30 @@
             "bytesEstimate": 1398128,
             "meshes": [
               10,
-              11,
-              32
+              11
             ],
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            },
             "textures": [
               0
             ],
             "materials": [
               0,
-              1,
-              2
+              1
             ],
             "geometries": [
               0,
-              1,
-              2
+              1
             ]
           },
           "1125874137104385": {
@@ -14408,15 +14420,18 @@
               -98.5
             ],
             "bytesEstimate": 0,
-            "meshes": [
-              32
-            ],
-            "materials": [
-              2
-            ],
-            "geometries": [
-              2
-            ]
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            }
           },
           "1125908496842750": {
             "bounds": [
@@ -14426,15 +14441,18 @@
               -98.5
             ],
             "bytesEstimate": 0,
-            "meshes": [
-              32
-            ],
-            "materials": [
-              2
-            ],
-            "geometries": [
-              2
-            ]
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            }
           },
           "1125925676711934": {
             "bounds": [
@@ -14444,15 +14462,18 @@
               -98.5
             ],
             "bytesEstimate": 0,
-            "meshes": [
-              32
-            ],
-            "materials": [
-              2
-            ],
-            "geometries": [
-              2
-            ]
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            }
           },
           "1125942856581114": {
             "bounds": [
@@ -14488,21 +14509,30 @@
             "bytesEstimate": 1398128,
             "meshes": [
               12,
-              13,
-              32
+              13
             ],
+            "kept": {
+              "bytesEstimate": 0,
+              "materials": [
+                2
+              ],
+              "geometries": [
+                2
+              ],
+              "meshes": [
+                32
+              ]
+            },
             "textures": [
               0
             ],
             "materials": [
               0,
-              1,
-              2
+              1
             ],
             "geometries": [
               0,
-              1,
-              2
+              1
             ]
           },
           "1125942856581121": {

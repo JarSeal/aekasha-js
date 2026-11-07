@@ -1,14 +1,28 @@
-// A streaming scene's JSON cell content (p353 Phase 3 D7): the gatherer's manifest
+// A streaming scene's JSON cell content (p353 Phase 3 D7, Phase 5 D7-D9): the gatherer's manifest
 // (`SceneData.__streaming`, StreamingManifest.ts) turned into the units the machine
-// (StreamingCells.ts) runs ahead of a cell's code-registered ones. Per cell: one async unit loading
-// its cell-only assets in its owner key, then its lights and meshes a few a unit, the first of
-// them waiting for the assets. An oversized mesh (in several cells' lists) is a unit of its own,
-// counted across them: the first cell to load creates it, the last to unload deletes it.
+// (StreamingCells.ts) runs ahead of a cell's code-registered ones, per content layer. Each layer:
+// one async unit loading its cell-only assets in its owner key, then its entries a few a unit, the
+// first of them waiting for the assets. The near layer's entries are its lights and meshes; the far
+// layer's its meshes' far representations (an `InstancedMesh` per group, a mesh of its own
+// otherwise); the kept layer's the oversized meshes it overlaps, each counted across their cells:
+// the first cell to load creates it, the last to unload deletes it.
+import * as THREE from 'three/webgpu';
 import { getCellOwnerKey } from '../../kernel/assets/AssetOwners';
+import { getGeometry, incGeometryRef } from '../../kernel/assets/Geometry';
+import { getMaterial, incMaterialRef } from '../../kernel/assets/Material';
+import type { ECSWorld } from '../../kernel/ecs/ECS';
+import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { getRootScene } from '../../kernel/scene/Scene';
 import { createSceneObject3Ds, loadSceneAssetsAsync } from '../../kernel/scene/SceneDataLoader';
 import type { StreamingCellUnitSource } from './StreamingCells';
 import type { StreamingCellContent, StreamingContentRange } from './StreamingContent';
-import type { StreamingManifest, StreamingManifestCell } from './StreamingManifest';
+import { getStreamingLayerOwnerLayer } from './StreamingLayers';
+import type {
+  StreamingFarMesh,
+  StreamingManifest,
+  StreamingManifestCell,
+  StreamingManifestLayer,
+} from './StreamingManifest';
 
 /** Entries (lights and meshes) per unit: a unit is the slice a frame's budget can't split */
 const ENTRIES_PER_UNIT = 8;
@@ -19,8 +33,8 @@ const NO_UNITS: readonly StreamingCellUnitSource[] = [];
 type SharedEntity = { entityId: number; holders: number };
 
 /**
- * A scene's JSON cell content: the units per cell, built on a cell's first load and kept (the
- * data doesn't change), and its shared meshes' entities.
+ * A scene's JSON cell content: the units per cell and layer, built on a layer's first load and kept
+ * (the data doesn't change), and its shared meshes' entities.
  * @internal
  */
 export type StreamingDataContent = {
@@ -33,32 +47,80 @@ export type StreamingDataContent = {
   readonly shared: ReadonlyMap<number, Readonly<SharedEntity>>;
 };
 
+type AssetLists = Pick<
+  StreamingManifestLayer,
+  'textures' | 'materials' | 'geometries' | 'importedAssets'
+>;
+
 const pick = <T>(list: readonly T[], indices: readonly number[] | undefined): T[] | undefined =>
   indices?.map((index) => list[index]);
 
-/** The cell's cell-only assets as the loader's lists, or null without any */
-const getCellAssetLists = (manifest: StreamingManifest, cell: StreamingManifestCell) => {
+/** A layer's cell-only assets as the loader's lists, or null without any */
+const getAssetLists = (manifest: StreamingManifest, layer: AssetLists) => {
   const { assets } = manifest;
-  if (!cell.textures && !cell.materials && !cell.geometries && !cell.importedAssets) return null;
+  if (!layer.textures && !layer.materials && !layer.geometries && !layer.importedAssets) {
+    return null;
+  }
   return {
-    textures: pick(assets.textures, cell.textures),
-    materials: pick(assets.materials, cell.materials),
-    geometries: pick(assets.geometries, cell.geometries),
-    importedAssets: pick(assets.importedAssets, cell.importedAssets),
+    textures: pick(assets.textures, layer.textures),
+    materials: pick(assets.materials, layer.materials),
+    geometries: pick(assets.geometries, layer.geometries),
+    importedAssets: pick(assets.importedAssets, layer.importedAssets),
   };
 };
 
-/** Which meshes more than one cell lists (oversized, D4) */
-const findSharedMeshes = (manifest: StreamingManifest) => {
-  const seen = new Set<number>();
-  const shared = new Set<number>();
-  for (const cell of Object.values(manifest.cells)) {
-    for (const index of cell.meshes ?? []) {
-      if (seen.has(index)) shared.add(index);
-      seen.add(index);
-    }
+/** The part of a manifest cell a content range loads */
+const getManifestLayer = (
+  cell: StreamingManifestCell,
+  range: StreamingContentRange
+): (AssetLists & { meshes?: number[] }) | undefined => {
+  if (range === 'NEAR') return cell;
+  return range === 'FAR' ? cell.far : cell.kept;
+};
+
+const _matrix = new THREE.Matrix4();
+const _position = new THREE.Vector3();
+const _quaternion = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
+const _euler = new THREE.Euler();
+
+/**
+ * A far group's entity (Phase 5 D7): one `InstancedMesh` of the group's registered geometry and
+ * material, an instance per entry, holding a ref on both (the mesh tag's delete hook releases
+ * them). Not in the ECS frustum culling (it measures one instance at the origin): three culls the
+ * mesh by its bounds over every instance. Throws when its geometry or material isn't registered.
+ * @internal
+ */
+export const createFarGroupEntity = (world: ECSWorld, far: StreamingFarMesh) => {
+  const { geo, mat, castShadow, receiveShadow } = far.props;
+  const geometry = typeof geo === 'string' ? getGeometry(geo) : undefined;
+  const material = typeof mat === 'string' ? getMaterial(mat) : undefined;
+  if (!geometry || !material) {
+    throw new Error(
+      `a far group's ${geometry ? `material "${String(mat)}"` : `geometry "${String(geo)}"`} isn't registered`
+    );
   }
-  return shared;
+  const instances = far.instances ?? [];
+  const mesh = new THREE.InstancedMesh(geometry, material, instances.length);
+  for (let i = 0; i < instances.length; i++) {
+    const { position: p, rotation: r, quaternion: q, scale: s } = instances[i];
+    _position.set(p?.x ?? 0, p?.y ?? 0, p?.z ?? 0);
+    if (q) _quaternion.set(q.x, q.y, q.z, q.w);
+    else _quaternion.setFromEuler(_euler.set(r?.x ?? 0, r?.y ?? 0, r?.z ?? 0));
+    _scale.set(s?.x ?? 1, s?.y ?? 1, s?.z ?? 1);
+    mesh.setMatrixAt(i, _matrix.compose(_position, _quaternion, _scale));
+  }
+  mesh.computeBoundingSphere();
+  mesh.castShadow = castShadow ?? false;
+  mesh.receiveShadow = receiveShadow ?? false;
+  if (geometry.userData.id) incGeometryRef(geometry.userData.id);
+  if (material.userData.id) incMaterialRef(material.userData.id);
+  const entityId = world.createEntity();
+  mesh.userData.entityId = entityId;
+  world.addComponent(entityId, ComponentType.OBJECT3D, { value: mesh, _lastVersion: -1 });
+  world.addComponent(entityId, ComponentType.TAG_IS_MESH, true);
+  getRootScene()?.add(mesh);
+  return entityId;
 };
 
 /**
@@ -69,15 +131,16 @@ export const createStreamingDataContent = (
   sceneId: string,
   manifest: StreamingManifest
 ): StreamingDataContent => {
-  const sharedMeshes = findSharedMeshes(manifest);
   const shared = new Map<number, SharedEntity>();
-  const unitsByCell = new Map<number, readonly StreamingCellUnitSource[]>();
+  const unitsByLayer = new Map<string, readonly StreamingCellUnitSource[]>();
+  const farMeshes = manifest.farMeshes ?? [];
 
-  /** A shared mesh's unit: created by its first holder, which gets its id (and primes it); the
-   * others hold it without one. The last holder's unload deletes it. */
+  /** A shared (kept) mesh's unit: created by its first holder, which gets its id (and primes it);
+   * the others hold it without one. The last holder's unload deletes it. */
   const createSharedMeshUnit = (cellKey: number, index: number): StreamingCellContent => ({
     sceneId,
     cellKey,
+    loadedAt: 'NEAR_AND_FAR',
     load: () => {
       const alive = shared.get(index);
       if (alive) {
@@ -97,18 +160,36 @@ export const createStreamingDataContent = (
     },
   });
 
-  const buildUnits = (cellKey: number): readonly StreamingCellUnitSource[] => {
+  /** A unit of far entries: each group one InstancedMesh entity, the rest meshes of their own */
+  const createFarUnit = (cellKey: number, indices: readonly number[]): StreamingCellContent => ({
+    sceneId,
+    cellKey,
+    loadedAt: 'FAR',
+    load: ({ world }) =>
+      indices.flatMap((index) => {
+        const far = farMeshes[index];
+        if (far.instances) return [createFarGroupEntity(world, far)];
+        return createSceneObject3Ds({ meshes: [{ props: far.props }] });
+      }),
+  });
+
+  const buildUnits = (
+    cellKey: number,
+    range: StreamingContentRange
+  ): readonly StreamingCellUnitSource[] => {
     const cell = manifest.cells[String(cellKey)];
-    if (!cell) return NO_UNITS;
+    const layer = cell && getManifestLayer(cell, range);
+    if (!layer) return NO_UNITS;
     const units: StreamingCellUnitSource[] = [];
-    const assetLists = getCellAssetLists(manifest, cell);
+    const assetLists = getAssetLists(manifest, layer);
     if (assetLists) {
-      const ownerKey = getCellOwnerKey(sceneId, cellKey);
+      const ownerKey = getCellOwnerKey(sceneId, cellKey, getStreamingLayerOwnerLayer(range));
       units.push({
         waits: false,
         content: {
           sceneId,
           cellKey,
+          loadedAt: range,
           load: async () => {
             await loadSceneAssetsAsync(assetLists, ownerKey);
             return [];
@@ -116,13 +197,27 @@ export const createStreamingDataContent = (
         },
       });
     }
-    // Lights first, then the meshes of this cell alone, a few a unit; the first waits for the
-    // assets (and so does everything after it)
+    // The first entry unit waits for the assets (and so does everything after it)
+    const waits = () => !!assetLists && units.length === 1;
+    const meshes = layer.meshes ?? [];
+    if (range === 'NEAR_AND_FAR') {
+      for (const index of meshes) {
+        units.push({ waits: waits(), content: createSharedMeshUnit(cellKey, index) });
+      }
+      return units;
+    }
+    if (range === 'FAR') {
+      for (let start = 0; start < meshes.length; start += ENTRIES_PER_UNIT) {
+        const chunk = meshes.slice(start, start + ENTRIES_PER_UNIT);
+        units.push({ waits: waits(), content: createFarUnit(cellKey, chunk) });
+      }
+      return units;
+    }
+    // Near: lights first, then the meshes, a few a unit
     const entries: ({ light: number } | { mesh: number })[] = [
       ...(cell.lights ?? []).map((light) => ({ light })),
-      ...(cell.meshes ?? []).filter((mesh) => !sharedMeshes.has(mesh)).map((mesh) => ({ mesh })),
+      ...meshes.map((mesh) => ({ mesh })),
     ];
-    const waits = () => !!assetLists && units.length === 1;
     for (let start = 0; start < entries.length; start += ENTRIES_PER_UNIT) {
       const chunk = entries.slice(start, start + ENTRIES_PER_UNIT);
       const lists = {
@@ -134,11 +229,6 @@ export const createStreamingDataContent = (
         content: { sceneId, cellKey, load: () => createSceneObject3Ds(lists) },
       });
     }
-    for (const index of cell.meshes ?? []) {
-      if (sharedMeshes.has(index)) {
-        units.push({ waits: waits(), content: createSharedMeshUnit(cellKey, index) });
-      }
-    }
     return units;
   };
 
@@ -146,12 +236,11 @@ export const createStreamingDataContent = (
     manifest,
     shared,
     getUnits: (cellKey, range) => {
-      // Its near content only, until the far and kept layers' entries (p353 Phase 5 section 4)
-      if (range !== 'NEAR') return NO_UNITS;
-      let units = unitsByCell.get(cellKey);
+      const key = `${cellKey}/${range}`;
+      let units = unitsByLayer.get(key);
       if (!units) {
-        units = buildUnits(cellKey);
-        unitsByCell.set(cellKey, units);
+        units = buildUnits(cellKey, range);
+        unitsByLayer.set(key, units);
       }
       return units;
     },

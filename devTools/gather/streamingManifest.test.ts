@@ -173,7 +173,7 @@ describe('buildStreamingManifest', () => {
     expect(statue?.bytesEstimate).toBe(7);
   });
 
-  it('puts an oversized mesh into every cell it overlaps', () => {
+  it('puts an oversized mesh into the kept layer of every cell it overlaps (Phase 5 D8)', () => {
     const scene = baseScene({
       geometries: [
         { id: 'wall', type: 'BOX', params: { width: 100, height: 2, depth: 4 } },
@@ -189,7 +189,7 @@ describe('buildStreamingManifest', () => {
     });
     const { out, warnings } = build(scene);
     const cells = out.__streaming?.cells ?? {};
-    const meshesIn = (cx: number, cz: number) => cells[key(cx, cz)]?.meshes;
+    const meshesIn = (cx: number, cz: number) => cells[key(cx, cz)]?.kept?.meshes;
     // An unrotated box reaches along its sides: x 64 ± 50 spans cells 0 and 1, z 10 ± 2 one row
     expect(meshesIn(0, 0)).toEqual([0]);
     expect(meshesIn(1, 0)).toEqual([0]);
@@ -215,8 +215,10 @@ describe('buildStreamingManifest', () => {
     ]) {
       expect(meshesIn(cx, cz)).toEqual([2]);
     }
-    // An unmeasured geometry is a point
-    expect(meshesIn(3, 6)).toEqual([3]);
+    // An unmeasured geometry is a point: one cell's near content
+    expect(meshesIn(3, 6)).toBeUndefined();
+    expect(cells[key(3, 6)]?.meshes).toEqual([3]);
+    expect(cells[key(0, 0)]?.meshes).toBeUndefined();
     expect(cells[key(3, 6)]?.bounds).toEqual([200, 400, 200, 400]);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('"missing"');
@@ -237,5 +239,76 @@ describe('buildStreamingManifest', () => {
     expect(out.__streaming).toBeUndefined();
     expect(out.streaming).toEqual({ cellSize: 64 });
     expect(out.lights).toHaveLength(1);
+  });
+
+  it('gives a mesh with LOD levels its coarsest level as a far entry, alike ones grouped (Phase 5 D7)', () => {
+    const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox', castShadow: false }];
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'lowBox', type: 'BOX' },
+      ],
+      meshes: [
+        mesh('a', 10, 10, { castShadow: true, lod: { levels } }),
+        mesh('b', 20, 30, { castShadow: true, lod: { levels }, scale: { x: 2, y: 2, z: 2 } }),
+        mesh('own', 30, 30, { lod: { levels }, matOverrides: { params: { color: '#ff0000' } } }),
+        mesh('culled', 40, 30, { lod: { levels, cullScreenSize: 0.01 } }),
+        mesh('auto', 50, 30, { lod: 'AUTO' }),
+        mesh('plain', 60, 30),
+        mesh('nextCell', 100, 30, { lod: { levels } }),
+      ],
+    });
+    const manifest = build(scene).out.__streaming;
+    const far = manifest?.farMeshes ?? [];
+    expect(manifest?.cells[key(0, 0)]?.far?.meshes).toEqual([0, 1]);
+    expect(manifest?.cells[key(1, 0)]?.far?.meshes).toEqual([2]);
+    // One group for a and b: the coarsest level's geometry, its castShadow, each entry's transform
+    expect(far[0]).toEqual({
+      props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
+      instances: [
+        { position: { x: 10, y: 0, z: 10 } },
+        { position: { x: 20, y: 0, z: 30 }, scale: { x: 2, y: 2, z: 2 } },
+      ],
+    });
+    // matOverrides: a mesh of its own, no app id, no lod
+    expect(far[1].instances).toBeUndefined();
+    expect(far[1].props).toMatchObject({ geo: 'lowBox', position: { x: 30, y: 0, z: 30 } });
+    expect(far[1].props).not.toHaveProperty('appId');
+    expect(far[1].props).not.toHaveProperty('lod');
+    expect(far).toHaveLength(3);
+    // The far level's geometry moves into the far layer's assets; the near layer keeps its own
+    const geometryIds = manifest?.assets.geometries.map((g) => (g as { id: string }).id);
+    expect(geometryIds).toEqual(['box', 'lowBox']);
+    const cell = manifest?.cells[key(0, 0)];
+    expect(cell?.geometries).toEqual([0, 1]);
+    expect(cell?.far?.geometries).toEqual([1]);
+    expect(cell?.far?.materials).toEqual([0]);
+  });
+
+  it('lists each layer’s cell-only assets and their estimate (Phase 5 D9)', () => {
+    const scene = baseScene({
+      textures: [{ id: 'bark', fileName: 'bark.png', __vramBytes: { in: 8, out: 4 } }],
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'wall', type: 'BOX', params: { width: 100, height: 2, depth: 4 } },
+      ],
+      materials: [
+        { id: 'grey', type: 'BASIC' },
+        { id: 'barkMat', type: 'STANDARD', params: { map: 'bark' } },
+      ],
+      meshes: [mesh('wall', 64, 10, { geo: 'wall', mat: 'barkMat' }), mesh('crate', 10, 10)],
+    });
+    const manifest = build(scene).out.__streaming;
+    const cell = manifest?.cells[key(0, 0)];
+    expect(cell?.kept).toEqual({
+      meshes: [0],
+      textures: [0],
+      materials: [1],
+      geometries: [1],
+      bytesEstimate: 4,
+    });
+    expect(cell).toMatchObject({ meshes: [1], materials: [0], geometries: [0], bytesEstimate: 0 });
+    expect(cell?.far).toBeUndefined();
+    expect(manifest?.farMeshes).toBeUndefined();
   });
 });

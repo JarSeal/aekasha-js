@@ -1,10 +1,19 @@
 /**
- * The streaming cell manifest (p353 §3.1-3.2, Phase 3 D1-D5): a streaming scene's resolved meshes
- * and point and spot lights go into the cells their positions are in, an oversized mesh into every
- * cell it overlaps, and the assets only cell content uses move out of the scene's lists with them,
- * into `__streaming`. What stays in the scene's lists is its base, loaded with the scene.
+ * The streaming cell manifest (p353 §3.1-3.2, Phase 3 D1-D5, Phase 5 D7-D9): a streaming scene's
+ * resolved meshes and point and spot lights go into the cells their positions are in (the cells'
+ * near content), an oversized mesh into every cell it overlaps (their kept content, loaded from
+ * `FAR` in), a mesh with explicit LOD levels gets a far representation (its coarsest level, a
+ * cell's alike ones one instanced group), and the assets only cell content uses move out of the
+ * scene's lists with them, into `__streaming`, listed per layer. What stays in the scene's lists is
+ * its base, loaded with the scene.
  */
-import type { StreamingManifest, StreamingManifestCell } from '../../src/_engine/schemas';
+import type {
+  StreamingFarInstance,
+  StreamingFarMesh,
+  StreamingManifest,
+  StreamingManifestCell,
+  StreamingManifestLayer,
+} from '../../src/_engine/schemas';
 import { isCellInRange, packCellKey } from '../../src/_engine/utils/CellKey';
 import type { GatherContext } from './context';
 import type { SceneJSON } from './sceneAssets';
@@ -199,7 +208,22 @@ const getMeshExtent = (
   return { hx: radius, hz: radius };
 };
 
-type CellBuild = { cell: StreamingManifestCell; refs: Refs };
+/** A cell's far or kept layer while it's built: its meshes and what they reference */
+type LayerBuild = { meshes: number[]; refs: Refs };
+
+type CellBuild = {
+  cell: StreamingManifestCell;
+  /** What its near content references */
+  refs: Refs;
+  far: LayerBuild & {
+    /** Its far groups' indices in the manifest's `farMeshes`, by `getFarGroupKey` */
+    groups: Map<string, number>;
+  };
+  kept: LayerBuild;
+};
+
+/** A build's three reference sets: its near, far and kept layers' */
+const getBuildRefs = (build: CellBuild) => [build.refs, build.far.refs, build.kept.refs];
 
 /** The streaming settings the runtime reads: the build-time `base` and `radii` dropped (D3) */
 const toRuntimeSettings = (settings: NonNullable<SceneJSON['streaming']>) => {
@@ -213,6 +237,8 @@ const getCellBuild = (cells: Map<number, CellBuild>, cellKey: number): CellBuild
     build = {
       cell: { bounds: [Infinity, Infinity, -Infinity, -Infinity], bytesEstimate: 0 },
       refs: createRefs(),
+      far: { meshes: [], refs: createRefs(), groups: new Map() },
+      kept: { meshes: [], refs: createRefs() },
     };
     cells.set(cellKey, build);
   }
@@ -231,11 +257,14 @@ const pushIndex = (cell: StreamingManifestCell, key: 'meshes' | 'lights', index:
   (cell[key] ??= []).push(index);
 };
 
+/** Whether an entry is oversized (D4): a half extent over `cellSize / 2`. */
+const isOversizedExtent = ({ hx, hz }: Extent, cellSize: number) => Math.max(hx, hz) > cellSize / 2;
+
 /** The cell keys an entry at (x, z) with `extent` goes into: its position's cell, or every cell
- * its box overlaps when it's oversized (D4: a half extent over `cellSize / 2`). Null outside the
- * cell keys' range. */
-const getEntryCellKeys = (x: number, z: number, { hx, hz }: Extent, cellSize: number) => {
-  const isOversized = Math.max(hx, hz) > cellSize / 2;
+ * its box overlaps when it's oversized. Null outside the cell keys' range. */
+const getEntryCellKeys = (x: number, z: number, extent: Extent, cellSize: number) => {
+  const { hx, hz } = extent;
+  const isOversized = isOversizedExtent(extent, cellSize);
   const reachX = isOversized ? hx : 0;
   const reachZ = isOversized ? hz : 0;
   const minCx = Math.floor((x - reachX) / cellSize);
@@ -253,6 +282,108 @@ const getEntryCellKeys = (x: number, z: number, { hx, hz }: Extent, cellSize: nu
 const getVramBytes = (entry: unknown) => {
   const vram = (entry as { __vramBytes?: { out?: unknown } } | undefined)?.__vramBytes;
   return typeof vram?.out === 'number' ? vram.out : 0;
+};
+
+type LodLike = { levels?: unknown; cullScreenSize?: unknown; auto?: unknown };
+type LevelLike = { geo?: unknown; mat?: unknown; castShadow?: unknown };
+
+/**
+ * A mesh's far representation (Phase 5 D7): with explicit `lod.levels`, its coarsest level (each
+ * omitted `geo`, `mat` and `castShadow` the levels' before it, level 0's the mesh's own), at its
+ * transform, without its `lod` and app id. None for a mesh without levels (`AUTO` included: its
+ * chain isn't known here) or whose LOD hides it at a distance (`cullScreenSize` over 0).
+ */
+export const getFarMeshProps = (
+  props: Record<string, unknown>
+): { props: Record<string, unknown>; transform: StreamingFarInstance } | null => {
+  const lod = props.lod as LodLike | undefined;
+  if (!lod || typeof lod !== 'object' || lod.auto || !Array.isArray(lod.levels)) return null;
+  if (!lod.levels.length || num(lod.cullScreenSize, 0) > 0) return null;
+  let { geo, mat, castShadow } = props;
+  for (const level of lod.levels as LevelLike[]) {
+    if (level.geo !== undefined) geo = level.geo;
+    if (level.mat !== undefined) mat = level.mat;
+    if (level.castShadow !== undefined) castShadow = level.castShadow;
+  }
+  const { lod: _lod, appId: _appId, position, rotation, quaternion, scale, ...rest } = props;
+  const transform: Record<string, unknown> = {};
+  if (position !== undefined) transform.position = position;
+  if (rotation !== undefined) transform.rotation = rotation;
+  if (quaternion !== undefined) transform.quaternion = quaternion;
+  if (scale !== undefined) transform.scale = scale;
+  return {
+    props: { ...rest, geo, mat, castShadow },
+    transform: transform as StreamingFarInstance,
+  };
+};
+
+/** The key a far entry groups by in its cell: registered geometry and material ids, its shadows;
+ * null for one that's a mesh of its own (an inline `geo` or `mat`, or `matOverrides`). */
+const getFarGroupKey = (props: Record<string, unknown>) =>
+  typeof props.geo === 'string' && typeof props.mat === 'string' && !props.matOverrides
+    ? `${props.geo}|${props.mat}|${props.castShadow ? 1 : 0}|${props.receiveShadow ? 1 : 0}`
+    : null;
+
+/** What a far entry references: its `geo`, `mat` and `matOverrides` */
+const addFarMeshRefs = (
+  scene: SceneJSON,
+  props: Record<string, unknown>,
+  listed: Listed,
+  refs: Refs
+) => {
+  if (typeof props.geo === 'string') addGeometryRef(props.geo, listed, refs);
+  if (typeof props.mat === 'string') addMaterialRef(scene, props.mat, listed, refs, false);
+  else addMaterialFieldRefs(props.mat, listed, refs);
+  addMaterialFieldRefs(props.matOverrides, listed, refs);
+};
+
+/** Adds a mesh's far representation to the cell's far layer: into the cell's group of its kind,
+ * or as a mesh of its own. */
+const addFarEntry = (
+  scene: SceneJSON,
+  build: CellBuild,
+  mesh: Exclude<MeshEntry, string>,
+  listed: Listed,
+  farMeshes: StreamingFarMesh[]
+) => {
+  const far = getFarMeshProps(mesh.props as Record<string, unknown>);
+  if (!far) return;
+  const { props, transform } = far;
+  addFarMeshRefs(scene, props, listed, build.far.refs);
+  const groupKey = getFarGroupKey(props);
+  if (groupKey === null) {
+    build.far.meshes.push(farMeshes.length);
+    farMeshes.push({ props: { ...props, ...transform } as StreamingFarMesh['props'] });
+    return;
+  }
+  let index = build.far.groups.get(groupKey);
+  if (index === undefined) {
+    index = farMeshes.length;
+    build.far.groups.set(groupKey, index);
+    build.far.meshes.push(index);
+    const { geo, mat, castShadow, receiveShadow } = props;
+    farMeshes.push({
+      props: {
+        geo,
+        mat,
+        castShadow: !!castShadow,
+        receiveShadow: !!receiveShadow,
+      } as StreamingFarMesh['props'],
+      instances: [],
+    });
+  }
+  farMeshes[index].instances?.push(transform);
+};
+
+/** A built far or kept layer, or undefined when it holds nothing. */
+const toManifestLayer = (layer: StreamingManifestLayer): StreamingManifestLayer | undefined => {
+  const isEmpty =
+    !layer.meshes &&
+    !layer.textures &&
+    !layer.materials &&
+    !layer.geometries &&
+    !layer.importedAssets;
+  return isEmpty ? undefined : layer;
 };
 
 /** Warns about the `base` and `radii` ids that name nothing the scene has */
@@ -338,43 +469,52 @@ export const buildStreamingManifest = <S extends SceneJSON>(
     assets: { textures: [], materials: [], geometries: [], importedAssets: [] },
     cells: {},
   };
-  const placeEntry = (key: 'meshes' | 'lights', index: number, at: Vec3, extent: Extent) => {
+  const farMeshes: StreamingFarMesh[] = [];
+  /** The cells an entry goes into, their bounds grown by it ([] outside the keys' range) */
+  const placeEntry = (kind: 'mesh' | 'light', at: Vec3, extent: Extent) => {
     const x = at.x ?? 0;
     const z = at.z ?? 0;
     const keys = getEntryCellKeys(x, z, extent, cellSize);
     if (!keys) {
       ctx.log.error(
-        `Scene "${sceneId}": a streamed ${key === 'meshes' ? 'mesh' : 'light'} at (${x}, ${z}) is outside the cell keys' range (±65,536 cells of ${cellSize} m).`
+        `Scene "${sceneId}": a streamed ${kind} at (${x}, ${z}) is outside the cell keys' range (±65,536 cells of ${cellSize} m).`
       );
       return [];
     }
     const builds = keys.map((cellKey) => getCellBuild(cells, cellKey));
-    for (const build of builds) {
-      pushIndex(build.cell, key, index);
-      growBounds(build.cell, x, z, extent);
-    }
+    for (const build of builds) growBounds(build.cell, x, z, extent);
     return builds;
   };
   cellMeshes.forEach((mesh, index) => {
     manifest.meshes.push(mesh as StreamingManifest['meshes'][number]);
     const extent = getMeshExtent(scene, mesh, listed, radii);
-    const builds = placeEntry('meshes', index, (mesh.props.position ?? {}) as Vec3, extent);
-    for (const build of builds) addMeshRefs(scene, mesh, listed, build.refs, false);
+    const builds = placeEntry('mesh', (mesh.props.position ?? {}) as Vec3, extent);
+    // Phase 5 D8: an oversized mesh is kept content (one entity, while any of its cells is
+    // loaded), drawn far away by its own LOD; one cell's mesh is near content with a far one
+    const isKept = isOversizedExtent(extent, cellSize);
+    for (const build of builds) {
+      if (isKept) {
+        build.kept.meshes.push(index);
+        addMeshRefs(scene, mesh, listed, build.kept.refs, false);
+        continue;
+      }
+      pushIndex(build.cell, 'meshes', index);
+      addMeshRefs(scene, mesh, listed, build.refs, false);
+      addFarEntry(scene, build, mesh, listed, farMeshes);
+    }
   });
   cellLights.forEach((light, index) => {
     manifest.lights.push(light as StreamingManifest['lights'][number]);
-    placeEntry(
-      'lights',
-      index,
-      ((light.lightProps as { position?: Vec3 }).position ?? {}) as Vec3,
-      NO_EXTENT
-    );
+    const at = ((light.lightProps as { position?: Vec3 }).position ?? {}) as Vec3;
+    for (const build of placeEntry('light', at, NO_EXTENT)) pushIndex(build.cell, 'lights', index);
   });
 
   // A material that stays base keeps its textures base: it's created with the scene
   const cellRefMaterials = new Set<string>();
-  for (const build of cells.values())
-    for (const id of build.refs.materials) cellRefMaterials.add(id);
+  for (const build of cells.values()) {
+    for (const refs of getBuildRefs(build))
+      for (const id of refs.materials) cellRefMaterials.add(id);
+  }
   for (const [matId] of listed.materials) {
     if (baseRefs.materials.has(matId) || !cellRefMaterials.has(matId)) {
       addMaterialFieldRefs(getListedEntry(scene, listed, 'materials', matId), listed, baseRefs);
@@ -393,7 +533,7 @@ export const buildStreamingManifest = <S extends SceneJSON>(
         typeof entry !== 'string' &&
         id !== undefined &&
         !baseRefs[kind].has(id) &&
-        [...cells.values()].some((build) => build.refs[kind].has(id));
+        [...cells.values()].some((build) => getBuildRefs(build).some((refs) => refs[kind].has(id)));
       if (!isCellOnly) {
         kept.push(entry);
         continue;
@@ -404,15 +544,23 @@ export const buildStreamingManifest = <S extends SceneJSON>(
     (out as Record<string, unknown>)[kind] = kept.length ? kept : undefined;
     if (!kept.length) delete (out as Record<string, unknown>)[kind];
     for (const build of cells.values()) {
-      const indices = [...build.refs[kind]]
-        .map((id) => moved.get(id))
-        .filter((index): index is number => index !== undefined)
-        .sort((a, b) => a - b);
-      if (!indices.length) continue;
-      build.cell[kind] = indices;
-      if (kind === 'textures' || kind === 'importedAssets') {
-        for (const index of indices) {
-          build.cell.bytesEstimate += getVramBytes(manifest.assets[kind][index]);
+      // Each layer lists the moved assets it references (a cell's near and far layers can both)
+      const layers: [Refs, StreamingManifestCell | StreamingManifestLayer][] = [
+        [build.refs, build.cell],
+        [build.far.refs, (build.cell.far ??= { bytesEstimate: 0 })],
+        [build.kept.refs, (build.cell.kept ??= { bytesEstimate: 0 })],
+      ];
+      for (const [refs, layer] of layers) {
+        const indices = [...refs[kind]]
+          .map((id) => moved.get(id))
+          .filter((index): index is number => index !== undefined)
+          .sort((a, b) => a - b);
+        if (!indices.length) continue;
+        layer[kind] = indices;
+        if (kind === 'textures' || kind === 'importedAssets') {
+          for (const index of indices) {
+            layer.bytesEstimate += getVramBytes(manifest.assets[kind][index]);
+          }
         }
       }
     }
@@ -423,8 +571,16 @@ export const buildStreamingManifest = <S extends SceneJSON>(
   if (!baseMeshes.length) delete out.meshes;
   if (!baseLights.length) delete out.lights;
   for (const [cellKey, build] of [...cells].sort((a, b) => a[0] - b[0])) {
-    manifest.cells[String(cellKey)] = build.cell;
+    const { cell } = build;
+    if (build.far.meshes.length) (cell.far ??= { bytesEstimate: 0 }).meshes = build.far.meshes;
+    if (build.kept.meshes.length) (cell.kept ??= { bytesEstimate: 0 }).meshes = build.kept.meshes;
+    cell.far = cell.far && toManifestLayer(cell.far);
+    cell.kept = cell.kept && toManifestLayer(cell.kept);
+    if (!cell.far) delete cell.far;
+    if (!cell.kept) delete cell.kept;
+    manifest.cells[String(cellKey)] = cell;
   }
+  if (farMeshes.length) manifest.farMeshes = farMeshes;
   out.__streaming = manifest;
   return out;
 };

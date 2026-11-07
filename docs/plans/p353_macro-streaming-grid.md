@@ -1424,6 +1424,49 @@ As built (section 3):
   `StreamingPriming.test.ts`: a forgotten material compiled again. `StreamingSchema.test.ts`: the
   setting and its default.
 
+As built (section 4):
+
+- **The manifest types** (`StreamingManifest.ts`, on `aekasha/schemas`): `StreamingManifestLayer`
+  (`meshes`, the four asset lists, `bytesEstimate`), a cell's optional `far` and `kept`,
+  `StreamingFarMesh` (`props`, and a group's `instances`), `StreamingFarInstance` (an entry's
+  `position`, `rotation`, `quaternion`, `scale`, as its props had them), the manifest's optional
+  `farMeshes`. A cell's own fields stay its near content's; a cell's `meshes` no longer lists the
+  oversized meshes (they're in `kept`).
+- **The gather** (`devTools/gather/streamingManifest.ts`): `placeEntry` grows the bounds and
+  returns the cells; an oversized mesh (`isOversizedExtent`) goes into each cell's kept layer with
+  its references there, a cell's own mesh into its near list with its far entry
+  (`getFarMeshProps`, exported for the tests: explicit levels, the coarsest's `geo` / `mat` /
+  `castShadow` walked from level 0, none with `auto`, `'AUTO'` or a `cullScreenSize` over 0; the
+  transform split off, `lod` and `appId` dropped). `addFarEntry` groups by `getFarGroupKey`
+  (string `geo` and `mat`, no `matOverrides`, the two shadows) into one `farMeshes` entry per cell
+  and key, or writes a mesh of its own. References per layer (`getBuildRefs`: near, far, kept); an
+  asset is cell-only when no base and some layer references it, and each layer lists the moved
+  assets it references, with its estimate. A layer with nothing is left out; `farMeshes` too.
+  `streamingGrid` (no JSON `lod` yet): 20 cells, 33 meshes, no far entries, the wall kept in its
+  six cells with its material and geometry.
+- **The runtime** (`StreamingDataContent.ts`): units per cell and layer (cached by
+  `cellKey/range`): each layer's asset unit loads its lists in its own owner key
+  (`getStreamingLayerOwnerLayer(range)`, `StreamingLayers.ts`); the near layer's lights and meshes
+  8 a unit; the kept layer's shared meshes (holder-counted per scene as in Phase 3); the far
+  layer's far entries 8 a unit, a group as `createFarGroupEntity` (`@internal`): one
+  `InstancedMesh` of the registered geometry and material (throws naming a missing one, so the
+  unit fails and is counted), an instance matrix per entry from its transform, its bounds over
+  every instance, a ref on both, `userData.entityId`, `OBJECT3D` and `TAG_IS_MESH` (whose delete
+  hook disposes it and releases the refs), in the root scene; not in the ECS frustum culling,
+  three culls it by those bounds. A mesh of its own goes through `createSceneObject3Ds`. Every
+  data unit names its `loadedAt`.
+- **Debug:** the tab's JSON content line counts the far meshes, and its estimate adds each
+  tracked cell's kept layer and its near or far one by its level; the cell window's JSON content
+  lists the near, far and kept layers' entries, assets and estimates.
+- **Tests:** `streamingManifest.test.ts` (an oversized mesh in the kept layers, a one-cell mesh
+  near; far entries: two alike grouped with each transform and the coarsest level, a
+  `matOverrides` one on its own without `appId` or `lod`, none for a culled, an `AUTO` or a
+  plain mesh, a group per cell, the far level's geometry in the far layer's assets; each layer's
+  assets and estimate). `StreamingDataContent.test.ts` (each layer's units and waits; a far
+  layer's assets in its key, a group of three as one `InstancedMesh` entity with its shadows,
+  matrices and bounds, a mesh of its own; the shared mesh through the kept layer; the machine
+  releasing the near and kept layers).
+
 ## 10. Versioning, Hub and docs
 
 Engine minor per phase that adds API (Phases 1–4); the `AssetOwners` change in Phase 2 is internal.

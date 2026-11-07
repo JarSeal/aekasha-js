@@ -48,8 +48,11 @@ export {
   streamingSchemaPart,
 } from '../features/streaming/StreamingSchema';
 export type {
+  StreamingFarInstance,
+  StreamingFarMesh,
   StreamingManifest,
   StreamingManifestCell,
+  StreamingManifestLayer,
 } from '../features/streaming/StreamingManifest';
 export {
   applySkyBoxSaveEntry,

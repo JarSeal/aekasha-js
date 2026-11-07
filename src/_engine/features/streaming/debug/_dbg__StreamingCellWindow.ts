@@ -23,7 +23,7 @@ import {
   getStreamingCellEntityIds,
 } from '../StreamingCells';
 import { setStreamingTransitionListener } from '../StreamingLayers';
-import type { StreamingManifest } from '../StreamingManifest';
+import type { StreamingManifest, StreamingManifestLayer } from '../StreamingManifest';
 import { StreamingLevel } from '../StreamingRings';
 import { getCellGPUBytes, getOwnedAssetIds, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 
@@ -88,14 +88,27 @@ const formatDataContent = (cellKey: number) => {
   if (!manifest || !entry) return 'none';
   const ids = (kind: keyof StreamingManifest['assets'], indices: number[] | undefined) =>
     (indices ?? []).map((index) => manifest.assets[kind][index]?.id ?? `#${index}`);
-  const assets = (['textures', 'materials', 'geometries', 'importedAssets'] as const)
-    .map((kind) => [kind, ids(kind, entry[kind])] as const)
-    .filter(([, list]) => list.length)
-    .map(([kind, list]) => `${kind}: ${list.join(', ')}`);
-  return [
-    `${entry.meshes?.length ?? 0} meshes, ${entry.lights?.length ?? 0} lights, est. ${formatBytes(entry.bytesEstimate)}`,
-    ...assets,
-  ].join('\n');
+  const assetsOf = (layer: StreamingManifestLayer, prefix: string) =>
+    (['textures', 'materials', 'geometries', 'importedAssets'] as const)
+      .map((kind) => [kind, ids(kind, layer[kind])] as const)
+      .filter(([, list]) => list.length)
+      .map(([kind, list]) => `${prefix}${kind}: ${list.join(', ')}`);
+  // Its near content, then its far and kept layers' (p353 Phase 5)
+  const lines = [
+    `near: ${entry.meshes?.length ?? 0} meshes, ${entry.lights?.length ?? 0} lights, est. ${formatBytes(entry.bytesEstimate)}`,
+    ...assetsOf(entry, '  '),
+  ];
+  for (const [name, layer] of [
+    ['far', entry.far],
+    ['kept', entry.kept],
+  ] as const) {
+    if (!layer) continue;
+    lines.push(
+      `${name}: ${layer.meshes?.length ?? 0} meshes, est. ${formatBytes(layer.bytesEstimate)}`
+    );
+    lines.push(...assetsOf(layer, '  '));
+  }
+  return lines.join('\n');
 };
 
 /** A cell's layers (p353 Phase 5 D1): each one's phase, units and load generation. */

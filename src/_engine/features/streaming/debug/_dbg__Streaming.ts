@@ -19,6 +19,7 @@ import {
   setStreamingUpdateInterval,
 } from '../Streaming';
 import type { StreamingRuntime } from '../StreamingCells';
+import { StreamingLevel } from '../StreamingRings';
 import {
   getCellStateLabel,
   getOpenStreamingCellWindowIds,
@@ -157,10 +158,15 @@ const formatDataContent = (rt: StreamingRuntime | null) => {
   const { manifest } = content;
   let estimate = 0;
   for (const cell of rt.cells.values()) {
-    estimate += manifest.cells[String(cell.key)]?.bytesEstimate ?? 0;
+    const entry = manifest.cells[String(cell.key)];
+    if (!entry) continue;
+    // What its level loads: its near or far content, and its kept content (p353 Phase 5)
+    const isFar = cell.level === StreamingLevel.FAR;
+    estimate += (isFar ? entry.far?.bytesEstimate ?? 0 : entry.bytesEstimate) ?? 0;
+    estimate += entry.kept?.bytesEstimate ?? 0;
   }
   return [
-    `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.lights.length} lights`,
+    `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.farMeshes?.length ?? 0} far meshes, ${manifest.lights.length} lights`,
     `estimated for the tracked cells: ${formatBytes(estimate)}`,
     `oversized meshes alive: ${content.shared.size}`,
   ].join('\n');

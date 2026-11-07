@@ -67,6 +67,12 @@ const OWNER_LAYERS: Record<StreamingContentRange, string | undefined> = {
 };
 
 /**
+ * The owner key suffix of a cell's layer of `range` (`getCellOwnerKey`'s `layer`).
+ * @internal
+ */
+export const getStreamingLayerOwnerLayer = (range: StreamingContentRange) => OWNER_LAYERS[range];
+
+/**
  * A cell's layer of content: the units of one content range, and where they are.
  * @internal
  */
