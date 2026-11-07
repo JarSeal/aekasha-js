@@ -84,7 +84,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema515"
+          "$ref": "#/definitions/__schema517"
         }
       ]
     }
@@ -6587,11 +6587,14 @@
         "nearbyPhysicsTier": {
           "$ref": "#/definitions/__schema509"
         },
-        "base": {
+        "fadeSeconds": {
           "$ref": "#/definitions/__schema511"
         },
-        "radii": {
+        "base": {
           "$ref": "#/definitions/__schema513"
+        },
+        "radii": {
+          "$ref": "#/definitions/__schema515"
         }
       },
       "required": [
@@ -6674,7 +6677,7 @@
       ]
     },
     "__schema511": {
-      "description": "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell.",
+      "description": "Seconds a streamed entity dithers in and out (0: at once). Default AppConfig.lod.fadeSeconds.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema512"
@@ -6682,13 +6685,11 @@
       ]
     },
     "__schema512": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "type": "number",
+      "minimum": 0
     },
     "__schema513": {
-      "description": "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's).",
+      "description": "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema514"
@@ -6696,6 +6697,20 @@
       ]
     },
     "__schema514": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema515": {
+      "description": "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema516"
+        }
+      ]
+    },
+    "__schema516": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -6705,7 +6720,7 @@
         "minimum": 0
       }
     },
-    "__schema515": {
+    "__schema517": {
       "type": "object",
       "propertyNames": {
         "type": "string"

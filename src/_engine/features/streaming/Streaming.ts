@@ -16,7 +16,12 @@ import { DEFAULT_ECS_WORLD_ID, type ECSWorld, getECSWorld } from '../../kernel/e
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
-import type { StreamingBudgets, StreamingPrimer, StreamingRuntime } from './StreamingCells';
+import type {
+  StreamingBudgets,
+  StreamingFader,
+  StreamingPrimer,
+  StreamingRuntime,
+} from './StreamingCells';
 import {
   type StreamingCellContent,
   STREAMING_CONTENT_RANGES,
@@ -29,7 +34,11 @@ import type { StreamingDataContent } from './StreamingDataContent';
 import type { StreamingManifest } from './StreamingManifest';
 import type { StreamingPrimeBudgets } from './StreamingPriming';
 import type { SceneStreamingSettings } from './StreamingSchema';
-import { getStreamingSettingsProblem, resolveStreamingSettings } from './StreamingSettings';
+import {
+  DEFAULT_STREAMING_FADE_SECONDS,
+  getStreamingSettingsProblem,
+  resolveStreamingSettings,
+} from './StreamingSettings';
 import { lwarn } from '../../utils/Logger';
 
 /**
@@ -60,6 +69,10 @@ let machine: StreamingMachine | null = null;
 /** Primes the layers streamed in during play (StreamingPriming.ts, loaded with the machine), its
  * budgets read every frame */
 let primer: StreamingPrimer | null = null;
+/** Fades the layers' entities in and out (StreamingFades.ts, loaded with the machine) */
+let fader: StreamingFader | null = null;
+/** The fade a scene's settings leave out: `AppConfig.lod.fadeSeconds`, read at the install */
+let defaultFadeSeconds = DEFAULT_STREAMING_FADE_SECONDS;
 
 /** The gathered scenes' settings, by scene id */
 const dataSettings = new Map<string, SceneStreamingSettings>();
@@ -400,23 +413,27 @@ const loadSceneCellsAsync = async (sceneId: string) => {
   // On demand (the import registry's pattern, p613 D4): the machine, its priming and the cells'
   // bodies for a scene that streams, the JSON content only for one whose JSON content is in
   // cells. Before any state is set, so nothing changes across the await.
-  const [cellsModule, primingModule, bodiesModule, dataModule] = await Promise.all([
+  const [cellsModule, primingModule, fadesModule, bodiesModule, dataModule] = await Promise.all([
     import('./StreamingCells'),
     import('./StreamingPriming'),
+    import('./StreamingFades'),
     import('./StreamingBodies'),
     manifest ? import('./StreamingDataContent') : null,
   ]);
   machine = cellsModule;
   primer ??= primingModule.createStreamingPrimer(primeBudgets);
+  fader ??= fadesModule.createStreamingFader(primingModule.forgetPrimedMaterial);
   const world = getECSWorld();
   const rt = cellsModule.createStreamingRuntime(
     sceneId,
-    resolveStreamingSettings(settings),
+    resolveStreamingSettings(settings, defaultFadeSeconds),
     world,
     now,
     createCellRelease(sceneId),
     primer
   );
+  // Its layers dither in and out (p353 Phase 5 D4), unless its fadeSeconds is 0
+  rt.fader = fader;
   // Its cells' bodies (StreamingBodies.ts): their tiers, and the hand-over of the ones that moved
   rt.bodies = bodiesModule.createStreamingBodies(rt.settings.nearbyPhysicsTier);
   if (manifest && dataModule) {
@@ -483,6 +500,8 @@ export const installStreaming = (ctx: FeatureContext) => {
   budgets.maxCreateMsPerFrame = config?.maxCreateMsPerFrame ?? DEFAULT_MAX_CREATE_MS_PER_FRAME;
   primeBudgets.maxPrimeMsPerFrame = config?.maxPrimeMsPerFrame ?? DEFAULT_MAX_PRIME_MS_PER_FRAME;
   primeBudgets.maxNewStructuresPerFrame = config?.maxNewStructuresPerFrame ?? null;
+  // A scene's streamed entities fade as long as its LOD cross-fades, unless it says otherwise
+  defaultFadeSeconds = ctx.config.lod?.fadeSeconds ?? DEFAULT_STREAMING_FADE_SECONDS;
   ctx.registerPlugin((world) => {
     world.addSystem(ECSSystemStage.MAIN, 'streamingSystem', streamingSystem);
   });

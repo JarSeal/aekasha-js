@@ -283,6 +283,15 @@ export const createStreamingPrimer = (budgets: StreamingPrimeBudgets): Streaming
 });
 
 /**
+ * Forgets that a material was shown (p353 Phase 5 D6): its build changed (the fades dithered it),
+ * so the next priming that holds it compiles it again before showing it.
+ * @internal
+ */
+export const forgetPrimedMaterial = (material: THREE.Material) => {
+  shownMaterials.delete(material);
+};
+
+/**
  * Forgets which materials and textures were primed (the tests', between cases).
  * @internal
  */

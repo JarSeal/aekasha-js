@@ -1372,6 +1372,58 @@ As built (section 2):
   `REMOVED`, `STATIC` at `NEARBY`, `FULL` at `RESIDENT` and `REMOVED` again; a leaving `NEAR`
   layer's body keeping `STATIC` while the far stand-in loads.
 
+As built (section 3):
+
+- **The fader** (`StreamingFades.ts`, `createStreamingFader(onMaterialDithered)`, loaded on demand
+  with the machine, 0.65 KiB gzip): `StreamingFader` (`StreamingCells.ts`, injected as
+  `rt.fader` like the primer): `prepare(world, ids, hidden)` dithers every material of the
+  entities' meshes (their Object3D and its children, LOD fade copies left out; `enableLodDither`)
+  and, with `hidden`, sets their visibility fade to 0; `start(world, ids, direction, progress)`
+  collects the meshes and draws the first frame (a fade in also lifts a draw hold left on its
+  entities); `draw(job, progress)` writes `progress` (in) or `progress - 1` (out), and at 1 clears
+  the fades, an out fade then holding its entities from drawing (`TAG_DRAW_HELD`) until they're
+  taken down; `release(world, ids)` clears both for what a content's own `unload` leaves alive.
+  Nothing per frame allocates: a job's meshes are collected at its start.
+- **The machine** (`StreamingLayers.ts`): a layer's `fadesIn` (a load during play, with a fader)
+  and `fade` (`{ job, direction, startedAt }`, on the runtime's clock). Fades run only with
+  `rt.fader` and `settings.fadeSeconds > 0` (the tests' runtimes have no fader, so they show and
+  unload at once as before). `finishUnit` prepares a unit's entities before the primer holds
+  them (hidden for a load during play, so the priming's groups show invisible and the whole layer
+  fades in together); `showLayer` starts the fade in; `releaseLeavingLayers` starts a shown
+  leaving layer's fade out once the wanted layers are shown (the same call, so a near ↔ far
+  switch fades both at once), and turns a wanted layer's fade out back in; the pump draws every
+  fade after the priming (`pumpStreamingLayerFade`) and starts a fade out's unload when it ends.
+  A turned fade restarts at `1 - progress` (a new job on the same objects). A layer whose unload
+  starts drops its fade; the drop drops every fade. A layer with no entities has nothing to fade
+  and unloads at once. Counters: `fadesStarted`, `fadesReversed`.
+- **Handed-over bodies:** a body handed to a shown layer (`showAdoptedBody`, from the hand-over
+  and the rebalance) is released of a fade or hold its old layer left on it (a fade out's end
+  holds what it faded, and a hand-over at unload comes after it); one handed to a layer not shown
+  yet takes that layer's fade in, which lifts the hold.
+- **The priming (D6):** `forgetPrimedMaterial(material)` (`StreamingPriming.ts`), the fader's
+  `onMaterialDithered`: a material shown before and dithered since is compiled again by the next
+  priming that holds it.
+- **Settings:** `streaming.fadeSeconds` (schema part, `getStreamingSettingsProblem`: 0 or more,
+  finite), resolved by `resolveStreamingSettings(settings, defaultFadeSeconds)`, the default
+  `AppConfig.lod.fadeSeconds` read at the install, else `DEFAULT_STREAMING_FADE_SECONDS` (0.25).
+- **Kernel:** `getObjectVisibilityFade(object)` (`LodFade.ts`, `@internal`, the tests').
+- **Measured on the way:** `yarn sbp`: every budget passes (the streaming group's first download
+  unchanged, 2.3 KiB; `StreamingLayers.js` 2.7 KiB on demand). `yarn verify:scenes` loads
+  `streamingGrid` and `streamingPhysics` clean in every configuration, the physics probe hash
+  `07287c06` in all three targets. `streamingGrid` flown 20 s on the dev server (WebGPU, debug):
+  the cells streamed in on the way draw whole, no console error. The pop count and the frame
+  times are section 5's.
+- **Tests:** `StreamingCells.test.ts`' fades (a recording fader on the test's clock): a layer
+  streamed in prepared hidden and fading in once shown, ending at 250 ms; a shown layer fading
+  out before it unloads (the cell `UNLOADING` meanwhile); a near ↔ far switch fading both at
+  once and the far layer unloading after; a fade out turned back in at 0.6 (no reload); a scene
+  load's cells prepared, not hidden, not faded, and the drop unfaded; `fadeSeconds` 0 preparing
+  nothing. `StreamingFades.test.ts` on the kernel: `prepare` dithering a shared material once
+  (told once) and hiding the meshes (a copy reading its mesh's); a fade in's progress, the hold
+  it lifts and its end; a fade out's `progress - 1`, its end held, `release`.
+  `StreamingPriming.test.ts`: a forgotten material compiled again. `StreamingSchema.test.ts`: the
+  setting and its default.
+
 ## 10. Versioning, Hub and docs
 
 Engine minor per phase that adds API (Phases 1–4); the `AssetOwners` change in Phase 2 is internal.

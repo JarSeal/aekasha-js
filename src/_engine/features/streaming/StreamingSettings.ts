@@ -43,7 +43,15 @@ export type ResolvedStreamingSettings = {
   margin: number;
   /** The physics tier of a `NEARBY` cell's dynamic bodies. */
   nearbyPhysicsTier: 'STATIC' | 'DISABLED';
+  /** How long a streamed entity fades in and out, in seconds (0: at once). */
+  fadeSeconds: number;
 };
+
+/**
+ * The streamed entities' fade when neither the scene nor `AppConfig.lod.fadeSeconds` gives one:
+ * the LOD cross-fades' default.
+ */
+export const DEFAULT_STREAMING_FADE_SECONDS = 0.25;
 
 /**
  * What's wrong with a scene's streaming settings, or null when nothing is: the scene field's
@@ -68,6 +76,10 @@ export const getStreamingSettingsProblem = (settings: SceneStreamingSettings): s
   if (settings.margin !== undefined && !(settings.margin >= 0)) {
     return `streaming.margin must be 0 or more (got ${settings.margin}).`;
   }
+  const { fadeSeconds } = settings;
+  if (fadeSeconds !== undefined && !(fadeSeconds >= 0 && Number.isFinite(fadeSeconds))) {
+    return `streaming.fadeSeconds must be 0 or more (got ${fadeSeconds}).`;
+  }
   const tier = settings.nearbyPhysicsTier;
   if (tier !== undefined && !STREAMING_NEARBY_PHYSICS_TIERS.includes(tier)) {
     return `streaming.nearbyPhysicsTier must be STATIC or DISABLED (got ${String(tier)}).`;
@@ -77,11 +89,13 @@ export const getStreamingSettingsProblem = (settings: SceneStreamingSettings): s
 
 /**
  * A scene's streaming settings with the defaults applied (rings 1, 2, 5; `margin` a quarter of a
- * cell; `NEARBY` bodies `STATIC`). Expects settings `getStreamingSettingsProblem` passes.
+ * cell; `NEARBY` bodies `STATIC`; `fadeSeconds` the install's, `AppConfig.lod.fadeSeconds`, else
+ * 0.25). Expects settings `getStreamingSettingsProblem` passes.
  * @internal
  */
 export const resolveStreamingSettings = (
-  settings: SceneStreamingSettings
+  settings: SceneStreamingSettings,
+  defaultFadeSeconds = DEFAULT_STREAMING_FADE_SECONDS
 ): ResolvedStreamingSettings => ({
   cellSize: settings.cellSize,
   invCellSize: 1 / settings.cellSize,
@@ -92,4 +106,5 @@ export const resolveStreamingSettings = (
   ],
   margin: settings.margin ?? settings.cellSize / 4,
   nearbyPhysicsTier: settings.nearbyPhysicsTier ?? STREAMING_NEARBY_PHYSICS_TIERS[0],
+  fadeSeconds: settings.fadeSeconds ?? defaultFadeSeconds,
 });

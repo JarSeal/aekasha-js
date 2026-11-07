@@ -12,6 +12,7 @@ import { packCellKey } from '../../utils/CellKey';
 import * as Logger from '../../utils/Logger';
 import {
   type StreamingBudgets,
+  type StreamingFader,
   type StreamingPrimeJob,
   type StreamingPrimer,
   type StreamingRuntime,
@@ -937,5 +938,127 @@ describe('content layers (p353 Phase 5 D1-D3, D10)', () => {
     await loadStreamingCellsNowAsync(rt);
     expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
     expect(world.getEntityCount()).toBe(2);
+  });
+});
+
+describe('fades (p353 Phase 5 D4)', () => {
+  // As the layers' tests: cell (3, 0) FAR from (32, 32), NEARBY from (96, 32); fades of 250 ms
+  const RINGS = { resident: 1, nearby: 2, far: 4 };
+  const KEY = packCellKey(3, 0, 0);
+
+  /** A fader recording what it's asked, by job: each job's direction and the progress it last drew */
+  const setupFades = () => {
+    const env = setup({}, RINGS);
+    const log: string[] = [];
+    const jobs: { ids: readonly number[]; direction: string; progress: number }[] = [];
+    const fader: StreamingFader = {
+      prepare: (_world, ids, hidden) => log.push(`prepare ${ids.length}${hidden ? ' hidden' : ''}`),
+      start: (_world, ids, direction, progress) => {
+        const job = { ids, direction, progress };
+        jobs.push(job);
+        log.push(`start ${direction} ${ids.length} at ${progress}`);
+        return job;
+      },
+      draw: (job, progress) => {
+        (job as (typeof jobs)[number]).progress = progress;
+      },
+      release: (_world, ids) => log.push(`release ${ids.length}`),
+    };
+    env.rt.fader = fader;
+    const go = (x: number) => {
+      decideStreamingCells(env.rt, x, 32);
+      env.pump();
+    };
+    /** Moves the clock by `ms` and pumps a frame */
+    const tick = (ms: number) => {
+      env.clock.ms += ms;
+      env.pump();
+    };
+    return { ...env, log, jobs, go, tick };
+  };
+
+  test('a layer streamed in fades in once shown, drawn hidden until then', () => {
+    const { rt, world, clock, log, jobs, go, tick } = setupFades();
+    add(rt, KEY, entitiesContent(world, clock, 3));
+    go(96);
+    expect(log).toEqual(['prepare 3 hidden', 'start IN 3 at 0']);
+    tick(100);
+    expect(jobs[0].progress).toBeCloseTo(0.4);
+    tick(200);
+    expect(jobs[0].progress).toBe(1);
+    expect(layerAt(rt, 3, 0).fade).toBeNull();
+    expect(rt.stats.fadesStarted).toBe(1);
+  });
+
+  test('a shown layer fades out before it unloads', () => {
+    const { rt, world, clock, jobs, go, tick } = setupFades();
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    go(96);
+    tick(300);
+    go(5000);
+    expect(jobs[1]).toMatchObject({ direction: 'OUT', progress: 0 });
+    expect(cellAt(rt, 3, 0)?.phase).toBe('UNLOADING');
+    expect(world.getEntityCount()).toBe(2);
+    tick(200);
+    expect(world.getEntityCount()).toBe(2);
+    tick(100);
+    expect(rt.cells.has(KEY)).toBe(false);
+    expect(world.getEntityCount()).toBe(0);
+  });
+
+  test('a near ↔ far switch fades the near layer in and the far one out at once', () => {
+    const { rt, world, clock, log, go, tick } = setupFades();
+    add(rt, KEY, { ...entitiesContent(world, clock, 1), loadedAt: 'FAR' });
+    add(rt, KEY, entitiesContent(world, clock, 4));
+    go(32);
+    tick(300);
+    log.length = 0;
+    go(96);
+    expect(log).toEqual(['prepare 4 hidden', 'start IN 4 at 0', 'start OUT 1 at 0']);
+    expect(cellAt(rt, 3, 0)?.phase).toBe('LOADED');
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('LOADED');
+    tick(300);
+    expect(layerAt(rt, 3, 0, 'FAR').phase).toBe('UNLOADED');
+    expect(world.getEntityCount()).toBe(4);
+  });
+
+  test('a layer fading out that is wanted again fades back in from where it is', () => {
+    const { rt, world, clock, jobs, go, tick } = setupFades();
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    go(96);
+    tick(300);
+    go(5000);
+    tick(100);
+    go(96);
+    expect(jobs[2]).toMatchObject({ direction: 'IN' });
+    expect(jobs[2].progress).toBeCloseTo(0.6);
+    expect(rt.stats.fadesReversed).toBe(1);
+    tick(100);
+    expect(layerAt(rt, 3, 0).fade).toBeNull();
+    tick(500);
+    expect(layerAt(rt, 3, 0).phase).toBe('LOADED');
+    expect(world.getEntityCount()).toBe(2);
+    expect(layerAt(rt, 3, 0).generation).toBe(1);
+  });
+
+  test("a scene load's cells are prepared but shown at once, and the exit drops them unfaded", async () => {
+    const { rt, world, clock, log } = setupFades();
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    decideStreamingCells(rt, 96, 32);
+    await loadStreamingCellsNowAsync(rt);
+    expect(log).toEqual(['prepare 2']);
+    dropStreamingCells(rt);
+    expect(log).toEqual(['prepare 2']);
+    expect(world.getEntityCount()).toBe(0);
+  });
+
+  test('fadeSeconds 0 shows and takes down at once, preparing nothing', () => {
+    const { rt, world, clock, log, go } = setupFades();
+    rt.settings.fadeSeconds = 0;
+    add(rt, KEY, entitiesContent(world, clock, 2));
+    go(96);
+    go(5000);
+    expect(log).toEqual([]);
+    expect(rt.cells.has(KEY)).toBe(false);
   });
 });

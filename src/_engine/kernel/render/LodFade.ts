@@ -176,6 +176,13 @@ export const setObjectVisibilityFade = (object: THREE.Object3D, fade: number) =>
 };
 
 /**
+ * The visibility fade an object draws with: its own, a LOD fade copy's mesh's, else
+ * {@link LOD_FADE_OPAQUE} (the tests' and tools').
+ * @internal
+ */
+export const getObjectVisibilityFade = (object: THREE.Object3D) => getVisibilityFade(object);
+
+/**
  * Forgets an object's visibility fade: it's drawn whole again.
  * @internal
  */

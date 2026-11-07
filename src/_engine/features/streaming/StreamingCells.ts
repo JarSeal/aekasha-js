@@ -29,6 +29,7 @@ import {
   isStreamingLayerLoading,
   isStreamingUnitDone,
   notifyStreamingCell,
+  pumpStreamingLayerFade,
   pumpStreamingLayerPrime,
   releaseLeavingLayers,
   runNextStreamingUnit,
@@ -117,6 +118,35 @@ export type StreamingPrimer = {
 };
 
 /**
+ * A layer's fade, the fader's own (opaque to the machine).
+ * @internal
+ */
+export type StreamingFadeJob = object;
+
+/**
+ * What fades a streamed layer's entities in and out (p353 Phase 5 D4-D6, StreamingFades.ts; none
+ * in most machine tests, which then show and take down at once).
+ * @internal
+ */
+export type StreamingFader = {
+  /** A unit's entities arrived: their materials take part in fades (before any draw), and with
+   * `hidden` they draw invisible until their fade in (a layer streamed in during play). */
+  prepare(world: ECSWorld, entityIds: readonly number[], hidden: boolean): void;
+  /** Starts fading the entities in or out, at `progress` (0 → 1). */
+  start(
+    world: ECSWorld,
+    entityIds: readonly number[],
+    direction: 'IN' | 'OUT',
+    progress: number
+  ): StreamingFadeJob;
+  /** Draws the fade at `progress`; 1 ends it: in, the entities draw whole; out, they're held from
+   * drawing (taken down next). */
+  draw(job: StreamingFadeJob, progress: number): void;
+  /** Lets go of entities a content's own `unload` left alive: they draw whole again. */
+  release(world: ECSWorld, entityIds: readonly number[]): void;
+};
+
+/**
  * The machine's counters since the scene's load, for the debug tab. Loads and unloads count the
  * layers that ran units (an empty layer is neither).
  * @internal
@@ -154,6 +184,11 @@ export type StreamingStats = {
   structuresShown: number;
   /** Bodies handed to another cell because they had moved into it. */
   bodiesAdopted: number;
+  /** Layer fades started (in when a layer streamed in during play is shown, out before a shown
+   * one is taken down). */
+  fadesStarted: number;
+  /** Fades turned around (a layer fading out wanted again, or one fading in no longer wanted). */
+  fadesReversed: number;
 };
 
 /**
@@ -203,6 +238,8 @@ export type StreamingRuntime = {
   isDropped: boolean;
   /** Primes the layers streamed in during play, or null (shown as soon as they're loaded). */
   primer: StreamingPrimer | null;
+  /** Fades the layers' entities in and out (`settings.fadeSeconds` over 0), or null (at once). */
+  fader: StreamingFader | null;
   /** A cell's layer's units from the scene's data (its JSON content), run before the
    * code-registered ones; null without any. */
   dataContent:
@@ -231,6 +268,7 @@ export const createStreamingRuntime = (
   now,
   releaseCellAssets,
   primer,
+  fader: null,
   dataContent: null,
   bodies: null,
   isDropped: false,
@@ -256,6 +294,8 @@ export const createStreamingRuntime = (
     compiles: 0,
     structuresShown: 0,
     bodiesAdopted: 0,
+    fadesStarted: 0,
+    fadesReversed: 0,
   },
 });
 
@@ -391,7 +431,8 @@ const startQueuedLoads = (rt: StreamingRuntime, budgets: StreamingBudgets) => {
 /**
  * One frame of loading and unloading, under `budgets`: starts the queued layers' loads nearest
  * first (up to `maxConcurrentLoads` cells loading), runs their content units nearest first, a
- * frame of the primings (the primer's own budgets), then unloads the farthest first. Loads and
+ * frame of the primings (the primer's own budgets) and of the fades, then unloads the farthest
+ * first. Loads and
  * unloads share `maxCreateMsPerFrame`, but a frame always runs at least one unit of each, so
  * neither starves.
  * @internal
@@ -421,7 +462,11 @@ export const pumpStreamingCells = (rt: StreamingRuntime, budgets: StreamingBudge
 
   for (let i = 0; i < order.length; i++) {
     const { layers } = order[i];
-    for (let j = 0; j < layers.length; j++) pumpStreamingLayerPrime(rt, layers[j]);
+    for (let j = 0; j < layers.length; j++) {
+      pumpStreamingLayerPrime(rt, layers[j]);
+      // After the priming: a layer shown this frame draws its fade's first frame now
+      pumpStreamingLayerFade(rt, layers[j]);
+    }
   }
 
   hasWorked = false;
@@ -491,6 +536,7 @@ export const dropStreamingCells = (rt: StreamingRuntime) => {
   for (const cell of rt.cells.values()) {
     for (const layer of cell.layers) {
       cancelStreamingPrime(rt, layer);
+      layer.fade = null;
       layer.generation++;
       for (let i = 0; i < layer.units.length; i++) {
         if (isStreamingUnitDone(layer.units[i])) unloadStreamingUnit(rt, layer, layer.units[i]);

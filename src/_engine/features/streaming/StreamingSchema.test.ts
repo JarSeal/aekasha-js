@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { SceneStreamingSchema } from './StreamingSchema';
+import { resolveStreamingSettings } from './StreamingSettings';
 
 const isValid = (value: unknown) => SceneStreamingSchema.safeParse(value).success;
 
@@ -31,5 +32,14 @@ describe('SceneStreamingSchema', () => {
     expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'DISABLED' })).toBe(true);
     expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'REMOVED' })).toBe(false);
     expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'FULL' })).toBe(false);
+  });
+
+  test('takes a fade of 0 seconds or more, resolved to the install default (p353 Phase 5 D4)', () => {
+    expect(isValid({ cellSize: 64, fadeSeconds: 0 })).toBe(true);
+    expect(isValid({ cellSize: 64, fadeSeconds: 0.4 })).toBe(true);
+    expect(isValid({ cellSize: 64, fadeSeconds: -0.1 })).toBe(false);
+    expect(resolveStreamingSettings({ cellSize: 64 }).fadeSeconds).toBe(0.25);
+    expect(resolveStreamingSettings({ cellSize: 64 }, 0.5).fadeSeconds).toBe(0.5);
+    expect(resolveStreamingSettings({ cellSize: 64, fadeSeconds: 0 }, 0.5).fadeSeconds).toBe(0);
   });
 });

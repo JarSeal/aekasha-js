@@ -5,14 +5,17 @@
 // load start, cancel and drop. A layer's units run in its owner key (D10) and creation scope, its
 // finished unload releases what it alone held, and its bodies that moved go to the same layer of
 // the cell they're in. A layer its cell's level no longer wants waits, drawn, until the layers the
-// level wants are shown (D2). The cells (StreamingCells.ts) decide the levels and pump the layers;
-// no engine state, as there.
+// level wants are shown (D2). With the runtime's fader and a `fadeSeconds` over 0 (D4), a layer
+// streamed in during play fades in once it's shown, and a shown layer fades out before it
+// unloads, both at once in a near ↔ far switch; a fade turns around when the cell changes its mind.
+// The cells (StreamingCells.ts) decide the levels and pump the layers; no engine state, as there.
 import { getCellOwnerKey, runInAssetOwnerScope } from '../../kernel/assets/AssetOwners';
 import { runInPhysicsCreationScope } from '../../kernel/ecs/PhysicsTierAccess';
 import { lerror } from '../../utils/Logger';
 import type {
   StreamingCell,
   StreamingCellPhase,
+  StreamingFadeJob,
   StreamingPrimeJob,
   StreamingRuntime,
 } from './StreamingCells';
@@ -110,6 +113,23 @@ export type StreamingLayer = {
   /** Bodies other cells' layers of its range made that moved into its cell and were handed to it
    * (p353 Phase 4 D1): deleted with it, unless they moved on by then. */
   adopted: number[];
+  /** Whether its current load fades in once it's shown (streamed in during play, with a fader). */
+  fadesIn: boolean;
+  /** Its running fade: in once shown, out before it unloads (D4). */
+  fade: StreamingLayerFade | null;
+};
+
+/**
+ * A layer's running fade.
+ * @internal
+ */
+export type StreamingLayerFade = {
+  /** The fader's job. */
+  job: StreamingFadeJob;
+  /** In (shown) or out (taken down once it ends). */
+  direction: 'IN' | 'OUT';
+  /** When it started on the runtime's clock, shifted back by a turned-around fade's progress. */
+  startedAt: number;
 };
 
 /**
@@ -143,6 +163,8 @@ export const createStreamingLayers = (
       primeStartedAt: 0,
       lastPrimeMs: -1,
       adopted: [],
+      fadesIn: false,
+      fade: null,
     };
   });
 
@@ -228,6 +250,78 @@ const changed = (rt: StreamingRuntime, layer: StreamingLayer) => {
   notifyStreamingCell(rt, layer.cell);
 };
 
+// --- Fades (D4) ------------------------------------------------------------------------------
+
+/** The runtime's fader, when its scene fades (a `fadeSeconds` over 0). */
+const getFader = (rt: StreamingRuntime) => (rt.settings.fadeSeconds > 0 ? rt.fader : null);
+
+const getFadeMs = (rt: StreamingRuntime) => rt.settings.fadeSeconds * 1000;
+
+/** The entities a fade takes: the layer's units' and the bodies it adopted. */
+const getFadedEntityIds = (layer: StreamingLayer) => {
+  const ids = getStreamingLayerEntityIds(layer);
+  for (let i = 0; i < layer.adopted.length; i++) ids.push(layer.adopted[i]);
+  return ids;
+};
+
+/** Starts the layer's fade `direction`, or turns its running one around from where it is.
+ * Returns false when there's nothing to fade (no fader, no entities). */
+const startFade = (rt: StreamingRuntime, layer: StreamingLayer, direction: 'IN' | 'OUT') => {
+  const fader = getFader(rt);
+  if (!fader) return false;
+  const now = rt.now();
+  const { fade } = layer;
+  if (fade) {
+    if (fade.direction === direction) return true;
+    const progress = Math.min(1, (now - fade.startedAt) / getFadeMs(rt));
+    // The other way from where it is: a new job at the turned progress, on the same objects
+    fade.direction = direction;
+    fade.startedAt = now - (1 - progress) * getFadeMs(rt);
+    fade.job = fader.start(rt.world, getFadedEntityIds(layer), direction, 1 - progress);
+    rt.stats.fadesReversed++;
+    return true;
+  }
+  const ids = getFadedEntityIds(layer);
+  if (!ids.length) return false;
+  layer.fade = { job: fader.start(rt.world, ids, direction, 0), direction, startedAt: now };
+  rt.stats.fadesStarted++;
+  return true;
+};
+
+/**
+ * A frame of the layer's fade: drawn at its progress; one that ends lets an incoming layer draw
+ * whole, and starts a leaving one's unload.
+ * @internal
+ */
+export const pumpStreamingLayerFade = (rt: StreamingRuntime, layer: StreamingLayer) => {
+  const { fade } = layer;
+  const fader = rt.fader;
+  if (!fade || !fader) return;
+  const progress = Math.min(1, (rt.now() - fade.startedAt) / getFadeMs(rt));
+  fader.draw(fade.job, progress);
+  if (progress < 1) return;
+  layer.fade = null;
+  if (fade.direction === 'OUT') beginStreamingLayerUnload(rt, layer);
+};
+
+/**
+ * A body handed to `layer` (p353 Phase 4 D1) draws as the layer does: one handed to a shown layer
+ * is let go of a fade or hold its old layer left on it (a fade out's end holds what it faded); one
+ * handed to a layer not shown yet takes that layer's fade in.
+ * @internal
+ */
+export const showAdoptedBody = (rt: StreamingRuntime, layer: StreamingLayer, entityId: number) => {
+  if (layer.phase === 'LOADED' && !isStreamingLayerFadingOut(layer)) {
+    rt.fader?.release(rt.world, [entityId]);
+  }
+};
+
+/**
+ * Whether the layer fades out before it unloads (its cell no longer wants it).
+ * @internal
+ */
+export const isStreamingLayerFadingOut = (layer: StreamingLayer) => layer.fade?.direction === 'OUT';
+
 // --- Unloading -------------------------------------------------------------------------------
 
 const unloadUnitContent = (
@@ -244,6 +338,7 @@ const unloadUnitContent = (
       lerror(`Streaming: a content unload of cell ${ctx.cx},${ctx.cz} threw.`, err);
     }
     rt.primer?.release(rt.world, entityIds);
+    rt.fader?.release(rt.world, entityIds);
     return;
   }
   for (let i = 0; i < entityIds.length; i++) rt.world.deleteEntity(entityIds[i]);
@@ -312,6 +407,8 @@ export const cancelStreamingPrime = cancelPrime;
 export const beginStreamingLayerUnload = (rt: StreamingRuntime, layer: StreamingLayer) => {
   rt.bodies?.handOver?.(rt, layer);
   cancelPrime(rt, layer);
+  // A fade still running goes with the entities (a never-shown layer is held from drawing)
+  layer.fade = null;
   if (layer.phase === 'LOADING') {
     if (layer.units.length) rt.stats.loadsCancelled++;
     layer.generation++;
@@ -342,10 +439,11 @@ export const finishStreamingLayerUnload = (rt: StreamingRuntime, layer: Streamin
 };
 
 /**
- * Starts unloading the layers its cell no longer wants (D2): one never shown (`LOADING`,
- * `PRIMING`) at once, a shown one once every layer the level wants is shown, so a switch between
- * a cell's near and far content never leaves it empty. Called when the level changes and when a
- * layer is shown.
+ * Starts taking down the layers its cell no longer wants (D2): one never shown (`LOADING`,
+ * `PRIMING`) unloads at once, a shown one once every layer the level wants is shown, so a switch
+ * between a cell's near and far content never leaves it empty; with fades (D4) it fades out first,
+ * while the layer replacing it fades in. A layer fading out that's wanted again fades back in.
+ * Called when the level changes and when a layer is shown.
  * @internal
  */
 export const releaseLeavingLayers = (rt: StreamingRuntime, cell: StreamingCell) => {
@@ -356,8 +454,13 @@ export const releaseLeavingLayers = (rt: StreamingRuntime, cell: StreamingCell) 
   }
   for (let i = 0; i < cell.layers.length; i++) {
     const layer = cell.layers[i];
-    if (isLayerWanted(layer) || !isLayerHolding(layer)) continue;
-    if (layer.phase !== 'LOADED' || areWantedShown) beginStreamingLayerUnload(rt, layer);
+    if (isLayerWanted(layer)) {
+      if (isStreamingLayerFadingOut(layer)) startFade(rt, layer, 'IN');
+      continue;
+    }
+    if (!isLayerHolding(layer) || isStreamingLayerFadingOut(layer)) continue;
+    if (layer.phase !== 'LOADED') beginStreamingLayerUnload(rt, layer);
+    else if (areWantedShown && !startFade(rt, layer, 'OUT')) beginStreamingLayerUnload(rt, layer);
   }
 };
 
@@ -375,9 +478,11 @@ export const getStreamingLayerEntityIds = (layer: StreamingLayer, out: number[] 
   return out;
 };
 
-/** A unit finished with `entityIds`: they're held from drawing while its layer's load is primed,
- * and its bodies get the layer's tier. */
+/** A unit finished with `entityIds`: their materials take part in fades (drawn invisible until
+ * the layer's fade in, D6), they're held from drawing while its layer's load is primed, and its
+ * bodies get the layer's tier. */
 const finishUnit = (rt: StreamingRuntime, layer: StreamingLayer, entityIds: readonly number[]) => {
+  getFader(rt)?.prepare(rt.world, entityIds, layer.fadesIn);
   if (layer.primes && rt.primer) rt.primer.hold(rt.world, entityIds);
   rt.bodies?.unitLoaded?.(rt, layer, entityIds);
 };
@@ -389,9 +494,11 @@ const runInLayerScopes = <T>(rt: StreamingRuntime, layer: StreamingLayer, fn: ()
     runInPhysicsCreationScope(rt.bodies?.getCreationScope?.(rt, layer) ?? null, fn)
   );
 
-/** The layer is shown: a layer its cell is leaving may go now. */
+/** The layer is shown (fading in when streamed in during play): a layer its cell is leaving may
+ * go now. */
 const showLayer = (rt: StreamingRuntime, layer: StreamingLayer) => {
   layer.phase = 'LOADED';
+  if (layer.fadesIn) startFade(rt, layer, 'IN');
   changed(rt, layer);
   releaseLeavingLayers(rt, layer.cell);
 };
@@ -497,6 +604,7 @@ export const beginStreamingLayerLoad = (
   layer.inFlight = 0;
   layer.loadStartedAt = rt.now();
   layer.primes = primes && rt.primer !== null;
+  layer.fadesIn = primes && getFader(rt) !== null;
   layer.ctx = createLayerContext(rt, layer, layer.generation);
   if (units.length) {
     layer.hasUnits = true;

@@ -24,8 +24,8 @@ export const StreamingRingsSchema = z
     nearby: RingSchema.optional().describe(
       'The outermost NEARBY ring, in cells from the focus cell. Default 2.'
     ),
-    /** The outermost `FAR` ring: only far representations (until those exist, `FAR` is
-     * `UNLOADED`). Default 5. */
+    /** The outermost `FAR` ring: only the cells' far representations (their `FAR` and
+     * `NEAR_AND_FAR` content). Default 5. */
     far: RingSchema.optional().describe(
       'The outermost FAR ring, in cells from the focus cell; beyond it a cell is unloaded. Default 5.'
     ),
@@ -65,6 +65,16 @@ export const SceneStreamingSchema = z
       .enum(STREAMING_NEARBY_PHYSICS_TIERS)
       .optional()
       .describe("A NEARBY cell's dynamic bodies' physics tier: STATIC (default) or DISABLED."),
+    /** How long a streamed entity dithers in when it's shown, and out before it's taken down, in
+     * seconds (a cell switching between its near and far content cross-fades them); 0 = at once.
+     * Default `AppConfig.lod.fadeSeconds` (0.25). A scene load's cells are shown with the scene. */
+    fadeSeconds: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'Seconds a streamed entity dithers in and out (0: at once). Default AppConfig.lod.fadeSeconds.'
+      ),
     /** Build time only (the gather's cell manifest): the mesh and light app ids and the asset ids
      * kept in the scene's base, loaded with the scene and never unloaded, instead of in the cell
      * their position is in (an asset: instead of with the cells that use it). Scene code gets only
@@ -102,7 +112,7 @@ export type SceneStreamingSettings = z.infer<typeof SceneStreamingSchema>;
 export const streamingSchemaPart = {
   feature: 'streaming',
   scene: {
-    /** Cuts the scene into square cells loaded by their distance to the focus (`streaming()`): `{ cellSize, rings?, margin? }`. */
+    /** Cuts the scene into square cells loaded by their distance to the focus (`streaming()`): `{ cellSize, rings?, margin?, nearbyPhysicsTier?, fadeSeconds? }`. */
     streaming: SceneStreamingSchema.optional(),
   },
 } satisfies FeatureSchemaPart;

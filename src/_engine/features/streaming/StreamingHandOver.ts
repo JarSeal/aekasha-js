@@ -7,7 +7,7 @@
 // the machine's tests can hand it to their stand-in.
 import { isCellInRange, packCellKey, worldToCell } from '../../utils/CellKey';
 import type { StreamingRuntime } from './StreamingCells';
-import { type StreamingLayer, isLayerHolding } from './StreamingLayers';
+import { type StreamingLayer, isLayerHolding, showAdoptedBody } from './StreamingLayers';
 
 const _at = { x: 0, z: 0 };
 
@@ -57,6 +57,7 @@ export const takeBodyFromLayer = (layer: StreamingLayer, entityId: number) => {
 const adoptBody = (rt: StreamingRuntime, target: StreamingLayer, entityId: number) => {
   target.adopted.push(entityId);
   rt.stats.bodiesAdopted++;
+  showAdoptedBody(rt, target, entityId);
   rt.bodies?.adopted?.(rt, target, entityId);
 };
 

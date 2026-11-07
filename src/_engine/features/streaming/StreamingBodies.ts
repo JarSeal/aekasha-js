@@ -20,7 +20,7 @@ import {
 import { lwarn } from '../../utils/Logger';
 import type { StreamingRuntime } from './StreamingCells';
 import { findAdopter, handOverMovedBodies, takeBodyFromLayer } from './StreamingHandOver';
-import { type StreamingLayer, isLayerWanted } from './StreamingLayers';
+import { type StreamingLayer, isLayerWanted, showAdoptedBody } from './StreamingLayers';
 import { StreamingLevel } from './StreamingRings';
 
 /**
@@ -196,6 +196,7 @@ export const createStreamingBodies = (
         takeBodyFromLayer(layer, entityId);
         target.adopted.push(entityId);
         rt.stats.bodiesAdopted++;
+        showAdoptedBody(rt, target, entityId);
         bodyLayers.set(entityId, target);
         moved ??= new Map();
         const ids = moved.get(target);

@@ -7,6 +7,7 @@ import {
   type StreamingPrimeBudgets,
   createStreamingPrimer,
   resetStreamingPrimer,
+  forgetPrimedMaterial,
 } from './StreamingPriming';
 
 // The renderer (its initTexture and backend) and the compile are stand-ins: a compile ends when
@@ -48,6 +49,8 @@ const createStats = (): StreamingStats => ({
   compiles: 0,
   structuresShown: 0,
   bodiesAdopted: 0,
+  fadesStarted: 0,
+  fadesReversed: 0,
 });
 
 /** A mesh entity of `material` */
@@ -137,6 +140,25 @@ describe('the streaming primer', () => {
     expect(frame(next)).toBe(true);
     expect(again.map(isHeld)).toEqual([false, false]);
     expect(fns.compiles).toHaveLength(0);
+  });
+
+  test('a material the fades dithered since it was shown is compiled again (p353 Phase 5 D6)', async () => {
+    const { primer, stats, frame } = setup();
+    const material = new THREE.MeshBasicNodeMaterial();
+    const first = [meshEntity(material)];
+    primer.hold(world, first);
+    const job = primer.start(world, first, stats);
+    frame(job);
+    await finishCompilesAsync();
+    expect(frame(job)).toBe(true);
+
+    forgetPrimedMaterial(material);
+    const again = [meshEntity(material)];
+    primer.hold(world, again);
+    const next = primer.start(world, again, stats);
+    expect(frame(next)).toBe(false);
+    expect(fns.compiles).toHaveLength(1);
+    expect(stats.compiles).toBe(2);
   });
 
   test('shows up to 8 new materials a frame on WebGPU, or the budget set', async () => {
