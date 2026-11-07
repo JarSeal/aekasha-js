@@ -82,6 +82,24 @@ describe('releaseCellOwnedAssets', () => {
     setAssetOwnerScene(null);
   });
 
+  test("a layer's release leaves what the cell's other layers hold (p353 Phase 5 D10)", () => {
+    setAssetOwnerScene('cellWorld');
+    const farKey = getCellOwnerKey('cellWorld', 1, 'far');
+    const both = saveCellGeometry(CELL_1, 'cellNearAndFar');
+    runInAssetOwnerScope(farKey, () => retagAssetOwner(both));
+    saveCellGeometry(farKey, 'cellFarOnly');
+    saveCellGeometry(CELL_1, 'cellNearOnly');
+
+    expect(releaseCellOwnedAssets('cellWorld', 1, 'far').geometries).toEqual(['cellFarOnly']);
+    expect(getAssetOwners(both)).toEqual([CELL_1]);
+    expect(getGeometry('cellNearOnly')).toBeDefined();
+    expect(releaseCellOwnedAssets('cellWorld', 1).geometries.sort()).toEqual([
+      'cellNearAndFar',
+      'cellNearOnly',
+    ]);
+    setAssetOwnerScene(null);
+  });
+
   test("a scene's release frees what its cells alone hold, not another scene's cells'", () => {
     setAssetOwnerScene('cellWorld');
     saveCellGeometry(CELL_1, 'cellLeftover');

@@ -571,19 +571,19 @@ the compile queue (what section 4 will do), out of the scene; 20 frames later ad
 N at once or k a frame, the longest `requestAnimationFrame` interval of the next 40 (headless
 frames run at ~18 ms, so a clean frame reads 18-20). Three trials each:
 
-| shown              | WebGL2, PostFX on | WebGL2, PostFX off | WebGPU, PostFX on |
-| ------------------ | ----------------- | ------------------ | ----------------- |
-| 1 at once          | 19 / 20 / 27      | 19 / 18 / 18       | 19 / 19 / 19      |
-| 2 at once          | 19 / 18 / 18      | 18 / 22 / 19       | 18 / 19 / 18      |
-| 3 at once          | 25 / 25 / 26      | 18 / 18 / 19       | 19 / 19 / 19      |
-| 4 at once          | 25 / 50 / 47      | 21 / 19 / 21       | 19 / 18 / 19      |
-| 6 at once          | 73 / 70 / 57      | 37 / 36 / 28       | 19 / 19 / 19      |
-| 8 at once          | 89 / 103 / 88     | 41 / 60 / 42       | 20 / 19 / 19      |
-| 8, 1 a frame       | 19 / 20 / 19      | 19 / 18 / 20       | 18 / 19 / 19      |
-| 8, 2 a frame       | 34 / 34 / 39 (×3) | 18 / 47 / 19       | 19 / 18 / 18      |
-| 8, 4 a frame       | 63 / 63 / 66 (×2) | 33 / 39 / 34       | 28 / 18 / 18      |
-| 4 cold, at once    | 1,652 / 1,674     | 1,025 / 974        | 2,441 / 2,330     |
-| prime of 8 (wall)  | 1.2-2.0 s         | 0.6-0.8 s          | 1.5-1.6 s         |
+| shown             | WebGL2, PostFX on | WebGL2, PostFX off | WebGPU, PostFX on |
+| ----------------- | ----------------- | ------------------ | ----------------- |
+| 1 at once         | 19 / 20 / 27      | 19 / 18 / 18       | 19 / 19 / 19      |
+| 2 at once         | 19 / 18 / 18      | 18 / 22 / 19       | 18 / 19 / 18      |
+| 3 at once         | 25 / 25 / 26      | 18 / 18 / 19       | 19 / 19 / 19      |
+| 4 at once         | 25 / 50 / 47      | 21 / 19 / 21       | 19 / 18 / 19      |
+| 6 at once         | 73 / 70 / 57      | 37 / 36 / 28       | 19 / 19 / 19      |
+| 8 at once         | 89 / 103 / 88     | 41 / 60 / 42       | 20 / 19 / 19      |
+| 8, 1 a frame      | 19 / 20 / 19      | 19 / 18 / 20       | 18 / 19 / 19      |
+| 8, 2 a frame      | 34 / 34 / 39 (×3) | 18 / 47 / 19       | 19 / 18 / 18      |
+| 8, 4 a frame      | 63 / 63 / 66 (×2) | 33 / 39 / 34       | 28 / 18 / 18      |
+| 4 cold, at once   | 1,652 / 1,674     | 1,025 / 974        | 2,441 / 2,330     |
+| prime of 8 (wall) | 1.2-2.0 s         | 0.6-0.8 s          | 1.5-1.6 s         |
 
 Findings, which section 4 follows:
 
@@ -711,9 +711,9 @@ Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1
   it), each entry and asset written once and the cells holding indices, so a world's data isn't
   multiplied by its cells (it's in the first download):
   `{ cellSize, meshes: [mesh entries], lights: [light entries], assets: { textures, materials,
-  geometries, importedAssets }, cells: { [cellKey]: { meshes?: [i], lights?: [i], textures?: [i],
-  materials?: [i], geometries?: [i], importedAssets?: [i], bounds: [minX, minZ, maxX, maxZ],
-  bytesEstimate } } }`. The plan's `base: [assetIds]` is the scene's own lists, not repeated.
+geometries, importedAssets }, cells: { [cellKey]: { meshes?: [i], lights?: [i], textures?: [i],
+materials?: [i], geometries?: [i], importedAssets?: [i], bounds: [minX, minZ, maxX, maxZ],
+bytesEstimate } } }`. The plan's `base: [assetIds]` is the scene's own lists, not repeated.
   `bounds` is the cell's content's x/z box (positions ± radii); `bytesEstimate` sums the cell's
   cell-only textures' and imports' `__vramBytes.out` where present (base assets are loaded
   already). Its types are the feature's (`StreamingManifest`), `import type`d by the kernel's
@@ -732,8 +732,7 @@ Scene JSON assignment, oversized content, `__streaming` in generated data (§3.1
 Sections: 1. the gather (the `base` and `radii` fields, the assignment, cell-only assets,
 oversized entries, `__streaming`, its types; tests on small trees). 2. the kernel's loaders on a
 subset (`SceneDataLoader.ts`: assets with an owner key, lights and meshes returning their ids;
-`@internal`). 3. the runtime (the data units, the barrier, the shared entries, D6; tests).
-4. `streamingGrid`'s JSON content (props per cell and an oversized landmark), the debug tab (a
+`@internal`). 3. the runtime (the data units, the barrier, the shared entries, D6; tests). 4. `streamingGrid`'s JSON content (props per cell and an oversized landmark), the debug tab (a
 cell's `bytesEstimate` and manifest entries before it loads), the docs (the feature's and the
 gather's `CLAUDE.md`, the Hub page, `readme.md`'s Features entry, §10) and the measurement.
 
@@ -785,7 +784,7 @@ As built (section 3):
   (`primer.release`).
 - **On demand:** `Streaming.ts` loads `StreamingDataContent.ts` with an `import()` in `created`,
   before it sets any state, only for a scene with a manifest (its own chunk, 0.8 KiB gzip). `yarn
-  sbp`: the streaming group's first download is 5.5 KiB (Phase 2's priming, 1.4 KiB, had taken it
+sbp`: the streaming group's first download is 5.5 KiB (Phase 2's priming, 1.4 KiB, had taken it
   over Phase 1's 5 KiB budget unnoticed), so its budget is 6 KiB (`sbp.config.ts`, with the
   reason). The bundle baseline (`yarn verify:baselines --update`) is recorded in section 4.
 - **The runtime** (`Streaming.ts`): `sceneRegistered` keeps each scene's `__streaming`; `created`
@@ -832,10 +831,10 @@ As built (section 4):
 2 m a frame along z = 32 from x = -455.5 to +455.5 and back, three times, 180 frames at home after
 each, then to (3000, 3000) and back home, 180 frames each):
 
-| backend | frames over 33 ms | longest | wall frames / mismatches | home before → after the grid | unit errors |
-| ------- | ----------------- | ------- | ------------------------ | ---------------------------- | ----------- |
-| WebGPU  | 0                 | 26 ms   | 1,965 / 0                | 264 entities, 19 geometries → the same | 0 |
-| WebGL2  | 1                 | 38 ms   | 1,962 / 0                | 264, 19 → the same          | 0           |
+| backend | frames over 33 ms | longest | wall frames / mismatches | home before → after the grid           | unit errors |
+| ------- | ----------------- | ------- | ------------------------ | -------------------------------------- | ----------- |
+| WebGPU  | 0                 | 26 ms   | 1,965 / 0                | 264 entities, 19 geometries → the same | 0           |
+| WebGL2  | 1                 | 38 ms   | 1,962 / 0                | 264, 19 → the same                     | 0           |
 
 A "mismatch" is a frame where the wall's entity exists and none of its cells is loaded (`PRIMING`
 or `LOADED`), or the other way round (frames with a wall cell `LOADING` or `UNLOADING` skipped);
@@ -889,7 +888,7 @@ into a neighbouring cell is re-owned and unloads with it; no capacity refusal at
   fixed step (for a body focus in `WORKER_THREAD`, the policy's worker read and gate through a
   seam), and content creation is frame-timed anyway.
 - **D3. A create-time tier, by scope and option.** `PhysicsEntityOpts.initialTier?: 'FULL' |
-  'STATIC' | 'DISABLED'` (public, engine minor; `REMOVED` stays a request, Phase 5 decides).
+'STATIC' | 'DISABLED'` (public, engine minor; `REMOVED` stays a request, Phase 5 decides).
   `DYNAMIC` only, needs `physicsTiers()` (without it ignored with one warning, as `tierPolicy`).
   Applied in the create's own message: the worker (or the `MAIN_THREAD` sync path) makes the body
   as its params say, slot included, then switches it before replying, so it never takes a step
@@ -915,7 +914,7 @@ into a neighbouring cell is re-owned and unloads with it; no capacity refusal at
   come with Phase 5's `FAR` content (until then a loaded cell is `RESIDENT` or `NEARBY`, so
   constraints 5 and 6 don't arise yet).
 - **D7. `NEARBY`'s tier is a scene setting**: `streaming.nearbyPhysicsTier?: 'STATIC' |
-  'DISABLED'` (default `STATIC`), in the schema part and `setSceneStreamingSettings`.
+'DISABLED'` (default `STATIC`), in the schema part and `setSceneStreamingSettings`.
 - **D8. The seams** (`@internal`, kernel; a feature imports no other's code): `PhysicsTierAccess`
   in `kernel/ecs/PhysicsTierAccess.ts` (like `SpatialMembership.ts`), set by `physicsTiers()`'s
   install: the batch request (D6), policy membership out and in, whether an entity has a
@@ -1019,7 +1018,7 @@ As built (section 3):
   `StreamingSettings.ts`, checked by `getStreamingSettingsProblem`, resolved (`STATIC`), the
   schema's enum.
 - **The probe:** `streamingSystem` skips its decisions while `IS_DEBUG_ENV &&
-  isDeterminismProbeArmed()` (the pump goes on, so loads in flight finish); a scene load still
+isDeterminismProbeArmed()` (the pump goes on, so loads in flight finish); a scene load still
   loads around its focus in `created`, so a probe run sees the same cells on every load.
 - **Limit:** a unit has to return its entities once their `createPhysicsEntity` calls have
   resolved (an entity without its body yet isn't a body to the cell); the scope covers the creates
@@ -1030,7 +1029,7 @@ As built (section 3):
   member out when its cell goes `NEARBY`; a handed-over body taking its new cell's tier; no
   `physicsTiers()`. `StreamingSchema.test.ts`: the setting.
 - **Section 4 to check:** the streaming group's first download against its 6 KiB budget (`yarn
-  sbp`: `StreamingBodies.ts` loads with the feature). Done in section 4: it went to 6.9 KiB, so
+sbp`: `StreamingBodies.ts` loads with the feature). Done in section 4: it went to 6.9 KiB, so
   `StreamingBodies.ts` loads on demand.
 
 As built (section 4):
@@ -1132,6 +1131,187 @@ all three targets (`07287c06`: a scene load, the cells held; `a2f331ff` before t
 ### Phase 5 — Far representations
 
 `FAR` content (§3.3) with p348 and p351.
+
+**Decisions** (2026-11-07, before section 1; D1, D4, D7 and D11 the user's choices, each the
+recommended one):
+
+- **D1. Three content layers per cell** (the user's choice over "a `FAR` cell keeps its full
+  content", which at the default rings 1 / 2 / 5 holds 96 of the 121 tracked cells' full content,
+  and over a far-only swap). A unit says where it's loaded:
+  `StreamingCellContent.loadedAt?: 'NEAR' | 'FAR' | 'NEAR_AND_FAR'` (public
+  `StreamingContentRange`, default `'NEAR'`). `NEAR`: `RESIDENT` and `NEARBY` (today's content).
+  `FAR`: only while `FAR`, the cell's stand-ins. `NEAR_AND_FAR`: from `FAR` in, kept through
+  every level (a cell's ground, so a far cell has no hole; bodies kept `REMOVED`, §6.1 and §8).
+  Each cell has a layer per range, and each layer runs today's machine on its own units (phase,
+  units, generation, in flight, late units, priming, owner key, adopted bodies). A level wants
+  `NEAR` + `NEAR_AND_FAR` (`RESIDENT`, `NEARBY`), `FAR` + `NEAR_AND_FAR` (`FAR`) or nothing
+  (`UNLOADED`), so `NEARBY` ↔ `FAR` loads one layer and unloads the other (§4.1's "a
+  content-level change, not a reload"), and `NEAR_AND_FAR` never moves between them.
+  `DEEPEST_LOADED_LEVEL` becomes `FAR`: a scene with only `NEAR` content tracks its `FAR` cells
+  with empty layers (a few hundred cells decided every N frames: microseconds).
+- **D2. A layer leaving waits for the layer replacing it.** `NEARBY → FAR`: the `NEAR` layer
+  stays drawn until the `FAR` layer is shown (loaded and primed), then fades out while the
+  other fades in (D5), then unloads; `FAR → NEARBY` the other way round. A cell going `UNLOADED`
+  has nothing incoming: its layers fade out at once. A leaving layer wanted again before its
+  fade starts just stays; one fading out fades back in from where it is (it still has its
+  entities); one still `LOADING` is cancelled as today. Budgets: `maxConcurrentLoads` counts
+  cells with a layer loading, the units and unloads share `maxCreateMsPerFrame` as today, nearest
+  first, so a near cell's `NEAR` layer goes before a far cell's stand-ins.
+- **D3. The public state** (`getStreamingCellState`): the cell's level once every layer it
+  wants is shown; while one isn't, its phase (`LOADING`, `PRIMING`), even though the leaving
+  layer is still drawn; `UNLOADING` while the cell is no longer wanted and a layer is still
+  fading or unloading. `StreamingCellState` keeps its values (its JSDoc drops "until far
+  representations exist").
+- **D4. Every streamed entity fades** (§3.3, the user's choice over swaps only and no fades): an
+  entity a layer shows during play (with an Object3D) dithers in over `streaming.fadeSeconds`,
+  and one it takes down dithers out first: its unit's `unload` (or the delete) runs once the
+  layer's fade has ended. `fadeSeconds` is a scene setting (≥ 0; the schema part,
+  `setSceneStreamingSettings`, `StreamingSettings.ts`' checks), default `AppConfig.lod
+.fadeSeconds` read at the install (else 0.25; `lod()` isn't needed), 0 = instant. A scene
+  load's cells are shown with the scene and the scene's exit drops everything at once (no
+  fades). Not faded: an entity without its own Object3D (an instanced LOD pool's instance: its
+  pool's meshes are shared, and the priming doesn't hold one either), stated as a limit.
+- **D5. The fade is a second per-object fade in the kernel's dither** (`kernel/render/
+LodFade.ts`, so `streaming()` imports no LOD code): a visibility fade
+  (`setObjectVisibilityFade` / `clearObjectVisibilityFade`, `@internal`), read per drawn object
+  like the LOD's and ANDed in the shared mask with the same noise. Both encodings split the same
+  noise, so the AND composes exactly: a LOD cross-fade during a streaming fade-in shows the
+  pixels with noise ≤ s across its two copies, during a fade-out at progress s those ≥ s. A LOD fade copy
+  (`userData.isLodFadeCopy`, a child of its mesh) reads its parent's visibility fade, so a level
+  change mid-fade stays faded. The noise is computed once per pixel; the two fades go in one
+  `vec2` object uniform if three's per-object update takes a reused vector without allocating
+  (section 1 checks), else two floats. The shadow pass reads the mask too, so shadows fade with
+  their meshes. The cost while nothing fades: the dither materials' one more uniform and test.
+- **D6. Streaming dithers its cells' materials** (`enableLodDither`, the kernel's) when a unit's
+  entities arrive, before any draw: in the scene load's cells (the load screen hides the
+  rebuild) and in the priming's `hold` (before its compile). A material that changes is new to
+  the primer (dropped from `shownMaterials`), so its dithered build is compiled before it's
+  drawn. Trap, documented: a material the scene's base drew before a cell first uses it
+  rebuilds on its next draw for every mesh using it (a cold compile); give such materials
+  `enableLodDither` in the scene code. Not with `fadeSeconds` 0.
+- **D7. JSON far representations** (§3.3, the user's choice over a plain mesh each and over code
+  content only): the gather gives a cell mesh entry a far entry when its resolved `lod` has
+  explicit `levels`: the coarsest level, its omitted `geo` / `mat` / `castShadow` from the
+  levels before it (level 0: the mesh's own), at the entry's transform, without `lod`. An entry
+  whose `lod` has a `cullScreenSize` over 0 gets none (its author hides it at a distance, and far
+  cells are far), nor does `AUTO` (its chain isn't known at build time; a follow-up). Per cell,
+  the far entries with the same string `geo` and `mat` ids, `castShadow` and `receiveShadow` are
+  one `InstancedMesh` entity (an instance matrix per entry), so a `FAR` cell costs a draw per
+  group; a far entry with an inline `geo` or `mat`, or with `matOverrides`, is a mesh of its own.
+  Lights have no far entry (adding or removing a light changes every lit material, Phase 3).
+- **D8. An oversized mesh is `NEAR_AND_FAR` content**: one entity, alive while any of its cells
+  is loaded at any level, its own `lod` drawing its coarse levels far away (a far copy of it
+  beside the near one in a cell at another level would overlap and z-fight). Its holder count is
+  per scene as in Phase 3, now on the `NEAR_AND_FAR` layers.
+- **D9. The manifest grows per layer**, backwards compatible: a cell's own lists and
+  `bytesEstimate` stay its `NEAR` layer's, and it gains `far?` and `kept?`
+  (`StreamingManifestLayer`: `meshes`, the four asset lists and `bytesEstimate`, each left out
+  when empty); `manifest.farMeshes` holds the far entries (a group: `geo`, `mat`, `castShadow`,
+  `receiveShadow`, `instances` of `[position, quaternion, scale]`; an own one: `props` and
+  `entityOpts`). An asset moves into the layers whose entries reference it (a cell's `NEAR` and
+  `FAR` layers can both list one: each loads it in its own owner key, the second a cache hit).
+  Public types on `aekasha/schemas` (an engine minor).
+- **D10. An owner key per layer**: `NEAR` keeps `sceneId#cellKey` (Phases 2-4, the GPU memory
+  tab and the debug tab unchanged), `FAR` is `sceneId#cellKey/far` and `NEAR_AND_FAR`
+  `sceneId#cellKey/kept` (`getCellOwnerKey(sceneId, cellKey, layer?)`,
+  `releaseCellOwnedAssets(sceneId, cellKey, layer?)`, still `@internal`; `isSceneOwnerKey`
+  already matches them). So a layer's release can't free an asset another layer of its cell is
+  still loading (a texture registered, its material not made yet), and the cell's GPU memory
+  sums its three keys.
+- **D11. Bodies per layer** (§6.1): each layer hands over and rebalances its own bodies, into the
+  same layer of the cell they're in (a `NEAR` crate rolls into the next cell's `NEAR` layer).
+  Tiers: `RESIDENT` `FULL` / `POLICY`, `NEARBY` `nearbyPhysicsTier`, `FAR` `REMOVED` for the
+  `NEAR_AND_FAR` and `FAR` layers' bodies (a leaving `NEAR` layer's keep their `NEARBY` tier
+  until they're deleted: a `REMOVED` round trip for a fade's length is waste). The creation
+  scope at `FAR` is `DISABLED` (`initialTier` has no `REMOVED`, D3 of Phase 4) and the unit's
+  batch then asks `REMOVED`. Jointed groups: the batch (`requestPhysicsTierWants`) gives a
+  jointed group `STATIC` for `REMOVED` as it does for `DISABLED` (`toJointSafeTier`; §6.1
+  constraint 3, and Phase 4's finding that a jointed body is never `DISABLED`);
+  `requestPhysicsTier` keeps refusing `REMOVED` for one (public behaviour). Capacity (§6.1
+  constraint 5): a `REMOVED → FULL` refusal leaves the body `REMOVED` in a `RESIDENT` cell, which
+  `summarize`'s "off their cell's tier" already counts. The test scene is the user's choice
+  (below): `streamingGrid` extended, `streamingPhysics` given a far ring.
+- **D12. Code layout.** `StreamingCells.ts` (787 lines) splits: a layer's machine (its units,
+  loading, priming, unloading, the late units, the release) into `StreamingLayers.ts`, the cells
+  (levels, decisions, the pump's order, the cross-swap, the drop) stay. The fades are
+  `StreamingFades.ts`, injected like the primer (the machine's tests use a recording stand-in).
+  The JSON far groups are built in `StreamingDataContent.ts` (its own chunk). `yarn sbp`: the
+  streaming group's first download is 5.9 of its 6 KiB; what Phase 5 adds that a scene needs
+  only when it streams loads on demand with the bodies in `created` (the fades, the far
+  groups); a budget raise is the user's call, with its reason.
+
+Sections:
+
+1. **The kernel and physics seams.** The visibility fade in `LodFade.ts` (the mask's AND, the
+   copy's parent, one noise; the `vec2` check), per-layer owner keys (`AssetOwners.ts`,
+   `SceneAssetRelease.ts`), the batch's `REMOVED → STATIC` for jointed groups
+   (`PhysicsTiers.ts`); tests: the dither composition as pure maths (a `isDitherShown(noise,
+fade)` beside the node), the owner keys' release, the batch in `PhysicsFacade.test.ts`.
+2. **The layers.** `StreamingLayers.ts` out of `StreamingCells.ts`, `loadedAt` (registration
+   checks, `StreamingContent.ts`), `DEEPEST_LOADED_LEVEL = FAR`, the levels' wanted layers, the
+   cross-swap's wait (D2, instant until section 3), the public state (D3), owner keys per layer,
+   bodies per layer with the `FAR` tiers and scope (D11); `StreamingCells.test.ts` and
+   `StreamingBodies.test.ts` moved onto layers, plus a `NEARBY ↔ FAR` swap, its cancel, wanted
+   again, `NEAR_AND_FAR` kept through `FAR`, a kept body `REMOVED` and back.
+3. **The fades.** `StreamingFades.ts` (per layer: its entities' meshes collected at the start,
+   the frame's delta, reversal), `fadeSeconds` (schema, settings, `AppConfig.lod` default), the
+   dither in the scene load's cells and the priming's `hold` (D6), show → fade in, leave → wait,
+   fade out, unload; tests with a recording fade sink (order, wait, reversal, a scene load's
+   cells and the drop unfaded, 0 instant).
+4. **JSON far content.** The gather (`devTools/gather/streamingManifest.ts`: far entries, the
+   cull and `AUTO` rules, groups, oversized meshes kept, per-layer asset lists and estimates;
+   tests on small trees), the manifest types (D9), `StreamingDataContent.ts`' units per layer (an
+   asset unit per layer, a group unit making its `InstancedMesh` entity with its refs and
+   `userData.entityId`, the kept shared meshes); tests on the real kernel.
+5. **The scenes, the tab, the docs and the exit check.** `streamingGrid`: rings 1 / 2 / 5, its
+   terrain `NEAR_AND_FAR` with a hand-made coarse LOD level, its rocks' stand-in a `FAR` unit
+   (one `InstancedMesh` of an octahedral impostor per cell, p351), its crates `NEAR` only, its
+   beacons with JSON `lod` levels (far groups) and its wall kept (D8). `streamingPhysics`: a far
+   ring, its slabs, piles and chains `NEAR_AND_FAR` (crates `REMOVED` at `FAR`, chains
+   `STATIC`). The Streaming tab and cell window (layers per cell, fades running, far groups and
+   instances, each layer's owner key and memory), the overlay. The docs: the feature's, the
+   gather's and physics' `CLAUDE.md`, the Hub's Streaming page (a Far representations section,
+   the `FAR` row, Not yet), `readme.md`'s World streaming entry; `yarn hub:build`, `yarn sbp`,
+   the bundle baseline.
+
+**Exit:** `streamingGrid` at rings 1 / 2 / 5 flown at 30 and 60 m/s on WebGPU and WebGL2: `FAR`
+cells show their stand-ins and grounds, no frame over 33 ms caused by streaming, no entity with
+an Object3D shown or deleted during play without its fade (counted), a `FAR` cell drawing a call
+per far group and holding only its far and kept layers' memory (the tab's per-layer bytes), and
+Phase 2's flight out and back leaving the registries and p345's snapshot as before.
+`streamingPhysics` in all three targets: a crate pushed in a cell that then goes `FAR` and comes
+back is where it was left, its tier `REMOVED` at `FAR` and back to its cell's tier after, chains
+`STATIC` at `FAR`, no capacity refusal, and the probe hash unchanged by the far ring (a scene
+load).
+
+As built (section 1):
+
+- **The visibility fade** (`kernel/render/LodFade.ts`): `setObjectVisibilityFade(object, fade)` /
+  `clearObjectVisibilityFade(object)` (`@internal`). The per-object uniform is one `vec2` (x the
+  LOD fade, y the visibility fade), its `onObjectUpdate` writing the uniform's own vector in place
+  (three r187's `UniformNode` keeps it when the callback returns `undefined`, and
+  `UniformsGroup.updateVector2` compares the components): one callback per draw, as before. The
+  mask computes the noise once and ANDs `ditherShows(noise, x)`, `ditherShows(noise, y)` and, on
+  an InstancedMesh, the per-instance fade. A LOD fade copy (`userData.isLodFadeCopy`) with no
+  visibility fade of its own reads its parent's. `isDitherShown(noise, fade)` (`@internal`) is the
+  test on the CPU. `lodDither` keeps its signature.
+- **Owner keys** (`kernel/assets/AssetOwners.ts`, `SceneAssetRelease.ts`): `getCellOwnerKey` and
+  `releaseCellOwnedAssets` take an optional `layer` (`sceneId#cellKey/layer`); without it, as
+  before.
+- **The batch** (`PhysicsTiers.ts`' `requestPhysicsTierWants`): a `REMOVED` want refused because
+  of joints is asked again as `STATIC` (any other refusal refuses that too). `requestPhysicsTier`
+  still refuses `REMOVED` for a jointed body. In `applyTier`, a joint made after a `REMOVED`
+  request still keeps the body at its tier with a warning (as before; streaming's batches see
+  their bodies' joints, since a unit returns its ids once its creates and joints are made).
+- **Found for section 5:** the GPU memory tab's `getMemoryOwner` shows an asset held by several
+  of one cell's keys (its `NEAR` and `FAR` layers) under the scene, not the cell: the tab's
+  per-cell sums need it to name the cell's own key then.
+- **Tests:** `LodFade.test.ts` (the uniform's two fades per drawn object, a copy reading its
+  mesh's, a plain child not; the composition over 1,000 noise values: either LOD copy under a
+  fade-in at s shows noise ≤ s, under a fade-out at progress s noise ≥ s),
+  `AssetOwners.test.ts` and `SceneAssetRelease.test.ts` (a layer's key, a layer's release
+  leaving the other layer's), `PhysicsFacade.test.ts` (a jointed group `STATIC` for a batch's
+  `REMOVED`, a lone body `REMOVED`).
 
 ## 10. Versioning, Hub and docs
 

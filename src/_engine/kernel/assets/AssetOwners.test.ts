@@ -28,6 +28,11 @@ describe('owner keys', () => {
     expect(getCellOwnerKey('world', 42)).toBe('world#42');
   });
 
+  test("a cell layer's key adds '/' and the layer, and is still its scene's", () => {
+    expect(getCellOwnerKey('world', 42, 'far')).toBe('world#42/far');
+    expect(isSceneOwnerKey(getCellOwnerKey('world', 42, 'kept'), 'world')).toBe(true);
+  });
+
   test("a scene's keys are its id and its cells', not another scene's that starts the same", () => {
     expect(isSceneOwnerKey('world', 'world')).toBe(true);
     expect(isSceneOwnerKey('world#42', 'world')).toBe(true);

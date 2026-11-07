@@ -1,10 +1,14 @@
 import * as THREE from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import {
+  clearObjectVisibilityFade,
   createLodFadeAttribute,
   enableLodDither,
   getLodFadeAttribute,
+  isDitherShown,
   LOD_FADE_OPAQUE,
+  setLodObjectFade,
+  setObjectVisibilityFade,
 } from './LodFade';
 
 type FadeAttributeNode = THREE.Node & {
@@ -80,13 +84,57 @@ describe('LodFade', () => {
     expect(fade.getAttribute(mesh)).toBe(bound);
   });
 
-  it('reads the per-object fade on an InstancedMesh too (an InstancedMesh entity fades whole)', () => {
+  it('reads the per-object fades on an InstancedMesh too (an InstancedMesh entity fades whole)', () => {
     const material = createDitheredMaterial();
     const instanced = new THREE.InstancedMesh(geometry, material, 1);
     const graph = setUpMask(material, instanced);
     const objectUniforms = findNodes(graph, 'UniformNode').filter(
-      (node) => (node as THREE.UniformNode<'float', number>).value === LOD_FADE_OPAQUE
+      (node) => (node as THREE.UniformNode<'vec2', THREE.Vector2>).value instanceof THREE.Vector2
     );
     expect(objectUniforms.length).toBeGreaterThan(0);
+  });
+
+  it("writes an object's LOD and visibility fades before its draw, a LOD fade copy its mesh's", () => {
+    const material = createDitheredMaterial();
+    const mesh = new THREE.Mesh(geometry, material);
+    const [pair] = findNodes(setUpMask(material, mesh), 'UniformNode').filter(
+      (node) => (node as THREE.UniformNode<'vec2', THREE.Vector2>).value instanceof THREE.Vector2
+    ) as THREE.UniformNode<'vec2', THREE.Vector2>[];
+    const drawn = (object: THREE.Object3D) => {
+      (pair.update as (frame: { object: THREE.Object3D }) => void)({ object });
+      return pair.value.toArray();
+    };
+    const copy = new THREE.Mesh(geometry, material);
+    copy.userData.isLodFadeCopy = true;
+    const child = new THREE.Mesh(geometry, material);
+    mesh.add(copy, child);
+
+    expect(drawn(mesh)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
+    setLodObjectFade(mesh, 0.25);
+    setObjectVisibilityFade(mesh, -0.5);
+    expect(drawn(mesh)).toEqual([0.25, -0.5]);
+    expect(drawn(copy)).toEqual([LOD_FADE_OPAQUE, -0.5]);
+    expect(drawn(child)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
+    clearObjectVisibilityFade(mesh);
+    expect(drawn(copy)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
+  });
+
+  // p353 Phase 5 D5: a visibility fade ANDed with a LOD cross-fade on the same noise
+  it('composes a visibility fade with a LOD cross-fade exactly', () => {
+    const noises = Array.from({ length: 1000 }, (_, i) => (i + 0.5) / 1000);
+    for (const t of [0, 0.2, 0.5, 0.9]) {
+      for (const s of [0, 0.3, 0.7, 1]) {
+        for (const noise of noises) {
+          // Either LOD copy (incoming at t, outgoing at t - 1) under the visibility fade
+          const shownIn = (v: number) =>
+            (isDitherShown(noise, t) || isDitherShown(noise, t - 1)) && isDitherShown(noise, v);
+          // The copies split the pixels: exactly one shows without a visibility fade
+          expect(isDitherShown(noise, t) !== isDitherShown(noise, t - 1)).toBe(true);
+          // Fading in at s shows noise ≤ s; fading out at progress s (drawn at s - 1), noise ≥ s
+          expect(shownIn(s)).toBe(noise <= s);
+          expect(shownIn(s - 1)).toBe(noise >= s);
+        }
+      }
+    }
   });
 });

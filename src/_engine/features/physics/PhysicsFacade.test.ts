@@ -274,6 +274,11 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(targetOf(world, lone)).toBe('DISABLED');
       requestPhysicsTierWants(world, [lone], () => 'DISABLED');
       expect(targetOf(world, lone)).toBe('DISABLED');
+      // p353 Phase 5 D11: a batch's REMOVED is STATIC for a jointed group (the request refuses it)
+      expect(requestPhysicsTier(a, 'REMOVED', world)).toBe(false);
+      requestPhysicsTierWants(world, [a, lone], () => 'REMOVED');
+      expect([a, b].map((id) => targetOf(world, id))).toEqual(['STATIC', 'STATIC']);
+      expect(targetOf(world, lone)).toBe('REMOVED');
 
       // c and d DISABLED, then joined: the listener moves them to STATIC
       requestPhysicsTier(c, 'DISABLED', world);

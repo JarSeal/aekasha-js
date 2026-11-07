@@ -117,14 +117,15 @@ export const releaseSceneOwnedAssets = (sceneId: string) => {
 };
 
 /**
- * Releases what a streaming cell's content holds (its owner key, `getCellOwnerKey`) as
- * {@link releaseSceneOwnedAssets} does a scene's: an asset another cell or the scene holds too
- * stays theirs, and one still in use stays the cell's until its next release (or its scene's).
- * Not logged (a cell unload is routine): the Streaming debug tab counts it.
+ * Releases what a streaming cell's content holds (its owner key, `getCellOwnerKey`; with `layer`,
+ * one of its other layers' key) as {@link releaseSceneOwnedAssets} does a scene's: an asset
+ * another cell, another layer or the scene holds too stays theirs, and one still in use stays the
+ * cell's until its next release (or its scene's). Not logged (a cell unload is routine): the
+ * Streaming debug tab counts it.
  * @internal
  * @returns the released ids by kind
  */
-export const releaseCellOwnedAssets = (sceneId: string, cellKey: number) => {
-  const key = getCellOwnerKey(sceneId, cellKey);
+export const releaseCellOwnedAssets = (sceneId: string, cellKey: number, layer?: string) => {
+  const key = getCellOwnerKey(sceneId, cellKey, layer);
   return releaseOwnedAssets((owner) => owner === key);
 };

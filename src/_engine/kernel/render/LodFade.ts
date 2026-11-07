@@ -19,6 +19,13 @@
 // docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md). Plain meshes take
 // the uniform alone. The shadow pass reads `maskNode` too: shadows dither with the
 // same split.
+//
+// A second per-object fade, the visibility fade (setObjectVisibilityFade; p353 Phase 5 D5:
+// streaming's content dithering in and out), is ANDed into the same mask on the same noise. Both
+// fades split one noise, so they compose exactly: a LOD cross-fade (its copies at t and t - 1)
+// under a visibility fade-in at s shows the pixels with noise ≤ s across the two copies, under a
+// fade-out at progress s (drawn at s - 1) those with noise ≥ s (isDitherShown has the maths). A
+// LOD fade copy reads its mesh's visibility fade.
 import * as THREE from 'three/webgpu';
 import { bool, dot, float, Fn, fract, screenCoordinate, select, uniform, vec2 } from 'three/tsl';
 
@@ -33,17 +40,27 @@ const interleavedGradientNoise = Fn(() => {
   return fract(float(52.9829189).mul(fract(dot(p, vec2(0.06711056, 0.00583715)))));
 });
 
+/** Whether a pixel of `noise` shows at the signed fade `fade` (a `bool` node). */
+const ditherShows = (noise: THREE.Node<'float'>, fade: THREE.Node) => {
+  const f = float(fade as THREE.Node<'float'>);
+  return select(f.greaterThanEqual(0), noise, noise.oneMinus()).lessThanEqual(f.abs());
+};
+
 /**
  * Whether a pixel of a copy drawn with the signed fade `fade` shows (a `bool` node), for a
  * material's `maskNode`. See the top of `LodFade.ts` for the encoding. Custom node materials that
  * build their own mask can combine it; `enableLodDither` does it for any material.
  * @param fade a float node: `t` for the incoming copy, `-(1 - t)` for the outgoing one
  */
-export const lodDither = (fade: THREE.Node) => {
-  const f = float(fade as THREE.Node<'float'>);
-  const noise = interleavedGradientNoise();
-  return select(f.greaterThanEqual(0), noise, noise.oneMinus()).lessThanEqual(f.abs());
-};
+export const lodDither = (fade: THREE.Node) => ditherShows(interleavedGradientNoise(), fade);
+
+/**
+ * The dither's test on the CPU, the same as the shader's: whether a pixel of `noise` (in [0, 1))
+ * shows at the signed fade `fade`. For tests and tools reasoning about the split.
+ * @internal
+ */
+export const isDitherShown = (noise: number, fade: number) =>
+  (fade >= 0 ? noise : 1 - noise) <= Math.abs(fade);
 
 // --- WHERE A DRAWN OBJECT'S FADE COMES FROM ---
 
@@ -51,10 +68,26 @@ const fadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribut
 /** The fade an InstancedMesh without `createLodFadeAttribute` draws with: every instance whole. */
 const opaqueFadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribute>();
 const objectFades = new WeakMap<THREE.Object3D, number>();
+const visibilityFades = new WeakMap<THREE.Object3D, number>();
 
-/** The per-object fade, written before each draw of an object (three's object uniform group). */
-const objectFade = uniform(LOD_FADE_OPAQUE).onObjectUpdate(
-  ({ object }) => (object && objectFades.get(object)) ?? LOD_FADE_OPAQUE
+/** An object's visibility fade: its own, or a LOD fade copy's mesh's (the copy is its child). */
+const getVisibilityFade = (object: THREE.Object3D) => {
+  const own = visibilityFades.get(object);
+  if (own !== undefined) return own;
+  const { parent } = object;
+  if (!parent || !object.userData.isLodFadeCopy) return LOD_FADE_OPAQUE;
+  return visibilityFades.get(parent) ?? LOD_FADE_OPAQUE;
+};
+
+/** The drawn object's fades, x its LOD fade and y its visibility fade, written before each draw of
+ * an object (three's object uniform group) into the uniform's own vector: nothing allocated. */
+const objectFadePair = uniform(new THREE.Vector2(LOD_FADE_OPAQUE, LOD_FADE_OPAQUE)).onObjectUpdate(
+  ({ object }, self) => {
+    const fades = self.value;
+    if (!object) fades.set(LOD_FADE_OPAQUE, LOD_FADE_OPAQUE);
+    else fades.set(objectFades.get(object) ?? LOD_FADE_OPAQUE, getVisibilityFade(object));
+    return undefined;
+  }
 );
 
 /**
@@ -129,6 +162,27 @@ export const clearLodObjectFade = (object: THREE.Object3D) => {
   objectFades.delete(object);
 };
 
+/**
+ * Sets an object's visibility fade, the second fade every dither-enabled material reads (p353
+ * Phase 5 D5: streamed content dithering in and out), ANDed with its LOD fade: a LOD cross-fade
+ * under it stays split right. Set it on each drawn mesh of an entity (a LOD fade copy reads its
+ * mesh's). {@link LOD_FADE_OPAQUE} (or `clearObjectVisibilityFade`) shows it whole.
+ * @internal
+ * @param object the drawn mesh
+ * @param fade the signed fade (see the top of `LodFade.ts`): 0 → 1 fading in, -1 → 0 fading out
+ */
+export const setObjectVisibilityFade = (object: THREE.Object3D, fade: number) => {
+  visibilityFades.set(object, fade);
+};
+
+/**
+ * Forgets an object's visibility fade: it's drawn whole again.
+ * @internal
+ */
+export const clearObjectVisibilityFade = (object: THREE.Object3D) => {
+  visibilityFades.delete(object);
+};
+
 /** An InstancedMesh's per-instance fade, bound per drawn object, so its build is shared. */
 class LodFadeAttributeNode extends THREE.ReferenceAttributeNode {
   static get type() {
@@ -158,12 +212,17 @@ class LodFadeMaskNode extends THREE.Node {
 
   setup(builder: THREE.NodeBuilder) {
     // An InstancedMesh's build key differs from a plain mesh's (its instance data), so each kind
-    // keeps the path it was built with. An InstancedMesh takes both fades: a pool level's per
+    // keeps the path it was built with. An InstancedMesh takes both LOD fades: a pool level's per
     // instance, an InstancedMesh entity's (its fade copy, its cull fade) per object; the other one
-    // stays opaque, which lets every pixel through.
+    // stays opaque, which lets every pixel through. Every object takes its visibility fade too,
+    // on the same noise (so the fades compose exactly).
+    const noise = interleavedGradientNoise();
+    const objectMask = ditherShows(noise, objectFadePair.x).and(
+      ditherShows(noise, objectFadePair.y)
+    );
     const isInstanced = (builder.object as THREE.InstancedMesh | null)?.isInstancedMesh === true;
-    if (!isInstanced) return lodDither(objectFade);
-    return lodDither(instanceFade).and(lodDither(objectFade));
+    if (!isInstanced) return objectMask;
+    return ditherShows(noise, instanceFade).and(objectMask);
   }
 }
 

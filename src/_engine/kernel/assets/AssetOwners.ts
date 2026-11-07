@@ -36,11 +36,14 @@ export const setAssetOwnerScene = (sceneId: string | null) => {
 };
 
 /**
- * The owner key of a streaming cell's assets: `sceneId#cellKey` (the GPU memory tab groups the
- * keys by the part before `#`).
+ * The owner key of a streaming cell's assets: `sceneId#cellKey`, or `sceneId#cellKey/layer` for
+ * one of the cell's other content layers (p353 Phase 5 D10: `far`, `kept`), so a layer's release
+ * frees nothing another layer of the cell still loads. The GPU memory tab groups the keys by the
+ * part before `#`.
  * @internal
  */
-export const getCellOwnerKey = (sceneId: string, cellKey: number) => `${sceneId}#${cellKey}`;
+export const getCellOwnerKey = (sceneId: string, cellKey: number, layer?: string) =>
+  layer ? `${sceneId}#${cellKey}/${layer}` : `${sceneId}#${cellKey}`;
 
 const HASH = 35; // '#'
 

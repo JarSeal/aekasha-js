@@ -239,7 +239,8 @@ const TIER_RANK: Record<PhysicsTier, number> = { FULL: 0, STATIC: 1, DISABLED: 2
  * have tiers, or whose group can't take the tier, is skipped without a warning (the caller asks
  * for whatever its entities are). A joint group takes the finest want of its members, asking
  * `wantOf` for the unlisted ones too, and a `POLICY` member leaves the group to the policy. Each
- * group is requested once per batch.
+ * group is requested once per batch. A jointed group gets `STATIC` for `DISABLED` and for
+ * `REMOVED` (`requestPhysicsTier` refuses `REMOVED` for one).
  * @internal
  */
 export const requestPhysicsTierWants = (
@@ -256,7 +257,7 @@ export const requestPhysicsTierWants = (
     if (want === null) continue;
     let tier: PhysicsTierWant = want;
     if (handled) {
-      // The whole joint group, whatever the tier (a REMOVED want is refused below)
+      // The whole joint group, whatever the tier (a REMOVED want is STATIC below)
       const group = resolveTierGroup(world, entityId, 'FULL');
       if (typeof group === 'string') continue;
       for (let j = 0; j < group.length && tier !== 'POLICY'; j++) {
@@ -268,7 +269,13 @@ export const requestPhysicsTierWants = (
       for (let j = 0; j < group.length; j++) handled.add(group[j]);
     }
     if (tier === 'POLICY') continue;
-    const group = resolveTierGroup(world, entityId, tier);
+    let group = resolveTierGroup(world, entityId, tier);
+    if (typeof group === 'string' && tier === 'REMOVED' && handled) {
+      // A jointed group can't leave the world (its joints would go): STATIC, as for DISABLED
+      // (p353 Phase 5 D11). Any other refusal refuses STATIC too.
+      tier = 'STATIC';
+      group = resolveTierGroup(world, entityId, tier);
+    }
     if (typeof group !== 'string')
       setGroupTarget(world, group, toJointSafeTier(world, group, tier));
   }

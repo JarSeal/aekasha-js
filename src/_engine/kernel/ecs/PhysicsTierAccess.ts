@@ -22,7 +22,8 @@ export type PhysicsTierAccess = {
    * an entity that can't have tiers (no `DYNAMIC` `createPhysicsEntity` body, a character). A
    * joint group changes tier as one, so it gets the finest want of all its members (`wantOf` is
    * asked for the members not listed too): `FULL` < `STATIC` < `DISABLED` < `REMOVED`, and a
-   * `POLICY` member leaves the group to the policy (nothing is requested for it).
+   * `POLICY` member leaves the group to the policy (nothing is requested for it). A jointed group
+   * gets `STATIC` for `DISABLED` and `REMOVED` (Rapier and the joints, see physics' tiers).
    */
   requestTiers: (
     world: ECSWorld,
