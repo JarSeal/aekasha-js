@@ -35,7 +35,7 @@ import {
 import { getCellGPUBytes, getOwnerGPUBytes } from './_dbg__StreamingMemory';
 import { countFarGroups } from './_dbg__StreamingCellWindow';
 
-// The Streaming tab (docs/plans/p353_macro-streaming-grid.md §7): the current scene's settings,
+// The Streaming tab (docs/plans/_DONE_p353_macro-streaming-grid.md §7): the current scene's settings,
 // the focus and its cell, the cells per state, the machine's counters, the focus tools (freeze,
 // teleport to a cell: the focus override `?streamingFocus=x,z` also sets), the budgets, the cell
 // overlay (_dbg__StreamingOverlay.ts) and a row per tracked cell opening its window
@@ -336,7 +336,21 @@ const getBudgetsFolder = (): Item => {
         step: 1,
         interval: 'refresh',
       },
-      getNoteItem('New materials per frame 0: by the backend (WebGL2 1, WebGPU 8).'),
+      {
+        label: 'Objects shown per frame',
+        get: () => primeBudgets.maxShownObjectsPerFrame ?? 0,
+        set: (count: unknown) => {
+          const n = Math.round(Number(count));
+          primeBudgets.maxShownObjectsPerFrame = n > 0 ? n : null;
+        },
+        min: 0,
+        max: 256,
+        step: 1,
+        interval: 'refresh',
+      },
+      getNoteItem(
+        'New materials per frame 0: by the backend (WebGL2 1, WebGPU 8). Objects shown per frame 0: by the backend (WebGL2 16, WebGPU not paced).'
+      ),
     ],
   };
 };

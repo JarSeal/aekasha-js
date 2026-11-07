@@ -67,7 +67,7 @@ export const ComponentType = {
   LOD: 'CORE_LOD', // opt-in, user-authored
   TAG_LOD_CULLED: 'CORE_TAG_LOD_CULLED', // runtime-only, beyond the last level
   TAG_LOD_TRANSITIONING: 'CORE_TAG_LOD_TRANSITIONING', // runtime-only, a LOD cross-fade runs (p351)
-  // Draw hold (docs/plans/p353_macro-streaming-grid.md §5) — see features/streaming/StreamingPriming.ts
+  // Draw hold (docs/plans/_DONE_p353_macro-streaming-grid.md §5) — see features/streaming/StreamingPriming.ts
   TAG_DRAW_HELD: 'CORE_TAG_DRAW_HELD', // runtime-only, not drawn until its owner lets it
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn

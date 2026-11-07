@@ -28,7 +28,7 @@ import {
   type StreamingCellContext,
 } from 'aekasha/streaming';
 
-// World streaming with physics (docs/plans/p353_macro-streaming-grid.md Phases 4-5): 12 × 12 cells
+// World streaming with physics (docs/plans/_DONE_p353_macro-streaming-grid.md Phases 4-5): 12 × 12 cells
 // of 64 m at rings 1 / 2 / 4 (the scene JSON's `streaming`), each code content of three units, all
 // `NEAR_AND_FAR` (kept from FAR in, Phase 5): a ground slab (a FIXED collider, deleted with its
 // cell), a pile of crates in the tier policy near the cell's +x edge, and on the middle row a

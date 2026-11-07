@@ -317,6 +317,8 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
       transform.setDirty();
       world.commitTransform(entityId, transform);
     }
+    // At once, like the pose (setTransformFromProps)
+    mesh.scale.set(props.scale.x, props.scale.y, props.scale.z);
   }
 
   // After the transform is finalized so the spatial index's initial insert

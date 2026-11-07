@@ -74,6 +74,7 @@ const setup = (budgets: Partial<StreamingPrimeBudgets> = {}) => {
   const primer = createStreamingPrimer({
     maxPrimeMsPerFrame: 1000,
     maxNewStructuresPerFrame: null,
+    maxShownObjectsPerFrame: null,
     ...budgets,
   });
   const stats = createStats();
@@ -182,6 +183,67 @@ describe('the streaming primer', () => {
     await finishCompilesAsync();
     expect(set.frame(capped)).toBe(false);
     expect(more.filter(isHeld)).toHaveLength(1);
+  });
+
+  // p353 Phase 5 section 5: ~10 layers shown at once took 33-37 ms frames on WebGL2
+  test('lets go of 16 held objects a frame on WebGL2 across the cells, unpaced on WebGPU', async () => {
+    const { primer, stats, frame } = setup();
+    const material = new THREE.MeshBasicNodeMaterial();
+    const first = Array.from({ length: 10 }, () => meshEntity(material));
+    const second = Array.from({ length: 10 }, () => meshEntity(material));
+    primer.hold(world, [...first, ...second]);
+    const jobA = primer.start(world, first, stats);
+    const jobB = primer.start(world, second, stats);
+    primer.beginFrame();
+    primer.step(jobA);
+    primer.step(jobB);
+    await finishCompilesAsync();
+    primer.beginFrame();
+    expect(primer.step(jobA)).toBe(true);
+    // B's group goes over two frames: 6 of its objects fit this one
+    expect(primer.step(jobB)).toBe(false);
+    expect(second.filter(isHeld)).toHaveLength(4);
+    expect(stats.structuresShown).toBe(1);
+    expect(frame(jobB)).toBe(true);
+    expect(second.filter(isHeld)).toHaveLength(0);
+
+    fns.isWebGPUBackend = true;
+    const many = Array.from({ length: 200 }, () => meshEntity(material));
+    primer.hold(world, many);
+    const job = primer.start(world, many, stats);
+    expect(frame(job)).toBe(true);
+    expect(many.filter(isHeld)).toHaveLength(0);
+
+    const set = setup({ maxShownObjectsPerFrame: 5 });
+    const capped = Array.from({ length: 7 }, () => meshEntity(material));
+    set.primer.hold(world, capped);
+    const cappedJob = set.primer.start(world, capped, set.stats);
+    expect(set.frame(cappedJob)).toBe(false);
+    expect(capped.filter(isHeld)).toHaveLength(2);
+    set.primer.finish(cappedJob);
+    expect(capped.filter(isHeld)).toHaveLength(0);
+  });
+
+  test('an object let go of draws its first frame unculled, a let go by release culled', async () => {
+    const { primer, stats, frame } = setup();
+    const material = new THREE.MeshBasicNodeMaterial();
+    const ids = [meshEntity(material), meshEntity(material)];
+    const [a, b] = ids.map((id) => world.getComponent(id, ComponentType.OBJECT3D)!.value);
+    b.frustumCulled = false;
+    primer.hold(world, ids);
+    const job = primer.start(world, ids, stats);
+    frame(job);
+    await finishCompilesAsync();
+    expect(frame(job)).toBe(true);
+    expect([a.frustumCulled, b.frustumCulled]).toEqual([false, false]);
+    primer.beginFrame();
+    // Culled again as it was; one its owner unculled stays so
+    expect([a.frustumCulled, b.frustumCulled]).toEqual([true, false]);
+
+    const other = meshEntity(material);
+    primer.hold(world, [other]);
+    primer.release(world, [other]);
+    expect(world.getComponent(other, ComponentType.OBJECT3D)!.value.frustumCulled).toBe(true);
   });
 
   test('a material another cell showed meanwhile costs this one no frame', async () => {

@@ -1,4 +1,4 @@
-// The Streaming tab's cell window (docs/plans/p353_macro-streaming-grid.md §7): one cell's state,
+// The Streaming tab's cell window (docs/plans/_DONE_p353_macro-streaming-grid.md §7): one cell's state,
 // ring, its layers (each one's phase, units, owner key, GPU memory and running fade; p353 Phase 5),
 // load time, entities, far groups, GPU memory and assets, its last transitions, and a
 // button that teleports the focus to it. A window kind keyed by the cell; cells don't outlive a scene, so the windows are

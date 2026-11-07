@@ -4,6 +4,44 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-07 — p353_macro-streaming-grid
+
+World streaming (p353, a child of the LOD epic p350): the `streaming()` feature, the eleventh, on `aekasha/streaming`. A scene can be larger than what fits in memory at once: it's cut into square cells, and each cell's content loads, shows at reduced detail or unloads by its distance to a focus (the main camera by default), through a per-cell state machine with three rings. A cell's content is near, far or kept (both). Code registers it per cell, and a scene's JSON meshes are cut into cells at build time. A cell reached during play is primed before it's drawn (textures uploaded and shaders compiled under per-frame budgets) and fades in; content leaving fades out. A cell owns its assets, and they're released when it unloads. Its physics bodies take its cell's simulation tier, and a far cell's bodies wait outside the world. Nothing breaks.
+
+### Engine 6.2.0 (Sunset)
+
+**Added**
+
+- `streaming()` (`aekasha/streaming`; the template lists it last of the eleven features): `registerStreamingCellContent({ sceneId, cellKey, loadedAt?, load, unload? })` (`loadedAt`: `NEAR`, `FAR` or `NEAR_AND_FAR`), `unregisterStreamingCellContent`, `getStreamingCellKey` / `getStreamingCellKeyAt`, `setStreamingFocus` / `getStreamingFocus`, `getStreamingCellState`, `setSceneStreamingSettings`, `DEFAULT_STREAMING_RINGS` and `STREAMING_MIN_CELL_SIZE`. A scene's JSON opts in with `streaming: { cellSize, rings?, margin?, nearbyPhysicsTier?, fadeSeconds?, radii? }` (`SceneStreamingSchema` on `aekasha/schemas`).
+- Cells, rings and layers. A cell is `RESIDENT`, `NEARBY`, `FAR` or unloaded by ring, with a margin against flicker. Its near, far and kept content are layers with their own loads, priming, fades and asset owner keys, and a layer leaving waits for the one replacing it. Loads and unloads run under `maxConcurrentLoads` and `maxCreateMsPerFrame`, nearest first. A cell no longer wanted cancels its load.
+- The build-time manifest (`__streaming`, the gatherer): a streaming scene's JSON meshes are placed into cells, with their cell-only geometries, materials and textures, a far representation from each mesh's `lod` levels (an `InstancedMesh` far group per cell and asset), and oversized meshes kept by every cell they cross. The types are on `aekasha/schemas` (`StreamingManifest`, `StreamingManifestCell`, `StreamingManifestLayer`, `StreamingFarMesh`, `StreamingFarInstance`).
+- Priming: a layer streamed in during play is held from drawing (`ComponentType.TAG_DRAW_HELD`), then its textures upload (`AppConfig.streaming.maxPrimeMsPerFrame`), its new materials compile in one pre-warm, and it's shown a few new materials a frame (`maxNewStructuresPerFrame`) and a few objects a frame (`maxShownObjectsPerFrame`, WebGL 2 16, WebGPU not paced). Each object draws its first frame unculled, still invisible, so its first draw never lands later when the camera turns to it.
+- Fades: every streamed entity dithers in and out over `fadeSeconds` (the LOD fade's by default). This is a second per-object fade in the kernel's dither, composing exactly with a LOD cross-fade, the shadow pass included.
+- Per-cell asset ownership (`kernel/assets/AssetOwners.ts`): what a cell's load registers is the cell's layer's, and it's released when its last owner goes.
+- Physics per cell: a body takes its cell's tier (`RESIDENT` `FULL` or the tier policy's, `NEARBY` `nearbyPhysicsTier`, `FAR` `REMOVED`, a jointed group `STATIC`), moves to the cell it rolls into, and is created in its layer's tier. `PhysicsEntityOpts.initialTier` is public; characters pass `FULL`.
+- The Streaming debug tab, its cell window and the overlay: cells per state, loads and releases, primings, fades, bodies by tier, GPU memory per layer and cell, far groups, the budgets to edit live, freeze or teleport the focus (`?streamingFocus=x,z`). A built-in icon, `streaming`.
+
+**Fixed**
+
+- A mesh or group entity created after the frame's `object3DSyncSystem` (later in `MAIN`, or in any `APP_*` stage) drew its first frame at the origin: its creation pose went only into its `TRANSFORM`. `createMeshEntity` and `createGroupEntity` now put the Object3D at its pose (and the mesh's scale) at once.
+- A deleted mesh entity leaked three's render objects (`disposeMesh` detached the mesh without disposing it).
+- A deleted `InstancedMesh`'s `lodFade` buffer stayed in three's GPU memory until it was collected. It's now disposed with its mesh.
+- The GPU memory tab lists an asset that only one cell's layers hold under that cell.
+
+### App 1.20.0 (Preschooler)
+
+**Added**
+
+- `streamingGrid`: 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell has a terrain block with a coarse LOD level (kept), rocks with a far impostor `InstancedMesh`, crates (near only), and JSON beacons (far groups). A 320 m wall crosses six cells. The camera flies across, hovers on a boundary or stays, and the cells can bring a shader each ("A shader per cell").
+- `streamingPhysics`: 12 × 12 cells at rings 1 / 2 / 4, each a ground slab, a crate pile in the tier policy and, on one row, a jointed chain, all kept. A kinematic plough mows the row on fixed steps and pushes crates across the edges, and each crate's tint shows its tier.
+
+### Project
+
+**Changed**
+
+- The bundle, API and docs baselines. The streaming group's first download stays under its 4 KiB budget: the cells' machine, the bodies, the priming, the fades and the JSON content load on demand with the first scene that streams.
+- The plans: p353 is `_DONE_`, and p350 tracks it.
+
 ## 2026-11-06 — p058-shared-instanced-builds
 
 Shared instanced builds for the LOD fades and impostors (p058, a child of the LOD epic p350). three r187 shares one shader build between `InstancedMesh`es with the same material and attributes, but the fade mask and the octahedral impostor bound a per-mesh buffer when the shader was built, so 6.1.0 made their builds object-specific again: every dithered or impostor `InstancedMesh` built its own shaders. Both now bind per drawn object, and those meshes share builds like every other instanced mesh. The impostor bake also generates its atlas mips once instead of after every frame it copies. Nothing breaks.

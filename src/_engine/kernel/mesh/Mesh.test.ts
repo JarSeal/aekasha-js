@@ -59,6 +59,23 @@ describe('createMeshEntity', () => {
     world.deleteEntity(entityId);
   });
 
+  // p353 Phase 5: a streamed cell's meshes are created in MAIN after object3DSyncSystem, and drew
+  // a frame at the origin
+  test('puts its mesh at the creation pose at once, before any object sync', () => {
+    const entityId = createMeshEntity({
+      geo: new THREE.BoxGeometry(),
+      mat: new THREE.MeshBasicNodeMaterial(),
+      position: { x: 300, y: -4, z: 120 },
+      rotation: { y: Math.PI / 2 },
+      scale: { x: 2, y: 2, z: 2 },
+    });
+    const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value;
+    expect(mesh.position.toArray()).toEqual([300, -4, 120]);
+    expect(mesh.rotation.y).toBeCloseTo(Math.PI / 2);
+    expect(mesh.scale.toArray()).toEqual([2, 2, 2]);
+    world.deleteEntity(entityId);
+  });
+
   test('throws its own message for an unregistered geometry id', () => {
     expect(() =>
       createMeshEntity({ geo: 'meshTestNoGeometry', mat: new THREE.MeshBasicNodeMaterial() })

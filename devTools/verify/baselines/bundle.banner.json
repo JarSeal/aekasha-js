@@ -26,16 +26,16 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 969987,
-      "gzip": 270714
+      "bytes": 970091,
+      "gzip": 270741
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 338
+      "gzip": 336
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 285
+      "gzip": 284
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -67,7 +67,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3101
+      "gzip": 3100
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4096,
@@ -75,19 +75,19 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47086,
-      "gzip": 14019
+      "gzip": 14017
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1632
+      "gzip": 1631
     },
     "assets/ImportRegistry.js": {
       "bytes": 16663,
-      "gzip": 6708
+      "gzip": 6707
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24496
+      "gzip": 24497
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2168,
@@ -119,14 +119,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 210
+      "gzip": 208
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 994179,
-    "gzip": 277129
+    "minified": 994283,
+    "gzip": 277148
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -141,13 +141,13 @@
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "minified": 2371,
-      "gzip": 1067
+      "minified": 2370,
+      "gzip": 1063
     },
     "_engine/kernel/ecs": {
       "modules": 6,
-      "minified": 24858,
-      "gzip": 7045
+      "minified": 24920,
+      "gzip": 7063
     },
     "_engine/kernel/init": {
       "modules": 5,
@@ -171,8 +171,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3859,
-      "gzip": 1657
+      "minified": 3902,
+      "gzip": 1662
     },
     "_engine/kernel/render": {
       "modules": 7,

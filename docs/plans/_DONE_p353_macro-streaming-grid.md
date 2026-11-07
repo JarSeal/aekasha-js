@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: implemented (Phases 0-5)
 Category: World, Streaming, Assets
 Epic: p350_lod-system-research.md (Tier 2.1)
 Related: p372_mesh-merge-groups.md (merge groups stay inside a cell), p376_hlod-merged-cluster-proxies.md (FAR proxies), \_DONE_p346_spatial-domains.md (the cell maths, and the `MANUAL` domain for this plan's Phase 4), \_DONE_p352_physics-simulation-tiers.md (Phase 4 here drives its tiers per cell; it took over p352's Phase 5), \_DONE_p343_deterministic-physics-tier-policy.md (deciding on fixed steps, §6), \_DONE_p348_ecs-lod-selection.md and \_DONE_p351_impostor-billboard-lod.md (what a `FAR` cell shows), p306_terrain-blocks-and-procedural-terrain-meshes.md (blocks are natural cell content; their sizes line up), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (per-cell memory), p420_npc-simulation-tiers.md (NPCs need the cells around the player loaded)
@@ -1128,7 +1128,7 @@ The review's own checks, 1,800 frames at the scene's 12 m/s in `WORKER_THREAD`, 
 all three targets (`07287c06`: a scene load, the cells held; `a2f331ff` before the review, when the chains loaded into `NEARBY` cells were `DISABLED`), and `physicsTiers`' is unchanged
 (its system order differs from `main`'s baseline by Phase 1's `streamingSystem`).
 
-### Phase 5 — Far representations
+### Phase 5 — Far representations — done
 
 `FAR` content (§3.3) with p348 and p351.
 
@@ -1526,21 +1526,51 @@ As built (section 5):
   samples), none off its cell's tier at the end, no capacity refusal, the removals per body the
   same in each target. The probe hash is the same in all three targets (`99126435`; `07287c06`
   with `far: 2`, section 3's, so the machine's changes leave the simulation as it was).
-- **Open: two exit criteria not met (for the user to decide; the phase isn't marked done):**
-  1. **WebGL 2: 5 frames of 33-37 ms a flight** at 30 and at 60 m/s, each within 3 frames of
-     about 10 layers finishing their priming and starting their fades together (a column of cells
-     changing level as the focus crosses a boundary), the main thread's streaming under 2 ms in
-     them: WebGL 2's GPU-process cost of first draws, which far content makes 2-3× more of per
-     crossing (Phase 2 measured none over 33 ms with near content only). Options: pace the layers
-     shown per frame on WebGL 2 (a budget like `maxNewStructuresPerFrame`, counting shown layers
-     or meshes), or accept it.
-  2. **The far ring changes the near simulation**: after 300 steps, 184 of the near cells' 198
-     bodies are bit-identical with and without it, and the 14 `FULL` crates of the pile being
-     mowed differ by up to 8.5 mm (the same in all three targets). Likely the far cells' ground
-     slabs (`FIXED` colliders, which have no tier, §6.1 constraint 2) and `STATIC` chains in
-     Rapier's broad phase, changing its contact pairs' order. Options: accept and document (the
-     scene stays deterministic, its hash per configuration of rings), or take a far cell's level
-     colliders out of the world (`FIXED` colliders have no tier: a physics change, its own plan).
+- **Two exit criteria were open at the section's review**, both decided by the user (the
+  recommendations): WebGL 2's 33-37 ms frames at boundary crossings (pace them) and the far ring
+  changing the near simulation (accept and document). See after review.
+
+As built (section 5, after review: the user saw a new cell's content drawn at the scene's origin
+for a frame):
+
+- **Found and fixed: a streamed entity drew its first frame at the origin.** `streamingSystem`
+  runs in `MAIN` after `object3DSyncSystem`, and a mesh's creation pose went only into its
+  `TRANSFORM`, so a cell's mesh created by its load kept the Object3D's default pose until the
+  next frame's sync. Held and dithered invisible, it showed where the layer was shown in its load's
+  frame (a sync unit's content primes, is let go of and starts its fade in in one frame when its
+  materials and textures are known): measured with a draw hook, about 690 draws at the origin a
+  flight (rocks, crates, beacons, terrain blocks), 0 after. The kernel fix: `setTransformFromProps`
+  (`createMeshEntity`, `createGroupEntity`) puts the Object3D at the pose too, and
+  `createMeshEntity` its scale (`Mesh.test.ts`; `kernel/ecs/CLAUDE.md`'s creators). Any mesh or
+  group entity created after the sync gains it: later in `MAIN`, or in any `APP_*` stage, since
+  the sync runs only in `MAIN` (a physics entity's pose was already its body's, written at
+  `APP_RENDER_SYNC`).
+- **Decided: WebGL 2's boundary frames are paced** (open item 1). The per-frame record showed that
+  `maxShownObjectsPerFrame` alone wasn't it: a crossing lets go of about 94 objects over 6 frames
+  (32, 32, 18, 4, 2, 6), and the long frame is the 6th, when the GPU process's queue catches up
+  (the next one 3-4 ms). And the turn's long frame let go of nothing: 22 first draws of objects
+  let go of behind the camera, never drawn until it turned (WebGPU's 38-46 ms turn frame too). So:
+  - `AppConfig.streaming.maxShownObjectsPerFrame` (`StreamingPrimeBudgets`, the tab's "Objects
+    shown per frame"; null by the backend: WebGL 2 16, WebGPU not paced): the primer lets go of
+    at most that many held objects a frame across the cells, a group over frames (`next`). A
+    layer streamed in during play is drawn invisible until its fade in starts with its last
+    object, so it never shows in parts.
+  - Each object let go of draws its first frame unculled (`frustumCulled` off until the next
+    `beginFrame`; one its owner set off stays so), so its first draw is paid in its paced frame.
+  - Measured (out and back, the per-frame record): 48 a frame with the uncull, one frame over
+    33 ms (75 ms, the flight's start from still); 16, none.
+- **Decided: the far ring's effect on the near simulation is accepted** (open item 2) and
+  documented (the feature's `CLAUDE.md` Limits, the Hub's Physics section): still deterministic,
+  the probe hash per set of rings (`99126435` at 1 / 2 / 4 in every target). Taking a far cell's
+  `FIXED` colliders out of the world would be a physics change of its own (no plan yet).
+- **The exit check again** (the same harness, after both changes): `streamingGrid` out and back at
+  30 and 60 m/s on WebGPU and WebGL 2: no frame over 33 ms in any run (the longest: WebGL 2
+  30.7 and 32.2 ms, WebGPU 24.6 and 25.8; p99 19.4-20.8), the streaming system at most 2.5-4.3 ms
+  in a frame (p99 1.9-2.1), 764 layer loads and unloads and 1,528 fades a flight, 0 unfaded take-downs,
+  0 priming stalls, every far cell sampled (1,332-2,726 samples, up to 96 at once) drawing one
+  `InstancedMesh` per far group with no near memory.
+  `yarn verify:scenes` loads both scenes clean in every configuration, `streamingPhysics`' probe
+  hash `99126435` in all three targets, unchanged.
 
 ## 10. Versioning, Hub and docs
 

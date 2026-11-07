@@ -216,7 +216,7 @@ export type AppConfig = {
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
   };
-  /** World streaming's budgets (`streaming()`: features/streaming/, docs/plans/p353_macro-streaming-grid.md).
+  /** World streaming's budgets (`streaming()`: features/streaming/, docs/plans/_DONE_p353_macro-streaming-grid.md).
    * A scene's cells and rings are its own (`streaming` in its JSON, or setSceneStreamingSettings()). */
   streaming?: {
     /** How often the cells' states are decided from the focus, in frames. Default 10. */
@@ -235,6 +235,11 @@ export type AppConfig = {
      * cells: a primed new shader still costs WebGL2 ~10 ms of GPU work on its first draw. Default
      * by the backend: 1 on WebGL2, 8 on WebGPU. */
     maxNewStructuresPerFrame?: number;
+    /** How many of a streamed cell's objects may first draw in one frame once it's primed,
+     * across the cells (a cell may show over a few frames, invisible until its fade in starts):
+     * WebGL2's first draw of an object costs GPU time even for a known shader. Default by the
+     * backend: 16 on WebGL2, not paced on WebGPU. */
+    maxShownObjectsPerFrame?: number;
   };
   /** The default ECS world's storage (read when it's created, in the boot). */
   ecs?: {

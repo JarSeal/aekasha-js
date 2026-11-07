@@ -1,4 +1,4 @@
-// The Streaming tab's overlay (docs/plans/p353_macro-streaming-grid.md §7): the tracked cells'
+// The Streaming tab's overlay (docs/plans/_DONE_p353_macro-streaming-grid.md §7): the tracked cells'
 // outlines from above, at a set height, coloured by state, and a cross at the focus. A line has one
 // colour, so each state has its own line, refilled every frame while the overlay is on (LATE_MAIN,
 // after the frame's decision and pump). Default world only; drawn with the lines() feature, off

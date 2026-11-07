@@ -1,4 +1,4 @@
-// World streaming's fades (docs/plans/p353_macro-streaming-grid.md §3.3, Phase 5 D4-D6): a layer
+// World streaming's fades (docs/plans/_DONE_p353_macro-streaming-grid.md §3.3, Phase 5 D4-D6): a layer
 // streamed in during play dithers in once it's shown, and a shown layer dithers out before it's
 // taken down, through the kernel's visibility fade (kernel/render/LodFade.ts), the second
 // per-object fade every dither-enabled material reads, ANDed with the LOD's, so a LOD cross-fade

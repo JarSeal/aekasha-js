@@ -150,7 +150,9 @@ export type ObjectTransformProps = {
 
 /**
  * Sets a new object entity's transform from its creation props: the object's own position and
- * rotation, with what the props give replacing it.
+ * rotation, with what the props give replacing it. The object takes the pose at once too, so an
+ * entity created after the frame's `object3DSyncSystem` (a streamed cell's, from `MAIN`) isn't
+ * drawn at its default pose, the origin, until the next frame's sync.
  * @internal
  */
 export const setTransformFromProps = (
@@ -177,6 +179,8 @@ export const setTransformFromProps = (
     rot = _q1.setFromEuler(_e1);
   }
   world.setTransform(entityId, { pos, rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w } });
+  obj.position.set(pos.x, pos.y, pos.z);
+  obj.quaternion.set(rot.x, rot.y, rot.z, rot.w);
 };
 
 /**

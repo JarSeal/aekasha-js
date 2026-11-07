@@ -61,6 +61,7 @@ const budgets: StreamingBudgets = {
 const primeBudgets: StreamingPrimeBudgets = {
   maxPrimeMsPerFrame: DEFAULT_MAX_PRIME_MS_PER_FRAME,
   maxNewStructuresPerFrame: null,
+  maxShownObjectsPerFrame: null,
 };
 /** The cells' machine (StreamingCells.ts and its layers), loaded with the first scene that streams
  * (p353 Phase 5 D12: a build's first download carries the API and the hooks, not the machine) */
@@ -502,6 +503,7 @@ export const installStreaming = (ctx: FeatureContext) => {
   budgets.maxCreateMsPerFrame = config?.maxCreateMsPerFrame ?? DEFAULT_MAX_CREATE_MS_PER_FRAME;
   primeBudgets.maxPrimeMsPerFrame = config?.maxPrimeMsPerFrame ?? DEFAULT_MAX_PRIME_MS_PER_FRAME;
   primeBudgets.maxNewStructuresPerFrame = config?.maxNewStructuresPerFrame ?? null;
+  primeBudgets.maxShownObjectsPerFrame = config?.maxShownObjectsPerFrame ?? null;
   // A scene's streamed entities fade as long as its LOD cross-fades, unless it says otherwise
   defaultFadeSeconds = ctx.config.lod?.fadeSeconds ?? DEFAULT_STREAMING_FADE_SECONDS;
   ctx.registerPlugin((world) => {

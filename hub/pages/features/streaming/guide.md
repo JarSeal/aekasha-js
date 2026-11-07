@@ -178,7 +178,12 @@ shaders of materials it's the first to show compile in one go, and then it appea
 materials drawn before show at once; each new material's take a frame, one at a time on WebGL 2
 (`maxNewStructuresPerFrame`: a new shader still costs WebGL 2 about 10 ms of GPU time when first
 drawn, even compiled) and eight on WebGPU. Without it, a new shader drawn cold stalls a frame for
-100 to 500 ms, and several at once for seconds.
+100 to 500 ms, and several at once for seconds. On WebGL 2 the objects themselves are paced too,
+16 a frame across the cells (`maxShownObjectsPerFrame`): an object's first draw costs WebGL 2 GPU
+time even with a known shader, and a row of cells changing level at once would otherwise miss
+frames. A cell let go of over a few frames stays invisible until its fade in starts, so it never
+appears in parts, and each object draws once then, even off screen, so turning the camera
+towards cells never seen costs nothing.
 
 - **Draw from a shared set of materials.** A cell of materials already shown costs nothing to
   prime but its textures; every new one costs a compile, and on WebGL 2 a frame.
@@ -231,6 +236,11 @@ A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
 - **Tier changes follow the frames.** Cells are decided every few frames and stream in over frames,
   so the steps a tier change lands on depend on frame timing: a scene's load is deterministic, but
   streaming during play isn't. The determinism probe holds the cells where the load put them.
+- **Far cells still touch the near simulation.** A far cell's ground colliders (`FIXED`, so no
+  tier) and its chains (`STATIC`) stay in the physics world, which changes the order the broad
+  phase pairs contacts in: in `streamingPhysics` a few crates near the plough end up millimetres
+  apart with and without the far ring. A scene is still deterministic, with a probe hash for each
+  set of rings.
 - The Streaming tab counts the cells' bodies per tier, those held out of the policy and those
   handed to another cell, and any off their cell's tier (none, unless something else sets one).
 
@@ -275,11 +285,12 @@ cell's tier, 389-413 bodies moved to the cell they were in and none left behind,
 bodies (no capacity refusal). With far content (rings 1 / 2 / 5), two flights out and back at 30 and 60 m/s on each backend:
 764 layer loads and unloads and 1,528 fades a flight, none taken down unfaded, every far cell
 drawing one instanced mesh per far group and holding no near memory, and the second flight leaving
-the GPU memory, registries and entities exactly as the first; WebGL 2 had 5 frames of 33-37 ms a
-flight where a column of cells changed level at once. `streamingPhysics` with a far ring: every
+the GPU memory, registries and entities exactly as the first, and no frame over 33 ms on either
+backend once WebGL 2's newly shown objects were paced (5 frames of 33-37 ms a flight before, where
+a column of cells changed level at once). `streamingPhysics` with a far ring: every
 crate back from `REMOVED` exactly where it was left, chains `STATIC` far away, in all three
 targets. The plan's
-[Phase 1](repo:docs/plans/p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
+[Phase 1](repo:docs/plans/_DONE_p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
 and Phases 2 to 5 have the numbers.
 :::
 
@@ -293,7 +304,7 @@ and Phases 2 to 5 have the numbers.
 - A cell's state isn't saved when it unloads: a crate moved in it is back where it started next
   time (it keeps its place while the cell is `FAR`).
 
-See [the plan](repo:docs/plans/p353_macro-streaming-grid.md).
+See [the plan](repo:docs/plans/_DONE_p353_macro-streaming-grid.md).
 
 ## Key APIs
 

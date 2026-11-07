@@ -1,4 +1,4 @@
-// What the streaming cells hold (docs/plans/p353_macro-streaming-grid.md §7): each cell's GPU bytes
+// What the streaming cells hold (docs/plans/_DONE_p353_macro-streaming-grid.md §7): each cell's GPU bytes
 // from the GPU memory tab's owners (three's own per-object bytes, an asset several cells share
 // counted under their scene, `getMemoryOwner`), and the registered assets a cell's owner key is on.
 // Both walk every registered asset: read once per refresh, for the Streaming tab and cell window.
