@@ -261,12 +261,37 @@ const createVariant = (
   return variant;
 };
 
+/** The level geometries whose dispose the sets forward to their buffers (below). */
+const forwardedGeometries = new WeakSet<THREE.BufferGeometry>();
+
+/** A level geometry's dispose, forwarded to its attributes and index. three frees a geometry's
+ * buffers on its dispose only when it drew that geometry itself (`Geometries.initGeometry` adds
+ * the listener), and a set draws its levels through wrappers sharing their buffers (a geometry has
+ * one indirect offset), so a level's buffers stayed in three's totals after the registry disposed
+ * it (p354 Phase 5 step 5). An attribute three made no buffer for, or freed already, does nothing;
+ * an interleaved one isn't an event dispatcher (three frees it with a geometry it drew). */
+const disposeLevelBuffers = (event: { target: THREE.BufferGeometry }) => {
+  const geometry = event.target;
+  geometry.removeEventListener('dispose', disposeLevelBuffers);
+  forwardedGeometries.delete(geometry);
+  geometry.index?.dispose();
+  for (const attribute of Object.values(geometry.attributes)) {
+    if ((attribute as THREE.BufferAttribute).isBufferAttribute) {
+      (attribute as THREE.BufferAttribute).dispose();
+    }
+  }
+};
+
 /** A draw's geometry: the level's attributes and index, its own indirect args. */
 const createDrawGeometry = (
   source: THREE.BufferGeometry,
   args: THREE.IndirectStorageBufferAttribute,
   argsIndex: number
 ) => {
+  if (!forwardedGeometries.has(source)) {
+    forwardedGeometries.add(source);
+    source.addEventListener('dispose', disposeLevelBuffers);
+  }
   const geometry = new THREE.BufferGeometry();
   if (source.index) geometry.setIndex(source.index);
   for (const name of Object.keys(source.attributes)) {
@@ -323,6 +348,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     counters: new THREE.StorageBufferAttribute(new Uint32Array(maxSlots * levelCount), 1),
     args: new THREE.IndirectStorageBufferAttribute(argsArray, 1),
   };
+  const bufferList: readonly THREE.BufferAttribute[] = Object.values(buffers);
 
   // --- The passes ---
   const { uniforms, reset, cull, finalize } = createInstanceSetPasses({
@@ -607,13 +633,21 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     removeLiveSet();
     probe.removeFromParent();
     for (const slot of slots) slot.group?.removeFromParent();
-    for (const mesh of meshes) setObjects.delete(mesh);
+    for (const mesh of meshes) {
+      setObjects.delete(mesh);
+      // The draw's geometry, its shared buffers detached first: three frees a geometry's index
+      // and attributes with it, which the level geometry (and any other set or pool drawing it)
+      // still holds. Their own dispose frees them (disposeLevelBuffers)
+      const { geometry } = mesh;
+      geometry.setIndex(null);
+      for (const name of Object.keys(geometry.attributes)) geometry.deleteAttribute(name);
+      geometry.dispose();
+    }
     setObjects.delete(probe);
-    // The variants (their render objects with them), never the sources. The draws' geometries
-    // aren't disposed: three would free the level geometries' shared buffers with them
+    // The variants (their render objects with them), never the sources
     for (const variant of variants.values()) variant.dispose();
     for (const pass of passes) pass.dispose();
-    for (const buffer of Object.values(buffers)) buffer.dispose();
+    for (const buffer of bufferList) buffer.dispose();
   };
 
   return {
@@ -628,6 +662,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       extent = value;
     },
     dispose,
+    debugMemory: () => bufferList,
     debugBuffers: {
       counters: buffers.counters,
       state: buffers.state,

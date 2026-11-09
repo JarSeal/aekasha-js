@@ -1601,6 +1601,57 @@ From Phase 4 (its "As built"), for these steps:
     (0.3 kB, shared by the GPU backend and the impostor code), the GPU backend 5.1 → 5.3 kB, and
     the app's lazy `Foliage.js` 0.6 → 2.7 kB (Rollup moved the impostor generators into the chunk
     the tree scenes share, now that `instanceStress` imports them too).
+- **Step 5, memory.** three's `info.memory` counts a set's buffers only by kind (storage,
+  indirect, instance attributes), so each set registers a GPU memory source:
+  - **The source**: the front registers one per set (`registerGPUMemorySource`, id
+    `instanceSet.<entityId>`, label `Instance set "<label>" (GPU|CPU)`), owned by the scene it was
+    made for (the loading scene, else the current one; a persistent set's is the engine's), removed
+    in the set's dispose. Its resources are the backend's new `debugMemory()` (on the contract):
+    the GPU backend's seven buffers, the CPU backend's level meshes' instance matrices and `lodFade`
+    attributes. `__AEK_DEBUG__` first, as `Viewports.ts`: a production build folds it and the GPU
+    memory module out of the front (`features/instancing` stays 4.6 kB).
+  - **The catch-all counts last**: the engine's "Instance buffers (InstancedMesh)" source (every
+    InstancedMesh in the root scene) was registered first and so counted the CPU backend's level
+    meshes. `collectGPUMemorySources` now counts the engine's catch-all sources
+    (`CATCH_ALL_SOURCE_IDS`) after every other, so a source naming its own instance buffers keeps
+    them.
+  - **Found and fixed: a GPU set's level buffers outlived it.** The scene switch left the tree
+    levels' vertex and index buffers in three's totals (the pools didn't). three frees a geometry's
+    buffers on its dispose only when it drew that geometry itself (`Geometries.initGeometry` adds
+    the listener), and the GPU backend draws its levels only through its wrappers (a geometry has
+    one indirect offset), which it never disposed (disposing them would free the buffers the level
+    geometry, and any pool or set on it, still uses). So the registry's dispose of a level freed
+    nothing in three, and every wrapper stayed in `info.memory.geometries` too. Now the backend
+    forwards a level geometry's dispose to its attributes and index (`attribute.dispose()`, which
+    three r187's `Attributes` hears; nothing for an attribute three has no buffer of or freed
+    already, and an interleaved one isn't an event dispatcher), and its own dispose detaches each
+    wrapper's shared index and attributes before disposing it. The CPU backend's level meshes draw
+    the level geometries themselves: nothing to do.
+  - Tests: the front's (the source's id, label, owner and resources, removed on the dispose; a
+    persistent set's without owner) and the GPU backend's (its dispose frees its seven buffers and
+    each wrapper with nothing shared left on it, and none of the level's shared buffers; a level
+    geometry's dispose after the set's frees its buffers, once). Not forwarding the dispose, and not
+    detaching the index, each fail one.
+  - **Verified** (a scratch script, `STILL`, Apple M2, Chrome, headless WebGPU, the dev server,
+    debug env): the sources as the GPU memory tab collects them, then a snapshot
+    (`takeGPUMemorySnapshot`), `loadScene` to `testDebugScene` and its diff:
+
+    | Run | The set's row (owner `instanceStress`) | InstancedMesh row | After the switch | Left behind by the visit |
+    | --- | --- | --- | --- | --- |
+    | 1M, GPU, before the fix | 74.67 MB, 7 buffers | 0 | storage 6 → 0 (74.66 MB → 0), indirect 1 → 0, geometries 14 → 21 | the pools' (below) + the 3 levels' 6 vertex and 3 index buffers |
+    | 20k / 1M, GPU | 3.20 / 74.67 MB, 7 buffers | 0 | storage 6 → 0, indirect 1 → 0, geometries 14 → 9 | the pools' |
+    | 1M, CPU (forced) | 194.55 MB, 6 buffers | 0 | attributes 194.58 → 0.19 MB, total 228.0 → 38.5 MB | the pools' |
+    | 20k, pools | | 3.66 MB, 12 objects | | a 33 × 33 vertex grid with its index, a 3-vertex attribute, a 1024 × 576 target and its depth, 4 programs |
+
+    The GPU row is D4's arithmetic: 48 + 16 + 4 + 4 MB per million instances (matrices, records,
+    state, progress) plus 6 MiB of lists (8 slots × 3 levels × 65,536 × 4 B); the CPU row three
+    level meshes of a 64 MB matrix and a 4 MB fade each, sized for every instance (Phase 4's ~300
+    MB at 1M was that plus the backend's own arrays, which are CPU memory). What the pools' visit
+    leaves is the same on both paths, so not the set's (not looked into: neither the forest nor the
+    shadow ground).
+  - `yarn sbp`: every budget within; `features/instancing` 4.6 kB (unchanged: the source folds
+    out of production), the lazy `InstanceSetGpu.js` 5.3 → 5.5 kB (the forwarding and the
+    wrappers' dispose). `yarn test` (322 files), lint and both type-checks pass.
 
 **Verification:**
 

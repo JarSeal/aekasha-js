@@ -185,7 +185,7 @@ const createSet = (
   scene.add(object);
   backend.addInstances(0, new Float32Array(new THREE.Matrix4().elements), 1);
   backend.setExtent(1);
-  return { backend, object, scene };
+  return { backend, object, scene, params };
 };
 
 /** Every backend a test made, disposed after it (once: the front guards a backend's dispose), so
@@ -543,5 +543,59 @@ describe('the GPU backend: materials that place each instance (p354 Phase 5 step
     const fetch = env.fetches.at(-1) as Fetch;
     const [, draw] = render(scene, createCamera());
     expect(positionOf(draw)).toBe(fetch.position);
+  });
+});
+
+describe('the GPU backend: memory (p354 Phase 5 step 5)', () => {
+  /** Counts each object's `dispose` events. */
+  const watchDisposes = (objects: THREE.EventDispatcher<{ dispose: object }>[]) => {
+    const counts = new Map<object, number>();
+    for (const o of objects) {
+      counts.set(o, 0);
+      o.addEventListener('dispose', () => counts.set(o, counts.get(o)! + 1));
+    }
+    return counts;
+  };
+
+  test("its dispose frees its buffers and its draws' geometries, not the levels' shared buffers", () => {
+    const { scene, backend } = createSet();
+    const draws = render(scene, createCamera()) as THREE.Mesh[];
+    expect(draws).toHaveLength(LEVELS);
+    const shared = draws.flatMap(({ geometry }) => [
+      geometry.index!,
+      ...Object.values(geometry.attributes as Record<string, THREE.BufferAttribute>),
+    ]);
+    const buffers = backend.debugMemory();
+    expect(buffers).toEqual(Object.values(getBuffers()));
+    // Each draw's geometry still holding the shared buffers at its dispose would free them
+    const heldAtDispose: number[] = [];
+    for (const { geometry } of draws) {
+      geometry.addEventListener('dispose', () =>
+        heldAtDispose.push(Object.keys(geometry.attributes).length + (geometry.index ? 1 : 0))
+      );
+    }
+    const disposes = watchDisposes([...shared, ...buffers]);
+
+    backends.splice(backends.indexOf(backend), 1);
+    backend.dispose();
+    expect(heldAtDispose).toEqual([0, 0]);
+    for (const buffer of buffers) expect(disposes.get(buffer)).toBe(1);
+    for (const attribute of shared) expect(disposes.get(attribute)).toBe(0);
+  });
+
+  test("a level geometry's dispose frees its buffers, which three knows only through the draws", () => {
+    const { scene, backend, params } = createSet();
+    render(scene, createCamera());
+    const { geometry } = params.levels[0];
+    const levelBuffers = [geometry.index!, ...Object.values(geometry.attributes)];
+    const disposes = watchDisposes(levelBuffers as THREE.BufferAttribute[]);
+    backends.splice(backends.indexOf(backend), 1);
+    backend.dispose();
+    // After the set's dispose too: the registry disposes a level once its refs are released
+    geometry.dispose();
+    for (const buffer of levelBuffers) expect(disposes.get(buffer)).toBe(1);
+    // Once
+    geometry.dispose();
+    for (const buffer of levelBuffers) expect(disposes.get(buffer)).toBe(1);
   });
 });

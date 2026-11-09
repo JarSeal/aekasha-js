@@ -138,6 +138,11 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const matrixArrays = meshes.map((mesh) => mesh.instanceMatrix.array as Float32Array);
   const fadeAttributes = meshes.map((mesh) => createLodFadeAttribute(mesh));
   const fadeArrays = fadeAttributes.map((attribute) => attribute.array as Float32Array);
+  /** The GPU buffers: each level mesh's instance matrix and fade (three's, freed with the mesh). */
+  const gpuBuffers: readonly THREE.BufferAttribute[] = [
+    ...meshes.map((mesh) => mesh.instanceMatrix),
+    ...fadeAttributes,
+  ];
   /** Per level mesh: the instance in each slot (the swap-remove patches the one it moves). */
   const owners = levels.map(() => new Int32Array(maxInstances));
   /** The level meshes a frame changed: their matrices (and counts), their fades. */
@@ -413,6 +418,7 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       extent = value;
     },
     dispose,
+    debugMemory: () => gpuBuffers,
     debugCpu: {
       levelCount,
       levels: levelOf,

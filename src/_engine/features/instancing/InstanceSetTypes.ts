@@ -78,6 +78,9 @@ export interface InstanceSetBackend {
   setExtent: (extent: number) => void;
   /** Frees the backend's draws and buffers (the front releases the registry refs). */
   dispose: () => void;
+  /** The GPU buffers the backend made, for the GPU memory tab's source of the set (its levels'
+   * geometries are assets, counted there). */
+  debugMemory: () => readonly THREE.BufferAttribute[];
   /** The buffers the debug readback reads: the GPU backend's. */
   debugBuffers?: InstanceSetDebugBuffers;
   /** The arrays the debug readback reads: the CPU backend's. */

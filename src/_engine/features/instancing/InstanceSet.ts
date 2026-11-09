@@ -5,6 +5,8 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { decGeometryRef, incGeometryRef } from '../../kernel/assets/Geometry';
 import { decMaterialRef, incMaterialRef } from '../../kernel/assets/Material';
 import { isWebGPURenderer } from '../../kernel/render/Renderer';
+import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
+import { registerGPUMemorySource } from '../../debug/GPUMemory';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { lwarn } from '../../utils/Logger';
@@ -307,6 +309,20 @@ export const createInstanceSetAsync = async (
   const drawer = createBackend(params);
 
   const ranges = createInstanceRanges(maxInstances);
+  // The GPU memory tab's row of the set's buffers (D11: three's `info.memory` knows them only as
+  // storage or instance attributes), under the scene it was made for (a persistent set: the
+  // engine's). `__AEK_DEBUG__` first: a production build folds it, and the GPU memory module with
+  // it, out of the front (as Viewports.ts)
+  const removeMemorySource = __AEK_DEBUG__
+    ? registerGPUMemorySource({
+        id: `instanceSet.${entityId}`,
+        label: `Instance set "${label}" (${backend})`,
+        owner: opts.entityOpts?.persistent
+          ? undefined
+          : getLoadingSceneId() ?? getCurrentSceneId() ?? undefined,
+        getResources: drawer.debugMemory,
+      })
+    : null;
   let isDisposed = false;
   world.addComponent(entityId, ComponentType.INSTANCE_SET, {
     object,
@@ -314,6 +330,7 @@ export const createInstanceSetAsync = async (
       if (isDisposed) return;
       isDisposed = true;
       if (IS_DEBUG_ENV) liveSets.delete(set);
+      removeMemorySource?.();
       object.removeFromParent();
       drawer.dispose();
       refLevels(levels, false);

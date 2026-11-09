@@ -13,6 +13,10 @@ const env = vi.hoisted(() => ({
   params: null as unknown,
   /** The module the last backend came from. */
   module: null as 'GPU' | 'CPU' | null,
+  /** The last backend's GPU buffers (`debugMemory`). */
+  memory: [] as unknown[],
+  /** The GPU memory sources registered and not removed, by id. */
+  memorySources: new Map<string, unknown>(),
 }));
 /** A backend recording what the front asks of it. */
 const createStubBackend = vi.hoisted(() => () => ({
@@ -25,6 +29,18 @@ const createStubBackend = vi.hoisted(() => () => ({
     env.extent = extent;
   },
   dispose: () => env.disposed++,
+  debugMemory: () => {
+    const memory = [new THREE.StorageBufferAttribute(new Float32Array(4), 4)];
+    env.memory = memory;
+    return memory;
+  },
+}));
+vi.mock(import('../../debug/GPUMemory'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  registerGPUMemorySource: (source) => {
+    env.memorySources.set(source.id, source);
+    return () => env.memorySources.delete(source.id);
+  },
 }));
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -52,6 +68,8 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
 import { initEnvironment } from '../../kernel/config/Config';
 import { getLodContentDebugSources } from '../../kernel/ecs/LodTargets';
+import { setLoadingSceneId } from '../../kernel/scene/Scene';
+import type { GPUMemorySource } from '../../debug/GPUMemory';
 import { createInstanceSetAsync, installInstanceSets } from './InstanceSet';
 
 let world: ECSWorld;
@@ -309,6 +327,37 @@ describe('InstanceSet: the owning entity', () => {
     world.clearNonPersistent();
     await expect(created).resolves.toBeNull();
     expect(env.params).toBeNull();
+  });
+
+  test("names its GPU buffers for the GPU memory tab, under its scene, until it's disposed", async () => {
+    setLoadingSceneId('memoryForest');
+    const set = (await createInstanceSetAsync({
+      world,
+      levels: levels(),
+      maxInstances: 3,
+      entityOpts: { appId: 'memoryForest' },
+    }))!;
+    setLoadingSceneId(null);
+    const source = env.memorySources.get(`instanceSet.${set.entityId}`) as GPUMemorySource;
+    expect(source.label).toBe('Instance set "memoryForest" (GPU)');
+    expect(source.owner).toBe('memoryForest');
+    // The backend's buffers, read when the tab refreshes
+    expect(source.getResources()).toBe(env.memory);
+    world.deleteEntity(set.entityId);
+    expect(env.memorySources.has(`instanceSet.${set.entityId}`)).toBe(false);
+
+    // A persistent set's is the engine's (no owner)
+    const persistent = (await createInstanceSetAsync({
+      world,
+      levels: levels(),
+      maxInstances: 3,
+      entityOpts: { persistent: true },
+    }))!;
+    expect(
+      (env.memorySources.get(`instanceSet.${persistent.entityId}`) as GPUMemorySource).owner
+    ).toBeUndefined();
+    world.deleteEntity(persistent.entityId);
+    expect(env.memorySources.size).toBe(0);
   });
 
   test('a persistent set outlives the scene switch', async () => {

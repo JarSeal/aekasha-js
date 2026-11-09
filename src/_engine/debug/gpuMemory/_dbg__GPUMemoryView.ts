@@ -565,7 +565,7 @@ const createSourcesSection = (scheduler: BindingScheduler) => {
   });
   const note = createNote();
   note.write(
-    'GPU resources that aren\'t registered assets, named with registerGPUMemorySource (debug/GPUMemory.ts) and counted in "By owner" under their owner. A render target counts its textures and depth buffer, an attribute every buffer three made from its array. A GPU object an asset or an earlier source already counts is not counted again.'
+    'GPU resources that aren\'t registered assets, named with registerGPUMemorySource (debug/GPUMemory.ts) and counted in "By owner" under their owner. A render target counts its textures and depth buffer, an attribute every buffer three made from its array. A GPU object an asset or an earlier source already counts is not counted again (the InstancedMesh catch-all counts last).'
   );
   const update = (sources: GPUMemorySourceRow[]) => {
     sourceRows.begin();
