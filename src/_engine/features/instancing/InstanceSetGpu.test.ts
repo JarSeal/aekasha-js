@@ -172,7 +172,7 @@ describe('the GPU backend: a slot per camera (p354 D6)', () => {
   });
 
   test('each camera draws only its own slot, and dispatches into it', () => {
-    const { scene } = createSet();
+    const { scene, backend } = createSet();
     const a = createCamera();
     const b = createCamera();
     render(scene, a);
@@ -181,6 +181,8 @@ describe('the GPU backend: a slot per camera (p354 D6)', () => {
     const listedA = render(scene, a);
     expect(listedA.map(slotOf)).toEqual([0, 0]);
     expect(env.dispatches.map((d) => d.slotLevel)).toEqual([0, LEVELS, 0]);
+    // The readback's count per slot: one per render that reached the set
+    expect(backend.debugBuffers!.getSlots().map((slot) => slot.dispatches)).toEqual([2, 1]);
   });
 
   test("a render that doesn't reach the set, or a shadow pass, takes no slot and dispatches nothing", () => {

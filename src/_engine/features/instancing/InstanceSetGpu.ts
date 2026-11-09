@@ -72,6 +72,8 @@ type Slot = {
   camera: THREE.Camera | null;
   /** The main loop frame a render last reached it in. */
   lastFrame: number;
+  /** Its dispatches since its camera took it (the debug readback's). */
+  dispatches: number;
   /** Its draws, made on the index's first use and kept while it's free (detached). */
   group: THREE.Group | null;
 };
@@ -300,6 +302,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     index,
     camera: null,
     lastFrame: -1,
+    dispatches: 0,
     group: null,
   }));
   /** Every slot's draws made so far, for the dispose. */
@@ -379,6 +382,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       }
       free.camera = camera;
       free.lastFrame = frame;
+      free.dispatches = 0;
       free.group ??= createSlotDraws(free);
       probe.add(free.group);
       return free;
@@ -386,6 +390,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     dispatch: (gpu, camera) => {
       const { slot } = set;
       if (!slot || extent === 0) return;
+      slot.dispatches++;
       // The state moves once a frame (D7): in the frame's first dispatch after lod() wrote its
       // inputs. A dispatch before that (a compile at the scene's load, before the first frame) and
       // a frame they aren't written in (the app loop paused: the levels and the fades hold, as
@@ -498,7 +503,9 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       getExtent: () => extent,
       getSlots: () => {
         debugSlots.length = 0;
-        for (const { index, camera } of slots) if (camera) debugSlots.push({ index, camera });
+        for (const { index, camera, dispatches } of slots) {
+          if (camera) debugSlots.push({ index, camera, dispatches });
+        }
         return debugSlots;
       },
     },

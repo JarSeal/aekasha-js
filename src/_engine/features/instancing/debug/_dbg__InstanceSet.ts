@@ -40,9 +40,10 @@ export const _readInstanceSetStatsAsync = async (
   if (!buffers || !renderer) return null;
   const { levelCount, maxVisible } = buffers;
   // The slots as they are now, with both reads queued after this frame's work
-  const slots = buffers.getSlots().map(({ index, camera }) => ({
+  const slots = buffers.getSlots().map(({ index, camera, dispatches }) => ({
     index,
     camera: getCameraName(camera),
+    dispatches,
   }));
   const countersRead = renderer.getArrayBufferAsync(buffers.counters);
   const stateRead = opts?.state ? renderer.getArrayBufferAsync(buffers.state) : null;
@@ -53,8 +54,8 @@ export const _readInstanceSetStatsAsync = async (
     overflow: new Array<number>(levelCount).fill(0),
     slots: [],
   };
-  for (const { index, camera } of slots) {
-    const slot: InstanceSetSlotStats = { camera, drawn: [], overflow: [] };
+  for (const { index, camera, dispatches } of slots) {
+    const slot: InstanceSetSlotStats = { camera, dispatches, drawn: [], overflow: [] };
     for (let level = 0; level < levelCount; level++) {
       const appended = counters[index * levelCount + level];
       slot.drawn.push(Math.min(appended, maxVisible));

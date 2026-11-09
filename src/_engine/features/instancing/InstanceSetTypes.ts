@@ -102,12 +102,17 @@ export interface InstanceSetDebugSlot {
   index: number;
   /** The camera holding it: renders through it draw this slot's draws. */
   camera: THREE.Camera;
+  /** Its dispatches since the camera took it: one per render of the camera that reached the set. */
+  dispatches: number;
 }
 
 /** One camera's draws of a set, as `readInstanceSetStatsAsync` reads them back. */
 export interface InstanceSetSlotStats {
   /** The camera: `main` for the main camera, else its name, or its type and id. */
   camera: string;
+  /** Its dispatches since it took its slot: one per render of the camera that reached the set
+   * (two renders in a frame are two; only the frame's first moves the state). */
+  dispatches: number;
   /** Per level: the instances its last dispatch drew (a cross-fading one in both its levels). */
   drawn: number[];
   /** Per level: the instances in its view past `maxVisible`, which weren't drawn. */

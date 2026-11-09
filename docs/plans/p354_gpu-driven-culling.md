@@ -1044,6 +1044,23 @@ From Phase 2 (its "As built"), for these steps:
   shadow pass, the cap and the release after 120 frames, the dispose, and step 3's D7 cases.
   Two mutations (every slot's draws passing the cull, the state moving before the inputs) each
   fail it.
+- **Step 3, once a frame.** The code is step 1's D7 rule (the frame's first dispatch after the
+  inputs moves the state, every other one only reads it), and its Node test is step 2's file:
+  two renders of one camera in a frame, then another camera, select once and hold four times; a
+  dispatch before the frame's inputs holds; no inputs a whole frame after the first dispatch
+  forces level 0. The readback's slots gained `dispatches` (since the camera took the slot; step 5
+  reads it for the bakes). **The page check** (20k, the held orbit, 1 s fades, 120 frames, the
+  dev server, debug env): the set alone, the set with test bridge snapshots taken back to back
+  (each a second render of the main camera in its frame), and the pools.
+
+  | Run | Main slot's dispatches | State per level / fading |
+  | --- | ---: | --- |
+  | The set alone | 149 | 1,083 / 5,502 / 14,267, 852 |
+  | The set, 248 snapshots meanwhile | 397 | 1,083 / 5,502 / 14,267, 852 |
+  | The pools alone | | 1,083 / 5,502 / 14,267, 852 |
+
+  Every snapshot dispatched into the main camera's slot (397 − 149 = 248) and advanced nothing,
+  and the set's state is still the pools' exactly after step 1's change to D7.
 
 ### Phase 4 — The CPU fallback (WebGL2)
 
