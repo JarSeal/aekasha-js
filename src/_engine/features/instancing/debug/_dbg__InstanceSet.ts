@@ -14,12 +14,17 @@ import {
   type InstanceSet,
 } from '../InstanceSet';
 import type { InstancedLodPoolLevel } from '../InstancedMeshPool';
-import { LEVEL_CULLED, LEVEL_NONE } from '../InstanceSetNodes';
-import type { InstanceSetSlotStats, InstanceSetStats } from '../InstanceSetTypes';
+import { LEVEL_CULLED } from '../InstanceSetNodes';
+import { LOD_LEVEL_CULLED, LOD_LEVEL_NONE } from '../../../utils/LodRules';
+import type {
+  InstanceSetCpuDebugData,
+  InstanceSetSlotStats,
+  InstanceSetStats,
+} from '../InstanceSetTypes';
 
 // An instance set's debug readback (docs/plans/p354_gpu-driven-culling.md D11): the GPU backend's
 // counters per slot and state words (the level and the outgoing one), read back after the GPU's
-// queued work. Loaded by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod
+// queued work, or the CPU backend's level meshes and state arrays, read as they are. Loaded by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod
 // test mode.
 
 /** The light in the root scene whose shadow map `camera` renders, if any. */
@@ -40,17 +45,62 @@ const getCameraName = (camera: THREE.Camera) => {
   return camera.name || `${camera.type} ${camera.id}`;
 };
 
+type StateCounts = NonNullable<InstanceSetStats['state']>;
+
+const createStateCounts = (levelCount: number): StateCounts => ({
+  levels: new Array<number>(levelCount).fill(0),
+  culled: 0,
+  unselected: 0,
+  fading: 0,
+});
+
+/** Counts one instance's state (`utils/LodRules.ts`' levels and sentinels): a fading one in both
+ * its levels, as a pool's level meshes hold it. */
+const countInstance = (counts: StateCounts, level: number, outgoing: number) => {
+  if (level >= 0) counts.levels[level]++;
+  else if (level === LOD_LEVEL_CULLED) counts.culled++;
+  else counts.unselected++;
+  if (outgoing === LOD_LEVEL_NONE) return;
+  counts.fading++;
+  if (outgoing >= 0) counts.levels[outgoing]++;
+};
+
+/** A state word's level byte (`InstanceSetNodes.ts`) as `utils/LodRules.ts` has it. */
+const decodeLevel = (byte: number, levelCount: number) => {
+  if (byte < levelCount) return byte;
+  return byte === LEVEL_CULLED ? LOD_LEVEL_CULLED : LOD_LEVEL_NONE;
+};
+
+/** A CPU set's stats, from its arrays now: each level mesh's copies (`slots` empty: three culls
+ * a level mesh as a whole, for every camera). */
+const readCpuStats = (data: InstanceSetCpuDebugData, isState: boolean): InstanceSetStats => {
+  const { levelCount } = data;
+  const stats: InstanceSetStats = {
+    drawn: data.meshes.map((mesh) => mesh.count),
+    overflow: new Array<number>(levelCount).fill(0),
+    slots: [],
+  };
+  if (!isState) return stats;
+  const counts = createStateCounts(levelCount);
+  const extent = data.getExtent();
+  for (let i = 0; i < extent; i++) countInstance(counts, data.levels[i], data.outgoing[i]);
+  stats.state = counts;
+  return stats;
+};
+
 /**
  * Reads each slot's last dispatch's counts per level (the main camera's as `drawn` and
- * `overflow`) and, with `state`, the state words counted. Null for a set without a GPU backend, or
- * disposed.
+ * `overflow`) and, with `state`, the state words counted; a CPU set's from its arrays. Null for a
+ * disposed set.
  * @internal
  */
 export const _readInstanceSetStatsAsync = async (
   set: InstanceSet,
   opts?: { state?: boolean }
 ): Promise<InstanceSetStats | null> => {
-  const buffers = getInstanceSetBackend(set)?.debugBuffers;
+  const backend = getInstanceSetBackend(set);
+  if (backend?.debugCpu) return readCpuStats(backend.debugCpu, opts?.state === true);
+  const buffers = backend?.debugBuffers;
   const renderer = getRenderer() as THREE.WebGPURenderer | null;
   if (!buffers || !renderer) return null;
   const { levelCount, maxVisible } = buffers;
@@ -84,24 +134,16 @@ export const _readInstanceSetStatsAsync = async (
   if (!stateRead) return stats;
 
   const words = new Uint32Array(await stateRead);
-  const state = {
-    levels: new Array<number>(levelCount).fill(0),
-    culled: 0,
-    unselected: 0,
-    fading: 0,
-  };
+  const counts = createStateCounts(levelCount);
   const extent = Math.min(buffers.getExtent(), words.length);
   for (let i = 0; i < extent; i++) {
-    const level = words[i] & 0xff;
-    const outgoing = (words[i] >>> 8) & 0xff;
-    if (level < levelCount) state.levels[level]++;
-    else if (level === LEVEL_CULLED) state.culled++;
-    else state.unselected++;
-    if (outgoing === LEVEL_NONE) continue;
-    state.fading++;
-    if (outgoing < levelCount) state.levels[outgoing]++;
+    countInstance(
+      counts,
+      decodeLevel(words[i] & 0xff, levelCount),
+      decodeLevel((words[i] >>> 8) & 0xff, levelCount)
+    );
   }
-  stats.state = state;
+  stats.state = counts;
   return stats;
 };
 
@@ -137,10 +179,15 @@ const requestStats = (set: InstanceSet, levels: readonly InstancedLodPoolLevel[]
         culled: state.culled,
         fading: state.fading,
         overflow: stats.slots.reduce((total, slot) => total + sum(slot.overflow), 0),
-        triangles: stats.slots.reduce(
-          (total, slot) => total + sum(slot.drawn, (i) => countTriangles(levels[i])),
-          0
-        ),
+        // A CPU set has no slots: its level meshes' copies, drawn once per render that doesn't
+        // cull the mesh (three's info.render counts those itself)
+        triangles:
+          stats.slots.length > 0
+            ? stats.slots.reduce(
+                (total, slot) => total + sum(slot.drawn, (i) => countTriangles(levels[i])),
+                0
+              )
+            : sum(stats.drawn, (i) => countTriangles(levels[i])),
         cameras: stats.slots.map((slot) => ({ name: slot.camera, drawn: slot.drawn })),
       });
     })

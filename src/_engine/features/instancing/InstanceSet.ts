@@ -22,7 +22,7 @@ import type {
 
 // Instance sets (docs/plans/p354_gpu-driven-culling.md): many instances as plain data, with no
 // entity per instance, culled and LOD-selected per instance by a backend: the GPU one (compute
-// culling and indirect draws, WebGPU) or the CPU one (WebGL2, Phase 4). This is the front, on the
+// culling and indirect draws, WebGPU) or the CPU one (WebGL2). This is the front, on the
 // entry: the options' checks, the owning entity, the ranges and the backend's `import()`, so a
 // build that never creates a set ships only this, and a device downloads only its own backend.
 // The backends' contract is InstanceSetTypes.ts.
@@ -37,7 +37,6 @@ const DEFAULT_MAX_SLOTS = 8;
 /** Set by the `instancing()` feature's install: without it, deleting a set's entity frees nothing. */
 let areInstanceSetsInstalled = false;
 let hasWarnedNotInstalled = false;
-let hasWarnedNoCompute = false;
 
 /** Each set's backend, for the debug readback (`_dbg__InstanceSet.ts`). */
 const backendsBySet = new WeakMap<
@@ -180,22 +179,10 @@ const findNonUniformScale = (matrices: Float32Array, count: number) => {
   return -1;
 };
 
-/** A backend that draws nothing: a set on WebGL2 until the CPU backend lands. */
-// TODO(docs/plans/p354_gpu-driven-culling.md Phase 4): the CPU backend, InstanceSetCpu.ts
-const createEmptyBackend: CreateInstanceSetBackend = ({ label }) => {
-  if (!hasWarnedNoCompute) {
-    hasWarnedNoCompute = true;
-    lwarn(
-      `Instance set "${label}": this renderer has no compute (WebGL2), and the CPU backend isn't built yet: the set draws nothing.`
-    );
-  }
-  return { writeInstances: () => {}, dispose: () => {} };
-};
-
 const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
   kind === 'GPU'
     ? (await import('./InstanceSetGpu')).createGpuInstanceSetBackend
-    : createEmptyBackend;
+    : (await import('./InstanceSetCpu')).createCpuInstanceSetBackend;
 
 /**
  * Creates an instance set (docs/plans/p354_gpu-driven-culling.md): up to millions of instances of
@@ -203,7 +190,9 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
  * passes cull each instance against the camera and select its level by the LOD rules
  * (`LodDef`'s screen sizes, `hysteresis` and `cullScreenSize`, against the LOD selection's camera),
  * and each level and geometry group draws with one indirect draw: the CPU cost per frame stays flat
- * whatever the count.
+ * whatever the count. On WebGL2 (no compute) the CPU backend draws the same set with the same
+ * rules: an `InstancedMesh` per level, the instances moved between them each frame without an
+ * entity each, culled by three per level mesh as a whole.
  *
  * Use a set for static (or rarely moving) content past about 20k instances: forests, grass,
  * rocks. An instanced LOD pool stays the choice for fewer, and for instances gameplay addresses
@@ -211,8 +200,8 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
  *
  * Every camera that renders a set (the view, a viewport, the debug camera, a snapshot) culls it
  * against its own frustum, up to `maxSlots` cameras at once, and draws the levels selected against
- * the LOD selection's camera. A shadow draws none of it yet. The levels need `lod()` for their
- * selection: without it a set draws level 0.
+ * the LOD selection's camera; a shadow draws its casting levels (`castShadow` per level). The
+ * levels need `lod()` for their selection: without it a set draws level 0.
  * @returns the set, or `null` when its world's scene exited while its backend loaded (the owning
  * entity was deleted): re-check after the `await`, as after any. It rejects on bad options (no
  * levels, `maxInstances` past 2^24, a bad `maxVisible` or `maxSlots`).
@@ -269,6 +258,7 @@ export const createInstanceSetAsync = async (
   object.name = `instanceSet ${label}`;
   refLevels(levels, true);
   const params: InstanceSetBackendParams = {
+    world,
     object,
     levels,
     lod: opts.lod ?? {},
@@ -372,8 +362,10 @@ export const getInstanceSetBackend = (set: InstanceSet) => {
 /**
  * Reads back what each camera drawing a set drew in its last dispatch, per level (the main
  * camera's as `drawn` and `overflow`, every camera's in `slots`), and with `state: true` every
- * instance's selected level counted: a GPU readback, for the debug tools and measuring scenes. The debug env and prod test mode only; `null` elsewhere, for a set on the CPU
- * backend, and for a disposed one.
+ * instance's selected level counted: a GPU readback, for the debug tools and measuring scenes. On
+ * the CPU backend `drawn` is each level mesh's copies (three culls a level mesh as a whole, for
+ * every camera), `slots` is empty and nothing overflows. The debug env and prod test mode only;
+ * `null` elsewhere and for a disposed set.
  * @param set a set `createInstanceSetAsync` made
  * @param opts `state`: also read the whole state buffer (4 bytes per instance)
  * @returns the counts, read after the GPU's queued work

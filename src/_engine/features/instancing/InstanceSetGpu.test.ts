@@ -62,6 +62,7 @@ vi.mock(import('./InstanceSetNodes'), async (importOriginal) => {
   } as unknown as typeof original;
 });
 
+import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { createGpuInstanceSetBackend } from './InstanceSetGpu';
 import { SELECT_MODE } from './InstanceSetNodes';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
@@ -122,6 +123,8 @@ const LEVELS = 2;
 const createSet = (opts: { maxSlots?: number; noneCast?: boolean } = {}) => {
   const object = new THREE.Group();
   const params: InstanceSetBackendParams = {
+    // The GPU backend reads no world
+    world: {} as ECSWorld,
     object,
     levels: [
       {

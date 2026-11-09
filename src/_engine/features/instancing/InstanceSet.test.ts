@@ -1,12 +1,14 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 
-// The renderer's backend, and the GPU backend module: a recording stand-in
+// The renderer's backend, and the backend modules: recording stand-ins
 const env = vi.hoisted(() => ({
   isWebGPU: true,
   writes: [] as { start: number; matrices: Float32Array; count: number }[],
   disposed: 0,
   params: null as unknown,
+  /** The module the last backend came from. */
+  module: null as 'GPU' | 'CPU' | null,
 }));
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -15,6 +17,18 @@ vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
 vi.mock(import('./InstanceSetGpu'), () => ({
   createGpuInstanceSetBackend: (params) => {
     env.params = params;
+    env.module = 'GPU';
+    return {
+      writeInstances: (start, matrices, count) =>
+        env.writes.push({ start, matrices: matrices.slice(), count }),
+      dispose: () => env.disposed++,
+    };
+  },
+}));
+vi.mock(import('./InstanceSetCpu'), () => ({
+  createCpuInstanceSetBackend: (params) => {
+    env.params = params;
+    env.module = 'CPU';
     return {
       writeInstances: (start, matrices, count) =>
         env.writes.push({ start, matrices: matrices.slice(), count }),
@@ -44,6 +58,7 @@ beforeEach(() => {
   env.writes = [];
   env.disposed = 0;
   env.params = null;
+  env.module = null;
 });
 
 const material = new THREE.MeshBasicNodeMaterial();
@@ -110,14 +125,16 @@ describe('createInstanceSetAsync: the options', () => {
   test('picks the backend by the renderer', async () => {
     const gpu = await createInstanceSetAsync({ world, levels: levels(), maxInstances: 4 });
     expect(gpu!.backend).toBe('GPU');
-    expect(env.params).not.toBeNull();
+    expect(env.module).toBe('GPU');
+    expect((env.params as InstanceSetBackendParams).world).toBe(world);
     env.isWebGPU = false;
-    env.params = null;
     const cpu = await createInstanceSetAsync({ world, levels: levels(), maxInstances: 4 });
     expect(cpu!.backend).toBe('CPU');
-    // Until Phase 4 the CPU backend is an empty one: the GPU module wasn't asked
-    expect(env.params).toBeNull();
+    expect(env.module).toBe('CPU');
     expect(cpu!.addInstances([placeAt(0)])).toEqual({ start: 0, count: 1 });
+    expect(env.writes.at(-1)).toMatchObject({ start: 0, count: 1 });
+    world.deleteEntity(gpu!.entityId);
+    world.deleteEntity(cpu!.entityId);
   });
 });
 

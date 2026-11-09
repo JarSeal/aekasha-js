@@ -1,4 +1,5 @@
 import type * as THREE from 'three/webgpu';
+import type { ECSWorld } from '../../kernel/ecs/ECS';
 import type { LodDef } from '../lod/LodTypes';
 import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 
@@ -33,6 +34,8 @@ export interface InstanceRange {
  * @internal
  */
 export interface InstanceSetBackendParams {
+  /** The owning entity's world: the CPU backend steps its instances in a system of it. */
+  world: ECSWorld;
   /** The set's group: the backend adds its draws to it. */
   object: THREE.Group;
   /** Level 0 first, `screenSize` descending. */
@@ -66,6 +69,8 @@ export interface InstanceSetBackend {
   dispose: () => void;
   /** The buffers the debug readback reads: the GPU backend's. */
   debugBuffers?: InstanceSetDebugBuffers;
+  /** The arrays the debug readback reads: the CPU backend's. */
+  debugCpu?: InstanceSetCpuDebugData;
 }
 
 /**
@@ -91,6 +96,24 @@ export interface InstanceSetDebugBuffers {
   getExtent: () => number;
   /** The slots a camera holds, by slot index. */
   getSlots: () => readonly InstanceSetDebugSlot[];
+}
+
+/**
+ * What the debug readback (`readInstanceSetStatsAsync`) reads of a CPU set: its state and level
+ * meshes, live (read synchronously).
+ * @internal
+ */
+export interface InstanceSetCpuDebugData {
+  /** The set's levels. */
+  levelCount: number;
+  /** The instances added so far: the state's live part. */
+  getExtent: () => number;
+  /** Per instance: its level, `LOD_LEVEL_NONE` or `LOD_LEVEL_CULLED` (`utils/LodRules.ts`). */
+  levels: Int16Array;
+  /** Per instance: the level it fades out of, `LOD_LEVEL_NONE` (no fade) or `LOD_LEVEL_CULLED`. */
+  outgoing: Int16Array;
+  /** Per level: its mesh, whose `count` is the copies it draws. */
+  meshes: readonly THREE.InstancedMesh[];
 }
 
 /**
