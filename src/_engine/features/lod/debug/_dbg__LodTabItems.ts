@@ -86,7 +86,7 @@ export const getLastFrameFolder = (stats: LodFrameStats): Item => {
 };
 
 /** "Selection": the global bias, the cap, freeze, a forced level and the camera, each with its
- * reset to the app's value. `levelCount` is the most levels an entity has. */
+ * reset to the app's value. `levelCount` is the most levels an entity or an instance set has. */
 export const getSelectionFolder = (controls: LodControls, levelCount: number): Item => {
   // A forced level past every entity's last stays listed while it is set
   const forceOptionCount = Math.max(levelCount, controls.forceLevel + 1);

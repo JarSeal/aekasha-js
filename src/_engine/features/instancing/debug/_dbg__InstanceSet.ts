@@ -1,6 +1,15 @@
 import type * as THREE from 'three/webgpu';
+import {
+  type LodContentDebugInfo,
+  registerLodContentDebugSource,
+} from '../../../kernel/ecs/LodTargets';
 import { getRenderer } from '../../../kernel/render/Renderer';
-import { getInstanceSetBackend, type InstanceSet } from '../InstanceSet';
+import {
+  getInstanceSetBackend,
+  getInstanceSetDebugInfo,
+  getLiveInstanceSets,
+  type InstanceSet,
+} from '../InstanceSet';
 import { LEVEL_CULLED, LEVEL_NONE } from '../InstanceSetNodes';
 import type { InstanceSetStats } from '../InstanceSetTypes';
 
@@ -54,4 +63,32 @@ export const _readInstanceSetStatsAsync = async (
   }
   stats.state = state;
   return stats;
+};
+
+/** The live sets' infos, rewritten in place on each read. */
+const infos: LodContentDebugInfo[] = [];
+
+let removeDebugSource: (() => void) | null = null;
+
+/**
+ * Lists the live sets in the LOD tab (once; the `instancing()` feature's `onDebug`).
+ * @internal
+ */
+export const _registerInstanceSetDebugSource = () => {
+  removeDebugSource ??= registerLodContentDebugSource({
+    getInfos: () => {
+      infos.length = 0;
+      for (const set of getLiveInstanceSets()) {
+        const info = getInstanceSetDebugInfo(set);
+        if (!info) continue;
+        infos.push({
+          label: info.label,
+          backend: set.backend,
+          levelCount: info.levelCount,
+          instanceCount: set.count,
+        });
+      }
+      return infos;
+    },
+  });
 };

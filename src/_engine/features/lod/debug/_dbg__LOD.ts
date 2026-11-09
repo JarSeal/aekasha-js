@@ -6,6 +6,7 @@ import {
 } from '../../../debug/DebuggerGUI';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import { getLodContentDebugSources } from '../../../kernel/ecs/LodTargets';
 import { getDevFilesStatus } from '../../../debug/DevFiles';
 import { getImpostorRecords } from '../impostors/ImpostorRegistry';
 import {
@@ -117,6 +118,16 @@ const countLevels = (world: ECSWorld): LodCounts => {
   return counts;
 };
 
+/** The most levels the LOD content without entities has (instance sets, through the kernel's
+ * debug sources, p354 D11): the forced level options cover them too. 0 without any. */
+export const getLodContentLevelCount = () => {
+  let levelCount = 0;
+  for (const source of getLodContentDebugSources()) {
+    for (const info of source.getInfos()) levelCount = Math.max(levelCount, info.levelCount);
+  }
+  return levelCount;
+};
+
 /** The counts as aligned lines (the monitor's mono font): a level's, then the hidden ones. */
 export const formatLodCounts = (world: ECSWorld) => {
   const counts = countLevels(world);
@@ -162,9 +173,12 @@ export const _createLodDebugGUI = () => {
   };
   const countsState = { text: '' };
 
-  /** Levels of the entity with the most, which the counts and the force options list. */
+  /** Levels of the entity with the most, which the counts and the overlay's legend list. */
   let levelCount = 1;
   let builtLevelCount = 0;
+  /** The force options' levels: the entities' and the content's without entities (sets). */
+  let forceLevelCount = 1;
+  let builtForceLevelCount = 0;
   /** The impostors the folders were built for (null: not built) */
   let builtImpostors: string | null = null;
   let devFilesNote = 'Checking the dev files…';
@@ -191,15 +205,19 @@ export const _createLodDebugGUI = () => {
       const counts = formatLodCounts(world);
       countsState.text = counts.text;
       levelCount = counts.levelCount;
+      forceLevelCount = Math.max(levelCount, getLodContentLevelCount());
 
       // Another level count (eg. a scene change): the force options and the counts' rows need
       // a rebuild, as do other impostors' folders. Deferred, since this runs inside a refresh or
       // a build.
-      const isLevelCountChanged = builtLevelCount && levelCount !== builtLevelCount;
+      const isLevelCountChanged =
+        (builtLevelCount && levelCount !== builtLevelCount) ||
+        (builtForceLevelCount && forceLevelCount !== builtForceLevelCount);
       const isImpostorsChanged =
         builtImpostors !== null && builtImpostors !== getImpostorsSignature();
       if (isLevelCountChanged || isImpostorsChanged) {
         builtLevelCount = 0;
+        builtForceLevelCount = 0;
         builtImpostors = null;
         queueMicrotask(() => updateDebuggerTab(LOD_TAB_ID, { rebuild: true }));
       }
@@ -220,6 +238,7 @@ export const _createLodDebugGUI = () => {
     },
     content: () => {
       builtLevelCount = levelCount;
+      builtForceLevelCount = forceLevelCount;
       builtImpostors = getImpostorsSignature();
       return [
         {
@@ -235,7 +254,7 @@ export const _createLodDebugGUI = () => {
               interval: 'refresh',
             },
             getLastFrameFolder(stats),
-            getSelectionFolder(controls, levelCount),
+            getSelectionFolder(controls, forceLevelCount),
             getFadesFolder(controls),
             getOverlayFolder(controls, levelCount),
             getImpostorsFolder(getImpostorRecords(), () => devFilesNote),

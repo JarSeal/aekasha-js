@@ -44,7 +44,13 @@ import type { AnyDebuggerTabDef } from '../../../debug/DebuggerGUI';
 import { _buildDebuggerPane } from '../../../debug/_dbg__DebuggerPaneBuilder';
 import { createBindingScheduler } from '../../../ui/forms/binding/BindingScheduler';
 import type { LodData } from '../LodTypes';
-import { _createLodDebugGUI, formatLodCounts, getLodMeshListData } from './_dbg__LOD';
+import { registerLodContentDebugSource } from '../../../kernel/ecs/LodTargets';
+import {
+  _createLodDebugGUI,
+  formatLodCounts,
+  getLodContentLevelCount,
+  getLodMeshListData,
+} from './_dbg__LOD';
 
 // p806 D11: the LOD tab split into its folders' builders: the counts and the mesh list, the
 // impostors as rows that fit the value column, the dev files note, and the rebuild a new level
@@ -187,5 +193,26 @@ describe('the LOD tab (p806 D11)', () => {
     getDef().onRefresh?.();
     await Promise.resolve();
     expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+  });
+
+  // p354 D11: an instance set's levels come through the kernel's debug sources
+  it('covers the levels of LOD content without entities in the force options', async () => {
+    getDef().onRefresh?.();
+    buildTab();
+    await Promise.resolve();
+    tab.update.mockClear();
+    expect(getLodContentLevelCount()).toBe(0);
+
+    const info = { label: 'forest', backend: 'GPU', levelCount: 7, instanceCount: 10 };
+    const remove = registerLodContentDebugSource({ getInfos: () => [info] });
+    try {
+      expect(getLodContentLevelCount()).toBe(7);
+      getDef().onRefresh?.();
+      await Promise.resolve();
+      expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+    } finally {
+      remove();
+    }
+    expect(getLodContentLevelCount()).toBe(0);
   });
 });

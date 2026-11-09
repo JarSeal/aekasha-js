@@ -10,6 +10,9 @@ import type { ComponentType } from './ECSCoreComponents';
 //   global settings, the debug options), written once a frame by `lod()`'s `lodSelectionSystem`,
 //   read by LOD content that has no `LOD` entity (instancing's instance sets). Without `lod()`
 //   they're never written: their `frame` stays -1.
+// - The debug sources (p354 D11): LOD content without entities, as the LOD tab lists it. A feature
+//   registers one from its `onDebug` (instancing's sets); only debug code calls either function,
+//   so a production build drops them.
 
 /**
  * A registered LOD target, with the component type it's for.
@@ -105,3 +108,49 @@ export const setLodFrameInputs = (inputs: Readonly<LodFrameInputs>) => {
  * @internal
  */
 export const getLodFrameInputs = (): Readonly<LodFrameInputs> => lodFrameInputs;
+
+/**
+ * LOD content without entities (an instance set), as the LOD tab lists it (p354 D11).
+ * @internal
+ */
+export type LodContentDebugInfo = {
+  /** What it is, for the tab (a set's owning entity's app id, or its entity id). */
+  label: string;
+  /** What draws it (a set's `backend`). */
+  backend: string;
+  /** Its levels: the tab's forced level options cover them. */
+  levelCount: number;
+  /** Its instances. */
+  instanceCount: number;
+};
+
+/**
+ * A feature's LOD content without entities, for the LOD tab: `getInfos` is read on the tab's
+ * refresh.
+ * @internal
+ */
+export type LodContentDebugSource = {
+  getInfos: () => readonly LodContentDebugInfo[];
+};
+
+const lodContentDebugSources: LodContentDebugSource[] = [];
+
+/**
+ * Lists a feature's LOD content without entities in the LOD tab (a feature's `onDebug`).
+ * @internal
+ * @returns the remover
+ */
+export const registerLodContentDebugSource = (source: LodContentDebugSource) => {
+  lodContentDebugSources.push(source);
+  return () => {
+    const index = lodContentDebugSources.indexOf(source);
+    if (index >= 0) lodContentDebugSources.splice(index, 1);
+  };
+};
+
+/**
+ * The registered debug sources of LOD content without entities, in registration order.
+ * @internal
+ */
+export const getLodContentDebugSources = (): readonly LodContentDebugSource[] =>
+  lodContentDebugSources;

@@ -28,6 +28,8 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { getGeometryRegistry, saveBufferGeometry } from '../../kernel/assets/Geometry';
 import type { FeatureContext } from '../../kernel/init/Features';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
+import { initEnvironment } from '../../kernel/config/Config';
+import { getLodContentDebugSources } from '../../kernel/ecs/LodTargets';
 import { createInstanceSetAsync, installInstanceSets } from './InstanceSet';
 
 let world: ECSWorld;
@@ -184,5 +186,30 @@ describe('InstanceSet: the owning entity', () => {
     const set = await created;
     expect(set).not.toBeNull();
     world.deleteEntity(set!.entityId);
+  });
+});
+
+// p354 D11: the LOD tab lists the live sets, the debug env only (the flags are set for the rest of
+// this file, so this runs last)
+describe('InstanceSet: the debug list', () => {
+  test("lists a live set's label, backend, levels and count in the LOD tab's source", async () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    // Through import(), as the debug loader loads it
+    const { _registerInstanceSetDebugSource } = await import('./debug/_dbg__InstanceSet');
+    _registerInstanceSetDebugSource();
+    const [source] = getLodContentDebugSources();
+    const set = (await createInstanceSetAsync({
+      world,
+      levels: levels(),
+      maxInstances: 3,
+      entityOpts: { appId: 'debugListForest' },
+    }))!;
+    set.addInstances([placeAt(0), placeAt(1)]);
+    expect(source.getInfos()).toEqual([
+      { label: 'debugListForest', backend: 'GPU', levelCount: 2, instanceCount: 2 },
+    ]);
+
+    world.deleteEntity(set.entityId);
+    expect(source.getInfos()).toEqual([]);
   });
 });

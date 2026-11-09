@@ -40,8 +40,10 @@ let hasWarnedNoCompute = false;
 /** Each set's backend, for the debug readback (`_dbg__InstanceSet.ts`). */
 const backendsBySet = new WeakMap<
   InstanceSet,
-  { backend: InstanceSetBackend; isDisposed: () => boolean }
+  { backend: InstanceSetBackend; isDisposed: () => boolean; label: string; levelCount: number }
 >();
+/** The live sets, for the LOD tab's list (the debug env only: production keeps none). */
+const liveSets = new Set<InstanceSet>();
 
 /** What draws a set: compute culling and indirect draws (WebGPU), or the CPU (WebGL2). */
 export type InstanceSetBackendKind = 'GPU' | 'CPU';
@@ -263,6 +265,7 @@ export const createInstanceSetAsync = async (
     _dispose: () => {
       if (isDisposed) return;
       isDisposed = true;
+      if (IS_DEBUG_ENV) liveSets.delete(set);
       object.removeFromParent();
       drawer.dispose();
       refLevels(levels, false);
@@ -309,8 +312,30 @@ export const createInstanceSetAsync = async (
     },
     addInstances,
   };
-  backendsBySet.set(set, { backend: drawer, isDisposed: () => isDisposed });
+  backendsBySet.set(set, {
+    backend: drawer,
+    isDisposed: () => isDisposed,
+    label,
+    levelCount: levels.length,
+  });
+  if (IS_DEBUG_ENV) liveSets.add(set);
   return set;
+};
+
+/**
+ * The sets not disposed yet, for the debug tools (the debug env only: empty elsewhere).
+ * @internal
+ */
+export const getLiveInstanceSets = (): ReadonlySet<InstanceSet> => liveSets;
+
+/**
+ * A set's label (its owning entity's app id, or its entity id) and level count, for the debug
+ * tools; undefined for a set this module didn't make.
+ * @internal
+ */
+export const getInstanceSetDebugInfo = (set: InstanceSet) => {
+  const entry = backendsBySet.get(set);
+  return entry && { label: entry.label, levelCount: entry.levelCount };
 };
 
 /**
@@ -350,13 +375,19 @@ export const readInstanceSetStatsAsync = async (
   return (await useDebug(ref, true)?._readInstanceSetStatsAsync(set, opts)) ?? null;
 };
 
+/** Lists the sets in the LOD tab: the `instancing()` feature's `onDebug` hook. */
+const registerInstanceSetDebugAsync = async () => {
+  const ref = await loadDebugModuleAsync(() => import('./debug/_dbg__InstanceSet'));
+  useDebug(ref)?._registerInstanceSetDebugSource();
+};
+
 const disposeInstanceSet = (entityId: number, world: ECSWorld) => {
   world.getComponent(entityId, ComponentType.INSTANCE_SET)?._dispose();
 };
 
 /**
  * Installs the instance sets (the `instancing()` feature's install): deleting a set's entity, or
- * removing its `INSTANCE_SET`, disposes the set.
+ * removing its `INSTANCE_SET`, disposes the set; in the debug env the LOD tab lists them.
  * @internal
  */
 export const installInstanceSets = (ctx: FeatureContext) => {
@@ -365,4 +396,6 @@ export const installInstanceSets = (ctx: FeatureContext) => {
     onRemoveComponent: disposeInstanceSet,
     onDeleteEntity: disposeInstanceSet,
   });
+  // Gated like every debug hook: a production build drops the call and the loader
+  if (IS_DEBUG_ENV) ctx.onDebug(registerInstanceSetDebugAsync);
 };
