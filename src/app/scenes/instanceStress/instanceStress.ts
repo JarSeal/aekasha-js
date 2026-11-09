@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
 import {
-  IS_DEBUG_ENV,
   createMaterial,
   createSceneAppLooper,
   createSeededRandom,
@@ -26,6 +25,7 @@ import {
 import type { LodDef } from 'aekasha/lod';
 import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
+import { loadDebugModuleAsync } from 'aekasha/debug';
 
 // GPU-driven culling's measuring and parity scene (docs/plans/p354_gpu-driven-culling.md D12): a
 // square forest of LOD trees on a jittered grid, with the main camera circling inside it on a
@@ -317,8 +317,12 @@ export const scene = async () => {
   if (cameraId === undefined) lwarn(`Instance stress: no camera '${CAMERA_APP_ID}' to move.`);
   else startCamera(world, cameraId);
 
-  if (IS_DEBUG_ENV) {
-    const { installInstanceStressProbe } = await import('./_dbg__instanceStress');
-    await installInstanceStressProbe(world);
-  }
+  // In prod test mode too: the bench harness measures a minified build there
+  // (devTools/bench/instanceStress.ts), which has no stats panels but the probe's own timing
+  const probe = await loadDebugModuleAsync(
+    () => import('./_dbg__instanceStress'),
+    true,
+    'Instance stress probe'
+  );
+  await probe?.current?.installInstanceStressProbe(world);
 };
