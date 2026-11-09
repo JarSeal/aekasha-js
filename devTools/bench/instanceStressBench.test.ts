@@ -103,6 +103,7 @@ describe('formatBenchTables', () => {
         avg: { poolSyncMs: 0.01, lodMs: 0.02, renderMs: 0.5, cpuMs: 1.09, intervalMs: 16.7 },
         levels: [221, 1384, 3392],
         overflow: [0, 0, 0],
+        cameras: [{ name: 'DirectionalLight shadow', drawn: [603, 1492, 0] }],
         state: { levels: [960, 5429, 13611], culled: 0, fading: 0 },
         builds: { nodeBuilds: 3, pipelines: 6, vertex: 3, fragment: 3 },
       },
@@ -112,7 +113,7 @@ describe('formatBenchTables', () => {
       '| 20,000 | GPU | 1.09 ms | 0.01 ms | 0.02 ms | 0.50 ms | 1.50 ms | — |'
     );
     expect(lines).toContain(
-      '| 20,000 | GPU | 221 / 1,384 / 3,392 | 0 / 0 / 0 | 960 / 5,429 / 13,611 | 0 | 0 | 3 nodes, 6 pipelines |'
+      '| 20,000 | GPU | 221 / 1,384 / 3,392 | DirectionalLight shadow: 603 / 1,492 / 0 | 0 / 0 / 0 | 960 / 5,429 / 13,611 | 0 | 0 | 3 nodes, 6 pipelines |'
     );
     // The failed case has no row
     expect(lines.filter((l) => l.startsWith('| 20,000'))).toHaveLength(2);

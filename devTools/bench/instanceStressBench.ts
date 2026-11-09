@@ -166,6 +166,8 @@ export type StressSummary = {
   avg: Record<'poolSyncMs' | 'lodMs' | 'renderMs' | 'cpuMs' | 'intervalMs', number>;
   levels: number[];
   overflow?: number[];
+  /** The set's other cameras (a shadow, a viewport): each one's drawn copies per level */
+  cameras?: { name: string; drawn: number[] }[];
   state?: { levels: number[]; culled: number; fading: number };
   builds: { nodeBuilds: number; pipelines: number; vertex: number; fragment: number };
 };
@@ -226,6 +228,7 @@ export const formatBenchTables = (results: BenchResult[]) => {
       'Trees',
       'Path',
       'Drawn (per level)',
+      'Other cameras: drawn',
       'Overflow',
       'State (per level)',
       'Culled',
@@ -239,6 +242,7 @@ export const formatBenchTables = (results: BenchResult[]) => {
         r.count.toLocaleString('en-US'),
         s.path,
         counts(s.levels),
+        s.cameras?.length ? s.cameras.map((c) => `${c.name}: ${counts(c.drawn)}`).join('; ') : '—',
         s.overflow ? counts(s.overflow) : '—',
         counts(s.state?.levels),
         s.state ? s.state.culled.toLocaleString('en-US') : '—',

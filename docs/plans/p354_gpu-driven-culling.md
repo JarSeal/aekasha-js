@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -928,7 +928,7 @@ after them):
     debug seam and the live-set list fold out of production), so no raise. `features/lod` is 5.4
     against 7 KiB, and every budget is within.
 
-### Phase 3 — Every camera: shadows, viewports, the debug camera
+### Phase 3 — Every camera: shadows, viewports, the debug camera — done
 
 1. **Slots (D6).** Allocate on first sight, release after 120 unused frames, cap at `maxSlots`
    (and warn once past it). Each slot has its draws, lists and args.
@@ -1136,6 +1136,46 @@ From Phase 2 (its "As built"), for these steps:
       has no impostor bake: a bake renders its own scene, which holds no probe (the Node test's
       "a render that doesn't reach the set").
 
+- **The verification** (2026-11-09, Apple M2, Chrome, headless WebGPU):
+  - **The cost**, on a `yarn build:test` build (minified, `VITE_ECS_MAX_ENTITIES=1110000`), the
+    bench's debug mode (for the stats panels), 1600 × 900, the orbit, 600 frames, fades off:
+
+    | Trees | 20k | 100k | 200k | 500k | 1M |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | The set: GPU frame, no shadow → the sun's | 1.46 → 7.62 | 3.04 → 8.61 | 3.65 → 7.87 | 4.31 → 9.02 | 4.84 → 8.69 ms |
+    | The set: compute, no shadow → the sun's | 0.06 → 0.14 | 0.17 → 0.23 | 0.25 → 0.33 | 0.41 → 0.67 | 0.61 → 1.07 ms |
+    | The set: CPU frame with the sun's | 1.40 | 1.39 | 1.48 | 1.32 | 1.53 ms |
+    | The sun's slot drew (L0 / L1; L2 casts nothing) | 829 / 2,022 | 790 / 2,212 | 780 / 2,210 | 789 / 2,137 | 778 / 2,151 |
+    | The pools: GPU frame, no shadow → the sun's | 2.77 → 8.59 | 4.93 → 13.11 | | | ms |
+    | The pools: CPU frame, no shadow → the sun's | 4.49 → 4.52 | 12.97 → 14.38 | | | ms |
+
+    - **The shadow's cost is Phase 0's: a fixed cost plus the casting instances in its frustum,
+      whatever the count.** The sun's slot draws about 3k copies from 20k to 1M trees (D6's
+      "about 1k" was Phase 0's tighter sphere and older measure; Phase 0 part 2 counted about
+      570 / 2,500), and the GPU frame with it stays at 7.6-9.0 ms. The pools' shadow grows with
+      the count: 13.1 ms at 100k against the set's 8.6.
+    - **The compute with two slots is 1.07 ms at 1M**, under the 2 ms that would have made §5's
+      single dispatch or the cell pre-cull a step here (Phase 0's spike: 2.13 ms). Left for later.
+    - The CPU frame with the shadow stays flat at 1.3-1.5 ms (0.5-0.9 ms without it: the shadow
+      render's submit).
+    - **Builds: 4 node builds and 7 pipelines without the shadow** (Phases 1-2: 3 and 6), 10 and
+      12 with it. The extra one is a second build of the tree material without lights: the
+      scene's first frames render it through the debug camera (the active camera until the
+      scene's own exists) before the scene's JSON lights are created, and the set now draws for
+      that camera (a slot). Its fragment program's outgoing light is the emissive alone. The
+      pools pay the same once a load spans frames (Phase 1's "4 and 4 from 100k up, not looked
+      into"). It's the engine rendering a half-built scene, not this plan's: one extra compile
+      per level material on the load.
+  - **`yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`**: 17 runs pass.
+  - **`yarn verify:baselines`, then `--update`**: the lazy `InstanceSetGpu.js` 4.1 → 4.9 kB gzip
+    (the slots, the level mask, the shadow slot), `instanceStress.js` 2.1 → 2.6 kB (its lights,
+    viewport and stats); the API's `setMaterialLodFade` → `setObjectLodFadeNode`, `ALL_LEVELS`,
+    `InstanceSetDebugSlot` added (`@internal`), and `InstanceSetSlotStats` on
+    `aekasha/instancing`. The main chunk and both embeds unchanged; docs 100%; no debug code in
+    any build.
+  - **`yarn sbp --profile all`**: every budget within (`features/instancing` at 5 KiB since
+    step 1).
+
 ### Phase 4 — The CPU fallback (WebGL2)
 
 1. **`InstanceSetCpu.ts` (D9).** An `InstancedMesh` per level with its `lodFade` attribute. The
@@ -1148,6 +1188,25 @@ From Phase 2 (its "As built"), for these steps:
 3. **Node tests.** The CPU backend's per-level membership after a scripted camera path matches a
    loop of `LodRules.ts` written in the test, and the swap-remove keeps every instance in
    exactly one level, or two while it fades.
+
+From Phase 3 (its "As built"), for these steps:
+
+- **No slots on the CPU backend.** three culls each level's `InstancedMesh` per camera by its
+  bounds, so every camera (shadows included) is three's, as with the pool. Each level mesh takes
+  its level's `castShadow`; VSM then draws a non-casting level into the shadow map as a receiver,
+  as the pools do (the set's GPU slots don't). The backend's `debugBuffers` is absent, so
+  `readInstanceSetStatsAsync` resolves `null` and the LOD tab's `cameraCount` is 0: give the CPU
+  backend a readback of its own (`drawn` from its level meshes' counts, `slots: []`, the state
+  from its typed arrays) so `instanceStress`' `measure()` and the bench read it like the GPU one.
+- **The dither is the pool's**: an `InstancedMesh`'s `lodFade` attribute (`createLodFadeAttribute`),
+  not `setObjectLodFadeNode`, which is the GPU draws' per-object node.
+- **Once a frame**: the loop runs at `APP_RENDER_SYNC_ORDER.LOD_SELECTION`, after
+  `lodSelectionSystem` wrote the frame's inputs, so Phase 3's rule (the state moves in the frame's
+  first dispatch after the inputs) holds by its order. Its "no `lod()`" case is the inputs' frame
+  still -1 at that point.
+- `instanceStress` has `?stressShadow=true`, `?stressLight=spot|point` and `?stressViewport=true`:
+  Phase 3's shadow and viewport checks (a snapshot pair against the pools per light, at 5k and
+  `STILL`) apply to the CPU backend unchanged.
 
 **Verification:**
 

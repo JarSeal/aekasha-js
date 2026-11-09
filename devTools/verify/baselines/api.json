@@ -431,6 +431,7 @@
       "createGpuInstanceSetBackend": "Variable"
     },
     "src/_engine/features/instancing/InstanceSetNodes.ts": {
+      "ALL_LEVELS": "Variable",
       "ARGS_INSTANCE_COUNT": "Variable",
       "ARGS_STRIDE": "Variable",
       "createInstanceSetFetch": "Function",
@@ -454,6 +455,8 @@
       "InstanceSetBackendParams": "Interface",
       "InstanceSetData": "Interface",
       "InstanceSetDebugBuffers": "Interface",
+      "InstanceSetDebugSlot": "Interface",
+      "InstanceSetSlotStats": "Interface",
       "InstanceSetStats": "Interface"
     },
     "src/_engine/features/instancing/InstancingFeature.ts": {
@@ -2700,7 +2703,7 @@
       "LOD_FADE_OPAQUE": "Variable",
       "lodDither": "Function",
       "setLodObjectFade": "Function",
-      "setMaterialLodFade": "Function",
+      "setObjectLodFadeNode": "Function",
       "setObjectVisibilityFade": "Function"
     },
     "src/_engine/kernel/render/Object3DHelpers.ts": {
@@ -4852,6 +4855,7 @@
       "InstanceRange",
       "InstanceSet",
       "InstanceSetBackendKind",
+      "InstanceSetSlotStats",
       "InstanceSetStats",
       "InstancedLodPool",
       "InstancedLodPoolLevel",
