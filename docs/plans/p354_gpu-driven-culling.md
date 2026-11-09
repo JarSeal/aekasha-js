@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -820,7 +820,7 @@ Every measurement goes in the phase's "As built" with its conditions, as Phase 0
     - Builds: 3 node builds and 6 pipelines (3 render, 3 compute) at every count. The pool path shows 4
       and 4 from 100k up (3 and 3 below), not looked into.
 
-### Phase 2 — Cross-fades and the debug options
+### Phase 2 — Cross-fades and the debug options — done
 
 1. **The fades in the select.** Add the state's outgoing level and progress, the fade's start,
    its mid-fade change and its advance by the frame inputs' step (D3's rules, ported). The two
@@ -845,6 +845,89 @@ Every measurement goes in the phase's "As built" with its conditions, as Phase 0
   held fade, the `STILL` camera).
 - Fades cost no measurable compute or GPU frame, as Phase 0 found, now on the minified build.
 
+**As built** (steps 1-4, 2026-11-09, commits `3bf645a6` to `360a3b5a`, and the verification
+after them):
+
+- **Step 1, the fades in the select.** `InstanceSetNodes.ts`' cull ports `stepLodInstanceState`
+  after `selectLodTarget`. The state word keeps the level and the outgoing level. The progress is
+  an `f32` buffer of its own (D4's 8 B), read only while a fade runs and written only when the
+  state changes or a fade runs. A list entry's fade byte is `127 + round(t × 127)` for the
+  incoming copy and `round(t × 127)` for the outgoing one: both copies decode from one rounded
+  `t`, so they split the pixels exactly (127 steps a side, not D4's 255; 254 draws whole). The
+  mode gains `ADVANCE`: under `freeze` (or with no selection camera) the levels hold and the fades
+  run, as `lodFadeSystem` does. `FORCE` now fades as the ECS path's forced level does, and
+  without `lod()` it draws level 0 unfaded. The fade's delta is a uniform,
+  `getLodFadeDelta(inputs.fadeStep, lod.fadeSeconds ?? inputs.fadeSeconds)`, so the shader only
+  adds and clamps at `1 − ε`. `InstanceSetStats.state` gained `fading`, and a fading instance
+  counts in both its levels, as a pool's level meshes hold it.
+- **Step 2, the mask.** `LodFadeMaskNode`'s third source is keyed by material:
+  `setMaterialLodFade(material, fade)` (`@internal`). A material with its own fade uses it in
+  place of the object's LOD fade, still ANDed with the object's visibility fade. The fetch returns
+  `{ position, fade }`; the fade is a flat varying decoded from the entry's byte. The set calls
+  `enableLodDither` on its sources before building the variants, which copy the whole mask.
+- **Step 3, the debug options.** They already reached the set through the frame inputs (steps
+  1-2). The LOD tab's "Force level" listed only the `LOD` entities' levels, so on a set path it
+  offered "Level 0" alone. That needed D11's seam a step early: `registerLodContentDebugSource` /
+  `getLodContentDebugSources` (`kernel/ecs/LodTargets.ts`, `@internal`, called only by debug code).
+  `instancing()`'s `onDebug` loads `_dbg__InstanceSet.ts`, which registers a source over the
+  front's live sets (`getLiveInstanceSets`, kept in the debug env only). The check drives the LOD
+  tab's controls through the test bridge (chosen over making `setLodDebugOptions` public or adding
+  a bridge method): `devTools/bench/instanceStressLodTab.ts`, with its pure parts tested
+  (`instanceStressLodTabChecks.ts`). Its held fade dispatches the time scale's keys inside the
+  page around the scene's `measure(75)`, so both paths advance exactly 75 frames.
+- **Step 4, the tab folder.** "Instance sets" has a field per set, labelled with the set's name,
+  in 19-character lines (the Entities counts' width; a table of three columns wrapped in the
+  drawer): the backend and instances; per level the copies drawn (the main camera's) over the
+  instances selected; then culled, fading, overflow, and the triangles drawn (the drawn copies ×
+  each level's triangles). The figures come from a `state: true` readback that each refresh of
+  the open tab asks for, one at a time per set, so a closed tab reads nothing. A set added or
+  removed, or another level count, rebuilds the tab.
+
+- **The verification** (2026-11-09, Apple M2, Chrome, headless WebGPU):
+  - **Parity, frame for frame** (step 1's bench, 20k, the held orbit, 300 frames, the dev server,
+    debug env): the per-level state and the fading count are the pool's exactly.
+
+    | Fades | Pools: per level / fading | Set: per level / fading |
+    | --- | --- | --- |
+    | off | 960 / 5,429 / 13,611, 0 | 960 / 5,429 / 13,611, 0 |
+    | 0.25 s | 991 / 5,522 / 13,685, 198 | 991 / 5,522 / 13,685, 198 |
+    | 1 s | 1,110 / 5,851 / 13,963, 924 | 1,110 / 5,851 / 13,963, 924 |
+
+    Phase 0's frame of difference (220 against 198) is gone: with the ε end, the pool's 0.25 s
+    fade lasts 15 frames too.
+  - **The LOD tab check** (20k, 0.25 s): both paths agree at every checkpoint. Settled
+    861 / 4,763 / 14,376. Time scale 0, then Force level 1: 15,237 fading, held at 0. 75 frames at
+    0.1: held at 0.5. Time scale 1: 0 / 20,000 / 0. Force level Off: 861 / 5,818 / 13,321 (from
+    level 1, the hysteresis keeps 1,055 of level 2's band at level 1, on both paths). Freeze, then
+    120 frames of the orbit: unchanged.
+  - **The held fade's snapshot pair** (1024 × 576, fades held at 0.5): the set's against the
+    pools' differs in 0.01% of pixels (mean 0.004), within the scene runner's tolerance. Had the
+    set drawn both copies of its 15k fading trees whole, their silhouettes would differ far more.
+  - **The cost**, on a `yarn build:test` build (minified), the orbit, 600 frames, debug mode (for
+    the stats panels), fades off / 0.25 s:
+
+    | Trees | 20k | 100k | 200k | 500k | 1M |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | Compute | 0.06 / 0.06 | 0.19 / 0.19 | 0.30 / 0.28 | 0.46 / 0.55 | 0.80 / 0.80 ms |
+    | GPU frame | 1.53 / 1.53 | 3.16 / 3.21 | 3.79 / 3.83 | 4.29 / 4.49 | 4.60 / 4.73 ms |
+    | Fading | 0 / 229 | 0 / 762 | 0 / 1,980 | 0 / 5,331 | 0 / 8,163 |
+
+    The fades cost no measurable compute or GPU frame: every pair is within Phase 1's ±0.5 ms
+    spread. The compute matches Phase 1's (0.04-0.69 ms). The CPU frame in prod test mode, fades
+    on, measured 0.39-0.56 ms at 20k and 1M on a quiet machine. A run straight after the long
+    verification chain read 1.0-1.2 ms with fades off and on alike, so that was the machine's
+    state. Builds: 3 node builds and 6 pipelines at every count, as in Phase 1. No overflow.
+  - **`yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`**: 17 runs pass. The
+    pool scenes and their probe hashes are unchanged; `instanceStress@set` is within tolerance
+    of its Phase 1 snapshot (fades off: mean 0.001, max 9/255).
+  - **`yarn verify:baselines --update`**: the lazy `InstanceSetGpu.js` 3.7 → 4.1 kB gzip (the
+    fades and the dither), and ten `@internal` exports added (the debug seam, `setMaterialLodFade`,
+    the fade byte's constants, the live sets). The main chunk and both embeds are unchanged; docs
+    100%; no debug code in any build.
+  - **`yarn sbp --profile all`**: `features/instancing` is still 3.9 kB against its 4 KiB (the
+    debug seam and the live-set list fold out of production), so no raise. `features/lod` is 5.4
+    against 7 KiB, and every budget is within.
+
 ### Phase 3 — Every camera: shadows, viewports, the debug camera
 
 1. **Slots (D6).** Allocate on first sight, release after 120 unused frames, cap at `maxSlots`
@@ -861,6 +944,20 @@ Every measurement goes in the phase's "As built" with its conditions, as Phase 0
 5. **Other cameras.** A viewport (`viewports()`), the debug camera, `takeSnapshotAsync` of the
    root scene, and the pre-warm camera (`compileAsync`). Each draws its frustum of the main
    camera's levels.
+
+From Phase 2 (its "As built"), for these steps:
+
+- **The shadow pass's dither.** A set variant's mask finds its fade by the material being built
+  (`setMaterialLodFade`, keyed on `builder.material`). Step 4 checks what the shadow pass builds a
+  set draw with: if it's an override material rather than the variant, the lookup misses, and the
+  set's two copies of a fade cast whole. Then the fade moves to a key that the shadow build also
+  sees (the drawn object, or the variant's `castShadowNode` / `maskShadowNode`).
+- **A slot's copies.** The cull already appends a fading instance's two copies from the state, so
+  a later slot's dispatch (`HOLD`) appends them with the same fade bytes. The shadow slot needs
+  only its casting levels' lists.
+- **The tab per slot (D11).** `LodContentDebugStats` has one camera's `drawn` and `overflow`; this
+  phase makes them per slot (each slot's camera named), and `readInstanceSetStatsAsync` reads
+  every slot's counters.
 
 **Verification:**
 

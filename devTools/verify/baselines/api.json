@@ -420,6 +420,8 @@
       "createInstanceSetAsync": "Function",
       "CreateInstanceSetOptions": "Interface",
       "getInstanceSetBackend": "Function",
+      "getInstanceSetDebugInfo": "Function",
+      "getLiveInstanceSets": "Function",
       "installInstanceSets": "Function",
       "InstanceSet": "Interface",
       "InstanceSetBackendKind": "TypeAlias",
@@ -433,6 +435,8 @@
       "ARGS_STRIDE": "Variable",
       "createInstanceSetFetch": "Function",
       "createInstanceSetPasses": "Function",
+      "FADE_BYTE_OPAQUE": "Variable",
+      "FADE_STEPS": "Variable",
       "InstanceSetBuffers": "TypeAlias",
       "InstanceSetPassesOptions": "TypeAlias",
       "InstanceSetPassUniforms": "TypeAlias",
@@ -2338,10 +2342,15 @@
       "initECSStressTest": "Function"
     },
     "src/_engine/kernel/ecs/LodTargets.ts": {
+      "getLodContentDebugSources": "Function",
       "getLodFrameInputs": "Function",
       "getLodTargets": "Function",
+      "LodContentDebugInfo": "TypeAlias",
+      "LodContentDebugSource": "TypeAlias",
+      "LodContentDebugStats": "TypeAlias",
       "LodFrameInputs": "TypeAlias",
       "LodTargetEntry": "TypeAlias",
+      "registerLodContentDebugSource": "Function",
       "registerLodTarget": "Function",
       "setLodFrameInputs": "Function"
     },
@@ -2691,6 +2700,7 @@
       "LOD_FADE_OPAQUE": "Variable",
       "lodDither": "Function",
       "setLodObjectFade": "Function",
+      "setMaterialLodFade": "Function",
       "setObjectVisibilityFade": "Function"
     },
     "src/_engine/kernel/render/Object3DHelpers.ts": {
