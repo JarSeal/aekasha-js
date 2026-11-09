@@ -50,6 +50,8 @@ export interface InstanceSetBackendParams {
   maxSlots: number;
   /** Whether the instances receive shadows (every level). */
   receiveShadow: boolean;
+  /** Compile the draws once `object` is added to the root scene (`preWarmObjectsAsync`). */
+  preWarm: boolean;
   /** For warnings and the debug tools: the owning entity's app id, or the entity id. */
   label: string;
 }

@@ -9,6 +9,8 @@ import {
   enableLodDither,
   LOD_FADE_OPAQUE,
 } from '../../kernel/render/LodFade';
+import { preWarmObjectsAsync } from '../../kernel/mesh/Mesh';
+import { runWhenSceneLoadSettled } from '../../kernel/scene/SceneLoader';
 import { lwarn } from '../../utils/Logger';
 import {
   DEFAULT_LOD_HYSTERESIS,
@@ -399,6 +401,20 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   };
 
   addStep(world, step);
+  if (params.preWarm) {
+    // Once the group is added (the caller adds it after the front resolves): one compile of the
+    // level meshes. They're the objects passed, not the group: the compile unculls only those, and
+    // a level mesh's bounds are empty until its instances are written. Empty ones compile too
+    // (three's compile doesn't skip a count of 0)
+    const onAdded = () => {
+      params.object.removeEventListener('added', onAdded);
+      // After the load running (a set made by scene code): its lights are in the scene then
+      runWhenSceneLoadSettled(() => {
+        if (params.object.parent) void preWarmObjectsAsync(meshes, `instance set "${label}"`);
+      });
+    };
+    params.object.addEventListener('added', onAdded);
+  }
 
   const dispose = () => {
     removeStep(world, step);

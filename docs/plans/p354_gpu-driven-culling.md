@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -1342,7 +1342,7 @@ From Phase 3 (its "As built"), for these steps:
     also waits for a new window global, not for the old one to go: a small scene's reload swaps
     them between two polls.
 
-### Phase 5 — Ranges, moving instances, impostor levels, memory
+### Phase 5 — Ranges, moving instances, impostor levels, memory — done
 
 1. **Removal and reuse (D1).** `removeInstances(range)` marks the range's state dead (skipped
    by the select and the culls), and a free list hands it to a later `addInstances` of equal or
@@ -1652,6 +1652,60 @@ From Phase 4 (its "As built"), for these steps:
   - `yarn sbp`: every budget within; `features/instancing` 4.6 kB (unchanged: the source folds
     out of production), the lazy `InstanceSetGpu.js` 5.3 → 5.5 kB (the forwarding and the
     wrappers' dispose). `yarn test` (322 files), lint and both type-checks pass.
+- **Step 6, `preWarm`.** `CreateInstanceSetOptions.preWarm` (default false) reaches the backend
+  as a param; the front adds nothing else. Each backend compiles through `preWarmObjectsAsync`
+  once the set's group is `added` (the caller adds it after the front resolves, so it can't be at
+  creation):
+  - **GPU**: the group. The compile goes through the drawing pipeline like a render: the probe
+    takes a slot for the compile's camera (the pre-warm camera, released after 120 frames unused,
+    or under PostFX the scene pass's camera), and the slot's draws, under the probe, are projected
+    and built in the same call: every (level, group) draw, so every source's variant, whose build
+    every slot shares. The compile's `finishRenderList` dispatches, which builds the three compute
+    pipelines (synchronous in three, but there, not in a frame). Not D8's "a draw per (material,
+    level) at slot 0": a slot is per camera, and any slot's draws are the same builds.
+  - **CPU**: the level meshes, not the group: `preWarmObjectsAsync` unculls only the objects it's
+    given, and a level mesh's bounds are empty until its instances are written. An empty one
+    compiles too (three's compile path doesn't skip a `count` of 0).
+  - **Found: a pre-warm during a scene load compiled the wrong variant.** A load runs the scene
+    code before it creates the scene data's lights and meshes (`createNextSceneObject3Ds`, after
+    `setCurrentScene` and the created hooks), so a set made by scene code was compiled without
+    the scene's lights: a variant of a lit material no frame draws (the WGSL diff: no irradiance,
+    no direct light). `kernel/scene/SceneLoader.ts` gained `runWhenSceneLoadSettled(run)`
+    (`@internal`): now, or once the running load has settled (a one-shot `loadSettled` hook), and
+    the backends pre-warm through it. `runSceneLoadSettledHooks` now walks a copy of the hooks, as
+    the created and entered ones do: a hook removing itself skipped the next one. A lit mesh that
+    scene code makes with `createMeshEntity({ preWarm })` likely compiles without the lights the
+    same way (`preWarmMesh` queues its compile at once): not checked or changed here.
+  - **A set made by scene code needs no pre-warm**, measured on `instanceStress`: the load renders
+    frames while its hooks await (behind the loader), and one of them builds the set's lit
+    pipeline synchronously; the first frame after the load builds nothing, with `preWarm` or
+    without. (Every lit material in the scene builds twice: once in the load's first render, at
+    `setCurrentScene`, before the lights exist, and again once they do. Not the set's.) `preWarm`
+    is for a set made during play.
+  - Tests: the backends' (each compiles once its group is added, once, the GPU one the group,
+    whose projection then lists its slot's draws, the CPU one its level meshes; nothing without
+    it), the front's (the option reaches the backend, default false) and `runWhenSceneLoadSettled`'s
+    in `SceneLoader.test.ts` (at once outside a load; inside one after the entered hooks, each
+    once, two in a row both run, another `loadSettled` hook still runs; after a failed load too).
+    The index walk over the live hooks fails two of them.
+  - `instanceStress` gained `?stressPreWarm=true` (its set made with `preWarm`).
+  - **Verified** (a scratch script, Apple M2, Chrome, headless WebGPU, the dev server, debug env,
+    `instanceStress` at 20k `STILL`): after the scene is ready, the page makes a second set of a
+    material the scene doesn't use (a Phong sphere, 2,000 instances in front of the camera) and
+    adds it; `GPUDevice`'s pipeline and shader calls are wrapped (synchronous or async, and in which
+    `requestAnimationFrame` callback), and the callbacks timed, 40 frames:
+
+    | Backend | `preWarm` | The set's builds in a frame | Longest callback | Frame intervals |
+    | --- | --- | --- | --- | --- |
+    | GPU (3 runs) | off | 7 in the first frame drawing it: 3 compute and 1 render pipeline, 3 shader modules | 5.7-9.2 ms | 15.8-17.1 ms |
+    | GPU (3 runs) | on | none: between frames at the add, the render pipeline async | 0.7 ms | 16.1-16.6 ms |
+    | CPU, forced (2 runs) | off | its render pipeline, synchronous | 5.6-6.5 ms | one run 257 ms once |
+    | CPU, forced (2 runs) | on | none (async) | 2.3-2.4 ms (the backend's loop) | 15.9-16.5 ms |
+
+    Both draw the whole set afterwards (1,654 copies on the GPU's main camera, 2,000 on the CPU's
+    level mesh). The pre-warm still runs on the main thread (the node builds; three's compile
+    yields every 8 ms), between frames rather than in one, and three skips a draw whose async
+    pipeline isn't ready, so a pre-warmed set can show a frame or two after it's added.
 
 **Verification:**
 

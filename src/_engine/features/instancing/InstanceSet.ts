@@ -89,6 +89,11 @@ export interface CreateInstanceSetOptions {
    * (`maxSlots` × levels × `maxVisible` × 4 bytes). A camera past it draws none of the set until
    * a slot frees (one unused for 120 frames). Default 8. */
   maxSlots?: number;
+  /** Compiles the set's draws ahead of their first frame, once `object` is added to the root
+   * scene (the engine's compile queue, as a pre-warmed mesh's), so the frame the set first shows in
+   * doesn't stall on its shaders. The shadow pass compiles on its first frame, as a mesh's. Default
+   * false. */
+  preWarm?: boolean;
   /** The owning entity's options (eg. `persistent` for a set that outlives the scene). */
   entityOpts?: CoreEntityOpts;
 }
@@ -304,6 +309,7 @@ export const createInstanceSetAsync = async (
     maxVisible,
     maxSlots,
     receiveShadow,
+    preWarm: opts.preWarm === true,
     label,
   };
   const drawer = createBackend(params);

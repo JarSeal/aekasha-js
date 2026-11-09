@@ -12,6 +12,8 @@ const env = vi.hoisted(() => ({
   frame: 0,
   inputs: { frame: -1 } as Record<string, unknown>,
   warnings: [] as string[],
+  /** Each `preWarmObjectsAsync` call's objects. */
+  preWarmed: [] as unknown[][],
 }));
 
 vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
@@ -21,6 +23,13 @@ vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
 vi.mock(import('../../kernel/ecs/LodTargets'), async (importOriginal) => ({
   ...(await importOriginal()),
   getLodFrameInputs: () => env.inputs as never,
+}));
+vi.mock(import('../../kernel/mesh/Mesh'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  preWarmObjectsAsync: (objects) => {
+    env.preWarmed.push([...objects]);
+    return Promise.resolve();
+  },
 }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -107,7 +116,8 @@ const createSet = (
   lod: InstanceSetBackendParams['lod'] = {
     cullScreenSize: CULL_SCREEN_SIZE,
     fadeSeconds: FADE_SECONDS,
-  }
+  },
+  preWarm = false
 ) => {
   const object = new THREE.Group();
   const backend = createCpuInstanceSetBackend({
@@ -119,6 +129,7 @@ const createSet = (
     maxVisible: count,
     maxSlots: 8,
     receiveShadow: true,
+    preWarm,
     label: 'test',
   });
   const matrices = createMatrices(count);
@@ -656,5 +667,32 @@ describe('the CPU backend: the meshes, the bounds and the system', () => {
     }
     backend.dispose();
     expect(disposed).toEqual(['test level 0', 'test level 1', 'test level 2']);
+  });
+});
+
+describe('the CPU backend: preWarm (p354 Phase 5 step 6)', () => {
+  test('compiles its level meshes once its group is added, once', () => {
+    env.preWarmed = [];
+    const { world } = createStubWorld();
+    const { backend, object } = createSet(world, 4, undefined, true);
+    // Not before: the caller adds the group after the front resolves
+    expect(env.preWarmed).toEqual([]);
+    const scene = new THREE.Scene();
+    scene.add(object);
+    // The meshes, not the group: the compile unculls only the objects it's given
+    expect(env.preWarmed).toEqual([backend.debugCpu!.meshes]);
+    object.removeFromParent();
+    scene.add(object);
+    expect(env.preWarmed).toHaveLength(1);
+    backend.dispose();
+  });
+
+  test('compiles nothing without it', () => {
+    env.preWarmed = [];
+    const { world } = createStubWorld();
+    const { backend, object } = createSet(world, 4);
+    new THREE.Scene().add(object);
+    expect(env.preWarmed).toEqual([]);
+    backend.dispose();
   });
 });

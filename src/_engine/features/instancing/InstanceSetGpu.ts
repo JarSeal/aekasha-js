@@ -12,6 +12,8 @@ import {
   setObjectInstanceMatrixNode,
 } from '../../kernel/render/InstanceMatrix';
 import { getRenderer } from '../../kernel/render/Renderer';
+import { preWarmObjectsAsync } from '../../kernel/mesh/Mesh';
+import { runWhenSceneLoadSettled } from '../../kernel/scene/SceneLoader';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 import { DEFAULT_LOD_HYSTERESIS, getLodFadeDelta } from '../../utils/LodRules';
@@ -578,6 +580,21 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   setObjects.set(probe, { set, slot: null, casts: false });
   params.object.add(probe);
   addLiveSet(renderer);
+  if (params.preWarm) {
+    // Once the group is added (the caller adds it after the front resolves): one compile of it.
+    // The probe takes a slot for the compile's camera (the pre-warm camera's, released unused, or
+    // the render pipeline's scene camera), and its draws, under the probe, are projected and built
+    // in the same call; the compile's dispatch builds the passes' compute pipelines
+    const onAdded = () => {
+      params.object.removeEventListener('added', onAdded);
+      // After the load running (a set made by scene code): its lights are in the scene then
+      runWhenSceneLoadSettled(() => {
+        if (params.object.parent)
+          void preWarmObjectsAsync([params.object], `instance set "${label}"`);
+      });
+    };
+    params.object.addEventListener('added', onAdded);
+  }
 
   const writeInstances = (start: number, matrices: Float32Array, count: number) => {
     for (let i = 0; i < count; i++) {

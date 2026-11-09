@@ -146,5 +146,6 @@ export const runSceneEnteredHooksAsync = async () => {
  * @internal
  */
 export const runSceneLoadSettledHooks = () => {
-  for (let i = 0; i < sceneHooks.length; i++) sceneHooks[i].loadSettled?.();
+  // A copy: a hook may remove itself (runWhenSceneLoadSettled's)
+  for (const hooks of sceneHooks.slice()) hooks.loadSettled?.();
 };

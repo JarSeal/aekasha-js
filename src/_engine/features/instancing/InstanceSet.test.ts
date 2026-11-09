@@ -125,6 +125,20 @@ describe('createInstanceSetAsync: the options', () => {
     }
   });
 
+  test('hands preWarm to the backend, default false', async () => {
+    const set = await createInstanceSetAsync({ world, levels: levels(), maxInstances: 10 });
+    expect((env.params as InstanceSetBackendParams).preWarm).toBe(false);
+    const warmed = await createInstanceSetAsync({
+      world,
+      levels: levels(),
+      maxInstances: 10,
+      preWarm: true,
+    });
+    expect((env.params as InstanceSetBackendParams).preWarm).toBe(true);
+    world.deleteEntity(set!.entityId);
+    world.deleteEntity(warmed!.entityId);
+  });
+
   test('maxSlots defaults to 8', async () => {
     const set = await createInstanceSetAsync({ world, levels: levels(), maxInstances: 10 });
     expect((env.params as InstanceSetBackendParams).maxSlots).toBe(8);

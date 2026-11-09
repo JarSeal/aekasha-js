@@ -26,11 +26,20 @@ const env = vi.hoisted(() => ({
   buffers: null as unknown,
   /** Each set's fetch (its stand-in), in creation order */
   fetches: [] as unknown[],
+  /** Each `preWarmObjectsAsync` call's objects */
+  preWarmed: [] as unknown[][],
 }));
 
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
   ...(await importOriginal()),
   getRenderer: () => env.renderer as THREE.WebGPURenderer,
+}));
+vi.mock(import('../../kernel/mesh/Mesh'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  preWarmObjectsAsync: (objects) => {
+    env.preWarmed.push([...objects]);
+    return Promise.resolve();
+  },
 }));
 vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -150,6 +159,7 @@ const createSet = (
     noneCast?: boolean;
     maxInstances?: number;
     material?: THREE.Material;
+    preWarm?: boolean;
   } = {}
 ) => {
   const object = new THREE.Group();
@@ -176,6 +186,7 @@ const createSet = (
     maxVisible: 16,
     maxSlots: opts.maxSlots ?? 8,
     receiveShadow: true,
+    preWarm: opts.preWarm ?? false,
     label: 'test',
   };
   // The passes' stand-in hands this set's uniforms to the stub's compute
@@ -597,5 +608,27 @@ describe('the GPU backend: memory (p354 Phase 5 step 5)', () => {
     // Once
     geometry.dispose();
     for (const buffer of levelBuffers) expect(disposes.get(buffer)).toBe(1);
+  });
+});
+
+describe('the GPU backend: preWarm (p354 Phase 5 step 6)', () => {
+  test('compiles its group once the group is added, once: the compile takes a slot and builds its draws', () => {
+    env.preWarmed = [];
+    // createSet adds the group to its scene
+    const { object, scene } = createSet({ preWarm: true });
+    expect(env.preWarmed).toEqual([[object]]);
+    object.removeFromParent();
+    scene.add(object);
+    expect(env.preWarmed).toHaveLength(1);
+    // What the compile projects: the probe takes its camera a slot, and lists that slot's draws
+    const listed = render(scene, createCamera());
+    expect(listed).toHaveLength(LEVELS);
+    expect(env.dispatches).toHaveLength(1);
+  });
+
+  test('compiles nothing without it', () => {
+    env.preWarmed = [];
+    createSet();
+    expect(env.preWarmed).toEqual([]);
   });
 });

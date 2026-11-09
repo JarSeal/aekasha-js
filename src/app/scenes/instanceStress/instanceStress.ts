@@ -89,7 +89,7 @@ export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
  * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=`,
  * `?stressLight=`, `?stressViewport=`, `?stressMove=`, `?stressStream=`, `?stressStreamFar=` and
- * `?stressOrbitSeconds=` and `?stressImpostor=` (the measuring harness's). */
+ * `?stressOrbitSeconds=`, `?stressImpostor=` and `?stressPreWarm=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -114,6 +114,9 @@ export const instanceStressSettings = {
   streamFar: undefined as number | undefined,
   /** The last level an impostor of level 0 (both paths), casting shadows */
   impostor: 'NONE' as InstanceStressImpostor,
+  /** The set path's set is created with `preWarm` (p354 Phase 5 step 6): its draws compile once
+   * it's added, ahead of its first frame */
+  preWarm: false,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -194,6 +197,7 @@ const readUrlOverrides = () => {
     instanceStressSettings.fadeSeconds = Number(fadeSeconds);
   }
   instanceStressSettings.orbitHold = params.get('stressOrbitHold') === 'true';
+  instanceStressSettings.preWarm = params.get('stressPreWarm') === 'true';
 };
 
 /** The tree's mesh levels, the first `count` of them (an impostor replaces the last: building
@@ -355,6 +359,7 @@ const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) 
     levels,
     maxInstances: Math.max(instanceStressState.count, 1),
     lod: createForestLod(),
+    preWarm: instanceStressSettings.preWarm,
     entityOpts: { appId: 'instanceStressForest' },
   });
   if (!set) return;
