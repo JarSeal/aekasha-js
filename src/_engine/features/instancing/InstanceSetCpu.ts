@@ -141,6 +141,8 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
 
   let extent = 0;
   let steppedFrame = -1;
+  /** The main loop frame of the set's first step (with instances). */
+  let firstFrame = -1;
   let hasWarnedNoLod = false;
 
   /** Appends instance `i`'s copy to `level`'s mesh: its slot. */
@@ -228,6 +230,7 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const step = () => {
     const frame = getMainLoopFrame();
     if (steppedFrame === frame || extent === 0) return;
+    if (firstFrame < 0) firstFrame = frame;
     const inputs = getLodFrameInputs();
     let mode = MODE_FORCE;
     let forced = 0;
@@ -239,8 +242,11 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       if (inputs.forceLevel >= 0) forced = Math.min(inputs.forceLevel, lastLevel);
       // `freeze` (or no camera) holds the levels only: the fades run
       else mode = inputs.hasCamera && !inputs.isFrozen ? MODE_SELECT : MODE_ADVANCE;
-    } else if (inputs.frame < 0) {
-      // No lod(): level 0, as an instanced LOD pool draws without it, and no fades
+    } else if (inputs.frame < 0 && frame > firstFrame) {
+      // No inputs a whole frame after the set's first step (not only a world that ran before
+      // lod()'s wrote them): no lod(). Level 0, as an instanced LOD pool draws without it, and no
+      // fades. Concluded on the first step, a band of instances would stay a level finer once
+      // the selection ran (the hysteresis from level 0: the GPU backend's Phase 3 finding)
       if (hasLevelsToSelect && !hasWarnedNoLod) {
         hasWarnedNoLod = true;
         lwarn(
@@ -248,7 +254,8 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         );
       }
     } else {
-      // Not this frame's inputs (lod() didn't select this frame): the levels and fades hold
+      // Not this frame's inputs (lod() didn't select this frame, or not yet): the levels and
+      // fades hold
       return;
     }
     steppedFrame = frame;
