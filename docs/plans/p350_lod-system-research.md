@@ -1,4 +1,4 @@
-Status: epic, in progress | Tiers 0-1, p351, p058 and p353 implemented; p354 open
+Status: epic, in progress | Tiers 0-1, p351, p058 and p353 implemented; p354 open (its Phase 0 spike done, 2026-11-09)
 Category: Rendering, LOD
 Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md, \_DONE_p353_macro-streaming-grid.md, p354_gpu-driven-culling.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)

@@ -1355,6 +1355,88 @@
         "skybox"
       ]
     },
+    "instanceStress": {
+      "name": "Instance stress test",
+      "description": "GPU-driven culling's measuring scene (p354 Phase 0): a square forest of instanced LOD trees (three mesh levels and a cull), cut into tiles of one pool each, with the camera circling inside it. The count comes from ?stressInstances= (or the scene's debug tab), ?stressPath=gpu draws it with the compute cull, ?stressShadow=true turns on the sun's VSM shadow, and the tab and the profiler show what the CPU path costs per frame: the pool sync, the LOD selection, the render submit.",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.5,
+            "far": 3000,
+            "position": {
+              "x": 0,
+              "y": 25,
+              "z": 0
+            },
+            "lookAtPoint": {
+              "x": 100,
+              "y": 10,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55
+          },
+          "entityOpts": {
+            "appId": "instanceStressCamera",
+            "debugData": {
+              "name": "Instance stress camera",
+              "description": "The main camera: instanceStress.ts circles it inside the forest (or keeps it still), so LOD selection and culling see the same path on every run."
+            }
+          }
+        }
+      ],
+      "lights": [
+        {
+          "lightProps": {
+            "type": "AMBIENT",
+            "color": "#dfe8ff",
+            "intensity": 0.7
+          },
+          "entityOpts": {
+            "appId": "instanceStressAmbient"
+          }
+        },
+        {
+          "lightProps": {
+            "type": "DIRECTIONAL",
+            "color": "#fff2d9",
+            "intensity": 2.2,
+            "position": {
+              "x": 40,
+              "y": 60,
+              "z": 30
+            },
+            "targetPos": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "castShadow": false
+          },
+          "entityOpts": {
+            "appId": "instanceStressSun"
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "id": "basicSkybox",
+          "base": {
+            "type": "EQUIRECTANGULAR",
+            "file": "/debugger/assets/testTextures/skyboxes/sunset_stylized/sky_empty_2k.png",
+            "textureId": "equiRectEmptyId",
+            "colorSpace": "srgb",
+            "rotate": 3.141592653589793
+          }
+        }
+      ],
+      "id": "instanceStress",
+      "sceneFile": "./scenes/instanceStress/instanceStress.ts",
+      "__features": [
+        "skybox"
+      ]
+    },
     "largeWorld": {
       "name": "Large world",
       "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
