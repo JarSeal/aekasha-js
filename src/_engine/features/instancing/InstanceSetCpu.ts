@@ -27,7 +27,8 @@ import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 //   (createLodFadeAttribute) and the level's materials (the LOD dither on them, as a pool's). An
 //   instance is in its level's mesh, in two while it cross-fades (the outgoing copy at t - 1), in
 //   one fading to or from culled, and in none culled or before its first selection: an instanced LOD
-//   pool's level meshes without the entities (InstancedMeshPool.ts).
+//   pool's level meshes without the entities (InstancedMeshPool.ts). A changed level mesh
+//   uploads its live part only (`[0, count)`): each is sized for every instance.
 // - Once a frame a system walks the instances' typed arrays with utils/LodRules.ts' selection and
 //   fade step (no entities, no storages), and moves only the instances whose copies change: a
 //   swap-remove from a level mesh and an append to another, as the pool does. Only the level meshes
@@ -144,6 +145,29 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   /** The main loop frame of the set's first step (with instances). */
   let firstFrame = -1;
   let hasWarnedNoLod = false;
+
+  /** Uploads what this frame changed: each changed level mesh's live part only, `[0, count)`
+   * (a swap-remove and an append touch nothing past it; a mesh sized for every instance would
+   * upload all of it), nothing for an empty one. */
+  const uploadChanged = () => {
+    for (let level = 0; level < levelCount; level++) {
+      const count = meshes[level].count;
+      if (isMatrixChanged[level] && count > 0) {
+        const matrices = meshes[level].instanceMatrix;
+        matrices.clearUpdateRanges();
+        matrices.addUpdateRange(0, count * 16);
+        matrices.needsUpdate = true;
+      }
+      if (isFadeChanged[level] && count > 0) {
+        const fades = fadeAttributes[level];
+        fades.clearUpdateRanges();
+        fades.addUpdateRange(0, count);
+        fades.needsUpdate = true;
+      }
+      isMatrixChanged[level] = 0;
+      isFadeChanged[level] = 0;
+    }
+  };
 
   /** Appends instance `i`'s copy to `level`'s mesh: its slot. */
   const append = (level: number, i: number) => {
@@ -289,12 +313,7 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       if (stepLodInstanceState(_state, target, fadeSeconds, fadeStep)) applyState(i);
     }
 
-    for (let level = 0; level < levelCount; level++) {
-      if (isMatrixChanged[level]) meshes[level].instanceMatrix.needsUpdate = true;
-      if (isFadeChanged[level]) fadeAttributes[level].needsUpdate = true;
-      isMatrixChanged[level] = 0;
-      isFadeChanged[level] = 0;
-    }
+    uploadChanged();
   };
 
   /** Rewrites instance `i`'s copy in `level`'s mesh from its matrix. */
@@ -331,10 +350,7 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       mesh.boundingBox!.copy(bounds);
       bounds.getBoundingSphere(mesh.boundingSphere!);
     }
-    for (let level = 0; level < levelCount; level++) {
-      if (isMatrixChanged[level]) meshes[level].instanceMatrix.needsUpdate = true;
-      isMatrixChanged[level] = 0;
-    }
+    uploadChanged();
   };
 
   addStep(world, step);

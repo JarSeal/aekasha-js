@@ -4,8 +4,11 @@
  * `instanceStressBench.test.ts` covers them.
  */
 
-/** What draws the forest: instanced LOD pools or an instance set (`?stressPath=`) */
-export type BenchPath = 'cpu' | 'gpu';
+/** What draws the forest: instanced LOD pools (`cpu`) or an instance set (`gpu`; `?stressPath=`),
+ * or the set forced onto its CPU backend on WebGPU too (`set-cpu`: the LOD tab's option, the
+ * debug env only; p354 Phase 4) */
+export type BenchPath = 'cpu' | 'gpu' | 'set-cpu';
+const BENCH_PATHS: readonly string[] = ['cpu', 'gpu', 'set-cpu'];
 
 /** The page's mode: the debug env (every readout, the stats panels' GPU figures included) or
  * prod test mode (closer to production: no stats panels, so no GPU figures) */
@@ -86,8 +89,8 @@ export const parseBenchArgs = (argv: string[]): { args: BenchArgs } | { error: s
       args.counts = counts;
     } else if (arg === '--paths') {
       const paths = value!.split(',');
-      if (!paths.every((p) => p === 'cpu' || p === 'gpu')) {
-        return { error: `--paths: cpu, gpu or both (${value})` };
+      if (!paths.every((p) => BENCH_PATHS.includes(p))) {
+        return { error: `--paths: cpu, gpu, set-cpu, comma separated (${value})` };
       }
       args.paths = paths as BenchPath[];
     } else if (arg === '--mode') {
@@ -121,6 +124,9 @@ export const parseBenchArgs = (argv: string[]): { args: BenchArgs } | { error: s
     else return { error: `Unknown argument: ${arg}` };
   }
   if (args.build && args.url) return { error: '--build serves dist/ itself: not with --url' };
+  if (args.paths.includes('set-cpu') && args.mode !== 'debug') {
+    return { error: "--paths set-cpu: the debug env's option (--mode debug)" };
+  }
   return { args };
 };
 
@@ -135,7 +141,7 @@ export const buildBenchUrl = (baseUrl: string, args: BenchArgs, c: BenchCase) =>
   params.set('aekTest', 'true');
   params.set('startScene', 'instanceStress');
   params.set('stressInstances', String(c.count));
-  params.set('stressPath', c.path);
+  params.set('stressPath', c.path === 'set-cpu' ? 'gpu' : c.path);
   params.set('stressCamera', args.camera);
   if (args.shadow) params.set('stressShadow', 'true');
   if (args.fadeSeconds !== null) params.set('stressFadeSeconds', String(args.fadeSeconds));
@@ -189,6 +195,9 @@ const ms = (n: number | undefined) => (n !== undefined && Number.isFinite(n) ? n
 const counts = (list: number[] | undefined) =>
   list?.length ? list.map((n) => n.toLocaleString('en-US')).join(' / ') : '—';
 
+/** What drew a case: the pools, or the set and its backend */
+const drawnBy = (s: StressSummary) => (s.setBackend ? `set (${s.setBackend})` : 'pools');
+
 const table = (header: string[], rows: string[][], rightFrom: number) => {
   const lines = [`| ${header.join(' | ')} |`];
   lines.push(`| ${header.map((_, i) => (i >= rightFrom ? '---:' : '---')).join(' | ')} |`);
@@ -215,7 +224,7 @@ export const formatBenchTables = (results: BenchResult[]) => {
       const s = r.summary!;
       return [
         r.count.toLocaleString('en-US'),
-        s.path,
+        drawnBy(s),
         `${ms(s.avg.cpuMs)} ms`,
         `${ms(s.avg.poolSyncMs)} ms`,
         `${ms(s.avg.lodMs)} ms`,
@@ -243,7 +252,7 @@ export const formatBenchTables = (results: BenchResult[]) => {
       const { nodeBuilds, pipelines } = s.builds;
       return [
         r.count.toLocaleString('en-US'),
-        s.path,
+        drawnBy(s),
         counts(s.levels),
         s.cameras?.length ? s.cameras.map((c) => `${c.name}: ${counts(c.drawn)}`).join('; ') : '—',
         s.overflow ? counts(s.overflow) : '—',

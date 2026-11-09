@@ -103,6 +103,16 @@ export const instanceStressSettings = {
   orbitSeconds: 60,
 };
 
+/** This load's cleanups, run in order by its one exit function: `registerOnSceneExit` keeps one
+ * function per scene, so a second call replaced the first (the ground's replaced the light's and
+ * the probe's: the probe's systems outlived a reload, whose own were then skipped as duplicates) */
+const exitTasks: (() => void)[] = [];
+
+/** Runs `fn` when this load of the scene exits (the scene's parts and its debug module). */
+export const onInstanceStressExit = (fn: () => void) => {
+  exitTasks.push(fn);
+};
+
 /** What the last load built, for the debug module's readouts */
 export const instanceStressState = {
   pools: [] as InstancedLodPool[],
@@ -263,7 +273,7 @@ const addShadowGround = () => {
   ground.receiveShadow = true;
   ground.name = GROUND_NAME;
   rootScene.add(ground);
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+  onInstanceStressExit(() => {
     ground.removeFromParent();
     ground.geometry.dispose();
     ground.material.dispose();
@@ -298,7 +308,7 @@ const startLightShadow = (kind: InstanceStressLight) => {
   light.name = `instanceStress${kind === 'SPOT' ? 'Spot' : 'Point'}Light`;
   rootScene.add(light);
   addShadowGround();
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+  onInstanceStressExit(() => {
     light.removeFromParent();
     if (light instanceof THREE.SpotLight) light.target.removeFromParent();
     light.dispose();
@@ -376,6 +386,10 @@ const startCamera = (world: ECSWorld, cameraId: number) => {
 
 export const scene = async () => {
   const world = getECSWorld();
+  exitTasks.length = 0;
+  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+    for (const task of exitTasks.splice(0)) task();
+  });
   readUrlOverrides();
   const byTile = createPlacements();
   instanceStressState.pools = [];

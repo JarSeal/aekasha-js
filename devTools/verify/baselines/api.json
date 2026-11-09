@@ -425,7 +425,12 @@
       "installInstanceSets": "Function",
       "InstanceSet": "Interface",
       "InstanceSetBackendKind": "TypeAlias",
-      "readInstanceSetStatsAsync": "Function"
+      "isInstanceSetCpuBackendForced": "Function",
+      "readInstanceSetStatsAsync": "Function",
+      "setInstanceSetCpuBackendForced": "Function"
+    },
+    "src/_engine/features/instancing/InstanceSetCpu.ts": {
+      "createCpuInstanceSetBackend": "Variable"
     },
     "src/_engine/features/instancing/InstanceSetGpu.ts": {
       "createGpuInstanceSetBackend": "Variable"
@@ -453,6 +458,7 @@
       "InstanceRange": "Interface",
       "InstanceSetBackend": "Interface",
       "InstanceSetBackendParams": "Interface",
+      "InstanceSetCpuDebugData": "Interface",
       "InstanceSetData": "Interface",
       "InstanceSetDebugBuffers": "Interface",
       "InstanceSetDebugSlot": "Interface",
@@ -2351,6 +2357,7 @@
       "LodContentDebugInfo": "TypeAlias",
       "LodContentDebugSource": "TypeAlias",
       "LodContentDebugStats": "TypeAlias",
+      "LodContentDebugToggle": "TypeAlias",
       "LodFrameInputs": "TypeAlias",
       "LodTargetEntry": "TypeAlias",
       "registerLodContentDebugSource": "Function",

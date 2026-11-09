@@ -37,7 +37,15 @@ import { EVALUATE_MARGIN_MS, launchVerifyChromiumAsync, withTimeout } from '../v
 import { startVerifyServerAsync } from '../verify/devServer';
 import { DEFAULT_SNAPSHOT_TOLERANCE } from '../verify/scenes.config';
 import { compareSnapshots } from '../verify/snapshotDiff';
-import type { StressSummary } from './instanceStressBench';
+import {
+  focusDrawerControlAsync,
+  forceSetCpuBackendAsync,
+  measureStressAsync,
+  openDrawerTabAsync,
+  pressOnDrawerControlAsync,
+  type StressWindow,
+  whenStressReadyAsync,
+} from './instanceStressPage';
 import {
   type CheckpointStates,
   findCheckpointProblems,
@@ -54,7 +62,6 @@ const LOG_FILE = path.join(ROOT, '.cache/bench/progress.log');
 const SHOT_DIR = path.join(ROOT, '.cache/bench/lodTab');
 const VIEWPORT = { width: 1600, height: 900 };
 const SHOT_SIZE = { width: 1024, height: 576 };
-const READY_TIMEOUT_MS = 240_000;
 const LOD_TAB_ID = 'lodControls';
 /** The frames step 3 runs at a time scale of 0.1: 75 × (1/60 s × 0.1) / 0.25 s = 0.5 */
 const HELD_FADE_FRAMES = 75;
@@ -73,9 +80,6 @@ type Args = {
   headed: boolean;
   webgl: boolean;
 };
-type StressApi = { measure: (frames: number, startOrbit?: boolean) => Promise<StressSummary> };
-const STRESS_TAB_ID = 'instanceStressDemo';
-type LodTabWindow = Window & { __aekInstanceStress?: StressApi };
 
 const fail = (message: string): never => {
   out(`${RED}${message}${RESET}`, true);
@@ -138,92 +142,20 @@ const buildUrl = (baseUrl: string, args: Args, p: Path) => {
   return `${baseUrl.replace(/\/$/, '')}/?${params}`;
 };
 
-/** The scene's `measure(frames)`: its summary of them */
-const measureSummaryAsync = (page: Page, frames: number, startOrbit = false) =>
-  withTimeout(
-    page.evaluate(
-      ({ n, orbit }) => (window as LodTabWindow).__aekInstanceStress!.measure(n, orbit),
-      { n: frames, orbit: startOrbit }
-    ),
-    (frames / 20) * 1000 + EVALUATE_MARGIN_MS,
-    `measure(${frames})`
-  );
-
 /** The scene's `measure(frames)`: its state at the last of them */
 const measureAsync = async (page: Page, frames: number, startOrbit = false) => {
-  const summary = await measureSummaryAsync(page, frames, startOrbit);
+  const summary = await measureStressAsync(page, frames, startOrbit);
   if (!summary.state) throw new Error(`measure(${frames}) has no state`);
   return { levels: summary.state.levels, fading: summary.state.fading };
 };
 
-/** Focuses a control of the LOD tab by its name, through the test bridge */
-const focusControlAsync = async (page: Page, name: string) => {
-  const focused = await page.evaluate(
-    (n) => window.__AEK_TEST__!.focusDebuggerControl({ root: 'drawer', name: n }),
-    name
-  );
-  if (focused.status !== 'FOCUSED') {
-    throw new Error(`no "${name}" control in the LOD tab (seen: ${focused.seen.join(', ')})`);
-  }
-};
-
 /** Picks "Force level"'s option `index` (0 Off, then Level 0, Level 1, …) by keys */
 const pickForceLevelAsync = async (page: Page, index: number) => {
-  await focusControlAsync(page, 'Force level');
+  await focusDrawerControlAsync(page, 'Force level');
   await page.keyboard.press('Enter');
   await page.keyboard.press('Home');
   for (let i = 0; i < index; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
-};
-
-const pressOnControlAsync = async (page: Page, name: string, key: string) => {
-  await focusControlAsync(page, name);
-  await page.keyboard.press(key);
-};
-
-const whenReadyAsync = async (page: Page) => {
-  const ready = await withTimeout(
-    page.evaluate((ms) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }), READY_TIMEOUT_MS),
-    READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
-    'whenSceneReady'
-  );
-  if (ready.status !== 'READY') throw new Error("the scene didn't load");
-  await page
-    .waitForFunction(() => Boolean((window as LodTabWindow).__aekInstanceStress), null, {
-      timeout: 60_000,
-    })
-    .catch(() => {
-      throw new Error('the scene loaded without its probe (window.__aekInstanceStress) in 60 s');
-    });
-};
-
-/** Ticks the LOD tab's "CPU backend (next sets)" and reloads the scene from its own tab, so its
- * set is made again on the CPU backend; fails when it isn't */
-const forceCpuBackendAsync = async (page: Page) => {
-  const openTabAsync = async (id: string) => {
-    const opened = await page.evaluate(
-      (tabId) => window.__AEK_TEST__!.openDebuggerTab({ host: 'DRAWER', id: tabId }),
-      id
-    );
-    if (opened.status !== 'OPEN') throw new Error(`the ${id} tab didn't open: ${opened.reason}`);
-  };
-  await openTabAsync(LOD_TAB_ID);
-  await pressOnControlAsync(page, 'CPU backend (next sets)', ' ');
-  await openTabAsync(STRESS_TAB_ID);
-  await pressOnControlAsync(page, 'Reload the scene', 'Enter');
-  // The scene's exit removes its window global: the reload has started
-  await page
-    .waitForFunction(() => !(window as LodTabWindow).__aekInstanceStress, null, {
-      timeout: 60_000,
-    })
-    .catch(() => {
-      throw new Error("'Reload the scene' didn't start a load in 60 s");
-    });
-  await whenReadyAsync(page);
-  const summary = await measureSummaryAsync(page, 1);
-  if (summary.setBackend !== 'CPU') {
-    throw new Error(`the set is on the ${summary.setBackend} backend after the reload, not CPU`);
-  }
 };
 
 const runPathAsync = async (
@@ -261,18 +193,14 @@ const runStepsAsync = async (
 ) => {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
-  await whenReadyAsync(page);
-  if (p === 'gpu' && args.setBackend === 'cpu') await forceCpuBackendAsync(page);
+  await whenStressReadyAsync(page);
+  if (p === 'gpu' && args.setBackend === 'cpu') await forceSetCpuBackendAsync(page);
 
   states.settled = await measureAsync(page, 60);
-  const opened = await page.evaluate(
-    (id) => window.__AEK_TEST__!.openDebuggerTab({ host: 'DRAWER', id }),
-    LOD_TAB_ID
-  );
-  if (opened.status !== 'OPEN') throw new Error(`the LOD tab didn't open: ${opened.reason}`);
+  await openDrawerTabAsync(page, LOD_TAB_ID);
 
   // 2. Every fade starts held at 0, whatever frame the keys land in
-  await pressOnControlAsync(page, 'Time scale (0 = hold)', 'Home');
+  await pressOnDrawerControlAsync(page, 'Time scale (0 = hold)', 'Home');
   await measureAsync(page, 2);
   await pickForceLevelAsync(page, 2);
   states.heldAt0 = await measureAsync(page, 5);
@@ -280,7 +208,7 @@ const runStepsAsync = async (
   // 3. Exactly HELD_FADE_FRAMES frames at 0.1: the keys dispatched in the page around measure(),
   // which resolves after its last frame's work. No named function inside: tsx's `__name` helper
   // isn't in the page
-  await focusControlAsync(page, 'Time scale (0 = hold)');
+  await focusDrawerControlAsync(page, 'Time scale (0 = hold)');
   await withTimeout(
     page.evaluate(async (frames) => {
       const elem = document.activeElement as HTMLElement;
@@ -288,7 +216,7 @@ const runStepsAsync = async (
         elem.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
         elem.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
       }
-      await (window as LodTabWindow).__aekInstanceStress!.measure(frames);
+      await (window as StressWindow).__aekInstanceStress!.measure(frames);
       elem.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
       elem.dispatchEvent(new KeyboardEvent('keyup', { key: 'Home', bubbles: true }));
     }, HELD_FADE_FRAMES),
@@ -305,13 +233,13 @@ const runStepsAsync = async (
   fs.writeFileSync(shotFile, Buffer.from(shot.pngBase64, 'base64'));
 
   // 4-5. The fades run out at level 1, then the selection again
-  await pressOnControlAsync(page, 'Time scale (0 = hold)', 'End');
+  await pressOnDrawerControlAsync(page, 'Time scale (0 = hold)', 'End');
   states.forcedLevel1 = await measureAsync(page, SETTLE_FRAMES);
   await pickForceLevelAsync(page, 0);
   states.forceOff = await measureAsync(page, SETTLE_FRAMES);
 
   // 6. Frozen while the camera moves
-  await pressOnControlAsync(page, 'Freeze', ' ');
+  await pressOnDrawerControlAsync(page, 'Freeze', ' ');
   states.frozenOrbit = await measureAsync(page, FREEZE_FRAMES, true);
 };
 

@@ -1,11 +1,4 @@
-import {
-  ECSSystemStage,
-  APP_RENDER_SYNC_ORDER,
-  getRenderer,
-  loadScene,
-  lwarn,
-  registerOnSceneExit,
-} from 'aekasha';
+import { ECSSystemStage, APP_RENDER_SYNC_ORDER, getRenderer, loadScene, lwarn } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 import { createDebuggerTab, registerStatsSource } from 'aekasha/debug';
 import { readInstanceSetStatsAsync, type InstanceSetBackendKind } from 'aekasha/instancing';
@@ -15,6 +8,7 @@ import {
   INSTANCE_STRESS_SCENE_ID,
   instanceStressSettings,
   instanceStressState,
+  onInstanceStressExit,
 } from './instanceStress';
 
 // The instance stress scene's measuring (debug env, p354 Phase 0): systems at fractional orders
@@ -165,7 +159,7 @@ const useStressPipelineAsync = async (): Promise<StressPipeline> => {
   const previous = renderer.drawingPipeline;
   const meshlet = new MeshletDrawingPipeline();
   renderer.drawingPipeline = meshlet;
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+  onInstanceStressExit(() => {
     renderer.drawingPipeline = previous;
     meshlet.dispose();
   });
@@ -384,7 +378,7 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
     })
   );
 
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+  onInstanceStressExit(() => {
     for (const [, id] of systems) world.removeSystem(PROBE_PREFIX + id);
     for (const remove of sources) remove();
     delete (window as unknown as { __aekInstanceStress?: unknown }).__aekInstanceStress;

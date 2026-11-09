@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: in progress | Phases 0-4 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -1176,7 +1176,7 @@ From Phase 2 (its "As built"), for these steps:
   - **`yarn sbp --profile all`**: every budget within (`features/instancing` at 5 KiB since
     step 1).
 
-### Phase 4 — The CPU fallback (WebGL2)
+### Phase 4 — The CPU fallback (WebGL2) — done
 
 1. **`InstanceSetCpu.ts` (D9).** An `InstancedMesh` per level with its `lodFade` attribute. The
    per-frame loop over the typed arrays runs `LodRules.ts`' selection and fades, and rewrites
@@ -1217,6 +1217,131 @@ From Phase 3 (its "As built"), for these steps:
   result goes into the Hub page's "which to use" (Phase 6) and p240's notes.
 - The forced CPU backend on WebGPU gives the same counts as the GPU backend.
 
+**As built** (step by step, 2026-11-09):
+
+- **Step 1, `InstanceSetCpu.ts`.** As step 1 says, with these choices:
+  - **The system is added by the backend**, to the set's world with its first CPU set (removed
+    with its last), at `LOD_SELECTION`: equal orders run in registration order, so it runs after
+    `lod()`'s systems whatever the feature order, and the front's first download gains nothing.
+    The backend params gained `world`.
+  - Per instance: the matrix (16 floats, the copies' source), the record (origin, scale × level
+    0's conservative radius), the level and outgoing level (`Int16Array`, `LodRules.ts`'
+    sentinels), the progress (`Float64Array`: the ECS path's numbers, so the pool's parity is
+    exact) and the slot of each copy; per level mesh the instance in each slot (the swap-remove
+    patches the instance it moves). A copy in a mesh both the old and the new state have stays in
+    place (a change back mid-fade reuses both copies), the others are swap-removed, then the new
+    ones appended.
+  - The bounds: every instance's sphere at its largest level's radius, grown as instances are
+    written, set on every level mesh. An instance written again moves its drawn copies.
+  - **Uploads: a changed level mesh uploads its live part only** (`[0, count)` through
+    `updateRanges`; both of three's backends honour them), nothing for an empty one. Added in the
+    verification: whole buffers (each sized for every instance) made the set's render submit
+    2.59 ms against the pools' 1.59 at 20k with 1 s fades; with the ranges 0.74 ms.
+  - **The readback** (Phase 3's note): `debugCpu` (the state arrays and level meshes), read by
+    `_dbg__InstanceSet.ts` synchronously: `drawn` the level meshes' counts, `slots: []`, no
+    overflow, the state counted as the GPU's (one count for both). The LOD tab's triangles for a
+    set without slots come from `drawn`.
+  - Memory: each level mesh is sized for every instance, as a pool's, plus the backend's matrix
+    copy: about 64 B × (levels + 1) + 36 B per instance, so about 300 MB at 1M with 3 levels.
+- **Step 2, the backend choice.** The front imports `InstanceSetCpu.ts` where the empty backend
+  was (done in step 1, to run it). The forced CPU backend is a checkbox in the LOD tab's Instance
+  sets folder, "CPU backend (next sets)" (debug env, not persisted: tick it, then reload the
+  scene), through a new optional `toggles` list on the kernel's debug source
+  (`LodContentDebugToggle`, an accessor `value`), so `lod()` still imports nothing of
+  instancing; underneath, `setInstanceSetCpuBackendForced` (`@internal`, read behind
+  `IS_DEBUG_ENV`). `instanceStress` draws `?stressPath=gpu` as a set on WebGL2 too (its WebGL2
+  fallback to the pools went; the URL values stay), its readout names the set's backend and
+  `measure()` reports it (`setBackend`). The LOD tab check gained `--set-backend cpu` (the box
+  ticked, the scene reloaded from its own tab, the backend asserted) and the bench a `set-cpu`
+  path (debug env only), both through `devTools/bench/instanceStressPage.ts`; the bench's tables
+  name what drew each case (`pools`, `set (GPU)`, `set (CPU)`).
+- **Step 3, the Node tests.** `InstanceSetCpu.test.ts` (15 tests): 600 frames of a camera path
+  (out and back with a fast wobble: fades, fades to and from culled, changes mid-fade) against a
+  loop of `LodRules.ts` in the test, each level mesh read back (each instance by its x): exactly
+  the rules' instances, each copy once, with its fade and its whole matrix; the backend's state
+  arrays the rules' too. Plus: no fades (one mesh or none), the first selection and the global
+  fade seconds, once a frame, a hold on another frame's inputs, `freeze`, a forced level (and
+  past the last), no `lod()`, the uploads and their ranges, the meshes' shadows and raycast, the
+  bounds, a rewritten instance, the system per world, the dispose. Four mutations (no swap-remove
+  patch, the outgoing copy whole, a step per system run, every mesh uploaded every frame) each
+  fail it.
+  - **No `lod()` is now the GPU backend's rule** (written with the tests): only when nothing was
+    written a whole frame after the set's first step. Step 1 concluded it on the first step,
+    which in a world that runs before the one `lod()` writes in would force level 0 and leave a
+    band of instances a level finer (Phase 3's finding).
+
+- **The verification** (2026-11-09, Apple M2, Chrome; WebGL2 is SwiftShader, headless Chromium's
+  only WebGL2 on macOS too):
+  - **Parity** (the bench, the held orbit, 300 frames, the dev server, debug env): the state per
+    level and the fading count are the pools' exactly, and Phase 2's.
+
+    | Run | Fades | Pools: per level, fading | Set (GPU) | Set (CPU) |
+    | --- | --- | --- | --- | --- |
+    | WebGPU, 20k | off | 960 / 5,429 / 13,611, 0 | the same | the same |
+    | WebGPU, 20k | 0.25 s | 991 / 5,522 / 13,685, 198 | the same | the same |
+    | WebGPU, 20k | 1 s | 1,110 / 5,851 / 13,963, 924 | the same | the same |
+    | WebGL2, 5k | off | 925 / 2,997 / 1,078, 0 | | the same |
+    | WebGL2, 5k | 0.25 s | 946 / 3,019 / 1,090, 55 | | the same |
+    | WebGL2, 5k | 1 s | 999 / 3,098 / 1,126, 223 | | the same |
+
+    WebGL2 at 5k, not 20k: on SwiftShader 300 frames of 20k pools pass the bench's answer
+    timeout. The CPU set builds 3 node builds and 3 pipelines, as the pools.
+  - **The LOD tab check** (`instanceStressLodTab.ts`, 0.25 s): WebGPU at 20k with
+    `--set-backend cpu` and WebGL2 at 5k: both paths agree at all six checkpoints, and the held
+    fade's snapshots are pixel-identical (max delta 0: both draw an `InstancedMesh` per level with
+    the `lodFade` attribute). One earlier `--set-backend cpu` run timed out after its reload and
+    didn't again (the run before it had Vite reloads from edits under the run).
+  - **The cost** (a `yarn build:test` build, `VITE_ECS_MAX_ENTITIES=1110000`, the orbit, the
+    default fades). WebGPU, the bench's debug mode (the forced backend is a debug option),
+    120 + 300 frames:
+
+    | Trees | 5k | 20k | 100k |
+    | --- | ---: | ---: | ---: |
+    | Pools: LOD + sync | 0.70 ms (140 ns each) | 1.97 ms (98 ns) | 12.97 ms (130 ns) |
+    | Set, CPU backend: LOD + sync | 0.10 ms (20 ns) | 0.27 ms (13 ns) | 1.71 ms (17 ns) |
+    | Set, GPU backend: LOD + sync | 0.03 ms | 0.03 ms | 0.03 ms |
+    | CPU frame: pools / CPU set / GPU set | 1.50 / 0.60 / 0.49 ms | 3.59 / 1.29 / 0.44 ms | 15.92 / 2.70 / 0.54 ms |
+    | GPU frame: pools / CPU set / GPU set | 1.97 / 1.63 / 1.25 ms | 2.60 / 2.66 / 1.71 ms | 5.08 / 7.04 / 2.92 ms |
+
+    WebGL2 (SwiftShader), prod test mode, 30 + 90 frames (100k: 3 + 12, more passed the answer
+    timeout): the pools' LOD + sync 0.47 / 1.93 / 19.46 ms (94 / 97 / 195 ns each), the CPU set's
+    0.10 / 0.24 / 1.70 ms (20 / 12 / 17 ns).
+    - **The ECS was about 85-90% of the pool's per-instance cost**: the same selection and fades
+      without entities cost 12-20 ns an instance against the pools' 94-195 ns, on either
+      renderer. For the Hub's "which to use" (Phase 6) and p240: on WebGL2 a set costs about a
+      tenth of the pools' CPU, linear in the count (1.7 ms at 100k).
+    - **The CPU set's GPU side grows faster than the pools' past 20k.** One `InstancedMesh` per
+      level for the whole set, so three culls level 2's 84k copies only together: at 100k the
+      GPU frame is 7.04 ms against the pools' 5.08 (`instanceStress`' pools are 128 × 128
+      tiles, whose tiles behind the camera three culls). On SwiftShader the same shows as 1.81M
+      triangles against 1.14M a frame, frames of 3.3 s against 1.4 s, and a render submit
+      blocked on the software renderer (440 ms against 2 ms). At 20k, mostly in view, they're
+      equal. §5's "spatial chunks for the CPU backend" is the follow-up.
+  - **Shadows** (Phase 3's checks, `instanceStressLodTab.ts --count 5k --set-backend cpu
+    --shadow sun|spot|point`): both paths agree at all six checkpoints and the held fade's
+    snapshots are pixel-identical, shadows included. Each level mesh casts by its level's
+    `castShadow`, and VSM draws a non-casting level as a receiver, the pools' way. Viewports
+    weren't checked again: three culls a level mesh for a viewport's camera as for any.
+  - **The scene runner.** WebGPU, `--only lodShowcase,largeWorld,instanceStress`: 17 runs pass,
+    the probe hashes unchanged (and `instanceStress`' 8 again after the fix below). WebGL2,
+    `--only instanceStress --webgl --config quick --update` (local baselines): `@set` (the CPU
+    backend) and `@pools` snapshots identical (max delta 0).
+  - **`yarn verify:baselines --update`**: a new lazy chunk, `InstanceSetCpu.js` (2.0 kB gzip),
+    and five `@internal` names (`createCpuInstanceSetBackend`, `InstanceSetCpuDebugData`,
+    `setInstanceSetCpuBackendForced`, `isInstanceSetCpuBackendForced`, `LodContentDebugToggle`).
+    The main chunk and both embeds unchanged; docs 100%; no debug code in any build.
+  - **`yarn sbp --profile all`**: `features/instancing` 3.9 kB initial (its 5 KiB budget), 6.3
+    kB lazy (both backends); every budget within.
+  - **Found on the way, fixed in `instanceStress`:** `registerOnSceneExit` keeps one function per
+    scene, and the scene registered four (the probe's, the meshlet pipeline's restore, the shadow
+    ground's, the extra light's): the last replaced the others. With a shadow the ground's won, so
+    the probe's systems outlived a reload (the reloaded scene's own were skipped as duplicates by
+    `addSystem`'s id check, so its `measure()` never answered) and a `?stressLight=` light stayed
+    after the scene; without one the probe's replaced the meshlet pipeline's restore. The scene
+    now has one exit function running a list (`onInstanceStressExit`). The checks' forced reload
+    also waits for a new window global, not for the old one to go: a small scene's reload swaps
+    them between two polls.
+
 ### Phase 5 — Ranges, moving instances, impostor levels, memory
 
 1. **Removal and reuse (D1).** `removeInstances(range)` marks the range's state dead (skipped
@@ -1240,6 +1365,26 @@ From Phase 3 (its "As built"), for these steps:
    (`_DONE_p345`).
 6. **`preWarm` (D8).** Through `preWarmObjectsAsync`. A set created with it shows no compile
    hitch on its first frame.
+
+From Phase 4 (its "As built"), for these steps:
+
+- **Every step has a CPU backend half** (`InstanceSetCpu.ts`), and its Node test file covers it
+  as the GPU half's browser checks do:
+  - Removal: the range's copies swap-removed from their level meshes (its instances' slots), its
+    state marked dead and skipped by the loop; the free list is the front's, shared.
+  - Moving: `writeInstances` already rewrites an instance's matrix, record and drawn copies and
+    grows the bounds (never shrinking, as a pool's); `setInstanceMatrices` calls it.
+  - Impostor levels: a level mesh is an `InstancedMesh`, so the octahedral impostor's material
+    reads its `instanceMatrix` as on a pool: check it, nothing to build.
+  - Memory: the level meshes' instance matrices and `lodFade` attributes (three's own) and the
+    backend's arrays (CPU only); each level mesh is sized for every instance (about 64 B ×
+    (levels + 1) + 36 B per instance). Step 5 checks the GPU memory tab shows them under the
+    set's owner, as for the GPU backend's buffers.
+  - `preWarm`: the level meshes, a pool's.
+- **The uploads are ranges already** on the CPU backend (`[0, count)` per changed level mesh):
+  step 2's "merged when adjacent" is the GPU backend's part.
+- The streamed set (step 3) on WebGL2 draws on the CPU backend: a cell's range added and
+  removed is a swap-remove per copy.
 
 **Verification:**
 
@@ -1346,3 +1491,10 @@ updated baseline. The page reads right in both themes (`yarn hub:preview`).
 - **p308's static scatter on sets**: whether `createStaticInstances` (p308 D1) creates a set
   for its large cases is p308's decision. Its Related line points here.
 - **Level colours for sets in the LOD overlay** (D11), until a debugging need shows up.
+- **Spatial chunks for the CPU backend** (Phase 4): one `InstancedMesh` per level for the whole
+  set, so three culls a level only as a whole, and past about 20k instances in a spread-out set
+  the CPU backend draws more than tiled pools do (at 100k on `instanceStress`: a GPU frame of
+  7.0 ms against the pools' 5.1, 1.8M triangles against 1.1M). A level mesh per (chunk, level),
+  each with its own bounds, would give three's culling what the pools' tiles give it, at a draw
+  call per chunk. Worth it when a WebGL2 device (p240's weak tier) shows a set's GPU frame as the
+  limit.

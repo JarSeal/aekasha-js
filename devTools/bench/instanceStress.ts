@@ -2,7 +2,7 @@
  * The instance stress bench (p354 Phase 1 step 7): `instanceStress`'s paths (instanced LOD pools,
  * an instance set) measured at each count, Phase 0's tables printed.
  *
- *   npx tsx devTools/bench/instanceStress.ts [--counts 5k,20k,100k] [--paths cpu,gpu]
+ *   npx tsx devTools/bench/instanceStress.ts [--counts 5k,20k,100k] [--paths cpu,gpu,set-cpu]
  *     [--mode debug|prodTest] [--url <server> | --build] [--shadow] [--fade-seconds <s>]
  *     [--orbit-hold] [--camera ORBIT|STILL] [--warmup 120] [--frames 300] [--headed] [--webgl]
  *     [--json <file>]
@@ -13,6 +13,10 @@
  * figures (turned on through `AEK_debugStats`) are sampled meanwhile. Prod test mode has no stats
  * panels, so no GPU figures: measure a minified build's CPU side there (`yarn build:test`, then
  * `--build`), and its GPU side with `--build --mode debug` (minified, the debug env on).
+ *
+ * `set-cpu` is the set on its CPU backend on WebGPU too (p354 Phase 4): the LOD tab's "CPU backend
+ * (next sets)" ticked and the scene reloaded before the warm-up (the debug env only); on WebGL2
+ * (`--webgl`) `gpu`'s set is on the CPU backend anyway. The tables name what drew each case.
  *
  * The server: its own dev server (the scene runner's, `devServer.ts`), `--build` (`dist/` served
  * with the COOP / COEP headers the dev server sends), or `--url`. The pool path past about 90k
@@ -39,6 +43,7 @@ import {
   parseBenchArgs,
   type StressSummary,
 } from './instanceStressBench';
+import { forceSetCpuBackendAsync, whenStressReadyAsync } from './instanceStressPage';
 
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -48,8 +53,6 @@ const RESET = '\x1b[0m';
 const DIST_DIR = path.join(ROOT, 'dist');
 const LOG_FILE = path.join(ROOT, '.cache/bench/progress.log');
 const VIEWPORT = { width: 1600, height: 900 };
-/** The scene's load at 1M trees takes a while on the pool path */
-const READY_TIMEOUT_MS = 240_000;
 /** The stats panels' figures change at 4 Hz */
 const GPU_SAMPLE_MS = 250;
 
@@ -142,26 +145,11 @@ const runCase = async (page: Page, url: string, args: BenchArgs, c: BenchCase) =
   );
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
-  const ready = await withTimeout(
-    page.evaluate(
-      (timeoutMs) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs }),
-      READY_TIMEOUT_MS
-    ),
-    READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
-    'whenSceneReady'
-  );
-  if (ready.status !== 'READY') {
-    result.failure = `the scene didn't load in ${READY_TIMEOUT_MS / 1000} s`;
-    return result;
-  }
-  const hasProbe = await page
-    .waitForFunction(() => Boolean((window as BenchWindow).__aekInstanceStress), null, {
-      timeout: 60_000,
-    })
-    .then(() => true)
-    .catch(() => false);
-  if (!hasProbe) {
-    result.failure = "the scene's probe didn't load (window.__aekInstanceStress)";
+  try {
+    await whenStressReadyAsync(page);
+    if (c.path === 'set-cpu') await forceSetCpuBackendAsync(page);
+  } catch (err) {
+    result.failure = (err as Error).message;
     return result;
   }
   const measureMs = ((args.warmupFrames + args.frames) / 30) * 1000 + EVALUATE_MARGIN_MS;

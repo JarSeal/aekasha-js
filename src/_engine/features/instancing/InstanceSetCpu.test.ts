@@ -424,6 +424,22 @@ describe('the CPU backend: the frame (p354 D7) and the debug options', () => {
     // A still camera: nothing changes level, nothing uploads
     expect(versions()).toEqual(settled);
   });
+
+  test('a changed level mesh uploads its live part only', () => {
+    const { world, runSystems } = createStubWorld();
+    const { object } = createSet(world, 30);
+    setInputs(1, 0);
+    runSystems();
+    for (const mesh of getMeshes(object)) {
+      const ranges = mesh.instanceMatrix.updateRanges;
+      if (mesh.count === 0) {
+        expect(ranges).toEqual([]);
+        continue;
+      }
+      expect(ranges).toEqual([{ start: 0, count: mesh.count * 16 }]);
+      expect(getLodFadeAttribute(mesh)!.updateRanges).toEqual([{ start: 0, count: mesh.count }]);
+    }
+  });
 });
 
 describe('the CPU backend: the meshes, the bounds and the system', () => {

@@ -73,6 +73,19 @@ describe('buildBenchUrl', () => {
   });
 });
 
+describe('the set-cpu path', () => {
+  it('is the set path forced onto its CPU backend, in the debug env only', () => {
+    const args = parse(['--paths', 'set-cpu', '--counts', '5k']);
+    expect(args.paths).toEqual(['set-cpu']);
+    expect(buildBenchUrl('http://x', args, { count: 5_000, path: 'set-cpu' })).toContain(
+      'stressPath=gpu'
+    );
+    expect(parseBenchArgs(['--paths', 'set-cpu', '--mode', 'prodTest'])).toMatchObject({
+      error: /set-cpu/,
+    });
+  });
+});
+
 describe('getNeededMaxEntities', () => {
   it('is 0 under 90k pool trees, else room for the largest pool case', () => {
     expect(getNeededMaxEntities([{ count: 1_000_000, path: 'gpu' }])).toBe(0);
@@ -100,6 +113,7 @@ describe('formatBenchTables', () => {
         count: 20_000,
         path: 'GPU',
         backend: 'WebGPU',
+        setBackend: 'GPU',
         avg: { poolSyncMs: 0.01, lodMs: 0.02, renderMs: 0.5, cpuMs: 1.09, intervalMs: 16.7 },
         levels: [221, 1384, 3392],
         overflow: [0, 0, 0],
@@ -110,12 +124,21 @@ describe('formatBenchTables', () => {
     };
     const lines = formatBenchTables([result, { ...result, summary: null, failure: 'x' }]);
     expect(lines).toContain(
-      '| 20,000 | GPU | 1.09 ms | 0.01 ms | 0.02 ms | 0.50 ms | 1.50 ms | — |'
+      '| 20,000 | set (GPU) | 1.09 ms | 0.01 ms | 0.02 ms | 0.50 ms | 1.50 ms | — |'
     );
     expect(lines).toContain(
-      '| 20,000 | GPU | 221 / 1,384 / 3,392 | DirectionalLight shadow: 603 / 1,492 / 0 | 0 / 0 / 0 | 960 / 5,429 / 13,611 | 0 | 0 | 3 nodes, 6 pipelines |'
+      '| 20,000 | set (GPU) | 221 / 1,384 / 3,392 | DirectionalLight shadow: 603 / 1,492 / 0 | 0 / 0 / 0 | 960 / 5,429 / 13,611 | 0 | 0 | 3 nodes, 6 pipelines |'
     );
     // The failed case has no row
     expect(lines.filter((l) => l.startsWith('| 20,000'))).toHaveLength(2);
+    // What drew each case: the pools, or the set on either backend
+    const pools = { ...result.summary!, path: 'CPU', setBackend: null };
+    const cpuSet = { ...result.summary!, setBackend: 'CPU' };
+    const named = formatBenchTables([
+      { ...result, path: 'cpu', summary: pools },
+      { ...result, path: 'set-cpu', summary: cpuSet },
+    ]);
+    expect(named.some((l) => l.startsWith('| 20,000 | pools | 1.09 ms'))).toBe(true);
+    expect(named.some((l) => l.startsWith('| 20,000 | set (CPU) | 1.09 ms'))).toBe(true);
   });
 });
