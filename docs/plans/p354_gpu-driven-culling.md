@@ -1,106 +1,292 @@
-Status: stub | Phase 0 (the spike) done, the real plan not written yet
+Status: draft | not-implemented (Phase 0, the spike, done)
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
-Related: \_DONE_p346_spatial-domains.md, \_DONE_p351_impostor-billboard-lod.md (impostor levels are bins too), p240_client-device-capability-sniffer.md (whether the GPU path is worth enabling on a device)
+Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
 
-# GPU-Driven Culling & Per-Instance LOD — Stub
+# GPU-Driven Culling & Per-Instance LOD
 
-**This is a stub.** It records the target and what's known, so the real plan can be written once
-p348 has shipped and its numbers show where the CPU path stops scaling. Phase 0's spike has
-measured that (Phase 0 findings, below): the real plan is written from it.
+Moves culling and LOD selection of large instanced content off the CPU. An **instance set** keeps
+its instances as plain data in GPU buffers, with no entity per instance. Each frame a compute
+pass selects every instance's level with the CPU path's rules (screen size, hysteresis,
+cross-fades), and for each camera that renders the set it frustum-culls them and appends the
+visible ones to per-level lists. Each (level, material group) is one indirect draw whose instance
+count the pass wrote. A hundred thousand or a million trees cost a few dispatches and a few
+indirect draws per camera, and a flat ~0.5-1.5 ms of CPU frame (Phase 0).
 
-## Goal
+The CPU path (`createInstancedLodPool`, an entity per instance) stays. It's the default below
+about 20k instances, the only path for instances that gameplay addresses, and what WebGL2 runs
+when a set falls back (D9).
 
-Move instance culling and LOD selection for instanced content off the CPU:
+---
 
-1. A compute pass reads every instance's bounds from a storage buffer, tests it against the camera
-   frustum, picks its LOD level with p348's rules (screen size, bias), and appends its index to
-   that level's visible list.
-2. Each level draws with an indirect draw whose instance count the compute pass wrote. The vertex
-   stage fetches the instance's matrix through the visible list.
-3. No per-instance CPU work per frame: ten thousand or a million trees cost one dispatch and one
-   indirect draw per level.
+## 1. Grounding
 
-This is the realistic end state for the engine (p350 §7): "Nanite-lite" at instance granularity,
-without meshlets or software rasterization.
+- **three r187's WebGPU backend** has indirect draws (`geometry.setIndirect(attribute, offset)`,
+  an `IndirectStorageBufferAttribute`, `drawIndexedIndirect`), compute (`renderer.compute`, also
+  from inside a render) and a drawing pipeline hook (`renderer.drawingPipeline`, a
+  `StandardDrawingPipeline`, marked experimental: `begin(camera, renderContext)`,
+  `beginRenderList`, `project`, `isCulled(object, camera)`, `finishRenderList`, `prepareAsync`;
+  `Renderer.js:1114`, `:2139`). Every render calls it, the nested shadow renders and the VSM
+  blur quads included. A `StorageBufferAttribute`'s `updateRanges` upload partially
+  (`WebGPUAttributeUtils.js:272`).
+- **WebGL2 has no compute** (`forceWebGL`, or no WebGPU). The engine reads the backend as
+  `renderer.backend.isWebGPUBackend` (`kernel/render/Renderer.ts`, `StreamingPriming.ts`).
+- **The engine has no compute passes and doesn't set `drawingPipeline`** (2026-11-09). The GPU
+  timer (`src/_engine/debug/_dbg__GPUTimer.ts`) times compute dispatches already, and the stats
+  panels show them.
+- **The CPU path** (`features/instancing/CLAUDE.md`, `features/lod/CLAUDE.md`):
+  `createInstancedLodPool` gives every instance an entity with `INSTANCED_MESH_SLOT` and `LOD`,
+  one `InstancedMesh` per level, instances moved between them through `registerLodTarget`
+  (`kernel/ecs/LodTargets.ts`, the kernel registry that lets instancing reach LOD without
+  importing it: a feature imports no other feature's code). The selection is `selectLevel`
+  (`LodSystem.ts:368`). The measure is `LodMeasure.ts`: the camera terms
+  (`computeCameraTerms`), a pool instance's screen size from its origin with level 0's
+  conservative radius, against `getLodSelectionCamera()` (the main camera, or the active one
+  with the `useActiveCamera` debug option). The fades are `LodFades.ts` and `lodFadeSystem`. The
+  settings are in `LodSettings.ts`: the global bias, `fadeSeconds`, and the debug options
+  `freeze`, `forceLevel`, `useActiveCamera` and `fadeTimeScale`.
+- **The dither** (`kernel/render/LodFade.ts`): one `LodFadeMaskNode` that every dither-enabled
+  material shares. It reads the drawn object's fades at draw time: an InstancedMesh's
+  per-instance `lodFade` attribute, and the per-object pair of LOD fade and visibility fade (the
+  visibility fade is streaming's, p353 Phase 5 D5). They bind per object, so the builds are
+  shared (p058 D2). `lodDither` isn't on an entry.
+- **The octahedral impostor's material positions its own billboard**
+  (`impostors/OctahedralImpostorMaterial.ts`). Its `positionNode` reads the drawn mesh's instance
+  matrix again, picked at setup by the drawn object: `instanceMatrix` through a
+  `referenceAttribute` for an InstancedMesh, the identity otherwise.
+- **The ECS world's entity cap.** The default `maxEntities` is 100,000 (`VITE_ECS_MAX_ENTITIES`,
+  `Config.ts`). A pool past it fails to load (Phase 0).
+- **SBP** (`devTools/sbp/CLAUDE.md`): `yarn sbp` budgets the `features/instancing` and
+  `features/lod` groups' first-download code, and the banner budgets every feature group at 0. A
+  module that only an `import()` reaches is lazy and adds nothing to the first download.
+- **Phase 0's numbers** (§3, Phase 0) are from the debug env on the dev server, an Apple M2 and
+  Chrome. Nothing has been measured yet on a production build, another GPU or WebGL2.
 
-## What's known (2026-10-02)
+## 2. Decisions
 
-- three r186's WebGPU backend supports indirect draws (`geometry.indirect`, an
-  `IndirectStorageBufferAttribute`; `renderers/common/Geometries.js:286`,
-  `WebGPUBackend.js:2187`) and indirect compute dispatch (`WebGPUBackend.js:1925`).
-- The engine has no compute passes yet (checked 2026-11-04). The only compute-related code is
-  debug: the GPU timer (`src/_engine/debug/_dbg__GPUTimer.ts`) times compute dispatches with the
-  frame's render contexts, and the stats panels show them (`src/_engine/debug/CLAUDE.md`, GPU
-  timing), so the spike's dispatch cost is readable without new tooling.
-- **The WebGL2 fallback (`forceWebGL`) has no compute.** The CPU path (p348) must stay and is
-  chosen per backend.
-- ECS state: GPU-culled instances have no ECS visibility tags (`TAG_FRUSTUM_CULLED`,
-  `TAG_LOD_CULLED`). That's fine for instanced content, which has none of the per-entity hooks
-  anyway, but anything gameplay-side reading "is this visible" can't use the GPU path.
-- **The CPU path's cost, measured** (p616 Phase 2, largeWorld's 3,800 `LOD` entities and pool
-  instances, debug env): LOD selection about 0.12-0.17 µs per entity a frame
-  (`features/lod/CLAUDE.md`); `instancedMeshPoolSyncSystem` about 35 ns per instance with nothing
-  moving (130-150 µs for 3,500). These are the numbers the GPU path has to beat, and the point
-  where the CPU path stops scaling is somewhere above them: the real plan measures it first.
-- **The pieces it builds on** (`features/instancing/CLAUDE.md`, `features/lod/CLAUDE.md`): the
-  instanced LOD pool (`createInstancedLodPool`, one `InstancedMesh` per level, instances moved
-  between them through `registerLodTarget`), its per-instance `lodFade` attribute
-  (`createLodFadeAttribute`, `enableLodDither`, on `aekasha/lod`), and pool bounds that grow
-  with their instances and never shrink.
-- **Where it goes** (SBP, `devTools/sbp/CLAUDE.md`): the GPU path is part of `instancing()` (with
-  `lod()`'s rules ported), opted into per pool, and its compute code loads with an `import()` on
-  the first pool that asks for it on a WebGPU backend, so a build or a device that doesn't use it
-  downloads none of it; `yarn sbp`'s `instancing` and `lod` groups stay within their budgets.
-- The instance attribute leak (`docs/issues/three-instanced-node-attribute-leak.md`, three
-  r186 never deleted a removed `InstancedMesh`'s instance attributes) is fixed in three r187
-  (#34603, #34690; p057 checks it).
-- **three r187 (2026-10-30) ships a drawing pipeline hook and an experimental GPU-driven
-  pipeline** (p057's review):
-  - `renderer.drawingPipeline` (core, `renderers/common/StandardDrawingPipeline.js`, marked
-    experimental): `begin`, `isCulled`, `pushRenderItem`, `project`, `prepareAsync`, the part
-    that was `Renderer._projectObject`. It's the supported place for a GPU path to take over a
-    pool's culling and submission without patching three (open question 4).
-  - `MeshletDrawingPipeline` / `VisibilityBufferDrawingPipeline` (addons,
-    `examples/jsm/pipelines/`, #35191, "experimental, interface might change", WebGPU only):
-    64-triangle clusters with up to 6 simplified levels, compute frustum, normal-cone and
-    two-phase Hi-Z occlusion culling per object and per cluster, LOD by projected error,
-    indirect draws; it handles `InstancedMesh` instances, `THREE.LOD`, static `BundleGroup`s and
-    `maskNode` (so `lodDither` survives). It falls back to the standard path for `VSMShadowMap`
-    shadow passes (the app's shadow type), non-perspective cameras, reversed or log depth,
-    transparent, non-`FrontSide`, `flatShading` or `vertexColors` materials, a texture `channel`
-    other than 0, mirrored objects and storage instance matrices. Its LOD is continuous per
-    cluster: no discrete p347 levels, impostor bins or cross-fades. About 190 KB raw plus ~90 KB
-    of meshopt clusterizer and simplifier it bundles itself (a duplicate of the engine's
-    `meshoptimizer`), so it could only ever be a lazy `import()` chunk.
-  - InstancedMeshes now share shader builds (#35007): the instance matrix is a
-    `referenceAttribute('instanceMatrix', 'mat4')`, bound per object. A GPU path's per-instance
-    buffers (visible lists, fades) bind per object the same way (p058), or mark their builds
-    object-specific as `LodFade.ts` does since p057.
+### D1 — An instance set: a new API, not a flag on the pool
 
-## Open questions for the real plan
+`createInstanceSetAsync(opts)` (`features/instancing/InstanceSet.ts`, on `aekasha/instancing`).
+Its instances are plain data (D2), so it can't be a flag on `createInstancedLodPool`, whose
+instances are entities. The options mirror the LOD pool's:
 
-1. **Shadow passes.** Each shadow-casting light needs its own cull against its own frustum (or a
-   conservative union). How many dispatches per frame is that with the sky's sun plus a few spot
-   lights?
-2. **Where instance data lives.** Pool transforms are on the ECS side today, synced into
-   `instanceMatrix` by `instancedMeshPoolSyncSystem`. A GPU path wants them in a storage buffer
-   written once (static instances) or from a dirty list (dynamic).
-3. **Occlusion culling.** A Hi-Z pyramid from the previous frame's depth is the usual next step.
-   Worth it only for dense scenes (cities, forests seen from inside); measure first.
-4. **Interaction with three's own culling.** Instanced meshes on the GPU path must have
-   `frustumCulled = false` (the whole batch is one object to three).
-5. **Debugging.** A readback of per-level visible counts (async, debug only) for the LOD drawer
-   tab (`features/lod/debug/_dbg__LOD.ts`), and the GPU memory tab's view of the storage
-   buffers (a `registerGPUMemorySource`, `aekasha/debug`, if three's `info.memory` doesn't place
-   them under an owner).
-6. **Cross-fades** (p351 Phase 2, no popping). An instance changing level is appended to both
-   levels' visible lists for `fadeSeconds`, each with its signed fade for `lodDither`, and fades
-   out to culled the same way; the fade state per instance moves to the GPU. `fadeSeconds: 0`
-   keeps instant switches. The GPU path must match the CPU path here, or a pool would pop only
-   on one backend.
+```ts
+type CreateInstanceSetOptions = {
+  world: ECSWorld; // the owning entity's world (a scene's content, cleared with it)
+  levels: InstancedLodPoolLevel[]; // the pool's level shape: geometry, material(s), screenSize, castShadow
+  maxInstances: number; // sized once, at most 2^24 (D4)
+  lod?: Omit<LodDef, 'levels'>; // cullScreenSize, hysteresis, bias, fadeSeconds
+  receiveShadow?: boolean;
+  maxVisible?: number; // per camera and level (D4); default min(maxInstances, 65,536)
+  preWarm?: boolean; // compiles the draws' materials (D8)
+  entityOpts?: CoreEntityOpts;
+};
+```
 
-## Phase 0 findings (2026-11-09)
+It returns an `InstanceSet`:
+
+- `object` is a `THREE.Group` that holds the set's draws. Add it directly under the root scene.
+- `entityId` is the owning entity. Deleting it disposes everything, so a scene switch clears the
+  set like any other content.
+- `backend` is `'GPU'` or `'CPU'` (D9).
+- `addInstances(placements | matrices)` takes `InstancePlacement[]` or a `Float32Array` of 16
+  floats each, and returns an `InstanceRange` (or `null` past `maxInstances`).
+  `removeInstances(range)` frees the range for a later add. The cull covers instances up to the
+  highest range in use, and a freed range's instances are skipped.
+- `setInstanceMatrices(range, matrices, offset?)` moves instances (D2).
+- `count` is the live instance count.
+
+It's async because each backend is a module of its own behind an `import()` (D10). The promise
+resolves `null` when the owning world's scene exited meanwhile, so the caller re-checks as after
+any `await`. A set with one level and no `cullScreenSize` is a GPU frustum-culled instanced mesh,
+with no LOD.
+
+A streamed cell's content (p353) adds a range in its `load` and removes it in its `unload`, and
+one set serves every cell. Content that wants the cells' visibility fade passes its fade with the
+range (`addInstances(…, { fade })`). That waits for a phase that needs it (§5).
+
+### D2 — Plain data: what a set gives up
+
+- No ECS tags (`TAG_FRUSTUM_CULLED`, `TAG_LOD_CULLED`), no spatial domain, no raycast (the draws
+  sit at the origin and `raycast` does nothing), and no "is this instance visible" for gameplay.
+  Gameplay that needs any of these uses the pool.
+- Uniform scale only (`InstancePlacement.scale` is a number already). The vertex stage turns the
+  normal with the matrix's rotation, and a set fails a non-uniform matrix in its debug check.
+- Moving instances: `setInstanceMatrices` writes the CPU copy and adds an update range. The
+  ranges upload once a frame, before the first dispatch. A set is meant for static or rarely
+  moving content: a sway or wind belongs in the material.
+
+### D3 — The CPU path's rules, written once
+
+- The pure core of the selection (`selectLevel`, the cull test with its hysteresis) and of a
+  fade's step (start, mid-fade change, advance, end) moves to `src/_engine/utils/LodRules.ts`. It
+  works on plain numbers. `LodSystem.ts` and `LodFades.ts` call it, so does the CPU fallback (D9),
+  and its tests are the reference the TSL port mirrors line by line, as the spike's did.
+  Node can't run TSL, so the GPU side's parity is checked in the browser, against the pool, by
+  `instanceStress`'s readback (Phase 0's parity table).
+- **A fade ends at `progress ≥ 1 − 1e-5`** on both paths (`LOD_FADE_END_EPSILON`, in
+  `LodRules.ts`). Under the fixed delta, a 0.25 s fade then lasts 15 frames on both backends,
+  where today the CPU path's f64 sum takes 16 (Phase 0). This changes `lodFadeSystem` by one
+  frame per fade, and Phase 1 reruns the scene runner to check that no baseline moves.
+- **The per-frame inputs are lod()'s.** `lodSelectionSystem` writes the frame's camera terms
+  (from `getLodSelectionCamera()`), the global bias, the frame's fade step (with
+  `fadeTimeScale`), `freeze` and `forceLevel` once a frame, through a kernel seam next to the LOD
+  targets (`kernel/ecs/LodTargets.ts`: `setLodFrameInputs` / `getLodFrameInputs`, `@internal`).
+  A set reads them there, so instancing still imports no LOD code. Without `lod()`, a set with
+  more than one level or a `cullScreenSize` warns once and draws level 0, as a pool does.
+
+### D4 — The buffers
+
+Per set, on the GPU path:
+
+| Buffer | Per | Size | Read by |
+| --- | --- | ---: | --- |
+| Matrices: affine, 3 `vec4` rows | instance | 48 B | the vertex stage only |
+| Cull record: the origin, and scale × level 0's conservative radius | instance | 16 B | the select and the cull |
+| State: level and outgoing level (8 bits each), and the fade progress (f32) | instance | 8 B | the select (written), the culls |
+| Visible list: an entry packs the instance (24 bits) and its signed fade (8 bits) | (slot, level) × `maxVisible` | 4 B | the vertex and fragment stages |
+| Draw args: `drawIndexedIndirect`'s five, padded | (slot, level, group) | 32 B | the draws |
+
+- **The cull record replaces the four matrix columns** in the compute. The record's sphere (the
+  origin, with the conservative radius) is what the CPU path measures a pool instance's screen
+  size with. It also contains level 0's own bounding sphere, so it serves as the frustum test's
+  sphere: a little looser than the spike's, and read in one 16-byte load instead of 64. Phase 0
+  found the cull's cost is reading the matrix, so Phase 1 measures what this saves.
+- **The lists are budgeted, not sized by the instance count.** Phase 0's list, sized by the
+  count with a separate fade per entry, was 48 MB at 1M with two slots. With a budget it's
+  slots × levels × `maxVisible` × 4 B: 3 MB for 3 levels, 4 slots and 65,536. An entry past
+  the budget is dropped and counted, and the debug tab shows the count (D11). The 8-bit fade has
+  255 steps, finer than a 15-frame fade needs.
+- At 1M instances that's 48 + 16 + 8 MB. The matrices are most of it, and they're also the CPU
+  copy the set keeps for `setInstanceMatrices` and the fallback.
+
+### D5 — The kernel owns the drawing pipeline
+
+`kernel/render/DrawingPipeline.ts` installs one `StandardDrawingPipeline` subclass on
+`renderer.drawingPipeline` with the first hook and puts three's back with the last.
+`addDrawingPipelineHook({ begin?, isCulled?, finishRenderList? })` returns the remover and is
+`@internal`. Three's experimental interface stays behind this one file, and a later user (p370's
+indirect draws, p375) shares it. The module is imported only by the GPU backend, so it's lazy
+too (D10).
+
+- **A set dispatches only for the renders that reach it.** `isCulled` sees the set's draws
+  during the projection, and `finishRenderList` dispatches that render's cull. That's after the
+  projection and before any draw is encoded, which is where three's meshlet pipeline dispatches.
+  So a render of another scene (an impostor bake, the sky's layers, a snapshot of an editor view)
+  costs the set nothing. Phase 0 dispatched in `begin`. Phase 1 checks that `finishRenderList`
+  runs before a nested shadow render, which starts while the outer render's list is drawn.
+
+### D6 — A slot per camera
+
+- A camera gets a slot on its first render that reaches the set: its draws (a mesh per (level,
+  group)) and, on its first dispatch, its lists and args. A slot unused for 120 frames is
+  released. `maxSlots` (default 8) caps them: past the cap, a camera draws none of the set, and
+  the debug env warns once.
+- **Every slot draws the levels selected against `getLodSelectionCamera()`**, as the CPU path's
+  viewports, debug camera and snapshots do. Only the frustum is the slot's own camera's.
+- **A shadow camera's slot draws only the casting levels** (`castShadow` per level). A camera is
+  a shadow camera when it's the `shadow.camera` of a light in the root scene, cached per camera.
+- **Nested renders need their own slots** (the sun's shadow inside the main render, Phase 0).
+  Sequential renders of one camera re-dispatch into its slot before each render. A point light's
+  six faces reuse its `shadow.camera` (`PointShadowNode.js:290-334`), and each face's draws run
+  before the next face's dispatch in queue order. Phase 3 checks this.
+- One dispatch per slot. The single dispatch for every slot (each instance tested against every
+  frustum, the record read once) needs the shadow cameras' matrices before the view's render.
+  Phase 0 found it worth it only above about 500k, so it's left out unless Phase 3's
+  measurements ask for it (§5).
+
+### D7 — The state advances once a frame
+
+The frame's first dispatch of a set runs the select and the advance, and writes the state. Every
+later dispatch in the frame (the shadow slot, a viewport) only reads it. The frame is the main
+loop's frame counter. This fixes the spike's double advance when one camera renders twice in a
+frame. The select applies the debug options as `lodSelectionSystem` does: `freeze` keeps the
+levels, `forceLevel` puts every instance at that level (none culled), and `fadeTimeScale` scales
+the step.
+
+### D8 — The level materials, a draw per (level, group)
+
+As Phase 0's part 3:
+
+- A set draws with its levels' materials as given (classic or node). Each source material gets
+  one node variant (`renderer.library.fromMaterial`, the values copied, the identity and
+  listeners left out). The variants share one vertex fetch (`positionNode`, through the visible
+  list's entry) and one mask. A mesh's list is a per-object uniform, so the builds are the CPU
+  path's: one per (material, pass), whatever the levels, groups and slots.
+- **The dither is the engine's.** `LodFadeMaskNode` learns a third source: a set's draw reads its
+  entry's fade, ANDed with the object's visibility fade as before. A material's other mask (an
+  alpha cut) is kept, where Phase 0's variant replaced it. The set calls `enableLodDither` on its
+  sources as the pool does.
+- **A material that positions its own instances** (the octahedral impostor) reads the instance
+  matrix through an engine node that resolves per drawn object: an InstancedMesh's
+  `instanceMatrix`, or the set's fetched matrix (`instanceSetMatrix`, `@internal`). Its variant
+  keeps its own `positionNode`. `OctahedralImpostorMaterial.ts`'s setup-time choice of the
+  `instanceMatrix` reference or the identity becomes that node's. The node lives in
+  `kernel/render/`, so neither feature imports the other.
+- A geometry has one indirect offset, so each group of a level is its own mesh and its own args
+  (its `firstIndex` and `indexCount`). The cull counts into group 0's args, and a finalize pass
+  in the same compute call copies the count to the level's other groups.
+- `preWarm: true` compiles the variants with the engine's compile queue (`preWarmObjectsAsync`,
+  `kernel/render/CLAUDE.md`'s Pre-warm compiles), one draw per (material, level) at slot 0.
+
+### D9 — The CPU fallback (WebGL2): the same set, no compute
+
+On a backend without compute, `createInstanceSetAsync` loads the CPU module, and `backend` is
+`'CPU'`. Same API, same data, same rules:
+
+- An `InstancedMesh` per level, its `instanceMatrix` and `lodFade` written from the typed arrays.
+  Each frame a loop runs D3's pure functions over the instances (no entities, no storages), and
+  rewrites only the levels whose membership changed.
+- No per-instance frustum culling: three culls each level mesh as a whole by its bounds, as with
+  the pool. A set's visual result is the pool's: the same counts per level, the same fades.
+- It's the pool's per-instance CPU cost without the ECS: Phase 4 measures how much the ECS was
+  of the pool's ~110 ns per instance. A device where even that is too slow is p240's case (a
+  lower density, or no set).
+- The other way, a set backed by a LOD pool on WebGL2, would bring back the entity per instance
+  and the 100k cap. That's what a set exists to remove.
+
+### D10 — Where the code goes
+
+All of it is in `features/instancing/`:
+
+- `InstanceSet.ts` is the front: the options, the owning entity and the backend choice. It's
+  small and on the entry, and it adds about a kilobyte to the `features/instancing` group's
+  first download.
+- `InstanceSetGpu.ts` (and its TSL, `InstanceSetNodes.ts`) and `InstanceSetCpu.ts` are each an
+  `import()` from it.
+- A build that never creates a set ships only the front, and a device downloads only its own
+  backend. The kernel modules the GPU backend alone imports (`DrawingPipeline.ts`) land in its
+  chunk.
+- `yarn sbp`: the instancing and LOD groups stay within their budgets, the banner's feature
+  groups at 0, and the report shows the two backend chunks as lazy.
+
+### D11 — Debug
+
+- **The LOD tab gets an Instance sets folder.** Per set it shows the backend, the instance
+  count, the slots (each one's camera) and, per (slot, level), the drawn count and the overflow.
+  These come from an async readback of the args, debug only, a few times a second. Three's
+  `info.render` counts an indirect draw's call but not its triangles, so the folder shows the
+  triangles from the counts.
+- **The GPU memory tab** gets the set's storage buffers through `registerGPUMemorySource`
+  (`aekasha/debug`), under the set's owner, if three's `info.memory` doesn't already place them
+  under one.
+- The LOD overlay and the per-entity window have no entity to show. A set's level colours (a
+  debug variant per level) wait for a need (§5).
+- `freeze`, `forceLevel` and `fadeTimeScale` work on sets through D3's inputs, so the tab's
+  controls drive both paths.
+
+### D12 — The verification scene
+
+`instanceStress` (`src/app/scenes/instanceStress/`) moves onto the engine API: its spike module
+`gpuCullSpike.ts` is removed in Phase 1 and its `?stressPath=gpu` creates a set. It keeps its
+flags, its tab and `window.__aekInstanceStress.measure`, and it's where the parity with the pool
+is checked (its readback), on both backends. It gets a `scenes.config.ts` entry: a snapshot at
+`?stressCamera=STILL` per path. Whether the Hub also gets an example scene or a `lodShowcase` lane
+is §4's question.
+
+## 3. Phases
+
+### Phase 0 — Spike — done (2026-11-09)
 
 Branch `p354-phase0-spike`. Measured on a new scene, `instanceStress` (`src/app/scenes/instanceStress/`),
 not on largeWorld or lodShowcase: neither scales its instance count. A square forest of trees (three
@@ -117,7 +303,7 @@ server (unminified). The test bridge's fixed frame delta puts the camera on the 
 run. Production builds will be somewhat faster per instance. The ratios and the scaling are what
 count here. `VITE_ECS_MAX_ENTITIES=600000` was needed past 100k (see below).
 
-### The CPU path (instanced LOD pools), camera circling
+#### The CPU path (instanced LOD pools), camera circling
 
 | Trees | Pool sync | LOD systems | Render submit | CPU frame | GPU frame |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -140,7 +326,7 @@ count here. `VITE_ECS_MAX_ENTITIES=600000` was needed past 100k (see below).
   default world, the camera and the level meshes included. The GPU path must not spend an
   entity per instance.
 
-### Three's `MeshletDrawingPipeline` as a drop-in (the same pools)
+#### Three's `MeshletDrawingPipeline` as a drop-in (the same pools)
 
 | Trees | GPU frame (standard → meshlet) | Its compute | CPU frame |
 | ---: | ---: | ---: | ---: |
@@ -161,7 +347,7 @@ count here. `VITE_ECS_MAX_ENTITIES=600000` was needed past 100k (see below).
   (Tier 4's question), and its fallback under the app's VSM shadows (the scene's sun has none).
   Instanced LOD content stays on this plan's path.
 
-### The hand-written path (`instanceStress/gpuCullSpike.ts`)
+#### The hand-written path (`instanceStress/gpuCullSpike.ts`)
 
 Every instance's matrix sits in one storage buffer (4 `vec4` columns each). Each frame a compute
 pass resets the level counts, frustum-culls each instance's level-0 sphere against the main
@@ -207,7 +393,7 @@ There are no entities.
   culling per camera (open questions 1 and 4), not measured yet.
 - WebGL2 has no compute: the scene falls back to the CPU path with a warning.
 
-### The cull per camera through `renderer.drawingPipeline`, the VSM sun shadow on
+#### The cull per camera through `renderer.drawingPipeline`, the VSM sun shadow on
 
 The spike's dispatch moved from the ECS system into a `StandardDrawingPipeline` subclass
 (`createGpuCullPipeline`, `gpuCullSpike.ts`), installed on the GPU path's load and restored on
@@ -276,7 +462,7 @@ two dispatches a frame.
   slot, not by the instance count.
 - The spike builds a level material per slot (five pipelines here): the shared builds are part 3.
 
-### Hysteresis and cross-fades on the GPU
+#### Hysteresis and cross-fades on the GPU
 
 The spike now applies the CPU path's rules (`features/lod/CLAUDE.md`: `selectLevel`, the cull
 test, `LodFades.ts`). Each instance has a state word (its level and the level it fades out of, 8
@@ -366,7 +552,7 @@ casting level. The CPU path, the same run: 100k at 4.5 ms of GPU frame with the 
 - The visible lists' order changes from frame to frame (the atomics). That's harmless for opaque
   content, and the state itself is deterministic: one thread per instance, no races.
 
-### The pools' own materials, a draw per (level, group)
+#### The pools' own materials, a draw per (level, group)
 
 The GPU path now draws with the CPU path's materials: `createMaterial`'s classic
 `MeshLambertMaterial`s, one for the trunk and one for the foliage, by the tree geometry's groups.
@@ -415,7 +601,7 @@ The GPU path now draws with the CPU path's materials: `createMaterial`'s classic
   production build with longer runs settles it (Phase 1). The CPU path in the same run measured
   8.1 and 11.2 ms with the shadow at 20k and 100k. The CPU frame stays 0.5-1.4 ms.
 
-### What this means for the real plan
+#### What this means for the real plan
 
 1. **The GPU path is worth building, for static instanced content above about 20-50k instances.**
    It removes the per-instance CPU work, the entity per instance and the cap, and the off-screen
@@ -437,29 +623,280 @@ The GPU path now draws with the CPU path's materials: `createMaterial`'s classic
    to win here), other GPUs (an integrated Intel or a phone, which p240's device level would
    gate), and a production build.
 
-## Rough phases (to be refined)
+Each phase leaves the tree as the root's Workflow asks: `yarn test`, lint and both type-checks
+clean (the Stop hook), and the docs ratchet holding. Each phase also runs:
 
-0. **Spike — done** (see Phase 0 findings; measured on `instanceStress`, the compute wired from an
-   ECS system, not yet through `drawingPipeline`). Two parts, on WebGPU, with p345's frame numbers
-   before and after:
-   - three's drop-in first (`renderer.drawingPipeline = new MeshletDrawingPipeline()`, a lazy
-     `import()`) on largeWorld and lodShowcase: what it culls, what falls back (VSM shadows, the
-     fades) and what it costs. If it covers a content class (static content in a `BundleGroup`,
-     huge single meshes), that class can use it instead of this plan's path.
-   - Then a TSL compute pass that frustum-culls 100k instances into one indirect draw, wired in
-     through `renderer.drawingPipeline` rather than a patch: the hand-rolled path keeps what
-     three's lacks (discrete levels, impostor bins, per-instance cross-fades, VSM shadows).
-1. **Frustum culling + indirect draw** for one instanced pool type, behind a per-pool flag.
-2. **Per-instance LOD** binned into per-level indirect draws (p348's rules ported to TSL).
-3. **Shadow passes.**
-4. **Occlusion culling**, if measured as worth it.
-5. **Hub and docs** (second-to-last, per the plans' convention): the LOD feature page
-   (`hub/pages/features/lod/`, which covers the pools too) and the instancing and LOD nested
-   `CLAUDE.md` files, a `lodShowcase` lane for the GPU path
-   (`features/lod/CLAUDE.md`'s lanes), then versioning.
+- `yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`: the pool's scenes don't
+  move, Phase 1's ε fix included. Record the baselines on `main` first.
+- `yarn verify:baselines`: the new API's exports, a lazy chunk per backend, and no debug code in
+  the build. Update the baselines only in the phase that explains the change.
+- `yarn sbp`: D10's budgets.
 
-## Not in scope
+Every measurement goes in the phase's "As built" with its conditions, as Phase 0's did.
 
-Cluster-level (meshlet) LOD of the engine's own stays out (p350 §8, Tier 4): since three r187 the
-question is whether three's `MeshletDrawingPipeline` serves huge single meshes (terrain chunks,
-large architecture), Phase 0's first part.
+### Phase 1 — A set on WebGPU: the cull, the levels, one camera
+
+1. **The rules (D3).** Add `src/_engine/utils/LodRules.ts`: the selection with its hysteresis,
+   the cull test, the fade step and `LOD_FADE_END_EPSILON`. `selectLevel` (`LodSystem.ts`) and
+   `LodFades.ts` call it. Unit tests cover the CPU path's cases (`LodSystem.test.ts`' selection
+   cases move there) and the ε end (a 0.25 s fade at 1/60 s lasts 15 frames).
+2. **The frame inputs (D3).** Add `setLodFrameInputs` / `getLodFrameInputs` in
+   `kernel/ecs/LodTargets.ts`, written by `lodSelectionSystem` once a frame: the camera terms,
+   the bias, the fade step, `freeze` and `forceLevel`. A test checks they're written with no
+   `LOD` entity in the world too.
+3. **The drawing pipeline seam (D5).** Add `kernel/render/DrawingPipeline.ts` with
+   `addDrawingPipelineHook`: installed with the first hook, three's restored with the last, and
+   the hooks called in the order they were added. Tests in Node with a stub renderer.
+4. **The front (D1, D2, D10).** Add `features/instancing/InstanceSet.ts`:
+   - `createInstanceSetAsync` and its options' checks: the levels as the pool checks them,
+     `maxInstances ≤ 2^24`, `maxVisible`.
+   - The owning entity (a `TAG_IS_MESH`-like delete hook that disposes the set), `object`, and
+     `addInstances` (append only here; Phase 5 adds the removal).
+   - The backend choice and its `import()`. Until Phase 4, a set on WebGL2 warns once and draws
+     nothing.
+   - On the entry, with JSDoc and an `@example`. Unit tests: the checks, the ranges, a scene
+     exit during the import resolving `null`.
+5. **The GPU backend, one slot.**
+   - `InstanceSetGpu.ts` and `InstanceSetNodes.ts`: the buffers (D4: the affine matrices, the
+     cull records, the state, the budgeted packed lists, the args) and the select, cull and
+     finalize passes.
+   - The select applies the hysteresis and switches levels instantly in this phase. A set with
+     `fadeSeconds > 0` draws without fades and says so in its JSDoc, until Phase 2.
+   - The variants and the draws per (level, group) (D8, without the mask's new source yet).
+   - The cull is dispatched through the seam in `finishRenderList`, for the main camera only. Any
+     other camera draws none of the set until Phase 3.
+6. **`instanceStress` on the engine API (D12).** `?stressPath=gpu` creates a set, and
+   `gpuCullSpike.ts` is removed. The tab and `measure()` read the set's debug readback (a
+   `_dbg__` helper of the set's, the first part of D11). It gets a `scenes.config.ts` entry: a
+   snapshot per path at `?stressCamera=STILL`, 20k trees, no fades.
+7. **The harness, committed.** Phase 0's Playwright script becomes
+   `devTools/bench/instanceStress.ts`, run with `npx tsx …` and given a layout rule for
+   `devTools/bench/`. It takes the counts, paths and flags, and prints Phase 0's tables. It
+   measures the dev server or a `yarn build:test` build (minified, `?isProdTest=true&aekTest=true`).
+   The first step finds which of the scene's readouts load in prod test mode, and reads the rest
+   from the harness's own frame timing.
+8. **The nested `CLAUDE.md` files.** `features/instancing/CLAUDE.md` gets an
+   "Instance sets" section, and `features/lod/CLAUDE.md` names `LodRules.ts` and the frame inputs.
+   The Hub waits for Phase 6.
+
+**Verification:**
+
+- **Parity with the pool.** At 20k on the held orbit with the fades off, the per-level counts
+  are the pool's exactly (Phase 0's first parity row). At `?stressCamera=STILL` the snapshot
+  differs from the pool's by no more than Phase 0's 0.12% of pixels over 8/255.
+- **The builds** are Phase 0's table: 3 node builds and 3 render pipelines, plus the 3 compute
+  pipelines.
+- **The cost**, on a `yarn build:test` build, 20k to 1M:
+  - The CPU frame stays flat, under 1.5 ms.
+  - The compute is compared with Phase 0's at the same drawn counts, to see what the cull
+    record saves.
+  - The GPU frame settles whether the draw per group costs about 0.5 ms (Phase 0, part 3).
+- The ε fix moves no scene runner baseline. If one moves, its reason goes in "As built", and
+  the baseline is updated in this phase.
+
+### Phase 2 — Cross-fades and the debug options
+
+1. **The fades in the select.** Add the state's outgoing level and progress, the fade's start,
+   its mid-fade change and its advance by the frame inputs' step (D3's rules, ported). The two
+   copies are appended with their packed signed fades (D4). A fade to or from culled has one
+   copy.
+2. **The mask (D8).** `LodFadeMaskNode` (`kernel/render/LodFade.ts`) gets its third source, the
+   set entry's fade, read through the vertex stage. It's ANDed with the object's visibility fade
+   on the same noise, and a material's other mask is kept. The variant no longer replaces the
+   source's mask: the set calls `enableLodDither` on its sources. The file's header comment says
+   where each kind of drawn object reads its fade.
+3. **The debug options.** `freeze`, `forceLevel` and `fadeTimeScale` come through the frame
+   inputs. Check them against the pool from the LOD tab, side by side in `instanceStress`.
+4. **D11's tab folder.** The LOD tab's Instance sets folder, with the backend, the counts per
+   level, the fading count and the overflow.
+
+**Verification:**
+
+- **Parity, frame for frame.** At 20k on the held orbit, with fades off, 0.25 s and 1 s, the
+  counts per level and fading match the pool's exactly at the measure's last frame. With the ε
+  fix on both paths, no frame of difference is left (Phase 0's table had 198 against 220).
+- With `fadeTimeScale` at 0.1, the dither looks the same as the pool's (a snapshot pair at a
+  held fade, the `STILL` camera).
+- Fades cost no measurable compute or GPU frame, as Phase 0 found, now on the minified build.
+
+### Phase 3 — Every camera: shadows, viewports, the debug camera
+
+1. **Slots (D6).** Allocate on first sight, release after 120 unused frames, cap at `maxSlots`
+   (and warn once past it). Each slot has its draws, lists and args.
+2. **The dispatch per render (D5).** In `finishRenderList`, for the slots that the render's
+   projection reached. The first step confirms the order with a nested shadow render: does the
+   main render's `finishRenderList` run before `ShadowNode.updateBefore` starts the shadow's
+   render? If it doesn't, fall back to Phase 0's `begin` and record why.
+3. **Once a frame (D7).** The frame's first dispatch selects and advances, and the others only
+   read the state. Test: two renders of the main camera in one frame advance a fade once.
+4. **Shadow cameras.** A light's `shadow.camera` is recognized, and its slot draws only the
+   casting levels. Cover the sun (VSM, `SunShadowFit`), a spot light (one camera) and a point
+   light (six faces in one slot, sequential).
+5. **Other cameras.** A viewport (`viewports()`), the debug camera, `takeSnapshotAsync` of the
+   root scene, and the pre-warm camera (`compileAsync`). Each draws its frustum of the main
+   camera's levels.
+
+**Verification:**
+
+- **`?stressShadow=true`** (the VSM sun) has the CPU path's look: Phase 0's pixel diff. Its cost
+  is Phase 0's: the shadow's fixed cost plus about 1k casting instances, whatever the count.
+- **A spot light and a point light** (new `instanceStress` flags) shadow the set with every
+  face correct. Check it with snapshots against the pool path at 5k (the pool's point shadow is
+  the reference).
+- **A viewport** of the scene and **the debug camera** show the set. A snapshot of the root
+  scene matches the canvas. An impostor bake or a sky bake dispatches nothing (the readback's
+  dispatch count).
+- **The compute with N slots** at 200k, 500k and 1M. If it passes about 2 ms at 1M with the sun,
+  §5's single dispatch or cell pre-cull becomes a step here. Otherwise it's left for later.
+
+### Phase 4 — The CPU fallback (WebGL2)
+
+1. **`InstanceSetCpu.ts` (D9).** An `InstancedMesh` per level with its `lodFade` attribute. The
+   per-frame loop over the typed arrays runs `LodRules.ts`' selection and fades, and rewrites
+   only the levels whose membership changed (a swap-remove per change, as the pool does). It runs
+   at `APP_RENDER_SYNC_ORDER.LOD_SELECTION`, right after `lodSelectionSystem`, on its frame
+   inputs. Its bounds are the union of the instances' records, kept per level mesh.
+2. **The backend choice.** No compute means the CPU module, and `backend: 'CPU'`. A debug
+   option forces it on WebGPU too (the LOD tab), to compare both backends on one device.
+3. **Node tests.** The CPU backend's per-level membership after a scripted camera path matches a
+   loop of `LodRules.ts` written in the test, and the swap-remove keeps every instance in
+   exactly one level, or two while it fades.
+
+**Verification:**
+
+- `instanceStress --webgl` (`yarn verify:scenes --webgl`, and the harness): counts per level and
+  fading identical to the pool's at 20k with fades off, 0.25 s and 1 s, and the snapshots match.
+- **The cost per instance** against the pool's at 5k, 20k and 100k on WebGL2 (the pool needs
+  `VITE_ECS_MAX_ENTITIES` past 100k). This tells how much of the pool's ~110 ns was the ECS. The
+  result goes into the Hub page's "which to use" (Phase 6) and p240's notes.
+- The forced CPU backend on WebGPU gives the same counts as the GPU backend.
+
+### Phase 5 — Ranges, moving instances, impostor levels, memory
+
+1. **Removal and reuse (D1).** `removeInstances(range)` marks the range's state dead (skipped
+   by the select and the culls), and a free list hands it to a later `addInstances` of equal or
+   smaller size (first fit). The cull's extent is the highest live range. Unit tests cover the
+   free list and the dead instances' skip.
+2. **Moving instances (D2).** `setInstanceMatrices` writes the CPU copy and the cull records, and
+   adds `updateRanges` that upload once a frame before the first dispatch, merged when adjacent.
+   The debug check fails a non-uniform scale.
+3. **A streamed set.** An `instanceStress` flag splits the forest into cells of
+   `registerStreamingCellContent`, each adding its range in `load` and removing it in `unload`.
+   This is the case p353's "an instanced LOD pool's instances aren't faded" leaves open: whether
+   a range gets the cells' visibility fade is decided here, from how it looks.
+4. **Impostor levels (D8).** The instance matrix node in `kernel/render/`
+   (`instanceSetMatrix`, resolving an InstancedMesh's `instanceMatrix`, a set's fetch, or the
+   identity), used by `OctahedralImpostorMaterial.ts`. Cover a set ending in cross-quads (plain
+   geometry, nothing new) and one ending in an octahedral impostor, in the shadow pass too.
+5. **Memory.** The GPU memory tab's view of the set's buffers (D11: `registerGPUMemorySource` if
+   three's `info.memory` doesn't place them under the set's owner). Check that disposing a set
+   (a scene switch) frees all of it: the GPU memory tab's high-water and snapshot diff
+   (`_DONE_p345`).
+6. **`preWarm` (D8).** Through `preWarmObjectsAsync`. A set created with it shows no compile
+   hitch on its first frame.
+
+**Verification:**
+
+- A scene switch away from `instanceStress` at 1M leaves no set buffer in the GPU memory tab's
+  snapshot diff.
+- Streaming the forest's cells in and out for 30 s on a fly-through: no frame over 33 ms caused
+  by the set (p353 Phase 1's measure), the free list reused (no growth past the first lap), and
+  no instance drawn from a removed range (the readback).
+- Moving 1% of the instances a frame costs one upload per frame, and the CPU frame stays under
+  2 ms at 100k.
+- Octahedral impostor levels match the pool's (the snapshot pair), shadows included.
+
+## 4. Hub, docs and versioning
+
+The Hub's example is a `lodShowcase` lane (decided 2026-11-09). There's no example scene of its
+own: `instanceStress` covers the scaling, and the lane shows the parity next to the pool's lane.
+
+### Phase 6 — The Hub, the lane and the docs
+
+1. **The `lodShowcase` lane** (`src/app/scenes/lodShowcase/lanes/instanceSetGrove.ts`, "Instance
+   set and cross-quads").
+   - It's `treeGrove`'s lane drawn by an instance set: the same tree levels and cross-quads, the
+     same cull, the same bands from `layout.ts`. The two lanes sit side by side, and every level
+     and the cull are on screen from the start camera.
+   - Its description names the backend it runs on, so on WebGL2 it says the CPU backend.
+   - The "LOD demo" tab gets its camera stops (each switch, just inside and just past) and its
+     levels and triangles, read from the set's readback rather than from entities.
+   - `lodShowcase`'s scene runner baseline changes with the new lane. Update it in this phase,
+     and give the reason in the commit.
+2. **The LOD feature page** (`hub/pages/features/lod/`).
+   - `guide.md`'s "Many instances" gets a part on instance sets: what a set is and what it gives
+     up (D2), when to take it over a pool (about 20-50k static instances and up, with Phase 1's
+     and Phase 4's production numbers), the backends (D9), the cameras (D6), the ranges and
+     streamed cells (Phase 5), and the debug folder (D11).
+   - A snippet from the lane, through a `#region` marker that names the page in its note.
+   - `index.html`'s `aek:covers` gets "Instance sets" (the new `##` section of
+     `features/instancing/CLAUDE.md`, Phase 1). Key APIs gets `createInstanceSetAsync`.
+   - The intro's "Thousands of instances cost a draw call per level" gets its sentence on sets.
+3. **The nested `CLAUDE.md` files.**
+   - `features/instancing/CLAUDE.md`'s Instance sets section as built (the backends, the slots,
+     the seams it uses, the traps found on the way).
+   - `features/lod/CLAUDE.md`: `LodRules.ts`, the frame inputs, the new lane in the lane list,
+     and p354 off its "later LOD plans" list.
+   - `kernel/render/CLAUDE.md`: a "Drawing pipeline" section for `DrawingPipeline.ts`, and the
+     instance matrix node. A new `##` section needs an `aek:covers` too: the Rendering page's, or
+     a `coverageIgnore` entry with its reason.
+4. **The root `.claude/CLAUDE.md`**: the map's instancing line ("instanced mesh pools and
+   instance sets"), and `devTools/bench/` under Commands (Phase 1's harness).
+5. **`readme.md`**:
+   - Features: the instanced mesh pools' entry gets instance sets (GPU culled and LOD-selected
+     on WebGPU, the same rules on the CPU on WebGL2, no entity per instance).
+   - The performance table gets a row for instance sets: the flat CPU cost, and a dispatch and a
+     draw per level and group per camera.
+6. `yarn hub:build` and `yarn hub:preview`: the page's snippet and links resolve. `yarn docs` has
+   the new API.
+
+**Verification:** `yarn hub:build` passes (no dead `hub:` link, no moved `#region`, every
+`##` section covered). `yarn verify:scenes --only lodShowcase` passes on both backends with the
+updated baseline. The page reads right in both themes (`yarn hub:preview`).
+
+### Phase 7 — Versioning, changelog, the plan done
+
+1. **Versions** (`package.json`), bumped from what `main` has at the merge (today engine 6.2.0
+   and app 1.20.0):
+   - Engine minor: 6.2.0 → 6.3.0, with the project `version` the same. It adds API
+     (`createInstanceSetAsync` and its types), and nothing in it breaks: the ε fix changes a
+     fade's length by one frame, and the seams are `@internal`.
+   - App minor: 1.20.0 → 1.21.0, for `instanceStress` and the lane.
+   - The toolkit is unchanged.
+2. **`CHANGELOG.md`**: the branch's entry with Engine (the set, the backends, the rules and the
+   fix, the drawing pipeline seam, the debug folder), App (`instanceStress`, the lane) and
+   Project (`devTools/bench/instanceStress.ts`) sections.
+3. `yarn checkVersions --against main`.
+4. **Mark the plan done** (`docs/plans/CLAUDE.md`).
+   - The status becomes `implemented (Phases 0-7)`, and the file is `git mv`'d to
+     `_DONE_p354_gpu-driven-culling.md`.
+   - The references to its old name are updated: p350's status line, its Tier 3 row and its
+     branches note; p308, p370 and p375's Related lines; `features/lod/CLAUDE.md`.
+   - p350's Tier 4 row keeps three's `MeshletDrawingPipeline` for huge single meshes as the
+     open question (§5).
+5. **The PR**: branch `p354-phase0-spike` into `main` (p350: p354 gets its own branch), opened
+   when asked.
+
+## 5. Not in scope, and left for later
+
+- **Occlusion culling** (a Hi-Z pyramid from the previous frame's depth). Phase 0 drew about
+  9-40k instances, mostly in the open, so it has little to win there. It's worth measuring only
+  for dense content seen from inside (a city, a forest at eye level), as a plan of its own on
+  top of the sets' cull.
+- **Cluster (meshlet) LOD**: p350 Tier 4. The question left is whether three's
+  `MeshletDrawingPipeline` serves huge single meshes and static `BundleGroup` content. For
+  instanced LOD content Phase 0 found it slower, and it keeps the CPU cost.
+- **The single dispatch for every slot, and the coarse cell pre-cull**: below about 500k
+  instances neither is needed (Phase 0). Phase 3 measures it and takes one in only if the
+  compute with the sun's slot passes about 2 ms at 1M.
+- **Multi-draw-indirect**: WebGPU doesn't have it. A draw per (slot, level, group) stays.
+- **Entities on top of a set**: per-instance gameplay, ECS visibility tags, raycasts against
+  instances, spatial domains. Those stay the pool's (D2).
+- **A visible-instance readback for gameplay** (which instances drew). It's debug only (D11).
+  A production readback would lag a frame or two behind, since it must stay async to stall
+  nothing.
+- **Choosing the backend by device** (a set off, or a lower density, on a weak device): p240's
+  device levels. This plan reports the numbers p240 needs (Phase 4).
+- **p308's static scatter on sets**: whether `createStaticInstances` (p308 D1) creates a set
+  for its large cases is p308's decision. Its Related line points here.
+- **Level colours for sets in the LOD overlay** (D11), until a debugging need shows up.
