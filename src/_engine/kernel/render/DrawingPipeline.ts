@@ -14,7 +14,7 @@ import * as THREE from 'three/webgpu';
 import { lwarn } from '../../utils/Logger';
 
 /**
- * What a drawing pipeline hook can do in each render (see {@link addDrawingPipelineHook}). Every
+ * What a drawing pipeline hook can do in each render (see `addDrawingPipelineHook`). Every
  * callback is optional; the hooks are called in the order they were added.
  * @internal
  */

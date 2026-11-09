@@ -35,7 +35,7 @@ export const LOD_LEVEL_NONE = -1;
 export const LOD_LEVEL_CULLED = -2;
 
 /**
- * The level for screen size `s`, coming from level `current` (-1, {@link LOD_LEVEL_NONE}: a first
+ * The level for screen size `s`, coming from level `current` (-1, `LOD_LEVEL_NONE`: a first
  * selection, which takes no hysteresis). The finest level whose `screenSize` `s` reaches (below
  * all of them, the last level). A move to a finer level happens at its `screenSize`; a move to a
  * coarser one only once `s` is below the current level's `screenSize` × (1 − `h`).
@@ -78,8 +78,8 @@ export const isLodCulledAt = (s: number, cullScreenSize: number, h: number, isCu
   cullScreenSize > 0 && s < (isCulled ? cullScreenSize : cullScreenSize * (1 - h));
 
 /**
- * The selection: the level for screen size `s`, or {@link LOD_LEVEL_CULLED}, coming from
- * `current` (a level, {@link LOD_LEVEL_NONE} or {@link LOD_LEVEL_CULLED}). Coming back from
+ * The selection: the level for screen size `s`, or `LOD_LEVEL_CULLED`, coming from
+ * `current` (a level, `LOD_LEVEL_NONE` or `LOD_LEVEL_CULLED`). Coming back from
  * culled, it comes from beyond the last level, so it takes the coarser levels' hysteresis.
  * @internal
  * @param levels level 0 first, `screenSize` descending
@@ -116,8 +116,8 @@ export const getLodFadeDelta = (step: number, fadeSeconds: number) =>
   fadeSeconds > 0 ? step / fadeSeconds : 1;
 
 /**
- * A fade's progress after a frame's `delta` ({@link getLodFadeDelta}): exactly 1 once the fade
- * has ended, at 1 − {@link LOD_FADE_END_EPSILON}.
+ * A fade's progress after a frame's `delta` (`getLodFadeDelta`): exactly 1 once the fade
+ * has ended, at 1 − `LOD_FADE_END_EPSILON`.
  * @internal
  */
 export const advanceLodFade = (progress: number, delta: number) => {
@@ -126,14 +126,14 @@ export const advanceLodFade = (progress: number, delta: number) => {
 };
 
 /**
- * An instance's LOD state, what {@link stepLodInstanceState} moves.
+ * An instance's LOD state, what `stepLodInstanceState` moves.
  * @internal
  */
 export type LodInstanceState = {
-  /** The selected level, {@link LOD_LEVEL_NONE} before the first selection, or
-   * {@link LOD_LEVEL_CULLED}. */
+  /** The selected level, `LOD_LEVEL_NONE` before the first selection, or
+   * `LOD_LEVEL_CULLED`. */
   level: number;
-  /** The level it fades out of ({@link LOD_LEVEL_CULLED} when fading in), {@link LOD_LEVEL_NONE}
+  /** The level it fades out of (`LOD_LEVEL_CULLED` when fading in), `LOD_LEVEL_NONE`
    * when no fade runs. */
   outgoing: number;
   /** The running fade's progress, in [0, 1); 1 when none runs. The incoming copy draws at it, the
@@ -142,14 +142,14 @@ export type LodInstanceState = {
 };
 
 /**
- * A frame of an instance's LOD state, in place: the selection's `target` ({@link selectLodTarget}),
+ * A frame of an instance's LOD state, in place: the selection's `target` (`selectLodTarget`),
  * then the fade's advance. A change starts a fade from the level shown until now (unless
- * {@link isLodChangeFaded} says no), ending a running one; the advance runs in the same frame, so
+ * `isLodChangeFaded` says no), ending a running one; the advance runs in the same frame, so
  * a new fade draws its first frame at one step. The order and the rules are the ECS path's
  * (`lodSelectionSystem`, `lodApplySystem`, then `lodFadeSystem`).
  * @internal
  * @param state written in place
- * @param target this frame's level, or {@link LOD_LEVEL_CULLED}
+ * @param target this frame's level, or `LOD_LEVEL_CULLED`
  * @param step the frame's seconds, times the `fadeTimeScale` debug option (0 holds the fades)
  * @returns whether the state changed (a change, or a fade's advance)
  */
