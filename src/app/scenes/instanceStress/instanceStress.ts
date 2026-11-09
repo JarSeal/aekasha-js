@@ -220,8 +220,8 @@ const createPoolForest = (world: ECSWorld, byTile: TreePlacement[][]) => {
   instanceStressState.pools = pools;
 };
 
-/** The GPU path: one instance set of every tree (no cross-fades until p354 Phase 2, no shadow
- * until its Phase 3: only the main camera draws a set). Its owning entity goes with the scene. */
+/** The GPU path: one instance set of every tree (no shadow until p354 Phase 3: only the main
+ * camera draws a set). Its owning entity goes with the scene. */
 const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
   const set = await createInstanceSetAsync({
     world,

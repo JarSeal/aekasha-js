@@ -126,8 +126,7 @@ export type InstanceStressSummary = ReturnType<FigureWindow['summarize']> & {
   /** The GPU path's instances in view past a visible list's budget, per level (a readback) */
   overflow?: number[];
   /** Every instance's state at the last frame: per level (a fading one in both), culled and
-   * fading. The CPU path's from its pools and the LOD stats, the GPU path's from a readback (no
-   * fades on it until p354 Phase 2) */
+   * fading. The CPU path's from its pools and the LOD stats, the GPU path's from a readback */
   state?: { levels: number[]; culled: number; fading: number };
   /** three's build caches, the whole renderer's (debug only, its private fields): node builds,
    * render pipelines, vertex and fragment programs */
@@ -337,7 +336,7 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
                 state: stats?.state && {
                   levels: stats.state.levels,
                   culled: stats.state.culled,
-                  fading: 0,
+                  fading: stats.state.fading,
                 },
               })
             );

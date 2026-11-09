@@ -91,17 +91,21 @@ export interface InstanceSetDebugBuffers {
 
 /** What `readInstanceSetStatsAsync` reads back of a set (debug only). */
 export interface InstanceSetStats {
-  /** Per level: the instances the last dispatch drew (the main camera's). */
+  /** Per level: the instances the last dispatch drew (the main camera's; a cross-fading one in
+   * both its levels). */
   drawn: number[];
   /** Per level: the instances in view past `maxVisible`, which weren't drawn. */
   overflow: number[];
   /** With `state: true`: every instance's selected level, counted (in view or not). */
   state?: {
-    /** Per level. */
+    /** Per level: a cross-fading instance counts in both its levels (one fading to or from culled
+     * in its one), as an instanced LOD pool's level meshes hold it. */
     levels: number[];
-    /** Beyond the last level. */
+    /** Beyond the last level (one fading out to it too). */
     culled: number;
     /** Not selected yet. */
     unselected: number;
+    /** Cross-fading: a level change, or to or from culled. */
+    fading: number;
   };
 }

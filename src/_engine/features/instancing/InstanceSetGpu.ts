@@ -10,7 +10,7 @@ import {
 import { getRenderer } from '../../kernel/render/Renderer';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
-import { DEFAULT_LOD_HYSTERESIS } from '../../utils/LodRules';
+import { DEFAULT_LOD_HYSTERESIS, getLodFadeDelta } from '../../utils/LodRules';
 import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 import {
   ARGS_STRIDE,
@@ -40,9 +40,10 @@ import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 //   sets the render reached; `finishRenderList`, after the projection and before any draw, runs
 //   their passes against that render's camera. A render that never reaches a set (another scene,
 //   another camera) costs it nothing.
-// - Once a frame (D7): the frame's first dispatch selects (or forces) the levels from the LOD
-//   frame inputs (kernel/ecs/LodTargets.ts, written by `lod()`); a later one in the frame only
-//   reads them. Without `lod()` the inputs are never written: every instance draws level 0.
+// - Once a frame (D7): the frame's first dispatch moves the state from the LOD frame inputs
+//   (kernel/ecs/LodTargets.ts, written by `lod()`): it selects (or forces, or with `freeze` keeps)
+//   the levels and advances the cross-fades by the inputs' step; a later one in the frame only
+//   reads it. Without `lod()` the inputs are never written: every instance draws level 0, unfaded.
 
 /** Variant keys not copied from the source material: its identity and listeners. */
 const VARIANT_SKIPPED_KEYS = new Set(['uuid', 'id', '_listeners', 'version', 'userData', 'name']);
@@ -200,6 +201,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     rows: new THREE.StorageBufferAttribute(rowsArray, 4),
     records: new THREE.StorageBufferAttribute(recordsArray, 4),
     state: new THREE.StorageBufferAttribute(new Uint32Array(maxInstances).fill(STATE_INITIAL), 1),
+    progress: new THREE.StorageBufferAttribute(new Float32Array(maxInstances).fill(1), 1),
     lists: new THREE.StorageBufferAttribute(new Uint32Array(levelCount * maxVisible), 1),
     counters: new THREE.StorageBufferAttribute(new Uint32Array(levelCount), 1),
     args: new THREE.IndirectStorageBufferAttribute(argsArray, 1),
@@ -250,7 +252,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         selectedFrame = frame;
         const inputs = getLodFrameInputs();
         if (inputs.frame < 0) {
-          // No lod(): level 0, as an instanced LOD pool draws without it
+          // No lod(): level 0, as an instanced LOD pool draws without it, and no fades
           if (hasLevelsToSelect && !hasWarnedNoLod) {
             hasWarnedNoLod = true;
             lwarn(
@@ -259,15 +261,25 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
           }
           mode = SELECT_MODE.FORCE;
           uniforms.forceLevel.value = 0;
-        } else if (inputs.frame === frame && inputs.forceLevel >= 0) {
-          mode = SELECT_MODE.FORCE;
-          uniforms.forceLevel.value = Math.min(inputs.forceLevel, lastLevel);
-        } else if (inputs.frame === frame && inputs.hasCamera && !inputs.isFrozen) {
-          // A frame the selection didn't run (the app loop paused) holds the levels, as lod() does
-          mode = SELECT_MODE.SELECT;
-          uniforms.cameraPosition.value.copy(inputs.cameraPosition);
-          uniforms.k.value = inputs.k * bias;
-          uniforms.isOrtho.value = inputs.isOrtho ? 1 : 0;
+          uniforms.isFaded.value = 0;
+          uniforms.fadeDelta.value = 1;
+        } else if (inputs.frame === frame) {
+          // A frame the selection didn't run (the app loop paused) holds the levels and the fades,
+          // as lod()'s systems do. `freeze` (or no camera) holds the levels only
+          const fadeSeconds = lod.fadeSeconds ?? inputs.fadeSeconds;
+          uniforms.isFaded.value = fadeSeconds > 0 ? 1 : 0;
+          uniforms.fadeDelta.value = getLodFadeDelta(inputs.fadeStep, fadeSeconds);
+          if (inputs.forceLevel >= 0) {
+            mode = SELECT_MODE.FORCE;
+            uniforms.forceLevel.value = Math.min(inputs.forceLevel, lastLevel);
+          } else if (inputs.hasCamera && !inputs.isFrozen) {
+            mode = SELECT_MODE.SELECT;
+            uniforms.cameraPosition.value.copy(inputs.cameraPosition);
+            uniforms.k.value = inputs.k * bias;
+            uniforms.isOrtho.value = inputs.isOrtho ? 1 : 0;
+          } else {
+            mode = SELECT_MODE.ADVANCE;
+          }
         }
       }
       uniforms.mode.value = mode;

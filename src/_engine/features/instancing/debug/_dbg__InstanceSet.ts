@@ -1,11 +1,11 @@
 import type * as THREE from 'three/webgpu';
 import { getRenderer } from '../../../kernel/render/Renderer';
 import { getInstanceSetBackend, type InstanceSet } from '../InstanceSet';
-import { LEVEL_CULLED } from '../InstanceSetNodes';
+import { LEVEL_CULLED, LEVEL_NONE } from '../InstanceSetNodes';
 import type { InstanceSetStats } from '../InstanceSetTypes';
 
 // An instance set's debug readback (docs/plans/p354_gpu-driven-culling.md D11): the GPU backend's
-// counters and state words, read back after the GPU's queued work. Loaded by
+// counters and state words (the level and the outgoing one), read back after the GPU's queued work. Loaded by
 // `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod test mode.
 
 /**
@@ -35,13 +35,22 @@ export const _readInstanceSetStatsAsync = async (
   if (!stateRead) return stats;
 
   const words = new Uint32Array(await stateRead);
-  const state = { levels: new Array<number>(levelCount).fill(0), culled: 0, unselected: 0 };
+  const state = {
+    levels: new Array<number>(levelCount).fill(0),
+    culled: 0,
+    unselected: 0,
+    fading: 0,
+  };
   const extent = Math.min(buffers.getExtent(), words.length);
   for (let i = 0; i < extent; i++) {
     const level = words[i] & 0xff;
+    const outgoing = (words[i] >>> 8) & 0xff;
     if (level < levelCount) state.levels[level]++;
     else if (level === LEVEL_CULLED) state.culled++;
     else state.unselected++;
+    if (outgoing === LEVEL_NONE) continue;
+    state.fading++;
+    if (outgoing < levelCount) state.levels[outgoing]++;
   }
   stats.state = state;
   return stats;
