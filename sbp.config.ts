@@ -74,7 +74,9 @@ const profiles: SbpProfile[] = [
         // (`src/index.ts`), with its spinner, its progress bar and their styles; every scene's
         // first load shows it, so it can't load later
         '_engine/ui': 7 * KIB,
-        app: 14 * KIB,
+        // p354 Phase 1: 14 → 15 KiB (14.06 KiB): the `instanceStress` verification scene's data
+        // (every scene's JSON is in the first download; its code loads with it, `instanceStress.js`)
+        app: 15 * KIB,
         toolkit: 7 * KIB,
       },
       modules: {

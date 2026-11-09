@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3282,
-      "total": 3282
+      "documented": 3327,
+      "total": 3327
     },
     "members": {
-      "documented": 1043,
-      "total": 1043
+      "documented": 1079,
+      "total": 1079
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3199,
-        "total": 3199
+        "documented": 3244,
+        "total": 3244
       },
       "members": {
-        "documented": 889,
-        "total": 889
+        "documented": 925,
+        "total": 925
       }
     },
     "toolkit": {
@@ -105,12 +105,12 @@
     },
     "engine/features/instancing": {
       "exports": {
-        "documented": 12,
-        "total": 12
+        "documented": 40,
+        "total": 40
       },
       "members": {
-        "documented": 35,
-        "total": 35
+        "documented": 70,
+        "total": 70
       },
       "undocumented": {
         "exports": [],
@@ -133,8 +133,8 @@
     },
     "engine/features/lod": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 87,
+        "total": 87
       },
       "members": {
         "documented": 0,
@@ -469,12 +469,12 @@
     },
     "engine/kernel/ecs": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 92,
+        "total": 92
       },
       "members": {
-        "documented": 160,
-        "total": 160
+        "documented": 161,
+        "total": 161
       },
       "undocumented": {
         "exports": [],
@@ -525,8 +525,8 @@
     },
     "engine/kernel/loop": {
       "exports": {
-        "documented": 45,
-        "total": 45
+        "documented": 46,
+        "total": 46
       },
       "members": {
         "documented": 0,
@@ -553,8 +553,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 96,
-        "total": 96
+        "documented": 99,
+        "total": 99
       },
       "members": {
         "documented": 0,
@@ -875,8 +875,8 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 55,
-        "total": 55
+        "documented": 67,
+        "total": 67
       },
       "members": {
         "documented": 9,

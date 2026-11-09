@@ -1,4 +1,4 @@
-Status: draft | not-implemented (Phase 0, the spike, done)
+Status: in progress | Phases 0-1 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -634,7 +634,7 @@ clean (the Stop hook), and the docs ratchet holding. Each phase also runs:
 
 Every measurement goes in the phase's "As built" with its conditions, as Phase 0's did.
 
-### Phase 1 — A set on WebGPU: the cull, the levels, one camera
+### Phase 1 — A set on WebGPU: the cull, the levels, one camera — done
 
 1. **The rules (D3).** Add `src/_engine/utils/LodRules.ts`: the selection with its hysteresis,
    the cull test, the fade step and `LOD_FADE_END_EPSILON`. `selectLevel` (`LodSystem.ts`) and
@@ -693,6 +693,132 @@ Every measurement goes in the phase's "As built" with its conditions, as Phase 0
   - The GPU frame settles whether the draw per group costs about 0.5 ms (Phase 0, part 3).
 - The ε fix moves no scene runner baseline. If one moves, its reason goes in "As built", and
   the baseline is updated in this phase.
+
+**As built** (steps 1-8, 2026-11-09, commits up to `ce6733b0`, and the verification after them):
+
+- **Step 1, the rules.** `utils/LodRules.ts`: `selectLodLevel` (the old `selectLevel`),
+  `isLodCulledAt`, `selectLodTarget` (the cull test, then the level; from culled it comes from beyond
+  the last level), `isLodChangeFaded`, `getLodFadeDelta`, `advanceLodFade` (exactly 1 at the end),
+  `LOD_FADE_END_EPSILON`, the sentinels `LOD_LEVEL_NONE` (-1) and `LOD_LEVEL_CULLED` (-2), and
+  `stepLodInstanceState` (an instance's frame: the target, then a fade's start and advance), which
+  no path calls yet: it's the reference for Phase 2's TSL and Phase 4's CPU backend.
+  `DEFAULT_LOD_HYSTERESIS` moved there (instancing can't import `lod`); `aekasha/lod` re-exports it.
+  `LodSystem.test.ts`' selection cases moved to `LodRules.test.ts`.
+- **Step 2, the frame inputs.** The main loop had no frame counter (D7 assumed one): `getMainLoopFrame()`
+  (`MainLoop.ts`, `@internal`) counts every `runFrameWork`. `LodFrameInputs` (`LodTargets.ts`) has the
+  frame (-1 until written, so for good without `lod()`), `hasCamera`, the camera position, `k` (the
+  global bias in it), `isOrtho`, `bias`, the global `fadeSeconds` (not in D3's list: a set without its
+  own needs it, and can't read `LodSettings`), `fadeStep`, `isFrozen` and `forceLevel`.
+  `lodSelectionSystem(world, dt)` writes them before its early returns, once a frame across worlds,
+  and reuses the terms. Written in `APP_RENDER_SYNC`: a paused app loop keeps the last frame's.
+- **Step 3, the seam.** `addDrawingPipelineHook(renderer, hook)` takes the renderer (the tests' stub;
+  no `Renderer.ts` imports in the lazy chunk). `isCulled` is tri-state (`undefined` passes on, then
+  three's test). `finishRenderList` fires for the render's own list only (the first begun after
+  `begin`): three finishes a `BundleGroup`'s list inside the projection too. A pipeline set over the
+  engine's meanwhile stays (the remover warns). `getDrawingPipelineHooks` for tests and tools.
+- **Step 4, the front.** A core component `INSTANCE_SET` (`InstanceSetData` in `InstanceSetTypes.ts`,
+  with the backend contract) disposes the set. The owning entity is created before the `import()`,
+  and `world.isAlive` after it says whether the scene exited (`createPhysicsEntity`'s pattern).
+  `entityOpts.persistent` is applied by the set (`createEntity` doesn't:
+  `docs/issues/entity-persistent-flag-not-applied.md`, which now names the pool's same gap). A
+  non-uniform matrix warns in the debug env instead of failing (debug and production behave alike).
+  No `preWarm` option until Phase 5. The front keeps no CPU copy: `writeInstances(start, matrices16,
+  count)` hands the matrices to the backend's own layout. WebGL2 gets an empty backend that warns once.
+- **Step 5, the GPU backend.** The state is one `uint` (Phase 2 adds the progress float). The counters
+  are apart from the args: an append past `maxVisible` is only counted, and the finalize writes
+  `min(count, maxVisible)` into each group's args. The frustum sphere is the record's grown by the
+  largest level's conservative radius over level 0's. One cull kernel with a mode uniform (`SELECT`,
+  `FORCE`, `HOLD`), so `forceLevel` and `freeze` already work (Phase 2 step 3 keeps `fadeTimeScale`
+  and the side-by-side check). One module-level pipeline hook for every GPU set; only the main
+  camera's renders draw one. The cull's dispatch count is the extent (three recomputes it, 2D past
+  the limit). The draws' wrapper geometries aren't disposed (three would free the level geometries'
+  shared buffers); variants copy the source's values once and replace its `positionNode` (a debug
+  warning). A list entry's fade byte is 0 until Phase 2.
+- **Step 6, `instanceStress`.** `readInstanceSetStatsAsync(set, { state? })` is public on
+  `aekasha/instancing` (the app reads it), debug env and prod test mode, through
+  `debug/_dbg__InstanceSet.ts`: the last dispatch's drawn and overflowed instances per level, and
+  every instance's level. The scene runner got scene `params` and `variants` (chosen over one path or
+  none: `sceneSelect.ts`' `getSceneTargets`, `devTools/verify/CLAUDE.md`); `instanceStress` runs as
+  `instanceStress@pools` and `instanceStress@set` (20k, `STILL`, no fades). Measured (Apple M2, Chrome,
+  headless WebGPU, debug env, dev server):
+  - Parity at 20k, the held orbit, fades off, 300 frames: the set's state per level is 960 / 5,429 /
+    13,611, the pools' and Phase 0's first row exactly.
+  - The runner's snapshots, `@set` against `@pools` in each debug configuration: one pixel of 147,456
+    (0.0007%) over 8/255, none over 9/255.
+  - Builds: 3 node builds and 3 render pipelines, plus 3 compute pipelines (Phase 0's table).
+  - CPU frame 1.1 ms (the set) against 4.6 ms (the pools); in view 221 / 1,384 / 3,392 (Phase 0's
+    205 / 1,338 / 3,448 with its tighter sphere).
+  - three's `info.render` counts neither the set's indirect draws nor their triangles (Phase 0 thought
+    it counted the calls): D11's folder reads the set's own counts.
+  - The runner hung once after a Vite reload mid-page, in code that predates this plan:
+    `docs/issues/scene-runner-hangs-after-a-vite-reload.md`.
+- **Step 7, the bench.** `devTools/bench/instanceStress.ts` (CLI) and `instanceStressBench.ts` (its pure
+  parts, tested). No layout rule: `layoutRules.ts` covers `src/` only. The first step's finding: the
+  scene's probe loaded in the debug env only; it now loads through `loadDebugModuleAsync(…, true)`, so
+  prod test mode has `measure()`, but no stats panels, so no GPU or compute figures there: a minified
+  build's GPU side is `--build --mode debug`. Its own dev server sets `VITE_ECS_MAX_ENTITIES` for pool
+  cases past 90k; `--build` serves `dist/` with COOP / COEP and collapses doubled slashes (a build asks
+  for `//debugger/…`). At 20k on the orbit: the pools' CPU frame 3.86 / 3.65 / 3.51 ms (dev debug,
+  dev prod test, test build prod test), the set's 0.49 / 0.45 / 0.42 ms; GPU frame (dev debug) 2.59 ms
+  against 1.59 ms.
+- **Step 8, the notes.** `features/instancing/CLAUDE.md`'s "Instance sets", `features/lod/CLAUDE.md`'s
+  `LodRules.ts` and frame inputs bullets. From Phase 6 step 2, done early: "Instance sets" is in the
+  LOD page's `aek:covers` (`yarn hub:build` fails on an uncovered `##` section). Still Phase 6's: the
+  root map's instancing line, `kernel/render/CLAUDE.md`'s Drawing pipeline section, `devTools/bench/`
+  under the root's Commands, and the LOD page's content.
+
+- **The verification** (2026-11-09, Apple M2, Chrome, headless WebGPU):
+  - **The scene runner.** Baselines recorded on `main` (`73663bb6`, a worktree whose `.cache` linked
+    this checkout's: the baselines are local) for `lodShowcase` and `largeWorld`, then the branch:
+    every run passed, the probe hashes and system orders unchanged. The ε fix moves no pool baseline:
+    largeWorld's snapshots are identical, lodShowcase's `workerSab` and `debugger` within tolerance
+    (mean 0.008, 0.00% changed, max 3/255). `instanceStress@pools` and `@set` recorded.
+  - **`yarn verify:baselines`, then `--update`.** `api.json`: the new exports (`aekasha/instancing`
+    gains `createInstanceSetAsync`, `readInstanceSetStatsAsync`, `CreateInstanceSetOptions`,
+    `InstanceRange`, `InstanceSet`, `InstanceSetBackendKind`, `InstanceSetStats`), `selectLevel`
+    removed, `DEFAULT_LOD_HYSTERESIS` moved to `utils/LodRules.ts`; docs 100%. The main chunk
+    371.6 → 373.7 kB gzip: instancing +1.2 kB (the front, D10's kilobyte), lod +0.1, ecs +0.2, utils
+    +0.2, app +0.2. `InstanceSetGpu.js` is lazy (3.7 kB gzip: `InstanceSetGpu.ts` and
+    `InstanceSetNodes.ts`, 3.2 kB, with `DrawingPipeline.ts`, 0.8 kB). `instanceStress.js` new (2.1 kB),
+    and `Foliage.js` (0.6 kB) split out of `largeWorldRock.js`, the tree geometry now shared by two
+    scenes. The embeds unchanged; no debug code in the build or either embed.
+  - **`yarn sbp --profile all`.** `features/instancing` 3.9 kB against its 4 KiB (Phase 2's front
+    growth will need it raised), `features/lod` 5.4 against 7 KiB, the GPU backend lazy, the banner's
+    and uiKit's budgets all within. The `app` group failed by 63 B (14,399 B against 14 KiB): the
+    `instanceStress` scene's JSON (+2.6 kB raw of `generatedAppData.json`), which every scene puts in
+    the first download. Raised to 15 KiB in `sbp.config.ts` with that reason.
+  - **The bench** on a `yarn build:test` build (minified, `VITE_ECS_MAX_ENTITIES=1110000`), 1600 ×
+    900, the orbit, the fades at the scene's default (the set draws without them). CPU frame, prod test
+    mode, 300 frames:
+
+    | Trees | 20k | 50k | 100k | 200k | 500k | 1M |
+    | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+    | The set | 0.49 | 1.12 | 1.41 | 1.16 | 1.16 | 1.11 ms |
+    | The pools | 3.56 | 7.19 | 12.08 | 24.56 | 60.37 | 166.03 ms |
+
+    The set's CPU frame is flat and under 1.5 ms; most of it is the render submit (0.4-1.1 ms, rising
+    with the GPU frame, so likely the wait on the GPU; not checked). The pools' LOD systems grow faster
+    than linear past 500k (45.8 ms, then 141.6 ms at 1M). Debug env, 1,200 frames (the pools at 1M
+    from a 300-frame run: 1,200 frames of 168 ms passed the bench's answer timeout):
+
+    | Trees | 20k | 100k | 200k | 500k | 1M |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | Compute, the set | 0.04 | 0.15 | 0.27 | 0.47 | 0.69 ms |
+    | Compute, Phase 0 (fades off / on) | 0.05 / 0.05 | 0.22 / 0.20 | 0.62 / 0.33 | 1.03 / 0.61 | 1.55 / 1.10 ms |
+    | GPU frame, the set | 1.50 | 2.84 | 3.70 | 4.18 | 4.69 ms |
+    | GPU frame, the pools | 2.60 | 5.15 | 5.42 | 6.90 | 7.07 ms |
+    | GPU frame, Phase 0 part 2 (a draw per level) | 1.44 | 2.54 | 3.31 | 3.92 | 3.68 ms |
+
+    - **The cull record about halves the compute at 500k-1M** (40-55% under Phase 0's, at the same
+      drawn counts: 187 / 1,361 / 37,880 at 1M, Phase 0's "about 40k"). At 100k and below it's within
+      the spread. No overflow at any count (the largest list 37.9k of 65,536).
+    - **The GPU frame is 55-65% of the pools'.** Against part 2 the set measures 0.3-0.4 ms more at
+      100k-500k and about 1 ms at 1M, within the spread at 20k. That's Phase 0's "up to about 0.5 ms"
+      for the draw per group, but it includes part 2's own height-coloured material against the pools'
+      Lambert ones, so the draws' share isn't isolated. The 300-frame run's 1M measured 4.18 ms: about
+      ±0.5 ms run to run.
+    - Builds: 3 node builds and 6 pipelines (3 render, 3 compute) at every count. The pool path shows 4
+      and 4 from 100k up (3 and 3 below), not looked into.
 
 ### Phase 2 — Cross-fades and the debug options
 

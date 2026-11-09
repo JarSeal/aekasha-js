@@ -416,6 +416,42 @@
       "InstancedMeshSlotData": "Interface",
       "InstancePlacement": "Interface"
     },
+    "src/_engine/features/instancing/InstanceSet.ts": {
+      "createInstanceSetAsync": "Function",
+      "CreateInstanceSetOptions": "Interface",
+      "getInstanceSetBackend": "Function",
+      "installInstanceSets": "Function",
+      "InstanceSet": "Interface",
+      "InstanceSetBackendKind": "TypeAlias",
+      "readInstanceSetStatsAsync": "Function"
+    },
+    "src/_engine/features/instancing/InstanceSetGpu.ts": {
+      "createGpuInstanceSetBackend": "Variable"
+    },
+    "src/_engine/features/instancing/InstanceSetNodes.ts": {
+      "ARGS_INSTANCE_COUNT": "Variable",
+      "ARGS_STRIDE": "Variable",
+      "createInstanceSetFetch": "Function",
+      "createInstanceSetPasses": "Function",
+      "InstanceSetBuffers": "TypeAlias",
+      "InstanceSetPassesOptions": "TypeAlias",
+      "InstanceSetPassUniforms": "TypeAlias",
+      "InstanceSetSelection": "TypeAlias",
+      "LEVEL_CULLED": "Variable",
+      "LEVEL_NONE": "Variable",
+      "LIST_BASE_KEY": "Variable",
+      "SELECT_MODE": "Variable",
+      "STATE_INITIAL": "Variable"
+    },
+    "src/_engine/features/instancing/InstanceSetTypes.ts": {
+      "CreateInstanceSetBackend": "TypeAlias",
+      "InstanceRange": "Interface",
+      "InstanceSetBackend": "Interface",
+      "InstanceSetBackendParams": "Interface",
+      "InstanceSetData": "Interface",
+      "InstanceSetDebugBuffers": "Interface",
+      "InstanceSetStats": "Interface"
+    },
     "src/_engine/features/instancing/InstancingFeature.ts": {
       "instancing": "Function"
     },
@@ -708,14 +744,12 @@
       "simplifyLodChain": "Function"
     },
     "src/_engine/features/lod/LodSystem.ts": {
-      "DEFAULT_LOD_HYSTERESIS": "Variable",
       "installLodSystem": "Function",
       "lodApplySystem": "Function",
       "lodFadeSystem": "Function",
       "lodSelectionSystem": "Function",
       "refreshLodBounds": "Function",
-      "registerLodDebugGUI": "Function",
-      "selectLevel": "Function"
+      "registerLodDebugGUI": "Function"
     },
     "src/_engine/features/lod/LodTypes.ts": {
       "LodAutoDef": "TypeAlias",
@@ -2304,9 +2338,12 @@
       "initECSStressTest": "Function"
     },
     "src/_engine/kernel/ecs/LodTargets.ts": {
+      "getLodFrameInputs": "Function",
       "getLodTargets": "Function",
+      "LodFrameInputs": "TypeAlias",
       "LodTargetEntry": "TypeAlias",
-      "registerLodTarget": "Function"
+      "registerLodTarget": "Function",
+      "setLodFrameInputs": "Function"
     },
     "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
@@ -2571,6 +2608,7 @@
       "getDelta": "Function",
       "getElapsedTime": "Function",
       "getFixedFrameDelta": "Function",
+      "getMainLoopFrame": "Function",
       "getPlaySpeedMultiplier": "Function",
       "getReadOnlyLoopState": "Function",
       "initMainLoop": "Function",
@@ -2635,6 +2673,11 @@
     "src/_engine/kernel/render/CompileQueue.ts": {
       "runCompileAsync": "Function",
       "runWithClearRenderState": "Function"
+    },
+    "src/_engine/kernel/render/DrawingPipeline.ts": {
+      "addDrawingPipelineHook": "Function",
+      "DrawingPipelineHook": "TypeAlias",
+      "getDrawingPipelineHooks": "Function"
     },
     "src/_engine/kernel/render/LodFade.ts": {
       "clearLodObjectFade": "Function",
@@ -4183,6 +4226,20 @@
       "ssSetItem": "Function",
       "StorageValue": "TypeAlias"
     },
+    "src/_engine/utils/LodRules.ts": {
+      "advanceLodFade": "Function",
+      "DEFAULT_LOD_HYSTERESIS": "Variable",
+      "getLodFadeDelta": "Function",
+      "isLodChangeFaded": "Function",
+      "isLodCulledAt": "Function",
+      "LOD_FADE_END_EPSILON": "Variable",
+      "LOD_LEVEL_CULLED": "Variable",
+      "LOD_LEVEL_NONE": "Variable",
+      "LodInstanceState": "TypeAlias",
+      "selectLodLevel": "Function",
+      "selectLodTarget": "Function",
+      "stepLodInstanceState": "Function"
+    },
     "src/_engine/utils/Logger.ts": {
       "getLogger": "Function",
       "lerror": "Function",
@@ -4778,16 +4835,23 @@
       "writeDevFiles"
     ],
     "aekasha/instancing": [
+      "CreateInstanceSetOptions",
       "CreateInstancedLodPoolOptions",
       "CreateInstancedMeshPoolOptions",
       "InstancePlacement",
+      "InstanceRange",
+      "InstanceSet",
+      "InstanceSetBackendKind",
+      "InstanceSetStats",
       "InstancedLodPool",
       "InstancedLodPoolLevel",
       "InstancedMeshPool",
       "InstancedMeshSlotData",
+      "createInstanceSetAsync",
       "createInstancedLodPool",
       "createInstancedMeshPool",
-      "instancing"
+      "instancing",
+      "readInstanceSetStatsAsync"
     ],
     "aekasha/lines": [
       "BOX_EDGE_SEGMENT_COUNT",
