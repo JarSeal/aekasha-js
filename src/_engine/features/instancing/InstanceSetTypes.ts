@@ -62,6 +62,8 @@ export interface InstanceSetBackend {
   writeInstances: (start: number, matrices: Float32Array, count: number) => void;
   /** Frees the backend's draws and buffers (the front releases the registry refs). */
   dispose: () => void;
+  /** The buffers the debug readback reads: the GPU backend's. */
+  debugBuffers?: InstanceSetDebugBuffers;
 }
 
 /**
@@ -69,3 +71,37 @@ export interface InstanceSetBackend {
  * @internal
  */
 export type CreateInstanceSetBackend = (params: InstanceSetBackendParams) => InstanceSetBackend;
+
+/**
+ * What the debug readback (`readInstanceSetStatsAsync`) reads of a GPU set: its buffers, as data.
+ * @internal
+ */
+export interface InstanceSetDebugBuffers {
+  /** Per level: the instances the last dispatch appended (past the budget too). */
+  counters: THREE.StorageBufferAttribute;
+  /** Per instance: its state word (`InstanceSetNodes.ts`). */
+  state: THREE.StorageBufferAttribute;
+  /** The set's levels. */
+  levelCount: number;
+  /** Each visible list's budget. */
+  maxVisible: number;
+  /** The instances added so far: the state's live part. */
+  getExtent: () => number;
+}
+
+/** What `readInstanceSetStatsAsync` reads back of a set (debug only). */
+export interface InstanceSetStats {
+  /** Per level: the instances the last dispatch drew (the main camera's). */
+  drawn: number[];
+  /** Per level: the instances in view past `maxVisible`, which weren't drawn. */
+  overflow: number[];
+  /** With `state: true`: every instance's selected level, counted (in view or not). */
+  state?: {
+    /** Per level. */
+    levels: number[];
+    /** Beyond the last level. */
+    culled: number;
+    /** Not selected yet. */
+    unselected: number;
+  };
+}

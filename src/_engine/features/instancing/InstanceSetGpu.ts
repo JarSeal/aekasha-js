@@ -346,5 +346,15 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     for (const buffer of Object.values(buffers)) buffer.dispose();
   };
 
-  return { writeInstances, dispose };
+  return {
+    writeInstances,
+    dispose,
+    debugBuffers: {
+      counters: buffers.counters,
+      state: buffers.state,
+      levelCount,
+      maxVisible,
+      getExtent: () => extent,
+    },
+  };
 };

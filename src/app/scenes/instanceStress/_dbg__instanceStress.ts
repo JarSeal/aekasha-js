@@ -3,11 +3,12 @@ import {
   APP_RENDER_SYNC_ORDER,
   getRenderer,
   loadScene,
+  lwarn,
   registerOnSceneExit,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
-import type * as THREE from 'three/webgpu';
 import { createDebuggerTab, registerStatsSource } from 'aekasha/debug';
+import { readInstanceSetStatsAsync } from 'aekasha/instancing';
 import { getLodFrameStats } from 'aekasha/lod';
 import {
   INSTANCE_STRESS_COUNTS,
@@ -26,7 +27,8 @@ import {
 //   render submit, not three's own animation frame).
 // The window global `__aekInstanceStress` is the measuring harness's: `measure(frames)` averages
 // the next `frames` frames. The tab and the profiler's App rows show the same figures live, over
-// one-second windows.
+// one-second windows. The GPU path's per-level counts come from the set's readback
+// (`readInstanceSetStatsAsync`), a few times a second; its dispatches are in the render submit.
 
 const TAB_ID = 'instanceStressDemo';
 const PROBE_PREFIX = 'instanceStress:';
@@ -42,8 +44,6 @@ type FrameFigures = {
   renderMs: number;
   cpuMs: number;
   intervalMs: number;
-  gpuDispatchMs: number;
-  gpuDispatches: number;
   lodApplies: number;
   lodFading: number;
   drawCalls: number;
@@ -56,8 +56,6 @@ const FIGURE_KEYS: (keyof FrameFigures)[] = [
   'renderMs',
   'cpuMs',
   'intervalMs',
-  'gpuDispatchMs',
-  'gpuDispatches',
   'lodApplies',
   'lodFading',
   'drawCalls',
@@ -71,8 +69,6 @@ const createFigures = (): FrameFigures => ({
   renderMs: 0,
   cpuMs: 0,
   intervalMs: 0,
-  gpuDispatchMs: 0,
-  gpuDispatches: 0,
   lodApplies: 0,
   lodFading: 0,
   drawCalls: 0,
@@ -104,8 +100,13 @@ class FigureWindow {
   }
 }
 
-/** Instances drawn per level (a fading one counts in both), summed over the pools */
+/** The GPU path's last readback: the instances drawn per level (in view) */
+let setDrawn: number[] = [];
+
+/** Instances per level: the pools' (a fading one counts in both, in view or not), or the set's
+ * drawn ones (in view) */
 const countLevels = () => {
+  if (instanceStressState.set) return setDrawn;
   const counts: number[] = [];
   for (const pool of instanceStressState.pools) {
     pool.meshes.forEach((mesh, i) => {
@@ -122,10 +123,11 @@ export type InstanceStressSummary = ReturnType<FigureWindow['summarize']> & {
   pipeline: StressPipeline;
   shadow: boolean;
   backend: string;
-  /** The GPU path's shadow slot's instances per level (a readback) */
-  shadowLevels?: number[];
+  /** The GPU path's instances in view past a visible list's budget, per level (a readback) */
+  overflow?: number[];
   /** Every instance's state at the last frame: per level (a fading one in both), culled and
-   * fading. The CPU path's from its pools and the LOD stats, the GPU path's from a readback */
+   * fading. The CPU path's from its pools and the LOD stats, the GPU path's from a readback (no
+   * fades on it until p354 Phase 2) */
   state?: { levels: number[]; culled: number; fading: number };
   /** three's build caches, the whole renderer's (debug only, its private fields): node builds,
    * render pipelines, vertex and fragment programs */
@@ -145,6 +147,13 @@ const useStressPipelineAsync = async (): Promise<StressPipeline> => {
     (renderer?.backend as { isWebGPUBackend?: boolean } | undefined)?.isWebGPUBackend
   );
   if (wanted !== 'meshlet' || !renderer || !isWebGPU) return 'standard';
+  // An instance set dispatches through the engine's drawing pipeline, which this would replace
+  if (instanceStressState.set) {
+    lwarn(
+      'Instance stress: ?stressPipeline=meshlet is for the CPU path; the GPU path keeps its own.'
+    );
+    return 'standard';
+  }
   const { MeshletDrawingPipeline } = await import(
     'three/examples/jsm/pipelines/MeshletDrawingPipeline.js'
   );
@@ -158,9 +167,29 @@ const useStressPipelineAsync = async (): Promise<StressPipeline> => {
   return 'meshlet';
 };
 
+/** Frames between two of the GPU path's live readbacks */
+const READBACK_FRAMES = 20;
+let readbackFrames = 0;
+let isReadbackPending = false;
+
+/** Reads the set's drawn counts back every READBACK_FRAMES frames, one read at a time. */
+const readSetLevels = () => {
+  const set = instanceStressState.set;
+  if (!set || isReadbackPending || ++readbackFrames < READBACK_FRAMES) return;
+  readbackFrames = 0;
+  isReadbackPending = true;
+  void readInstanceSetStatsAsync(set).then((stats) => {
+    isReadbackPending = false;
+    if (stats && instanceStressState.set === set) setDrawn = stats.drawn;
+  });
+};
+
 /** Installs the measuring systems for this load of the scene (removed on its exit), the window
  * global, the profiler's App rows and the scene's tab. */
 export const installInstanceStressProbe = async (world: ECSWorld) => {
+  // This load's set: the last load's readback is no longer its
+  setDrawn = [];
+  readbackFrames = 0;
   const pipeline = await useStressPipelineAsync();
   const frame = createFigures();
   const marks = { frameStart: 0, lastFrameStart: 0, syncStart: 0, lodStart: 0, renderStart: 0 };
@@ -224,10 +253,7 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
         const now = performance.now();
         frame.renderMs = now - marks.renderStart;
         frame.cpuMs = now - marks.frameStart;
-        frame.gpuDispatchMs = instanceStressState.gpuDispatchMs;
-        frame.gpuDispatches = instanceStressState.gpuDispatches;
-        instanceStressState.gpuDispatchMs = 0;
-        instanceStressState.gpuDispatches = 0;
+        readSetLevels();
         const render = getRenderer()?.info.render;
         frame.drawCalls = render?.drawCalls ?? 0;
         frame.triangles = render?.triangles ?? 0;
@@ -294,23 +320,27 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
           left: Math.max(1, frames),
           resolve: (w) => {
             const summary = summarize(w);
-            const forest = instanceStressState.gpuForest;
-            const renderer = getRenderer();
-            if (!forest || !renderer) {
+            const set = instanceStressState.set;
+            if (!set) {
               const levels = countLevels();
               const drawn = levels.reduce((sum, n) => sum + n, 0) - frame.lodFading;
               const culled = instanceStressState.count - drawn;
               resolve({ ...summary, state: { levels, culled, fading: frame.lodFading } });
               return;
             }
-            // Both reads are queued now, after this frame's work
-            const gpu = renderer as THREE.WebGPURenderer;
-            const stateRead = forest.readStateAsync(gpu);
-            void forest
-              .readCountsAsync(gpu)
-              .then(async ([levels, shadowLevels]) =>
-                resolve({ ...summary, levels, shadowLevels, state: await stateRead })
-              );
+            // Queued now, after this frame's work: the counts and the state of its last dispatch
+            void readInstanceSetStatsAsync(set, { state: true }).then((stats) =>
+              resolve({
+                ...summary,
+                levels: stats?.drawn ?? [],
+                overflow: stats?.overflow,
+                state: stats?.state && {
+                  levels: stats.state.levels,
+                  culled: stats.state.culled,
+                  fading: 0,
+                },
+              })
+            );
           },
         };
       }),
@@ -353,7 +383,7 @@ const formatLive = (summary: ReturnType<FigureWindow['summarize']>) => {
   const ms = (key: keyof FrameFigures) => `${avg[key].toFixed(3)} (max ${max[key].toFixed(3)})`;
   const where =
     instanceStressState.path === 'GPU'
-      ? 'the GPU path'
+      ? 'an instance set'
       : `${instanceStressState.pools.length} pools`;
   return [
     `Instances: ${instanceStressState.count.toLocaleString()} in ${where}`,
@@ -363,7 +393,6 @@ const formatLive = (summary: ReturnType<FigureWindow['summarize']>) => {
     `LOD applies per frame: ${avg.lodApplies.toFixed(1)}, fading: ${avg.lodFading.toFixed(0)}`,
     `Render submit ms: ${ms('renderMs')}`,
     `CPU frame ms: ${ms('cpuMs')}`,
-    `GPU path dispatch ms: ${ms('gpuDispatchMs')} (${avg.gpuDispatches.toFixed(1)} per frame)`,
     `Frame interval ms: ${avg.intervalMs.toFixed(2)}`,
     `Draws: ${avg.drawCalls.toFixed(0)}, triangles: ${Math.round(avg.triangles).toLocaleString()}`,
   ].join('\n');
@@ -407,7 +436,7 @@ const createInstanceStressTab = (getShown: () => ReturnType<FigureWindow['summar
             key: 'path',
             options: [
               { text: 'CPU: instanced LOD pools', value: 'CPU' },
-              { text: 'GPU: compute cull (WebGPU)', value: 'GPU' },
+              { text: 'GPU: an instance set (WebGPU)', value: 'GPU' },
             ],
           },
           {

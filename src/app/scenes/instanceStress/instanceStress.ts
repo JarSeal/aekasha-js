@@ -1,15 +1,12 @@
 import * as THREE from 'three/webgpu';
 import {
-  ECSSystemStage,
   IS_DEBUG_ENV,
   createMaterial,
   createSceneAppLooper,
   createSeededRandom,
-  getCameraByAppId,
   getECSWorld,
   getEntityIdByAppId,
   getLightByAppId,
-  getRenderer,
   getRootScene,
   isWebGPURenderer,
   lwarn,
@@ -18,23 +15,30 @@ import {
   saveBufferGeometry,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
-import { createInstancedLodPool, type InstancedLodPool } from 'aekasha/instancing';
-import { DEFAULT_LOD_HYSTERESIS, getLodFadeSeconds, type LodDef } from 'aekasha/lod';
+import {
+  createInstancedLodPool,
+  createInstanceSetAsync,
+  type InstancedLodPool,
+  type InstancedLodPoolLevel,
+  type InstancePlacement,
+  type InstanceSet,
+} from 'aekasha/instancing';
+import type { LodDef } from 'aekasha/lod';
 import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
-import type { GpuCullForest } from './gpuCullSpike';
 
-// GPU-driven culling's measuring scene (docs/plans/p354_gpu-driven-culling.md Phase 0): a square
-// forest of instanced LOD trees on a jittered grid, with the main camera circling inside it on a
-// fixed path. Two paths draw it:
+// GPU-driven culling's measuring and parity scene (docs/plans/p354_gpu-driven-culling.md D12): a
+// square forest of LOD trees on a jittered grid, with the main camera circling inside it on a
+// fixed path. Two paths draw the same trees with the same levels, materials and LOD settings:
 // - CPU (the default): square tiles of one `createInstancedLodPool` each (so three's whole-mesh
 //   culling still has something to cull, as static instance cells would give it). Every instance
 //   is an entity that the pool sync walks and the LOD selection measures every frame, in view or
 //   not (pool instances don't opt into the ECS frustum culling: three culls a level mesh only as
-//   a whole). This is what the GPU path has to beat.
-// - GPU (`?stressPath=gpu`, WebGPU only): the same trees in one storage buffer, culled and binned
-//   into per-level indirect draws by a compute pass (`gpuCullSpike.ts`): no entity per tree.
-// The scene's debug module (`_dbg__instanceStress.ts`) times both.
+//   a whole).
+// - GPU (`?stressPath=gpu`): one instance set (`createInstanceSetAsync`): no entity per tree,
+//   culled and LOD-selected per instance by compute passes, a draw per level and material group.
+//   On WebGL2 a set has no GPU backend (p354 Phase 4 adds its CPU one): the scene draws the pools.
+// The scene's debug module (`_dbg__instanceStress.ts`) times both and reads the set back.
 
 export const INSTANCE_STRESS_SCENE_ID = 'instanceStress';
 const CAMERA_APP_ID = 'instanceStressCamera';
@@ -91,11 +95,8 @@ export const instanceStressSettings = {
 /** What the last load built, for the debug module's readouts */
 export const instanceStressState = {
   pools: [] as InstancedLodPool[],
-  gpuForest: null as GpuCullForest | null,
-  /** The GPU path's dispatch calls this frame, their CPU side (ms): every slot's */
-  gpuDispatchMs: 0,
-  /** The GPU path's dispatches this frame (one per slot whose camera rendered) */
-  gpuDispatches: 0,
+  /** The GPU path's instance set */
+  set: null as InstanceSet | null,
   path: 'CPU' as InstanceStressPath,
   count: 0,
   /** The forest's side, in metres */
@@ -140,6 +141,32 @@ const createTreeMaterials = () => [
 /** A tree on the grid: its position, its turn about +y and its scale */
 type TreePlacement = { position: THREE.Vector3; yaw: number; scale: number };
 
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Both paths' levels: the tree's three mesh levels, its trunk and foliage materials */
+const createForestLevels = (): InstancedLodPoolLevel[] => {
+  const materials = createTreeMaterials();
+  return createLevelGeometries().map((geometry, i) => ({
+    geometry,
+    material: materials,
+    screenSize: LEVEL_SCREEN_SIZES[i],
+    // The coarsest level casts no shadow, as a far level usually wouldn't
+    castShadow: i < LEVEL_SEGMENTS.length - 1,
+  }));
+};
+
+/** Both paths' LOD settings */
+const createForestLod = (): Omit<LodDef, 'levels'> => ({
+  cullScreenSize: CULL_SCREEN_SIZE,
+  fadeSeconds: instanceStressSettings.fadeSeconds,
+});
+
+const toInstancePlacement = ({ position, yaw, scale }: TreePlacement): InstancePlacement => ({
+  position,
+  quaternion: new THREE.Quaternion().setFromAxisAngle(UP, yaw),
+  scale,
+});
+
 /** `count` trees on a square grid centred on the origin, the same on every load, grouped by tile
  * (row-major in each). */
 const createPlacements = () => {
@@ -170,22 +197,10 @@ const createPlacements = () => {
   return byTile;
 };
 
-const UP = new THREE.Vector3(0, 1, 0);
-
 /** The CPU path: one instanced LOD pool per tile. */
 const createPoolForest = (world: ECSWorld, byTile: TreePlacement[][]) => {
-  const materials = createTreeMaterials();
-  const levels = createLevelGeometries().map((geometry, i) => ({
-    geometry,
-    material: materials,
-    screenSize: LEVEL_SCREEN_SIZES[i],
-    // The coarsest level casts no shadow, as a far level usually wouldn't
-    castShadow: i < LEVEL_SEGMENTS.length - 1,
-  }));
-  const lod: Omit<LodDef, 'levels'> = {
-    cullScreenSize: CULL_SCREEN_SIZE,
-    fadeSeconds: instanceStressSettings.fadeSeconds,
-  };
+  const levels = createForestLevels();
+  const lod = createForestLod();
   const rootScene = getRootScene();
 
   const pools: InstancedLodPool[] = [];
@@ -199,106 +214,26 @@ const createPoolForest = (world: ECSWorld, byTile: TreePlacement[][]) => {
       receiveShadow: true,
     });
     rootScene?.add(...pool.meshes);
-    pool.spawn(
-      placements.map(({ position, yaw, scale }) => ({
-        position,
-        quaternion: new THREE.Quaternion().setFromAxisAngle(UP, yaw),
-        scale,
-      }))
-    );
+    pool.spawn(placements.map(toInstancePlacement));
     pools.push(pool);
   }
   instanceStressState.pools = pools;
 };
 
-/** The GPU path: every tree's matrix in one buffer, culled and binned by a compute pass per
- * camera, from three's drawing pipeline (`createGpuCullPipeline`). */
-const createGpuForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
-  const { createGpuCullForest, createGpuCullPipeline } = await import('./gpuCullSpike');
-  const matrices = new Float32Array(instanceStressState.count * 16);
-  const matrix = new THREE.Matrix4();
-  const quaternion = new THREE.Quaternion();
-  const scale = new THREE.Vector3();
-  let i = 0;
-  for (const placements of byTile) {
-    for (const placement of placements) {
-      quaternion.setFromAxisAngle(UP, placement.yaw);
-      scale.setScalar(placement.scale);
-      matrix.compose(placement.position, quaternion, scale).toArray(matrices, i * 16);
-      i++;
-    }
-  }
-  const renderer = getRenderer();
-  if (!renderer) return;
-  const geometries = createLevelGeometries();
-  const forest = createGpuCullForest({
-    matrices,
-    levels: geometries.map((geometry, level) => ({
-      geometry,
-      screenSize: LEVEL_SCREEN_SIZES[level],
-      castShadow: level < LEVEL_SEGMENTS.length - 1,
-    })),
-    cullScreenSize: CULL_SCREEN_SIZE,
-    hysteresis: DEFAULT_LOD_HYSTERESIS,
-    fadeSeconds: instanceStressSettings.fadeSeconds ?? getLodFadeSeconds(),
-    materials: createTreeMaterials(),
-    toNodeMaterial: (material) => renderer.library.fromMaterial(material) as THREE.NodeMaterial,
-    sharedBuilds: new URLSearchParams(window.location.search).get('stressSharedBuilds') !== 'false',
-    shadow: instanceStressSettings.shadow,
+/** The GPU path: one instance set of every tree (no cross-fades until p354 Phase 2, no shadow
+ * until its Phase 3: only the main camera draws a set). Its owning entity goes with the scene. */
+const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
+  const set = await createInstanceSetAsync({
+    world,
+    levels: createForestLevels(),
+    maxInstances: Math.max(instanceStressState.count, 1),
+    lod: createForestLod(),
+    entityOpts: { appId: 'instanceStressForest' },
   });
-  getRootScene()?.add(...forest.meshes);
-  instanceStressState.gpuForest = forest;
-  // The fades' clock: the frame time, as the CPU path's fade system takes it
-  createSceneAppLooper((delta) => forest.setFrameDelta(delta), INSTANCE_STRESS_SCENE_ID);
-  const getViewCamera = () => {
-    const camera = getCameraByAppId(CAMERA_APP_ID, world);
-    return camera instanceof THREE.PerspectiveCamera ? camera : null;
-  };
-  // `?stressDispatch=system`: Phase 0's dispatch site, an ECS system before the render, the view
-  // slot only (the A/B against the drawing pipeline's `begin`)
-  if (new URLSearchParams(window.location.search).get('stressDispatch') === 'system') {
-    const systemId = 'instanceStress:gpuCullDispatch';
-    world.addSystem(
-      ECSSystemStage.APP_RENDER_SYNC,
-      systemId,
-      () => {
-        const camera = getViewCamera();
-        if (!camera) return;
-        const start = performance.now();
-        camera.updateMatrixWorld();
-        forest.setLodCamera(camera);
-        forest.dispatch(renderer, 0, camera);
-        instanceStressState.gpuDispatchMs += performance.now() - start;
-        instanceStressState.gpuDispatches++;
-      },
-      -3
-    );
-    registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
-      world.removeSystem(systemId);
-      forest.dispose();
-      if (instanceStressState.gpuForest === forest) instanceStressState.gpuForest = null;
-    });
-    return;
-  }
-  const previous = renderer.drawingPipeline;
-  renderer.drawingPipeline = createGpuCullPipeline({
-    forest,
-    getViewCamera,
-    getShadowCamera: () => {
-      const sun = getLightByAppId(SUN_APP_ID, world);
-      return sun instanceof THREE.DirectionalLight ? sun.shadow.camera : null;
-    },
-    // Summed over the frame's dispatches (the debug probe reads and resets them every frame)
-    onDispatch: (_slot, ms) => {
-      instanceStressState.gpuDispatchMs += ms;
-      instanceStressState.gpuDispatches++;
-    },
-  });
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
-    renderer.drawingPipeline = previous;
-    forest.dispose();
-    if (instanceStressState.gpuForest === forest) instanceStressState.gpuForest = null;
-  });
+  if (!set) return;
+  getRootScene()?.add(set.object);
+  set.addInstances(byTile.flat().map(toInstancePlacement));
+  instanceStressState.set = set;
 };
 
 /** `?stressShadow=true`: the sun casts its VSM shadow, fitted to the view (the toolkit's sun
@@ -362,9 +297,7 @@ export const scene = async () => {
   readUrlOverrides();
   const byTile = createPlacements();
   instanceStressState.pools = [];
-  instanceStressState.gpuForest = null;
-  instanceStressState.gpuDispatchMs = 0;
-  instanceStressState.gpuDispatches = 0;
+  instanceStressState.set = null;
   instanceStressState.orbiting = !instanceStressSettings.orbitHold;
   if (instanceStressSettings.shadow) {
     registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startSunShadow(world));
@@ -372,12 +305,12 @@ export const scene = async () => {
   let path = instanceStressSettings.path;
   if (path === 'GPU' && !isWebGPURenderer()) {
     lwarn(
-      'Instance stress: the GPU path needs WebGPU (no compute on WebGL2); drawing on the CPU path.'
+      'Instance stress: an instance set has no WebGL2 backend yet (p354 Phase 4); drawing on the CPU path.'
     );
     path = 'CPU';
   }
   instanceStressState.path = path;
-  if (path === 'GPU') await createGpuForestAsync(world, byTile);
+  if (path === 'GPU') await createSetForestAsync(world, byTile);
   else createPoolForest(world, byTile);
 
   const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);

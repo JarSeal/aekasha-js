@@ -6,6 +6,7 @@ import { decGeometryRef, incGeometryRef } from '../../kernel/assets/Geometry';
 import { decMaterialRef, incMaterialRef } from '../../kernel/assets/Material';
 import { isWebGPURenderer } from '../../kernel/render/Renderer';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { lwarn } from '../../utils/Logger';
 import type { LodDef } from '../lod/LodTypes';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
@@ -14,7 +15,9 @@ import type { InstancePlacement } from './InstancedMeshPoolTypes';
 import type {
   CreateInstanceSetBackend,
   InstanceRange,
+  InstanceSetBackend,
   InstanceSetBackendParams,
+  InstanceSetStats,
 } from './InstanceSetTypes';
 
 // Instance sets (docs/plans/p354_gpu-driven-culling.md): many instances as plain data, with no
@@ -33,6 +36,12 @@ const DEFAULT_MAX_VISIBLE = 65_536;
 let areInstanceSetsInstalled = false;
 let hasWarnedNotInstalled = false;
 let hasWarnedNoCompute = false;
+
+/** Each set's backend, for the debug readback (`_dbg__InstanceSet.ts`). */
+const backendsBySet = new WeakMap<
+  InstanceSet,
+  { backend: InstanceSetBackend; isDisposed: () => boolean }
+>();
 
 /** What draws a set: compute culling and indirect draws (WebGPU), or the CPU (WebGL2). */
 export type InstanceSetBackendKind = 'GPU' | 'CPU';
@@ -289,7 +298,7 @@ export const createInstanceSetAsync = async (
     return range;
   };
 
-  return {
+  const set: InstanceSet = {
     object,
     entityId,
     backend,
@@ -299,6 +308,45 @@ export const createInstanceSetAsync = async (
     },
     addInstances,
   };
+  backendsBySet.set(set, { backend: drawer, isDisposed: () => isDisposed });
+  return set;
+};
+
+/**
+ * A set's backend, for the debug readback; undefined once the set is disposed.
+ * @internal
+ */
+export const getInstanceSetBackend = (set: InstanceSet) => {
+  const entry = backendsBySet.get(set);
+  return entry && !entry.isDisposed() ? entry.backend : undefined;
+};
+
+/**
+ * Reads back what a set drew in its last dispatch (the main camera's), per level, and with
+ * `state: true` every instance's selected level counted: a GPU readback, for the debug tools and
+ * measuring scenes. The debug env and prod test mode only; `null` elsewhere, for a set on the CPU
+ * backend, and for a disposed one.
+ * @param set a set `createInstanceSetAsync` made
+ * @param opts `state`: also read the whole state buffer (4 bytes per instance)
+ * @returns the counts, read after the GPU's queued work
+ * @example
+ * ```ts
+ * import { readInstanceSetStatsAsync } from 'aekasha/instancing';
+ *
+ * const stats = await readInstanceSetStatsAsync(set, { state: true });
+ * if (stats) console.log(`drawn per level: ${stats.drawn.join(' / ')}`);
+ * ```
+ */
+export const readInstanceSetStatsAsync = async (
+  set: InstanceSet,
+  opts?: { state?: boolean }
+): Promise<InstanceSetStats | null> => {
+  const ref = await loadDebugModuleAsync(
+    () => import('./debug/_dbg__InstanceSet'),
+    true,
+    'Instance set readback'
+  );
+  return (await useDebug(ref, true)?._readInstanceSetStatsAsync(set, opts)) ?? null;
 };
 
 const disposeInstanceSet = (entityId: number, world: ECSWorld) => {
