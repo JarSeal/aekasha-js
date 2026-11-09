@@ -1,9 +1,15 @@
+import * as THREE from 'three/webgpu';
 import type { LodTarget } from '../../features/lod/LodTypes';
 import type { ComponentType } from './ECSCoreComponents';
 
-// The LOD targets (p607 D5): a kernel registry the LOD system reads, so a feature with entities
-// that aren't plain meshes (instancing's LOD pools) registers its target without importing LOD.
-// A target registered without `lod()` is never read.
+// The LOD seams in the kernel, so a feature reaches the LOD selection without importing `lod()`:
+// - The LOD targets (p607 D5): a registry the LOD system reads, so a feature with entities that
+//   aren't plain meshes (instancing's LOD pools) registers its target. A target registered without
+//   `lod()` is never read.
+// - The frame inputs (p354 D3): what the selection measured a frame with (the camera's terms, the
+//   global settings, the debug options), written once a frame by `lod()`'s `lodSelectionSystem`,
+//   read by LOD content that has no `LOD` entity (instancing's instance sets). Without `lod()`
+//   they're never written: their `frame` stays -1.
 
 /**
  * A registered LOD target, with the component type it's for.
@@ -28,3 +34,74 @@ export const registerLodTarget = (componentType: ComponentType, target: LodTarge
  * @internal
  */
 export const getLodTargets = (): readonly LodTargetEntry[] => lodTargets;
+
+/**
+ * A frame's LOD selection inputs (p354 D3): what `lodSelectionSystem` measures and selects with,
+ * for LOD content without a `LOD` entity, which applies the same rules (`utils/LodRules.ts`).
+ * @internal
+ */
+export type LodFrameInputs = {
+  /** The main loop frame they were written in (`getMainLoopFrame`); -1 before the first write,
+   * and for good without `lod()`. Written only while the app loop plays: a paused frame keeps the
+   * last ones, and the levels and fades hold, as the ECS path's do. */
+  frame: number;
+  /** The selection camera (`getLodSelectionCamera`: the main camera, or the active one with the
+   * `useActiveCamera` debug option) was found and measurable. Without it nothing is selected. */
+  hasCamera: boolean;
+  /** The selection camera's world position. */
+  cameraPosition: THREE.Vector3;
+  /** A sphere's screen size is its world radius × `k` / its distance (perspective), or × `k`
+   * (orthographic); `k` includes the global bias. */
+  k: number;
+  isOrtho: boolean;
+  /** The global bias (`setLodBias`), already in `k`. */
+  bias: number;
+  /** The global fade seconds (`setLodFadeSeconds`), for content whose definition has none. */
+  fadeSeconds: number;
+  /** The fades' step this frame, in seconds: the frame's delta × the `fadeTimeScale` debug
+   * option (0 holds the fades). */
+  fadeStep: number;
+  /** The `freeze` debug option: the levels hold (the fades still run). */
+  isFrozen: boolean;
+  /** The `forceLevel` debug option, -1 when off: every instance at that level (the last one past
+   * it), none culled. */
+  forceLevel: number;
+};
+
+const lodFrameInputs: LodFrameInputs = {
+  frame: -1,
+  hasCamera: false,
+  cameraPosition: new THREE.Vector3(),
+  k: 0,
+  isOrtho: false,
+  bias: 1,
+  fadeSeconds: 0,
+  fadeStep: 0,
+  isFrozen: false,
+  forceLevel: -1,
+};
+
+/**
+ * Sets the frame's LOD selection inputs, copied (`lodSelectionSystem`'s, once a frame).
+ * @internal
+ */
+export const setLodFrameInputs = (inputs: Readonly<LodFrameInputs>) => {
+  const to = lodFrameInputs;
+  to.frame = inputs.frame;
+  to.hasCamera = inputs.hasCamera;
+  to.cameraPosition.copy(inputs.cameraPosition);
+  to.k = inputs.k;
+  to.isOrtho = inputs.isOrtho;
+  to.bias = inputs.bias;
+  to.fadeSeconds = inputs.fadeSeconds;
+  to.fadeStep = inputs.fadeStep;
+  to.isFrozen = inputs.isFrozen;
+  to.forceLevel = inputs.forceLevel;
+};
+
+/**
+ * The last frame's LOD selection inputs (one object, rewritten in place: copy what must outlast
+ * the frame). Its `frame` tells whether they're this frame's.
+ * @internal
+ */
+export const getLodFrameInputs = (): Readonly<LodFrameInputs> => lodFrameInputs;

@@ -12,7 +12,8 @@ import {
   getGeometryRegistry,
   incGeometryRef,
 } from '../../kernel/assets/Geometry';
-import { getLodTargets } from '../../kernel/ecs/LodTargets';
+import { getLodTargets, type LodFrameInputs, setLodFrameInputs } from '../../kernel/ecs/LodTargets';
+import { getMainLoopFrame } from '../../kernel/loop/MainLoop';
 import { decMaterialRef, getMaterialRegistry, incMaterialRef } from '../../kernel/assets/Material';
 import { preWarmMesh } from '../../kernel/mesh/Mesh';
 import { lwarn } from '../../utils/Logger';
@@ -49,10 +50,12 @@ import {
   type StorageOf,
 } from './LodMeasure';
 import {
+  getLodBias,
   getLodDebugOptions,
   getLodFadeSeconds,
   getLodMaxSelectionsPerFrame,
   getWritableLodFrameStats,
+  type LodDebugOptions,
   type LodFrameStats,
 } from './LodSettings';
 import type { LodData, LodResolvedLevel } from './LodTypes';
@@ -369,6 +372,39 @@ const pendingApplies = new WeakMap<ECSWorld, number[]>();
 
 /** The frame's camera terms. */
 const _terms: CameraTerms = { k: 0, isOrtho: false, position: new THREE.Vector3() };
+
+/** The frame's inputs for LOD content without entities (kernel/ecs/LodTargets.ts), filled with
+ * `_terms` once a frame: every world's selection measures with the same terms. */
+const _inputs: LodFrameInputs = {
+  frame: -1,
+  hasCamera: false,
+  cameraPosition: _terms.position,
+  k: 0,
+  isOrtho: false,
+  bias: 1,
+  fadeSeconds: 0,
+  fadeStep: 0,
+  isFrozen: false,
+  forceLevel: -1,
+};
+
+/** Measures the selection camera into `_terms` and publishes the frame's inputs, in the frame's
+ * first selection (the first world's): the rest of the frame's worlds reuse both. */
+const writeLodFrameInputs = (dt: number, debugOptions: Readonly<LodDebugOptions>) => {
+  const frame = getMainLoopFrame();
+  if (_inputs.frame === frame) return;
+  const camera = getLodSelectionCamera();
+  _inputs.frame = frame;
+  _inputs.hasCamera = camera !== undefined && computeCameraTerms(camera, _terms);
+  _inputs.k = _terms.k;
+  _inputs.isOrtho = _terms.isOrtho;
+  _inputs.bias = getLodBias();
+  _inputs.fadeSeconds = getLodFadeSeconds();
+  _inputs.fadeStep = dt * Math.max(debugOptions.fadeTimeScale, 0);
+  _inputs.isFrozen = debugOptions.freeze;
+  _inputs.forceLevel = debugOptions.forceLevel;
+  setLodFrameInputs(_inputs);
+};
 const _objPos = new THREE.Vector3();
 
 // The frame's inputs to selectEntity, read once per frame: a world.hasComponent / getComponent per
@@ -475,22 +511,25 @@ const walkCapped = (
  * select against the active camera.
  * {@link _engine/features/lod/LodSettings!setLodMaxSelectionsPerFrame} caps the entities
  * reconsidered per frame (a forced level ignores the cap).
+ * First, once a frame and with or without `LOD` entities, it writes the frame's inputs for LOD
+ * content without entities (`setLodFrameInputs`, kernel/ecs/LodTargets.ts: instance sets).
  * Registered by the feature's install.
  * @internal
  */
-export const lodSelectionSystem = (world: ECSWorld) => {
+export const lodSelectionSystem = (world: ECSWorld, dt: number) => {
   const stats = getWritableLodFrameStats(world);
   stats.selections = 0;
   stats.selectionMs = 0;
 
+  const debugOptions = getLodDebugOptions();
+  writeLodFrameInputs(dt, debugOptions);
+
   const queue = prioritySelections.get(world);
   const storage = world.getStorage(ComponentType.LOD);
-  const debugOptions = getLodDebugOptions();
   const forceLevel = debugOptions.forceLevel;
   const isForced = forceLevel >= 0;
-  const camera =
-    isForced || storage.size === 0 || debugOptions.freeze ? undefined : getLodSelectionCamera();
-  if (!isForced && (!camera || !computeCameraTerms(camera, _terms))) {
+  const isSelecting = isForced || (storage.size > 0 && !debugOptions.freeze && _inputs.hasCamera);
+  if (!isSelecting) {
     // Nothing to select: a queued entity is reconsidered by the walk later, like any other
     if (queue) queue.length = 0;
     stats.lapFrames = 1;
