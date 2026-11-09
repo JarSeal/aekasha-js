@@ -12,6 +12,7 @@ import type { EntityDebugData, ManagedByData } from './ECSRegistry';
 import type { CharacterObject } from '../../features/character/CharacterTypes';
 import type { LodData } from '../../features/lod/LodTypes';
 import type { InstancedMeshSlotData } from '../../features/instancing/InstancedMeshPoolTypes';
+import type { InstanceSetData } from '../../features/instancing/InstanceSetTypes';
 
 /**
  * The engine's own component keys, whose values (`'CORE_…'`) the debug listings print. App and
@@ -71,6 +72,7 @@ export const ComponentType = {
   TAG_DRAW_HELD: 'CORE_TAG_DRAW_HELD', // runtime-only, not drawn until its owner lets it
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
+  INSTANCE_SET: 'CORE_INSTANCE_SET', // runtime-only, set by createInstanceSetAsync (p354)
   // Debug
   DEBUG_DATA: 'CORE_DEBUG_DATA',
   DEBUG_LIGHT_HELPER: 'CORE_DEBUG_LIGHT_HELPER',
@@ -222,6 +224,9 @@ export interface CoreComponentData {
   [ComponentType.TAG_DRAW_HELD]: boolean;
   /** An instanced mesh pool's slot, set by the pool's spawn (`instancing()`). */
   [ComponentType.INSTANCED_MESH_SLOT]: InstancedMeshSlotData;
+  /** An instance set its entity owns, set by `createInstanceSetAsync` (`instancing()`): deleting the
+   * entity disposes it. */
+  [ComponentType.INSTANCE_SET]: InstanceSetData;
   // Debug
   /** What the debug tools show for the entity ({@link EntityDebugData}); stored only in the debug
    * env and prod test mode. */
