@@ -1104,9 +1104,37 @@ From Phase 2 (its "As built"), for these steps:
     when the material being built is the object's own), they differ by 0.148 and 0.056 (0.06%
     of pixels), seven to nineteen times more, yet both stay within the scene runner's tolerance:
     the blurred and soft shadows keep nearly every pixel under 8/255. So the check measures this
-    bug but doesn't fail on it. `yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`: all
-    17 runs pass after the `LodFade.ts` change. The cost with the shadow (D6's "about 1k casting
-    instances, whatever the count") is measured with the phase's verification, after step 5.
+    bug but doesn't fail on it. `yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`:
+    all 17 runs pass after the `LodFade.ts` change. The cost with the shadow (D6's "about 1k
+    casting instances, whatever the count") is measured with the phase's verification, after
+    step 5.
+- **Step 5, the other cameras.** No engine change was needed for them: each is a render that
+  reaches the set's probe. What changed is the tab (D11, Phase 2's "the tab per slot"):
+  `LodContentDebugInfo` gained `cameraCount` (the slots held now, read synchronously, so the
+  field's line count is known before a readback), and `LodContentDebugStats` gained `cameras`
+  (each slot's name and drawn copies per level). The set's field adds a "Cameras" heading and a
+  line per camera, the name cut to leave room for the counts. Overflow and Triangles now sum
+  every camera's, as three's `info.render` counts every render's. A camera starting or stopping
+  to draw a set changes the folder's signature and rebuilds it, as a set coming or going does.
+  D11's per (slot, level) overflow doesn't fit a 19-character field: the readback has it
+  (`InstanceSetStats.slots`). `instanceStress` gained `?stressViewport=true`, a 320 × 180
+  picture-in-picture of the root scene from 150 m above where the still camera looks.
+  - **Verified** (20k, `STILL`, no fades, the dev server, debug env):
+    - A viewport: over 60 frames the main camera's and the overview's slots each gained 60
+      dispatches, and no other camera took a slot. The viewport's pixels on the page, the set's
+      against the pools': identical (max delta 0).
+    - The debug camera: step 1 (its own slot, its frustum, the main camera's levels).
+    - A snapshot of the root scene (`takeSnapshotAsync`) against the canvas on the page (the HUD
+      hidden): identical (max delta 0).
+    - A `compileAsync` of the root scene with a new camera at the main camera's pose (the
+      renderer and scene caught from three's `Renderer.render`): the camera took a slot, it
+      dispatched once, and the state was unchanged. The engine's pre-warm camera is one shared
+      camera, so a pre-warm takes one slot, released 120 frames later.
+    - Bakes: no camera but the main one, the overview and the debug camera at the load ever took
+      a slot. The renders per frame are the view, the shadow's, its blur quads and the output
+      pass (step 2's trace), and only the ones whose scene holds the set dispatch. `instanceStress`
+      has no impostor bake: a bake renders its own scene, which holds no probe (the Node test's
+      "a render that doesn't reach the set").
 
 ### Phase 4 — The CPU fallback (WebGL2)
 

@@ -142,12 +142,17 @@ export const getLodContentLevelCount = (
 /** An Instance sets field's width, in the monitor's mono characters (the Entities counts'). */
 const SET_LINE_WIDTH = 19;
 
+/** The Instance sets field's lines past its levels' and cameras': the backend's and the levels'
+ * headings, culled, fading, overflow, triangles and the cameras' heading. */
+export const LOD_CONTENT_EXTRA_LINES = 7;
+
 /** An instance set as aligned lines for its field (the monitor's mono font): its backend and
  * instances, per level the copies drawn (the main camera's) over the instances selected (a fading
- * one in both levels), then culled, fading, overflow and the triangles drawn. The line count
- * depends only on its levels: a readback's arrival needs no rebuild. */
+ * one in both levels), then culled, fading, overflow and the triangles drawn (every camera's),
+ * then a line per camera drawing it (its name, its drawn copies per level). The line count depends
+ * on its levels and its cameras only: a readback's arrival needs no rebuild. */
 export const formatLodContentInfo = (info: LodContentDebugInfo) => {
-  const { backend, levelCount, instanceCount, stats } = info;
+  const { backend, levelCount, instanceCount, cameraCount, stats } = info;
   const n = (v: number | undefined) => (v === undefined ? '—' : v.toLocaleString('en-US'));
   const row = (label: string, value: string) =>
     `${label}${value.padStart(Math.max(SET_LINE_WIDTH - label.length, value.length + 1))}`;
@@ -159,13 +164,21 @@ export const formatLodContentInfo = (info: LodContentDebugInfo) => {
   lines.push(row('Fading', n(stats?.fading)));
   lines.push(row('Overflow', n(stats?.overflow)));
   lines.push(row('Triangles', n(stats?.triangles)));
+  lines.push(row('Cameras', 'drawn'));
+  for (let i = 0; i < cameraCount; i++) {
+    const camera = stats?.cameras[i];
+    const drawn = camera ? camera.drawn.map((count) => n(count)).join('/') : '—';
+    // The name gives way to the counts
+    const name = (camera?.name ?? '').slice(0, Math.max(SET_LINE_WIDTH - drawn.length - 1, 1));
+    lines.push(row(name, drawn));
+  }
   return lines.join('\n');
 };
 
 /** What the Instance sets folder was built for: a rebuild follows a change (a set added or
- * removed, other levels). */
+ * removed, other levels, a camera starting or stopping to draw one). */
 const getSetsSignature = (infos: readonly LodContentDebugInfo[]) =>
-  infos.map((info) => `${info.label}:${info.levelCount}`).join('|');
+  infos.map((info) => `${info.label}:${info.levelCount}:${info.cameraCount}`).join('|');
 
 /** The counts as aligned lines (the monitor's mono font): a level's, then the hidden ones. */
 export const formatLodCounts = (world: ECSWorld) => {
@@ -257,7 +270,7 @@ export const _createLodDebugGUI = () => {
         setFields = infos.map((info) => ({
           label: info.label,
           target: { text: formatLodContentInfo(info) },
-          rows: info.levelCount + 6,
+          rows: info.levelCount + LOD_CONTENT_EXTRA_LINES + info.cameraCount,
         }));
       }
 

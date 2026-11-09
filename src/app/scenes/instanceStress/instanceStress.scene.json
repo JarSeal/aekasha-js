@@ -3,7 +3,7 @@
   "id": "instanceStress",
   "sceneFile": "./scenes/instanceStress/instanceStress.ts",
   "name": "Instance stress test",
-  "description": "GPU-driven culling's measuring scene (p354 Phase 0): a square forest of instanced LOD trees (three mesh levels and a cull), cut into tiles of one pool each, with the camera circling inside it. The count comes from ?stressInstances= (or the scene's debug tab), ?stressPath=gpu draws it with the compute cull, ?stressShadow=true turns on the sun's VSM shadow, ?stressLight=spot or point adds a spot or point light's shadow, and the tab and the profiler show what the CPU path costs per frame: the pool sync, the LOD selection, the render submit.",
+  "description": "GPU-driven culling's measuring scene (p354 Phase 0): a square forest of instanced LOD trees (three mesh levels and a cull), cut into tiles of one pool each, with the camera circling inside it. The count comes from ?stressInstances= (or the scene's debug tab), ?stressPath=gpu draws it with the compute cull, ?stressShadow=true turns on the sun's VSM shadow, ?stressLight=spot or point adds a spot or point light's shadow, ?stressViewport=true a picture-in-picture from above, and the tab and the profiler show what the CPU path costs per frame: the pool sync, the LOD selection, the render submit.",
   "cameras": [
     {
       "camProps": {

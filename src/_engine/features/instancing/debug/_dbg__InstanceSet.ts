@@ -129,13 +129,19 @@ const requestStats = (set: InstanceSet, levels: readonly InstancedLodPoolLevel[]
     .then((stats) => {
       if (!stats?.state) return;
       const { state } = stats;
+      const sum = (counts: number[], perLevel?: (level: number) => number) =>
+        counts.reduce((total, n, i) => total + n * (perLevel?.(i) ?? 1), 0);
       lastStats.set(set, {
         drawn: stats.drawn,
         selected: state.levels,
         culled: state.culled,
         fading: state.fading,
-        overflow: stats.overflow.reduce((sum, n) => sum + n, 0),
-        triangles: stats.drawn.reduce((sum, n, i) => sum + n * countTriangles(levels[i]), 0),
+        overflow: stats.slots.reduce((total, slot) => total + sum(slot.overflow), 0),
+        triangles: stats.slots.reduce(
+          (total, slot) => total + sum(slot.drawn, (i) => countTriangles(levels[i])),
+          0
+        ),
+        cameras: stats.slots.map((slot) => ({ name: slot.camera, drawn: slot.drawn })),
       });
     })
     .finally(() => pendingReads.delete(set));
@@ -159,6 +165,7 @@ export const _registerInstanceSetDebugSource = () => {
           backend: set.backend,
           levelCount: info.levels.length,
           instanceCount: set.count,
+          cameraCount: getInstanceSetBackend(set)?.debugBuffers?.getSlots().length ?? 0,
           stats: lastStats.get(set) ?? null,
         });
       }

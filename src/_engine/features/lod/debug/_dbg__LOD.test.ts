@@ -204,7 +204,14 @@ describe('the LOD tab (p806 D11)', () => {
     tab.update.mockClear();
     expect(getLodContentLevelCount()).toBe(0);
 
-    const info = { label: 'forest', backend: 'GPU', levelCount: 7, instanceCount: 10, stats: null };
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 7,
+      instanceCount: 10,
+      cameraCount: 0,
+      stats: null,
+    };
     const remove = registerLodContentDebugSource({ getInfos: () => [info] });
     try {
       expect(getLodContentLevelCount()).toBe(7);
@@ -218,8 +225,14 @@ describe('the LOD tab (p806 D11)', () => {
   });
 
   // p354 D11: the Instance sets folder
-  it("writes a set's readback per level, its lines the same before the first readback", () => {
-    const info = { label: 'forest', backend: 'GPU', levelCount: 2, instanceCount: 20_000 };
+  it("writes a set's readback per level and per camera, its lines the same before the first", () => {
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 2,
+      instanceCount: 20_000,
+      cameraCount: 2,
+    };
     const waiting = formatLodContentInfo({ ...info, stats: null }).split('\n');
     const read = formatLodContentInfo({
       ...info,
@@ -230,6 +243,10 @@ describe('the LOD tab (p806 D11)', () => {
         fading: 198,
         overflow: 0,
         triangles: 12_345_678,
+        cameras: [
+          { name: 'main', drawn: [221, 1_406] },
+          { name: 'instanceStressSun shadow', drawn: [603, 1_492] },
+        ],
       },
     }).split('\n');
     expect(read).toEqual([
@@ -242,9 +259,14 @@ describe('the LOD tab (p806 D11)', () => {
       'Overflow          0',
       // Past the width the value keeps a space
       'Triangles 12,345,678',
+      'Cameras       drawn',
+      'main      221/1,406',
+      // A long name gives way to the counts
+      'instanceS 603/1,492',
     ]);
     expect(waiting).toHaveLength(read.length);
     expect(waiting[2]).toBe('L0              —/—');
+    expect(waiting[waiting.length - 1]).toBe('                  —');
   });
 
   it('builds the Instance sets folder and rebuilds when a set comes', async () => {
@@ -254,7 +276,14 @@ describe('the LOD tab (p806 D11)', () => {
     tab.update.mockClear();
     expect(getFolder(pane.cmp.elem, 'Instance sets')).toBeTruthy();
 
-    const info = { label: 'forest', backend: 'GPU', levelCount: 1, instanceCount: 3, stats: null };
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 1,
+      instanceCount: 3,
+      cameraCount: 0,
+      stats: null,
+    };
     const remove = registerLodContentDebugSource({ getInfos: () => [info] });
     try {
       getDef().onRefresh?.();

@@ -26,6 +26,7 @@ import type { LodDef } from 'aekasha/lod';
 import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 import { loadDebugModuleAsync } from 'aekasha/debug';
+import { createViewport } from 'aekasha/viewports';
 
 // GPU-driven culling's measuring and parity scene (docs/plans/p354_gpu-driven-culling.md D12): a
 // square forest of LOD trees on a jittered grid, with the main camera circling inside it on a
@@ -77,8 +78,8 @@ export type InstanceStressPath = 'CPU' | 'GPU';
 export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
 
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
- * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=` and
- * `?stressLight=` (the measuring harness's). */
+ * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=`,
+ * `?stressLight=` and `?stressViewport=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -89,6 +90,8 @@ export const instanceStressSettings = {
   shadow: false,
   /** A spot or point light casting its shadow over the still camera's view */
   light: 'NONE' as InstanceStressLight,
+  /** A picture-in-picture viewport of the forest from above (a second camera drawing it) */
+  viewport: false,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -125,6 +128,7 @@ const readUrlOverrides = () => {
   if (path === 'CPU' || path === 'GPU') instanceStressSettings.path = path;
   const shadow = params.get('stressShadow');
   if (shadow === 'true' || shadow === 'false') instanceStressSettings.shadow = shadow === 'true';
+  instanceStressSettings.viewport = params.get('stressViewport') === 'true';
   const light = params.get('stressLight')?.toUpperCase();
   if (light === 'NONE' || light === 'SPOT' || light === 'POINT') {
     instanceStressSettings.light = light;
@@ -300,6 +304,32 @@ const startLightShadow = (kind: InstanceStressLight) => {
   });
 };
 
+/** `?stressViewport=true`: a picture-in-picture of the root scene in the bottom right, from 150 m
+ * above where the still camera looks, looking down (p354 Phase 3 step 5: another camera drawing
+ * the set, its own frustum of the main camera's levels). Deleted with the scene. */
+const startOverviewViewport = () => {
+  const rootScene = getRootScene();
+  if (!rootScene) return;
+  const radius = instanceStressState.extent * 0.3;
+  const ahead = new THREE.Vector3(Math.cos(0.5) * radius, 0, Math.sin(0.5) * radius);
+  const camera = new THREE.PerspectiveCamera(50, 16 / 9, 1, 1000);
+  camera.name = 'instanceStressOverview';
+  camera.position.copy(ahead).setY(150);
+  camera.up.set(1, 0, 0);
+  camera.lookAt(ahead);
+  camera.updateMatrixWorld();
+  createViewport({
+    id: 'instanceStressOverview',
+    scene: rootScene,
+    camera,
+    anchor: 'BOTTOM_RIGHT',
+    size: { width: '320px', height: '180px' },
+    transparent: false,
+    toneMapping: 'RENDERER',
+    sceneId: INSTANCE_STRESS_SCENE_ID,
+  });
+};
+
 /** `?stressShadow=true`: the sun casts its VSM shadow, fitted to the view (the toolkit's sun
  * shadow fit). Called on the scene's enter: the JSON lights are created after the scene code. */
 const startSunShadow = (world: ECSWorld) => {
@@ -354,8 +384,12 @@ export const scene = async () => {
     registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startSunShadow(world));
   }
   const light = instanceStressSettings.light;
-  if (light !== 'NONE')
+  if (light !== 'NONE') {
     registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startLightShadow(light));
+  }
+  if (instanceStressSettings.viewport) {
+    registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, startOverviewViewport);
+  }
   let path = instanceStressSettings.path;
   if (path === 'GPU' && !isWebGPURenderer()) {
     lwarn(

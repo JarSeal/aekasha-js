@@ -122,6 +122,8 @@ export type LodContentDebugInfo = {
   levelCount: number;
   /** Its instances. */
   instanceCount: number;
+  /** The cameras drawing it now (a set's slots): the tab's line count. */
+  cameraCount: number;
   /** Its last debug readback, null before the first (and for a backend without one). */
   stats: LodContentDebugStats | null;
 };
@@ -140,10 +142,14 @@ export type LodContentDebugStats = {
   culled: number;
   /** Cross-fading. */
   fading: number;
-  /** In view past a visible list's budget: not drawn. */
+  /** In view past a visible list's budget, every camera's: not drawn. */
   overflow: number;
-  /** The triangles the drawn copies make (three's `info.render` doesn't count indirect draws). */
+  /** The triangles every camera's drawn copies make, as three's `info.render` counts every
+   * render's (it doesn't count indirect draws). */
   triangles: number;
+  /** Each camera drawing it (a set's slots, in slot order): its name and its drawn copies per
+   * level. */
+  cameras: { name: string; drawn: number[] }[];
 };
 
 /**
