@@ -162,7 +162,10 @@ export const averageSamples = (samples: number[]) => {
 export type StressSummary = {
   count: number;
   path: string;
+  /** The renderer's ('WebGPU', 'WebGL2') */
   backend: string;
+  /** What draws the set ('GPU', 'CPU'), null on the pool path */
+  setBackend?: string | null;
   avg: Record<'poolSyncMs' | 'lodMs' | 'renderMs' | 'cpuMs' | 'intervalMs', number>;
   levels: number[];
   overflow?: number[];

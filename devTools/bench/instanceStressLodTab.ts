@@ -4,7 +4,7 @@
  * checkpoint by checkpoint, plus a snapshot pair at a held cross-fade.
  *
  *   npx tsx devTools/bench/instanceStressLodTab.ts [--count 20k] [--fade-seconds 0.25]
- *     [--shadow sun|spot|point] [--url <server>] [--headed] [--webgl]
+ *     [--shadow sun|spot|point] [--set-backend cpu] [--url <server>] [--headed] [--webgl]
  *
  * Each path is a page of its own (debug env, the test bridge's fixed 1/60 s frame delta), the
  * orbit held at its start, then:
@@ -21,7 +21,10 @@
  * own dev server (the scene runner's) or `--url`. `--shadow` adds a shadow-casting light (the
  * scene's `?stressShadow=true` sun, or its `?stressLight=` spot or point light), so the held
  * fade's snapshots compare the fading trees' shadows too (p354 Phase 3 step 4: the shadow pass
- * dithers a set's copies). Output: `.cache/bench/progress.log` too, the
+ * dithers a set's copies). `--set-backend cpu` draws the set with its CPU backend on WebGPU too
+ * (p354 Phase 4: the LOD tab's "CPU backend (next sets)" ticked, then the scene reloaded from its
+ * tab, before step 1); on WebGL2 (`--webgl`) a set is on the CPU backend anyway. Output:
+ * `.cache/bench/progress.log` too, the
  * snapshots in `.cache/bench/lodTab/`. Exits 1 on a problem.
  */
 import fs from 'node:fs';
@@ -64,11 +67,14 @@ type Args = {
   count: number;
   fadeSeconds: number;
   shadow: ShadowLight | null;
+  /** 'cpu': the set forced onto its CPU backend (the LOD tab's option) */
+  setBackend: 'auto' | 'cpu';
   url: string | null;
   headed: boolean;
   webgl: boolean;
 };
 type StressApi = { measure: (frames: number, startOrbit?: boolean) => Promise<StressSummary> };
+const STRESS_TAB_ID = 'instanceStressDemo';
 type LodTabWindow = Window & { __aekInstanceStress?: StressApi };
 
 const fail = (message: string): never => {
@@ -88,6 +94,7 @@ const parseArgs = (argv: string[]): Args => {
     count: 20_000,
     fadeSeconds: 0.25,
     shadow: null,
+    setBackend: 'auto',
     url: null,
     headed: false,
     webgl: false,
@@ -102,6 +109,10 @@ const parseArgs = (argv: string[]): Args => {
         fail('--shadow: sun, spot or point');
       }
       args.shadow = light as ShadowLight;
+    } else if (arg === '--set-backend') {
+      const backend = argv[++i];
+      if (backend !== 'cpu' && backend !== 'auto') fail('--set-backend: cpu or auto');
+      args.setBackend = backend as Args['setBackend'];
     } else if (arg === '--url') args.url = argv[++i] ?? null;
     else if (arg === '--headed') args.headed = true;
     else if (arg === '--webgl') args.webgl = true;
@@ -127,9 +138,9 @@ const buildUrl = (baseUrl: string, args: Args, p: Path) => {
   return `${baseUrl.replace(/\/$/, '')}/?${params}`;
 };
 
-/** The scene's `measure(frames)`: its state at the last of them */
-const measureAsync = async (page: Page, frames: number, startOrbit = false) => {
-  const summary = await withTimeout(
+/** The scene's `measure(frames)`: its summary of them */
+const measureSummaryAsync = (page: Page, frames: number, startOrbit = false) =>
+  withTimeout(
     page.evaluate(
       ({ n, orbit }) => (window as LodTabWindow).__aekInstanceStress!.measure(n, orbit),
       { n: frames, orbit: startOrbit }
@@ -137,6 +148,10 @@ const measureAsync = async (page: Page, frames: number, startOrbit = false) => {
     (frames / 20) * 1000 + EVALUATE_MARGIN_MS,
     `measure(${frames})`
   );
+
+/** The scene's `measure(frames)`: its state at the last of them */
+const measureAsync = async (page: Page, frames: number, startOrbit = false) => {
+  const summary = await measureSummaryAsync(page, frames, startOrbit);
   if (!summary.state) throw new Error(`measure(${frames}) has no state`);
   return { levels: summary.state.levels, fading: summary.state.fading };
 };
@@ -166,23 +181,88 @@ const pressOnControlAsync = async (page: Page, name: string, key: string) => {
   await page.keyboard.press(key);
 };
 
-const runPathAsync = async (page: Page, url: string, p: Path, states: CheckpointStates) => {
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
+const whenReadyAsync = async (page: Page) => {
   const ready = await withTimeout(
     page.evaluate((ms) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }), READY_TIMEOUT_MS),
     READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
     'whenSceneReady'
   );
   if (ready.status !== 'READY') throw new Error("the scene didn't load");
-  await page.waitForFunction(() => Boolean((window as LodTabWindow).__aekInstanceStress), null, {
-    timeout: 60_000,
+  await page
+    .waitForFunction(() => Boolean((window as LodTabWindow).__aekInstanceStress), null, {
+      timeout: 60_000,
+    })
+    .catch(() => {
+      throw new Error('the scene loaded without its probe (window.__aekInstanceStress) in 60 s');
+    });
+};
+
+/** Ticks the LOD tab's "CPU backend (next sets)" and reloads the scene from its own tab, so its
+ * set is made again on the CPU backend; fails when it isn't */
+const forceCpuBackendAsync = async (page: Page) => {
+  const openTabAsync = async (id: string) => {
+    const opened = await page.evaluate(
+      (tabId) => window.__AEK_TEST__!.openDebuggerTab({ host: 'DRAWER', id: tabId }),
+      id
+    );
+    if (opened.status !== 'OPEN') throw new Error(`the ${id} tab didn't open: ${opened.reason}`);
+  };
+  await openTabAsync(LOD_TAB_ID);
+  await pressOnControlAsync(page, 'CPU backend (next sets)', ' ');
+  await openTabAsync(STRESS_TAB_ID);
+  await pressOnControlAsync(page, 'Reload the scene', 'Enter');
+  // The scene's exit removes its window global: the reload has started
+  await page
+    .waitForFunction(() => !(window as LodTabWindow).__aekInstanceStress, null, {
+      timeout: 60_000,
+    })
+    .catch(() => {
+      throw new Error("'Reload the scene' didn't start a load in 60 s");
+    });
+  await whenReadyAsync(page);
+  const summary = await measureSummaryAsync(page, 1);
+  if (summary.setBackend !== 'CPU') {
+    throw new Error(`the set is on the ${summary.setBackend} backend after the reload, not CPU`);
+  }
+};
+
+const runPathAsync = async (
+  page: Page,
+  url: string,
+  p: Path,
+  states: CheckpointStates,
+  args: Args
+) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
+  /** The page's warnings, named only when a step fails (eg. a set's backend failing to load) */
+  const warnings: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+    else if (msg.type() === 'warning') warnings.push(msg.text());
   });
+  try {
+    await runStepsAsync(page, url, p, states, args);
+  } catch (err) {
+    const said = [...errors, ...warnings.slice(-5)].map((text) => text.slice(0, 300));
+    throw new Error(
+      `${(err as Error).message}${said.length > 0 ? `\n    the page said: ${said.join('\n    ')}` : ''}`
+    );
+  }
+  return errors;
+};
+
+const runStepsAsync = async (
+  page: Page,
+  url: string,
+  p: Path,
+  states: CheckpointStates,
+  args: Args
+) => {
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
+  await whenReadyAsync(page);
+  if (p === 'gpu' && args.setBackend === 'cpu') await forceCpuBackendAsync(page);
 
   states.settled = await measureAsync(page, 60);
   const opened = await page.evaluate(
@@ -233,7 +313,6 @@ const runPathAsync = async (page: Page, url: string, p: Path, states: Checkpoint
   // 6. Frozen while the camera moves
   await pressOnControlAsync(page, 'Freeze', ' ');
   states.frozenOrbit = await measureAsync(page, FREEZE_FRAMES, true);
-  return errors;
 };
 
 const main = async () => {
@@ -253,7 +332,7 @@ const main = async () => {
     onNote: (note) => out(`${YELLOW}${note}${RESET}`),
   });
   out(
-    `The LOD tab check against ${baseUrl} (${launched.label}): ${args.count} trees, fades ${args.fadeSeconds} s${args.shadow ? `, the ${args.shadow} light's shadow` : ''}`
+    `The LOD tab check against ${baseUrl} (${launched.label}): ${args.count} trees, fades ${args.fadeSeconds} s${args.shadow ? `, the ${args.shadow} light's shadow` : ''}${args.setBackend === 'cpu' ? ', the set forced onto its CPU backend' : ''}`
   );
   out(`${DIM}Watch it: cd ${ROOT} && ${watch}${RESET}\n`);
 
@@ -263,7 +342,7 @@ const main = async () => {
     for (const p of ['cpu', 'gpu'] as const) {
       const page = await launched.browser.newPage({ viewport: VIEWPORT });
       try {
-        const errors = await runPathAsync(page, buildUrl(baseUrl, args, p), p, states[p]);
+        const errors = await runPathAsync(page, buildUrl(baseUrl, args, p), p, states[p], args);
         for (const e of errors) problems.push(`${p}: ${e.slice(0, 300)}`);
         out(`  ${p}: ${Object.keys(states[p]).length} checkpoints`);
       } catch (err) {

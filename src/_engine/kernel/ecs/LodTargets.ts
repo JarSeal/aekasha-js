@@ -153,12 +153,26 @@ export type LodContentDebugStats = {
 };
 
 /**
+ * A debug option of a feature's LOD content, as a checkbox in the LOD tab's Instance sets folder
+ * (eg. the instance sets' forced CPU backend).
+ * @internal
+ */
+export type LodContentDebugToggle = {
+  /** The checkbox's label. */
+  readonly label: string;
+  /** The option: an accessor the source defines, which the tab reads on its refresh and writes. */
+  value: boolean;
+};
+
+/**
  * A feature's LOD content without entities, for the LOD tab: `getInfos` is read on the tab's
- * refresh.
+ * refresh, `toggles` when the tab builds.
  * @internal
  */
 export type LodContentDebugSource = {
   getInfos: () => readonly LodContentDebugInfo[];
+  /** Its debug options, shown above its content. */
+  toggles?: readonly LodContentDebugToggle[];
 };
 
 const lodContentDebugSources: LodContentDebugSource[] = [];

@@ -8,6 +8,7 @@ import {
 } from '../../../debug/DebuggerGUI';
 import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
 import type { ECSWorld } from '../../../kernel/ecs/ECS';
+import type { LodContentDebugToggle } from '../../../kernel/ecs/LodTargets';
 import { getConfig } from '../../../kernel/config/Config';
 import type { ImpostorRecord } from '../impostors/ImpostorRegistry';
 import { doesTextureExist, getTexture } from '../../../kernel/assets/Texture';
@@ -88,23 +89,33 @@ export const getLastFrameFolder = (stats: LodFrameStats): Item => {
 /** An instance set's field in the Instance sets folder: its lines, rewritten on each refresh. */
 export type InstanceSetField = { label: string; target: { text: string }; rows: number };
 
-/** "Instance sets" (p354 D11): a field per set, its label the set's, its lines
- * `formatLodContentInfo`'s, read on the tab's refresh; a note without any. */
-export const getInstanceSetsFolder = (fields: readonly InstanceSetField[]): Item => ({
+/** "Instance sets" (p354 D11): the debug sources' options (a checkbox each), then a field per
+ * set, its label the set's, its lines `formatLodContentInfo`'s, read on the tab's refresh; a note
+ * without any. */
+export const getInstanceSetsFolder = (
+  fields: readonly InstanceSetField[],
+  toggles: readonly LodContentDebugToggle[]
+): Item => ({
   type: 'folder',
   title: 'Instance sets',
-  content:
-    fields.length === 0
+  content: [
+    ...toggles.map(
+      (toggle): Item => ({ key: 'value', target: toggle, label: toggle.label, interval: 'refresh' })
+    ),
+    ...(fields.length === 0
       ? [getNoteItem('No instance sets in this scene.')]
-      : fields.map(({ label, target, rows }) => ({
-          key: 'text',
-          target,
-          label,
-          readonly: true,
-          multiline: true,
-          rows,
-          interval: 'refresh',
-        })),
+      : fields.map(
+          ({ label, target, rows }): Item => ({
+            key: 'text',
+            target,
+            label,
+            readonly: true,
+            multiline: true,
+            rows,
+            interval: 'refresh',
+          })
+        )),
+  ],
 });
 
 /** "Selection": the global bias, the cap, freeze, a forced level and the camera, each with its

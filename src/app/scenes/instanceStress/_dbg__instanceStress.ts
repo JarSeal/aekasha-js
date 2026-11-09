@@ -8,7 +8,7 @@ import {
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 import { createDebuggerTab, registerStatsSource } from 'aekasha/debug';
-import { readInstanceSetStatsAsync } from 'aekasha/instancing';
+import { readInstanceSetStatsAsync, type InstanceSetBackendKind } from 'aekasha/instancing';
 import { getLodFrameStats } from 'aekasha/lod';
 import {
   INSTANCE_STRESS_COUNTS,
@@ -122,7 +122,10 @@ export type InstanceStressSummary = ReturnType<FigureWindow['summarize']> & {
   path: string;
   pipeline: StressPipeline;
   shadow: boolean;
+  /** The renderer's: 'WebGPU' or 'WebGL2' */
   backend: string;
+  /** What draws the set ('GPU', 'CPU'), null on the pool path */
+  setBackend: InstanceSetBackendKind | null;
   /** The GPU path's instances in view past a visible list's budget, per level (a readback) */
   overflow?: number[];
   /** The GPU path's other cameras drawing the set (a shadow, a viewport): each one's drawn copies
@@ -152,7 +155,7 @@ const useStressPipelineAsync = async (): Promise<StressPipeline> => {
   // An instance set dispatches through the engine's drawing pipeline, which this would replace
   if (instanceStressState.set) {
     lwarn(
-      'Instance stress: ?stressPipeline=meshlet is for the CPU path; the GPU path keeps its own.'
+      "Instance stress: ?stressPipeline=meshlet is for the pools; an instance set keeps the engine's pipeline."
     );
     return 'standard';
   }
@@ -305,6 +308,7 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
     path: instanceStressState.path,
     pipeline,
     shadow: instanceStressSettings.shadow,
+    setBackend: instanceStressState.set?.backend ?? null,
     backend: (getRenderer()?.backend as { isWebGPUBackend?: boolean } | undefined)?.isWebGPUBackend
       ? 'WebGPU'
       : 'WebGL2',
@@ -392,10 +396,10 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
 const formatLive = (summary: ReturnType<FigureWindow['summarize']>) => {
   const { avg, max, levels } = summary;
   const ms = (key: keyof FrameFigures) => `${avg[key].toFixed(3)} (max ${max[key].toFixed(3)})`;
-  const where =
-    instanceStressState.path === 'GPU'
-      ? 'an instance set'
-      : `${instanceStressState.pools.length} pools`;
+  const { set } = instanceStressState;
+  const where = set
+    ? `an instance set (${set.backend})`
+    : `${instanceStressState.pools.length} pools`;
   return [
     `Instances: ${instanceStressState.count.toLocaleString()} in ${where}`,
     `Per level: ${levels.map((n) => n.toLocaleString()).join(' / ')}`,
@@ -447,7 +451,7 @@ const createInstanceStressTab = (getShown: () => ReturnType<FigureWindow['summar
             key: 'path',
             options: [
               { text: 'CPU: instanced LOD pools', value: 'CPU' },
-              { text: 'GPU: an instance set (WebGPU)', value: 'GPU' },
+              { text: 'GPU: an instance set', value: 'GPU' },
             ],
           },
           {

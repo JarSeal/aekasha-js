@@ -7,7 +7,6 @@ import {
   getEntityIdByAppId,
   getLightByAppId,
   getRootScene,
-  isWebGPURenderer,
   lwarn,
   registerOnSceneEnter,
   registerOnSceneExit,
@@ -36,9 +35,10 @@ import { createViewport } from 'aekasha/viewports';
 //   is an entity that the pool sync walks and the LOD selection measures every frame, in view or
 //   not (pool instances don't opt into the ECS frustum culling: three culls a level mesh only as
 //   a whole).
-// - GPU (`?stressPath=gpu`): one instance set (`createInstanceSetAsync`): no entity per tree,
-//   culled and LOD-selected per instance by compute passes, a draw per level and material group.
-//   On WebGL2 a set has no GPU backend (p354 Phase 4 adds its CPU one): the scene draws the pools.
+// - GPU (`?stressPath=gpu`): one instance set (`createInstanceSetAsync`): no entity per tree. On
+//   WebGPU its GPU backend culls and LOD-selects per instance in compute passes, a draw per level
+//   and material group; on WebGL2 (or with the LOD tab's "CPU backend" option) its CPU backend
+//   selects the same way in a loop over typed arrays, an InstancedMesh per level (p354 Phase 4).
 // The scene's debug module (`_dbg__instanceStress.ts`) times both and reads the set back.
 
 export const INSTANCE_STRESS_SCENE_ID = 'instanceStress';
@@ -70,7 +70,8 @@ const MAX_COUNT = 1_000_000;
  * stay where it is (the steady state: nothing changes level) */
 export type InstanceStressCameraMode = 'ORBIT' | 'STILL';
 
-/** What draws the forest: instanced LOD pools (the CPU path) or the compute cull (WebGPU only) */
+/** What draws the forest: instanced LOD pools (the CPU path) or an instance set (its backend the
+ * renderer's: compute on WebGPU, the CPU on WebGL2) */
 export type InstanceStressPath = 'CPU' | 'GPU';
 
 /** A shadow-casting light over the still camera's view besides the sun (p354 Phase 3 step 4):
@@ -390,13 +391,7 @@ export const scene = async () => {
   if (instanceStressSettings.viewport) {
     registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, startOverviewViewport);
   }
-  let path = instanceStressSettings.path;
-  if (path === 'GPU' && !isWebGPURenderer()) {
-    lwarn(
-      'Instance stress: an instance set has no WebGL2 backend yet (p354 Phase 4); drawing on the CPU path.'
-    );
-    path = 'CPU';
-  }
+  const path = instanceStressSettings.path;
   instanceStressState.path = path;
   if (path === 'GPU') await createSetForestAsync(world, byTile);
   else createPoolForest(world, byTile);

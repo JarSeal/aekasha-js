@@ -38,6 +38,10 @@ const DEFAULT_MAX_SLOTS = 8;
 let areInstanceSetsInstalled = false;
 let hasWarnedNotInstalled = false;
 
+/** The debug option forcing new sets onto the CPU backend on WebGPU too (the LOD tab's): read
+ * only in the debug env, so a production build drops it. */
+let isCpuBackendForced = false;
+
 /** Each set's backend, for the debug readback (`_dbg__InstanceSet.ts`). */
 const backendsBySet = new WeakMap<
   InstanceSet,
@@ -93,7 +97,8 @@ export interface InstanceSet {
   /** The owning entity: deleting it (or the scene switch that deletes it) disposes the set: its
    * draws, its buffers and its registry refs on the levels' geometries and materials. */
   readonly entityId: number;
-  /** What draws the set, chosen by the renderer: `'GPU'` on WebGPU, `'CPU'` on WebGL2. */
+  /** What draws the set, chosen by the renderer: `'GPU'` on WebGPU, `'CPU'` on WebGL2 (and on
+   * WebGPU with the LOD tab's debug option forcing it). */
   readonly backend: InstanceSetBackendKind;
   /** The most instances the set holds. */
   readonly maxInstances: number;
@@ -243,7 +248,8 @@ export const createInstanceSetAsync = async (
   const entityId = world.createEntity(opts.entityOpts);
   // createEntity leaves it to the creators (as createLineEntity)
   if (opts.entityOpts?.persistent) world.addComponent(entityId, ComponentType.PERSISTENT, true);
-  const backend: InstanceSetBackendKind = isWebGPURenderer() ? 'GPU' : 'CPU';
+  const isGpu = isWebGPURenderer() && !(IS_DEBUG_ENV && isCpuBackendForced);
+  const backend: InstanceSetBackendKind = isGpu ? 'GPU' : 'CPU';
   let createBackend: CreateInstanceSetBackend;
   try {
     createBackend = await loadBackendAsync(backend);
@@ -333,6 +339,21 @@ export const createInstanceSetAsync = async (
   if (IS_DEBUG_ENV) liveSets.add(set);
   return set;
 };
+
+/**
+ * Forces the sets created from now on onto the CPU backend on WebGPU too (the debug env only, the
+ * LOD tab's option), to compare both backends on one device; sets already created keep theirs.
+ * @internal
+ */
+export const setInstanceSetCpuBackendForced = (value: boolean) => {
+  isCpuBackendForced = value;
+};
+
+/**
+ * Whether the sets created from now on are forced onto the CPU backend (the debug option).
+ * @internal
+ */
+export const isInstanceSetCpuBackendForced = () => isCpuBackendForced;
 
 /**
  * The sets not disposed yet, for the debug tools (the debug env only: empty elsewhere).

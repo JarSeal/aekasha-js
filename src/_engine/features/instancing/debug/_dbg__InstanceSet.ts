@@ -2,6 +2,7 @@ import type * as THREE from 'three/webgpu';
 import {
   type LodContentDebugInfo,
   type LodContentDebugStats,
+  type LodContentDebugToggle,
   registerLodContentDebugSource,
 } from '../../../kernel/ecs/LodTargets';
 import { getMainCamera } from '../../../kernel/camera/Camera';
@@ -11,6 +12,8 @@ import {
   getInstanceSetBackend,
   getInstanceSetDebugInfo,
   getLiveInstanceSets,
+  isInstanceSetCpuBackendForced,
+  setInstanceSetCpuBackendForced,
   type InstanceSet,
 } from '../InstanceSet';
 import type { InstancedLodPoolLevel } from '../InstancedMeshPool';
@@ -155,6 +158,18 @@ const pendingReads = new WeakSet<InstanceSet>();
 
 let removeDebugSource: (() => void) | null = null;
 
+/** The LOD tab's checkbox forcing the sets created from now on onto the CPU backend (D9: both
+ * backends compared on one WebGPU device). */
+const cpuBackendToggle: LodContentDebugToggle = {
+  label: 'CPU backend (next sets)',
+  get value() {
+    return isInstanceSetCpuBackendForced();
+  },
+  set value(value: boolean) {
+    setInstanceSetCpuBackendForced(value);
+  },
+};
+
 /** A level's triangles: its index (or vertices) over 3, every group. */
 const countTriangles = (level: InstancedLodPoolLevel) => {
   const { geometry } = level;
@@ -201,6 +216,7 @@ const requestStats = (set: InstanceSet, levels: readonly InstancedLodPoolLevel[]
  */
 export const _registerInstanceSetDebugSource = () => {
   removeDebugSource ??= registerLodContentDebugSource({
+    toggles: [cpuBackendToggle],
     getInfos: () => {
       infos.length = 0;
       for (const set of getLiveInstanceSets()) {

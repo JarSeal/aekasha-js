@@ -133,6 +133,11 @@ export const getLodContentInfos = () => {
   return infos;
 };
 
+/** The LOD content's debug options (instance sets' forced CPU backend), from the kernel's debug
+ * sources, in their order. */
+export const getLodContentToggles = () =>
+  getLodContentDebugSources().flatMap((source) => source.toggles ?? []);
+
 /** The most levels the LOD content without entities has: the forced level options cover them
  * too. 0 without any. */
 export const getLodContentLevelCount = (
@@ -324,7 +329,7 @@ export const _createLodDebugGUI = () => {
               interval: 'refresh',
             },
             getLastFrameFolder(stats),
-            getInstanceSetsFolder(setFields),
+            getInstanceSetsFolder(setFields, getLodContentToggles()),
             getSelectionFolder(controls, forceLevelCount),
             getFadesFolder(controls),
             getOverlayFolder(controls, levelCount),
