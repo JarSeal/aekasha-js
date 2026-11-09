@@ -18,6 +18,7 @@ import {
   storage,
   uint,
   uniform,
+  varying,
   vec3,
   vec4,
 } from 'three/tsl';
@@ -311,9 +312,13 @@ export const LIST_BASE_KEY = 'aekInstanceSetListBase';
 /**
  * The vertex fetch every draw of a set shares: the drawn instance's matrix through its visible
  * list (the mesh's own, a per-object uniform read before each draw), as a material's
- * `positionNode`. It turns the normal with the matrix's rotation (uniform scale: normalized where
- * it's used). The meshes then share their material's build, whatever the level and group.
+ * `positionNode`, and the drawn copy's signed fade from the same entry, for the LOD dither
+ * (`setMaterialLodFade`, kernel/render/LodFade.ts). It turns the normal with the matrix's rotation
+ * (uniform scale: normalized where it's used). The meshes then share their material's build,
+ * whatever the level and group.
  * @internal
+ * @returns `position`, the `positionNode`, and `fade`, a flat varying (every vertex of a copy has
+ * the same, so the two copies of a fade split the pixels exactly)
  */
 export const createInstanceSetFetch = (
   buffers: InstanceSetBuffers,
@@ -325,8 +330,12 @@ export const createInstanceSetFetch = (
   const listBase = uniform(0, 'uint').onObjectUpdate(
     ({ object }) => (object?.userData[LIST_BASE_KEY] as number | undefined) ?? 0
   );
-  return Fn(() => {
-    const entry = lists.element(listBase.add(instanceIndex));
+  const entry = lists.element(listBase.add(instanceIndex));
+  const fadeByte = entry.shiftRight(uint(24)).toFloat();
+  const fade = varying(fadeByte.sub(FADE_STEPS).div(FADE_STEPS)).setInterpolation(
+    THREE.InterpolationSamplingType.FLAT
+  ) as unknown as THREE.Node<'float'>;
+  const position = Fn(() => {
     const row = entry.bitAnd(ENTRY_INSTANCE_MASK).mul(3).toVar();
     const r0 = rows.element(row).toVar();
     const r1 = rows.element(row.add(1)).toVar();
@@ -337,4 +346,5 @@ export const createInstanceSetFetch = (
     const p = vec4(positionLocal, 1);
     return vec3(dot(r0, p), dot(r1, p), dot(r2, p));
   })();
+  return { position, fade };
 };

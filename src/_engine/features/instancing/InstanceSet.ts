@@ -58,8 +58,9 @@ export interface CreateInstanceSetOptions {
   /** The most instances the set holds, sized once: at most 2^24 (16,777,216). */
   maxInstances: number;
   /** The selection settings every instance shares (`cullScreenSize`, `hysteresis`, `bias`,
-   * `fadeSeconds`), as an instanced LOD pool's. A set draws without cross-fades for now: a level
-   * change is instant whatever `fadeSeconds` says (p354 Phase 2 adds the fades). */
+   * `fadeSeconds`), as an instanced LOD pool's: a level change and LOD culling cross-fade through
+   * the LOD dither, which the set adds to its levels' materials (`enableLodDither`, as the pool
+   * does). */
   lod?: Omit<LodDef, 'levels'>;
   /** Whether the instances receive shadows. Default true (casting is per level). */
   receiveShadow?: boolean;

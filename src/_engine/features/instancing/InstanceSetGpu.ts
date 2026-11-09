@@ -7,6 +7,7 @@ import {
   addDrawingPipelineHook,
   type DrawingPipelineHook,
 } from '../../kernel/render/DrawingPipeline';
+import { enableLodDither, setMaterialLodFade } from '../../kernel/render/LodFade';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
@@ -34,7 +35,10 @@ import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 // - The draws (D8): a plain Mesh per (level, geometry group) drawing with `drawIndexedIndirect`
 //   from its own args. Each source material gets one node variant (its values copied) whose
 //   `positionNode` is the shared fetch through the visible list; the list a mesh reads is a
-//   per-object uniform, so every draw of a material shares its build.
+//   per-object uniform, so every draw of a material shares its build. The sources get the LOD
+//   dither (`enableLodDither`, as a pool's level materials), which the variants copy with the rest
+//   of their mask, and each variant's dither reads the drawn copy's fade from its list entry
+//   (`setMaterialLodFade`, kernel/render/LodFade.ts).
 // - The dispatch (D5): one drawing pipeline hook for every GPU set. `isCulled` keeps a set's
 //   draws to the main camera's renders (p354 Phase 3 gives every camera a slot) and notes the
 //   sets the render reached; `finishRenderList`, after the projection and before any draw, runs
@@ -123,13 +127,16 @@ const getLevelDraws = (level: InstancedLodPoolLevel): LevelDraw[] => {
 };
 
 /** A node variant of `source` drawing through the set's fetch: its values copied (not its
- * identity or listeners, so disposing the variant leaves the source be), its own mask kept. */
+ * identity or listeners, so disposing the variant leaves the source be), its own mask kept, the
+ * LOD dither (added to the source first, as a pool does to its level materials) reading the drawn
+ * copy's fade. */
 const createVariant = (
   renderer: THREE.Renderer,
   source: THREE.Material,
-  positionNode: THREE.Node<'vec3'>,
+  fetch: { position: THREE.Node<'vec3'>; fade: THREE.Node<'float'> },
   label: string
 ) => {
+  enableLodDither(source);
   const node = renderer.library.fromMaterial(source) as THREE.NodeMaterial;
   const variant = new (node.constructor as new () => THREE.NodeMaterial)();
   for (const key of Object.keys(node)) {
@@ -144,7 +151,8 @@ const createVariant = (
     );
   }
   variant.name = `${source.name || source.type} (instance set)`;
-  variant.positionNode = positionNode;
+  variant.positionNode = fetch.position;
+  setMaterialLodFade(variant, fetch.fade);
   variant.needsUpdate = true;
   return variant;
 };
@@ -225,12 +233,12 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const hasLevelsToSelect = levelCount > 1 || (lod.cullScreenSize ?? 0) > 0;
 
   // --- The draws ---
-  const positionNode = createInstanceSetFetch(buffers, maxInstances, levelCount * maxVisible);
+  const fetch = createInstanceSetFetch(buffers, maxInstances, levelCount * maxVisible);
   const variants = new Map<THREE.Material, THREE.NodeMaterial>();
   const getVariant = (source: THREE.Material) => {
     let variant = variants.get(source);
     if (!variant) {
-      variant = createVariant(renderer, source, positionNode, label);
+      variant = createVariant(renderer, source, fetch, label);
       variants.set(source, variant);
     }
     return variant;
