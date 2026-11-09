@@ -71,6 +71,34 @@ export const pressOnDrawerControlAsync = async (page: Page, name: string, key: s
   await page.keyboard.press(key);
 };
 
+/** The focused element's checkbox state, through shadow roots: null when it isn't a checkbox */
+const readFocusedCheckboxAsync = (page: Page) =>
+  page.evaluate(() => {
+    let element: Element | null = document.activeElement;
+    while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+    return element instanceof HTMLInputElement && element.type === 'checkbox'
+      ? element.checked
+      : null;
+  });
+
+/** Ticks a checkbox of the drawer's open tab, and checks it took: the LOD tab rebuilds its
+ * Instance sets folder when a set's cameras change (the debug camera's slot freed 120 frames
+ * after the load), and a key pressed on the control a rebuild just replaced is lost. So it reads
+ * the control again (focused anew) and presses only while it's unticked, at most three times. */
+const tickDrawerCheckboxAsync = async (page: Page, name: string) => {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await focusDrawerControlAsync(page, name);
+    const checked = await readFocusedCheckboxAsync(page);
+    if (checked === null) throw new Error(`"${name}" isn't a checkbox`);
+    if (checked) return;
+    await page.keyboard.press(' ');
+    // A frame for the binding and a rebuild to settle
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  }
+  await focusDrawerControlAsync(page, name);
+  if (!(await readFocusedCheckboxAsync(page))) throw new Error(`"${name}" didn't tick`);
+};
+
 /** Opens a drawer tab through the test bridge */
 export const openDrawerTabAsync = async (page: Page, id: string) => {
   const opened = await page.evaluate(
@@ -85,7 +113,7 @@ export const openDrawerTabAsync = async (page: Page, id: string) => {
  * scene's tab open. */
 export const forceSetCpuBackendAsync = async (page: Page) => {
   await openDrawerTabAsync(page, LOD_TAB_ID);
-  await pressOnDrawerControlAsync(page, 'CPU backend (next sets)', ' ');
+  await tickDrawerCheckboxAsync(page, 'CPU backend (next sets)');
   await openDrawerTabAsync(page, STRESS_TAB_ID);
   // The reload makes the scene's window global again: a new object is the reloaded scene's. Not
   // "the global gone" (its exit removes it): a small scene's reload removes and adds it between

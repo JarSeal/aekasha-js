@@ -10,6 +10,7 @@ import {
   instanceStressState,
   onInstanceStressExit,
 } from './instanceStress';
+import { instanceStressStreamStats } from './instanceStressStreaming';
 
 // The instance stress scene's measuring (debug env, p354 Phase 0): systems at fractional orders
 // around the engine's bracket the CPU path's parts in every frame, without touching the engine:
@@ -350,6 +351,8 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
     /** The set itself, for page scripts (its ranges: `removeInstances`, `addInstances`), or null
      * on the pool path */
     set: () => instanceStressState.set,
+    /** The streamed forest's measures (`?stressStream=`), a copy */
+    stream: () => structuredClone(instanceStressStreamStats),
     /** The set's readback now (every camera's slot; `state: true` adds the state counted), or
      * null on the pool path */
     stats: (state = false) => {

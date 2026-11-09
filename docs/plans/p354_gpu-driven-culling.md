@@ -1487,6 +1487,67 @@ From Phase 4 (its "As built"), for these steps:
     - `yarn verify:scenes --only instanceStress`: all 8 runs pass. `yarn sbp`: `features/instancing`
       4.4 → 4.6 kB gzip of its 5 KiB (step 6's `preWarm` has about 0.4 kB left), the lazy
       `InstanceSetGpu.js` 4.9 → 5.1 kB, `instanceStress.js` 2.5 → 2.8 kB; every budget within.
+- **Step 3, a streamed set.** No engine change: a set's ranges are what streamed content needs.
+  `instanceStress` gained `?stressStream=<cellSize>` (the set path; a power of two of at least
+  32 m), in `instanceStressStreaming.ts`: the trees cut into world streaming's cells, each cell
+  one unit of code content (`registerStreamingCellContent`, `loadedAt: 'NEAR_AND_FAR'`) whose
+  `load` adds the cell's matrices (made once at the scene's load) as a range and returns no
+  entity, and whose `unload` removes the range. One set, sized for every tree, serves every cell.
+  `setSceneStreamingSettings` turns it on from the scene code (and back to the JSON's, none, on a
+  load without it); `?stressStreamFar=<ring>` overrides the far ring and `?stressOrbitSeconds=`
+  the orbit's period (a 15 s orbit makes 30 s two laps). The probe's `stream()` returns what the
+  module measured: the loads and unloads (those during play apart from the load's), each one's
+  time, the extent per orbit lap (the scene's own live ranges' end), the adds that found no room,
+  and the pops (below).
+  - **The visibility fade: decided against, for now.** The far ring defaults to the set's own
+    cull distance: the farthest a tree is drawn (level 0's conservative radius at the largest
+    scale, the main camera's field of view and the LOD bias, against the cull size less the
+    hysteresis, which a drawn tree and a new one's first selection use), in cells. Then a cell
+    loads before its trees would be drawn and unloads after the set has culled them, and a range
+    needs no fade. The scene counts the pops at each load and unload during play: the cell's
+    trees in the main camera's frustum at a screen size the set draws. With that ring, none, on
+    both backends. With a smaller one (far ring 4 against the 8 the cull distance asks at 256 m),
+    580,671 tree copies popped in over 623 loads in 30 s, nearly every loading cell's whole
+    content, far away but visible. (No pop out in any run: the orbit leaves the unloading cells
+    behind its camera.) So content streamed from a ring short of its cull distance would want
+    the cells' fade, which is D1's `addInstances(…, { fade })`, still left for a need (§5): the
+    rule for now is a ring past the set's cull distance, or a cull short of the ring.
+  - **Found on the way, fixed in `instanceStress`:** `registerOnSceneEnter` keeps one function
+    per scene, like the exit (Phase 4), and the scene registered up to three (the sun's shadow, a
+    light, the viewport): the last one won, and one an earlier load registered ran on a load that
+    set none. The scene now has one enter function running this load's list. And the bench's
+    `forceSetCpuBackendAsync` (Phase 4's and steps 1-2's flake): the LOD tab rebuilds its Instance
+    sets folder when a set's cameras change, and a key pressed on the control a rebuild replaced
+    is lost. It now reads the checkbox back, focused anew, and presses only while it's unticked
+    (three tries); with that, the forced runs passed every time.
+  - **Verified** (Apple M2, Chrome, headless WebGPU, the dev server, debug env; a scratch script:
+    the orbit held through the scene's load and 60 frames, then 1,800 or 3,600 frames of the test
+    bridge's fixed delta, the frame intervals timed in the page by `requestAnimationFrame`):
+
+    | Run | Cells (window) | Play loads / unloads | Max load / unload | Frames over 33 ms (max) | Extent per lap | Live |
+    | --- | --- | ---: | ---: | --- | --- | ---: |
+    | 1M, GPU, 2 laps | 576 (17 × 17) | 1,197 / 1,248 | 2.3 / 0.1 ms | 0 (30.8 ms) | 529,958, 505,764 | 424,405 |
+    | 500k, GPU, 4 laps | 324 (17 × 17) | 1,043 / 1,111 | 4.2 / 1.7 ms | 0 (24.3 ms) | 481,774, 380,316, 380,857, 381,379 | 364,704 |
+    | 500k, CPU (forced), 4 laps | 324 | 1,043 / 1,043 | 0.9 / 0.2 ms | 0 (29.8 ms) | 376,567, 381,027, 381,831, 385,491 | 364,704 |
+    | 500k, GPU, far ring 4 | 324 (9 × 9) | 623 / 623 | 4.4 / 0.8 ms | 0 (22.9 ms) | 181,842, 179,478 | 135,738 |
+
+    256 m cells, the cull distance 1,818 m (far ring 8), the orbit at 0.3 of the forest's side.
+    No add found no room. **The free list is reused, and the extent stays bounded but not flat:**
+    after the first lap it moves by a cell or two a lap (cells hold 1,600-1,900 trees, so a freed
+    range can be a few trees short of the next cell, which then goes to the end). A Node run of
+    the same pattern over ten laps (18 × 18 cells of 1,600-1,900, a 13 × 13 window on the orbit)
+    puts first fit's extent at 277-285k for 254k live (9-12% over, wobbling, not growing), and
+    best fit's at 270-278k: kept first fit, as planned. The 1M run's 1,794 pops in were the 51
+    cells that loaded in the frames after the scene was entered, the camera still: the load
+    builds part of the ring and the rest arrives over the first frames (the streaming budget),
+    so a streamed set's farthest cells pop in at the start.
+  - A cell's load costs 0.12-0.18 ms on average (1,600-1,900 trees), its unload 0.003-0.008 ms;
+    the CPU frame during the flights 0.67-0.95 ms (GPU) and 5.3 ms (the CPU backend's loop over
+    365k live instances, its known cost).
+  - `yarn test` (321 files), lint and both type-checks pass; `yarn verify:scenes --only
+    instanceStress`: all 8 runs. `yarn sbp`: every budget within, the engine's groups unchanged
+    by this step (`features/instancing` 4.6 kB); the lazy `instanceStress.js` 2.8 → 4.1 kB (the
+    streaming module and the scene's enter list), on the scene's own chunk.
 
 **Verification:**
 
@@ -1593,6 +1654,11 @@ updated baseline. The page reads right in both themes (`yarn hub:preview`).
 - **p308's static scatter on sets**: whether `createStaticInstances` (p308 D1) creates a set
   for its large cases is p308's decision. Its Related line points here.
 - **Level colours for sets in the LOD overlay** (D11), until a debugging need shows up.
+- **A streamed range's visibility fade** (D1's `addInstances(…, { fade })`): Phase 5 step 3 found
+  none needed while the cells load from a ring past the set's cull distance (no tree pops in or
+  out); content streamed from a nearer ring pops in whole cells (580k copies in 30 s at half the
+  ring). It needs a per-range fade the cull writes into the entries' fade byte, with the set's
+  LOD fade, when such content shows up.
 - **Spatial chunks for the CPU backend** (Phase 4): one `InstancedMesh` per level for the whole
   set, so three culls a level only as a whole, and past about 20k instances in a spread-out set
   the CPU backend draws more than tiled pools do (at 100k on `instanceStress`: a GPU frame of

@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   createMaterial,
   createSceneAppLooper,
+  getCameraByAppId,
   createSeededRandom,
   getECSWorld,
   getEntityIdByAppId,
@@ -27,6 +28,7 @@ import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 import { loadDebugModuleAsync } from 'aekasha/debug';
 import { createViewport } from 'aekasha/viewports';
+import { startStreamedForest, stopStreamedForest } from './instanceStressStreaming';
 
 // GPU-driven culling's measuring and parity scene (docs/plans/p354_gpu-driven-culling.md D12): a
 // square forest of LOD trees on a jittered grid, with the main camera circling inside it on a
@@ -81,7 +83,8 @@ export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
 
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
  * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=`,
- * `?stressLight=`, `?stressViewport=` and `?stressMove=` (the measuring harness's). */
+ * `?stressLight=`, `?stressViewport=`, `?stressMove=`, `?stressStream=`, `?stressStreamFar=` and
+ * `?stressOrbitSeconds=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -98,6 +101,12 @@ export const instanceStressSettings = {
    * round-robin through the forest, each turned and nudged with its own call
    * (`setInstanceMatrices`, p354 Phase 5 step 2) */
   move: 0,
+  /** The set path's trees in world streaming's cells of this size (0: none; a power of two of at
+   * least 32 m), each cell a range of the set added in its load and removed in its unload
+   * (`instanceStressStreaming.ts`, p354 Phase 5 step 3) */
+  stream: 0,
+  /** The streamed cells' far ring; undefined: the set's cull distance's (no tree pops) */
+  streamFar: undefined as number | undefined,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -118,6 +127,17 @@ export const onInstanceStressExit = (fn: () => void) => {
   exitTasks.push(fn);
 };
 
+/** This load's enter tasks, run in order by its one enter function: `registerOnSceneEnter` keeps
+ * one function per scene too, so the sun's shadow, a light and the viewport replaced each other
+ * (the last registered won), and one an earlier load registered ran on a load that set none. */
+const enterTasks: (() => void)[] = [];
+
+/** Runs `fn` when this load of the scene is entered (its JSON objects exist, its first cells
+ * loaded). */
+const onInstanceStressEnter = (fn: () => void) => {
+  enterTasks.push(fn);
+};
+
 /** What the last load built, for the debug module's readouts */
 export const instanceStressState = {
   pools: [] as InstancedLodPool[],
@@ -129,6 +149,8 @@ export const instanceStressState = {
   extent: 0,
   /** The orbit runs (false while `orbitHold` holds it) */
   orbiting: true,
+  /** The orbit's laps so far (whole turns) */
+  lap: 0,
 };
 
 /** Applies the URL's overrides to the settings (the measuring harness sets them per page load). */
@@ -147,6 +169,12 @@ const readUrlOverrides = () => {
   instanceStressSettings.viewport = params.get('stressViewport') === 'true';
   const move = Number(params.get('stressMove'));
   instanceStressSettings.move = move > 0 ? Math.min(move, 1) : 0;
+  const stream = Number(params.get('stressStream'));
+  instanceStressSettings.stream = stream >= 32 ? 2 ** Math.round(Math.log2(stream)) : 0;
+  const streamFar = Number(params.get('stressStreamFar'));
+  instanceStressSettings.streamFar = streamFar >= 1 ? Math.round(streamFar) : undefined;
+  const orbitSeconds = Number(params.get('stressOrbitSeconds'));
+  if (orbitSeconds > 0) instanceStressSettings.orbitSeconds = orbitSeconds;
   const light = params.get('stressLight')?.toUpperCase();
   if (light === 'NONE' || light === 'SPOT' || light === 'POINT') {
     instanceStressSettings.light = light;
@@ -289,9 +317,10 @@ const startMovingTrees = (set: InstanceSet, range: InstanceRange, trees: TreePla
 
 /** The GPU path: one instance set of every tree. Its owning entity goes with the scene. */
 const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
+  const levels = createForestLevels();
   const set = await createInstanceSetAsync({
     world,
-    levels: createForestLevels(),
+    levels,
     maxInstances: Math.max(instanceStressState.count, 1),
     lod: createForestLod(),
     entityOpts: { appId: 'instanceStressForest' },
@@ -299,8 +328,27 @@ const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) 
   if (!set) return;
   getRootScene()?.add(set.object);
   const trees = byTile.flat();
-  const range = set.addInstances(trees.map(toInstancePlacement));
   instanceStressState.set = set;
+  if (instanceStressSettings.stream > 0) {
+    // Its cells add and remove their ranges (the trees' cells around the main camera)
+    startStreamedForest({
+      sceneId: INSTANCE_STRESS_SCENE_ID,
+      set,
+      trees,
+      cellSize: instanceStressSettings.stream,
+      farRing: instanceStressSettings.streamFar,
+      levelGeometries: levels.map((level) => level.geometry),
+      cullScreenSize: CULL_SCREEN_SIZE,
+      getCamera: () => getCameraByAppId(CAMERA_APP_ID, world),
+      getLap: () => instanceStressState.lap,
+      onEnter: onInstanceStressEnter,
+    });
+    if (instanceStressSettings.move > 0) {
+      lwarn('Instance stress: ?stressMove= moves an unstreamed set only.');
+    }
+    return;
+  }
+  const range = set.addInstances(trees.map(toInstancePlacement));
   if (range && range.count > 0 && instanceStressSettings.move > 0) {
     startMovingTrees(set, range, trees);
   }
@@ -425,6 +473,7 @@ const startCamera = (world: ECSWorld, cameraId: number) => {
   createSceneAppLooper((delta) => {
     if (instanceStressSettings.camera === 'STILL' || !instanceStressState.orbiting) return;
     angle += (delta / instanceStressSettings.orbitSeconds) * Math.PI * 2;
+    instanceStressState.lap = Math.floor(angle / (Math.PI * 2));
     place();
   }, INSTANCE_STRESS_SCENE_ID);
 };
@@ -435,20 +484,28 @@ export const scene = async () => {
   registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
     for (const task of exitTasks.splice(0)) task();
   });
+  enterTasks.length = 0;
+  registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => {
+    for (const task of enterTasks.splice(0)) task();
+  });
   readUrlOverrides();
   const byTile = createPlacements();
   instanceStressState.pools = [];
   instanceStressState.set = null;
   instanceStressState.orbiting = !instanceStressSettings.orbitHold;
+  instanceStressState.lap = 0;
+  if (instanceStressSettings.path !== 'GPU' || instanceStressSettings.stream === 0) {
+    stopStreamedForest(INSTANCE_STRESS_SCENE_ID);
+  }
   if (instanceStressSettings.shadow) {
-    registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startSunShadow(world));
+    onInstanceStressEnter(() => startSunShadow(world));
   }
   const light = instanceStressSettings.light;
   if (light !== 'NONE') {
-    registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startLightShadow(light));
+    onInstanceStressEnter(() => startLightShadow(light));
   }
   if (instanceStressSettings.viewport) {
-    registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, startOverviewViewport);
+    onInstanceStressEnter(startOverviewViewport);
   }
   const path = instanceStressSettings.path;
   instanceStressState.path = path;
