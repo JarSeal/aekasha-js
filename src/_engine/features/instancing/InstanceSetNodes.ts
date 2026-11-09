@@ -32,11 +32,11 @@ import { LOD_FADE_END_EPSILON } from '../../utils/LodRules';
 // per-level counters; the cull, one thread per instance, first moves the instance's state
 // (`utils/LodRules.ts`' `selectLodTarget` and `stepLodInstanceState` ported line by line: their
 // tests are this port's reference), then tests its sphere against the camera's frustum and appends
-// its copies to the slot's visible lists of their levels; the finalize writes each of the slot's
-// level counts, capped at the list's budget, into each of its draws' indirect args. The lists,
-// counters and args hold every slot, one after another (a slot's part starts at its first (slot,
-// level), the `slotLevel` uniform), so every slot's draws read one lists buffer and share their
-// builds (D8).
+// its copies to the slot's visible lists of their levels (a shadow render's slot: the casting
+// levels only, `levelMask`); the finalize writes each of the slot's level counts, capped at the
+// list's budget, into each of its draws' indirect args. The lists, counters and args hold every
+// slot, one after another (a slot's part starts at its first (slot, level), the `slotLevel`
+// uniform), so every slot's draws read one lists buffer and share their builds (D8).
 //
 // An instance's state (`utils/LodRules.ts`' `LodInstanceState`): its word, the level in bits 0-7
 // and the outgoing one (the level a cross-fade dissolves out of) in bits 8-15, with LEVEL_NONE (not
@@ -68,6 +68,9 @@ export const FADE_STEPS = 127;
 export const FADE_BYTE_OPAQUE = FADE_STEPS * 2;
 /** `utils/LodRules.ts`' LOD_FADE_END_EPSILON: a fade ends at progress ≥ 1 − it. */
 const FADE_END = 1 - LOD_FADE_END_EPSILON;
+
+/** `levelMask` drawing every level. */
+export const ALL_LEVELS = 0xffffffff;
 
 /** What the cull does with the instances' state before the frustum test. */
 export const SELECT_MODE = {
@@ -132,6 +135,9 @@ export type InstanceSetPassUniforms = {
   extent: THREE.UniformNode<'uint', number>;
   /** The dispatch's slot's first (slot, level): slot × levels. */
   slotLevel: THREE.UniformNode<'uint', number>;
+  /** The levels the dispatch appends, a bit each (levels past 32 always): every level, or a shadow
+   * render's casting ones. */
+  levelMask: THREE.UniformNode<'uint', number>;
   /** A `SELECT_MODE`. */
   mode: THREE.UniformNode<'uint', number>;
   /** The level `FORCE` puts every instance at (clamped to the last). */
@@ -171,6 +177,7 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
   const uniforms: InstanceSetPassUniforms = {
     extent: uniform(0, 'uint'),
     slotLevel: uniform(0, 'uint'),
+    levelMask: uniform(ALL_LEVELS, 'uint'),
     mode: uniform(SELECT_MODE.HOLD, 'uint'),
     forceLevel: uniform(0, 'uint'),
     isFaded: uniform(0, 'uint'),
@@ -213,6 +220,14 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
   const reset = Fn(() => {
     atomicStore(counters.element(uniforms.slotLevel.add(instanceIndex)), uint(0));
   })().compute(levelCount);
+
+  /** Whether the dispatch draws `level` (`levelMask`). */
+  const isInMask = (level: THREE.Node<'uint'>) =>
+    select(
+      level.lessThan(uint(32)),
+      uniforms.levelMask.shiftRight(level).bitAnd(uint(1)).equal(uint(1)),
+      bool(true)
+    );
 
   /** Appends a copy of the instance to the slot's visible list of `level` with its fade byte:
    * within the budget; past it only counted (the debug readback's overflow). */
@@ -277,9 +292,9 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
     });
 
     // Its copies: its level's and, fading, the outgoing level's (LEVEL_NONE, LEVEL_CULLED and
-    // not selected yet are past the levels: no copy)
-    const isLevelDrawn = level.lessThan(uint(levelCount)).toVar();
-    const isOutgoingDrawn = outgoing.lessThan(uint(levelCount)).toVar();
+    // not selected yet are past the levels: no copy), each when the dispatch draws its level
+    const isLevelDrawn = level.lessThan(uint(levelCount)).and(isInMask(level)).toVar();
+    const isOutgoingDrawn = outgoing.lessThan(uint(levelCount)).and(isInMask(outgoing)).toVar();
     If(isLevelDrawn.or(isOutgoingDrawn).not(), () => {
       Return();
     });
@@ -322,7 +337,7 @@ export const LIST_BASE_KEY = 'aekInstanceSetListBase';
  * The vertex fetch every draw of a set shares: the drawn instance's matrix through its visible
  * list (the mesh's own, a per-object uniform read before each draw), as a material's
  * `positionNode`, and the drawn copy's signed fade from the same entry, for the LOD dither
- * (`setMaterialLodFade`, kernel/render/LodFade.ts). It turns the normal with the matrix's rotation
+ * (`setObjectLodFadeNode`, kernel/render/LodFade.ts). It turns the normal with the matrix's rotation
  * (uniform scale: normalized where it's used). The meshes then share their material's build,
  * whatever the level and group.
  * @internal

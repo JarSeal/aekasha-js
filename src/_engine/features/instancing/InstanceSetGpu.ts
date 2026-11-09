@@ -6,13 +6,14 @@ import {
   addDrawingPipelineHook,
   type DrawingPipelineHook,
 } from '../../kernel/render/DrawingPipeline';
-import { enableLodDither, setMaterialLodFade } from '../../kernel/render/LodFade';
+import { enableLodDither, setObjectLodFadeNode } from '../../kernel/render/LodFade';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
 import { DEFAULT_LOD_HYSTERESIS, getLodFadeDelta } from '../../utils/LodRules';
 import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 import {
+  ALL_LEVELS,
   ARGS_STRIDE,
   createInstanceSetFetch,
   createInstanceSetPasses,
@@ -38,15 +39,18 @@ import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceS
 //   shadow render takes a slot). The set's group holds a probe: a mesh the hook always culls, whose
 //   `isCulled` call picks the render's slot. three projects an object's children after the object
 //   itself, so the slot's draws, a group under the probe, are projected in the same render even on
-//   the camera's first one. A shadow render gets no slot yet (p354 Phase 3 step 4: VSM draws a
-//   receiving level into the shadow map whatever its `castShadow`).
+//   the camera's first one. A shadow render's slot (three's shadow pass: its scene's
+//   `overrideMaterial` is a shadow pass material) draws the casting levels only: its dispatch
+//   appends no other level (`levelMask`), and the hook culls the other levels' draws, which VSM
+//   would draw into the shadow map whatever their `castShadow` (a receiving object).
 // - The draws (D8): per slot, a plain Mesh per (level, geometry group) drawing with
 //   `drawIndexedIndirect` from its own args. Each source material gets one node variant (its
 //   values copied) whose `positionNode` is the shared fetch through the visible lists; the list a
 //   mesh reads is a per-object uniform, so every draw of a material, in every slot, shares its
 //   build. The sources get the LOD dither (`enableLodDither`, as a pool's level materials), which
-//   the variants copy with the rest of their mask, and each variant's dither reads the drawn copy's
-//   fade from its list entry (`setMaterialLodFade`, kernel/render/LodFade.ts).
+//   the variants copy with the rest of their mask, and each draw's dither reads the drawn copy's
+//   fade from its list entry (`setObjectLodFadeNode`, kernel/render/LodFade.ts: keyed on the
+//   draw, so the shadow pass, which builds it with its own material, reads it too).
 // - The dispatch (D5): one drawing pipeline hook for every GPU set. `isCulled` keeps each slot's
 //   draws to its camera's renders and notes the sets the render reached; `finishRenderList`,
 //   after the projection and before any draw, runs their passes into the render's slot against its
@@ -82,16 +86,20 @@ type Slot = {
 type GpuInstanceSet = {
   /** The render it was last reached in (the hook's counter). */
   reachedRender: number;
-  /** That render's slot: null when it has none (past `maxSlots`, a shadow render). */
+  /** That render's slot: null when it has none (past `maxSlots`; a shadow render of a set with no
+   * casting level). */
   slot: Slot | null;
-  /** Finds or takes `camera`'s slot for a render that reached the set. */
+  /** That render is a shadow map's: its slot draws the casting levels only. */
+  isShadowRender: boolean;
+  /** Finds or takes `camera`'s slot for a render that reached the set (`isShadowRender` set). */
   getSlot: (camera: THREE.Camera) => Slot | null;
   /** Runs the passes into the render's slot. */
   dispatch: (renderer: THREE.Renderer, camera: THREE.Camera) => void;
 };
 
-/** A set's object the hook decides: a slot's draw, or the set's probe (no slot). */
-type SetObject = { set: GpuInstanceSet; slot: Slot | null };
+/** A set's object the hook decides: a slot's draw, or the set's probe (no slot). `casts`: the
+ * draw's level casts shadows. */
+type SetObject = { set: GpuInstanceSet; slot: Slot | null; casts: boolean };
 
 // --- THE PIPELINE HOOK, shared by every GPU set ---
 
@@ -111,10 +119,17 @@ const pipelineHook: DrawingPipelineHook = {
     const entry = setObjects.get(object);
     if (!entry) return undefined;
     const { set, slot } = entry;
-    if (slot) return set.reachedRender !== renderCounter || set.slot !== slot;
+    if (slot) {
+      return (
+        set.reachedRender !== renderCounter ||
+        set.slot !== slot ||
+        (set.isShadowRender && !entry.casts)
+      );
+    }
     // The probe, projected before the slots' draws (its children): the render's slot
     if (set.reachedRender !== renderCounter) {
       set.reachedRender = renderCounter;
+      set.isShadowRender = isInShadowPass(object);
       set.slot = set.getSlot(camera);
       if (set.slot) reachedSets.push(set);
     }
@@ -174,12 +189,12 @@ const getLevelDraws = (level: InstancedLodPoolLevel): LevelDraw[] => {
 
 /** A node variant of `source` drawing through the set's fetch: its values copied (not its
  * identity or listeners, so disposing the variant leaves the source be), its own mask kept, the
- * LOD dither (added to the source first, as a pool does to its level materials) reading the drawn
- * copy's fade. */
+ * LOD dither added to the source first (as a pool does to its level materials; each draw gives it
+ * the drawn copy's fade, `setObjectLodFadeNode`). */
 const createVariant = (
   renderer: THREE.Renderer,
   source: THREE.Material,
-  fetch: { position: THREE.Node<'vec3'>; fade: THREE.Node<'float'> },
+  position: THREE.Node<'vec3'>,
   label: string
 ) => {
   enableLodDither(source);
@@ -197,8 +212,7 @@ const createVariant = (
     );
   }
   variant.name = `${source.name || source.type} (instance set)`;
-  variant.positionNode = fetch.position;
-  setMaterialLodFade(variant, fetch.fade);
+  variant.positionNode = position;
   variant.needsUpdate = true;
   return variant;
 };
@@ -282,6 +296,15 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const passes = [reset, cull, finalize];
   const bias = lod.bias ?? 1;
   const hasLevelsToSelect = levelCount > 1 || (lod.cullScreenSize ?? 0) > 0;
+  /** Whether each level casts shadows (a pool level's default: it does). */
+  const casts = levels.map((level) => level.castShadow ?? true);
+  /** A shadow render's `levelMask`: the casting levels (levels past 32 always pass the mask; the
+   * hook culls their draws). */
+  const castMask = casts.reduce(
+    (mask, isCast, level) => (isCast && level < 32 ? (mask | (1 << level)) >>> 0 : mask),
+    0
+  );
+  const hasCastingLevel = casts.includes(true);
 
   // --- The draws ---
   const fetch = createInstanceSetFetch(buffers, maxInstances, listLength);
@@ -289,7 +312,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const getVariant = (source: THREE.Material) => {
     let variant = variants.get(source);
     if (!variant) {
-      variant = createVariant(renderer, source, fetch, label);
+      variant = createVariant(renderer, source, fetch.position, label);
       variants.set(source, variant);
     }
     return variant;
@@ -331,12 +354,13 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         // The cull is the culling (three sees one object at the origin), and a set has no raycast
         mesh.frustumCulled = false;
         mesh.raycast = () => {};
-        // A shadow render gets no slot yet (p354 Phase 3 step 4)
-        mesh.castShadow = false;
+        mesh.castShadow = casts[level];
         mesh.receiveShadow = params.receiveShadow;
         mesh.userData[LIST_BASE_KEY] = slotLevel * maxVisible;
         mesh.name = `${label} slot ${slot.index} level ${level} group ${drawGroup}`;
-        setObjects.set(mesh, { set, slot });
+        // Before its first build: the drawn copy's fade, in the shadow pass too
+        setObjectLodFadeNode(mesh, fetch.fade);
+        setObjects.set(mesh, { set, slot, casts: casts[level] });
         meshes.push(mesh);
         group.add(mesh);
       });
@@ -358,9 +382,10 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   const set: GpuInstanceSet = {
     reachedRender: -1,
     slot: null,
+    isShadowRender: false,
     getSlot: (camera) => {
-      // TODO(docs/plans/p354_gpu-driven-culling.md Phase 3 step 4): the shadow cameras' slots
-      if (isInShadowPass(probe)) return null;
+      // A shadow map of a set that casts nothing: no slot to spend
+      if (set.isShadowRender && !hasCastingLevel) return null;
       const frame = getMainLoopFrame();
       releaseUnusedSlots(frame);
       let free: Slot | null = null;
@@ -434,6 +459,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       }
       uniforms.mode.value = mode;
       uniforms.slotLevel.value = slot.index * levelCount;
+      uniforms.levelMask.value = set.isShadowRender ? castMask : ALL_LEVELS;
 
       // three updated the camera's matrices for this render before its projection
       _projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -448,7 +474,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     },
   };
 
-  setObjects.set(probe, { set, slot: null });
+  setObjects.set(probe, { set, slot: null, casts: false });
   params.object.add(probe);
   addLiveSet(renderer);
 

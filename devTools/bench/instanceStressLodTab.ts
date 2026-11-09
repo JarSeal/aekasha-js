@@ -4,7 +4,7 @@
  * checkpoint by checkpoint, plus a snapshot pair at a held cross-fade.
  *
  *   npx tsx devTools/bench/instanceStressLodTab.ts [--count 20k] [--fade-seconds 0.25]
- *     [--url <server>] [--headed] [--webgl]
+ *     [--shadow sun|spot|point] [--url <server>] [--headed] [--webgl]
  *
  * Each path is a page of its own (debug env, the test bridge's fixed 1/60 s frame delta), the
  * orbit held at its start, then:
@@ -18,7 +18,10 @@
  *   5. "Force level" Off: the selection again (from level 1, so through its hysteresis);
  *   6. "Freeze" on, then 120 frames with the orbit started: the levels from step 5 hold.
  * The two paths must agree at every checkpoint (`instanceStressLodTabChecks.ts`). The server: its
- * own dev server (the scene runner's) or `--url`. Output: `.cache/bench/progress.log` too, the
+ * own dev server (the scene runner's) or `--url`. `--shadow` adds a shadow-casting light (the
+ * scene's `?stressShadow=true` sun, or its `?stressLight=` spot or point light), so the held
+ * fade's snapshots compare the fading trees' shadows too (p354 Phase 3 step 4: the shadow pass
+ * dithers a set's copies). Output: `.cache/bench/progress.log` too, the
  * snapshots in `.cache/bench/lodTab/`. Exits 1 on a problem.
  */
 import fs from 'node:fs';
@@ -56,9 +59,11 @@ const SETTLE_FRAMES = 30;
 const FREEZE_FRAMES = 120;
 
 type Path = 'cpu' | 'gpu';
+type ShadowLight = 'sun' | 'spot' | 'point';
 type Args = {
   count: number;
   fadeSeconds: number;
+  shadow: ShadowLight | null;
   url: string | null;
   headed: boolean;
   webgl: boolean;
@@ -79,12 +84,25 @@ const parseCount = (text: string) => {
 };
 
 const parseArgs = (argv: string[]): Args => {
-  const args: Args = { count: 20_000, fadeSeconds: 0.25, url: null, headed: false, webgl: false };
+  const args: Args = {
+    count: 20_000,
+    fadeSeconds: 0.25,
+    shadow: null,
+    url: null,
+    headed: false,
+    webgl: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--count') args.count = parseCount(argv[++i] ?? '');
     else if (arg === '--fade-seconds') args.fadeSeconds = Number(argv[++i]);
-    else if (arg === '--url') args.url = argv[++i] ?? null;
+    else if (arg === '--shadow') {
+      const light = argv[++i];
+      if (light !== 'sun' && light !== 'spot' && light !== 'point') {
+        fail('--shadow: sun, spot or point');
+      }
+      args.shadow = light as ShadowLight;
+    } else if (arg === '--url') args.url = argv[++i] ?? null;
     else if (arg === '--headed') args.headed = true;
     else if (arg === '--webgl') args.webgl = true;
     else fail(`Unknown option ${arg}`);
@@ -104,6 +122,8 @@ const buildUrl = (baseUrl: string, args: Args, p: Path) => {
     stressFadeSeconds: String(args.fadeSeconds),
     stressOrbitHold: 'true',
   });
+  if (args.shadow === 'sun') params.set('stressShadow', 'true');
+  else if (args.shadow) params.set('stressLight', args.shadow);
   return `${baseUrl.replace(/\/$/, '')}/?${params}`;
 };
 
@@ -233,7 +253,7 @@ const main = async () => {
     onNote: (note) => out(`${YELLOW}${note}${RESET}`),
   });
   out(
-    `The LOD tab check against ${baseUrl} (${launched.label}): ${args.count} trees, fades ${args.fadeSeconds} s`
+    `The LOD tab check against ${baseUrl} (${launched.label}): ${args.count} trees, fades ${args.fadeSeconds} s${args.shadow ? `, the ${args.shadow} light's shadow` : ''}`
   );
   out(`${DIM}Watch it: cd ${ROOT} && ${watch}${RESET}\n`);
 

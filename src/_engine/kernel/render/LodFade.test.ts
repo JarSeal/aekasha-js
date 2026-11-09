@@ -9,7 +9,7 @@ import {
   isDitherShown,
   LOD_FADE_OPAQUE,
   setLodObjectFade,
-  setMaterialLodFade,
+  setObjectLodFadeNode,
   setObjectVisibilityFade,
 } from './LodFade';
 
@@ -146,29 +146,37 @@ describe('LodFade', () => {
     expect(drawn(copy)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
   });
 
-  // p354 D8: an instance set's variants carry each drawn copy's fade in their list entries
-  it("reads a material's own fade in place of the object's LOD fade, the visibility fade too", () => {
+  // p354 D8: an instance set's draws carry each drawn copy's fade in their list entries
+  it("reads an object's own fade node in place of its LOD fade, whatever material builds it", () => {
     const material = createDitheredMaterial();
     const fade = uniform(0.5);
-    setMaterialLodFade(material, fade);
+    const hasFade = (graph: THREE.Node) => {
+      let found = false;
+      graph.traverse((node) => {
+        if (node === fade) found = true;
+      });
+      return found;
+    };
+    // The shadow pass builds the object with its own material, which takes the source's mask
+    const shadowPass = new THREE.MeshBasicNodeMaterial();
     for (const object of [
       new THREE.Mesh(geometry, material),
       new THREE.InstancedMesh(geometry, material, 2),
     ]) {
-      const graph = setUpMask(material, object);
-      expect(findNodes(graph, 'LodFadeAttributeNode')).toHaveLength(0);
-      const found: THREE.Node[] = [];
-      graph.traverse((node) => {
-        if (node === fade) found.push(node);
-      });
-      expect(found.length).toBeGreaterThan(0);
-      // The pair is read for its visibility fade (y)
-      expect(findObjectFadePairs(graph).length).toBeGreaterThan(0);
+      setObjectLodFadeNode(object, fade);
+      for (const built of [material, shadowPass]) {
+        const graph = (material as THREE.Material & { maskNode: THREE.Node }).maskNode.setup({
+          object,
+          material: built,
+        } as unknown as THREE.NodeBuilder) as THREE.Node;
+        expect(findNodes(graph, 'LodFadeAttributeNode')).toHaveLength(0);
+        expect(hasFade(graph)).toBe(true);
+        // The pair is read for its visibility fade (y)
+        expect(findObjectFadePairs(graph).length).toBeGreaterThan(0);
+      }
     }
-    // Another material on the same object keeps the object's fades
-    const other = createDitheredMaterial();
-    const graph = setUpMask(other, new THREE.Mesh(geometry, other));
-    graph.traverse((node) => expect(node).not.toBe(fade));
+    // Another object on the same material keeps its own fades
+    expect(hasFade(setUpMask(material, new THREE.Mesh(geometry, material)))).toBe(false);
   });
 
   // p354 D4: a list entry's 8-bit fade (InstanceSetNodes.ts) rounds the progress once for both

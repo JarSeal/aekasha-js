@@ -6,6 +6,7 @@ import {
 } from '../../../kernel/ecs/LodTargets';
 import { getMainCamera } from '../../../kernel/camera/Camera';
 import { getRenderer } from '../../../kernel/render/Renderer';
+import { getRootScene } from '../../../kernel/scene/Scene';
 import {
   getInstanceSetBackend,
   getInstanceSetDebugInfo,
@@ -21,9 +22,23 @@ import type { InstanceSetSlotStats, InstanceSetStats } from '../InstanceSetTypes
 // queued work. Loaded by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod
 // test mode.
 
-/** A slot's camera, as the stats name it. */
-const getCameraName = (camera: THREE.Camera) =>
-  camera === getMainCamera() ? 'main' : camera.name || `${camera.type} ${camera.id}`;
+/** The light in the root scene whose shadow map `camera` renders, if any. */
+const findShadowLight = (camera: THREE.Camera) => {
+  let found: THREE.Light | undefined;
+  getRootScene()?.traverse((object) => {
+    const light = object as THREE.Light & { shadow?: THREE.LightShadow };
+    if (!found && light.isLight && light.shadow?.camera === camera) found = light;
+  });
+  return found;
+};
+
+/** A slot's camera, as the stats name it: `main`, a light's shadow, or the camera's own name. */
+const getCameraName = (camera: THREE.Camera) => {
+  if (camera === getMainCamera()) return 'main';
+  const light = findShadowLight(camera);
+  if (light) return `${light.name || light.type} shadow`;
+  return camera.name || `${camera.type} ${camera.id}`;
+};
 
 /**
  * Reads each slot's last dispatch's counts per level (the main camera's as `drawn` and

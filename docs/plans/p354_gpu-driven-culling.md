@@ -1061,6 +1061,52 @@ From Phase 2 (its "As built"), for these steps:
 
   Every snapshot dispatched into the main camera's slot (397 − 149 = 248) and advanced nothing,
   and the set's state is still the pools' exactly after step 1's change to D7.
+- **Step 4, the shadow cameras.** **A shadow render is recognized by three's shadow pass, not by
+  a light lookup** (D6 said "the `shadow.camera` of a light in the root scene, cached per camera"):
+  the probe's root scene has a shadow pass material as its `overrideMaterial`
+  (`isShadowPassMaterial`, set by `ShadowNode.updateShadow` for the render). That's free per
+  render, needs no cache, and covers every light kind and any scene. A shadow render's slot draws
+  the casting levels only (`castShadow` per level, default true): a `levelMask` uniform keeps its
+  dispatch from appending the other levels (a bit per level below 32; a level past that always
+  passes, and the hook culls its draw), and the hook culls the other levels' draws, which VSM
+  would draw into the shadow map as receivers whatever their `castShadow`. Each draw now has its
+  level's `castShadow` (three's shadow pass lists only casters). A set with no casting level
+  takes no slot for a shadow. The readback names a shadow slot after its light (`<name or type>
+  shadow`).
+  - **The shadow pass's dither (Phase 2's note): it missed, and the fade moved to the object.**
+    three's shadow pass builds a draw with its shadow pass material, whose `colorNode` wraps the
+    source material's `maskNode` (`Renderer._getShadowNodes`), so `builder.material` there is the
+    shadow material and `setMaterialLodFade`'s lookup missed: both copies of a fade cast whole.
+    `setMaterialLodFade` is now `setObjectLodFadeNode(object, fade)` (`LodFade.ts`, `@internal`),
+    keyed on the drawn object, which both builds see; the set calls it on each draw before its
+    first build. Builds still share: every draw of a set's material reads its set's one fade node,
+    and its position fetch (the set's own) already keys the builds apart from other sets' and
+    from the pools'. `LodFade.test.ts` sets up the mask for the object with the source material
+    and with another (the shadow pass's), and finds the node in both.
+  - `instanceStress` gained `?stressLight=spot|point`: a spot light 30 m above the halfway point
+    of the still camera's view, aimed where it looks, or a point light 10 m up among the trees
+    there (its shadows fall every way, so several cube faces show), each with a 1024² map, on the
+    ground the sun's shadow uses. The LOD tab check gained `--shadow sun|spot|point`.
+  - **Verified** (Apple M2, Chrome, headless WebGPU, the dev server, debug env). Snapshots at 5k,
+    `STILL`, no fades, the set against the pools (1024 × 576):
+
+    | Light | Pixels over 8/255 | Mean / max delta | Shadow slot drew (L0 / L1 / L2) | Its dispatches a frame |
+    | --- | ---: | --- | --- | ---: |
+    | Sun (VSM, fitted) | 0.027% | 0.006 / 55 | 603 / 1,492 / 0 | 1 |
+    | Spot | 0.000% | 0.000 / 27 | 148 / 383 / 0 | 1 |
+    | Point | 0.002% | 0.000 / 14 | 374 / 77 / 0 (the last face's) | 6 (354 against the view's 59) |
+
+    Phase 0's VSM comparison was 0.12% at 20k. The pools draw their non-casting level 2 into the
+    VSM map as a receiver and the set doesn't: within these figures. The LOD tab check at 20k
+    with a shadow: both paths agree at every checkpoint, and the held fade's snapshots (15,237
+    trees at 0.5) differ by a mean of 0.019 with the sun (0.02% of pixels) and 0.003 with the
+    point light. With the shadow pass's dither broken on purpose (the object's node read only
+    when the material being built is the object's own), they differ by 0.148 and 0.056 (0.06%
+    of pixels), seven to nineteen times more, yet both stay within the scene runner's tolerance:
+    the blurred and soft shadows keep nearly every pixel under 8/255. So the check measures this
+    bug but doesn't fail on it. `yarn verify:scenes --only lodShowcase,largeWorld,instanceStress`: all
+    17 runs pass after the `LodFade.ts` change. The cost with the shadow (D6's "about 1k casting
+    instances, whatever the count") is measured with the phase's verification, after step 5.
 
 ### Phase 4 — The CPU fallback (WebGL2)
 

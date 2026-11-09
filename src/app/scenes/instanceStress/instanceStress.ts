@@ -43,6 +43,7 @@ import { loadDebugModuleAsync } from 'aekasha/debug';
 export const INSTANCE_STRESS_SCENE_ID = 'instanceStress';
 const CAMERA_APP_ID = 'instanceStressCamera';
 const SUN_APP_ID = 'instanceStressSun';
+const GROUND_NAME = 'instanceStressGround';
 
 /** The tree: largeWorld's generator, a little larger */
 const TREE = { trunkHeight: 1.4, foliageRadius: 1.2, foliageHeight: 3 };
@@ -71,9 +72,13 @@ export type InstanceStressCameraMode = 'ORBIT' | 'STILL';
 /** What draws the forest: instanced LOD pools (the CPU path) or the compute cull (WebGPU only) */
 export type InstanceStressPath = 'CPU' | 'GPU';
 
+/** A shadow-casting light over the still camera's view besides the sun (p354 Phase 3 step 4):
+ * a spot light's shadow (one camera) or a point light's (six faces of one camera) */
+export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
+
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
- * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=` and `?stressShadow=` (the
- * measuring harness's). */
+ * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=` and
+ * `?stressLight=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -82,6 +87,8 @@ export const instanceStressSettings = {
   path: 'CPU' as InstanceStressPath,
   /** The sun casts a VSM shadow (the app's shadow type), fitted to the view */
   shadow: false,
+  /** A spot or point light casting its shadow over the still camera's view */
+  light: 'NONE' as InstanceStressLight,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -118,6 +125,10 @@ const readUrlOverrides = () => {
   if (path === 'CPU' || path === 'GPU') instanceStressSettings.path = path;
   const shadow = params.get('stressShadow');
   if (shadow === 'true' || shadow === 'false') instanceStressSettings.shadow = shadow === 'true';
+  const light = params.get('stressLight')?.toUpperCase();
+  if (light === 'NONE' || light === 'SPOT' || light === 'POINT') {
+    instanceStressSettings.light = light;
+  }
   const fadeSeconds = params.get('stressFadeSeconds');
   if (fadeSeconds !== null && Number(fadeSeconds) >= 0) {
     instanceStressSettings.fadeSeconds = Number(fadeSeconds);
@@ -220,8 +231,7 @@ const createPoolForest = (world: ECSWorld, byTile: TreePlacement[][]) => {
   instanceStressState.pools = pools;
 };
 
-/** The GPU path: one instance set of every tree (no shadow until p354 Phase 3: only the main
- * camera draws a set). Its owning entity goes with the scene. */
+/** The GPU path: one instance set of every tree. Its owning entity goes with the scene. */
 const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
   const set = await createInstanceSetAsync({
     world,
@@ -236,6 +246,60 @@ const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) 
   instanceStressState.set = set;
 };
 
+/** A ground to catch the shadows (one quad under the whole forest), once per load. */
+const addShadowGround = () => {
+  const rootScene = getRootScene();
+  if (!rootScene || rootScene.getObjectByName(GROUND_NAME)) return;
+  const side = instanceStressState.extent + SPACING * 4;
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(side, side).rotateX(-Math.PI / 2),
+    new THREE.MeshLambertNodeMaterial({ color: '#6f7d4f' })
+  );
+  ground.receiveShadow = true;
+  ground.name = GROUND_NAME;
+  rootScene.add(ground);
+  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+    ground.removeFromParent();
+    ground.geometry.dispose();
+    ground.material.dispose();
+  });
+};
+
+/** `?stressLight=spot|point`: a light casting its shadow where the still camera looks (the orbit's
+ * start: the camera at angle 0, looking at the circle's point 0.5 rad ahead). The spot light
+ * shines down from 30 m above the halfway point; the point light sits 10 m up among the trees
+ * there, so its shadows fall every way and several of its cube faces show in the view. */
+const startLightShadow = (kind: InstanceStressLight) => {
+  const rootScene = getRootScene();
+  if (!rootScene || kind === 'NONE') return;
+  const radius = instanceStressState.extent * 0.3;
+  const ahead = new THREE.Vector3(Math.cos(0.5) * radius, 0, Math.sin(0.5) * radius);
+  const halfway = new THREE.Vector3(radius, 0, 0).lerp(ahead, 0.5);
+  let light: THREE.SpotLight | THREE.PointLight;
+  if (kind === 'SPOT') {
+    const spot = new THREE.SpotLight('#ffe7c4', 4000, 0, 0.7, 0.3, 2);
+    spot.position.copy(halfway).setY(30);
+    spot.target.position.copy(ahead);
+    rootScene.add(spot.target);
+    light = spot;
+  } else {
+    light = new THREE.PointLight('#ffe7c4', 900, 120, 2);
+    light.position.copy(halfway.lerp(ahead, 0.3)).setY(10);
+  }
+  light.castShadow = true;
+  light.shadow.mapSize.set(1024, 1024);
+  light.shadow.camera.near = 0.5;
+  light.shadow.camera.far = 120;
+  light.name = `instanceStress${kind === 'SPOT' ? 'Spot' : 'Point'}Light`;
+  rootScene.add(light);
+  addShadowGround();
+  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
+    light.removeFromParent();
+    if (light instanceof THREE.SpotLight) light.target.removeFromParent();
+    light.dispose();
+  });
+};
+
 /** `?stressShadow=true`: the sun casts its VSM shadow, fitted to the view (the toolkit's sun
  * shadow fit). Called on the scene's enter: the JSON lights are created after the scene code. */
 const startSunShadow = (world: ECSWorld) => {
@@ -246,20 +310,7 @@ const startSunShadow = (world: ECSWorld) => {
     return;
   }
   sun.castShadow = true;
-  // A ground to catch the shadows (one quad under the whole forest)
-  const side = instanceStressState.extent + SPACING * 4;
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(side, side).rotateX(-Math.PI / 2),
-    new THREE.MeshLambertNodeMaterial({ color: '#6f7d4f' })
-  );
-  ground.receiveShadow = true;
-  ground.name = 'instanceStressGround';
-  getRootScene()?.add(ground);
-  registerOnSceneExit(INSTANCE_STRESS_SCENE_ID, () => {
-    ground.removeFromParent();
-    ground.geometry.dispose();
-    ground.material.dispose();
-  });
+  addShadowGround();
   world.addComponent(sunId, SunShadowFitComponentType.SUN_SHADOW_FIT, {
     maxDistance: SHADOW_MAX_DISTANCE,
     casterExtension: SHADOW_CASTER_EXTENSION,
@@ -302,6 +353,9 @@ export const scene = async () => {
   if (instanceStressSettings.shadow) {
     registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startSunShadow(world));
   }
+  const light = instanceStressSettings.light;
+  if (light !== 'NONE')
+    registerOnSceneEnter(INSTANCE_STRESS_SCENE_ID, () => startLightShadow(light));
   let path = instanceStressSettings.path;
   if (path === 'GPU' && !isWebGPURenderer()) {
     lwarn(

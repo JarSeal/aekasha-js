@@ -8,7 +8,7 @@ import { float, vec3 } from 'three/tsl';
 // `createInstanceSetPasses`: Node can't run TSL). The main loop's frame and the LOD frame inputs
 // are the test's.
 
-type Dispatch = { mode: number; slotLevel: number; camera: THREE.Camera | null };
+type Dispatch = { mode: number; slotLevel: number; levelMask: number; camera: THREE.Camera | null };
 const env = vi.hoisted(() => ({
   frame: 0,
   inputs: { frame: -1 } as Record<string, unknown>,
@@ -40,6 +40,7 @@ vi.mock(import('./InstanceSetNodes'), async (importOriginal) => {
       const uniforms = {
         extent: value(0),
         slotLevel: value(0),
+        levelMask: value(0),
         mode: value(0),
         forceLevel: value(0),
         isFaded: value(0),
@@ -65,7 +66,7 @@ import { createGpuInstanceSetBackend } from './InstanceSetGpu';
 import { SELECT_MODE } from './InstanceSetNodes';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
 
-type StubUniforms = { mode: { value: number }; slotLevel: { value: number } };
+type StubUniforms = Record<'mode' | 'slotLevel' | 'levelMask', { value: number }>;
 
 /** The stub renderer: three's standard pipeline, the material library, a recording compute. */
 const createRenderer = () => {
@@ -78,6 +79,7 @@ const createRenderer = () => {
       env.dispatches.push({
         mode: uniforms!.mode.value,
         slotLevel: uniforms!.slotLevel.value,
+        levelMask: uniforms!.levelMask.value,
         camera: env.camera as THREE.Camera,
       });
     },
@@ -116,13 +118,19 @@ const createCamera = () => {
 const material = new THREE.MeshBasicNodeMaterial();
 const LEVELS = 2;
 
-const createSet = (opts: { maxSlots?: number } = {}) => {
+/** A set of two levels: the first casts shadows (unless `noneCast`), the second doesn't. */
+const createSet = (opts: { maxSlots?: number; noneCast?: boolean } = {}) => {
   const object = new THREE.Group();
   const params: InstanceSetBackendParams = {
     object,
     levels: [
-      { geometry: new THREE.BoxGeometry(), material, screenSize: 0.1 },
-      { geometry: new THREE.BoxGeometry(), material, screenSize: 0 },
+      {
+        geometry: new THREE.BoxGeometry(),
+        material,
+        screenSize: 0.1,
+        castShadow: !opts.noneCast,
+      },
+      { geometry: new THREE.BoxGeometry(), material, screenSize: 0, castShadow: false },
     ],
     lod: {},
     maxInstances: 16,
@@ -185,21 +193,46 @@ describe('the GPU backend: a slot per camera (p354 D6)', () => {
     expect(backend.debugBuffers!.getSlots().map((slot) => slot.dispatches)).toEqual([2, 1]);
   });
 
-  test("a render that doesn't reach the set, or a shadow pass, takes no slot and dispatches nothing", () => {
+  test("a render that doesn't reach the set takes no slot and dispatches nothing", () => {
     const { scene, backend } = createSet();
     const camera = createCamera();
     expect(render(new THREE.Scene(), camera)).toEqual([]);
     // Hidden: three doesn't project its children
     scene.children[0].visible = false;
     expect(render(scene, camera)).toEqual([]);
-    scene.children[0].visible = true;
-    // three's shadow pass overrides the scene's material with its shadow pass material
+    expect(env.dispatches).toEqual([]);
+    expect(backend.debugBuffers!.getSlots()).toEqual([]);
+  });
+
+  /** three's shadow pass: the scene's material overridden by a shadow pass material. */
+  const setShadowPass = (scene: THREE.Scene) => {
     const shadowPass = new THREE.MeshBasicNodeMaterial() as THREE.Material & {
       isShadowPassMaterial?: boolean;
     };
     shadowPass.isShadowPassMaterial = true;
     scene.overrideMaterial = shadowPass;
-    expect(render(scene, camera)).toEqual([]);
+  };
+
+  test("a shadow render's slot draws and appends the casting levels only", () => {
+    const { scene, backend } = createSet();
+    const view = createCamera();
+    const sun = createCamera();
+    render(scene, view);
+    setShadowPass(scene);
+    const listed = render(scene, sun);
+    // Level 1 casts nothing: its draw isn't listed (VSM would draw a receiver into the map)
+    expect(listed.map((o) => o.name)).toEqual(['test slot 1 level 0 group 0']);
+    expect(listed[0].castShadow).toBe(true);
+    scene.overrideMaterial = null;
+    expect(render(scene, view)).toHaveLength(LEVELS);
+    expect(env.dispatches.map((d) => d.levelMask)).toEqual([0xffffffff, 0b01, 0xffffffff]);
+    expect(backend.debugBuffers!.getSlots().map((slot) => slot.camera)).toEqual([view, sun]);
+  });
+
+  test('a shadow render of a set that casts nothing takes no slot', () => {
+    const { scene, backend } = createSet({ noneCast: true });
+    setShadowPass(scene);
+    expect(render(scene, createCamera())).toEqual([]);
     expect(env.dispatches).toEqual([]);
     expect(backend.debugBuffers!.getSlots()).toEqual([]);
   });

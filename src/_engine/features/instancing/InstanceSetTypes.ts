@@ -108,7 +108,8 @@ export interface InstanceSetDebugSlot {
 
 /** One camera's draws of a set, as `readInstanceSetStatsAsync` reads them back. */
 export interface InstanceSetSlotStats {
-  /** The camera: `main` for the main camera, else its name, or its type and id. */
+  /** The camera: `main` for the main camera, `<light name or type> shadow` for a light's shadow in
+   * the root scene, else its name, or its type and id. */
   camera: string;
   /** Its dispatches since it took its slot: one per render of the camera that reached the set
    * (two renders in a frame are two; only the frame's first moves the state). */

@@ -14,9 +14,12 @@
 //   docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md). An InstancedMesh
 //   without a fade of its own binds an opaque one (`getDrawnFadeAttribute`), so the shared build
 //   always finds an attribute.
-// - A material whose draws carry their own fade (setMaterialLodFade): an instance set's variants
+// - An object whose draws carry their own fade (setObjectLodFadeNode): an instance set's draws
 //   (features/instancing/, p354 D8), whose fade comes with each drawn instance's visible list
-//   entry, through the vertex stage. It takes the place of the per-object LOD fade.
+//   entry, through the vertex stage. It takes the place of the per-object LOD fade. It's keyed on
+//   the object, not its material: the shadow pass builds the object with its own material, which
+//   takes the source material's mask (three's `_getShadowNodes`), so only the object is the same
+//   in both builds (p354 Phase 3 step 4).
 // - Anything else (a plain mesh, a LOD fade copy): the per-object value alone.
 // The attribute and the per-object value bind per object at draw time, so meshes on one material
 // share one build: three r187 shares a build between InstancedMeshes with the same material and
@@ -72,8 +75,8 @@ const fadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribut
 /** The fade an InstancedMesh without `createLodFadeAttribute` draws with: every instance whole. */
 const opaqueFadeAttributes = new WeakMap<THREE.Object3D, THREE.InstancedBufferAttribute>();
 const objectFades = new WeakMap<THREE.Object3D, number>();
-/** A material's own per-draw fade node (setMaterialLodFade). */
-const materialFades = new WeakMap<THREE.Material, THREE.Node<'float'>>();
+/** An object's own per-draw fade node (setObjectLodFadeNode). */
+const objectFadeNodes = new WeakMap<THREE.Object3D, THREE.Node<'float'>>();
 const visibilityFades = new WeakMap<THREE.Object3D, number>();
 
 /** An object's visibility fade: its own, or a LOD fade copy's mesh's (the copy is its child). */
@@ -202,18 +205,18 @@ export const clearObjectVisibilityFade = (object: THREE.Object3D) => {
 };
 
 /**
- * Gives `material` a LOD fade of its own: every object drawn with it is dithered by `fade`, a float
- * node holding the drawn copy's signed fade (see the top of `LodFade.ts`), in place of the object's
- * LOD fade; the object's visibility fade still applies. For a material whose draws carry their
- * fade in their own data (an instance set's variants, `features/instancing/`: a visible list
- * entry's, through the vertex stage). Takes effect with `enableLodDither` on the material, at its
- * next build.
+ * Gives `object` a LOD fade node of its own: its dither-enabled materials dither it by `fade`, a
+ * float node holding the drawn copy's signed fade (see the top of `LodFade.ts`), in place of its
+ * per-object LOD fade; its visibility fade still applies. For an object whose draws carry their
+ * fade in their own data (an instance set's draws, `features/instancing/`: a visible list entry's,
+ * through the vertex stage). Keyed on the object, so the shadow pass, which builds it with its own
+ * material, reads it too. Set it before the object's first build: every object sharing a build
+ * must read the same node (an instance set's draws of one material do).
  * @internal
  * @param fade a float node, evaluated in the fragment stage (a varying for a per-vertex value)
  */
-export const setMaterialLodFade = (material: THREE.Material, fade: THREE.Node<'float'>) => {
-  materialFades.set(material, fade);
-  material.needsUpdate = true;
+export const setObjectLodFadeNode = (object: THREE.Object3D, fade: THREE.Node<'float'>) => {
+  objectFadeNodes.set(object, fade);
 };
 
 /** An InstancedMesh's per-instance fade, bound per drawn object, so its build is shared. */
@@ -244,16 +247,17 @@ class LodFadeMaskNode extends THREE.Node {
   }
 
   setup(builder: THREE.NodeBuilder) {
-    // The source is picked per build: a material with a fade of its own (an instance set's draws)
-    // is built for those draws only. An InstancedMesh's build key differs from a plain mesh's (its
+    // The source is picked per build: an object with a fade node of its own (an instance set's
+    // draws) shares builds only with objects of the same node (its material's position fetch is
+    // its set's), in the shadow pass too. An InstancedMesh's build key differs from a plain mesh's (its
     // instance data), so each kind keeps the path it was built with. An InstancedMesh takes both
     // LOD fades: a pool level's per instance, an InstancedMesh entity's (its fade copy, its cull
     // fade) per object; the other one stays opaque, which lets every pixel through. Every object
     // takes its visibility fade too, on the same noise (so the fades compose exactly).
     const noise = interleavedGradientNoise();
-    const materialFade = builder.material ? materialFades.get(builder.material) : undefined;
-    if (materialFade) {
-      return ditherShows(noise, materialFade).and(ditherShows(noise, objectFadePair.y));
+    const ownFade = builder.object ? objectFadeNodes.get(builder.object) : undefined;
+    if (ownFade) {
+      return ditherShows(noise, ownFade).and(ditherShows(noise, objectFadePair.y));
     }
     const objectMask = ditherShows(noise, objectFadePair.x).and(
       ditherShows(noise, objectFadePair.y)
