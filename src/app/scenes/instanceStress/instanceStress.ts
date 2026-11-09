@@ -19,6 +19,7 @@ import {
   type InstancedLodPool,
   type InstancedLodPoolLevel,
   type InstancePlacement,
+  type InstanceRange,
   type InstanceSet,
 } from 'aekasha/instancing';
 import type { LodDef } from 'aekasha/lod';
@@ -80,7 +81,7 @@ export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
 
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
  * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=`,
- * `?stressLight=` and `?stressViewport=` (the measuring harness's). */
+ * `?stressLight=`, `?stressViewport=` and `?stressMove=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -93,6 +94,10 @@ export const instanceStressSettings = {
   light: 'NONE' as InstanceStressLight,
   /** A picture-in-picture viewport of the forest from above (a second camera drawing it) */
   viewport: false,
+  /** The share of the set's trees moved each frame (0 to 1; the set path only): a block of them,
+   * round-robin through the forest, each turned and nudged with its own call
+   * (`setInstanceMatrices`, p354 Phase 5 step 2) */
+  move: 0,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -140,6 +145,8 @@ const readUrlOverrides = () => {
   const shadow = params.get('stressShadow');
   if (shadow === 'true' || shadow === 'false') instanceStressSettings.shadow = shadow === 'true';
   instanceStressSettings.viewport = params.get('stressViewport') === 'true';
+  const move = Number(params.get('stressMove'));
+  instanceStressSettings.move = move > 0 ? Math.min(move, 1) : 0;
   const light = params.get('stressLight')?.toUpperCase();
   if (light === 'NONE' || light === 'SPOT' || light === 'POINT') {
     instanceStressSettings.light = light;
@@ -246,6 +253,40 @@ const createPoolForest = (world: ECSWorld, byTile: TreePlacement[][]) => {
   instanceStressState.pools = pools;
 };
 
+/** `?stressMove=`: moves `share` of the set's trees each frame, a block of them round-robin
+ * through the forest, one `setInstanceMatrices` call each (their writes upload as one range a
+ * frame): each turns about +y and sways up to half a metre along x from its place, by the scene's
+ * time, so a tree's level can change with it. */
+const startMovingTrees = (set: InstanceSet, range: InstanceRange, trees: TreePlacement[]) => {
+  const perFrame = Math.max(1, Math.round(trees.length * instanceStressSettings.move));
+  const matrix = new Float32Array(16);
+  matrix[5] = 1;
+  matrix[15] = 1;
+  let cursor = 0;
+  let time = 0;
+  createSceneAppLooper((delta) => {
+    time += delta;
+    for (let n = 0; n < perFrame; n++) {
+      const i = cursor;
+      cursor = (cursor + 1) % trees.length;
+      const { position, yaw, scale } = trees[i];
+      const wave = Math.sin(time * 2 + i);
+      // makeRotationY's columns, scaled
+      const c = Math.cos(yaw + wave * 0.3) * scale;
+      const sn = Math.sin(yaw + wave * 0.3) * scale;
+      matrix[0] = c;
+      matrix[2] = -sn;
+      matrix[5] = scale;
+      matrix[8] = sn;
+      matrix[10] = c;
+      matrix[12] = position.x + wave * 0.5;
+      matrix[13] = position.y;
+      matrix[14] = position.z;
+      set.setInstanceMatrices(range, matrix, i);
+    }
+  }, INSTANCE_STRESS_SCENE_ID);
+};
+
 /** The GPU path: one instance set of every tree. Its owning entity goes with the scene. */
 const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) => {
   const set = await createInstanceSetAsync({
@@ -257,8 +298,12 @@ const createSetForestAsync = async (world: ECSWorld, byTile: TreePlacement[][]) 
   });
   if (!set) return;
   getRootScene()?.add(set.object);
-  set.addInstances(byTile.flat().map(toInstancePlacement));
+  const trees = byTile.flat();
+  const range = set.addInstances(trees.map(toInstancePlacement));
   instanceStressState.set = set;
+  if (range && range.count > 0 && instanceStressSettings.move > 0) {
+    startMovingTrees(set, range, trees);
+  }
 };
 
 /** A ground to catch the shadows (one quad under the whole forest), once per load. */
@@ -409,6 +454,9 @@ export const scene = async () => {
   instanceStressState.path = path;
   if (path === 'GPU') await createSetForestAsync(world, byTile);
   else createPoolForest(world, byTile);
+  if (path !== 'GPU' && instanceStressSettings.move > 0) {
+    lwarn("Instance stress: ?stressMove= moves the set path's trees only (?stressPath=gpu).");
+  }
 
   const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
   if (cameraId === undefined) lwarn(`Instance stress: no camera '${CAMERA_APP_ID}' to move.`);

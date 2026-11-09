@@ -94,6 +94,8 @@ export const createInstanceRanges = (capacity: number) => {
       freeRun(start, count);
       return true;
     },
+    /** Whether `start` and `count` are a live range, exactly as `take` gave it. */
+    isLive: (start: number, count: number) => live.get(start) === count,
     /** Calls `fn` with each live range (in no order). */
     forEachLive: (fn: (start: number, count: number) => void) => {
       for (const [start, count] of live) fn(start, count);

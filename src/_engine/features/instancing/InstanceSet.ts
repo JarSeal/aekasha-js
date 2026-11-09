@@ -123,6 +123,21 @@ export interface InstanceSet {
    * disposed (a streamed cell unloading after its scene's switch).
    */
   removeInstances: (range: InstanceRange) => boolean;
+  /**
+   * Moves instances of a live range: writes `instances` (placements, or matrices as
+   * `addInstances` takes them) over the range's instances from `offset` (default 0) on. They keep
+   * their levels and cross-fades, and are drawn at their new places from the next frame. Writes in
+   * a frame upload together before its first draw, adjacent ones as one range (on the GPU
+   * backend), so moving instances one call each costs no more uploads than one call for them all.
+   * A set is meant for static or rarely moving content: a sway or wind belongs in the material.
+   * Returns false (and moves nothing) for a range that isn't live, or once the set is disposed.
+   * @throws when the instances don't fit in the range from `offset`
+   */
+  setInstanceMatrices: (
+    range: InstanceRange,
+    instances: InstancePlacement[] | Float32Array,
+    offset?: number
+  ) => boolean;
 }
 
 const refLevels = (levels: readonly InstancedLodPoolLevel[], isInc: boolean) => {
@@ -215,7 +230,8 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
  * rocks. An instanced LOD pool stays the choice for fewer, and for instances gameplay addresses
  * (an entity each: transforms, ECS tags, raycasts, spatial domains). Instances come and go by
  * range: `addInstances` returns one, `removeInstances` frees it for a later add (a streamed cell's
- * content adds its range in its load and removes it in its unload, and one set serves every cell).
+ * content adds its range in its load and removes it in its unload, and one set serves every cell),
+ * and `setInstanceMatrices` moves its instances (now and then: a sway belongs in the material).
  *
  * Every camera that renders a set (the view, a viewport, the debug camera, a snapshot) culls it
  * against its own frustum, up to `maxSlots` cameras at once, and draws the levels selected against
@@ -304,15 +320,35 @@ export const createInstanceSetAsync = async (
     },
   });
 
-  const addInstances: InstanceSet['addInstances'] = (instances) => {
-    if (isDisposed) return null;
-    const isMatrices = instances instanceof Float32Array;
-    if (isMatrices && instances.length % 16 !== 0) {
+  /** The instances' count, checked as whole matrices. */
+  const countInstances = (instances: InstancePlacement[] | Float32Array, call: string) => {
+    if (!(instances instanceof Float32Array)) return instances.length;
+    if (instances.length % 16 !== 0) {
       throw new Error(
-        `InstanceSet.addInstances: ${instances.length} floats aren't whole matrices (16 floats each).`
+        `InstanceSet.${call}: ${instances.length} floats aren't whole matrices (16 floats each).`
       );
     }
-    const added = isMatrices ? instances.length / 16 : instances.length;
+    return instances.length / 16;
+  };
+
+  /** The instances as matrices; a non-uniform scale warns in the debug env (placements have
+   * none). */
+  const toMatrixArray = (instances: InstancePlacement[] | Float32Array, count: number) => {
+    if (!(instances instanceof Float32Array)) return toMatrices(instances);
+    if (IS_DEBUG_ENV) {
+      const index = findNonUniformScale(instances, count);
+      if (index >= 0) {
+        lwarn(
+          `Instance set "${label}": instance ${index} of the ${count} written has a non-uniform scale, which a set doesn't draw right (its normals).`
+        );
+      }
+    }
+    return instances;
+  };
+
+  const addInstances: InstanceSet['addInstances'] = (instances) => {
+    if (isDisposed) return null;
+    const added = countInstances(instances, 'addInstances');
     if (added === 0) return { start: ranges.end, count: 0 };
     const start = ranges.take(added);
     if (start < 0) {
@@ -321,15 +357,7 @@ export const createInstanceSetAsync = async (
       );
       return null;
     }
-    const matrices = isMatrices ? instances : toMatrices(instances);
-    if (IS_DEBUG_ENV && isMatrices) {
-      const index = findNonUniformScale(matrices, added);
-      if (index >= 0) {
-        lwarn(
-          `Instance set "${label}": instance ${index} of the ${added} added has a non-uniform scale, which a set doesn't draw right (its normals).`
-        );
-      }
-    }
+    const matrices = toMatrixArray(instances, added);
     drawer.addInstances(start, matrices, added);
     drawer.setExtent(ranges.end);
     return { start, count: added };
@@ -349,6 +377,30 @@ export const createInstanceSetAsync = async (
     return true;
   };
 
+  const setInstanceMatrices: InstanceSet['setInstanceMatrices'] = (
+    range,
+    instances,
+    offset = 0
+  ) => {
+    if (isDisposed) return false;
+    const written = countInstances(instances, 'setInstanceMatrices');
+    if (!Number.isInteger(offset) || offset < 0 || offset + written > range.count) {
+      throw new Error(
+        `InstanceSet.setInstanceMatrices: ${written} instances from offset ${offset} don't fit in the range's ${range.count}.`
+      );
+    }
+    if (!ranges.isLive(range.start, range.count)) {
+      lwarn(
+        `Instance set "${label}": the range ${range.start}-${range.start + range.count - 1} isn't one of its live ranges (removed, or another set's): nothing moved.`
+      );
+      return false;
+    }
+    if (written > 0) {
+      drawer.writeInstances(range.start + offset, toMatrixArray(instances, written), written);
+    }
+    return true;
+  };
+
   const set: InstanceSet = {
     object,
     entityId,
@@ -359,6 +411,7 @@ export const createInstanceSetAsync = async (
     },
     addInstances,
     removeInstances,
+    setInstanceMatrices,
   };
   backendsBySet.set(set, {
     backend: drawer,

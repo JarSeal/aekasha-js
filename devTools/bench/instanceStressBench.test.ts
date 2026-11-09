@@ -59,6 +59,7 @@ describe('parseBenchArgs', () => {
     expect(parseBenchArgs(['--build', '--url', 'http://x'])).toMatchObject({ error: /--build/ });
     expect(parseBenchArgs(['--frames'])).toEqual({ error: '--frames needs a value' });
     expect(parseBenchArgs(['--nope'])).toEqual({ error: 'Unknown argument: --nope' });
+    expect(parseBenchArgs(['--move', '2'])).toMatchObject({ error: /--move/ });
   });
 });
 
@@ -77,6 +78,13 @@ describe('the set-cpu path', () => {
   it('is the set path forced onto its CPU backend, in the debug env only', () => {
     const args = parse(['--paths', 'set-cpu', '--counts', '5k']);
     expect(args.paths).toEqual(['set-cpu']);
+    const moving = parse(['--move', '0.01']);
+    expect(buildBenchUrl('http://x', moving, { count: 5_000, path: 'gpu' })).toContain(
+      'stressMove=0.01'
+    );
+    expect(buildBenchUrl('http://x', moving, { count: 5_000, path: 'cpu' })).not.toContain(
+      'stressMove'
+    );
     expect(buildBenchUrl('http://x', args, { count: 5_000, path: 'set-cpu' })).toContain(
       'stressPath=gpu'
     );

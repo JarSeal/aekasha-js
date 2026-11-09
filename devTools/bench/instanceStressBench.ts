@@ -28,6 +28,8 @@ export type BenchArgs = {
   fadeSeconds: number | null;
   /** The orbit holds until the measuring starts it: every path sees the same camera path */
   orbitHold: boolean;
+  /** `?stressMove=`: the share of the set's trees moved each frame (0: none; the set paths only) */
+  move: number;
   camera: 'ORBIT' | 'STILL';
   warmupFrames: number;
   frames: number;
@@ -60,6 +62,7 @@ export const parseBenchArgs = (argv: string[]): { args: BenchArgs } | { error: s
     shadow: false,
     fadeSeconds: null,
     orbitHold: false,
+    move: 0,
     camera: 'ORBIT',
     warmupFrames: 120,
     frames: 300,
@@ -73,6 +76,7 @@ export const parseBenchArgs = (argv: string[]): { args: BenchArgs } | { error: s
     '--mode',
     '--url',
     '--fade-seconds',
+    '--move',
     '--camera',
     '--warmup',
     '--frames',
@@ -107,6 +111,10 @@ export const parseBenchArgs = (argv: string[]): { args: BenchArgs } | { error: s
       const seconds = Number(value);
       if (!(seconds >= 0)) return { error: `--fade-seconds: 0 or more (${value})` };
       args.fadeSeconds = seconds;
+    } else if (arg === '--move') {
+      const share = Number(value);
+      if (!(share >= 0 && share <= 1)) return { error: `--move: a share from 0 to 1 (${value})` };
+      args.move = share;
     } else if (arg === '--warmup' || arg === '--frames') {
       const frames = Number(value);
       if (!Number.isInteger(frames) || frames < (arg === '--frames' ? 1 : 0)) {
@@ -146,6 +154,7 @@ export const buildBenchUrl = (baseUrl: string, args: BenchArgs, c: BenchCase) =>
   if (args.shadow) params.set('stressShadow', 'true');
   if (args.fadeSeconds !== null) params.set('stressFadeSeconds', String(args.fadeSeconds));
   if (args.orbitHold) params.set('stressOrbitHold', 'true');
+  if (args.move > 0 && c.path !== 'cpu') params.set('stressMove', String(args.move));
   return `${baseUrl.replace(/\/$/, '')}/?${params}`;
 };
 

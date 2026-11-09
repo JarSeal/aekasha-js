@@ -22,6 +22,8 @@ const env = vi.hoisted(() => ({
   /** The render being projected's camera, for the dispatch records */
   camera: null as unknown,
   renderer: null as unknown,
+  /** The latest set's buffers, as the passes got them */
+  buffers: null as unknown,
 }));
 
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
@@ -42,7 +44,8 @@ vi.mock(import('./InstanceSetNodes'), async (importOriginal) => {
   const value = (v: unknown) => ({ value: v });
   return {
     ...original,
-    createInstanceSetPasses: () => {
+    createInstanceSetPasses: (opts: { buffers: unknown }) => {
+      env.buffers = opts.buffers;
       const uniforms = {
         extent: value(0),
         slotLevel: value(0),
@@ -72,6 +75,10 @@ import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { createGpuInstanceSetBackend } from './InstanceSetGpu';
 import { SELECT_MODE, STATE_INITIAL, STATE_REMOVED } from './InstanceSetNodes';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
+import type { InstanceSetBuffers } from './InstanceSetNodes';
+
+/** The latest set's buffers (the backend keeps them to itself). */
+const getBuffers = () => env.buffers as InstanceSetBuffers;
 
 type StubUniforms = Record<'mode' | 'slotLevel' | 'levelMask' | 'extent', { value: number }>;
 
@@ -127,7 +134,7 @@ const material = new THREE.MeshBasicNodeMaterial();
 const LEVELS = 2;
 
 /** A set of two levels: the first casts shadows (unless `noneCast`), the second doesn't. */
-const createSet = (opts: { maxSlots?: number; noneCast?: boolean } = {}) => {
+const createSet = (opts: { maxSlots?: number; noneCast?: boolean; maxInstances?: number } = {}) => {
   const object = new THREE.Group();
   const params: InstanceSetBackendParams = {
     // The GPU backend reads no world
@@ -143,7 +150,7 @@ const createSet = (opts: { maxSlots?: number; noneCast?: boolean } = {}) => {
       { geometry: new THREE.BoxGeometry(), material, screenSize: 0, castShadow: false },
     ],
     lod: {},
-    maxInstances: 16,
+    maxInstances: opts.maxInstances ?? 16,
     maxVisible: 16,
     maxSlots: opts.maxSlots ?? 8,
     receiveShadow: true,
@@ -404,5 +411,69 @@ describe('the GPU backend: removed ranges (p354 Phase 5 step 1)', () => {
     backend.setExtent(0);
     render(scene, camera);
     expect(env.dispatches.map((d) => d.extent)).toEqual([1, 0]);
+  });
+});
+
+describe('the GPU backend: moving instances (p354 Phase 5 step 2)', () => {
+  const at = (x: number) => new Float32Array(new THREE.Matrix4().makeTranslation(x, 0, 0).elements);
+
+  test("uploads a frame's writes at its dispatch, one range for writes that touch", () => {
+    const { scene, backend } = createSet();
+    const { rows, records } = getBuffers();
+    const camera = createCamera();
+    const added = new Float32Array(9 * 16);
+    for (let i = 0; i < 9; i++) added.set(at(i), i * 16);
+    backend.addInstances(1, added, 9);
+    backend.setExtent(10);
+    // Before the first dispatch: no ranges (three creates the buffers from the arrays)
+    render(scene, camera);
+    expect(rows.updateRanges).toEqual([]);
+    expect(records.updateRanges).toEqual([]);
+
+    // One instance a call, in order, and a range overlapping them; then one apart
+    for (let i = 2; i <= 5; i++) backend.writeInstances(i, at(i * 10), 1);
+    backend.writeInstances(4, new Float32Array([...at(1), ...at(2), ...at(3)]), 3);
+    backend.writeInstances(8, at(80), 1);
+    // Nothing until the frame's dispatch
+    expect(rows.updateRanges).toEqual([]);
+    const versions = [rows.version, records.version];
+    render(scene, camera);
+    expect(rows.updateRanges).toEqual([
+      { start: 2 * 12, count: 5 * 12 },
+      { start: 8 * 12, count: 12 },
+    ]);
+    expect(records.updateRanges).toEqual([
+      { start: 2 * 4, count: 5 * 4 },
+      { start: 8 * 4, count: 4 },
+    ]);
+    expect([rows.version, records.version]).toEqual(versions.map((v) => v + 1));
+    // The written matrix and record (row 0's translation, the record's origin)
+    expect(rows.array[8 * 12 + 3]).toBe(80);
+    expect(records.array[8 * 4]).toBe(80);
+
+    // The next dispatch uploads nothing new
+    rows.clearUpdateRanges();
+    render(scene, camera);
+    expect(rows.updateRanges).toEqual([]);
+  });
+
+  test('past its cap of separate writes, one range over them: at most 256 a dispatch', () => {
+    const { scene, backend } = createSet({ maxInstances: 1024 });
+    const { rows } = getBuffers();
+    const camera = createCamera();
+    render(scene, camera);
+    // Every other instance: none touches the last
+    for (let i = 0; i < 600; i++) backend.writeInstances(i * 2, at(i), 1);
+    render(scene, camera);
+    const ranges = rows.updateRanges;
+    expect(ranges.length).toBeGreaterThan(1);
+    expect(ranges.length).toBeLessThanOrEqual(256);
+    // Every written instance in one of them
+    for (let i = 0; i < 600; i++) {
+      const row = i * 2 * 12;
+      expect(ranges.some(({ start, count }) => row >= start && row + 12 <= start + count)).toBe(
+        true
+      );
+    }
   });
 });

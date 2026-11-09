@@ -4,8 +4,8 @@
  *
  *   npx tsx devTools/bench/instanceStress.ts [--counts 5k,20k,100k] [--paths cpu,gpu,set-cpu]
  *     [--mode debug|prodTest] [--url <server> | --build] [--shadow] [--fade-seconds <s>]
- *     [--orbit-hold] [--camera ORBIT|STILL] [--warmup 120] [--frames 300] [--headed] [--webgl]
- *     [--json <file>]
+ *     [--orbit-hold] [--camera ORBIT|STILL] [--move <share>] [--warmup 120] [--frames 300]
+ *     [--headed] [--webgl] [--json <file>]
  *
  * Each case is a page of its own: the test bridge's fixed frame delta puts the camera on the same
  * path every run, the scene's `measure()` (`_dbg__instanceStress.ts`) averages the probe's timing
@@ -13,6 +13,9 @@
  * figures (turned on through `AEK_debugStats`) are sampled meanwhile. Prod test mode has no stats
  * panels, so no GPU figures: measure a minified build's CPU side there (`yarn build:test`, then
  * `--build`), and its GPU side with `--build --mode debug` (minified, the debug env on).
+ *
+ * `--move 0.01` moves 1% of the set's trees each frame, one `setInstanceMatrices` call each
+ * (`?stressMove=`, p354 Phase 5 step 2; the set paths only: the pools' cases ignore it).
  *
  * `set-cpu` is the set on its CPU backend on WebGPU too (p354 Phase 4): the LOD tab's "CPU backend
  * (next sets)" ticked and the scene reloaded before the warm-up (the debug env only); on WebGL2

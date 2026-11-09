@@ -93,8 +93,11 @@ describe('createInstanceRanges', () => {
     expect(ranges.release(a, 5)).toBe(false);
     expect(ranges.release(a + 1, 9)).toBe(false);
     expect(ranges.release(50, 10)).toBe(false);
+    expect(ranges.isLive(a, 10)).toBe(true);
+    expect(ranges.isLive(a, 5)).toBe(false);
     expect(ranges.release(a, 10)).toBe(true);
     expect(ranges.release(a, 10)).toBe(false);
+    expect(ranges.isLive(a, 10)).toBe(false);
     expect(ranges.count).toBe(10);
   });
 

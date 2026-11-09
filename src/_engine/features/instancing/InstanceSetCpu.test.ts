@@ -196,7 +196,7 @@ const stepReference = (
 
 const getMeshes = (object: THREE.Group) => object.children as THREE.InstancedMesh[];
 
-/** Each level mesh's copies in slot order: the instance (by its x), its fade and scale. */
+/** Each level mesh's copies in slot order: the instance (by its x), its fade, scale and z. */
 const readMeshes = (object: THREE.Group) =>
   getMeshes(object).map((mesh) => {
     const fades = getLodFadeAttribute(mesh)!;
@@ -205,6 +205,7 @@ const readMeshes = (object: THREE.Group) =>
       instance: Math.round(e[slot * 16 + 12] / SPACING),
       fade: fades.getX(slot),
       scale: Math.hypot(e[slot * 16], e[slot * 16 + 1], e[slot * 16 + 2]),
+      z: e[slot * 16 + 14],
     }));
   });
 
@@ -240,6 +241,7 @@ const expectMeshes = (
       const m = copy.instance * 16;
       const scale = Math.hypot(matrices[m], matrices[m + 1], matrices[m + 2]);
       expect(Math.abs(copy.scale - scale), `${at}: ${copy.instance}'s matrix`).toBeLessThan(1e-6);
+      expect(copy.z, `${at}: ${copy.instance}'s place`).toBe(matrices[m + 14]);
     });
   });
 };
@@ -394,6 +396,47 @@ describe('the CPU backend: removed ranges (p354 Phase 5 step 1)', () => {
       runSystems();
     }
     expect(getMeshes(object).map((mesh) => mesh.count)).toEqual([0, 0, 0]);
+  });
+});
+
+describe('the CPU backend: moving instances (p354 Phase 5 step 2)', () => {
+  test('a moved instance is selected at its new place, and every copy drawn moves with it', () => {
+    const { world, runSystems } = createStubWorld();
+    const count = 40;
+    const { object, matrices, backend } = createSet(world, count);
+    const reference = createReference(count);
+    let movedWhileFading = 0;
+    for (let frame = 1; frame <= 400; frame++) {
+      setInputs(frame, cameraXAt(frame));
+      // Every third frame an instance steps 25 m off the line and back (its x, which names it in
+      // the meshes, kept): its screen size changes, so its level does, fades included
+      if (frame % 3 === 0) {
+        const i = (frame * 7) % count;
+        if (reference[i].outgoing !== LOD_LEVEL_NONE) movedWhileFading++;
+        matrices[i * 16 + 14] = matrices[i * 16 + 14] === 0 ? 25 : 0;
+        backend.writeInstances(i, matrices.subarray(i * 16, i * 16 + 16), 1);
+        // Drawn at the new place at once, before the frame's step
+        expectMeshes(object, reference, matrices, `frame ${frame}, the move`);
+      }
+      stepReference(reference, matrices, { mode: 'SELECT' });
+      runSystems();
+      expectMeshes(object, reference, matrices, `frame ${frame}`);
+    }
+    expect(movedWhileFading).toBeGreaterThan(0);
+  });
+
+  test('a move inside the bounds leaves them; one outside grows them', () => {
+    const { world } = createStubWorld();
+    const { object, matrices, backend } = createSet(world, 10);
+    const [mesh] = getMeshes(object);
+    const box = mesh.boundingBox!.clone();
+    matrices[3 * 16 + 14] = 0.5;
+    backend.writeInstances(3, matrices.subarray(3 * 16, 4 * 16), 1);
+    expect(mesh.boundingBox!.equals(box)).toBe(true);
+    matrices[3 * 16 + 14] = 300;
+    backend.writeInstances(3, matrices.subarray(3 * 16, 4 * 16), 1);
+    expect(mesh.boundingBox!.max.z).toBeGreaterThan(300);
+    expect(mesh.boundingSphere!.containsPoint(new THREE.Vector3(15, 0, 300))).toBe(true);
   });
 });
 

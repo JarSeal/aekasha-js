@@ -1447,6 +1447,46 @@ From Phase 4 (its "As built"), for these steps:
     kB gzip of its 5 KiB (the ranges module and `removeInstances`: 4 modules first-download),
     the lazy `InstanceSetCpu.js` 2.0 → 2.1 kB; every budget within. Steps 2 and 6 add to the
     front too, with about 0.6 kB left.
+- **Step 2, moving instances.** `setInstanceMatrices(range, instances, offset?)` takes placements
+  or matrices, as `addInstances` does, and returns a boolean: false (and a warning) for a range
+  that isn't live, false once the set is disposed; it throws when the instances don't fit in the
+  range from `offset` (a caller's bug, as matrices that aren't 16 floats each). The instances keep
+  their levels and fades (the backend's `writeInstances`). **A non-uniform scale still warns in
+  the debug env and doesn't fail** (Phase 1's choice, kept over this step's "fails": the debug
+  and production builds behave alike), now for every write. `InstanceRanges` gained `isLive`.
+  - **GPU**: the matrices and records written are uploaded at the backend's next dispatch, before
+    its passes (`uploadWrites`), not at the write: a write touching the last pending one (an
+    overlap or adjacent) merges into it, so a frame's writes in order, one instance a call, are
+    one range per buffer. Past 256 separate ranges they become one range over them all, so a set
+    no render reaches (hidden) while it moves keeps no growing list. Nothing is added before the
+    first dispatch, for step 1's reason (three creates the buffers from the whole arrays): this
+    also ends a whole re-upload of the first add's ranges, which lingered until the first move.
+  - **CPU**: `writeInstances` already moved the drawn copies (both of a fading instance's) and
+    the record; it now sets the level meshes' bounds only when they grew, so a move inside them,
+    one call per instance, costs no bounds work.
+  - Tests: the front's (an offset, placements and matrices, the refusals and the throw), the GPU
+    backend's (no range until the dispatch, ordered and overlapping writes as one range and one
+    apart as another, one version bump each, nothing new at the next dispatch, at most 256 ranges
+    with every write covered) and the CPU backend's (400 frames of the camera path with an
+    instance stepping 25 m off the line every third frame, fades included: the meshes are the
+    rules' reference with every copy at its new place, at the move and after the step; a move
+    inside the bounds leaves them). Not moving a fading instance's outgoing copy fails it.
+  - `instanceStress` gained `?stressMove=<share>` (the set path; the pools warn): a round-robin
+    block of that share of the trees each frame, one `setInstanceMatrices` call per tree, each
+    turned and swayed along x by the scene's time. The bench gained `--move <share>`.
+  - **Verified** (Apple M2, Chrome, headless WebGPU, the dev server, debug env, 100k trees):
+    - **One upload a frame per buffer.** `GPUQueue.writeBuffer` counted in the page (`STILL`,
+      120 frames): none a frame without moves; with `?stressMove=0.01` exactly 2 a frame, the
+      records' 16,000 B and the matrices' 48,000 B (1,000 trees as one range each).
+    - **The CPU frame** (the bench, the orbit, 120 + 300 frames), without → with 1% moved a frame:
+      the GPU set 0.49 → 0.62 ms (render submit 0.40 → 0.52), under 2 ms; the CPU backend 2.28 →
+      2.20 ms, its selection loop's cost (Phase 4's 2.70 ms on a build) and within its spread.
+    - The first bench run broke on a Vite reload from an edit under it (the forced CPU backend's
+      flag lives in `InstanceSet.ts`, so the reload reset it: "the set is on the GPU backend
+      after the reload"); step 1's flake of that helper may have been the same.
+    - `yarn verify:scenes --only instanceStress`: all 8 runs pass. `yarn sbp`: `features/instancing`
+      4.4 → 4.6 kB gzip of its 5 KiB (step 6's `preWarm` has about 0.4 kB left), the lazy
+      `InstanceSetGpu.js` 4.9 → 5.1 kB, `instanceStress.js` 2.5 → 2.8 kB; every budget within.
 
 **Verification:**
 

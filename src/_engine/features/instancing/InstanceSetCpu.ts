@@ -329,7 +329,11 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     isMatrixChanged[level] = 1;
   };
 
+  /** Writes instances' matrices and records (an add's, or a move: `setInstanceMatrices`), and
+   * their drawn copies; the bounds grow to hold them (set on the meshes only when they did, so a
+   * move inside them, one instance a call, costs no bounds work). */
   const writeInstances = (start: number, written: Float32Array, count: number) => {
+    let isGrown = false;
     for (let n = 0; n < count; n++) {
       const i = start + n;
       const m = n * 16;
@@ -342,18 +346,27 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       records[r + 3] = scale * radii[0];
       // The bounds hold the instance at its largest level, whichever is drawn
       const radius = records[r + 3] * boundsRadiusScale;
-      _point.set(records[r], records[r + 1], records[r + 2]);
-      bounds.expandByPoint(_point.addScalar(radius));
-      bounds.expandByPoint(_point.addScalar(-2 * radius));
+      _point.set(records[r], records[r + 1], records[r + 2]).addScalar(radius);
+      if (!bounds.containsPoint(_point)) {
+        bounds.expandByPoint(_point);
+        isGrown = true;
+      }
+      _point.addScalar(-2 * radius);
+      if (!bounds.containsPoint(_point)) {
+        bounds.expandByPoint(_point);
+        isGrown = true;
+      }
       // A copy already drawn takes the new matrix (an instance written again)
       const level = levelOf[i];
       const outgoing = outgoingOf[i];
       if (level >= 0) copyMatrixTo(level, inSlots[i], i);
       if (outgoing >= 0) copyMatrixTo(outgoing, outSlots[i], i);
     }
-    for (const mesh of meshes) {
-      mesh.boundingBox!.copy(bounds);
-      bounds.getBoundingSphere(mesh.boundingSphere!);
+    if (isGrown) {
+      for (const mesh of meshes) {
+        mesh.boundingBox!.copy(bounds);
+        bounds.getBoundingSphere(mesh.boundingSphere!);
+      }
     }
     uploadChanged();
   };

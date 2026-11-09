@@ -30,9 +30,10 @@ import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceS
 // pipeline seam (DrawingPipeline.ts) it alone imports.
 //
 // - The buffers (D4): the instances' affine matrices and cull records (with their CPU copies, which
-//   writeInstances fills and uploads by range), their state words, and per slot the budgeted
-//   visible lists, the per-level counters and the draws' indirect args. The passes and the vertex
-//   fetch are InstanceSetNodes.ts. The state is the GPU's (the cull writes it), but an added range
+//   writeInstances fills; the ranges written upload at the next dispatch, a write touching the
+//   last one merged into it), their state words, and per slot the budgeted visible lists, the
+//   per-level counters and the draws' indirect args. The passes and the vertex fetch are
+//   InstanceSetNodes.ts. The state is the GPU's (the cull writes it), but an added range
 //   starts it (STATE_INITIAL) and a removed one stops it (STATE_REMOVED: the cull skips it) by
 //   uploading that range from the CPU array. Only once the buffer exists: three creates it from the
 //   whole array and keeps the update ranges added before, which the next upload would then write
@@ -68,6 +69,10 @@ import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceS
 
 /** Variant keys not copied from the source material: its identity and listeners. */
 const VARIANT_SKIPPED_KEYS = new Set(['uuid', 'id', '_listeners', 'version', 'userData', 'name']);
+/** The most separate write ranges kept for the next upload: past it they become one range over
+ * them all (the instances between uploaded too), so a set no render reaches (hidden) while its
+ * instances move keeps no growing list, and scattered writes cost a bounded number of uploads. */
+const MAX_PENDING_WRITES = 256;
 /** A slot no render reached for this many frames is released (D6). */
 const SLOT_RELEASE_FRAMES = 120;
 
@@ -339,6 +344,29 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   let extent = 0;
   /** The passes ran once: three created their buffers (the state's included) from the arrays. */
   let isDispatched = false;
+  /** The instances written since the last upload, as (start, end) pairs: a write touching the
+   * last pair merges into it, so writes in order (one instance a call) upload as one range. */
+  const pendingWrites: number[] = [];
+
+  /** Uploads the matrices and records written since the last dispatch: before this dispatch's
+   * passes read the records and its draws the matrices. Before the first, nothing: three creates
+   * the buffers from the whole arrays, and an update range added before would be uploaded again
+   * at the next update (`Attributes.update` doesn't clear them on create). */
+  const uploadWrites = () => {
+    if (pendingWrites.length === 0) return;
+    if (isDispatched) {
+      const { rows, records } = buffers;
+      for (let i = 0; i < pendingWrites.length; i += 2) {
+        const start = pendingWrites[i];
+        const count = pendingWrites[i + 1] - start;
+        rows.addUpdateRange(start * 12, count * 12);
+        records.addUpdateRange(start * 4, count * 4);
+      }
+      rows.needsUpdate = true;
+      records.needsUpdate = true;
+    }
+    pendingWrites.length = 0;
+  };
   let selectedFrame = -1;
   /** The main loop frame of the set's first dispatch. */
   let firstFrame = -1;
@@ -477,6 +505,7 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         const { normal, constant } = _frustum.planes[p];
         uniforms.planes[p].value.set(normal.x, normal.y, normal.z, constant);
       }
+      uploadWrites();
       uniforms.extent.value = extent;
       cull.count = Math.max(extent, 1);
       void gpu.compute(passes);
@@ -506,10 +535,25 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       recordsArray[record + 2] = matrices[m + 14];
       recordsArray[record + 3] = scale * recordRadius;
     }
-    buffers.rows.addUpdateRange(start * 12, count * 12);
-    buffers.rows.needsUpdate = true;
-    buffers.records.addUpdateRange(start * 4, count * 4);
-    buffers.records.needsUpdate = true;
+    // Uploaded at the next dispatch, merged with the last write when it touches it
+    const end = start + count;
+    const last = pendingWrites.length - 2;
+    if (last >= 0 && start <= pendingWrites[last + 1] && end >= pendingWrites[last]) {
+      pendingWrites[last] = Math.min(pendingWrites[last], start);
+      pendingWrites[last + 1] = Math.max(pendingWrites[last + 1], end);
+    } else if (pendingWrites.length < MAX_PENDING_WRITES * 2) {
+      pendingWrites.push(start, end);
+    } else {
+      // One range over every pending write and this one
+      let first = start;
+      let past = end;
+      for (let i = 0; i < pendingWrites.length; i += 2) {
+        first = Math.min(first, pendingWrites[i]);
+        past = Math.max(past, pendingWrites[i + 1]);
+      }
+      pendingWrites.length = 0;
+      pendingWrites.push(first, past);
+    }
   };
 
   /** Sets a range's state words (an added range's start, a removed one's stop), uploaded once the

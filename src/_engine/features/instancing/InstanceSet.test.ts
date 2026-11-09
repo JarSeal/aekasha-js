@@ -7,6 +7,7 @@ const env = vi.hoisted(() => ({
   /** The backend's calls: adds, rewrites and removals, and its extent after each change. */
   writes: [] as { start: number; matrices: Float32Array; count: number }[],
   removals: [] as { start: number; count: number }[],
+  rewrites: [] as { start: number; matrices: Float32Array; count: number }[],
   extent: 0,
   disposed: 0,
   params: null as unknown,
@@ -17,7 +18,8 @@ const env = vi.hoisted(() => ({
 const createStubBackend = vi.hoisted(() => () => ({
   addInstances: (start: number, matrices: Float32Array, count: number) =>
     env.writes.push({ start, matrices: matrices.slice(), count }),
-  writeInstances: () => {},
+  writeInstances: (start: number, matrices: Float32Array, count: number) =>
+    env.rewrites.push({ start, matrices: matrices.slice(), count }),
   removeInstances: (start: number, count: number) => env.removals.push({ start, count }),
   setExtent: (extent: number) => {
     env.extent = extent;
@@ -63,6 +65,7 @@ beforeEach(() => {
   env.isWebGPU = true;
   env.writes = [];
   env.removals = [];
+  env.rewrites = [];
   env.extent = 0;
   env.disposed = 0;
   env.params = null;
@@ -221,6 +224,49 @@ describe('InstanceSet: the ranges', () => {
     world.deleteEntity(set.entityId);
     expect(set.removeInstances(again)).toBe(false);
     expect(env.removals).toHaveLength(1);
+  });
+
+  test('moves instances of a live range from an offset, as placements or matrices', async () => {
+    const set = (await createInstanceSetAsync({ world, levels: levels(), maxInstances: 8 }))!;
+    set.addInstances([placeAt(0)]);
+    const range = set.addInstances([placeAt(1), placeAt(2), placeAt(3)])!;
+    expect(set.setInstanceMatrices(range, [placeAt(20, 2)], 2)).toBe(true);
+    const matrices = new Float32Array(32);
+    new THREE.Matrix4().makeTranslation(10, 0, 0).toArray(matrices, 0);
+    new THREE.Matrix4().makeTranslation(11, 0, 0).toArray(matrices, 16);
+    expect(set.setInstanceMatrices(range, matrices)).toBe(true);
+    expect(env.rewrites.map(({ start, count }) => [start, count])).toEqual([
+      [3, 1],
+      [1, 2],
+    ]);
+    expect(env.rewrites[0].matrices[12]).toBe(20);
+    expect(new THREE.Matrix4().fromArray(env.rewrites[0].matrices).getMaxScaleOnAxis()).toBeCloseTo(
+      2,
+      6
+    );
+    expect(env.rewrites[1].matrices[16 + 12]).toBe(11);
+    // Neither added nor removed
+    expect(set.count).toBe(4);
+    expect(env.writes).toHaveLength(2);
+  });
+
+  test('moves nothing outside the range, of a range not live, or once disposed', async () => {
+    const set = (await createInstanceSetAsync({ world, levels: levels(), maxInstances: 8 }))!;
+    const range = set.addInstances([placeAt(0), placeAt(1)])!;
+    expect(() => set.setInstanceMatrices(range, [placeAt(0)], 2)).toThrow("don't fit");
+    expect(() => set.setInstanceMatrices(range, [placeAt(0), placeAt(1), placeAt(2)])).toThrow(
+      "don't fit"
+    );
+    expect(() => set.setInstanceMatrices(range, [placeAt(0)], -1)).toThrow("don't fit");
+    expect(() => set.setInstanceMatrices(range, new Float32Array(8))).toThrow('16 floats');
+    // In part is a range it didn't give
+    expect(set.setInstanceMatrices({ start: 1, count: 1 }, [placeAt(0)])).toBe(false);
+    set.removeInstances(range);
+    expect(set.setInstanceMatrices(range, [placeAt(0)])).toBe(false);
+    const again = set.addInstances([placeAt(0)])!;
+    world.deleteEntity(set.entityId);
+    expect(set.setInstanceMatrices(again, [placeAt(0)])).toBe(false);
+    expect(env.rewrites).toEqual([]);
   });
 
   test("refuses matrices that aren't 16 floats each", async () => {
