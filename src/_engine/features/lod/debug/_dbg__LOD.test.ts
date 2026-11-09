@@ -47,6 +47,7 @@ import type { LodData } from '../LodTypes';
 import { registerLodContentDebugSource } from '../../../kernel/ecs/LodTargets';
 import {
   _createLodDebugGUI,
+  formatLodContentInfo,
   formatLodCounts,
   getLodContentLevelCount,
   getLodMeshListData,
@@ -203,7 +204,7 @@ describe('the LOD tab (p806 D11)', () => {
     tab.update.mockClear();
     expect(getLodContentLevelCount()).toBe(0);
 
-    const info = { label: 'forest', backend: 'GPU', levelCount: 7, instanceCount: 10 };
+    const info = { label: 'forest', backend: 'GPU', levelCount: 7, instanceCount: 10, stats: null };
     const remove = registerLodContentDebugSource({ getInfos: () => [info] });
     try {
       expect(getLodContentLevelCount()).toBe(7);
@@ -214,5 +215,53 @@ describe('the LOD tab (p806 D11)', () => {
       remove();
     }
     expect(getLodContentLevelCount()).toBe(0);
+  });
+
+  // p354 D11: the Instance sets folder
+  it("writes a set's readback per level, its lines the same before the first readback", () => {
+    const info = { label: 'forest', backend: 'GPU', levelCount: 2, instanceCount: 20_000 };
+    const waiting = formatLodContentInfo({ ...info, stats: null }).split('\n');
+    const read = formatLodContentInfo({
+      ...info,
+      stats: {
+        drawn: [221, 1_406],
+        selected: [991, 19_207],
+        culled: 0,
+        fading: 198,
+        overflow: 0,
+        triangles: 12_345_678,
+      },
+    }).split('\n');
+    expect(read).toEqual([
+      'GPU          20,000',
+      '     drawn/selected',
+      'L0          221/991',
+      'L1     1,406/19,207',
+      'Culled            0',
+      'Fading          198',
+      'Overflow          0',
+      // Past the width the value keeps a space
+      'Triangles 12,345,678',
+    ]);
+    expect(waiting).toHaveLength(read.length);
+    expect(waiting[2]).toBe('L0              —/—');
+  });
+
+  it('builds the Instance sets folder and rebuilds when a set comes', async () => {
+    getDef().onRefresh?.();
+    const pane = buildTab();
+    await Promise.resolve();
+    tab.update.mockClear();
+    expect(getFolder(pane.cmp.elem, 'Instance sets')).toBeTruthy();
+
+    const info = { label: 'forest', backend: 'GPU', levelCount: 1, instanceCount: 3, stats: null };
+    const remove = registerLodContentDebugSource({ getInfos: () => [info] });
+    try {
+      getDef().onRefresh?.();
+      await Promise.resolve();
+      expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+    } finally {
+      remove();
+    }
   });
 });

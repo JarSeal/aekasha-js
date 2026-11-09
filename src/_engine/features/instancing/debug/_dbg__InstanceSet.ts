@@ -1,6 +1,7 @@
 import type * as THREE from 'three/webgpu';
 import {
   type LodContentDebugInfo,
+  type LodContentDebugStats,
   registerLodContentDebugSource,
 } from '../../../kernel/ecs/LodTargets';
 import { getRenderer } from '../../../kernel/render/Renderer';
@@ -10,6 +11,7 @@ import {
   getLiveInstanceSets,
   type InstanceSet,
 } from '../InstanceSet';
+import type { InstancedLodPoolLevel } from '../InstancedMeshPool';
 import { LEVEL_CULLED, LEVEL_NONE } from '../InstanceSetNodes';
 import type { InstanceSetStats } from '../InstanceSetTypes';
 
@@ -67,11 +69,43 @@ export const _readInstanceSetStatsAsync = async (
 
 /** The live sets' infos, rewritten in place on each read. */
 const infos: LodContentDebugInfo[] = [];
+/** Each set's last readback for the LOD tab, and the sets with one on the way. */
+const lastStats = new WeakMap<InstanceSet, LodContentDebugStats>();
+const pendingReads = new WeakSet<InstanceSet>();
 
 let removeDebugSource: (() => void) | null = null;
 
+/** A level's triangles: its index (or vertices) over 3, every group. */
+const countTriangles = (level: InstancedLodPoolLevel) => {
+  const { geometry } = level;
+  const vertices = geometry.index ? geometry.index.count : geometry.getAttribute('position').count;
+  return Math.floor(vertices / 3);
+};
+
+/** Starts a readback of `set` for the LOD tab, unless one is on the way: its figures are the
+ * tab's from its next refresh. Only while the tab refreshes (it's open): nothing otherwise. */
+const requestStats = (set: InstanceSet, levels: readonly InstancedLodPoolLevel[]) => {
+  if (pendingReads.has(set)) return;
+  pendingReads.add(set);
+  void _readInstanceSetStatsAsync(set, { state: true })
+    .then((stats) => {
+      if (!stats?.state) return;
+      const { state } = stats;
+      lastStats.set(set, {
+        drawn: stats.drawn,
+        selected: state.levels,
+        culled: state.culled,
+        fading: state.fading,
+        overflow: stats.overflow.reduce((sum, n) => sum + n, 0),
+        triangles: stats.drawn.reduce((sum, n, i) => sum + n * countTriangles(levels[i]), 0),
+      });
+    })
+    .finally(() => pendingReads.delete(set));
+};
+
 /**
- * Lists the live sets in the LOD tab (once; the `instancing()` feature's `onDebug`).
+ * Lists the live sets in the LOD tab (once; the `instancing()` feature's `onDebug`), each with
+ * its last readback, which every read of the list (the tab's refresh) asks again for.
  * @internal
  */
 export const _registerInstanceSetDebugSource = () => {
@@ -81,11 +115,13 @@ export const _registerInstanceSetDebugSource = () => {
       for (const set of getLiveInstanceSets()) {
         const info = getInstanceSetDebugInfo(set);
         if (!info) continue;
+        requestStats(set, info.levels);
         infos.push({
           label: info.label,
           backend: set.backend,
-          levelCount: info.levelCount,
+          levelCount: info.levels.length,
           instanceCount: set.count,
+          stats: lastStats.get(set) ?? null,
         });
       }
       return infos;

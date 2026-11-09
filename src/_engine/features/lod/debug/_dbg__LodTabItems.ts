@@ -85,6 +85,28 @@ export const getLastFrameFolder = (stats: LodFrameStats): Item => {
   };
 };
 
+/** An instance set's field in the Instance sets folder: its lines, rewritten on each refresh. */
+export type InstanceSetField = { label: string; target: { text: string }; rows: number };
+
+/** "Instance sets" (p354 D11): a field per set, its label the set's, its lines
+ * `formatLodContentInfo`'s, read on the tab's refresh; a note without any. */
+export const getInstanceSetsFolder = (fields: readonly InstanceSetField[]): Item => ({
+  type: 'folder',
+  title: 'Instance sets',
+  content:
+    fields.length === 0
+      ? [getNoteItem('No instance sets in this scene.')]
+      : fields.map(({ label, target, rows }) => ({
+          key: 'text',
+          target,
+          label,
+          readonly: true,
+          multiline: true,
+          rows,
+          interval: 'refresh',
+        })),
+});
+
 /** "Selection": the global bias, the cap, freeze, a forced level and the camera, each with its
  * reset to the app's value. `levelCount` is the most levels an entity or an instance set has. */
 export const getSelectionFolder = (controls: LodControls, levelCount: number): Item => {

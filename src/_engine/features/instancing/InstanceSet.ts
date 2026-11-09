@@ -40,7 +40,12 @@ let hasWarnedNoCompute = false;
 /** Each set's backend, for the debug readback (`_dbg__InstanceSet.ts`). */
 const backendsBySet = new WeakMap<
   InstanceSet,
-  { backend: InstanceSetBackend; isDisposed: () => boolean; label: string; levelCount: number }
+  {
+    backend: InstanceSetBackend;
+    isDisposed: () => boolean;
+    label: string;
+    levels: readonly InstancedLodPoolLevel[];
+  }
 >();
 /** The live sets, for the LOD tab's list (the debug env only: production keeps none). */
 const liveSets = new Set<InstanceSet>();
@@ -316,7 +321,7 @@ export const createInstanceSetAsync = async (
     backend: drawer,
     isDisposed: () => isDisposed,
     label,
-    levelCount: levels.length,
+    levels,
   });
   if (IS_DEBUG_ENV) liveSets.add(set);
   return set;
@@ -329,13 +334,13 @@ export const createInstanceSetAsync = async (
 export const getLiveInstanceSets = (): ReadonlySet<InstanceSet> => liveSets;
 
 /**
- * A set's label (its owning entity's app id, or its entity id) and level count, for the debug
- * tools; undefined for a set this module didn't make.
+ * A set's label (its owning entity's app id, or its entity id) and levels, for the debug tools;
+ * undefined for a set this module didn't make.
  * @internal
  */
 export const getInstanceSetDebugInfo = (set: InstanceSet) => {
   const entry = backendsBySet.get(set);
-  return entry && { label: entry.label, levelCount: entry.levelCount };
+  return entry && { label: entry.label, levels: entry.levels };
 };
 
 /**

@@ -206,7 +206,8 @@ describe('InstanceSet: the debug list', () => {
     }))!;
     set.addInstances([placeAt(0), placeAt(1)]);
     expect(source.getInfos()).toEqual([
-      { label: 'debugListForest', backend: 'GPU', levelCount: 2, instanceCount: 2 },
+      // No renderer here: no readback
+      { label: 'debugListForest', backend: 'GPU', levelCount: 2, instanceCount: 2, stats: null },
     ]);
 
     world.deleteEntity(set.entityId);

@@ -122,6 +122,28 @@ export type LodContentDebugInfo = {
   levelCount: number;
   /** Its instances. */
   instanceCount: number;
+  /** Its last debug readback, null before the first (and for a backend without one). */
+  stats: LodContentDebugStats | null;
+};
+
+/**
+ * What LOD content without entities drew and selected, as its last debug readback had it.
+ * @internal
+ */
+export type LodContentDebugStats = {
+  /** Per level: the copies the main camera's last dispatch drew (a fading instance's two in both
+   * its levels). */
+  drawn: number[];
+  /** Per level: every instance's selected level (in view or not; a fading one in both). */
+  selected: number[];
+  /** Beyond the last level. */
+  culled: number;
+  /** Cross-fading. */
+  fading: number;
+  /** In view past a visible list's budget: not drawn. */
+  overflow: number;
+  /** The triangles the drawn copies make (three's `info.render` doesn't count indirect draws). */
+  triangles: number;
 };
 
 /**
