@@ -31,6 +31,8 @@ import type {
 const MAX_INSTANCE_SET_INSTANCES = 1 << 24;
 /** `maxVisible`'s default cap. */
 const DEFAULT_MAX_VISIBLE = 65_536;
+/** `maxSlots`' default (D6). */
+const DEFAULT_MAX_SLOTS = 8;
 
 /** Set by the `instancing()` feature's install: without it, deleting a set's entity frees nothing. */
 let areInstanceSetsInstalled = false;
@@ -74,6 +76,11 @@ export interface CreateInstanceSetOptions {
   /** The most instances one camera draws per level: the GPU backend's visible lists are sized by
    * it, and what's past it isn't drawn that frame. Default: `maxInstances`, at most 65,536. */
   maxVisible?: number;
+  /** The most cameras that draw the set at once (the view, a shadow, a viewport, the debug
+   * camera): the GPU backend keeps a slot per camera, its visible lists sized for all of them
+   * (`maxSlots` × levels × `maxVisible` × 4 bytes). A camera past it draws none of the set until
+   * a slot frees (one unused for 120 frames). Default 8. */
+  maxSlots?: number;
   /** The owning entity's options (eg. `persistent` for a set that outlives the scene). */
   entityOpts?: CoreEntityOpts;
 }
@@ -113,7 +120,15 @@ const refLevels = (levels: readonly InstancedLodPoolLevel[], isInc: boolean) => 
   }
 };
 
-/** Checks the options as an instanced LOD pool does, plus the set's limits; returns `maxVisible`. */
+const checkCount = (name: string, value: number) => {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`createInstanceSetAsync: ${name} (${value}) isn't a positive integer.`);
+  }
+  return value;
+};
+
+/** Checks the options as an instanced LOD pool does, plus the set's limits; returns `maxVisible`
+ * and `maxSlots`. */
 const checkOptions = (opts: CreateInstanceSetOptions) => {
   const { levels, maxInstances } = opts;
   if (levels.length === 0) throw new Error('createInstanceSetAsync: no levels.');
@@ -124,21 +139,20 @@ const checkOptions = (opts: CreateInstanceSetOptions) => {
       );
     }
   }
-  if (!Number.isInteger(maxInstances) || maxInstances < 1) {
-    throw new Error(
-      `createInstanceSetAsync: maxInstances (${maxInstances}) isn't a positive integer.`
-    );
-  }
+  checkCount('maxInstances', maxInstances);
   if (maxInstances > MAX_INSTANCE_SET_INSTANCES) {
     throw new Error(
       `createInstanceSetAsync: maxInstances (${maxInstances}) is over a set's ${MAX_INSTANCE_SET_INSTANCES} (2^24).`
     );
   }
-  const maxVisible = opts.maxVisible ?? Math.min(maxInstances, DEFAULT_MAX_VISIBLE);
-  if (!Number.isInteger(maxVisible) || maxVisible < 1) {
-    throw new Error(`createInstanceSetAsync: maxVisible (${maxVisible}) isn't a positive integer.`);
-  }
-  return Math.min(maxVisible, maxInstances);
+  const maxVisible = checkCount(
+    'maxVisible',
+    opts.maxVisible ?? Math.min(maxInstances, DEFAULT_MAX_VISIBLE)
+  );
+  return {
+    maxVisible: Math.min(maxVisible, maxInstances),
+    maxSlots: checkCount('maxSlots', opts.maxSlots ?? DEFAULT_MAX_SLOTS),
+  };
 };
 
 const _matrix = new THREE.Matrix4();
@@ -195,11 +209,13 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
  * rocks. An instanced LOD pool stays the choice for fewer, and for instances gameplay addresses
  * (an entity each: transforms, ECS tags, raycasts, spatial domains).
  *
- * Only the main camera draws a set for now (a shadow or another view draws none of it). The levels
- * need `lod()` for their selection: without it a set draws level 0.
+ * Every camera that renders a set (the view, a viewport, the debug camera, a snapshot) culls it
+ * against its own frustum, up to `maxSlots` cameras at once, and draws the levels selected against
+ * the LOD selection's camera. A shadow draws none of it yet. The levels need `lod()` for their
+ * selection: without it a set draws level 0.
  * @returns the set, or `null` when its world's scene exited while its backend loaded (the owning
  * entity was deleted): re-check after the `await`, as after any. It rejects on bad options (no
- * levels, `maxInstances` past 2^24, a bad `maxVisible`).
+ * levels, `maxInstances` past 2^24, a bad `maxVisible` or `maxSlots`).
  * @example
  * ```ts
  * import { getECSWorld, getRootScene } from 'aekasha';
@@ -224,7 +240,7 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
 export const createInstanceSetAsync = async (
   opts: CreateInstanceSetOptions
 ): Promise<InstanceSet | null> => {
-  const maxVisible = checkOptions(opts);
+  const { maxVisible, maxSlots } = checkOptions(opts);
   const { world, levels, maxInstances, receiveShadow = true } = opts;
   if (!areInstanceSetsInstalled && !hasWarnedNotInstalled) {
     hasWarnedNotInstalled = true;
@@ -258,6 +274,7 @@ export const createInstanceSetAsync = async (
     lod: opts.lod ?? {},
     maxInstances,
     maxVisible,
+    maxSlots,
     receiveShadow,
     label,
   };
@@ -353,9 +370,9 @@ export const getInstanceSetBackend = (set: InstanceSet) => {
 };
 
 /**
- * Reads back what a set drew in its last dispatch (the main camera's), per level, and with
- * `state: true` every instance's selected level counted: a GPU readback, for the debug tools and
- * measuring scenes. The debug env and prod test mode only; `null` elsewhere, for a set on the CPU
+ * Reads back what each camera drawing a set drew in its last dispatch, per level (the main
+ * camera's as `drawn` and `overflow`, every camera's in `slots`), and with `state: true` every
+ * instance's selected level counted: a GPU readback, for the debug tools and measuring scenes. The debug env and prod test mode only; `null` elsewhere, for a set on the CPU
  * backend, and for a disposed one.
  * @param set a set `createInstanceSetAsync` made
  * @param opts `state`: also read the whole state buffer (4 bytes per instance)

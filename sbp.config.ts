@@ -47,7 +47,10 @@ const profiles: SbpProfile[] = [
       groups: {
         three: 249 * KIB,
         '_engine/features/character': 5 * KIB,
-        '_engine/features/instancing': 4 * KIB,
+        // p354: the instance sets' front (createInstanceSetAsync, on the entry; its backends are
+        // lazy) took it to 3.9 KiB in Phase 1, and Phase 3's `maxSlots` option to 4.0 KiB (4,102 B):
+        // 4 → 5 KiB, for Phase 5's removeInstances / setInstanceMatrices on the front too
+        '_engine/features/instancing': 5 * KIB,
         '_engine/features/lines': 6 * KIB,
         '_engine/features/lod': 7 * KIB,
         '_engine/features/physics': 25 * KIB,

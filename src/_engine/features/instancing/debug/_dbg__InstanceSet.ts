@@ -4,6 +4,7 @@ import {
   type LodContentDebugStats,
   registerLodContentDebugSource,
 } from '../../../kernel/ecs/LodTargets';
+import { getMainCamera } from '../../../kernel/camera/Camera';
 import { getRenderer } from '../../../kernel/render/Renderer';
 import {
   getInstanceSetBackend,
@@ -13,15 +14,21 @@ import {
 } from '../InstanceSet';
 import type { InstancedLodPoolLevel } from '../InstancedMeshPool';
 import { LEVEL_CULLED, LEVEL_NONE } from '../InstanceSetNodes';
-import type { InstanceSetStats } from '../InstanceSetTypes';
+import type { InstanceSetSlotStats, InstanceSetStats } from '../InstanceSetTypes';
 
 // An instance set's debug readback (docs/plans/p354_gpu-driven-culling.md D11): the GPU backend's
-// counters and state words (the level and the outgoing one), read back after the GPU's queued work. Loaded by
-// `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod test mode.
+// counters per slot and state words (the level and the outgoing one), read back after the GPU's
+// queued work. Loaded by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod
+// test mode.
+
+/** A slot's camera, as the stats name it. */
+const getCameraName = (camera: THREE.Camera) =>
+  camera === getMainCamera() ? 'main' : camera.name || `${camera.type} ${camera.id}`;
 
 /**
- * Reads a set's last dispatch's counts per level and, with `state`, its state words counted.
- * Null for a set without a GPU backend, or disposed.
+ * Reads each slot's last dispatch's counts per level (the main camera's as `drawn` and
+ * `overflow`) and, with `state`, the state words counted. Null for a set without a GPU backend, or
+ * disposed.
  * @internal
  */
 export const _readInstanceSetStatsAsync = async (
@@ -32,16 +39,31 @@ export const _readInstanceSetStatsAsync = async (
   const renderer = getRenderer() as THREE.WebGPURenderer | null;
   if (!buffers || !renderer) return null;
   const { levelCount, maxVisible } = buffers;
-  // Both reads queued now, after this frame's work
+  // The slots as they are now, with both reads queued after this frame's work
+  const slots = buffers.getSlots().map(({ index, camera }) => ({
+    index,
+    camera: getCameraName(camera),
+  }));
   const countersRead = renderer.getArrayBufferAsync(buffers.counters);
   const stateRead = opts?.state ? renderer.getArrayBufferAsync(buffers.state) : null;
 
   const counters = new Uint32Array(await countersRead);
-  const stats: InstanceSetStats = { drawn: [], overflow: [] };
-  for (let level = 0; level < levelCount; level++) {
-    const appended = counters[level];
-    stats.drawn.push(Math.min(appended, maxVisible));
-    stats.overflow.push(Math.max(appended - maxVisible, 0));
+  const stats: InstanceSetStats = {
+    drawn: new Array<number>(levelCount).fill(0),
+    overflow: new Array<number>(levelCount).fill(0),
+    slots: [],
+  };
+  for (const { index, camera } of slots) {
+    const slot: InstanceSetSlotStats = { camera, drawn: [], overflow: [] };
+    for (let level = 0; level < levelCount; level++) {
+      const appended = counters[index * levelCount + level];
+      slot.drawn.push(Math.min(appended, maxVisible));
+      slot.overflow.push(Math.max(appended - maxVisible, 0));
+    }
+    stats.slots.push(slot);
+    if (camera !== 'main') continue;
+    stats.drawn = slot.drawn;
+    stats.overflow = slot.overflow;
   }
   if (!stateRead) return stats;
 

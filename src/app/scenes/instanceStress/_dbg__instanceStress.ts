@@ -343,6 +343,12 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
           },
         };
       }),
+    /** The set's readback now (every camera's slot; `state: true` adds the state counted), or
+     * null on the pool path */
+    stats: (state = false) => {
+      const set = instanceStressState.set;
+      return set ? readInstanceSetStatsAsync(set, { state }) : Promise.resolve(null);
+    },
     /** three's render pipeline cache keys (debug: what differs between two pipelines) */
     pipelineKeys: () => [
       ...((getRenderer() as unknown as RendererCaches | null)?._pipelines?.caches?.keys() ?? []),

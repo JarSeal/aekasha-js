@@ -28,12 +28,15 @@ import { LOD_FADE_END_EPSILON } from '../../utils/LodRules';
 // the vertex fetch, over the GPU backend's buffers (InstanceSetGpu.ts). Its own module so the
 // backend's bookkeeping and the shader code read apart; only the GPU backend imports it.
 //
-// Each dispatch runs three passes: the reset zeroes the per-level counters; the cull, one thread
-// per instance, first moves the instance's state (`utils/LodRules.ts`' `selectLodTarget` and
-// `stepLodInstanceState` ported line by line: their tests are this port's reference), then tests
-// its sphere against the camera's frustum and appends its copies to their levels' visible lists;
-// the finalize writes each level's count, capped at the list's budget, into each of its draws'
-// indirect args.
+// Each dispatch is one camera's slot (D6) and runs three passes: the reset zeroes the slot's
+// per-level counters; the cull, one thread per instance, first moves the instance's state
+// (`utils/LodRules.ts`' `selectLodTarget` and `stepLodInstanceState` ported line by line: their
+// tests are this port's reference), then tests its sphere against the camera's frustum and appends
+// its copies to the slot's visible lists of their levels; the finalize writes each of the slot's
+// level counts, capped at the list's budget, into each of its draws' indirect args. The lists,
+// counters and args hold every slot, one after another (a slot's part starts at its first (slot,
+// level), the `slotLevel` uniform), so every slot's draws read one lists buffer and share their
+// builds (D8).
 //
 // An instance's state (`utils/LodRules.ts`' `LodInstanceState`): its word, the level in bits 0-7
 // and the outgoing one (the level a cross-fade dissolves out of) in bits 8-15, with LEVEL_NONE (not
@@ -91,11 +94,11 @@ export type InstanceSetBuffers = {
   state: THREE.StorageBufferAttribute;
   /** Per instance: its fade's progress, 1 when none runs. */
   progress: THREE.StorageBufferAttribute;
-  /** Per level: `maxVisible` entries. */
+  /** Per (slot, level): `maxVisible` entries. */
   lists: THREE.StorageBufferAttribute;
-  /** Per level: the instances the cull appended (past `maxVisible` too). */
+  /** Per (slot, level): the instances the slot's cull appended (past `maxVisible` too). */
   counters: THREE.StorageBufferAttribute;
-  /** Per (level, group): a draw's indirect args. */
+  /** Per (slot, level, group): a draw's indirect args. */
   args: THREE.IndirectStorageBufferAttribute;
 };
 
@@ -113,6 +116,8 @@ export type InstanceSetPassesOptions = {
   buffers: InstanceSetBuffers;
   maxInstances: number;
   maxVisible: number;
+  /** The slots the lists, counters and args hold. */
+  maxSlots: number;
   selection: InstanceSetSelection;
   /** Args entries per level: the most draws (groups) a level has. */
   groupCount: number;
@@ -125,6 +130,8 @@ export type InstanceSetPassesOptions = {
 export type InstanceSetPassUniforms = {
   /** The instances to visit: the highest added + 1. */
   extent: THREE.UniformNode<'uint', number>;
+  /** The dispatch's slot's first (slot, level): slot × levels. */
+  slotLevel: THREE.UniformNode<'uint', number>;
   /** A `SELECT_MODE`. */
   mode: THREE.UniformNode<'uint', number>;
   /** The level `FORCE` puts every instance at (clamped to the last). */
@@ -148,7 +155,7 @@ export type InstanceSetPassUniforms = {
  * @internal
  */
 export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
-  const { buffers, maxInstances, maxVisible, selection, groupCount } = opts;
+  const { buffers, maxInstances, maxVisible, maxSlots, selection, groupCount } = opts;
   const { screenSizes, cullScreenSize, hysteresis } = selection;
   const levelCount = screenSizes.length;
   const last = levelCount - 1;
@@ -157,12 +164,13 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
   const records = storage(buffers.records, 'vec4', maxInstances).toReadOnly();
   const state = storage(buffers.state, 'uint', maxInstances);
   const progress = storage(buffers.progress, 'float', maxInstances);
-  const lists = storage(buffers.lists, 'uint', levelCount * maxVisible);
-  const counters = storage(buffers.counters, 'uint', levelCount).toAtomic();
+  const lists = storage(buffers.lists, 'uint', maxSlots * levelCount * maxVisible);
+  const counters = storage(buffers.counters, 'uint', maxSlots * levelCount).toAtomic();
   const args = storage(buffers.args, 'uint', buffers.args.array.length);
 
   const uniforms: InstanceSetPassUniforms = {
     extent: uniform(0, 'uint'),
+    slotLevel: uniform(0, 'uint'),
     mode: uniform(SELECT_MODE.HOLD, 'uint'),
     forceLevel: uniform(0, 'uint'),
     isFaded: uniform(0, 'uint'),
@@ -203,16 +211,17 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
   };
 
   const reset = Fn(() => {
-    atomicStore(counters.element(instanceIndex), uint(0));
+    atomicStore(counters.element(uniforms.slotLevel.add(instanceIndex)), uint(0));
   })().compute(levelCount);
 
-  /** Appends a copy of the instance to `level`'s visible list with its fade byte: within the
-   * budget; past it only counted (the debug readback's overflow). */
+  /** Appends a copy of the instance to the slot's visible list of `level` with its fade byte:
+   * within the budget; past it only counted (the debug readback's overflow). */
   const append = (level: THREE.Node<'uint'>, fadeByte: THREE.Node<'uint'>) => {
-    const slot = atomicAdd(counters.element(level), uint(1)).toVar();
-    If(slot.lessThan(uint(maxVisible)), () => {
+    const list = uniforms.slotLevel.add(level).toVar();
+    const at = atomicAdd(counters.element(list), uint(1)).toVar();
+    If(at.lessThan(uint(maxVisible)), () => {
       lists
-        .element(level.mul(maxVisible).add(slot))
+        .element(list.mul(maxVisible).add(at))
         .assign(instanceIndex.bitOr(fadeByte.shiftLeft(uint(24))));
     });
   };
@@ -294,19 +303,19 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
   })().compute(maxInstances);
 
   const finalize = Fn(() => {
-    const level = instanceIndex.div(groupCount);
-    const group = instanceIndex.mod(groupCount);
-    const counted = atomicLoad(counters.element(level)).toVar();
+    // The slot's draws are its part of the args, (level, group) in order
+    const list = uniforms.slotLevel.add(instanceIndex.div(groupCount)).toVar();
+    const counted = atomicLoad(counters.element(list)).toVar();
     const drawn = select(counted.lessThan(uint(maxVisible)), counted, uint(maxVisible));
-    args
-      .element(level.mul(groupCount).add(group).mul(ARGS_STRIDE).add(ARGS_INSTANCE_COUNT))
-      .assign(drawn);
+    const draw = uniforms.slotLevel.mul(groupCount).add(instanceIndex);
+    args.element(draw.mul(ARGS_STRIDE).add(ARGS_INSTANCE_COUNT)).assign(drawn);
   })().compute(levelCount * groupCount);
 
   return { uniforms, reset, cull, finalize };
 };
 
-/** A set draw's first visible list entry, on its mesh's `userData`. */
+/** A set draw's first visible list entry (its slot's list of its level), on its mesh's
+ * `userData`. */
 export const LIST_BASE_KEY = 'aekInstanceSetListBase';
 
 /**

@@ -972,6 +972,51 @@ From Phase 2 (its "As built"), for these steps:
 - **The compute with N slots** at 200k, 500k and 1M. If it passes about 2 ms at 1M with the sun,
   §5's single dispatch or cell pre-cull becomes a step here. Otherwise it's left for later.
 
+**As built** (step by step, 2026-11-09):
+
+- **Step 1, the slots.** `maxSlots` is an option (`CreateInstanceSetOptions`, default 8, a
+  positive integer; the front's three count checks share one helper). How a camera gets its slot
+  on its first render: the set's group holds a **probe**, a `Mesh` the hook always culls (empty
+  geometry, an invisible material: never listed under another pipeline either). three's
+  `StandardDrawingPipeline.project` reads an object's `children` after its own `isCulled`, so the
+  probe's `isCulled` picks the render's slot (found, or taken from the free ones) and the slot's
+  group under the probe is projected in that same render. **The lists, counters and args are one
+  buffer each, sized for `maxSlots` at creation**, not grown per slot (D6 said "on its first
+  dispatch"): the vertex fetch binds one lists buffer, which keeps every slot's draws on one build
+  (D8), and growing the args while a nested render takes a slot (the sun's, during the view's
+  draws) would move the buffer the outer render's draws still read. three r187 does rebind a
+  storage binding whose attribute changed (`Bindings._update`), but the outer draws would read the
+  new args without the outer dispatch's counts. A `slotLevel` uniform (slot × levels) puts each
+  dispatch in its slot's part; a slot's meshes read theirs through the list base and their own
+  indirect offset. A slot's draws are made on its index's first use and kept, detached, while it's
+  free. A slot no render reached for 120 main loop frames is released (checked once a frame, in a
+  render that reaches the set). Past `maxSlots` a camera draws none of the set, and the debug env
+  warns once per set. **A shadow render gets no slot until step 4** (`isShadowPassMaterial` on the
+  probe's root scene's `overrideMaterial`, three's shadow pass): its slot would draw every level,
+  and VSM draws a receiving level whatever its `castShadow`. `readInstanceSetStatsAsync` gained
+  `slots` (each camera's drawn and overflow per level: `main`, else its name, or its type and id;
+  `InstanceSetSlotStats`, public), while `drawn` and `overflow` stay the main camera's, which
+  `instanceStress`, the bench and the LOD tab read. `instanceStress`' `__aekInstanceStress` has
+  `stats(state?)` for page scripts.
+  - **D7's rule changed: the state moves in the frame's first dispatch after `lod()` wrote the
+    frame's inputs**, not in its first dispatch. With every camera dispatching, a dispatch could run
+    before the inputs existed: `compileAsync` at the scene's load, before the first frame. Phase 2's
+    code read the unwritten inputs as "no `lod()`": it warned, forced level 0, and the first real
+    selection then started from level 0, so the hysteresis kept a band of trees a level finer
+    (`instanceStress@set` failed the scene runner: mean 0.140, 0.26% changed). Now a dispatch whose
+    frame the inputs aren't from only reads the state, and "no `lod()`" is concluded only when
+    nothing was written a whole frame after the set's first dispatch (an app loop paused from the
+    boot would read as that too).
+  - The first frames' renders during a load go through the active camera, the debug camera until
+    the scene's main camera exists: it takes a slot then, released 120 frames later.
+  - Verified (Apple M2, Chrome, headless WebGPU, the dev server, debug env): `yarn verify:scenes
+    --only instanceStress` passes all 8 runs (`@set` in each configuration against its Phase 2
+    snapshot). A page check at 20k, `STILL`: the main camera's slot draws 207 / 1,427 / 3,421; F1
+    puts the debug camera in a slot of its own (drawing 0 / 21 / 21 in its frustum, the main
+    camera's levels), and 140 frames after F1 again only the main camera's slot is left.
+    `yarn sbp`: `features/instancing` 4,044 → 4,102 B gzip (the option), over its 4 KiB, raised
+    to 5 KiB in `sbp.config.ts` with that reason; the lazy `InstanceSetGpu.js` 4.1 → 4.8 kB gzip.
+
 ### Phase 4 — The CPU fallback (WebGL2)
 
 1. **`InstanceSetCpu.ts` (D9).** An `InstancedMesh` per level with its `lodFade` attribute. The

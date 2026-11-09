@@ -74,6 +74,25 @@ describe('createInstanceSetAsync: the options', () => {
     await expect(
       createInstanceSetAsync({ world, levels: levels(), maxInstances: 10, maxVisible: 0 })
     ).rejects.toThrow('maxVisible');
+    for (const maxSlots of [0, 2.5]) {
+      await expect(
+        createInstanceSetAsync({ world, levels: levels(), maxInstances: 10, maxSlots })
+      ).rejects.toThrow('maxSlots');
+    }
+  });
+
+  test('maxSlots defaults to 8', async () => {
+    const set = await createInstanceSetAsync({ world, levels: levels(), maxInstances: 10 });
+    expect((env.params as InstanceSetBackendParams).maxSlots).toBe(8);
+    const two = await createInstanceSetAsync({
+      world,
+      levels: levels(),
+      maxInstances: 10,
+      maxSlots: 2,
+    });
+    expect((env.params as InstanceSetBackendParams).maxSlots).toBe(2);
+    world.deleteEntity(set!.entityId);
+    world.deleteEntity(two!.entityId);
   });
 
   test('takes 2^24 instances, and maxVisible defaults to maxInstances up to 65,536', async () => {

@@ -43,6 +43,8 @@ export interface InstanceSetBackendParams {
   maxInstances: number;
   /** Visible instances per camera and level, at most (the GPU backend's list budget). */
   maxVisible: number;
+  /** Cameras drawing the set at once, at most (the GPU backend's slots). */
+  maxSlots: number;
   /** Whether the instances receive shadows (every level). */
   receiveShadow: boolean;
   /** For warnings and the debug tools: the owning entity's app id, or the entity id. */
@@ -77,7 +79,7 @@ export type CreateInstanceSetBackend = (params: InstanceSetBackendParams) => Ins
  * @internal
  */
 export interface InstanceSetDebugBuffers {
-  /** Per level: the instances the last dispatch appended (past the budget too). */
+  /** Per (slot, level): the instances the slot's last dispatch appended (past the budget too). */
   counters: THREE.StorageBufferAttribute;
   /** Per instance: its state word (`InstanceSetNodes.ts`). */
   state: THREE.StorageBufferAttribute;
@@ -87,15 +89,40 @@ export interface InstanceSetDebugBuffers {
   maxVisible: number;
   /** The instances added so far: the state's live part. */
   getExtent: () => number;
+  /** The slots a camera holds, by slot index. */
+  getSlots: () => readonly InstanceSetDebugSlot[];
+}
+
+/**
+ * A slot a camera holds in a GPU set (the debug readback's).
+ * @internal
+ */
+export interface InstanceSetDebugSlot {
+  /** Its index: its counters, lists and args are the index's part of each buffer. */
+  index: number;
+  /** The camera holding it: renders through it draw this slot's draws. */
+  camera: THREE.Camera;
+}
+
+/** One camera's draws of a set, as `readInstanceSetStatsAsync` reads them back. */
+export interface InstanceSetSlotStats {
+  /** The camera: `main` for the main camera, else its name, or its type and id. */
+  camera: string;
+  /** Per level: the instances its last dispatch drew (a cross-fading one in both its levels). */
+  drawn: number[];
+  /** Per level: the instances in its view past `maxVisible`, which weren't drawn. */
+  overflow: number[];
 }
 
 /** What `readInstanceSetStatsAsync` reads back of a set (debug only). */
 export interface InstanceSetStats {
-  /** Per level: the instances the last dispatch drew (the main camera's; a cross-fading one in
-   * both its levels). */
+  /** Per level: the instances the main camera's last dispatch drew (a cross-fading one in both its
+   * levels); zeros while the main camera has no slot. */
   drawn: number[];
-  /** Per level: the instances in view past `maxVisible`, which weren't drawn. */
+  /** Per level: the instances in the main camera's view past `maxVisible`, which weren't drawn. */
   overflow: number[];
+  /** Every camera that holds a slot, in slot order (the main camera's included). */
+  slots: InstanceSetSlotStats[];
   /** With `state: true`: every instance's selected level, counted (in view or not). */
   state?: {
     /** Per level: a cross-fading instance counts in both its levels (one fading to or from culled
