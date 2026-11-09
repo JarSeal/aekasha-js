@@ -1016,6 +1016,34 @@ From Phase 2 (its "As built"), for these steps:
     camera's levels), and 140 frames after F1 again only the main camera's slot is left.
     `yarn sbp`: `features/instancing` 4,044 → 4,102 B gzip (the option), over its 4 KiB, raised
     to 5 KiB in `sbp.config.ts` with that reason; the lazy `InstanceSetGpu.js` 4.1 → 4.8 kB gzip.
+- **Step 2, the dispatch per render.** It went in with step 1: `finishRenderList` dispatches the
+  sets whose probes the render's projection reached, each into the render's slot. **The order
+  holds, so no fallback to `begin`.** A trace of one frame with the sun's VSM shadow
+  (`?stressShadow=true`, 20k, `STILL`), wrapping three's own prototypes (the app's instance of
+  the prebundled `three_webgpu.js`, found by its resource entry) in a page:
+
+  ```
+  render Scene / PerspectiveCamera (the view) {
+    begin, finishRenderList, compute (the view's slot)
+    renderShadow DirectionalLight {
+      render Shadow Map / OrthographicCamera (the sun's) { begin, finishRenderList }
+    }
+    render Mesh / OrthographicCamera (the VSM blur, twice) { begin, finishRenderList }
+    begin, finishRenderList (the output pass's quad)
+  }
+  ```
+
+  The view's `finishRenderList` and its dispatch run before `ShadowNode.renderShadow` starts the
+  nested render. The shadow render dispatches nothing yet (step 1's gate); the blur and output
+  quads' scenes don't hold the set, so they dispatch nothing either. With step 1's reading of three
+  (each `compute` and each render submits on its own, in call order), every render's draws read its
+  own dispatch. `InstanceSetGpu.test.ts` covers the backend's hook in Node: three's real
+  `StandardDrawingPipeline.project` on a stub renderer, the passes a stand-in recording each
+  dispatch's mode and slot. It covers a slot taken and drawn in the camera's first render, each
+  camera drawing only its own slot, no slot or dispatch for another scene, a hidden set or a
+  shadow pass, the cap and the release after 120 frames, the dispose, and step 3's D7 cases.
+  Two mutations (every slot's draws passing the cull, the state moving before the inputs) each
+  fail it.
 
 ### Phase 4 — The CPU fallback (WebGL2)
 
