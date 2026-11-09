@@ -16,6 +16,13 @@ import { getLodTargets } from '../../kernel/ecs/LodTargets';
 import { decMaterialRef, getMaterialRegistry, incMaterialRef } from '../../kernel/assets/Material';
 import { preWarmMesh } from '../../kernel/mesh/Mesh';
 import { lwarn } from '../../utils/Logger';
+import {
+  advanceLodFade,
+  DEFAULT_LOD_HYSTERESIS,
+  getLodFadeDelta,
+  LOD_LEVEL_CULLED,
+  selectLodTarget,
+} from '../../utils/LodRules';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { getInstancedLodBounds } from './LodBounds';
@@ -81,10 +88,9 @@ export const registerLodDebugGUI = async () => {
 // instance: its bounds are level 0 over all its instances (LodBounds.ts), not one instance.
 //
 // The settings are in LodSettings.ts, the measuring in LodMeasure.ts, the cross-fades in
-// LodFades.ts; this module has the hooks, the selection, apply and fade systems and the install.
-
-/** A definition's `hysteresis` when it has none. */
-export const DEFAULT_LOD_HYSTERESIS = 0.1;
+// LodFades.ts, and the rules on plain numbers (the selection with its hysteresis, the cull test,
+// a fade's step), which instance sets share, in utils/LodRules.ts; this module has the hooks, the
+// selection, apply and fade systems and the install.
 
 const lodCulledHooks: ComponentHooks = {
   onAddComponent: (entityId, world) => {
@@ -358,35 +364,6 @@ const lodHooks: ComponentHooks = {
 
 // --- SELECTION ---
 
-/**
- * The level for screen size `s`, coming from level `current` (-1 = first selection). The finest
- * level whose screenSize `s` reaches (below all of them, the last level). A move to a finer level
- * happens at its screenSize; a move to a coarser one only once `s` is below the current level's
- * screenSize × (1 - hysteresis). Exported for its test.
- * @internal
- */
-export const selectLevel = (
-  levels: LodData['def']['levels'],
-  s: number,
-  current: number,
-  h: number
-) => {
-  const last = levels.length - 1;
-  let raw = last;
-  for (let i = 0; i < last; i++) {
-    if (s >= levels[i].screenSize) {
-      raw = i;
-      break;
-    }
-  }
-  if (current < 0 || raw <= current) return raw;
-  const f = 1 - h;
-  for (let i = current; i < last; i++) {
-    if (s >= levels[i].screenSize * f) return i;
-  }
-  return last;
-};
-
 /** Per world: entities whose selected level differs from the applied one, for lodApplySystem. */
 const pendingApplies = new WeakMap<ECSWorld, number[]>();
 
@@ -427,15 +404,20 @@ const selectEntity = (entityId: number, lod: LodData, world: ECSWorld, frame: Se
   if (maxScale < 0) return true;
   const s = getScreenSize(_objPos, lod.radius * maxScale, _terms) * (lod.def.bias ?? 1);
 
-  const h = lod.def.hysteresis ?? DEFAULT_LOD_HYSTERESIS;
-  const cull = lod.def.cullScreenSize ?? 0;
-  if (cull > 0 && s < (isCulled ? cull : cull * (1 - h))) {
+  // Coming back from culled, it comes from beyond the last level (selectLodTarget)
+  const target = selectLodTarget(
+    levels,
+    s,
+    isCulled ? LOD_LEVEL_CULLED : lod.level,
+    lod.def.cullScreenSize ?? 0,
+    lod.def.hysteresis ?? DEFAULT_LOD_HYSTERESIS
+  );
+  if (target === LOD_LEVEL_CULLED) {
     // Hidden: the level holds (no swap while nothing shows it)
     if (!isCulled) world.addComponent(entityId, ComponentType.TAG_LOD_CULLED, true);
     return true;
   }
-  // Coming back from culled, it comes from beyond the last level
-  lod.level = selectLevel(levels, s, isCulled ? levels.length - 1 : lod.level, h);
+  lod.level = target;
   if (isCulled) world.removeComponent(entityId, ComponentType.TAG_LOD_CULLED);
   if (lod.level !== lod.applied) frame.pending.push(entityId);
   return true;
@@ -593,8 +575,9 @@ export const lodApplySystem = (world: ECSWorld) => {
 
 /**
  * Advances every running cross-fade (the TAG_LOD_TRANSITIONING entities) by the frame's `dt` (times
- * the `fadeTimeScale` debug option) over its `fadeSeconds`, and ends the ones that are done. Runs
- * right after lodApplySystem, so a fade started this frame is drawn at its first step.
+ * the `fadeTimeScale` debug option) over its `fadeSeconds`, and ends the ones that are done (at
+ * 1 − `LOD_FADE_END_EPSILON`, utils/LodRules.ts). Runs right after lodApplySystem, so a fade
+ * started this frame is drawn at its first step.
  * Registered by the feature's install.
  * @internal
  */
@@ -619,7 +602,7 @@ export const lodFadeSystem = (world: ECSWorld, dt: number) => {
       continue;
     }
     const seconds = lod.def.fadeSeconds ?? globalSeconds;
-    const progress = seconds > 0 ? (lod._fade ?? 0) + step / seconds : 1;
+    const progress = advanceLodFade(lod._fade ?? 0, getLodFadeDelta(step, seconds));
     if (progress >= 1) {
       endFade(entityId, world, lod);
       continue;

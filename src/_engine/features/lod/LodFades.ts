@@ -10,6 +10,7 @@ import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { setMeshGeometry, setMeshMaterial } from '../../kernel/mesh/Mesh';
 import { clearLodObjectFade, LOD_FADE_OPAQUE, setLodObjectFade } from '../../kernel/render/LodFade';
+import { isLodChangeFaded } from '../../utils/LodRules';
 import { getLodFadeSeconds } from './LodSettings';
 import type { LodData, LodResolvedLevel } from './LodTypes';
 
@@ -243,8 +244,7 @@ export const prepareChange = (
   endFade(entityId, world, lod);
   return (
     !areFadesSuppressed &&
-    (lod.applied >= 0 || isShowing) &&
-    getFadeSeconds(lod) > 0 &&
+    isLodChangeFaded(lod.applied >= 0 || isShowing, getFadeSeconds(lod)) &&
     canFade(entityId, world, lod)
   );
 };
