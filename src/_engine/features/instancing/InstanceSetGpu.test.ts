@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { float, vec3 } from 'three/tsl';
+import { float, mat4, vec3 } from 'three/tsl';
 
 // p354 Phase 3: the GPU backend's slots and dispatches (D5-D7), without a GPU. three's own
 // `StandardDrawingPipeline.project` drives the engine's pipeline on a stub renderer, whose
@@ -24,6 +24,8 @@ const env = vi.hoisted(() => ({
   renderer: null as unknown,
   /** The latest set's buffers, as the passes got them */
   buffers: null as unknown,
+  /** Each set's fetch (its stand-in), in creation order */
+  fetches: [] as unknown[],
 }));
 
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
@@ -67,13 +69,21 @@ vi.mock(import('./InstanceSetNodes'), async (importOriginal) => {
         finalize: { dispose: () => {} },
       };
     },
-    createInstanceSetFetch: () => ({ position: vec3(0), fade: float(1) }),
+    createInstanceSetFetch: () => {
+      const fetch = { position: vec3(0), matrix: mat4(new THREE.Matrix4()), fade: float(1) };
+      env.fetches.push(fetch);
+      return fetch;
+    },
   } as unknown as typeof original;
 });
 
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { createGpuInstanceSetBackend } from './InstanceSetGpu';
 import { SELECT_MODE, STATE_INITIAL, STATE_REMOVED } from './InstanceSetNodes';
+import {
+  drawnInstanceMatrix,
+  setMaterialPositionsInstances,
+} from '../../kernel/render/InstanceMatrix';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
 import type { InstanceSetBuffers } from './InstanceSetNodes';
 
@@ -134,7 +144,14 @@ const material = new THREE.MeshBasicNodeMaterial();
 const LEVELS = 2;
 
 /** A set of two levels: the first casts shadows (unless `noneCast`), the second doesn't. */
-const createSet = (opts: { maxSlots?: number; noneCast?: boolean; maxInstances?: number } = {}) => {
+const createSet = (
+  opts: {
+    maxSlots?: number;
+    noneCast?: boolean;
+    maxInstances?: number;
+    material?: THREE.Material;
+  } = {}
+) => {
   const object = new THREE.Group();
   const params: InstanceSetBackendParams = {
     // The GPU backend reads no world
@@ -147,7 +164,12 @@ const createSet = (opts: { maxSlots?: number; noneCast?: boolean; maxInstances?:
         screenSize: 0.1,
         castShadow: !opts.noneCast,
       },
-      { geometry: new THREE.BoxGeometry(), material, screenSize: 0, castShadow: false },
+      {
+        geometry: new THREE.BoxGeometry(),
+        material: opts.material ?? material,
+        screenSize: 0,
+        castShadow: false,
+      },
     ],
     lod: {},
     maxInstances: opts.maxInstances ?? 16,
@@ -475,5 +497,51 @@ describe('the GPU backend: moving instances (p354 Phase 5 step 2)', () => {
         true
       );
     }
+  });
+});
+
+describe('the GPU backend: materials that place each instance (p354 Phase 5 step 4)', () => {
+  type Fetch = { position: THREE.Node; matrix: THREE.Node };
+  const positionOf = (draw: THREE.Object3D) =>
+    ((draw as THREE.Mesh).material as THREE.NodeMaterial).positionNode as THREE.Node & {
+      inner?: THREE.Node;
+    };
+
+  test("keeps an impostor's positionNode, under a key of each set's, and gives its draws the set's matrix", () => {
+    const impostor = new THREE.MeshBasicNodeMaterial();
+    impostor.positionNode = vec3(1, 2, 3);
+    setMaterialPositionsInstances(impostor);
+    const camera = createCamera();
+    const first = createSet({ material: impostor });
+    const second = createSet({ material: impostor });
+    const [firstFetch, secondFetch] = env.fetches.slice(-2) as Fetch[];
+    const [plainA, impostorA] = render(first.scene, camera);
+    const [, impostorB] = render(second.scene, camera);
+
+    // The plain level draws through the fetch; the impostor keeps its billboard
+    expect(positionOf(plainA)).toBe(firstFetch.position);
+    expect(positionOf(impostorA).inner).toBe(impostor.positionNode);
+    expect(positionOf(impostorB).inner).toBe(impostor.positionNode);
+    // Two sets' variants build apart (a build is keyed by its material's nodes)
+    expect(positionOf(impostorA).getCacheKey(true)).not.toBe(
+      positionOf(impostorB).getCacheKey(true)
+    );
+    // Each draw reads its own set's fetched matrix, whatever builds it (the shadow pass too)
+    const matrixFor = (draw: THREE.Object3D) =>
+      (drawnInstanceMatrix as unknown as THREE.Node).setup({
+        object: draw,
+        material: new THREE.MeshBasicNodeMaterial(),
+      } as unknown as THREE.NodeBuilder);
+    expect(matrixFor(impostorA)).toBe(firstFetch.matrix);
+    expect(matrixFor(impostorB)).toBe(secondFetch.matrix);
+  });
+
+  test("replaces an unmarked material's own positionNode with the fetch", () => {
+    const moved = new THREE.MeshBasicNodeMaterial();
+    moved.positionNode = vec3(1, 2, 3);
+    const { scene } = createSet({ material: moved });
+    const fetch = env.fetches.at(-1) as Fetch;
+    const [, draw] = render(scene, createCamera());
+    expect(positionOf(draw)).toBe(fetch.position);
   });
 });

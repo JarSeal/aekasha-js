@@ -1548,6 +1548,59 @@ From Phase 4 (its "As built"), for these steps:
     instanceStress`: all 8 runs. `yarn sbp`: every budget within, the engine's groups unchanged
     by this step (`features/instancing` 4.6 kB); the lazy `instanceStress.js` 2.8 → 4.1 kB (the
     streaming module and the scene's enter list), on the scene's own chunk.
+- **Step 4, impostor levels.** As D8, with these names and one addition:
+  - **`kernel/render/InstanceMatrix.ts`**: `drawnInstanceMatrix` (named for what it is, not
+    `instanceSetMatrix`: it serves InstancedMeshes too), a node resolved at setup by the drawn
+    object: an InstancedMesh's `instanceMatrix` (three's `referenceAttribute`, one node for every
+    InstancedMesh: p058's shared build), an object's own node (`setObjectInstanceMatrixNode`), else
+    the identity. It's keyed on the object, as `setObjectLodFadeNode` is, so the shadow pass's
+    builds (the drawn object with the shadow pass's material) resolve it too.
+    `setMaterialPositionsInstances` / `doesMaterialPositionInstances` mark a material whose
+    `positionNode` places each instance itself. All `@internal`; neither feature imports the other.
+  - `OctahedralImpostorMaterial.ts` reads `drawnInstanceMatrix` (its own setup-time node went), and
+    `buildOctahedralImpostor` marks its material. The pools' impostors draw as before (below).
+  - The GPU backend's fetch returns `matrix` too (the rows as a `mat4`'s columns). A marked
+    source's variant keeps its `positionNode` and each draw gets `fetch.matrix`; an unmarked one's
+    is replaced by the fetch, with the debug warning, as before.
+  - **Added: the kept `positionNode` is wrapped per set** (`SetPositionNode`, a node whose setup is
+    the source's). A build is keyed by its material's nodes, and each node's key includes its id
+    (`Node.customCacheKey`), so two sets' variants of one impostor would share a build, the shadow
+    pass's too (its override material takes the variant's `positionNode`), and the second set would
+    draw the first one's instances. A plain material's variants differ already: their
+    `positionNode` is the set's own fetch.
+  - Cross-quads are plain geometry (no `positionNode`): nothing to build, as the plan said. On the
+    CPU backend a level mesh is an InstancedMesh, so the impostor reads three's `instanceMatrix`.
+  - Tests: `InstanceMatrix.test.ts` (the InstancedMesh's shared reference, an object's node in its
+    own and another material's build, the identity, the mark), and the GPU backend's (a marked
+    material keeps its `positionNode` under a key of each set's, each draw resolves its own set's
+    matrix whatever material builds it; an unmarked one's own is replaced).
+  - `instanceStress` gained `?stressImpostor=crossQuads|octahedral`: the last level an impostor
+    of level 0 (`generateCrossQuads`, or `generateOctahedralImpostor` hemi), baked at the load,
+    casting shadows, on both paths. Building the coarsest mesh level anyway left a registered
+    geometry no level held, which a reload found again (a warning): only the levels used are
+    built.
+  - **Verified** (20k, `STILL`, no fades, 1024 × 576, Apple M2, Chrome, headless WebGPU, the dev
+    server, debug env): the set's snapshot against the pools':
+
+    | Last level | Shadow | Set (GPU) vs pools | Set (CPU, forced) vs pools | The shadow slot drew (L0 / L1 / L2) |
+    | --- | --- | --- | --- | --- |
+    | Cross-quads | none | mean 0.0003, 1 pixel over 8/255 | | |
+    | Cross-quads | the sun's VSM | mean 0.0006, max 18/255 | | 578 / 2,437 / 1,193 |
+    | Octahedral | none | mean 0.0001, 1 pixel over 8/255 | identical | |
+    | Octahedral | the sun's VSM | mean 0.0003, max 18/255 | identical | 574 / 2,433 / 1,186 |
+
+    The state per level is the pools' in every case (861 / 4,763 / 14,376), no console error. A
+    mutation (the draws not given `fetch.matrix`, so the billboard reads the identity) changes
+    3.1% of the pixels (mean 3.73): every impostor at the origin.
+  - **The pools' impostors draw as before**: `yarn verify:scenes --only
+    lodShowcase,largeWorld,instanceStress` passes all 17 runs, and `streamingGrid` (its far rocks
+    an InstancedMesh of an octahedral impostor; no local baseline, so recorded on the step's
+    parent first, the changes stashed) all 5, identical. `yarn test` (322 files), lint and both
+    type-checks pass. `yarn sbp`: every budget within; `features/lod` 5.4 kB and
+    `features/instancing` 4.6 kB unchanged; `InstanceMatrix.ts` is a lazy chunk of its own
+    (0.3 kB, shared by the GPU backend and the impostor code), the GPU backend 5.1 → 5.3 kB, and
+    the app's lazy `Foliage.js` 0.6 → 2.7 kB (Rollup moved the impostor generators into the chunk
+    the tree scenes share, now that `instanceStress` imports them too).
 
 **Verification:**
 

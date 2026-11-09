@@ -7,6 +7,10 @@ import {
   type DrawingPipelineHook,
 } from '../../kernel/render/DrawingPipeline';
 import { enableLodDither, setObjectLodFadeNode } from '../../kernel/render/LodFade';
+import {
+  doesMaterialPositionInstances,
+  setObjectInstanceMatrixNode,
+} from '../../kernel/render/InstanceMatrix';
 import { getRenderer } from '../../kernel/render/Renderer';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lwarn } from '../../utils/Logger';
@@ -197,10 +201,37 @@ const getLevelDraws = (level: InstancedLodPoolLevel): LevelDraw[] => {
     }));
 };
 
+/**
+ * A node standing in for another under an id of its own: a set's copy of a self-positioning
+ * material's `positionNode`. A build is keyed by its material's nodes (each node's key includes its
+ * id), so two sets' variants of one impostor would share a build, the shadow pass's too (its
+ * material takes the variant's `positionNode`), and the second set would draw the first one's
+ * instances: the stand-in keys each set's apart.
+ */
+class SetPositionNode extends THREE.Node {
+  static get type() {
+    return 'InstanceSetPositionNode';
+  }
+
+  readonly inner: THREE.Node;
+
+  constructor(inner: THREE.Node) {
+    super('vec3');
+    this.inner = inner;
+  }
+
+  setup() {
+    return this.inner;
+  }
+}
+
 /** A node variant of `source` drawing through the set's fetch: its values copied (not its
  * identity or listeners, so disposing the variant leaves the source be), its own mask kept, the
  * LOD dither added to the source first (as a pool does to its level materials; each draw gives it
- * the drawn copy's fade, `setObjectLodFadeNode`). */
+ * the drawn copy's fade, `setObjectLodFadeNode`). A material that places each instance itself
+ * (`doesMaterialPositionInstances`: the octahedral impostor's billboard) keeps its `positionNode`,
+ * which reads each draw's fetched matrix (`setObjectInstanceMatrixNode`); any other's is the
+ * fetch. */
 const createVariant = (
   renderer: THREE.Renderer,
   source: THREE.Material,
@@ -216,13 +247,16 @@ const createVariant = (
       node as unknown as Record<string, unknown>
     )[key];
   }
-  if (IS_DEBUG_ENV && node.positionNode) {
+  const isSelfPositioned = doesMaterialPositionInstances(source) && Boolean(node.positionNode);
+  if (IS_DEBUG_ENV && node.positionNode && !isSelfPositioned) {
     lwarn(
       `Instance set "${label}": material "${source.name || source.type}" has its own positionNode, which the set's instance fetch replaces.`
     );
   }
   variant.name = `${source.name || source.type} (instance set)`;
-  variant.positionNode = position;
+  variant.positionNode = isSelfPositioned
+    ? (new SetPositionNode(node.positionNode!) as unknown as THREE.Node<'vec3'>)
+    : position;
   variant.needsUpdate = true;
   return variant;
 };
@@ -394,8 +428,10 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         mesh.receiveShadow = params.receiveShadow;
         mesh.userData[LIST_BASE_KEY] = slotLevel * maxVisible;
         mesh.name = `${label} slot ${slot.index} level ${level} group ${drawGroup}`;
-        // Before its first build: the drawn copy's fade, in the shadow pass too
+        // Before its first build: the drawn copy's fade, in the shadow pass too, and its matrix
+        // for a material that places each instance itself
         setObjectLodFadeNode(mesh, fetch.fade);
+        setObjectInstanceMatrixNode(mesh, fetch.matrix);
         setObjects.set(mesh, { set, slot, casts: casts[level] });
         meshes.push(mesh);
         group.add(mesh);

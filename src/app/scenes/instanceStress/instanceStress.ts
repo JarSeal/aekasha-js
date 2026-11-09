@@ -23,7 +23,7 @@ import {
   type InstanceRange,
   type InstanceSet,
 } from 'aekasha/instancing';
-import type { LodDef } from 'aekasha/lod';
+import { generateCrossQuads, generateOctahedralImpostor, type LodDef } from 'aekasha/lod';
 import { generateTreeGeometry } from 'aekasha/toolkit/geometry';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 import { loadDebugModuleAsync } from 'aekasha/debug';
@@ -77,6 +77,11 @@ export type InstanceStressCameraMode = 'ORBIT' | 'STILL';
  * renderer's: compute on WebGPU, the CPU on WebGL2) */
 export type InstanceStressPath = 'CPU' | 'GPU';
 
+/** What draws the last level: the tree's coarsest mesh, or an impostor baked from level 0 (p354
+ * Phase 5 step 4: a set's levels ending in cross-quads, plain geometry, or in an octahedral
+ * impostor, whose material places each instance itself) */
+export type InstanceStressImpostor = 'NONE' | 'CROSS_QUADS' | 'OCTAHEDRAL';
+
 /** A shadow-casting light over the still camera's view besides the sun (p354 Phase 3 step 4):
  * a spot light's shadow (one camera) or a point light's (six faces of one camera) */
 export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
@@ -84,7 +89,7 @@ export type InstanceStressLight = 'NONE' | 'SPOT' | 'POINT';
 /** The scene's settings: read at every load, so a change applies on the next load. Overridden by
  * `?stressInstances=`, `?stressTile=`, `?stressCamera=`, `?stressPath=`, `?stressShadow=`,
  * `?stressLight=`, `?stressViewport=`, `?stressMove=`, `?stressStream=`, `?stressStreamFar=` and
- * `?stressOrbitSeconds=` (the measuring harness's). */
+ * `?stressOrbitSeconds=` and `?stressImpostor=` (the measuring harness's). */
 export const instanceStressSettings = {
   count: 20_000,
   /** Trees on a tile's side: a tile is one pool of up to `tileSide²` instances */
@@ -107,6 +112,8 @@ export const instanceStressSettings = {
   stream: 0,
   /** The streamed cells' far ring; undefined: the set's cull distance's (no tree pops) */
   streamFar: undefined as number | undefined,
+  /** The last level an impostor of level 0 (both paths), casting shadows */
+  impostor: 'NONE' as InstanceStressImpostor,
   /** The LOD cross-fades' seconds on both paths (`LodDef.fadeSeconds`); undefined: the global
    * setting (`getLodFadeSeconds`) */
   fadeSeconds: undefined as number | undefined,
@@ -173,6 +180,9 @@ const readUrlOverrides = () => {
   instanceStressSettings.stream = stream >= 32 ? 2 ** Math.round(Math.log2(stream)) : 0;
   const streamFar = Number(params.get('stressStreamFar'));
   instanceStressSettings.streamFar = streamFar >= 1 ? Math.round(streamFar) : undefined;
+  const impostor = params.get('stressImpostor')?.toUpperCase();
+  instanceStressSettings.impostor =
+    impostor === 'CROSSQUADS' ? 'CROSS_QUADS' : impostor === 'OCTAHEDRAL' ? 'OCTAHEDRAL' : 'NONE';
   const orbitSeconds = Number(params.get('stressOrbitSeconds'));
   if (orbitSeconds > 0) instanceStressSettings.orbitSeconds = orbitSeconds;
   const light = params.get('stressLight')?.toUpperCase();
@@ -186,8 +196,10 @@ const readUrlOverrides = () => {
   instanceStressSettings.orbitHold = params.get('stressOrbitHold') === 'true';
 };
 
-const createLevelGeometries = () =>
-  LEVEL_SEGMENTS.map((radialSegments, i) =>
+/** The tree's mesh levels, the first `count` of them (an impostor replaces the last: building
+ * its mesh anyway left a registered geometry no level held, which the next load found again) */
+const createLevelGeometries = (count = LEVEL_SEGMENTS.length) =>
+  LEVEL_SEGMENTS.slice(0, count).map((radialSegments, i) =>
     saveBufferGeometry(generateTreeGeometry({ ...TREE, radialSegments }).geometry, {
       id: `instanceStressTreeLod${i}`,
     })
@@ -207,13 +219,33 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** Both paths' levels: the tree's three mesh levels, its trunk and foliage materials */
 const createForestLevels = (): InstancedLodPoolLevel[] => {
   const materials = createTreeMaterials();
-  return createLevelGeometries().map((geometry, i) => ({
+  const { impostor } = instanceStressSettings;
+  const meshLevels = impostor === 'NONE' ? LEVEL_SEGMENTS.length : LEVEL_SEGMENTS.length - 1;
+  const levels: InstancedLodPoolLevel[] = createLevelGeometries(meshLevels).map((geometry, i) => ({
     geometry,
     material: materials,
     screenSize: LEVEL_SCREEN_SIZES[i],
     // The coarsest level casts no shadow, as a far level usually wouldn't
     castShadow: i < LEVEL_SEGMENTS.length - 1,
   }));
+  if (impostor === 'NONE') return levels;
+  // Baked from level 0 at the load (a scene's assets: registered, so a reload reuses them), and
+  // casting, so the shadow pass draws it too
+  const source = levels[0].geometry;
+  const baked =
+    impostor === 'CROSS_QUADS'
+      ? generateCrossQuads(source, materials, { id: 'instanceStressTreeCross' })
+      : generateOctahedralImpostor(source, materials, {
+          id: 'instanceStressTreeOctahedral',
+          hemi: true,
+        });
+  levels.push({
+    geometry: baked.geometry,
+    material: baked.material,
+    screenSize: LEVEL_SCREEN_SIZES[meshLevels],
+    castShadow: true,
+  });
+  return levels;
 };
 
 /** Both paths' LOD settings */

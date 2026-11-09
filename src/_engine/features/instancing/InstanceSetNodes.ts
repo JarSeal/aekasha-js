@@ -11,6 +11,7 @@ import {
   dot,
   float,
   instanceIndex,
+  mat4,
   max,
   normalLocal,
   positionLocal,
@@ -351,8 +352,10 @@ export const LIST_BASE_KEY = 'aekInstanceSetListBase';
  * (uniform scale: normalized where it's used). The meshes then share their material's build,
  * whatever the level and group.
  * @internal
- * @returns `position`, the `positionNode`, and `fade`, a flat varying (every vertex of a copy has
- * the same, so the two copies of a fade split the pixels exactly)
+ * @returns `position`, the `positionNode`; `matrix`, the instance's matrix, for a material that
+ * places each instance itself (`drawnInstanceMatrix`, kernel/render/InstanceMatrix.ts: the
+ * octahedral impostor's billboard), which keeps its own `positionNode`; and `fade`, a flat varying
+ * (every vertex of a copy has the same, so the two copies of a fade split the pixels exactly)
  */
 export const createInstanceSetFetch = (
   buffers: InstanceSetBuffers,
@@ -380,5 +383,18 @@ export const createInstanceSetFetch = (
     const p = vec4(positionLocal, 1);
     return vec3(dot(r0, p), dot(r1, p), dot(r2, p));
   })();
-  return { position, fade };
+  // The rows as a matrix's columns (the affine's last row 0, 0, 0, 1)
+  const matrix = Fn(() => {
+    const row = entry.bitAnd(ENTRY_INSTANCE_MASK).mul(3).toVar();
+    const r0 = rows.element(row).toVar();
+    const r1 = rows.element(row.add(1)).toVar();
+    const r2 = rows.element(row.add(2)).toVar();
+    return mat4(
+      vec4(r0.x, r1.x, r2.x, 0),
+      vec4(r0.y, r1.y, r2.y, 0),
+      vec4(r0.z, r1.z, r2.z, 0),
+      vec4(r0.w, r1.w, r2.w, 1)
+    );
+  })() as unknown as THREE.Node<'mat4'>;
+  return { position, matrix, fade };
 };

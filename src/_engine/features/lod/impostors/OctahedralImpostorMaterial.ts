@@ -10,11 +10,13 @@
 //
 // The billboard needs each instance's centre and rotation, but three (r186, r187) multiplies
 // `positionLocal` by the instance matrix before `positionNode` runs (`NodeMaterial.setupPosition`,
-// `Instance.js`). So the material reads the instance matrix a second time: `impostorInstanceMatrix`
-// is three r187's `referenceAttribute('instanceMatrix', 'mat4')`, bound per drawn mesh (so
-// impostor InstancedMeshes on one material share a build,
-// docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), and reads
-// `positionGeometry`, the quad's corners before any transform. On a plain mesh it's the identity.
+// `Instance.js`). So the material reads the instance matrix a second time, through the kernel's
+// `drawnInstanceMatrix` (kernel/render/InstanceMatrix.ts), resolved per drawn object: an
+// InstancedMesh's `instanceMatrix` through three r187's `referenceAttribute`, bound per drawn mesh
+// (so impostor InstancedMeshes on one material share a build,
+// docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), an instance
+// set's draw's fetched matrix (docs/plans/p354_gpu-driven-culling.md D8), else the identity; and it
+// reads `positionGeometry`, the quad's corners before any transform.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):
 // there the quad faces the light and shows the frames seen from it, so the impostor casts its own
@@ -36,12 +38,10 @@ import {
   floor,
   Fn,
   mat3,
-  mat4,
   max,
   min,
   modelWorldMatrix,
   positionGeometry,
-  referenceAttribute,
   select,
   smoothstep,
   texture,
@@ -54,6 +54,7 @@ import {
   viewZToReversedOrthographicDepth,
   viewZToReversedPerspectiveDepth,
 } from 'three/tsl';
+import { drawnInstanceMatrix } from '../../../kernel/render/InstanceMatrix';
 import { IMPOSTOR_DEPTH_MIN } from './ImpostorBake';
 import {
   decodeOctahedralNode,
@@ -62,37 +63,6 @@ import {
 } from './Octahedral';
 import type { ImpostorAtlasVOrigin } from './ImpostorFormat';
 import type { OctahedralImpostorLayout } from './OctahedralImpostor';
-
-// --- THE INSTANCE MATRIX, READ A SECOND TIME ---
-
-const IDENTITY = new THREE.Matrix4();
-/** three's own per-object binding of an InstancedMesh's matrices (r187), so builds are shared. */
-const instanceMatrixReference = referenceAttribute('instanceMatrix', 'mat4');
-
-/**
- * The drawn object's instance matrix: an InstancedMesh's per instance, else the identity.
- * @remarks three (r186, r187) multiplies `positionLocal` by the instance matrix before
- * `positionNode` runs (`NodeMaterial.setupPosition`), so the billboard reads the matrix again
- * through three's `referenceAttribute`, which binds the drawn mesh's own `instanceMatrix` at draw
- * time: every InstancedMesh on the material shares one build. A plain mesh's build key differs
- * from an InstancedMesh's (its instance data), so each keeps the branch it was built with.
- */
-class ImpostorInstanceMatrixNode extends THREE.Node {
-  static get type() {
-    return 'ImpostorInstanceMatrixNode';
-  }
-
-  constructor() {
-    super('mat4');
-  }
-
-  setup(builder: THREE.NodeBuilder) {
-    const mesh = builder.object as THREE.InstancedMesh | null;
-    return mesh?.isInstancedMesh ? instanceMatrixReference : mat4(IDENTITY);
-  }
-}
-
-const impostorInstanceMatrix = new ImpostorInstanceMatrixNode() as unknown as THREE.Node<'mat4'>;
 
 // --- THE MATERIAL ---
 
@@ -149,7 +119,7 @@ const createImpostorVertexNodes = (layout: OctahedralImpostorLayout) => {
 
   // The camera in the instance's space, relative to its centre (an orthographic camera's forward
   // is the same everywhere, eg. a directional light's shadow camera)
-  const instance = impostorInstanceMatrix;
+  const instance = drawnInstanceMatrix;
   const world = modelWorldMatrix.mul(instance);
   const worldBasisInverse = mat3(world).inverse();
   const centerWorld = world.mul(vec4(centerLocal, 1)).xyz;
