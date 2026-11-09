@@ -122,7 +122,8 @@ const createSet = (
     label: 'test',
   });
   const matrices = createMatrices(count);
-  backend.writeInstances(0, matrices, count);
+  backend.addInstances(0, matrices, count);
+  backend.setExtent(count);
   return { backend, object, matrices };
 };
 
@@ -161,10 +162,19 @@ type ReferenceStep = {
   fadeSeconds?: number;
 };
 
-const stepReference = (reference: Reference, matrices: Float32Array, step: ReferenceStep) => {
+/** The instances of removed ranges: no state, no copies. */
+const NONE_REMOVED: ReadonlySet<number> = new Set();
+
+const stepReference = (
+  reference: Reference,
+  matrices: Float32Array,
+  step: ReferenceStep,
+  removed = NONE_REMOVED
+) => {
   const inputs = env.inputs as { cameraPosition: THREE.Vector3; k: number; fadeStep: number };
   const levels = SCREEN_SIZES.map((screenSize) => ({ screenSize }));
   reference.forEach((state, i) => {
+    if (removed.has(i)) return;
     let target = state.level;
     if (step.mode === 'SELECT') {
       const m = i * 16;
@@ -204,11 +214,13 @@ const expectMeshes = (
   object: THREE.Group,
   reference: Reference,
   matrices: Float32Array,
-  at: string
+  at: string,
+  removed = NONE_REMOVED
 ) => {
   readMeshes(object).forEach((copies, level) => {
     const expected: { instance: number; fade: number }[] = [];
     reference.forEach((state, i) => {
+      if (removed.has(i)) return;
       const isFading = state.outgoing !== LOD_LEVEL_NONE;
       if (state.level === level) {
         expected.push({ instance: i, fade: isFading ? state.progress : LOD_FADE_OPAQUE });
@@ -310,6 +322,78 @@ describe('the CPU backend: the rules (p354 D3, D9)', () => {
       runSystems();
       expectMeshes(object, reference, matrices, `frame ${frame}`);
     }
+  });
+});
+
+describe('the CPU backend: removed ranges (p354 Phase 5 step 1)', () => {
+  test('a removed range leaves the level meshes, and one added again starts unselected', () => {
+    const { world, runSystems } = createStubWorld();
+    const count = 40;
+    const { object, matrices, backend } = createSet(world, count);
+    const reference = createReference(count);
+    const removed = new Set<number>();
+    const remove = (start: number, n: number) => {
+      backend.removeInstances(start, n);
+      for (let i = start; i < start + n; i++) removed.add(i);
+    };
+    const add = (start: number, n: number) => {
+      backend.addInstances(start, matrices.subarray(start * 16, (start + n) * 16), n);
+      for (let i = start; i < start + n; i++) {
+        removed.delete(i);
+        reference[i] = { level: LOD_LEVEL_NONE, outgoing: LOD_LEVEL_NONE, progress: 1 };
+      }
+    };
+    let fadingAtRemoval = 0;
+    for (let frame = 1; frame <= 600; frame++) {
+      setInputs(frame, cameraXAt(frame));
+      // Mid-path, while instances fade: a range in the middle and the top one go
+      if (frame === 150) {
+        for (let i = 8; i < 30; i++) {
+          if (reference[i].outgoing !== LOD_LEVEL_NONE) fadingAtRemoval++;
+        }
+        remove(8, 12);
+        remove(20, 10);
+        remove(34, 6);
+        backend.setExtent(34);
+        expectMeshes(object, reference, matrices, 'the removal', removed);
+      }
+      // Part of a removed range taken again, then the rest and the top
+      if (frame === 300) add(8, 5);
+      if (frame === 400) {
+        add(13, 7);
+        add(34, 6);
+        backend.setExtent(40);
+      }
+      stepReference(reference, matrices, { mode: 'SELECT' }, removed);
+      runSystems();
+      expectMeshes(object, reference, matrices, `frame ${frame}`, removed);
+      if (frame === 300) {
+        // Added: selected on its first frame, unfaded (never a fade from what was there before)
+        for (let i = 8; i < 13; i++) expect(reference[i].outgoing).toBe(LOD_LEVEL_NONE);
+      }
+    }
+    // The removal took fading instances out too, swap-removing both their copies
+    expect(fadingAtRemoval).toBeGreaterThan(0);
+    // The ones still removed are in no mesh, and the backend skips their state
+    expect(removed.size).toBe(10);
+    const copies = readMeshes(object).flat();
+    expect(copies.some((copy) => copy.instance >= 20 && copy.instance < 30)).toBe(false);
+  });
+
+  test('a removed instance is skipped past the extent and below it', () => {
+    const { world, runSystems } = createStubWorld();
+    const { object, backend } = createSet(world, 10);
+    setInputs(1, 0);
+    runSystems();
+    expect(readMeshes(object).flat()).toHaveLength(10);
+    backend.removeInstances(0, 10);
+    expect(getMeshes(object).map((mesh) => mesh.count)).toEqual([0, 0, 0]);
+    // The extent left where it was: the loop still skips every removed one
+    for (let frame = 2; frame <= 20; frame++) {
+      setInputs(frame, frame * 5);
+      runSystems();
+    }
+    expect(getMeshes(object).map((mesh) => mesh.count)).toEqual([0, 0, 0]);
   });
 });
 

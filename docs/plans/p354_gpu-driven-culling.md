@@ -1386,6 +1386,68 @@ From Phase 4 (its "As built"), for these steps:
 - The streamed set (step 3) on WebGL2 draws on the CPU backend: a cell's range added and
   removed is a swap-remove per copy.
 
+**As built** (step by step, 2026-11-09):
+
+- **Step 1, removal and reuse.** The free list is its own pure module, `InstanceRanges.ts`
+  (`createInstanceRanges(capacity)`, `@internal`, tested alone): an add takes the first free
+  range it fits in (first fit by start, the rest staying free), else appends at the end; a removed
+  range merges with its free neighbours, and one at the end lowers the end with the free range it
+  then touches, so the end (the backend's extent) is always the highest live range's. The front's
+  `removeInstances(range)` returns a boolean: false (and a warning) for a range that isn't one an
+  add returned, removed already or in part; false silently once the set is disposed (a cell
+  unloading after its scene's switch); true for an empty range. `count` is now the live instances,
+  and an add that fits nowhere says so (live count, no removed range that large).
+  - **The backend contract split**: `addInstances` (starts a range: not selected, whatever a
+    removed range drew there), `writeInstances` (rewrites live instances, which keep their state:
+    step 2's `setInstanceMatrices`), `removeInstances` and `setExtent` (the front's end; the
+    backends no longer grow it in `writeInstances`). The debug types lost `getExtent`: the
+    readback walks the front's live ranges (`getInstanceSetDebugInfo(set).ranges`, the GPU one
+    snapshotted before its reads), and `InstanceSetStats` gained `extent` (public: step 3's "no
+    growth past the first lap" reads it).
+  - **GPU**: a removed instance's state word is `STATE_REMOVED` (`LEVEL_REMOVED` 0xfd in the level
+    byte), and the cull returns on it first, before the record or the progress. The state is the
+    GPU's, so an add or a removal uploads that range of the CPU array, **only once the passes ran
+    once**: three creates a buffer from its whole array and doesn't clear the update ranges added
+    before (`Attributes.update`), so a range added before the creation would be uploaded again at
+    the next update, over the GPU's state (every instance back to unselected). The progress isn't
+    reset: it's read only while a fade runs. A dispatch with no live instance still runs (the
+    cull's `count` at least 1), so the reset and finalize zero the slot's draws (before, a set
+    with no instance didn't dispatch, and its draws would have kept the last counts).
+  - **CPU**: a removal swap-removes the range's copies (both of a fading one's) and marks its
+    instances `LEVEL_REMOVED` (-3, the backend's own, next to `LodRules.ts`' sentinels), which the
+    loop skips first; an add resets the state to unselected. The bounds don't shrink, as a pool's.
+  - Tests: `InstanceRanges.test.ts` (first fit, merging, the end, only live ranges, cells loading
+    and unloading in turns: no overlap, no growth past the first lap), the front's (the backend's
+    calls and extent, reuse, the refusals), the CPU backend's (600 frames of the camera path with a
+    middle range and the top one removed while instances fade, then re-added in parts: the level
+    meshes are the rules' reference with the removed ones left out, and an added instance's first
+    selection doesn't fade; two mutations, no skip in the loop and no swap-remove of the outgoing
+    copy, each fail it) and the GPU backend's (the state words, no upload range before the first
+    dispatch and only the changed ranges after it, the dispatch with no live instance).
+  - **Verified in the page** (a scratch script, 20k, `STILL`, no fades, Apple M2, Chrome, headless
+    WebGPU, the dev server, debug env; `instanceStress`' probe gained `set()` for page scripts):
+    the scene's range removed, then A (5,000 in view) and B (3,000 behind the camera) added, A
+    removed with B live above it, C (2,000) added, then B removed:
+
+    | Step | Live | Extent | GPU: drawn (main camera) | State per level (both backends) |
+    | --- | ---: | ---: | --- | --- |
+    | The scene | 20,000 | 20,000 | 207 / 1,427 / 3,421 | 861 / 4,763 / 14,376 |
+    | Its range removed | 0 | 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+    | A and B added | 8,000 | 8,000 | 701 / 3,025 / 1,189 | 773 / 3,482 / 3,745 |
+    | A removed (below B) | 3,000 | 8,000 | 0 / 0 / 0 | 0 / 444 / 2,556 |
+    | C added: takes `{ 0, 2000 }` | 5,000 | 8,000 | 701 / 1,214 / 0 | 773 / 1,671 / 2,556 |
+    | B removed | 2,000 | 2,000 | 701 / 1,214 / 0 | 773 / 1,227 / 0 |
+
+    A's instances, below the extent, draw nothing once removed, and the forced CPU backend's state
+    is the GPU's at every step. The bench's `forceSetCpuBackendAsync` failed once ("the set is on
+    the GPU backend after the reload") and passed on the rerun: Phase 4's flake of the same
+    helper, not looked into.
+  - `yarn verify:scenes --only instanceStress`: all 8 runs pass (`@set` within tolerance of its
+    snapshot: mean 0.001, max 9/255, as in Phase 2). `yarn sbp`: `features/instancing` 3.9 → 4.4
+    kB gzip of its 5 KiB (the ranges module and `removeInstances`: 4 modules first-download),
+    the lazy `InstanceSetCpu.js` 2.0 → 2.1 kB; every budget within. Steps 2 and 6 add to the
+    front too, with about 0.6 kB left.
+
 **Verification:**
 
 - A scene switch away from `instanceStress` at 1M leaves no set buffer in the GPU memory tab's

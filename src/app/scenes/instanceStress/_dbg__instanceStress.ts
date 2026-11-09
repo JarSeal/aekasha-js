@@ -347,6 +347,9 @@ export const installInstanceStressProbe = async (world: ECSWorld) => {
           },
         };
       }),
+    /** The set itself, for page scripts (its ranges: `removeInstances`, `addInstances`), or null
+     * on the pool path */
+    set: () => instanceStressState.set,
     /** The set's readback now (every camera's slot; `state: true` adds the state counted), or
      * null on the pool path */
     stats: (state = false) => {

@@ -17,6 +17,7 @@ import {
   type InstanceSet,
 } from '../InstanceSet';
 import type { InstancedLodPoolLevel } from '../InstancedMeshPool';
+import type { InstanceRanges } from '../InstanceRanges';
 import { LEVEL_CULLED } from '../InstanceSetNodes';
 import { LOD_LEVEL_CULLED, LOD_LEVEL_NONE } from '../../../utils/LodRules';
 import type {
@@ -27,8 +28,9 @@ import type {
 
 // An instance set's debug readback (docs/plans/p354_gpu-driven-culling.md D11): the GPU backend's
 // counters per slot and state words (the level and the outgoing one), read back after the GPU's
-// queued work, or the CPU backend's level meshes and state arrays, read as they are. Loaded by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod
-// test mode.
+// queued work, or the CPU backend's level meshes and state arrays, read as they are; the state of
+// the front's live ranges only (a removed instance's is the backend's own marker). Loaded by
+// `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod test mode.
 
 /** The light in the root scene whose shadow map `camera` renders, if any. */
 const findShadowLight = (camera: THREE.Camera) => {
@@ -76,17 +78,25 @@ const decodeLevel = (byte: number, levelCount: number) => {
 
 /** A CPU set's stats, from its arrays now: each level mesh's copies (`slots` empty: three culls
  * a level mesh as a whole, for every camera). */
-const readCpuStats = (data: InstanceSetCpuDebugData, isState: boolean): InstanceSetStats => {
+const readCpuStats = (
+  data: InstanceSetCpuDebugData,
+  ranges: InstanceRanges,
+  isState: boolean
+): InstanceSetStats => {
   const { levelCount } = data;
   const stats: InstanceSetStats = {
+    extent: ranges.end,
     drawn: data.meshes.map((mesh) => mesh.count),
     overflow: new Array<number>(levelCount).fill(0),
     slots: [],
   };
   if (!isState) return stats;
   const counts = createStateCounts(levelCount);
-  const extent = data.getExtent();
-  for (let i = 0; i < extent; i++) countInstance(counts, data.levels[i], data.outgoing[i]);
+  ranges.forEachLive((start, count) => {
+    for (let i = start; i < start + count; i++) {
+      countInstance(counts, data.levels[i], data.outgoing[i]);
+    }
+  });
   stats.state = counts;
   return stats;
 };
@@ -102,8 +112,10 @@ export const _readInstanceSetStatsAsync = async (
   opts?: { state?: boolean }
 ): Promise<InstanceSetStats | null> => {
   const backend = getInstanceSetBackend(set);
-  if (backend?.debugCpu) return readCpuStats(backend.debugCpu, opts?.state === true);
-  const buffers = backend?.debugBuffers;
+  const ranges = getInstanceSetDebugInfo(set)?.ranges;
+  if (!backend || !ranges) return null;
+  if (backend.debugCpu) return readCpuStats(backend.debugCpu, ranges, opts?.state === true);
+  const buffers = backend.debugBuffers;
   const renderer = getRenderer() as THREE.WebGPURenderer | null;
   if (!buffers || !renderer) return null;
   const { levelCount, maxVisible } = buffers;
@@ -113,11 +125,16 @@ export const _readInstanceSetStatsAsync = async (
     camera: getCameraName(camera),
     dispatches,
   }));
+  // The live ranges as the reads see them (an add or a removal meanwhile uploads after them)
+  const live: number[] = [];
+  ranges.forEachLive((start, count) => live.push(start, count));
+  const extent = ranges.end;
   const countersRead = renderer.getArrayBufferAsync(buffers.counters);
   const stateRead = opts?.state ? renderer.getArrayBufferAsync(buffers.state) : null;
 
   const counters = new Uint32Array(await countersRead);
   const stats: InstanceSetStats = {
+    extent,
     drawn: new Array<number>(levelCount).fill(0),
     overflow: new Array<number>(levelCount).fill(0),
     slots: [],
@@ -138,13 +155,15 @@ export const _readInstanceSetStatsAsync = async (
 
   const words = new Uint32Array(await stateRead);
   const counts = createStateCounts(levelCount);
-  const extent = Math.min(buffers.getExtent(), words.length);
-  for (let i = 0; i < extent; i++) {
-    countInstance(
-      counts,
-      decodeLevel(words[i] & 0xff, levelCount),
-      decodeLevel((words[i] >>> 8) & 0xff, levelCount)
-    );
+  for (let r = 0; r < live.length; r += 2) {
+    const end = Math.min(live[r] + live[r + 1], words.length);
+    for (let i = live[r]; i < end; i++) {
+      countInstance(
+        counts,
+        decodeLevel(words[i] & 0xff, levelCount),
+        decodeLevel((words[i] >>> 8) & 0xff, levelCount)
+      );
+    }
   }
   stats.state = counts;
   return stats;

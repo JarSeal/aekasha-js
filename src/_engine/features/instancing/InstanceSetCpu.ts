@@ -36,6 +36,8 @@ import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 //   with its first CPU set (so after `lod()`'s systems in that tier, which registered at install),
 //   on the LOD frame inputs `lodSelectionSystem` just wrote: the GPU backend's modes (select, force,
 //   hold the levels, level 0 without `lod()`).
+// - A removed range's copies are swap-removed from their level meshes, and its instances are
+//   marked LEVEL_REMOVED, which the loop skips until an add starts them again (not selected yet).
 // - No per-instance frustum culling: three culls each level mesh as a whole by its bounds (the
 //   union of every instance's sphere at its largest level's radius, grown as instances are
 //   written), for every camera, shadows included. So no slots: each level mesh casts by its level's
@@ -74,6 +76,9 @@ const removeStep = (world: ECSWorld, step: () => void) => {
   stepsByWorld.delete(world);
   world.removeSystem(SYSTEM_ID);
 };
+
+/** A removed instance's level (next to `utils/LodRules.ts`' sentinels): the loop skips it. */
+const LEVEL_REMOVED = -3;
 
 /** How a frame moves the levels: the GPU backend's modes (InstanceSetNodes.ts' SELECT_MODE). */
 const MODE_SELECT = 0;
@@ -289,6 +294,7 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     const { isOrtho } = inputs;
     for (let i = 0; i < extent; i++) {
       const from = levelOf[i];
+      if (from === LEVEL_REMOVED) continue;
       let target = from;
       if (mode === MODE_SELECT) {
         const r = i * 4;
@@ -345,10 +351,31 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
       if (level >= 0) copyMatrixTo(level, inSlots[i], i);
       if (outgoing >= 0) copyMatrixTo(outgoing, outSlots[i], i);
     }
-    extent = Math.max(extent, start + count);
     for (const mesh of meshes) {
       mesh.boundingBox!.copy(bounds);
       bounds.getBoundingSphere(mesh.boundingSphere!);
+    }
+    uploadChanged();
+  };
+
+  /** Starts instances (new, or a removed range taken again): not selected yet. */
+  const addInstances = (start: number, written: Float32Array, count: number) => {
+    levelOf.fill(LOD_LEVEL_NONE, start, start + count);
+    outgoingOf.fill(LOD_LEVEL_NONE, start, start + count);
+    progressOf.fill(1, start, start + count);
+    writeInstances(start, written, count);
+  };
+
+  /** Stops instances: their copies swap-removed (another instance's moved copy follows its slot,
+   * as in a frame's move), their state skipped until they're added again. */
+  const removeInstances = (start: number, count: number) => {
+    for (let i = start; i < start + count; i++) {
+      if (levelOf[i] >= 0) removeAt(levelOf[i], inSlots[i]);
+      if (outgoingOf[i] >= 0) removeAt(outgoingOf[i], outSlots[i]);
+      levelOf[i] = LEVEL_REMOVED;
+      outgoingOf[i] = LOD_LEVEL_NONE;
+      inSlots[i] = -1;
+      outSlots[i] = -1;
     }
     uploadChanged();
   };
@@ -366,11 +393,15 @@ export const createCpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   };
 
   return {
+    addInstances,
     writeInstances,
+    removeInstances,
+    setExtent: (value) => {
+      extent = value;
+    },
     dispose,
     debugCpu: {
       levelCount,
-      getExtent: () => extent,
       levels: levelOf,
       outgoing: outgoingOf,
       meshes,

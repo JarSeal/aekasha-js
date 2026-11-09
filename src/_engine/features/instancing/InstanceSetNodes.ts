@@ -40,7 +40,8 @@ import { LOD_FADE_END_EPSILON } from '../../utils/LodRules';
 //
 // An instance's state (`utils/LodRules.ts`' `LodInstanceState`): its word, the level in bits 0-7
 // and the outgoing one (the level a cross-fade dissolves out of) in bits 8-15, with LEVEL_NONE (not
-// selected yet; no fade running) and LEVEL_CULLED; and its fade's progress, a float of its own
+// selected yet; no fade running), LEVEL_CULLED and LEVEL_REMOVED (a removed range's: the cull
+// skips it before anything else); and its fade's progress, a float of its own
 // (1 when no fade runs), read only while one runs. The cull moves both as `stepLodInstanceState`
 // does, then appends the instance in view once per drawn copy: its level's at the progress `t`, the
 // outgoing level's at `t - 1` (a fade to or from culled has one copy).
@@ -58,8 +59,13 @@ export const ARGS_INSTANCE_COUNT = 1;
 export const LEVEL_NONE = 0xfe;
 /** A state word's level field: culled (beyond the last level). */
 export const LEVEL_CULLED = 0xff;
+/** A state word's level field: removed (a removed range's instance, skipped until it's added
+ * again). */
+export const LEVEL_REMOVED = 0xfd;
 /** A new instance's state word: not selected, no fade. */
 export const STATE_INITIAL = LEVEL_NONE | (LEVEL_NONE << 8);
+/** A removed instance's state word. */
+export const STATE_REMOVED = LEVEL_REMOVED | (LEVEL_NONE << 8);
 /** A visible list entry's instance bits. */
 const ENTRY_INSTANCE_MASK = 0xffffff;
 /** A visible list entry's fade field: the signed fade (-1 to 1) is (byte − this) / this. */
@@ -245,9 +251,13 @@ export const createInstanceSetPasses = (opts: InstanceSetPassesOptions) => {
     If(instanceIndex.greaterThanEqual(uniforms.extent), () => {
       Return();
     });
-    const record = records.element(instanceIndex).toVar();
     const word = state.element(instanceIndex).toVar();
     const level = word.bitAnd(0xff).toVar();
+    // A removed range's instance: no state to move, nothing to draw
+    If(level.equal(uint(LEVEL_REMOVED)), () => {
+      Return();
+    });
+    const record = records.element(instanceIndex).toVar();
     const outgoing = word.shiftRight(uint(8)).bitAnd(0xff).toVar();
     // The progress is read only while a fade runs: most instances read their word alone
     const fade = float(1).toVar();

@@ -4,11 +4,25 @@ import * as THREE from 'three/webgpu';
 // The renderer's backend, and the backend modules: recording stand-ins
 const env = vi.hoisted(() => ({
   isWebGPU: true,
+  /** The backend's calls: adds, rewrites and removals, and its extent after each change. */
   writes: [] as { start: number; matrices: Float32Array; count: number }[],
+  removals: [] as { start: number; count: number }[],
+  extent: 0,
   disposed: 0,
   params: null as unknown,
   /** The module the last backend came from. */
   module: null as 'GPU' | 'CPU' | null,
+}));
+/** A backend recording what the front asks of it. */
+const createStubBackend = vi.hoisted(() => () => ({
+  addInstances: (start: number, matrices: Float32Array, count: number) =>
+    env.writes.push({ start, matrices: matrices.slice(), count }),
+  writeInstances: () => {},
+  removeInstances: (start: number, count: number) => env.removals.push({ start, count }),
+  setExtent: (extent: number) => {
+    env.extent = extent;
+  },
+  dispose: () => env.disposed++,
 }));
 vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -18,22 +32,14 @@ vi.mock(import('./InstanceSetGpu'), () => ({
   createGpuInstanceSetBackend: (params) => {
     env.params = params;
     env.module = 'GPU';
-    return {
-      writeInstances: (start, matrices, count) =>
-        env.writes.push({ start, matrices: matrices.slice(), count }),
-      dispose: () => env.disposed++,
-    };
+    return createStubBackend();
   },
 }));
 vi.mock(import('./InstanceSetCpu'), () => ({
   createCpuInstanceSetBackend: (params) => {
     env.params = params;
     env.module = 'CPU';
-    return {
-      writeInstances: (start, matrices, count) =>
-        env.writes.push({ start, matrices: matrices.slice(), count }),
-      dispose: () => env.disposed++,
-    };
+    return createStubBackend();
   },
 }));
 
@@ -56,6 +62,8 @@ beforeAll(() => {
 beforeEach(() => {
   env.isWebGPU = true;
   env.writes = [];
+  env.removals = [];
+  env.extent = 0;
   env.disposed = 0;
   env.params = null;
   env.module = null;
@@ -167,6 +175,52 @@ describe('InstanceSet: the ranges', () => {
     expect(set.addInstances([])).toEqual({ start: 2, count: 0 });
     expect(set.addInstances([placeAt(2)])).toEqual({ start: 2, count: 1 });
     expect(env.writes).toHaveLength(2);
+  });
+
+  test('a removed range stops in the backend, and a later add of its size or smaller takes it', async () => {
+    const set = (await createInstanceSetAsync({ world, levels: levels(), maxInstances: 6 }))!;
+    const a = set.addInstances([placeAt(0), placeAt(1)])!;
+    const b = set.addInstances([placeAt(2), placeAt(3)])!;
+    set.addInstances([placeAt(4)]);
+    expect(env.extent).toBe(5);
+
+    expect(set.removeInstances(a)).toBe(true);
+    expect(env.removals).toEqual([{ start: 0, count: 2 }]);
+    expect(set.count).toBe(3);
+    // A removed range below the end leaves the extent
+    expect(env.extent).toBe(5);
+    // Too large for the free range: the end; then one that fits takes it
+    expect(set.addInstances([placeAt(5), placeAt(6), placeAt(7)])).toBeNull();
+    expect(set.addInstances([placeAt(8)])).toEqual({ start: 0, count: 1 });
+    expect(env.writes.at(-1)).toMatchObject({ start: 0, count: 1 });
+    expect(env.writes.at(-1)!.matrices[12]).toBe(8);
+    expect(set.count).toBe(4);
+
+    // Removing the top ranges lowers the extent
+    set.removeInstances(b);
+    expect(env.extent).toBe(5);
+    set.removeInstances({ start: 4, count: 1 });
+    expect(env.extent).toBe(1);
+    expect(set.count).toBe(1);
+  });
+
+  test("removes only a live range of its own, and nothing once it's disposed", async () => {
+    const set = (await createInstanceSetAsync({ world, levels: levels(), maxInstances: 6 }))!;
+    const range = set.addInstances([placeAt(0), placeAt(1)])!;
+    // In part, or not one it gave
+    expect(set.removeInstances({ start: 0, count: 1 })).toBe(false);
+    expect(set.removeInstances({ start: 4, count: 2 })).toBe(false);
+    expect(set.removeInstances(range)).toBe(true);
+    // Twice
+    expect(set.removeInstances(range)).toBe(false);
+    expect(env.removals).toHaveLength(1);
+    // An empty range removes nothing
+    expect(set.removeInstances(set.addInstances([])!)).toBe(true);
+
+    const again = set.addInstances([placeAt(0)])!;
+    world.deleteEntity(set.entityId);
+    expect(set.removeInstances(again)).toBe(false);
+    expect(env.removals).toHaveLength(1);
   });
 
   test("refuses matrices that aren't 16 floats each", async () => {

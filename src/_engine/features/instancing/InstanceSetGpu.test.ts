@@ -8,7 +8,13 @@ import { float, vec3 } from 'three/tsl';
 // `createInstanceSetPasses`: Node can't run TSL). The main loop's frame and the LOD frame inputs
 // are the test's.
 
-type Dispatch = { mode: number; slotLevel: number; levelMask: number; camera: THREE.Camera | null };
+type Dispatch = {
+  mode: number;
+  slotLevel: number;
+  levelMask: number;
+  extent: number;
+  camera: THREE.Camera | null;
+};
 const env = vi.hoisted(() => ({
   frame: 0,
   inputs: { frame: -1 } as Record<string, unknown>,
@@ -64,10 +70,10 @@ vi.mock(import('./InstanceSetNodes'), async (importOriginal) => {
 
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { createGpuInstanceSetBackend } from './InstanceSetGpu';
-import { SELECT_MODE } from './InstanceSetNodes';
+import { SELECT_MODE, STATE_INITIAL, STATE_REMOVED } from './InstanceSetNodes';
 import type { InstanceSetBackendParams } from './InstanceSetTypes';
 
-type StubUniforms = Record<'mode' | 'slotLevel' | 'levelMask', { value: number }>;
+type StubUniforms = Record<'mode' | 'slotLevel' | 'levelMask' | 'extent', { value: number }>;
 
 /** The stub renderer: three's standard pipeline, the material library, a recording compute. */
 const createRenderer = () => {
@@ -81,6 +87,7 @@ const createRenderer = () => {
         mode: uniforms!.mode.value,
         slotLevel: uniforms!.slotLevel.value,
         levelMask: uniforms!.levelMask.value,
+        extent: uniforms!.extent.value,
         camera: env.camera as THREE.Camera,
       });
     },
@@ -147,7 +154,8 @@ const createSet = (opts: { maxSlots?: number; noneCast?: boolean } = {}) => {
   backends.push(backend);
   const scene = new THREE.Scene();
   scene.add(object);
-  backend.writeInstances(0, new Float32Array(new THREE.Matrix4().elements), 1);
+  backend.addInstances(0, new Float32Array(new THREE.Matrix4().elements), 1);
+  backend.setExtent(1);
   return { backend, object, scene };
 };
 
@@ -343,5 +351,58 @@ describe('the GPU backend: the state moves once a frame (p354 D7)', () => {
       SELECT_MODE.FORCE,
       SELECT_MODE.HOLD,
     ]);
+  });
+});
+
+describe('the GPU backend: removed ranges (p354 Phase 5 step 1)', () => {
+  const identities = (count: number) => {
+    const matrices = new Float32Array(count * 16);
+    for (let i = 0; i < count; i++) new THREE.Matrix4().toArray(matrices, i * 16);
+    return matrices;
+  };
+
+  test('an added range starts its state words and a removed one stops them, uploaded once the buffer exists', () => {
+    const { scene, backend } = createSet();
+    const state = backend.debugBuffers!.state;
+    const words = state.array as Uint32Array;
+    backend.addInstances(1, identities(3), 3);
+    backend.setExtent(4);
+    backend.removeInstances(1, 2);
+    expect(Array.from(words.subarray(0, 4))).toEqual([
+      STATE_INITIAL,
+      STATE_REMOVED,
+      STATE_REMOVED,
+      STATE_INITIAL,
+    ]);
+    // Before the first dispatch the buffer's creation uploads the array: an update range now
+    // would be written again at the next upload, over the GPU's own state
+    expect(state.updateRanges).toEqual([]);
+    expect(state.version).toBe(0);
+
+    render(scene, createCamera());
+    backend.addInstances(1, identities(2), 2);
+    backend.removeInstances(3, 1);
+    expect(Array.from(words.subarray(0, 4))).toEqual([
+      STATE_INITIAL,
+      STATE_INITIAL,
+      STATE_INITIAL,
+      STATE_REMOVED,
+    ]);
+    // Only the changed ranges, never the whole buffer
+    expect(state.updateRanges).toEqual([
+      { start: 1, count: 2 },
+      { start: 3, count: 1 },
+    ]);
+    expect(state.version).toBe(2);
+  });
+
+  test("with no live instance it still dispatches, so the slot's draws draw none", () => {
+    const { scene, backend } = createSet();
+    const camera = createCamera();
+    render(scene, camera);
+    backend.removeInstances(0, 1);
+    backend.setExtent(0);
+    render(scene, camera);
+    expect(env.dispatches.map((d) => d.extent)).toEqual([1, 0]);
   });
 });

@@ -12,6 +12,7 @@ import type { LodDef } from '../lod/LodTypes';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 import type { InstancePlacement } from './InstancedMeshPoolTypes';
+import { createInstanceRanges, type InstanceRanges } from './InstanceRanges';
 import type {
   CreateInstanceSetBackend,
   InstanceRange,
@@ -23,9 +24,10 @@ import type {
 // Instance sets (docs/plans/p354_gpu-driven-culling.md): many instances as plain data, with no
 // entity per instance, culled and LOD-selected per instance by a backend: the GPU one (compute
 // culling and indirect draws, WebGPU) or the CPU one (WebGL2). This is the front, on the
-// entry: the options' checks, the owning entity, the ranges and the backend's `import()`, so a
-// build that never creates a set ships only this, and a device downloads only its own backend.
-// The backends' contract is InstanceSetTypes.ts.
+// entry: the options' checks, the owning entity, the ranges (InstanceRanges.ts: the live ones and
+// the free list) and the backend's `import()`, so a build that never creates a set ships only
+// this, and a device downloads only its own backend. The backends' contract is
+// InstanceSetTypes.ts.
 
 /** The most instances a set holds: a visible list's entry packs the instance in 24 bits (D4). */
 const MAX_INSTANCE_SET_INSTANCES = 1 << 24;
@@ -50,6 +52,7 @@ const backendsBySet = new WeakMap<
     isDisposed: () => boolean;
     label: string;
     levels: readonly InstancedLodPoolLevel[];
+    ranges: InstanceRanges;
   }
 >();
 /** The live sets, for the LOD tab's list (the debug env only: production keeps none). */
@@ -102,15 +105,24 @@ export interface InstanceSet {
   readonly backend: InstanceSetBackendKind;
   /** The most instances the set holds. */
   readonly maxInstances: number;
-  /** Instances added so far. */
+  /** The live instances: added and not removed. */
   readonly count: number;
   /**
-   * Adds instances after the last ones, from placements (uniform scale) or from world matrices
-   * (16 floats each, column major as three's `Matrix4.elements`, uniform scale: the vertex stage
-   * turns the normal with the matrix's rotation). They're drawn from the next frame. Returns
-   * their range, or `null` (and adds none) past `maxInstances` or once the set is disposed.
+   * Adds instances from placements (uniform scale) or from world matrices (16 floats each, column
+   * major as three's `Matrix4.elements`, uniform scale: the vertex stage turns the normal with the
+   * matrix's rotation). They're drawn from the next frame. They take the first removed range they
+   * fit in, else go after the last ones. Returns their range, or `null` (and adds none) when they
+   * don't fit in `maxInstances` (a removed range is reused only by an add of its size or smaller)
+   * or once the set is disposed.
    */
   addInstances: (instances: InstancePlacement[] | Float32Array) => InstanceRange | null;
+  /**
+   * Removes a range `addInstances` returned: its instances aren't drawn from the next frame, and
+   * a later add takes its indices again (a range can't be removed in part). Returns false (and
+   * removes nothing) for a range that isn't live: removed already, another set's, or the set
+   * disposed (a streamed cell unloading after its scene's switch).
+   */
+  removeInstances: (range: InstanceRange) => boolean;
 }
 
 const refLevels = (levels: readonly InstancedLodPoolLevel[], isInc: boolean) => {
@@ -201,7 +213,9 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
  *
  * Use a set for static (or rarely moving) content past about 20k instances: forests, grass,
  * rocks. An instanced LOD pool stays the choice for fewer, and for instances gameplay addresses
- * (an entity each: transforms, ECS tags, raycasts, spatial domains).
+ * (an entity each: transforms, ECS tags, raycasts, spatial domains). Instances come and go by
+ * range: `addInstances` returns one, `removeInstances` frees it for a later add (a streamed cell's
+ * content adds its range in its load and removes it in its unload, and one set serves every cell).
  *
  * Every camera that renders a set (the view, a viewport, the debug camera, a snapshot) culls it
  * against its own frustum, up to `maxSlots` cameras at once, and draws the levels selected against
@@ -276,7 +290,7 @@ export const createInstanceSetAsync = async (
   };
   const drawer = createBackend(params);
 
-  let count = 0;
+  const ranges = createInstanceRanges(maxInstances);
   let isDisposed = false;
   world.addComponent(entityId, ComponentType.INSTANCE_SET, {
     object,
@@ -299,9 +313,11 @@ export const createInstanceSetAsync = async (
       );
     }
     const added = isMatrices ? instances.length / 16 : instances.length;
-    if (count + added > maxInstances) {
+    if (added === 0) return { start: ranges.end, count: 0 };
+    const start = ranges.take(added);
+    if (start < 0) {
       lwarn(
-        `Instance set "${label}": maxInstances (${maxInstances}) reached, ${added} instances not added (${count} in the set).`
+        `Instance set "${label}": no room for ${added} instances in its maxInstances (${maxInstances}): ${ranges.count} live, and no removed range that large.`
       );
       return null;
     }
@@ -314,10 +330,23 @@ export const createInstanceSetAsync = async (
         );
       }
     }
-    const range: InstanceRange = { start: count, count: added };
-    if (added > 0) drawer.writeInstances(count, matrices, added);
-    count += added;
-    return range;
+    drawer.addInstances(start, matrices, added);
+    drawer.setExtent(ranges.end);
+    return { start, count: added };
+  };
+
+  const removeInstances: InstanceSet['removeInstances'] = ({ start, count }) => {
+    if (isDisposed) return false;
+    if (count === 0) return true;
+    if (!ranges.release(start, count)) {
+      lwarn(
+        `Instance set "${label}": the range ${start}-${start + count - 1} isn't one of its live ranges (removed already, or another set's): nothing removed.`
+      );
+      return false;
+    }
+    drawer.removeInstances(start, count);
+    drawer.setExtent(ranges.end);
+    return true;
   };
 
   const set: InstanceSet = {
@@ -326,15 +355,17 @@ export const createInstanceSetAsync = async (
     backend,
     maxInstances,
     get count() {
-      return count;
+      return ranges.count;
     },
     addInstances,
+    removeInstances,
   };
   backendsBySet.set(set, {
     backend: drawer,
     isDisposed: () => isDisposed,
     label,
     levels,
+    ranges,
   });
   if (IS_DEBUG_ENV) liveSets.add(set);
   return set;
@@ -362,13 +393,13 @@ export const isInstanceSetCpuBackendForced = () => isCpuBackendForced;
 export const getLiveInstanceSets = (): ReadonlySet<InstanceSet> => liveSets;
 
 /**
- * A set's label (its owning entity's app id, or its entity id) and levels, for the debug tools;
- * undefined for a set this module didn't make.
+ * A set's label (its owning entity's app id, or its entity id), levels and ranges, for the debug
+ * tools; undefined for a set this module didn't make.
  * @internal
  */
 export const getInstanceSetDebugInfo = (set: InstanceSet) => {
   const entry = backendsBySet.get(set);
-  return entry && { label: entry.label, levels: entry.levels };
+  return entry && { label: entry.label, levels: entry.levels, ranges: entry.ranges };
 };
 
 /**

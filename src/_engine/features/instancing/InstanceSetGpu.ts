@@ -20,6 +20,7 @@ import {
   LIST_BASE_KEY,
   SELECT_MODE,
   STATE_INITIAL,
+  STATE_REMOVED,
   type InstanceSetBuffers,
 } from './InstanceSetNodes';
 import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceSetTypes';
@@ -31,7 +32,11 @@ import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceS
 // - The buffers (D4): the instances' affine matrices and cull records (with their CPU copies, which
 //   writeInstances fills and uploads by range), their state words, and per slot the budgeted
 //   visible lists, the per-level counters and the draws' indirect args. The passes and the vertex
-//   fetch are InstanceSetNodes.ts.
+//   fetch are InstanceSetNodes.ts. The state is the GPU's (the cull writes it), but an added range
+//   starts it (STATE_INITIAL) and a removed one stops it (STATE_REMOVED: the cull skips it) by
+//   uploading that range from the CPU array. Only once the buffer exists: three creates it from the
+//   whole array and keeps the update ranges added before, which the next upload would then write
+//   again over the GPU's state (`Attributes.update` doesn't clear them on create).
 // - The slots (D6): every camera whose render reaches the set gets one, on its first such render,
 //   up to `maxSlots`, released after SLOT_RELEASE_FRAMES frames unused. A slot is its draws and its
 //   part of the lists, counters and args, which are sized for every slot when the set is created:
@@ -269,10 +274,11 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     });
   }
   const listLength = maxSlots * levelCount * maxVisible;
+  const stateArray = new Uint32Array(maxInstances).fill(STATE_INITIAL);
   const buffers: InstanceSetBuffers = {
     rows: new THREE.StorageBufferAttribute(rowsArray, 4),
     records: new THREE.StorageBufferAttribute(recordsArray, 4),
-    state: new THREE.StorageBufferAttribute(new Uint32Array(maxInstances).fill(STATE_INITIAL), 1),
+    state: new THREE.StorageBufferAttribute(stateArray, 1),
     progress: new THREE.StorageBufferAttribute(new Float32Array(maxInstances).fill(1), 1),
     lists: new THREE.StorageBufferAttribute(new Uint32Array(listLength), 1),
     counters: new THREE.StorageBufferAttribute(new Uint32Array(maxSlots * levelCount), 1),
@@ -331,6 +337,8 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   /** Every slot's draws made so far, for the dispose. */
   const meshes: THREE.Mesh[] = [];
   let extent = 0;
+  /** The passes ran once: three created their buffers (the state's included) from the arrays. */
+  let isDispatched = false;
   let selectedFrame = -1;
   /** The main loop frame of the set's first dispatch. */
   let firstFrame = -1;
@@ -414,7 +422,8 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     },
     dispatch: (gpu, camera) => {
       const { slot } = set;
-      if (!slot || extent === 0) return;
+      // With no live instance too: the reset and finalize zero the slot's draws
+      if (!slot) return;
       slot.dispatches++;
       // The state moves once a frame (D7): in the frame's first dispatch after lod() wrote its
       // inputs. A dispatch before that (a compile at the scene's load, before the first frame) and
@@ -469,8 +478,9 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
         uniforms.planes[p].value.set(normal.x, normal.y, normal.z, constant);
       }
       uniforms.extent.value = extent;
-      cull.count = extent;
+      cull.count = Math.max(extent, 1);
       void gpu.compute(passes);
+      isDispatched = true;
     },
   };
 
@@ -500,7 +510,15 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
     buffers.rows.needsUpdate = true;
     buffers.records.addUpdateRange(start * 4, count * 4);
     buffers.records.needsUpdate = true;
-    extent = Math.max(extent, start + count);
+  };
+
+  /** Sets a range's state words (an added range's start, a removed one's stop), uploaded once the
+   * buffer exists (before, its creation uploads the array). */
+  const setStates = (start: number, count: number, word: number) => {
+    stateArray.fill(word, start, start + count);
+    if (!isDispatched) return;
+    buffers.state.addUpdateRange(start, count);
+    buffers.state.needsUpdate = true;
   };
 
   const debugSlots: InstanceSetDebugSlot[] = [];
@@ -519,14 +537,22 @@ export const createGpuInstanceSetBackend: CreateInstanceSetBackend = (params) =>
   };
 
   return {
+    addInstances: (start, matrices, count) => {
+      // Not selected, no fade: the progress is read only while a fade runs
+      setStates(start, count, STATE_INITIAL);
+      writeInstances(start, matrices, count);
+    },
     writeInstances,
+    removeInstances: (start, count) => setStates(start, count, STATE_REMOVED),
+    setExtent: (value) => {
+      extent = value;
+    },
     dispose,
     debugBuffers: {
       counters: buffers.counters,
       state: buffers.state,
       levelCount,
       maxVisible,
-      getExtent: () => extent,
       getSlots: () => {
         debugSlots.length = 0;
         for (const { index, camera, dispatches } of slots) {

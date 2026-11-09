@@ -61,10 +61,21 @@ export interface InstanceSetBackendParams {
  */
 export interface InstanceSetBackend {
   /**
-   * Writes the instances `start` to `start + count - 1` from `matrices`: 16 floats each, column
-   * major (three's `Matrix4.elements`), uniform scale. They're drawn from the next frame.
+   * Starts the instances `start` to `start + count - 1` (new, or a removed range taken again): not
+   * selected yet, whatever was there before, and written from `matrices` as `writeInstances`
+   * writes them. They're drawn from the next frame.
+   */
+  addInstances: (start: number, matrices: Float32Array, count: number) => void;
+  /**
+   * Writes live instances `start` to `start + count - 1` from `matrices`: 16 floats each, column
+   * major (three's `Matrix4.elements`), uniform scale. They keep their levels and fades.
    */
   writeInstances: (start: number, matrices: Float32Array, count: number) => void;
+  /** Stops the instances `start` to `start + count - 1` (a removed range): none of them is
+   * selected or drawn from the next frame on, until `addInstances` starts them again. */
+  removeInstances: (start: number, count: number) => void;
+  /** The instances to visit: the highest live one + 1 (the front's ranges' end). */
+  setExtent: (extent: number) => void;
   /** Frees the backend's draws and buffers (the front releases the registry refs). */
   dispose: () => void;
   /** The buffers the debug readback reads: the GPU backend's. */
@@ -92,8 +103,6 @@ export interface InstanceSetDebugBuffers {
   levelCount: number;
   /** Each visible list's budget. */
   maxVisible: number;
-  /** The instances added so far: the state's live part. */
-  getExtent: () => number;
   /** The slots a camera holds, by slot index. */
   getSlots: () => readonly InstanceSetDebugSlot[];
 }
@@ -106,9 +115,8 @@ export interface InstanceSetDebugBuffers {
 export interface InstanceSetCpuDebugData {
   /** The set's levels. */
   levelCount: number;
-  /** The instances added so far: the state's live part. */
-  getExtent: () => number;
-  /** Per instance: its level, `LOD_LEVEL_NONE` or `LOD_LEVEL_CULLED` (`utils/LodRules.ts`). */
+  /** Per instance: its level, `LOD_LEVEL_NONE` or `LOD_LEVEL_CULLED` (`utils/LodRules.ts`); a
+   * removed instance's is neither (read the live ranges only). */
   levels: Int16Array;
   /** Per instance: the level it fades out of, `LOD_LEVEL_NONE` (no fade) or `LOD_LEVEL_CULLED`. */
   outgoing: Int16Array;
@@ -145,6 +153,9 @@ export interface InstanceSetSlotStats {
 
 /** What `readInstanceSetStatsAsync` reads back of a set (debug only). */
 export interface InstanceSetStats {
+  /** The instances the set visits each frame: the highest live one + 1. A removed range below it
+   * waits for a later `addInstances` to take it again (the set's `count` is the live ones). */
+  extent: number;
   /** Per level: the instances the main camera's last dispatch drew (a cross-fading one in both its
    * levels); zeros while the main camera has no slot. */
   drawn: number[];
@@ -152,7 +163,7 @@ export interface InstanceSetStats {
   overflow: number[];
   /** Every camera that holds a slot, in slot order (the main camera's included). */
   slots: InstanceSetSlotStats[];
-  /** With `state: true`: every instance's selected level, counted (in view or not). */
+  /** With `state: true`: every live instance's selected level, counted (in view or not). */
   state?: {
     /** Per level: a cross-fading instance counts in both its levels (one fading to or from culled
      * in its one), as an instanced LOD pool's level meshes hold it. */
