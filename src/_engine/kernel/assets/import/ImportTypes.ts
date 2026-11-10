@@ -6,6 +6,7 @@ import type { MeshProps } from '../../mesh/Mesh';
 import type { CoreEntityOpts } from '../../../schemas/_HelperSchemas';
 import type { GeneratedAssetUrls } from '../AssetUrl';
 import type { LodChainOptions } from '../../../features/lod/LodChainOptions';
+import type { MeshMergeDef } from '../../../features/merging/MergeTypes';
 import type * as THREE from 'three/webgpu';
 
 /** Plain, structured-clone-safe vector (no THREE classes: a manifest must survive a worker hop). */
@@ -91,6 +92,9 @@ export type ParsedCustomProps = {
   id?: string;
   /** The `name` custom prop as a string, for the app: the engine doesn't read it. */
   name?: string;
+  /** The `merge` custom prop: the node's mesh is drawn merged into this merge group (an id, or
+   * `AUTO`; the `merging()` feature), see `SpawnImportedParams.merge`. */
+  merge?: string;
   /** Problems found while parsing (eg. an unknown `colliderType`), logged by the importer. */
   warnings: string[];
 };
@@ -144,6 +148,10 @@ export type SpawnImportedParams = {
   material?: THREE.Material | string;
   /** Shadow flags for every visible piece (a `meshProps` entry's own flags win). */
   castShadow?: boolean;
+  /** Draws every visible piece merged (a merge group's id, `AUTO` or the options; the `merging()`
+   * feature), but a piece of a physics group with a dynamic or kinematic body. A node's own `merge`
+   * custom prop and a `meshProps` entry's `merge` win for their piece. */
+  merge?: MeshMergeDef;
   /** Like `castShadow`, for receiving shadows. */
   receiveShadow?: boolean;
   /** Per-piece mesh overrides, by node order in the manifest (array) or by geometryId (record).

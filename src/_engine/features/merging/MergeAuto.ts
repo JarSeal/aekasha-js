@@ -123,6 +123,12 @@ export const pickAutoGroup = (
   return { groupId: idOf(bucket.n), isPersistent };
 };
 
+/** `createPhysicsEntity` tags the entity at once and adds its colliders (`COLLIDER`, with its
+ * `BODY_*`) when the body exists; a failed creation takes the tag off. */
+const isPhysicsCreationPending = (entityId: number, world: ECSWorld) =>
+  world.hasComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT) &&
+  !world.hasComponent(entityId, ComponentType.COLLIDER);
+
 /**
  * Queues a mesh's `merge` for the next build (the kernel's mesh merge handler,
  * `setMeshMergeHandler`): an invalid one warns and is dropped. A later one for the same entity
@@ -150,7 +156,8 @@ export const queueMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld)
 /**
  * Empties the world's queued `merge`s into the groups they join, by group id (in creation order,
  * so `AUTO` picks the same groups on every load), creating the `AUTO` groups they open. An entity
- * deleted meanwhile is dropped, and a refused `AUTO` one warns. Undefined when none is queued.
+ * deleted meanwhile is dropped, and a refused `AUTO` one warns. One whose physics body is still
+ * being created stays queued for the next call. Undefined when none is queued.
  * @internal
  */
 export const collectQueuedJoins = (world: ECSWorld) => {
@@ -164,6 +171,10 @@ export const collectQueuedJoins = (world: ECSWorld) => {
     else joins.set(groupId, [entityId]);
   };
   for (const [entityId, def] of queued) {
+    // Its body is being created (createPhysicsEntity awaits it): it waits, so the refusals see
+    // what the body is
+    if (isPhysicsCreationPending(entityId, world)) continue;
+    queued.delete(entityId);
     if (!world.isAlive(entityId)) continue;
     const groupId = typeof def === 'string' ? def : def.group ?? AUTO;
     if (groupId !== AUTO) {
@@ -189,6 +200,5 @@ export const collectQueuedJoins = (world: ECSWorld) => {
     }
     join(pick.groupId, entityId);
   }
-  queued.clear();
   return joins;
 };

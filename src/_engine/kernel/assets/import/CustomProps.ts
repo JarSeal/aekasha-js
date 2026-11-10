@@ -99,7 +99,7 @@ const toShapeParams = (props: Record<string, unknown>, type: ColliderParams['typ
 
 /**
  * Parses a node's Blender custom properties (glTF `extras`, found in GLTFLoader's
- * `object.userData`) into normalized physics metadata. Pure: `userData` is not mutated and no
+ * `object.userData`) into normalized physics metadata, and the node's merge group (`merge`). Pure: `userData` is not mutated and no
  * physics is created. Defaults: density/friction/restitution 0.2, combine rules 'AVERAGE', an
  * unknown `rigidType` → 'FIXED'.
  * @internal
@@ -154,6 +154,14 @@ export const parseCustomProps = (
     }
   }
 
+  // The merge group (an id or `AUTO`): merging() checks the id when the mesh joins
+  const merge = typeof props.merge === 'string' ? props.merge.trim() : undefined;
+  if (props.merge !== undefined && !merge) {
+    warnings.push(
+      `"merge" should be a merge group's id or "AUTO" (a string), not ${JSON.stringify(props.merge)}: ignored.`
+    );
+  }
+
   const rigidBodyUserData: Record<string, unknown> = {};
   for (const key of Object.keys(props)) {
     if (!key.startsWith('userData_')) continue;
@@ -171,6 +179,7 @@ export const parseCustomProps = (
     ...(typeof props.index === 'number' ? { index: props.index } : {}),
     ...(props.id !== undefined ? { id: String(props.id) } : {}),
     ...(props.name !== undefined ? { name: String(props.name) } : {}),
+    ...(merge ? { merge } : {}),
     warnings,
   };
 };

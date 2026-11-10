@@ -463,6 +463,28 @@ maxVertices? }` or a group's `{ id, castShadow?, receiveShadow? }`, strict, so `
   the manifest for either field). `yarn gatherAppData`: the generated data unchanged (no scene
   uses the fields yet), `.schemas/mesh.schema.json` and `scene.schema.json` regenerated.
 
+As built, section 3 (2026-11-10):
+
+- The `merge` custom prop (`kernel/assets/import/CustomProps.ts`): a string, trimmed, on
+  `ParsedCustomProps.merge`; another value (or an empty string) is a parse warning and dropped.
+  The id's rules are checked when the mesh joins (`queueMerge`). Not done:
+  `customPropTemplates.blend` (a binary Blender file) has no `merge` prop yet; whoever edits it
+  in Blender adds one.
+- `SpawnImportedParams.merge?: MeshMergeDef`: each visible piece's `merge` is its `meshProps`
+  entry's, else its node's custom prop, else the spawn's, which leaves out every node of a
+  physics group (an `index`, or the nodes without one, as `ImportPhysics.ts` groups them) whose
+  rigid node isn't `FIXED`: the anchor moves with the body. A node's own prop in such a group is
+  kept, and refused (warned) when it joins.
+- Found here, for every `merge`, not only imports: `createPhysicsEntity` adds the body's
+  components after an `await`, so a queued mesh could join before its dynamic body existed and
+  be drawn frozen. The resolution keeps a mesh queued while its creation is pending
+  (`TAG_IS_PHYSICS_OBJECT`, added at once, without `COLLIDER`, added with the `BODY_*`; a failed
+  creation takes the tag off), so the refusals see the body.
+- Tests: `CustomProps.test.ts` and `SpawnImported.test.ts` (new, the kernel's: the handler a
+  spy, so the order of the three sources and the moving groups left out), `MergeAuto.test.ts`
+  (a fixed and a dynamic body waited for, then merged and refused). For Phase 5: the Hub's
+  imported asset pages list the `merge` custom prop and the spawn option.
+
 ### Phase 4 — Adoption and measurements
 
 1. largeWorld's static props (and its imported level pieces) use `AUTO`.

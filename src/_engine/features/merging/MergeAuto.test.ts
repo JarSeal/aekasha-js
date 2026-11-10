@@ -111,6 +111,29 @@ describe("a mesh's merge", () => {
     expect(fns.lwarn).not.toHaveBeenCalled();
   });
 
+  test('waits for a physics body being created, then the refusals see it', async () => {
+    // What createPhysicsEntity adds: its tag at once, the colliders and the body when it exists
+    const fixed = createBox(0, 0);
+    const dynamic = createBox(1, 0);
+    for (const id of [fixed, dynamic]) {
+      world.addComponent(id, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
+    }
+    await buildPendingMergeGroupsAsync();
+    expect(getMergeGroupOf(fixed)).toBeUndefined();
+    expect(getMergeGroupOf(dynamic)).toBeUndefined();
+
+    // A stand-in body: physics isn't installed, so no hook reads it
+    const body = {} as never;
+    world.addComponent(fixed, ComponentType.COLLIDER, []);
+    world.addComponent(fixed, ComponentType.BODY_STATIC, body);
+    world.addComponent(dynamic, ComponentType.COLLIDER, []);
+    world.addComponent(dynamic, ComponentType.BODY_DYNAMIC_VISUAL, body);
+    await buildPendingMergeGroupsAsync();
+    expect(getMergeGroupOf(fixed)).toMatch(/^auto:/);
+    expect(getMergeGroupOf(dynamic)).toBeUndefined();
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringMatching(/dynamic or kinematic body/));
+  });
+
   test('addToMergeGroup wins over a queued merge, removeFromMergeGroup drops one', async () => {
     const moved = createBox(0, 0, 'ruins');
     const dropped = createBox(1, 0, 'ruins');
