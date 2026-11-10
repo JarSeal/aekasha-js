@@ -759,6 +759,30 @@ As built, section 2 (2026-11-10):
   Rapier's init deprecation, which every scene logs.
 - `readme.md`'s Examples sentence: twelve examples, eleven scenes, with mesh merging.
 
+As built, section 3 (2026-11-10):
+
+- `hub/pages/features/mesh-merging/` (Performance, order 95, `aek:covers` Mesh merging, `aek:image`
+  the example's): installing it, a merge group, joining one (the `merge` prop, `AUTO`, imported
+  models), members are static, scene loads, what can't be merged, when to merge (p370 §3's table
+  cut to what exists: instancing, a merge group, a merged geometry, each mesh on its own; the
+  rules of thumb; when it doesn't pay) and Phase 4's table with the culling and shadow lessons,
+  streaming's limits, "Not yet" (no debug tab or face mapping: p373; one material: p374; no group
+  LOD: p376), key APIs. It links the plan by its current name: section 5 renames it.
+- `hub/pages/examples/merging/` (order 65): the scene JSON whole, the three regions with notes,
+  other ways in.
+- Edited: the asset optimization page (the build-time merge's trade-off points at merge groups),
+  scenes and assets (`mergeGroups` among the scene keys, the feature manifest), physics' imported
+  models (the `merge` property), the toolkit page's largeWorld line, the spatial index page
+  (`DEFAULT` and merged meshes, largeWorld's cells against the oversized tier), "twelve" and
+  `merging()` in the architecture guide, the documentation intro (and an `aekasha/merging` row in
+  its entries table), the quick start's setup and the smallest build page; `hub/CLAUDE.md`'s
+  feature page list.
+- `yarn hub:build` passes. It warned that `SceneData` (on `aekasha`) names `SceneAutoMergeEntry`
+  and `SceneMergeGroupEntry`, which no entry exported (since Phase 3 section 2): both are on
+  `aekasha/merging` now (type exports; `api.json` changes in section 5). Its one warning left, the
+  search index at 550 KiB gzipped against 450, isn't this phase's (the two new pages are 17 KB of
+  Markdown).
+
 ## 9. Versioning
 
 Engine minor (components, API, schema). App patch (largeWorld adoption).

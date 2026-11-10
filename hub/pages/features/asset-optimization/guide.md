@@ -69,7 +69,9 @@ asset's JSON joins its static pieces into one mesh at build time:
   the scenes name its merged nodes. Optimization off then means "merged, not compressed".
 
 The trade-off: the pieces are gone as nodes, so they can't be entities, moved or picked one by
-one. Keep a piece that must stay addressable out with `exclude`.
+one. Keep a piece that must stay addressable out with `exclude`, or merge the pieces at runtime
+instead: a [merge group](hub:features/mesh-merging) draws them as one mesh while each stays an
+entity (a `merge` custom property on the nodes, or `spawnImportedAsset`'s `merge`).
 
 ::: note What it doesn't cover
 

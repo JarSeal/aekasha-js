@@ -12,7 +12,8 @@ Each ECS world holds named domains, each its own grid with its own cell size, ca
 update policy. An entity can be in several.
 
 - **`DEFAULT`** ([`DEFAULT_SPATIAL_DOMAIN`](api:DEFAULT_SPATIAL_DOMAIN)) is the engine's. Meshes and point and spot lights join it by default (a mesh
-  created with `spatialIndex: false` doesn't), and the engine culls lights with it. Its grid is
+  created with `spatialIndex: false` doesn't, and a [merged](hub:features/mesh-merging) mesh is in
+  it through its group's mesh), and the engine culls lights with it. Its grid is
   built per scene, only once something is in it.
 - **Your own** domains hold what your game asks about:
 
@@ -71,7 +72,8 @@ your own components one.
 Registered with a `sceneId`, a domain's settings are that scene's: they replace the domain's
 world settings until the scene exits, and then the domain goes back to them, or is removed if it
 had none. A scene's JSON can do the same with `spatialDomains`; `largeWorld` widens the default
-grid's cells:
+grid's cells, so its merge groups (50 m cells, a radius of at most about 36 m) stay under twice
+the cell size, out of the oversized tier:
 
 ```json
 { "spatialDomains": [{ "id": "DEFAULT", "cellSize": 24 }] }

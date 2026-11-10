@@ -14,5 +14,7 @@ export type {
   MergeMemberData,
   MeshMergeDef,
   MeshMergeOptions,
+  SceneAutoMergeEntry,
+  SceneMergeGroupEntry,
 } from './MergeTypes';
 export { merging } from './MergingFeature';

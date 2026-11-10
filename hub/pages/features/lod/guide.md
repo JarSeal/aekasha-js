@@ -112,11 +112,11 @@ selection and sync cost under 2 ms. Measured on the `instanceStress` scene's for
 levels and a cull, the camera circling inside it; a minified build, Apple M2, Chrome, WebGPU):
 
 | Trees | Pools: CPU / GPU frame | Set, CPU backend | Set, GPU backend |
-| --- | --- | --- | --- |
-| 5k | 1.50 / 1.97 ms | 0.60 / 1.63 ms | 0.49 / 1.25 ms |
-| 20k | 3.59 / 2.60 ms | 1.29 / 2.66 ms | 0.44 / 1.71 ms |
-| 100k | 15.92 / 5.08 ms | 2.70 / 7.04 ms | 0.54 / 2.92 ms |
-| 1M | 166 ms CPU | | 1.1 ms CPU |
+| ----- | ---------------------- | ---------------- | ---------------- |
+| 5k    | 1.50 / 1.97 ms         | 0.60 / 1.63 ms   | 0.49 / 1.25 ms   |
+| 20k   | 3.59 / 2.60 ms         | 1.29 / 2.66 ms   | 0.44 / 1.71 ms   |
+| 100k  | 15.92 / 5.08 ms        | 2.70 / 7.04 ms   | 0.54 / 2.92 ms   |
+| 1M    | 166 ms CPU             |                  | 1.1 ms CPU       |
 
 The 1M row is the CPU frame alone, from a run without the debug tools (which give the GPU
 figures); the pools there need an ECS world past its default size. With the sun's shadow the set's

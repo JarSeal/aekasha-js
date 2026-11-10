@@ -34,6 +34,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 | [`aekasha/spatial`](hub:documentation/aekasha/spatial)                     | The spatial index and its domains.                                                                                                                                                                                                                                |
 | [`aekasha/streaming`](hub:documentation/aekasha/streaming)                 | World streaming: a scene's cells, loaded and unloaded around a focus.                                                                                                                                                                                             |
 | [`aekasha/instancing`](hub:documentation/aekasha/instancing)               | Instanced mesh pools.                                                                                                                                                                                                                                             |
+| [`aekasha/merging`](hub:documentation/aekasha/merging)                     | Mesh merge groups: static meshes drawn as one merged mesh.                                                                                                                                                                                                        |
 | [`aekasha/lines`](hub:documentation/aekasha/lines)                         | Lines and their segment builders.                                                                                                                                                                                                                                 |
 | [`aekasha/postfx`](hub:documentation/aekasha/postfx)                       | PostFX passes.                                                                                                                                                                                                                                                    |
 | [`aekasha/viewports`](hub:documentation/aekasha/viewports)                 | Viewports.                                                                                                                                                                                                                                                        |
@@ -47,7 +48,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 
 - Each feature's entry exports its factory, named after it: `physics()` (with
   `physicsTiers()`, the simulation tiers), `character()`, `skyBox()`, `lod()`, `spatial()`,
-  `instancing()`, `lines()`, `postFx()`, `viewports()` and `streaming()`. A
+  `instancing()`, `lines()`, `postFx()`, `viewports()`, `streaming()` and `merging()`. A
   feature is installed only when [`InitEngine`](api:InitEngine)'s `features` lists it (see
   [How the app starts](hub:examples/quick-start#how-the-app-starts)), and a production build holds
   only what's listed.
