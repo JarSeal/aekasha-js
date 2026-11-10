@@ -695,6 +695,36 @@ that a group is culled whole: 38 members outside the view drawn with their group
 shadow lesson (merging pays in every pass that draws the members: `largeWorldSun`'s fixed shadow
 box reaches no ruins, the day-night sun's does).
 
+Decided when it started (2026-11-10):
+
+- **An example scene is built**: `exampleMerging` (`src/app/examples/merging/`), with an example
+  page (`hub/pages/examples/merging/`) walking through its code, and the feature page's
+  `::: scene` panel showing it. A small modular kit (a few registered geometries, two or three
+  materials) placed in code: `AUTO` members, an explicit group with its `mergeGroups` entry, a
+  member moved with `updateMergeMember`, one removed; a HUD toggle between merged and dissolved
+  with the draw count, so the page can say what to look at. App patch (with largeWorld's).
+- **Versioning now, not after p373**: the bump and the changelog entry are written in this phase
+  (engine 6.4.0 → 6.5.0, app 1.21.1 → 1.21.2, against `main`'s); p373, on the same branch, extends
+  the entry and keeps the versions (another minor at most stays 6.5.0: one bump per merge).
+
+Sections:
+
+1. `features/merging/CLAUDE.md` (its first line, a `## Mesh merging` section: the components, the
+   API, the build, in-place updates, `AUTO`, the scene step and its holds, the limits) and its
+   line in the root's map; the root's Three-folder split and Bootstrap flow ("twelve", `merging()`
+   in the list), `kernel/init/CLAUDE.md`'s feature list; `readme.md` Features.
+2. The example scene `exampleMerging` and its HUD; its Hub image.
+3. The Hub: the feature page `hub/pages/features/mesh-merging/` (`aek:covers` Mesh merging; p370
+   §3's decision table, when not to merge, Phase 4's table and the shadow lesson, a group culled
+   whole, the streaming limits), the example page, links from the asset optimization page; the
+   imported asset pages' `merge` custom prop and spawn option; the largeWorld mentions (toolkit
+   guide, spatial index guide); the feature counts ("eleven": the architecture guide, the
+   documentation intro, the quick start's setup, the smallest build guide); `yarn hub:build`.
+4. `docs/techniques/terrain-modular-kits.md` (p301 §5's page template).
+5. Versions, `CHANGELOG.md`, the baselines (`yarn verify:scenes` for `exampleMerging`,
+   `yarn verify:baselines`, `yarn sbp`), the plan marked done (`_DONE_`, the references), the
+   epic's status.
+
 ## 9. Versioning
 
 Engine minor (components, API, schema). App patch (largeWorld adoption).
