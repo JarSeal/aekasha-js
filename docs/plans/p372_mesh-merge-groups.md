@@ -565,6 +565,42 @@ THREE.BatchedMesh` had been there since Phase 1, but only `testDebugScene` (a de
 **Exit:** largeWorld's draw count drops by the measured amount with no visual change, on both
 backends.
 
+Decided when it started (2026-11-10):
+
+- **largeWorld has no imported level pieces**, and few static meshes: 8 props in 3 materials, 5
+  resting objects and the barbell in one. With the default 32 m cells `AUTO` saves about 3 draws
+  per pass (most props are alone in their cell). So the scene gains a **ruins kit**: a few
+  hundred static wall, pillar and floor pieces built from a few geometries, in clusters on the
+  terrain, all `merge: 'AUTO'`, so the measurement shows what merging is for (many small static
+  pieces). App patch; the scene's look and its baselines change.
+- **The three `offFrustum` props stay on their own**: they show the ECS frustum culling
+  (`ecsFrustumCullingEnabled`), which a merged member's own flags don't do (§7). The crate stack
+  hovers (`HoverEffect` writes its `TRANSFORM` every frame), so it isn't merged either.
+- **`AUTO` cell size 50 m** (the scene's `mergeGroups`): 4 × 4 cells on the 200 m terrain, a
+  group's bounding radius (at most about 36 m) under the DEFAULT domain's oversized threshold
+  (its 24 m cells × 2).
+- **"Before" is the same scene with every group dissolved** (`dissolveMergeGroup`), measured in
+  the same run, as Phases 1-3's checks did.
+
+Sections:
+
+1. The existing props: `merge: 'AUTO'` on the five in-view static props, the resting objects and
+   the barbell; the scene's `mergeGroups: [{ id: 'AUTO', cellSize: 50 }]`.
+2. The ruins kit: its geometries and materials, the seeded clusters on the terrain, `merge:
+'AUTO'`.
+3. The measurements: draws and triangles per pass (main and shadow) and the CPU frame time,
+   merged against dissolved, on WebGPU and WebGL2, the images compared.
+4. The baselines (`yarn verify:scenes`, `yarn verify:baselines`, `yarn sbp`).
+
+As built, section 1 (2026-11-10):
+
+- `largeWorld.ts`: `merge: 'AUTO'` on `STATIC_PROPS` but the `offFrustum` ones, on the
+  `RESTING_OBJECTS` and on the barbell; `largeWorld.scene.json`: `mergeGroups: [{ id: 'AUTO',
+cellSize: 50 }]` (its manifest names `merging` now) and the description.
+- Loaded in Chrome (debug env, through the test bridge): 11 members in 8 groups, each built once
+  by the scene step, none held, no merge warning. Five are one prop alone (the rocks, platforms
+  and wall are in different 50 m cells); the resting objects make three (3, 2 and the barbell).
+
 ### Phase 5 — Handbook, docs and versioning
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk

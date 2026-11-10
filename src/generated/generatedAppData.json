@@ -1439,7 +1439,7 @@
     },
     "largeWorld": {
       "name": "Large world",
-      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
+      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props drawn merged by material and 50 m cell, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
       "cameras": [
         {
           "camProps": {
@@ -1723,6 +1723,12 @@
             "halfHeight": 1.729032208842616
           },
           "normals": true
+        }
+      ],
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 50
         }
       ],
       "id": "largeWorld",
@@ -5391,7 +5397,8 @@
         "skybox",
         "postfx",
         "spatial",
-        "lod"
+        "lod",
+        "merging"
       ]
     },
     "lodShowcase": {
