@@ -113,10 +113,26 @@ const addMaterialFieldRefs = (mat: unknown, listed: Listed, refs: Refs) => {
 };
 
 /** A geometry id's references: a listed geometry (a LOD level `<geo>#lod<n>` names its base), or
- * the listed import whose `<id>/<node>` it is */
-const addGeometryRef = (geoId: string, listed: Listed, refs: Refs) => {
+ * the listed import whose `<id>/<node>` it is; a listed MERGED geometry's parts' too (p371 D2), so
+ * they load with it (in the base, or each cell that loads it) */
+const addGeometryRef = (
+  scene: SceneJSON,
+  geoId: string,
+  listed: Listed,
+  refs: Refs,
+  isPart = false
+) => {
   const baseId = geoId.replace(/#lod\d+$/, '');
-  if (listed.geometries.has(baseId)) refs.geometries.add(baseId);
+  if (listed.geometries.has(baseId)) {
+    refs.geometries.add(baseId);
+    const geo = getListedEntry(scene, listed, 'geometries', baseId) as GeoLike | undefined;
+    // One level: a MERGED part is a gather error, and two merging each other would never end
+    if (geo?.type === 'MERGED' && !isPart) {
+      for (const part of (geo.params?.parts ?? []) as { geo: string }[]) {
+        addGeometryRef(scene, part.geo, listed, refs, true);
+      }
+    }
+  }
   for (const importId of listed.importedAssets.keys()) {
     if (baseId.startsWith(`${importId}/`)) refs.importedAssets.add(importId);
   }
@@ -147,13 +163,13 @@ const addMeshRefs = (
 ) => {
   if (typeof mesh === 'string') return;
   const props = mesh.props as Record<string, unknown>;
-  if (typeof props.geo === 'string') addGeometryRef(props.geo, listed, refs);
+  if (typeof props.geo === 'string') addGeometryRef(scene, props.geo, listed, refs);
   if (typeof props.mat === 'string') addMaterialRef(scene, props.mat, listed, refs, isBase);
   else addMaterialFieldRefs(props.mat, listed, refs);
   addMaterialFieldRefs(props.matOverrides, listed, refs);
   const levels = (props.lod as { levels?: { geo?: unknown; mat?: unknown }[] } | undefined)?.levels;
   for (const level of Array.isArray(levels) ? levels : []) {
-    if (typeof level.geo === 'string') addGeometryRef(level.geo, listed, refs);
+    if (typeof level.geo === 'string') addGeometryRef(scene, level.geo, listed, refs);
     if (typeof level.mat === 'string') addMaterialRef(scene, level.mat, listed, refs, isBase);
   }
 };
@@ -331,7 +347,7 @@ const addFarMeshRefs = (
   listed: Listed,
   refs: Refs
 ) => {
-  if (typeof props.geo === 'string') addGeometryRef(props.geo, listed, refs);
+  if (typeof props.geo === 'string') addGeometryRef(scene, props.geo, listed, refs);
   if (typeof props.mat === 'string') addMaterialRef(scene, props.mat, listed, refs, false);
   else addMaterialFieldRefs(props.mat, listed, refs);
   addMaterialFieldRefs(props.matOverrides, listed, refs);

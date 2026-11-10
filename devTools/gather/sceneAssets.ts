@@ -16,6 +16,7 @@ import {
 import { mergeSkyBoxPreset } from '../../src/_engine/features/skybox/Presets';
 import type { GatherContext, Registries } from './context';
 import { EngineMeshAssetSchema, type EngineSceneAsset } from './engineSchemas';
+import { checkSceneMergedGeometries } from './mergedGeometries';
 import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
@@ -72,7 +73,12 @@ const resolveLights = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
   });
 };
 
-const resolveGeometries = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
+const resolveGeometries = (run: SceneRun) => {
+  resolveGeometryIds(run);
+  checkSceneMergedGeometries(run.ctx, run.reg, run.sceneId, run.scene);
+};
+
+const resolveGeometryIds = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
   if (!Array.isArray(scene.geometries)) return;
   scene.geometries = scene.geometries.map((geoId) => {
     if (typeof geoId !== 'string') return geoId;
