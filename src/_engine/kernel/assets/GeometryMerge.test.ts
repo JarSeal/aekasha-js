@@ -10,7 +10,7 @@ import {
   mergeGeometryPartsAsync,
   registerMergedGeometry,
   registerMergedGeometryAsync,
-  registerMergedGeoProps,
+  registerMergedGeoPropsAsync,
 } from './GeometryMerge';
 
 /** The worker's side, in this thread: whether `MERGE` runs the worker task, how many requests
@@ -79,9 +79,9 @@ describe('registerMergedGeometry', () => {
   });
 });
 
-describe('registerMergedGeoProps', () => {
-  const box = (y: number) => {
-    const geometry = registerMergedGeoProps({
+describe('registerMergedGeoPropsAsync', () => {
+  const boxAsync = async (y: number) => {
+    const geometry = await registerMergedGeoPropsAsync({
       id: `geometryMergeTestProps${y}`,
       type: 'MERGED',
       params: {
@@ -110,10 +110,10 @@ describe('registerMergedGeoProps', () => {
     return geometry;
   };
 
-  test('composes each part as a mesh: position, rotation (quaternion over it), scale', () => {
+  test('composes each part as a mesh: position, rotation (quaternion over it), scale', async () => {
     // A 2×1×1 box: the scale stretches it along its own x, the quarter turn puts that on y
     saveBufferGeometry(new THREE.BoxGeometry(1, 1, 1), { id: 'geometryMergeTestUnit' });
-    const geometry = box(0);
+    const geometry = await boxAsync(0);
     const ranges = geometry.userData.mergeParts as { key?: string; vertexStart: number }[];
     expect(ranges.map((range) => range.key)).toEqual(['plain', undefined, 'rotated']);
     const partBox = (start: number) =>

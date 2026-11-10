@@ -33,6 +33,7 @@ import {
   describeOwner,
   describePipelineFile,
   findDeclaration,
+  THREAD_TEXT,
   toUrls,
 } from './_dbg__AssetsData';
 import {
@@ -278,6 +279,14 @@ export const getGeometryInfoItems = (
   const load = importInfo ? describeLoadReport(report) : undefined;
   const pipeline = importInfo ? describePipelineFile(importDeclaration, report, true) : undefined;
   const loadedFile = pipeline?.loadedUrl ?? (typeof sourceFile === 'string' ? sourceFile : '');
+  // A merge (p371): its parts, and where it ran (none recorded: a synchronous merge)
+  const mergeParts = geometry.userData.mergeParts as unknown[] | undefined;
+  const mergeReport = mergeParts ? getAssetLoadReport(`merge:${id}`) : undefined;
+  const merge = mergeParts
+    ? mergeReport
+      ? describeLoadReport(mergeReport)
+      : { loadedOn: `${THREAD_TEXT.MAIN_THREAD} (synchronous)`, duration: '—' }
+    : undefined;
 
   return [
     ...toInfoRows([
@@ -285,9 +294,11 @@ export const getGeometryInfoItems = (
         'Type',
         importInfo
           ? 'Imported geometry'
-          : generatorType
-            ? `${generatorType} (generated)`
-            : geometry.type,
+          : mergeParts
+            ? `Merged geometry (${mergeParts.length} parts)`
+            : generatorType
+              ? `${generatorType} (generated)`
+              : geometry.type,
       ],
       ['Id', id],
       ['File', typeof sourceFile === 'string' ? sourceFile : '—'],
@@ -309,6 +320,12 @@ export const getGeometryInfoItems = (
         ? [
             ['Loaded on', load.loadedOn] as [string, string],
             ['Load time (import)', load.duration] as [string, string],
+          ]
+        : []),
+      ...(merge
+        ? [
+            ['Merged on', merge.loadedOn] as [string, string],
+            ['Merge time', merge.duration] as [string, string],
           ]
         : []),
       ['Ref count', String(entry.count)],

@@ -276,13 +276,15 @@ const getPartMatrix = (part: MergedGeoPart) => {
 };
 
 /**
- * Registers a `MERGED` geometry JSON's props ({@link registerMergedGeometry} with its parts'
- * transforms as matrices): the scene loader's, which `import()`s this module for a scene's first
- * `MERGED` geometry.
+ * Registers a `MERGED` geometry JSON's props ({@link registerMergedGeometryAsync} with its
+ * parts' transforms as matrices, so in the assets worker): the scene loader's, which `import()`s
+ * this module for a scene's first `MERGED` geometry.
  * @internal
- * @throws as {@link mergeGeometryParts}
+ * @throws (rejects) as {@link mergeGeometryParts}
  */
-export const registerMergedGeoProps = (props: MergedGeoProps): THREE.BufferGeometry => {
+export const registerMergedGeoPropsAsync = (
+  props: MergedGeoProps
+): Promise<THREE.BufferGeometry> => {
   const { type, params, ...registration } = props;
   const { parts, groups, attributes, indexed } = params;
   const mergeParts: MergePart[] = parts.map((part) => ({
@@ -291,5 +293,10 @@ export const registerMergedGeoProps = (props: MergedGeoProps): THREE.BufferGeome
     ...(part.materialSlot !== undefined ? { materialSlot: part.materialSlot } : {}),
     ...(part.key !== undefined ? { key: part.key } : {}),
   }));
-  return registerMergedGeometry(mergeParts, { ...registration, groups, attributes, indexed });
+  return registerMergedGeometryAsync(mergeParts, {
+    ...registration,
+    groups,
+    attributes,
+    indexed,
+  });
 };

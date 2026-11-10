@@ -226,24 +226,29 @@ export const loadSceneAssetsAsync = async (
   return { textures, materials, geometries, importedAssets };
 };
 
-/** Registers a scene's MERGED geometries from their parts (p371 D2). The merge code loads here,
- * on the first one: an app without one never loads it. A merge that fails (a part not
- * registered, a morphed or skinned one) is logged and left out, so a mesh using it is skipped as
- * for any missing geometry. The parts are only read: the merge takes no ref on them, so they stay
- * with whatever loaded them and are released with it. */
+/** Registers a scene's MERGED geometries from their parts (p371 D2), in the assets worker
+ * (`AppConfig.assets.mergeWorkerTarget`, D4), all at once: a part is never another MERGED one.
+ * The merge code loads here, on the first one: an app without one never loads it. Each merge
+ * captures the owner scope at its call, so it registers in it after its await. A merge that
+ * fails (a part not registered, a morphed or skinned one) is logged and left out, so a mesh using
+ * it is skipped as for any missing geometry. The parts are only read: the merge takes no ref on
+ * them, so they stay with whatever loaded them and are released with it. */
 const registerMergedGeometriesAsync = async (
   merged: { props: MergedGeoProps; key: string }[],
   geometries: ScenePrimitiveAssets['geometries'],
   owned: Owned
 ) => {
-  const { registerMergedGeoProps } = await import('../assets/GeometryMerge');
-  for (const { props, key } of merged) {
-    try {
-      geometries[key] = owned(() => registerMergedGeoProps(props));
-    } catch (err) {
-      lerror(`Could not merge geometry "${key}" in loadNextSceneAssets.`, err);
-    }
-  }
+  const { registerMergedGeoPropsAsync } = await import('../assets/GeometryMerge');
+  await Promise.all(
+    merged.map(({ props, key }) =>
+      owned(() => registerMergedGeoPropsAsync(props)).then(
+        (geometry) => {
+          geometries[key] = geometry;
+        },
+        (err: unknown) => lerror(`Could not merge geometry "${key}" in loadNextSceneAssets.`, err)
+      )
+    )
+  );
 };
 
 /**
