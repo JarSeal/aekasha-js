@@ -11,8 +11,7 @@ import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 
 /**
  * The `INSTANCE_SET` component's data: the set its entity owns. Deleting the entity (or removing
- * the component) disposes the set.
- * @internal
+ * the component) disposes the set. Set by `createInstanceSetAsync`: don't add it.
  */
 export interface InstanceSetData {
   /** The set's draws, a child of the scene it's added to. */

@@ -9,5 +9,10 @@ export type {
 export type { InstancedMeshSlotData, InstancePlacement } from './InstancedMeshPoolTypes';
 export { createInstanceSetAsync, readInstanceSetStatsAsync } from './InstanceSet';
 export type { CreateInstanceSetOptions, InstanceSet, InstanceSetBackendKind } from './InstanceSet';
-export type { InstanceRange, InstanceSetSlotStats, InstanceSetStats } from './InstanceSetTypes';
+export type {
+  InstanceRange,
+  InstanceSetData,
+  InstanceSetSlotStats,
+  InstanceSetStats,
+} from './InstanceSetTypes';
 export { instancing } from './InstancingFeature';

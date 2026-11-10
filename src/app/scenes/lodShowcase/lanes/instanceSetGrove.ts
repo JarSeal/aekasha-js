@@ -32,14 +32,14 @@ export const instanceSetGroveLane: ShowcaseLane = {
     // #region instance-set-grove (shown in the Hub: features/lod, "Instance sets")
     const set = await createInstanceSetAsync({
       world: ctx.world,
-      levels, // an instanced LOD pool's levels: geometry, material(s), screenSize, castShadow
-      lod, // { cullScreenSize: 0.04 }: the selection settings every instance shares
+      levels, // a LOD pool's: geometry, material(s), screenSize, castShadow
+      lod, // { cullScreenSize: 0.04 }, shared by every instance
       maxInstances: placements.length,
       receiveShadow: true,
     });
     // null: the scene exited while the set's backend loaded
     if (!set) return state;
-    ctx.rootScene.add(set.object); // directly under the root scene: the instances are in world space
+    ctx.rootScene.add(set.object); // under the root scene: world space
     set.addInstances(placements); // plain data, no entity per instance
     // #endregion instance-set-grove
 
