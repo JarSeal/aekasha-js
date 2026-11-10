@@ -617,6 +617,50 @@ As built, section 2 (2026-11-10):
   groups; `largeWorldPlatform2` still alone; the resting objects' three), 12-25 members and
   312-776 vertices each, each built once, none held, no merge warning.
 
+As built, section 3 (2026-11-10): the measurements.
+
+- How: Chrome on macOS, prod test mode (`?isProdTest=true&aekTest=true&startScene=largeWorld`),
+  1000 × 700, through the test bridge, a harness in the session's scratchpad (not committed). Per
+  frame the main loop's frame probe (`setFrameProbe`, as the profiler's CPU figure: the loop
+  function's time, the render's encoding included) and every draw (`renderer.info.update`, both
+  backends) counted by the camera it was drawn with (`renderer._renderObjectDirect` wrapped, the
+  outer camera put back after a nested render: a shadow map renders lazily inside the main pass's
+  first draw that samples it). 60 frames to settle, 240 measured merged, every group dissolved
+  (`dissolveMergeGroup` of the 28), 60 to settle, 240 measured. The images on a second load:
+  `freeze()`, a snapshot, every group dissolved (the members show at once), a snapshot.
+- The main camera draws the scene twice per frame (the ambient occlusion PostFX's scene pass
+  and the colour pass), plus two fullscreen passes; three draws of fullscreen quads (4 triangles)
+  on an orthographic camera are the same in both.
+- With the default sky box (`basicSkybox`), the scene's `largeWorldSun` casts the shadows: its
+  shadow camera is a fixed ±25 m box around the origin, which reaches no ruin site. With
+  `dayNight` (`setActiveSkyBox('dayNight')`, paused at 10:00), the sky's sun casts them, its
+  shadow following the camera, and the ruins are in it.
+
+| Sky box, backend            | Main draws (2 passes) | Shadow draws | Triangles (main / shadow) | CPU frame median (p10-p90) |
+| --------------------------- | --------------------- | ------------ | ------------------------- | -------------------------- |
+| basic, WebGPU, merged       | 76                    | 18           | 287 140 / 135 894         | 2.25 ms (1.48-2.81)        |
+| basic, WebGPU, dissolved    | 762                   | 19           | 287 164 / 134 694         | 3.23 ms (2.61-3.70)        |
+| basic, WebGL2, merged       | 76                    | 18           | 287 140 / 135 894         | 2.48 ms (1.67-3.81)        |
+| basic, WebGL2, dissolved    | 762                   | 19           | 287 164 / 134 694         | 3.59 ms (2.82-3.99)        |
+| dayNight, WebGPU, merged    | 76                    | 15           | 287 140 / 134 846         | 2.39 ms (1.62-3.44)        |
+| dayNight, WebGPU, dissolved | 762                   | 53           | 287 164 / 134 846         | 3.77 ms (3.23-3.92)        |
+| dayNight, WebGL2, merged    | 76                    | 15           | 287 140 / 134 846         | 2.27 ms (1.51-2.82)        |
+| dayNight, WebGL2, dissolved | 762                   | 53           | 287 164 / 134 846         | 3.40 ms (2.85-3.81)        |
+
+- So merging the 409 members into 28 groups takes the main camera's draws from 381 to 38 per
+  pass (686 a frame: 38 members are outside the view on their own, while their groups are drawn
+  whole), and the day-night shadow pass's from 53 to 15; the triangles stay the same within 0.01 %
+  (the groups are drawn whole, but almost every ruin is in view). The CPU frame time drops by
+  about 1.0-1.4 ms (30-37 %) on both backends; medians move by about 0.3 ms between runs.
+  The draw counts are the same in every frame and on both backends.
+- Images, merged against dissolved (700 000 pixels): 606 differ on WebGPU (88 by more than 2
+  levels, at most 43), 853 on WebGL2 (83, at most 41); with `dayNight` 699 (105) and 857 (103).
+  All at the ruin sites. With the PostFX off (`setPostFxEnabled(false)`) 103 on WebGPU (78 by more
+  than 2) and 81 on WebGL2 (68): the ambient occlusion turns the depth's rounding into the 1-level
+  differences over the ruins' surfaces, and what's left are single pixels on the pieces' edges and
+  where they intersect, flipping coverage (the merged vertices are baked relative to the group's
+  centre, Phase 2's rounding). Side by side, no difference is visible.
+
 ### Phase 5 — Handbook, docs and versioning
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk
