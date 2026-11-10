@@ -26,11 +26,11 @@ import type {
   InstanceSetStats,
 } from '../InstanceSetTypes';
 
-// An instance set's debug readback (docs/plans/p354_gpu-driven-culling.md D11): the GPU backend's
-// counters per slot and state words (the level and the outgoing one), read back after the GPU's
-// queued work, or the CPU backend's level meshes and state arrays, read as they are; the state of
-// the front's live ranges only (a removed instance's is the backend's own marker). Loaded by
-// `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod test mode.
+// An instance set's debug readback (docs/plans/_DONE_p354_gpu-driven-culling.md D11): the GPU
+// backend's counters per slot and state words (the level and the outgoing one), read back after the
+// GPU's queued work, or the CPU backend's level meshes and state arrays, read as they are; the
+// state of the front's live ranges only (a removed instance's is the backend's own marker). Loaded
+// by `readInstanceSetStatsAsync` (InstanceSet.ts) in the debug env and prod test mode.
 
 /** The light in the root scene whose shadow map `camera` renders, if any. */
 const findShadowLight = (camera: THREE.Camera) => {

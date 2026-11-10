@@ -1,7 +1,7 @@
-// An instance set's ranges (docs/plans/p354_gpu-driven-culling.md D1, Phase 5 step 1): which of
-// its instance indices are live, and the free list a removed range waits in for a later add. Pure
-// bookkeeping, no three: the front (InstanceSet.ts) keeps one per set and tells the backend what
-// changed.
+// An instance set's ranges (docs/plans/_DONE_p354_gpu-driven-culling.md D1, Phase 5 step 1): which
+// of its instance indices are live, and the free list a removed range waits in for a later add.
+// Pure bookkeeping, no three: the front (InstanceSet.ts) keeps one per set and tells the backend
+// what changed.
 //
 // - An add takes the first free range it fits in (first fit, by start: the lowest indices fill
 //   first, so the extent stays low), the rest of that range staying free; with none it fits, it

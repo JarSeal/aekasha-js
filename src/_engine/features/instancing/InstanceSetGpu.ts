@@ -31,7 +31,7 @@ import {
 } from './InstanceSetNodes';
 import type { CreateInstanceSetBackend, InstanceSetDebugSlot } from './InstanceSetTypes';
 
-// An instance set's GPU backend (docs/plans/p354_gpu-driven-culling.md D4-D8): the front's
+// An instance set's GPU backend (docs/plans/_DONE_p354_gpu-driven-culling.md D4-D8): the front's
 // `import()` (InstanceSet.ts), so only a WebGPU device downloads it, with the kernel's drawing
 // pipeline seam (DrawingPipeline.ts) it alone imports.
 //

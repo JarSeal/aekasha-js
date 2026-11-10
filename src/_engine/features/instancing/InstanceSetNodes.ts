@@ -25,9 +25,9 @@ import {
 } from 'three/tsl';
 import { LOD_FADE_END_EPSILON } from '../../utils/LodRules';
 
-// An instance set's TSL (docs/plans/p354_gpu-driven-culling.md D4, D7, D8): the compute passes and
-// the vertex fetch, over the GPU backend's buffers (InstanceSetGpu.ts). Its own module so the
-// backend's bookkeeping and the shader code read apart; only the GPU backend imports it.
+// An instance set's TSL (docs/plans/_DONE_p354_gpu-driven-culling.md D4, D7, D8): the compute
+// passes and the vertex fetch, over the GPU backend's buffers (InstanceSetGpu.ts). Its own module
+// so the backend's bookkeeping and the shader code read apart; only the GPU backend imports it.
 //
 // Each dispatch is one camera's slot (D6) and runs three passes: the reset zeroes the slot's
 // per-level counters; the cull, one thread per instance, first moves the instance's state

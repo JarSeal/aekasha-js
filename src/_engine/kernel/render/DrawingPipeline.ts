@@ -1,4 +1,4 @@
-// The engine's seam on three's drawing pipeline (docs/plans/p354_gpu-driven-culling.md D5):
+// The engine's seam on three's drawing pipeline (docs/plans/_DONE_p354_gpu-driven-culling.md D5):
 // `renderer.drawingPipeline` (a `StandardDrawingPipeline`, experimental in three r187) decides
 // which objects of a render are drawn. Every render calls it, a nested one (a shadow map, rendered
 // while the outer render's list is drawn) and a `compileAsync` projection included: `begin(camera)`,

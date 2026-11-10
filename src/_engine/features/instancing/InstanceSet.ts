@@ -23,13 +23,12 @@ import type {
   InstanceSetStats,
 } from './InstanceSetTypes';
 
-// Instance sets (docs/plans/p354_gpu-driven-culling.md): many instances as plain data, with no
-// entity per instance, culled and LOD-selected per instance by a backend: the GPU one (compute
-// culling and indirect draws, WebGPU) or the CPU one (WebGL2). This is the front, on the
-// entry: the options' checks, the owning entity, the ranges (InstanceRanges.ts: the live ones and
-// the free list) and the backend's `import()`, so a build that never creates a set ships only
-// this, and a device downloads only its own backend. The backends' contract is
-// InstanceSetTypes.ts.
+// Instance sets (docs/plans/_DONE_p354_gpu-driven-culling.md): many instances as plain data, with
+// no entity per instance, culled and LOD-selected per instance by a backend: the GPU one (compute
+// culling and indirect draws, WebGPU) or the CPU one (WebGL2). This is the front, on the entry: the
+// options' checks, the owning entity, the ranges (InstanceRanges.ts: the live ones and the free
+// list) and the backend's `import()`, so a build that never creates a set ships only this, and a
+// device downloads only its own backend. The backends' contract is InstanceSetTypes.ts.
 
 /** The most instances a set holds: a visible list's entry packs the instance in 24 bits (D4). */
 const MAX_INSTANCE_SET_INSTANCES = 1 << 24;
@@ -224,13 +223,13 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
     : (await import('./InstanceSetCpu')).createCpuInstanceSetBackend;
 
 /**
- * Creates an instance set (docs/plans/p354_gpu-driven-culling.md): up to millions of instances of
- * an instanced LOD pool's levels as plain data, with no entity per instance. On WebGPU, compute
- * passes cull each instance against the camera and select its level by the LOD rules
- * (`LodDef`'s screen sizes, `hysteresis` and `cullScreenSize`, against the LOD selection's camera),
- * and each level and geometry group draws with one indirect draw: the CPU cost per frame stays flat
- * whatever the count. On WebGL2 (no compute) the CPU backend draws the same set with the same
- * rules: an `InstancedMesh` per level, the instances moved between them each frame without an
+ * Creates an instance set (docs/plans/_DONE_p354_gpu-driven-culling.md): up to millions of
+ * instances of an instanced LOD pool's levels as plain data, with no entity per instance. On
+ * WebGPU, compute passes cull each instance against the camera and select its level by the LOD
+ * rules (`LodDef`'s screen sizes, `hysteresis` and `cullScreenSize`, against the LOD selection's
+ * camera), and each level and geometry group draws with one indirect draw: the CPU cost per frame
+ * stays flat whatever the count. On WebGL2 (no compute) the CPU backend draws the same set with the
+ * same rules: an `InstancedMesh` per level, the instances moved between them each frame without an
  * entity each, culled by three per level mesh as a whole.
  *
  * Use a set for static (or rarely moving) content past about 20k instances: forests, grass,

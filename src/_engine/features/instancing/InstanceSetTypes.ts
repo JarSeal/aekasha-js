@@ -7,7 +7,7 @@ import type { InstancedLodPoolLevel } from './InstancedMeshPool';
 //
 // The instance sets' types that the front (InstanceSet.ts) and its backends share, apart from
 // them so `ECSCoreComponents.ts` can import the component's data and a backend the contract
-// without pulling the front in. Types only. docs/plans/p354_gpu-driven-culling.md D1, D10.
+// without pulling the front in. Types only. docs/plans/_DONE_p354_gpu-driven-culling.md D1, D10.
 
 /**
  * The `INSTANCE_SET` component's data: the set its entity owns. Deleting the entity (or removing

@@ -1,9 +1,9 @@
-// The LOD rules on plain numbers (docs/plans/p354_gpu-driven-culling.md D3): the level selection
-// with its hysteresis, the cull test, and a cross-fade's start and step. Pure, so it's in utils/:
-// the ECS path (features/lod/LodSystem.ts, LodFades.ts) calls it, and so do the instance sets
-// (features/instancing/), which import no LOD code. The GPU backend's TSL ports these functions
-// line by line (Node can't run TSL: its parity with the pool is checked in the browser, by
-// instanceStress's readback), so a change of a rule here changes the port too.
+// The LOD rules on plain numbers (docs/plans/_DONE_p354_gpu-driven-culling.md D3): the level
+// selection with its hysteresis, the cull test, and a cross-fade's start and step. Pure, so it's in
+// utils/: the ECS path (features/lod/LodSystem.ts, LodFades.ts) calls it, and so do the instance
+// sets (features/instancing/), which import no LOD code. The GPU backend's TSL ports these
+// functions line by line (Node can't run TSL: its parity with the pool is checked in the browser,
+// by instanceStress's readback), so a change of a rule here changes the port too.
 //
 // A selection measures a screen size `s` (the bounding sphere's diameter over the viewport height,
 // both biases included) and turns it into a level, or culled. An instance's state is its level,

@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-6 implemented
+Status: implemented (Phases 0-7)
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -1828,7 +1828,7 @@ verification after them):
   - `yarn sbp --profile all`: every budget within (`features/instancing` 4.6 kB of its 5 KiB,
     `features/lod` 5.4 of 7).
 
-### Phase 7 — Versioning, changelog, the plan done
+### Phase 7 — Versioning, changelog, the plan done — done
 
 1. **Versions** (`package.json`), bumped from what `main` has at the merge (today engine 6.2.0
    and app 1.20.0):
@@ -1850,6 +1850,27 @@ verification after them):
      open question (§5).
 5. **The PR**: branch `p354-phase0-spike` into `main` (p350: p354 gets its own branch), opened
    when asked.
+
+**As built** (section by section, 2026-11-10, commits "phase 7 - section 1" to "section 3"):
+
+- **Section 1, the versions.** `main` was still at the branch's base (`73663bb6`, p353's merge),
+  so the bumps are step 1's: engine and project 6.3.0, app 1.21.0, the toolkit 3.0.0 (the branch
+  changes nothing in `src/toolkit/`). `yarn checkVersions --against main` passes.
+- **Section 2, the changelog.** The entry is headed by the branch's name, as the others are
+  (`2026-11-10 — p354-phase0-spike`), with Engine, App and Project sections. Engine adds a Fixed
+  list beyond step 2's list: `runSceneLoadSettledHooks` walking a copy (Phase 5 step 6) and the GPU
+  memory tab's catch-all counted last (Phase 5 step 5). The SBP budget raises are under Project
+  (`sbp.config.ts`). The sizes are from the committed bundle baseline: the main chunk 392.3 →
+  395.8 kB gzip, `features/instancing` 2,827 → 4,673 B.
+- **Section 3, the plan done.** More files named this one than step 4 listed, and fewer of those it
+  listed did: p057, p058, p348 and p351's header lines, p350's `Blocks` line, 14 comments in 13
+  files in `src/` and `features/instancing/CLAUDE.md` (`docs/plans/p354_gpu-driven-culling.md`)
+  named it, and all were updated (the comments rewrapped at 100 columns). p350's status line, "Where
+  it stands", the roadmap's done list, its Tier 3 row and its branches note say p354 is done. p308
+  and p370 didn't name it: each Related line gained it (p308: §5's static scatter on sets; p370:
+  its §12 question 3, whose text now says the cull and the hook are there to build on). `features/lod/CLAUDE.md` no longer named it
+  (Phase 6 took p354 off its later plans). p350's Tier 4 row is unchanged (its open question was
+  already three's `MeshletDrawingPipeline` for huge single meshes).
 
 ## 5. Not in scope, and left for later
 

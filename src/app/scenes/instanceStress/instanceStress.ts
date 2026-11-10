@@ -30,9 +30,9 @@ import { loadDebugModuleAsync } from 'aekasha/debug';
 import { createViewport } from 'aekasha/viewports';
 import { startStreamedForest, stopStreamedForest } from './instanceStressStreaming';
 
-// GPU-driven culling's measuring and parity scene (docs/plans/p354_gpu-driven-culling.md D12): a
-// square forest of LOD trees on a jittered grid, with the main camera circling inside it on a
-// fixed path. Two paths draw the same trees with the same levels, materials and LOD settings:
+// GPU-driven culling's measuring and parity scene (docs/plans/_DONE_p354_gpu-driven-culling.md
+// D12): a square forest of LOD trees on a jittered grid, with the main camera circling inside it on
+// a fixed path. Two paths draw the same trees with the same levels, materials and LOD settings:
 // - CPU (the default): square tiles of one `createInstancedLodPool` each (so three's whole-mesh
 //   culling still has something to cull, as static instance cells would give it). Every instance
 //   is an entity that the pool sync walks and the LOD selection measures every frame, in view or

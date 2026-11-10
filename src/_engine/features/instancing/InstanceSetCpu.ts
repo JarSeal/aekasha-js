@@ -21,9 +21,9 @@ import {
 } from '../../utils/LodRules';
 import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 
-// An instance set's CPU backend (docs/plans/p354_gpu-driven-culling.md D9): what a set draws with
-// on a renderer without compute (WebGL2). The front's `import()` (InstanceSet.ts), so only such a
-// device downloads it. The same set, data and rules as the GPU backend, without the compute:
+// An instance set's CPU backend (docs/plans/_DONE_p354_gpu-driven-culling.md D9): what a set draws
+// with on a renderer without compute (WebGL2). The front's `import()` (InstanceSet.ts), so only
+// such a device downloads it. The same set, data and rules as the GPU backend, without the compute:
 //
 // - An InstancedMesh per level, sized for every instance, with its per-instance `lodFade`
 //   (createLodFadeAttribute) and the level's materials (the LOD dither on them, as a pool's). An

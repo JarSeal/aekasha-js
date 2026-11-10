@@ -8,7 +8,7 @@ import {
   setSceneStreamingSettings,
 } from 'aekasha/streaming';
 
-// `instanceStress`' streamed forest (docs/plans/p354_gpu-driven-culling.md Phase 5 step 3,
+// `instanceStress`' streamed forest (docs/plans/_DONE_p354_gpu-driven-culling.md Phase 5 step 3,
 // `?stressStream=<cellSize>`): the set path's trees cut into world streaming's cells, each cell
 // one unit of code content (`NEAR_AND_FAR`) that adds its trees to the one instance set as a range
 // in its `load` and removes the range in its `unload`, so the set holds only the cells around the

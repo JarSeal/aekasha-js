@@ -15,8 +15,8 @@
 // InstancedMesh's `instanceMatrix` through three r187's `referenceAttribute`, bound per drawn mesh
 // (so impostor InstancedMeshes on one material share a build,
 // docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), an instance
-// set's draw's fetched matrix (docs/plans/p354_gpu-driven-culling.md D8), else the identity; and it
-// reads `positionGeometry`, the quad's corners before any transform.
+// set's draw's fetched matrix (docs/plans/_DONE_p354_gpu-driven-culling.md D8), else the identity;
+// and it reads `positionGeometry`, the quad's corners before any transform.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):
 // there the quad faces the light and shows the frames seen from it, so the impostor casts its own
