@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 50,
+    "near": 0.1,
+    "far": 300,
+    "position": { "x": 0, "y": 17, "z": 30 },
+    "lookAtPoint": { "x": 0, "y": 0, "z": 1 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "exampleMergingCamera",
+    "debugData": { "name": "Mesh merging example camera" }
+  }
+}

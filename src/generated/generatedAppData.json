@@ -611,6 +611,155 @@
         "skybox"
       ]
     },
+    "exampleMerging": {
+      "name": "Example: Mesh merging",
+      "description": "A ruined courtyard of about 280 pieces from a four-piece kit, drawn as five merged meshes: the floor tiles in one named group, the stone in four automatic ones (one per 16 m cell). Space draws every piece on its own and merges them again, G swings the gate (its part of the merged mesh is rewritten in place) and R topples a pillar (it leaves its group).",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 300,
+            "position": {
+              "x": 0,
+              "y": 17,
+              "z": 30
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 1
+            },
+            "type": "PERSPECTIVE",
+            "fov": 50,
+            "appId": "exampleMergingCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleMergingCamera",
+            "debugData": {
+              "name": "Mesh merging example camera"
+            }
+          }
+        }
+      ],
+      "geometries": [
+        {
+          "id": "exampleMergingTile",
+          "type": "BOX",
+          "params": {
+            "width": 1.94,
+            "height": 0.2,
+            "depth": 1.94
+          }
+        },
+        {
+          "id": "exampleMergingBlock",
+          "type": "BOX",
+          "params": {
+            "width": 1.94,
+            "height": 0.96,
+            "depth": 0.6
+          }
+        },
+        {
+          "id": "exampleMergingPillar",
+          "type": "CYLINDER",
+          "params": {
+            "radiusTop": 0.32,
+            "radiusBottom": 0.38,
+            "height": 3.2,
+            "radialSegments": 16
+          }
+        },
+        {
+          "id": "exampleMergingGate",
+          "type": "BOX",
+          "params": {
+            "width": 4,
+            "height": 2,
+            "depth": 0.3
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "exampleMergingTile",
+          "params": {
+            "color": "#c9b48a",
+            "roughness": 0.85
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "exampleMergingStone",
+          "params": {
+            "color": "#a8957a",
+            "roughness": 0.9
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "meshes": [
+        {
+          "props": {
+            "geo": "exampleMergingGate",
+            "mat": "exampleMergingStone",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 12.3
+            },
+            "appId": "exampleMergingGate",
+            "merge": "AUTO"
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {},
+          "suns": [
+            {
+              "elevation": 45,
+              "azimuth": 160,
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "id": "exampleMerging",
+          "debugData": {
+            "name": "Mesh merging example sky",
+            "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the courtyard, so the merged stone is drawn once more in the shadow pass."
+          }
+        }
+      ],
+      "mergeGroups": [
+        {
+          "id": "exampleMergingFloor",
+          "castShadow": false,
+          "receiveShadow": true
+        },
+        {
+          "id": "AUTO",
+          "cellSize": 16
+        }
+      ],
+      "id": "exampleMerging",
+      "sceneFile": "./examples/merging/exampleMerging.ts",
+      "__features": [
+        "skybox",
+        "merging"
+      ]
+    },
     "examplePhysics": {
       "name": "Example: Physics",
       "description": "A static ground with a box, a sphere, a capsule and a cylinder dropping onto it, each a mesh entity with a Rapier body from createPhysicsEntity. Space drops another one.",
@@ -17731,6 +17880,33 @@
       },
       "__sourcePath": "src/app/examples/lod/exampleLodCamera.camera.json"
     },
+    "exampleMergingCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 300,
+        "position": {
+          "x": 0,
+          "y": 17,
+          "z": 30
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 1
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "exampleMergingCamera"
+      },
+      "entityOpts": {
+        "appId": "exampleMergingCamera",
+        "debugData": {
+          "name": "Mesh merging example camera"
+        }
+      },
+      "__sourcePath": "src/app/examples/merging/exampleMergingCamera.camera.json"
+    },
     "examplePhysicsCamera": {
       "camProps": {
         "active": true,
@@ -27703,6 +27879,31 @@
         "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the field."
       },
       "__sourcePath": "src/app/examples/lod/exampleLod.skybox.json"
+    },
+    "exampleMerging": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {},
+      "suns": [
+        {
+          "elevation": 45,
+          "azimuth": 160,
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "clouds": {
+        "coverage": 0.35
+      },
+      "ground": {},
+      "id": "exampleMerging",
+      "debugData": {
+        "name": "Mesh merging example sky",
+        "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the courtyard, so the merged stone is drawn once more in the shadow pass."
+      },
+      "__sourcePath": "src/app/examples/merging/exampleMerging.skybox.json"
     },
     "exampleSkyBox": {
       "base": {

@@ -725,6 +725,40 @@ Sections:
    `yarn verify:baselines`, `yarn sbp`), the plan marked done (`_DONE_`, the references), the
    epic's status.
 
+As built, section 1 (2026-11-10): `features/merging/CLAUDE.md` (one `## Mesh merging` section,
+from Phases 1-4's "As built"), its line in the root's map, "twelve" and `merging()` in the root's
+Three-folder split and Bootstrap flow and in `kernel/init/CLAUDE.md`; `readme.md`: a Mesh merging
+feature (largeWorld's numbers) and `merging()` in Feature modules. The Hub's coverage of the new
+section waits for section 3's `aek:covers`.
+
+As built, section 2 (2026-11-10):
+
+- `src/app/examples/merging/`: `exampleMerging.scene.json` (the kit's four geometries and two
+  materials, the gate as its one mesh with `"merge": "AUTO"`, `mergeGroups: [{ id:
+'exampleMergingFloor', castShadow: false, receiveShadow: true }, { id: 'AUTO', cellSize: 16 }]`),
+  `exampleMerging.ts` (three Hub regions: `merging-kit`, `merging-edit`, `merging-scene`), its
+  camera and a `DAY_SKY` sky box (the sun's shadow follows the camera, so the stone is drawn in
+  the shadow pass too), `exampleMerging.hub.png` (saved with the Hub tab, 1600 × 1000).
+- A 24 m courtyard: 144 floor tiles (`merge: 'exampleMergingFloor'`, a named group from code),
+  walls of three courses of blocks (the top one broken by `createSeededRandom(3)`, a gap for the
+  gate), two rows of 10 pillars (`merge: 'AUTO'`: another geometry, the same material, so the same
+  groups) and the gate: 282 pieces in 5 groups (the floor, and the stone in the four 16 m cells).
+  The tiles and blocks are 1.94 m wide, so the kit's pieces show. A ground box under it, unmerged.
+- Keys (an action map with the scene's id): Space dissolves every group (each piece on its own)
+  and merges them again (`addToMergeGroup` with the named id and `'AUTO'`); G swings the gate on
+  its hinge (`setTransform`, then `updateMergeMember` while it's merged: a rotation, so the
+  normals are rewritten too); R topples the next pillar (`removeFromMergeGroup`, then
+  `setTransform`: on its own, it moves without telling the group; a toppled pillar isn't merged
+  again). The HUD (`createExampleHud`) shows the keys and the draw calls, read by a `LATE_MAIN`
+  system from `renderer.info.render` when they change, removed on the scene's exit.
+- A scene's JSON meshes are made after its code runs (`kernel/scene/CLAUDE.md`), so the gate is
+  looked up by its app id when a key needs it.
+- Checked 2026-11-10 in Chrome on macOS (1000 × 700, through the test bridge): 16 draw calls merged,
+  423 with each piece on its own, 16 again merged; 18 after the gate swing and two topples (the two
+  pillars on their own); the same on WebGPU (debug env) and WebGL2 (prod test); no warning but
+  Rapier's init deprecation, which every scene logs.
+- `readme.md`'s Examples sentence: twelve examples, eleven scenes, with mesh merging.
+
 ## 9. Versioning
 
 Engine minor (components, API, schema). App patch (largeWorld adoption).
