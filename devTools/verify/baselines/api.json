@@ -2043,6 +2043,8 @@
       "getGeometry": "Function",
       "getGeometryRegistry": "Function",
       "incGeometryRef": "Function",
+      "MergedGeoPart": "TypeAlias",
+      "MergedGeoProps": "TypeAlias",
       "onGeometryDeleted": "Function",
       "prewarmGeometry": "Function",
       "saveBufferGeometry": "Function"
@@ -2051,7 +2053,8 @@
       "mergeGeometryParts": "Function",
       "MergePart": "TypeAlias",
       "registerMergedGeometry": "Function",
-      "RegisterMergedGeometryOptions": "TypeAlias"
+      "RegisterMergedGeometryOptions": "TypeAlias",
+      "registerMergedGeoProps": "Function"
     },
     "src/_engine/kernel/assets/GeometryMergeCore.ts": {
       "MergedGeometry": "TypeAlias",
@@ -2980,6 +2983,8 @@
     },
     "src/_engine/schemas/GeometrySchema.ts": {
       "GeoAsset": "TypeAlias",
+      "GeoAssetProps": "TypeAlias",
+      "GeoAssetPropsSchema": "Variable",
       "GeoAssetSchema": "Variable",
       "GeoProps": "TypeAlias",
       "GeoPropsSchema": "Variable"
@@ -4539,6 +4544,8 @@
       "MergeGeometryOptions",
       "MergePart",
       "MergePartRange",
+      "MergedGeoPart",
+      "MergedGeoProps",
       "MergedGeometry",
       "MeshProps",
       "Modifiers",

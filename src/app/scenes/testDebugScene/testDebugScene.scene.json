@@ -4,7 +4,55 @@
   "isDebugScene": true,
   "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
   "name": "Optimized assets orientation check",
-  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
+  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, and a MERGED geometry JSON of three imported pieces on two meshes.",
   "cameras": ["p300Camera"],
-  "lights": ["p300Ambient", "p300Sun"]
+  "lights": ["p300Ambient", "p300Sun"],
+  "importedAssets": ["aekashaSymbol"],
+  "geometries": ["p371SymbolTrio"],
+  "materials": [
+    {
+      "id": "p371_symbolMat",
+      "type": "STANDARD",
+      "params": {
+        "color": "#c8a24a",
+        "roughness": 0.4,
+        "metalness": 0.3
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "props": {
+        "appId": "p371_symbolTrioA",
+        "geo": "p371SymbolTrio",
+        "mat": "p371_symbolMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": -1.8,
+          "y": -3,
+          "z": 0
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "p371_symbolTrioB",
+        "geo": "p371SymbolTrio",
+        "mat": "p371_symbolMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": 1.8,
+          "y": -3,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0
+        }
+      }
+    }
+  ]
 }

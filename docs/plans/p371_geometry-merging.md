@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Merging, Geometry, Assets
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.1)
 Blocks: p372_mesh-merge-groups.md
@@ -110,26 +110,40 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 
 ```json
 {
-  "id": "ruinWallSection",
-  "type": "MERGED",
-  "params": {
-    "parts": [
-      { "geo": "ruinKit/wallStraight", "position": [0, 0, 0] },
-      { "geo": "ruinKit/wallStraight", "position": [4, 0, 0], "rotation": [0, 3.1416, 0] },
-      { "geo": "ruinKit/pillar", "position": [2, 0, 0], "scale": [1, 1.2, 1] }
-    ],
-    "groups": "NONE"
+  "geoProps": {
+    "id": "ruinWallSection",
+    "type": "MERGED",
+    "params": {
+      "parts": [
+        { "geo": "ruinKit/wallStraight" },
+        {
+          "geo": "ruinKit/wallStraight",
+          "position": { "x": 4, "y": 0, "z": 0 },
+          "rotation": { "x": 0, "y": 3.1416, "z": 0 }
+        },
+        {
+          "geo": "ruinKit/pillar",
+          "position": { "x": 2, "y": 0, "z": 0 },
+          "scale": { "x": 1, "y": 1.2, "z": 1 }
+        }
+      ],
+      "groups": "NONE"
+    }
   }
 }
 ```
 
-- Parts reference registered geometry ids, including imported pieces (`assetId/nodeName`).
-  `createGeometry` loads the parts first (imported assets and other geometries load before
-  geometries in `loadNextSceneAssets`' order, `kernel/scene/SceneDataLoader.ts`), loads
-  `GeometryMerge.ts` with an `import()` on the first `MERGED` geometry, merges, registers, and
-  releases the parts it loaded only for this merge.
-- `gatherAppData` validates that each part id exists; the scene dependency closure (p302 D6, when
-  it lands) follows part ids.
+- A part's transform is a mesh's: `position`, `rotation` (Euler radians) or `quaternion` (wins),
+  `scale` as `{x,y,z}` objects; plus `materialSlot` and `key`. The merge options are `groups`,
+  `attributes` and `indexed` (D1).
+- Parts reference registered geometry ids: a geometry JSON's (not another `MERGED` one) or an
+  imported piece (`assetId/nodeName`). The scene loader (`loadSceneAssetsAsync`,
+  `kernel/scene/SceneDataLoader.ts`) merges a scene's `MERGED` geometries after its other
+  geometries, so the imports and primitives are registered; it loads `GeometryMerge.ts` with an
+  `import()` on the first one. The parts stay as they were (decided 2026-11-10): the merge takes
+  no ref on them, and they're released with the scene or cell that loaded them.
+- `gatherAppData` validates the part ids; the scene dependency closure (p302 D6, when it lands)
+  follows part ids.
 - Useful for kit-bashed props: a wall section made from kit pieces, one draw wherever it's used.
 
 ### D3 — GLB `merge` option (build time)
@@ -205,7 +219,7 @@ As built:
   took 6. The scene runner's `testDebugScene` baselines (its snapshot and debugger shots: the
   entity, asset and light lists) change with it: record them again (`--update`) with this phase.
 
-### Phase 2 — JSON type (D2)
+### Phase 2 — JSON type (D2) — done
 
 Schema, gatherer validation, `createGeometry` path, compiled `.schemas/`.
 
@@ -222,6 +236,41 @@ that this scene loaded only for the merge, or releases them right after (D2 says
 geometry of three imported pieces is used by two scene meshes; `yarn sbp`: the app's first
 download doesn't grow by the merge code (it loads with the first `MERGED` geometry).
 
+As built:
+
+- Schema (`schemas/GeometrySchema.ts`): `MERGED` is in `GeoAssetPropsSchema` (the primitives
+  and `MERGED`), which a `*.geometry.json`'s `geoProps` and a scene's `geometries` use.
+  `GeoPropsSchema` stays the primitives: a mesh's inline `geo` (which goes to `createGeometry`)
+  and the save entries' params. A part's transform is a mesh's (`{x,y,z}` objects, D2's example).
+- Runtime (`kernel/assets/Geometry.ts`): `MergedGeoPart` and `MergedGeoProps`, on `aekasha`;
+  `SceneData.geometries` and the streaming manifest's `assets.geometries` take them.
+  `createGeometry` throws for `MERGED`, naming `registerMergedGeometry`.
+- Loader (`loadSceneAssetsAsync`): the `MERGED` entries are set aside in the geometry loop (a part
+  listed after its merge still works) and merged after it: one `import()` of `GeometryMerge.ts`,
+  then `registerMergedGeoProps` (`@internal` there: the JSON's transforms to matrices, kept in
+  the lazy chunk) per entry in the owner scope, so a streaming cell's merge is the cell's. A merge
+  that throws is logged (`lerror`) and left out: a mesh using it is skipped as for any missing
+  geometry, and the load goes on. The parts are kept (D2).
+- A save entry's `params` are the primitives': a `MERGED` geometry takes only its `debugData`.
+- The gather (`devTools/gather/mergedGeometries.ts`): pass 1 fails on a geometry JSON's part that
+  names no geometry JSON nor an import's piece (`<importId>/…`), or a `MERGED` one (merges don't
+  nest); the scene pass checks inline `MERGED` geometries alike, and warns (only) for a part
+  whose geometry or import the scene doesn't list (a persistent asset can still provide it). Node
+  names aren't known before the import runs, so a wrong one fails at load (the `lerror` above).
+- Streaming (`gather/streamingManifest.ts`): a mesh's `MERGED` geometry brings its parts' refs (one
+  level), so a cell that loads the merge loads its parts, unless the base has them. A mesh with a
+  `MERGED` geometry has no extent the gather can measure: it's placed as a point, so a large one
+  needs a `streaming.radii` entry (Phase 5 documents it).
+- The check (`testDebugScene`): `p371SymbolTrio.geometry.json`, three pieces of the toolkit's
+  `aekashaSymbol` import (one plain, one mirrored, one tilted), on two JSON meshes in a row below
+  Phase 1's (`p371_symbolTrioA` / `B`, the second turned); the camera moved back to frame it.
+  Checked 2026-11-10 in Chrome on macOS, debug and prod test: both meshes alike, the mirrored
+  piece not inside out, no console errors.
+- `yarn sbp` (2026-11-10): the merge code is a lazy chunk of its own, `assets/GeometryMerge.js`
+  (2.5 kB gzip); the first download grows by 0.1 kB (`_engine/kernel/scene`: the loader's
+  loop and `import()`). `yarn verify:baselines --update`: `bundle.json`, `api.json` (the two
+  types, `registerMergedGeoProps`, `GeoAssetProps` / `GeoAssetPropsSchema`) and `docs.json`.
+
 ### Phase 3 — GLB option (D3)
 
 `merge` in `importedAssetSchema`, the pipeline step, lock entry stats. **Exit:** a test GLB of 20
@@ -229,6 +278,9 @@ pieces imports as one `__merged` node; its collider nodes and excluded nodes sta
 cached re-run is a cache hit.
 
 ### Phase 4 — Worker and adoption (D4, D5)
+
+The scene loader's `MERGED` path (Phase 2: `registerMergedGeoProps` on the main thread) moves to
+`mergeGeometryPartsAsync` with the worker job.
 
 **Exit:** largeWorld, the gym's stairs and the foliage generator use the new utility with
 unchanged visuals (`yarn verify:scenes`' snapshots); a 100k-vertex merge doesn't block a frame for
@@ -238,8 +290,9 @@ more than its transfer.
 
 1. The Hub: the asset optimization feature page (`hub/pages/features/asset-optimization/`):
    "Merging a model's pieces" (D3 and its trade-off), and the scenes and assets page for the
-   `MERGED` type; `docs/techniques/asset-optimization.md` if it still mirrors the page; `yarn
-   hub:build`.
+   `MERGED` type (its parts' rules, the gather's errors and warning, a wrong node name failing at
+   load, `streaming.radii` for a large merged mesh in a streaming scene);
+   `docs/techniques/asset-optimization.md` if it still mirrors the page; `yarn hub:build`.
 2. `devTools/gather/CLAUDE.md` and `devTools/assetPipeline/CLAUDE.md` (the `MERGED` type, the GLB
    `merge` step), `readme.md` if asset types are listed.
 3. Engine minor, toolkit patch (foliage), app patch (largeWorld, the gym); `CHANGELOG.md`.

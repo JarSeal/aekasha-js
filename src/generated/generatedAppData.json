@@ -16113,19 +16113,19 @@
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",
-      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, and a MERGED geometry JSON of three imported pieces on two meshes.",
       "cameras": [
         {
           "camProps": {
             "active": true,
             "position": {
               "x": 0,
-              "y": 1,
-              "z": 7
+              "y": 0.2,
+              "z": 8.5
             },
             "lookAtPoint": {
               "x": 0,
-              "y": 0.7,
+              "y": -0.3,
               "z": 0
             },
             "type": "PERSPECTIVE",
@@ -16136,7 +16136,7 @@
             "appId": "p300Camera",
             "debugData": {
               "name": "Camera",
-              "description": "Faces the orientation check's two rows and the merge check's row below them."
+              "description": "Faces the orientation check's two rows and the merge checks' rows below them."
             }
           }
         }
@@ -16179,6 +16179,134 @@
             "debugData": {
               "name": "Sun"
             }
+          }
+        }
+      ],
+      "geometries": [
+        {
+          "id": "p371SymbolTrio",
+          "type": "MERGED",
+          "params": {
+            "parts": [
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": -0.75,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": {
+                  "x": 0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "plain"
+              },
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": {
+                  "x": -0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "mirrored"
+              },
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": 0.75,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.5,
+                  "z": 0.3
+                },
+                "scale": {
+                  "x": 0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "tilted"
+              }
+            ]
+          },
+          "debugData": {
+            "name": "Symbol trio (MERGED)",
+            "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "p371_symbolMat",
+          "params": {
+            "color": "#c8a24a",
+            "roughness": 0.4,
+            "metalness": 0.3
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "meshes": [
+        {
+          "props": {
+            "geo": "p371SymbolTrio",
+            "mat": "p371_symbolMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": -1.8,
+              "y": -3,
+              "z": 0
+            },
+            "appId": "p371_symbolTrioA"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371SymbolTrio",
+            "mat": "p371_symbolMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 1.8,
+              "y": -3,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0.5,
+              "z": 0
+            },
+            "appId": "p371_symbolTrioB"
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "aekashaSymbol",
+          "fileName": "./aekashaSymbol.glb",
+          "debugData": {
+            "name": "Ækasha symbol",
+            "description": "The Æ glyph of the favicon, extruded with a small bevel: 1 unit high, centred on the origin, facing +z. One geometry, aekashaSymbol/aekashaSymbol. Built by devTools/toolkit/buildAekashaSymbol.ts; the pipeline keeps it Draco."
+          },
+          "__fileSize": 16320,
+          "__sourceUrl": "/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
+          "__url": "/aek-assets/toolkit/models/brand/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
+          "__bytes": {
+            "in": 16320,
+            "out": 16576
+          },
+          "__vramBytes": {
+            "in": 117856,
+            "out": 117248
           }
         }
       ],
@@ -17828,12 +17956,12 @@
         "active": true,
         "position": {
           "x": 0,
-          "y": 1,
-          "z": 7
+          "y": 0.2,
+          "z": 8.5
         },
         "lookAtPoint": {
           "x": 0,
-          "y": 0.7,
+          "y": -0.3,
           "z": 0
         },
         "type": "PERSPECTIVE",
@@ -17844,7 +17972,7 @@
         "appId": "p300Camera",
         "debugData": {
           "name": "Camera",
-          "description": "Faces the orientation check's two rows and the merge check's row below them."
+          "description": "Faces the orientation check's two rows and the merge checks' rows below them."
         }
       },
       "__sourcePath": "src/app/scenes/testDebugScene/p300Camera.camera.json"
@@ -18856,6 +18984,68 @@
         "id": "testSphere"
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/testSphere.geometry.json"
+    },
+    "p371SymbolTrio": {
+      "geoProps": {
+        "id": "p371SymbolTrio",
+        "debugData": {
+          "name": "Symbol trio (MERGED)",
+          "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
+        },
+        "type": "MERGED",
+        "params": {
+          "parts": [
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": -0.75,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "plain"
+            },
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": -0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "mirrored"
+            },
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": 0.75,
+                "y": 0,
+                "z": 0
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.5,
+                "z": 0.3
+              },
+              "scale": {
+                "x": 0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "tilted"
+            }
+          ]
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p371SymbolTrio.geometry.json"
     }
   },
   "textures": {
