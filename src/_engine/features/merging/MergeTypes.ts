@@ -62,4 +62,7 @@ export type MergeMemberData = {
   /** The world matrix its range in the merged geometry was written with (its build, or its last
    * `updateMergeMember`). */
   _bakedMatrix: THREE.Matrix4;
+  /** Its range in the merged index is collapsed because it's disabled (`DISABLED`): enabling it
+   * writes the range again from its geometry. */
+  _isCollapsed: boolean;
 };

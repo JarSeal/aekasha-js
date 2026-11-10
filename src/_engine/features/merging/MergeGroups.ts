@@ -38,7 +38,12 @@ import { getCurrentSceneId, getLoadingSceneId, getRootScene } from '../../kernel
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getMergeRefusal } from './MergeEligibility';
-import { dropMember, rewriteMember } from './MergeInPlace';
+import {
+  collapseDisabledMember,
+  dropMember,
+  restoreEnabledMember,
+  rewriteMember,
+} from './MergeInPlace';
 import {
   findPending,
   getGroups,
@@ -153,6 +158,8 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * this id). They're drawn merged from the group's next build, in the next frame's render sync (a
  * large group's builds in the assets worker, and its new members are drawn on their own until it's
  * in). A member keeps its entity, transform, physics body and assets; its own mesh is hidden.
+ * A disabled member (`setDisabled`) isn't drawn in the merged mesh either, and is again when
+ * it's enabled, without a rebuild.
  *
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
  * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
@@ -198,6 +205,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       partIndex: -1,
       _wasSpatialIndexed: false,
       _bakedMatrix: new THREE.Matrix4(),
+      _isCollapsed: false,
     });
     group.members.push(entityId);
     added++;
@@ -480,6 +488,7 @@ const applyBuild = (
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
     member.partIndex = partIndex;
     member._bakedMatrix = worldMatrices[partIndex];
+    member._isCollapsed = false;
     if (world.hasComponent(entityId, ComponentType.TAG_MERGED)) return;
     member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
     world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
@@ -490,6 +499,10 @@ const applyBuild = (
   group.members = [...members, ...waiting];
   group.wasted = 0;
   group.rebuilds++;
+  // A disabled member is merged as it is and collapsed, so enabling it needs no build
+  for (const entityId of members) {
+    if (world.isDisabled(entityId)) collapseDisabledMember(entityId, world);
+  }
 
   // Joined again, so the spatial index measures the new bounds
   world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
@@ -616,7 +629,8 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
 
 /**
  * Installs the merge groups (the `merging()` feature's install, MergingFeature.ts): the
- * `TAG_MERGED` visibility hooks, the groups' and members' deletion hooks and the build system.
+ * `TAG_MERGED` visibility hooks, the groups' and members' deletion hooks, the `DISABLED` hooks
+ * that collapse and restore a member's range, and the build system.
  * @internal
  */
 export const installMergeGroups = (ctx: FeatureContext) => {
@@ -628,6 +642,11 @@ export const installMergeGroups = (ctx: FeatureContext) => {
   });
   ctx.registerComponentHooks(ComponentType.MERGE_GROUP, { onDeleteEntity: onGroupDeleted });
   ctx.registerComponentHooks(ComponentType.MERGE_MEMBER, { onDeleteEntity: onMemberDeleted });
+  // A disabled member's range collapses, and enabling it restores it
+  ctx.registerComponentHooks(ComponentType.DISABLED, {
+    onAddComponent: collapseDisabledMember,
+    onRemoveComponent: restoreEnabledMember,
+  });
   ctx.registerPlugin((world) => {
     world.addSystem(
       ECSSystemStage.APP_RENDER_SYNC,

@@ -92,6 +92,43 @@ const getWorldBox = (geometry: THREE.BufferGeometry, object: THREE.Object3D) => 
   return geometry.boundingBox!.clone().applyMatrix4(object.matrixWorld);
 };
 
+/** The merged geometry the members would give merged fresh at the group mesh's place: what an
+ * in-place update must match. */
+const getFreshMerge = (groupMesh: THREE.Mesh, members: number[]) => {
+  groupMesh.updateWorldMatrix(true, false);
+  const inverse = groupMesh.matrixWorld.clone().invert();
+  return mergeGeometryParts(
+    members.map((id) => {
+      const mesh = getMesh(id)!;
+      mesh.updateWorldMatrix(true, false);
+      return { geo: mesh.geometry, matrix: inverse.clone().multiply(mesh.matrixWorld) };
+    })
+  );
+};
+
+const expectSameGeometry = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) => {
+  expect(Object.keys(a.attributes).sort()).toEqual(Object.keys(b.attributes).sort());
+  for (const name in a.attributes) {
+    const left = a.getAttribute(name).array;
+    const right = b.getAttribute(name).array;
+    expect(left.length).toBe(right.length);
+    for (let i = 0; i < left.length; i++) expect(left[i]).toBeCloseTo(right[i], 5);
+  }
+  expect(Array.from(a.index!.array)).toEqual(Array.from(b.index!.array));
+};
+
+/** A merged attribute: always a plain BufferAttribute. */
+const getAttr = (geometry: THREE.BufferGeometry, name: string) =>
+  geometry.getAttribute(name) as THREE.BufferAttribute;
+
+/** Sets a Map-mode entity's scale (setTransform takes none). */
+const setScale = (id: number, x: number, y: number, z: number) => {
+  const transform = world.getComponent(id, ComponentType.TRANSFORM)!;
+  transform.scale.set(x, y, z);
+  transform.setDirty();
+  world.commitTransform(id, transform);
+};
+
 describe('TAG_MERGED', () => {
   test('hides a merged entity whatever else changes, and shows it when it leaves', () => {
     const id = world.createEntity();
@@ -207,43 +244,6 @@ describe('a build', () => {
 });
 
 describe('updateMergeMember', () => {
-  /** The merged geometry the members would give merged fresh at the group mesh's place: what an
-   * in-place update must match. */
-  const getFreshMerge = (groupMesh: THREE.Mesh, members: number[]) => {
-    groupMesh.updateWorldMatrix(true, false);
-    const inverse = groupMesh.matrixWorld.clone().invert();
-    return mergeGeometryParts(
-      members.map((id) => {
-        const mesh = getMesh(id)!;
-        mesh.updateWorldMatrix(true, false);
-        return { geo: mesh.geometry, matrix: inverse.clone().multiply(mesh.matrixWorld) };
-      })
-    );
-  };
-
-  const expectSameGeometry = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) => {
-    expect(Object.keys(a.attributes).sort()).toEqual(Object.keys(b.attributes).sort());
-    for (const name in a.attributes) {
-      const left = a.getAttribute(name).array;
-      const right = b.getAttribute(name).array;
-      expect(left.length).toBe(right.length);
-      for (let i = 0; i < left.length; i++) expect(left[i]).toBeCloseTo(right[i], 5);
-    }
-    expect(Array.from(a.index!.array)).toEqual(Array.from(b.index!.array));
-  };
-
-  /** A merged attribute: always a plain BufferAttribute. */
-  const getAttr = (geometry: THREE.BufferGeometry, name: string) =>
-    geometry.getAttribute(name) as THREE.BufferAttribute;
-
-  /** Sets a Map-mode entity's scale (setTransform takes none). */
-  const setScale = (id: number, x: number, y: number, z: number) => {
-    const transform = world.getComponent(id, ComponentType.TRANSFORM)!;
-    transform.scale.set(x, y, z);
-    transform.setDirty();
-    world.commitTransform(id, transform);
-  };
-
   test("rewrites only the member's range, from its TRANSFORM, without a rebuild", async () => {
     const groupId = nextGroupId();
     const groupEntityId = createMergeGroup({ id: groupId });
@@ -552,6 +552,106 @@ describe('removing', () => {
   test('warns for an entity that is no member', () => {
     removeFromMergeGroup([createBox(0)]);
     expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining("isn't in a merge group"));
+  });
+});
+
+describe('disabling', () => {
+  /** A group of three boxes, the middle one mirrored; built unless `build` is false. */
+  const createGroupAsync = async (build = true) => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const members = [createBox(0), createBox(2), createBox(4)];
+    setScale(members[1], -1, 1, 1);
+    addToMergeGroup(groupId, members);
+    if (build) await buildPendingMergeGroupsAsync();
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    return { groupId, groupEntityId, members, group };
+  };
+
+  const getMerged = (groupEntityId: number) => getMesh(groupEntityId)!.geometry as MergedGeometry;
+  const getIndex = (merged: THREE.BufferGeometry) => merged.index as THREE.BufferAttribute;
+
+  const expectCollapsed = (merged: MergedGeometry, part: number) => {
+    const { indexStart, indexCount, vertexStart } = merged.userData.mergeParts[part];
+    const range = Array.from(merged.index!.array).slice(indexStart, indexStart + indexCount);
+    expect(new Set(range)).toEqual(new Set([vertexStart]));
+  };
+
+  test('collapses a disabled member without waste, and enabling writes it back', async () => {
+    const { groupEntityId, members, group } = await createGroupAsync();
+    const merged = getMerged(groupEntityId);
+    const indexBefore = Array.from(merged.index!.array);
+
+    world.setDisabled(members[1], true);
+    expectCollapsed(merged, 1);
+    expect(group.wasted).toBe(0);
+    // Disabled again (DISABLED replaced): nothing written
+    getIndex(merged).clearUpdateRanges();
+    world.setDisabled(members[1], true);
+    expect(getIndex(merged).updateRanges).toEqual([]);
+
+    // The mirrored member's winding as the build wrote it
+    world.setDisabled(members[1], false);
+    expect(Array.from(merged.index!.array)).toEqual(indexBefore);
+    await buildPendingMergeGroupsAsync();
+    expect(group.rebuilds).toBe(1);
+    expect(getMesh(members[1])!.visible).toBe(false);
+  });
+
+  test('merges a disabled member collapsed, so enabling it needs no build', async () => {
+    const { groupEntityId, members, group } = await createGroupAsync(false);
+    world.setDisabled(members[2], true);
+    await buildPendingMergeGroupsAsync();
+    const merged = getMerged(groupEntityId);
+    expectCollapsed(merged, 2);
+
+    world.setDisabled(members[2], false);
+    expectSameGeometry(merged, getFreshMerge(getMesh(groupEntityId)!, members));
+    expect(group.rebuilds).toBe(1);
+  });
+
+  test("a member moved while disabled comes back with its new pose's winding", async () => {
+    const { groupEntityId, members } = await createGroupAsync();
+    const merged = getMerged(groupEntityId);
+    world.setDisabled(members[1], true);
+
+    // Mirrored back and moved: its vertices written, its collapsed range not touched
+    getIndex(merged).clearUpdateRanges();
+    setScale(members[1], 1, 1, 1);
+    world.setTransform(members[1], { pos: { x: 2, y: 2, z: 0 } });
+    updateMergeMember(members[1]);
+    expectCollapsed(merged, 1);
+    expect(getIndex(merged).updateRanges).toEqual([]);
+
+    world.setDisabled(members[1], false);
+    expectSameGeometry(merged, getFreshMerge(getMesh(groupEntityId)!, members));
+  });
+
+  test('a disabled member removed counts as waste, its range left collapsed', async () => {
+    const { groupEntityId, members, group } = await createGroupAsync();
+    const merged = getMerged(groupEntityId);
+    world.setDisabled(members[0], true);
+    getIndex(merged).clearUpdateRanges();
+
+    removeFromMergeGroup([members[0]]);
+    expect(group.wasted).toBe(24);
+    expect(getIndex(merged).updateRanges).toEqual([]);
+    expect(getMesh(members[0])!.visible).toBe(false);
+    world.setDisabled(members[0], false);
+    expect(getMesh(members[0])!.visible).toBe(true);
+    expectCollapsed(merged, 0);
+  });
+
+  test('a member whose geometry was replaced while disabled makes its group build again', async () => {
+    const { groupEntityId, members, group } = await createGroupAsync();
+    world.setDisabled(members[2], true);
+    getMesh(members[2])!.geometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2);
+    world.setDisabled(members[2], false);
+    expect(fns.lwarn).toHaveBeenLastCalledWith(expect.stringContaining('builds again'));
+
+    await buildPendingMergeGroupsAsync();
+    expect(group.rebuilds).toBe(2);
+    expectSameGeometry(getMerged(groupEntityId), getFreshMerge(getMesh(groupEntityId)!, members));
   });
 });
 

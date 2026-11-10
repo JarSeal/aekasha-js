@@ -2,7 +2,8 @@
 // changes to one member written into the group's built geometry without a rebuild. A move
 // rewrites the member's vertices (`updateMergeMember`); a leave (`removeFromMergeGroup`, a
 // deleted member) collapses its triangles and counts its vertices as wasted, and past
-// COMPACT_WASTE_SHARE of the merged vertices the group builds again, compact.
+// COMPACT_WASTE_SHARE of the merged vertices the group builds again, compact. A disabled member
+// (`DISABLED`) is collapsed without counting as waste, and enabling it writes its triangles back.
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
@@ -11,6 +12,7 @@ import {
   collapsePartIndex,
   flipPartWinding,
   growMergedBounds,
+  restorePartIndex,
   rewritePartVertices,
 } from './MergeRanges';
 import { getGroupMesh, getMemberMesh, markPending, syncMemberPose } from './MergeState';
@@ -65,9 +67,15 @@ export const rewriteMember = (
   groupInverse.copy(groupMesh.matrixWorld).invert();
   partMatrix.multiplyMatrices(groupInverse, mesh.matrixWorld);
   previousPartMatrix.multiplyMatrices(groupInverse, member._bakedMatrix);
-  if (rewritePartVertices(merged, range, mesh.geometry, partMatrix, previousPartMatrix)) {
-    flipPartWinding(merged, range);
-  }
+  const mirrorChanged = rewritePartVertices(
+    merged,
+    range,
+    mesh.geometry,
+    partMatrix,
+    previousPartMatrix
+  );
+  // A collapsed (disabled) member's winding is written when it's enabled, from its baked matrix
+  if (mirrorChanged && !member._isCollapsed) flipPartWinding(merged, range);
   member._bakedMatrix.copy(mesh.matrixWorld);
   if (
     growMergedBounds(merged, mesh.geometry, partMatrix) &&
@@ -98,9 +106,53 @@ export const dropMember = (
   const found = getMemberRange(member, world);
   if (!found) return;
   const merged = found.groupMesh.geometry;
-  collapsePartIndex(merged, found.range);
+  if (!member._isCollapsed) collapsePartIndex(merged, found.range);
   group.wasted += found.range.vertexCount;
   if (group.wasted > merged.getAttribute('position').count * COMPACT_WASTE_SHARE) {
     markPending(world, member.groupEntityId, group);
   }
+};
+
+/**
+ * A built member disabled (`DISABLED`'s add hook, and a build of a disabled member): its range
+ * collapses, not counted as waste. Again on a member collapsed already does nothing (a `DISABLED`
+ * replaced runs the hook again).
+ * @internal
+ */
+export const collapseDisabledMember = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (!member || member._isCollapsed) return;
+  const found = getMemberRange(member, world);
+  if (!found) return;
+  collapsePartIndex(found.groupMesh.geometry, found.range);
+  member._isCollapsed = true;
+};
+
+/**
+ * A collapsed member enabled (`DISABLED`'s remove hook): its triangles written back from its
+ * geometry, with the winding of the pose it's baked with. A member whose geometry was replaced
+ * since (another vertex or index count) makes its group build again.
+ * @internal
+ */
+export const restoreEnabledMember = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (!member?._isCollapsed) return;
+  member._isCollapsed = false;
+  const found = getMemberRange(member, world);
+  const group = world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  if (!found || !group) return;
+  const { groupMesh, range } = found;
+  const source = getMemberMesh(entityId, world).geometry;
+  const vertexCount = source.getAttribute('position').count;
+  const indexCount = source.index ? source.index.count : vertexCount;
+  if (vertexCount !== range.vertexCount || indexCount !== range.indexCount) {
+    lwarn(
+      `Merge groups: entity ${entityId}'s geometry isn't the one merged (another vertex or index count): its merge group "${group.id}" builds again.`
+    );
+    markPending(world, member.groupEntityId, group);
+    return;
+  }
+  // The group's mesh is only moved, never turned or scaled: the world matrix's mirroring is the
+  // part's
+  restorePartIndex(groupMesh.geometry, range, source, member._bakedMatrix.determinant() < 0);
 };

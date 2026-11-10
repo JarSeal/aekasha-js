@@ -153,6 +153,37 @@ export const growMergedBounds = (
 };
 
 /**
+ * Writes a collapsed member's triangles back into the merged index from its own geometry's
+ * (offset by its first vertex; a non-indexed member's in vertex order), the winding flipped for a
+ * mirrored member, as the merge wrote them. The member's geometry must be the one merged (its
+ * index count the range's).
+ * @internal
+ */
+export const restorePartIndex = (
+  merged: THREE.BufferGeometry,
+  range: MergePartRange,
+  source: THREE.BufferGeometry,
+  isMirrored: boolean
+) => {
+  const index = merged.index;
+  if (!index) return;
+  const indices = index.array;
+  const sourceIndex = source.index;
+  const { indexStart, indexCount, vertexStart } = range;
+  for (let i = 0; i < indexCount; i++) {
+    indices[indexStart + i] = (sourceIndex ? sourceIndex.getX(i) : i) + vertexStart;
+  }
+  if (isMirrored) {
+    for (let i = indexStart; i + 2 < indexStart + indexCount; i += 3) {
+      const second = indices[i + 1];
+      indices[i + 1] = indices[i + 2];
+      indices[i + 2] = second;
+    }
+  }
+  markRange(index, indexStart, indexCount);
+};
+
+/**
  * Collapses a member's triangles in the merged index to degenerate ones (every index its first
  * vertex): the member isn't drawn, and its vertices stay where they are, unused.
  * @internal
