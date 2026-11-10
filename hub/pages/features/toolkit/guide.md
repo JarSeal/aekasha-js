@@ -203,7 +203,8 @@ in place of `../TriplanarProjection`.
   orbit.
 - The app's `space` scene: toolkit asteroids under `MutualGravity`, at zero world gravity. Open it
   with `?isDebug=true&startScene=space`.
-- The app's `largeWorld` scene: a generated terrain with scattered trees, bushes and rocks;
+- The app's `largeWorld` scene: a generated terrain with scattered trees, bushes and rocks, and
+  eight ruin sites whose 398 pieces are drawn in 28 [merge groups](hub:features/mesh-merging);
   `thirdPersonGymScene`: moving platforms and the follow camera.
 
 ## Read more

@@ -611,6 +611,155 @@
         "skybox"
       ]
     },
+    "exampleMerging": {
+      "name": "Example: Mesh merging",
+      "description": "A ruined courtyard of about 280 pieces from a four-piece kit, drawn as five merged meshes: the floor tiles in one named group, the stone in four automatic ones (one per 16 m cell). Space draws every piece on its own and merges them again, G swings the gate (its part of the merged mesh is rewritten in place) and R topples a pillar (it leaves its group).",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 300,
+            "position": {
+              "x": 0,
+              "y": 17,
+              "z": 30
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 0,
+              "z": 1
+            },
+            "type": "PERSPECTIVE",
+            "fov": 50,
+            "appId": "exampleMergingCamera"
+          },
+          "entityOpts": {
+            "appId": "exampleMergingCamera",
+            "debugData": {
+              "name": "Mesh merging example camera"
+            }
+          }
+        }
+      ],
+      "geometries": [
+        {
+          "id": "exampleMergingTile",
+          "type": "BOX",
+          "params": {
+            "width": 1.94,
+            "height": 0.2,
+            "depth": 1.94
+          }
+        },
+        {
+          "id": "exampleMergingBlock",
+          "type": "BOX",
+          "params": {
+            "width": 1.94,
+            "height": 0.96,
+            "depth": 0.6
+          }
+        },
+        {
+          "id": "exampleMergingPillar",
+          "type": "CYLINDER",
+          "params": {
+            "radiusTop": 0.32,
+            "radiusBottom": 0.38,
+            "height": 3.2,
+            "radialSegments": 16
+          }
+        },
+        {
+          "id": "exampleMergingGate",
+          "type": "BOX",
+          "params": {
+            "width": 4,
+            "height": 2,
+            "depth": 0.3
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "exampleMergingTile",
+          "params": {
+            "color": "#c9b48a",
+            "roughness": 0.85
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "exampleMergingStone",
+          "params": {
+            "color": "#a8957a",
+            "roughness": 0.9
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "meshes": [
+        {
+          "props": {
+            "geo": "exampleMergingGate",
+            "mat": "exampleMergingStone",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 0,
+              "y": 1,
+              "z": 12.3
+            },
+            "appId": "exampleMergingGate",
+            "merge": "AUTO"
+          }
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {},
+          "suns": [
+            {
+              "elevation": 45,
+              "azimuth": 160,
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "id": "exampleMerging",
+          "debugData": {
+            "name": "Mesh merging example sky",
+            "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the courtyard, so the merged stone is drawn once more in the shadow pass."
+          }
+        }
+      ],
+      "mergeGroups": [
+        {
+          "id": "exampleMergingFloor",
+          "castShadow": false,
+          "receiveShadow": true
+        },
+        {
+          "id": "AUTO",
+          "cellSize": 16
+        }
+      ],
+      "id": "exampleMerging",
+      "sceneFile": "./examples/merging/exampleMerging.ts",
+      "__features": [
+        "skybox",
+        "merging"
+      ]
+    },
     "examplePhysics": {
       "name": "Example: Physics",
       "description": "A static ground with a box, a sphere, a capsule and a cylinder dropping onto it, each a mesh entity with a Rapier body from createPhysicsEntity. Space drops another one.",
@@ -1439,7 +1588,7 @@
     },
     "largeWorld": {
       "name": "Large world",
-      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
+      "description": "A large procedural world without physics: a generated 200 m terrain, 1,500 trees, 2,000 bushes and 300 rocks in instanced LOD pools (down to cross-quads and an octahedral impostor) in a spatial domain, static props and eight ruin sites (about 400 pieces) drawn merged by material and 50 m cell, lanterns with light culling, and a bobbing crate stack a second camera follows (C switches to it). The day-night sky box's lights take over from the scene's sun and ambient.",
       "cameras": [
         {
           "camProps": {
@@ -1723,6 +1872,12 @@
             "halfHeight": 1.729032208842616
           },
           "normals": true
+        }
+      ],
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 50
         }
       ],
       "id": "largeWorld",
@@ -5391,7 +5546,8 @@
         "skybox",
         "postfx",
         "spatial",
-        "lod"
+        "lod",
+        "merging"
       ]
     },
     "lodShowcase": {
@@ -16113,7 +16269,7 @@
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",
-      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart.",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group. Under the right block, 500 boxes in three materials, merged by AUTO into 12 groups (four 2 m cells).",
       "cameras": [
         {
           "camProps": {
@@ -16241,6 +16397,15 @@
             "name": "Symbol trio (MERGED)",
             "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
           }
+        },
+        {
+          "id": "p372_autoBox",
+          "type": "BOX",
+          "params": {
+            "width": 0.12,
+            "height": 0.12,
+            "depth": 0.12
+          }
         }
       ],
       "materials": [
@@ -16266,6 +16431,30 @@
           "params": {
             "color": "#7f5433",
             "roughness": 0.7
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatA",
+          "params": {
+            "color": "#c0563b",
+            "roughness": 0.6
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatB",
+          "params": {
+            "color": "#4f8a5b",
+            "roughness": 0.6
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatC",
+          "params": {
+            "color": "#3f6fb0",
+            "roughness": 0.6
           },
           "type": "STANDARD"
         }
@@ -16359,6 +16548,58 @@
             },
             "appId": "p371_doorRight"
           }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 4.2,
+              "y": -5.82,
+              "z": -0.8
+            },
+            "appId": "p372_autoJson_0",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 6.72,
+              "y": -5.82,
+              "z": -0.8
+            },
+            "appId": "p372_autoJson_1",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 4.2,
+              "y": -5.82,
+              "z": 0.8
+            },
+            "appId": "p372_autoJson_2",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 6.72,
+              "y": -5.82,
+              "z": 0.8
+            },
+            "appId": "p372_autoJson_3",
+            "merge": "AUTO"
+          }
         }
       ],
       "importedAssets": [
@@ -16401,9 +16642,17 @@
           }
         }
       ],
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 2
+        }
+      ],
       "id": "testDebugScene",
       "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
-      "__features": []
+      "__features": [
+        "merging"
+      ]
     },
     "textureArrays": {
       "isDebugScene": true,
@@ -17630,6 +17879,33 @@
         }
       },
       "__sourcePath": "src/app/examples/lod/exampleLodCamera.camera.json"
+    },
+    "exampleMergingCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 300,
+        "position": {
+          "x": 0,
+          "y": 17,
+          "z": 30
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 1
+        },
+        "type": "PERSPECTIVE",
+        "fov": 50,
+        "appId": "exampleMergingCamera"
+      },
+      "entityOpts": {
+        "appId": "exampleMergingCamera",
+        "debugData": {
+          "name": "Mesh merging example camera"
+        }
+      },
+      "__sourcePath": "src/app/examples/merging/exampleMergingCamera.camera.json"
     },
     "examplePhysicsCamera": {
       "camProps": {
@@ -27603,6 +27879,31 @@
         "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the field."
       },
       "__sourcePath": "src/app/examples/lod/exampleLod.skybox.json"
+    },
+    "exampleMerging": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {},
+      "suns": [
+        {
+          "elevation": 45,
+          "azimuth": 160,
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "clouds": {
+        "coverage": 0.35
+      },
+      "ground": {},
+      "id": "exampleMerging",
+      "debugData": {
+        "name": "Mesh merging example sky",
+        "description": "The DAY_SKY preset: its sun light (with a shadow that follows the camera) lights the courtyard, so the merged stone is drawn once more in the shadow pass."
+      },
+      "__sourcePath": "src/app/examples/merging/exampleMerging.skybox.json"
     },
     "exampleSkyBox": {
       "base": {

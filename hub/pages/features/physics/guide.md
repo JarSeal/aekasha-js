@@ -50,6 +50,9 @@ properties (Blender's custom properties, the glTF `extras`):
 - `density`, `friction` and `restitution` default to 0.2.
 - `spawnImportedAsset`'s `physicsParams` override the properties per node from code, or give
   physics to a node without any.
+- A `merge` property (`AUTO` or a group's id) draws the node's mesh in a
+  [merge group](hub:features/mesh-merging#imported-models); a node whose body isn't `FIXED` is
+  refused.
   [`deriveColliderFromGeometry`](api:deriveColliderFromGeometry) sizes a collider of your own
   from an imported node the same way.
 

@@ -30,6 +30,7 @@ import { getGeometry } from '../assets/Geometry';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import { IS_DEBUG_ENV } from '../config/Config';
 import type { LodAutoDef, LodDef, MeshLodDef } from '../../features/lod/LodTypes';
+import type { MeshMergeDef } from '../../features/merging/MergeTypes';
 import type { FeatureContext } from '../init/Features';
 
 /**
@@ -71,6 +72,10 @@ export type MeshProps = {
   frustumCullingEnabled?: boolean;
   /** Levels of detail, or `AUTO` from the geometry's LOD chain, see {@link setMeshLod}. */
   lod?: MeshLodDef;
+  /** Draws the mesh merged into a merge group (the `merging()` feature): a group's id, `'AUTO'`
+   * or the options. It joins at the group's next build. Without `merging()` it warns once and
+   * the mesh is drawn on its own. */
+  merge?: MeshMergeDef;
 };
 
 /** Debug only: warns about a geometry or material that isn't the registered one under its id (it
@@ -337,8 +342,40 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
   // Last: the LOD's level 0 is the mesh as created, and its add hook pre-warms the other levels
   // when the mesh has preWarm
   if (props.lod) setMeshLod(entityId, props.lod, world);
+  if (props.merge !== undefined) queueMeshMerge(entityId, props.merge, world);
 
   return entityId;
+};
+
+/**
+ * Queues a mesh's `merge` for its group's next build: the `merging()` feature's, set by its
+ * install (`setMeshMergeHandler`).
+ * @internal
+ */
+export type MeshMergeHandler = (entityId: number, def: MeshMergeDef, world: ECSWorld) => void;
+
+let meshMergeHandler: MeshMergeHandler | null = null;
+let hasWarnedNoMerge = false;
+
+/**
+ * Sets what takes a mesh's `merge` (the `merging()` feature's install, MergeGroups.ts). Without
+ * it, a mesh's `merge` warns once and the mesh is drawn on its own.
+ * @internal
+ */
+export const setMeshMergeHandler = (handler: MeshMergeHandler | null) => {
+  meshMergeHandler = handler;
+};
+
+const queueMeshMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld) => {
+  if (meshMergeHandler) {
+    meshMergeHandler(entityId, def, world);
+    return;
+  }
+  if (hasWarnedNoMerge) return;
+  hasWarnedNoMerge = true;
+  lwarn(
+    "[Merging] A mesh's merge needs the merging feature, which isn't installed: add `merging()` (from 'aekasha/merging') to InitEngine's `features`. The mesh is drawn on its own (warned once)."
+  );
 };
 
 /**

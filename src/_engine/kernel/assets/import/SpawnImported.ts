@@ -100,6 +100,8 @@ const getMeshProps = (
  * an engine material, at root transform ∘ node transform (node scale included), and the physics
  * the nodes' Blender custom props (or `physicsParams` overrides) describe, via the Physics API
  * (the `physics()` feature: without it, the physics nodes spawn no bodies, with a warning).
+ * A piece is drawn merged into a merge group by its node's `merge` custom prop or the spawn's
+ * `merge` (the `merging()` feature), joining at the group's next build.
  * @param manifestOrId an import's manifest, or the id of an imported asset
  * @param params the root transform, the material, and the mesh and physics overrides
  * @returns the created entities (none, with an error logged, for an id that isn't imported)
@@ -150,6 +152,14 @@ export const spawnImportedAsset = async (
     material = params.material;
   }
 
+  // The spawn's `merge` leaves out the physics groups (an `index`, or the nodes without one) whose
+  // body moves: their anchor's mesh moves with it
+  const movingGroups = new Set(
+    nodes
+      .filter((node) => node.props.rigidType && node.props.rigidType !== 'FIXED')
+      .map((node) => node.props.index)
+  );
+
   const meshEntityIds: number[] = [];
   nodes.forEach((node) => {
     if (node.props.isPhysObj && !node.props.keepMesh) return;
@@ -168,6 +178,10 @@ export const spawnImportedAsset = async (
         position: meshProps?.position ?? node.position,
         quaternion: hasTransformOverride ? meshProps?.quaternion : node.quaternion,
         scale: meshProps?.scale ?? node.scale,
+        merge:
+          meshProps?.merge ??
+          node.props.merge ??
+          (movingGroups.has(node.props.index) ? undefined : params.merge),
         appId,
       },
       { ...params.entityOpts, appId }

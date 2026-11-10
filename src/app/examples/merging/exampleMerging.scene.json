@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "exampleMerging",
+  "sceneFile": "./examples/merging/exampleMerging.ts",
+  "name": "Example: Mesh merging",
+  "description": "A ruined courtyard of about 280 pieces from a four-piece kit, drawn as five merged meshes: the floor tiles in one named group, the stone in four automatic ones (one per 16 m cell). Space draws every piece on its own and merges them again, G swings the gate (its part of the merged mesh is rewritten in place) and R topples a pillar (it leaves its group).",
+  "cameras": ["exampleMergingCamera"],
+  "skyboxes": ["exampleMerging"],
+  "geometries": [
+    {
+      "id": "exampleMergingTile",
+      "type": "BOX",
+      "params": { "width": 1.94, "height": 0.2, "depth": 1.94 }
+    },
+    {
+      "id": "exampleMergingBlock",
+      "type": "BOX",
+      "params": { "width": 1.94, "height": 0.96, "depth": 0.6 }
+    },
+    {
+      "id": "exampleMergingPillar",
+      "type": "CYLINDER",
+      "params": { "radiusTop": 0.32, "radiusBottom": 0.38, "height": 3.2, "radialSegments": 16 }
+    },
+    {
+      "id": "exampleMergingGate",
+      "type": "BOX",
+      "params": { "width": 4, "height": 2, "depth": 0.3 }
+    }
+  ],
+  "materials": [
+    {
+      "id": "exampleMergingTile",
+      "type": "STANDARD",
+      "params": { "color": "#c9b48a", "roughness": 0.85 }
+    },
+    {
+      "id": "exampleMergingStone",
+      "type": "STANDARD",
+      "params": { "color": "#a8957a", "roughness": 0.9 }
+    }
+  ],
+  "meshes": [
+    {
+      "props": {
+        "appId": "exampleMergingGate",
+        "geo": "exampleMergingGate",
+        "mat": "exampleMergingStone",
+        "position": { "x": 0, "y": 1, "z": 12.3 },
+        "castShadow": true,
+        "receiveShadow": true,
+        "merge": "AUTO"
+      }
+    }
+  ],
+  "mergeGroups": [
+    { "id": "exampleMergingFloor", "castShadow": false, "receiveShadow": true },
+    { "id": "AUTO", "cellSize": 16 }
+  ]
+}

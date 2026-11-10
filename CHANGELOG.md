@@ -4,6 +4,57 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-10 — p372_mesh-merge-groups
+
+Mesh merge groups (p372, the second child of the merging epic p370): the `merging()` feature, the twelfth, on `aekasha/merging`. Static meshes that share a material are drawn as one merged mesh per group, in the main pass and in every shadow pass, while each piece stays an entity with its own transform, physics body and data. A mesh joins a named group or `AUTO`, which groups meshes by material, attributes, shadow flags, layers and a cell of the world. A scene's groups are built during its load, so its first frame is already merged and the pieces' own geometry is never uploaded. A merged piece can still be moved, disabled or removed: only its range in the merged mesh is rewritten. In `largeWorld`, 409 ruin pieces and props in 28 groups take the main camera's draws from 381 to 38 per pass and the CPU frame time down by 30-37 %. Nothing breaks. (p373, the groups' debug tools and member editing, shares this branch and extends this entry.)
+
+### Engine 6.5.0 (Sunset)
+
+**Added**
+
+- `merging()` (`aekasha/merging`; the template lists it last of the twelve features, after `physics()` so a scene's bodies exist when its groups are built). Without it, a mesh's `merge` warns once and the mesh is drawn on its own, and the functions below throw, naming the feature.
+- `createMergeGroup({ id, castShadow?, receiveShadow?, persistent? }, world?)`, `addToMergeGroup(groupId, entityIds, world?)` (makes the group on first use; `'AUTO'` queues the entities as the `merge` prop does), `removeFromMergeGroup`, `updateMergeMember`, `rebuildMergeGroup`, `dissolveMergeGroup` and `getMergeGroupOf`, with the types `CreateMergeGroupOptions`, `MergeGroupData`, `MergeGroupSettings`, `MergeMemberData`, `MeshMergeDef`, `MeshMergeOptions`, `SceneAutoMergeEntry` and `SceneMergeGroupEntry`. A group is an entity (`MANAGED_BY` `MERGE`) that goes with the scene it was made in unless `persistent`. Its mesh sits at the centre of its members' bounds and is in the spatial index in their place.
+- Builds: once a frame in `APP_RENDER_SYNC` (`mergeGroupBuildSystem`, at the new `APP_RENDER_SYNC_ORDER.MERGE_BUILD`, 0.5), with p371's merge, which loads with the first build. A group of more than 65 536 vertices merges in the assets worker, its new members drawn on their own until it's in.
+- In place: `updateMergeMember` rewrites a moved member's positions, normals and tangents (a mirroring change included) without a rebuild or an allocation. A removed or deleted member's triangles are collapsed in place, and a group whose unused vertices pass a quarter builds again, compact. Disabling a member hides its range and enabling it writes it back. In the debug env, a member moved without `updateMergeMember` warns once.
+- A mesh's `merge` (`MeshProps.merge`: `'AUTO'`, a group's id, or `{ group?, cellSize?, maxVertices? }`), in code, a `*.mesh.json` and a scene's inline mesh. It joins at the next build (or the scene load's end), so the checks and `AUTO`'s cell see the final entity, an import's bodies included; a mesh whose physics creation is pending waits for its body.
+- `AUTO`: the group is picked by the material, the attributes, both shadow flags, the layers, `PERSISTENT` and a square x/z cell (32 m by default) under a vertex cap (262 144); a full group opens the next one in its cell. The ids (`auto:<key hash>:<cx>,<cz>:<n>`) are the same on every visit.
+- A scene's `mergeGroups` (`mergingSchemaPart` on `aekasha/schemas`): an `AUTO` entry sets the scene's cell size and cap, a group's entry its shadow flags. A mesh's `merge` or a `mergeGroups` list names `merging` in the scene's feature manifest. In a scene with `streaming`, an `AUTO` cell size that doesn't divide the streaming cell size and a group spanning two streaming cells warn.
+- Imported models: a `merge` custom property on a node (`ParsedCustomProps.merge`) and `spawnImportedAsset`'s `merge` for every visible piece (a node's property and a `meshProps` entry win), which leaves out the pieces of a physics group whose body isn't `FIXED`.
+- The scene step: the scene's queued `merge`s and groups are built in its `entered` hook, worker builds awaited, while the loader is shown. A mesh that joins during a load is held from drawing (`TAG_DRAW_HELD`) until then.
+- Refused with a warning naming the entity and the reason, the entity then drawn on its own: skinned, morphed and instanced meshes and pool instances, transparent materials, material arrays, another material than the group's, dynamic, kinematic and tier-frozen bodies, managed entities, `LOD`, a group already, a persistent entity in a group that isn't, attributes the group's can't take.
+- The kernel's part (in every app): the component types `MERGE_GROUP`, `MERGE_MEMBER` and `TAG_MERGED` (a sixth reason in the visibility reconcile), `MERGE_BUILD`, and the `merge` prop's handler seam: +56 B gzip in an app without `merging()`.
+
+**Changed**
+
+- The app's first download: `merging()` is 6.9 kB gzip with the in-place updates, which ship once an app calls `updateMergeMember` or `removeFromMergeGroup` (6.0 kB without), plus `utils/CellKey.ts`; the merge code stays a lazy chunk. The budgets (`sbp.config.ts`): `merging` 7 KiB, the main chunk 382 KiB (from 380), the initial download 386 KiB (from 385). An app that doesn't list `merging()` carries only the kernel's part.
+
+### App 1.21.2 (Preschooler)
+
+**Added**
+
+- `exampleMerging` (`src/app/examples/merging/`): a ruined courtyard of 282 pieces from a four-piece kit, drawn as five merged meshes (a named floor group and four `AUTO` cells): 16 draw calls, against 423 on their own. Space switches between the two, G swings the gate in place (`updateMergeMember`) and R topples a pillar out of its group.
+
+**Changed**
+
+- `src/index.ts` lists `merging()` last of the twelve features.
+- `largeWorld` merges: its static props, resting objects and barbell are `merge: 'AUTO'` (the offscreen frustum culling props and the hovering crate stack stay on their own), and eight ruin sites of 398 walls, pillars, floor tiles and rubble stones (`largeWorldRuins.ts`, seeded) join them, in `AUTO` cells of 50 m: 409 members in 28 groups. Its look and its scene runner baselines changed.
+- `testDebugScene` checks the groups: 200 boxes in one named group (`p372_grid`) and 500 `AUTO` boxes in three materials over four cells (12 groups; four of the boxes from the scene JSON).
+
+### Project
+
+**Added**
+
+- The Hub: a Mesh merging feature page (joining a group, `AUTO`, imported models, members are static, scene loads, what can't be merged, when to merge, `largeWorld`'s measurements, streaming) and the mesh merging example page.
+- `docs/techniques/terrain-modular-kits.md`: modular kits and tile-chunk worlds, built on merge groups.
+- `src/_engine/features/merging/CLAUDE.md`.
+
+**Changed**
+
+- The Hub's asset optimization, scenes and assets, physics, toolkit and spatial index pages link mesh merging, and the architecture guide, the documentation intro (with an `aekasha/merging` row), the quick start and the smallest build page count twelve features. `asset-optimization.md`, the root and `kernel/init/` `CLAUDE.md`, `hub/CLAUDE.md`, `devTools/gather/CLAUDE.md` and the readme (Mesh merging in the Features, the examples) follow.
+- The gatherer's schema parts end with `mergingSchemaPart`; the compiled `.schemas/` regenerated. The `aekasha/merging` alias (`devTools/aliases.ts`, `tsconfig.json`).
+- The bundle, API and docs baselines (the new entry and its names; no debug code in any build), and the scene runner baselines of `largeWorld`, `testDebugScene` and `exampleMerging`.
+- The plans: p372 is `_DONE_`; the p370 epic's status and the plans p372 blocks follow it.
+
 ## 2026-11-10 — p371_geometry-merging
 
 Geometry merging (p371, the first child of the merging epic p370): several geometries, each with its transform, become one registered geometry and one draw, with a part table recording which vertex and index range came from which part. It works at three levels: from code (`mergeGeometryParts`, `registerMergedGeometry` and their `*Async` versions, which merge in the assets worker), as a `MERGED` geometry JSON listing parts, merged at scene load, and at build time for a model (an imported asset's `merge`, which joins the GLB's static pieces into `__merged` nodes). The ad hoc `mergeGeometries` calls in the toolkit's foliage, the gym's stairs and `largeWorld` use it now, with unchanged geometry. Nothing breaks.

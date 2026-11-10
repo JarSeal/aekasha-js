@@ -13,6 +13,7 @@ import type { CharacterObject } from '../../features/character/CharacterTypes';
 import type { LodData } from '../../features/lod/LodTypes';
 import type { InstancedMeshSlotData } from '../../features/instancing/InstancedMeshPoolTypes';
 import type { InstanceSetData } from '../../features/instancing/InstanceSetTypes';
+import type { MergeGroupData, MergeMemberData } from '../../features/merging/MergeTypes';
 
 /**
  * The engine's own component keys, whose values (`'CORE_…'`) the debug listings print. App and
@@ -73,6 +74,10 @@ export const ComponentType = {
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
   INSTANCE_SET: 'CORE_INSTANCE_SET', // runtime-only, set by createInstanceSetAsync (p354)
+  // Mesh merge groups (docs/plans/_DONE_p372_mesh-merge-groups.md) — see features/merging/MergeGroups.ts
+  MERGE_GROUP: 'CORE_MERGE_GROUP', // runtime-only, on a merge group's entity
+  MERGE_MEMBER: 'CORE_MERGE_MEMBER', // runtime-only, on a merge group's member
+  TAG_MERGED: 'CORE_TAG_MERGED', // runtime-only, drawn by its group's merged mesh
   // Debug
   DEBUG_DATA: 'CORE_DEBUG_DATA',
   DEBUG_LIGHT_HELPER: 'CORE_DEBUG_LIGHT_HELPER',
@@ -227,6 +232,15 @@ export interface CoreComponentData {
   /** An instance set its entity owns, set by `createInstanceSetAsync` (`instancing()`): deleting the
    * entity disposes it. */
   [ComponentType.INSTANCE_SET]: InstanceSetData;
+  // Mesh merge groups
+  /** A merge group's entity: its members and its merged mesh's bookkeeping (`merging()`'s
+   * `createMergeGroup`). Don't add it. */
+  [ComponentType.MERGE_GROUP]: MergeGroupData;
+  /** A merge group's member (`merging()`'s `addToMergeGroup`). Don't add it. */
+  [ComponentType.MERGE_MEMBER]: MergeMemberData;
+  /** Runtime state: the entity is drawn by its merge group's mesh, its own Object3D hidden. Don't
+   * add it. */
+  [ComponentType.TAG_MERGED]: boolean;
   // Debug
   /** What the debug tools show for the entity ({@link EntityDebugData}); stored only in the debug
    * env and prod test mode. */

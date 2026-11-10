@@ -9,9 +9,9 @@ import type { FeatureContext } from '../init/Features';
 
 /**
  * Single source of truth for Object3D.visible, recomputed from the full
- * five-way AND
- * whenever any of DISABLED/TAG_FRUSTUM_CULLED/TAG_OBJECT_CULLED/TAG_LOD_CULLED/TAG_DRAW_HELD
- * changes, instead of each hook fighting over the flag pairwise.
+ * six-way AND
+ * whenever any of DISABLED/TAG_FRUSTUM_CULLED/TAG_OBJECT_CULLED/TAG_LOD_CULLED/TAG_DRAW_HELD/
+ * TAG_MERGED changes, instead of each hook fighting over the flag pairwise.
  *
  * `overrides` lets a hook state the value of the flag IT is toggling
  * explicitly, rather than reading it live off `world` — `removeComponent`
@@ -20,7 +20,8 @@ import type { FeatureContext } from '../init/Features';
  * otherwise see `hasComponent(TAG_FRUSTUM_CULLED)` still return `true`.
  *
  * A LOD-culled mesh still fading out (TAG_LOD_TRANSITIONING, features/lod/LodSystem.ts) stays visible until
- * its fade ends.
+ * its fade ends. A merge group's member (TAG_MERGED, features/merging/MergeGroups.ts) is drawn by
+ * its group's mesh, so its own is hidden.
  */
 export function reconcileObject3DVisibility(
   entityId: number,
@@ -32,6 +33,7 @@ export function reconcileObject3DVisibility(
     isLodCulled?: boolean;
     isLodTransitioning?: boolean;
     isDrawHeld?: boolean;
+    isMerged?: boolean;
   }>
 ): void {
   const objComp = world.getComponent(entityId, ComponentType.OBJECT3D);
@@ -52,8 +54,10 @@ export function reconcileObject3DVisibility(
   const isDrawHeld =
     overrides?.isDrawHeld ?? world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD);
 
+  const isMerged = overrides?.isMerged ?? world.hasComponent(entityId, ComponentType.TAG_MERGED);
+
   objComp.value.visible =
-    !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled && !isDrawHeld;
+    !isDisabled && !isFrustumCulled && !isObjectCulled && !isLodCulled && !isDrawHeld && !isMerged;
 }
 
 // The DISABLED and TAG_DRAW_HELD hooks' overrides: constants, so a toggle allocates nothing

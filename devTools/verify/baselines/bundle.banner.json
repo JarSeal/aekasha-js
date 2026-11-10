@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "chunks": {
     "assets/AssetsSwitchGLTF.js": {
-      "bytes": 149885,
-      "gzip": 52200
+      "bytes": 150090,
+      "gzip": 52289
     },
     "assets/AssetsSwitchMerge.js": {
       "bytes": 5442,
@@ -19,7 +19,7 @@
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 155
+      "gzip": 156
     },
     "assets/AssetsWorker.js@AssetsWorker": {
       "bytes": 2180,
@@ -30,12 +30,12 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 971247,
-      "gzip": 271183
+      "bytes": 971715,
+      "gzip": 271329
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 339
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -79,11 +79,11 @@
     },
     "assets/GeometryMerge.js": {
       "bytes": 7117,
-      "gzip": 2989
+      "gzip": 2988
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1854,
-      "gzip": 831
+      "gzip": 830
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1859,
@@ -98,16 +98,16 @@
       "gzip": 1634
     },
     "assets/ImportRegistry.js": {
-      "bytes": 15942,
-      "gzip": 6419
+      "bytes": 16147,
+      "gzip": 6505
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24497
+      "gzip": 24496
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
-      "gzip": 969
+      "gzip": 971
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -127,7 +127,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 182
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -141,8 +141,8 @@
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 995346,
-    "gzip": 277499
+    "minified": 995824,
+    "gzip": 277649
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -157,18 +157,18 @@
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "minified": 2427,
-      "gzip": 1075
+      "minified": 2425,
+      "gzip": 1078
     },
     "_engine/kernel/ecs": {
       "modules": 6,
-      "minified": 24953,
-      "gzip": 7071
+      "minified": 25124,
+      "gzip": 7125
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7286,
-      "gzip": 3130
+      "minified": 7329,
+      "gzip": 3145
     },
     "_engine/kernel/input": {
       "modules": 1,
@@ -187,8 +187,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3902,
-      "gzip": 1662
+      "minified": 4168,
+      "gzip": 1740
     },
     "_engine/kernel/render": {
       "modules": 7,

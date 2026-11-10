@@ -39,6 +39,7 @@ import {
   generateLargeWorldRockImpostor,
   saveLargeWorldRockGeometry,
 } from '../../shared/largeWorldRock';
+import { createRuins } from './largeWorldRuins';
 
 const LARGE_WORLD_SCENE_ID = 'largeWorld';
 
@@ -62,9 +63,11 @@ interface Placed {
 type PropMaterial = 'rock' | 'platform' | 'wall';
 
 /**
- * The static props. The `offFrustum` ones stand behind the overview camera (`largeWorldOverview`,
- * at z = 120 looking at the origin), out of its view, at a fixed `y`: they opt into the ECS
- * frustum culling (`ecsFrustumCullingEnabled`), whose result the ECS can query.
+ * The static props, drawn merged by material and 50 m cell (`merge: 'AUTO'`, the scene JSON's
+ * `mergeGroups`). The `offFrustum` ones stand behind the overview camera (`largeWorldOverview`, at
+ * z = 120 looking at the origin), out of its view, at a fixed `y`: they opt into the ECS frustum
+ * culling (`ecsFrustumCullingEnabled`), whose result the ECS can query, so they're drawn on their
+ * own (a merged member's own culling does nothing).
  */
 const STATIC_PROPS: (Placed & { mat: PropMaterial; y?: number; offFrustum?: boolean })[] = [
   {
@@ -172,11 +175,13 @@ const FOLLOW_OFFSET = new THREE.Vector3(4, 3, 6);
 
 /**
  * A large procedural world without physics: a generated terrain, instanced trees, bushes and rocks
- * scattered on it with LOD levels down to impostors, static props, point-light lanterns, a few
- * resting objects, a bobbing crate stack with a camera following it (C switches to it), and the
- * day-night sky box's lights taking over from the scene's own. The overview camera, the sun, the
- * ambient light and the sky boxes come from `largeWorld.scene.json` (the camera before this file
- * runs, the lights and the sky box after it); the terrain has no JSON form, so it's built here.
+ * scattered on it with LOD levels down to impostors, static props, ruins (`largeWorldRuins.ts`) and
+ * a few resting objects drawn merged (`merge: 'AUTO'`, by material and 50 m cell: the scene JSON's
+ * `mergeGroups`), point-light lanterns, a bobbing crate stack with a camera following it (C
+ * switches to it), and the day-night sky box's lights taking over from the scene's own. The
+ * overview camera, the sun, the ambient light and the sky boxes come from `largeWorld.scene.json`
+ * (the camera before this file runs, the lights and the sky box after it); the terrain has no JSON
+ * form, so it's built here.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
@@ -186,7 +191,8 @@ export const scene = async () => {
   createTreePool(ctx);
   createBushPool(ctx);
   createRockPool(ctx);
-  createStaticProps(ctx);
+  const propMaterials = createStaticProps(ctx);
+  createRuins(ctx.world, ctx.terrain, propMaterials);
   createLanterns(ctx);
   const restingMaterial = createRestingObjects(ctx);
   const crateStackId = createCrateStack(ctx, restingMaterial);
@@ -382,7 +388,10 @@ const createRockPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
   pool.spawn(placements);
 };
 
-/** The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`. */
+/**
+ * The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`; all but the
+ * `offFrustum` ones merged. Returns their materials, which the ruins share.
+ */
 const createStaticProps = ({ world, terrain }: WorldContext) => {
   const materials: Record<PropMaterial, THREE.Material> = {
     rock: createMaterial({
@@ -406,6 +415,7 @@ const createStaticProps = ({ world, terrain }: WorldContext) => {
         castShadow: true,
         receiveShadow: true,
         position: { x: prop.x, y, z: prop.z },
+        merge: prop.offFrustum ? undefined : 'AUTO',
       },
       {
         appId: prop.appId,
@@ -415,6 +425,7 @@ const createStaticProps = ({ world, terrain }: WorldContext) => {
       }
     );
   }
+  return materials;
 };
 
 /**
@@ -438,7 +449,10 @@ const createLanterns = ({ world, terrainMesh }: WorldContext) => {
   });
 };
 
-/** `RESTING_OBJECTS` on the terrain. Returns their material, which the crates and barbell share. */
+/**
+ * `RESTING_OBJECTS` on the terrain, merged (they never move). Returns their material, which the
+ * crates and barbell share.
+ */
 const createRestingObjects = ({ world, terrain }: WorldContext) => {
   const material = createMaterial({
     id: 'largeWorldDynamicMat',
@@ -453,6 +467,7 @@ const createRestingObjects = ({ world, terrain }: WorldContext) => {
         castShadow: true,
         receiveShadow: true,
         position: { x: obj.x, y: terrain.getHeightAt(obj.x, obj.z) + 0.6, z: obj.z },
+        merge: 'AUTO',
       },
       { appId: obj.appId, debugData: { name: obj.appId }, world }
     );
@@ -462,7 +477,8 @@ const createRestingObjects = ({ world, terrain }: WorldContext) => {
 
 /**
  * Two crates, one on the other's edge, merged into one geometry, bobbing with the toolkit's
- * HoverEffect so the follow camera has something to follow. Returns its entity.
+ * HoverEffect so the follow camera has something to follow (so not in a merge group: its
+ * `TRANSFORM` changes every frame). Returns its entity.
  */
 const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Material) => {
   const crate = new THREE.BoxGeometry(1.4, 1.4, 1.4);
@@ -494,7 +510,7 @@ const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Mate
   return entityId;
 };
 
-/** Two spheres on a handle, merged into one geometry. */
+/** Two spheres on a handle, merged into one geometry, and drawn merged with the resting objects. */
 const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Material) => {
   const sphere = new THREE.SphereGeometry(0.5, 10, 8);
   const { x, z } = BARBELL_POSITION;
@@ -512,6 +528,7 @@ const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Materia
       castShadow: true,
       receiveShadow: true,
       position: { x, y: terrain.getHeightAt(x, z) + 0.5, z },
+      merge: 'AUTO',
     },
     { appId: 'largeWorldDynamicBarbell', debugData: { name: 'Large world dynamic barbell' }, world }
   );

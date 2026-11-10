@@ -11,6 +11,7 @@ import {
   spawnImportedAsset,
 } from 'aekasha';
 import type { ImportedAssetManifest, TexOpts } from 'aekasha';
+import { addToMergeGroup, createMergeGroup } from 'aekasha/merging';
 
 const TEX = '/debugger/assets/testTextures';
 const OPT = '/debugger/assets/testOptimized';
@@ -129,6 +130,105 @@ const createMergeCheck = (checker: THREE.Texture) => {
   }
 };
 
+/** The merge group check's grid: two blocks of 10 × 10 boxes, left and right of the rows. */
+const GROUP_GRID = {
+  columns: 10,
+  rows: 10,
+  spacing: 0.24,
+  size: 0.16,
+  blockX: [-6.6, 4.44],
+  topY: -0.2,
+};
+
+/**
+ * The merge group check (p372 Phase 1): 200 boxes of one material, each turned its own way, drawn
+ * by one merge group (`p372_grid`): one draw in the profiler where there were 200, and the same
+ * image. `dissolveMergeGroup('p372_grid')` draws them on their own again. No shadows: one pass.
+ */
+const createMergeGroupCheck = (checker: THREE.Texture) => {
+  const geo = createGeometry({
+    id: 'p372_box',
+    type: 'BOX',
+    params: { width: GROUP_GRID.size, height: GROUP_GRID.size, depth: GROUP_GRID.size },
+  });
+  const mat = createMaterial({ id: 'p372_gridMat', type: 'STANDARD', params: { map: checker } });
+  createMergeGroup({ id: 'p372_grid' });
+  const boxes: number[] = [];
+  for (const blockX of GROUP_GRID.blockX) {
+    for (let row = 0; row < GROUP_GRID.rows; row++) {
+      for (let column = 0; column < GROUP_GRID.columns; column++) {
+        const i = boxes.length;
+        boxes.push(
+          createMeshEntity(
+            {
+              geo,
+              mat,
+              position: {
+                x: blockX + column * GROUP_GRID.spacing,
+                y: GROUP_GRID.topY - row * GROUP_GRID.spacing,
+                z: 0,
+              },
+              rotation: { x: i * 0.37, y: i * 0.23, z: 0 },
+            },
+            { appId: `p372_box_${i}` }
+          )
+        );
+      }
+    }
+  }
+  addToMergeGroup('p372_grid', boxes);
+};
+
+/** The AUTO check's lattice: 10 columns (x) × 10 rows (y) × 5 layers (z), under the right block.
+ * The scene's `mergeGroups` makes AUTO's cells 2 m, so x 4-6 / 6-8 and z -2-0 / 0-2: four cells. */
+const AUTO_LATTICE = {
+  columns: 10,
+  rows: 10,
+  layers: 5,
+  x: 4.2,
+  y: -3.3,
+  z: -0.8,
+  spacing: { x: 0.28, y: 0.28, z: 0.4 },
+  materials: ['p372_autoMatA', 'p372_autoMatB', 'p372_autoMatC'],
+};
+
+/**
+ * The AUTO merge check (p372 Phase 3): 500 boxes of `p372_autoBox` (the scene JSON's), the three
+ * materials in turn, `merge: 'AUTO'`: 12 groups, 3 materials in 4 cells, built by the scene step
+ * so the first frame draws them merged and `p372_autoBox` is never uploaded. The bottom row's four
+ * corners are the JSON's meshes (`p372_autoJson_*`, material A): the code skips them.
+ */
+const createAutoMergeCheck = () => {
+  const { columns, rows, layers, spacing, materials } = AUTO_LATTICE;
+  let i = 0;
+  for (let layer = 0; layer < layers; layer++) {
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        const isJsonCorner =
+          row === rows - 1 &&
+          (column === 0 || column === columns - 1) &&
+          (layer === 0 || layer === layers - 1);
+        if (isJsonCorner) continue;
+        createMeshEntity(
+          {
+            geo: 'p372_autoBox',
+            mat: materials[i % materials.length],
+            position: {
+              x: AUTO_LATTICE.x + column * spacing.x,
+              y: AUTO_LATTICE.y - row * spacing.y,
+              z: AUTO_LATTICE.z + layer * spacing.z,
+            },
+            rotation: { x: i * 0.41, y: i * 0.29, z: 0 },
+            merge: 'AUTO',
+          },
+          { appId: `p372_auto_${i}` }
+        );
+        i++;
+      }
+    }
+  }
+};
+
 /**
  * The orientation check of hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
  * next to their sources; its camera and lights are in its JSON. Top row: each PNG texture, then
@@ -137,7 +237,9 @@ const createMergeCheck = (checker: THREE.Texture) => {
  * its quantized meshopt + KTX2 copy (all three must look the same), then `box01.glb` (no
  * textures, a plain material) and its meshopt copy. Switch the GLTF worker target in the Assets
  * tab (and reload) to check the assets worker path. Bottom row: the geometry merge check
- * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows.
+ * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows. Left and right of
+ * the rows, the merge group check (`createMergeGroupCheck`), and under the right block the AUTO
+ * check (`createAutoMergeCheck`).
  */
 export const scene = async () => {
   const textures = await Promise.all(
@@ -163,6 +265,8 @@ export const scene = async () => {
     );
   });
   createMergeCheck(textures[0]);
+  createMergeGroupCheck(textures[0]);
+  createAutoMergeCheck();
 
   for (let i = 0; i < MODELS_TO_IMPORT.length; i++) {
     const { id, fileName, noTextures } = MODELS_TO_IMPORT[i];

@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3378,
-      "total": 3378
+      "documented": 3445,
+      "total": 3445
     },
     "members": {
-      "documented": 1104,
-      "total": 1104
+      "documented": 1107,
+      "total": 1107
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3295,
-        "total": 3295
+        "documented": 3362,
+        "total": 3362
       },
       "members": {
-        "documented": 950,
-        "total": 950
+        "documented": 953,
+        "total": 953
       }
     },
     "toolkit": {
@@ -163,6 +163,20 @@
       "exports": {
         "documented": 1,
         "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/merging": {
+      "exports": {
+        "documented": 65,
+        "total": 65
       },
       "members": {
         "documented": 0,
@@ -473,8 +487,8 @@
         "total": 98
       },
       "members": {
-        "documented": 161,
-        "total": 161
+        "documented": 164,
+        "total": 164
       },
       "undocumented": {
         "exports": [],
@@ -539,8 +553,8 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 13,
-        "total": 13
+        "documented": 15,
+        "total": 15
       },
       "members": {
         "documented": 0,

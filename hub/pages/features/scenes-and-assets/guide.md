@@ -9,8 +9,9 @@
   created first, before the assets load; the lights and meshes right after the scene file runs,
   so its code reaches them on the scene's enter.
 - Other keys set up the scene itself: `postFxEnabled`, `backgroundColor`, `spatialDomains` (see
-  [Spatial index](hub:features/spatial-index)) and `impostors` (see
-  [LOD and impostors](hub:features/lod#exporting-an-impostor)).
+  [Spatial index](hub:features/spatial-index)), `impostors` (see
+  [LOD and impostors](hub:features/lod#exporting-an-impostor)) and `mergeGroups` (see
+  [Mesh merging](hub:features/mesh-merging#auto)).
 - `name` is the scene's name in the debugger's scene lists.
 
 ## The asset types
@@ -155,7 +156,8 @@ The textures and models the JSONs point at go through the
 
 Some scene and mesh fields belong to a feature: `skyboxes` to the sky box (`skyBox()`), `postFx`
 and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial index (`spatial()`),
-and `impostors` and a mesh's `lod` to LOD (`lod()`). The gatherer writes the features each scene's
+`impostors` and a mesh's `lod` to LOD (`lod()`), and `mergeGroups` and a mesh's `merge` to mesh
+merging (`merging()`). The gatherer writes the features each scene's
 data uses into the generated data (the scene's `__features`), and `InitEngine` checks every scene,
 loaded or not, against its `features` before anything boots:
 

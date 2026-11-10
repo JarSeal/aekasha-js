@@ -24,6 +24,7 @@
       "aekasha/instancing": ["./src/_engine/features/instancing/index.ts"],
       "aekasha/lines": ["./src/_engine/features/lines/index.ts"],
       "aekasha/lod": ["./src/_engine/features/lod/index.ts"],
+      "aekasha/merging": ["./src/_engine/features/merging/index.ts"],
       "aekasha/physics": ["./src/_engine/features/physics/index.ts"],
       "aekasha/postfx": ["./src/_engine/features/postfx/index.ts"],
       "aekasha/skybox": ["./src/_engine/features/skybox/index.ts"],
