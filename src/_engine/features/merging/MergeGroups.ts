@@ -19,6 +19,10 @@
 // (`MERGE_MEMBER._bakedMatrix`), the bounds only growing until the next build; a remove or a
 // delete collapses its triangles and counts its vertices as wasted, and past a quarter of the
 // group's the group builds again, compact. The shared state is MergeState.ts.
+//
+// A mesh's `merge` prop (`createMeshEntity`, through the kernel's `setMeshMergeHandler`) is queued
+// and joins at the next build (`resolveQueuedMerges`), so the refusals see what was added after
+// the mesh (an import's bodies) and `AUTO` (MergeAuto.ts) picks the cell from the final pose.
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
@@ -33,11 +37,13 @@ import {
   saveBufferGeometry,
 } from '../../kernel/assets/Geometry';
 import { incMaterialRef } from '../../kernel/assets/Material';
+import { setMeshMergeHandler } from '../../kernel/mesh/Mesh';
 import type { MergePart } from '../../kernel/assets/GeometryMerge';
-import { getCurrentSceneId, getLoadingSceneId, getRootScene } from '../../kernel/scene/Scene';
+import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
+import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import { getMergeRefusal } from './MergeEligibility';
 import {
   collapseDisabledMember,
@@ -46,7 +52,9 @@ import {
   rewriteMember,
 } from './MergeInPlace';
 import {
+  createGroup,
   findPending,
+  findQueued,
   getGroups,
   getMemberMesh,
   getPending,
@@ -62,9 +70,6 @@ import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
  * @internal
  */
 export const WORKER_BUILD_VERTICES = 65_536;
-
-/** The `MANAGED_BY` manager of a group entity. */
-const MANAGER = 'MERGE';
 
 // The TAG_MERGED hooks' overrides: constants, so a toggle allocates nothing
 const IS_MERGED = Object.freeze({ isMerged: true });
@@ -110,7 +115,8 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
  * until its first build, and goes with the scene that created it unless `persistent`.
  * @param world the group's world (default: the default world)
  * @returns the group's entity id
- * @throws for an id the world has a group with already, or without the `merging()` feature
+ * @throws for an id the world has a group with already, a reserved id (`AUTO`, or one starting
+ * with `auto:`, the automatic groups'), or without the `merging()` feature
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -126,32 +132,15 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
 export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld): number => {
   assertInstalled('createMergeGroup');
   const ecsWorld = world ?? getECSWorld();
-  const { id, ...settings } = opts;
-  const groups = getGroups(ecsWorld);
-  if (groups.has(id)) {
-    throw new Error(`createMergeGroup: the world has a merge group "${id}" already.`);
+  if (opts.id === AUTO || opts.id.startsWith(AUTO_ID_PREFIX)) {
+    throw new Error(
+      `createMergeGroup: "${opts.id}" is reserved for the automatic groups (merge: 'AUTO').`
+    );
   }
-  const sceneId = getLoadingSceneId() ?? getCurrentSceneId() ?? '';
-  const groupEntityId = ecsWorld.createEntity({
-    appId: `mergeGroup:${id}`,
-    managedBy: { manager: MANAGER, ownerId: settings.persistent ? '' : sceneId, role: 'group' },
-    debugData: { name: `Merge group ${id}` },
-  });
-  if (settings.persistent) ecsWorld.addComponent(groupEntityId, ComponentType.PERSISTENT, true);
-  ecsWorld.addComponent(groupEntityId, ComponentType.MERGE_GROUP, {
-    id,
-    members: [],
-    settings,
-    partIndex: new Map(),
-    wasted: 0,
-    rebuilds: 0,
-    _material: null,
-    _isPending: false,
-    _buildToken: 0,
-    _isBuilding: false,
-  });
-  groups.set(id, groupEntityId);
-  return groupEntityId;
+  if (getGroups(ecsWorld).has(opts.id)) {
+    throw new Error(`createMergeGroup: the world has a merge group "${opts.id}" already.`);
+  }
+  return createGroup(opts, ecsWorld, false);
 };
 
 /**
@@ -160,7 +149,8 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * large group's builds in the assets worker, and its new members are drawn on their own until it's
  * in). A member keeps its entity, transform, physics body and assets; its own mesh is hidden.
  * A disabled member (`setDisabled`) isn't drawn in the merged mesh either, and is again when
- * it's enabled, without a rebuild.
+ * it's enabled, without a rebuild. `'AUTO'` queues them as a mesh's `merge: 'AUTO'` does: each
+ * joins the automatic group of its material and cell at the next build.
  *
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
  * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
@@ -182,6 +172,13 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
 export const addToMergeGroup = (groupId: string, entityIds: number[], world?: ECSWorld) => {
   assertInstalled('addToMergeGroup');
   const ecsWorld = world ?? getECSWorld();
+  if (groupId === AUTO) {
+    for (const entityId of entityIds) queueMerge(entityId, AUTO, ecsWorld);
+    return;
+  }
+  // This call wins over a mesh's `merge` still waiting for its build
+  const queued = findQueued(ecsWorld);
+  if (queued?.size) for (const entityId of entityIds) queued.delete(entityId);
   const groupEntityId =
     getGroups(ecsWorld).get(groupId) ?? createMergeGroup({ id: groupId }, ecsWorld);
   const group = existsOrThrow(
@@ -283,8 +280,9 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
  * (no rebuild), and its vertices counted as wasted; once a group's waste passes a quarter of its
  * vertices, it builds again, compact, in the next frame's render sync.
  * @param world the members' world (default: the default world)
- * @remarks An entity that isn't a member is skipped with a warning. Deleting a member collapses
- * its range the same way.
+ * @remarks An entity that isn't a member is skipped with a warning, unless its `merge` was still
+ * waiting for the next build: it then doesn't join. Deleting a member collapses its range the
+ * same way.
  * @example
  * ```ts
  * import { getEntityIdByAppId } from 'aekasha';
@@ -297,7 +295,9 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
 export const removeFromMergeGroup = (entityIds: number[], world?: ECSWorld) => {
   assertInstalled('removeFromMergeGroup');
   const ecsWorld = world ?? getECSWorld();
+  const queued = findQueued(ecsWorld);
   for (const entityId of entityIds) {
+    if (queued?.delete(entityId)) continue;
     const member = ecsWorld.getComponent(entityId, ComponentType.MERGE_MEMBER);
     const group = member && ecsWorld.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
     if (!member || !group) {
@@ -329,7 +329,8 @@ export const dissolveMergeGroup = (groupId: string, world?: ECSWorld) => {
 };
 
 /**
- * The merge group an entity is a member of (built or waiting for its build), if any.
+ * The merge group an entity is a member of (built or waiting for its build), if any. A mesh whose
+ * `merge` prop hasn't joined yet (it joins at the next build) has none.
  * @param world the entity's world (default: the default world)
  * @returns the group's id, or undefined
  * @example
@@ -344,6 +345,12 @@ export const getMergeGroupOf = (entityId: number, world?: ECSWorld): string | un
   (world ?? getECSWorld()).getComponent(entityId, ComponentType.MERGE_MEMBER)?.groupId;
 
 // --- MEMBERSHIP ---
+
+/** Joins the queued `merge`s to their groups (MergeAuto.ts picks the `AUTO` ones). */
+const resolveQueuedMerges = (world: ECSWorld) => {
+  const joins = collectQueuedJoins(world);
+  if (joins) for (const [groupId, entityIds] of joins) addToMergeGroup(groupId, entityIds, world);
+};
 
 /** A group entity's deletion (a dissolve, its scene's exit): its members go free. */
 const onGroupDeleted = (groupEntityId: number, world: ECSWorld) => {
@@ -542,6 +549,11 @@ const buildGroup = (
   const members = getLiveMembers(groupEntityId, group, world);
   group.members = members.concat();
   if (members.length === 0) {
+    // An automatic group is only its members': it goes (its id is free again)
+    if (group._isAuto) {
+      world.deleteEntity(groupEntityId);
+      return;
+    }
     // Nothing to draw: the mesh leaves the scene until a member joins
     world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value.removeFromParent();
     group.partIndex.clear();
@@ -601,10 +613,12 @@ const buildPendingGroups = (world: ECSWorld, merge: MergeModule) => {
 };
 
 /**
- * Builds the pending merge groups, once a frame (APP_RENDER_SYNC, `MERGE_BUILD`). Its first run
- * with a pending group loads the merge code, and the run after it's in builds.
+ * Joins the queued `merge`s, then builds the pending merge groups, once a frame (APP_RENDER_SYNC,
+ * `MERGE_BUILD`). Its first run with a pending group loads the merge code, and the run after it's
+ * in builds.
  */
 const mergeGroupBuildSystem = (world: ECSWorld) => {
+  resolveQueuedMerges(world);
   const pending = findPending(world);
   if (!pending || pending.size === 0) return;
   if (!mergeModule) {
@@ -617,12 +631,14 @@ const mergeGroupBuildSystem = (world: ECSWorld) => {
 };
 
 /**
- * Builds the world's pending merge groups now, worker builds included, without waiting for the
- * build system: for a scene load, so its first frame draws them merged (p372 §6).
+ * Joins the queued `merge`s and builds the world's pending merge groups now, worker builds
+ * included, without waiting for the build system: for a scene load, so its first frame draws them
+ * merged (p372 §6).
  * @internal
  */
 export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
   const ecsWorld = world ?? getECSWorld();
+  resolveQueuedMerges(ecsWorld);
   if (!findPending(ecsWorld)?.size) return;
   const merge = await loadMergeModuleAsync();
   await Promise.all(buildPendingGroups(ecsWorld, merge));
@@ -641,11 +657,12 @@ export const registerMergeDebug = async () => {
 /**
  * Installs the merge groups (the `merging()` feature's install, MergingFeature.ts): the
  * `TAG_MERGED` visibility hooks, the groups' and members' deletion hooks, the `DISABLED` hooks
- * that collapse and restore a member's range, and the build system.
+ * that collapse and restore a member's range, the meshes' `merge` prop, and the build system.
  * @internal
  */
 export const installMergeGroups = (ctx: FeatureContext) => {
   isInstalled = true;
+  setMeshMergeHandler(queueMerge);
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
     onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_MERGED),
     onRemoveComponent: (entityId, world) =>

@@ -25,13 +25,14 @@ const getGroupGeometry = (group: MergeGroupData, world: ECSWorld) => {
 };
 
 /**
- * Why a merge group can't take the entity, or null when it can.
+ * Why a merge group can't take the entity, or null when it can. Without `group`, only what any
+ * group refuses (an `AUTO` member before its bucket is picked).
  * @internal
  */
 export const getMergeRefusal = (
   entityId: number,
   world: ECSWorld,
-  group: MergeGroupData
+  group?: MergeGroupData
 ): string | null => {
   if (!world.isAlive(entityId)) return 'it was deleted';
   const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
@@ -53,7 +54,7 @@ export const getMergeRefusal = (
     return 'it has a material array (multi-material merging is p374)';
   }
   if (object.material.transparent) return 'its material is transparent (drawn sorted per object)';
-  if (group._material && object.material !== group._material) {
+  if (group?._material && object.material !== group._material) {
     return "its material isn't the group's (one material per group)";
   }
   if (
@@ -67,6 +68,7 @@ export const getMergeRefusal = (
     return 'a manager owns it (MANAGED_BY)';
   }
   if (world.hasComponent(entityId, ComponentType.LOD)) return 'it has a LOD';
+  if (!group) return null;
   if (world.hasComponent(entityId, ComponentType.PERSISTENT) && !group.settings.persistent) {
     return "it's persistent and the group isn't";
   }

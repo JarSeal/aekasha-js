@@ -4,12 +4,15 @@
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
 import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
-import type { MergeGroupData } from './MergeTypes';
+import type { MergeGroupData, MergeGroupSettings, MeshMergeDef } from './MergeTypes';
 
-/** Per world: the group entities by group id, and the groups waiting for a build. */
+/** Per world: the group entities by group id, the groups waiting for a build, and the meshes
+ * whose `merge` waits for the next build to join. */
 const groupsByWorld = new WeakMap<ECSWorld, Map<string, number>>();
 const pendingByWorld = new WeakMap<ECSWorld, Set<number>>();
+const queuedByWorld = new WeakMap<ECSWorld, Map<number, MeshMergeDef>>();
 
 /**
  * The world's group entities by group id (made on first use).
@@ -36,6 +39,57 @@ export const getPending = (world: ECSWorld) => {
  * @internal
  */
 export const findPending = (world: ECSWorld) => pendingByWorld.get(world);
+
+/**
+ * Creates a group's entity and its `MERGE_GROUP`, and lists it under its id (no checks: the API's
+ * `createMergeGroup` and the `AUTO` groups' resolution make them).
+ * @internal
+ */
+export const createGroup = (
+  opts: MergeGroupSettings & { id: string },
+  ecsWorld: ECSWorld,
+  isAuto: boolean
+) => {
+  const { id, ...settings } = opts;
+  const sceneId = getLoadingSceneId() ?? getCurrentSceneId() ?? '';
+  const groupEntityId = ecsWorld.createEntity({
+    appId: `mergeGroup:${id}`,
+    managedBy: { manager: 'MERGE', ownerId: settings.persistent ? '' : sceneId, role: 'group' },
+    debugData: { name: `Merge group ${id}` },
+  });
+  if (settings.persistent) ecsWorld.addComponent(groupEntityId, ComponentType.PERSISTENT, true);
+  ecsWorld.addComponent(groupEntityId, ComponentType.MERGE_GROUP, {
+    id,
+    members: [],
+    settings,
+    partIndex: new Map(),
+    wasted: 0,
+    rebuilds: 0,
+    _material: null,
+    _isPending: false,
+    _buildToken: 0,
+    _isBuilding: false,
+    _isAuto: isAuto,
+  });
+  getGroups(ecsWorld).set(id, groupEntityId);
+  return groupEntityId;
+};
+
+/**
+ * The world's meshes whose `merge` joins at the next build, in creation order (made on first use).
+ * @internal
+ */
+export const getQueued = (world: ECSWorld) => {
+  let queued = queuedByWorld.get(world);
+  if (!queued) queuedByWorld.set(world, (queued = new Map()));
+  return queued;
+};
+
+/**
+ * The world's queued `merge`s, if it ever had any: for the per-frame check.
+ * @internal
+ */
+export const findQueued = (world: ECSWorld) => queuedByWorld.get(world);
 
 /**
  * Marks a group for a build at the build system's next run.

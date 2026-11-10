@@ -43,7 +43,29 @@ export type MergeGroupData = {
   _buildToken: number;
   /** A worker build is running (its token is `_buildToken`). */
   _isBuilding: boolean;
+  /** An `AUTO` group (`merge: 'AUTO'`): its id is derived, and it's deleted when a build finds
+   * no member left. */
+  _isAuto: boolean;
 };
+
+/** `merge`'s object form: a group, and the `AUTO` bucket's bounds. */
+export type MeshMergeOptions = {
+  /** The group's id, or `'AUTO'` (the default): a group the engine picks by the mesh's material,
+   * attributes, shadow flags, layers and cell. */
+  group?: string;
+  /** `AUTO` only: the side of the square x/z cells that bound an automatic group, in metres.
+   * Default 32. */
+  cellSize?: number;
+  /** `AUTO` only: an automatic group's vertex cap; a full one opens another in its cell.
+   * Default 262 144. */
+  maxVertices?: number;
+};
+
+/**
+ * A mesh's `merge` (`createMeshEntity`'s props, a mesh JSON's): a merge group's id, `'AUTO'`,
+ * or the options. The mesh joins at the next build.
+ */
+export type MeshMergeDef = string | MeshMergeOptions;
 
 /**
  * A merge group member's `MERGE_MEMBER` component: added when it joins (`addToMergeGroup`),

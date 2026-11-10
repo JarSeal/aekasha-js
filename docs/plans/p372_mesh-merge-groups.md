@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-2 implemented, Phase 3 started
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -90,7 +90,7 @@ getMergeGroupOf(entityId: number, world?): string | undefined;
 
 - **Builds** are batched: adds and removes mark the group pending; `mergeGroupBuildSystem` at
   `APP_RENDER_SYNC`, registered by `merging()`'s install (new `APP_RENDER_SYNC_ORDER.MERGE_BUILD
-  = 0.5`, before the pose producers; the scene runner's system order baseline records it)
+= 0.5`, before the pose producers; the scene runner's system order baseline records it)
   builds pending groups once per frame with `mergeGeometryParts` (or its worker variant above a
   vertex threshold, the members staying visible until the new mesh is in).
 - **`updateMergeMember`** rewrites the member's range in place: positions by the new world matrix,
@@ -216,7 +216,7 @@ As built (2026-11-10):
   - `createMergeGroup({ id, castShadow?, receiveShadow?, persistent? }, world?)`: `persistent`
     in place of `sceneId` (§4.1's "`sceneId: undefined`" is `persistent: true`). A group goes
     with the scene it was created in (`MANAGED_BY { manager: 'MERGE', ownerId: <scene id>, role:
-    'group' }`, appId `mergeGroup:<id>`); a persistent one gets `PERSISTENT` and takes persistent
+'group' }`, appId `mergeGroup:<id>`); a persistent one gets `PERSISTENT` and takes persistent
     members. `castShadow` / `receiveShadow` default to the first member's. A taken id throws.
   - `addToMergeGroup` makes the group with default settings on first use (as §4.1 says of
     `"<groupId>"`). A member gets `MERGE_MEMBER` (`partIndex` -1) when it joins, so
@@ -373,6 +373,68 @@ The cell maths to `src/_engine/utils/` unless p353 moved it (p370 §13), `merge`
 schema part and `createMeshEntity`, scene `mergeGroups`, `AUTO` buckets, imported asset custom
 prop and option, the scene-load step. **Exit:** a scene with 500 `AUTO` meshes in 3
 materials over 4 cells loads with 12 groups, and its first frame is already merged.
+
+Decided when it started (2026-11-10):
+
+- **`merge` is a mesh prop** (in `props`, next to `lod`): a feature's `mesh` schema part adds
+  fields to a mesh's `props`, as §4.1's text says; §4.1's JSON example, with `merge` beside
+  `props`, is wrong.
+- **A mesh's `merge` is queued and joins at the next build** (the build system's run, or the scene
+  step), not in `createMeshEntity`: an import spawns a node's body after its mesh, and scene code
+  can move a mesh right after creating it, so the refusals and `AUTO`'s cell see the final entity.
+- **No import extension** (§4.3): `spawnImportedAsset` creates its pieces with `createMeshEntity`,
+  so the custom prop and the spawn option reach `merging()` through the same `merge` prop.
+- The cell maths was moved to `src/_engine/utils/CellKey.ts` by p353 Phase 1.
+
+Sections:
+
+1. The `merge` prop and its kernel seam, the queue, explicit ids, the `AUTO` buckets.
+2. The schema part: a mesh's `merge`, the scene's `mergeGroups` (an explicit group's settings,
+   `AUTO`'s defaults), the streaming cell size warning and the spanning group warning.
+3. Imported assets: the `merge` custom prop and `spawnImportedAsset`'s `merge` option.
+4. The scene-load step: the scene's members hidden from its first frames, the `entered` hook
+   building (and awaiting the worker builds already running) before the loader's `loadEndFn`.
+5. The exit check (500 `AUTO` meshes, 3 materials, 4 cells), the SBP budget, the baselines.
+
+As built, section 1 (2026-11-10):
+
+- `MeshProps.merge?: MeshMergeDef` (`kernel/mesh/Mesh.ts`, the type `import type` from
+  `MergeTypes.ts`): `string | MeshMergeOptions` (`{ group?, cellSize?, maxVertices? }`, `group`
+  defaulting to `'AUTO'`; the sizes only for `AUTO`), both on `aekasha/merging`.
+  `createMeshEntity` hands it, last, to the handler `merging()`'s install sets
+  (`setMeshMergeHandler`, `@internal`, as `setAutoLodResolverLoader`); without one it warns once
+  and the mesh is drawn on its own.
+- `MergeAuto.ts`: the queue (`queueMerge`: an empty id, an `auto:` id or a size that isn't a
+  finite number over 0 warns and is dropped; a later `merge` for the entity replaces it) and its
+  resolution (`collectQueuedJoins`, in creation order, the joins returned to `MergeGroups.ts`'
+  `resolveQueuedMerges`, which adds them: no import cycle), run first by the build system and by
+  `buildPendingMergeGroupsAsync`. A queued entity deleted meanwhile is dropped;
+  `addToMergeGroup` with another id wins over a queued one, `removeFromMergeGroup` drops one
+  without a warning; `getMergeGroupOf` answers only once it has joined.
+- `AUTO` (`pickAutoGroup`): the key is the material's registered id (else its uuid: a clone
+  carrying the id is then refused by the group), the attributes' names and item sizes, both
+  shadow flags, the layers' mask, whether the entity is `PERSISTENT` (its group is then
+  persistent), and the cell size; the cell is x/z only (`worldToCell` of the world position read
+  from the `TRANSFORM` at the resolution), as streaming's cells. The id is
+  `auto:<FNV-1a of the key, base 36>:<cx>,<cz>:<n>`, cell coordinates rather than a packed key
+  (no range limit, readable). A refused mesh warns (`merge 'AUTO': …`) before a bucket is picked,
+  so no group is opened for it (`getMergeRefusal` takes the group as optional: without one, only
+  what every group refuses). A bucket counts the vertices that joined its open group (a removed
+  member isn't taken off: it opens the next group early, never late); the first member of a group
+  goes in whatever its size. When its open group is gone, the bucket goes back to the first id
+  after the full groups still alive, so a scene's next load gets the same ids.
+- `addToMergeGroup('AUTO', ids)` queues them as the prop does; `createMergeGroup` throws on
+  `'AUTO'` and on an `auto:` id. An `AUTO` group (`MergeGroupData._isAuto`) is deleted when a
+  build finds no member left; an explicit one keeps Phase 1's behaviour (its mesh leaves the
+  scene). `createGroup` moved to `MergeState.ts` (`MergeGroups.ts` stays under 800 lines).
+- Not in §3: `MERGE_GROUP.cellKey` (§2): the `AUTO` id carries the cell.
+- Tests: `MergeAuto.test.ts` (the queue, the object form, invalid defs, a deleted queued mesh,
+  add and remove against the queue, `addToMergeGroup('AUTO')` and the reserved ids, 3 materials ×
+  4 cells = 12 groups, the shadow flags and attributes in the key, the same ids on a second load
+  after a bucket overflowed, the cap, a mesh's cell size and its pose at the resolution, a
+  refusal, a persistent member through `clearNonPersistent`, an emptied group deleted and its id
+  reused), and `Mesh.test.ts` (the warning without `merging()`). The overflowed bucket's ids were
+  found wrong by the test first (`:2` on the next load).
 
 ### Phase 4 — Adoption and measurements
 

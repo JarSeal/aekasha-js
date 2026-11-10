@@ -46,6 +46,19 @@ describe('createMeshEntity', () => {
     world.deleteEntity(entityId);
   });
 
+  test('a merge without the merging feature warns once, and the mesh is drawn on its own', () => {
+    fns.lwarn.mockClear();
+    const ids = [0, 1].map(() =>
+      createMeshEntity({ geo: new THREE.BoxGeometry(), mat: 'meshTestMaterial', merge: 'AUTO' })
+    );
+    expect(fns.lwarn).toHaveBeenCalledOnce();
+    expect(fns.lwarn.mock.calls[0][0]).toContain('merging()');
+    for (const id of ids) {
+      expect(world.getComponent(id, ComponentType.OBJECT3D)!.value.visible).toBe(true);
+      world.deleteEntity(id);
+    }
+  });
+
   test('a deleted mesh entity disposes its mesh, so three frees its render objects', () => {
     const material = saveMaterial(new THREE.MeshBasicNodeMaterial(), 'meshTestShared');
     const entityId = createMeshEntity({ geo: new THREE.BoxGeometry(), mat: 'meshTestShared' });
