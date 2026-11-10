@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented
+Status: in progress | Phases 0-6 implemented
 Category: Rendering, LOD, GPU
 Epic: p350_lod-system-research.md (Tier 3)
 Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), p375_batched-mesh-batches.md
@@ -1723,7 +1723,7 @@ From Phase 4 (its "As built"), for these steps:
 The Hub's example is a `lodShowcase` lane (decided 2026-11-09). There's no example scene of its
 own: `instanceStress` covers the scaling, and the lane shows the parity next to the pool's lane.
 
-### Phase 6 — The Hub, the lane and the docs
+### Phase 6 — The Hub, the lane and the docs — done
 
 1. **The `lodShowcase` lane** (`src/app/scenes/lodShowcase/lanes/instanceSetGrove.ts`, "Instance
    set and cross-quads").
@@ -1765,6 +1765,68 @@ own: `instanceStress` covers the scaling, and the lane shows the parity next to 
 **Verification:** `yarn hub:build` passes (no dead `hub:` link, no moved `#region`, every
 `##` section covered). `yarn verify:scenes --only lodShowcase` passes on both backends with the
 updated baseline. The page reads right in both themes (`yarn hub:preview`).
+
+**As built** (section by section, 2026-11-10, commits "phase 6 - section 1" to "section 5", and the
+verification after them):
+
+- **Section 1, the lane.** `lanes/instanceSetGrove.ts` as planned. The pool lane's trees became
+  `createShowcaseTrees(ctx)` in `lanes/treeGrove.ts` (the levels, the LOD, level 0's radius and the
+  placements, one seed), which both lanes call: the second call reuses the registered geometries
+  (`getGeometry(id) ??`: `saveBufferGeometry` warns on a second geometry under one id), and the
+  materials and the cross-quads return the first call's. The scene has 7 lane slots (the set lane
+  in slot 1, next to the pool's; the generated chain still in the centre). A lane may return
+  `instanceSet` (the set, its instances' origins and each level's triangles) and a `description`
+  (the backend's). The "LOD demo" tab's stops measure a set lane from its instances' origins, and
+  its row comes from `readInstanceSetStatsAsync` with `state` (asked for by the open tab's refresh,
+  one at a time per set, kept per set so a late readback of an earlier visit's set lands nowhere):
+  the selected levels, culled, fading, the backend, and the triangles the main camera's last
+  dispatch drew. On both backends the row is the pool lane's (`L0 3 · L1 3 · L2 3 · culled 1`,
+  234 triangles). `lodShowcase`'s baselines moved with the lane (mean 7.8-7.9, 14.8% of pixels: the
+  new lane and the lanes it moved over; no console error, the probe hashes unchanged), recorded
+  again on WebGPU and on WebGL2 (local baselines). `lodShowcase.hub.png` saved again from the
+  start view.
+- **Section 2, the LOD page.** The set's part is a `## Instance sets` with `###` subsections (a pool
+  or a set, two backends, every camera, ranges and streamed cells, memory, seeing a set work), not
+  `####` under "Many instances": the page's "On this page" lists h2 and h3 only. "Which to use" is
+  Phase 4's table (5k / 20k / 100k: pools, the CPU backend, the GPU backend, CPU and GPU frame, one
+  minified build), Phase 1's 1M CPU frames (166 against 1.1 ms) and Phase 3's sun shadow (8.6
+  against 13.1 ms at 100k). A dev-only block names `instanceStress` and the bench. Found:
+  `yarn hub:build` warned that `InstanceSetData` (`@internal`) is named by the public
+  `CoreComponentData` (Phase 1's leak); it's now a type on `aekasha/instancing`, as the pool's
+  `InstancedMeshSlotData` is. Found on the dev server: the dev Hub checks `api:` links against the
+  last API model it built, and an engine save only marks it stale, so the page failed on
+  `InstanceSet.setInstanceMatrices` and `.removeInstances` (Phase 5's) until an API page was
+  opened (which rebuilds it). Not changed here.
+- **Section 3, the nested `CLAUDE.md` files.** `kernel/render/CLAUDE.md`'s "Drawing pipeline" (the
+  hook, its order with nested renders, and the drawn object's nodes: `drawnInstanceMatrix` and
+  `setObjectLodFadeNode`), covered by the Rendering page (`aek:covers`, and a sentence in its
+  "More on screen"); `coverageIgnore` stays empty. `features/instancing/CLAUDE.md` gained the seams
+  a set uses in one bullet, the pointer to the Hub's "which to use" and the lane;
+  `features/lod/CLAUDE.md` the lane, the lane shape, `createShowcaseTrees` and the tab's set rows,
+  and p354 left its "later LOD plans".
+- **Section 4, the root `CLAUDE.md`**: the map's instancing line, the bench tools under Commands
+  and their `.cache/bench/progress.log` next to the other logs.
+- **Section 5, `readme.md`**: instance sets in the pools' Features entry, an "Instance sets" row
+  in the Technical highlights (the readme's performance table), the lane and `instanceStress` in
+  the scene lists, and GPU-driven culling off the Roadmap highlights.
+- **The verification** (2026-11-10, Apple M2, Chrome):
+  - `yarn hub:build` passes: 111 pages, 1,334 public names, 100% documented, every `##` section
+    covered. Its one warning, the search index at 534 KiB gzipped over 450 KiB, was 530 KiB before
+    this phase. The LOD page read right in both themes on `yarn hub:preview`.
+  - `yarn docs` has `createInstanceSetAsync`, `readInstanceSetStatsAsync` and the set's types (0
+    errors; none of its 120 warnings names a set).
+  - `yarn verify:scenes --only lodShowcase`: all 5 runs pass on WebGPU and on WebGL2 (SwiftShader,
+    the set on its CPU backend).
+  - `yarn verify:baselines --update`: Phase 5's changes, not recorded there (`InstanceRanges.ts`'
+    exports, `STATE_REMOVED` / `LEVEL_REMOVED`, `InstanceMatrix.ts` as its own 0.3 kB lazy chunk
+    with its four exports, `runWhenSceneLoadSettled`, the lazy `InstanceSetGpu.js` 4.9 → 5.5 kB and
+    `InstanceSetCpu.js` 2.0 → 2.2 kB, `instanceStress.js` 2.5 → 4.3 kB, the impostor generators
+    moving from `largeWorldRock.js` to `Foliage.js`), and this phase's (`InstanceSetData` on
+    `aekasha/instancing`, `lodShowcase.js` 4.9 → 5.2 kB for the lane). The main chunk's
+    `features/instancing` 3.9 → 4.6 kB (Phase 5's ranges and `removeInstances`); both embeds
+    unchanged; docs 100%; no debug code in any build.
+  - `yarn sbp --profile all`: every budget within (`features/instancing` 4.6 kB of its 5 KiB,
+    `features/lod` 5.4 of 7).
 
 ### Phase 7 — Versioning, changelog, the plan done
 

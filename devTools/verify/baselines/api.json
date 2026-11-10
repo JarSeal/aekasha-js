@@ -416,6 +416,10 @@
       "InstancedMeshSlotData": "Interface",
       "InstancePlacement": "Interface"
     },
+    "src/_engine/features/instancing/InstanceRanges.ts": {
+      "createInstanceRanges": "Function",
+      "InstanceRanges": "TypeAlias"
+    },
     "src/_engine/features/instancing/InstanceSet.ts": {
       "createInstanceSetAsync": "Function",
       "CreateInstanceSetOptions": "Interface",
@@ -449,9 +453,11 @@
       "InstanceSetSelection": "TypeAlias",
       "LEVEL_CULLED": "Variable",
       "LEVEL_NONE": "Variable",
+      "LEVEL_REMOVED": "Variable",
       "LIST_BASE_KEY": "Variable",
       "SELECT_MODE": "Variable",
-      "STATE_INITIAL": "Variable"
+      "STATE_INITIAL": "Variable",
+      "STATE_REMOVED": "Variable"
     },
     "src/_engine/features/instancing/InstanceSetTypes.ts": {
       "CreateInstanceSetBackend": "TypeAlias",
@@ -2698,6 +2704,12 @@
       "DrawingPipelineHook": "TypeAlias",
       "getDrawingPipelineHooks": "Function"
     },
+    "src/_engine/kernel/render/InstanceMatrix.ts": {
+      "doesMaterialPositionInstances": "Function",
+      "drawnInstanceMatrix": "Variable",
+      "setMaterialPositionsInstances": "Function",
+      "setObjectInstanceMatrixNode": "Function"
+    },
     "src/_engine/kernel/render/LodFade.ts": {
       "clearLodObjectFade": "Function",
       "clearObjectVisibilityFade": "Function",
@@ -2891,6 +2903,7 @@
       "isCurrentlyLoading": "Function",
       "loadScene": "Function",
       "LoadSceneProps": "TypeAlias",
+      "runWhenSceneLoadSettled": "Function",
       "SceneLoader": "TypeAlias",
       "ScenePrimitiveAssets": "TypeAlias",
       "UpdateLoaderStatusFn": "TypeAlias"
@@ -4862,6 +4875,7 @@
       "InstanceRange",
       "InstanceSet",
       "InstanceSetBackendKind",
+      "InstanceSetData",
       "InstanceSetSlotStats",
       "InstanceSetStats",
       "InstancedLodPool",
