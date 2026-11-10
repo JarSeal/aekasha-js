@@ -1,5 +1,6 @@
 // In-place writes to a merge group's built geometry (docs/plans/p372_mesh-merge-groups.md §3,
-// Phase 2): a member's range rewritten for its new pose, without a rebuild. Only the member's
+// Phase 2): a member's range rewritten for its new pose, or its triangles collapsed when it
+// leaves, without a rebuild. Only the member's
 // ranges are written and marked for upload (`addUpdateRange`), from scratch objects: nothing is
 // allocated, and the vertex count never changes.
 //
@@ -149,4 +150,16 @@ export const growMergedBounds = (
     sphere.center.distanceTo(scratchSphere.center) + scratchSphere.radius > sphere.radius;
   if (sphereGrows) sphere.union(scratchSphere);
   return boxGrows || sphereGrows;
+};
+
+/**
+ * Collapses a member's triangles in the merged index to degenerate ones (every index its first
+ * vertex): the member isn't drawn, and its vertices stay where they are, unused.
+ * @internal
+ */
+export const collapsePartIndex = (merged: THREE.BufferGeometry, range: MergePartRange) => {
+  const index = merged.index;
+  if (!index) return;
+  index.array.fill(range.vertexStart, range.indexStart, range.indexStart + range.indexCount);
+  markRange(index, range.indexStart, range.indexCount);
 };

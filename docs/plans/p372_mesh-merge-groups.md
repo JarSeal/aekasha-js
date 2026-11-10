@@ -281,9 +281,13 @@ As built (2026-11-10):
   recorded at `d4decbdf`, before p353: `streamingSystem`, the Streaming tab, the gym's LOD tab;
   `streamingPhysics` had none); no hash, character path or console error changed, and
   `exampleSkyBox`'s one `workerSab` snapshot difference (a few pixels of a highlight) passed when
-  run again. Then `yarn verify:scenes --update` (132 runs recorded) and `yarn verify:baselines
-  --update`: `api.json` (the entry `aekasha/merging`, its exports), `docs.json` (merging 14 / 14
-  documented), the three `bundle*.json`; no debug code in any build.
+  run again. Then `yarn verify:scenes --update` (132 runs recorded, all passing; its one note,
+  `thirdPersonGymScene`'s physics targets hashing differently in `workerSab`, e40a1d59 against
+  84a78084, is the gym's known worker-target spread that earlier runs show with other configs,
+  in a scene without merge groups) and `yarn verify:baselines --update`: `api.json` (the entry
+  `aekasha/merging`, its exports), `docs.json` (merging 14 / 14 documented), the three
+  `bundle*.json` (the embeds below the report's threshold: +202 B, 56 B gzip); no debug code in
+  any build.
 
 ### Phase 2 — In-place updates (§3)
 

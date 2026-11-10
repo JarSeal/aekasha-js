@@ -4,7 +4,7 @@
 // a reason of the kernel's visibility reconcile (`reconcileObject3DVisibility`), whose hooks this
 // feature registers, as `lod()` does `TAG_LOD_CULLED`'s, and leaves the DEFAULT spatial domain.
 //
-// Adds and deletes mark the group pending; `mergeGroupBuildSystem` (APP_RENDER_SYNC, before the
+// Adds mark the group pending; `mergeGroupBuildSystem` (APP_RENDER_SYNC, before the
 // pose producers) builds the pending groups once a frame with p371's merge (`GeometryMerge.ts`,
 // loaded on the first build, so an app that never merges doesn't download it), in the assets
 // worker above WORKER_BUILD_VERTICES. A member stays drawn on its own until a build includes it,
@@ -14,9 +14,11 @@
 // centre of the members' bounds with the members baked relative to it: the spatial index measures
 // a mesh's radius from its origin, so a world-space merge at the origin would get a wrong one.
 //
-// A built member moved with `updateMergeMember` has its range rewritten in place (MergeRanges.ts),
-// from the world matrix it was baked with (`MERGE_MEMBER._bakedMatrix`); the bounds only grow until
-// the next build.
+// A built member's changes are written in place (MergeInPlace.ts, MergeRanges.ts): a move with
+// `updateMergeMember` rewrites its range from the world matrix it was baked with
+// (`MERGE_MEMBER._bakedMatrix`), the bounds only growing until the next build; a remove or a
+// delete collapses its triangles and counts its vertices as wasted, and past a quarter of the
+// group's the group builds again, compact. The shared state is MergeState.ts.
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
@@ -32,13 +34,21 @@ import {
 } from '../../kernel/assets/Geometry';
 import { incMaterialRef } from '../../kernel/assets/Material';
 import type { MergePart } from '../../kernel/assets/GeometryMerge';
-import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
 import { getCurrentSceneId, getLoadingSceneId, getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getMergeRefusal } from './MergeEligibility';
-import { flipPartWinding, growMergedBounds, rewritePartVertices } from './MergeRanges';
-import type { MergeGroupData, MergeGroupSettings, MergeMemberData } from './MergeTypes';
+import { dropMember, rewriteMember } from './MergeInPlace';
+import {
+  findPending,
+  getGroups,
+  getMemberMesh,
+  getPending,
+  markPending,
+  releaseMember,
+  syncMemberPose,
+} from './MergeState';
+import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
 
 /**
  * A build of more vertices than this merges in the assets worker (`mergeGeometryPartsAsync`):
@@ -56,33 +66,12 @@ const IS_UNMERGED = Object.freeze({ isMerged: false });
 
 let isInstalled = false;
 
-/** Per world: the group entities by group id, and the groups waiting for a build. */
-const groupsByWorld = new WeakMap<ECSWorld, Map<string, number>>();
-const pendingByWorld = new WeakMap<ECSWorld, Set<number>>();
-
-const getGroups = (world: ECSWorld) => {
-  let groups = groupsByWorld.get(world);
-  if (!groups) groupsByWorld.set(world, (groups = new Map()));
-  return groups;
-};
-
-const getPending = (world: ECSWorld) => {
-  let pending = pendingByWorld.get(world);
-  if (!pending) pendingByWorld.set(world, (pending = new Set()));
-  return pending;
-};
-
 const assertInstalled = (fn: string) => {
   if (!isInstalled) {
     throw new Error(
       `${fn}: merge groups need the merging() feature (from 'aekasha/merging') in InitEngine's \`features\`.`
     );
   }
-};
-
-const markPending = (world: ECSWorld, groupEntityId: number, group: MergeGroupData) => {
-  group._isPending = true;
-  getPending(world).add(groupEntityId);
 };
 
 // --- THE MERGE CODE (loaded on the first build) ---
@@ -280,6 +269,38 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
 };
 
 /**
+ * Takes members out of their merge groups: each is drawn on its own again at once, back in the
+ * spatial index if it was. A built member's triangles in the merged mesh are collapsed in place
+ * (no rebuild), and its vertices counted as wasted; once a group's waste passes a quarter of its
+ * vertices, it builds again, compact, in the next frame's render sync.
+ * @param world the members' world (default: the default world)
+ * @remarks An entity that isn't a member is skipped with a warning. Deleting a member collapses
+ * its range the same way.
+ * @example
+ * ```ts
+ * import { getEntityIdByAppId } from 'aekasha';
+ * import { removeFromMergeGroup } from 'aekasha/merging';
+ *
+ * // The wall the player broke: drawn on its own from now on
+ * removeFromMergeGroup([getEntityIdByAppId('ruinWall3')!]);
+ * ```
+ */
+export const removeFromMergeGroup = (entityIds: number[], world?: ECSWorld) => {
+  assertInstalled('removeFromMergeGroup');
+  const ecsWorld = world ?? getECSWorld();
+  for (const entityId of entityIds) {
+    const member = ecsWorld.getComponent(entityId, ComponentType.MERGE_MEMBER);
+    const group = member && ecsWorld.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+    if (!member || !group) {
+      lwarn(`removeFromMergeGroup: entity ${entityId} isn't in a merge group.`);
+      continue;
+    }
+    dropMember(entityId, member, group, ecsWorld);
+    releaseMember(entityId, ecsWorld);
+  }
+};
+
+/**
  * Dissolves a merge group: its members are drawn on their own again at once, back in the spatial
  * index, and its entity and merged mesh are deleted. An unknown id does nothing.
  * @param world the group's world (default: the default world)
@@ -315,15 +336,6 @@ export const getMergeGroupOf = (entityId: number, world?: ECSWorld): string | un
 
 // --- MEMBERSHIP ---
 
-/** Lets a member go: drawn on its own again, back in the spatial index if it was. */
-const releaseMember = (entityId: number, world: ECSWorld) => {
-  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  if (!member) return;
-  world.removeComponent(entityId, ComponentType.MERGE_MEMBER);
-  world.removeComponent(entityId, ComponentType.TAG_MERGED);
-  if (member._wasSpatialIndexed) world.addComponent(entityId, ComponentType.SPATIAL_INDEXED, true);
-};
-
 /** A group entity's deletion (a dissolve, its scene's exit): its members go free. */
 const onGroupDeleted = (groupEntityId: number, world: ECSWorld) => {
   const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
@@ -339,16 +351,11 @@ const onGroupDeleted = (groupEntityId: number, world: ECSWorld) => {
   getPending(world).delete(groupEntityId);
 };
 
-/** A member's deletion: its group builds without it (p372 Phase 2 collapses its range instead). */
+/** A member's deletion: its range collapses, as a remove's (its components go with it). */
 const onMemberDeleted = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  if (!member) return;
-  const group = world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
-  if (!group) return;
-  const index = group.members.indexOf(entityId);
-  if (index >= 0) group.members.splice(index, 1);
-  group.partIndex.delete(entityId);
-  markPending(world, member.groupEntityId, group);
+  const group = member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  if (member && group) dropMember(entityId, member, group, world);
 };
 
 // --- BUILDS ---
@@ -364,30 +371,6 @@ const getLiveMembers = (groupEntityId: number, group: MergeGroupData, world: ECS
     (entityId) =>
       world.getComponent(entityId, ComponentType.MERGE_MEMBER)?.groupEntityId === groupEntityId
   );
-
-const getMemberMesh = (entityId: number, world: ECSWorld) =>
-  world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
-
-/**
- * Puts a member's mesh at its `TRANSFORM` now and updates its world matrix: object3DSyncSystem
- * copies a `TRANSFORM` only in MAIN, so one set later in the frame (an `APP_LOGIC` move followed
- * by `updateMergeMember`) isn't on the mesh yet. The sync's dirty flag stays for the sync.
- */
-const syncMemberPose = (entityId: number, mesh: THREE.Mesh, world: ECSWorld) => {
-  const store = world.getTypedTransformStore();
-  if (store) {
-    const slot = store.getSlot(entityId);
-    if (slot !== -1) store.copyToObject3D(slot, mesh);
-  } else {
-    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
-    if (transform) {
-      mesh.position.copy(transform.position);
-      mesh.quaternion.copy(transform.quaternion);
-      mesh.scale.copy(transform.scale);
-    }
-  }
-  mesh.updateWorldMatrix(true, false);
-};
 
 /** A build's input: the members as merge parts in the group's space (centred on their bounds),
  * the world matrices they were baked with, and that centre. */
@@ -577,6 +560,9 @@ const buildGroup = (
       settle();
       if (!isBuildCurrent(groupEntityId, group, token, members, world)) {
         geometry.dispose();
+        // A member left while it ran (not a newer build, nor the group's deletion): build again
+        const isLive = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP) === group;
+        if (isLive && group._buildToken === token) markPending(world, groupEntityId, group);
         return;
       }
       applyBuild(groupEntityId, group, members, geometry, build, world);
@@ -600,60 +586,12 @@ const buildPendingGroups = (world: ECSWorld, merge: MergeModule) => {
   return running;
 };
 
-// --- IN-PLACE UPDATES ---
-
-const groupInverse = new THREE.Matrix4();
-const partMatrix = new THREE.Matrix4();
-const previousPartMatrix = new THREE.Matrix4();
-
-/** Writes a built member's range for its pose now (`updateMergeMember`): its vertices, its
- * winding when its mirroring changed, and the merged bounds when it moved out of them. */
-const rewriteMember = (
-  entityId: number,
-  member: MergeMemberData,
-  group: MergeGroupData,
-  world: ECSWorld
-) => {
-  const groupEntityId = member.groupEntityId;
-  const groupMesh = world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value as
-    | THREE.Mesh
-    | undefined;
-  const merged = groupMesh?.geometry as MergedGeometry | undefined;
-  const range = merged?.userData.mergeParts?.[member.partIndex];
-  if (!groupMesh || !merged || !range) return;
-  const mesh = getMemberMesh(entityId, world);
-  if (mesh.geometry.getAttribute('position').count !== range.vertexCount) {
-    lwarn(
-      `updateMergeMember: entity ${entityId}'s geometry isn't the one merged (another vertex count): its merge group "${group.id}" builds again.`
-    );
-    markPending(world, groupEntityId, group);
-    return;
-  }
-  syncMemberPose(entityId, mesh, world);
-  groupMesh.updateWorldMatrix(true, false);
-  groupInverse.copy(groupMesh.matrixWorld).invert();
-  partMatrix.multiplyMatrices(groupInverse, mesh.matrixWorld);
-  previousPartMatrix.multiplyMatrices(groupInverse, member._bakedMatrix);
-  if (rewritePartVertices(merged, range, mesh.geometry, partMatrix, previousPartMatrix)) {
-    flipPartWinding(merged, range);
-  }
-  member._bakedMatrix.copy(mesh.matrixWorld);
-  if (
-    growMergedBounds(merged, mesh.geometry, partMatrix) &&
-    world.hasComponent(groupEntityId, ComponentType.SPATIAL_INDEXED)
-  ) {
-    // Joined again, so the spatial index measures the grown bounds
-    world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
-    world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
-  }
-};
-
 /**
  * Builds the pending merge groups, once a frame (APP_RENDER_SYNC, `MERGE_BUILD`). Its first run
  * with a pending group loads the merge code, and the run after it's in builds.
  */
 const mergeGroupBuildSystem = (world: ECSWorld) => {
-  const pending = pendingByWorld.get(world);
+  const pending = findPending(world);
   if (!pending || pending.size === 0) return;
   if (!mergeModule) {
     loadMergeModuleAsync().catch((err: unknown) =>
@@ -671,7 +609,7 @@ const mergeGroupBuildSystem = (world: ECSWorld) => {
  */
 export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
   const ecsWorld = world ?? getECSWorld();
-  if (!pendingByWorld.get(ecsWorld)?.size) return;
+  if (!findPending(ecsWorld)?.size) return;
   const merge = await loadMergeModuleAsync();
   await Promise.all(buildPendingGroups(ecsWorld, merge));
 };

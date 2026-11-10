@@ -19,6 +19,7 @@ import {
   getMergeGroupOf,
   installMergeGroups,
   rebuildMergeGroup,
+  removeFromMergeGroup,
   updateMergeMember,
 } from './MergeGroups';
 
@@ -433,7 +434,7 @@ describe('leaving', () => {
     expect(() => createMergeGroup({ id: groupId })).not.toThrow();
   });
 
-  test('a deleted member is built out; the last one leaves the mesh out of the scene', async () => {
+  test('a deleted member past the waste share is built out; the last one leaves the mesh out of the scene', async () => {
     const groupId = nextGroupId();
     const groupEntityId = createMergeGroup({ id: groupId, persistent: true });
     const members = [createBox(0), createBox(2)];
@@ -465,6 +466,92 @@ describe('leaving', () => {
     expect(mesh.parent).toBeNull();
     expect(getGeometry(`mergeGroup:${groupId}`)).toBeUndefined();
     await expect(buildPendingMergeGroupsAsync()).resolves.toBeUndefined();
+  });
+});
+
+describe('removing', () => {
+  /** A built group of `count` boxes 2 apart, its index cleared of update ranges. */
+  const createBuiltGroupAsync = async (count: number) => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const members = Array.from({ length: count }, (_, i) => createBox(i * 2));
+    addToMergeGroup(groupId, members);
+    await buildPendingMergeGroupsAsync();
+    const merged = getMesh(groupEntityId)!.geometry as MergedGeometry;
+    (merged.index as THREE.BufferAttribute).clearUpdateRanges();
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    return { groupId, groupEntityId, members, merged, group };
+  };
+
+  test("collapses the member's triangles in place and draws it on its own", async () => {
+    const { groupEntityId, members, merged, group } = await createBuiltGroupAsync(4);
+    const indexBefore = Array.from(merged.index!.array);
+    const range = merged.userData.mergeParts[1];
+
+    // A quarter of the vertices: not past the share
+    removeFromMergeGroup([members[1]]);
+    await buildPendingMergeGroupsAsync();
+    expect(group.rebuilds).toBe(1);
+    expect(getMesh(groupEntityId)!.geometry).toBe(merged);
+    expect(group.wasted).toBe(24);
+    expect(group.members).toEqual([members[0], members[2], members[3]]);
+    expect(group.partIndex.has(members[1])).toBe(false);
+    expect(group.partIndex.get(members[2])).toBe(2);
+
+    const end = range.indexStart + range.indexCount;
+    Array.from(merged.index!.array).forEach((value, i) => {
+      if (i >= range.indexStart && i < end) expect(value).toBe(range.vertexStart);
+      else expect(value).toBe(indexBefore[i]);
+    });
+    expect((merged.index as THREE.BufferAttribute).updateRanges).toEqual([
+      { start: range.indexStart, count: range.indexCount },
+    ]);
+    expect(getMergeGroupOf(members[1])).toBeUndefined();
+    expect(getMesh(members[1])!.visible).toBe(true);
+    expect(world.hasComponent(members[1], ComponentType.SPATIAL_INDEXED)).toBe(true);
+  });
+
+  test('builds the group again, compact, once its waste passes a quarter', async () => {
+    const { groupEntityId, members, group } = await createBuiltGroupAsync(10);
+
+    removeFromMergeGroup([members[0], members[5]]);
+    await buildPendingMergeGroupsAsync();
+    expect(group.rebuilds).toBe(1);
+    expect(group.wasted).toBe(48);
+
+    // A delete collapses too: 30 % now
+    world.deleteEntity(members[7]);
+    expect(group.wasted).toBe(72);
+    await buildPendingMergeGroupsAsync();
+    expect(group.rebuilds).toBe(2);
+    expect(group.wasted).toBe(0);
+    const kept = members.filter((_, i) => i !== 0 && i !== 5 && i !== 7);
+    expect(group.members).toEqual(kept);
+    kept.forEach((id, i) => expect(group.partIndex.get(id)).toBe(i));
+    const merged = getMesh(groupEntityId)!.geometry as MergedGeometry;
+    expect(merged.getAttribute('position').count).toBe(7 * 24);
+    expect(merged.userData.mergeParts).toHaveLength(7);
+  });
+
+  test('a member not built yet only leaves the lists, and the build leaves it out', async () => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const members = [createBox(0), createBox(2)];
+    addToMergeGroup(groupId, members);
+    removeFromMergeGroup([members[0]]);
+    expect(getMergeGroupOf(members[0])).toBeUndefined();
+
+    await buildPendingMergeGroupsAsync();
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    expect(group.members).toEqual([members[1]]);
+    expect(group.wasted).toBe(0);
+    expect(getMesh(groupEntityId)!.geometry.getAttribute('position').count).toBe(24);
+    expect(getMesh(members[0])!.visible).toBe(true);
+  });
+
+  test('warns for an entity that is no member', () => {
+    removeFromMergeGroup([createBox(0)]);
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining("isn't in a merge group"));
   });
 });
 
