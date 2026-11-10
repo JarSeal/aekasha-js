@@ -42,6 +42,7 @@ export type InitEngineOptions = {
  * import { instancing } from 'aekasha/instancing';
  * import { lines } from 'aekasha/lines';
  * import { lod } from 'aekasha/lod';
+ * import { merging } from 'aekasha/merging';
  * import { physics, physicsTiers } from 'aekasha/physics';
  * import { postFx } from 'aekasha/postfx';
  * import { skyBox } from 'aekasha/skybox';
@@ -66,6 +67,7 @@ export type InitEngineOptions = {
  *     postFx(),
  *     viewports(),
  *     streaming(),
+ *     merging(),
  *     appECSPlugins,
  *   ],
  *   start: async () => {

@@ -44,6 +44,9 @@ export enum ECSSystemStage {
 /**
  * `addSystem` order values for `ECSSystemStage.APP_RENDER_SYNC` (higher runs earlier, equal
  * values run in registration order).
+ * - MERGE_BUILD: mergeGroupBuildSystem (features/merging/MergeGroups.ts), which builds the merge
+ *   groups with members added or removed: before the pose producers, so a member hidden by this
+ *   frame's build and the group mesh replacing it are in this frame's poses and culling.
  * - POSE_PRODUCERS: systems that write the final Object3D render pose (physicsInterpolationSystem,
  *   lookAtSystem). Plain default order.
  * - POSE_CONSUMERS: systems that read the final render pose of another entity (camera rigs).
@@ -59,6 +62,7 @@ export enum ECSSystemStage {
  *   (features/lod/LodSystem.ts), between the two: after frustum culling, so they skip entities culled this frame and see the final camera.
  */
 export const APP_RENDER_SYNC_ORDER = {
+  MERGE_BUILD: 0.5,
   POSE_PRODUCERS: 0,
   POSE_CONSUMERS: -0.5,
   SHADOW_FIT: -0.75,

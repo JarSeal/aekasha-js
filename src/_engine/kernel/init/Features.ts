@@ -225,6 +225,7 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   postfx: "postFx() from 'aekasha/postfx'",
   viewports: "viewports() from 'aekasha/viewports'",
   streaming: "streaming() from 'aekasha/streaming'",
+  merging: "merging() from 'aekasha/merging'",
 };
 
 /**
