@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Performance, Settings
-Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), p350_lod-system-research.md (the device levels are a natural LOD budget input), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (§2.4: a device memory level is the GPU memory tab's natural default budget), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
+Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), \_DONE_p350_lod-system-research.md (the device levels are a natural LOD budget input), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (§2.4: a device memory level is the GPU memory tab's natural default budget), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
 
 # Client Device Capability Sniffer — Plan
 

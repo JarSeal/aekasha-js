@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-4; Phase 5 moved to p353 Phase 4)
 Category: Physics
-Epic: p350_lod-system-research.md (Tier 1.2, §6)
+Epic: \_DONE_p350_lod-system-research.md (Tier 1.2, §6)
 Blocks: \_DONE_p353_macro-streaming-grid.md (its physics phase, Phase 4, which took over this plan's Phase 5)
 Related: \_DONE_p343_deterministic-physics-tier-policy.md (the policy's `STEPS` / `FRAMES` cadence and the step plumbing it uses), p420_npc-simulation-tiers.md (characters and NPCs: their tiers, kinematic movers and crowds live there, not here), p102_physics-world-bounds.md (its `DISABLE` action disables the body as the `DISABLED` tier does, but also hides the visual; its §8 has how the two meet), p500_restore-physics-snapshot.md (no shared format after all, see open question 3; it has a note on detached bodies), p063 (the transform buffer's slot allocation; `features/physics/CLAUDE.md`), p101 scene-load determinism (implemented; CLAUDE.md Physics section)
 

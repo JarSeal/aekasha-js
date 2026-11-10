@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-4)
 Category: Rendering, LOD, Performance
-Epic: p350_lod-system-research.md (Tier 2, before p353)
+Epic: \_DONE_p350_lod-system-research.md (Tier 2, before p353)
 Related: \_DONE_p057_three-r187-migration.md (D3: the fix this replaces), \_DONE_p351_impostor-billboard-lod.md, \_DONE_p354_gpu-driven-culling.md (its per-instance buffers bind the same way), p302_material-and-texture-system-refactor.md (`NodeMaterialInstance`)
 
 # Shared Instanced Builds for LOD Fades and Impostors — Plan

@@ -1,4 +1,4 @@
-Status: epic, in progress | Tiers 0-3 implemented (p354 the last, 2026-11-10); Tier 4's research open
+Status: implemented (epic: Tiers 0-3, p354 the last, 2026-11-10; Tier 4's research moved to p990)
 Category: Rendering, LOD
 Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md, \_DONE_p353_macro-streaming-grid.md, \_DONE_p354_gpu-driven-culling.md
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)
@@ -9,7 +9,7 @@ How Ækasha does level of detail for large worlds. The research is done: this fi
 findings and decisions, and the work is split into the child plans listed in §8. The original
 rough draft was checked against the code on 2026-10-02; what changed is recorded in §4.
 
-**Where it stands (2026-11-04):** Tiers 0 and 1 and p351 (Tier 2) are implemented, as features
+**Where it stands (2026-11-10, done):** Tiers 0 and 1 and p351 (Tier 2) are implemented, as features
 an app opts into (`lod()`, `spatial()`, `instancing()`, `lines()`, with `physics()`'s tiers). What
 they built is documented next to the code: `src/_engine/features/lod/CLAUDE.md` (chains,
 selection, cross-fades, the `lodShowcase` scene), `features/lod/impostors/CLAUDE.md`,
@@ -22,7 +22,9 @@ with near, far and kept content, priming, fades and per-cell physics tiers
 (`features/streaming/CLAUDE.md`, the Hub's Streaming page). p354 (GPU-driven culling, 2026-11-10)
 is done too: instance sets, with no entity per instance, culled and LOD-selected per instance by
 compute passes and indirect draws on WebGPU, and by the same rules on the CPU on WebGL2
-(`features/instancing/CLAUDE.md`'s Instance sets, the Hub's LOD page). Open: Tier 4's research.
+(`features/instancing/CLAUDE.md`'s Instance sets, the Hub's LOD page). With it the epic is done
+(2026-11-10): Tier 4's research spike (three's `MeshletDrawingPipeline` for huge single meshes)
+moved to `p990_follow-ups-from-done-plans.md` (Rendering), self-contained there.
 
 The short version: `THREE.LOD` is the wrong foundation. LOD is a _selection decision made by an
 ECS system_ that feeds the instancing/batching layer. Large worlds also need several spatial
@@ -242,7 +244,9 @@ projected error, indirect draws, without a software rasterizer. It falls back to
 for VSM shadow passes and several material features, and has no discrete levels, impostors or
 cross-fades (p354's "What's known" has the detail). So Tier 4 is no longer "build it": it's
 "evaluate three's addon for huge single meshes and static `BundleGroup` content", p354 Phase 0's
-first part.
+first part. p354 Phase 0 found it slower for instanced LOD content; the huge-mesh case wasn't
+measured, and moved to `p990_follow-ups-from-done-plans.md` (Rendering) when this epic was marked
+done.
 
 ### 7.1 Tooling
 
@@ -264,7 +268,8 @@ first part.
 ## 8. Roadmap
 
 Child plans, in the order they should run. Each is independently useful. Done: every `_DONE_`
-row (2026-11-04; p058 2026-11-06, p353 2026-11-07, p354 2026-11-10); open: Tier 4. p349 (scene-scoped spatial domains) and p343 (the
+row (2026-11-04; p058 2026-11-06, p353 2026-11-07, p354 2026-11-10); Tier 4's research moved to
+p990. p349 (scene-scoped spatial domains) and p343 (the
 tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 
 | Tier | Plan                                           | What it delivers                                                                                                  | Depends on                               |
@@ -278,7 +283,7 @@ tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 | 2    | `_DONE_p353_macro-streaming-grid`                    | Cell residency state machine, per-cell asset ownership, build-time manifest, priming, per-cell physics tiers      | p346 Phase 1; p352 for its physics phase |
 | 2    | `_DONE_p351_impostor-billboard-lod`            | Cross-quads, dithered cross-fade, octahedral impostors                                                            | p348 Phase 3                             |
 | 3    | `_DONE_p354_gpu-driven-culling`                | Instance sets: compute frustum culling, indirect draws, per-instance LOD on the GPU; the same rules on the CPU on WebGL2 | p348, p346                         |
-| 4    | — (research only)                              | Cluster (meshlet) LOD, §7: evaluate three r187's `MeshletDrawingPipeline` (p354 Phase 0) for huge single meshes   | p354                                     |
+| 4    | — (research only; moved to p990)               | Cluster (meshlet) LOD, §7: evaluate three r187's `MeshletDrawingPipeline` (p354 Phase 0) for huge single meshes   | p354                                     |
 
 **Follow-on epic:** `p370_static-mesh-merging-and-texture-atlas-systems` (after these plans) merges
 static meshes into fewer draws. Its HLOD stub (p376) turns merged groups into LOD units with p347's
@@ -305,7 +310,7 @@ cheaper than retrofitting.
 
 Written after the rule, from what the children did: each child plan has its own branch from
 `main` and merges into `main` with its own bump; no integration branch, since no two children
-share a major. The open ones:
+share a major. The last ones:
 
 - **p058 (done):** its own branch (`p058-shared-instanced-builds`) into `main`, engine 6.1.1 and
   app 1.19.1. It ran before p353 because a cell's content fades in (p353 §3.3): with
@@ -314,7 +319,7 @@ share a major. The open ones:
   p058's, engine 6.2.0 and app 1.20.0.
 - **p354 (done):** its own branch (`p354-phase0-spike`, Phases 0-7) into `main` after p353's,
   engine 6.3.0 and app 1.21.0.
-- **Tier 4:** a spike, no PR unless it leaves code.
+- **Tier 4:** a spike, no PR unless it leaves code; moved to p990 with the epic done.
 
 Engine 6.0.0 is released (p622, 2026-11-05), so a child's PR bumps a 6.x minor with a dated entry
 of its own.
