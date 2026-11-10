@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Merging, Geometry, Assets
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.1)
 Blocks: p372_mesh-merge-groups.md
@@ -66,21 +66,42 @@ mergeGeometryParts(parts: MergePart[], opts?: {
 }): MergedGeometry; // a BufferGeometry with userData.mergeParts
 ```
 
-- **Transforms baked**: positions by `matrix`, normals and tangents by its normal matrix
-  (tangent `w` kept), and the triangle winding flipped for a part whose matrix has a negative
-  determinant (mirrored scale), so it isn't back-face culled.
-- **Attribute unification:** `UNION` fills a missing attribute with defaults (uv 0, colour 1,
-  tangent from `computeTangents` if any part has a normal map and uvs, else dropped with a dev
-  warning); `INTERSECTION` drops attributes not every part has. Mismatched item sizes or array
-  types (eg. quantized `Int16` positions from a meshopt GLB) are converted to `Float32` first.
+- **Two modules** (decided 2026-11-10, so Phase 4's worker job reuses the merge as it is):
+  `kernel/assets/GeometryMergeCore.ts` is worker-safe (three only: no `Logger`, `Config` or
+  registry), takes geometries and returns the merge and its warnings; `GeometryMerge.ts` resolves
+  string ids through the registry, logs the warnings (debug env) and registers, and is what
+  `aekasha` exports.
+- **Transforms baked**: positions by `matrix`, normals by its normal matrix (inverse transpose),
+  tangents' `xyz` by its upper 3×3 (surface directions, as three's `applyMatrix4`), both
+  normalized. For a part whose matrix has a negative determinant (mirrored scale) the triangle
+  winding is flipped within its index range, so it isn't back-face culled, and tangent `w` is
+  negated, so the shader's rebuilt bitangent keeps pointing the right way.
+- **Attribute reads** go through `getX`/`getY`/`getZ`/`getW`, so interleaved and normalized
+  (quantized meshopt) attributes read as their values. Positions, normals and tangents are written
+  `Float32`; any other attribute keeps its array type when every part has the same type and
+  `normalized` flag, else `Float32` with denormalized values. One attribute with different item
+  sizes across parts throws.
+- **Attribute unification:** `UNION` fills a missing attribute with defaults (uv 0, colour 1 with
+  the parts' item size, anything else 0); a missing tangent is computed for that part
+  (`computeTangents`: it needs an index, normals and uvs), and when it can't be, the tangent is
+  dropped from the result with a warning. `INTERSECTION` drops attributes not every part has.
+- **Refused:** a part with morph attributes, `skinIndex` or `skinWeight` throws (p370 §4). A
+  part's own groups and draw range are ignored: the whole part is merged.
 - **Index:** non-indexed parts get a trivial index; the result is `Uint16` while it fits, else
-  `Uint32` (past 65 535 vertices).
+  `Uint32` (past 65 535 vertices). `indexed: false` returns a non-indexed geometry.
+- **`BY_SLOT`** sorts the parts by `materialSlot` (stable: a slot's parts keep their order;
+  a part without one is slot 0) before merging, so each slot is one contiguous group with its
+  `materialIndex`.
+- **Empty:** no parts gives an empty geometry with a `position` attribute, not a throw (the
+  bush generator's zero clusters, D5).
 - **Part table** (`userData.mergeParts`):
-  `{ key, vertexStart, vertexCount, indexStart, indexCount, materialSlot }[]`. p372 rewrites a
-  part's range in place with it; p373 maps a picked face to its part.
+  `{ key, vertexStart, vertexCount, indexStart, indexCount, materialSlot }[]`, in the merged
+  order. p372 rewrites a part's range in place with it; p373 maps a picked face to its part.
 - **Bounds:** box and sphere computed once at the end.
-- Returns an unregistered geometry; `registerMergedGeometry(id, parts, opts)` merges and
-  registers through `saveBufferGeometry`, taking a ref on nothing it doesn't own (the source
+- Returns an unregistered geometry; `registerMergedGeometry(parts, { id, groups, attributes,
+  indexed, isPersistent, preWarm, debugData })` (an options object: coding standards) merges and
+  registers through `saveBufferGeometry`, and returns the registered geometry without merging
+  when `id` is registered already. It takes a ref on nothing it doesn't own (the source
   geometries are only read).
 
 ### D2 — `MERGED` geometry JSON
@@ -153,7 +174,7 @@ Replace the ad hoc merges (§1) with `registerMergedGeometry` / `mergeGeometryPa
 
 ## 3. Phases
 
-### Phase 1 — Core utility (D1)
+### Phase 1 — Core utility (D1) — done
 
 `mergeGeometryParts`, `registerMergedGeometry`, part table, transforms, attribute unification.
 **Exit:** in `testDebugScene`, a merged box + sphere + mirrored cylinder renders like the three
@@ -161,9 +182,43 @@ separate meshes (normals, winding, shadows), with one draw (profiler). Unit test
 module (`GeometryMerge.test.ts`, in Node): transforms, winding, attribute unification, index
 type, the part table.
 
+As built:
+
+- Two modules (D1): `kernel/assets/GeometryMergeCore.ts` (`mergeGeometryPartsCore`,
+  `@internal`, worker-safe, returns `{ geometry, warnings }`; the types `MergeGeometryOptions`,
+  `MergePartRange`, `MergedGeometry`) and `kernel/assets/GeometryMerge.ts` (`mergeGeometryParts`,
+  `registerMergedGeometry`, `MergePart`, `RegisterMergedGeometryOptions`), all public names on
+  `aekasha`. Tests: `GeometryMergeCore.test.ts` (transforms, non-uniform scale, the mirrored
+  winding and tangent `w`, UNION / INTERSECTION, computed and dropped tangents, quantized and
+  interleaved reads, a shared normalized type's fill, the refusals, the index type, the part
+  table, `BY_SLOT`, non-indexed output, empty, bounds) and `GeometryMerge.test.ts` (ids, the
+  registration and a taken id).
+- `registerMergedGeometry` returns `THREE.BufferGeometry` (what's registered under a taken id
+  may not be a merge); a fresh merge has its `userData.mergeParts`.
+- `indexed: false` merges indexed, then `toNonIndexed()`: each part's `vertexStart` /
+  `vertexCount` become its index range.
+- `testDebugScene`'s bottom row is the check (`createMergeCheck`): the three parts as meshes on
+  the left, `p371_merged` on the right, each group on a slab; the sun (`p300Sun.light.json`) casts
+  shadows now, and only this row casts and receives them, so the p300 rows look as before.
+  Measured (2026-11-10, Chrome on macOS, `onBeforeRender` per frame): the merged mesh draws twice
+  a frame (main and the sun's shadow pass), as each separate mesh does, so 2 draws where the parts
+  took 6. The scene runner's `testDebugScene` baselines (its snapshot and debugger shots: the
+  entity, asset and light lists) change with it: record them again (`--update`) with this phase.
+
 ### Phase 2 — JSON type (D2)
 
-Schema, gatherer validation, `createGeometry` path, compiled `.schemas/`. **Exit:** a `MERGED`
+Schema, gatherer validation, `createGeometry` path, compiled `.schemas/`.
+
+Found 2026-11-10 (before Phase 1): `createGeometry` is synchronous and `loadSceneAssetsAsync`
+(`kernel/scene/SceneDataLoader.ts`) calls it in a plain loop, so D2's "createGeometry loads
+`GeometryMerge.ts` with an `import()`" can't be done inside `createGeometry`. The `MERGED` path
+goes in the loader: after the scene's other geometries (a part can be one of them), it `import()`s
+`GeometryMerge.ts` once for the first `MERGED` entry and runs each through
+`registerMergedGeometry` in the owner scope (`owned`). A direct `createGeometry({ type: 'MERGED' })`
+throws, naming `registerMergedGeometry`. Decide whether the merged geometry keeps a ref on parts
+that this scene loaded only for the merge, or releases them right after (D2 says release).
+
+**Exit:** a `MERGED`
 geometry of three imported pieces is used by two scene meshes; `yarn sbp`: the app's first
 download doesn't grow by the merge code (it loads with the first `MERGED` geometry).
 

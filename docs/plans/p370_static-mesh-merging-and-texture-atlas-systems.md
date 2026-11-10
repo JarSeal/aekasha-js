@@ -1,4 +1,4 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371-p376 not started
+Status: epic, in progress | p299 Phases 0-4 implemented; p371 Phase 1 implemented; p372-p376 not started
 Category: Rendering, Merging, Texture atlas
 Blocks: p299_texture-arrays-and-atlases.md, p371_geometry-merging.md, p372_mesh-merge-groups.md, p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
@@ -304,8 +304,18 @@ plans to follow; each child's paths below say the same.
 
 ## 14. Branches and PRs
 
-Not decided yet: decide before p371 starts. The default, as p350's children and p299 do: each
-child on its own branch from `main`, merging into `main` with its own bump (p299's Phases 0-4 are
-on `main`). p371-p373 are one feature's first release (the utility, the groups, their debug
-tools), so sharing one branch, with one engine minor, is the likely alternative. p375 runs only
-if its spike passes; p376 is a stub until p372 has numbers.
+Decided 2026-11-10, before p371 started. Every branch starts from `main` and merges into `main`
+with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are on `main` already.
+
+| Branch                   | Plans      | Merges into | Bump                                   | PR opens                     |
+| ------------------------ | ---------- | ----------- | -------------------------------------- | ---------------------------- |
+| `p371_geometry-merging`  | p371       | `main`      | engine minor, toolkit and app patches  | after p371 Phase 5           |
+| `p372_mesh-merge-groups` | p372, p373 | `main`      | engine minor (the `merging()` feature) | after p373's last phase      |
+| own branch each          | p374, p375 | `main`      | engine minor each                      | after each plan's last phase |
+
+- p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
+  that is useful without the groups.
+- p372 and p373 share one branch: the `merging()` feature's first release is the groups with their
+  debug tools and member editing.
+- p375 runs only if its spike passes; p376 is a stub until p372 has numbers (its branch is decided
+  when it stops being one).

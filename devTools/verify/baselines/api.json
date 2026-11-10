@@ -2047,6 +2047,19 @@
       "prewarmGeometry": "Function",
       "saveBufferGeometry": "Function"
     },
+    "src/_engine/kernel/assets/GeometryMerge.ts": {
+      "mergeGeometryParts": "Function",
+      "MergePart": "TypeAlias",
+      "registerMergedGeometry": "Function",
+      "RegisterMergedGeometryOptions": "TypeAlias"
+    },
+    "src/_engine/kernel/assets/GeometryMergeCore.ts": {
+      "MergedGeometry": "TypeAlias",
+      "MergeGeometryOptions": "TypeAlias",
+      "mergeGeometryPartsCore": "Function",
+      "MergePartRange": "TypeAlias",
+      "ResolvedMergePart": "TypeAlias"
+    },
     "src/_engine/kernel/assets/import/CustomProps.ts": {
       "parseCustomProps": "Function"
     },
@@ -4523,6 +4536,10 @@
       "MatProps",
       "MaterialVariantOverrides",
       "Materials",
+      "MergeGeometryOptions",
+      "MergePart",
+      "MergePartRange",
+      "MergedGeometry",
       "MeshProps",
       "Modifiers",
       "MountAekashaOptions",
@@ -4541,6 +4558,7 @@
       "PickOpts",
       "QuatLike",
       "RayDebugOpts",
+      "RegisterMergedGeometryOptions",
       "RemapUVsToAtlasCellOpts",
       "RenderPipelineCompiler",
       "RenderPipelineProvider",
@@ -4685,12 +4703,14 @@
       "loadTextureAsync",
       "loadTslMaterialFileAsync",
       "lwarn",
+      "mergeGeometryParts",
       "mountAekasha",
       "onGamepadConnected",
       "onGamepadDisconnected",
       "onLastInputDeviceChange",
       "playActionRecording",
       "recordActions",
+      "registerMergedGeometry",
       "registerOnAllSceneEnters",
       "registerOnAllSceneExits",
       "registerOnSceneEnter",

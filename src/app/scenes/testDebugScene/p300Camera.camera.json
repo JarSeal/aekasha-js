@@ -9,6 +9,6 @@
   },
   "entityOpts": {
     "appId": "p300Camera",
-    "debugData": { "name": "Camera", "description": "Faces both rows of the orientation check." }
+    "debugData": { "name": "Camera", "description": "Faces the orientation check's two rows and the merge check's row below them." }
   }
 }

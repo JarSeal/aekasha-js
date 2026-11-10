@@ -16136,7 +16136,7 @@
             "appId": "p300Camera",
             "debugData": {
               "name": "Camera",
-              "description": "Faces both rows of the orientation check."
+              "description": "Faces the orientation check's two rows and the merge check's row below them."
             }
           }
         }
@@ -16171,6 +16171,7 @@
               "y": 0,
               "z": 0
             },
+            "castShadow": true,
             "appId": "p300Sun"
           },
           "entityOpts": {
@@ -17843,7 +17844,7 @@
         "appId": "p300Camera",
         "debugData": {
           "name": "Camera",
-          "description": "Faces both rows of the orientation check."
+          "description": "Faces the orientation check's two rows and the merge check's row below them."
         }
       },
       "__sourcePath": "src/app/scenes/testDebugScene/p300Camera.camera.json"
@@ -18669,6 +18670,7 @@
           "y": 0,
           "z": 0
         },
+        "castShadow": true,
         "appId": "p300Sun"
       },
       "entityOpts": {
