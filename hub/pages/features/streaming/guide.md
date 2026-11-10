@@ -96,8 +96,9 @@ directional lights stay with the scene.
   with it, never unloaded.
 - **Big content is in every cell it reaches.** A mesh more than half a cell across (a bridge, a
   wall, a large building) goes into every cell it overlaps and stays while any of them is loaded.
-  A box, sphere, cylinder, capsule or cone is measured from its geometry; an imported model isn't,
-  so give it a radius in `streaming.radii`.
+  A box, sphere, cylinder, capsule or cone is measured from its geometry; an imported model or a
+  [merged geometry](hub:features/scenes-and-assets#merged-geometries) isn't, so give it a radius
+  in `streaming.radii`. A cell that loads a merged geometry loads its parts with it.
 - `base` and `radii` are read when the scene is gathered: setting them in code changes nothing.
   A cell size set in code has to be the JSON's, which the content was cut at.
 - The Streaming tab shows each cell's JSON content and the estimated GPU memory of its own
@@ -300,7 +301,8 @@ and Phases 2 to 5 have the numbers.
   gathered): give a far unit in code, or explicit levels.
 - An instanced LOD pool's instances don't fade (they share their pool's meshes): stream a pool
   whole, or keep it out of cells.
-- An imported model's size isn't measured: give a big one a radius in `streaming.radii`.
+- An imported model's or a merged geometry's size isn't measured: give a big one a radius in
+  `streaming.radii`.
 - A cell's state isn't saved when it unloads: a crate moved in it is back where it started next
   time (it keeps its place while the cell is `FAR`).
 

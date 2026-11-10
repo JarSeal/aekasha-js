@@ -17,21 +17,21 @@
 
 The engine finds every file with one of these suffixes under `src/` by itself:
 
-| Suffix                 | What it is                                                                 |
-| ---------------------- | -------------------------------------------------------------------------- |
-| `*.scene.json`         | A scene.                                                                   |
-| `*.camera.json`        | A perspective or orthographic camera.                                      |
-| `*.light.json`         | A light of any three.js type.                                              |
-| `*.geometry.json`      | A geometry: a three.js type and its params.                                |
-| `*.texture.json`       | A texture, and how the asset pipeline encodes it.                          |
-| `*.textureArray.json`  | Textures of one size as the layers of one array texture.                   |
-| `*.textureAtlas.json`  | Images packed into one atlas, each a named slot.                           |
-| `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.     |
-| `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.   |
-| `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.    |
-| `*.skybox.json`        | A [sky box](hub:features/sky-box).                                         |
-| `*.postFx.json`        | A [PostFX pass](hub:features/rendering#post-effects), with its `*.tsl.ts`. |
-| `*.impostor.json`      | An exported [impostor](hub:features/lod#impostors), written by its export. |
+| Suffix                 | What it is                                                                  |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `*.scene.json`         | A scene.                                                                    |
+| `*.camera.json`        | A perspective or orthographic camera.                                       |
+| `*.light.json`         | A light of any three.js type.                                               |
+| `*.geometry.json`      | A geometry: a three.js type and its params, or a merge of other geometries. |
+| `*.texture.json`       | A texture, and how the asset pipeline encodes it.                           |
+| `*.textureArray.json`  | Textures of one size as the layers of one array texture.                    |
+| `*.textureAtlas.json`  | Images packed into one atlas, each a named slot.                            |
+| `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.      |
+| `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.    |
+| `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.     |
+| `*.skybox.json`        | A [sky box](hub:features/sky-box).                                          |
+| `*.postFx.json`        | A [PostFX pass](hub:features/rendering#post-effects), with its `*.tsl.ts`.  |
+| `*.impostor.json`      | An exported [impostor](hub:features/lod#impostors), written by its export.  |
 
 Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` line pointing at
 `.schemas/<type>.schema.json`, and your editor checks and autocompletes it as you type.
@@ -39,6 +39,70 @@ Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` l
 The gather fails, naming the file, on a JSON that doesn't parse or fails its schema, on an id two
 files give, and on an id a scene lists that no asset JSON has. In `yarn dev` the page then stays
 as it was until the next save fixes it, and `yarn build` stops.
+
+## Merged geometries
+
+A `MERGED` geometry is several geometries, each with its own transform, joined into one: a wall
+section kit-bashed from pieces draws once wherever a mesh uses it.
+
+```json
+{
+  "geoProps": {
+    "id": "ruinWallSection",
+    "type": "MERGED",
+    "params": {
+      "parts": [
+        { "geo": "ruinKit/wallStraight" },
+        {
+          "geo": "ruinKit/wallStraight",
+          "position": { "x": 4, "y": 0, "z": 0 },
+          "rotation": { "x": 0, "y": 3.1416, "z": 0 }
+        },
+        {
+          "geo": "ruinKit/pillar",
+          "position": { "x": 2, "y": 0, "z": 0 },
+          "scale": { "x": 1, "y": 1.2, "z": 1 }
+        }
+      ]
+    }
+  }
+}
+```
+
+- **A part** is a geometry id and a mesh's transform: `position`, `rotation` (Euler radians) or
+  `quaternion` (which wins), and `scale`. A mirroring scale is fine: its triangles are turned
+  round, so it isn't drawn inside out. `materialSlot` and `key` are optional.
+- **The id** is a geometry JSON's or an imported model's piece (`<importId>/<nodeName>`), never
+  another `MERGED` geometry: merges don't nest. List the parts' geometries and imports in the
+  scene too, so they load with it. The merge only reads them: they stay loaded with the scene.
+- **The options**: `groups: "BY_SLOT"` makes a geometry group per `materialSlot`, for a mesh with
+  a material array (`"NONE"`, the default, for one material); `attributes: "INTERSECTION"` drops
+  the attributes not every part has (`"UNION"`, the default, fills them in); `indexed: false`
+  gives a non-indexed geometry. A morphed or skinned part can't be merged.
+- **It's merged when the scene loads**, after its other geometries, in the assets worker, so a
+  large merge doesn't hold up a frame. `AppConfig.assets.mergeWorkerTarget` (or
+  `VITE_ASSETS_MERGE_WORKER_TARGET`) moves it to the main thread; it defaults to
+  `WORKER_THREAD`, whatever the other assets' target. The merge's code is a chunk of its own,
+  loaded with a scene's first `MERGED` geometry.
+- **The gather checks the ids:** it fails on a part that names no geometry JSON and no import, or
+  names a `MERGED` geometry, and warns about a part whose geometry or import the scene doesn't
+  list (a persistent asset can still provide it). An import's node names aren't known until it
+  loads: a wrong one fails at load, where the merge is logged and left out, the meshes using it
+  aren't created, and the load goes on.
+- **In a streaming scene**, a cell that loads a merge loads its parts too. The gather can't
+  measure a merged geometry, so a mesh using one is placed at its position as a point: give a large
+  one a radius in [`streaming.radii`](hub:features/streaming#content-from-the-scene-json), or it won't be
+  kept by the cells it reaches.
+
+From code, [`registerMergedGeometry`](api:registerMergedGeometry) merges registered ids or
+geometries, each with a `matrix`, and registers the result;
+[`mergeGeometryParts`](api:mergeGeometryParts) returns it unregistered. Their `*Async` versions,
+[`registerMergedGeometryAsync`](api:registerMergedGeometryAsync) and
+[`mergeGeometryPartsAsync`](api:mergeGeometryPartsAsync), merge in the assets worker: use them
+for a large merge (100k vertices block a slow device's frame for tens of milliseconds). For a few
+thousand vertices the round trip costs more than the merge, and a scene's first worker request
+waits for the worker to start. Either way the geometry's `userData.mergeParts` lists each part's
+vertex and index range.
 
 ## Where the files go
 
@@ -187,6 +251,8 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
   [`createSceneMainLooper`](api:createSceneMainLooper).
 - [`getMaterial`](api:getMaterial), [`getTexture`](api:getTexture) and
   [`getGeometry`](api:getGeometry): the assets a scene loaded, by id.
+- [`registerMergedGeometry`](api:registerMergedGeometry) and
+  [`registerMergedGeometryAsync`](api:registerMergedGeometryAsync): a merged geometry from code.
 - [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial),
   [`loadTextureAsync`](api:loadTextureAsync) and [`importAssetAsync`](api:importAssetAsync): the
   same assets from code ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: implemented (Phases 1-5)
 Category: Merging, Geometry, Assets
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.1)
 Blocks: p372_mesh-merge-groups.md
@@ -426,7 +426,7 @@ opts)` (not in D4; the loader and p372 need it). The latter returns a taken id's
   worker), `AppConfig.assets.mergeWorkerTarget` and its env var, a scene's `MERGED` geometries
   merged in the worker, and the stairs' groups.
 
-### Phase 5 — Docs and versioning
+### Phase 5 — Docs and versioning — done
 
 1. The Hub: the asset optimization feature page (`hub/pages/features/asset-optimization/`):
    "Merging a model's pieces" (D3 and its trade-off; Phase 3's As built: the node names, what is
@@ -438,6 +438,27 @@ opts)` (not in D4; the loader and p372 need it). The latter returns a taken id's
 2. `devTools/gather/CLAUDE.md` and `devTools/assetPipeline/CLAUDE.md` (the `MERGED` type, the GLB
    `merge` step), `readme.md` if asset types are listed.
 3. Engine minor, toolkit patch (foliage), app patch (largeWorld, the gym); `CHANGELOG.md`.
+
+As built (2026-11-10):
+
+- The Hub: the asset optimization page's "Merging a model's pieces" (the modes and names, what
+  is kept, the file written with optimization off, the trade-off, and the gaps in a note), the
+  scenes and assets page's "Merged geometries" (the JSON type, the parts' rules and options, the
+  load in the worker and `mergeWorkerTarget`, the gather's errors and warning, a wrong node name
+  at load, `streaming.radii`, then the code API and when to use the `*Async` versions), its
+  asset table row and key APIs; the streaming page's `radii` lines name merged geometries too.
+  `docs/techniques/asset-optimization.md` doesn't mirror the page (it's the full reference): it
+  got "Merging pieces" under "Add a model" with the pipeline detail, which the page's Read more
+  links.
+- `devTools/gather/CLAUDE.md` (the part checks in full, `sources.ts`' `merge` drop and remote
+  error, the streaming manifest's `MERGED` refs and point placement),
+  `devTools/assetPipeline/CLAUDE.md` (a bullet for the merge step, the third fixture generator),
+  `features/streaming/CLAUDE.md`'s limits, and the readme (a "Geometry merging" Features bullet,
+  the asset optimization bullet and the technique guide line). The readme lists no asset types.
+- Engine 6.3.0 → 6.4.0 (project 6.4.0), toolkit 3.0.0 → 3.0.1, app 1.21.0 → 1.21.1, codenames
+  unchanged; the `CHANGELOG.md` entry `p371_geometry-merging`.
+- Still to do on `main` or here, from Phase 4: record the gym's scene runner baseline again
+  (`yarn verify:scenes --only thirdPersonGymScene --update`).
 
 ## 4. Risks
 

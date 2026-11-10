@@ -4,6 +4,51 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-10 — p371_geometry-merging
+
+Geometry merging (p371, the first child of the merging epic p370): several geometries, each with its transform, become one registered geometry and one draw, with a part table recording which vertex and index range came from which part. It works at three levels: from code (`mergeGeometryParts`, `registerMergedGeometry` and their `*Async` versions, which merge in the assets worker), as a `MERGED` geometry JSON listing parts, merged at scene load, and at build time for a model (an imported asset's `merge`, which joins the GLB's static pieces into `__merged` nodes). The ad hoc `mergeGeometries` calls in the toolkit's foliage, the gym's stairs and `largeWorld` use it now, with unchanged geometry. Nothing breaks.
+
+### Engine 6.4.0 (Sunset)
+
+**Added**
+
+- `mergeGeometryParts(parts, { groups?, attributes?, indexed? })` and `registerMergedGeometry(parts, { id, groups?, attributes?, indexed?, isPersistent?, preWarm?, debugData? })` on `aekasha`. A part (`MergePart`) is a registered geometry id or a `BufferGeometry`, with an optional `matrix`, `materialSlot` and `key`. The merge bakes each part's transform into its positions, normals (normal matrix) and tangents. A mirrored part gets its winding flipped and its tangent `w` negated, so it isn't drawn inside out. `attributes: 'UNION'` (the default) fills a missing attribute (uv 0, colour 1, others 0, and a missing tangent is computed or else dropped with a warning), and `'INTERSECTION'` drops it. Attributes are read as values, so quantized (normalized) and interleaved parts merge with float ones. `groups: 'BY_SLOT'` makes one group per `materialSlot`. The index is `Uint16` up to 65 535 vertices, else `Uint32`, and `indexed: false` gives a non-indexed geometry. Morphed and skinned parts throw. The result's `userData.mergeParts` lists each part's `vertexStart`, `vertexCount`, `indexStart`, `indexCount`, `materialSlot` and `key`. `registerMergedGeometry` returns a taken id's geometry without merging. The types are `MergePart`, `MergeGeometryOptions`, `MergePartRange`, `MergedGeometry` and `RegisterMergedGeometryOptions`.
+- `mergeGeometryPartsAsync(parts, opts?)` and `registerMergedGeometryAsync(parts, opts)`: the same merge in the assets worker (job `MERGE_GEOMETRY`, its module `AssetsSwitchMerge` loaded on the worker's first merge). Each geometry is sent once, however many parts name it, and the result comes back transferred. A refused merge rejects on the main thread before anything is sent, and the main-thread fallback (`fallbackToMainThread`) gives the same result. The async register captures the owner scope at its call (a streaming cell's merge stays the cell's), and of two overlapping calls with one id, the first to finish registers. Measured (Chrome on macOS, 4× CPU throttling): a 100k-vertex merge blocks the main thread for 39-61 ms synchronously and leaves no frame gap over 17.7 ms in the worker.
+- `AppConfig.assets.mergeWorkerTarget` (env `VITE_ASSETS_MERGE_WORKER_TARGET`, a boot override and a "Geometry merges" row in the Assets tab) defaults to `WORKER_THREAD`, whatever `workerTarget` is.
+- The `MERGED` geometry type (`*.geometry.json` and a scene's `geometries`; `GeoAssetPropsSchema` / `GeoAssetProps` on `aekasha/schemas`, `MergedGeoPart` / `MergedGeoProps` on `aekasha`). It takes `parts` (a geometry JSON's id or an imported piece, `<importId>/<nodeName>`, with a mesh's `position`, `rotation` or `quaternion` and `scale`, plus `materialSlot` and `key`) and the merge's options. The scene loader merges a scene's `MERGED` geometries after its other geometries, in parallel in the worker, loading the merge code (a lazy chunk, 3.0 kB gzip) with the first one. A merge that fails is logged and left out, and the load goes on. The parts stay loaded with their scene or cell. A mesh's inline `geo` can't be `MERGED`, and `createGeometry` throws for it, naming `registerMergedGeometry`.
+- An imported asset's `merge` (`true` or `{ mode?: 'BY_MATERIAL' | 'ALL', exclude?: string[] }`, `ImportedAssetMerge` / `ImportedAssetMergeSchema` on `aekasha/schemas`). It is build time only, like `optimize`: see Project.
+- The geometry info window shows a merged geometry's parts, where it was merged and the merge's time.
+
+**Changed**
+
+- The assets worker's chunk that held `GeometryTransfer` and three's `BufferGeometryUtils` is split in two (0.8 + 1.0 kB gzip), since the merge job needs only the first. The app's first download is unchanged. The embeds' first download grows by 0.1 kB (the scene loader's `MERGED` loop).
+
+### Toolkit 3.0.1 (Gibbous)
+
+**Changed**
+
+- `generateTreeGeometry` merges its trunk and canopy with `mergeGeometryParts` (`groups: 'BY_SLOT'`, the same two groups), and `generateBushGeometry` its seeded spheres, each part placed by matrix. Positions, normals, uvs and the index are bit-identical to before.
+
+### App 1.21.1 (Preschooler)
+
+**Changed**
+
+- `largeWorld`'s merged props and the gym's stairs use the engine's merge. The crates are one box placed twice, the barbell one sphere placed twice, and the stairs one step box placed ten times with `registerMergedGeometry` (`groups: 'NONE'`: the old per-step groups were never read by its single material). The geometry is bit-identical, and `largeWorld` keeps its `computeVertexNormals()` after the merge, so it looks the same.
+- `testDebugScene` checks every level of the merge: three primitives merged in code next to the same parts as meshes (`p371_merged`), a `MERGED` JSON of three `aekashaSymbol` pieces on two meshes (one piece mirrored, one tilted), and `p371MergeKit`, a 20-piece GLB merged with `ALL` next to its excluded doors. The sun casts shadows on these rows, and the camera is moved back to frame them.
+
+### Project
+
+**Added**
+
+- The asset pipeline's GLB merge step (`devTools/assetPipeline/gltfMerge.ts`, `mergeGLTFNodes`). It runs before the compression and the LOD chain step, so a `lodChain` is built from the merged mesh. Each piece's transform is baked into the import root's space (mirrored pieces included) and the pieces are joined into a new child of the import root: `__merged` (`ALL`) or `__merged_<material>` (`BY_MATERIAL`, the default). The nodes `exclude` names, physics nodes, joints and animated nodes stay as they are with their subtrees, and skinned, GPU-instanced, morph-target and non-triangle nodes stay with a warning. A file with `merge` is written even with optimization off. The stats (each merged node's parts, vertices and triangles, the kept nodes by reason) go into the lock entry, `last-run.json` and the run's line. The options are in the cache key with `GLTF_MERGE_VERSION`. The fixture generator `fixtures/mergeKitFile.ts` builds `p371MergeKit.glb`.
+- The gather checks a `MERGED` geometry's part ids (`devTools/gather/mergedGeometries.ts`). It fails on a part that names neither a geometry JSON nor an import's piece, or that names a `MERGED` geometry, and warns about a part the scene doesn't list. It drops an import's `merge` from the generated data and fails on `merge` with a remote `fileName`. In a streaming scene, a mesh's `MERGED` geometry brings its parts into the cell, and the mesh is placed as a point (a large one needs `streaming.radii`).
+
+**Changed**
+
+- The Hub: the asset optimization page's "Merging a model's pieces", the scenes and assets page's "Merged geometries" (the JSON type, the code API and when to merge in the worker), and the streaming page's `radii` note. The docs: `docs/techniques/asset-optimization.md`'s "Merging pieces", `devTools/gather/CLAUDE.md`, `devTools/assetPipeline/CLAUDE.md`, `kernel/init/CLAUDE.md` (the merge job), `features/streaming/CLAUDE.md`'s limits, and the readme (geometry merging in the Features).
+- The bundle, API and docs baselines (the new public names, the lazy `assets/GeometryMerge.js` and `assets/AssetsSwitchMerge.js` chunks; no debug code in any build), the compiled `.schemas/`, and `testDebugScene`'s scene runner baselines.
+- The plans: p371 is `_DONE_`. The p370 epic's status and p372's `Blocked by` line follow it.
+
 ## 2026-11-10 — p354-phase0-spike
 
 GPU-driven culling and per-instance LOD (p354, a child of the LOD epic p350): instance sets, on `aekasha/instancing`. A set draws an instanced LOD pool's levels for instances that are plain data in buffers, with no entity per instance. On WebGPU, a compute pass selects each instance's level with the CPU path's rules (screen size, hysteresis, cross-fades) and, for each camera that renders the set, frustum-culls the instances into per-level lists drawn by indirect draws. On WebGL2 the same set runs the same rules on the CPU, without entities. The CPU frame stays flat: 0.4-1.5 ms from 20k to 1M trees, against 3.6-166 ms for the pools (a minified build, Apple M2). With the sun's shadow, the GPU frame is 8.6 ms at 100k, against the pools' 13.1. Instanced LOD pools stay the path for content gameplay addresses and below about 20k instances; the Hub's LOD page says which to use. Nothing breaks.

@@ -98,7 +98,7 @@ export const ImportedAssetMergeSchema = z
     "Build time only: the asset pipeline joins the file's static pieces into __merged nodes (physics, skinned, animated and excluded nodes stay as they are)."
   );
 
-/** An import's `merge`, as {@link ImportedAssetMergeSchema} validates it. */
+/** An import's `merge`, as `ImportedAssetMergeSchema` validates it. */
 export type ImportedAssetMerge = z.infer<typeof ImportedAssetMergeSchema>;
 
 /**
