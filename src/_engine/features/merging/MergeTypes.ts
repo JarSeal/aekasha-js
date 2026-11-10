@@ -1,5 +1,6 @@
 // The mesh merge groups' data (docs/plans/p372_mesh-merge-groups.md §2): the components' types,
 // which the kernel names with `import type` (its component registry, ECSCoreComponents.ts).
+import type * as THREE from 'three/webgpu';
 
 /** A merge group's settings: `createMergeGroup`'s options, kept on its `MERGE_GROUP`. */
 export type MergeGroupSettings = {
@@ -7,6 +8,10 @@ export type MergeGroupSettings = {
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's `receiveShadow`. */
   receiveShadow?: boolean;
+  /** Keeps the group on a scene switch (a `PERSISTENT` group entity).
+   * Default false: the group goes with the scene it was created in. Only a persistent group takes
+   * persistent members. */
+  persistent?: boolean;
 };
 
 /**
@@ -29,6 +34,8 @@ export type MergeGroupData = {
   wasted: number;
   /** How many times the group's geometry was built. */
   rebuilds: number;
+  /** The members' material (the first member's): every member shares it. */
+  _material: THREE.Material | null;
   /** A build is due: the build system builds the group at its next run. */
   _isPending: boolean;
   /** Counts the builds started, so an async build that finishes after a newer one started is
