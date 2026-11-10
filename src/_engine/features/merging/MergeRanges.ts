@@ -1,4 +1,4 @@
-// In-place writes to a merge group's built geometry (docs/plans/p372_mesh-merge-groups.md §3,
+// In-place writes to a merge group's built geometry (docs/plans/_DONE_p372_mesh-merge-groups.md §3,
 // Phase 2): a member's range rewritten for its new pose, or its triangles collapsed when it
 // leaves, without a rebuild. Only the member's
 // ranges are written and marked for upload (`addUpdateRange`), from scratch objects: nothing is

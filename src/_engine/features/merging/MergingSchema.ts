@@ -7,7 +7,7 @@ import type {
   SceneMergeGroupEntry,
 } from './MergeTypes';
 
-// The merging feature's JSON fields (docs/plans/p372_mesh-merge-groups.md §4): a mesh's `merge` and
+// The merging feature's JSON fields (docs/plans/_DONE_p372_mesh-merge-groups.md §4): a mesh's `merge` and
 // a scene's `mergeGroups`, so the gather's feature manifest names `merging` for a scene that uses
 // either. The runtime checks the same rules without zod (MergeAuto.ts' `queueMerge`).
 

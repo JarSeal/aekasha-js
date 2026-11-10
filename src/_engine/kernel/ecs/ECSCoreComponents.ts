@@ -74,7 +74,7 @@ export const ComponentType = {
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
   INSTANCE_SET: 'CORE_INSTANCE_SET', // runtime-only, set by createInstanceSetAsync (p354)
-  // Mesh merge groups (docs/plans/p372_mesh-merge-groups.md) — see features/merging/MergeGroups.ts
+  // Mesh merge groups (docs/plans/_DONE_p372_mesh-merge-groups.md) — see features/merging/MergeGroups.ts
   MERGE_GROUP: 'CORE_MERGE_GROUP', // runtime-only, on a merge group's entity
   MERGE_MEMBER: 'CORE_MERGE_MEMBER', // runtime-only, on a merge group's member
   TAG_MERGED: 'CORE_TAG_MERGED', // runtime-only, drawn by its group's merged mesh

@@ -27,11 +27,14 @@ const profiles: SbpProfile[] = [
     // Set from p611 Phase 1's report (initial 387.7 KiB gzip); p057 (three r187, `three/tsl`
     // tree-shakeable, unused maths classes dropped) lowered the initial and `assets/index.js` to
     // `suggestBudget` of 369.5 and 365.3 KiB. p372 Phase 3: `merging()`'s JSON, AUTO and scene
-    // step took `assets/index.js` to 380.4 KiB: 380 → 381 KiB
+    // step took `assets/index.js` to 380.4 KiB: 380 → 381 KiB. p372 Phase 5: the mesh merging
+    // example is the first shipping caller of `updateMergeMember` and `removeFromMergeGroup`, so
+    // the in-place writes ship (initial 385.8, `assets/index.js` 381.6 KiB): 385 → 386 and
+    // 381 → 382 KiB
     budgets: {
-      initial: 385 * KIB,
+      initial: 386 * KIB,
       chunks: {
-        'assets/index.js': 381 * KIB,
+        'assets/index.js': 382 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -59,7 +62,10 @@ const profiles: SbpProfile[] = [
         // updates took it to 2.8 KiB, Phase 3's `merge` queue, AUTO buckets, scene settings and
         // scene step to 6.0 KiB (8 modules): 3 → 6 KiB. Keep `instanceof` of three classes out
         // (MergeEligibility.ts): `BatchedMesh` shipped with it for +4.6 KiB
-        '_engine/features/merging': 6 * KIB,
+        // Phase 5: 6.0 → 6.9 KiB, `MergeRanges` and `MergeInPlace` in full once the example
+        // calls `updateMergeMember` and `removeFromMergeGroup` (only the debug-only
+        // `testDebugScene` did): 6 → 7 KiB
+        '_engine/features/merging': 7 * KIB,
         '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,

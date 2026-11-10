@@ -1,4 +1,4 @@
-// `merge: 'AUTO'`'s buckets (docs/plans/p372_mesh-merge-groups.md §4.1): a mesh goes into the group
+// `merge: 'AUTO'`'s buckets (docs/plans/_DONE_p372_mesh-merge-groups.md §4.1): a mesh goes into the group
 // of its compatibility key (its material, its attributes' names and sizes, both shadow flags, its
 // layers, and whether it's persistent) and its x/z cell (`worldToCell` of its world position, the
 // cells streaming uses, so a cell size that divides a streaming scene's keeps each group inside

@@ -221,7 +221,7 @@ In a [streaming](hub:features/streaming) scene, keep each group inside a cell:
 - One material per group: meshes with different materials make a group each.
 - A group's level of detail: members with a `LOD` are refused.
 
-See [the plan](repo:docs/plans/p372_mesh-merge-groups.md) and its epic,
+See [the plan](repo:docs/plans/_DONE_p372_mesh-merge-groups.md) and its epic,
 [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs

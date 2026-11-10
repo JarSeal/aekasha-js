@@ -1,4 +1,4 @@
-// Which mesh entities a merge group takes (docs/plans/p372_mesh-merge-groups.md §5): a refused one
+// Which mesh entities a merge group takes (docs/plans/_DONE_p372_mesh-merge-groups.md §5): a refused one
 // is drawn on its own, with a warning naming the reason (`addToMergeGroup`).
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';

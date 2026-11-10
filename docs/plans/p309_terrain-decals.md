@@ -3,7 +3,7 @@ Category: Terrain, Rendering, Materials
 Blocked by: p299_texture-arrays-and-atlases.md (soft: D1's atlases are p299 D3 atlases, built since its Phase 3; only its Phase 5 JSON binding is open), p306_terrain-blocks-and-procedural-terrain-meshes.md, p304_procedural-texture-baker.md (procedural decals), p307_wet-and-dry-surface-states.md (soft: wet decals)
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
-Related: p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; §2.1 on `BatchedMesh` draw counts), p372_mesh-merge-groups.md (merging a block's cutout mesh decals), p375_batched-mesh-batches.md (its Phase 0 spike answers this plan's `BatchedMesh` risk)
+Related: p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; §2.1 on `BatchedMesh` draw counts), \_DONE_p372_mesh-merge-groups.md (merging a block's cutout mesh decals), p375_batched-mesh-batches.md (its Phase 0 spike answers this plan's `BatchedMesh` risk)
 
 # Terrain Decals
 

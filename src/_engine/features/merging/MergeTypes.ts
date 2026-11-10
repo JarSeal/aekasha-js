@@ -1,4 +1,4 @@
-// The mesh merge groups' data (docs/plans/p372_mesh-merge-groups.md §2): the components' types,
+// The mesh merge groups' data (docs/plans/_DONE_p372_mesh-merge-groups.md §2): the components' types,
 // which the kernel names with `import type` (its component registry, ECSCoreComponents.ts).
 import type * as THREE from 'three/webgpu';
 

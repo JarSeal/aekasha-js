@@ -1,4 +1,4 @@
-// Mesh merge groups (docs/plans/p372_mesh-merge-groups.md): mesh entities sharing a material drawn
+// Mesh merge groups (docs/plans/_DONE_p372_mesh-merge-groups.md): mesh entities sharing a material drawn
 // as one merged mesh, owned by a group entity (`MERGE_GROUP`), each member (`MERGE_MEMBER`)
 // keeping its entity, transform, body and asset refs. A built member is hidden by `TAG_MERGED`,
 // a reason of the kernel's visibility reconcile (`reconcileObject3DVisibility`), whose hooks this

@@ -1,4 +1,4 @@
-// The merge groups' shared state and helpers (docs/plans/p372_mesh-merge-groups.md): the groups and
+// The merge groups' shared state and helpers (docs/plans/_DONE_p372_mesh-merge-groups.md): the groups and
 // pending builds per world, and a member's mesh and pose. MergeGroups.ts (the API and the builds)
 // and MergeInPlace.ts (the in-place range updates) both use them.
 import type * as THREE from 'three/webgpu';

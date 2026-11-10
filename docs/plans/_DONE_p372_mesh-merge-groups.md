@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: implemented (Phases 1-5)
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -676,7 +676,7 @@ As built, section 4 (2026-11-10): the baselines.
   any build. `yarn sbp`: unchanged against it, every budget kept (`merging` now names largeWorld
   among its scenes).
 
-### Phase 5 — Handbook, docs and versioning
+### Phase 5 — Handbook, docs and versioning — done
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk
    worlds, built on groups. Page template from p301 §5; p374 adds the array-material variation.
@@ -800,6 +800,38 @@ As built, section 4 (2026-11-10):
 - Linked from the Hub feature page's Read more (checked `repo:` links), `asset-optimization.md`'s
   "Merging pieces" (its "p372 will keep members as entities" now says what groups do) and the
   readme's Guides line.
+
+As built, section 5 (2026-11-10):
+
+- Versions: engine (and project) 6.4.0 → 6.5.0, app 1.21.1 → 1.21.2, toolkit unchanged (no
+  toolkit file changed on the branch); `yarn checkVersions --against main` passes. `CHANGELOG.md`:
+  the branch's entry (Engine, App, Project), which p373 extends on the same branch.
+- `yarn verify:scenes` (136 runs): 131 passed, `exampleMerging`'s four new, one failed:
+  `testDebugScene`'s debugger shots `window.about` (the versions and the checksum only) and
+  `stats.panels` (Phase 4's masked TFPS figure flake). No hash, system order, character path or
+  console error changed. `exampleHubHero`'s `workerMsg` run passed with a reload mid-run (this
+  section's comment edits under `src/`): run again alone, 4 passed. Then
+  `yarn verify:scenes --only exampleMerging,testDebugScene --update` (9 recorded; the flaky shot
+  recorded with the rest).
+- `yarn verify:baselines`: `api.json` (`SceneAutoMergeEntry` and `SceneMergeGroupEntry` on
+  `aekasha/merging`), `bundle.json` (the new lazy `assets/exampleMerging.js`, 1.4 kB gzip;
+  `_engine/features/merging` 6.0 → 6.9 kB, the app 14.1 → 14.4 kB), the embeds unchanged; docs
+  100 %; no debug code in any build. Recorded with `--update`.
+- **Found:** the example is the first shipping caller of `updateMergeMember` and
+  `removeFromMergeGroup` (only the debug-only `testDebugScene` called them), so `MergeRanges.ts`
+  (0.3 → 0.9 kB gzip) and `MergeInPlace.ts` (0.6 → 0.9) ship in full now: an app pays for the
+  in-place writes once it calls them. `yarn sbp` failed three budgets; raised as Phase 3 decided
+  (over moving code into a lazy chunk), each with its reason in `sbp.config.ts`: `merging` 6 → 7
+  KiB, `assets/index.js` 381 → 382 KiB (381.6), the initial download 385 → 386 KiB (385.8).
+  `yarn sbp` then passes (its one note, `features/character` well under its budget, isn't this
+  plan's).
+- The plan marked done: `_DONE_p372_mesh-merge-groups.md`; the references followed (the merging
+  code's header comments, `features/merging/CLAUDE.md`, the Hub feature page's link, p370's
+  status, roadmap row and `Blocks`, p371's `Blocks`, p353's and p309's `Related`); the
+  `Blocked by` lines of p373, p375 and p376 dropped (p372 was their only one), p374's shortened.
+  p370 §14's branch row keeps the branch's name.
+- **The PR waits for p373** (p370 §14: p372 and p373 share `p372_mesh-merge-groups`, which merges
+  into `main` after p373's last phase).
 
 ## 9. Versioning
 

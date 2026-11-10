@@ -5110,6 +5110,8 @@
       "MergeMemberData",
       "MeshMergeDef",
       "MeshMergeOptions",
+      "SceneAutoMergeEntry",
+      "SceneMergeGroupEntry",
       "addToMergeGroup",
       "createMergeGroup",
       "dissolveMergeGroup",

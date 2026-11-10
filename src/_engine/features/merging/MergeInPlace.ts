@@ -1,4 +1,4 @@
-// A merge group's in-place member updates (docs/plans/p372_mesh-merge-groups.md §3, Phase 2):
+// A merge group's in-place member updates (docs/plans/_DONE_p372_mesh-merge-groups.md §3, Phase 2):
 // changes to one member written into the group's built geometry without a rebuild. A move
 // rewrites the member's vertices (`updateMergeMember`); a leave (`removeFromMergeGroup`, a
 // deleted member) collapses its triangles and counts its vertices as wasted, and past

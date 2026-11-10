@@ -1,4 +1,4 @@
-// A scene's merge settings (docs/plans/p372_mesh-merge-groups.md §4.2), kept when it's registered: its
+// A scene's merge settings (docs/plans/_DONE_p372_mesh-merge-groups.md §4.2), kept when it's registered: its
 // `mergeGroups` (a group's settings for when it's made on first use, `AUTO`'s defaults) and its
 // JSON streaming cell size, for the two streaming warnings: an `AUTO` cell size that doesn't
 // divide it, and a group whose members span two streaming cells. Only the JSON's `streaming` is
