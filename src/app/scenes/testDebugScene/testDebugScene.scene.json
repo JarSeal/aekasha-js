@@ -4,10 +4,10 @@
   "isDebugScene": true,
   "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
   "name": "Optimized assets orientation check",
-  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, and a MERGED geometry JSON of three imported pieces on two meshes.",
+  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart.",
   "cameras": ["p300Camera"],
   "lights": ["p300Ambient", "p300Sun"],
-  "importedAssets": ["aekashaSymbol"],
+  "importedAssets": ["aekashaSymbol", "p371MergeKit"],
   "geometries": ["p371SymbolTrio"],
   "materials": [
     {
@@ -17,6 +17,22 @@
         "color": "#c8a24a",
         "roughness": 0.4,
         "metalness": 0.3
+      }
+    },
+    {
+      "id": "p371_kitMat",
+      "type": "STANDARD",
+      "params": {
+        "color": "#9d998c",
+        "roughness": 0.85
+      }
+    },
+    {
+      "id": "p371_doorMat",
+      "type": "STANDARD",
+      "params": {
+        "color": "#7f5433",
+        "roughness": 0.7
       }
     }
   ],
@@ -51,6 +67,82 @@
           "x": 0,
           "y": 0.5,
           "z": 0
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "p371_mergeKit",
+        "geo": "p371MergeKit/__merged",
+        "mat": "p371_kitMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": 0,
+          "y": -5.2,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "p371_doorLeft",
+        "geo": "p371MergeKit/door_left",
+        "mat": "p371_doorMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": -0.125,
+          "y": -4.9750000000000005,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "p371_doorLeftHandle",
+        "geo": "p371MergeKit/door_left_handle",
+        "mat": "p371_kitMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": -0.05,
+          "y": -4.9750000000000005,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        }
+      }
+    },
+    {
+      "props": {
+        "appId": "p371_doorRight",
+        "geo": "p371MergeKit/door_right",
+        "mat": "p371_doorMat",
+        "castShadow": true,
+        "receiveShadow": true,
+        "position": {
+          "x": 0.125,
+          "y": -4.9750000000000005,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
         }
       }
     }

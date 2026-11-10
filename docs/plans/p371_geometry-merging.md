@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Merging, Geometry, Assets
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.1)
 Blocks: p372_mesh-merge-groups.md
@@ -271,11 +271,75 @@ As built:
   loop and `import()`). `yarn verify:baselines --update`: `bundle.json`, `api.json` (the two
   types, `registerMergedGeoProps`, `GeoAssetProps` / `GeoAssetPropsSchema`) and `docs.json`.
 
-### Phase 3 — GLB option (D3)
+### Phase 3 — GLB option (D3) — done
 
 `merge` in `importedAssetSchema`, the pipeline step, lock entry stats. **Exit:** a test GLB of 20
 pieces imports as one `__merged` node; its collider nodes and excluded nodes stay separate; a
 cached re-run is a cache hit.
+
+As built:
+
+- Schema (`ImportedAssetSchema.ts`): `merge` is `true` or an object of `mode` (`BY_MATERIAL`,
+  the default, or `ALL`) and `exclude` (globs), the type `ImportedAssetMerge` on
+  `aekasha/schemas`. Build time only, like
+  `optimize`: not in a save entry or a scene's inline import; the gather drops it from the
+  generated data and fails on `merge` with a remote `fileName`.
+- Not `flatten` + `join` (D3's wording): `flatten` moves every node, the kept ones too, to the
+  scene root and prunes empty nodes, which changes the runtime's import root (the single empty
+  root, `GLTFExtract.ts`) and the kept nodes' transforms and parent paths; `join` keeps the first
+  piece's node, name and transform; gltf-transform's `transformPrimitive` transforms a tangent
+  wrong (it reads a component it has already written) and never negates a mirrored piece's `w`.
+  The step (`devTools/assetPipeline/gltfMerge.ts`, `mergeGLTFNodes`) copies each piece's
+  primitives (`compactPrimitive`), dequantizes them, bakes its transform into the import root's
+  space with D1's maths (normal matrix, winding and tangent `w` flipped for a mirrored piece) and
+  joins them with `joinPrimitives`. A merged node is a new child of the import root with no
+  transform, so a scene mesh at the origin draws the file's layout.
+- Kept as they are, with their subtrees: `exclude` globs on node names (the config's glob
+  syntax), physics nodes (`isPhysObj` or `colliderType` in the node's or its mesh's extras),
+  joints and animated nodes; kept alone, with a warning: skinned and GPU-instanced nodes and
+  nodes with a morph-target or non-triangle primitive. A merged piece's node is removed when
+  nothing kept hangs on it, and so is an empty parent it leaves childless; a file's own empty
+  nodes stay.
+- Names: `ALL` → `__merged`; `BY_MATERIAL` → `__merged_<material>` always (one material too, so a
+  second one doesn't rename the first; D3's example `ruinKitLevel/__merged` is `ALL`'s),
+  sanitized as GLTFLoader names nodes (`stone wall` → `__merged_stone_wall`, `wood.001` →
+  `__merged_wood001`), `material<index>` for an unnamed material, `nomaterial` for none. Pieces
+  that can't join (another attribute set) make `_2`, `_3`, … with a warning naming each node's
+  attributes; a name the file already uses gets a suffix and a warning.
+- Open question 2, decided: the merge runs before the compression and the LOD chain step, so a
+  `lodChain` is built from the merged mesh (one chain per `__merged` primitive).
+- Pipeline: the JSON's own `merge` applies to every use of the file (`assets.ts`). The options
+  and `GLTF_MERGE_VERSION` (`gltfMergeOptions.ts`, apart from the step so a key doesn't load
+  gltf-transform) are in the cache key only when set. A file with `merge` is written even when
+  both sides are kept as they are (`optimize: false`, `AEK_ASSETS_OPTIMIZE=false`), with a
+  warning, since scenes name the merged nodes. The stats (each merged node's parts, vertices,
+  triangles; the kept nodes by reason) go into the lock entry and `last-run.json`, and the run's
+  line reads `merged 20 pieces into __merged (kept 3 excluded, 2 physics)`.
+- Not covered, for Phase 5's docs: a runtime that loads the source instead of an output (no
+  output, eg. `ktx` missing with `importTextures`) has no `__merged` node; `meshIndex` counts the
+  merged file's nodes; a merge of meshes several nodes share grows the vertex count (each use is
+  a copy: the kit's six pillars, 16.8 → 21.0 KB of VRAM). Found while checking it: nodes that
+  share a glTF mesh get one geometry id at import, the first node's (`ImportRegistry.ts`), which
+  is the import's rule, not the merge's.
+- The check (`testDebugScene`): `p371MergeKit.glb` (built by
+  `devTools/assetPipeline/fixtures/mergeKitFile.ts`): 20 box pieces in two glTF materials (ten
+  wall blocks, six pillars sharing one mesh, four blocks on a turned empty, one mirrored), two
+  `door_*` nodes (one with a handle child) and two collider nodes, with
+  `merge: { mode: "ALL", exclude: ["door_*"] }`. `yarn assets`: one `__merged` node of 480
+  vertices, the doors, the handle under its door and the colliders as they were, the emptied
+  `upperWall` gone; meshopt lossless (the collider default); a second run a cache hit. In the
+  scene, a row below Phase 2's: `p371MergeKit/__merged` and the three door pieces as JSON
+  meshes; the camera moved back again. Checked 2026-11-10 in Chrome on macOS, debug and prod
+  test: the ruin whole, the mirrored block not inside out, no console errors. Unit tests:
+  `gltfMerge.test.ts` (transforms, the import root, naming, `ALL`, kept subtrees, emptied nodes,
+  mirroring, tangents, shared meshes, dequantizing, attribute splits, name clashes, unsupported
+  pieces, a written file); `gather.test.ts` (no `merge` in the generated data, the remote error).
+- Baselines (2026-11-10): `yarn verify:scenes --only testDebugScene --update` (its five
+  configurations); `yarn verify:baselines --update`: `api.json` (`ImportedAssetMerge`, the
+  schema), `docs.json`, and `bundle.banner.json` / `bundle.uiKit.json`, which Phase 2 left
+  unrecorded: the embeds get Phase 2's lazy `assets/GeometryMerge.js` chunk (2.5 kB gzip) and
+  +0.1 kB in their main `_engine/kernel/scene`, as the app did. `bundle.json` unchanged (all
+  build time), no debug code in any build.
 
 ### Phase 4 — Worker and adoption (D4, D5)
 
@@ -289,7 +353,9 @@ more than its transfer.
 ### Phase 5 — Docs and versioning
 
 1. The Hub: the asset optimization feature page (`hub/pages/features/asset-optimization/`):
-   "Merging a model's pieces" (D3 and its trade-off), and the scenes and assets page for the
+   "Merging a model's pieces" (D3 and its trade-off; Phase 3's As built: the node names, what is
+   kept, the file written with optimization off, the gaps it lists), and the scenes and assets
+   page for the
    `MERGED` type (its parts' rules, the gather's errors and warning, a wrong node name failing at
    load, `streaming.radii` for a large merged mesh in a streaming scene);
    `docs/techniques/asset-optimization.md` if it still mirrors the page; `yarn hub:build`.
@@ -311,6 +377,5 @@ more than its transfer.
 
 1. Should `MERGED` JSON parts accept p299 atlas cells (`"atlasCell": "…"`, remapping each part's
    UVs)? Only if a kit uses an atlas; p374's arrays need no UV change.
-2. A JSON with both `merge` and `lodChain` (the pipeline builds chains into the GLB since p347):
-   is the chain built from the joined mesh, so the join runs before the chain step? Decide in
-   Phase 3.
+2. ~~A JSON with both `merge` and `lodChain`: is the chain built from the joined mesh?~~ Yes
+   (Phase 3): the merge runs before the compression and the chain step.

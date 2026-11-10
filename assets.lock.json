@@ -142,6 +142,32 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "766575b07e3bf502d05474d6267b02b83ce02e6786f071c55593173fdfff8014": {
+      "source": "src/app/scenes/testDebugScene/p371MergeKit.glb",
+      "url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+      "bytes": 16576,
+      "geometryBytes": {
+        "in": 16800,
+        "out": 21000
+      },
+      "merge": {
+        "mode": "ALL",
+        "merged": [
+          {
+            "name": "__merged",
+            "material": "stone",
+            "parts": 20,
+            "vertices": 480,
+            "triangles": 240
+          }
+        ],
+        "kept": {
+          "excluded": 3,
+          "physics": 2,
+          "unsupported": 0
+        }
+      }
+    },
     "7a4133a4b698edfa83a917062e5f6d6907a5a2d9583c900c8c53ded082756d9c": {
       "source": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",

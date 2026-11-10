@@ -2991,6 +2991,8 @@
     },
     "src/_engine/schemas/ImportedAssetSchema.ts": {
       "ImportedAsset": "TypeAlias",
+      "ImportedAssetMerge": "TypeAlias",
+      "ImportedAssetMergeSchema": "Variable",
       "ImportedAssetSchema": "Variable",
       "InlineImportedAssetSchema": "Variable"
     },
@@ -5105,6 +5107,7 @@
       "GeoAsset",
       "GeoAssetSchema",
       "ImportedAsset",
+      "ImportedAssetMerge",
       "ImportedAssetSchema",
       "ImpostorAsset",
       "ImpostorAssetSchema",
