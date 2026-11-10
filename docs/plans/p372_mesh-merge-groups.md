@@ -783,6 +783,24 @@ As built, section 3 (2026-11-10):
   search index at 550 KiB gzipped against 450, isn't this phase's (the two new pages are 17 KB of
   Markdown).
 
+As built, section 4 (2026-11-10):
+
+- `docs/techniques/terrain-modular-kits.md`, p301 §5's template in order: what it is (a diagram of
+  the example's kit → pieces → groups), best for (with the poor fits), performance (fetches per
+  pixel by p301 §6, VRAM, draws, CPU; measured: Phase 4's CPU and draw figures and the example's
+  draws, the GPU ms left to p310's gallery), maps, Blender step by step, export settings (p306
+  D5's locked settings, adapted: custom properties for `merge`, tangents off), import (the
+  imported asset JSON, the scene's `mergeGroups`, `spawnImportedAsset`'s `merge`, a scene mesh's
+  `merge`), set-up and parameters, variations (tile-chunk worlds, a world-space material, the
+  build-time merge, `MERGED` geometries, instancing, streaming), the checklist, and the examples'
+  ids.
+- **No Blender template** (p301 §5's "decided in p372"): a kit is a few modules on a grid, and the
+  `merge` property is a String custom property (step 5). p301's table says so. The engine's
+  `customPropTemplates.blend` still has no `merge` property (Phase 3 section 3).
+- Linked from the Hub feature page's Read more (checked `repo:` links), `asset-optimization.md`'s
+  "Merging pieces" (its "p372 will keep members as entities" now says what groups do) and the
+  readme's Guides line.
+
 ## 9. Versioning
 
 Engine minor (components, API, schema). App patch (largeWorld adoption).

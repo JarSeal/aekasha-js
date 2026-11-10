@@ -98,7 +98,7 @@ A model made of many static pieces (a level, a kit-bashed ruin) costs a draw per
 - **Stats:** the run's line reads `merged 20 pieces into __merged (kept 3 excluded, 2 physics)`; the lock entry and `.cache/asset-pipeline/last-run.json` hold each merged node's pieces, vertices and triangles and the kept nodes by reason.
 - **Remote files** (an `https://` `fileName`) can't be merged: the gather fails on it. `merge` is build time only, so it isn't in a save entry or a scene's inline import, and the generated data drops it.
 
-The trade-off: the pieces are no longer nodes, so they can't be entities, moved, hidden or picked one by one. Keep what must stay addressable (doors, levers) out with `exclude`; mesh merge groups (p372) will keep members as entities.
+The trade-off: the pieces are no longer nodes, so they can't be entities, moved, hidden or picked one by one. Keep what must stay addressable (doors, levers) out with `exclude`, or merge at runtime instead: mesh merge groups (`merging()`) draw the pieces as one mesh while each stays an entity (see [Modular kits and tile-chunk worlds](terrain-modular-kits.md)).
 
 Gaps:
 

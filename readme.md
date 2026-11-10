@@ -479,7 +479,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 - **API reference**: the Hub's Documentation section (`/hub/documentation/`): a page per public entry (`aekasha`, `aekasha/physics`, …, at `/hub/documentation/aekasha/physics/`) with every name it exports, its signature, JSDoc and source link, searchable and linked from the other Hub pages. `yarn docs` still writes TypeDoc's own HTML to `docs-api/`.
 - **Architecture**: the Hub's `/hub/documentation/architecture/`: how the engine fits together (the layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, debug code, the build) and where a feature of your own goes.
 - **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with its codemods: `migrateToEntries.ts` for engine 5's entry imports, `devTools/migrate/migrateEngine6.ts` for engine 6.
-- **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md).
+- **Guides**: [`docs/techniques/`](docs/techniques/), eg. [asset optimization](docs/techniques/asset-optimization.md) and [modular kits and tile-chunk worlds](docs/techniques/terrain-modular-kits.md).
 - **Design docs**: [`docs/plans/`](docs/plans/), and the app's in [`docsApp/plans/`](docsApp/plans/). Files prefixed `_DONE_` describe features that are already implemented. Known issues are in [`docs/issues/`](docs/issues/) (the app's in [`docsApp/issues/`](docsApp/issues/)) and on the Hub's Issues page.
 - **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md), with a map of the `CLAUDE.md` next to each subsystem.
 

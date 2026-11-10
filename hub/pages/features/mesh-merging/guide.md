@@ -237,6 +237,9 @@ See [the plan](repo:docs/plans/p372_mesh-merge-groups.md) and its epic,
 ## Read more
 
 - The [mesh merging example](hub:examples/merging).
+- [Modular kits and tile-chunk worlds](repo:docs/techniques/terrain-modular-kits.md): building a
+  world from a kit in Blender, exporting it and merging it per cell, and
+  [the variations](repo:docs/techniques/terrain-modular-kits.md#variations).
 - [Merging a model's pieces](hub:features/asset-optimization#merging-a-model-s-pieces) at build
   time, and [merged geometries](hub:features/scenes-and-assets#merged-geometries).
 - The API reference: [`aekasha/merging`](hub:documentation/aekasha/merging).
