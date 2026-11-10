@@ -13,6 +13,10 @@
 // The group's mesh is added at its first build (the material is its first member's), at the
 // centre of the members' bounds with the members baked relative to it: the spatial index measures
 // a mesh's radius from its origin, so a world-space merge at the origin would get a wrong one.
+//
+// A built member moved with `updateMergeMember` has its range rewritten in place (MergeRanges.ts),
+// from the world matrix it was baked with (`MERGE_MEMBER._bakedMatrix`); the bounds only grow until
+// the next build.
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
@@ -28,11 +32,13 @@ import {
 } from '../../kernel/assets/Geometry';
 import { incMaterialRef } from '../../kernel/assets/Material';
 import type { MergePart } from '../../kernel/assets/GeometryMerge';
+import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
 import { getCurrentSceneId, getLoadingSceneId, getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getMergeRefusal } from './MergeEligibility';
-import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
+import { flipPartWinding, growMergedBounds, rewritePartVertices } from './MergeRanges';
+import type { MergeGroupData, MergeGroupSettings, MergeMemberData } from './MergeTypes';
 
 /**
  * A build of more vertices than this merges in the assets worker (`mergeGeometryPartsAsync`):
@@ -147,6 +153,7 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
     _material: null,
     _isPending: false,
     _buildToken: 0,
+    _isBuilding: false,
   });
   groups.set(id, groupEntityId);
   return groupEntityId;
@@ -164,7 +171,8 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * `LOD`, attributes the group's can't take, or a group already; a persistent one, unless the
  * group is persistent.
  * @param world the group's world (default: the default world)
- * @remarks Members are static: a member moved later still draws where it was merged.
+ * @remarks Members are static: a member moved later is drawn where it was merged until
+ * `updateMergeMember` moves its part.
  * @example
  * ```ts
  * import { getEntityIdByAppId } from 'aekasha';
@@ -200,6 +208,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       groupId,
       partIndex: -1,
       _wasSpatialIndexed: false,
+      _bakedMatrix: new THREE.Matrix4(),
     });
     group.members.push(entityId);
     added++;
@@ -231,6 +240,43 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
     return;
   }
   markPending(ecsWorld, groupEntityId, group);
+};
+
+/**
+ * Moves a merged member's part of its group's mesh to where the member is now: call it after
+ * changing a member's `TRANSFORM` (`setTransform`, a fixed body moved). Only the member's range of
+ * the merged geometry is written again, without a rebuild. A member waiting for its group's build
+ * is merged where it is then and needs no call.
+ * @param world the member's world (default: the default world)
+ * @remarks Members are static by contract: a member moved without this call is still drawn where
+ * it was merged (the debug env warns once per member). Its geometry's vertex count can't change in
+ * place: a member whose geometry was replaced makes its group build again.
+ * @example
+ * ```ts
+ * import { getEntityIdByAppId, getECSWorld } from 'aekasha';
+ * import { updateMergeMember } from 'aekasha/merging';
+ *
+ * const gate = getEntityIdByAppId('ruinGate')!;
+ * getECSWorld().setTransform(gate, { pos: { x: 4, y: 0, z: 12 } });
+ * updateMergeMember(gate);
+ * ```
+ */
+export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
+  assertInstalled('updateMergeMember');
+  const ecsWorld = world ?? getECSWorld();
+  const member = ecsWorld.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const group = member && ecsWorld.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  if (!member || !group) {
+    lwarn(`updateMergeMember: entity ${entityId} isn't in a merge group.`);
+    return;
+  }
+  // A running worker build read the old pose: it's dropped, and the group builds again
+  if (group._isBuilding) {
+    group._buildToken++;
+    group._isBuilding = false;
+    markPending(ecsWorld, member.groupEntityId, group);
+  }
+  if (member.partIndex !== -1) rewriteMember(entityId, member, group, ecsWorld);
 };
 
 /**
@@ -322,28 +368,59 @@ const getLiveMembers = (groupEntityId: number, group: MergeGroupData, world: ECS
 const getMemberMesh = (entityId: number, world: ECSWorld) =>
   world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
 
-/** The members as merge parts in the group's space (centred on their bounds), and that centre. */
-const getBuildParts = (members: number[], world: ECSWorld) => {
+/**
+ * Puts a member's mesh at its `TRANSFORM` now and updates its world matrix: object3DSyncSystem
+ * copies a `TRANSFORM` only in MAIN, so one set later in the frame (an `APP_LOGIC` move followed
+ * by `updateMergeMember`) isn't on the mesh yet. The sync's dirty flag stays for the sync.
+ */
+const syncMemberPose = (entityId: number, mesh: THREE.Mesh, world: ECSWorld) => {
+  const store = world.getTypedTransformStore();
+  if (store) {
+    const slot = store.getSlot(entityId);
+    if (slot !== -1) store.copyToObject3D(slot, mesh);
+  } else {
+    const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
+    if (transform) {
+      mesh.position.copy(transform.position);
+      mesh.quaternion.copy(transform.quaternion);
+      mesh.scale.copy(transform.scale);
+    }
+  }
+  mesh.updateWorldMatrix(true, false);
+};
+
+/** A build's input: the members as merge parts in the group's space (centred on their bounds),
+ * the world matrices they were baked with, and that centre. */
+type BuildParts = {
+  parts: MergePart[];
+  worldMatrices: THREE.Matrix4[];
+  centre: THREE.Vector3;
+  vertexCount: number;
+};
+
+const getBuildParts = (members: number[], world: ECSWorld): BuildParts => {
   groupBounds.makeEmpty();
   for (const entityId of members) {
     const mesh = getMemberMesh(entityId, world);
-    mesh.updateWorldMatrix(true, false);
+    syncMemberPose(entityId, mesh, world);
     if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
     groupBounds.union(scratchBox.copy(mesh.geometry.boundingBox!).applyMatrix4(mesh.matrixWorld));
   }
   groupBounds.getCenter(groupCentre);
   toGroupSpace.makeTranslation(-groupCentre.x, -groupCentre.y, -groupCentre.z);
   let vertexCount = 0;
+  const worldMatrices: THREE.Matrix4[] = [];
   const parts: MergePart[] = members.map((entityId) => {
     const mesh = getMemberMesh(entityId, world);
     vertexCount += mesh.geometry.getAttribute('position').count;
+    worldMatrices.push(mesh.matrixWorld.clone());
     return {
       geo: mesh.geometry,
       matrix: new THREE.Matrix4().multiplyMatrices(toGroupSpace, mesh.matrixWorld),
       key: String(entityId),
     };
   });
-  return { parts, centre: groupCentre.clone(), vertexCount };
+  return { parts, worldMatrices, centre: groupCentre.clone(), vertexCount };
 };
 
 /** Registers a build's geometry as the group's, releasing the one it replaces. */
@@ -385,16 +462,17 @@ const createGroupMesh = (
   return mesh;
 };
 
-/** Draws `members` merged as `geometry`, centred on `centre`: the group's mesh takes it, the
- * members hide and leave the spatial index. */
+/** Draws `members` merged as `geometry`, centred on the build's centre: the group's mesh takes
+ * it, the members hide and leave the spatial index. */
 const applyBuild = (
   groupEntityId: number,
   group: MergeGroupData,
   members: number[],
   geometry: THREE.BufferGeometry,
-  centre: THREE.Vector3,
+  build: BuildParts,
   world: ECSWorld
 ) => {
+  const { centre, worldMatrices } = build;
   let mesh = world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value as
     | THREE.Mesh
     | undefined;
@@ -418,6 +496,7 @@ const applyBuild = (
     group.partIndex.set(entityId, partIndex);
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
     member.partIndex = partIndex;
+    member._bakedMatrix = worldMatrices[partIndex];
     if (world.hasComponent(entityId, ComponentType.TAG_MERGED)) return;
     member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
     world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
@@ -471,24 +550,42 @@ const buildGroup = (
     group.partIndex.clear();
     return;
   }
-  const { parts, centre, vertexCount } = getBuildParts(members, world);
+  const build = getBuildParts(members, world);
   const fail = (err: unknown) => lerror(`Merge group "${group.id}" failed to build.`, err);
 
-  if (vertexCount <= WORKER_BUILD_VERTICES) {
+  if (build.vertexCount <= WORKER_BUILD_VERTICES) {
     try {
-      applyBuild(groupEntityId, group, members, merge.mergeGeometryParts(parts), centre, world);
+      applyBuild(
+        groupEntityId,
+        group,
+        members,
+        merge.mergeGeometryParts(build.parts),
+        build,
+        world
+      );
     } catch (err) {
       fail(err);
     }
     return;
   }
-  return merge.mergeGeometryPartsAsync(parts).then((geometry) => {
-    if (!isBuildCurrent(groupEntityId, group, token, members, world)) {
-      geometry.dispose();
-      return;
+  group._isBuilding = true;
+  const settle = () => {
+    if (group._buildToken === token) group._isBuilding = false;
+  };
+  return merge.mergeGeometryPartsAsync(build.parts).then(
+    (geometry) => {
+      settle();
+      if (!isBuildCurrent(groupEntityId, group, token, members, world)) {
+        geometry.dispose();
+        return;
+      }
+      applyBuild(groupEntityId, group, members, geometry, build, world);
+    },
+    (err: unknown) => {
+      settle();
+      fail(err);
     }
-    applyBuild(groupEntityId, group, members, geometry, centre, world);
-  }, fail);
+  );
 };
 
 /** Builds every pending group of the world; the worker builds' promises. */
@@ -501,6 +598,54 @@ const buildPendingGroups = (world: ECSWorld, merge: MergeModule) => {
   }
   pending.clear();
   return running;
+};
+
+// --- IN-PLACE UPDATES ---
+
+const groupInverse = new THREE.Matrix4();
+const partMatrix = new THREE.Matrix4();
+const previousPartMatrix = new THREE.Matrix4();
+
+/** Writes a built member's range for its pose now (`updateMergeMember`): its vertices, its
+ * winding when its mirroring changed, and the merged bounds when it moved out of them. */
+const rewriteMember = (
+  entityId: number,
+  member: MergeMemberData,
+  group: MergeGroupData,
+  world: ECSWorld
+) => {
+  const groupEntityId = member.groupEntityId;
+  const groupMesh = world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value as
+    | THREE.Mesh
+    | undefined;
+  const merged = groupMesh?.geometry as MergedGeometry | undefined;
+  const range = merged?.userData.mergeParts?.[member.partIndex];
+  if (!groupMesh || !merged || !range) return;
+  const mesh = getMemberMesh(entityId, world);
+  if (mesh.geometry.getAttribute('position').count !== range.vertexCount) {
+    lwarn(
+      `updateMergeMember: entity ${entityId}'s geometry isn't the one merged (another vertex count): its merge group "${group.id}" builds again.`
+    );
+    markPending(world, groupEntityId, group);
+    return;
+  }
+  syncMemberPose(entityId, mesh, world);
+  groupMesh.updateWorldMatrix(true, false);
+  groupInverse.copy(groupMesh.matrixWorld).invert();
+  partMatrix.multiplyMatrices(groupInverse, mesh.matrixWorld);
+  previousPartMatrix.multiplyMatrices(groupInverse, member._bakedMatrix);
+  if (rewritePartVertices(merged, range, mesh.geometry, partMatrix, previousPartMatrix)) {
+    flipPartWinding(merged, range);
+  }
+  member._bakedMatrix.copy(mesh.matrixWorld);
+  if (
+    growMergedBounds(merged, mesh.geometry, partMatrix) &&
+    world.hasComponent(groupEntityId, ComponentType.SPATIAL_INDEXED)
+  ) {
+    // Joined again, so the spatial index measures the grown bounds
+    world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
+    world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
+  }
 };
 
 /**

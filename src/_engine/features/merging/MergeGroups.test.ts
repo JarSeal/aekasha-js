@@ -6,6 +6,8 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { installCoreSystems } from '../../kernel/ecs/ECSCoreSystems';
 import { createFeatureHost } from '../../kernel/init/Features';
 import { createGeometry, getGeometry, getGeometryRegistry } from '../../kernel/assets/Geometry';
+import { mergeGeometryParts } from '../../kernel/assets/GeometryMerge';
+import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
 import { createMaterial } from '../../kernel/assets/Material';
 import { createMeshEntity, installMeshes } from '../../kernel/mesh/Mesh';
 import { createRootScene, getRootScene } from '../../kernel/scene/Scene';
@@ -17,6 +19,7 @@ import {
   getMergeGroupOf,
   installMergeGroups,
   rebuildMergeGroup,
+  updateMergeMember,
 } from './MergeGroups';
 
 // The warning log, and the worker merge: held until the test lets it finish (the real merge on
@@ -199,6 +202,214 @@ describe('a build', () => {
     await buildPendingMergeGroupsAsync();
     expect(getMesh(groupEntityId)!.position.x).toBe(0);
     expect(world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!.rebuilds).toBe(2);
+  });
+});
+
+describe('updateMergeMember', () => {
+  /** The merged geometry the members would give merged fresh at the group mesh's place: what an
+   * in-place update must match. */
+  const getFreshMerge = (groupMesh: THREE.Mesh, members: number[]) => {
+    groupMesh.updateWorldMatrix(true, false);
+    const inverse = groupMesh.matrixWorld.clone().invert();
+    return mergeGeometryParts(
+      members.map((id) => {
+        const mesh = getMesh(id)!;
+        mesh.updateWorldMatrix(true, false);
+        return { geo: mesh.geometry, matrix: inverse.clone().multiply(mesh.matrixWorld) };
+      })
+    );
+  };
+
+  const expectSameGeometry = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) => {
+    expect(Object.keys(a.attributes).sort()).toEqual(Object.keys(b.attributes).sort());
+    for (const name in a.attributes) {
+      const left = a.getAttribute(name).array;
+      const right = b.getAttribute(name).array;
+      expect(left.length).toBe(right.length);
+      for (let i = 0; i < left.length; i++) expect(left[i]).toBeCloseTo(right[i], 5);
+    }
+    expect(Array.from(a.index!.array)).toEqual(Array.from(b.index!.array));
+  };
+
+  /** A merged attribute: always a plain BufferAttribute. */
+  const getAttr = (geometry: THREE.BufferGeometry, name: string) =>
+    geometry.getAttribute(name) as THREE.BufferAttribute;
+
+  /** Sets a Map-mode entity's scale (setTransform takes none). */
+  const setScale = (id: number, x: number, y: number, z: number) => {
+    const transform = world.getComponent(id, ComponentType.TRANSFORM)!;
+    transform.scale.set(x, y, z);
+    transform.setDirty();
+    world.commitTransform(id, transform);
+  };
+
+  test("rewrites only the member's range, from its TRANSFORM, without a rebuild", async () => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const members = [createBox(0), createBox(2), createBox(4)];
+    addToMergeGroup(groupId, members);
+    await buildPendingMergeGroupsAsync();
+    const groupMesh = getMesh(groupEntityId)!;
+    const merged = groupMesh.geometry as MergedGeometry;
+    const before = Float32Array.from(merged.getAttribute('position').array);
+    const indexBefore = Array.from(merged.index!.array);
+    for (const name in merged.attributes) getAttr(merged, name).clearUpdateRanges();
+
+    // Moved and turned through its TRANSFORM only: the mesh isn't synced yet
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 3);
+    world.setTransform(members[1], { pos: { x: 2, y: 3, z: 1 }, rot: q });
+    updateMergeMember(members[1]);
+
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    expect(group.rebuilds).toBe(1);
+    expect(groupMesh.geometry).toBe(merged);
+    expectSameGeometry(merged, getFreshMerge(groupMesh, members));
+    // Only its range written and marked for upload
+    const { vertexStart, vertexCount } = merged.userData.mergeParts[1];
+    const after = merged.getAttribute('position').array;
+    for (let i = 0; i < before.length; i++) {
+      if (i < vertexStart * 3 || i >= (vertexStart + vertexCount) * 3) {
+        expect(after[i]).toBe(before[i]);
+      }
+    }
+    for (const name of ['position', 'normal']) {
+      expect(getAttr(merged, name).updateRanges).toEqual([
+        { start: vertexStart * 3, count: vertexCount * 3 },
+      ]);
+    }
+    expect(getAttr(merged, 'uv').updateRanges).toEqual([]);
+    expect(Array.from(merged.index!.array)).toEqual(indexBefore);
+    expect(merged.index!.updateRanges).toEqual([]);
+  });
+
+  test('turns a tangent the merge computed, and flips the winding of a mirrored member', async () => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const withTangents = new THREE.BoxGeometry(1, 1, 1);
+    withTangents.computeTangents();
+    const members = [
+      createMeshEntity({ geo: withTangents, mat: 'mergeTestMat', position: { x: -2 } }),
+      createBox(2),
+    ];
+    addToMergeGroup(groupId, members);
+    await buildPendingMergeGroupsAsync();
+    const groupMesh = getMesh(groupEntityId)!;
+    const merged = groupMesh.geometry as MergedGeometry;
+    const indexBefore = Array.from(merged.index!.array);
+
+    // The box without tangents mirrored and turned: its computed tangents turn, w and the
+    // winding flip
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.7);
+    world.setTransform(members[1], { pos: { x: 3, y: 1, z: 0 }, rot: q });
+    setScale(members[1], -1, 2, 1);
+    updateMergeMember(members[1]);
+    expectSameGeometry(merged, getFreshMerge(groupMesh, members));
+    const range = merged.userData.mergeParts[1];
+    expect(merged.index!.updateRanges).toEqual([
+      { start: range.indexStart, count: range.indexCount },
+    ]);
+
+    // Mirrored back: the winding as it was
+    setScale(members[1], 1, 1, 1);
+    updateMergeMember(members[1]);
+    expectSameGeometry(merged, getFreshMerge(groupMesh, members));
+    expect(Array.from(merged.index!.array)).toEqual(indexBefore);
+  });
+
+  test('grows the bounds and measures the spatial radius again only when it moved out', async () => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const members = [createBox(0), createBox(4)];
+    addToMergeGroup(groupId, members);
+    await buildPendingMergeGroupsAsync();
+    const merged = getMesh(groupEntityId)!.geometry;
+    const rejoins = vi.fn();
+    const remove = world.removeComponent.bind(world);
+    const spy = vi.spyOn(world, 'removeComponent').mockImplementation((id, type) => {
+      if (id === groupEntityId && type === ComponentType.SPATIAL_INDEXED) rejoins();
+      return remove(id, type);
+    });
+
+    // Inside the bounds: nothing grows
+    world.setTransform(members[1], { pos: { x: 3.5, y: 1, z: 0 } });
+    updateMergeMember(members[1]);
+    expect(rejoins).not.toHaveBeenCalled();
+
+    world.setTransform(members[1], { pos: { x: 12, y: 1, z: 0 } });
+    updateMergeMember(members[1]);
+    spy.mockRestore();
+    expect(rejoins).toHaveBeenCalledTimes(1);
+    expect(world.hasComponent(groupEntityId, ComponentType.SPATIAL_INDEXED)).toBe(true);
+    // In group space (the mesh at x 2): the moved box's far side at 12.5
+    expect(merged.boundingBox!.max.x).toBeCloseTo(10.5, 6);
+    const far = new THREE.Vector3(10.5, 0.5, 0.5);
+    expect(merged.boundingSphere!.containsPoint(far)).toBe(true);
+  });
+
+  test('reads the pose from a typed transform store', async () => {
+    const typedWorld = new ECSWorld({ id: 'mergeTypedWorld', storageMode: 'TYPED_ARRAY' });
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId }, typedWorld);
+    const members = [0, 2].map((x) =>
+      createMeshEntity(
+        { geo: 'mergeTestBox', mat: 'mergeTestMat', position: { x } },
+        { world: typedWorld }
+      )
+    );
+    addToMergeGroup(groupId, members, typedWorld);
+    await buildPendingMergeGroupsAsync(typedWorld);
+
+    typedWorld.setTransform(members[0], { pos: { x: -3, y: 0, z: 0 } });
+    updateMergeMember(members[0], typedWorld);
+    const groupMesh = typedWorld.getComponent(groupEntityId, ComponentType.OBJECT3D)!
+      .value as THREE.Mesh;
+    const merged = groupMesh.geometry as MergedGeometry;
+    // The group at x 1: the moved box spans -4.5 … -3.5 in its space
+    merged.computeBoundingBox();
+    expect(merged.boundingBox!.min.x).toBeCloseTo(-4.5, 6);
+    ECSWorld.deleteWorld(typedWorld.id);
+  });
+
+  test('drops a running worker build, which builds again from the new pose', async () => {
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const sphere = createMeshEntity({
+      geo: new THREE.SphereGeometry(1, 300, 300),
+      mat: 'mergeTestMat',
+      position: { x: 0 },
+    });
+    addToMergeGroup(groupId, [sphere]);
+    const build = buildPendingMergeGroupsAsync();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    world.setTransform(sphere, { pos: { x: 5, y: 0, z: 0 } });
+    updateMergeMember(sphere);
+    await releaseWorkerBuildsAsync();
+    await build;
+    expect(getMesh(groupEntityId)).toBeUndefined();
+
+    const next = buildPendingMergeGroupsAsync();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await releaseWorkerBuildsAsync();
+    await next;
+    expect(getMesh(groupEntityId)!.position.x).toBeCloseTo(5, 6);
+  });
+
+  test('warns for a non-member, and builds again for a member whose geometry changed', async () => {
+    const box = createBox(0);
+    updateMergeMember(box);
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining("isn't in a merge group"));
+
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId });
+    addToMergeGroup(groupId, [box, createBox(2)]);
+    await buildPendingMergeGroupsAsync();
+    getMesh(box)!.geometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2);
+    updateMergeMember(box);
+    expect(fns.lwarn).toHaveBeenLastCalledWith(expect.stringContaining('builds again'));
+    await buildPendingMergeGroupsAsync();
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    expect(group.rebuilds).toBe(2);
   });
 });
 

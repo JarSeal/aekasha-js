@@ -4,6 +4,7 @@ export {
   dissolveMergeGroup,
   getMergeGroupOf,
   rebuildMergeGroup,
+  updateMergeMember,
 } from './MergeGroups';
 export type { CreateMergeGroupOptions } from './MergeGroups';
 export type { MergeGroupData, MergeGroupSettings, MergeMemberData } from './MergeTypes';

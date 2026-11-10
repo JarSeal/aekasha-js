@@ -41,6 +41,8 @@ export type MergeGroupData = {
   /** Counts the builds started, so an async build that finishes after a newer one started is
    * dropped. */
   _buildToken: number;
+  /** A worker build is running (its token is `_buildToken`). */
+  _isBuilding: boolean;
 };
 
 /**
@@ -57,4 +59,7 @@ export type MergeMemberData = {
   /** Whether it was in the `DEFAULT` spatial domain (`SPATIAL_INDEXED`) when it was merged: it
    * leaves it while merged and gets it back when it leaves the group. */
   _wasSpatialIndexed: boolean;
+  /** The world matrix its range in the merged geometry was written with (its build, or its last
+   * `updateMergeMember`). */
+  _bakedMatrix: THREE.Matrix4;
 };
