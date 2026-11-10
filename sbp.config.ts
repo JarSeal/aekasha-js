@@ -53,6 +53,9 @@ const profiles: SbpProfile[] = [
         '_engine/features/instancing': 5 * KIB,
         '_engine/features/lines': 6 * KIB,
         '_engine/features/lod': 7 * KIB,
+        // p372 Phase 1: the merge groups' API, hooks and build system (1.9 KiB gzip, two modules);
+        // the merge itself (`GeometryMerge.js`) loads with the first build
+        '_engine/features/merging': 3 * KIB,
         '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,

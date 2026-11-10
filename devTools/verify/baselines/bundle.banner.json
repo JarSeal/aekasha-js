@@ -30,8 +30,8 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 971247,
-      "gzip": 271183
+      "bytes": 971449,
+      "gzip": 271239
     },
     "assets/banner.js": {
       "bytes": 483,
@@ -39,7 +39,7 @@
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 285
+      "gzip": 284
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -79,11 +79,11 @@
     },
     "assets/GeometryMerge.js": {
       "bytes": 7117,
-      "gzip": 2989
+      "gzip": 2990
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1854,
-      "gzip": 831
+      "gzip": 829
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1859,
@@ -99,11 +99,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 15942,
-      "gzip": 6419
+      "gzip": 6421
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24497
+      "gzip": 24496
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -127,7 +127,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 182
+      "gzip": 181
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -135,14 +135,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 209
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 995346,
-    "gzip": 277499
+    "minified": 995560,
+    "gzip": 277572
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -158,17 +158,17 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2427,
-      "gzip": 1075
+      "gzip": 1079
     },
     "_engine/kernel/ecs": {
       "modules": 6,
-      "minified": 24953,
-      "gzip": 7071
+      "minified": 25124,
+      "gzip": 7125
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7286,
-      "gzip": 3130
+      "minified": 7329,
+      "gzip": 3145
     },
     "_engine/kernel/input": {
       "modules": 1,

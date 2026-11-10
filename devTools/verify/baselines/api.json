@@ -782,6 +782,28 @@
     "src/_engine/features/lod/worker/AssetsSwitchSimplify.ts": {
       "assetsSwitchSimplify": "Function"
     },
+    "src/_engine/features/merging/MergeEligibility.ts": {
+      "getMergeRefusal": "Function"
+    },
+    "src/_engine/features/merging/MergeGroups.ts": {
+      "addToMergeGroup": "Function",
+      "buildPendingMergeGroupsAsync": "Function",
+      "createMergeGroup": "Function",
+      "CreateMergeGroupOptions": "TypeAlias",
+      "dissolveMergeGroup": "Function",
+      "getMergeGroupOf": "Function",
+      "installMergeGroups": "Function",
+      "rebuildMergeGroup": "Function",
+      "WORKER_BUILD_VERTICES": "Variable"
+    },
+    "src/_engine/features/merging/MergeTypes.ts": {
+      "MergeGroupData": "TypeAlias",
+      "MergeGroupSettings": "TypeAlias",
+      "MergeMemberData": "TypeAlias"
+    },
+    "src/_engine/features/merging/MergingFeature.ts": {
+      "merging": "Function"
+    },
     "src/_engine/features/physics/backends/Engines.ts": {
       "ENGINES": "Variable"
     },
@@ -5015,6 +5037,18 @@
       "setLodFadeSeconds",
       "setLodMaxSelectionsPerFrame",
       "simplifyLodChain"
+    ],
+    "aekasha/merging": [
+      "CreateMergeGroupOptions",
+      "MergeGroupData",
+      "MergeGroupSettings",
+      "MergeMemberData",
+      "addToMergeGroup",
+      "createMergeGroup",
+      "dissolveMergeGroup",
+      "getMergeGroupOf",
+      "merging",
+      "rebuildMergeGroup"
     ],
     "aekasha/physics": [
       "ColliderAPI",

@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -192,13 +192,98 @@ faceIndex)` (p373 D4) maps the hit to its member.
 
 ## 8. Phases
 
-### Phase 1 — Components and runtime API (§2, §3)
+### Phase 1 — Components and runtime API (§2, §3) — done
 
 The `merging()` feature (its install, entry, a `sbp.config.ts` budget line), components,
 `TAG_MERGED` in the reconcile, `createMergeGroup` / `addToMergeGroup` / `dissolveMergeGroup`, the
 build system, unit tests next to the modules. **Exit:** 200 `testDebugScene` boxes with one
 material in one group: one draw (profiler), same image as unmerged, dissolving restores 200
 draws; without `merging()` in `features` the app's first download is unchanged (`yarn sbp`).
+
+As built (2026-11-10):
+
+- The feature: `features/merging/` with `MergingFeature.ts` (`merging()`, id `merging`),
+  `index.ts` (`aekasha/merging`: the alias in `devTools/aliases.ts` and `tsconfig.json`,
+  `ENGINE_FEATURE_FACTORIES`), `MergeTypes.ts`, `MergeGroups.ts` (the API, the hooks, the build
+  system, the install) and `MergeEligibility.ts` (§5's checks). The template lists it twelfth,
+  after `streaming()` (`src/index.ts`, `InitEngine`'s example); the docs that say "eleven" are
+  Phase 5's.
+- Kernel: `MERGE_GROUP`, `MERGE_MEMBER` and `TAG_MERGED` are kernel component types
+  (`ECSCoreComponents.ts`, the data types `import type` from `MergeTypes.ts`, as `LOD`'s);
+  `TAG_MERGED` is the sixth reason in `reconcileObject3DVisibility` (after p353's
+  `TAG_DRAW_HELD`), its hooks `merging()`'s; `APP_RENDER_SYNC_ORDER.MERGE_BUILD = 0.5`.
+- API (§3), with these differences:
+  - `createMergeGroup({ id, castShadow?, receiveShadow?, persistent? }, world?)`: `persistent`
+    in place of `sceneId` (§4.1's "`sceneId: undefined`" is `persistent: true`). A group goes
+    with the scene it was created in (`MANAGED_BY { manager: 'MERGE', ownerId: <scene id>, role:
+    'group' }`, appId `mergeGroup:<id>`); a persistent one gets `PERSISTENT` and takes persistent
+    members. `castShadow` / `receiveShadow` default to the first member's. A taken id throws.
+  - `addToMergeGroup` makes the group with default settings on first use (as §4.1 says of
+    `"<groupId>"`). A member gets `MERGE_MEMBER` (`partIndex` -1) when it joins, so
+    `getMergeGroupOf` answers before the build; `TAG_MERGED` and leaving the spatial index at the
+    build that includes it.
+  - Also in Phase 1: `rebuildMergeGroup` and `getMergeGroupOf`. Without `merging()` every one
+    throws, naming the feature (as `createLines`). `buildPendingMergeGroupsAsync(world?)`
+    (`@internal`) builds what's pending now, awaiting worker builds: Phase 3's scene step.
+- The group entity has no mesh until its first build (the material is the first member's, kept as
+  `MergeGroupData._material`): the build adds `OBJECT3D` and `TAG_IS_MESH` (so `disposeMesh`
+  releases its refs on delete), the material's ref and `SPATIAL_INDEXED`. The mesh sits at the
+  centre of the members' world bounds, the members baked relative to it (`TRANSFORM` set too):
+  `spatial()`'s mesh radius is measured from the mesh's origin, so a world-space merge at the
+  origin would get a radius reaching from there. Each build re-joins the spatial index (remove
+  and add `SPATIAL_INDEXED`) so the radius is measured again.
+- The geometry is registered as `mergeGroup:<id>` (`#<rebuilds>` appended only when something
+  else still holds the previous one under the id), never persistent: the group mesh's ref keeps
+  it through a scene release, and a persistent registration would outlive a dissolve. A rebuild
+  releases the previous one (its last ref disposes it).
+- Builds: the merge code (`GeometryMerge.ts`) loads with an `import()` on the first pending
+  group, so the build system's first run with one only starts the load and the next run builds;
+  then `mergeGeometryParts` up to `WORKER_BUILD_VERTICES` (65 536, `@internal`, a constant, not
+  a setting), `mergeGeometryPartsAsync` above, members drawn on their own until it's in. A worker
+  result is dropped when a newer build started (`_buildToken`), the group was deleted or a
+  member left meanwhile. A build with no members left takes the mesh out of the scene (a
+  persistent group whose members went with their scene).
+- Phase 1's membership changes: a deleted member (`MERGE_MEMBER`'s `onDeleteEntity`) marks the
+  group pending and the next build leaves it out; until then the old mesh still draws it (a
+  frame, or a worker build's time; Phase 2's collapse replaces this). A disabled member is
+  merged as it is (Phase 2). Dissolving deletes the group entity, whose `onDeleteEntity` lets the
+  members go (`TAG_MERGED` and `MERGE_MEMBER` removed, `SPATIAL_INDEXED` back if it had it).
+- Refusals (§5) in `addToMergeGroup`, each a warning naming the entity and the reason, plus: a
+  material other than the group's, an entity already in a group, a `PHYSICS_SIM_TIER` (a
+  tier-frozen dynamic body, in `BODY_STATIC`), a persistent entity in a group that isn't, an
+  attribute whose item size differs from the group's first member's (the merge would throw).
+- Tests: `MergeGroups.test.ts` (in Node: `TAG_MERGED` with the other reasons; a build's
+  placement, bounds, part indices and refs; a late member; a rebuild; dissolving; a deleted
+  member; both scene exits; the refusals; a held worker build and a stale one dropped, with
+  `GeometryMerge.ts`' async merge mocked; the system's lazy load and its order).
+- The check (`testDebugScene`, `createMergeGroupCheck`): 200 boxes of `p372_gridMat` (the
+  checker), each turned its own way, in two 10 × 10 blocks left and right of the rows, in the
+  group `p372_grid`; no shadows, so one pass. Measured 2026-11-10 in Chrome on macOS, prod test,
+  from a `LATE_MAIN` system after the render (`renderer.info.render`, as the profiler reads it):
+  37 draws merged, 236 after `dissolveMergeGroup('p372_grid')`, 64 151 triangles both; the two
+  snapshots differ in 3 of 700 000 pixels by 1 level (WebGL2: the same counts, 7 pixels by 1).
+- GPU memory (§10's third risk), checked through three's geometry map on both backends: 20
+  members merged before any frame drew them (`buildPendingMergeGroupsAsync` right after adding
+  them) never had their own geometry uploaded. The grid's box geometry was uploaded: the members
+  drew on their own in the frames before the first build (the merge code's `import()`), and three
+  keeps a geometry's buffers until it's disposed. **For Phase 3:** the scene step must build
+  before the load's first frame that would draw the members (or hold them from drawing until
+  then), or every scene-loaded group carries both copies.
+- `yarn sbp --profile all`: `_engine/features/merging` is 1.9 kB gzip in the app's first
+  download (two modules; budget 3 KiB, `sbp.config.ts`), `GeometryMerge.js` still lazy; the
+  banner and UI kit embeds, which don't list `merging()`, unchanged but for the kernel's part in
+  every build (the three component keys, the reconcile's check, `MERGE_BUILD`: +202 B, 56 B gzip,
+  in their main chunk).
+- Baselines (2026-11-10): `yarn verify:scenes` before the update failed only on what this phase
+  changes (`mergeGroupBuildSystem@0.5` in every scene's system order; `testDebugScene`'s
+  snapshot, only at the two grid blocks, and its debugger shots of the Assets tab, the
+  profiler's Objects and GPU memory and About) and on the local baseline's age (most scenes
+  recorded at `d4decbdf`, before p353: `streamingSystem`, the Streaming tab, the gym's LOD tab;
+  `streamingPhysics` had none); no hash, character path or console error changed, and
+  `exampleSkyBox`'s one `workerSab` snapshot difference (a few pixels of a highlight) passed when
+  run again. Then `yarn verify:scenes --update` (132 runs recorded) and `yarn verify:baselines
+  --update`: `api.json` (the entry `aekasha/merging`, its exports), `docs.json` (merging 14 / 14
+  documented), the three `bundle*.json`; no debug code in any build.
 
 ### Phase 2 — In-place updates (§3)
 

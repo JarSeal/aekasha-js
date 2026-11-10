@@ -16113,7 +16113,7 @@
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",
-      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart.",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group.",
       "cameras": [
         {
           "camProps": {
