@@ -288,6 +288,7 @@ const resolveImportedAssets = (run: SceneRun) => {
     setGeneratedFields(ctx, importData, 'importedAsset', jsonFile);
     ship.checkAsset(importData, 'importedAsset', jsonFile, sceneId);
     delete importData.optimize; // Build time only (p300)
+    delete importData.merge; // Build time only (p371 D3)
     delete importData.__sourcePath;
     delete importData.__saveData;
     return importData;

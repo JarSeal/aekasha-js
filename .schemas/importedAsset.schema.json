@@ -41,6 +41,17 @@
       ],
       "description": "The asset pipeline's settings: a profile plus texture and mesh overrides, or false to keep the file as it is."
     },
+    "merge": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema86"
+        },
+        {
+          "$ref": "#/definitions/__schema87"
+        }
+      ],
+      "description": "Build time only: the asset pipeline joins the file's static pieces into __merged nodes (physics, skinned, animated and excluded nodes stay as they are)."
+    },
     "__sourcePath": {
       "type": "string",
       "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
@@ -49,7 +60,7 @@
       "description": "Set by the gatherer: the file's bytes on disk (not a .gltf's external buffers).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema86"
+          "$ref": "#/definitions/__schema90"
         }
       ]
     },
@@ -57,7 +68,7 @@
       "description": "Set by the gatherer: the pipeline's output.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema87"
+          "$ref": "#/definitions/__schema91"
         }
       ]
     },
@@ -65,7 +76,7 @@
       "description": "Set by the gatherer: the source as the dev server serves it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema88"
+          "$ref": "#/definitions/__schema92"
         }
       ]
     },
@@ -73,7 +84,7 @@
       "description": "Set by the gatherer: the download in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema89"
+          "$ref": "#/definitions/__schema93"
         }
       ]
     },
@@ -81,7 +92,7 @@
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema89"
+          "$ref": "#/definitions/__schema93"
         }
       ]
     },
@@ -89,7 +100,7 @@
       "description": "Set by the gatherer: the GLB's LOD chains per primitive.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema90"
+          "$ref": "#/definitions/__schema94"
         }
       ]
     },
@@ -97,7 +108,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema92"
+          "$ref": "#/definitions/__schema96"
         }
       ]
     }
@@ -932,15 +943,55 @@
       "$ref": "#/definitions/__schema84"
     },
     "__schema86": {
-      "type": "number"
+      "type": "boolean",
+      "const": true
     },
     "__schema87": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "BY_MATERIAL: one node per glTF material (__merged_<material>), the default. ALL: one node (__merged).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema88"
+            }
+          ]
+        },
+        "exclude": {
+          "description": "Node names (globs: *, ?, {a,b}) kept as they are, with their children.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema89"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "__schema88": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+        "BY_MATERIAL",
+        "ALL"
+      ]
     },
     "__schema89": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema90": {
+      "type": "number"
+    },
+    "__schema91": {
+      "type": "string"
+    },
+    "__schema92": {
+      "type": "string"
+    },
+    "__schema93": {
       "type": "object",
       "properties": {
         "in": {
@@ -958,7 +1009,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema90": {
+    "__schema94": {
       "type": "array",
       "items": {
         "type": "object",
@@ -987,7 +1038,7 @@
           "levels": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/__schema91"
+              "$ref": "#/definitions/__schema95"
             },
             "description": "Each level's triangles and error, the base first."
           }
@@ -1002,7 +1053,7 @@
         "additionalProperties": false
       }
     },
-    "__schema91": {
+    "__schema95": {
       "type": "object",
       "properties": {
         "triangles": {
@@ -1020,7 +1071,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema92": {
+    "__schema96": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -1034,16 +1085,16 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "$ref": "#/definitions/__schema93"
-                },
-                "engineVersion": {
-                  "$ref": "#/definitions/__schema95"
-                },
-                "toolkitVersion": {
                   "$ref": "#/definitions/__schema97"
                 },
+                "engineVersion": {
+                  "$ref": "#/definitions/__schema99"
+                },
+                "toolkitVersion": {
+                  "$ref": "#/definitions/__schema101"
+                },
                 "appVersion": {
-                  "$ref": "#/definitions/__schema98"
+                  "$ref": "#/definitions/__schema102"
                 }
               },
               "additionalProperties": false,
@@ -1082,42 +1133,42 @@
         }
       }
     },
-    "__schema93": {
+    "__schema97": {
       "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema94"
-        }
-      ]
-    },
-    "__schema94": {
-      "type": "number"
-    },
-    "__schema95": {
-      "description": "The engine's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema96"
-        }
-      ]
-    },
-    "__schema96": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
-    "__schema97": {
-      "description": "The toolkit's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema96"
+          "$ref": "#/definitions/__schema98"
         }
       ]
     },
     "__schema98": {
+      "type": "number"
+    },
+    "__schema99": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema100"
+        }
+      ]
+    },
+    "__schema100": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema101": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema100"
+        }
+      ]
+    },
+    "__schema102": {
       "description": "The app's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema96"
+          "$ref": "#/definitions/__schema100"
         }
       ]
     }

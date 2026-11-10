@@ -136,8 +136,8 @@ describe('the asset JSONs fit their runtime types', () => {
   test('imported asset (*.importedAsset.json) → ImportAssetParams', () => {
     expectTypeOf<WithImportTexOpts<ImportedAsset>>().toExtend<ImportAssetParams>();
     expectTypeOf<ExtraKeys<ImportedAsset, ImportAssetParams>>().toEqualTypeOf<
-      // Build time and the Assets tab only: the gatherer drops `optimize`
-      ToolingKeys | 'optimize' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
+      // Build time and the Assets tab only: the gatherer drops `optimize` and `merge`
+      ToolingKeys | 'optimize' | 'merge' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
     >();
   });
 
