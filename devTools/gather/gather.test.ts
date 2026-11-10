@@ -316,6 +316,34 @@ describe('p371 D2: a MERGED geometry’s parts', () => {
   });
 });
 
+describe('p371 D3: an import’s merge', () => {
+  const kit = (fileName: string) => ({
+    'app/kit.importedAsset.json': { id: 'kit', fileName, merge: { exclude: ['door_*'] } },
+  });
+
+  it('is build time only: the generated import has none', () => {
+    const files = {
+      ...scene('s', { importedAssets: ['kit'] }),
+      ...kit('/debugger/assets/testModels/box01.glb'),
+    };
+    const { isGathered, scene: getScene } = gather(files);
+    expect(isGathered).toBe(true);
+    const [imported] = getScene('s')?.importedAssets as Record<string, unknown>[];
+    expect(imported).toMatchObject({ id: 'kit' });
+    expect(imported).not.toHaveProperty('merge');
+  });
+
+  it('fails the gather for a remote file, which the pipeline doesn’t read', () => {
+    const files = {
+      ...scene('s', { importedAssets: ['kit'] }),
+      ...kit('https://example.com/kit.glb'),
+    };
+    expect(gather(files).isGathered).toBe(false);
+    const withoutMerge = { id: 'kit', fileName: 'https://example.com/kit.glb' };
+    expect(gather({ ...files, 'app/kit.importedAsset.json': withoutMerge }).isGathered).toBe(true);
+  });
+});
+
 describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
   const crate = {
     'app/crate.mesh.json': {

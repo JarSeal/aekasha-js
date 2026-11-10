@@ -45,6 +45,8 @@ type SourcedAsset = {
   fileName?: string;
   path?: string;
   optimize?: AssetOptimize;
+  /** An imported asset's (p371 D3): only a file the pipeline reads can be merged */
+  merge?: unknown;
   pack?: TexturePack;
   useHDRLoader?: boolean;
   __saveData?: Record<string, { fileName?: string; path?: string }[] | undefined>;
@@ -105,6 +107,9 @@ export const checkAssetSources = (
     if (!fileName) continue;
     const source = resolveAssetSource({ jsonFile: fullPath, fileName, path: urlPath });
     let error = 'error' in source ? source.error : undefined;
+    if (!('error' in source) && source.kind === 'remote' && data.merge) {
+      error = `"merge" is set, but a remote file ("${fileName}") isn't merged: the asset pipeline only reads local ones`;
+    }
     if (!('error' in source) && data.optimize) {
       if (source.kind === 'remote') {
         error = `"optimize" is set, but a remote file ("${fileName}") can't be optimized`;

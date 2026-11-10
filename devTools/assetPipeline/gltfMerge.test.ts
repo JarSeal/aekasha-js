@@ -1,6 +1,7 @@
 import { Accessor, Document, Logger, NodeIO, type Material, type Node } from '@gltf-transform/core';
 import { describe, expect, it } from 'vitest';
-import { mergeGLTFNodes, resolveMergeOptions, type ResolvedMergeOptions } from './gltfMerge';
+import { mergeGLTFNodes } from './gltfMerge';
+import { resolveMergeOptions, type ResolvedMergeOptions } from './gltfMergeOptions';
 
 // One triangle per piece: (0,0,0), (1,0,0), (0,1,0), facing +z
 const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 1, 0];

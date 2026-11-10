@@ -15,8 +15,8 @@ import {
   prune,
 } from '@gltf-transform/functions';
 import { Matrix3, Matrix4, Vector3, Vector4 } from 'three';
-import type { ImportedAssetMerge } from '../../src/_engine/schemas';
 import { globToRegExp } from './glob';
+import type { GLTFMergeStats, ResolvedMergeOptions } from './gltfMergeOptions';
 
 /**
  * The GLB step's `merge` (p371 D3): joins a file's static pieces into one node per glTF material
@@ -32,42 +32,6 @@ import { globToRegExp } from './glob';
  * import root's space, and joined with `joinPrimitives`: a kept node keeps its place, name,
  * transform and parent, and a merged node is a child of the import root with no transform.
  */
-
-/**
- * Bump when what the step writes changes for the same file and options: the cache key has it
- * (only for a JSON with `merge`).
- */
-export const GLTF_MERGE_VERSION = 1;
-
-/** `merge` with its defaults */
-export type ResolvedMergeOptions = { mode: 'BY_MATERIAL' | 'ALL'; exclude: string[] };
-
-/** A merged node, as the lock records it */
-export type MergedNodeStats = {
-  /** The node's name in the file: the import's geometry id is `<importId>/<name>` */
-  name: string;
-  /** The glTF material's name (`material<index>` when it has none), null for none; `ALL`'s is
-   * its first piece's */
-  material: string | null;
-  /** The primitives joined (a mesh two nodes use counts twice) */
-  parts: number;
-  vertices: number;
-  triangles: number;
-};
-
-/** What the step did, as the lock records it */
-export type GLTFMergeStats = {
-  mode: ResolvedMergeOptions['mode'];
-  merged: MergedNodeStats[];
-  /** Mesh nodes kept as they are, by reason (a kept node's descendants count as kept too) */
-  kept: { excluded: number; physics: number; unsupported: number };
-};
-
-/** The defaults of `merge` (`true`, or an object's missing keys) */
-export const resolveMergeOptions = (merge: ImportedAssetMerge): ResolvedMergeOptions =>
-  merge === true
-    ? { mode: 'BY_MATERIAL', exclude: [] }
-    : { mode: merge.mode ?? 'BY_MATERIAL', exclude: merge.exclude ?? [] };
 
 /** GLTFLoader's name rule (`PropertyBinding.sanitizeNodeName`): a node's id is this */
 const sanitizeName = (name: string) => name.replace(/\s/g, '_').replace(/[[\].:/]/g, '');

@@ -18,7 +18,8 @@ import type { ResolvedLodChainOptions } from '../../src/_engine/features/lod/Lod
 import type { TextureSlot } from '../../src/_engine/schemas';
 import { readImageFile, resizeImage } from './images';
 import type { KtxProvider } from './ktxEncode';
-import { mergeGLTFNodes, type GLTFMergeStats, type ResolvedMergeOptions } from './gltfMerge';
+import { mergeGLTFNodes } from './gltfMerge';
+import type { GLTFMergeStats, ResolvedMergeOptions } from './gltfMergeOptions';
 import { buildLodChains, type BuiltLodChain } from './lodChains';
 import { getLogicalPath, writeOutput, type PipelineOutput } from './outputs';
 import type { ResolvedAssetSettings, ResolvedMeshSettings } from './settings';
