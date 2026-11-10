@@ -26,12 +26,12 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 970091,
-      "gzip": 270741
+      "bytes": 970112,
+      "gzip": 270753
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 336
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -67,7 +67,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3100
+      "gzip": 3099
     },
     "assets/GeometryTransfer.js": {
       "bytes": 4096,
@@ -75,15 +75,15 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47086,
-      "gzip": 14017
+      "gzip": 14018
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1631
+      "gzip": 1632
     },
     "assets/ImportRegistry.js": {
       "bytes": 16663,
-      "gzip": 6707
+      "gzip": 6705
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
@@ -111,7 +111,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 183
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -119,14 +119,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 208
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 65,
-    "minified": 994283,
-    "gzip": 277148
+    "minified": 994305,
+    "gzip": 277177
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -146,8 +146,8 @@
     },
     "_engine/kernel/ecs": {
       "modules": 6,
-      "minified": 24920,
-      "gzip": 7063
+      "minified": 24953,
+      "gzip": 7071
     },
     "_engine/kernel/init": {
       "modules": 5,
@@ -181,8 +181,8 @@
     },
     "_engine/kernel/scene": {
       "modules": 7,
-      "minified": 10848,
-      "gzip": 4054
+      "minified": 10837,
+      "gzip": 4075
     },
     "_engine/ui": {
       "modules": 3,

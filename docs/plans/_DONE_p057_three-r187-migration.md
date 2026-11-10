@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-5; Phase 4 step 4, posting the two upstream reports, left: p990)
 Category: Rendering, Dependencies
-Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
+Related: \_DONE_p056_three-bind-group-cache-light-leak.md (fixed by this plan's Phase 1), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (D3's better fix), p311_sky-box-ktx2-cube-textures.md (r187's compressed cube support), p350_lod-system-research.md, \_DONE_p354_gpu-driven-culling.md, p375_batched-mesh-batches.md, p302_material-and-texture-system-refactor.md (r187 features noted there)
 
 # Three r187 Migration — Plan
 

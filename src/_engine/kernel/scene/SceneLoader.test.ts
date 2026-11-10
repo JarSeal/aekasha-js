@@ -115,6 +115,7 @@ import {
   getNextSceneId,
   isCurrentlyLoading,
   loadScene,
+  runWhenSceneLoadSettled,
   type LoadSceneProps,
 } from './SceneLoader';
 
@@ -310,5 +311,45 @@ describe("loadScene: the scene data's cameras", () => {
     setScene('noCamera', undefined, { cameras: [] });
     await expect(loadScene({ sceneId: 'noCamera' })).resolves.toBe(false);
     expect(isCurrentlyLoading()).toBe(false);
+  });
+});
+
+describe('runWhenSceneLoadSettled (p354 Phase 5 step 6)', () => {
+  it('runs at once outside a load, and after a load settles inside one, once, the other hooks too', async () => {
+    const runs: string[] = [];
+    runWhenSceneLoadSettled(() => runs.push('idle'));
+    expect(runs).toEqual(['idle']);
+
+    // Asked for by the scene code: after the load's lights and meshes, its entered hooks and its end
+    const settled: string[] = [];
+    const removeHooks = addSceneHooks({
+      entered: () => void runs.push('entered'),
+      loadSettled: () => void settled.push('other'),
+    });
+    setScene('settleA', () => {
+      runWhenSceneLoadSettled(() => runs.push('first'));
+      runWhenSceneLoadSettled(() => runs.push('second'));
+    });
+    await expect(loadScene({ sceneId: 'settleA' })).resolves.toBe(true);
+    expect(runs).toEqual(['idle', 'entered', 'first', 'second']);
+    // Each removed itself without skipping the hook after it
+    expect(settled).toEqual(['other']);
+
+    // Once: the next load runs them no more
+    setScene('settleB');
+    await loadScene({ sceneId: 'settleB' });
+    expect(runs).toEqual(['idle', 'entered', 'first', 'second', 'entered']);
+    expect(settled).toEqual(['other', 'other']);
+    removeHooks();
+  });
+
+  it('runs after a failed load too', async () => {
+    const runs: string[] = [];
+    setScene('settleFailing', () => {
+      runWhenSceneLoadSettled(() => runs.push('after'));
+      throw new Error('scene code failed');
+    });
+    await expect(loadScene({ sceneId: 'settleFailing' })).resolves.toBe(false);
+    expect(runs).toEqual(['after']);
   });
 });

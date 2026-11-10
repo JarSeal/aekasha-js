@@ -60,8 +60,10 @@ import { isAllowed, type LoadContext, runOne } from './sceneRun';
 import {
   checkCrossTargetHashes,
   getSceneConfigs,
+  getSceneTargets,
   parseSceneRunArgs,
-  selectScenes,
+  type SceneTarget,
+  selectTargets,
 } from './sceneSelect';
 
 const GENERATED_DATA = path.join(ROOT, 'src/generated/generatedAppData.json');
@@ -182,9 +184,17 @@ const main = async () => {
   const dataHashAtStart = readDataHash();
   const generated = readJSON<{ scenes: Record<string, unknown> }>(GENERATED_DATA);
   if (!generated) fail(`Can't read ${path.relative(ROOT, GENERATED_DATA)}: run yarn gatherAppData`);
-  const selected = selectScenes(Object.keys(generated.scenes), args.only);
+  let allTargets: SceneTarget[] = [];
+  try {
+    allTargets = Object.keys(generated.scenes).flatMap((id) =>
+      getSceneTargets(id, SCENE_VERIFY_CONFIG[id])
+    );
+  } catch (err) {
+    fail((err as Error).message);
+  }
+  const selected = selectTargets(allTargets, args.only);
   if ('error' in selected) fail(selected.error);
-  const sceneIds = selected.ids;
+  const { targets } = selected;
   // A scene renamed in the data would lose its settings (allowed errors, skips) without a word
   const unknown = Object.keys(SCENE_VERIFY_CONFIG).filter((id) => !(id in generated.scenes));
   if (unknown.length) {
@@ -227,7 +237,7 @@ const main = async () => {
   });
 
   out(
-    `Scene runner against ${baseUrl}: ${sceneIds.length} scene(s) × ${args.configs.join(', ')}, ` +
+    `Scene runner against ${baseUrl}: ${targets.length} scene(s) × ${args.configs.join(', ')}, ` +
       `${launched.label}${args.update ? ', recording baselines' : ''}`
   );
   out(`${DIM}Watch it: ${PROGRESS_LOG_WATCH}${RESET}\n`);
@@ -246,11 +256,11 @@ const main = async () => {
   const started = Date.now();
   let aborted: string | null = null;
   try {
-    for (const sceneId of sceneIds) {
+    for (const target of targets) {
       const sceneResults: RunResult[] = [];
-      for (const config of getSceneConfigs(args.configs, SCENE_VERIFY_CONFIG[sceneId])) {
+      for (const config of getSceneConfigs(args.configs, SCENE_VERIFY_CONFIG[target.sceneId])) {
         const isFirstPage = !ctx.backend;
-        const r = await runOne(ctx, sceneId, config);
+        const r = await runOne(ctx, target, config);
         // The SIGINT handler exits once the browser is closed
         if (isStopping) return;
         if (isFirstPage && ctx.backend && ctx.backend !== requested) {

@@ -11,7 +11,7 @@ import {
   measureLodEntity,
 } from '../LodMeasure';
 import { getLodBias, getLodDebugOptions, getLodFadeSeconds } from '../LodSettings';
-import { DEFAULT_LOD_HYSTERESIS } from '../LodSystem';
+import { DEFAULT_LOD_HYSTERESIS } from '../../../utils/LodRules';
 import type { LodData } from '../LodTypes';
 import {
   getKindWindowId,

@@ -3,6 +3,7 @@ import { lwarn } from 'aekasha';
 import type { ECSWorld, SceneData } from 'aekasha';
 import { DEFAULT_LOD_HYSTERESIS, getLodBias } from 'aekasha/lod';
 import type { LodDef } from 'aekasha/lod';
+import type { InstanceSet } from 'aekasha/instancing';
 
 // The LOD showcase's layout: lanes side by side along x, each running away from the start camera
 // along -z. A level is used while the screen size
@@ -45,6 +46,16 @@ export type ShowcaseLaneContext = {
   getSwitchDistances: (radius: number, def: LodDef) => number[];
 };
 
+/** A lane drawn by an instance set: no entities, so the demo tab reads the set instead. */
+export type ShowcaseLaneSet = {
+  set: InstanceSet;
+  /** Each instance's LOD centre (its origin, which the selection measures from), for the camera
+   * stops. */
+  centres: readonly THREE.Vector3[];
+  /** Each level's triangles, for the tab's count of what the set draws. */
+  levelTriangles: readonly number[];
+};
+
 /** What a lane hands back: the demo tab reads it. */
 export type ShowcaseLaneState = {
   /** Its entities (a pool's instances), most with a LOD. A function: a JSON mesh only exists
@@ -54,6 +65,11 @@ export type ShowcaseLaneState = {
   radius: number;
   /** The start camera's distances where its levels switch (and it hides). */
   switchDistances: number[];
+  /** The lane's instance set, when it draws one. */
+  instanceSet?: ShowcaseLaneSet;
+  /** The lane's description when it depends on how it was made (the backend a set chose), in
+   * place of `ShowcaseLane.description`. */
+  description?: string;
 };
 
 export type ShowcaseLane = {

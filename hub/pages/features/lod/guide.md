@@ -3,7 +3,8 @@
 List [`lod()`](api:lod), from `aekasha/lod`, in `InitEngine`'s `features` (see
 [How the app starts](hub:examples/quick-start#how-the-app-starts)), and
 [`instancing()`](api:instancing), from `aekasha/instancing`, for the instanced pools
-([Many instances](#many-instances)). Generating chains and impostors loads on first use.
+([Many instances](#many-instances)) and instance sets ([Instance sets](#instance-sets)).
+Generating chains and impostors, and a set's backend, load on first use.
 
 - Without `lod()`, a mesh's `lod` does nothing (`"AUTO"` warns once), and an import reads no
   prebuilt chains and builds none.
@@ -74,6 +75,109 @@ entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`
 ([`setLodMaxSelectionsPerFrame`](api:setLodMaxSelectionsPerFrame)) spreads it over frames when
 there are very many.
 
+## Instance sets
+
+A pool's cost grows with its instances: every instance is an entity, selected and synced on the
+CPU each frame, and an ECS world holds 100,000 entities by default. An instance set
+([`createInstanceSetAsync`](api:createInstanceSetAsync)) draws the same levels for instances
+that are plain data, with no entity per instance. On WebGPU a compute pass selects every
+instance's level with the pool's rules (screen size, hysteresis, cross-fades), frustum-culls it
+for each camera, and appends it to its level's list, and each level is an indirect draw that the
+pass wrote the count of. A hundred thousand or a million trees cost the CPU about the same.
+
+The `lodShowcase` lane next to the pool's draws the same trees as a set:
+
+<<< src/app/scenes/lodShowcase/lanes/instanceSetGrove.ts#instance-set-grove
+
+- The options are an instanced LOD pool's: the same `levels` and `lod`. `maxInstances` is sized
+  once, up to 16,777,216.
+- It's async because each backend loads on first use, and it resolves `null` when the scene
+  exited meanwhile.
+- Add `object` directly under the root scene: the instances are in world space. The set's
+  owning entity (`entityId`) disposes it, so a scene switch clears it like the rest of the scene.
+- `preWarm: true` compiles its shaders once `object` is in the scene, for a set made during
+  play. A set made by scene code needs none: the load's own frames build it.
+
+A set gives up what an entity gives a pool's instance: a `Transform`, the ECS visibility tags, a
+spatial domain, raycasts and gameplay asking whether an instance is visible. Its scale is
+uniform. Instances can move
+([`setInstanceMatrices`](api:InstanceSet.setInstanceMatrices), uploaded once a frame), but a set
+is meant for content that stays put: a sway or wind belongs in the material.
+
+### A pool or a set
+
+Take a set for static content past about 20-50k instances: a forest, a field of rocks, a
+scatter. Keep a pool for instances that gameplay addresses, and below about 20k, where a pool's
+selection and sync cost under 2 ms. Measured on the `instanceStress` scene's forest (three mesh
+levels and a cull, the camera circling inside it; a minified build, Apple M2, Chrome, WebGPU):
+
+| Trees | Pools: CPU / GPU frame | Set, CPU backend | Set, GPU backend |
+| --- | --- | --- | --- |
+| 5k | 1.50 / 1.97 ms | 0.60 / 1.63 ms | 0.49 / 1.25 ms |
+| 20k | 3.59 / 2.60 ms | 1.29 / 2.66 ms | 0.44 / 1.71 ms |
+| 100k | 15.92 / 5.08 ms | 2.70 / 7.04 ms | 0.54 / 2.92 ms |
+| 1M | 166 ms CPU | | 1.1 ms CPU |
+
+The 1M row is the CPU frame alone, from a run without the debug tools (which give the GPU
+figures); the pools there need an ECS world past its default size. With the sun's shadow the set's
+shadow costs about the same at any count (its shadow camera draws only the casting levels in its
+frustum): a GPU frame of 8.6 ms at 100k against the pools' 13.1.
+
+### Two backends
+
+`set.backend` says which one draws it, chosen by the renderer:
+
+- **`'GPU'` (WebGPU)**: the compute pass and the indirect draws above. The CPU does a few
+  dispatches and a draw per level and material group, per camera.
+- **`'CPU'` (WebGL2, which has no compute)**: the same set and the same rules in a loop over the
+  instances' arrays, without entities, and an `InstancedMesh` per level, as a pool has. It costs
+  about a tenth of the pool's CPU (12-20 ns an instance against 94-195 ns), and it draws what the
+  pool draws: the same levels, the same fades. three culls each level mesh as a whole, so past
+  about 20k instances spread around the camera it draws more than tiled pools do (the table's
+  GPU frame at 100k).
+
+### Every camera
+
+Every camera that renders the set draws it: the view, a light's shadow, a
+[viewport](hub:features/viewports), the debug camera and a [snapshot](hub:features/rendering#snapshots).
+On WebGPU each takes a slot on its first render (`maxSlots`, 8 by default) and culls the set
+against its own frustum, with the levels chosen for the main camera. A shadow's slot draws only
+the levels that cast. A render of another scene (an impostor or sky bake) costs the set nothing.
+
+### Ranges and streamed cells
+
+[`addInstances`](api:InstanceSet.addInstances) returns the instances' range, and
+[`removeInstances`](api:InstanceSet.removeInstances) frees it for a later add of its size or
+smaller. So one set can serve every cell of a [streamed world](hub:features/streaming#cell-content):
+each cell's content adds its range in `load` and removes it in `unload`, and returns no entity.
+A range doesn't fade in or out, so load the cells from a ring past the set's cull distance: a
+cell then loads before its instances would show, and unloads after the set has culled them.
+
+### Memory
+
+On the GPU backend a set keeps 72 bytes an instance (its matrices, cull spheres and state), plus
+its visible lists: `maxSlots` × levels × `maxVisible` × 4 bytes (6 MiB with the defaults and
+three levels). At a million instances that's 74.7 MB. The CPU backend's level meshes are each
+sized for every instance, about 65 MB a level at a million.
+
+### Seeing a set work
+
+three's draw and triangle counts leave out indirect draws. In debug mode the LOD tab's Instance
+sets folder shows each set instead: its backend and instances, each level's drawn and selected
+counts, culled, fading, past the visible budget, the triangles drawn and each camera drawing it.
+The tab's freeze, forced level and fade time scale drive sets too, and its "CPU backend (next
+sets)" box puts the next sets on the CPU backend on WebGPU, to compare both on one device. Each
+set is also a source in the GPU memory tab. From code,
+[`readInstanceSetStatsAsync`](api:readInstanceSetStatsAsync) reads the counts back (debug and
+prod test builds only).
+
+::: dev-only Measuring it
+The `instanceStress` scene draws its forest with pools, or with `?stressPath=gpu` a set, at
+`?stressInstances=N`. `npx tsx devTools/bench/instanceStress.ts` measures both paths at any
+count on a dev server or a `yarn build:test` build, and `devTools/bench/instanceStressLodTab.ts`
+drives the LOD tab on both and compares them. Their options are in each file's header.
+:::
+
 ## Impostors
 
 An impostor is a far level drawn with a few textured quads. Only the albedo, normals and depth
@@ -129,7 +233,7 @@ shows its live screen size and the distance of each switch.
 
 ::: scene lodShowcase
 **The full demo:** every LOD feature in its own lane, every level of every lane on screen from
-the start camera. Its LOD demo tab has camera stops on both sides of every switch and a dolly
+the start camera, an instanced pool's trees and the same trees as an instance set side by side. Its LOD demo tab has camera stops on both sides of every switch and a dolly
 down the lanes.
 :::
 
@@ -143,6 +247,8 @@ down the lanes.
 - [`generateLodChain`](api:generateLodChain).
 - [`createInstancedMeshPool`](api:createInstancedMeshPool) and
   [`createInstancedLodPool`](api:createInstancedLodPool).
+- [`createInstanceSetAsync`](api:createInstanceSetAsync) and
+  [`readInstanceSetStatsAsync`](api:readInstanceSetStatsAsync).
 - [`generateCrossQuads`](api:generateCrossQuads) and
   [`generateOctahedralImpostor`](api:generateOctahedralImpostor).
 - [`registerLodTarget`](api:registerLodTarget): levels for entities that aren't plain meshes.

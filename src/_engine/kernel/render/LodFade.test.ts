@@ -1,3 +1,4 @@
+import { uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,6 +9,7 @@ import {
   isDitherShown,
   LOD_FADE_OPAQUE,
   setLodObjectFade,
+  setObjectLodFadeNode,
   setObjectVisibilityFade,
 } from './LodFade';
 
@@ -18,8 +20,14 @@ type FadeAttributeNode = THREE.Node & {
 /** The mask's graph for `object`, as a build for it would set it up. */
 const setUpMask = (material: THREE.Material, object: THREE.Object3D) => {
   const mask = (material as THREE.Material & { maskNode: THREE.Node }).maskNode;
-  return mask.setup({ object } as unknown as THREE.NodeBuilder) as THREE.Node;
+  return mask.setup({ object, material } as unknown as THREE.NodeBuilder) as THREE.Node;
 };
+
+/** The graph's per-object fade pair (x the LOD fade, y the visibility fade). */
+const findObjectFadePairs = (root: THREE.Node) =>
+  findNodes(root, 'UniformNode').filter(
+    (node) => (node as THREE.UniformNode<'vec2', THREE.Vector2>).value instanceof THREE.Vector2
+  ) as THREE.UniformNode<'vec2', THREE.Vector2>[];
 
 /** The nodes of `type` in a graph. */
 const findNodes = (root: THREE.Node, type: string) => {
@@ -136,6 +144,53 @@ describe('LodFade', () => {
     expect(drawn(child)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
     clearObjectVisibilityFade(mesh);
     expect(drawn(copy)).toEqual([LOD_FADE_OPAQUE, LOD_FADE_OPAQUE]);
+  });
+
+  // p354 D8: an instance set's draws carry each drawn copy's fade in their list entries
+  it("reads an object's own fade node in place of its LOD fade, whatever material builds it", () => {
+    const material = createDitheredMaterial();
+    const fade = uniform(0.5);
+    const hasFade = (graph: THREE.Node) => {
+      let found = false;
+      graph.traverse((node) => {
+        if (node === fade) found = true;
+      });
+      return found;
+    };
+    // The shadow pass builds the object with its own material, which takes the source's mask
+    const shadowPass = new THREE.MeshBasicNodeMaterial();
+    for (const object of [
+      new THREE.Mesh(geometry, material),
+      new THREE.InstancedMesh(geometry, material, 2),
+    ]) {
+      setObjectLodFadeNode(object, fade);
+      for (const built of [material, shadowPass]) {
+        const graph = (material as THREE.Material & { maskNode: THREE.Node }).maskNode.setup({
+          object,
+          material: built,
+        } as unknown as THREE.NodeBuilder) as THREE.Node;
+        expect(findNodes(graph, 'LodFadeAttributeNode')).toHaveLength(0);
+        expect(hasFade(graph)).toBe(true);
+        // The pair is read for its visibility fade (y)
+        expect(findObjectFadePairs(graph).length).toBeGreaterThan(0);
+      }
+    }
+    // Another object on the same material keeps its own fades
+    expect(hasFade(setUpMask(material, new THREE.Mesh(geometry, material)))).toBe(false);
+  });
+
+  // p354 D4: a list entry's 8-bit fade (InstanceSetNodes.ts) rounds the progress once for both
+  // copies, so they still split the pixels exactly
+  it('splits the pixels exactly with fades rounded to 127 steps, as a list entry holds them', () => {
+    const noises = Array.from({ length: 2000 }, (_, i) => (i + 0.5) / 2000);
+    for (let t = 0; t <= 1; t += 1 / 97) {
+      const steps = Math.round(t * 127);
+      const incoming = (steps + 127 - 127) / 127;
+      const outgoing = (steps - 127) / 127;
+      for (const noise of noises) {
+        expect(isDitherShown(noise, incoming) !== isDitherShown(noise, outgoing)).toBe(true);
+      }
+    }
   });
 
   // p353 Phase 5 D5: a visibility fade ANDed with a LOD cross-fade on the same noise

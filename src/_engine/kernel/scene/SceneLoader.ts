@@ -40,6 +40,7 @@ import { setAssetOwnerScene } from '../assets/AssetOwners';
 import { createCameras, createNextSceneObject3Ds, loadNextSceneAssets } from './SceneDataLoader';
 import { releaseSceneOwnedAssets } from '../assets/SceneAssetRelease';
 import {
+  addSceneHooks,
   runSceneBeforeAssetsHooksAsync,
   runSceneCreatedHooksAsync,
   runSceneEnteredHooksAsync,
@@ -604,6 +605,26 @@ export const getLoaderStatusUpdater = (loaderId?: string) => {
  * @internal
  */
 export const isCurrentlyLoading = () => currentlyLoading;
+
+/**
+ * Runs `run` now, or once the scene load running has settled (finished or failed, its
+ * `loadSettled` hooks): a load creates its scene data's lights and meshes after the scene code, so
+ * a pre-warm asked for from scene code compiles a lit material with the scene's lights then, not
+ * a variant without them that no frame draws (p354 Phase 5 step 6).
+ * @internal
+ */
+export const runWhenSceneLoadSettled = (run: () => void) => {
+  if (!currentlyLoading) {
+    run();
+    return;
+  }
+  const remove = addSceneHooks({
+    loadSettled: () => {
+      remove();
+      run();
+    },
+  });
+};
 
 /**
  * Whether a scene load has completed on this page (the first one ends the debug start-scene

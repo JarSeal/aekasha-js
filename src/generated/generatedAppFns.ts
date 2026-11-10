@@ -120,6 +120,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  instanceStress: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/instanceStress/instanceStress.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   largeWorld: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/largeWorld/largeWorld.ts');
     await (

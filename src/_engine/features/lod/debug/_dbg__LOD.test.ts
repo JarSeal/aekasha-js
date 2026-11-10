@@ -44,7 +44,14 @@ import type { AnyDebuggerTabDef } from '../../../debug/DebuggerGUI';
 import { _buildDebuggerPane } from '../../../debug/_dbg__DebuggerPaneBuilder';
 import { createBindingScheduler } from '../../../ui/forms/binding/BindingScheduler';
 import type { LodData } from '../LodTypes';
-import { _createLodDebugGUI, formatLodCounts, getLodMeshListData } from './_dbg__LOD';
+import { registerLodContentDebugSource } from '../../../kernel/ecs/LodTargets';
+import {
+  _createLodDebugGUI,
+  formatLodContentInfo,
+  formatLodCounts,
+  getLodContentLevelCount,
+  getLodMeshListData,
+} from './_dbg__LOD';
 
 // p806 D11: the LOD tab split into its folders' builders: the counts and the mesh list, the
 // impostors as rows that fit the value column, the dev files note, and the rebuild a new level
@@ -187,5 +194,103 @@ describe('the LOD tab (p806 D11)', () => {
     getDef().onRefresh?.();
     await Promise.resolve();
     expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+  });
+
+  // p354 D11: an instance set's levels come through the kernel's debug sources
+  it('covers the levels of LOD content without entities in the force options', async () => {
+    getDef().onRefresh?.();
+    buildTab();
+    await Promise.resolve();
+    tab.update.mockClear();
+    expect(getLodContentLevelCount()).toBe(0);
+
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 7,
+      instanceCount: 10,
+      cameraCount: 0,
+      stats: null,
+    };
+    const remove = registerLodContentDebugSource({ getInfos: () => [info] });
+    try {
+      expect(getLodContentLevelCount()).toBe(7);
+      getDef().onRefresh?.();
+      await Promise.resolve();
+      expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+    } finally {
+      remove();
+    }
+    expect(getLodContentLevelCount()).toBe(0);
+  });
+
+  // p354 D11: the Instance sets folder
+  it("writes a set's readback per level and per camera, its lines the same before the first", () => {
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 2,
+      instanceCount: 20_000,
+      cameraCount: 2,
+    };
+    const waiting = formatLodContentInfo({ ...info, stats: null }).split('\n');
+    const read = formatLodContentInfo({
+      ...info,
+      stats: {
+        drawn: [221, 1_406],
+        selected: [991, 19_207],
+        culled: 0,
+        fading: 198,
+        overflow: 0,
+        triangles: 12_345_678,
+        cameras: [
+          { name: 'main', drawn: [221, 1_406] },
+          { name: 'instanceStressSun shadow', drawn: [603, 1_492] },
+        ],
+      },
+    }).split('\n');
+    expect(read).toEqual([
+      'GPU          20,000',
+      '     drawn/selected',
+      'L0          221/991',
+      'L1     1,406/19,207',
+      'Culled            0',
+      'Fading          198',
+      'Overflow          0',
+      // Past the width the value keeps a space
+      'Triangles 12,345,678',
+      'Cameras       drawn',
+      'main      221/1,406',
+      // A long name gives way to the counts
+      'instanceS 603/1,492',
+    ]);
+    expect(waiting).toHaveLength(read.length);
+    expect(waiting[2]).toBe('L0              —/—');
+    expect(waiting[waiting.length - 1]).toBe('                  —');
+  });
+
+  it('builds the Instance sets folder and rebuilds when a set comes', async () => {
+    getDef().onRefresh?.();
+    const pane = buildTab();
+    await Promise.resolve();
+    tab.update.mockClear();
+    expect(getFolder(pane.cmp.elem, 'Instance sets')).toBeTruthy();
+
+    const info = {
+      label: 'forest',
+      backend: 'GPU',
+      levelCount: 1,
+      instanceCount: 3,
+      cameraCount: 0,
+      stats: null,
+    };
+    const remove = registerLodContentDebugSource({ getInfos: () => [info] });
+    try {
+      getDef().onRefresh?.();
+      await Promise.resolve();
+      expect(tab.update).toHaveBeenCalledWith('lodControls', { rebuild: true });
+    } finally {
+      remove();
+    }
   });
 });

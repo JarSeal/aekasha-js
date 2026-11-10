@@ -4,6 +4,7 @@ import {
   _getGPUMemorySources,
   registerGPUMemorySource,
   type GPUMemoryResource,
+  type GPUMemorySource,
 } from '../GPUMemory';
 import { lwarn } from '../../utils/Logger';
 import { getPostFxBuiltChain } from '../../features/postfx/PostFX';
@@ -77,10 +78,26 @@ const buildTrackedIndex = () => {
 
 const warnedSources = new Set<string>();
 
+/** The engine's catch-all sources (every InstancedMesh in the root scene): counted after the
+ * others, so a source naming its own instance buffers (an instance set's level meshes on its CPU
+ * backend) lists them under its own row and owner. */
+const CATCH_ALL_SOURCE_IDS = new Set(['instancedMeshes']);
+
+/** The registered sources, the catch-all ones last. */
+const getSourcesInCountOrder = () => {
+  const own: GPUMemorySource[] = [];
+  const catchAll: GPUMemorySource[] = [];
+  for (const source of _getGPUMemorySources().values()) {
+    (CATCH_ALL_SOURCE_IDS.has(source.id) ? catchAll : own).push(source);
+  }
+  return own.concat(catchAll);
+};
+
 /**
  * Every registered source with three's bytes, largest first. `counted` holds the GPU objects
  * already counted (by the "By owner" assets): those count 0 here, and each one counted here is
- * added to it, so a GPU object two sources share counts once, for the first.
+ * added to it, so a GPU object two sources share counts once, for the first in registration
+ * order, the engine's catch-all ones (`CATCH_ALL_SOURCE_IDS`) last.
  */
 export const collectGPUMemorySources = (
   renderer: Renderer,
@@ -91,7 +108,7 @@ export const collectGPUMemorySources = (
   const tracked = buildTrackedIndex();
   const rows: GPUMemorySourceRow[] = [];
 
-  for (const source of _getGPUMemorySources().values()) {
+  for (const source of getSourcesInCountOrder()) {
     const owner = typeof source.owner === 'function' ? source.owner() : source.owner;
     const row: GPUMemorySourceRow = {
       id: source.id,

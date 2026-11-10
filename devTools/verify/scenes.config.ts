@@ -226,6 +226,24 @@ export type SceneVerifyConfig = {
     | { tolerance: Partial<SnapshotTolerance>; reason: string };
   /** The `debugger` configuration runs only on the scenes that have these */
   debugger?: SceneDebuggerConfig;
+  /** URL parameters every page of the scene gets (its variants' too), after the runner's own,
+   * which they can't replace (`isDebug`, `isProdTest`, `aekTest`, `startScene`, `physicsProbe`) */
+  params?: Record<string, string>;
+  /** Runs the scene once per variant instead of once: each with its `params` on top of the
+   * scene's, as `<sceneId>@<id>` (its results, baselines and snapshots; `--only` takes either
+   * name). For a scene whose URL picks what it shows. The scene's other settings are every
+   * variant's */
+  variants?: SceneVariant[];
+};
+
+/** One of a scene's runs (`SceneVerifyConfig.variants`) */
+export type SceneVariant = {
+  /** The run's name after the scene's (`instanceStress@set`): letters, digits, `-` and `_` */
+  id: string;
+  /** Its URL parameters, on top of the scene's */
+  params: Record<string, string>;
+  /** What it covers */
+  reason: string;
 };
 
 /** By scene id. A scene that isn't listed runs with the defaults */
@@ -340,6 +358,20 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
         reason: "live readouts of the moving focus, the cells per state and their bodies' tiers",
       },
     },
+  },
+  // GPU-driven culling's parity scene (p354 D12): the same 20k trees drawn by instanced LOD pools
+  // and by an instance set, the camera still (the orbit's start), no fades. The two snapshots
+  // should look alike: p354 Phase 0's pixel diff found 0.12% of pixels over 8/255
+  instanceStress: {
+    params: { stressInstances: '20000', stressCamera: 'STILL', stressFadeSeconds: '0' },
+    variants: [
+      { id: 'pools', params: { stressPath: 'cpu' }, reason: 'the CPU path: a LOD pool per tile' },
+      {
+        id: 'set',
+        params: { stressPath: 'gpu' },
+        reason: 'an instance set: on WebGPU its GPU backend, on WebGL2 the pools (p354 Phase 4)',
+      },
+    ],
   },
   lodShowcase: {
     debugger: {

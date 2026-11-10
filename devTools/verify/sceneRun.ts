@@ -23,7 +23,6 @@ import {
   PROBE_TIMEOUT_MS,
   PROD_TEST_SETTLE_MS,
   READY_TIMEOUT_MS,
-  SCENE_VERIFY_CONFIG,
   SNAPSHOT_SIZE,
   VERIFY_CONFIGS,
   type SceneVerifyConfig,
@@ -45,7 +44,13 @@ import {
   runKey,
   snapshotFileName,
 } from './sceneBaseline';
-import { appliesTo, buildSceneUrl } from './sceneSelect';
+import {
+  appliesTo,
+  buildSceneUrl,
+  getSceneVerifyConfig,
+  getTargetSceneId,
+  type SceneTarget,
+} from './sceneSelect';
 import { EVALUATE_MARGIN_MS, withTimeout } from './browser';
 import { runDebuggerChecksAsync } from './sceneDebugger';
 import { compareSnapshots } from './snapshotDiff';
@@ -68,9 +73,10 @@ export type LoadContext = BaselineContext & {
   backend: Backend | null;
 };
 
-/** Whether an error is allowed for a scene (`GLOBAL_ALLOWED_ERRORS`, the scene's own) */
-export const isAllowed = (sceneId: string, message: string, browser: VerifyBrowser) =>
-  [...GLOBAL_ALLOWED_ERRORS, ...(SCENE_VERIFY_CONFIG[sceneId]?.allowedErrors ?? [])].some(
+/** Whether an error is allowed for a run (`GLOBAL_ALLOWED_ERRORS`, its scene's own); `runId` is
+ * the scene's id or a variant's run name */
+export const isAllowed = (runId: string, message: string, browser: VerifyBrowser) =>
+  [...GLOBAL_ALLOWED_ERRORS, ...(getSceneVerifyConfig(runId)?.allowedErrors ?? [])].some(
     (a) => appliesTo(a, null, browser) && a.pattern.test(message)
   );
 
@@ -119,7 +125,7 @@ const compareRunHash = (
   }
   if (baseHash === hash) return;
   const msg = `${label} ${hash}, baseline ${baseHash} (${source ? `${source}, ` : ''}${entry!.commit})`;
-  const unstable = SCENE_VERIFY_CONFIG[result.sceneId]?.unstableHash;
+  const unstable = getSceneVerifyConfig(result.sceneId)?.unstableHash;
   if (unstable && appliesTo(unstable, result.config, browser)) {
     result.warnings.push(`${msg}: ${unstable.reason}`);
   } else {
@@ -184,7 +190,7 @@ const handleSnapshot = async (
     result.notes.push('no baseline snapshot');
     return;
   }
-  const sceneSnapshot = SCENE_VERIFY_CONFIG[result.sceneId]?.snapshot;
+  const sceneSnapshot = getSceneVerifyConfig(result.sceneId)?.snapshot;
   const tolerance = {
     ...DEFAULT_SNAPSHOT_TOLERANCE,
     ...(sceneSnapshot && 'tolerance' in sceneSnapshot ? sceneSnapshot.tolerance : {}),
@@ -243,11 +249,12 @@ const openPage = async (
 const loadScene = async (
   ctx: LoadContext,
   page: Page,
+  target: SceneTarget,
   def: VerifyConfigDef,
   steps: number,
   result: RunResult
 ): Promise<Backend | null> => {
-  await page.goto(buildSceneUrl(ctx.baseUrl, result.sceneId, def, steps), {
+  await page.goto(buildSceneUrl(ctx.baseUrl, target, def, steps), {
     waitUntil: 'domcontentloaded',
   });
   const hasBridge = await page
@@ -274,7 +281,7 @@ const loadScene = async (
     result.failures.push(`the scene didn't finish loading in ${READY_TIMEOUT_MS / 1000} s`);
     return null;
   }
-  if (ready.sceneId !== result.sceneId) {
+  if (ready.sceneId !== getTargetSceneId(result.sceneId)) {
     result.failures.push(`loaded "${ready.sceneId}" instead (startScene fell back)`);
     return null;
   }
@@ -374,13 +381,14 @@ export const RELOAD_RERUN_NOTE =
 /** One attempt at a run; `isReloaded` when the page loaded more than once */
 const runAttempt = async (
   ctx: LoadContext,
-  sceneId: string,
+  target: SceneTarget,
   config: VerifyConfigName,
   isRetry: boolean
 ): Promise<{ result: RunResult; isReloaded: boolean }> => {
   const started = Date.now();
   const def: VerifyConfigDef = VERIFY_CONFIGS[config];
-  const sceneConfig = SCENE_VERIFY_CONFIG[sceneId] ?? {};
+  const sceneId = target.id;
+  const sceneConfig = getSceneVerifyConfig(sceneId) ?? {};
   const steps = sceneConfig.probeSteps ?? DEFAULT_PROBE_STEPS;
   const result: RunResult = {
     sceneId,
@@ -417,7 +425,7 @@ const runAttempt = async (
     context = opened.context;
     loads = opened.loads;
     const { page, warnings } = opened;
-    const backend = await loadScene(ctx, page, def, steps, result);
+    const backend = await loadScene(ctx, page, target, def, steps, result);
     if (!backend) return finish();
     const baseline = getBaseline(ctx, backend);
 
@@ -472,10 +480,10 @@ const runAttempt = async (
  */
 export const runOne = async (
   ctx: LoadContext,
-  sceneId: string,
+  target: SceneTarget,
   config: VerifyConfigName
 ): Promise<RunResult> => {
-  const first = await runAttempt(ctx, sceneId, config, false);
+  const first = await runAttempt(ctx, target, config, false);
   if (!first.isReloaded) return first.result;
-  return (await runAttempt(ctx, sceneId, config, true)).result;
+  return (await runAttempt(ctx, target, config, true)).result;
 };

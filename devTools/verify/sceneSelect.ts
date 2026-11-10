@@ -6,6 +6,7 @@
 import type { RunResult } from './sceneBaseline';
 import {
   DEFAULT_CONFIG_SET,
+  SCENE_VERIFY_CONFIG,
   VERIFY_BROWSERS,
   VERIFY_CONFIG_SETS,
   VERIFY_CONFIGS,
@@ -104,23 +105,79 @@ export const appliesTo = (
 const globToRegExp = (glob: string) =>
   new RegExp(`^${glob.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
 
-/** The scenes `--only` picks (ids or globs), in the data's order; all without it. A pattern that
- * matches nothing is an error. */
-export const selectScenes = (
-  allIds: string[],
+/** Between a scene's id and its variant's in a run's name (`instanceStress@set`) */
+export const VARIANT_SEPARATOR = '@';
+
+/** The URL parameters the runner sets itself, which a scene's `params` can't replace */
+const RUNNER_PARAMS = new Set(['isDebug', 'isProdTest', 'aekTest', 'startScene', 'physicsProbe']);
+
+/** What the runner loads: a scene, or one of its variants (`SceneVerifyConfig.variants`) */
+export type SceneTarget = {
+  /** The run's name: the scene's id, or `<sceneId>@<variant>` (its results and baselines) */
+  id: string;
+  sceneId: string;
+  /** Its URL parameters: the scene's `params` and the variant's */
+  params: Record<string, string>;
+};
+
+/** The scene a run's name (`RunResult.sceneId`) is of */
+export const getTargetSceneId = (id: string) => id.split(VARIANT_SEPARATOR)[0];
+
+/** A run's scene settings: its scene's, which every variant shares */
+export const getSceneVerifyConfig = (id: string): SceneVerifyConfig | undefined =>
+  SCENE_VERIFY_CONFIG[getTargetSceneId(id)];
+
+/** A scene's runs: one, or one per variant. Throws on a bad variant id or a runner parameter. */
+export const getSceneTargets = (
+  sceneId: string,
+  sceneConfig: SceneVerifyConfig | undefined
+): SceneTarget[] => {
+  const base = sceneConfig?.params ?? {};
+  const variants = sceneConfig?.variants;
+  const targets: SceneTarget[] = variants?.length
+    ? variants.map((variant) => {
+        if (!/^[\w-]+$/.test(variant.id)) {
+          throw new Error(
+            `scenes.config.ts: ${sceneId}'s variant id "${variant.id}" isn't [\\w-]+`
+          );
+        }
+        return {
+          id: `${sceneId}${VARIANT_SEPARATOR}${variant.id}`,
+          sceneId,
+          params: { ...base, ...variant.params },
+        };
+      })
+    : [{ id: sceneId, sceneId, params: { ...base } }];
+  const ids = new Set(targets.map((t) => t.id));
+  if (ids.size !== targets.length)
+    throw new Error(`scenes.config.ts: ${sceneId} repeats a variant id`);
+  for (const target of targets) {
+    const taken = Object.keys(target.params).filter((key) => RUNNER_PARAMS.has(key));
+    if (taken.length) {
+      throw new Error(`scenes.config.ts: ${target.id} sets the runner's own ${taken.join(', ')}`);
+    }
+  }
+  return targets;
+};
+
+/** The runs `--only` picks (ids or globs, matching a scene's id, so all its variants, or a run's
+ * own name), in the data's order; all without it. A pattern that matches nothing is an error. */
+export const selectTargets = (
+  targets: SceneTarget[],
   only: string[]
-): { ids: string[] } | { error: string } => {
-  if (!only.length) return { ids: allIds };
+): { targets: SceneTarget[] } | { error: string } => {
+  if (!only.length) return { targets };
   const selected = new Set<string>();
   for (const pattern of only) {
     const re = globToRegExp(pattern);
-    const matches = allIds.filter((id) => re.test(id));
+    const matches = targets.filter((t) => re.test(t.id) || re.test(t.sceneId));
     if (!matches.length) {
-      return { error: `--only "${pattern}" matches no scene (${allIds.join(', ')})` };
+      const names = [...new Set(targets.flatMap((t) => [t.sceneId, t.id]))];
+      return { error: `--only "${pattern}" matches no scene (${names.join(', ')})` };
     }
-    matches.forEach((id) => selected.add(id));
+    matches.forEach((t) => selected.add(t.id));
   }
-  return { ids: allIds.filter((id) => selected.has(id)) };
+  return { targets: targets.filter((t) => selected.has(t.id)) };
 };
 
 /** The configurations a scene runs in: the `debugger` ones only on a scene with `debugger`
@@ -130,18 +187,21 @@ export const getSceneConfigs = (
   sceneConfig: SceneVerifyConfig | undefined
 ) => configs.filter((name) => !isDebuggerConfig(name) || Boolean(sceneConfig?.debugger));
 
-/** A scene's page: the configuration's mode, the test bridge, the start scene and, in the debug
- * mode, the probe's steps */
+/** A run's page: the configuration's mode, the test bridge, the start scene, the run's own
+ * parameters and, in the debug mode, the probe's steps */
 export const buildSceneUrl = (
   baseUrl: string,
-  sceneId: string,
+  target: Pick<SceneTarget, 'sceneId' | 'params'>,
   def: VerifyConfigDef,
   steps: number
 ) => {
   const params = new URLSearchParams();
   params.set(def.mode === 'DEBUG' ? 'isDebug' : 'isProdTest', 'true');
   params.set('aekTest', 'true');
-  params.set('startScene', sceneId);
+  params.set('startScene', target.sceneId);
+  for (const [key, value] of Object.entries(target.params)) {
+    if (!RUNNER_PARAMS.has(key)) params.set(key, value);
+  }
   if (def.mode === 'DEBUG') params.set('physicsProbe', String(steps));
   return `${baseUrl.replace(/\/$/, '')}/?${params}`;
 };

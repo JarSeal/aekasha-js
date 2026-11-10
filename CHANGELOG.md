@@ -4,6 +4,58 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-10 — p354-phase0-spike
+
+GPU-driven culling and per-instance LOD (p354, a child of the LOD epic p350): instance sets, on `aekasha/instancing`. A set draws an instanced LOD pool's levels for instances that are plain data in buffers, with no entity per instance. On WebGPU, a compute pass selects each instance's level with the CPU path's rules (screen size, hysteresis, cross-fades) and, for each camera that renders the set, frustum-culls the instances into per-level lists drawn by indirect draws. On WebGL2 the same set runs the same rules on the CPU, without entities. The CPU frame stays flat: 0.4-1.5 ms from 20k to 1M trees, against 3.6-166 ms for the pools (a minified build, Apple M2). With the sun's shadow, the GPU frame is 8.6 ms at 100k, against the pools' 13.1. Instanced LOD pools stay the path for content gameplay addresses and below about 20k instances; the Hub's LOD page says which to use. Nothing breaks.
+
+### Engine 6.3.0 (Sunset)
+
+**Added**
+
+- `createInstanceSetAsync({ world, levels, maxInstances, lod?, receiveShadow?, maxVisible?, maxSlots?, preWarm?, entityOpts? })` on `aekasha/instancing`, which resolves an `InstanceSet` (or `null` when its scene exits during the load). The levels and `lod` take the pool's settings (`InstancedLodPoolLevel[]`, `LodDef`). An entity owns the set (`ComponentType.INSTANCE_SET`), and deleting the entity disposes the set. The types are `CreateInstanceSetOptions`, `InstanceSet`, `InstanceSetBackendKind`, `InstanceRange`, `InstanceSetData`, `InstanceSetStats` and `InstanceSetSlotStats`.
+- A set's instances, in ranges. `addInstances(placements | matrices)` returns a range, or `null` when the instances don't fit. It takes the first free range they fit in, else appends. `removeInstances(range)` frees a range, and freed neighbours merge. `setInstanceMatrices(range, instances, offset?)` moves live instances, which keep their levels and fades; on WebGPU a frame's moves upload as one range per buffer. A streamed cell's content can add and remove its range: one set serves every cell.
+- The GPU backend (WebGPU, a lazy chunk of 5.7 kB gzip). It has the buffers, the select, cull and finalize compute passes, and a draw per (level, material group) with its instance count written by the pass. Cross-fades draw both copies with a packed fade per list entry, on the kernel's dither. Octahedral impostor and cross-quad levels work like mesh levels. The pools' level materials are used through variants (3 node builds and 3 render pipelines for a three-level tree, plus 3 compute pipelines).
+- Every camera draws a set from its own slot (`maxSlots`, default 8): the main camera, viewports, the debug camera, snapshots, `compileAsync`, and shadow cameras of every light kind. A slot is taken on a camera's first render and released after 120 frames unused. A shadow slot draws only the levels that cast (`castShadow` per level), and the fade dithers in the shadow pass too. The state advances once a frame, in the first dispatch after `lod()` writes the frame's inputs. Other renders that frame only read it.
+- The CPU backend (WebGL2, a lazy chunk of 2.3 kB gzip): the same rules over plain arrays, into an `InstancedMesh` per level, uploading only each mesh's live part. It costs about 12-20 ns an instance, against the pools' 94-195 ns.
+- `readInstanceSetStatsAsync(set, { state? })` (debug env and prod test mode): the drawn and overflowed instances per level and per camera slot, the extent, and with `state` the instances selected per level, culled, unselected and fading.
+- `preWarm` compiles a set made during play between frames, once its group is added and the running scene load has settled, so it compiles with the scene's lights.
+- The LOD tab: an "Instance sets" folder with a field per set (the backend, the copies drawn per level and per camera, culled, fading, overflow and triangles) and a "CPU backend (next sets)" checkbox. "Force level", "Freeze" and the fade time scale apply to sets too. Each set is a GPU memory source of its own (`instanceSet.<entityId>`) with its buffers, owned by its scene.
+- The kernel's seams, all `@internal`: `utils/LodRules.ts` (the level selection with its hysteresis, the cull test and the fade step on plain numbers, which the pools' `LodSystem` and `LodFades` now call too), the LOD frame inputs (`setLodFrameInputs` / `getLodFrameInputs`, written by `lodSelectionSystem` once a frame), `getMainLoopFrame()`, the drawing pipeline hook (`kernel/render/DrawingPipeline.ts`' `addDrawingPipelineHook`), the drawn object's nodes (`kernel/render/InstanceMatrix.ts`' `drawnInstanceMatrix`, `LodFade.ts`' `setObjectLodFadeNode`), the LOD tab's content sources (`registerLodContentDebugSource`) and `runWhenSceneLoadSettled`.
+
+**Changed**
+
+- A LOD cross-fade ends at 1 − `LOD_FADE_END_EPSILON`, so a fade whose steps sum to just under 1 in floating point no longer lasts an extra frame: a 0.25 s fade at 60 fps is 15 frames, not 16. No scene runner baseline moved.
+- The octahedral impostor material places each instance through `drawnInstanceMatrix`, three's `instanceMatrix` on an `InstancedMesh` or a set's fetched matrix. A pool's impostors draw as before.
+- `DEFAULT_LOD_HYSTERESIS` is defined in `utils/LodRules.ts`; `aekasha/lod` still exports it.
+- The `instancing` group's first download is 2.8 → 4.7 kB gzip (the set's front, its ranges and the entry; the backends are lazy).
+
+**Fixed**
+
+- A scene's `loadSettled` hook that removed itself skipped the next hook: they now run from a copy of the list.
+- The GPU memory tab counted an `InstancedMesh` under the engine's catch-all "Instance buffers (InstancedMesh)" row even when another source named it. The catch-all sources now count last.
+
+### App 1.21.0 (Preschooler)
+
+**Added**
+
+- `instanceStress`: GPU-driven culling's measuring and parity scene. A forest of up to 1M trees, drawn by instanced LOD pools or an instance set (`?stressPath=cpu|gpu`). It takes URL options for the count, the camera (an orbit or `STILL`), the fades, the sun's shadow or a spot or point light, a viewport, moving trees (`?stressMove=`), streamed cells (`?stressStream=`), impostor levels (`?stressImpostor=crossQuads|octahedral`) and `preWarm`. Its readout and `measure()` give the levels, the cull, the backend and the frame times. It runs as `instanceStress@pools` and `instanceStress@set` in the scene runner.
+- `lodShowcase`: the "Instance set and cross-quads" lane (`lanes/instanceSetGrove.ts`), `treeGrove`'s trees drawn by an instance set next to the pool's lane, with the same levels and cull. Its description names the backend. The "LOD demo" tab's camera stops and level rows read the set. Both lanes take their trees from `createShowcaseTrees`, and the scene has 7 lane slots.
+
+### Project
+
+**Added**
+
+- The bench tools (`devTools/bench/`): `npx tsx devTools/bench/instanceStress.ts` measures `instanceStress`' paths (`pools`, `set` on the GPU backend, `set-cpu`) at each count on its own dev server or a `yarn build:test` build, and prints the CPU, GPU and compute frame tables. `instanceStressLodTab.ts` drives the LOD tab's controls on both paths and compares them at six checkpoints and in snapshots of a held fade (`--shadow`, `--set-backend cpu`, `--webgl`). Their pure parts are tested. They log to `.cache/bench/progress.log`.
+- The scene runner's scene `params` and `variants` (`scenes.config.ts`, `sceneSelect.ts`): a scene runs once per variant, each under its own baseline name (`instanceStress@pools`, `@set`).
+- Issues: `scene-runner-hangs-after-a-vite-reload` (new) and `entity-persistent-flag-not-applied` (now also names the pool's gap).
+
+**Changed**
+
+- The bundle, API and docs baselines: `aekasha/instancing` gains the set's names. The new lazy chunks are `InstanceSetGpu.js`, `InstanceSetCpu.js` and `InstanceMatrix.js`. The main chunk is 392.3 → 395.8 kB gzip. Both embeds are unchanged, and no debug code is in any build. The SBP budgets (`sbp.config.ts`): `features/instancing` 4 → 5 KiB (the set's front), and the `app` group 14 → 15 KiB (`instanceStress`' scene data, which every scene's JSON puts in the first download). `lodShowcase`'s scene runner baselines and its Hub picture moved with the new lane.
+- The Hub: the LOD page's "Instance sets" (a pool or a set with the measured numbers, the two backends, every camera, ranges and streamed cells, memory, seeing a set work) with a snippet from the lane, `createInstanceSetAsync` in its key APIs, and its intro. The Rendering page covers the drawing pipeline.
+- The docs: `features/instancing/CLAUDE.md`'s "Instance sets", `features/lod/CLAUDE.md` (`LodRules.ts`, the frame inputs, the lane), `kernel/render/CLAUDE.md`'s "Drawing pipeline", the root `CLAUDE.md` (the map's instancing line, the bench tools), `devTools/verify/CLAUDE.md` (variants), the notes on GPU memory, the impostor material, streaming's limits and the scene load's settled hook, and the readme (instance sets in the Features and Technical highlights, the lane and `instanceStress`, GPU-driven culling off the Roadmap).
+- The plans: p354 is `_DONE_`, and p350 tracks it.
+
 ## 2026-11-07 — p353_macro-streaming-grid
 
 World streaming (p353, a child of the LOD epic p350): the `streaming()` feature, the eleventh, on `aekasha/streaming`. A scene can be larger than what fits in memory at once: it's cut into square cells, and each cell's content loads, shows at reduced detail or unloads by its distance to a focus (the main camera by default), through a per-cell state machine with three rings. A cell's content is near, far or kept (both). Code registers it per cell, and a scene's JSON meshes are cut into cells at build time. A cell reached during play is primed before it's drawn (textures uploaded and shaders compiled under per-frame budgets) and fades in; content leaving fades out. A cell owns its assets, and they're released when it unloads. Its physics bodies take its cell's simulation tier, and a far cell's bodies wait outside the world. Nothing breaks.

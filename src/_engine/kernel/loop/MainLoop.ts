@@ -27,6 +27,8 @@ export const LOOP_DEBUGGER_TAB_ID = 'loopControls';
 const timer = new Timer();
 let delta = 0;
 let deltaApp = 0;
+/** Frames the loop ran (getMainLoopFrame) */
+let frameCounter = 0;
 /** getElapsedTime's clock (see advanceElapsedClock); the first delta is time since module load */
 const elapsedClock: ElapsedClock = { elapsed: 0, discardNext: true };
 let mainLoopInitiated = false;
@@ -132,6 +134,14 @@ export const getDelta = () => delta;
  * @returns (number) delta time
  */
 export const getAppDelta = () => deltaApp;
+
+/**
+ * The main loop's frame: counts every frame the loop ran (a frame the max FPS cap held back and
+ * one in an editor view included), 0 before the first. For work that must happen once a frame
+ * whatever calls it (p354 D7: an instance set's state advances in its frame's first dispatch).
+ * @internal
+ */
+export const getMainLoopFrame = () => frameCounter;
 
 /**
  * Returns the main loop's accumulated elapsed time in seconds: the sum of every main loop
@@ -429,6 +439,7 @@ const runFrame = () => {
 };
 
 const runFrameWork = () => {
+  frameCounter++;
   frameProbe?.begin(performance.now());
   if (IS_DEBUG_ENV) startCustomMeasurements();
 

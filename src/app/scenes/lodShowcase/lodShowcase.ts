@@ -21,6 +21,7 @@ import {
 import { handMadeLevelsLane } from './lanes/handMadeLevels';
 import { generatedChainLane } from './lanes/generatedChain';
 import { treeGroveLane } from './lanes/treeGrove';
+import { instanceSetGroveLane } from './lanes/instanceSetGrove';
 import { instanceCellLane } from './lanes/instanceCell';
 import { knotImpostorLane } from './lanes/knotImpostor';
 import { rockImpostorsLane } from './lanes/rockImpostors';
@@ -32,20 +33,22 @@ export const SHOWCASE_CAMERA_APP_ID = 'lodShowcaseCamera';
 /** The time of day the sky holds on every enter (the demo tab plays it). */
 export const SHOWCASE_START_TIME_OF_DAY = 15;
 const LANE_SPACING = 8;
-/** Slots side by side, centred on the camera: lane `slot` stands at x = (slot - 2.5) × spacing. */
-const LANE_SLOT_COUNT = 6;
+/** Slots side by side, centred on the camera: lane `slot` stands at x = (slot - 3) × spacing. */
+const LANE_SLOT_COUNT = 7;
 /**
  * The lanes and their slots, left to right: a new lane is a module and an entry here. A lane
  * whose finest level needs the camera close (the generated chain's, within 21 m) takes a centre
- * slot: an outer lane only comes into view farther down (lodShowcase/layout.ts).
+ * slot: an outer lane only comes into view farther down (lodShowcase/layout.ts). The pool's trees
+ * and the instance set's stand side by side, to compare.
  */
 const LANES: { lane: ShowcaseLane; slot: number }[] = [
   { lane: treeGroveLane, slot: 0 },
-  { lane: handMadeLevelsLane, slot: 1 },
-  { lane: generatedChainLane, slot: 2 },
-  { lane: knotImpostorLane, slot: 3 },
-  { lane: rockImpostorsLane, slot: 4 },
-  { lane: instanceCellLane, slot: 5 },
+  { lane: instanceSetGroveLane, slot: 1 },
+  { lane: handMadeLevelsLane, slot: 2 },
+  { lane: generatedChainLane, slot: 3 },
+  { lane: knotImpostorLane, slot: 4 },
+  { lane: rockImpostorsLane, slot: 5 },
+  { lane: instanceCellLane, slot: 6 },
 ];
 
 export type ShowcaseLaneEntry = { lane: ShowcaseLane; x: number; state: ShowcaseLaneState };

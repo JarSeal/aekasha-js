@@ -25,3 +25,6 @@ scene's `mainCamera.camera.json`). So the fix needs one of:
 - `persistent` leaves the asset JSONs' options (code only), where the caller decides once.
 
 Either is a kernel behaviour change for the ECS's owner, with a changelog line.
+
+Instanced mesh pools inherit it: `CreateInstancedMeshPoolOptions.entityOpts` says it marks a long-lived pool `persistent`, but `createPoolMesh` (`features/instancing/InstancedMeshPool.ts`) adds no `PERSISTENT` either (found 2026-11-09, p354 Phase 1 step 4; `createInstanceSetAsync` adds it itself, as `createLineEntity` does).
+

@@ -48,7 +48,8 @@ export {
 export type { LodFrameStats } from './LodSettings';
 export { simplifyLodChain } from './LodSimplify';
 export type { SimplifiedLevel, SimplifiedLodChain } from './LodSimplify';
-export { DEFAULT_LOD_HYSTERESIS, refreshLodBounds } from './LodSystem';
+export { refreshLodBounds } from './LodSystem';
+export { DEFAULT_LOD_HYSTERESIS } from '../../utils/LodRules';
 export type {
   LodAutoDef,
   LodData,

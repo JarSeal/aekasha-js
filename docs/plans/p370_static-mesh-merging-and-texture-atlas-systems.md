@@ -1,7 +1,7 @@
 Status: epic, in progress | p299 Phases 0-4 implemented; p371-p376 not started
 Category: Rendering, Merging, Texture atlas
 Blocks: p299_texture-arrays-and-atlases.md, p371_geometry-merging.md, p372_mesh-merge-groups.md, p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
-Related: p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result)
+Related: p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
 
 # Static Mesh Merging & Texture Arrays/Atlases — Research & Epic
 
@@ -263,7 +263,9 @@ Heightfield blocks themselves gain little: each is already one mesh.
    into compound bodies per group is plausible but changes collision events per member. Not
    planned.
 3. **Indirect draws.** p354's compute culling plus `drawIndexedIndirect` could cull inside a merged
-   group per member range. Only if p354 lands and merged groups prove too coarse.
+   group per member range. p354 landed (2026-11-10, instance sets): its passes and the drawing
+   pipeline hook (`kernel/render/DrawingPipeline.ts`) are what this would build on. Only if merged
+   groups prove too coarse.
 4. **Multi-draw-indirect.** If WebGPU ships it (or three uses Chrome's experimental extension),
    `BatchedMesh` becomes a draw-count win for interleaved members too. Partly answered by three
    r187: grouped members already merge into one draw per geometry (§2.1), so p375's trade-off

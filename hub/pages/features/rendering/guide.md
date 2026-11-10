@@ -88,7 +88,10 @@ touched.
 - [Viewports](hub:features/viewports): extra rectangles over the canvas with their own scene and
   camera, drawn after the post effects.
 - [Sky box](hub:features/sky-box): the background and the environment lighting.
-- [LOD and impostors](hub:features/lod): fewer triangles for what's far away.
+- [LOD and impostors](hub:features/lod): fewer triangles for what's far away. An
+  [instance set](hub:features/lod#instance-sets) culls its instances on the GPU inside each
+  render, between the render deciding what it draws and drawing it, so every camera (a shadow,
+  a viewport) draws only what's in its own view.
 
 ## Key APIs
 

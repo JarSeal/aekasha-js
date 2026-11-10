@@ -7,6 +7,8 @@ import {
   createSceneAppLooper,
 } from 'aekasha';
 import { getLodFrameStats, getLodWorldSphere } from 'aekasha/lod';
+import { readInstanceSetStatsAsync } from 'aekasha/instancing';
+import type { InstanceSet, InstanceSetStats } from 'aekasha/instancing';
 import {
   getTimeOfDay,
   isDayNightPlaying,
@@ -32,6 +34,7 @@ import {
   SHOWCASE_START_TIME_OF_DAY,
   type ShowcaseLaneEntry,
 } from './lodShowcase';
+import type { ShowcaseLaneSet } from './layout';
 
 const TAB_ID = 'lodShowcaseDemo';
 const LS_KEY = 'AEK_debugLodShowcase';
@@ -95,6 +98,31 @@ const setCameraPose = ({ position, target }: Pose) => {
   cameraLookAtPoint(id, target, world);
 };
 
+/** A lane's LOD centres, where the selection measures each object from: its entities' LOD
+ * spheres, or its instance set's instance origins (a set has no entities). */
+const getLodCentres = (entry: ShowcaseLaneEntry): readonly THREE.Vector3[] => {
+  if (entry.state.instanceSet) return entry.state.instanceSet.centres;
+  const world = getECSWorld();
+  const centres: THREE.Vector3[] = [];
+  for (const id of entry.state.getEntityIds()) {
+    const lod = world.getComponent(id, ComponentType.LOD);
+    if (lod && getLodWorldSphere(world, id, lod, _sphere)) centres.push(_sphere.center.clone());
+  }
+  return centres;
+};
+
+/** A lane's level count: its first LOD entity's, or its instance set's. */
+const getLevelCount = (entry: ShowcaseLaneEntry) => {
+  if (entry.state.instanceSet) return entry.state.instanceSet.levelTriangles.length;
+  const world = getECSWorld();
+  const firstId = entry.state
+    .getEntityIds()
+    .find((id) => world.hasComponent(id, ComponentType.LOD));
+  return firstId === undefined
+    ? 0
+    : world.getComponent(firstId, ComponentType.LOD)?.def.levels.length ?? 0;
+};
+
 /**
  * A switch's stop: the camera on the line from the start camera to the lane's first object past
  * the switch (as the start camera sees it), the switch distance × the side's factor from it,
@@ -104,16 +132,13 @@ const getSwitchPose = (entry: ShowcaseLaneEntry, index: number, side: StopSide) 
   const start = getShowcaseStartCamera();
   const distance = entry.state.switchDistances[index];
   if (!start) return null;
-  const world = getECSWorld();
   let best: THREE.Vector3 | null = null;
   let bestDistance = Infinity;
-  for (const id of entry.state.getEntityIds()) {
-    const lod = world.getComponent(id, ComponentType.LOD);
-    if (!lod || !getLodWorldSphere(world, id, lod, _sphere)) continue;
-    const d = _sphere.center.distanceTo(start.position);
+  for (const centre of getLodCentres(entry)) {
+    const d = centre.distanceTo(start.position);
     if (d > distance && d < bestDistance) {
       bestDistance = d;
-      best = _sphere.center.clone();
+      best = centre.clone();
     }
   }
   if (!best) return null;
@@ -136,15 +161,8 @@ const getStops = (): CameraStop[] => {
       }),
     },
   ];
-  const world = getECSWorld();
   for (const entry of [...getShowcaseLanes()].sort((a, b) => a.x - b.x)) {
-    const firstId = entry.state
-      .getEntityIds()
-      .find((id) => world.hasComponent(id, ComponentType.LOD));
-    const levelCount =
-      firstId === undefined
-        ? 0
-        : world.getComponent(firstId, ComponentType.LOD)?.def.levels.length ?? 0;
+    const levelCount = getLevelCount(entry);
     entry.state.switchDistances.forEach((distance, i) => {
       const what = i < levelCount - 1 ? `level ${i} → ${i + 1}` : 'hides';
       stops.push({
@@ -204,9 +222,57 @@ const getDollyStatus = () => {
 const getTriangles = (geometry: THREE.BufferGeometry) =>
   Math.floor((geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3);
 
+/** The set lanes' last readbacks, by set (a late one from an earlier visit's set lands nowhere). */
+const setStats = new WeakMap<InstanceSet, InstanceSetStats>();
+/** The sets with a readback running: one at a time per set. */
+const setReads = new WeakSet<InstanceSet>();
+
+/** Asks each set lane's set for its counts, every state included (the tab's refresh, so a closed
+ * tab reads nothing). */
+const refreshSetStats = () => {
+  for (const { state } of getShowcaseLanes()) {
+    const set = state.instanceSet?.set;
+    if (!set || setReads.has(set)) continue;
+    setReads.add(set);
+    void readInstanceSetStatsAsync(set, { state: true })
+      .then((stats) => {
+        if (stats) setStats.set(set, stats);
+      })
+      .finally(() => setReads.delete(set));
+  }
+};
+
+/** A set lane's row, from its last readback: its instances per selected level (a fading one in
+ * both its levels), and the triangles the main camera's last dispatch drew (after the set's own
+ * frustum cull, both copies of a fade). */
+const getSetLaneRow = (entry: ShowcaseLaneEntry, laneSet: ShowcaseLaneSet) => {
+  const stats = setStats.get(laneSet.set);
+  const levels: string[] = [];
+  let triangles = 0;
+  if (stats?.state) {
+    stats.state.levels.forEach((count, level) => {
+      if (count) levels.push(`L${level} ${count}`);
+    });
+    if (stats.state.culled) levels.push(`culled ${stats.state.culled}`);
+    if (stats.state.fading) levels.push(`fading ${stats.state.fading}`);
+  }
+  stats?.drawn.forEach((count, level) => {
+    triangles += count * (laneSet.levelTriangles[level] ?? 0);
+  });
+  return {
+    itemId: entry.lane.id,
+    title: entry.lane.title,
+    subTitle: `[x ${entry.x}] [${laneSet.set.backend}] ${entry.state.switchDistances.map((d) => `${d.toFixed(0)} m`).join(' · ')}`,
+    suffix: stats ? `${triangles.toLocaleString('en-US')} tris drawn` : 'reading…',
+    description: levels.join(' · '),
+    tooltip: entry.state.description ?? entry.lane.description,
+  };
+};
+
 /** A lane's row: its entities per level shown, and the triangles of what they show (the main
  * pass, before frustum culling; a fading entity's outgoing copy not counted). */
 const getLaneRow = (entry: ShowcaseLaneEntry) => {
+  if (entry.state.instanceSet) return getSetLaneRow(entry, entry.state.instanceSet);
   const world = getECSWorld();
   const perLevel: number[] = [];
   let culled = 0;
@@ -244,14 +310,15 @@ const getLaneRow = (entry: ShowcaseLaneEntry) => {
     subTitle: `[x ${entry.x}] ${entry.state.switchDistances.map((d) => `${d.toFixed(0)} m`).join(' · ')}`,
     suffix: `${triangles.toLocaleString('en-US')} tris`,
     description: levels.join(' · '),
-    tooltip: entry.lane.description,
+    tooltip: entry.state.description ?? entry.lane.description,
   };
 };
 
 /**
  * The lodShowcase scene's "LOD demo" tab (a scene tab: removed on the scene's exit, created again
  * on every visit): camera stops (the start view, overhead, and both sides of every lane's switch),
- * a dolly down the lanes and back, the time of day, each lane's entities per level and triangles,
+ * a dolly down the lanes and back, the time of day, each lane's entities per level and triangles
+ * (an instance set lane's from the set's readback),
  * and shortcuts to the LOD tab and the profiler. The camera stop and its side are persisted, and
  * applied again on the scene's enter.
  */
@@ -283,6 +350,7 @@ export const createLodShowcaseTab = () => {
       state.timeOfDay = getTimeOfDay() ?? state.timeOfDay;
       state.dayNightPlaying = isDayNightPlaying();
       state.fading = getLodFrameStats(getECSWorld()).fading;
+      refreshSetStats();
     },
     content: () => [
       {

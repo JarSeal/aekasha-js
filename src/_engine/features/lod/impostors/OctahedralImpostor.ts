@@ -9,6 +9,7 @@
 import * as THREE from 'three/webgpu';
 import { float } from 'three/tsl';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
+import { setMaterialPositionsInstances } from '../../../kernel/render/InstanceMatrix';
 import {
   deleteGeometry,
   doesGeoExist,
@@ -336,6 +337,9 @@ export const buildOctahedralImpostor = (
   impostorMaterial.name = id;
   const nodes = createOctahedralImpostorNodes(layout, albedo, normalDepth, vOrigin);
   impostorMaterial.positionNode = nodes.positionNode;
+  // Its billboard places each instance itself: an instance set keeps it, and gives its draws the
+  // matrices (kernel/render/InstanceMatrix.ts)
+  setMaterialPositionsInstances(impostorMaterial);
   impostorMaterial.colorNode = nodes.colorNode;
   if (surfaceDepth) impostorMaterial.depthNode = nodes.depthNode;
   // An unlit impostor has no use for normals or received shadows

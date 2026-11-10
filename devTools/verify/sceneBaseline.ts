@@ -53,6 +53,8 @@ export type RunStatus = 'PASS' | 'FAIL' | 'NEW' | 'UPDATED' | 'SKIPPED';
 
 /** One page load's result: a scene in a configuration */
 export type RunResult = {
+  /** The scene's id, or a variant's run name (`<sceneId>@<variant>`, `getSceneTargets`): the key of
+   * its baselines and snapshots */
   sceneId: string;
   config: VerifyConfigName;
   status: RunStatus;

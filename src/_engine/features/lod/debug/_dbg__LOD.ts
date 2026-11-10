@@ -6,6 +6,10 @@ import {
 } from '../../../debug/DebuggerGUI';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import {
+  getLodContentDebugSources,
+  type LodContentDebugInfo,
+} from '../../../kernel/ecs/LodTargets';
 import { getDevFilesStatus } from '../../../debug/DevFiles';
 import { getImpostorRecords } from '../impostors/ImpostorRegistry';
 import {
@@ -26,7 +30,9 @@ import {
   getFadesFolder,
   getImpostorsFolder,
   getInspectFolder,
+  getInstanceSetsFolder,
   getLastFrameFolder,
+  type InstanceSetField,
   getOverlayFolder,
   getSelectionFolder,
   LOD_TAB_ID,
@@ -39,8 +45,10 @@ import {
 // scale (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 2), the level overlay
 // (_dbg__LodOverlay.ts), the per-entity LOD windows (_dbg__LodEntityWindow.ts) and the
 // impostors generated in this session with their Export (p351 Phase 4,
-// _dbg__ImpostorExport.ts). Nothing is persisted: it's all for inspecting, and a reload starts
-// from the app's values. Default world only. Its folders are _dbg__LodTabItems.ts (p806 D11).
+// _dbg__ImpostorExport.ts), and the instance sets (p354 D11: LOD content without entities, through
+// the kernel's debug sources, kernel/ecs/LodTargets.ts). Nothing is persisted: it's all for
+// inspecting, and a reload starts from the app's values. Default world only. Its folders are
+// _dbg__LodTabItems.ts (p806 D11).
 
 /** Rows the mesh list shows at most (a scene can have thousands of LOD meshes). */
 const MAX_LIST_ROWS = 100;
@@ -117,6 +125,66 @@ const countLevels = (world: ECSWorld): LodCounts => {
   return counts;
 };
 
+/** The LOD content without entities (instance sets), from the kernel's debug sources (p354
+ * D11), in their order. Reading it asks each source for a fresh readback. */
+export const getLodContentInfos = () => {
+  const infos: LodContentDebugInfo[] = [];
+  for (const source of getLodContentDebugSources()) infos.push(...source.getInfos());
+  return infos;
+};
+
+/** The LOD content's debug options (instance sets' forced CPU backend), from the kernel's debug
+ * sources, in their order. */
+export const getLodContentToggles = () =>
+  getLodContentDebugSources().flatMap((source) => source.toggles ?? []);
+
+/** The most levels the LOD content without entities has: the forced level options cover them
+ * too. 0 without any. */
+export const getLodContentLevelCount = (
+  infos: readonly LodContentDebugInfo[] = getLodContentInfos()
+) => infos.reduce((most, info) => Math.max(most, info.levelCount), 0);
+
+/** An Instance sets field's width, in the monitor's mono characters (the Entities counts'). */
+const SET_LINE_WIDTH = 19;
+
+/** The Instance sets field's lines past its levels' and cameras': the backend's and the levels'
+ * headings, culled, fading, overflow, triangles and the cameras' heading. */
+export const LOD_CONTENT_EXTRA_LINES = 7;
+
+/** An instance set as aligned lines for its field (the monitor's mono font): its backend and
+ * instances, per level the copies drawn (the main camera's) over the instances selected (a fading
+ * one in both levels), then culled, fading, overflow and the triangles drawn (every camera's),
+ * then a line per camera drawing it (its name, its drawn copies per level). The line count depends
+ * on its levels and its cameras only: a readback's arrival needs no rebuild. */
+export const formatLodContentInfo = (info: LodContentDebugInfo) => {
+  const { backend, levelCount, instanceCount, cameraCount, stats } = info;
+  const n = (v: number | undefined) => (v === undefined ? '—' : v.toLocaleString('en-US'));
+  const row = (label: string, value: string) =>
+    `${label}${value.padStart(Math.max(SET_LINE_WIDTH - label.length, value.length + 1))}`;
+  const lines = [row(backend, n(instanceCount)), row('', 'drawn/selected')];
+  for (let i = 0; i < levelCount; i++) {
+    lines.push(row(`L${i}`, `${n(stats?.drawn[i])}/${n(stats?.selected[i])}`));
+  }
+  lines.push(row('Culled', n(stats?.culled)));
+  lines.push(row('Fading', n(stats?.fading)));
+  lines.push(row('Overflow', n(stats?.overflow)));
+  lines.push(row('Triangles', n(stats?.triangles)));
+  lines.push(row('Cameras', 'drawn'));
+  for (let i = 0; i < cameraCount; i++) {
+    const camera = stats?.cameras[i];
+    const drawn = camera ? camera.drawn.map((count) => n(count)).join('/') : '—';
+    // The name gives way to the counts
+    const name = (camera?.name ?? '').slice(0, Math.max(SET_LINE_WIDTH - drawn.length - 1, 1));
+    lines.push(row(name, drawn));
+  }
+  return lines.join('\n');
+};
+
+/** What the Instance sets folder was built for: a rebuild follows a change (a set added or
+ * removed, other levels, a camera starting or stopping to draw one). */
+const getSetsSignature = (infos: readonly LodContentDebugInfo[]) =>
+  infos.map((info) => `${info.label}:${info.levelCount}:${info.cameraCount}`).join('|');
+
 /** The counts as aligned lines (the monitor's mono font): a level's, then the hidden ones. */
 export const formatLodCounts = (world: ECSWorld) => {
   const counts = countLevels(world);
@@ -162,9 +230,16 @@ export const _createLodDebugGUI = () => {
   };
   const countsState = { text: '' };
 
-  /** Levels of the entity with the most, which the counts and the force options list. */
+  /** Levels of the entity with the most, which the counts and the overlay's legend list. */
   let levelCount = 1;
   let builtLevelCount = 0;
+  /** The force options' levels: the entities' and the content's without entities (sets). */
+  let forceLevelCount = 1;
+  let builtForceLevelCount = 0;
+  /** The instance sets' fields, and the sets the folder was built for (null: not built) */
+  let setFields: InstanceSetField[] = [];
+  let setsSignature = '';
+  let builtSetsSignature: string | null = null;
   /** The impostors the folders were built for (null: not built) */
   let builtImpostors: string | null = null;
   let devFilesNote = 'Checking the dev files…';
@@ -191,15 +266,32 @@ export const _createLodDebugGUI = () => {
       const counts = formatLodCounts(world);
       countsState.text = counts.text;
       levelCount = counts.levelCount;
+      const infos = getLodContentInfos();
+      forceLevelCount = Math.max(levelCount, getLodContentLevelCount(infos));
+      setsSignature = getSetsSignature(infos);
+      if (setsSignature === builtSetsSignature) {
+        infos.forEach((info, i) => (setFields[i].target.text = formatLodContentInfo(info)));
+      } else {
+        setFields = infos.map((info) => ({
+          label: info.label,
+          target: { text: formatLodContentInfo(info) },
+          rows: info.levelCount + LOD_CONTENT_EXTRA_LINES + info.cameraCount,
+        }));
+      }
 
       // Another level count (eg. a scene change): the force options and the counts' rows need
       // a rebuild, as do other impostors' folders. Deferred, since this runs inside a refresh or
       // a build.
-      const isLevelCountChanged = builtLevelCount && levelCount !== builtLevelCount;
+      const isLevelCountChanged =
+        (builtLevelCount && levelCount !== builtLevelCount) ||
+        (builtForceLevelCount && forceLevelCount !== builtForceLevelCount) ||
+        (builtSetsSignature !== null && setsSignature !== builtSetsSignature);
       const isImpostorsChanged =
         builtImpostors !== null && builtImpostors !== getImpostorsSignature();
       if (isLevelCountChanged || isImpostorsChanged) {
         builtLevelCount = 0;
+        builtForceLevelCount = 0;
+        builtSetsSignature = null;
         builtImpostors = null;
         queueMicrotask(() => updateDebuggerTab(LOD_TAB_ID, { rebuild: true }));
       }
@@ -220,6 +312,8 @@ export const _createLodDebugGUI = () => {
     },
     content: () => {
       builtLevelCount = levelCount;
+      builtForceLevelCount = forceLevelCount;
+      builtSetsSignature = setsSignature;
       builtImpostors = getImpostorsSignature();
       return [
         {
@@ -235,7 +329,8 @@ export const _createLodDebugGUI = () => {
               interval: 'refresh',
             },
             getLastFrameFolder(stats),
-            getSelectionFolder(controls, levelCount),
+            getInstanceSetsFolder(setFields, getLodContentToggles()),
+            getSelectionFolder(controls, forceLevelCount),
             getFadesFolder(controls),
             getOverlayFolder(controls, levelCount),
             getImpostorsFolder(getImpostorRecords(), () => devFilesNote),
