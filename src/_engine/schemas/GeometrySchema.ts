@@ -5,7 +5,7 @@ import {
   MetaSchema,
   SourcePathSchema,
 } from './_SaveDataSchema';
-import { DebugDataSchema } from './_HelperSchemas';
+import { DebugDataSchema, Vector3Schema, Vector4Schema } from './_HelperSchemas';
 
 const GeoBaseProps = z.object({
   /** The registry id. Default: the JSON's file name (a scene's inline geometry: the geometry's
@@ -154,8 +154,8 @@ const GEO_VARIANTS = [
 ] as const;
 
 /**
- * A geometry's props (`*.geometry.json`'s `geoProps`): one variant per `type`, each with its three
- * params. The scene's inline `geometries` and a mesh's `geo` use it.
+ * A primitive geometry's props: one variant per `type`, each with its three params. A mesh's
+ * inline `geo` uses it (`createGeometry` builds it); {@link GeoAssetPropsSchema} adds `MERGED`.
  * @internal
  */
 export const GeoPropsSchema = z
@@ -163,11 +163,80 @@ export const GeoPropsSchema = z
   .describe('The geometry: BOX, SPHERE, CYLINDER, CAPSULE or CONE, and its params.');
 
 /**
- * A geometry JSON's props, as {@link GeoAssetSchema} validates them. `RuntimeTypes.test.ts` checks
- * it against the runtime's `GeoProps`.
+ * A primitive geometry's props, as {@link GeoPropsSchema} validates them. `RuntimeTypes.test.ts`
+ * checks it against the runtime's `GeoProps`.
  * @internal
  */
 export type GeoProps = z.infer<typeof GeoPropsSchema>;
+
+/** One part of a `MERGED` geometry: a registered geometry and its transform into the merge. */
+const MergedGeoPartSchema = z.object({
+  /** A geometry JSON's id, or an imported asset's piece (`<importId>/<nodeName>`). Not another
+   * `MERGED` geometry. */
+  geo: z
+    .string()
+    .describe("A geometry JSON's id, or an imported piece (<importId>/<nodeName>); not MERGED."),
+  /** Where the part goes in the merged geometry. Default: the origin. */
+  position: Vector3Schema.optional().describe('Where the part goes. Default: the origin.'),
+  /** Euler angles in radians (XYZ order); `quaternion` wins over it. */
+  rotation: Vector3Schema.optional().describe('Euler angles in radians; quaternion wins over it.'),
+  /** A rotation quaternion. */
+  quaternion: Vector4Schema.optional().describe('A rotation quaternion.'),
+  /** The part's scale; a negative component mirrors it (its winding is flipped). Default 1. */
+  scale: Vector3Schema.optional().describe('The scale; negative mirrors. Default 1.'),
+  /** The material slot (the group's `materialIndex`) with `groups: 'BY_SLOT'`. Default 0. */
+  materialSlot: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("The material slot with groups 'BY_SLOT'. Default 0."),
+  /** An id for the part, kept in the merged geometry's `userData.mergeParts`. */
+  key: z.string().optional().describe('An id for the part, kept in userData.mergeParts.'),
+});
+
+const MergedVariant = GeoBaseProps.extend({
+  /** Several registered geometries, each with its transform, merged into one (one draw). */
+  type: z.literal('MERGED').describe('Several geometries merged into one.'),
+  /** The parts and the merge's options. */
+  params: z
+    .object({
+      /** The parts, in the merged order. */
+      parts: z.array(MergedGeoPartSchema).min(1).describe('The parts, in the merged order.'),
+      /** `BY_SLOT` makes one geometry group per `materialSlot`, for a material array. Default
+       * `NONE`. */
+      groups: z
+        .enum(['NONE', 'BY_SLOT'])
+        .optional()
+        .describe("BY_SLOT: one group per materialSlot. Default 'NONE'."),
+      /** `UNION` fills an attribute a part lacks; `INTERSECTION` keeps only the shared ones.
+       * Default `UNION`. */
+      attributes: z
+        .enum(['UNION', 'INTERSECTION'])
+        .optional()
+        .describe("UNION fills missing attributes; INTERSECTION drops them. Default 'UNION'."),
+      /** An indexed result. Default true. */
+      indexed: z.boolean().optional().describe('An indexed result. Default true.'),
+    })
+    .describe("The parts and the merge's options."),
+});
+
+/**
+ * A geometry JSON's props (`*.geometry.json`'s `geoProps`, and a scene's inline `geometries`):
+ * a primitive ({@link GeoPropsSchema}) or `MERGED`, which the scene loader merges from its parts.
+ * A mesh's inline `geo` can't be `MERGED`.
+ * @internal
+ */
+export const GeoAssetPropsSchema = z
+  .discriminatedUnion('type', [...GEO_VARIANTS, MergedVariant])
+  .describe('The geometry: BOX, SPHERE, CYLINDER, CAPSULE, CONE or MERGED, and its params.');
+
+/**
+ * A geometry JSON's props, as {@link GeoAssetPropsSchema} validates them. `RuntimeTypes.test.ts`
+ * checks its `MERGED` member against the runtime's `MergedGeoProps`.
+ * @internal
+ */
+export type GeoAssetProps = z.infer<typeof GeoAssetPropsSchema>;
 
 // Every type's params, each optional: a save entry's params go over the geometry's
 const GeoOverridesSchema = z.object({
@@ -195,7 +264,7 @@ export const GeoAssetSchema = z.object({
   /** The JSON Schema an editor validates the file with. */
   $schema: JsonSchemaRefSchema.optional(),
   /** The geometry's type and params. */
-  geoProps: GeoPropsSchema,
+  geoProps: GeoAssetPropsSchema,
   /** Set by the gatherer: the file it came from. */
   __sourcePath: SourcePathSchema.optional(),
   /** Per scene id, its save entries over the params and `debugData` (the first applies). */

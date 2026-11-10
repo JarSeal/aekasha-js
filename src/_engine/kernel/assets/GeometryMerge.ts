@@ -1,7 +1,13 @@
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
-import { getGeometry, saveBufferGeometry, type GeoBaseProps } from './Geometry';
+import {
+  getGeometry,
+  saveBufferGeometry,
+  type GeoBaseProps,
+  type MergedGeoPart,
+  type MergedGeoProps,
+} from './Geometry';
 import {
   mergeGeometryPartsCore,
   type MergedGeometry,
@@ -99,4 +105,39 @@ export const registerMergedGeometry = (
   const existing = props.id ? getGeometry(props.id) : undefined;
   if (existing) return saveBufferGeometry(existing, props);
   return saveBufferGeometry(mergeGeometryParts(parts, { groups, attributes, indexed }), props);
+};
+
+const partPosition = new THREE.Vector3();
+const partQuaternion = new THREE.Quaternion();
+const partScale = new THREE.Vector3();
+const partEuler = new THREE.Euler();
+
+/** A `MERGED` JSON part's transform as a matrix: position, then rotation (`quaternion` over
+ * `rotation`), then scale, as a mesh's. */
+const getPartMatrix = (part: MergedGeoPart) => {
+  const { position: p, rotation: r, quaternion: q, scale: s } = part;
+  partPosition.set(p?.x ?? 0, p?.y ?? 0, p?.z ?? 0);
+  if (q) partQuaternion.set(q.x, q.y, q.z, q.w);
+  else partQuaternion.setFromEuler(partEuler.set(r?.x ?? 0, r?.y ?? 0, r?.z ?? 0));
+  partScale.set(s?.x ?? 1, s?.y ?? 1, s?.z ?? 1);
+  return new THREE.Matrix4().compose(partPosition, partQuaternion, partScale);
+};
+
+/**
+ * Registers a `MERGED` geometry JSON's props ({@link registerMergedGeometry} with its parts'
+ * transforms as matrices): the scene loader's, which `import()`s this module for a scene's first
+ * `MERGED` geometry.
+ * @internal
+ * @throws as {@link mergeGeometryParts}
+ */
+export const registerMergedGeoProps = (props: MergedGeoProps): THREE.BufferGeometry => {
+  const { type, params, ...registration } = props;
+  const { parts, groups, attributes, indexed } = params;
+  const mergeParts: MergePart[] = parts.map((part) => ({
+    geo: part.geo,
+    matrix: getPartMatrix(part),
+    ...(part.materialSlot !== undefined ? { materialSlot: part.materialSlot } : {}),
+    ...(part.key !== undefined ? { key: part.key } : {}),
+  }));
+  return registerMergedGeometry(mergeParts, { ...registration, groups, attributes, indexed });
 };

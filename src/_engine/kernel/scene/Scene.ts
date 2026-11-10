@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import type { GeoProps } from '../assets/Geometry';
+import type { GeoProps, MergedGeoProps } from '../assets/Geometry';
 import type { MatProps } from '../assets/Material';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { TextureProps } from '../assets/Texture';
@@ -57,8 +57,8 @@ export type SceneData = {
   )[];
   /** The lights the loader creates after the scene code. */
   lights?: ({ lightProps: LightProps; entityOpts?: CoreEntityOpts } | string)[];
-  /** The geometries the loader registers. */
-  geometries?: (GeoProps | string)[];
+  /** The geometries the loader registers (`MERGED` ones after the others, from their parts). */
+  geometries?: (GeoProps | MergedGeoProps | string)[];
   /** The textures the loader loads. */
   textures?: (TextureProps | string)[];
   /** The materials the loader creates (after the textures they name). */

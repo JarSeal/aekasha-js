@@ -80,13 +80,18 @@ const resolveGeometries = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneR
     if (!geo) return reportUnknownId('geometry', geoId);
     const entry = getSaveEntry(geo, sceneId);
     if (ctx.isProduction) delete geo.geoProps.debugData;
+    const debugData = geo.geoProps.debugData
+      ? { debugData: { ...geo.geoProps.debugData, ...entry?.debugData } }
+      : {};
+    // A save entry's params are the primitives': a MERGED geometry takes only its debug data
+    if (geo.geoProps.type === 'MERGED') {
+      return { id: geoId, type: geo.geoProps.type, params: geo.geoProps.params, ...debugData };
+    }
     return {
       id: geoId,
       type: geo.geoProps.type,
       params: { ...geo.geoProps.params, ...entry?.params },
-      ...(geo.geoProps.debugData
-        ? { debugData: { ...geo.geoProps.debugData, ...entry?.debugData } }
-        : {}),
+      ...debugData,
     };
   });
 };

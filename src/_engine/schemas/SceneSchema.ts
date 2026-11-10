@@ -7,7 +7,7 @@ import {
 } from './_SaveDataSchema';
 import { CameraAssetSchema } from './CameraSchema';
 import { LightAssetSchema } from './LightSchema';
-import { GeoPropsSchema } from './GeometrySchema';
+import { GeoAssetPropsSchema } from './GeometrySchema';
 import { InlineTextureSchema } from './TextureSchema';
 import { MaterialAssetSchema } from './MaterialSchema';
 import { createMeshAssetSchema } from './MeshSchema';
@@ -58,9 +58,10 @@ const createKernelSceneShape = <M extends z.ZodType>(InlineMeshSchema: M) => ({
     .array(z.union([z.string(), LightAssetSchema]))
     .optional()
     .describe('Light ids, or inline lights, created after the scene code.'),
-  /** The geometries the loader registers: geometry JSON ids, or inline props. */
+  /** The geometries the loader registers: geometry JSON ids, or inline props (`MERGED` ones after
+   * the others, from their parts). */
   geometries: z
-    .array(z.union([z.string(), GeoPropsSchema]))
+    .array(z.union([z.string(), GeoAssetPropsSchema]))
     .optional()
     .describe('Geometry ids, or inline geometry props, registered with the assets.'),
   /** The textures the loader loads: texture, array or atlas ids (an atlas id for every slot), or
