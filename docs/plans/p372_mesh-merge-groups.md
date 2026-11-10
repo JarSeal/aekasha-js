@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -289,10 +289,83 @@ As built (2026-11-10):
   `bundle*.json` (the embeds below the report's threshold: +202 B, 56 B gzip); no debug code in
   any build.
 
-### Phase 2 — In-place updates (§3)
+### Phase 2 — In-place updates (§3) — done
 
 `updateMergeMember`, remove by collapse, compaction, disable/enable, the moved-member check.
 **Exit:** moving one member rewrites only its range (no rebuild counted); removing 30% compacts.
+
+As built (2026-11-10):
+
+- Files: `MergeRanges.ts` (the buffer writes: `rewritePartVertices`, `flipPartWinding`,
+  `growMergedBounds`, `collapsePartIndex`, `restorePartIndex`), `MergeInPlace.ts` (per member:
+  `rewriteMember`, `dropMember`, `collapseDisabledMember`, `restoreEnabledMember`,
+  `COMPACT_WASTE_SHARE`), `MergeState.ts` (the per-world maps, `markPending`, `syncMemberPose`,
+  `releaseMember`: moved out of `MergeGroups.ts`, which keeps the API, the hooks, the builds and
+  the install, and would have passed 800 lines) and `debug/_dbg__MergeGroups.ts`.
+- `updateMergeMember(entityId, world?)` (§3): the pose read from `TRANSFORM` (both storage
+  modes: object3DSyncSystem copies it only in MAIN, so a move later in the frame isn't on the
+  mesh yet; the builds read it the same way since). Positions, normals (the normal matrix) and
+  tangents (the linear part; a tangent the merge computed, the member having none, turned from
+  the merged value by the change since `MERGE_MEMBER._bakedMatrix`, the world matrix its range
+  was written with) rewritten, `w` and the winding flipped when the mirroring changed, one
+  `addUpdateRange` per attribute written (uvs and colours untouched). The bounds only grow (box and
+  sphere each: a box inside the merged box can still leave its sphere) until the next build, and
+  the group re-joins the spatial index only when they grew. A running worker build
+  (`MERGE_GROUP._isBuilding`) is dropped and the group builds again (it read the old pose). A
+  member whose geometry has another vertex count warns and its group builds again; a non-member
+  warns.
+- `removeFromMergeGroup(entityIds, world?)`: a built member's index range collapsed to its first
+  vertex (one index range), its vertices counted in `wasted`, the member released at once (drawn
+  on its own, back in the spatial index). A deleted member the same (Phase 1 rebuilt instead).
+  Past `COMPACT_WASTE_SHARE` (§3's "max(wasted / total, 25%)" read as past 25 % of the merged
+  vertices) the group is marked for a compacting build. A member not built yet only leaves the
+  lists (its group's pending build stays: a merge of the same members when nothing else changed).
+  A worker build dropped because a member left marks the group again (not when a newer build
+  replaced it or the group was deleted).
+- Disable / enable (§7): `DISABLED` hooks from the install (one component lookup per disable or
+  enable in an app with `merging()`). A built member's range collapses without counting as waste
+  (`MERGE_MEMBER._isCollapsed`); enabling writes it back from the member's geometry with its
+  baked matrix's winding (the group mesh is only ever moved, so the world matrix's mirroring is
+  the part's); a geometry replaced meanwhile warns and the group builds again. A member disabled
+  at its build is merged, then collapsed. `updateMergeMember` on a collapsed member writes its
+  vertices, not its index; removing one counts its vertices as waste.
+- The moved-member check (§3): `registerMergeDebug` (`MergeGroups.ts`, through `ctx.onDebug`,
+  gated by `IS_DEBUG_ENV`) loads `debug/_dbg__MergeGroups.ts`, whose `mergeMoveCheckSystem`
+  (`LATE_MAIN`, every 60 frames, `MOVE_CHECK_FRAMES`) compares each built member's world matrix
+  with `_bakedMatrix` (1e-5 per element) and warns once per member, naming the group, the entity
+  and `updateMergeMember`.
+- Tests: `MergeGroups.test.ts` (each in-place update compared with a fresh merge of the same poses,
+  a mirrored member with computed tangents included; the update ranges; the bounds and the spatial
+  re-join; the typed store; a dropped worker build; the collapse and compaction through a remove
+  and a delete; disabling: the round trip, at a build, moved while disabled, removed while
+  disabled, a replaced geometry), `debug/_dbg__MergeGroups.test.ts` (once per member, the members
+  waiting skipped, the 60-frame interval in `LATE_MAIN`). Each guarded path was checked failing
+  without its code.
+- The exit check (2026-11-10, Chrome on macOS, debug env; `testDebugScene`'s `p372_grid`, 200
+  boxes, driven through the test bridge, its merged image against the one after
+  `dissolveMergeGroup`):
+  - In place: 3 members moved and turned with `updateMergeMember`, 10 disabled and 5 of them
+    enabled again, 40 removed (20 %): no rebuild (`rebuilds` 1, the same geometry), `wasted` 960;
+    draws 37 → 77 (the 40 removed on their own); the images differ in 2 of 700 000 pixels by 1
+    level (WebGPU), 5 by 1 (WebGL2).
+  - Compaction: 60 removed (30 %): `wasted` 1 440, pending, built in the next frame (`rebuilds`
+    2, `wasted` 0, 140 members, 3 360 vertices); a member moved without `updateMergeMember`
+    warned once within the interval. Images: 6 pixels by 1 (WebGPU); 13 on WebGL2, 11 by at most
+    7 and 2 silhouette pixels at box corners over the background flipping coverage (the compacted
+    group is centred elsewhere, so its baked vertices round differently).
+  - Collapsed ranges still count in the triangles (degenerate ones are submitted until the
+    compaction): 64 631 merged against 64 091 dissolved.
+- `yarn sbp`: `_engine/features/merging` 1.9 → 2.8 kB gzip in the first download (5 modules),
+  under its 3 KiB budget; **Phase 3** (the schema part, `AUTO`, the scene step) will need the
+  budget raised. No debug code in any build.
+- Baselines (2026-11-10): `yarn verify:scenes` before the update failed only on
+  `mergeMoveCheckSystem` in `LATE_MAIN` (the 101 debug-env runs' system order) and on
+  `thirdPersonGymScene` `workerSab`'s snapshot: its probe hash back at 84a78084 (the other
+  configs'), from Phase 1's recorded e40a1d59, the camera following a character that ran
+  differently (p428's worker-target spread; the gym has no merge groups). Then
+  `yarn verify:scenes --update` (132 recorded) and `yarn verify:baselines --update` (`api.json`:
+  `removeFromMergeGroup` and `updateMergeMember` on the entry, the new internal modules;
+  `docs.json` merging 35 / 35; `bundle.json`).
 
 ### Phase 3 — JSON, AUTO and scene load (§4, §6)
 

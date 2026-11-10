@@ -1,5 +1,6 @@
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
-import { installMergeGroups } from './MergeGroups';
+import { installMergeGroups, registerMergeDebug } from './MergeGroups';
 
 /**
  * The merging feature: mesh entities that share a material drawn as one merged mesh (a merge
@@ -18,5 +19,8 @@ export const merging = (): EngineFeature => ({
   id: 'merging',
   install: (ctx) => {
     installMergeGroups(ctx);
+    // The moved-member check; gated like every debug hook, so a production build drops the call
+    // and the wrapper it names (verify:baselines fails on an ungated one)
+    if (IS_DEBUG_ENV) ctx.onDebug(registerMergeDebug);
   },
 });

@@ -37,6 +37,7 @@ import type { MergePart } from '../../kernel/assets/GeometryMerge';
 import { getCurrentSceneId, getLoadingSceneId, getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
+import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { getMergeRefusal } from './MergeEligibility';
 import {
   collapseDisabledMember,
@@ -625,6 +626,16 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
   if (!findPending(ecsWorld)?.size) return;
   const merge = await loadMergeModuleAsync();
   await Promise.all(buildPendingGroups(ecsWorld, merge));
+};
+
+/**
+ * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts): the `merging()`
+ * feature's `onDebug` hook.
+ * @internal
+ */
+export const registerMergeDebug = async () => {
+  const debug = await loadDebugModuleAsync(() => import('./debug/_dbg__MergeGroups'));
+  useDebug(debug)?._installMergeDebug();
 };
 
 /**

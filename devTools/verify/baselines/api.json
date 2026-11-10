@@ -794,7 +794,34 @@
       "getMergeGroupOf": "Function",
       "installMergeGroups": "Function",
       "rebuildMergeGroup": "Function",
+      "registerMergeDebug": "Function",
+      "removeFromMergeGroup": "Function",
+      "updateMergeMember": "Function",
       "WORKER_BUILD_VERTICES": "Variable"
+    },
+    "src/_engine/features/merging/MergeInPlace.ts": {
+      "collapseDisabledMember": "Function",
+      "COMPACT_WASTE_SHARE": "Variable",
+      "dropMember": "Function",
+      "restoreEnabledMember": "Function",
+      "rewriteMember": "Function"
+    },
+    "src/_engine/features/merging/MergeRanges.ts": {
+      "collapsePartIndex": "Function",
+      "flipPartWinding": "Function",
+      "growMergedBounds": "Function",
+      "restorePartIndex": "Function",
+      "rewritePartVertices": "Function"
+    },
+    "src/_engine/features/merging/MergeState.ts": {
+      "findPending": "Function",
+      "getGroupMesh": "Function",
+      "getGroups": "Function",
+      "getMemberMesh": "Function",
+      "getPending": "Function",
+      "markPending": "Function",
+      "releaseMember": "Function",
+      "syncMemberPose": "Function"
     },
     "src/_engine/features/merging/MergeTypes.ts": {
       "MergeGroupData": "TypeAlias",
@@ -5048,7 +5075,9 @@
       "dissolveMergeGroup",
       "getMergeGroupOf",
       "merging",
-      "rebuildMergeGroup"
+      "rebuildMergeGroup",
+      "removeFromMergeGroup",
+      "updateMergeMember"
     ],
     "aekasha/physics": [
       "ColliderAPI",
