@@ -3,11 +3,11 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1247
+      "gzip": 1246
     },
     "assets/AssetsSwitchGLTF.js": {
-      "bytes": 149885,
-      "gzip": 52200
+      "bytes": 150090,
+      "gzip": 52289
     },
     "assets/AssetsSwitchMerge.js": {
       "bytes": 5442,
@@ -23,7 +23,7 @@
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 155
+      "gzip": 156
     },
     "assets/AssetsWorker.js@AssetsWorker": {
       "bytes": 2180,
@@ -75,7 +75,7 @@
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1853,
-      "gzip": 831
+      "gzip": 830
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1859,
@@ -83,7 +83,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47087,
-      "gzip": 14025
+      "gzip": 14023
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
@@ -118,8 +118,8 @@
       "gzip": 45594
     },
     "assets/ImportRegistry.js": {
-      "bytes": 15939,
-      "gzip": 6421
+      "bytes": 16144,
+      "gzip": 6507
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
@@ -127,7 +127,7 @@
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
-      "gzip": 969
+      "gzip": 971
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -147,7 +147,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 182
+      "gzip": 181
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -158,8 +158,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 969735,
-      "gzip": 270634
+      "bytes": 970003,
+      "gzip": 270706
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -167,7 +167,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16882
+      "gzip": 16887
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -191,18 +191,18 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8594
+      "gzip": 8593
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 212
+      "gzip": 209
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
-    "minified": 993666,
-    "gzip": 276850
+    "minified": 993932,
+    "gzip": 276928
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -247,8 +247,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 3902,
-      "gzip": 1662
+      "minified": 4168,
+      "gzip": 1740
     },
     "_engine/kernel/render": {
       "modules": 7,

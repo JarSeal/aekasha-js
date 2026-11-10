@@ -179,6 +179,56 @@ const createMergeGroupCheck = (checker: THREE.Texture) => {
   addToMergeGroup('p372_grid', boxes);
 };
 
+/** The AUTO check's lattice: 10 columns (x) × 10 rows (y) × 5 layers (z), under the right block.
+ * The scene's `mergeGroups` makes AUTO's cells 2 m, so x 4-6 / 6-8 and z -2-0 / 0-2: four cells. */
+const AUTO_LATTICE = {
+  columns: 10,
+  rows: 10,
+  layers: 5,
+  x: 4.2,
+  y: -3.3,
+  z: -0.8,
+  spacing: { x: 0.28, y: 0.28, z: 0.4 },
+  materials: ['p372_autoMatA', 'p372_autoMatB', 'p372_autoMatC'],
+};
+
+/**
+ * The AUTO merge check (p372 Phase 3): 500 boxes of `p372_autoBox` (the scene JSON's), the three
+ * materials in turn, `merge: 'AUTO'`: 12 groups, 3 materials in 4 cells, built by the scene step
+ * so the first frame draws them merged and `p372_autoBox` is never uploaded. The bottom row's four
+ * corners are the JSON's meshes (`p372_autoJson_*`, material A): the code skips them.
+ */
+const createAutoMergeCheck = () => {
+  const { columns, rows, layers, spacing, materials } = AUTO_LATTICE;
+  let i = 0;
+  for (let layer = 0; layer < layers; layer++) {
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        const isJsonCorner =
+          row === rows - 1 &&
+          (column === 0 || column === columns - 1) &&
+          (layer === 0 || layer === layers - 1);
+        if (isJsonCorner) continue;
+        createMeshEntity(
+          {
+            geo: 'p372_autoBox',
+            mat: materials[i % materials.length],
+            position: {
+              x: AUTO_LATTICE.x + column * spacing.x,
+              y: AUTO_LATTICE.y - row * spacing.y,
+              z: AUTO_LATTICE.z + layer * spacing.z,
+            },
+            rotation: { x: i * 0.41, y: i * 0.29, z: 0 },
+            merge: 'AUTO',
+          },
+          { appId: `p372_auto_${i}` }
+        );
+        i++;
+      }
+    }
+  }
+};
+
 /**
  * The orientation check of hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
  * next to their sources; its camera and lights are in its JSON. Top row: each PNG texture, then
@@ -188,7 +238,8 @@ const createMergeGroupCheck = (checker: THREE.Texture) => {
  * textures, a plain material) and its meshopt copy. Switch the GLTF worker target in the Assets
  * tab (and reload) to check the assets worker path. Bottom row: the geometry merge check
  * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows. Left and right of
- * the rows, the merge group check (`createMergeGroupCheck`).
+ * the rows, the merge group check (`createMergeGroupCheck`), and under the right block the AUTO
+ * check (`createAutoMergeCheck`).
  */
 export const scene = async () => {
   const textures = await Promise.all(
@@ -215,6 +266,7 @@ export const scene = async () => {
   });
   createMergeCheck(textures[0]);
   createMergeGroupCheck(textures[0]);
+  createAutoMergeCheck();
 
   for (let i = 0; i < MODELS_TO_IMPORT.length; i++) {
     const { id, fileName, noTextures } = MODELS_TO_IMPORT[i];

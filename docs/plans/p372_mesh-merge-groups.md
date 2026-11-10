@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented, Phase 3 started
+Status: in progress | Phases 1-3 implemented
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -367,7 +367,7 @@ As built (2026-11-10):
   `removeFromMergeGroup` and `updateMergeMember` on the entry, the new internal modules;
   `docs.json` merging 35 / 35; `bundle.json`).
 
-### Phase 3 — JSON, AUTO and scene load (§4, §6)
+### Phase 3 — JSON, AUTO and scene load (§4, §6) — done
 
 The cell maths to `src/_engine/utils/` unless p353 moved it (p370 §13), `merge` in the feature's
 schema part and `createMeshEntity`, scene `mergeGroups`, `AUTO` buckets, imported asset custom
@@ -484,6 +484,77 @@ As built, section 3 (2026-11-10):
   spy, so the order of the three sources and the moving groups left out), `MergeAuto.test.ts`
   (a fixed and a dynamic body waited for, then merged and refused). For Phase 5: the Hub's
   imported asset pages list the `merge` custom prop and the spawn option.
+
+As built, section 4 (2026-11-10):
+
+- The scene hooks (`installMergeGroups`): `loadStart` marks a load running
+  (`setMergeSceneLoading`, `MergeState.ts`); `entered` is the scene step,
+  `buildSceneMergeGroupsAsync` (§6's `buildSceneMergeGroups`): it joins the queued `merge`s and
+  builds every pending group, awaiting the worker builds, up to three rounds (a worker build
+  dropped because a member left marks its group again), then ends the load's state and lets go of
+  the holds; `loadSettled` does the last two for a load that failed before `entered`. A failed
+  build or merge code load is logged (the load doesn't fail): the members are drawn on their own
+  until the build system builds them.
+- The build system does nothing while a load runs, so a scene's groups are built once, after its
+  code placed its meshes and physics created their bodies (`merging()`'s `entered` runs after
+  physics' when it's listed after `physics()`, as the template does; listed before, a member
+  whose body isn't created yet stays queued past the step and the build system takes it).
+- Holds (Phase 1's GPU memory finding): a mesh that joins during a load (a queued `merge`, or
+  `addToMergeGroup`) gets `TAG_DRAW_HELD`, the kernel's draw hold, from merging
+  (`holdForSceneLoad`), unless something else holds it already; the step lets go of only the
+  holds it added (`releaseSceneLoadHolds`). So a scene's members are never drawn on their own,
+  and their own geometry is never uploaded; a refused one is drawn once the step is done.
+- Not handled (for Phase 5's docs, or a follow-up): a streaming cell loaded during play makes
+  its members' meshes outside a load, so they're drawn on their own (primed and held by
+  streaming meanwhile) until the next frame's build, and the group mesh isn't primed by streaming
+  (its first draw may compile). `testDebugScene`'s `p372_grid` is now built by the step (its
+  scene code adds the boxes during the load): section 5 records its baselines.
+- Tests: `MergeAuto.test.ts` (through the kernel's scene hooks: held while loading, the system
+  waiting across frames, built and let go of at `entered`, a refused mesh shown; another owner's
+  hold left; a failed load's holds let go of and the system building). Each guard was checked
+  failing without its code (the system's wait, the hold).
+
+As built, section 5 (2026-11-10):
+
+- The check in `testDebugScene` (`createAutoMergeCheck`, under the right block): 500 boxes of
+  `p372_autoBox` (an inline geometry of the scene JSON, used by nothing else), the materials
+  `p372_autoMatA`-`C` in turn, in a 10 × 10 × 5 lattice at x 4.2-6.72, y -3.3 to -5.82, z -0.8 to
+  0.8; the scene's `mergeGroups: [{ id: 'AUTO', cellSize: 2 }]` makes that four cells (x 4-6 /
+  6-8, z -2-0 / 0-2). 496 come from the scene code, the bottom row's four corners from the JSON
+  (`p372_autoJson_*`, `"merge": "AUTO"`); the manifest names `merging`.
+- Measured 2026-11-10 in Chrome on macOS, debug env, 1000 × 700, through the test bridge
+  (`whenSceneReady`, then a `LATE_MAIN` system after the render), the same on WebGPU and WebGL2:
+  12 groups (`auto:<hash>:2,-1:0` …, 19-71 members, 456-1 704 vertices), 500 members merged (the
+  4 JSON ones among them), none held, each group built once (`rebuilds` 1: the scene step);
+  `p372_autoBox`'s position attribute never uploaded (three's backend has no data for it; after
+  dissolving the 12 groups it has), the 12 group geometries uploaded. Draws 49 merged, 534 after
+  `dissolveMergeGroup` of the 12 (+485: three boxes past the right edge of the 1000 × 700 view are
+  culled on their own, 36 triangles); the merged and dissolved images differ in 5 of 700 000 pixels
+  on WebGPU and 4 on WebGL2, all at the lattice's lower right corner by the view's edge (two box
+  corners' coverage, 27 and 30 levels, and three by 1 level: the merged vertices are baked
+  relative to the group's centre, Phase 2's rounding).
+- `yarn sbp --profile all` found `BatchedMesh` (about 18 kB minified, +4.6 KiB gzip in
+  `three`) in the app's first download since section 1: `MergeEligibility.ts`' `instanceof
+THREE.BatchedMesh` had been there since Phase 1, but only `testDebugScene` (a debug scene, not
+  in a production build) called `addToMergeGroup` until section 1's build system started joining
+  the queue. Found by building each commit with the production gather and diffing the minified
+  chunk's identifiers (`_initMatricesTexture`, `addGeometry`, …). The checks read three's type
+  flags now (`isMesh`, `isSkinnedMesh`, `isInstancedMesh`, `isBatchedMesh`; three as a type
+  import there), and `three` is back at its baseline. Then `_engine/features/merging` 2.8 →
+  6.0 kB gzip in the first download (8 modules: `MergeGroups` 2.8, `MergeAuto` 1.3, `MergeState`
+  0.8, `MergeEligibility` 0.8, `MergeSceneSettings` 0.7, `MergeInPlace` 0.6, `MergeRanges` 0.3,
+  each gzipped alone) and `assets/index.js` 377.4 → 380.4 KiB: the budgets raised to 6 KiB and
+  381 KiB (`sbp.config.ts`, decided over moving the AUTO bucketing and the in-place writes into
+  the lazy merge chunk); `utils/CellKey.ts` is in the first download now (merging's
+  `worldToCell`). The embeds unchanged.
+- Baselines (2026-11-10): `yarn verify:scenes` failed only on `testDebugScene` (its snapshot in
+  the four configurations, only at the new lattice; its debugger shots of the Assets tab and the
+  profiler's Objects and GPU memory); the other 128 runs passed, `p372_grid` (now built by the
+  scene step) unchanged, no hash, character path or console error changed. Then
+  `yarn verify:scenes --only testDebugScene --update` (5 recorded) and
+  `yarn verify:baselines --update` (`api.json`: `MeshMergeDef` and `MeshMergeOptions` on
+  `aekasha/merging`, `mergingSchemaPart` on `aekasha/schemas`, the new internal modules;
+  `docs.json` merging 65 / 65; the three `bundle*.json`); no debug code in any build.
 
 ### Phase 4 — Adoption and measurements
 

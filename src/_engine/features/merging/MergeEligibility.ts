@@ -1,6 +1,6 @@
 // Which mesh entities a merge group takes (docs/plans/p372_mesh-merge-groups.md §5): a refused one
 // is drawn on its own, with a warning naming the reason (`addToMergeGroup`).
-import * as THREE from 'three/webgpu';
+import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { MergeGroupData } from './MergeTypes';
@@ -19,7 +19,9 @@ const getAttributeMismatch = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) 
 const getGroupGeometry = (group: MergeGroupData, world: ECSWorld) => {
   for (const entityId of group.members) {
     const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    if (object instanceof THREE.Mesh) return object.geometry as THREE.BufferGeometry;
+    if ((object as Partial<THREE.Mesh> | undefined)?.isMesh) {
+      return (object as THREE.Mesh).geometry as THREE.BufferGeometry;
+    }
   }
   return undefined;
 };
@@ -36,25 +38,30 @@ export const getMergeRefusal = (
 ): string | null => {
   if (!world.isAlive(entityId)) return 'it was deleted';
   const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-  if (!(object instanceof THREE.Mesh)) return "it isn't a mesh entity";
+  // three's type flags, not `instanceof`: a class named here ships with every app that lists
+  // merging() (BatchedMesh alone is ~18 kB minified, and no other shipping code uses it)
+  if (!(object as Partial<THREE.Mesh> | undefined)?.isMesh) return "it isn't a mesh entity";
+  const mesh = object as THREE.Mesh & {
+    isSkinnedMesh?: boolean;
+    isInstancedMesh?: boolean;
+    isBatchedMesh?: boolean;
+  };
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   if (member) return `it's in the merge group "${member.groupId}" already`;
-  if (object instanceof THREE.SkinnedMesh) return 'skinned meshes are never merged';
-  if (object instanceof THREE.InstancedMesh || object instanceof THREE.BatchedMesh) {
-    return 'instanced meshes are never merged';
-  }
+  if (mesh.isSkinnedMesh) return 'skinned meshes are never merged';
+  if (mesh.isInstancedMesh || mesh.isBatchedMesh) return 'instanced meshes are never merged';
   if (world.hasComponent(entityId, ComponentType.INSTANCED_MESH_SLOT)) {
     return "it's an instanced mesh pool's instance";
   }
-  const geometry = object.geometry as THREE.BufferGeometry;
+  const geometry = mesh.geometry as THREE.BufferGeometry;
   if (Object.keys(geometry.morphAttributes).length > 0) return 'it has morph targets';
   const position = geometry.getAttribute('position');
   if (!position || position.itemSize !== 3) return 'its geometry has no 3-component position';
-  if (Array.isArray(object.material)) {
+  if (Array.isArray(mesh.material)) {
     return 'it has a material array (multi-material merging is p374)';
   }
-  if (object.material.transparent) return 'its material is transparent (drawn sorted per object)';
-  if (group?._material && object.material !== group._material) {
+  if (mesh.material.transparent) return 'its material is transparent (drawn sorted per object)';
+  if (group?._material && mesh.material !== group._material) {
     return "its material isn't the group's (one material per group)";
   }
   if (

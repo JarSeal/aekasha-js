@@ -16113,7 +16113,7 @@
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",
-      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group.",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group. Under the right block, 500 boxes in three materials, merged by AUTO into 12 groups (four 2 m cells).",
       "cameras": [
         {
           "camProps": {
@@ -16241,6 +16241,15 @@
             "name": "Symbol trio (MERGED)",
             "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
           }
+        },
+        {
+          "id": "p372_autoBox",
+          "type": "BOX",
+          "params": {
+            "width": 0.12,
+            "height": 0.12,
+            "depth": 0.12
+          }
         }
       ],
       "materials": [
@@ -16266,6 +16275,30 @@
           "params": {
             "color": "#7f5433",
             "roughness": 0.7
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatA",
+          "params": {
+            "color": "#c0563b",
+            "roughness": 0.6
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatB",
+          "params": {
+            "color": "#4f8a5b",
+            "roughness": 0.6
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p372_autoMatC",
+          "params": {
+            "color": "#3f6fb0",
+            "roughness": 0.6
           },
           "type": "STANDARD"
         }
@@ -16359,6 +16392,58 @@
             },
             "appId": "p371_doorRight"
           }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 4.2,
+              "y": -5.82,
+              "z": -0.8
+            },
+            "appId": "p372_autoJson_0",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 6.72,
+              "y": -5.82,
+              "z": -0.8
+            },
+            "appId": "p372_autoJson_1",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 4.2,
+              "y": -5.82,
+              "z": 0.8
+            },
+            "appId": "p372_autoJson_2",
+            "merge": "AUTO"
+          }
+        },
+        {
+          "props": {
+            "geo": "p372_autoBox",
+            "mat": "p372_autoMatA",
+            "position": {
+              "x": 6.72,
+              "y": -5.82,
+              "z": 0.8
+            },
+            "appId": "p372_autoJson_3",
+            "merge": "AUTO"
+          }
         }
       ],
       "importedAssets": [
@@ -16401,9 +16486,17 @@
           }
         }
       ],
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 2
+        }
+      ],
       "id": "testDebugScene",
       "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
-      "__features": []
+      "__features": [
+        "merging"
+      ]
     },
     "textureArrays": {
       "isDebugScene": true,

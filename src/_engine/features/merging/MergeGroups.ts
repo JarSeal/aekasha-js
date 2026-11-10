@@ -63,8 +63,12 @@ import {
   getGroups,
   getMemberMesh,
   getPending,
+  holdForSceneLoad,
+  isMergeSceneLoading,
   markPending,
   releaseMember,
+  releaseSceneLoadHolds,
+  setMergeSceneLoading,
   syncMemberPose,
 } from './MergeState';
 import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
@@ -216,6 +220,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       _isCollapsed: false,
     });
     group.members.push(entityId);
+    holdForSceneLoad(entityId, ecsWorld);
     added++;
   }
   if (added > 0) markPending(ecsWorld, groupEntityId, group);
@@ -626,9 +631,11 @@ const buildPendingGroups = (world: ECSWorld, merge: MergeModule) => {
 /**
  * Joins the queued `merge`s, then builds the pending merge groups, once a frame (APP_RENDER_SYNC,
  * `MERGE_BUILD`). Its first run with a pending group loads the merge code, and the run after it's
- * in builds.
+ * in builds. Not during a scene load: its scene step builds (`buildSceneMergeGroupsAsync`), once
+ * the scene's code has placed its meshes and physics has created their bodies.
  */
 const mergeGroupBuildSystem = (world: ECSWorld) => {
+  if (isMergeSceneLoading()) return;
   resolveQueuedMerges(world);
   const pending = findPending(world);
   if (!pending || pending.size === 0) return;
@@ -655,6 +662,41 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
   await Promise.all(buildPendingGroups(ecsWorld, merge));
 };
 
+/** How many times the scene step builds again: a worker build dropped meanwhile (a member left
+ * while it ran) marks its group again. */
+const SCENE_STEP_BUILD_ROUNDS = 3;
+
+/**
+ * The scene step (p372 §6, the `entered` scene hook): joins the scene's queued `merge`s and builds
+ * every pending group, awaiting the worker builds, then lets go of the members the load held, so
+ * the scene's first frame draws them merged and their own geometry is never uploaded. Runs after
+ * the `entered` hooks of the features listed before `merging()` (physics' waits for the scene's
+ * bodies). A failed build or merge code load is logged and the members are drawn on their own
+ * until the build system builds them.
+ * @internal
+ */
+export const buildSceneMergeGroupsAsync = async () => {
+  const world = getECSWorld();
+  try {
+    for (let round = 0; round < SCENE_STEP_BUILD_ROUNDS; round++) {
+      await buildPendingMergeGroupsAsync(world);
+      if (!findPending(world)?.size) break;
+    }
+  } catch (err) {
+    lerror("Merge groups: the scene's groups failed to build.", err);
+  } finally {
+    setMergeSceneLoading(false);
+    releaseSceneLoadHolds(world);
+  }
+};
+
+/** A scene load's end, loaded or failed: a failed load never ran the scene step. */
+const onSceneLoadSettled = () => {
+  if (!isMergeSceneLoading()) return;
+  setMergeSceneLoading(false);
+  releaseSceneLoadHolds(getECSWorld());
+};
+
 /**
  * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts): the `merging()`
  * feature's `onDebug` hook.
@@ -674,7 +716,12 @@ export const registerMergeDebug = async () => {
 export const installMergeGroups = (ctx: FeatureContext) => {
   isInstalled = true;
   setMeshMergeHandler(queueMerge);
-  ctx.addSceneHooks({ sceneRegistered: keepSceneMergeSettings });
+  ctx.addSceneHooks({
+    sceneRegistered: keepSceneMergeSettings,
+    loadStart: () => setMergeSceneLoading(true),
+    entered: buildSceneMergeGroupsAsync,
+    loadSettled: onSceneLoadSettled,
+  });
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
     onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_MERGED),
     onRemoveComponent: (entityId, world) =>

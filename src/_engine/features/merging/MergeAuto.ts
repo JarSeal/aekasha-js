@@ -17,6 +17,7 @@ import {
   getGroups,
   getMemberMesh,
   getQueued,
+  holdForSceneLoad,
   syncMemberPose,
 } from './MergeState';
 import type { MeshMergeDef } from './MergeTypes';
@@ -151,6 +152,7 @@ export const queueMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld)
     return;
   }
   getQueued(world).set(entityId, def);
+  holdForSceneLoad(entityId, world);
 };
 
 /**

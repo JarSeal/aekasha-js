@@ -782,12 +782,22 @@
     "src/_engine/features/lod/worker/AssetsSwitchSimplify.ts": {
       "assetsSwitchSimplify": "Function"
     },
+    "src/_engine/features/merging/MergeAuto.ts": {
+      "AUTO": "Variable",
+      "AUTO_ID_PREFIX": "Variable",
+      "AutoGroupPick": "TypeAlias",
+      "collectQueuedJoins": "Function",
+      "getAutoCompatibilityKey": "Function",
+      "pickAutoGroup": "Function",
+      "queueMerge": "Function"
+    },
     "src/_engine/features/merging/MergeEligibility.ts": {
       "getMergeRefusal": "Function"
     },
     "src/_engine/features/merging/MergeGroups.ts": {
       "addToMergeGroup": "Function",
       "buildPendingMergeGroupsAsync": "Function",
+      "buildSceneMergeGroupsAsync": "Function",
       "createMergeGroup": "Function",
       "CreateMergeGroupOptions": "TypeAlias",
       "dissolveMergeGroup": "Function",
@@ -813,23 +823,49 @@
       "restorePartIndex": "Function",
       "rewritePartVertices": "Function"
     },
+    "src/_engine/features/merging/MergeSceneSettings.ts": {
+      "DEFAULT_AUTO_CELL_SIZE": "Variable",
+      "DEFAULT_AUTO_MAX_VERTICES": "Variable",
+      "getActiveSceneMergeSettings": "Function",
+      "keepSceneMergeSettings": "Function",
+      "SceneMergeSettings": "TypeAlias",
+      "warnIfCellSizeSplitsStreaming": "Function",
+      "warnIfGroupSpansStreamingCells": "Function"
+    },
     "src/_engine/features/merging/MergeState.ts": {
+      "createGroup": "Function",
       "findPending": "Function",
+      "findQueued": "Function",
       "getGroupMesh": "Function",
       "getGroups": "Function",
       "getMemberMesh": "Function",
       "getPending": "Function",
+      "getQueued": "Function",
+      "holdForSceneLoad": "Function",
+      "isMergeSceneLoading": "Function",
       "markPending": "Function",
       "releaseMember": "Function",
+      "releaseSceneLoadHolds": "Function",
+      "setMergeSceneLoading": "Function",
       "syncMemberPose": "Function"
     },
     "src/_engine/features/merging/MergeTypes.ts": {
       "MergeGroupData": "TypeAlias",
       "MergeGroupSettings": "TypeAlias",
-      "MergeMemberData": "TypeAlias"
+      "MergeMemberData": "TypeAlias",
+      "MeshMergeDef": "TypeAlias",
+      "MeshMergeOptions": "TypeAlias",
+      "SceneAutoMergeEntry": "TypeAlias",
+      "SceneMergeGroupEntry": "TypeAlias"
     },
     "src/_engine/features/merging/MergingFeature.ts": {
       "merging": "Function"
+    },
+    "src/_engine/features/merging/MergingSchema.ts": {
+      "mergingSchemaPart": "Variable",
+      "MeshMergeDefSchema": "Variable",
+      "MeshMergeOptionsSchema": "Variable",
+      "SceneMergeGroupEntrySchema": "Variable"
     },
     "src/_engine/features/physics/backends/Engines.ts": {
       "ENGINES": "Variable"
@@ -2753,6 +2789,7 @@
       "disposeMesh": "Function",
       "getMeshByAppId": "Function",
       "installMeshes": "Function",
+      "MeshMergeHandler": "TypeAlias",
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
       "preWarmObjectsAsync": "Function",
@@ -2760,7 +2797,8 @@
       "setAutoLodResolverLoader": "Function",
       "setMeshGeometry": "Function",
       "setMeshLod": "Function",
-      "setMeshMaterial": "Function"
+      "setMeshMaterial": "Function",
+      "setMeshMergeHandler": "Function"
     },
     "src/_engine/kernel/render/CanvasSize.ts": {
       "CanvasSize": "TypeAlias",
@@ -5070,6 +5108,8 @@
       "MergeGroupData",
       "MergeGroupSettings",
       "MergeMemberData",
+      "MeshMergeDef",
+      "MeshMergeOptions",
       "addToMergeGroup",
       "createMergeGroup",
       "dissolveMergeGroup",
@@ -5239,6 +5279,7 @@
       "isJsonRelativeFileName",
       "isTextureArrayLayerFile",
       "lodSchemaPart",
+      "mergingSchemaPart",
       "postFxSchemaPart",
       "skyBoxSchemaPart",
       "spatialSchemaPart",

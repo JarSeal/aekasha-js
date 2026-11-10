@@ -18,6 +18,11 @@ import {
   rebuildMergeGroup,
   removeFromMergeGroup,
 } from './MergeGroups';
+import {
+  runSceneEnteredHooksAsync,
+  runSceneLoadSettledHooks,
+  runSceneLoadStartHooks,
+} from '../../kernel/scene/SceneHooks';
 import { keepSceneMergeSettings } from './MergeSceneSettings';
 import type { MeshMergeDef } from './MergeTypes';
 
@@ -49,6 +54,8 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  // A test's load left running ends (merging's loadSettled hook lets go of its holds)
+  runSceneLoadSettledHooks();
   setLoadingSceneId(null);
   world.clearWorld();
   fns.lwarn.mockClear();
@@ -259,6 +266,29 @@ describe('AUTO', () => {
     expect(getGroupIds()).toEqual([]);
   });
 
+  test('refuses skinned, instanced and batched meshes (by their type flags)', async () => {
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicNodeMaterial();
+    const objects = [
+      new THREE.SkinnedMesh(geometry, material),
+      new THREE.InstancedMesh(geometry, material, 2),
+      new THREE.BatchedMesh(2, 24, 36, material),
+    ];
+    for (const object of objects) {
+      const id = world.createEntity();
+      world.addComponent(id, ComponentType.OBJECT3D, { value: object, _lastVersion: -1 });
+      addToMergeGroup('AUTO', [id]);
+    }
+    await buildPendingMergeGroupsAsync();
+    const warnings = fns.lwarn.mock.calls.map((call) => String(call[0]));
+    expect(warnings).toEqual([
+      expect.stringContaining('skinned meshes are never merged'),
+      expect.stringContaining('instanced meshes are never merged'),
+      expect.stringContaining('instanced meshes are never merged'),
+    ]);
+    expect(getGroupIds()).toEqual([]);
+  });
+
   test('a persistent mesh goes into a persistent group of its own', async () => {
     // createEntity doesn't read `persistent` (p619 S8): the component, before the build
     const persistent = createBox(0, 0);
@@ -364,5 +394,69 @@ describe("a scene's settings", () => {
     const warnings = fns.lwarn.mock.calls.map((call) => String(call[0]));
     expect(warnings).toEqual([expect.stringMatching(/"ruins" .* cells 0,0 and 1,0/)]);
     expect(getMergeGroupOf(ids[2])).toBe('ruins');
+  });
+});
+
+describe('the scene step', () => {
+  const isHeld = (id: number) => world.hasComponent(id, ComponentType.TAG_DRAW_HELD);
+
+  test('holds the joining meshes, builds at the entered hook, then lets them go', async () => {
+    runSceneLoadStartHooks();
+    const auto = createBox(0, 0);
+    const explicit = createMeshEntity({ geo: 'autoTestBox', mat: 'autoTestMatA' });
+    addToMergeGroup('ruins', [explicit]);
+    const refused = createBox(1, 0, 'AUTO', {
+      mat: new THREE.MeshBasicNodeMaterial({ transparent: true }),
+    });
+    for (const id of [auto, explicit, refused]) {
+      expect(isHeld(id)).toBe(true);
+      expect(getMesh(id).visible).toBe(false);
+    }
+
+    // The build system waits for the step, frames or not
+    world.updateAppLoop(0.016);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    world.updateAppLoop(0.016);
+    expect(getMergeGroupOf(auto)).toBeUndefined();
+    expect(world.hasComponent(explicit, ComponentType.TAG_MERGED)).toBe(false);
+
+    await runSceneEnteredHooksAsync();
+    for (const id of [auto, explicit]) {
+      expect(world.hasComponent(id, ComponentType.TAG_MERGED)).toBe(true);
+      expect(isHeld(id)).toBe(false);
+      expect(getMesh(id).visible).toBe(false);
+    }
+    expect(isHeld(refused)).toBe(false);
+    expect(getMesh(refused).visible).toBe(true);
+
+    // Loaded: a mesh joining now isn't held, and the system builds again
+    const later = createBox(2, 0);
+    expect(isHeld(later)).toBe(false);
+    world.updateAppLoop(0.016);
+    expect(getMergeGroupOf(later)).toBe(getMergeGroupOf(auto));
+  });
+
+  test("leaves another owner's hold", async () => {
+    const id = createMeshEntity({ geo: 'autoTestBox', mat: 'autoTestMatA' });
+    world.addComponent(id, ComponentType.TAG_DRAW_HELD, true);
+    runSceneLoadStartHooks();
+    addToMergeGroup('AUTO', [id]);
+    await runSceneEnteredHooksAsync();
+    expect(world.hasComponent(id, ComponentType.TAG_MERGED)).toBe(true);
+    expect(isHeld(id)).toBe(true);
+  });
+
+  test('a failed load (no entered hook) lets go of its holds, and the system builds', async () => {
+    runSceneLoadStartHooks();
+    const id = createBox(0, 0);
+    expect(isHeld(id)).toBe(true);
+
+    runSceneLoadSettledHooks();
+    expect(isHeld(id)).toBe(false);
+    expect(getMesh(id).visible).toBe(true);
+    world.updateAppLoop(0.016);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    world.updateAppLoop(0.016);
+    expect(world.hasComponent(id, ComponentType.TAG_MERGED)).toBe(true);
   });
 });

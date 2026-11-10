@@ -91,6 +91,56 @@ export const getQueued = (world: ECSWorld) => {
  */
 export const findQueued = (world: ECSWorld) => queuedByWorld.get(world);
 
+/** A scene load is running (the `loadStart` hook until the scene step, or `loadSettled` for a
+ * load that failed): the build system waits for the step, and joining members are held. */
+let isSceneLoading = false;
+/** Per world: the members a scene load held from drawing (`TAG_DRAW_HELD`, only those it added). */
+const loadHoldsByWorld = new WeakMap<ECSWorld, Set<number>>();
+
+/**
+ * Sets whether a scene load is running (the `merging()` feature's scene hooks).
+ * @internal
+ */
+export const setMergeSceneLoading = (isLoading: boolean) => {
+  isSceneLoading = isLoading;
+};
+
+/**
+ * Whether a scene load is running: the build system waits for the scene step.
+ * @internal
+ */
+export const isMergeSceneLoading = () => isSceneLoading;
+
+/**
+ * Holds a mesh joining a group during a scene load from drawing until the scene step has built its
+ * group: a mesh drawn on its own even once uploads its geometry, which three keeps until it's
+ * disposed (p372 Phase 1). Not one something else holds already. Outside a load, nothing.
+ * @internal
+ */
+export const holdForSceneLoad = (entityId: number, world: ECSWorld) => {
+  if (!isSceneLoading || world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) return;
+  world.addComponent(entityId, ComponentType.TAG_DRAW_HELD, true);
+  let held = loadHoldsByWorld.get(world);
+  if (!held) loadHoldsByWorld.set(world, (held = new Set()));
+  held.add(entityId);
+};
+
+/**
+ * Lets go of the members the scene load held: the merged ones stay hidden by `TAG_MERGED`, a
+ * refused one is drawn on its own.
+ * @internal
+ */
+export const releaseSceneLoadHolds = (world: ECSWorld) => {
+  const held = loadHoldsByWorld.get(world);
+  if (!held) return;
+  for (const entityId of held) {
+    if (world.isAlive(entityId) && world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) {
+      world.removeComponent(entityId, ComponentType.TAG_DRAW_HELD);
+    }
+  }
+  held.clear();
+};
+
 /**
  * Marks a group for a build at the build system's next run.
  * @internal
