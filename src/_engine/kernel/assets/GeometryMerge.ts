@@ -1,6 +1,11 @@
 import * as THREE from 'three/webgpu';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
+import { getAssetOwnerScope, runInAssetOwnerScope } from './AssetOwners';
+import { mergeGeometryInWorker, recordAssetLoadReport, runAssetTask } from './AssetsAPI';
+import type { TransferableMergePart } from './AssetsAPITypes';
+import { deserializeGeometry, serializeGeometry } from './import/GeometryTransfer';
+import type { TransferableGeometry } from './import/GeometryTransfer';
 import {
   getGeometry,
   saveBufferGeometry,
@@ -9,6 +14,7 @@ import {
   type MergedGeoProps,
 } from './Geometry';
 import {
+  assertMergeableParts,
   mergeGeometryPartsCore,
   type MergedGeometry,
   type MergeGeometryOptions,
@@ -41,6 +47,11 @@ const resolveParts = (parts: MergePart[]): ResolvedMergePart[] =>
     }
     return { ...rest, geometry };
   });
+
+/** The merge's warnings, logged in the debug env. */
+const logWarnings = (warnings: string[], caller: string) => {
+  if (IS_DEBUG_ENV) for (const warning of warnings) lwarn(`${caller}: ${warning}`);
+};
 
 /**
  * Merges several geometries, each with its transform, into one new geometry, for one draw where
@@ -76,7 +87,7 @@ export const mergeGeometryParts = (
   opts?: MergeGeometryOptions
 ): MergedGeometry => {
   const { geometry, warnings } = mergeGeometryPartsCore(resolveParts(parts), opts);
-  if (IS_DEBUG_ENV) for (const warning of warnings) lwarn(`mergeGeometryParts: ${warning}`);
+  logWarnings(warnings, 'mergeGeometryParts');
   return geometry;
 };
 
@@ -105,6 +116,147 @@ export const registerMergedGeometry = (
   const existing = props.id ? getGeometry(props.id) : undefined;
   if (existing) return saveBufferGeometry(existing, props);
   return saveBufferGeometry(mergeGeometryParts(parts, { groups, attributes, indexed }), props);
+};
+
+/** The parts as the worker's request: each geometry once (its attributes and index only, as
+ * copies, so the registered ones stay usable), the parts naming it by index. */
+const serializeParts = (parts: ResolvedMergePart[]) => {
+  const transfer = new Set<ArrayBuffer>();
+  const geometries: TransferableGeometry[] = [];
+  const indexOf = new Map<THREE.BufferGeometry, number>();
+  const transferableParts: TransferableMergePart[] = parts.map(
+    ({ geometry, matrix, materialSlot, key }) => {
+      let geometryIndex = indexOf.get(geometry);
+      if (geometryIndex === undefined) {
+        // Not the geometry itself: its userData and groups needn't (or can't) be cloned
+        const input = new THREE.BufferGeometry();
+        for (const name in geometry.attributes) {
+          input.setAttribute(name, geometry.attributes[name]);
+        }
+        input.setIndex(geometry.index);
+        geometryIndex = geometries.push(serializeGeometry(input, transfer, { copy: true })) - 1;
+        indexOf.set(geometry, geometryIndex);
+      }
+      return {
+        geometryIndex,
+        ...(matrix ? { matrix: [...matrix.elements] } : {}),
+        ...(materialSlot !== undefined ? { materialSlot } : {}),
+        ...(key !== undefined ? { key } : {}),
+      };
+    }
+  );
+  return { geometries, parts: transferableParts, transfer };
+};
+
+/** The merge where `MERGE` is targeted, with its load report. The parts are checked first, on
+ * this thread: a refused merge throws here, not in the worker. */
+const mergeWithReportAsync = async (parts: MergePart[], opts?: MergeGeometryOptions) => {
+  const resolved = resolveParts(parts);
+  assertMergeableParts(resolved.map((part) => part.geometry));
+  const options: MergeGeometryOptions = { ...opts };
+  const { result, report } = await runAssetTask(
+    'MERGE',
+    async () => {
+      const request = serializeParts(resolved);
+      const { geometry, warnings } = await mergeGeometryInWorker(
+        request.geometries,
+        request.parts,
+        options,
+        request.transfer
+      );
+      return { geometry: deserializeGeometry(geometry) as MergedGeometry, warnings };
+    },
+    async () => mergeGeometryPartsCore(resolved, options)
+  );
+  return { ...result, report };
+};
+
+/**
+ * Merges like {@link mergeGeometryParts}, in the assets worker (`AppConfig.assets.mergeWorkerTarget`,
+ * default `WORKER_THREAD`): the parts' arrays are copied and sent, and the merged ones come back
+ * transferred, so a large merge doesn't hold up a frame. Where the worker can't run it, it runs
+ * on the main thread (`AppConfig.assets.fallbackToMainThread`). The result is the same either way.
+ * @returns the merged geometry, unregistered
+ * @throws (rejects) as {@link mergeGeometryParts}, before anything is sent to the worker
+ * @remarks The parts are read when it's called: a part changed or released after the call
+ * doesn't change the merge. For a small merge (a few thousand vertices) the round trip costs more
+ * than it saves: use {@link mergeGeometryParts}.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createSeededRandom, mergeGeometryPartsAsync, saveBufferGeometry } from 'aekasha';
+ *
+ * // 500 rocks of one registered geometry, scattered and scaled, as one geometry
+ * const random = createSeededRandom(7);
+ * const parts = Array.from({ length: 500 }, () => {
+ *   const scale = 0.5 + random();
+ *   return {
+ *     geo: 'rockGeo',
+ *     matrix: new THREE.Matrix4()
+ *       .makeScale(scale, scale, scale)
+ *       .setPosition((random() - 0.5) * 100, 0, (random() - 0.5) * 100),
+ *   };
+ * });
+ * saveBufferGeometry(await mergeGeometryPartsAsync(parts), { id: 'rockFieldGeo' });
+ * ```
+ */
+export const mergeGeometryPartsAsync = async (
+  parts: MergePart[],
+  opts?: MergeGeometryOptions
+): Promise<MergedGeometry> => {
+  const { geometry, warnings } = await mergeWithReportAsync(parts, opts);
+  logWarnings(warnings, 'mergeGeometryPartsAsync');
+  return geometry;
+};
+
+/**
+ * Merges the parts in the assets worker ({@link mergeGeometryPartsAsync}) and registers the
+ * result like {@link registerMergedGeometry}: an `id` already registered returns that geometry,
+ * re-tagged, without merging. The owner is the one in force at the call (a streaming cell's
+ * scope, else the scene loading or current when it registers).
+ * @returns the registered geometry (its `userData.mergeParts` lists the parts' ranges)
+ * @throws (rejects) as {@link mergeGeometryParts}
+ * @remarks Two overlapping calls with one `id` both merge, and the first to finish registers:
+ * the other resolves with its geometry and disposes its own.
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { createMeshEntity, registerMergedGeometryAsync } from 'aekasha';
+ *
+ * // A 20 × 20 grid of rocks, one draw
+ * const parts = Array.from({ length: 400 }, (_, i) => ({
+ *   geo: 'rockGeo',
+ *   matrix: new THREE.Matrix4().makeTranslation((i % 20) * 4, 0, Math.floor(i / 20) * 4),
+ * }));
+ * const geo = await registerMergedGeometryAsync(parts, { id: 'rockFieldGeo' });
+ * createMeshEntity({ geo, mat: 'rockMat' });
+ * ```
+ */
+export const registerMergedGeometryAsync = async (
+  parts: MergePart[],
+  opts: RegisterMergedGeometryOptions = {}
+): Promise<THREE.BufferGeometry> => {
+  const { groups, attributes, indexed, ...props } = opts;
+  const ownerScope = getAssetOwnerScope();
+  const existing = props.id ? getGeometry(props.id) : undefined;
+  if (existing) return saveBufferGeometry(existing, props);
+  const { geometry, warnings, report } = await mergeWithReportAsync(parts, {
+    groups,
+    attributes,
+    indexed,
+  });
+  logWarnings(warnings, 'registerMergedGeometryAsync');
+  return runInAssetOwnerScope(ownerScope, () => {
+    // Registered while this one merged: the first one wins
+    const registered = props.id ? getGeometry(props.id) : undefined;
+    if (registered) {
+      geometry.dispose();
+      return saveBufferGeometry(registered, props);
+    }
+    const saved = saveBufferGeometry(geometry, props);
+    recordAssetLoadReport(`merge:${String(saved.userData.id)}`, report);
+    return saved;
+  });
 };
 
 const partPosition = new THREE.Vector3();

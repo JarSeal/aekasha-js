@@ -59,7 +59,12 @@ export type {
   MergedGeoPart,
   MergedGeoProps,
 } from './kernel/assets/Geometry';
-export { mergeGeometryParts, registerMergedGeometry } from './kernel/assets/GeometryMerge';
+export {
+  mergeGeometryParts,
+  mergeGeometryPartsAsync,
+  registerMergedGeometry,
+  registerMergedGeometryAsync,
+} from './kernel/assets/GeometryMerge';
 export type { MergePart, RegisterMergedGeometryOptions } from './kernel/assets/GeometryMerge';
 export type {
   MergedGeometry,

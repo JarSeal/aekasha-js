@@ -10,16 +10,17 @@ import type { TransferableLodChain } from '../../features/lod/LodChainGLTF';
 import type { ImportedGeometryInfo } from './import/ImportTypes';
 import type { TransferableImage, TransferableTexture } from './import/TextureTransfer';
 import type { TextureMapKeys } from './Material';
+import type { MergeGeometryOptions } from './GeometryMergeCore';
 
 /** Where an asset kind is loaded. */
 export type AssetsWorkerTarget = 'MAIN_THREAD' | 'WORKER_THREAD';
 
 /**
- * The asset kinds that can be loaded (or, for SIMPLIFY, LOD chains generated) in the assets
- * worker. Each has its own workerTarget.
+ * The asset kinds that can be loaded (or, for SIMPLIFY, LOD chains generated, for MERGE,
+ * geometries merged) in the assets worker. Each has its own workerTarget.
  * @internal
  */
-export type AssetKind = 'GLTF' | 'TEXTURE' | 'SIMPLIFY';
+export type AssetKind = 'GLTF' | 'TEXTURE' | 'SIMPLIFY' | 'MERGE';
 
 /**
  * Resolved assets config (AppConfig.assets with the defaults filled in).
@@ -28,11 +29,12 @@ export type AssetKind = 'GLTF' | 'TEXTURE' | 'SIMPLIFY';
 export type AssetsState = {
   /** Shared default for all asset kinds. */
   workerTarget: AssetsWorkerTarget;
-  /** Per-kind overrides; undefined falls back to workerTarget. SIMPLIFY's is always set (its
-   * default is 'WORKER_THREAD'). */
+  /** Per-kind overrides; undefined falls back to workerTarget. SIMPLIFY's and MERGE's are always
+   * set (their default is 'WORKER_THREAD'). */
   gltfWorkerTarget?: AssetsWorkerTarget;
   textureWorkerTarget?: AssetsWorkerTarget;
   simplifyWorkerTarget?: AssetsWorkerTarget;
+  mergeWorkerTarget?: AssetsWorkerTarget;
   /** Max number of requests in flight in the worker at once, the rest wait in a queue. */
   maxConcurrentLoads: number;
   /** A worker request (and the worker handshake) not answered in this time falls back (or fails). */
@@ -146,6 +148,8 @@ export enum AssetsProtocolType {
   LOAD_GLTF = 4,
   /** A geometry's LOD chain: simplified by meshoptimizer (features/lod/LodSimplify.ts). */
   SIMPLIFY_GEOMETRY = 5,
+  /** Geometries merged into one (kernel/assets/GeometryMergeCore.ts). */
+  MERGE_GEOMETRY = 6,
 }
 
 // UP (main thread → worker). Every request has a requestId; the worker answers each one with
@@ -212,6 +216,33 @@ export type AssetsSimplifyGeometryRequest = {
 };
 
 /**
+ * One part of a MERGE_GEOMETRY request: a geometry of the request's `geometries` (several parts
+ * can name one) and where it goes.
+ * @internal
+ */
+export type TransferableMergePart = {
+  /** Its geometry's index in the request's `geometries`. */
+  geometryIndex: number;
+  /** Its local → merged space transform (`Matrix4.elements`); identity when left out. */
+  matrix?: number[];
+  materialSlot?: number;
+  key?: string;
+};
+
+/**
+ * The parts' geometries are copies, each sent once and transferred: the main thread's stay
+ * usable.
+ * @internal
+ */
+export type AssetsMergeGeometryRequest = {
+  type: AssetsProtocolType.MERGE_GEOMETRY;
+  requestId: number;
+  geometries: TransferableGeometry[];
+  parts: TransferableMergePart[];
+  options: MergeGeometryOptions;
+};
+
+/**
  * Every message the main thread sends the worker (`AssetsAPI.ts`' requests).
  * @internal
  */
@@ -220,7 +251,8 @@ export type AssetsUpProtocol =
   | AssetsLoadTextureRequest
   | AssetsLoadHDRTextureRequest
   | AssetsLoadGLTFRequest
-  | AssetsSimplifyGeometryRequest;
+  | AssetsSimplifyGeometryRequest
+  | AssetsMergeGeometryRequest;
 
 // DOWN (worker → main thread)
 
@@ -309,6 +341,19 @@ export type AssetsSimplifyGeometryResponse = {
 };
 
 /**
+ * GeometryMergeCore's mergeGeometryPartsCore() result, run in the worker: the merged geometry
+ * (its `userData.mergeParts` and bounds included), its arrays transferred, and the warnings for
+ * the main thread to log.
+ * @internal
+ */
+export type AssetsMergeGeometryResponse = {
+  type: AssetsProtocolType.MERGE_GEOMETRY;
+  requestId: number;
+  geometry: TransferableGeometry;
+  warnings: string[];
+};
+
+/**
  * Every message the worker sends the main thread but its handshake
  * ({@link AssetsWorkerReadyMessage}): one response per request, by `requestId`.
  * @internal
@@ -319,4 +364,5 @@ export type AssetsDownProtocol =
   | AssetsLoadTextureResponse
   | AssetsLoadHDRTextureResponse
   | AssetsLoadGLTFResponse
-  | AssetsSimplifyGeometryResponse;
+  | AssetsSimplifyGeometryResponse
+  | AssetsMergeGeometryResponse;

@@ -95,8 +95,7 @@ const readValue = (attr: AnyAttribute, index: number, component: number) => {
 const defaultValue = (name: string) => (name === 'color' ? 1 : 0);
 
 /** Parts with morph targets or skinning can't share one buffer (p370 §4). */
-const assertMergeable = (part: ResolvedMergePart, i: number) => {
-  const { geometry } = part;
+const assertMergeable = (geometry: THREE.BufferGeometry, i: number) => {
   const morphs = Object.entries(geometry.morphAttributes)
     .filter(([, list]) => list?.length)
     .map(([name]) => name);
@@ -112,6 +111,32 @@ const assertMergeable = (part: ResolvedMergePart, i: number) => {
   if (!position || position.itemSize !== 3) {
     throw new Error(`Merge part ${i} has no 3-component "position" attribute.`);
   }
+};
+
+/**
+ * Throws for parts the merge refuses, before any work: a morphed or skinned part, one without a
+ * 3-component position, or one attribute with different item sizes across parts.
+ * {@link mergeGeometryPartsCore} runs it first, and `mergeGeometryPartsAsync` on the main
+ * thread before it sends anything, so a refused merge throws there instead of failing in the
+ * worker and running again.
+ * @internal
+ * @param geometries the parts' geometries, in the parts' order (for the errors' part indices)
+ */
+export const assertMergeableParts = (geometries: readonly THREE.BufferGeometry[]) => {
+  const itemSizes = new Map<string, number>();
+  geometries.forEach((geometry, i) => {
+    assertMergeable(geometry, i);
+    for (const name in geometry.attributes) {
+      const { itemSize } = geometry.attributes[name];
+      const earlier = itemSizes.get(name);
+      if (earlier === undefined) itemSizes.set(name, itemSize);
+      else if (earlier !== itemSize) {
+        throw new Error(
+          `Merge part ${i}'s "${name}" has ${itemSize} components, an earlier part's ${earlier}.`
+        );
+      }
+    }
+  });
 };
 
 /** A temporary geometry with the part's tangents computed (the part itself is only read), or
@@ -134,7 +159,8 @@ const createTrivialIndex = (count: number) => {
   return new THREE.BufferAttribute(array, 1);
 };
 
-/** The merged attributes, from the parts' attributes and the attribute mode. */
+/** The merged attributes, from the parts' attributes and the attribute mode (the parts checked
+ * by {@link assertMergeableParts}). */
 const planAttributes = (
   parts: ResolvedMergePart[],
   mode: 'UNION' | 'INTERSECTION',
@@ -156,11 +182,6 @@ const planAttributes = (
           normalized: new Set([attr.normalized]),
         });
         continue;
-      }
-      if (entry.itemSize !== attr.itemSize) {
-        throw new Error(
-          `Merge part ${i}'s "${name}" has ${attr.itemSize} components, an earlier part's ${entry.itemSize}.`
-        );
       }
       entry.count++;
       entry.arrays.add(getArray(attr).constructor);
@@ -312,7 +333,7 @@ export const mergeGeometryPartsCore = (
   const { groups = 'NONE', attributes = 'UNION', indexed = true } = opts;
   const warnings: string[] = [];
   if (!parts.length) return { geometry: createEmpty(), warnings };
-  parts.forEach(assertMergeable);
+  assertMergeableParts(parts.map((part) => part.geometry));
 
   // A part missing tangents others have gets its own computed (UNION only)
   const hasTangents = parts.some((part) => part.geometry.attributes.tangent);
