@@ -39,6 +39,7 @@ import {
   generateLargeWorldRockImpostor,
   saveLargeWorldRockGeometry,
 } from '../../shared/largeWorldRock';
+import { createRuins } from './largeWorldRuins';
 
 const LARGE_WORLD_SCENE_ID = 'largeWorld';
 
@@ -174,12 +175,13 @@ const FOLLOW_OFFSET = new THREE.Vector3(4, 3, 6);
 
 /**
  * A large procedural world without physics: a generated terrain, instanced trees, bushes and rocks
- * scattered on it with LOD levels down to impostors, static props and a few resting objects drawn
- * merged (`merge: 'AUTO'`, by material and 50 m cell: the scene JSON's `mergeGroups`), point-light
- * lanterns, a bobbing crate stack with a camera following it (C switches to it), and the day-night
- * sky box's lights taking over from the scene's own. The overview camera, the sun, the ambient
- * light and the sky boxes come from `largeWorld.scene.json` (the camera before this file runs, the
- * lights and the sky box after it); the terrain has no JSON form, so it's built here.
+ * scattered on it with LOD levels down to impostors, static props, ruins (`largeWorldRuins.ts`) and
+ * a few resting objects drawn merged (`merge: 'AUTO'`, by material and 50 m cell: the scene JSON's
+ * `mergeGroups`), point-light lanterns, a bobbing crate stack with a camera following it (C
+ * switches to it), and the day-night sky box's lights taking over from the scene's own. The
+ * overview camera, the sun, the ambient light and the sky boxes come from `largeWorld.scene.json`
+ * (the camera before this file runs, the lights and the sky box after it); the terrain has no JSON
+ * form, so it's built here.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
@@ -189,7 +191,8 @@ export const scene = async () => {
   createTreePool(ctx);
   createBushPool(ctx);
   createRockPool(ctx);
-  createStaticProps(ctx);
+  const propMaterials = createStaticProps(ctx);
+  createRuins(ctx.world, ctx.terrain, propMaterials);
   createLanterns(ctx);
   const restingMaterial = createRestingObjects(ctx);
   const crateStackId = createCrateStack(ctx, restingMaterial);
@@ -387,7 +390,7 @@ const createRockPool = ({ world, rootScene, terrainMesh }: WorldContext) => {
 
 /**
  * The static props of `STATIC_PROPS`, 0.3 m above the terrain unless they have a `y`; all but the
- * `offFrustum` ones merged.
+ * `offFrustum` ones merged. Returns their materials, which the ruins share.
  */
 const createStaticProps = ({ world, terrain }: WorldContext) => {
   const materials: Record<PropMaterial, THREE.Material> = {
@@ -422,6 +425,7 @@ const createStaticProps = ({ world, terrain }: WorldContext) => {
       }
     );
   }
+  return materials;
 };
 
 /**

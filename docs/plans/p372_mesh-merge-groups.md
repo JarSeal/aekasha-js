@@ -601,6 +601,22 @@ cellSize: 50 }]` (its manifest names `merging` now) and the description.
   by the scene step, none held, no merge warning. Five are one prop alone (the rocks, platforms
   and wall are in different 50 m cells); the resting objects make three (3, 2 and the barbell).
 
+As built, section 2 (2026-11-10):
+
+- `largeWorldRuins.ts` (next to the scene file; `createRuins(world, terrain, materials)`, the
+  materials `createStaticProps` now returns): 8 hand-placed sites (`RUIN_SITES`, each with its
+  rubble inside one 50 m cell, away from the cell edges), each a floor of 2 m tiles
+  (`largeWorldPlatformMat`), walls round its edge broken to 0.6-3 m and pillars at the corners and
+  in two inner rows (`largeWorldWallMat`), and 12 tumbled rubble stones (`largeWorldRockMat`).
+  Four registered geometries (`largeWorldRuin{Floor,Wall,Pillar,Rubble}Geo`; the walls and
+  pillars scaled to their height, so non-uniform scales are merged too), a share of each kind left
+  out, all from `createSeededRandom(7)`: the same ruins on every load. No app ids (only
+  `debugData` names).
+- Loaded in Chrome (debug env): 398 ruin pieces + the 11 props = 409 members in 28 groups (each
+  site 3, one per material; `largeWorldWall1`, `largeWorldPlatform1` and both rocks in a site's
+  groups; `largeWorldPlatform2` still alone; the resting objects' three), 12-25 members and
+  312-776 vertices each, each built once, none held, no merge warning.
+
 ### Phase 5 — Handbook, docs and versioning
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk
