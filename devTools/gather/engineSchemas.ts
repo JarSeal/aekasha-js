@@ -9,6 +9,7 @@ import {
   createMeshAssetSchema,
   createSceneAssetSchema,
   lodSchemaPart,
+  mergingSchemaPart,
   postFxSchemaPart,
   skyBoxSchemaPart,
   spatialSchemaPart,
@@ -24,6 +25,7 @@ export const ENGINE_SCHEMA_PARTS = [
   spatialSchemaPart,
   lodSchemaPart,
   streamingSchemaPart,
+  mergingSchemaPart,
 ] as const;
 
 /** The scene schema with every engine feature's fields */

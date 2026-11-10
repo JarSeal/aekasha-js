@@ -67,6 +67,27 @@ export type MeshMergeOptions = {
  */
 export type MeshMergeDef = string | MeshMergeOptions;
 
+/** A scene's `mergeGroups` entry for its `AUTO` groups: their defaults in that scene. */
+export type SceneAutoMergeEntry = {
+  /** `AUTO`: the entry for the scene's automatic groups. */
+  id: 'AUTO';
+  /** The cell size for the scene's meshes that don't give one. Default 32. */
+  cellSize?: number;
+  /** The vertex cap for the scene's meshes that don't give one. Default 262 144. */
+  maxVertices?: number;
+};
+
+/** A scene's `mergeGroups` entry for one of its groups: its settings when it's made on first use
+ * (a mesh's `merge`, `addToMergeGroup`). */
+export type SceneMergeGroupEntry = {
+  /** The group's id. */
+  id: string;
+  /** Whether the group's mesh casts shadows. Default: its first member's. */
+  castShadow?: boolean;
+  /** Whether the group's mesh receives shadows. Default: its first member's. */
+  receiveShadow?: boolean;
+};
+
 /**
  * A merge group member's `MERGE_MEMBER` component: added when it joins (`addToMergeGroup`),
  * before the build that draws it merged.

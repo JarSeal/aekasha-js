@@ -8,15 +8,17 @@ import { createFeatureHost } from '../../kernel/init/Features';
 import { createGeometry } from '../../kernel/assets/Geometry';
 import { createMaterial } from '../../kernel/assets/Material';
 import { createMeshEntity, installMeshes, type MeshProps } from '../../kernel/mesh/Mesh';
-import { createRootScene } from '../../kernel/scene/Scene';
+import { createRootScene, type SceneData, setLoadingSceneId } from '../../kernel/scene/Scene';
 import {
   addToMergeGroup,
   buildPendingMergeGroupsAsync,
   createMergeGroup,
   getMergeGroupOf,
   installMergeGroups,
+  rebuildMergeGroup,
   removeFromMergeGroup,
 } from './MergeGroups';
+import { keepSceneMergeSettings } from './MergeSceneSettings';
 import type { MeshMergeDef } from './MergeTypes';
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
@@ -47,6 +49,7 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  setLoadingSceneId(null);
   world.clearWorld();
   fns.lwarn.mockClear();
 });
@@ -266,5 +269,77 @@ describe('AUTO', () => {
     const again = [createBox(2, 0, { maxVertices: 48 }), createBox(3, 0, { maxVertices: 48 })];
     await buildPendingMergeGroupsAsync();
     expect(again.map((id) => getMergeGroupOf(id))).toEqual([groupId, groupId]);
+  });
+});
+
+describe("a scene's settings", () => {
+  /** Registers a scene's data, and makes it the one loading. */
+  const loadSceneSettings = (sceneId: string, data: Partial<SceneData>) => {
+    keepSceneMergeSettings(sceneId, { id: sceneId, sceneFile: `${sceneId}.ts`, ...data });
+    setLoadingSceneId(sceneId);
+  };
+
+  const getGroupMesh = (groupId: string) => {
+    const [groupEntityId] = [...world.getStorage(ComponentType.MERGE_GROUP).entries()].find(
+      ([, group]) => group.id === groupId
+    )!;
+    return getMesh(groupEntityId);
+  };
+
+  test("its AUTO entry sets the defaults, a mesh's own options win", async () => {
+    loadSceneSettings('autoDefaults', {
+      mergeGroups: [{ id: 'AUTO', cellSize: 64, maxVertices: 24 }],
+    });
+    const wide = [createBox(0, 0), createBox(40, 0)];
+    const own = [0, 1].map((x) => createBox(x, 10, { cellSize: 128, maxVertices: 48 }));
+    await buildPendingMergeGroupsAsync();
+
+    // One cell of 64 m, but a cap of one box
+    const [a, b] = wide.map((id) => getMergeGroupOf(id)!);
+    expect(a.split(':').slice(0, 3)).toEqual(b.split(':').slice(0, 3));
+    expect(a).not.toBe(b);
+    expect(getMergeGroupOf(own[0])).toBe(getMergeGroupOf(own[1]));
+  });
+
+  test("a group's entry gives its settings when it's made on first use", async () => {
+    loadSceneSettings('groupEntry', { mergeGroups: [{ id: 'ruins', castShadow: true }] });
+    createBox(0, 0, 'ruins');
+    createBox(0, 0, 'walls');
+    await buildPendingMergeGroupsAsync();
+    expect(getGroupMesh('ruins').castShadow).toBe(true);
+    expect(getGroupMesh('walls').castShadow).toBe(false);
+
+    // Another scene's entry doesn't apply
+    world.clearWorld();
+    setLoadingSceneId('elsewhere');
+    createBox(0, 0, 'ruins');
+    await buildPendingMergeGroupsAsync();
+    expect(getGroupMesh('ruins').castShadow).toBe(false);
+  });
+
+  test("warns once for an AUTO cell size that doesn't divide the streaming cell size", async () => {
+    loadSceneSettings('streamedAuto', {
+      streaming: { cellSize: 64 },
+      mergeGroups: [{ id: 'AUTO', cellSize: 48 }],
+    });
+    createBox(0, 0);
+    createBox(1, 0);
+    createBox(2, 0, { cellSize: 32 });
+    await buildPendingMergeGroupsAsync();
+    const warnings = fns.lwarn.mock.calls.map((call) => String(call[0]));
+    expect(warnings).toEqual([expect.stringMatching(/cell size 48 doesn't divide .* 64/)]);
+  });
+
+  test('warns once for a group whose members are in two streaming cells', async () => {
+    loadSceneSettings('streamedGroup', { streaming: { cellSize: 64 } });
+    const ids = [createBox(0, 0, 'ruins'), createBox(10, 0, 'ruins'), createBox(70, 0, 'ruins')];
+    createBox(0, 5, 'walls');
+    createBox(10, 5, 'walls');
+    await buildPendingMergeGroupsAsync();
+    rebuildMergeGroup('ruins');
+    await buildPendingMergeGroupsAsync();
+    const warnings = fns.lwarn.mock.calls.map((call) => String(call[0]));
+    expect(warnings).toEqual([expect.stringMatching(/"ruins" .* cells 0,0 and 1,0/)]);
+    expect(getMergeGroupOf(ids[2])).toBe('ruins');
   });
 });

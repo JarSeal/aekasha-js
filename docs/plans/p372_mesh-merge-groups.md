@@ -436,6 +436,33 @@ As built, section 1 (2026-11-10):
   reused), and `Mesh.test.ts` (the warning without `merging()`). The overflowed bucket's ids were
   found wrong by the test first (`:2` on the next load).
 
+As built, section 2 (2026-11-10):
+
+- `MergingSchema.ts`' `mergingSchemaPart` (feature `merging`; on `aekasha/schemas`, last in the
+  gatherer's `ENGINE_SCHEMA_PARTS`, so `.schemas/`' new fields come last): a mesh's `merge`
+  (`MeshMergeDefSchema`: `AUTO`, a group id, or `{ group?, cellSize?, maxVertices? }`, the cap
+  an integer) and a scene's `mergeGroups` (an `AUTO` entry `{ id: 'AUTO', cellSize?,
+maxVertices? }` or a group's `{ id, castShadow?, receiveShadow? }`, strict, so `AUTO` with a
+  group's fields fails; an id listed twice fails). A group id isn't empty, `AUTO` or an `auto:`
+  one. No `persistent` in a scene entry: a scene's groups are its own. `SceneData.mergeGroups`
+  names the types with `import type` (`SceneMergeGroupEntry`, `SceneAutoMergeEntry`).
+- `MergeSceneSettings.ts`: the `sceneRegistered` hook keeps each scene's entries and its JSON
+  streaming cell size. The defaults moved here from `MergeAuto.ts`. The scene is the loading one,
+  else the current one (`getActiveSceneMergeSettings`): an `AUTO` mesh without its own sizes takes
+  the scene's, and a group made on first use (`addToMergeGroup`, a mesh's `merge`) takes its
+  entry's settings; `createMergeGroup`'s own options don't read the scene.
+- The streaming warnings, each once per scene: an `AUTO` cell size (the scene's or a mesh's) that
+  doesn't divide the streaming cell size, at the resolution; a build whose members' positions are
+  in two streaming cells, at `applyBuild` (any group). Only the JSON's `streaming` is seen
+  (`setSceneStreamingSettings` in code isn't: merging imports nothing of streaming's). A
+  streamed member that goes collapses in place: a group doesn't load, unload, prime or fade with
+  a cell (Phase 5's docs say so; the group mesh pops where streaming would fade its members).
+- Tests: `MergingSchema.test.ts` (the mesh and scene fields, an inline mesh's), `MergeAuto.test.ts`
+  (the scene's `AUTO` defaults and a mesh's own options, a group's entry applied in its scene
+  only, both warnings once), `devTools/gather/engineSchemas.test.ts` (the fields, `merging` in
+  the manifest for either field). `yarn gatherAppData`: the generated data unchanged (no scene
+  uses the fields yet), `.schemas/mesh.schema.json` and `scene.schema.json` regenerated.
+
 ### Phase 4 — Adoption and measurements
 
 1. largeWorld's static props (and its imported level pieces) use `AUTO`.

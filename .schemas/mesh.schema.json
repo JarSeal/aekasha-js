@@ -47,6 +47,9 @@
         },
         "lod": {
           "$ref": "#/definitions/__schema130"
+        },
+        "merge": {
+          "$ref": "#/definitions/__schema151"
         }
       },
       "required": [
@@ -60,28 +63,28 @@
       "type": "object",
       "properties": {
         "appId": {
-          "$ref": "#/definitions/__schema151"
-        },
-        "disabled": {
-          "$ref": "#/definitions/__schema153"
-        },
-        "persistent": {
-          "$ref": "#/definitions/__schema155"
-        },
-        "doNotAddToScene": {
           "$ref": "#/definitions/__schema157"
         },
-        "userData": {
+        "disabled": {
           "$ref": "#/definitions/__schema159"
         },
-        "debugData": {
-          "$ref": "#/definitions/__schema160"
-        },
-        "spatialIndex": {
+        "persistent": {
           "$ref": "#/definitions/__schema161"
         },
-        "ecsFrustumCullingEnabled": {
+        "doNotAddToScene": {
           "$ref": "#/definitions/__schema163"
+        },
+        "userData": {
+          "$ref": "#/definitions/__schema165"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema166"
+        },
+        "spatialIndex": {
+          "$ref": "#/definitions/__schema167"
+        },
+        "ecsFrustumCullingEnabled": {
+          "$ref": "#/definitions/__schema169"
         }
       },
       "additionalProperties": false,
@@ -98,7 +101,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema165"
+          "$ref": "#/definitions/__schema171"
         }
       ]
     }
@@ -1601,18 +1604,44 @@
       "exclusiveMinimum": 0
     },
     "__schema151": {
-      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
-      "allOf": [
+      "anyOf": [
         {
-          "$ref": "#/definitions/__schema152"
+          "type": "string",
+          "const": "AUTO",
+          "description": "Merged into an automatic group: the engine's pick by material, attributes, shadow flags, layers and cell."
+        },
+        {
+          "description": "The merge group's id: made on first use (the scene's mergeGroups entry's settings).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema152"
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "group": {
+              "$ref": "#/definitions/__schema153"
+            },
+            "cellSize": {
+              "$ref": "#/definitions/__schema155"
+            },
+            "maxVertices": {
+              "$ref": "#/definitions/__schema156"
+            }
+          },
+          "additionalProperties": false,
+          "description": "A merge group, and the automatic groups' bounds."
         }
       ]
     },
     "__schema152": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
     "__schema153": {
-      "description": "Creates the entity disabled.",
+      "description": "The group's id, or AUTO (the default).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema154"
@@ -1620,21 +1649,29 @@
       ]
     },
     "__schema154": {
-      "type": "boolean"
-    },
-    "__schema155": {
-      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
-      "allOf": [
+      "anyOf": [
         {
-          "$ref": "#/definitions/__schema156"
+          "type": "string",
+          "const": "AUTO"
+        },
+        {
+          "$ref": "#/definitions/__schema152"
         }
       ]
     },
+    "__schema155": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "AUTO only: the side of the square x/z cells that bound an automatic group, in metres (default 32). In a streaming scene it divides the streaming cell size, or a group can span two streaming cells."
+    },
     "__schema156": {
-      "type": "boolean"
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
     },
     "__schema157": {
-      "description": "Leaves the entity's object out of the root scene.",
+      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema158"
@@ -1642,24 +1679,21 @@
       ]
     },
     "__schema158": {
-      "type": "boolean"
+      "type": "string"
     },
     "__schema159": {
+      "description": "Creates the entity disabled.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema79"
+          "$ref": "#/definitions/__schema160"
         }
       ]
     },
     "__schema160": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema7"
-        }
-      ]
+      "type": "boolean"
     },
     "__schema161": {
-      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
+      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema162"
@@ -1670,7 +1704,7 @@
       "type": "boolean"
     },
     "__schema163": {
-      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "description": "Leaves the entity's object out of the root scene.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema164"
@@ -1681,6 +1715,42 @@
       "type": "boolean"
     },
     "__schema165": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema79"
+        }
+      ]
+    },
+    "__schema166": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema167": {
+      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema168"
+        }
+      ]
+    },
+    "__schema168": {
+      "type": "boolean"
+    },
+    "__schema169": {
+      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema170"
+        }
+      ]
+    },
+    "__schema170": {
+      "type": "boolean"
+    },
+    "__schema171": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -2067,6 +2137,9 @@
             },
             "lod": {
               "$ref": "#/definitions/__schema130"
+            },
+            "merge": {
+              "$ref": "#/definitions/__schema151"
             },
             "__meta": {
               "allOf": [

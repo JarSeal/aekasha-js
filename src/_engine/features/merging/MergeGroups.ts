@@ -46,6 +46,11 @@ import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import { getMergeRefusal } from './MergeEligibility';
 import {
+  getActiveSceneMergeSettings,
+  keepSceneMergeSettings,
+  warnIfGroupSpansStreamingCells,
+} from './MergeSceneSettings';
+import {
   collapseDisabledMember,
   dropMember,
   restoreEnabledMember,
@@ -144,8 +149,8 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
 };
 
 /**
- * Adds mesh entities to a merge group (created with default settings when the world has none with
- * this id). They're drawn merged from the group's next build, in the next frame's render sync (a
+ * Adds mesh entities to a merge group (created when the world has none with this id, with the
+ * settings of the loading or current scene's `mergeGroups` entry for it, else the defaults). They're drawn merged from the group's next build, in the next frame's render sync (a
  * large group's builds in the assets worker, and its new members are drawn on their own until it's
  * in). A member keeps its entity, transform, physics body and assets; its own mesh is hidden.
  * A disabled member (`setDisabled`) isn't drawn in the merged mesh either, and is again when
@@ -179,8 +184,13 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
   // This call wins over a mesh's `merge` still waiting for its build
   const queued = findQueued(ecsWorld);
   if (queued?.size) for (const entityId of entityIds) queued.delete(entityId);
+  // Made on first use with the scene's `mergeGroups` entry's settings, if it lists one
   const groupEntityId =
-    getGroups(ecsWorld).get(groupId) ?? createMergeGroup({ id: groupId }, ecsWorld);
+    getGroups(ecsWorld).get(groupId) ??
+    createMergeGroup(
+      { ...getActiveSceneMergeSettings().groups.get(groupId), id: groupId },
+      ecsWorld
+    );
   const group = existsOrThrow(
     ecsWorld.getComponent(groupEntityId, ComponentType.MERGE_GROUP),
     `addToMergeGroup: the merge group "${groupId}" has no MERGE_GROUP component.`
@@ -472,6 +482,7 @@ const applyBuild = (
   world: ECSWorld
 ) => {
   const { centre, worldMatrices } = build;
+  warnIfGroupSpansStreamingCells(group.id, worldMatrices);
   let mesh = world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value as
     | THREE.Mesh
     | undefined;
@@ -663,6 +674,7 @@ export const registerMergeDebug = async () => {
 export const installMergeGroups = (ctx: FeatureContext) => {
   isInstalled = true;
   setMeshMergeHandler(queueMerge);
+  ctx.addSceneHooks({ sceneRegistered: keepSceneMergeSettings });
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
     onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_MERGED),
     onRemoveComponent: (entityId, world) =>

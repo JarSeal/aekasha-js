@@ -10,6 +10,7 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { worldToCell } from '../../utils/CellKey';
 import { lwarn } from '../../utils/Logger';
 import { getMergeRefusal } from './MergeEligibility';
+import { getActiveSceneMergeSettings, warnIfCellSizeSplitsStreaming } from './MergeSceneSettings';
 import {
   createGroup,
   findQueued,
@@ -31,18 +32,6 @@ export const AUTO = 'AUTO';
  * @internal
  */
 export const AUTO_ID_PREFIX = 'auto:';
-
-/**
- * `AUTO`'s default cell size, in metres (§4.1).
- * @internal
- */
-export const DEFAULT_AUTO_CELL_SIZE = 32;
-
-/**
- * `AUTO`'s default vertex cap per group (§4.1).
- * @internal
- */
-export const DEFAULT_AUTO_MAX_VERTICES = 262_144;
 
 /** A bucket's open group (`n`) and the vertices that joined it so far (the members removed
  * since aren't taken off: a bucket opens its next group early rather than late). */
@@ -167,6 +156,7 @@ export const queueMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld)
 export const collectQueuedJoins = (world: ECSWorld) => {
   const queued = findQueued(world);
   if (!queued?.size) return undefined;
+  const settings = getActiveSceneMergeSettings();
   const joins = new Map<string, number[]>();
   const join = (groupId: string, entityId: number) => {
     const ids = joins.get(groupId);
@@ -186,10 +176,12 @@ export const collectQueuedJoins = (world: ECSWorld) => {
       continue;
     }
     const options = typeof def === 'string' ? undefined : def;
+    const cellSize = options?.cellSize ?? settings.autoCellSize;
+    warnIfCellSizeSplitsStreaming(settings, cellSize);
     const pick = pickAutoGroup(
       entityId,
-      options?.cellSize ?? DEFAULT_AUTO_CELL_SIZE,
-      options?.maxVertices ?? DEFAULT_AUTO_MAX_VERTICES,
+      cellSize,
+      options?.maxVertices ?? settings.autoMaxVertices,
       world
     );
     if (!getGroups(world).has(pick.groupId)) {

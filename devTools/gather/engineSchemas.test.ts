@@ -43,13 +43,23 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       skyboxes: ['day'],
       spatialDomains: [{ id: 'DEFAULT' }],
       streaming: { cellSize: 64 },
+      mergeGroups: [{ id: 'AUTO', cellSize: 32 }],
     };
-    expect(getSceneFeatureIds(scene)).toEqual(['skybox', 'postfx', 'spatial', 'lod', 'streaming']);
+    expect(getSceneFeatureIds(scene)).toEqual([
+      'skybox',
+      'postfx',
+      'spatial',
+      'lod',
+      'streaming',
+      'merging',
+    ]);
   });
 
   it('lists a feature whose mesh field one of the scene’s meshes uses', () => {
     const scene = { id: 'a', meshes: ['unresolvedId', mesh({}), mesh({ lod: 'AUTO' })] };
     expect(getSceneFeatureIds(scene)).toEqual(['lod']);
+    const merged = { id: 'a', meshes: [mesh({ merge: 'AUTO' })] };
+    expect(getSceneFeatureIds(merged)).toEqual(['merging']);
   });
 
   it('doesn’t count an empty list or a missing value', () => {
@@ -75,6 +85,8 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'impostors',
       'lod',
       'streaming',
+      'mergeGroups',
+      'merge',
     ]);
   });
 });

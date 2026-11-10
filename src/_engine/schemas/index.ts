@@ -33,6 +33,7 @@ export { LightAssetSchema } from './LightSchema';
 export { lodSchemaPart } from '../features/lod/LodSchema';
 export type { LightAsset } from './LightSchema';
 export { MaterialAssetSchema } from './MaterialSchema';
+export { mergingSchemaPart } from '../features/merging/MergingSchema';
 export type { MaterialAsset, PerType } from './MaterialSchema';
 export { createMeshAssetSchema } from './MeshSchema';
 export type { MeshAsset } from './MeshSchema';
