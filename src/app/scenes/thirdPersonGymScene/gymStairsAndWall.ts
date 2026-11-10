@@ -1,13 +1,6 @@
 import * as THREE from 'three/webgpu';
-import {
-  createGeometry,
-  createMeshEntity,
-  existsOrThrow,
-  getGeometry,
-  saveBufferGeometry,
-} from 'aekasha';
+import { createGeometry, createMeshEntity, getGeometry, registerMergedGeometry } from 'aekasha';
 import type { Vector3Like } from 'aekasha';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createPhysicsEntity } from 'aekasha/physics';
 
 /** The stairs' steps: each a 4 × 0.2 × 4 m box, 0.2 m above and 0.4 m behind the one before. */
@@ -44,19 +37,22 @@ const createStairsColliders = () => {
   ];
 };
 
-/** The steps merged into one geometry (`stairsGeo`), or the registered one on a later visit. */
+/**
+ * The steps merged into one geometry (`stairsGeo`): one box placed ten times, without groups (the
+ * stairs have one material). The registered one on a later visit.
+ */
 const getStairsGeometry = () => {
   const existing = getGeometry('stairsGeo');
   if (existing) return existing;
   const step = new THREE.BoxGeometry(STEP.width, STEP.rise, STEP.depth);
-  const steps = Array.from({ length: STEP.count }, (_, i) =>
-    step.clone().translate(0, STEP.rise * i, STEP.run * i)
-  );
-  const merged = existsOrThrow(mergeGeometries(steps, true), 'Could not merge the gym stairs.');
+  const steps = Array.from({ length: STEP.count }, (_, i) => ({
+    geo: step,
+    matrix: new THREE.Matrix4().makeTranslation(0, STEP.rise * i, STEP.run * i),
+  }));
+  // Registered, so the mesh's ref count disposes it with the scene; the step is only read
+  const stairs = registerMergedGeometry(steps, { id: 'stairsGeo' });
   step.dispose();
-  steps.forEach((geometry) => geometry.dispose());
-  // Registered, so the mesh's ref count disposes it with the scene
-  return saveBufferGeometry(merged, { id: 'stairsGeo' });
+  return stairs;
 };
 
 /**

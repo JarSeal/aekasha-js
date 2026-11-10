@@ -1987,6 +1987,7 @@
       "loadGLTFInWorker": "Function",
       "loadHDRTextureInWorker": "Function",
       "loadTextureInWorker": "Function",
+      "mergeGeometryInWorker": "Function",
       "pingAssetsWorker": "Function",
       "recordAssetLoadReport": "Function",
       "runAssetTask": "Function",
@@ -2005,6 +2006,8 @@
       "AssetsLoadHDRTextureResponse": "TypeAlias",
       "AssetsLoadTextureRequest": "TypeAlias",
       "AssetsLoadTextureResponse": "TypeAlias",
+      "AssetsMergeGeometryRequest": "TypeAlias",
+      "AssetsMergeGeometryResponse": "TypeAlias",
       "AssetsPingRequest": "TypeAlias",
       "AssetsPingResponse": "TypeAlias",
       "AssetsProtocolType": "Enum",
@@ -2017,7 +2020,8 @@
       "AssetsWorkerStatus": "TypeAlias",
       "AssetsWorkerTarget": "TypeAlias",
       "DracoWorkerSettings": "TypeAlias",
-      "KTX2WorkerSettings": "TypeAlias"
+      "KTX2WorkerSettings": "TypeAlias",
+      "TransferableMergePart": "TypeAlias"
     },
     "src/_engine/kernel/assets/AssetUrl.ts": {
       "GeneratedAssetUrls": "TypeAlias",
@@ -2051,12 +2055,15 @@
     },
     "src/_engine/kernel/assets/GeometryMerge.ts": {
       "mergeGeometryParts": "Function",
+      "mergeGeometryPartsAsync": "Function",
       "MergePart": "TypeAlias",
       "registerMergedGeometry": "Function",
+      "registerMergedGeometryAsync": "Function",
       "RegisterMergedGeometryOptions": "TypeAlias",
-      "registerMergedGeoProps": "Function"
+      "registerMergedGeoPropsAsync": "Function"
     },
     "src/_engine/kernel/assets/GeometryMergeCore.ts": {
+      "assertMergeableParts": "Function",
       "MergedGeometry": "TypeAlias",
       "MergeGeometryOptions": "TypeAlias",
       "mergeGeometryPartsCore": "Function",
@@ -2233,6 +2240,9 @@
     },
     "src/_engine/kernel/assets/worker/AssetsSwitchGLTF.ts": {
       "assetsSwitchGLTF": "Function"
+    },
+    "src/_engine/kernel/assets/worker/AssetsSwitchMerge.ts": {
+      "assetsSwitchMerge": "Function"
     },
     "src/_engine/kernel/assets/worker/AssetsSwitchTexture.ts": {
       "assetsSwitchTexture": "Function"
@@ -4713,6 +4723,7 @@
       "loadTslMaterialFileAsync",
       "lwarn",
       "mergeGeometryParts",
+      "mergeGeometryPartsAsync",
       "mountAekasha",
       "onGamepadConnected",
       "onGamepadDisconnected",
@@ -4720,6 +4731,7 @@
       "playActionRecording",
       "recordActions",
       "registerMergedGeometry",
+      "registerMergedGeometryAsync",
       "registerOnAllSceneEnters",
       "registerOnAllSceneExits",
       "registerOnSceneEnter",

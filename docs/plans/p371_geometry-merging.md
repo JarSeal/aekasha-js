@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Merging, Geometry, Assets
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.1)
 Blocks: p372_mesh-merge-groups.md
@@ -99,7 +99,7 @@ mergeGeometryParts(parts: MergePart[], opts?: {
   order. p372 rewrites a part's range in place with it; p373 maps a picked face to its part.
 - **Bounds:** box and sphere computed once at the end.
 - Returns an unregistered geometry; `registerMergedGeometry(parts, { id, groups, attributes,
-  indexed, isPersistent, preWarm, debugData })` (an options object: coding standards) merges and
+indexed, isPersistent, preWarm, debugData })` (an options object: coding standards) merges and
   registers through `saveBufferGeometry`, and returns the registered geometry without merging
   when `id` is registered already. It takes a ref on nothing it doesn't own (the source
   geometries are only read).
@@ -341,7 +341,7 @@ As built:
   +0.1 kB in their main `_engine/kernel/scene`, as the app did. `bundle.json` unchanged (all
   build time), no debug code in any build.
 
-### Phase 4 — Worker and adoption (D4, D5)
+### Phase 4 — Worker and adoption (D4, D5) — done
 
 The scene loader's `MERGED` path (Phase 2: `registerMergedGeoProps` on the main thread) moves to
 `mergeGeometryPartsAsync` with the worker job.
@@ -349,6 +349,82 @@ The scene loader's `MERGED` path (Phase 2: `registerMergedGeoProps` on the main 
 **Exit:** largeWorld, the gym's stairs and the foliage generator use the new utility with
 unchanged visuals (`yarn verify:scenes`' snapshots); a 100k-vertex merge doesn't block a frame for
 more than its transfer.
+
+As built:
+
+- Found 2026-11-10: LOD's `AssetsSwitchSimplify` (D4's pattern) is LOD's own,
+  `features/lod/worker/AssetsSwitchSimplify.ts`; the merge job is the kernel's,
+  `kernel/assets/worker/AssetsSwitchMerge.ts`, next to the texture and GLTF jobs, loaded by the
+  worker on its first merge job (`createJobLoader`).
+- **Its own target, not `workerTarget`** (D4's wording): kind `MERGE`, `AppConfig.assets.mergeWorkerTarget`
+  (env `VITE_ASSETS_MERGE_WORKER_TARGET`, a boot override and a "Geometry merges" row in the
+  Assets tab), default `WORKER_THREAD` whatever `workerTarget` is, as `simplifyWorkerTarget`: the
+  shared default is `MAIN_THREAD`, which would keep every merge on the main thread.
+- Protocol (`AssetsAPITypes.ts`): `MERGE_GEOMETRY` (6). The request sends each geometry once
+  (several parts name one by `geometryIndex`; the gym's ten steps send one box), only its
+  attributes and index, as copies (`serializeGeometry` with `copy`), never its `userData` (it can
+  hold what doesn't clone); matrices as their 16 elements. The response is the merge,
+  transferred, with its part table and bounds, and the warnings, logged on the main thread.
+- The refusals are one check, `assertMergeableParts` (`GeometryMergeCore.ts`, `@internal`), which
+  `mergeGeometryPartsCore` runs first and the async path runs on the main thread before it sends
+  anything: a refused merge rejects there, instead of failing in the worker and running again on
+  the main thread as a `WORKER_ERROR` fallback.
+- Public on `aekasha`: `mergeGeometryPartsAsync(parts, opts?)` and `registerMergedGeometryAsync(parts,
+opts)` (not in D4; the loader and p372 need it). The latter returns a taken id's geometry without
+  merging, captures the owner scope at its call and registers in it after the await (a streaming
+  cell's merge stays the cell's), and of two overlapping calls with one id the first to finish
+  registers (the other disposes its own). Its merge's report is `merge:<id>`, which the geometry
+  info window shows ("Merged geometry (N parts)", "Merged on", "Merge time"; a synchronous merge
+  "Main thread (synchronous)").
+- Loader: `registerMergedGeoProps` became `registerMergedGeoPropsAsync` (`@internal`); a scene's
+  `MERGED` geometries merge in parallel (a part is never another `MERGED` one), each failure
+  logged and left out as before.
+- Tests: `GeometryMerge.test.ts` mocks `AssetsAPI` so the worker task's request goes through
+  `structuredClone` with its transfer list into the real `assetsSwitchMerge`, and back: the
+  worker's merge equals the synchronous one (attributes, index, groups, part table, bounds), a
+  geometry two parts name is sent once, a refused merge sends nothing, the owner scope and the
+  overlapping calls. `SceneDataLoader.test.ts`'s owner key test now checks the capture (the merge
+  registers after an await).
+- Measured (2026-11-10, Chrome on macOS, WebGPU, `testDebugScene` on the dev server): its
+  `p371SymbolTrio` merges in the worker with no fallback. A 100k-vertex merge (12 spheres of 8,385
+  vertices with tangents, 100,620 vertices) at 4× CPU throttling: `mergeGeometryParts` blocks the
+  main thread 39-61 ms (frame gaps 41-64 ms, one 62 ms long task); `mergeGeometryPartsAsync`'s
+  longest frame gap is 17.4-17.7 ms (idle 20.8 ms), no long task, its result byte-identical.
+  Unthrottled a warm 100k merge is about 11 ms on that Mac. The trade-off: a scene whose only
+  worker request is a small merge pays the worker's start (51-104 ms of wall time, none on the
+  main thread) on its first one; warm, an 8.7k-vertex merge takes 2-5 ms either way.
+- Adoption (D5), each checked against the old `mergeGeometries` output (positions, normals, uvs and
+  index bit-identical):
+  - the gym's stairs: one step box placed ten times by matrix, `registerMergedGeometry`, `groups:
+'NONE'`, not D5's `BY_SLOT`: `mergeGeometries(steps, true)` gave each step a group
+    (`materialIndex` 0-9), which a single-material mesh never reads;
+  - the foliage tree: `mergeGeometryParts` with `BY_SLOT`, the trunk slot 0 and the canopy 1 (the
+    same two groups), the parts placed by matrix; the bush: its seeded spheres placed by matrix.
+    The bush keeps its own empty geometry for zero clusters (positions, normals and uvs; the
+    merge's empty one, D1, has only positions, which a lit material reads as missing);
+  - largeWorld: `saveMergedGeometry` takes parts with matrices (the crates one box placed twice,
+    the barbell one sphere placed twice) and keeps its `computeVertexNormals()` after the merge, so
+    the scene looks the same: it averages normals per vertex index, which differs from the parts'
+    own at the spheres' seams and poles.
+- Checked (2026-11-10): `yarn verify:scenes --only testDebugScene` (after the loader moved to the
+  worker) passes its five configurations; `--only largeWorld,thirdPersonGymScene,lodShowcase,instanceStress`
+  passes `largeWorld`, `lodShowcase` and both `instanceStress` variants in every configuration.
+  The gym's five fail only on what its local baseline (recorded at `d4decbdf`, before p353 and
+  p354 landed) lacks: `streamingSystem` in the system order, the `streamingControls` tab and the
+  LOD tab's "Instance sets" folder; its snapshots and character paths match. Record the gym's
+  baseline again (`--only thirdPersonGymScene --update`) on `main` or here.
+- `yarn sbp --profile all` (2026-11-10): every budget within, the app's first download unchanged.
+  Lazy: the worker's `assets/AssetsSwitchMerge.js` (2.3 kB gzip, new) and `assets/GeometryMerge.js`
+  2.5 → 3.0 kB (the async path); the worker's chunk that held `GeometryTransfer` and three's
+  `BufferGeometryUtils` (1.7 kB) split in two (0.8 + 1.0 kB), since the merge job needs only the
+  first. `yarn verify:baselines --update`: `bundle.json`, `bundle.banner.json`, `bundle.uiKit.json`,
+  `api.json` (the two public functions, the protocol types, `registerMergedGeoProps` →
+  `registerMergedGeoPropsAsync`, `assertMergeableParts`, `mergeGeometryInWorker`,
+  `assetsSwitchMerge`) and `docs.json`; no debug code in any build.
+- For Phase 5's docs: `mergeGeometryPartsAsync` / `registerMergedGeometryAsync` and when to use
+  them (a large merge; a small one costs more as a round trip, and the first one may start the
+  worker), `AppConfig.assets.mergeWorkerTarget` and its env var, a scene's `MERGED` geometries
+  merged in the worker, and the stairs' groups.
 
 ### Phase 5 — Docs and versioning
 
