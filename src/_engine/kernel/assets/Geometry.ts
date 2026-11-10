@@ -5,6 +5,7 @@ import { getRootScene } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
+import type { MergeGeometryOptions } from './GeometryMergeCore';
 
 /** A geometry's name and description for the debug tooling: a registry entry's `debugData`. */
 export type GeoDebugData = { name?: string; description?: string };
@@ -98,6 +99,41 @@ export type GeoProps = GeoBaseProps &
         };
       }
   );
+
+/** One part of a {@link MergedGeoProps} geometry: a registered geometry and its transform. */
+export type MergedGeoPart = {
+  /** A registered geometry's id: a geometry JSON's, or an imported piece's
+   * (`<importId>/<nodeName>`). Only read: the merge takes no ref on it. */
+  geo: string;
+  /** Where the part goes in the merged geometry. Default: the origin. */
+  position?: { x?: number; y?: number; z?: number };
+  /** Euler angles in radians (XYZ order); `quaternion` wins over it. */
+  rotation?: { x?: number; y?: number; z?: number };
+  /** A rotation quaternion. */
+  quaternion?: { x: number; y: number; z: number; w: number };
+  /** The part's scale; a negative component mirrors it. Default 1. */
+  scale?: { x: number; y: number; z: number };
+  /** Its material slot (the group's `materialIndex`) with `groups: 'BY_SLOT'`. Default 0. */
+  materialSlot?: number;
+  /** An id for the part, kept in the merged geometry's `userData.mergeParts`. */
+  key?: string;
+};
+
+/**
+ * A geometry the scene loader merges from registered geometries (a `MERGED` geometry JSON):
+ * after the scene's other geometries, with `registerMergedGeometry`, so a part can be one of
+ * them or an imported piece. Not for {@link createGeometry}, which is synchronous and throws for
+ * it: in code, call `registerMergedGeometry`.
+ */
+export type MergedGeoProps = GeoBaseProps & {
+  /** Several geometries merged into one. */
+  type: 'MERGED';
+  /** The parts, in the merged order, and the merge's options. */
+  params: {
+    /** The parts, in the merged order. */
+    parts: MergedGeoPart[];
+  } & MergeGeometryOptions;
+};
 
 /** The three geometries {@link createGeometry} builds, one per {@link GeoProps} `type`. */
 export type GeoTypes =
@@ -225,7 +261,7 @@ export const prewarmGeometry = (id: string) =>
  * registered returns that geometry, re-tagged to the scene getting it, and builds nothing (the
  * props are ignored).
  * @template T the geometry class `props.type` builds, for the caller's type
- * @throws for an unknown `type`
+ * @throws for an unknown `type`, and for `MERGED` (see {@link MergedGeoProps})
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';
@@ -302,6 +338,11 @@ export const createGeometry = <T extends GeoTypes>(props: GeoProps): T => {
   }
 
   if (!geo) {
+    if ((props as { type: string }).type === 'MERGED') {
+      throw new Error(
+        `createGeometry can't build a MERGED geometry ("${props?.id}"): list it in a scene's geometries, or call registerMergedGeometry.`
+      );
+    }
     throw new Error(
       `Could not create geometry (unknown type: ${props.type}). Geometry id "${props?.id}".`
     );

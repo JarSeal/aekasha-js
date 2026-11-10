@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getResultFigures } from './generated';
+import type { GLTFMergeStats } from './gltfMergeOptions';
 import type { PipelineRun, PipelineRunResult } from './run';
 import { ROOT } from '../paths';
 
@@ -39,6 +40,8 @@ export type RunSummaryAsset = {
   vramBytes?: InOut;
   /** A standalone texture's (or a texture array's) codec */
   codec?: string;
+  /** What a GLB's `merge` joined and kept (p371 D3) */
+  merge?: GLTFMergeStats;
   /** Why it was passed through, skipped or not encoded, or what failed */
   reason?: string;
   warnings?: string[];
@@ -103,6 +106,7 @@ export const summarizeRun = (
       ...(result.status === 'optimized' && isTexture && result.textures[0]
         ? { codec: result.textures[0].codec }
         : {}),
+      ...(result.status === 'optimized' && result.merge ? { merge: result.merge } : {}),
       ...('reason' in result ? { reason: result.reason } : {}),
       ...('warnings' in result && result.warnings.length ? { warnings: result.warnings } : {}),
       ...(opts.overBudget.has(key) ? { overBudget: opts.overBudget.get(key) } : {}),

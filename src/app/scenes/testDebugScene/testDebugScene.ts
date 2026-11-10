@@ -7,6 +7,7 @@ import {
   getTexture,
   loadTextureAsync,
   importAssetAsync,
+  registerMergedGeometry,
   spawnImportedAsset,
 } from 'aekasha';
 import type { ImportedAssetManifest, TexOpts } from 'aekasha';
@@ -43,14 +44,100 @@ const createSlotMaterial = (manifest: ImportedAssetManifest) => {
   return createMaterial({ id: `${manifest.id}_material`, type: 'STANDARD', params });
 };
 
+/** The merge check's parts, in their group's space: a box, a sphere and a tilted, mirrored
+ * cylinder (scale x -1), whose winding the merge must flip. */
+const MERGE_PARTS = [
+  { geoId: 'p371_box', position: [-0.8, 0, 0], rotation: [0, 0.5, 0], scale: [1, 1, 1] },
+  { geoId: 'p371_sphere', position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  { geoId: 'p371_cylinder', position: [0.8, 0, 0], rotation: [0, 0.6, 0.3], scale: [-1, 1, 1] },
+] as const;
+/** Where the merge check's two groups stand: the separate meshes left, the merged mesh right. */
+const MERGE_ROW = { y: -1.5, separateX: -1.8, mergedX: 1.8 };
+
+/**
+ * The merge check (p371 Phase 1): the parts as three meshes, and merged into one geometry
+ * (`p371_merged`, one draw in the profiler), each group on a slab that takes their shadows. The
+ * two groups must look the same: the mirrored cylinder not inside out, the checker the same way
+ * round, the shading and shadows alike.
+ */
+const createMergeCheck = (checker: THREE.Texture) => {
+  createGeometry({ id: 'p371_box', type: 'BOX', params: { width: 0.6, height: 0.6, depth: 0.6 } });
+  createGeometry({ id: 'p371_sphere', type: 'SPHERE', params: { radius: 0.35 } });
+  createGeometry({
+    id: 'p371_cylinder',
+    type: 'CYLINDER',
+    params: { radiusTop: 0.15, radiusBottom: 0.25, height: 0.6, radialSegments: 16 },
+  });
+  const mat = createMaterial({ id: 'p371_mergeMat', type: 'STANDARD', params: { map: checker } });
+  const slabMat = createMaterial({
+    id: 'p371_slabMat',
+    type: 'STANDARD',
+    params: { color: 0x667788 },
+  });
+  const slabGeo = createGeometry({
+    id: 'p371_slab',
+    type: 'BOX',
+    params: { width: 2.6, height: 0.04, depth: 1.2 },
+  });
+
+  const matrices = MERGE_PARTS.map(({ position, rotation, scale }) =>
+    new THREE.Matrix4().compose(
+      new THREE.Vector3(...position),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)),
+      new THREE.Vector3(...scale)
+    )
+  );
+  const mergedGeo = registerMergedGeometry(
+    MERGE_PARTS.map(({ geoId }, i) => ({ geo: geoId, matrix: matrices[i], key: geoId })),
+    { id: 'p371_merged' }
+  );
+
+  MERGE_PARTS.forEach(({ geoId, position, rotation, scale }) => {
+    createMeshEntity(
+      {
+        geo: geoId,
+        mat,
+        castShadow: true,
+        receiveShadow: true,
+        position: { x: MERGE_ROW.separateX + position[0], y: MERGE_ROW.y + position[1], z: 0 },
+        rotation: { x: rotation[0], y: rotation[1], z: rotation[2] },
+        scale: { x: scale[0], y: scale[1], z: scale[2] },
+      },
+      { appId: `${geoId}_separate` }
+    );
+  });
+  createMeshEntity(
+    {
+      geo: mergedGeo,
+      mat,
+      castShadow: true,
+      receiveShadow: true,
+      position: { x: MERGE_ROW.mergedX, y: MERGE_ROW.y, z: 0 },
+    },
+    { appId: 'p371_mergedMesh' }
+  );
+  for (const x of [MERGE_ROW.separateX, MERGE_ROW.mergedX]) {
+    createMeshEntity(
+      {
+        geo: slabGeo,
+        mat: slabMat,
+        receiveShadow: true,
+        position: { x, y: MERGE_ROW.y - 0.38, z: 0 },
+      },
+      { appId: `p371_slab_${x < 0 ? 'separate' : 'merged'}` }
+    );
+  }
+};
+
 /**
  * The orientation check of hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
  * next to their sources; its camera and lights are in its JSON. Top row: each PNG texture, then
  * its KTX2 copy; they must look the same (the KTX2 files are encoded flipped, so this is the
- * orientation check). Bottom row, left to right: `box01Textured.glb`, its meshopt + KTX2 copy and
+ * orientation check). Middle row, left to right: `box01Textured.glb`, its meshopt + KTX2 copy and
  * its quantized meshopt + KTX2 copy (all three must look the same), then `box01.glb` (no
  * textures, a plain material) and its meshopt copy. Switch the GLTF worker target in the Assets
- * tab (and reload) to check the assets worker path.
+ * tab (and reload) to check the assets worker path. Bottom row: the geometry merge check
+ * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows.
  */
 export const scene = async () => {
   const textures = await Promise.all(
@@ -75,6 +162,7 @@ export const scene = async () => {
       { appId: `${TEXTURES[i].id}_plane` }
     );
   });
+  createMergeCheck(textures[0]);
 
   for (let i = 0; i < MODELS_TO_IMPORT.length; i++) {
     const { id, fileName, noTextures } = MODELS_TO_IMPORT[i];

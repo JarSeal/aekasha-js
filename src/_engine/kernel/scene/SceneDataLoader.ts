@@ -6,7 +6,7 @@ import { getEntityIdByAppId } from '../ecs/ECS';
 import { getTexture, loadTextureAsync } from '../assets/Texture';
 import { createMaterial, getMaterial, loadTslMaterialFileAsync } from '../assets/Material';
 import { textureMapKeys } from '../../utils/Constants';
-import { createGeometry, getGeometry } from '../assets/Geometry';
+import { createGeometry, getGeometry, type MergedGeoProps } from '../assets/Geometry';
 import { createLightEntity } from '../light/Light';
 import { createCameraEntity, setActiveCamera } from '../camera/Camera';
 import { createMeshEntity } from '../mesh/Mesh';
@@ -132,7 +132,8 @@ export const loadNextSceneAssets = (sceneData: SceneData): Promise<ScenePrimitiv
 
 /**
  * Loads asset lists of a scene's data: the textures, imported assets and TSL material files in
- * parallel, then the materials (with their texture ids resolved) and the geometries. The ones
+ * parallel, then the materials (with their texture ids resolved) and the geometries, the `MERGED`
+ * ones last (their parts can be the others, or imported pieces). The ones
  * named by id are taken from the registries and re-tagged. Their owner is `ownerKey` when it's
  * given (a streaming cell's, `getCellOwnerKey`), for every registration, also those after the
  * loads' awaits; else the loading or current scene.
@@ -200,8 +201,9 @@ export const loadSceneAssetsAsync = async (
     if (mat) materials[material.id || `material-${i}`] = mat;
   }
 
-  // Create geometries
+  // Create geometries: the MERGED ones last, since their parts can be the others
   const sceneGeometries = sceneData.geometries || [];
+  const merged: { props: MergedGeoProps; key: string }[] = [];
   for (let i = 0; i < sceneGeometries.length; i++) {
     const geometry = sceneGeometries[i];
     if (typeof geometry === 'string') {
@@ -212,11 +214,41 @@ export const loadSceneAssetsAsync = async (
       }
       continue;
     }
+    if (geometry.type === 'MERGED') {
+      merged.push({ props: geometry, key: geometry.id || `geometry-${i}` });
+      continue;
+    }
     const geo = owned(() => createGeometry({ ...geometry }));
     if (geo) geometries[geometry.id || `geometry-${i}`] = geo;
   }
+  if (merged.length) await registerMergedGeometriesAsync(merged, geometries, owned);
 
   return { textures, materials, geometries, importedAssets };
+};
+
+/** Registers a scene's MERGED geometries from their parts (p371 D2), in the assets worker
+ * (`AppConfig.assets.mergeWorkerTarget`, D4), all at once: a part is never another MERGED one.
+ * The merge code loads here, on the first one: an app without one never loads it. Each merge
+ * captures the owner scope at its call, so it registers in it after its await. A merge that
+ * fails (a part not registered, a morphed or skinned one) is logged and left out, so a mesh using
+ * it is skipped as for any missing geometry. The parts are only read: the merge takes no ref on
+ * them, so they stay with whatever loaded them and are released with it. */
+const registerMergedGeometriesAsync = async (
+  merged: { props: MergedGeoProps; key: string }[],
+  geometries: ScenePrimitiveAssets['geometries'],
+  owned: Owned
+) => {
+  const { registerMergedGeoPropsAsync } = await import('../assets/GeometryMerge');
+  await Promise.all(
+    merged.map(({ props, key }) =>
+      owned(() => registerMergedGeoPropsAsync(props)).then(
+        (geometry) => {
+          geometries[key] = geometry;
+        },
+        (err: unknown) => lerror(`Could not merge geometry "${key}" in loadNextSceneAssets.`, err)
+      )
+    )
+  );
 };
 
 /**

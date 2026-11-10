@@ -256,6 +256,94 @@ describe('G13: a mesh save entry’s geo and mat', () => {
   });
 });
 
+describe('p371 D2: a MERGED geometry’s parts', () => {
+  const kit = {
+    // A public file the repo has: a JSON-relative one would resolve outside the repo's src/
+    'app/kit.importedAsset.json': { id: 'kit', fileName: '/debugger/assets/testModels/box01.glb' },
+    'app/post.geometry.json': { geoProps: { id: 'post', type: 'CYLINDER' } },
+  };
+  const merged = (id: string, parts: string[]) => ({
+    [`app/${id}.geometry.json`]: {
+      geoProps: { id, type: 'MERGED', params: { parts: parts.map((geo) => ({ geo })) } },
+    },
+  });
+  // The file's console.warn mock, spied again for its calls
+  const warns = () => vi.spyOn(console, 'warn').mock.calls;
+
+  it('gathers parts that are geometry JSONs and imported pieces the scene lists', () => {
+    const files = {
+      ...scene('s', { geometries: ['post', 'wall'], importedAssets: ['kit'] }),
+      ...kit,
+      ...merged('wall', ['post', 'kit/wall', 'kit/pillar']),
+    };
+    const { isGathered, scene: getScene } = gather(files);
+    expect(isGathered).toBe(true);
+    expect(getScene('s')?.geometries).toEqual([
+      expect.objectContaining({ id: 'post' }),
+      expect.objectContaining({ id: 'wall', type: 'MERGED' }),
+    ]);
+  });
+
+  it.each([
+    ['an unknown part, though no scene lists the geometry', ['post', 'nothing']],
+    ['an unknown import’s piece', ['other/wall']],
+    ['a MERGED part', ['inner']],
+  ])('fails the gather for %s', (_, parts) => {
+    const files = { ...scene('s'), ...kit, ...merged('inner', ['post']), ...merged('wall', parts) };
+    expect(gather(files).isGathered).toBe(false);
+  });
+
+  it('checks an inline MERGED geometry’s parts in the scene pass', () => {
+    const inline = { id: 'wall', type: 'MERGED', params: { parts: [{ geo: 'nothing' }] } };
+    expect(gather({ ...scene('s', { geometries: [inline] }), ...kit }).isGathered).toBe(false);
+  });
+
+  it('warns about a part the scene doesn’t list, and gathers', () => {
+    const files = {
+      ...scene('s', { geometries: ['wall'] }),
+      ...kit,
+      ...merged('wall', ['post', 'kit/wall']),
+    };
+    const before = warns().length;
+    expect(gather(files).isGathered).toBe(true);
+    const messages = warns()
+      .slice(before)
+      .map(([message]) => String(message));
+    expect(messages.filter((message) => message.includes('MERGED geometry "wall"'))).toEqual([
+      expect.stringContaining('"post"'),
+      expect.stringContaining('the imported asset "kit"'),
+    ]);
+  });
+});
+
+describe('p371 D3: an import’s merge', () => {
+  const kit = (fileName: string) => ({
+    'app/kit.importedAsset.json': { id: 'kit', fileName, merge: { exclude: ['door_*'] } },
+  });
+
+  it('is build time only: the generated import has none', () => {
+    const files = {
+      ...scene('s', { importedAssets: ['kit'] }),
+      ...kit('/debugger/assets/testModels/box01.glb'),
+    };
+    const { isGathered, scene: getScene } = gather(files);
+    expect(isGathered).toBe(true);
+    const [imported] = getScene('s')?.importedAssets as Record<string, unknown>[];
+    expect(imported).toMatchObject({ id: 'kit' });
+    expect(imported).not.toHaveProperty('merge');
+  });
+
+  it('fails the gather for a remote file, which the pipeline doesn’t read', () => {
+    const files = {
+      ...scene('s', { importedAssets: ['kit'] }),
+      ...kit('https://example.com/kit.glb'),
+    };
+    expect(gather(files).isGathered).toBe(false);
+    const withoutMerge = { id: 'kit', fileName: 'https://example.com/kit.glb' };
+    expect(gather({ ...files, 'app/kit.importedAsset.json': withoutMerge }).isGathered).toBe(true);
+  });
+});
+
 describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
   const crate = {
     'app/crate.mesh.json': {

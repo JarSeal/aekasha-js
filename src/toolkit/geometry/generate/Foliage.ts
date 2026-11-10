@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { createSeededRandom, existsOrThrow } from 'aekasha';
+import { createSeededRandom, mergeGeometryParts } from 'aekasha';
 
 /** {@link generateTreeGeometry}'s options, in world units; every one has a default. */
 export interface TreeGeometryOptions {
@@ -75,22 +74,30 @@ export const generateTreeGeometry = (opts: TreeGeometryOptions = {}): GeneratedT
     trunkHeight,
     radialSegments
   );
-  trunkGeo.translate(0, trunkHeight / 2, 0);
-
   const foliageGeo = new THREE.ConeGeometry(foliageRadius, foliageHeight, radialSegments);
-  // Overlap the cone slightly into the trunk so there's no visible gap at the seam.
-  foliageGeo.translate(0, trunkHeight + foliageHeight / 2 - 0.15, 0);
+  const materialGroups = { trunk: 0, foliage: 1 };
 
-  const geometry = existsOrThrow(
-    mergeGeometries([trunkGeo, foliageGeo], true),
-    "[generateTreeGeometry] The trunk and the canopy couldn't be merged."
+  // One group per material slot, with its bounds
+  const geometry = mergeGeometryParts(
+    [
+      {
+        geo: trunkGeo,
+        matrix: new THREE.Matrix4().makeTranslation(0, trunkHeight / 2, 0),
+        materialSlot: materialGroups.trunk,
+      },
+      {
+        geo: foliageGeo,
+        // Overlap the cone slightly into the trunk so there's no visible gap at the seam
+        matrix: new THREE.Matrix4().makeTranslation(0, trunkHeight + foliageHeight / 2 - 0.15, 0),
+        materialSlot: materialGroups.foliage,
+      },
+    ],
+    { groups: 'BY_SLOT' }
   );
-  geometry.computeBoundingSphere();
-  geometry.computeBoundingBox();
   trunkGeo.dispose();
   foliageGeo.dispose();
 
-  return { geometry, materialGroups: { trunk: 0, foliage: 1 } };
+  return { geometry, materialGroups };
 };
 
 /** {@link generateBushGeometry}'s options, in world units; every one has a default. */
@@ -126,19 +133,21 @@ export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.Buff
   const { clusterCount = 3, baseRadius = 0.5, radiusVariance = 0.2, segments = 5, seed = 1 } = opts;
 
   const random = createSeededRandom(seed);
-  const blobGeos: THREE.BufferGeometry[] = [];
+  const blobs: { geo: THREE.BufferGeometry; matrix: THREE.Matrix4 }[] = [];
   for (let i = 0; i < clusterCount; i++) {
     const radius = baseRadius + (random() - 0.5) * radiusVariance;
-    const blobGeo = new THREE.SphereGeometry(radius, segments, segments);
-    blobGeo.translate(
-      (random() - 0.5) * baseRadius,
-      radius * 0.6 + (random() - 0.5) * 0.1,
-      (random() - 0.5) * baseRadius
-    );
-    blobGeos.push(blobGeo);
+    blobs.push({
+      geo: new THREE.SphereGeometry(radius, segments, segments),
+      matrix: new THREE.Matrix4().makeTranslation(
+        (random() - 0.5) * baseRadius,
+        radius * 0.6 + (random() - 0.5) * 0.1,
+        (random() - 0.5) * baseRadius
+      ),
+    });
   }
-  // No clusters: an empty geometry (mergeGeometries needs one to merge)
-  if (!blobGeos.length) {
+  // No clusters: an empty geometry with the normals and uvs a lit material reads (the merge's
+  // empty one has only positions)
+  if (!blobs.length) {
     const empty = new THREE.BufferGeometry();
     empty.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
     empty.setAttribute('normal', new THREE.Float32BufferAttribute([], 3));
@@ -148,13 +157,9 @@ export const generateBushGeometry = (opts: BushGeometryOptions = {}): THREE.Buff
     return empty;
   }
 
-  const geometry = existsOrThrow(
-    mergeGeometries(blobGeos, false),
-    "[generateBushGeometry] The bush's spheres couldn't be merged."
-  );
-  geometry.computeBoundingSphere();
-  geometry.computeBoundingBox();
-  for (const blobGeo of blobGeos) blobGeo.dispose();
+  // Bounds included
+  const geometry = mergeGeometryParts(blobs);
+  for (const { geo } of blobs) geo.dispose();
 
   return geometry;
 };

@@ -16,7 +16,8 @@ const STATUS_READY_STRING = 'INIT_READY';
 
 // Each job kind's module (and the loaders and decoders it brings) loads on its first job (p607
 // D5): a worker can't be handed code, so the job kinds are named here, not registered. An app
-// that never simplifies a geometry (no LOD) never loads LodSimplify.
+// that never simplifies a geometry (no LOD) never loads LodSimplify, one that merges none never
+// loads GeometryMergeCore.
 /** Loads a job module once; a failed load is tried again by the next job. */
 const createJobLoader = <T>(load: () => Promise<T>) => {
   let loading: Promise<T> | null = null;
@@ -31,6 +32,7 @@ const loadGLTFJob = createJobLoader(() => import('./AssetsSwitchGLTF'));
 const loadSimplifyJob = createJobLoader(
   () => import('../../../features/lod/worker/AssetsSwitchSimplify')
 );
+const loadMergeJob = createJobLoader(() => import('./AssetsSwitchMerge'));
 
 /** The same test GLTFLoader runs (three 0.186.1 and 0.187.0, GLTFParser constructor; check it on a
  * three update) to choose between ImageBitmapLoader and the `document`-dependent TextureLoader. */
@@ -69,6 +71,8 @@ const handleMessage = async (data: AssetsUpProtocol) => {
         return await (await loadGLTFJob()).assetsSwitchGLTF(data, sendMessage);
       case AssetsProtocolType.SIMPLIFY_GEOMETRY:
         return await (await loadSimplifyJob()).assetsSwitchSimplify(data, sendMessage);
+      case AssetsProtocolType.MERGE_GEOMETRY:
+        return (await loadMergeJob()).assetsSwitchMerge(data, sendMessage);
       default:
         return sendMessage({
           type: AssetsProtocolType.ERROR,

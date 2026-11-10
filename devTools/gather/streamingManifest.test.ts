@@ -311,4 +311,41 @@ describe('buildStreamingManifest', () => {
     expect(cell?.far).toBeUndefined();
     expect(manifest?.farMeshes).toBeUndefined();
   });
+
+  it('loads a MERGED geometry’s parts with it, in each cell, unless the base has them (p371 D2)', () => {
+    const merged = (id: string, parts: string[]) => ({
+      id,
+      type: 'MERGED',
+      params: { parts: parts.map((geo) => ({ geo })) },
+    });
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'post', type: 'CYLINDER' },
+        merged('wallKit', ['post', 'kit/wall', 'box']),
+        // Two merging each other (a gather error) don't hang the manifest
+        merged('loopA', ['loopB']),
+        merged('loopB', ['loopA']),
+      ],
+      importedAssets: [{ id: 'kit', fileName: 'kit.glb' }],
+      meshes: [
+        mesh('baseBox', 0, 0),
+        mesh('wall1', 100, 0, { geo: 'wallKit' }),
+        mesh('wall2', 200, 0, { geo: 'wallKit' }),
+        mesh('loop', 300, 0, { geo: 'loopA' }),
+      ],
+      streaming: { cellSize: 64, base: ['baseBox'] },
+    });
+    const { out } = build(scene);
+    const ids = (list: unknown[] | undefined) => (list ?? []).map((e) => (e as { id: string }).id);
+    // The base mesh's box stays base: the cells merge it from there
+    expect(ids(out.geometries)).toEqual(['box']);
+    const manifest = out.__streaming;
+    expect(ids(manifest?.assets.geometries)).toEqual(['post', 'wallKit', 'loopA', 'loopB']);
+    expect(ids(manifest?.assets.importedAssets)).toEqual(['kit']);
+    for (const cell of [key(1, 0), key(3, 0)]) {
+      expect(manifest?.cells[cell]).toMatchObject({ geometries: [0, 1], importedAssets: [0] });
+    }
+    expect(manifest?.cells[key(4, 0)]).toMatchObject({ geometries: [2, 3] });
+  });
 });

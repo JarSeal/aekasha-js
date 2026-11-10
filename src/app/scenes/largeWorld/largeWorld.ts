@@ -1,5 +1,4 @@
 import * as THREE from 'three/webgpu';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {
   getLoaderStatusUpdater,
   createMeshEntity,
@@ -20,8 +19,9 @@ import {
   registerOnSceneEnter,
   registerOnSceneExit,
   existsOrThrow,
+  mergeGeometryParts,
 } from 'aekasha';
-import type { ECSWorld, MeshProps } from 'aekasha';
+import type { ECSWorld, MergePart, MeshProps } from 'aekasha';
 import { FollowToolComponentType, HoverToolComponentType } from 'aekasha/toolkit/ecs';
 import { onSkyBoxChange, getSkyLightIds } from 'aekasha/skybox';
 import { generateCrossQuads } from 'aekasha/lod';
@@ -203,18 +203,18 @@ const saveGeometryOnce = (id: string, build: () => THREE.BufferGeometry) =>
   getGeometry(id) ?? saveBufferGeometry(build(), { id });
 
 /**
- * Merges `parts` (three's geometries, never registered) into one geometry registered under `id`,
- * and disposes the parts.
+ * Merges `parts` (three's geometries, never registered, each placed by its matrix) into one
+ * geometry registered under `id`, and disposes the parts' geometries.
  */
-const saveMergedGeometry = (id: string, parts: THREE.BufferGeometry[]) => {
+const saveMergedGeometry = (id: string, parts: (MergePart & { geo: THREE.BufferGeometry })[]) => {
   const geometry = saveGeometryOnce(id, () => {
-    const merged = existsOrThrow(mergeGeometries(parts, false), `Could not merge "${id}".`);
+    const merged = mergeGeometryParts(parts);
+    // The normals as they were before the engine's merge (p371): averaged per vertex index, not
+    // the parts' own (they differ at the spheres' seams and poles). Kept so the scene looks the same
     merged.computeVertexNormals();
-    merged.computeBoundingSphere();
-    merged.computeBoundingBox();
     return merged;
   });
-  for (const part of parts) part.dispose();
+  for (const geo of new Set(parts.map((part) => part.geo))) geo.dispose();
   return geometry;
 };
 
@@ -465,11 +465,10 @@ const createRestingObjects = ({ world, terrain }: WorldContext) => {
  * HoverEffect so the follow camera has something to follow. Returns its entity.
  */
 const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Material) => {
-  const top = new THREE.BoxGeometry(1.4, 1.4, 1.4);
-  top.translate(0.7, 1.4, 0);
+  const crate = new THREE.BoxGeometry(1.4, 1.4, 1.4);
   const geometry = saveMergedGeometry('largeWorldCrateStackGeo', [
-    new THREE.BoxGeometry(1.4, 1.4, 1.4),
-    top,
+    { geo: crate },
+    { geo: crate, matrix: new THREE.Matrix4().makeTranslation(0.7, 1.4, 0) },
   ]);
   const { x, z } = CRATE_STACK_POSITION;
   const baseY = terrain.getHeightAt(x, z) + 0.7;
@@ -497,16 +496,18 @@ const createCrateStack = ({ world, terrain }: WorldContext, material: THREE.Mate
 
 /** Two spheres on a handle, merged into one geometry. */
 const createBarbell = ({ world, terrain }: WorldContext, material: THREE.Material) => {
-  const sphereA = new THREE.SphereGeometry(0.5, 10, 8);
-  sphereA.translate(-0.9, 0, 0);
-  const sphereB = new THREE.SphereGeometry(0.5, 10, 8);
-  sphereB.translate(0.9, 0, 0);
-  const handle = new THREE.CylinderGeometry(0.15, 0.15, 1.8, 8);
-  handle.rotateZ(Math.PI / 2);
+  const sphere = new THREE.SphereGeometry(0.5, 10, 8);
   const { x, z } = BARBELL_POSITION;
   createMeshEntity(
     {
-      geo: saveMergedGeometry('largeWorldBarbellGeo', [sphereA, sphereB, handle]),
+      geo: saveMergedGeometry('largeWorldBarbellGeo', [
+        { geo: sphere, matrix: new THREE.Matrix4().makeTranslation(-0.9, 0, 0) },
+        { geo: sphere, matrix: new THREE.Matrix4().makeTranslation(0.9, 0, 0) },
+        {
+          geo: new THREE.CylinderGeometry(0.15, 0.15, 1.8, 8),
+          matrix: new THREE.Matrix4().makeRotationZ(Math.PI / 2),
+        },
+      ]),
       mat: material,
       castShadow: true,
       receiveShadow: true,

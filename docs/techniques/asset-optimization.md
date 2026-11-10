@@ -76,6 +76,38 @@ Save it, and the dev server encodes it. Then commit the source, the new file in 
 - `.gltf` files with external buffers and images work; the output is always a `.glb`.
 - **`"lodChain": true`** (or its options: `ratios`, `maxError`, `compactVertices`, …) builds the LOD levels into the output, so the client never runs the simplifier. They are extra meshes no node uses, so glTF viewers show the model as before. Every use of a file shares one output: if the JSON and a scene's save entry ask for different options, the first one wins and the run warns. With the mesh side off (`"optimize": { "mesh": false }`, or a pass-through), the chains are generated at runtime after the load instead. Changing the options re-encodes the file, and so does a three.js update (the simplifier welds with its `mergeVertices`).
 
+### Merging pieces
+
+A model made of many static pieces (a level, a kit-bashed ruin) costs a draw per piece. `merge` joins them at build time:
+
+```jsonc
+{
+  "id": "ruinKitLevel",
+  "fileName": "./ruinKitLevel.glb",
+  "merge": { "mode": "ALL", "exclude": ["door_*"] },
+}
+```
+
+- **`mode`**: `BY_MATERIAL` (the default; `"merge": true` is the same) gives one node per glTF material, named `__merged_<material>`, also when the file has one material, so a second one never renames the first. `ALL` gives one node, `__merged`. The engine uses one material per imported asset, so `ALL` is one draw. Scenes reference the node like any other (`ruinKitLevel/__merged`).
+- **Names** are sanitized as three's GLTFLoader names nodes: `stone wall` → `__merged_stone_wall`, `wood.001` → `__merged_wood001`; an unnamed material is `material<index>`, no material `nomaterial`. Pieces whose attribute set differs from the others' (one has `COLOR_0`) can't join them and make `_2`, `_3`, …, with a warning naming each node's attributes. A merged name the file already uses gets a suffix and a warning.
+- **The merged node** is a new child of the import root with no transform: each piece's transform is baked into the root's space (normals by the normal matrix; a mirrored piece's winding and tangent `w` flipped, so it isn't drawn inside out), and quantized pieces are dequantized first. A scene mesh at the origin draws the file's layout.
+- **Kept as they are, with their subtrees:** nodes an `exclude` glob names (the config's glob syntax, on node names), physics nodes (`isPhysObj` or `colliderType` in the node's or its mesh's extras), joints and animated nodes. **Kept alone, with a warning:** skinned and GPU-instanced (`EXT_mesh_gpu_instancing`) nodes, and nodes with a morph target or a non-triangle primitive. A merged piece's node is removed when nothing kept hangs on it, and so is a parent it leaves empty; the file's own empty nodes stay.
+- **Order:** the merge runs before the compression and the `lodChain` step, so a chain is built from the merged mesh (one per merged node).
+- **Always written.** A file with `merge` is written even when both its geometry and its textures would pass through (`"optimize": false`, `AEK_ASSETS_OPTIMIZE=false`), with a warning, since scenes name the merged nodes.
+- **Every use of the file** is merged with the JSON's own `merge`. Changing it re-encodes the file (it's in the cache key, with the merge step's version).
+- **Stats:** the run's line reads `merged 20 pieces into __merged (kept 3 excluded, 2 physics)`; the lock entry and `.cache/asset-pipeline/last-run.json` hold each merged node's pieces, vertices and triangles and the kept nodes by reason.
+- **Remote files** (an `https://` `fileName`) can't be merged: the gather fails on it. `merge` is build time only, so it isn't in a save entry or a scene's inline import, and the generated data drops it.
+
+The trade-off: the pieces are no longer nodes, so they can't be entities, moved, hidden or picked one by one. Keep what must stay addressable (doors, levers) out with `exclude`; mesh merge groups (p372) will keep members as entities.
+
+Gaps:
+
+- A runtime that loads the source instead of an output has no `__merged` node: the dev server's fallback when the pipeline has no output (a failed encode, `ktx` missing with `importTextures`) and the Assets tab's "Load source files". A scene mesh naming the node isn't created, and the load logs the missing geometry.
+- `meshIndex` counts the merged file's nodes.
+- A mesh several nodes share is copied into the merge once per node, so the vertex count grows (the test kit's six pillars of one mesh: 16.8 → 21.0 KB of GPU memory). Unmerged, nodes that share a glTF mesh get one geometry id at import, the first node's.
+
+`testDebugScene`'s `p371MergeKit` is the example: 20 pieces in two materials joined with `ALL`, its doors excluded and its colliders kept (its GLB is built by `devTools/assetPipeline/fixtures/mergeKitFile.ts`).
+
 ### Collider sources
 
 Quantized positions break CONVEXHULL and HEIGHTFIELD colliders, and the meshopt vertex reorder scrambles a heightfield's grid. So a GLB with a node that has `colliderType` in its extras, or in its mesh's extras (the custom property the importer reads, which three's loader merges from both), gets **lossless** meshopt: compressed, but not quantized, reordered or simplified. You don't need to set anything.

@@ -16113,19 +16113,19 @@
     "testDebugScene": {
       "isDebugScene": true,
       "name": "Optimized assets orientation check",
-      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies.",
+      "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart.",
       "cameras": [
         {
           "camProps": {
             "active": true,
             "position": {
               "x": 0,
-              "y": 1,
-              "z": 7
+              "y": -0.8,
+              "z": 10.5
             },
             "lookAtPoint": {
               "x": 0,
-              "y": 0.7,
+              "y": -1.5,
               "z": 0
             },
             "type": "PERSPECTIVE",
@@ -16136,7 +16136,7 @@
             "appId": "p300Camera",
             "debugData": {
               "name": "Camera",
-              "description": "Faces both rows of the orientation check."
+              "description": "Faces the orientation check's two rows and the merge checks' rows below them."
             }
           }
         }
@@ -16171,6 +16171,7 @@
               "y": 0,
               "z": 0
             },
+            "castShadow": true,
             "appId": "p300Sun"
           },
           "entityOpts": {
@@ -16178,6 +16179,225 @@
             "debugData": {
               "name": "Sun"
             }
+          }
+        }
+      ],
+      "geometries": [
+        {
+          "id": "p371SymbolTrio",
+          "type": "MERGED",
+          "params": {
+            "parts": [
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": -0.75,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": {
+                  "x": 0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "plain"
+              },
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "scale": {
+                  "x": -0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "mirrored"
+              },
+              {
+                "geo": "aekashaSymbol/aekashaSymbol",
+                "position": {
+                  "x": 0.75,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.5,
+                  "z": 0.3
+                },
+                "scale": {
+                  "x": 0.45,
+                  "y": 0.45,
+                  "z": 0.45
+                },
+                "key": "tilted"
+              }
+            ]
+          },
+          "debugData": {
+            "name": "Symbol trio (MERGED)",
+            "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "p371_symbolMat",
+          "params": {
+            "color": "#c8a24a",
+            "roughness": 0.4,
+            "metalness": 0.3
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p371_kitMat",
+          "params": {
+            "color": "#9d998c",
+            "roughness": 0.85
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "p371_doorMat",
+          "params": {
+            "color": "#7f5433",
+            "roughness": 0.7
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "meshes": [
+        {
+          "props": {
+            "geo": "p371SymbolTrio",
+            "mat": "p371_symbolMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": -1.8,
+              "y": -3,
+              "z": 0
+            },
+            "appId": "p371_symbolTrioA"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371SymbolTrio",
+            "mat": "p371_symbolMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 1.8,
+              "y": -3,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0.5,
+              "z": 0
+            },
+            "appId": "p371_symbolTrioB"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371MergeKit/__merged",
+            "mat": "p371_kitMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 0,
+              "y": -5.2,
+              "z": 0
+            },
+            "appId": "p371_mergeKit"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371MergeKit/door_left",
+            "mat": "p371_doorMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": -0.125,
+              "y": -4.9750000000000005,
+              "z": 0
+            },
+            "appId": "p371_doorLeft"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371MergeKit/door_left_handle",
+            "mat": "p371_kitMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": -0.05,
+              "y": -4.9750000000000005,
+              "z": 0
+            },
+            "appId": "p371_doorLeftHandle"
+          }
+        },
+        {
+          "props": {
+            "geo": "p371MergeKit/door_right",
+            "mat": "p371_doorMat",
+            "castShadow": true,
+            "receiveShadow": true,
+            "position": {
+              "x": 0.125,
+              "y": -4.9750000000000005,
+              "z": 0
+            },
+            "appId": "p371_doorRight"
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "aekashaSymbol",
+          "fileName": "./aekashaSymbol.glb",
+          "debugData": {
+            "name": "Ækasha symbol",
+            "description": "The Æ glyph of the favicon, extruded with a small bevel: 1 unit high, centred on the origin, facing +z. One geometry, aekashaSymbol/aekashaSymbol. Built by devTools/toolkit/buildAekashaSymbol.ts; the pipeline keeps it Draco."
+          },
+          "__fileSize": 16320,
+          "__sourceUrl": "/toolkit/models/brand/aekashaSymbol/aekashaSymbol.glb",
+          "__url": "/aek-assets/toolkit/models/brand/aekashaSymbol/aekashaSymbol.ac7e8564.glb",
+          "__bytes": {
+            "in": 16320,
+            "out": 16576
+          },
+          "__vramBytes": {
+            "in": 117856,
+            "out": 117248
+          }
+        },
+        {
+          "id": "p371MergeKit",
+          "fileName": "./p371MergeKit.glb",
+          "debugData": {
+            "name": "Merge kit",
+            "description": "The GLB merge check (p371 Phase 3): 20 box pieces in two glTF materials (ten wall blocks, six pillars sharing a mesh, four blocks on a turned empty, one mirrored) that the asset pipeline joins into p371MergeKit/__merged; the door_* nodes (one with a handle child) and the two collider nodes stay as they are. Built by devTools/assetPipeline/fixtures/mergeKitFile.ts."
+          },
+          "__fileSize": 32068,
+          "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
+          "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+          "__bytes": {
+            "in": 32068,
+            "out": 16576
+          },
+          "__vramBytes": {
+            "in": 16800,
+            "out": 21000
           }
         }
       ],
@@ -17827,12 +18047,12 @@
         "active": true,
         "position": {
           "x": 0,
-          "y": 1,
-          "z": 7
+          "y": -0.8,
+          "z": 10.5
         },
         "lookAtPoint": {
           "x": 0,
-          "y": 0.7,
+          "y": -1.5,
           "z": 0
         },
         "type": "PERSPECTIVE",
@@ -17843,7 +18063,7 @@
         "appId": "p300Camera",
         "debugData": {
           "name": "Camera",
-          "description": "Faces both rows of the orientation check."
+          "description": "Faces the orientation check's two rows and the merge checks' rows below them."
         }
       },
       "__sourcePath": "src/app/scenes/testDebugScene/p300Camera.camera.json"
@@ -18669,6 +18889,7 @@
           "y": 0,
           "z": 0
         },
+        "castShadow": true,
         "appId": "p300Sun"
       },
       "entityOpts": {
@@ -18854,6 +19075,68 @@
         "id": "testSphere"
       },
       "__sourcePath": "src/app/scenes/sceneTestECS/testSphere.geometry.json"
+    },
+    "p371SymbolTrio": {
+      "geoProps": {
+        "id": "p371SymbolTrio",
+        "debugData": {
+          "name": "Symbol trio (MERGED)",
+          "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
+        },
+        "type": "MERGED",
+        "params": {
+          "parts": [
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": -0.75,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "plain"
+            },
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": -0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "mirrored"
+            },
+            {
+              "geo": "aekashaSymbol/aekashaSymbol",
+              "position": {
+                "x": 0.75,
+                "y": 0,
+                "z": 0
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.5,
+                "z": 0.3
+              },
+              "scale": {
+                "x": 0.45,
+                "y": 0.45,
+                "z": 0.45
+              },
+              "key": "tilted"
+            }
+          ]
+        }
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p371SymbolTrio.geometry.json"
     }
   },
   "textures": {
@@ -27014,6 +27297,32 @@
       "__vramBytes": {
         "in": 45544,
         "out": 33824
+      }
+    },
+    "p371MergeKit": {
+      "id": "p371MergeKit",
+      "fileName": "./p371MergeKit.glb",
+      "debugData": {
+        "name": "Merge kit",
+        "description": "The GLB merge check (p371 Phase 3): 20 box pieces in two glTF materials (ten wall blocks, six pillars sharing a mesh, four blocks on a turned empty, one mirrored) that the asset pipeline joins into p371MergeKit/__merged; the door_* nodes (one with a handle child) and the two collider nodes stay as they are. Built by devTools/assetPipeline/fixtures/mergeKitFile.ts."
+      },
+      "merge": {
+        "mode": "ALL",
+        "exclude": [
+          "door_*"
+        ]
+      },
+      "__sourcePath": "src/app/scenes/testDebugScene/p371MergeKit.importedAsset.json",
+      "__fileSize": 32068,
+      "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
+      "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+      "__bytes": {
+        "in": 32068,
+        "out": 16576
+      },
+      "__vramBytes": {
+        "in": 16800,
+        "out": 21000
       }
     },
     "aekashaSymbol": {

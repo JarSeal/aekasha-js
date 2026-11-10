@@ -51,7 +51,26 @@ export {
   incGeometryRef,
   saveBufferGeometry,
 } from './kernel/assets/Geometry';
-export type { GeoBaseProps, GeoDebugData, GeoProps, GeoTypes } from './kernel/assets/Geometry';
+export type {
+  GeoBaseProps,
+  GeoDebugData,
+  GeoProps,
+  GeoTypes,
+  MergedGeoPart,
+  MergedGeoProps,
+} from './kernel/assets/Geometry';
+export {
+  mergeGeometryParts,
+  mergeGeometryPartsAsync,
+  registerMergedGeometry,
+  registerMergedGeometryAsync,
+} from './kernel/assets/GeometryMerge';
+export type { MergePart, RegisterMergedGeometryOptions } from './kernel/assets/GeometryMerge';
+export type {
+  MergedGeometry,
+  MergeGeometryOptions,
+  MergePartRange,
+} from './kernel/assets/GeometryMergeCore';
 export {
   addToGroupEntity,
   createGroupEntity,

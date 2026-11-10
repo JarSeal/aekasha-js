@@ -32,6 +32,7 @@ import {
   setGeneratedFields,
 } from './sources';
 import { readTextureAssets } from './textures';
+import { checkMergedGeometryJsons } from './mergedGeometries';
 
 /** The material and PostFX ids the shipped scenes list: their TSL files get loaders (a
  * production build leaves the debug scenes out, and their files with them, p619 G6) */
@@ -209,5 +210,7 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readImportedAssets(ctx, reg, taken);
   readSkyBoxes(ctx, reg, taken);
   readPostFx(ctx, reg, taken, shipped);
+  // After the imports: a MERGED geometry's parts can be their pieces
+  checkMergedGeometryJsons(ctx, reg);
   return reg;
 };

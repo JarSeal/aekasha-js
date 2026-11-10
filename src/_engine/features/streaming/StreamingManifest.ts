@@ -3,7 +3,7 @@
 // what the runtime loads a cell's JSON content from. Types only: the kernel's `SceneData` imports
 // them with `import type`.
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
-import type { GeoProps } from '../../kernel/assets/Geometry';
+import type { GeoProps, MergedGeoProps } from '../../kernel/assets/Geometry';
 import type { MatProps } from '../../kernel/assets/Material';
 import type { TextureProps } from '../../kernel/assets/Texture';
 import type { ImportAssetParams } from '../../kernel/assets/import/ImportTypes';
@@ -104,8 +104,8 @@ export type StreamingManifest = {
     textures: TextureProps[];
     /** Materials (a TSL material's file loads with them). */
     materials: MatProps[];
-    /** Geometries. */
-    geometries: GeoProps[];
+    /** Geometries (a `MERGED` one's parts are in the base or the same cell's lists). */
+    geometries: (GeoProps | MergedGeoProps)[];
     /** glTF imports (their geometries are `<id>/<node>`). */
     importedAssets: ImportAssetParams[];
   };

@@ -22,6 +22,11 @@ import {
   type PipelineCache,
 } from './cache';
 import { hasColliderNodes, listExternalGLTFFiles, readGLTFJson, type GLTFJson } from './gltfJson';
+import {
+  GLTF_MERGE_VERSION,
+  type GLTFMergeStats,
+  type ResolvedMergeOptions,
+} from './gltfMergeOptions';
 import { KTX_VERSION } from './ktxTool';
 import {
   getLogicalPath,
@@ -97,6 +102,12 @@ export type PipelineAsset = {
   lodChain?: ResolvedLodChainOptions;
   /** Another use asks for a chain with other options: the file has one chain, the first use's */
   hasLodChainConflict?: boolean;
+  /**
+   * An imported asset's `merge` (p371 D3), its JSON's own: the file's static pieces are joined
+   * into `__merged` nodes. It's encoded even when both sides are kept as they are, since the
+   * scenes name the merged nodes.
+   */
+  merge?: ResolvedMergeOptions;
 };
 
 /** How the cache (§7) answered: the output was there, was copied back from the store, or was encoded */
@@ -116,6 +127,8 @@ export type PipelineOutcome =
       geometryBytes?: { in: number; out: number };
       /** A GLB's LOD chains built into it (p347 Phase 3) */
       lodChains?: BuiltLodChain[];
+      /** What a GLB's `merge` joined and kept (p371 D3) */
+      merge?: GLTFMergeStats;
       /** Worth a look, but not errors (eg. an aspect ratio changed by the rounding to 4) */
       warnings: string[];
       /** Unset without a cache */
@@ -161,8 +174,9 @@ const getPassThroughReason = (asset: PipelineAsset, settings: ResolvedAssetSetti
     if (COMPRESSED_TEXTURE_EXTENSIONS.includes(ext)) return `the source is already ${ext}`;
     return null;
   }
-  // A GLB with one side kept as it is still goes through gltf-transform for the other side
-  if (!passThrough.textures || !passThrough.mesh) return null;
+  // A GLB with one side kept as it is still goes through gltf-transform for the other side, and
+  // a merged one for its merge
+  if (!passThrough.textures || !passThrough.mesh || asset.merge) return null;
   return passThrough.textures === passThrough.mesh
     ? passThrough.textures
     : `${passThrough.textures}; ${passThrough.mesh}`;
@@ -263,7 +277,7 @@ const toCacheEntry = (
 ): CacheEntry => {
   const { url, bytes } = result.output;
   if (result.status === 'passThrough') return { source: repoPath, url, bytes };
-  const { textures, droppedTextures, geometryBytes, lodChains, warnings } = result;
+  const { textures, droppedTextures, geometryBytes, lodChains, merge, warnings } = result;
   return {
     source: repoPath,
     url,
@@ -272,6 +286,7 @@ const toCacheEntry = (
     ...(droppedTextures ? { droppedTextures } : {}),
     ...(geometryBytes ? { geometryBytes } : {}),
     ...(lodChains?.length ? { lodChains } : {}),
+    ...(merge ? { merge } : {}),
     ...(warnings.length ? { warnings } : {}),
     ...(ktxVersion ? { ktxVersion } : {}),
   };
@@ -283,6 +298,7 @@ const fromCacheEntry = ({ entry }: CacheHit) => ({
   ...(entry.droppedTextures !== undefined ? { droppedTextures: entry.droppedTextures } : {}),
   ...(entry.geometryBytes ? { geometryBytes: entry.geometryBytes } : {}),
   ...(entry.lodChains ? { lodChains: entry.lodChains } : {}),
+  ...(entry.merge ? { merge: entry.merge } : {}),
   warnings: entry.warnings ?? [],
 });
 
@@ -457,6 +473,8 @@ const planGLTFEncode = (
             },
           }
         : {}),
+      // Only when set, so the keys of the files without it didn't change
+      ...(asset.merge ? { merge: { options: asset.merge, version: GLTF_MERGE_VERSION } } : {}),
       output: getLogicalPath(source),
     },
   };
@@ -511,6 +529,7 @@ const encodeAsync = async (
   const encoded = await encodeGLTFAsset(source, settings, {
     importTextures: !!asset.importTextures,
     lodChain: settings.mesh ? asset.lodChain : undefined,
+    merge: asset.merge,
     getKtx,
     warn,
   });
@@ -598,7 +617,18 @@ export const processAsset = async (
 ): Promise<PipelineResult> => {
   const start = performance.now();
   const outcome = await runAsset(asset, resolveSettings, opts);
-  // Not cached: they're about the uses, not the encode
+  // Not cached: they're about the uses and the settings, not the encode
+  const passThrough = outcome.status === 'optimized' ? outcome.settings.passThrough : {};
+  if (outcome.status === 'optimized' && asset.merge && passThrough.mesh && passThrough.textures) {
+    const reason =
+      passThrough.mesh === passThrough.textures
+        ? passThrough.mesh
+        : `${passThrough.textures}; ${passThrough.mesh}`;
+    outcome.warnings = [
+      ...outcome.warnings,
+      `merge: the file is written again for its merged nodes, its geometry and textures as they are (${reason})`,
+    ];
+  }
   if (outcome.status === 'optimized' && asset.lodChain) {
     const warnings: string[] = [];
     if (!outcome.settings.mesh) {

@@ -18,6 +18,8 @@ import type { ResolvedLodChainOptions } from '../../src/_engine/features/lod/Lod
 import type { TextureSlot } from '../../src/_engine/schemas';
 import { readImageFile, resizeImage } from './images';
 import type { KtxProvider } from './ktxEncode';
+import { mergeGLTFNodes } from './gltfMerge';
+import type { GLTFMergeStats, ResolvedMergeOptions } from './gltfMergeOptions';
 import { buildLodChains, type BuiltLodChain } from './lodChains';
 import { getLogicalPath, writeOutput, type PipelineOutput } from './outputs';
 import type { ResolvedAssetSettings, ResolvedMeshSettings } from './settings';
@@ -280,6 +282,9 @@ const encodeTextures = async (
  * whatever the textures settings say
  * @param opts.lodChain Build LOD chains into the file (p347 Phase 3), after the geometry's
  * compression. Only with the mesh side on: a geometry kept as it is gets its chain at runtime.
+ * @param opts.merge Join the file's static pieces (p371 D3, `gltfMerge.ts`) before anything else
+ * changes the geometry, so a LOD chain is the joined mesh's. It runs with the mesh side off too:
+ * the scenes name the merged nodes.
  */
 export const encodeGLTFAsset = async (
   source: Extract<AssetSource, { file: string }>,
@@ -287,6 +292,7 @@ export const encodeGLTFAsset = async (
   opts: {
     importTextures: boolean;
     lodChain?: ResolvedLodChainOptions;
+    merge?: ResolvedMergeOptions;
     getKtx: KtxProvider;
     warn: (message: string) => void;
   }
@@ -296,12 +302,14 @@ export const encodeGLTFAsset = async (
   droppedTextures: number;
   geometryBytes: { in: number; out: number };
   lodChains?: BuiltLodChain[];
+  merge?: GLTFMergeStats;
 }> => {
   const io = await getIO();
   const doc = await io.read(source.file);
   doc.setLogger(new WarningLogger(opts.warn));
   const droppedTextures = opts.importTextures ? 0 : dropTextures(doc);
   const geometryIn = getGeometryBytes(doc);
+  const merge = opts.merge ? await mergeGLTFNodes(doc, opts.merge, opts.warn) : undefined;
   if (settings.mesh) await compressGeometry(doc, settings.mesh, opts.warn);
   let lodChains: BuiltLodChain[] | undefined;
   if (opts.lodChain && settings.mesh) {
@@ -326,5 +334,6 @@ export const encodeGLTFAsset = async (
     droppedTextures,
     geometryBytes: { in: geometryIn, out: getGeometryBytes(doc) },
     ...(lodChains?.length ? { lodChains } : {}),
+    ...(merge ? { merge } : {}),
   };
 };

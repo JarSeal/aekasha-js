@@ -26,7 +26,7 @@ export type { CameraAsset } from './CameraSchema';
 export { GeoAssetSchema } from './GeometrySchema';
 export type { GeoAsset } from './GeometrySchema';
 export { ImportedAssetSchema } from './ImportedAssetSchema';
-export type { ImportedAsset } from './ImportedAssetSchema';
+export type { ImportedAsset, ImportedAssetMerge } from './ImportedAssetSchema';
 export { ImpostorAssetSchema } from '../features/lod/impostors/ImpostorSchema';
 export type { ImpostorAsset, ImpostorDef } from '../features/lod/impostors/ImpostorSchema';
 export { LightAssetSchema } from './LightSchema';

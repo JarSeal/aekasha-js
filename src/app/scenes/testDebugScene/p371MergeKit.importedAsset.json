@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/importedAsset.schema.json",
+  "id": "p371MergeKit",
+  "fileName": "./p371MergeKit.glb",
+  "merge": { "mode": "ALL", "exclude": ["door_*"] },
+  "debugData": {
+    "name": "Merge kit",
+    "description": "The GLB merge check (p371 Phase 3): 20 box pieces in two glTF materials (ten wall blocks, six pillars sharing a mesh, four blocks on a turned empty, one mirrored) that the asset pipeline joins into p371MergeKit/__merged; the door_* nodes (one with a handle child) and the two collider nodes stay as they are. Built by devTools/assetPipeline/fixtures/mergeKitFile.ts."
+  }
+}

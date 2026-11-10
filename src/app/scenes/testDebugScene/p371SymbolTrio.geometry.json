@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../../.schemas/geometry.schema.json",
+  "geoProps": {
+    "id": "p371SymbolTrio",
+    "type": "MERGED",
+    "params": {
+      "parts": [
+        {
+          "geo": "aekashaSymbol/aekashaSymbol",
+          "position": {
+            "x": -0.75,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          },
+          "key": "plain"
+        },
+        {
+          "geo": "aekashaSymbol/aekashaSymbol",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": -0.45,
+            "y": 0.45,
+            "z": 0.45
+          },
+          "key": "mirrored"
+        },
+        {
+          "geo": "aekashaSymbol/aekashaSymbol",
+          "position": {
+            "x": 0.75,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0.3
+          },
+          "scale": {
+            "x": 0.45,
+            "y": 0.45,
+            "z": 0.45
+          },
+          "key": "tilted"
+        }
+      ]
+    },
+    "debugData": {
+      "name": "Symbol trio (MERGED)",
+      "description": "The JSON merge check (p371 Phase 2): three pieces of the aekashaSymbol import, one plain, one mirrored (its winding flipped by the merge), one tilted, merged at load into one geometry."
+    }
+  }
+}

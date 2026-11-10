@@ -16,6 +16,7 @@ import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
+import { resolveMergeOptions } from './gltfMergeOptions';
 import type { PipelineAsset } from './pipeline';
 import { createArraySource, resolveTextureArrayLayers, type TextureLookup } from './textureArrays';
 import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';
@@ -265,6 +266,11 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
       assetJson.type === 'texture' && assetJson.data.optimize
         ? assetJson.data.optimize.alphaCoverage
         : undefined;
+    // The JSON's own (p371 D3), for every use: a scene entry has no `merge`
+    const merge =
+      assetJson.type === 'importedAsset' && assetJson.data.merge
+        ? resolveMergeOptions(assetJson.data.merge)
+        : undefined;
     for (const useData of listAssetUses(data)) {
       const use = resolveAssetUse(jsonFile, useData);
       if (!use) continue;
@@ -297,6 +303,7 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
           : {
               importTextures: use.importTextures,
               ...(use.lodChain ? { lodChain: use.lodChain } : {}),
+              ...(merge ? { merge } : {}),
             }),
       });
     }

@@ -22,9 +22,12 @@
         },
         {
           "$ref": "#/definitions/__schema57"
+        },
+        {
+          "$ref": "#/definitions/__schema73"
         }
       ],
-      "description": "The geometry: BOX, SPHERE, CYLINDER, CAPSULE or CONE, and its params."
+      "description": "The geometry: BOX, SPHERE, CYLINDER, CAPSULE, CONE or MERGED, and its params."
     },
     "__sourcePath": {
       "type": "string",
@@ -34,7 +37,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema73"
+          "$ref": "#/definitions/__schema86"
         }
       ]
     }
@@ -748,6 +751,218 @@
     },
     "__schema73": {
       "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "type": {
+          "type": "string",
+          "const": "MERGED",
+          "description": "Several geometries merged into one."
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "parts": {
+              "$ref": "#/definitions/__schema74"
+            },
+            "groups": {
+              "$ref": "#/definitions/__schema80"
+            },
+            "attributes": {
+              "$ref": "#/definitions/__schema82"
+            },
+            "indexed": {
+              "$ref": "#/definitions/__schema84"
+            }
+          },
+          "required": [
+            "parts"
+          ],
+          "additionalProperties": false,
+          "description": "The parts and the merge's options."
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "__schema74": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema75"
+      },
+      "description": "The parts, in the merged order."
+    },
+    "__schema75": {
+      "type": "object",
+      "properties": {
+        "geo": {
+          "type": "string",
+          "description": "A geometry JSON's id, or an imported piece (<importId>/<nodeName>); not MERGED."
+        },
+        "position": {
+          "description": "Where the part goes. Default: the origin.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema76"
+            }
+          ]
+        },
+        "rotation": {
+          "description": "Euler angles in radians; quaternion wins over it.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema76"
+            }
+          ]
+        },
+        "quaternion": {
+          "description": "A rotation quaternion.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema77"
+            }
+          ]
+        },
+        "scale": {
+          "description": "The scale; negative mirrors. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema76"
+            }
+          ]
+        },
+        "materialSlot": {
+          "description": "The material slot with groups 'BY_SLOT'. Default 0.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema78"
+            }
+          ]
+        },
+        "key": {
+          "description": "An id for the part, kept in userData.mergeParts.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema79"
+            }
+          ]
+        }
+      },
+      "required": [
+        "geo"
+      ],
+      "additionalProperties": false
+    },
+    "__schema76": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "The x component."
+        },
+        "y": {
+          "type": "number",
+          "description": "The y component (up)."
+        },
+        "z": {
+          "type": "number",
+          "description": "The z component."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "__schema77": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "The x component."
+        },
+        "y": {
+          "type": "number",
+          "description": "The y component."
+        },
+        "z": {
+          "type": "number",
+          "description": "The z component."
+        },
+        "w": {
+          "type": "number",
+          "description": "The w (scalar) component."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z",
+        "w"
+      ],
+      "additionalProperties": false
+    },
+    "__schema78": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema79": {
+      "type": "string"
+    },
+    "__schema80": {
+      "description": "BY_SLOT: one group per materialSlot. Default 'NONE'.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema81"
+        }
+      ]
+    },
+    "__schema81": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "BY_SLOT"
+      ]
+    },
+    "__schema82": {
+      "description": "UNION fills missing attributes; INTERSECTION drops them. Default 'UNION'.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema83"
+        }
+      ]
+    },
+    "__schema83": {
+      "type": "string",
+      "enum": [
+        "UNION",
+        "INTERSECTION"
+      ]
+    },
+    "__schema84": {
+      "description": "An indexed result. Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema85"
+        }
+      ]
+    },
+    "__schema85": {
+      "type": "boolean"
+    },
+    "__schema86": {
+      "type": "object",
       "propertyNames": {
         "type": "string"
       },
@@ -760,16 +975,16 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "$ref": "#/definitions/__schema74"
+                  "$ref": "#/definitions/__schema87"
                 },
                 "engineVersion": {
-                  "$ref": "#/definitions/__schema76"
+                  "$ref": "#/definitions/__schema89"
                 },
                 "toolkitVersion": {
-                  "$ref": "#/definitions/__schema78"
+                  "$ref": "#/definitions/__schema91"
                 },
                 "appVersion": {
-                  "$ref": "#/definitions/__schema79"
+                  "$ref": "#/definitions/__schema92"
                 }
               },
               "additionalProperties": false,
@@ -841,42 +1056,42 @@
         }
       }
     },
-    "__schema74": {
+    "__schema87": {
       "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema75"
+          "$ref": "#/definitions/__schema88"
         }
       ]
     },
-    "__schema75": {
+    "__schema88": {
       "type": "number"
     },
-    "__schema76": {
+    "__schema89": {
       "description": "The engine's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema77"
+          "$ref": "#/definitions/__schema90"
         }
       ]
     },
-    "__schema77": {
+    "__schema90": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "__schema78": {
+    "__schema91": {
       "description": "The toolkit's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema77"
+          "$ref": "#/definitions/__schema90"
         }
       ]
     },
-    "__schema79": {
+    "__schema92": {
       "description": "The app's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema77"
+          "$ref": "#/definitions/__schema90"
         }
       ]
     }

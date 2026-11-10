@@ -25,6 +25,7 @@ import type {
   AssetsLoadGLTFResponse,
   AssetsLoadHDRTextureResponse,
   AssetsLoadTextureResponse,
+  AssetsMergeGeometryResponse,
   AssetsPingResponse,
   AssetsSimplifyGeometryResponse,
   AssetsState,
@@ -35,10 +36,12 @@ import type {
   AssetsWorkerTarget,
   DracoWorkerSettings,
   KTX2WorkerSettings,
+  TransferableMergePart,
 } from './AssetsAPITypes';
 import { AssetsProtocolType } from './AssetsAPITypes';
 import type { TransferableGeometry } from './import/GeometryTransfer';
 import type { ResolvedLodChainOptions } from '../../features/lod/LodChainOptions';
+import type { MergeGeometryOptions } from './GeometryMergeCore';
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -73,16 +76,18 @@ const REQUIRED_CAPABILITY: Record<AssetKind, keyof AssetsWorkerCapabilities | nu
   GLTF: 'gltfImageBitmapPath',
   TEXTURE: 'createImageBitmap',
   SIMPLIFY: null,
+  MERGE: null,
 };
 
 /** Each asset kind's per-kind workerTarget override. */
 const KIND_TARGET_KEY: Record<
   AssetKind,
-  'gltfWorkerTarget' | 'textureWorkerTarget' | 'simplifyWorkerTarget'
+  'gltfWorkerTarget' | 'textureWorkerTarget' | 'simplifyWorkerTarget' | 'mergeWorkerTarget'
 > = {
   GLTF: 'gltfWorkerTarget',
   TEXTURE: 'textureWorkerTarget',
   SIMPLIFY: 'simplifyWorkerTarget',
+  MERGE: 'mergeWorkerTarget',
 };
 
 let assetsState: AssetsState = { ...DEFAULT_ASSETS_STATE };
@@ -126,6 +131,7 @@ export const initAssets = () => {
     textureWorkerTarget: assetsConfig.textureWorkerTarget,
     // Unlike the loads, not the shared workerTarget: simplifying is pure CPU work
     simplifyWorkerTarget: assetsConfig.simplifyWorkerTarget ?? 'WORKER_THREAD',
+    mergeWorkerTarget: assetsConfig.mergeWorkerTarget ?? 'WORKER_THREAD',
     maxConcurrentLoads: Math.max(
       1,
       Math.floor(assetsConfig.maxConcurrentLoads ?? DEFAULT_ASSETS_STATE.maxConcurrentLoads)
@@ -529,6 +535,29 @@ export const simplifyGeometryInWorker = async (
       [...transfer]
     )
   ).result;
+
+/**
+ * Merges geometries in the assets worker (GeometryMergeCore.ts's mergeGeometryPartsCore()). The
+ * geometries' arrays are transferred: pass copies. Call it inside {@link runAssetTask}.
+ * @internal
+ * @param geometries the parts' geometries, each once (serializeGeometry() with `copy`)
+ * @param parts the parts, each naming its geometry by index
+ * @param options the groups, attributes and index the result gets
+ * @param transfer the geometries' ArrayBuffers
+ * @returns the merged geometry (deserializeGeometry() rebuilds it) and the merge's warnings
+ */
+export const mergeGeometryInWorker = async (
+  geometries: TransferableGeometry[],
+  parts: TransferableMergePart[],
+  options: MergeGeometryOptions,
+  transfer: Set<ArrayBuffer>
+) => {
+  const { geometry, warnings } = await requestAssetsWorker<AssetsMergeGeometryResponse>(
+    { type: AssetsProtocolType.MERGE_GEOMETRY, geometries, parts, options },
+    [...transfer]
+  );
+  return { geometry, warnings };
+};
 
 // Debug
 let debugGUI: DebugModuleRef<typeof import('./debug/_dbg__Assets')> | null = null;

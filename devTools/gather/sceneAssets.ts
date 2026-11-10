@@ -16,6 +16,7 @@ import {
 import { mergeSkyBoxPreset } from '../../src/_engine/features/skybox/Presets';
 import type { GatherContext, Registries } from './context';
 import { EngineMeshAssetSchema, type EngineSceneAsset } from './engineSchemas';
+import { checkSceneMergedGeometries } from './mergedGeometries';
 import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
@@ -72,7 +73,12 @@ const resolveLights = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
   });
 };
 
-const resolveGeometries = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
+const resolveGeometries = (run: SceneRun) => {
+  resolveGeometryIds(run);
+  checkSceneMergedGeometries(run.ctx, run.reg, run.sceneId, run.scene);
+};
+
+const resolveGeometryIds = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
   if (!Array.isArray(scene.geometries)) return;
   scene.geometries = scene.geometries.map((geoId) => {
     if (typeof geoId !== 'string') return geoId;
@@ -80,13 +86,18 @@ const resolveGeometries = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneR
     if (!geo) return reportUnknownId('geometry', geoId);
     const entry = getSaveEntry(geo, sceneId);
     if (ctx.isProduction) delete geo.geoProps.debugData;
+    const debugData = geo.geoProps.debugData
+      ? { debugData: { ...geo.geoProps.debugData, ...entry?.debugData } }
+      : {};
+    // A save entry's params are the primitives': a MERGED geometry takes only its debug data
+    if (geo.geoProps.type === 'MERGED') {
+      return { id: geoId, type: geo.geoProps.type, params: geo.geoProps.params, ...debugData };
+    }
     return {
       id: geoId,
       type: geo.geoProps.type,
       params: { ...geo.geoProps.params, ...entry?.params },
-      ...(geo.geoProps.debugData
-        ? { debugData: { ...geo.geoProps.debugData, ...entry?.debugData } }
-        : {}),
+      ...debugData,
     };
   });
 };
@@ -277,6 +288,7 @@ const resolveImportedAssets = (run: SceneRun) => {
     setGeneratedFields(ctx, importData, 'importedAsset', jsonFile);
     ship.checkAsset(importData, 'importedAsset', jsonFile, sceneId);
     delete importData.optimize; // Build time only (p300)
+    delete importData.merge; // Build time only (p371 D3)
     delete importData.__sourcePath;
     delete importData.__saveData;
     return importData;

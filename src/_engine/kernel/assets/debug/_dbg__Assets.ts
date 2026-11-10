@@ -78,6 +78,7 @@ type DebugAssetsBoot = {
   gltfWorkerTarget?: AssetsWorkerTarget;
   textureWorkerTarget?: AssetsWorkerTarget;
   simplifyWorkerTarget?: AssetsWorkerTarget;
+  mergeWorkerTarget?: AssetsWorkerTarget;
   /** Load the asset pipeline's source files instead of its outputs (p300 DD8 level 3) */
   loadSourceFiles?: boolean;
 };
@@ -85,7 +86,8 @@ type WorkerTargetKey =
   | 'workerTarget'
   | 'gltfWorkerTarget'
   | 'textureWorkerTarget'
-  | 'simplifyWorkerTarget';
+  | 'simplifyWorkerTarget'
+  | 'mergeWorkerTarget';
 
 const getBootOverrides = () => lsGetItem(DEBUG_ASSETS_BOOT_LS_KEY, {}) as DebugAssetsBoot;
 /** The overrides this page load booted with (nothing else writes the key before this tab). */
@@ -165,6 +167,7 @@ const getResolvedFolder = (): Item => {
       row('GLTF', THREAD_TEXT[getAssetsWorkerTarget('GLTF')]),
       row('Textures', THREAD_TEXT[getAssetsWorkerTarget('TEXTURE')]),
       row('LOD chains', THREAD_TEXT[getAssetsWorkerTarget('SIMPLIFY')]),
+      row('Geometry merges', THREAD_TEXT[getAssetsWorkerTarget('MERGE')]),
       row('Files', filesText),
     ],
   };
@@ -178,6 +181,7 @@ const getLoadingFolder = (): Item => {
     gltfWorkerTarget: overrides.gltfWorkerTarget || '',
     textureWorkerTarget: overrides.textureWorkerTarget || '',
     simplifyWorkerTarget: overrides.simplifyWorkerTarget || '',
+    mergeWorkerTarget: overrides.mergeWorkerTarget || '',
   };
   const targetDropDown = (key: WorkerTargetKey, label: string): Item => ({
     key,
@@ -209,6 +213,7 @@ const getLoadingFolder = (): Item => {
       targetDropDown('gltfWorkerTarget', 'GLTF target (boot)'),
       targetDropDown('textureWorkerTarget', 'Texture target (boot)'),
       targetDropDown('simplifyWorkerTarget', 'LOD chain target (boot)'),
+      targetDropDown('mergeWorkerTarget', 'Merge target (boot)'),
       {
         // p300 DD8 level 3: A/B the asset pipeline's outputs against their sources. Only the dev
         // server serves the sources (src/ is the Vite root); a production build ignores it.

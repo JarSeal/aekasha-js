@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, test } from 'vitest';
-import type { GeoProps } from '../kernel/assets/Geometry';
+import type { GeoProps, MergedGeoProps } from '../kernel/assets/Geometry';
 import type { MatProps } from '../kernel/assets/Material';
 import type { TextureProps } from '../kernel/assets/Texture';
 import type { createCameraEntity } from '../kernel/camera/Camera';
@@ -10,7 +10,7 @@ import type { EntityDebugData } from '../kernel/ecs/ECSRegistry';
 import type { DebugData } from './_HelperSchemas';
 import type { ImportAssetParams } from '../kernel/assets/import/ImportTypes';
 import type { CameraAsset } from './CameraSchema';
-import type { GeoProps as GeoPropsJson } from './GeometrySchema';
+import type { GeoAssetProps, GeoProps as GeoPropsJson } from './GeometrySchema';
 import type { ImportedAsset } from './ImportedAssetSchema';
 import type { LightAsset } from './LightSchema';
 import type { MaterialAsset, PerType } from './MaterialSchema';
@@ -90,6 +90,18 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<ExtraKeys<GeoPropsJson, GeoProps>>().toEqualTypeOf<never>();
   });
 
+  test('MERGED geometry (*.geometry.json, a scene geometry) → MergedGeoProps', () => {
+    type MergedJson = Extract<GeoAssetProps, { type: 'MERGED' }>;
+    type PartJson = MergedJson['params']['parts'][number];
+    type Part = MergedGeoProps['params']['parts'][number];
+    expectTypeOf<MergedJson>().toExtend<MergedGeoProps>();
+    expectTypeOf<ExtraKeys<MergedJson, MergedGeoProps>>().toEqualTypeOf<never>();
+    expectTypeOf<
+      ExtraKeys<MergedJson['params'], MergedGeoProps['params']>
+    >().toEqualTypeOf<never>();
+    expectTypeOf<ExtraKeys<PartJson, Part>>().toEqualTypeOf<never>();
+  });
+
   test('material (*.material.json) → MatProps', () => {
     expectTypeOf<MaterialAsset>().toExtend<MatProps>();
     expectTypeOf<ExtraKeys<MaterialAsset, MatProps>>().toEqualTypeOf<ToolingKeys>();
@@ -124,8 +136,8 @@ describe('the asset JSONs fit their runtime types', () => {
   test('imported asset (*.importedAsset.json) → ImportAssetParams', () => {
     expectTypeOf<WithImportTexOpts<ImportedAsset>>().toExtend<ImportAssetParams>();
     expectTypeOf<ExtraKeys<ImportedAsset, ImportAssetParams>>().toEqualTypeOf<
-      // Build time and the Assets tab only: the gatherer drops `optimize`
-      ToolingKeys | 'optimize' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
+      // Build time and the Assets tab only: the gatherer drops `optimize` and `merge`
+      ToolingKeys | 'optimize' | 'merge' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
     >();
   });
 

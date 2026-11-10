@@ -80,3 +80,11 @@ describe('saveBufferGeometry', () => {
     expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining('"geometryTestSaved"'));
   });
 });
+
+describe('createGeometry', () => {
+  test('throws for a MERGED geometry, naming registerMergedGeometry', () => {
+    const merged = { id: 'geometryTestMerged', type: 'MERGED', params: { parts: [] } };
+    expect(() => createGeometry(merged as never)).toThrow(/registerMergedGeometry/);
+    expect(getGeometry('geometryTestMerged')).toBeUndefined();
+  });
+});

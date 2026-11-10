@@ -6,6 +6,7 @@ import { writeFileAtomic } from '../files';
 import { KTX_VERSION } from './ktxTool';
 import { AEK_ASSETS_DIR, getOutputFile } from './outputs';
 import { ROOT } from '../paths';
+import type { GLTFMergeStats } from './gltfMergeOptions';
 import type { BuiltLodChain } from './lodChains';
 import type { EncodedTexture } from './textures';
 
@@ -13,7 +14,8 @@ import type { EncodedTexture } from './textures';
  * The content-hash cache (p300 §7). An encode is keyed by everything that decides its bytes:
  * the source bytes (every file a pack reads, a .gltf's external files), the settings that apply
  * (sorted keys), the asset's own inputs (sRGB, `importTextures`, a GLB's resolved `lodChain` with
- * the simplifier and LOD format versions, the output's logical path), {@link PIPELINE_VERSION} and
+ * the simplifier and LOD format versions, its `merge` with the step's version, the output's
+ * logical path), {@link PIPELINE_VERSION} and
  * the pinned tool versions. Two tiers:
  * - `assets.lock.json` (committed, like the outputs it points to, DD3): key → output URL and the
  *   result's metadata. A hit needs the entry and its file in `aek-assets/`, nothing else: a clone
@@ -48,6 +50,8 @@ export type CacheEntry = {
   geometryBytes?: { in: number; out: number };
   /** A GLB's LOD chains (p347 Phase 3), for the generated data's `__lodChain` */
   lodChains?: BuiltLodChain[];
+  /** What a GLB's `merge` joined and kept (p371 D3) */
+  merge?: GLTFMergeStats;
   warnings?: string[];
   /** The `ktx` that encoded it, when one did (the key has the pinned version) */
   ktxVersion?: string;

@@ -174,6 +174,10 @@ export type AppConfig = {
      * 'WORKER_THREAD', whatever workerTarget is: the main thread runs the simplifier inline, which
      * takes tens of ms for a large mesh. */
     simplifyWorkerTarget?: AssetsWorkerTarget;
+    /** Where `mergeGeometryPartsAsync` (kernel/assets/GeometryMerge.ts) and a scene's `MERGED`
+     * geometries merge. Default 'WORKER_THREAD', whatever workerTarget is: the merge is pure CPU
+     * work, a few ms per 10k vertices. */
+    mergeWorkerTarget?: AssetsWorkerTarget;
     /** Max number of requests in flight in the assets worker at once. Default 8. */
     maxConcurrentLoads?: number;
     /** A worker request not answered in this time (ms) falls back to the main thread. Also
@@ -389,6 +393,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
     ['VITE_ASSETS_GLTF_WORKER_TARGET', 'gltfWorkerTarget'],
     ['VITE_ASSETS_TEXTURE_WORKER_TARGET', 'textureWorkerTarget'],
     ['VITE_ASSETS_SIMPLIFY_WORKER_TARGET', 'simplifyWorkerTarget'],
+    ['VITE_ASSETS_MERGE_WORKER_TARGET', 'mergeWorkerTarget'],
   ] as const;
   for (const [envKey, configKey] of assetsTargetEnvs) {
     const target = envVars[envKey];
@@ -427,6 +432,7 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
       gltfWorkerTarget?: AssetsWorkerTarget;
       textureWorkerTarget?: AssetsWorkerTarget;
       simplifyWorkerTarget?: AssetsWorkerTarget;
+      mergeWorkerTarget?: AssetsWorkerTarget;
     };
     if (debugAssetsBoot.workerTarget) assets.workerTarget = debugAssetsBoot.workerTarget;
     if (debugAssetsBoot.gltfWorkerTarget) {
@@ -437,6 +443,9 @@ export const loadConfig = (appConfig: AppConfig = {}) => {
     }
     if (debugAssetsBoot.simplifyWorkerTarget) {
       assets.simplifyWorkerTarget = debugAssetsBoot.simplifyWorkerTarget;
+    }
+    if (debugAssetsBoot.mergeWorkerTarget) {
+      assets.mergeWorkerTarget = debugAssetsBoot.mergeWorkerTarget;
     }
   }
 

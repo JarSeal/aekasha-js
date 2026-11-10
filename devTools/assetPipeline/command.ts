@@ -5,6 +5,7 @@ import { collectPipelineAssets, readAssetJsons, type DroppedAsset } from './asse
 import { BUDGET_FIX, getBudgetViolations } from './budgets';
 import { createPipelineCache, saveKeyMemo } from './cache';
 import { getResultFigures, isKtxOnlyAsset } from './generated';
+import { describeMerge } from './gltfMergeOptions';
 import { createKtxProvider } from './ktxEncode';
 import { KTX_FIX } from './ktxTool';
 import { removeStaleOutputs } from './outputs';
@@ -92,6 +93,7 @@ const formatResult = (
       ...new Set(result.textures.map((texture) => texture.codec)),
     ];
     details.push(codecs.join(' + '));
+    if (result.merge) details.push(describeMerge(result.merge));
   } else if (result.status === 'passThrough') {
     details.push('passed through');
   }

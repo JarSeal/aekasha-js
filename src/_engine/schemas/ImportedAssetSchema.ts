@@ -69,6 +69,39 @@ const ImportedAssetOverridesSchema = z.object({
 });
 
 /**
+ * An import's `merge` (p371 D3), build time only: the asset pipeline joins the file's static
+ * pieces into one node per glTF material (`BY_MATERIAL`, named `__merged_<material>`) or one node
+ * in all (`ALL`, named `__merged`), so a scene draws them with one mesh
+ * (`<id>/__merged`). Physics, skinned, morph-target and animated nodes, and the `exclude`d ones,
+ * stay as they are, with their names. `true` is the defaults.
+ */
+export const ImportedAssetMergeSchema = z
+  .union([
+    z.literal(true),
+    z.strictObject({
+      /** One node per glTF material (`__merged_<material>`, the default) or one in all
+       * (`__merged`). */
+      mode: z
+        .enum(['BY_MATERIAL', 'ALL'])
+        .optional()
+        .describe(
+          'BY_MATERIAL: one node per glTF material (__merged_<material>), the default. ALL: one node (__merged).'
+        ),
+      /** Node names (globs: `*`, `?`, `{a,b}`) kept as they are, with their children. */
+      exclude: z
+        .array(z.string().min(1))
+        .optional()
+        .describe('Node names (globs: *, ?, {a,b}) kept as they are, with their children.'),
+    }),
+  ])
+  .describe(
+    "Build time only: the asset pipeline joins the file's static pieces into __merged nodes (physics, skinned, animated and excluded nodes stay as they are)."
+  );
+
+/** An import's `merge`, as `ImportedAssetMergeSchema` validates it. */
+export type ImportedAssetMerge = z.infer<typeof ImportedAssetMergeSchema>;
+
+/**
  * An imported asset JSON (`*.importedAsset.json`): a glTF or GLB the scene imports (the runtime's
  * `ImportAssetParams` for `importAssetAsync`). Only assets are registered, its geometries and the
  * textures it opts into, no entities: a scene's meshes name the geometries by id
@@ -82,6 +115,9 @@ export const ImportedAssetSchema = z.object({
   fileName: AssetFileNameSchema,
   /** Build time only: the asset pipeline's settings (not per scene, never read by the runtime). */
   optimize: ImportedAssetOptimizeSchema.optional(),
+  /** Build time only: joins the file's static pieces into `__merged` nodes (p371 D3); not per
+   * scene, never read by the runtime. */
+  merge: ImportedAssetMergeSchema.optional(),
   /** Set by the gatherer: the file it came from. */
   __sourcePath: SourcePathSchema.optional(),
   /** Set by the gatherer: bytes on disk of the .glb or .gltf (not a .gltf's external buffers). */
@@ -104,6 +140,7 @@ export type ImportedAsset = z.infer<typeof ImportedAssetSchema>;
  */
 export const InlineImportedAssetSchema = ImportedAssetSchema.omit({
   optimize: true,
+  merge: true,
   __url: true,
   __sourceUrl: true,
   __bytes: true,
