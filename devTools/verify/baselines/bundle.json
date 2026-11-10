@@ -3,7 +3,7 @@
   "chunks": {
     "assets/ambientOcclusion.tsl.js": {
       "bytes": 7144,
-      "gzip": 2842
+      "gzip": 2841
     },
     "assets/Announcer.js": {
       "bytes": 2429,
@@ -35,15 +35,15 @@
     },
     "assets/Asteroid.js": {
       "bytes": 10099,
-      "gzip": 3777
+      "gzip": 3778
     },
     "assets/asteroid.tsl.js": {
       "bytes": 1345,
-      "gzip": 774
+      "gzip": 775
     },
     "assets/banner.js": {
       "bytes": 484,
-      "gzip": 345
+      "gzip": 346
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 406,
@@ -63,7 +63,7 @@
     },
     "assets/BufferGeometryUtils.js": {
       "bytes": 2975,
-      "gzip": 1321
+      "gzip": 1320
     },
     "assets/BufferGeometryUtils.js@AssetsWorker": {
       "bytes": 2284,
@@ -79,7 +79,7 @@
     },
     "assets/DialogWindow.js": {
       "bytes": 32644,
-      "gzip": 11742
+      "gzip": 11744
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -103,7 +103,7 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7507,
-      "gzip": 3089
+      "gzip": 3090
     },
     "assets/DynamicCharacter.js": {
       "bytes": 19784,
@@ -111,7 +111,7 @@
     },
     "assets/EngineRapier.js": {
       "bytes": 36216,
-      "gzip": 9576
+      "gzip": 9574
     },
     "assets/EngineRapier.js@PhysicsWorker": {
       "bytes": 36765,
@@ -123,7 +123,7 @@
     },
     "assets/exampleDebugTab.js": {
       "bytes": 1028,
-      "gzip": 600
+      "gzip": 599
     },
     "assets/exampleEcs.js": {
       "bytes": 840,
@@ -139,27 +139,27 @@
     },
     "assets/exampleHubHero.js": {
       "bytes": 1336,
-      "gzip": 807
+      "gzip": 808
     },
     "assets/exampleHud.js": {
       "bytes": 430,
-      "gzip": 327
+      "gzip": 324
     },
     "assets/exampleLod.js": {
       "bytes": 1450,
-      "gzip": 883
+      "gzip": 882
     },
     "assets/examplePhysics.js": {
       "bytes": 1968,
-      "gzip": 950
+      "gzip": 951
     },
     "assets/exampleQuickStart.js": {
       "bytes": 563,
-      "gzip": 375
+      "gzip": 374
     },
     "assets/exampleSkyBox.js": {
       "bytes": 2020,
-      "gzip": 981
+      "gzip": 979
     },
     "assets/exampleToolkit.js": {
       "bytes": 760,
@@ -171,7 +171,7 @@
     },
     "assets/exampleUiKit.js": {
       "bytes": 53233,
-      "gzip": 20164
+      "gzip": 20165
     },
     "assets/FocusTrap.css": {
       "bytes": 6144,
@@ -179,15 +179,15 @@
     },
     "assets/FocusTrap.js": {
       "bytes": 11434,
-      "gzip": 4870
+      "gzip": 4871
     },
     "assets/Foliage.js": {
       "bytes": 5759,
-      "gzip": 2766
+      "gzip": 2764
     },
     "assets/GeometryMerge.js": {
       "bytes": 7435,
-      "gzip": 3044
+      "gzip": 3042
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1859,
@@ -195,7 +195,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 46145,
-      "gzip": 13728
+      "gzip": 13729
     },
     "assets/GraphMonitor.js": {
       "bytes": 301,
@@ -203,7 +203,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3400,
-      "gzip": 1626
+      "gzip": 1627
     },
     "assets/heroBloom.tsl.js": {
       "bytes": 6311,
@@ -215,7 +215,7 @@
     },
     "assets/Hotbar.js": {
       "bytes": 19056,
-      "gzip": 7170
+      "gzip": 7169
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -247,19 +247,19 @@
     },
     "assets/ImportPhysics.js": {
       "bytes": 5966,
-      "gzip": 2671
+      "gzip": 2670
     },
     "assets/ImportRegistry.js": {
       "bytes": 11348,
-      "gzip": 4622
+      "gzip": 4620
     },
     "assets/index.css": {
       "bytes": 17959,
       "gzip": 4330
     },
     "assets/index.js": {
-      "bytes": 1441828,
-      "gzip": 389488
+      "bytes": 1441882,
+      "gzip": 389522
     },
     "assets/InstanceMatrix.js": {
       "bytes": 403,
@@ -267,7 +267,7 @@
     },
     "assets/InstanceSetCpu.js": {
       "bytes": 4405,
-      "gzip": 2268
+      "gzip": 2267
     },
     "assets/InstanceSetGpu.js": {
       "bytes": 13060,
@@ -275,7 +275,7 @@
     },
     "assets/instanceStress.js": {
       "bytes": 9782,
-      "gzip": 4408
+      "gzip": 4409
     },
     "assets/Kbd.css": {
       "bytes": 700,
@@ -283,23 +283,23 @@
     },
     "assets/Kbd.js": {
       "bytes": 2770,
-      "gzip": 1229
+      "gzip": 1227
     },
     "assets/KTX2Loader.js": {
       "bytes": 60255,
       "gzip": 24488
     },
     "assets/largeWorld.js": {
-      "bytes": 12049,
-      "gzip": 4318
+      "bytes": 14165,
+      "gzip": 5143
     },
     "assets/largeWorldRock.js": {
       "bytes": 403,
-      "gzip": 310
+      "gzip": 309
     },
     "assets/LineBackendFat.js": {
       "bytes": 4758,
-      "gzip": 1924
+      "gzip": 1923
     },
     "assets/LodAuto.js": {
       "bytes": 1710,
@@ -311,11 +311,11 @@
     },
     "assets/LodChains.js": {
       "bytes": 8079,
-      "gzip": 3559
+      "gzip": 3560
     },
     "assets/lodShowcase.js": {
       "bytes": 13043,
-      "gzip": 5394
+      "gzip": 5393
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -331,15 +331,15 @@
     },
     "assets/OctahedralImpostor.js": {
       "bytes": 13877,
-      "gzip": 5955
+      "gzip": 5956
     },
     "assets/physicsTest.js": {
       "bytes": 5379,
-      "gzip": 1898
+      "gzip": 1897
     },
     "assets/physicsTiers.js": {
       "bytes": 5298,
-      "gzip": 2600
+      "gzip": 2599
     },
     "assets/PhysicsWorker.js": {
       "bytes": 134,
@@ -355,11 +355,11 @@
     },
     "assets/scene01.js": {
       "bytes": 4910,
-      "gzip": 2058
+      "gzip": 2057
     },
     "assets/sceneTestECS.js": {
       "bytes": 555,
-      "gzip": 361
+      "gzip": 364
     },
     "assets/SimplexNoise.js": {
       "bytes": 4365,
@@ -367,7 +367,7 @@
     },
     "assets/skyShowcase.js": {
       "bytes": 1448,
-      "gzip": 700
+      "gzip": 699
     },
     "assets/Slider.css": {
       "bytes": 24068,
@@ -375,15 +375,15 @@
     },
     "assets/Slider.js": {
       "bytes": 48946,
-      "gzip": 18427
+      "gzip": 18428
     },
     "assets/space.js": {
       "bytes": 3807,
-      "gzip": 1908
+      "gzip": 1911
     },
     "assets/SpawnImported.js": {
       "bytes": 3231,
-      "gzip": 1489
+      "gzip": 1484
     },
     "assets/StreamingBodies.js": {
       "bytes": 3893,
@@ -395,19 +395,19 @@
     },
     "assets/StreamingDataContent.js": {
       "bytes": 3314,
-      "gzip": 1566
+      "gzip": 1567
     },
     "assets/StreamingFades.js": {
       "bytes": 1173,
-      "gzip": 647
+      "gzip": 646
     },
     "assets/streamingGrid.js": {
       "bytes": 4277,
-      "gzip": 2113
+      "gzip": 2112
     },
     "assets/StreamingLayers.js": {
       "bytes": 7336,
-      "gzip": 2966
+      "gzip": 2964
     },
     "assets/streamingPhysics.js": {
       "bytes": 4824,
@@ -423,7 +423,7 @@
     },
     "assets/Table.js": {
       "bytes": 28663,
-      "gzip": 11395
+      "gzip": 11396
     },
     "assets/Tabs.css": {
       "bytes": 5344,
@@ -439,7 +439,7 @@
     },
     "assets/testTslMat.tsl.js": {
       "bytes": 211,
-      "gzip": 179
+      "gzip": 180
     },
     "assets/TextField.css": {
       "bytes": 7055,
@@ -447,11 +447,11 @@
     },
     "assets/TextField.js": {
       "bytes": 21755,
-      "gzip": 8666
+      "gzip": 8667
     },
     "assets/thirdPersonGymScene.js": {
       "bytes": 10219,
-      "gzip": 3705
+      "gzip": 3706
     },
     "assets/three.core.js": {
       "bytes": 199201,
@@ -459,7 +459,7 @@
     },
     "assets/three.module.js": {
       "bytes": 213,
-      "gzip": 177
+      "gzip": 178
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -471,11 +471,11 @@
     },
     "assets/TimeSeries.js": {
       "bytes": 7523,
-      "gzip": 3546
+      "gzip": 3545
     },
     "assets/topDownTestScene.js": {
       "bytes": 7623,
-      "gzip": 3209
+      "gzip": 3211
     },
     "assets/triplanarCheckerboard.tsl.js": {
       "bytes": 1184,
@@ -483,11 +483,11 @@
     },
     "assets/triplanarGrid.tsl.js": {
       "bytes": 2395,
-      "gzip": 1129
+      "gzip": 1130
     },
     "assets/TriplanarProjection.js": {
       "bytes": 1612,
-      "gzip": 787
+      "gzip": 786
     },
     "assets/uiKitEmbed.js": {
       "bytes": 3759,
@@ -499,22 +499,22 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 18249,
-      "gzip": 7253
+      "gzip": 7252
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 1118,
-      "gzip": 669
+      "gzip": 677
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 1925,
-      "gzip": 1067
+      "gzip": 1066
     }
   },
   "main": {
     "chunk": "assets/index.js",
     "modules": 206,
-    "minified": 1486497,
-    "gzip": 402550
+    "minified": 1486551,
+    "gzip": 402576
   },
   "mainGroups": {
     "_engine/features/character": {
@@ -639,8 +639,8 @@
     },
     "app": {
       "modules": 9,
-      "minified": 162230,
-      "gzip": 14404
+      "minified": 162284,
+      "gzip": 14430
     },
     "three": {
       "modules": 4,

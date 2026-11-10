@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Merging, ECS, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
 Blocks: p373_merge-debug-and-member-editing.md, p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
@@ -556,7 +556,7 @@ THREE.BatchedMesh` had been there since Phase 1, but only `testDebugScene` (a de
   `aekasha/merging`, `mergingSchemaPart` on `aekasha/schemas`, the new internal modules;
   `docs.json` merging 65 / 65; the three `bundle*.json`); no debug code in any build.
 
-### Phase 4 — Adoption and measurements
+### Phase 4 — Adoption and measurements — done
 
 1. largeWorld's static props (and its imported level pieces) use `AUTO`.
 2. Record draws, triangles and CPU frame time before and after (profiler, main + shadow pass) in
@@ -661,6 +661,21 @@ As built, section 3 (2026-11-10): the measurements.
   where they intersect, flipping coverage (the merged vertices are baked relative to the group's
   centre, Phase 2's rounding). Side by side, no difference is visible.
 
+As built, section 4 (2026-11-10): the baselines.
+
+- `yarn verify:scenes` (132 runs) failed only on largeWorld's snapshot in its three physics
+  configurations (changed 1.62 %, only at the ruin sites; no hash, system order or console error
+  changed) and on `testDebugScene`'s debugger shot `stats.panels`, which this phase doesn't touch:
+  the masked TFPS figure is wider than the recorded one (the mask follows the figure's text, and
+  TFPS, 1000 over the mean CPU time, had another number of digits on this run; again on a re-run).
+  A scene runner flake for a follow-up, its baseline left as it was. Then
+  `yarn verify:scenes --only largeWorld --update` (4 recorded).
+- `yarn verify:baselines`: only `bundle.json`, `assets/largeWorld.js` 4.2 → 5.0 kB gzip (the
+  ruins) and the main chunk +34 B gzip (largeWorld's scene data: `mergeGroups`, `merging` in its
+  manifest, the description); recorded with `--update`. API and docs unchanged; no debug code in
+  any build. `yarn sbp`: unchanged against it, every budget kept (`merging` now names largeWorld
+  among its scenes).
+
 ### Phase 5 — Handbook, docs and versioning
 
 1. `docs/techniques/terrain-modular-kits.md` (p301 §5 row): modular kit terrain and tile-chunk
@@ -672,6 +687,13 @@ As built, section 3 (2026-11-10): the measurements.
 3. `features/merging/CLAUDE.md` (a `## Mesh merging` section) and its line in the root's map, the
    root's Bootstrap flow (the features the template lists), `readme.md` Features.
 4. Engine minor, app patch; `CHANGELOG.md`.
+
+From Phase 4 for this phase: the Hub's pages that describe largeWorld (`hub/pages/features/
+toolkit/guide.md`'s "The app's `largeWorld` scene", the spatial index guide) gain its ruins and
+merge groups where they list what the scene has; the feature page can quote Phase 4's table (and
+that a group is culled whole: 38 members outside the view drawn with their groups) and the
+shadow lesson (merging pays in every pass that draws the members: `largeWorldSun`'s fixed shadow
+box reaches no ruins, the day-night sun's does).
 
 ## 9. Versioning
 
