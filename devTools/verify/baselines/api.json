@@ -785,6 +785,7 @@
     "src/_engine/features/merging/MergeAuto.ts": {
       "AUTO": "Variable",
       "AUTO_ID_PREFIX": "Variable",
+      "AutoGroupBounds": "TypeAlias",
       "AutoGroupPick": "TypeAlias",
       "collectQueuedJoins": "Function",
       "getAutoCompatibilityKey": "Function",
@@ -832,7 +833,6 @@
     },
     "src/_engine/features/merging/MergeMaterialRegister.ts": {
       "createMergeMaterialFromData": "Function",
-      "getMergeMaterialInfo": "Function",
       "getMergeMaterialTableId": "Function",
       "registerMergeMaterial": "Function"
     },
@@ -857,6 +857,12 @@
       "getMergeMemberAtFace": "Function",
       "isMergeMemberInEdit": "Function"
     },
+    "src/_engine/features/merging/MergePalettes.ts": {
+      "findPaletteMaterial": "Function",
+      "getGroupPaletteIndex": "Function",
+      "getMergeMaterialInfo": "Function",
+      "getPaletteIndex": "Function"
+    },
     "src/_engine/features/merging/MergeRanges.ts": {
       "collapsePartIndex": "Function",
       "flipPartWinding": "Function",
@@ -871,7 +877,8 @@
       "keepSceneMergeSettings": "Function",
       "SceneMergeSettings": "TypeAlias",
       "warnIfCellSizeSplitsStreaming": "Function",
-      "warnIfGroupSpansStreamingCells": "Function"
+      "warnIfGroupSpansStreamingCells": "Function",
+      "warnPaletteNotRegistered": "Function"
     },
     "src/_engine/features/merging/MergeState.ts": {
       "createGroup": "Function",

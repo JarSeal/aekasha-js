@@ -4,7 +4,7 @@
   "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
   "isDebugScene": true,
   "name": "Merge materials (p374)",
-  "description": "p374's verification scene: the palette ruinsPalette (four STANDARD materials) on eight meshes, drawn as eight entities with the members' own materials (REFERENCE), as one geometry with a group per member drawn by the four materials (BAKED, the control), and as one geometry with a per-vertex aekMatIndex drawn by the palette's merge material (MERGED) and by one made from a copy of its data with SKIP slots (SKIP). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant).",
+  "description": "p374's verification scene: the palette ruinsPalette (four STANDARD materials) on eight meshes, drawn as eight entities with the members' own materials (REFERENCE), as one geometry with a group per member drawn by the four materials (BAKED, the control), and as one geometry with a per-vertex aekMatIndex drawn by the palette's merge material (MERGED) and by one made from a copy of its data with SKIP slots (SKIP). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant). The field (Phase 3, D5): 1600 meshes of the four members on 3 x 3 AUTO cells of 8 m, merged by palette (9 groups), by material (36) or not: window.__mergeMaterials.field(mode).",
   "textures": [
     "ruinStoneAlbedo",
     "ruinStoneNormal",
@@ -19,5 +19,6 @@
     "ruinPlasterMetalness"
   ],
   "materials": ["ruinStone", "ruinBrick", "ruinMoss", "ruinPlaster"],
-  "mergeMaterials": ["ruinsPalette"]
+  "mergeMaterials": ["ruinsPalette"],
+  "mergeGroups": [{ "id": "AUTO", "cellSize": 8, "palettes": ["ruinsPalette"] }]
 }

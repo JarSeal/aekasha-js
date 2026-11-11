@@ -19,6 +19,7 @@ import {
   saveTexture,
 } from 'aekasha';
 import { createMergeMaterialAsync, type SceneMergeMaterial } from 'aekasha/merging';
+import { createField, FIELD_MODES, type FieldFigures, type FieldMode } from './mergeMaterialsField';
 import {
   getBackendName,
   getErrorMessage,
@@ -44,8 +45,14 @@ import {
  *
  * The camera is orthographic (one view direction everywhere), so a variant shown alone at the
  * origin (`window.__mergeMaterials.show(variant)`) renders the same pixels as the control wherever
- * the merge material is right. `measureDraws()` counts each variant's draws; `results` holds them,
- * the backend, and `ruinBrick`'s `normalScale` kind (`done` once measured).
+ * the merge material is right. `measureDraws()` counts each variant's draws.
+ *
+ * The field (Phase 3, `mergeMaterialsField.ts`): 1 600 meshes of the four members on 3 × 3 of the
+ * scene's `AUTO` cells, merged by palette (`PALETTE`: the scene's `AUTO` `palettes`), by material
+ * (`MATERIAL`) or not (`UNMERGED`), seen by its own camera: `field(mode)` shows one and resolves
+ * with its groups and draws, `field('NONE')` goes back to the variants, `measureField()` counts
+ * each mode. `results` holds the draws, the field's figures, the backend and `ruinBrick`'s
+ * `normalScale` kind (`done` once measured).
  */
 
 const SCENE_ID = 'mergeMaterials';
@@ -171,6 +178,9 @@ const createSkipMaterialAsync = async (palette: SceneMergeMaterial) => {
 /** A variant's entities and each one's position in its block */
 type VariantEntities = { entityId: number; local: THREE.Vector3 }[];
 
+/** The field of this visit (made with the scene) */
+let field: ReturnType<typeof createField> | undefined;
+
 /** What `window.__mergeMaterials` holds: the results and the console's handles */
 const state = {
   ...getHarnessHandles(),
@@ -209,6 +219,25 @@ const state = {
     }
     state.show('ALL');
     return draws;
+  },
+  /** Shows the field in a mode (the variants hidden) and resolves with its figures, or goes back
+   * to the variants (`NONE`) */
+  field: async (mode: FieldMode | 'NONE'): Promise<FieldFigures | undefined> => {
+    const current = existsOrThrow(field, 'The field is made with the scene.');
+    if (mode === 'NONE') {
+      await current.showFieldAsync('NONE');
+      state.show('ALL');
+      return undefined;
+    }
+    state.show('NONE');
+    return current.showFieldAsync(mode);
+  },
+  /** Each field mode's figures, then back to the variants */
+  measureField: async () => {
+    const figures: Partial<Record<FieldMode, FieldFigures>> = {};
+    for (const mode of FIELD_MODES) figures[mode] = await state.field(mode);
+    await state.field('NONE');
+    return figures;
   },
 };
 
@@ -272,7 +301,7 @@ export const scene = async () => {
   state.results = {};
   state.variants = {};
 
-  createCameraEntity(
+  const variantsCameraId = createCameraEntity(
     {
       type: 'ORTHOGRAPHIC',
       frustumSize: 6.4,
@@ -303,6 +332,12 @@ export const scene = async () => {
   });
   try {
     await createVariantsAsync();
+    const palette = getScenePalette();
+    field = createField({
+      members: palette.materials.map((_, i) => getMemberMaterial(palette, i)),
+      getGeometry: getMemberGeometry,
+      variantsCameraId,
+    });
     state.show('ALL');
   } catch (error) {
     lerror('[mergeMaterials] Build failed', error);
@@ -317,6 +352,8 @@ export const scene = async () => {
     state.results.backend = getBackendName();
     state.results.ruinBrickNormalScale = describeNormalScale();
     state.results.draws = await state.measureDraws();
+    if (visit.isLeft) return;
+    state.results.field = await state.measureField();
     if (visit.isLeft) return;
     state.results.done = true;
   })().catch((error) => {

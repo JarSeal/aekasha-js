@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented
+Status: in progress | Phases 0-3 implemented
 Category: Merging, Materials, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.1)
 Blocked by: p299_texture-arrays-and-atlases.md (only its Phases 2 and 4, done: build-time arrays, `sampleArrayLayer`)
@@ -514,7 +514,7 @@ per channel):
   gains section 1's and 3's internals and the entry's new names, `bundle*.json`, `docs.json` at
   100 %); no debug code in the production or embed builds.
 
-### Phase 3 — Group integration (D4)
+### Phase 3 — Group integration (D4) — done
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.
 
@@ -646,6 +646,42 @@ As built, section 2 (`AUTO` with palettes; `MergeGroups.ts` untouched):
   indices); a mesh's list replaces the scene's (`[]` and the other way); another material, a
   persistent mesh and an unregistered palette (warned once) take their own groups; an invalid list
   is dropped. The gather's in `gather.test.ts`.
+
+As built, section 3 (the field; verified 2026-11-11 on macOS Chrome, WebGPU and WebGL2
+(`navigator.gpu` hidden; ANGLE on Metal), `?isProdTest=true`, 1200 × 800):
+
+- **The field** (`src/app/scenes/mergeMaterials/mergeMaterialsField.ts`): 1 600 meshes on a
+  40 × 40 grid (0.6 m apart, scale 0.42, y 0.25) over cells 10-12 × 10-12 of the scene's `AUTO`
+  entry (`{ id: "AUTO", cellSize: 8, palettes: ["ruinsPalette"] }`), member `(gx + gz) % 4`
+  (400 each) on shape `gx % 4` (each material on every shape), seen by its own perspective
+  camera (`mergeMaterialsFieldCam`, `setMainCamera` switching). `__mergeMaterials.field(mode)`
+  deletes the field shown before, hides the variants, makes the mode's meshes, waits until every
+  one is built (`MERGE_MEMBER.partIndex`, at most 600 frames) and resolves with `{ meshes,
+  groups, draws }`; `field('NONE')` goes back to the variants; `measureField()` runs the three
+  modes, and the scene's measurement does after the variants' draws (`results.field`).
+- **The exit**, the same on both backends: `PALETTE` 9 groups, 10 draws; `MATERIAL` 36 groups,
+  37 draws; `UNMERGED` 1 601 draws (the extra draw is the scene's, as `NONE`'s 1). A `PALETTE`
+  group holds ~178 meshes, ~86 k vertices: over `WORKER_BUILD_VERTICES`, so they build in the
+  assets worker; the three modes measure in under 3 s after the load.
+- **The image:** `PALETTE` against `MATERIAL` (the same meshes, merged by the merge material vs the
+  members' own materials): WebGPU mean 0.016/255, 230 pixels over 2/255, 13 over 16 (max 48);
+  WebGL2 mean 0.012/255, 48 over 2/255, 9 over 16 (max 36): Phase 2's figures (the arrays' and
+  the members' own textures are separate encodes), on a frame of tiny meshes. `MATERIAL` against
+  `UNMERGED`: WebGPU 58 over 2/255, WebGL2 21 (the bake). `?isDebug=true` draws without errors.
+  The one console warning on every run, a WASM module's "deprecated parameters for the
+  initialization function", isn't this phase's.
+- **`features/merging/CLAUDE.md`:** the Mesh merging section's API, `merge` prop, `AUTO`, schema
+  and refusal lines; Merge materials' palette groups, `AUTO` by palette, the API, the tests and
+  the field. No new `##` section.
+- **The build** (`yarn sbp`): `merging` in the first download 7.1 → 7.7 kB gzip (within its
+  8 KiB; `MergePalettes.ts` 0.3 kB minified, the rest `MergeAuto.ts`, `MergeSceneSettings.ts`,
+  `MergeGroups.ts` and `MergeEligibility.ts`, mostly their warnings), `assets/index.js` 382.6 kB
+  over its 382 KiB budget: `sbp.config.ts` 383 KiB (the initial, 386.8 kB, within 387).
+  `MergeMaterialRegister.js` 2.2 kB lazy, unchanged. Baselines recorded (`api.json`: the moved
+  `getMergeMaterialInfo` and the new internals; `bundle.json`; `docs.json` at 100 %); no debug code
+  in the production or embed builds.
+- **Not done here** (Phase 4, as planned): the Hub's Mesh merging page (its `merge` options list
+  lacks `palettes`, its palette section), `readme.md`, `CHANGELOG.md` and the version bump.
 
 ### Phase 4 — Measurements, handbook, versioning (D5)
 

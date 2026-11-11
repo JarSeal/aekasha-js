@@ -32,11 +32,13 @@ const profiles: SbpProfile[] = [
     // the in-place writes ship (initial 385.8, `assets/index.js` 381.6 KiB): 385 → 386 and
     // 381 → 382 KiB. p374 Phase 2: the kernel's `assetsLoaded` scene hook, `merging()`'s palette
     // guard (its material code is a lazy chunk) and the transfer's integer flag took the initial
-    // to 386.0 KiB: 386 → 387 KiB
+    // to 386.0 KiB: 386 → 387 KiB. p374 Phase 3: palette groups (`MergePalettes.ts`, `AUTO`'s
+    // palettes, their refusals and warnings) took `merging` 7.1 → 7.7 KiB and `assets/index.js` to
+    // 382.6 KiB: 382 → 383 KiB (the initial, 386.8 KiB, stays within 387)
     budgets: {
       initial: 387 * KIB,
       chunks: {
-        'assets/index.js': 382 * KIB,
+        'assets/index.js': 383 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
