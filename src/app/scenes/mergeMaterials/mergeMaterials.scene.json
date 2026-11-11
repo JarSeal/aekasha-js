@@ -4,5 +4,20 @@
   "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
   "isDebugScene": true,
   "name": "Merge materials (p374)",
-  "description": "p374's verification scene. Phase 0: two STANDARD materials drawn as separate meshes, next to the same meshes merged into one geometry (a per-vertex aekMatIndex) drawn by one merge material that samples per-slot texture arrays and a parameter table, once per table kind (uniform array, float texture, storage buffer). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant)."
+  "description": "p374's verification scene: the palette ruinsPalette (four STANDARD materials) on eight meshes, drawn as eight entities with the members' own materials (REFERENCE), as one geometry with a group per member drawn by the four materials (BAKED, the control), and as one geometry with a per-vertex aekMatIndex drawn by the palette's merge material (MERGED) and by one made from a copy of its data with SKIP slots (SKIP). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant).",
+  "textures": [
+    "ruinStoneAlbedo",
+    "ruinStoneNormal",
+    "ruinStoneOrm",
+    "ruinBrickAlbedo",
+    "ruinBrickNormal",
+    "ruinBrickRoughness",
+    "ruinMossAlbedo",
+    "ruinPlasterAlbedo",
+    "ruinPlasterAo",
+    "ruinPlasterRoughness",
+    "ruinPlasterMetalness"
+  ],
+  "materials": ["ruinStone", "ruinBrick", "ruinMoss", "ruinPlaster"],
+  "mergeMaterials": ["ruinsPalette"]
 }

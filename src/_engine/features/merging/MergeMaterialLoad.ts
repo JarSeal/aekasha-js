@@ -1,4 +1,5 @@
 import type { SceneData } from '../../kernel/scene/Scene';
+import type { SceneMergeMaterial } from './MergeMaterialSchema';
 
 // A scene's merge materials (docs/plans/p374_multi-material-merging.md Phase 2): merging()'s
 // `assetsLoaded` scene hook makes the merge material of each palette the loading scene lists,
@@ -33,4 +34,21 @@ export const createSceneMergeMaterialsAsync = async (sceneData: SceneData) => {
   if (!palettes?.length) return;
   const { registerMergeMaterial } = await loadMergeMaterialModuleAsync();
   for (const palette of palettes) registerMergeMaterial(palette);
+};
+
+/**
+ * A merge material made from palette data the caller gives, over the slot arrays its `__slots`
+ * name (loaded already), neither it nor its table registered. Its user is the `mergeMaterials`
+ * verification scene, which draws a copy of its palette's data with `missing: 'SKIP'` slots (a
+ * scene's list takes a palette as its JSON is). The caller registers both (`saveTexture` under
+ * `tableId`, `saveMaterial`), so the loading scene owns them. Loads the material code first.
+ * @internal
+ * @param palette a palette of the scene's data (`SceneData.mergeMaterials`), or a copy of one
+ * @param tableId the registry id the caller saves the table under (kept in the material's info)
+ * @returns the material and its table texture
+ * @throws (rejects) when a slot's array didn't load and the palette has `throwOnError`
+ */
+export const createMergeMaterialAsync = async (palette: SceneMergeMaterial, tableId: string) => {
+  const { createMergeMaterialFromData } = await loadMergeMaterialModuleAsync();
+  return createMergeMaterialFromData(palette, tableId);
 };

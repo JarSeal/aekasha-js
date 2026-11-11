@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented
+Status: in progress | Phases 0-2 implemented
 Category: Merging, Materials, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.1)
 Blocked by: p299_texture-arrays-and-atlases.md (only its Phases 2 and 4, done: build-time arrays, `sampleArrayLayer`)
@@ -297,7 +297,7 @@ As built, section 3 (the test palette; verified 2026-11-11):
   (only a production gather and `yarn assets` exit 1). `mergeMaterials.test.ts` pins the repo
   palette's layers per slot.
 
-### Phase 2 — Runtime material and table (D3)
+### Phase 2 — Runtime material and table (D3) — done
 
 **Exit:** a 4-material palette renders identically to the 4 materials (screenshot diff within
 compression error), with the table on both backends.
@@ -462,6 +462,58 @@ As built, section 3 (the merge material):
   assets worker's `AssetsSwitchMerge.js` (+0.4 kB each). `bundle.json` and `api.json` are
   recorded (`yarn verify:baselines --update`) at the phase's end.
 
+As built, section 4 (the test scene; verified 2026-11-11 on macOS Chrome, WebGPU and WebGL2
+(`navigator.gpu` hidden; ANGLE on Metal), `?isProdTest=true`, 1200 × 800 canvas screenshots diffed
+per channel):
+
+- **The scene** `mergeMaterials` lists `ruinsPalette` (`mergeMaterials`), its four members and
+  their 11 textures. Eight meshes (Phase 0's shapes), each member twice, the mirrored torus a
+  normal-mapped one (`ruinBrick`). Variants: `REFERENCE` (eight entities with the members' own
+  materials and textures), `BAKED` (one geometry, `groups: 'BY_SLOT'` by palette index, the four
+  materials as an array: the control), `MERGED` (one geometry with each part's `paletteIndex`,
+  drawn by the material the hook registered under `ruinsPalette`) and `SKIP` (the same geometry,
+  a merge material made from a copy of the scene data's palette with `missing: 'SKIP'` on
+  `normalMap` and `orm`, registered as `ruinsPaletteSkip` with its table). Phase 0's table kinds,
+  index types and bisection switches went with `mergeMaterialPrototype.ts` (removed).
+- **`createMergeMaterialAsync(palette, tableId)`** (`@internal`, on `aekasha/merging`, in
+  `MergeMaterialLoad.ts`; `createMergeMaterialFromData` in the lazy chunk): makes a merge material
+  from palette data, unregistered. The app can't reach `createMergeMaterial`, and a scene's list
+  takes a palette as its JSON is, so the `SKIP` copy needed an entry point (a second palette JSON
+  would have built three more arrays of the same layers). Its user is the scene; tested in
+  `MergeMaterialLoad.test.ts`.
+- **`ruinBrick`'s `normalScale`** (section 2's note) was wrong in the reference: three's
+  `setValues` left the JSON's `[0.8, 0.8]` a plain array, of which three's `ReferenceNode` makes a
+  `uniformArray`. `createMaterial` now makes a `normalScale` or `clearcoatNormalScale` given as
+  `[x, y]` or `{ x, y }` a `Vector2` (`Material.test.ts`). It took `MERGED` against `BAKED` from
+  2 879 pixels over 2/255 to 478 on WebGPU.
+- **Draws** with each variant shown alone, both backends: none 1, `REFERENCE` 9, `BAKED` 5,
+  `MERGED` 2, `SKIP` 2.
+- **The exit** (`MERGED` against `BAKED`): WebGPU mean 0.016/255, 478 pixels over 2/255, 1 over
+  16, max 19; WebGL2 mean 0.013/255, 321 over 2/255, none over 16, max 13 (the bake alone,
+  `REFERENCE` against `BAKED`: WebGPU 11 over 2/255, WebGL2 max 1). Spread thinly over every
+  member: the arrays' layers and the members' own textures are separate UASTC encodes (the packed
+  ORM layers of `ruinBrick` and `ruinPlaster` are other images altogether), and the neutral normal
+  layer is 128/255, not 0.5, so a member without a normal map tilts by about 1/255 where its
+  reference has none. Within compression error on both backends: met.
+- **`SKIP`** compiles and draws on both backends with no error. Against `MERGED`: 910 (WebGPU) and
+  903 (WebGL2) pixels over 2/255, max 32, on the minified, high-frequency texels of the members
+  with the maps (`ruinBrick`'s mortar most), plus 1-2/255 everywhere on the members without them
+  (the constant 0.5 normal against the 128/255 layer). Bisected: with `.grad()` from the same
+  derivatives on the non-`SKIP` path too, `SKIP` against `MERGED` is 0 pixels over 2/255, so it's
+  the explicit gradients' mip selection (`dFdx` / `dFdy` of the UV against the sampler's implicit
+  ones), not the table, the flags or the branch. Phase 4's handbook notes it.
+- Leaving the scene releases both merge materials, both tables, the arrays and the members'
+  textures; a second visit makes them again with the same figures; `?isDebug=true` draws without
+  errors.
+- `features/merging/CLAUDE.md` gained `## Merge materials` (the asset and the gather, the load, the
+  material, the API, the tests), listed in the Mesh merging page's `aek:covers` (the page's
+  palette section is Phase 4's) and in the root's map.
+- **The build** (`yarn sbp`, every budget met): the initial 386.2 kB gzip (budget 387 KiB),
+  `merging` in it 7.1 kB (`createMergeMaterialAsync` adds bytes only), `MergeMaterialRegister.js`
+  2.2 kB lazy. The phase's baselines are recorded (`yarn verify:baselines --update`: `api.json`
+  gains section 1's and 3's internals and the entry's new names, `bundle*.json`, `docs.json` at
+  100 %); no debug code in the production or embed builds.
+
 ### Phase 3 — Group integration (D4)
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.
@@ -469,10 +521,12 @@ As built, section 3 (the merge material):
 ### Phase 4 — Measurements, handbook, versioning (D5)
 
 1. D5's numbers in this file.
-2. The array-material variation in `docs/techniques/terrain-modular-kits.md` (p372 Phase 5), the
+2. The array-material variation in `docs/techniques/terrain-modular-kits.md` (p372 Phase 5, with
+   `SKIP`'s cost: its explicit gradients pick other mip levels, Phase 2's "As built"), the
    palette section on the Hub's Mesh merging page (p372 Phase 5) and the asset optimization page
    (`hub/pages/features/asset-optimization/`: the generated arrays); `yarn hub:build`.
-3. `features/merging/CLAUDE.md` (merge materials), `devTools/gather/CLAUDE.md` (the
+3. `features/merging/CLAUDE.md` (its Merge materials section: Phase 3's groups and the
+   measurements), `devTools/gather/CLAUDE.md` (the
    `*.mergeMaterial.json` suffix), `readme.md` Features.
 4. Engine minor; `CHANGELOG.md`.
 

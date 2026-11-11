@@ -30,4 +30,5 @@ export type {
   MergeMaterialSlotInfo,
   SceneMergeMaterial,
 } from './MergeMaterialSchema';
+export { createMergeMaterialAsync } from './MergeMaterialLoad';
 export { merging } from './MergingFeature';

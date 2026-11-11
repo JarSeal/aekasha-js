@@ -53,6 +53,26 @@ const isSameArrays = (
   return true;
 };
 
+/** Each slot's loaded array; a slot texture that isn't one warns, or throws with `throwOnError` */
+const getSlotArrays = (palette: SceneMergeMaterial) => {
+  const { arrays, missing } = findSlotArrays(palette);
+  if (missing.length) {
+    const message = `Merge material "${palette.id}": ${missing.map((id) => `"${id}"`).join(', ')} isn't a loaded texture array, so every member samples its neutral value there (the scene lists the palette, so its arrays load with its textures: see the load's errors).`;
+    if (palette.throwOnError) throw new Error(message);
+    lwarn(message);
+  }
+  return arrays;
+};
+
+/**
+ * A merge material made from palette data over its loaded slot arrays, neither it nor its table
+ * registered. See `createMergeMaterialAsync`.
+ * @internal
+ * @throws when a slot's array didn't load and the palette has `throwOnError`
+ */
+export const createMergeMaterialFromData = (palette: SceneMergeMaterial, tableId: string) =>
+  createMergeMaterial(palette, getSlotArrays(palette), tableId);
+
 /**
  * One palette's merge material: the registered one re-tagged to the loading scene when it
  * samples the loaded arrays, else a new one, registered under the palette's id with its table
@@ -62,12 +82,7 @@ const isSameArrays = (
  * slot's array didn't load and the palette has `throwOnError`
  */
 export const registerMergeMaterial = (palette: SceneMergeMaterial) => {
-  const { arrays, missing } = findSlotArrays(palette);
-  if (missing.length) {
-    const message = `Merge material "${palette.id}": ${missing.map((id) => `"${id}"`).join(', ')} isn't a loaded texture array, so every member samples its neutral value there (the scene lists the palette, so its arrays load with its textures: see the load's errors).`;
-    if (palette.throwOnError) throw new Error(message);
-    lwarn(message);
-  }
+  const arrays = getSlotArrays(palette);
 
   const tableId = getMergeMaterialTableId(palette.id);
   const existing = getMaterial(palette.id);

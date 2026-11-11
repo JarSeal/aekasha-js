@@ -51,6 +51,32 @@ describe('createMaterial', () => {
     expect([...(texture.image.data as Uint8Array)]).toEqual([255, 255, 255, 255]);
     expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining('materialTestNoTexture'));
   });
+
+  test("makes a JSON's [x, y] or { x, y } normal scale a Vector2", () => {
+    const fromArray = createMaterial({
+      id: 'materialTestNormalScaleArray',
+      type: 'STANDARD',
+      params: { normalScale: [0.8, -0.5] as unknown as THREE.Vector2 },
+    }) as THREE.MeshStandardMaterial;
+    expect(fromArray.normalScale).toBeInstanceOf(THREE.Vector2);
+    expect(fromArray.normalScale.toArray()).toEqual([0.8, -0.5]);
+
+    const fromObject = createMaterial({
+      id: 'materialTestNormalScaleObject',
+      type: 'PHYSICAL',
+      params: { clearcoatNormalScale: { x: 0.3, y: 0.4 } as THREE.Vector2 },
+    }) as THREE.MeshPhysicalMaterial;
+    expect(fromObject.clearcoatNormalScale).toBeInstanceOf(THREE.Vector2);
+    expect(fromObject.clearcoatNormalScale.toArray()).toEqual([0.3, 0.4]);
+
+    const given = new THREE.Vector2(2, 3);
+    const fromVector = createMaterial({
+      id: 'materialTestNormalScaleVector',
+      type: 'STANDARD',
+      params: { normalScale: given },
+    }) as THREE.MeshStandardMaterial;
+    expect(fromVector.normalScale.toArray()).toEqual([2, 3]);
+  });
 });
 
 describe('decMaterialRef', () => {

@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3471,
-      "total": 3471
+      "documented": 3489,
+      "total": 3489
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3388,
-        "total": 3388
+        "documented": 3406,
+        "total": 3406
       },
       "members": {
         "documented": 953,
@@ -175,8 +175,8 @@
     },
     "engine/features/merging": {
       "exports": {
-        "documented": 91,
-        "total": 91
+        "documented": 106,
+        "total": 106
       },
       "members": {
         "documented": 0,
@@ -413,8 +413,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 153,
-        "total": 153
+        "documented": 155,
+        "total": 155
       },
       "members": {
         "documented": 0,
@@ -581,8 +581,8 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 77,
-        "total": 77
+        "documented": 78,
+        "total": 78
       },
       "members": {
         "documented": 1,

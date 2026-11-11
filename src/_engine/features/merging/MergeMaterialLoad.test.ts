@@ -10,7 +10,7 @@ import { releaseSceneOwnedAssets } from '../../kernel/assets/SceneAssetRelease';
 import { deleteTexture, getTexture, saveTexture } from '../../kernel/assets/Texture';
 import { createRootScene, type SceneData } from '../../kernel/scene/Scene';
 import type { SceneMergeMaterial } from './MergeMaterialSchema';
-import { createSceneMergeMaterialsAsync } from './MergeMaterialLoad';
+import { createMergeMaterialAsync, createSceneMergeMaterialsAsync } from './MergeMaterialLoad';
 import { getMergeMaterialInfo, getMergeMaterialTableId } from './MergeMaterialRegister';
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
@@ -151,5 +151,24 @@ describe("a scene's merge materials (p374 Phase 2)", () => {
     await expect(
       createSceneMergeMaterialsAsync({ id: 'mmF', sceneFile: '' } as SceneData)
     ).resolves.toBeUndefined();
+  });
+
+  test('createMergeMaterialAsync makes one from a copy of the data, registering nothing', async () => {
+    setAssetOwnerScene('mmG');
+    loadArray('mmCopied.map');
+    const copy = palette('mmCopied#skip', {
+      __slots: { map: { texture: 'mmCopied.map', has: [true, false], missing: 'SKIP' } },
+    });
+    const { material, table } = await createMergeMaterialAsync(copy, 'mmCopied#skip.table');
+    expect(getMergeMaterialInfo(material)).toMatchObject({
+      paletteId: 'mmCopied#skip',
+      tableId: 'mmCopied#skip.table',
+      arrays: { map: getTexture('mmCopied.map') },
+    });
+    // The SKIP flags: member 0 has the map (bit 0), member 1 doesn't
+    const data = table.image.data as Float32Array;
+    expect([data[19], data[39]]).toEqual([1, 0]);
+    expect(getMaterial('mmCopied#skip')).toBeUndefined();
+    expect(getTexture('mmCopied#skip.table')).toBeUndefined();
   });
 });
