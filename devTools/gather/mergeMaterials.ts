@@ -48,7 +48,7 @@ export const readMergeMaterials = (ctx: GatherContext, reg: Registries, taken: T
     MergeMaterialAssetSchema,
     (paletteJSON, { file, fullPath, sourcePath }) => {
       const paletteId = paletteJSON.id || getIdFromFileName(file, 'mergeMaterial');
-      const { slots, entries, errors, warnings } = resolveMergeMaterial(
+      const { slots, entries, state, errors, warnings } = resolveMergeMaterial(
         fullPath,
         paletteId,
         paletteJSON,
@@ -76,6 +76,7 @@ export const readMergeMaterials = (ctx: GatherContext, reg: Registries, taken: T
       registerSlots(ctx, reg, paletteJSON, paletteId, slots, { fullPath, sourcePath });
       paletteJSON.id = paletteId;
       paletteJSON.__entries = entries;
+      if (Object.keys(state).length) paletteJSON.__state = state;
       paletteJSON.__sourcePath = sourcePath;
       delete paletteJSON.$schema;
       reg.mergeMaterials[paletteId] = paletteJSON;
@@ -130,6 +131,7 @@ export const resolveSceneMergeMaterials = (run: SceneRun) => {
       continue;
     }
     const { materials, throwOnError, userData, debugData, __slots = {}, __entries = [] } = palette;
+    const { __state } = palette;
     palettes.push({
       id: paletteId,
       materials,
@@ -138,6 +140,7 @@ export const resolveSceneMergeMaterials = (run: SceneRun) => {
       ...(debugData && !ctx.isProduction ? { debugData } : {}),
       __slots,
       __entries,
+      ...(__state ? { __state } : {}),
     });
     for (const info of Object.values(__slots)) slotIds.push(info.texture);
   }

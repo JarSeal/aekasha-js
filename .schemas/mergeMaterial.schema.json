@@ -109,6 +109,14 @@
           "$ref": "#/definitions/__schema52"
         }
       ]
+    },
+    "__state": {
+      "description": "Set by the gatherer: the state parameters the members set and agree on, which the merge material takes.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
     }
   },
   "required": [
@@ -710,6 +718,13 @@
           "type": "number"
         }
       ]
+    },
+    "__schema54": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     }
   }
 }

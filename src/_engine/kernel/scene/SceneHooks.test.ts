@@ -4,6 +4,7 @@ import type { SceneData } from './Scene';
 import {
   addSceneHooks,
   getSceneRetainedTextures,
+  runSceneAssetsLoadedHooksAsync,
   runSceneBeforeAssetsHooksAsync,
   runSceneEnteredHooksAsync,
   runSceneExitHooks,
@@ -43,6 +44,19 @@ describe('scene hooks', () => {
     add({ beforeAssets: () => void calls.push('b') });
     await runSceneBeforeAssetsHooksAsync();
     expect(calls).toEqual(['a', 'b']);
+  });
+
+  it('hands the assetsLoaded hooks the scene data, awaiting each', async () => {
+    const calls: string[] = [];
+    add({
+      assetsLoaded: async (data) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        calls.push(`a:${data.id}`);
+      },
+    });
+    add({ assetsLoaded: (data) => void calls.push(`b:${data.id}`) });
+    await runSceneAssetsLoadedHooksAsync({ id: 's1', sceneFile: '' } as SceneData);
+    expect(calls).toEqual(['a:s1', 'b:s1']);
   });
 
   it('rejects with a failing hook, and the hooks after it do not run', async () => {

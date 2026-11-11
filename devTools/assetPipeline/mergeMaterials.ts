@@ -79,6 +79,8 @@ export type ResolvedMergeMaterial = {
   slots: MergeMaterialSlotBuild[];
   /** Each member's parameter table entry, by palette index (empty on an error) */
   entries: MergeMaterialEntry[];
+  /** The state parameters the members set and agree on (`side`, `alphaTest`, …) */
+  state: Record<string, unknown>;
   errors: string[];
   warnings: string[];
 };
@@ -283,11 +285,11 @@ export const resolveMergeMaterial = (
   findMaterial: MaterialLookup,
   findTexture: TextureLookup
 ): ResolvedMergeMaterial => {
-  const { errors, warnings, members, entries, maps } = checkMergeMaterialClass(
+  const { errors, warnings, members, entries, state, maps } = checkMergeMaterialClass(
     palette,
     findMaterial
   );
-  if (errors.length) return { slots: [], entries: [], errors, warnings };
+  if (errors.length) return { slots: [], entries: [], state: {}, errors, warnings };
   const memberJsonFiles = members.flatMap((member) =>
     member ? [path.resolve(member.jsonFile)] : []
   );
@@ -306,6 +308,6 @@ export const resolveMergeMaterial = (
     if (build) slots.push(build);
   }
   return errors.length
-    ? { slots: [], entries: [], errors, warnings }
-    : { slots, entries: entries as MergeMaterialEntry[], errors, warnings };
+    ? { slots: [], entries: [], state: {}, errors, warnings }
+    : { slots, entries: entries as MergeMaterialEntry[], state, errors, warnings };
 };

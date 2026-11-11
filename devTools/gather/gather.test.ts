@@ -549,6 +549,18 @@ describe('merge material palettes (p374 D1, D2)', () => {
       const [palette] = getScene('a')!.mergeMaterials as Record<string, unknown>[];
       expect(palette).not.toHaveProperty('debugData');
       expect(palette.__entries).toHaveLength(2);
+      expect(palette).not.toHaveProperty('__state');
+    });
+
+    it('carries the state the members agree on', () => {
+      const { scene: getScene } = gather({
+        ...scene('a', { mergeMaterials: ['stones'] }),
+        ...standard('stoneA', { side: 2, roughness: 0.5 }),
+        ...standard('stoneB', { side: 2 }),
+        ...palette({ slots: { map: { size: [64, 64] } } }),
+      });
+      const [resolved] = getScene('a')!.mergeMaterials as Record<string, unknown>[];
+      expect(resolved.__state).toEqual({ side: 2 });
     });
 
     it('fails on an id no palette has', () => {

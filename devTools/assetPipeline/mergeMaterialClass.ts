@@ -44,6 +44,8 @@ export type MergeMaterialClass = {
   members: (MergeMaterialMember | undefined)[];
   /** By palette index: each member's parameter table entry (undefined as in `members`) */
   entries: (MergeMaterialEntry | undefined)[];
+  /** The state parameters the members set, which they agree on: the merge material's own */
+  state: Record<string, unknown>;
   /**
    * Per slot the palette has, each member's maps in it by key (a texture's id), by palette index:
    * `{}` for a member without one. `orm` holds only the keys its `from` lists.
@@ -267,9 +269,11 @@ const checkMember = (
   return { id, jsonFile: found.jsonFile, params };
 };
 
-/** Every state parameter the members don't agree on: one error each, naming every value's members */
+/** Every state parameter the members don't agree on: one error each, naming every value's members.
+ * Returns the state they set (each key's value: the members agree when there's no error). */
 const checkSharedState = (members: MergeMaterialMember[], errors: string[]) => {
   const keys = new Set<string>();
+  const state: Record<string, unknown> = {};
   for (const { params } of members) {
     for (const key of Object.keys(params)) {
       if (ENTRY_PARAMS.has(key) || IGNORED_PARAMS.has(key) || MAP_KEYS.has(key)) continue;
@@ -285,12 +289,16 @@ const checkSharedState = (members: MergeMaterialMember[], errors: string[]) => {
       const text = formatValue(value);
       byValue.set(text, [...(byValue.get(text) ?? []), id]);
     }
-    if (byValue.size < 2) continue;
+    if (byValue.size < 2) {
+      state[key] = members.find(({ params }) => params[key] !== undefined)!.params[key];
+      continue;
+    }
     const values = [...byValue].map(([value, ids]) => `${value} in ${formatIds(ids)}`);
     errors.push(
       `params.${key} differs: ${values.join('; ')} (${getStateReason(key)}: the members must agree${key in STATE_DEFAULTS ? `; unset is three's ${formatValue(STATE_DEFAULTS[key])}` : ''})`
     );
   }
+  return state;
 };
 
 /** Each slot's maps by member, and the warnings about a slot no member or one member uses */
@@ -350,13 +358,14 @@ export const checkMergeMaterialClass = (
     warnings: [],
     members: [],
     entries: [],
+    state: {},
     maps: {},
   };
   result.members = palette.materials.map((_, index) =>
     checkMember(palette, index, findMaterial, result)
   );
   const members = result.members.filter((member): member is MergeMaterialMember => !!member);
-  checkSharedState(members, result.errors);
+  result.state = checkSharedState(members, result.errors);
   collectSlotMaps(palette, result.members, result);
   return result;
 };

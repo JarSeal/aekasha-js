@@ -206,6 +206,14 @@ export const MergeMaterialAssetSchema = z.object({
     .array(MergeMaterialEntrySchema)
     .optional()
     .describe("Set by the gatherer: each member's parameter table entry, by palette index."),
+  /** Set by the gatherer: the state parameters the members set and agree on (`side`,
+   * `alphaTest`, …), which the merge material takes. */
+  __state: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'Set by the gatherer: the state parameters the members set and agree on, which the merge material takes.'
+    ),
 });
 
 /** A merge material's palette JSON (`*.mergeMaterial.json`), as {@link MergeMaterialAssetSchema}
@@ -227,6 +235,9 @@ export type SceneMergeMaterial = Pick<
   __slots: NonNullable<MergeMaterialAsset['__slots']>;
   /** Each member's parameter table entry, by palette index. */
   __entries: MergeMaterialEntry[];
+  /** The state parameters the members set and agree on (`side`, `alphaTest`, …): the merge
+   * material's own. */
+  __state?: Record<string, unknown>;
 };
 
 // A slot's array as a texture in the generated data: written by the gatherer, never validated, so

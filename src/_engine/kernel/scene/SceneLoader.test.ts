@@ -314,6 +314,29 @@ describe("loadScene: the scene data's cameras", () => {
   });
 });
 
+describe('loadScene: the assetsLoaded hook (p374 Phase 2)', () => {
+  it('runs after the assets, before the scene code, with the scene data', async () => {
+    const phases: string[] = [];
+    const removeHooks = addSceneHooks({
+      beforeAssets: () => void phases.push('beforeAssets'),
+      assetsLoaded: async (data) => {
+        await Promise.resolve();
+        phases.push(`assetsLoaded:${data.id}`);
+      },
+      created: (id) => void phases.push(`created:${id}`),
+    });
+    setScene('assetsLoadedA', () => void phases.push('sceneCode'));
+    await expect(loadScene({ sceneId: 'assetsLoadedA' })).resolves.toBe(true);
+    removeHooks();
+    expect(phases).toEqual([
+      'beforeAssets',
+      'assetsLoaded:assetsLoadedA',
+      'sceneCode',
+      'created:assetsLoadedA',
+    ]);
+  });
+});
+
 describe('runWhenSceneLoadSettled (p354 Phase 5 step 6)', () => {
   it('runs at once outside a load, and after a load settles inside one, once, the other hooks too', async () => {
     const runs: string[] = [];

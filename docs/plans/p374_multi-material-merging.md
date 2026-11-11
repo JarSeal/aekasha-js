@@ -402,6 +402,66 @@ As built, section 2 (the palette in a scene's data):
   wrong or missing normal scale. Check `ruinBrick` alone in the reference first; if it's wrong,
   `createMaterial` converts a two-number array for a `Vector2` parameter (a kernel fix of its own).
 
+As built, section 3 (the merge material):
+
+- **The members' agreed state** (added to section 2's gather): the class check's
+  `checkSharedState` also returns the state parameters the members set and agree on (`state`;
+  one set to three's default counts), `resolveMergeMaterial` passes it on and pass 1 writes a
+  non-empty one as the palette's `__state` (`SceneMergeMaterial.__state`). The merge material
+  takes it with `setValues` (`side`, `alphaTest`, `flatShading`, `envMapIntensity`, …): D1 makes
+  the members agree on it, and without it the merge material drew with three's defaults.
+- **A kernel scene hook, `assetsLoaded(sceneData)`** (`SceneHooks.ts`, awaited, run by
+  `loadNextSceneAsync` right after `loadNextSceneAssets`, before the scene code): `beforeAssets`
+  is before the arrays load and `created` after the scene code, and the scene code (and a JSON
+  mesh's `mat`) should find the merge material. `kernel/init/CLAUDE.md` and
+  `kernel/scene/CLAUDE.md` name it.
+- **`MergeMaterialLoad.ts`** (the only part in the first download, with `merging()`, which adds
+  the hook): `createSceneMergeMaterialsAsync` does nothing for a scene without palettes; otherwise
+  it loads `MergeMaterialRegister.ts` once (`import()`, again after a failed load), which holds
+  the rest and imports `MergeMaterial.ts`: one lazy chunk, `MergeMaterialRegister.js`.
+- **`MergeMaterialRegister.ts`:** `registerMergeMaterial` per palette finds each slot's array
+  (`getTexture(<paletteId>.<slot>)`, an array texture: a stand-in or a missing one warns, or
+  fails the load with `throwOnError`, and the slot samples neutral values). A registered merge
+  material that samples the same arrays is re-tagged to the loading scene with its table (the
+  next scene shares it); one whose arrays were loaded again is replaced; another material under
+  the palette's id fails the load. Else `createMergeMaterial`, the table saved as the texture
+  `<paletteId>.table` (`getMergeMaterialTableId`) and the material with `saveMaterial` under the
+  palette's id, both owned by the loading scene. `getMergeMaterialInfo(material)` (`@internal`,
+  here so the first download doesn't carry it; Phase 3 moves it if a group needs it there) reads
+  `userData.mergeMaterial` (`MergeMaterialInfo`: `paletteId`, `materials`, `tableId`, `arrays`).
+  No public API is new.
+- **`MergeMaterial.ts`** (its own chunk): `packMergeMaterialTable` (`MERGE_TABLE_TEXELS` 5 RGBA
+  floats per entry as D3; colours through `THREE.Color.set`, the UV rows the identity; texel 4's
+  `w` the `SKIP` flags, bit `i` for `MERGE_MATERIAL_RUNTIME_SLOTS[i]` (the schema's slots, which
+  the runtime can't import: zod; a test checks they match) when the member has the map),
+  `createMergeMaterialTable` (RGBA32F `DataTexture`, nearest, no mips) and `createMergeMaterial`:
+  Phase 0's graph, the table read with `textureLoad(table, ivec2(texel, index))`, the index
+  attribute's name its own copy (`MERGE_MATERIAL_INDEX_ATTRIBUTE`: importing the merge core's
+  split `GeometryMergeCore.js` into a chunk of its own; a test checks they match). A slot without
+  an array gives every member its neutral value (no `normalNode` without `normalMap`, no
+  `aoNode` without `orm`, the colour and scalars alone); `emissiveNode` only when an entry's
+  emissive is above black with a non-zero intensity (times `emissiveMap` when there's one). A
+  `SKIP` slot samples in an `If` on the entry's flag inside a `Fn` (`If` needs the builder's
+  stack), with `.grad()` from `dFdx` / `dFdy` of the UV taken outside it (the branch is per
+  triangle, which WGSL's uniformity analysis treats as non-uniform). The table and arrays go into
+  `userData.uniforms` as texture nodes (`mergeMaterial_table`, `mergeMaterial_<slot>`), where the
+  scene's asset release (`isTextureUsedByAnyMaterial`), streaming's priming and the GPU memory tab
+  look: the release frees the material first, then its table and arrays.
+- **Tests:** `MergeMaterial.test.ts` (the slots, the packing, the sockets per slot and emissive,
+  the state, `userData`), `MergeMaterialLoad.test.ts` (registration and owners, sharing with the
+  next scene and both releases, arrays loaded again, a missing array with and without
+  `throwOnError`, an id taken by another material), the hook in `SceneHooks.test.ts` and its place
+  in `SceneLoader.test.ts`. They build the node graph only: the GPU compile is section 4's, and
+  `ruinsPalette` has no `SKIP` slot, so section 4 also draws a copy of its scene data with
+  `missing: 'SKIP'` on `normalMap` and `orm` (the material takes the data, so no second palette
+  JSON is needed).
+- **The build** (`yarn sbp`, every profile within budget): `merging` in the first download 7.0 →
+  7.1 kB gzip; the initial 386.0 KiB, over its 386 KiB budget by bytes (the hook's runner, the
+  guard, section 1's transfer flag), so `sbp.config.ts`' `initial` is 387 KiB. Lazy: the new
+  `MergeMaterialRegister.js` (2.2 kB), and section 1's growth of `GeometryMerge.js` and the
+  assets worker's `AssetsSwitchMerge.js` (+0.4 kB each). `bundle.json` and `api.json` are
+  recorded (`yarn verify:baselines --update`) at the phase's end.
+
 ### Phase 3 — Group integration (D4)
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.

@@ -30,9 +30,11 @@ const profiles: SbpProfile[] = [
     // step took `assets/index.js` to 380.4 KiB: 380 → 381 KiB. p372 Phase 5: the mesh merging
     // example is the first shipping caller of `updateMergeMember` and `removeFromMergeGroup`, so
     // the in-place writes ship (initial 385.8, `assets/index.js` 381.6 KiB): 385 → 386 and
-    // 381 → 382 KiB
+    // 381 → 382 KiB. p374 Phase 2: the kernel's `assetsLoaded` scene hook, `merging()`'s palette
+    // guard (its material code is a lazy chunk) and the transfer's integer flag took the initial
+    // to 386.0 KiB: 386 → 387 KiB
     budgets: {
-      initial: 386 * KIB,
+      initial: 387 * KIB,
       chunks: {
         'assets/index.js': 382 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design

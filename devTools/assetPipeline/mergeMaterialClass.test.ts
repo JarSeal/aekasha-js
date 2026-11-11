@@ -62,6 +62,7 @@ describe('checkMergeMaterialClass', () => {
       })
     );
     expect(result.errors).toEqual([]);
+    expect(result.state).toEqual({});
     const defaults = {
       color: 0xffffff,
       opacity: 1,
@@ -157,6 +158,18 @@ describe('checkMergeMaterialClass', () => {
       expect.stringMatching(/"b" .*: params\.alphaMap: a merge material has no alphaMap/),
       expect.stringMatching(/"b" .*: params\.map isn't a texture's id/),
     ]);
+  });
+
+  it('returns the state the members set and agree on, three’s default counting as unset', () => {
+    const result = checkMergeMaterialClass(
+      palette(['a', 'b']),
+      lookup({
+        a: standard({ side: 2, alphaTest: 0.5, flatShading: false }),
+        b: standard({ side: 2, alphaTest: 0.5 }),
+      })
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.state).toEqual({ side: 2, alphaTest: 0.5, flatShading: false });
   });
 
   it('names every value of a state parameter the members don’t agree on', () => {
