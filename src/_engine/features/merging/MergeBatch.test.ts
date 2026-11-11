@@ -27,6 +27,7 @@ import {
   removeFromMergeGroup,
   updateMergeMember,
 } from './MergeGroups';
+import { COMPACT_RUNS_FACTOR, getBatchState } from './MergeBatch';
 import { getMergeBatchModule, loadMergeBatchModuleAsync } from './MergeBatchFront';
 import { beginMergeMemberEdit, isMergeMemberInEdit } from './MergeMemberEdit';
 import { getAutoCompatibilityKey } from './MergeAuto';
@@ -36,7 +37,9 @@ import type { MeshMergeDef } from './MergeTypes';
 
 // p375's batched groups (docs/plans/p375_batched-mesh-batches.md): the mode, its refusals and
 // AUTO's batched buckets (Phase 1 S1); the batch build, leaving and visibility (S2); the sync
-// and the growing bounds in both storage modes (S3).
+// and the growing bounds in both storage modes (S3); grouping and compaction (S4). The first test
+// needs the loader not to have run yet (`getMergeBatchModule()` is the loader's: this file's static
+// import of MergeBatch.ts for its figures doesn't set it): keep it first.
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
@@ -671,5 +674,120 @@ describe('the sync', () => {
     w.setTransform(members[0], { pos: { x: 5, y: 1, z: 0 } });
     frame();
     expect(writes).not.toHaveBeenCalled();
+  });
+});
+
+describe('grouping and compaction (D1)', () => {
+  /** three r187's merged draws for the batch (its WebGPU path): consecutive instances of one
+   * geometry, freed and hidden ids skipped, are one draw. */
+  const countMergedDraws = (batch: THREE.BatchedMesh) => {
+    const internals = batch as unknown as {
+      _visibilityChanged: boolean;
+      _mergedDrawCount: number;
+      _updateDrawParameters: (
+        camera: THREE.Camera,
+        geometry: THREE.BufferGeometry,
+        material: THREE.Material,
+        drawFormat: 'merged'
+      ) => void;
+    };
+    internals._visibilityChanged = true;
+    internals._updateDrawParameters(
+      new THREE.PerspectiveCamera(),
+      batch.geometry,
+      batch.material as THREE.Material,
+      'merged'
+    );
+    return internals._mergedDrawCount;
+  };
+
+  const frame = () => {
+    world.updateMainLoop(0.016);
+    world.updateAppLoop(0.016);
+  };
+
+  /** Eight members, four boxes then four spheres by id (createBatchedGroup alternates them, the
+   * build groups them), culled as a whole only, so three's count sees every instance. */
+  const createGroupedAsync = async () => {
+    const { groupId, members } = createBatchedGroup(8, { perMemberCulling: false });
+    await buildPendingMergeGroupsAsync();
+    frame();
+    const batch = getBatch(groupId)!;
+    const group = getGroup(groupId)!;
+    const boxes = members.filter((_, i) => i % 2 === 0);
+    const spheres = members.filter((_, i) => i % 2 === 1);
+    return { groupId, batch, group, boxes, spheres };
+  };
+
+  test('a build adds the members grouped: one run, and one merged draw, per geometry', async () => {
+    const { batch, group, boxes, spheres } = await createGroupedAsync();
+    expect(boxes.map((id) => getMember(id).instanceId)).toEqual([0, 1, 2, 3]);
+    expect(spheres.map((id) => getMember(id).instanceId)).toEqual([4, 5, 6, 7]);
+    expect(getBatchState(group)!.runs).toBe(2);
+    expect(countMergedDraws(batch)).toBe(2);
+  });
+
+  test(`joins into freed ids split the runs; under ${COMPACT_RUNS_FACTOR}× the geometries nothing moves`, async () => {
+    const { groupId, batch, group, boxes } = await createGroupedAsync();
+    // A box leaves id 0, a sphere joins into it: sphere, box ×3, sphere ×4
+    removeFromMergeGroup([boxes[0]]);
+    const sphere = createMember(20, 0, { geo: 'batchTestSphere' });
+    addToMergeGroup(groupId, [sphere]);
+    await buildPendingMergeGroupsAsync();
+    frame();
+    const state = getBatchState(group)!;
+    expect(getMember(sphere).instanceId).toBe(0);
+    expect(state.runs).toBe(3);
+    expect(countMergedDraws(batch)).toBe(3);
+    expect(state.compactions).toBe(0);
+  });
+
+  test('past it, the sync compacts in place: the same ids regrouped, each instance where its member is', async () => {
+    const { groupId, batch, group, boxes, spheres } = await createGroupedAsync();
+    // Boxes leave ids 0 and 2, spheres join into them: sphere, box, sphere, box, sphere ×4 is
+    // five runs, past twice the two geometries
+    removeFromMergeGroup([boxes[0], boxes[2]]);
+    const joined = [
+      createMember(20, 0, { geo: 'batchTestSphere' }),
+      createMember(22, 0, { geo: 'batchTestSphere' }),
+    ];
+    world.addComponent(spheres[1], ComponentType.DISABLED, true);
+    addToMergeGroup(groupId, joined);
+    await buildPendingMergeGroupsAsync();
+    frame();
+
+    const state = getBatchState(group)!;
+    expect(state.compactions).toBe(1);
+    expect(state.runs).toBe(2);
+    expect(countMergedDraws(batch)).toBe(2);
+    // The ids in use are the same eight; the boxes (geometry 0) first, by their ids before
+    const remainingBoxes = [boxes[1], boxes[3]];
+    expect(remainingBoxes.map((id) => getMember(id).instanceId)).toEqual([0, 1]);
+    const allIds = [...remainingBoxes, ...spheres, ...joined].map((id) => getMember(id).instanceId);
+    expect(allIds.sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    // Each instance is its member's geometry, place and visibility
+    const matrix = new THREE.Matrix4();
+    for (const id of [...remainingBoxes, ...spheres, ...joined]) {
+      const instanceId = getMember(id).instanceId;
+      const geometryId = getOwnMesh(id).geometry === getOwnMesh(boxes[1]).geometry ? 0 : 1;
+      expect(batch.getGeometryIdAt(instanceId)).toBe(geometryId);
+      batch.getMatrixAt(instanceId, matrix);
+      const place = new THREE.Vector3().setFromMatrixPosition(matrix).add(batch.position);
+      expect(place.distanceTo(getOwnMesh(id).position)).toBeLessThan(1e-6);
+      expect(batch.getVisibleAt(instanceId)).toBe(id !== spheres[1]);
+    }
+    // The sync keeps writing them where they are now
+    world.setTransform(joined[0], { pos: { x: 30, y: 1, z: 0 } });
+    frame();
+    batch.getMatrixAt(getMember(joined[0]).instanceId, matrix);
+    expect(new THREE.Vector3().setFromMatrixPosition(matrix).add(batch.position).x).toBeCloseTo(30);
+  });
+
+  test('a leave alone never splits a run (three skips the freed id)', async () => {
+    const { batch, group, boxes } = await createGroupedAsync();
+    removeFromMergeGroup([boxes[1], boxes[2]]);
+    frame();
+    expect(getBatchState(group)!.runs).toBe(2);
+    expect(countMergedDraws(batch)).toBe(2);
   });
 });

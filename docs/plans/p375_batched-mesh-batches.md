@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 next
+Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 in progress (S1-S4 done)
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
@@ -244,6 +244,62 @@ moving members.
    **Exit:** 2 000 moving kinematic boxes in one engine batch match the spike's hand-built batch
    (CPU frame within the runs' noise, 23 draws on WebGPU) on both backends, and `yarn sbp` shows no
    `BatchedMesh` in the first download.
+   **Sections** (the breakdown agreed 2026-11-11; each stopped for review):
+   - S1 — the mode, settings and refusals — done (`6db6b464`).
+   - S2 — the batch build behind `import()` — done.
+   - S3 — the sync and the growing bounds — done.
+   - S4 — grouping and compaction (D1) — done.
+   - S5 — the debugger: the moved-member check, the overlay, "Show unmerged" and the member window
+     read `_bakedMatrix` or part ranges, so each skips a batched member or group (or shows it its
+     own way); the Merging tab's group rows get a mode badge and, for a batched group, its members,
+     visible members, runs and compactions (`getBatchState`); the group window the same. Read
+     `features/merging/CLAUDE.md`'s Merge debugging first. Tests in the debug folder's files (or a
+     new one: `MergeBatch.test.ts` is at about 800 lines).
+   - S6 — the exit: `?bmsWay=engine` in `batchedMeshSpike` (mesh entities with
+     `merge: { group, mode: 'BATCHED' }`) and `?bmsBodies=kinematic` (kinematic bodies moved in
+     `APP_PHYSICS_STEP`, on the separate and engine ways), the bench's cases, a `scenes.config.ts`
+     entry, then `yarn sbp` (no `BatchedMesh` in the first download; the `merging` budget, 8 KiB,
+     was 7.7 KiB before S1), `yarn verify:baselines` (the new `APP_RENDER_SYNC_ORDER` key and
+     `MergeGroupMode` change the API baseline), `yarn verify:scenes --only batchedMeshSpike`, and
+     the numbers recorded here.
+
+   **Decisions while building** (2026-11-11):
+   - Exit parity is measured `ENGINE` against the spike's hand-built `BATCHED` way, the same field,
+     no bodies (23 draws on WebGPU, CPU frame within the runs' noise); a kinematic case checks
+     correctness and is compared with separate meshes with bodies.
+   - A batched member keeps its own (hidden) mesh, and the sync reads that mesh's pose, not its
+     `TRANSFORM`: physics' interpolation writes the mesh only (`PhysicsInterpolation.ts`), so a
+     `TRANSFORM` read draws kinematic members stepped. The batch draws a member where its mesh
+     would be drawn on its own (a `TRANSFORM` written after `MAIN` a frame later, as an own mesh).
+   - Change detection: `OBJECT3D._lastVersion`; the kernel's `object3DSyncSystem` now bumps it
+     with each copy in `TYPED_ARRAY` storage (it had no version there, p616's trap). A
+     `BODY_DYNAMIC_VISUAL` member is written every frame.
+   - Spatial index: members leave it (as baked ones); the batch is one entry, at its members'
+     bounds' centre from its full build (instances are world matrices less that centre), its
+     internal geometry carrying a copy of its bounding sphere, which the index measures a mesh by.
+     The sphere grows with the sync and never shrinks; the group re-joins when it grew.
+   - "Object culling" in §3 is lights only (`TAG_OBJECT_CULLED`): a member's instance follows
+     `DISABLED`, `TAG_FRUSTUM_CULLED` (the opt-in) and `TAG_DRAW_HELD`. The visibility hooks moved
+     to S2 (the scene step builds while the load's holds are on).
+   - The mode is the group's: a scene entry's, else the first joining `merge`'s; a `merge` naming
+     the other mode is refused. `BATCHED` refuses a mesh not directly under the root scene and a
+     geometry whose index or attributes aren't the group's exactly; it refuses no body. No palette
+     with `BATCHED`. `AUTO` keeps the modes apart (a `BAKED` key unchanged, so the ids stay) and its
+     cap counts each geometry once per batched group.
+   - Compaction is in place (`setGeometryIdAt` over the same live ids): a freed id between two
+     instances of a geometry doesn't split their merged draw, and deleting and re-adding would
+     reallocate the textures or sort the freed ids per add.
+   - `updateMergeMember` does nothing for a batched member; `beginMergeMemberEdit` warns.
+     `rebuildMergeGroup` makes a fresh batch in geometry order.
+
+   **As built** (S1-S4; the detail is `features/merging/CLAUDE.md`'s "The mode" bullet): the builds
+   moved out of `MergeGroups.ts` into `MergeBuild.ts` (both modes' dispatch, the `BAKED` build);
+   `MergeBatch.ts` (the lazy chunk: build, sync, compaction) and `MergeBatchFront.ts` (the loader, a
+   leaving member, the visibility hooks); `MERGE_MEMBER.instanceId` (`partIndex` stays -1 for a
+   batched member, so the baked in-place paths skip it) and `_batchVersion`; the kernel's
+   `APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC` (-0.25) and the typed-mode version bump. Tests:
+   `MergeBatch.test.ts`, `MergingSchema.test.ts`, `ECSCoreSystems.test.ts`.
+
 2. LOD per member (with p348). 3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).

@@ -19,6 +19,14 @@
 // written every frame, as physics' interpolation moves it without a version. The batch's sphere
 // grows with what's written (never shrinks: the next full build measures it again), so three
 // culls it whole only when no member can be in view.
+//
+// Grouping (D1): r187 merges only adjacent draws of one geometry (in instance id order; a freed or
+// hidden id between them doesn't split them). A join takes the lowest freed id, which can sit in
+// another geometry's run, so a batch counts its runs after its instances changed (`countRuns`,
+// from its own geometry-per-id list) and, past COMPACT_RUNS_FACTOR times the geometries in use,
+// compacts in the sync that frame (`compactBatch`): the same ids, each given the next member in
+// geometry order (`setGeometryIdAt`, its matrix and visibility written again), so nothing is
+// reallocated.
 import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
@@ -31,6 +39,13 @@ import type { BatchVisibilityOverrides } from './MergeBatchFront';
 import { clearEmptyGroup, getLiveMembers } from './MergeBuild';
 import { getMemberMesh, noteMergeBuild, syncMemberPose } from './MergeState';
 import type { MergeGroupData, MergeMemberData } from './MergeTypes';
+
+/**
+ * A batch compacts once its geometry runs (in id order) pass this many times the geometries its
+ * instances use (D1): one run per geometry is one draw on WebGPU.
+ * @internal
+ */
+export const COMPACT_RUNS_FACTOR = 2;
 
 /** A batch is made, and grows, with this share of room over what it holds. */
 const BATCH_RESERVE = 1.25;
@@ -52,6 +67,19 @@ type BatchState = {
   maxIndexCount: number;
   /** A full build is due (`rebuildMergeGroup`). */
   isRebuildDue: boolean;
+  /** The batch's geometry id of each instance id, -1 for a freed one (three's is private). */
+  geometryAt: number[];
+  /** Its instances changed since the runs were counted: the sync counts them again. */
+  isOrderDirty: boolean;
+  /** Its geometry runs in instance id order (a draw each on WebGPU), and the geometries its
+   * instances use, at the last count. */
+  runs: number;
+  geometriesInUse: number;
+  /** Compactions so far. */
+  compactions: number;
+  /** The run count's per-geometry marks, and the count's stamp. */
+  seen: number[];
+  countStamp: number;
 };
 
 const states = new WeakMap<MergeGroupData, BatchState>();
@@ -140,7 +168,10 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
   const mesh = getMemberMesh(entityId, world);
   const isFirstBuild = member.instanceId === -1;
-  member.instanceId = state.batch.addInstance(state.geometryIds.get(mesh.geometry)!);
+  const geometryId = state.geometryIds.get(mesh.geometry)!;
+  member.instanceId = state.batch.addInstance(geometryId);
+  state.geometryAt[member.instanceId] = geometryId;
+  state.isOrderDirty = true;
   syncMemberPose(entityId, mesh, world);
   instanceMatrix.copy(mesh.matrixWorld);
   writeInstanceMatrix(state, member.instanceId);
@@ -261,6 +292,13 @@ const createBatch = (
     maxVertexCount,
     maxIndexCount: Math.max(maxIndexCount, 1),
     isRebuildDue: false,
+    geometryAt: [],
+    isOrderDirty: true,
+    runs: 0,
+    geometriesInUse: 0,
+    compactions: 0,
+    seen: [],
+    countStamp: 0,
   };
   const previousState = states.get(group);
   states.set(group, state);
@@ -364,7 +402,70 @@ export const requestBatchRebuild = (group: MergeGroupData) => {
  * @internal
  */
 export const deleteBatchInstance = (member: MergeMemberData, group: MergeGroupData) => {
-  states.get(group)?.batch.deleteInstance(member.instanceId);
+  const state = states.get(group);
+  if (!state) return;
+  state.batch.deleteInstance(member.instanceId);
+  state.geometryAt[member.instanceId] = -1;
+  state.isOrderDirty = true;
+};
+
+/** Counts the batch's geometry runs in instance id order, freed ids skipped (three skips them
+ * when it merges draws), and the geometries in use. */
+const countRuns = (state: BatchState) => {
+  const { geometryAt, seen } = state;
+  const stamp = ++state.countStamp;
+  let runs = 0;
+  let geometries = 0;
+  let previous = -1;
+  for (let id = 0; id < geometryAt.length; id++) {
+    const geometryId = geometryAt[id];
+    if (geometryId < 0) continue;
+    if (geometryId !== previous) runs++;
+    previous = geometryId;
+    if (seen[geometryId] !== stamp) {
+      seen[geometryId] = stamp;
+      geometries++;
+    }
+  }
+  state.runs = runs;
+  state.geometriesInUse = geometries;
+};
+
+/** A member being compacted: its geometry and its instance before. */
+type CompactEntry = { entityId: number; member: MergeMemberData; geometryId: number; id: number };
+
+/**
+ * Compacts a batch (D1): its live instance ids, in order, each given the next member in geometry
+ * order (by its id before within a geometry), so each geometry's instances are one run. Its matrix
+ * from its own mesh (the sync's source) and its visibility are written again. A rare frame's
+ * work: it allocates its lists.
+ */
+const compactBatch = (state: BatchState, world: ECSWorld) => {
+  const { batch, geometryAt } = state;
+  const entries: CompactEntry[] = [];
+  for (const entityId of state.group.members) {
+    const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+    if (!member || member.instanceId < 0) continue;
+    const { instanceId: id } = member;
+    entries.push({ entityId, member, geometryId: geometryAt[id], id });
+  }
+  const ids = entries.map((entry) => entry.id).sort((a, b) => a - b);
+  entries.sort((a, b) => a.geometryId - b.geometryId || a.id - b.id);
+  entries.forEach((entry, k) => {
+    const id = ids[k];
+    const { entityId, member, geometryId } = entry;
+    member.instanceId = id;
+    geometryAt[id] = geometryId;
+    batch.setGeometryIdAt(id, geometryId);
+    const object = world.getComponent(entityId, ComponentType.OBJECT3D)!;
+    const mesh = object.value as THREE.Mesh;
+    instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
+    writeInstanceMatrix(state, id);
+    member._batchVersion = object._lastVersion;
+    batch.setVisibleAt(id, isBatchMemberShown(entityId, world));
+  });
+  state.compactions++;
+  countRuns(state);
 };
 
 /**
@@ -404,5 +505,10 @@ export const mergeBatchSyncSystem = (world: ECSWorld) => {
       if (growBatchSphere(state, mesh.geometry)) hasGrown = true;
     }
     if (hasGrown) rejoinSpatialIndex(groupEntityId, world);
+    if (state.isOrderDirty) {
+      state.isOrderDirty = false;
+      countRuns(state);
+      if (state.runs > COMPACT_RUNS_FACTOR * state.geometriesInUse) compactBatch(state, world);
+    }
   }
 };
