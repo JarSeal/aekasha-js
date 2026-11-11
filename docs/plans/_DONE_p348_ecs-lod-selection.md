@@ -234,6 +234,12 @@ member, so it can't beat §4.2's one draw per level on draw count; the question 
   draws instead of 2,000 (GPU time isn't measurable headless). Before the fix, the batched way
   measured 0.66-0.89 ms: the rejected command buffers were cheap, not the rendering.
 
+- p375's Phase 0 (2026-11-11, three r187, `p375_batched-mesh-batches.md` §2 Results) ran the rest:
+  2,000 members of 20 geometries in a plain `BatchedMesh` cost 45-80% less CPU than separate
+  meshes on both backends, and r187 merges grouped members into one draw per geometry (23 draws
+  instead of 2,003; three's default depth sort merges almost nothing). For one geometry with LOD,
+  §4.2's pool is still the tool; p375 builds batches for mixed geometries that move.
+
 ## 5. JSON and generated chains
 
 `meshSchema` gets `lod`:

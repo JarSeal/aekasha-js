@@ -128,6 +128,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  batchedMeshSpike: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/batchedMeshSpike/batchedMeshSpike.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   instanceStress: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/instanceStress/instanceStress.ts');
     await (

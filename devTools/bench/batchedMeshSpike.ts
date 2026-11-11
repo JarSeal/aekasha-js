@@ -1,0 +1,383 @@
+/**
+ * p375 Phase 0's spike bench (docs/plans/p375_batched-mesh-batches.md §2): the `batchedMeshSpike`
+ * scene's ways (separate meshes, a baked merge group, a `BatchedMesh`) in each case below, on
+ * WebGPU and on WebGL2, both on the machine's GPU (WebGL2 through the renderer tab's persisted
+ * "Force WebGL", so the debug env), printing a table per backend.
+ *
+ *   npx tsx devTools/bench/batchedMeshSpike.ts [--backends webgpu,webgl] [--only <case>[,…]]
+ *     [--runs 3] [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
+ *
+ * Each case is a page of its own (its own dev server, the scene runner's, unless `--url`), run
+ * `--runs` times; the table gives the median of the runs' medians, and the runs' spread. The CPU
+ * frame is the first MAIN system to the first LATE_MAIN one (`_dbg__batchedMeshSpike.ts`), GPU
+ * the stats panel's figure. The `check:` cases screenshot to `.cache/bench/batchedMeshSpike/`;
+ * the `churn:` cases run the scene's churn calls before measuring. Output:
+ * `.cache/bench/progress.log` too.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { Page } from 'playwright-core';
+import { ROOT } from '../paths';
+import { out, setProgressLogFile } from '../progressLog';
+import { EVALUATE_MARGIN_MS, launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
+import { startVerifyServerAsync } from '../verify/devServer';
+
+const RED = '\x1b[31m';
+const YELLOW = '\x1b[33m';
+const DIM = '\x1b[2m';
+const RESET = '\x1b[0m';
+const LOG_FILE = path.join(ROOT, '.cache/bench/progress.log');
+const SHOT_DIR = path.join(ROOT, '.cache/bench/batchedMeshSpike');
+const VIEWPORT = { width: 1600, height: 900 };
+const READY_TIMEOUT_MS = 180_000;
+const GPU_SAMPLE_MS = 250;
+
+type Backend = 'webgpu' | 'webgl';
+/** A page script run after the load, before the warm-up (the scene's window global) */
+type Churn =
+  | { kind: 'instances'; share: number; rounds: number }
+  | { kind: 'geometries'; mode: 'DELETE_ADD' | 'OPTIMIZE' | 'SET_AT'; rounds: number };
+type Case = { name: string; params: Record<string, string>; churn?: Churn; shot?: boolean };
+
+const batched = (extra: Record<string, string> = {}) => ({ bmsWay: 'batched', ...extra });
+const grouped = { bmsOrder: 'grouped', bmsSort: 'none' };
+
+/** The spike's cases, by item (§2) */
+const CASES: Case[] = [
+  // Items 1 and 2: the field in view, still
+  { name: 'separate', params: { bmsWay: 'separate' } },
+  { name: 'baked', params: { bmsWay: 'baked' } },
+  { name: 'batch random depth', params: batched() },
+  { name: 'batch grouped depth', params: batched({ bmsOrder: 'grouped' }) },
+  { name: 'batch random range', params: batched({ bmsSort: 'range' }) },
+  { name: 'batch grouped none', params: batched(grouped) },
+  { name: 'batch grouped none nocull', params: batched({ ...grouped, bmsCull: 'false' }) },
+  // Item 1 with the sun's shadow
+  { name: 'shadow: separate', params: { bmsWay: 'separate', bmsShadow: 'true' } },
+  { name: 'shadow: baked', params: { bmsWay: 'baked', bmsShadow: 'true' } },
+  { name: 'shadow: batch random depth', params: batched({ bmsShadow: 'true' }) },
+  { name: 'shadow: batch random range', params: batched({ bmsSort: 'range', bmsShadow: 'true' }) },
+  { name: 'shadow: batch grouped none', params: batched({ ...grouped, bmsShadow: 'true' }) },
+  {
+    name: 'shadow: batch grouped none nocull',
+    params: batched({ ...grouped, bmsCull: 'false', bmsShadow: 'true' }),
+  },
+  // Item 3: members moving
+  { name: 'move 10%: separate', params: { bmsWay: 'separate', bmsMove: '0.1' } },
+  { name: 'move 10%: baked', params: { bmsWay: 'baked', bmsMove: '0.1' } },
+  { name: 'move 10%: batch grouped none', params: batched({ ...grouped, bmsMove: '0.1' }) },
+  { name: 'move 100%: separate', params: { bmsWay: 'separate', bmsMove: '1' } },
+  { name: 'move 100%: baked', params: { bmsWay: 'baked', bmsMove: '1' } },
+  { name: 'move 100%: batch grouped none', params: batched({ ...grouped, bmsMove: '1' }) },
+  // Item 5: most members out of view
+  { name: 'inside: separate', params: { bmsWay: 'separate', bmsCamera: 'inside' } },
+  { name: 'inside: baked', params: { bmsWay: 'baked', bmsCamera: 'inside' } },
+  { name: 'inside: batch grouped none', params: batched({ ...grouped, bmsCamera: 'inside' }) },
+  {
+    name: 'inside: batch grouped none nocull',
+    params: batched({ ...grouped, bmsCamera: 'inside', bmsCull: 'false' }),
+  },
+  {
+    name: 'inside: batch random range',
+    params: batched({ bmsSort: 'range', bmsCamera: 'inside' }),
+  },
+  // Item 4: per-member colour and visibility (screenshots)
+  {
+    name: 'check: colours hidden',
+    params: batched({ ...grouped, bmsColors: 'true', bmsHidden: '7' }),
+    shot: true,
+  },
+  // Item 6: slot reuse
+  {
+    name: 'churn: instances none',
+    params: batched(grouped),
+    churn: { kind: 'instances', share: 0.1, rounds: 1 },
+  },
+  {
+    name: 'churn: instances range',
+    params: batched({ bmsOrder: 'grouped', bmsSort: 'range' }),
+    churn: { kind: 'instances', share: 0.1, rounds: 1 },
+  },
+  {
+    name: 'churn: geometries delete-add',
+    params: batched({ ...grouped, bmsColors: 'true' }),
+    churn: { kind: 'geometries', mode: 'DELETE_ADD', rounds: 40 },
+    shot: true,
+  },
+  {
+    name: 'churn: geometries optimize',
+    params: batched({ ...grouped, bmsColors: 'true' }),
+    churn: { kind: 'geometries', mode: 'OPTIMIZE', rounds: 40 },
+    shot: true,
+  },
+  {
+    name: 'churn: geometries set-at',
+    params: batched({ ...grouped, bmsColors: 'true' }),
+    churn: { kind: 'geometries', mode: 'SET_AT', rounds: 40 },
+    shot: true,
+  },
+];
+
+type Args = {
+  backends: Backend[];
+  only: string[];
+  runs: number;
+  warmup: number;
+  frames: number;
+  url: string | null;
+  headed: boolean;
+  json: string | null;
+};
+
+const fail = (message: string): never => {
+  out(`${RED}${message}${RESET}`, true);
+  process.exit(2);
+};
+
+const parseArgs = (argv: string[]): Args => {
+  const args: Args = {
+    backends: ['webgpu', 'webgl'],
+    only: [],
+    runs: 3,
+    warmup: 120,
+    frames: 300,
+    url: null,
+    headed: false,
+    json: null,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i];
+    const value = () => argv[++i] ?? fail(`${flag} needs a value`);
+    if (flag === '--backends') {
+      args.backends = value()
+        .split(',')
+        .map((b) => (b === 'webgpu' || b === 'webgl' ? b : fail(`unknown backend ${b}`)));
+    } else if (flag === '--only') args.only = value().split(',');
+    else if (flag === '--runs') args.runs = Math.max(1, Number(value()));
+    else if (flag === '--warmup') args.warmup = Math.max(0, Number(value()));
+    else if (flag === '--frames') args.frames = Math.max(1, Number(value()));
+    else if (flag === '--url') args.url = value();
+    else if (flag === '--headed') args.headed = true;
+    else if (flag === '--json') args.json = value();
+    else fail(`unknown option ${flag}`);
+  }
+  return args;
+};
+
+/** What the scene's `measure` gives */
+type Summary = {
+  frames: number;
+  cpuMs: number;
+  cpuMsP90: number;
+  renderMs: number;
+  syncMs: number;
+  drawCalls: number;
+  triangles: number;
+  backend: string;
+  batch: Record<string, unknown> | null;
+};
+type BmsApi = {
+  measure: (frames: number) => Promise<Summary>;
+  churnInstances: (share: number, rounds: number) => unknown;
+  churnGeometries: (mode: string, rounds: number) => unknown;
+};
+type BmsWindow = Window & {
+  __aekBms?: BmsApi;
+  __benchGpu?: { samples: number[]; timer: number };
+};
+
+type Run = { summary: Summary | null; gpuMs: number; churn?: unknown; errors: string[] };
+
+const STATS_SETTINGS = JSON.stringify({
+  enabled: true,
+  trackTFPS: true,
+  trackFPS: true,
+  trackCPU: true,
+  trackHz: false,
+  trackGPU: true,
+  trackCPT: false,
+  horizontal: false,
+});
+
+const buildUrl = (base: string, c: Case) => {
+  const params = new URLSearchParams({
+    isDebug: 'true',
+    aekTest: 'true',
+    startScene: 'batchedMeshSpike',
+    ...c.params,
+  });
+  return `${base.replace(/\/$/, '')}/?${params}`;
+};
+
+const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backend: Backend) => {
+  const run: Run = { summary: null, gpuMs: NaN, errors: [] };
+  page.on('pageerror', (err) => run.errors.push(`[pageerror] ${err.message}`));
+  page.on('console', (msg) => {
+    const text = msg.text();
+    if (msg.type() === 'error' || /webgpu|validation|batchedmesh/i.test(text)) {
+      if (msg.type() !== 'log' && msg.type() !== 'debug') run.errors.push(text);
+    }
+  });
+  await page.addInitScript(
+    ({ stats, webgl }) => {
+      localStorage.setItem('AEK_debugStats', stats);
+      if (webgl) localStorage.setItem('debugRenderer', JSON.stringify({ forceWebGL: true }));
+      else localStorage.removeItem('debugRenderer');
+    },
+    { stats: STATS_SETTINGS, webgl: backend === 'webgl' }
+  );
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
+  const ready = await withTimeout(
+    page.evaluate((ms) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }), READY_TIMEOUT_MS),
+    READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
+    'whenSceneReady'
+  );
+  if (ready.status !== 'READY') throw new Error(`the scene didn't load (${ready.status})`);
+  await page.waitForFunction(() => Boolean((window as BmsWindow).__aekBms), null, {
+    timeout: 60_000,
+  });
+  const measureAsync = (frames: number) =>
+    withTimeout(
+      page.evaluate((n) => (window as BmsWindow).__aekBms!.measure(n), frames),
+      (frames / 20) * 1000 + EVALUATE_MARGIN_MS,
+      `measure(${frames})`
+    );
+  // A first frame before the churn: the batch drawn once
+  await measureAsync(5);
+  if (c.churn) {
+    const churn = c.churn;
+    run.churn = await page.evaluate(
+      (ch) =>
+        ch.kind === 'instances'
+          ? (window as BmsWindow).__aekBms!.churnInstances(ch.share, ch.rounds)
+          : (window as BmsWindow).__aekBms!.churnGeometries(ch.mode, ch.rounds),
+      churn
+    );
+  }
+  if (args.warmup > 0) await measureAsync(args.warmup);
+  await page.evaluate((everyMs) => {
+    const gpu = { samples: [] as number[], timer: 0 };
+    gpu.timer = window.setInterval(() => {
+      const figure = document.querySelector('[data-panel="GPU"] .statsLive');
+      gpu.samples.push(parseFloat(figure?.textContent ?? ''));
+    }, everyMs);
+    (window as BmsWindow).__benchGpu = gpu;
+  }, GPU_SAMPLE_MS);
+  run.summary = await measureAsync(args.frames);
+  const samples = await page.evaluate(() => {
+    const gpu = (window as BmsWindow).__benchGpu!;
+    window.clearInterval(gpu.timer);
+    return gpu.samples;
+  });
+  const usable = samples.slice(Math.ceil(1000 / GPU_SAMPLE_MS)).filter((s) => !Number.isNaN(s));
+  run.gpuMs = usable.length ? usable.reduce((a, b) => a + b, 0) / usable.length : NaN;
+  if (c.shot) {
+    fs.mkdirSync(SHOT_DIR, { recursive: true });
+    const file = `${c.name.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`;
+    await page.screenshot({ path: path.join(SHOT_DIR, file) });
+  }
+  return run;
+};
+
+const med = (values: number[]) => {
+  const v = values.filter((x) => !Number.isNaN(x)).sort((a, b) => a - b);
+  return v.length ? v[Math.floor(v.length / 2)] : NaN;
+};
+const fmt = (n: number, digits = 2) => (Number.isNaN(n) ? 'n/a' : n.toFixed(digits));
+
+const formatTable = (backend: string, rows: { c: Case; runs: Run[] }[]) => {
+  const lines = [
+    `\n${backend}: medians of the runs (CPU spread min-max)`,
+    '| Case | Draws | Triangles | CPU frame (ms) | spread | Render submit (ms) | Sync (ms) | GPU (ms) | Batch |',
+    '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |',
+  ];
+  for (const { c, runs } of rows) {
+    const ok = runs.filter((r) => r.summary);
+    if (ok.length === 0) {
+      lines.push(`| ${c.name} | failed | | | | | | | |`);
+      continue;
+    }
+    const pick = (key: keyof Summary) => med(ok.map((r) => r.summary![key] as number));
+    const cpus = ok.map((r) => r.summary!.cpuMs);
+    const b = ok[ok.length - 1].summary!.batch;
+    const batch = b ? `visible ${b.visible}, merged draws ${b.mergedDraws}` : '';
+    lines.push(
+      `| ${c.name} | ${fmt(pick('drawCalls'), 0)} | ${Math.round(pick('triangles')).toLocaleString('en')} | ${fmt(pick('cpuMs'))} | ${fmt(Math.min(...cpus))}-${fmt(Math.max(...cpus))} | ${fmt(pick('renderMs'))} | ${fmt(pick('syncMs'), 3)} | ${fmt(med(ok.map((r) => r.gpuMs)))} | ${batch} |`
+    );
+  }
+  return lines;
+};
+
+const main = async () => {
+  const args = parseArgs(process.argv.slice(2));
+  const cases = args.only.length
+    ? CASES.filter((c) => args.only.some((o) => c.name.includes(o)))
+    : CASES;
+  if (cases.length === 0) fail('no case matches --only');
+  const watch = setProgressLogFile(LOG_FILE);
+  const server = args.url
+    ? null
+    : await startVerifyServerAsync().catch((err: Error) => fail(err.message));
+  const baseUrl = server ? server.url : args.url!;
+  const launched = await launchVerifyChromiumAsync({
+    webgl: false,
+    headed: args.headed,
+    probeUrl: baseUrl,
+    onNote: (note) => out(`${YELLOW}${note}${RESET}`),
+  });
+  out(
+    `BatchedMesh spike against ${baseUrl} (${launched.label}): ${cases.length} case(s) × ${args.backends.join(', ')} × ${args.runs} run(s), ${args.warmup} + ${args.frames} frames`
+  );
+  out(`${DIM}Watch it: cd ${ROOT} && ${watch}${RESET}\n`);
+
+  const results: Record<string, { c: Case; runs: Run[] }[]> = {};
+  try {
+    for (const backend of args.backends) {
+      results[backend] = [];
+      for (const c of cases) {
+        const runs: Run[] = [];
+        for (let r = 0; r < args.runs; r++) {
+          const page = await launched.browser.newPage({ viewport: VIEWPORT });
+          try {
+            runs.push(await runCaseAsync(page, buildUrl(baseUrl, c), args, c, backend));
+          } catch (err) {
+            runs.push({ summary: null, gpuMs: NaN, errors: [(err as Error).message] });
+          } finally {
+            await withTimeout(page.close(), 30_000, 'closing the page').catch(() => undefined);
+          }
+          const last = runs[runs.length - 1];
+          const s = last.summary;
+          out(
+            s
+              ? `  ${backend} ${c.name} #${r + 1} (${s.backend}): CPU ${fmt(s.cpuMs)} ms, ${s.drawCalls} draws${(s as { moveWaitFrames?: number }).moveWaitFrames ? `, moves waited ${(s as { moveWaitFrames?: number }).moveWaitFrames} frames for the build` : ''}`
+              : `${RED}✗ ${backend} ${c.name} #${r + 1}${RESET}`
+          );
+          if (s && !s.backend.toLowerCase().startsWith(backend)) {
+            out(`    ${RED}asked for ${backend}, drew on ${s.backend}${RESET}`);
+          }
+          if (last.churn) out(`    churn: ${JSON.stringify(last.churn)}`);
+          for (const e of [...new Set(last.errors)].slice(0, 5)) {
+            out(`    ${RED}${e.slice(0, 300)}${RESET}`);
+          }
+        }
+        results[backend].push({ c, runs });
+      }
+    }
+  } finally {
+    await launched.closeAsync().catch(() => undefined);
+    await server?.server.close();
+  }
+  for (const backend of args.backends) {
+    for (const line of formatTable(backend, results[backend])) out(line);
+  }
+  if (args.json) {
+    fs.writeFileSync(args.json, `${JSON.stringify({ args, results }, null, 2)}\n`);
+    out(`\n${DIM}Results: ${args.json}${RESET}`);
+  }
+};
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err: Error) => fail(`The bench stopped: ${err.stack ?? err.message}`));
+}
