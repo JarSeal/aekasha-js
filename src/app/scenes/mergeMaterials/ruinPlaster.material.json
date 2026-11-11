@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "ruinPlaster",
+  "type": "STANDARD",
+  "params": {
+    "map": "ruinPlasterAlbedo",
+    "aoMap": "ruinPlasterAo",
+    "aoMapIntensity": 0.8,
+    "roughnessMap": "ruinPlasterRoughness",
+    "metalnessMap": "ruinPlasterMetalness",
+    "roughness": 1,
+    "metalness": 1
+  }
+}

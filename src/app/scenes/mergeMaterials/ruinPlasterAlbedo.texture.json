@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ruinPlasterAlbedo",
+  "fileName": "./source/ruinPlaster_albedo.png",
+  "texOpts": {
+    "wrapS": 1000,
+    "wrapT": 1000,
+    "colorSpace": "srgb"
+  },
+  "optimize": {
+    "slot": "baseColor"
+  }
+}

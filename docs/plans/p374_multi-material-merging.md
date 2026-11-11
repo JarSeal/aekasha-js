@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Merging, Materials, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.1)
 Blocked by: p299_texture-arrays-and-atlases.md (only its Phases 2 and 4, done: build-time arrays, `sampleArrayLayer`)
@@ -194,7 +194,7 @@ Metal), `?isProdTest=true`, 1200 × 800 screenshots diffed per channel):
   merge's computed tangents: D1's vertex requirements), compressed (KTX2) arrays, and a palette
   of more than two entries.
 
-### Phase 1 — Palette asset and build (D1, D2)
+### Phase 1 — Palette asset and build (D1, D2) — done
 
 Schema, class validation, generated array jobs, `orm` packing, neutral layers. **Exit:**
 `yarn assets` builds `ruinsPalette`'s three arrays; a class violation fails the gather with the
@@ -218,6 +218,9 @@ Sections (each stopped for review):
 3. **The test palette.** `ruinsPalette` and its four materials in `src/app/scenes/mergeMaterials/`
    (sources from a fixture generator, plus the MetalRust set's separate maps for the `orm` pack),
    `yarn assets` building its three arrays, a class violation checked by hand and in a test.
+
+   Not the MetalRust set after all: its 2048² maps would have committed megabytes of member
+   outputs, and Phase 2's comparison is cleaner with members and layers at one size.
 
 Decisions (2026-11-11, at the phase's start):
 
@@ -273,10 +276,41 @@ As built, section 2 (the array jobs):
   `missing: 'SKIP'`). A scene can list a slot's texture id in `textures` (dev and production, with
   the production output check, `checkMergeMaterialSlot`); how a scene names a palette is Phase 3.
 
+As built, section 3 (the test palette; verified 2026-11-11):
+
+- **`ruinsPalette`** (`src/app/scenes/mergeMaterials/`): `ruinStone`, `ruinBrick`, `ruinMoss`,
+  `ruinPlaster` (`STANDARD`), slots `map`, `normalMap`, `orm` at 256², profile `prop`. Each member
+  builds its layers another way: `ruinStone` one ORM map as its `aoMap`, `roughnessMap` and
+  `metalnessMap` (the layer as it is), `ruinBrick` a separate roughness map (packed r 1, g, b 1),
+  `ruinMoss` an albedo only (neutral normal and ORM layers), `ruinPlaster` separate AO, roughness
+  and metalness maps (a full pack, a metal trim band) and no normal map. Sources: 11 procedural,
+  tileable 256² PNGs (456 KB) in `source/`, from `devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts`
+  (deterministic, run by hand). Each member texture has its own JSON and output too (Phase 2's
+  reference draws the members with them): 14 KTX2 outputs, 660 KB, committed with the lock.
+- **The exit:** `yarn assets` builds the three arrays (256², 4 layers, 9 levels, UASTC + zstd;
+  map 117 KB, normalMap 74 KB, orm 107 KB). Each layer transcoded back (`ktx extract`) is what it
+  should be: the neutral normals exactly 128/128/255, `ruinMoss`'s ORM white, `ruinBrick`'s r and b
+  255, `ruinPlaster`'s metalness 0-255 only in the band. With `side: 2` and a `bumpMap` on
+  `ruinMoss`, `yarn gatherAppData` fails naming `materials[2] "ruinMoss" … params.bumpMap` and
+  `params.side differs: 0 in "ruinStone", "ruinBrick", "ruinPlaster"; 2 in "ruinMoss"`, and the
+  pipeline drops the palette (no prune). A development gather exits 0 on a failure as before
+  (only a production gather and `yarn assets` exit 1). `mergeMaterials.test.ts` pins the repo
+  palette's layers per slot.
+
 ### Phase 2 — Runtime material and table (D3)
 
 **Exit:** a 4-material palette renders identically to the 4 materials (screenshot diff within
 compression error), with the table on both backends.
+
+Starts from (Phase 1): `ruinsPalette` and its members (their own textures built too, for the
+reference); the dev data's `mergeMaterials.<id>` (the JSON, `__slots`: each slot's texture id,
+`has` by member, `missing: 'SKIP'`) and each slot's array texture `<id>.<slot>`, which a scene's
+`textures` can list today and `loadTextureAsync` loads as a `CompressedArrayTexture` (`__layers`:
+the member ids). Still open at its start: the table's storage (D3), the check that a code-made
+member's maps share one UV transform (moved from Phase 1), and how the merge material finds its
+palette's data at runtime (a production scene carries only what it lists: decide with Phase 3's
+`palette` on groups, or have the scene list the slot textures). Diff against the `BAKED` control
+(Phase 0).
 
 ### Phase 3 — Group integration (D4)
 

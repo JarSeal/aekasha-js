@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "ruinMoss",
+  "type": "STANDARD",
+  "params": {
+    "map": "ruinMossAlbedo",
+    "color": "#d8ecc8",
+    "roughness": 0.95,
+    "metalness": 0
+  }
+}

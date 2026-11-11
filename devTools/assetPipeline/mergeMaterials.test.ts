@@ -2,7 +2,7 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 import type { MergeMaterialAsset, TextureAsset } from '../../src/_engine/schemas';
 import { ROOT } from '../paths';
-import { collectPipelineAssets, type AssetJson } from './assets';
+import { collectPipelineAssets, readAssetJsons, type AssetJson } from './assets';
 import type { MaterialLookup } from './mergeMaterialClass';
 import { resolveMergeMaterial } from './mergeMaterials';
 import { readTextureSource, type TextureArrayLayer, type TextureLookup } from './textureArrays';
@@ -320,5 +320,46 @@ describe('collectPipelineAssets', () => {
         reason: expect.stringContaining('type PHONG'),
       },
     ]);
+  });
+});
+
+describe('the repo’s ruinsPalette (p374 Phase 1’s exit)', () => {
+  it('builds three arrays, each member’s layer the way its maps call for', () => {
+    const { assetJsons } = readAssetJsons();
+    const { assets } = collectPipelineAssets(assetJsons);
+    const json = 'src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json';
+    const getLayers = (slot: string) => {
+      const asset = assets.get(`mergeMaterial:${json}:${slot}`);
+      if (asset?.source.kind !== 'array') return null;
+      return asset.source.layers.map((layer) => {
+        if (layer.source.kind !== 'pack') return [layer.key, layer.source.kind];
+        const channels = Object.entries(layer.source.pack.channels).map(([target, spec]) =>
+          typeof spec === 'number' ? `${target}=${spec}` : `${target}<${path.basename(spec.src)}`
+        );
+        return [layer.key, channels.join(' ')];
+      });
+    };
+    expect(getLayers('map')).toEqual([
+      ['ruinStone', 'relative'],
+      ['ruinBrick', 'relative'],
+      ['ruinMoss', 'relative'],
+      ['ruinPlaster', 'relative'],
+    ]);
+    expect(getLayers('normalMap')).toEqual([
+      ['ruinStone', 'relative'],
+      ['ruinBrick', 'relative'],
+      ['ruinMoss', 'r=0.5 g=0.5 b=1'],
+      ['ruinPlaster', 'r=0.5 g=0.5 b=1'],
+    ]);
+    expect(getLayers('orm')).toEqual([
+      ['ruinStone', 'relative'],
+      ['ruinBrick', 'r=1 g<ruinBrick_roughness.png b=1'],
+      ['ruinMoss', 'rgb=1'],
+      [
+        'ruinPlaster',
+        'r<ruinPlaster_ao.png g<ruinPlaster_roughness.png b<ruinPlaster_metalness.png',
+      ],
+    ]);
+    expect(assets.has(`mergeMaterial:${json}:emissiveMap`)).toBe(false);
   });
 });

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "ruinBrick",
+  "type": "STANDARD",
+  "params": {
+    "map": "ruinBrickAlbedo",
+    "normalMap": "ruinBrickNormal",
+    "normalScale": [0.8, 0.8],
+    "roughnessMap": "ruinBrickRoughness",
+    "roughness": 1,
+    "metalness": 0
+  }
+}
