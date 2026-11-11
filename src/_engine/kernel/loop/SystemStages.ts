@@ -51,7 +51,8 @@ export enum ECSSystemStage {
  *   lookAtSystem). Plain default order.
  * - MERGE_BATCH_SYNC: mergeBatchSyncSystem (features/merging/MergeBatch.ts, p375), which writes a
  *   batched merge group's members' instance matrices from their own Object3Ds' final poses: after
- *   every producer, before the consumers (nothing reads a batch's matrices).
+ *   every producer, before the consumers (nothing reads a batch's matrices). Before LOD_SELECTION
+ *   too: a batched member's level swap (p375 Phase 2) is counted and compacted the next frame.
  * - POSE_CONSUMERS: systems that read the final render pose of another entity (camera rigs).
  *   Deliberately fractional: it has to run after every order-0 producer whatever their
  *   registration sequence (the follow camera rig registers before physics() does), and

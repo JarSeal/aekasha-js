@@ -14,8 +14,14 @@
 // root, frustum culling's `getWorldPosition` updates its matrix itself, and a deleted entity's
 // `disposeMesh` takes it from no parent. A raycast of the root scene hits the batch instead
 // (`getMergeMemberAtBatchId` maps its `batchId` to the member).
+//
+// A batched member's LOD (p375 Phase 2): `batchMemberLodDelegate`, the kernel's mesh draw delegate
+// (merging's install sets it), forwards the levels, the cull and the fades of a member its batch
+// draws (an instance and `TAG_MERGED`: not while "Show unmerged" draws its own mesh) to the batch
+// code; merged again, its instance takes what its own mesh shows (`refreshBatchMember`).
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import type { LodMeshDrawDelegate } from '../../kernel/ecs/LodTargets';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { markPending } from './MergeState';
@@ -80,6 +86,8 @@ const detachedMeshes = new WeakSet<object>();
 export const detachBatchedMemberMesh = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   if (!member || member.instanceId < 0) return;
+  // Its LOD changed its own mesh while that was drawn (an instance means the code is loaded)
+  batchModule?.refreshBatchMember(entityId, world);
   const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   if (!object?.parent) return;
   object.removeFromParent();
@@ -107,7 +115,29 @@ export type BatchVisibilityOverrides = Readonly<{
   isDisabled?: boolean;
   isFrustumCulled?: boolean;
   isDrawHeld?: boolean;
+  isLodCulled?: boolean;
+  /** `TAG_LOD_TRANSITIONING`: a member fading out to LOD culled is still drawn. */
+  isLodFading?: boolean;
 }>;
+
+/**
+ * The kernel's mesh draw delegate for batched members (merging's install sets it): a member its
+ * batch draws (an instance, and `TAG_MERGED`) has its LOD's levels, cull and fades forwarded to
+ * the batch code, loaded whenever a member has an instance.
+ * @internal
+ */
+export const batchMemberLodDelegate: LodMeshDrawDelegate = {
+  isDrawing: (entityId, world) =>
+    batchModule !== null &&
+    (world.getComponent(entityId, ComponentType.MERGE_MEMBER)?.instanceId ?? -1) >= 0 &&
+    world.hasComponent(entityId, ComponentType.TAG_MERGED),
+  applyLevel: (entityId, world, level) =>
+    batchModule!.applyBatchMemberLevel(entityId, world, level),
+  setCulled: (entityId, world, isCulled, fade) =>
+    batchModule!.setBatchMemberLodCulled(entityId, world, isCulled, fade),
+  setFade: (entityId, world, progress) =>
+    batchModule!.setBatchMemberFade(entityId, world, progress),
+};
 
 // The visibility hooks' overrides: the value of the tag a hook changes (a remove hook runs before
 // it's gone). Constants, so a toggle allocates nothing

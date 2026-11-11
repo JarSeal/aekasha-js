@@ -2,10 +2,11 @@
 // is drawn on its own, with a warning naming the reason (`addToMergeGroup`). A `BATCHED` group
 // (p375) takes moving bodies, but only a mesh directly under the root scene whose geometry's
 // attributes and index are the group's exactly (`BatchedMesh` copies every geometry into one set
-// of buffers).
+// of buffers). A `BAKED` group refuses a `LOD` (until p376); a `BATCHED` one draws a member's
+// levels (p375 Phase 2) when each is drawable in its batch (`getBatchLodRefusal`).
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
-import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { ComponentType, type ComponentDataMap } from '../../kernel/ecs/ECSCoreComponents';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { getGroupPaletteIndex } from './MergePalettes';
 import type { MergeGroupData, MergeGroupMode } from './MergeTypes';
@@ -20,22 +21,27 @@ const getAttributeMismatch = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) 
   return undefined;
 };
 
-/** How a geometry differs from a batch's (its first member's): an index on one only, an attribute
- * one has and the other hasn't, or one of another item size or normalization. `BatchedMesh` throws
- * on the first two kinds and would drop an extra attribute. Undefined when they agree. */
-const getBatchMismatch = (geometry: THREE.BufferGeometry, batch: THREE.BufferGeometry) => {
+/** How a geometry differs from a batch's (its first member's, or a member's own for its LOD
+ * levels, named by `owner`): an index on one only, an attribute one has and the other hasn't, or
+ * one of another item size or normalization. `BatchedMesh` throws on the first two kinds and would
+ * drop an extra attribute. Undefined when they agree. */
+const getBatchMismatch = (
+  geometry: THREE.BufferGeometry,
+  batch: THREE.BufferGeometry,
+  owner = 'the group'
+) => {
   if (!geometry.index !== !batch.index)
-    return 'an index where the group has none, or none where it has one';
+    return `an index where ${owner} has none, or none where it has one`;
   for (const name in batch.attributes) {
     const own = geometry.attributes[name];
-    if (!own) return `no "${name}" attribute, which the group has`;
+    if (!own) return `no "${name}" attribute, which ${owner} has`;
     const other = batch.attributes[name];
     if (own.itemSize !== other.itemSize || own.normalized !== other.normalized) {
-      return `a "${name}" attribute of another item size or normalization than the group's`;
+      return `a "${name}" attribute of another item size or normalization than ${owner}'s`;
     }
   }
   for (const name in geometry.attributes) {
-    if (!batch.attributes[name]) return `a "${name}" attribute the group hasn't`;
+    if (!batch.attributes[name]) return `a "${name}" attribute ${owner} hasn't`;
   }
   return undefined;
 };
@@ -49,6 +55,38 @@ const getGroupGeometry = (group: MergeGroupData, world: ECSWorld) => {
     }
   }
   return undefined;
+};
+
+/** A `LOD`'s resolved levels (merging imports no LOD code: the kernel's component data). */
+type LodLevels = ComponentDataMap[(typeof ComponentType)['LOD']]['_levels'];
+
+/**
+ * Why a `BATCHED` group can't draw a mesh's LOD levels, or null. Each level must be drawable in the
+ * batch the mesh is: its geometry agreeing exactly with the mesh's (which agrees with the
+ * group's), the mesh's material (a batch draws one) and the mesh's `castShadow` (a batch casts
+ * shadows as a whole). The levels are the ones `lod()`'s add hook resolved: none (no `lod()`, or
+ * its hook not run yet) is nothing to check.
+ * @internal
+ */
+export const getBatchLodRefusal = (mesh: THREE.Mesh, levels: LodLevels): string | null => {
+  const geometry = mesh.geometry as THREE.BufferGeometry;
+  for (let i = 0; i < levels.length; i++) {
+    const level = levels[i];
+    if (level.material !== mesh.material) {
+      return `its LOD level ${i}'s material isn't the mesh's (a batch draws one material)`;
+    }
+    if (level.castShadow !== mesh.castShadow) {
+      return `its LOD level ${i}'s castShadow isn't the mesh's (a batch casts shadows as a whole)`;
+    }
+    const mismatch =
+      level.geometry === geometry
+        ? undefined
+        : getBatchMismatch(level.geometry, geometry, 'the mesh');
+    if (mismatch) {
+      return `its LOD level ${i}'s geometry has ${mismatch} (a batch's geometries agree exactly)`;
+    }
+  }
+  return null;
 };
 
 /**
@@ -115,7 +153,10 @@ export const getMergeRefusal = (
   if (world.hasComponent(entityId, ComponentType.MANAGED_BY)) {
     return 'a manager owns it (MANAGED_BY)';
   }
-  if (world.hasComponent(entityId, ComponentType.LOD)) return 'it has a LOD';
+  const lod = world.getComponent(entityId, ComponentType.LOD);
+  if (lod && mode === 'BAKED') return 'it has a LOD (a BATCHED group draws its levels)';
+  const lodRefusal = lod && getBatchLodRefusal(mesh, lod._levels);
+  if (lodRefusal) return lodRefusal;
   if (!group) return null;
   if (world.hasComponent(entityId, ComponentType.PERSISTENT) && !group.settings.persistent) {
     return "it's persistent and the group isn't";

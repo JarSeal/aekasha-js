@@ -23,6 +23,7 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
+import { setLodMeshDrawDelegate } from '../../kernel/ecs/LodTargets';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
@@ -32,6 +33,7 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import {
+  batchMemberLodDelegate,
   detachBatchedMemberMesh,
   dropBatchMember,
   getMergeBatchModule,
@@ -44,7 +46,7 @@ import {
   loadPendingBuildCodeAsync,
   startPendingBuildCodeLoads,
 } from './MergeBuild';
-import { getMergeRefusal } from './MergeEligibility';
+import { getBatchLodRefusal, getMergeRefusal } from './MergeEligibility';
 import { findPaletteMaterial, getGroupPaletteIndex } from './MergePalettes';
 import { getActiveSceneMergeSettings, keepSceneMergeSettings } from './MergeSceneSettings';
 import {
@@ -512,6 +514,23 @@ export const registerMergeDebug = async () => {
   useDebug(tab)?._createMergingDebugGUI();
 };
 
+/** A `LOD` added to a batched member after its join (an `AUTO` LOD whose chain came later,
+ * `setMeshLod`): its levels are checked as at a join (`getBatchLodRefusal`), and a member whose
+ * levels its batch can't draw leaves its group, warned, drawn on its own with its LOD. Registered
+ * after `lod()`'s add hook, which resolves the levels. */
+const checkBatchedMemberLod = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const group = member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  const lod = world.getComponent(entityId, ComponentType.LOD);
+  if (!group || !lod || !isBatchedGroup(group)) return;
+  const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+  const refusal = getBatchLodRefusal(mesh, lod._levels);
+  if (!refusal) return;
+  lwarn(`Merge group "${group.id}": entity ${entityId} leaves it, drawn on its own: ${refusal}.`);
+  if (IS_DEBUG_ENV) noteMergeRefusal(world, entityId, group.id, refusal);
+  removeFromMergeGroup([entityId], world);
+};
+
 /**
  * Installs the merge groups (the `merging()` feature's install, MergingFeature.ts): the
  * `TAG_MERGED` visibility hooks, the groups' and members' deletion hooks, the `DISABLED` hooks
@@ -547,6 +566,13 @@ export const installMergeGroups = (ctx: FeatureContext) => {
   });
   // A batched member's instance is shown and hidden instead (p375)
   installBatchMemberVisibility(ctx);
+  // A batched member's LOD: its batch draws its levels (the kernel's seam, read by lod() whatever
+  // the install order), and one added later is checked after lod()'s add hook, which resolves its
+  // levels (p375 Phase 2; without lod() a LOD does nothing)
+  setLodMeshDrawDelegate(batchMemberLodDelegate);
+  if (ctx.isInstalled('lod')) {
+    ctx.registerComponentHooks(ComponentType.LOD, { onAddComponent: checkBatchedMemberLod });
+  }
   ctx.registerPlugin((world) => {
     world.addSystem(
       ECSSystemStage.APP_RENDER_SYNC,

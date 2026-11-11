@@ -372,14 +372,14 @@ moving members.
    **Sections** (the breakdown agreed 2026-11-11; each stopped for review):
    - S1 — a batched member's own mesh out of the scene graph (the candidate above) — done (its
      results: "S1 results" below).
-   - S2 — the seam and the refusals: a kernel draw delegate next to the LOD targets
+   - S2 — the seam and the refusals — done ("S2 results" below): a kernel draw delegate next to the LOD targets
      (`kernel/ecs/LodTargets.ts`), set by `merging()`'s install, which `LodFades.ts`' plain-mesh
      apply, cull and fade ask per call whether something else draws the entity. LOD keeps
      resolving the levels (refs, `AUTO`, pre-warm, dither) and the hidden mesh still gets each
      level (a leave shows the right one). `BATCHED` stops refusing `LOD` (`BAKED` keeps it until
      p376); each level's geometry must match the batch, its material be the group's and its
      `castShadow` the batch's; impostor levels refused.
-   - S3 — level swaps and LOD culling, no fades: the batch holds every level geometry of its
+   - S3 — level swaps and LOD culling, no fades — done ("S3 results" below): the batch holds every level geometry of its
      members; the apply swaps in place (`setGeometryIdAt`, not a remove and an add);
      `TAG_LOD_CULLED` joins the batched members' visibility.
    - S4 — cross-fades: a per-batch fade texture read at `batchIndirectIndex` through
@@ -448,6 +448,73 @@ moving members.
      deleted member's not put back; a raycast hits only the batch and `getMergeMemberAtBatchId`
      maps it, undefined for a freed or unknown id and a baked group), and
      `_dbg__MergingBatched.test.ts`' "Show unmerged" checks the meshes' place both ways.
+
+   **S2 results** (2026-11-11):
+   - **The seam** (`kernel/ecs/LodTargets.ts`): `LodMeshDrawDelegate` (`isDrawing`,
+     `applyLevel(entityId, world, level, fade)`, `setCulled(entityId, world, isCulled, fade)`,
+     `setFade(entityId, world, progress)`), `setLodMeshDrawDelegate` and
+     `getLodMeshDrawDelegateFor` (the delegate when it draws the entity now), all `@internal`.
+     `LodFades.ts`: `applyMeshLevel` always sets the level on the mesh, then for a delegated entity
+     calls `applyLevel` instead of making a fade copy; `setMeshCulled` hands a delegated entity's
+     cull to `setCulled` (with or without a fade: the plain path relies on the visibility
+     reconcile, which the batch doesn't read); `drawFade` ends the mesh's own copies first (a fade
+     it started before it was delegated), then calls `setFade`. `LodSystem.ts`: the `LOD`'s remove
+     hook shows level 0 through `applyLevelTo` (so the delegate hears it), the delete hook ends the
+     fade through `drawFade` (`setFade(1)`). The delegate's `setFade` may come for a fade it didn't
+     start; without one it does nothing. Not registered by merging yet (S3): until then a batched
+     member's LOD swaps its detached own mesh and the batch keeps the geometry it joined with.
+   - **The refusals** (`MergeEligibility.ts`): `BAKED` refuses a `LOD` ("it has a LOD (a BATCHED
+     group draws its levels)"); `BATCHED` takes one when `getBatchLodRefusal(mesh, lod._levels)`
+     passes: each resolved level's material and `castShadow` the mesh's, its geometry agreeing
+     exactly with the mesh's (`getBatchMismatch` now names what it compares against, `owner`). The
+     mesh agrees with the group, so every level does. Levels not resolved (no `lod()`) check
+     nothing. `AUTO`'s `BATCHED` merge checks before a bucket, as for the other refusals.
+   - **A later LOD** (`checkBatchedMemberLod`, `MergeGroups.ts`): a `LOD` add hook registered only
+     when `ctx.isInstalled('lod')` (so after `lod()`'s, which resolves the levels); a batched member
+     whose new levels its batch can't draw leaves its group (`removeFromMergeGroup`), warned
+     (`Merge group "<id>": entity N leaves it, drawn on its own: <reason>.`) and recorded as a
+     refusal for the Merging tab. A baked member's later LOD is left alone, as before.
+   - **Tests:** `features/lod/LodMeshDrawDelegate.test.ts` (7: the plain path's fade copy and its
+     disposal, which no unit test covered before; a delegated level change with its fade steps, a
+     cull fading out and in, no fades, the remove and delete hooks, an entity leaving the delegate
+     mid-fade and one joining it mid-fade, its plain copy disposed) and
+     `features/merging/MergeBatchLod.test.ts` (10: the refusals at a join, `AUTO`'s, a later LOD
+     kept, refused and left alone on a baked member). `yarn test` 3 253 passed; lint, both `tsc`,
+     the docs ratchet clean.
+   - **`yarn sbp` fails two budgets by 0.2 kB each:** `_engine/features/merging` 9.2 kB against
+     9 KiB (8.9 before S1: S1's detach and S2's checks, about +0.35 kB) and the initial download
+     393.2 kB against 393 KiB. **Decided (2026-11-11):** raised, `merging` 9 → 10 KiB and the
+     initial 393 → 394 KiB (`sbp.config.ts`, with the reason), rather than moving the checks into
+     the lazy chunk (about 0.25 kB saved, the join's refusal moved to the build, and S3's stubs
+     over again). S3's and S4's first-download parts stay forwarding stubs, the batch side lazy.
+     `assets/index.js` is 388.9 of its 389 KiB: watched in S3.
+
+   **S3 results** (2026-11-11):
+   - **Built:** `batchMemberLodDelegate` (`MergeBatchFront.ts`, forwarding stubs; set by merging's
+     install, whatever its order with `lod()`): it draws a member with an instance and
+     `TAG_MERGED` (one shown unmerged keeps the LOD's plain path). `MergeBatch.ts`: the batch holds
+     every member's level geometries (`collectGeometries`, `addGeometries`: a build sizes and adds
+     them, the unshown levels too; a LOD that came after the build adds its levels at its first
+     apply); `applyBatchMemberLevel` swaps the instance's geometry in place
+     (`setInstanceGeometry`: `setGeometryIdAt`, `geometryAt`, the order dirty, the sphere grown);
+     `setBatchMemberLodCulled` hides or shows it (`isBatchMemberShown` now counts `TAG_LOD_CULLED`
+     unless `TAG_LOD_TRANSITIONING`); `setBatchMemberFade(1)` hides a cull faded out;
+     `refreshBatchMember` (`TAG_MERGED`'s add hook) gives a member merged again the level and
+     visibility its own mesh got meanwhile. A faded level change switches at once until S4.
+   - **Found:** `addSystem` runs higher orders first, so `MERGE_BATCH_SYNC` (-0.25) runs before
+     `LOD_SELECTION` (-1.5), not after (this phase's proposal had it the other way): a frame's swaps
+     are counted and compacted in the next frame's sync, one frame of extra WebGPU draws after a
+     burst of swaps. Accepted (no extra per-frame system); `SystemStages.ts` says so.
+   - **Tests:** `MergeBatchLod.test.ts` (20, 10 new: the levels in the batch, a swap in place and
+     back, a faded swap at once without a copy, swaps splitting the runs and the next frame's
+     compaction, a later LOD's levels added at its first apply, a rebuild keeping the levels and a
+     leave showing it, a member merged again taking its mesh's level; culling hiding the instance
+     and never the batch, a cull fading out kept until its end, a culled member hidden through a
+     compaction and a `DISABLED` round trip). `yarn test` 3 263 passed; lint, both `tsc`, the docs
+     ratchet clean. Not yet in a browser (S6's scene).
+   - **`yarn sbp`:** `merging` 9.4 kB (of 10 KiB), the lazy `MergeBatch.js` 2.7 → 3.1 kB, the
+     initial 393.4 kB (of 394); `assets/index.js` 389.1 kB went over its 389 KiB: raised to 390 KiB
+     with the initial's reason (S2's decision; Phase 1 raised the two together).
 
    3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if

@@ -39,11 +39,14 @@ const profiles: SbpProfile[] = [
     // (`MergeBatch.ts`) names it: its class is a statement of `three.core.js`, one module, and
     // Rollup keeps a module's statements in its chunk, so no `import()` moves it
     // (docs/issues/three-classes-ship-with-their-chunk.md); with `merging`'s growth the initial
-    // is 392.8 and `assets/index.js` 388.6 KiB: 387 → 393 and 383 → 389 KiB
+    // is 392.8 and `assets/index.js` 388.6 KiB: 387 → 393 and 383 → 389 KiB. p375 Phase 2:
+    // per-member LOD in batched groups (S1's scene graph detach, S2's level checks; S3-S4's
+    // delegate and LOD-cull hooks are forwarding stubs, the batch side lazy): initial 393.2 KiB,
+    // 393 → 394 KiB; with S3's delegate `assets/index.js` 389.1 KiB, 389 → 390 KiB
     budgets: {
-      initial: 393 * KIB,
+      initial: 394 * KIB,
       chunks: {
-        'assets/index.js': 389 * KIB,
+        'assets/index.js': 390 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -82,7 +85,10 @@ const profiles: SbpProfile[] = [
         // `AUTO`'s batched key, the builds' dispatch (`MergeBuild.ts`) and the batch code's loader,
         // leave and visibility hooks (`MergeBatchFront.ts`); the batch code is a lazy chunk: 8 → 9
         // KiB
-        '_engine/features/merging': 9 * KIB,
+        // p375 Phase 2: 8.9 → 9.2 KiB: S1's scene graph detach of a batched member's mesh, S2's
+        // LOD level checks at a join and the later-LOD hook; S3-S4 add the LOD delegate's and the
+        // LOD-cull hooks' forwarding stubs (the batch side is in the lazy batch chunk): 9 → 10 KiB
+        '_engine/features/merging': 10 * KIB,
         '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,

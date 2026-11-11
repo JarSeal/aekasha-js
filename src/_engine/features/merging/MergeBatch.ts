@@ -27,6 +27,16 @@
 // compacts in the sync that frame (`compactBatch`): the same ids, each given the next member in
 // geometry order (`setGeometryIdAt`, its matrix and visibility written again), so nothing is
 // reallocated.
+//
+// LOD per member (p375 Phase 2): `lod()` keeps a member's levels and sets each on its own mesh; the
+// kernel's mesh draw delegate (MergeBatchFront.ts' forwarding stub, registered by merging's
+// install) hands the batch the level, the cull and the fade steps. The batch holds every level
+// geometry of its members (added with them; a LOD that came later adds its levels at its first
+// apply), and a level change gives the instance the level's geometry in place (`setGeometryIdAt`:
+// the id stays, its run may split, D1's compaction regroups: in the next frame's sync, which runs
+// before the LOD's apply, APP_RENDER_SYNC_ORDER). LOD culling hides the instance
+// (`isBatchMemberShown`), and a cull fading out keeps it until its fade ends. S3: a level change
+// or a fade in switches at once; S4 cross-fades them.
 import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
@@ -142,8 +152,9 @@ const rejoinSpatialIndex = (groupEntityId: number, world: ECSWorld) => {
 
 /**
  * Whether a batched member is drawn: not disabled, frustum-culled (an opt-in, the engine's) or
- * held. `overrides` gives the value of the tag a hook is changing (its remove hook runs before
- * it's gone).
+ * held, and not LOD culled unless it's fading out (`TAG_LOD_TRANSITIONING`: the outgoing copy).
+ * `overrides` gives the value of the tag a hook is changing (its remove hook runs before it's
+ * gone, an add hook before a fade's tag is added).
  * @internal
  */
 export const isBatchMemberShown = (
@@ -153,7 +164,9 @@ export const isBatchMemberShown = (
 ) =>
   !(overrides?.isDisabled ?? world.isDisabled(entityId)) &&
   !(overrides?.isFrustumCulled ?? world.hasComponent(entityId, ComponentType.TAG_FRUSTUM_CULLED)) &&
-  !(overrides?.isDrawHeld ?? world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD));
+  !(overrides?.isDrawHeld ?? world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) &&
+  (!(overrides?.isLodCulled ?? world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED)) ||
+    (overrides?.isLodFading ?? world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)));
 
 /**
  * Sets a batched member's instance visibility (its visibility hooks, MergeBatchFront.ts).
@@ -193,6 +206,51 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   if (!world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
     world.addComponent(entityId, ComponentType.TAG_MERGED, true);
   }
+};
+
+/** Calls `fn` with a member's own geometry (the level it shows) and its LOD's level geometries
+ * (the levels `lod()` resolved; none without a LOD). */
+const forEachMemberGeometry = (
+  entityId: number,
+  world: ECSWorld,
+  fn: (geometry: THREE.BufferGeometry) => void
+) => {
+  fn(getMemberMesh(entityId, world).geometry);
+  const levels = world.getComponent(entityId, ComponentType.LOD)?._levels;
+  if (levels) for (let i = 0; i < levels.length; i++) fn(levels[i].geometry);
+};
+
+/** The geometries of `members` and their LOD levels, each once. */
+const collectGeometries = (members: readonly number[], world: ECSWorld) => {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const add = (geometry: THREE.BufferGeometry) => geometries.add(geometry);
+  for (const entityId of members) forEachMemberGeometry(entityId, world, add);
+  return geometries;
+};
+
+/** Adds the geometries the batch doesn't hold yet, growing its buffers when they're full. */
+const addGeometries = (state: BatchState, geometries: Iterable<THREE.BufferGeometry>) => {
+  const { batch, geometryIds } = state;
+  const added: THREE.BufferGeometry[] = [];
+  let vertices = 0;
+  let indices = 0;
+  for (const geometry of geometries) {
+    if (geometryIds.has(geometry) || added.includes(geometry)) continue;
+    added.push(geometry);
+    vertices += geometry.getAttribute('position').count;
+    indices += getIndexCount(geometry);
+  }
+  if (vertices > batch.unusedVertexCount || indices > batch.unusedIndexCount) {
+    state.maxVertexCount = Math.ceil(
+      (state.maxVertexCount - batch.unusedVertexCount + vertices) * BATCH_RESERVE
+    );
+    state.maxIndexCount = Math.max(
+      Math.ceil((state.maxIndexCount - batch.unusedIndexCount + indices) * BATCH_RESERVE),
+      1
+    );
+    batch.setGeometrySize(state.maxVertexCount, state.maxIndexCount);
+  }
+  for (const geometry of added) geometryIds.set(geometry, batch.addGeometry(geometry));
 };
 
 /** The members' geometries in first-seen order, and the members grouped by them in that order
@@ -243,9 +301,11 @@ const createBatch = (
   world: ECSWorld
 ) => {
   const byGeometry = groupByGeometry(members, world);
+  // The buffers hold the members' LOD levels too
+  const geometries = collectGeometries(members, world);
   let vertices = 0;
   let indices = 0;
-  for (const geometry of byGeometry.keys()) {
+  for (const geometry of geometries) {
     vertices += geometry.getAttribute('position').count;
     indices += getIndexCount(geometry);
   }
@@ -327,33 +387,19 @@ const createBatch = (
     state.geometryIds.set(geometry, batch.addGeometry(geometry));
     for (const entityId of ids) addMemberInstance(entityId, state, world);
   }
+  // The levels no member shows now
+  for (const geometry of geometries) {
+    if (!state.geometryIds.has(geometry))
+      state.geometryIds.set(geometry, batch.addGeometry(geometry));
+  }
   return state;
 };
 
-/** Makes room for `newcomers` and their geometries the batch doesn't hold yet, and adds those. */
+/** Makes room for `newcomers` and their geometries (their LOD levels too) the batch doesn't hold
+ * yet, and adds those. */
 const growBatch = (state: BatchState, newcomers: readonly number[], world: ECSWorld) => {
-  const { batch, geometryIds } = state;
-  const added = new Set<THREE.BufferGeometry>();
-  let vertices = 0;
-  let indices = 0;
-  for (const entityId of newcomers) {
-    const { geometry } = getMemberMesh(entityId, world);
-    if (geometryIds.has(geometry) || added.has(geometry)) continue;
-    added.add(geometry);
-    vertices += geometry.getAttribute('position').count;
-    indices += getIndexCount(geometry);
-  }
-  if (vertices > batch.unusedVertexCount || indices > batch.unusedIndexCount) {
-    state.maxVertexCount = Math.ceil(
-      (state.maxVertexCount - batch.unusedVertexCount + vertices) * BATCH_RESERVE
-    );
-    state.maxIndexCount = Math.max(
-      Math.ceil((state.maxIndexCount - batch.unusedIndexCount + indices) * BATCH_RESERVE),
-      1
-    );
-    batch.setGeometrySize(state.maxVertexCount, state.maxIndexCount);
-  }
-  for (const geometry of added) geometryIds.set(geometry, batch.addGeometry(geometry));
+  const { batch } = state;
+  addGeometries(state, collectGeometries(newcomers, world));
   const needed = batch.instanceCount + newcomers.length;
   if (needed > batch.maxInstanceCount) {
     batch.setInstanceCount(Math.ceil(needed * BATCH_RESERVE) + MIN_SPARE_INSTANCES);
@@ -522,4 +568,109 @@ export const mergeBatchSyncSystem = (world: ECSWorld) => {
       if (state.runs > COMPACT_RUNS_FACTOR * state.geometriesInUse) compactBatch(state, world);
     }
   }
+};
+
+// --- LOD PER MEMBER (p375 Phase 2) ---
+//
+// The kernel's mesh draw delegate's work (MergeBatchFront.ts forwards to it): `lod()` has set the
+// level on the member's own mesh already.
+
+// The cull's overrides (constants: a cull allocates nothing). The cull's add hook runs before its
+// fade's tag is added: with a fade, the member is the outgoing copy until the fade ends
+const LOD_CULLED = Object.freeze({ isLodCulled: true, isLodFading: false });
+const LOD_CULLED_FADING = Object.freeze({ isLodCulled: true, isLodFading: true });
+const LOD_SHOWN = Object.freeze({ isLodCulled: false });
+const LOD_FADE_ENDED = Object.freeze({ isLodFading: false });
+
+/** A member's batch, while it has an instance in one. */
+const getMemberState = (member: MergeMemberData | undefined, world: ECSWorld) => {
+  if (!member || member.instanceId < 0) return undefined;
+  const group = world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  return group && states.get(group);
+};
+
+/** Gives a member's instance `geometry` (one of its levels) in place, adding the member's levels
+ * first when the batch doesn't hold it (a LOD that came after the member's build), and grows the
+ * batch's sphere to hold it there. */
+const setInstanceGeometry = (
+  state: BatchState,
+  entityId: number,
+  instanceId: number,
+  geometry: THREE.BufferGeometry,
+  world: ECSWorld
+) => {
+  let geometryId = state.geometryIds.get(geometry);
+  if (geometryId === undefined) {
+    const geometries = collectGeometries([entityId], world);
+    geometries.add(geometry);
+    addGeometries(state, geometries);
+    geometryId = state.geometryIds.get(geometry)!;
+  }
+  if (state.geometryAt[instanceId] === geometryId) return;
+  state.batch.setGeometryIdAt(instanceId, geometryId);
+  state.geometryAt[instanceId] = geometryId;
+  state.isOrderDirty = true;
+  state.batch.getMatrixAt(instanceId, instanceMatrix);
+  if (growBatchSphere(state, geometry)) rejoinSpatialIndex(state.groupEntityId, world);
+};
+
+/**
+ * The LOD delegate's `applyLevel`: the member's instance shows the level's geometry. S3: at once,
+ * a faded change too (S4 cross-fades).
+ * @internal
+ */
+export const applyBatchMemberLevel = (
+  entityId: number,
+  world: ECSWorld,
+  level: { geometry: THREE.BufferGeometry }
+) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const state = getMemberState(member, world);
+  if (state) setInstanceGeometry(state, entityId, member!.instanceId, level.geometry, world);
+};
+
+/**
+ * The LOD delegate's `setCulled`: hides or shows the member's instance (a cull fading out keeps
+ * it until its fade ends).
+ * @internal
+ */
+export const setBatchMemberLodCulled = (
+  entityId: number,
+  world: ECSWorld,
+  isCulled: boolean,
+  fade: boolean
+) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const state = getMemberState(member, world);
+  if (!state) return;
+  const overrides = isCulled ? (fade ? LOD_CULLED_FADING : LOD_CULLED) : LOD_SHOWN;
+  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world, overrides));
+};
+
+/**
+ * The LOD delegate's `setFade`. S3: its end hides a member faded out to LOD culled (its fade's
+ * tag goes right after); the steps draw nothing yet (S4).
+ * @internal
+ */
+export const setBatchMemberFade = (entityId: number, world: ECSWorld, progress: number) => {
+  if (progress < 1) return;
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const state = getMemberState(member, world);
+  if (!state) return;
+  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world, LOD_FADE_ENDED));
+};
+
+/**
+ * A batched member merged again (`TAG_MERGED`'s add hook: a build, "Show unmerged" turned off):
+ * its instance takes the level its own mesh shows and its visibility now, which the LOD changed
+ * on its own mesh meanwhile.
+ * @internal
+ */
+export const refreshBatchMember = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const state = getMemberState(member, world);
+  if (!state) return;
+  const { geometry } = getMemberMesh(entityId, world);
+  setInstanceGeometry(state, entityId, member!.instanceId, geometry, world);
+  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world));
 };
