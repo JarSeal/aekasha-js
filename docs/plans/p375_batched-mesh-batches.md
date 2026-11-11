@@ -386,8 +386,9 @@ moving members.
      `setObjectLodFadeNode` (before the batch's first build; the shadow pass reads it too), a
      second instance per fading member with the outgoing level (`MERGE_MEMBER._fadeInstanceId`),
      cull fades, and the second instance through fade end, delete, leave, compaction and rebuild.
-   - S5 — the debugger: the batch's fading instances and level geometries, the member window's
-     level and fade instance; the LOD tab and overlay checked with batched members.
+   - S5 — the debugger — done ("S5 results" below): the batch's fading instances and level
+     geometries, the member window's level and fade instance; the LOD tab and overlay checked with
+     batched members.
    - S6 — the exit: `?bmsLod=…` in `batchedMeshSpike` (two or three hand-made levels per
      geometry) and a camera dolly; the bench's separate LOD meshes against the engine batch, still
      and dollying (swaps a second, compactions, runs), and a range `customSort` against compaction
@@ -551,6 +552,35 @@ moving members.
      out and in, the fade texture and its growth, a grown batch's rebuild). `yarn test` 3 271
      passed; lint, both `tsc`, the docs ratchet clean. `yarn sbp`: every budget passes (`merging`
      9.4 of 10 KiB, the initial 393.4 of 394, `assets/index.js` 389.2 of 390).
+
+   **S5 results** (2026-11-11):
+   - **Built** (debug code only, `_dbg__` modules): `getMergeBatchFigures` adds `batchInstances`
+     (three's `instanceCount`: the members' and the level fades' outgoing instances),
+     `levelGeometries` (held geometries that are a member's LOD level), `lodMembers`, `levelFades`,
+     `cullFades` and `lodCulled`. The tab's row adds ", N fading" only while some fade (a group
+     without fades reads as before: no tab shot changes). The group window's Batch row counts the
+     LOD levels and the batch's instances (was the members'), and a LOD row ("2 members with a LOD:
+     2 level fades, 0 cull fades, 0 LOD culled", or "no member has a LOD"). The member window: the
+     state "LOD culled: its instance hidden", and a LOD row (`getMemberLodText`) only on a batched
+     group's member or a member with a LOD (largeWorld's member window shot keeps its rows): "level
+     1 of 2, fading from level 0 (instance #3), 17%", "… fading out to LOD culled" / "fading in
+     from LOD culled", "a fade it came with: drawn whole until it ends", "LOD culled"; a baked
+     member's later LOD "on its own mesh (not drawn: its group draws the geometry it joined with)".
+     The LOD window's Kind is "mesh, drawn by its merge batch" while the delegate draws it (through
+     the kernel's `getLodMeshDrawDelegateFor`: no merging import); the LOD overlay's loop is
+     `writeLodOverlayBoxes(world, targets)`, exported for the tests.
+   - **Found (fixed):** the merging overlay culled a batched group whole when the batch's
+     `instanceCount` equalled its members: with level fades' outgoing instances that can hold
+     while a member still waits for its build, so a waiting member in view outside the batch's
+     sphere wasn't outlined. It counts the members with an instance now. It also skips a member
+     the LOD culled (its instance hidden; one fading out is still outlined).
+   - **Checked:** the LOD overlay and window over batched members whose own meshes are out of the
+     scene graph: boxes at their own meshes' poses (moved too), coloured by level, none once
+     culled; the window's state and distance as for a plain mesh; "Show unmerged" makes it a plain
+     mesh again. Nothing needed changing in the LOD tab's figures (its counts are the selection's).
+   - **Tests:** `debug/_dbg__MergingBatchedLod.test.ts` (10; the cull-whole test fails with the old
+     count). `yarn test` 3 281 passed; lint, both `tsc`, the docs ratchet clean. Not in a browser
+     (S6's scene).
 
    3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if

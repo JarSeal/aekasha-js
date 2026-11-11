@@ -1,7 +1,8 @@
 // What the Merging tab and its windows read of the merge groups (docs/plans/_DONE_p373_merge-debug-and-member-editing.md
 // D1, D2): names, a group's vertices and cell, the summary's figures (counts, draws per pass,
 // waste), the build and update rates, and the refusals still standing; a batched group's batch
-// figures (p375 S5: its instances, visible ones, geometry runs and compactions). Pure reads of the
+// figures (p375 S5: its instances, visible ones, geometry runs and compactions; Phase 2 S5: its
+// members' LOD, their level geometries, fades and outgoing instances). Pure reads of the
 // components, of the merging code's debug figures (MergeState.ts' `getMergeDebugStats`) and of a
 // batch's state (MergeBatch.ts' `getBatchState`, through the loader: the batch code isn't pulled
 // into the debugger's chunk, and no batch exists before it's loaded).
@@ -39,11 +40,22 @@ export type MergeBatchFigures = {
   /** …of which shown (`setVisibleAt`: not disabled, held or culled by the engine; three's own
    * per-member culling is per pass, not counted) */
   visible: number;
+  /** The batch's instances: the members' and their level fades' outgoing ones */
+  batchInstances: number;
   /** The instances the batch has room for */
   maxInstances: number;
   /** Geometries the batch holds, and those its instances use */
   geometries: number;
   geometriesInUse: number;
+  /** Of the geometries it holds, those a member's LOD has as a level */
+  levelGeometries: number;
+  /** Members with an instance and a `LOD` */
+  lodMembers: number;
+  /** Members in a level fade (each with an outgoing instance), and in a cull fade (out or in) */
+  levelFades: number;
+  cullFades: number;
+  /** Members the LOD culled, their instance hidden (a cull fading out is still drawn) */
+  lodCulled: number;
   /** The vertices its geometries take, and its vertex buffer's size */
   vertices: number;
   maxVertices: number;
@@ -65,18 +77,43 @@ export const getMergeBatchFigures = (
   const { batch } = state;
   let instances = 0;
   let visible = 0;
+  let lodMembers = 0;
+  let levelFades = 0;
+  let cullFades = 0;
+  let lodCulled = 0;
+  const levelGeometries = new Set<THREE.BufferGeometry>();
   for (const entityId of group.members) {
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
     if (!member || member.instanceId < 0) continue;
     instances++;
     if (batch.getVisibleAt(member.instanceId)) visible++;
+    if (member._fadeInstanceId >= 0) levelFades++;
+    else if (member._lodFade) cullFades++;
+    const lod = world.getComponent(entityId, ComponentType.LOD);
+    if (!lod) continue;
+    lodMembers++;
+    for (const level of lod._levels) {
+      if (state.geometryIds.has(level.geometry)) levelGeometries.add(level.geometry);
+    }
+    if (
+      world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED) &&
+      !world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)
+    ) {
+      lodCulled++;
+    }
   }
   return {
     instances,
     visible,
+    batchInstances: batch.instanceCount,
     maxInstances: batch.maxInstanceCount,
     geometries: state.geometryIds.size,
     geometriesInUse: state.geometriesInUse,
+    levelGeometries: levelGeometries.size,
+    lodMembers,
+    levelFades,
+    cullFades,
+    lodCulled,
     vertices: state.maxVertexCount - batch.unusedVertexCount,
     maxVertices: state.maxVertexCount,
     runs: state.runs,

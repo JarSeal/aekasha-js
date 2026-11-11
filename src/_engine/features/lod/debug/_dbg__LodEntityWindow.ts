@@ -4,6 +4,7 @@ import { CMP } from '../../../ui/core/CMP';
 import type { ECSWorld } from '../../../kernel/ecs/ECS';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import { getLodMeshDrawDelegateFor } from '../../../kernel/ecs/LodTargets';
 import {
   getLodSelectionCamera,
   getLodWorldSphere,
@@ -63,7 +64,8 @@ const getKindLabel = (entityId: number, lod: LodData, world: ECSWorld) => {
   if ((mesh as THREE.InstancedMesh | undefined)?.isInstancedMesh) {
     return `instanced mesh (${(mesh as THREE.InstancedMesh).count} instances)`;
   }
-  return 'mesh';
+  // Its levels drawn by something else (p375 Phase 2: a batched merge member's batch)
+  return getLodMeshDrawDelegateFor(entityId, world) ? 'mesh, drawn by its merge batch' : 'mesh';
 };
 
 const triangles = (geometry: THREE.BufferGeometry) =>
@@ -146,7 +148,7 @@ const getCameraText = () => {
 const row = (label: string, value: string) => `${label.padEnd(13)}${value}`;
 
 /** The window's text: the entity's live readout and its levels' switch distances. */
-const getLodEntityText = (entityId: number, world: ECSWorld) => {
+export const getLodEntityText = (entityId: number, world: ECSWorld) => {
   if (!world.isAlive(entityId)) return 'The entity no longer exists.';
   const lod = world.getComponent(entityId, ComponentType.LOD);
   if (!lod) return 'The entity has no LOD (any more).';

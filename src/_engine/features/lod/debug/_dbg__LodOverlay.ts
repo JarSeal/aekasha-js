@@ -15,7 +15,9 @@ import { getLodSelectionCamera, getLodWorldSphere } from '../LodMeasure';
 // each level has its own line, refilled every frame while the overlay is on. Default world only.
 //
 // "In view" is the selection's view: inside the selection camera's frustum (the main camera, or
-// the active one with "use active camera"), and not disabled, frustum-culled or LOD-culled.
+// the active one with "use active camera"), and not disabled, frustum-culled or LOD-culled. A
+// batched merge member (p375 Phase 2), its own mesh out of the scene graph, is measured as the
+// selection measures it (`measureEntity`: a mesh without a parent is one at the root).
 
 /** Level 0 green, 1 yellow, 2 orange, 3 red, 4 magenta, 5 and on blue. */
 export const LOD_OVERLAY_COLORS = [0x30c040, 0xe0c020, 0xf08020, 0xd03020, 0xc040d0, 0x4080f0];
@@ -52,34 +54,43 @@ const createLevelLine = (index: number) => {
   return line;
 };
 
+/**
+ * Writes a box per `LOD` entity in the selection camera's view (shown: not disabled, frustum- or
+ * LOD-culled) into the writer of the level it shows (`targets`, index-aligned with
+ * LOD_OVERLAY_COLORS; the last takes the levels past it). Nothing without a camera.
+ * Allocation-free.
+ */
+export const writeLodOverlayBoxes = (world: ECSWorld, targets: LineWriter[]) => {
+  const camera = getLodSelectionCamera();
+  if (!camera) return;
+  camera.updateMatrixWorld();
+  _frustum.setFromProjectionMatrix(
+    _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+  );
+  const disabled = world.getStorage(ComponentType.DISABLED);
+  const frustumCulled = world.getStorage(ComponentType.TAG_FRUSTUM_CULLED);
+  const lodCulled = world.getStorage(ComponentType.TAG_LOD_CULLED);
+  const last = targets.length - 1;
+  for (const [entityId, lod] of world.getStorage(ComponentType.LOD)) {
+    if (disabled.has(entityId) || frustumCulled.has(entityId) || lodCulled.has(entityId)) {
+      continue;
+    }
+    if (!getLodWorldSphere(world, entityId, lod, _sphere)) continue;
+    if (!_frustum.intersectsSphere(_sphere)) continue;
+    const r = _sphere.radius;
+    const c = _sphere.center;
+    _box.min.set(c.x - r, c.y - r, c.z - r);
+    _box.max.set(c.x + r, c.y + r, c.z + r);
+    // Not applied yet: the mesh shows what it was created with, level 0
+    writeBox3Edges(targets[Math.min(Math.max(lod.applied, 0), last)], _box);
+  }
+};
+
 const lodOverlaySystem = (world: ECSWorld) => {
   if (!isEnabled || world !== getECSWorld()) return;
 
   for (let i = 0; i < lines.length; i++) writers[i] = lines[i].beginWrite();
-  const camera = getLodSelectionCamera();
-  if (camera) {
-    camera.updateMatrixWorld();
-    _frustum.setFromProjectionMatrix(
-      _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    );
-    const disabled = world.getStorage(ComponentType.DISABLED);
-    const frustumCulled = world.getStorage(ComponentType.TAG_FRUSTUM_CULLED);
-    const lodCulled = world.getStorage(ComponentType.TAG_LOD_CULLED);
-    const last = writers.length - 1;
-    for (const [entityId, lod] of world.getStorage(ComponentType.LOD)) {
-      if (disabled.has(entityId) || frustumCulled.has(entityId) || lodCulled.has(entityId)) {
-        continue;
-      }
-      if (!getLodWorldSphere(world, entityId, lod, _sphere)) continue;
-      if (!_frustum.intersectsSphere(_sphere)) continue;
-      const r = _sphere.radius;
-      const c = _sphere.center;
-      _box.min.set(c.x - r, c.y - r, c.z - r);
-      _box.max.set(c.x + r, c.y + r, c.z + r);
-      // Not applied yet: the mesh shows what it was created with, level 0
-      writeBox3Edges(writers[Math.min(Math.max(lod.applied, 0), last)], _box);
-    }
-  }
+  writeLodOverlayBoxes(world, writers);
   for (let i = 0; i < lines.length; i++) {
     lines[i].endWrite();
     // An empty line would still draw (0 vertices, a WebGPU warning)

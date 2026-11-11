@@ -7,7 +7,8 @@
 //
 // A batched group's (p375 S5): its mode, its batch's figures (instances, visible ones, geometries,
 // vertices, runs, compactions, per-member culling) in place of the palette and the waste; a
-// batched member's state is its instance's, its part its instance and the batch's geometry.
+// batched member's state is its instance's, its part its instance and the batch's geometry. Its
+// LOD (p375 Phase 2 S5): the group's LOD figures, a member's level and the fade its batch draws.
 import type * as THREE from 'three/webgpu';
 import { registerEntityWindowOpener } from '../../../debug/Profiler';
 import { updateDebuggerTab } from '../../../debug/DebuggerGUI';
@@ -131,7 +132,47 @@ const getBatchedMemberStateText = (entityId: number, member: MergeMemberData, wo
   if (world.hasComponent(entityId, ComponentType.TAG_FRUSTUM_CULLED)) {
     return 'frustum-culled: its instance hidden';
   }
+  // A cull fading out is drawn until its fade ends
+  if (
+    world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED) &&
+    !world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)
+  ) {
+    return 'LOD culled: its instance hidden';
+  }
   return 'merged';
+};
+
+/** A batched member's level and the fade its batch draws, eg. "level 1 of 3, fading from level 0
+ * (instance #12), 40%". */
+const getBatchedMemberLodText = (entityId: number, member: MergeMemberData, world: ECSWorld) => {
+  const lod = world.getComponent(entityId, ComponentType.LOD)!;
+  const level = `level ${Math.max(lod.applied, 0)} of ${lod._levels.length}`;
+  const percent = `${Math.round((lod._fade ?? 0) * 100)}%`;
+  const isFading = world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING);
+  switch (member._lodFade) {
+    case 'LEVEL':
+      return `${level}, fading from level ${lod._fadeFrom ?? '?'} (instance #${member._fadeInstanceId}), ${percent}`;
+    case 'OUT':
+      return `${level}, fading out to LOD culled, ${percent}`;
+    case 'IN':
+      return `${level}, fading in from LOD culled, ${percent}`;
+  }
+  if (isFading) return `${level}, a fade it came with: drawn whole until it ends`;
+  if (world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED)) return `${level}, LOD culled`;
+  return lod.applied < 0 ? `${level} (not selected yet)` : level;
+};
+
+/** A member's LOD: none, a batched member's level and fade, or the level its own mesh shows (a
+ * baked group draws the geometry a member joined with). */
+export const getMemberLodText = (entityId: number, world: ECSWorld) => {
+  const lod = world.getComponent(entityId, ComponentType.LOD);
+  if (!lod || lod._levels.length === 0) return 'none';
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (member && member.instanceId >= 0) return getBatchedMemberLodText(entityId, member, world);
+  const own = `level ${Math.max(lod.applied, 0)} of ${lod._levels.length} on its own mesh`;
+  return member && member.partIndex !== -1
+    ? `${own} (not drawn: its group draws the geometry it joined with)`
+    : own;
 };
 
 /** A member's state in a few words. */
@@ -207,11 +248,26 @@ const getBatchItems = (group: MergeGroupData, world: ECSWorld): PropertyGridItem
   const figures = () => getMergeBatchFigures(group, world);
   const NOT_BUILT = 'not built yet';
   return [
-    live('Batch', () => {
-      const f = figures();
-      if (!f) return NOT_BUILT;
-      return `${formatCountOf(f.geometries, 'geometry', 'geometries')}, ${formatCount(f.vertices)} of ${formatCount(f.maxVertices)} vertices, ${formatCount(f.instances)} of ${formatCount(f.maxInstances)} instances`;
-    }),
+    live(
+      'Batch',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        const levels = f.levelGeometries ? ` (${formatCount(f.levelGeometries)} LOD levels)` : '';
+        return `${formatCountOf(f.geometries, 'geometry', 'geometries')}${levels}, ${formatCount(f.vertices)} of ${formatCount(f.maxVertices)} vertices, ${formatCount(f.batchInstances)} of ${formatCount(f.maxInstances)} instances`;
+      },
+      "Its geometries are its members' and their LOD levels', each once; its instances are its members' and their level fades' outgoing ones."
+    ),
+    live(
+      'LOD',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        if (!f.lodMembers) return 'no member has a LOD';
+        return `${formatCountOf(f.lodMembers, 'member')} with a LOD: ${formatCountOf(f.levelFades, 'level fade')}, ${formatCountOf(f.cullFades, 'cull fade')}, ${formatCount(f.lodCulled)} LOD culled`;
+      },
+      "A level fade draws the outgoing level as a second instance until it ends; a cull fade dithers the member's own instance."
+    ),
     live(
       'Draw runs',
       () => {
@@ -361,6 +417,10 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
   const member = () => world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const mesh = () => getMemberMesh(entityId, world);
   const pose = getMergeMemberPoseItems(entityId, world);
+  const joined = getGroup(member()?.groupEntityId ?? -1, world);
+  // A LOD row where one can matter: a batched group's member, or a member with a LOD
+  const hasLodRow =
+    world.hasComponent(entityId, ComponentType.LOD) || Boolean(joined && isBatchedGroup(joined));
   const items: PropertyGridItem[] = [
     getNoteItem(() => {
       if (!world.isAlive(entityId)) return 'The entity no longer exists.';
@@ -384,6 +444,15 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
     }),
     live('Vertices', () => formatCount(mesh()?.geometry.getAttribute('position')?.count ?? 0)),
     live('Part', () => getMemberPartText(entityId, world)),
+    ...(hasLodRow
+      ? [
+          live(
+            'LOD',
+            () => getMemberLodText(entityId, world),
+            "A level fade draws the outgoing level as a second instance of the batch; the LOD tab's window has the switch distances."
+          ),
+        ]
+      : []),
     live('Palette index', () => {
       const index = member()?._paletteIndex;
       return index === undefined ? 'none (a group of one material)' : String(index);
