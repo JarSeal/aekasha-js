@@ -13,7 +13,9 @@ Next to either, `?startScene=<scene id>` picks the first scene.
 
 `h` opens the drawer. Its tabs cover the engine: stats, the main loop, the sky box, the debug
 tools, physics, the renderer, assets, PostFX, ray casting, lights, cameras, characters, the ECS,
-the spatial index and levels of detail. The drawer remembers its tab, its width and each tab's
+the spatial index, levels of detail, [world streaming](hub:features/streaming) and
+[mesh merging](hub:features/mesh-merging#debugging). A feature's tab is there when the app lists
+the feature. The drawer remembers its tab, its width and each tab's
 settings in localStorage.
 
 The debugger is built from the [UI kit](hub:features/ui-kit) in its compact density, and is dark
@@ -23,8 +25,9 @@ changes it for your browser. Its keys are its own: a key pressed on a debugger c
 reaches your app's action maps or key bindings.
 
 From the drawer, an entity opens in an edit window: lights, cameras, ECS worlds, PostFX passes,
-physics entities, assets and characters. Several can be open at once, and they're kept over
-reloads and scene changes.
+physics entities, assets, characters, merge groups and their members. Several can be open at
+once, and they're kept over reloads and scene changes (but for a streaming cell's and a merge
+group's or member's, which close with their scene).
 
 ## Write your own tab
 

@@ -81,7 +81,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `src/_engine/features/lines/CLAUDE.md`: lines (the backends, the refill, the entity binding, the scene exit).
 - `src/_engine/features/viewports/CLAUDE.md`: viewports (the placement, interactive slots, the renderer state, the axes gizmo and the environment ball).
 - `src/_engine/features/streaming/CLAUDE.md`: world streaming (the cells' settings and levels, the state machine, code content, the cells' bodies and their physics tiers, the runtime and its scene hooks, the Streaming tab).
-- `src/_engine/features/merging/CLAUDE.md`: mesh merging (merge groups: the group entity, the builds, in-place member updates, the `merge` prop and `AUTO`, the scene step and its holds, the refusals, the streaming limits).
+- `src/_engine/features/merging/CLAUDE.md`: mesh merging (merge groups: the group entity, the builds, in-place member updates, the `merge` prop and `AUTO`, the scene step and its holds, the refusals, the streaming limits, edit sessions and picking; merge debugging: the Merging tab, its windows, undo, the overlay and the A/B view).
 - `hub/CLAUDE.md`: authoring the Hub (pages, Markdown, code blocks, snippets, scenes and examples, feature pages, dev pages and the Project section: the design documents, the component library; issue files).
 - `devTools/hub/CLAUDE.md`: the Hub's generator (search, output, the script build and its UI kit stand-ins, modes, dev plugin, generated sections, the API Documentation) and `yarn hub:build`'s detail.
 - `devTools/assetPipeline/CLAUDE.md`: the asset pipeline's commands in detail (`yarn assets`, `yarn setupAssetTools`, the build's budgets).

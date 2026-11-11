@@ -139,6 +139,55 @@ A member's `TRANSFORM` changing isn't enough: the engine doesn't watch it (a fix
 would look like a move). In debug mode, a member moved without `updateMergeMember` warns once,
 naming it and its group.
 
+### Moving a member over many frames
+
+`updateMergeMember` writes the member's part once. For a member that moves for a while (a drag in
+an editor tool), an edit session draws it on its own meanwhile and writes it into the merged mesh
+once, at the end:
+
+```ts
+import { getECSWorld, getEntityIdByAppId } from 'aekasha';
+import { beginMergeMemberEdit, endMergeMemberEdit } from 'aekasha/merging';
+
+const gate = getEntityIdByAppId('ruinGate')!;
+beginMergeMemberEdit(gate);
+getECSWorld().setTransform(gate, { pos: { x: 4, y: 0, z: 12 } }); // as often as the drag moves
+endMergeMemberEdit(gate);
+```
+
+- [`beginMergeMemberEdit`](api:beginMergeMemberEdit) hides the member's part of the merged mesh
+  (in place, no rebuild) and draws its own mesh, which follows its `TRANSFORM`: moving it costs
+  the group nothing per frame.
+- [`endMergeMemberEdit`](api:endMergeMemberEdit) writes its part where it is now, draws it merged
+  again and moves its physics body there (a fixed body doesn't follow its mesh).
+- [`cancelMergeMemberEdit`](api:cancelMergeMemberEdit) puts it back where it was at the begin,
+  then ends. [`isMergeMemberInEdit`](api:isMergeMemberInEdit) says whether a session is open.
+- A scene exit cancels the open sessions. A member removed or deleted meanwhile stays where it
+  is, on its own; a group rebuilt meanwhile keeps the member on its own until the end.
+
+### Which member a ray hit
+
+A raycast hits the group's mesh, whose `userData.entityId` is the group's entity.
+[`getMergeMemberAtFace`](api:getMergeMemberAtFace) resolves the hit's face to the member drawn
+there (a search of the group's part table, no allocation):
+
+```ts
+import * as THREE from 'three/webgpu';
+import { getRootScene } from 'aekasha';
+import { getMergeMemberAtFace } from 'aekasha/merging';
+
+const ray = new THREE.Raycaster(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));
+const [hit] = ray.intersectObject(getRootScene()!, true);
+const hitEntityId = hit?.object.userData.entityId as number | undefined;
+const memberId =
+  hitEntityId !== undefined && hit.faceIndex != null
+    ? getMergeMemberAtFace(hitEntityId, hit.faceIndex)
+    : undefined;
+```
+
+It's `undefined` for a face of a member removed since the build, and for anything that isn't a
+built group.
+
 ## Scene loads
 
 A scene's groups are built during its load, after its code has placed its meshes and physics has
@@ -213,16 +262,49 @@ In a [streaming](hub:features/streaming) scene, keep each group inside a cell:
   group's mesh collapsed in place, and a cell loaded during play draws its members on their own
   until the next frame merges them (the group's mesh may compile its shaders on its first draw).
 
+## Debugging
+
+In debug mode (`?isDebug=true`), the drawer's **Merging** tab (`h`, the last tab) shows what
+merging does in the scene. Here on the [mesh merging example](hub:examples/merging), with
+**Highlight all groups** on (the overlay's lines add their own draws to the example's count):
+
+![The Merging tab on the mesh merging example: five groups, each group's members outlined in its colour](merging-tab.png)
+
+- **The summary:** the groups and their members, the merged vertices and the wasted ones (left by
+  removed members until the next build), each pass's draws now against every member drawn on its
+  own (before culling: what the pass submits with everything in view), the builds and in-place
+  updates in the last second, the last build's time, and how many entities were refused.
+- **Highlight all groups** outlines the members of every group in view, each group in a colour
+  of its own (it draws with the [lines](hub:features/lines) feature).
+- **The groups:** a row per group (an `AUTO` one with its material and cell), which opens the
+  group's window; its two buttons outline the group's members and show it unmerged.
+- **Refused entities:** each entity whose `merge` was refused, with the reason.
+
+A **group's window** shows its state, settings, members, vertices and wasted vertices, with
+Rebuild (which compacts too) and Dissolve; a member row opens the member's window. A **member's
+window** shows its group (a button opens the group's window), its state, geometry, material and
+part of the merged mesh, and its position, rotation and scale as fields: editing them moves the
+member in an [edit session](#moving-a-member-over-many-frames), drawn on its own while you drag
+and written in place when you let go.
+"Remove from group" takes it out. The profiler's Objects tab opens a group mesh's window too.
+
+- **Undo** (`Ctrl/⌘ + Z`) takes back a dissolve, a removal and each move, during the scene visit
+  they were made in: members are named by entity id, which another visit can give to another
+  entity.
+- **Show unmerged** (a group's row or window) hides the group's mesh and draws its members on
+  their own, until you turn it off or the scene exits: an A/B of the image and the draw count. The
+  image stays the same (but where two members' faces lie in one plane: draw order picks which
+  shows), and each pass draws the members one by one instead of the group's one mesh, less those
+  now culled on their own.
+
 ## Not yet
 
-- No debug tab: the group's mesh is in the profiler's counts and the Objects tab, but a group's
-  members, sizes and parts aren't shown, and a raycast hit on the group isn't mapped to its
-  member.
 - One material per group: meshes with different materials make a group each.
 - A group's level of detail: members with a `LOD` are refused.
 
-See [the plan](repo:docs/plans/_DONE_p372_mesh-merge-groups.md) and its epic,
-[static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
+See the plans, [merge groups](repo:docs/plans/_DONE_p372_mesh-merge-groups.md) and
+[merge debugging and member editing](repo:docs/plans/p373_merge-debug-and-member-editing.md),
+and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs
 
@@ -231,7 +313,11 @@ See [the plan](repo:docs/plans/_DONE_p372_mesh-merge-groups.md) and its epic,
   [`removeFromMergeGroup`](api:removeFromMergeGroup) and
   [`dissolveMergeGroup`](api:dissolveMergeGroup).
 - [`updateMergeMember`](api:updateMergeMember) and [`rebuildMergeGroup`](api:rebuildMergeGroup).
-- [`getMergeGroupOf`](api:getMergeGroupOf).
+- Edit sessions: [`beginMergeMemberEdit`](api:beginMergeMemberEdit),
+  [`endMergeMemberEdit`](api:endMergeMemberEdit),
+  [`cancelMergeMemberEdit`](api:cancelMergeMemberEdit) and
+  [`isMergeMemberInEdit`](api:isMergeMemberInEdit).
+- [`getMergeGroupOf`](api:getMergeGroupOf) and [`getMergeMemberAtFace`](api:getMergeMemberAtFace).
 - [`MeshMergeDef`](api:MeshMergeDef): a mesh's `merge`.
 
 ## Read more

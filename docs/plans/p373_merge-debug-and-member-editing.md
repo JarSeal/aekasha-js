@@ -583,6 +583,27 @@ As built, section 3 (2026-11-11):
    `yarn hub:build`.
 2. Engine minor; `CHANGELOG.md`.
 
+As built, section 1 (2026-11-11):
+
+- `features/merging/CLAUDE.md`: the Mesh merging section gains `MergeMemberEdit.ts`, `_editPose`,
+  the five functions, the Edit sessions and Picking bullets, the moved-member check's skip, the
+  tests and the SBP figures (8 KiB, 7.2 kB); a new `## Merge debugging` section (the debug
+  figures, the tab, the windows, the pose fields, undo, the overlay, show unmerged, the tests).
+  The root map line names both; `debug/CLAUDE.md` adds Merging to the kept tabs and the merge
+  windows to the edit windows; `readme.md`'s mesh merging feature (sessions, picking, the tab) and
+  its drawer tab list (streaming and merging were both missing).
+- The Hub's Mesh merging page: `aek:covers` "Mesh merging, Merge debugging", tags; "Moving a
+  member over many frames" and "Which member a ray hit" under Members are static; a Debugging
+  section with `merging-tab.png` (the tab on exampleMerging, 1600×1000, every group highlighted:
+  largeWorld's overview camera showed the outlines too small to read; a scratchpad harness, not
+  committed); "Not yet" loses the debug tab; Key APIs and the plans' links. The debug suite page's
+  drawer tabs (streaming and merging) and edit windows (merge groups and members; those that close
+  with their scene). The merging example's walkthrough points at the tab.
+- `yarn hub:build`: 114 pages, no dead link, no coverage warning; the search index's size warning
+  (553 KiB gzip, over 450) stands.
+- Seen: exampleMerging's tab reads 281 members, its pages say 282 pieces (p372's text, not
+  changed here).
+
 ## 4. Versioning
 
 Engine minor (debug tab, public edit-session API).
