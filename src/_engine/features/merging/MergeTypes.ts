@@ -139,8 +139,12 @@ export type MergeMemberData = {
   groupEntityId: number;
   /** Its group's id. */
   groupId: string;
-  /** Its part in the group's merged geometry, or -1 until a build includes it. */
+  /** Its part in the group's merged geometry, or -1 until a build includes it. Always -1 in a
+   * `BATCHED` group. */
   partIndex: number;
+  /** A `BATCHED` group's (p375): its instance in the group's `BatchedMesh`, or -1 until a build
+   * adds it. Always -1 in a `BAKED` group. */
+  instanceId: number;
   /** Whether it was in the `DEFAULT` spatial domain (`SPATIAL_INDEXED`) when it was merged: it
    * leaves it while merged and gets it back when it leaves the group. */
   _wasSpatialIndexed: boolean;

@@ -42,7 +42,7 @@ const cancelOpenEdits = () => {
  * the group nothing per frame. Move it as usual (`setTransform`, a `TRANSFORM` write), then
  * `endMergeMemberEdit` merges it back where it is, or `cancelMergeMemberEdit` puts it back where it
  * was. A member waiting for its group's first build only records its pose. A second begin keeps
- * the first one's pose.
+ * the first one's pose. A `BATCHED` group's member needs none: it warns and does nothing.
  * @param world the member's world (default: the default world)
  * @throws without the `merging()` feature
  * @remarks A scene exit cancels the open sessions. A member removed from its group or deleted
@@ -65,6 +65,13 @@ export const beginMergeMemberEdit = (entityId: number, world?: ECSWorld): void =
   const member = ecsWorld.getComponent(entityId, ComponentType.MERGE_MEMBER);
   if (!member) {
     lwarn(`beginMergeMemberEdit: entity ${entityId} isn't in a merge group.`);
+    return;
+  }
+  const group = ecsWorld.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  if (group?.settings.mode === 'BATCHED') {
+    lwarn(
+      `beginMergeMemberEdit: entity ${entityId} is in the BATCHED group "${group.id}", which draws its moves as they happen: it needs no session.`
+    );
     return;
   }
   if (member._editPose) return;
