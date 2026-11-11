@@ -1,9 +1,10 @@
 // The Merging tab's windows (docs/plans/p373_merge-debug-and-member-editing.md D2): a merge group's
 // (its kind, settings and figures, its members' highlight and the unmerged A/B (D3), its members as
-// a list whose rows open their windows, Rebuild and Dissolve) and a member's (its group with a link to the group's window, its state, assets and
-// part range, its pose, Remove from group). Group and member entities don't outlive their scene, so
+// a list whose rows open their windows, Rebuild and Dissolve) and a member's (its group with a link
+// to the group's window, its state, assets and part range, its pose, editable through an edit
+// session (D4, `_dbg__MergingMemberPose.ts`), Remove from group). Group and member entities don't outlive their scene, so
 // the windows are removed on a scene change and not saved. Default world only.
-import * as THREE from 'three/webgpu';
+import type * as THREE from 'three/webgpu';
 import { registerEntityWindowOpener } from '../../../debug/Profiler';
 import { updateDebuggerTab } from '../../../debug/DebuggerGUI';
 import {
@@ -25,6 +26,7 @@ import {
   toggleDraggableWindow,
 } from '../../../ui/overlays/windows/DraggableWindow';
 import { rebuildMergeGroup } from '../MergeGroups';
+import { isMergeMemberInEdit } from '../MergeMemberEdit';
 import { getGroupMesh } from '../MergeState';
 import {
   formatCount,
@@ -42,6 +44,7 @@ import {
   setMergeGroupUnmergedView,
 } from './_dbg__MergingUnmerged';
 import { dissolveMergeGroupRecorded, removeMergeMemberRecorded } from './_dbg__MergingUndo';
+import { getMergeMemberPoseItems } from './_dbg__MergingMemberPose';
 
 const GROUP_WIN_KIND = 'mergeGroup';
 const MEMBER_WIN_KIND = 'mergeMember';
@@ -62,12 +65,16 @@ const live = (label: string, get: () => string, hint?: string): PropertyGridItem
 });
 
 /** A window's grid refreshed every REFRESH_MS while it exists: its buttons' disabled states and
- * reasons, its notes and functions (its monitors read on their own interval). */
-const createRefreshedGrid = (items: PropertyGridItem[]) => {
+ * reasons, its notes and functions, its edit fields (its monitors read on their own interval).
+ * `onRemove` runs at its removal too. */
+const createRefreshedGrid = (items: PropertyGridItem[], onRemove?: () => void) => {
   let interval = 0;
   const { cmp, grid } = createDebugWindowGrid({
     items,
-    onRemove: () => window.clearInterval(interval),
+    onRemove: () => {
+      window.clearInterval(interval);
+      onRemove?.();
+    },
   });
   interval = window.setInterval(() => grid.refresh(), REFRESH_MS);
   return cmp;
@@ -109,6 +116,7 @@ export const getMemberStateText = (entityId: number, world: ECSWorld) => {
   if (!world.isAlive(entityId)) return 'deleted';
   if (!member) return 'not in a merge group';
   if (member.partIndex === -1) return "waiting for its group's build";
+  if (member._editPose) return 'being moved: drawn on its own until the move ends';
   if (member._isCollapsed) return 'disabled: its range collapsed';
   if (isMergeGroupUnmergedView(member.groupEntityId, world)) {
     return 'merged, drawn on its own (shown unmerged)';
@@ -236,8 +244,6 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
 
 // --- THE MEMBER WINDOW ---
 
-const scratchEuler = new THREE.Euler();
-
 /** A member's own mesh, if it still has one. */
 const getMemberMesh = (entityId: number, world: ECSWorld) =>
   world.getComponent(entityId, ComponentType.OBJECT3D)?.value as THREE.Mesh | undefined;
@@ -260,7 +266,7 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
   const world = getECSWorld();
   const member = () => world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const mesh = () => getMemberMesh(entityId, world);
-  const pose = { label: '', readonly: true as const, interval: REFRESH_MS, precision: 2 };
+  const pose = getMergeMemberPoseItems(entityId, world);
   const items: PropertyGridItem[] = [
     getNoteItem(() => {
       if (!world.isAlive(entityId)) return 'The entity no longer exists.';
@@ -284,25 +290,18 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
     }),
     live('Vertices', () => formatCount(mesh()?.geometry.getAttribute('position')?.count ?? 0)),
     live('Part', () => getMemberPartText(entityId, world)),
-    { ...pose, label: 'Position', get: () => mesh()?.position ?? { x: 0, y: 0, z: 0 } },
-    {
-      ...pose,
-      label: 'Rotation (°)',
-      get: () => {
-        const object = mesh();
-        if (!object) return { x: 0, y: 0, z: 0 };
-        scratchEuler.setFromQuaternion(object.quaternion);
-        const deg = THREE.MathUtils.RAD2DEG;
-        return { x: scratchEuler.x * deg, y: scratchEuler.y * deg, z: scratchEuler.z * deg };
-      },
-    },
-    { ...pose, label: 'Scale', get: () => mesh()?.scale ?? { x: 1, y: 1, z: 1 } },
+    ...pose.items,
     getNoteItem(
-      'The pose is read-only: a merged member is static; move it with updateMergeMember.'
+      'Moving it draws it on its own until the change ends, then writes its part of the group’s mesh in place (no rebuild); undo puts it back.'
     ),
     getReasonedButtonItem({
       title: 'Remove from group',
-      getDisabledReason: () => (member() ? null : 'It isn’t in a merge group.'),
+      getDisabledReason: () => {
+        if (!member()) return 'It isn’t in a merge group.';
+        return isMergeMemberInEdit(entityId, world)
+          ? 'It’s being moved: finish the move first.'
+          : null;
+      },
       onClick: () => {
         removeMergeMemberRecorded(entityId, world);
         updateDebuggerTab(MERGING_TAB_ID);
@@ -315,7 +314,8 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
       name: world.getComponent(entityId, ComponentType.DEBUG_DATA)?.name,
     }),
   ];
-  return createRefreshedGrid(items);
+  // Closed mid-gesture: the move ends there
+  return createRefreshedGrid(items, pose.onRemove);
 };
 
 registerDraggableWindowKind(GROUP_WIN_KIND, { content: createGroupWindowContent });

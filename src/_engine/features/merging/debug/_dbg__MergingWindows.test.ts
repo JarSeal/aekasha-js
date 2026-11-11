@@ -28,7 +28,7 @@ vi.mock(import('../../../utils/Logger'), async (importOriginal) => ({
   lwarn: fns.lwarn,
 }));
 
-import { stubKitDomAsync } from '../../../ui/testing/KitDom';
+import { dispatchKey, stubKitDomAsync } from '../../../ui/testing/KitDom';
 import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { getConfig, initEnvironment } from '../../../kernel/config/Config';
 import { ECSWorld } from '../../../kernel/ecs/ECS';
@@ -55,10 +55,16 @@ import {
   createGroupWindowContent,
   createMemberWindowContent,
   getMemberPartText,
+  getMemberStateText,
 } from './_dbg__MergingWindows';
 import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
 import { isMergeGroupUnmergedView, setMergeGroupUnmergedView } from './_dbg__MergingUnmerged';
-import { MERGE_DISSOLVE_ACTION, MERGE_REMOVE_ACTION } from './_dbg__MergingUndo';
+import {
+  MERGE_DISSOLVE_ACTION,
+  MERGE_MEMBER_TRANSFORM_ACTION,
+  MERGE_REMOVE_ACTION,
+} from './_dbg__MergingUndo';
+import { isMergeMemberInEdit } from '../MergeMemberEdit';
 
 // p373 D2: the group and member windows, their links, and the dissolve and removal with undo
 
@@ -134,6 +140,23 @@ const getButton = (root: Element, text: string) => {
   if (!button) throw new Error(`No button "${text}"`);
   return button;
 };
+/** A field's spin buttons (a vector's axes, in order). */
+const getInputs = (root: Element, label: string) => [
+  ...getField(root, label).querySelectorAll<HTMLInputElement>('input'),
+];
+/** Typed text written with Enter: one `last: true` change. */
+const type = (input: HTMLInputElement, text: string) => {
+  input.value = text;
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  dispatchKey(input, 'keydown', 'Enter');
+};
+const isVisible = (entityId: number) =>
+  world.getComponent(entityId, ComponentType.OBJECT3D)!.value.visible;
+const getPosition = (entityId: number) =>
+  world.getComponent(entityId, ComponentType.TRANSFORM)!.position.toArray();
+const getRebuilds = (groupEntityId: number) =>
+  world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!.rebuilds;
+
 const click = (target: Element) =>
   target.dispatchEvent(new window.Event('click', { bubbles: true, cancelable: true }));
 
@@ -248,6 +271,112 @@ describe('the member window', () => {
     _undoLastAction();
     expect(world.hasComponent(members[0], ComponentType.MERGE_MEMBER)).toBe(false);
     expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining(`"${groupId}"`));
+  });
+});
+
+describe("the member window's pose", () => {
+  it('moves the member in place through one session per change, and undo and redo move it', async () => {
+    const { members, groupEntityId } = await createGroupAsync();
+    const root = show(createMemberWindowContent({ entityId: members[1] }));
+    type(getInputs(root, 'Position')[1], '3');
+
+    expect(getPosition(members[1])).toEqual([2, 3, 0]);
+    expect(isMergeMemberInEdit(members[1])).toBe(false);
+    expect(isVisible(members[1])).toBe(false);
+    expect(getRebuilds(groupEntityId)).toBe(1);
+    const member = world.getComponent(members[1], ComponentType.MERGE_MEMBER)!;
+    expect(member._bakedMatrix.elements[13]).toBe(3);
+    const entry = _getUndoRedoHistory().at(-1)!;
+    expect(entry.actionType).toBe(MERGE_MEMBER_TRANSFORM_ACTION);
+    expect(entry.payload).toMatchObject({
+      entityId: members[1],
+      prev: { position: [2, 0, 0] },
+      next: { position: [2, 3, 0] },
+    });
+
+    expect(_undoLastAction()).toBe(true);
+    expect(getPosition(members[1])).toEqual([2, 0, 0]);
+    expect(member._bakedMatrix.elements[13]).toBe(0);
+    expect(_redoLastAction()).toBe(true);
+    expect(getPosition(members[1])).toEqual([2, 3, 0]);
+    expect(member._bakedMatrix.elements[13]).toBe(3);
+    expect(getRebuilds(groupEntityId)).toBe(1);
+  });
+
+  it('keeps a key gesture in one session, drawn on its own, until its keyup', async () => {
+    const { members } = await createGroupAsync();
+    const root = show(createMemberWindowContent({ entityId: members[0] }));
+    const y = getInputs(root, 'Position')[1];
+    dispatchKey(y, 'keydown', 'ArrowUp');
+    dispatchKey(y, 'keydown', 'ArrowUp');
+    expect(isMergeMemberInEdit(members[0])).toBe(true);
+    expect(isVisible(members[0])).toBe(true);
+    expect(getMemberStateText(members[0], world)).toBe(
+      'being moved: drawn on its own until the move ends'
+    );
+    // The grid's refresh reads the button's reason
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(getButton(root, 'Remove from group').getAttribute('aria-disabled')).toBe('true');
+
+    dispatchKey(y, 'keyup', 'ArrowUp');
+    expect(isMergeMemberInEdit(members[0])).toBe(false);
+    expect(isVisible(members[0])).toBe(false);
+    expect(getPosition(members[0])).toEqual([0, 2, 0]);
+    const moves = _getUndoRedoHistory().filter(
+      (e) => e.actionType === MERGE_MEMBER_TRANSFORM_ACTION
+    );
+    expect(moves).toHaveLength(1);
+  });
+
+  it('ends a session its window closed on, and records it', async () => {
+    const { members } = await createGroupAsync();
+    const root = show(createMemberWindowContent({ entityId: members[2] }));
+    dispatchKey(getInputs(root, 'Position')[0], 'keydown', 'ArrowDown');
+    expect(isMergeMemberInEdit(members[2])).toBe(true);
+    built.pop()!.remove();
+    expect(isMergeMemberInEdit(members[2])).toBe(false);
+    expect(isVisible(members[2])).toBe(false);
+    expect(_getUndoRedoHistory().at(-1)?.actionType).toBe(MERGE_MEMBER_TRANSFORM_ACTION);
+  });
+
+  it('turns it by degrees and scales it; a member with a body keeps its scale', async () => {
+    const { members } = await createGroupAsync();
+    const root = show(createMemberWindowContent({ entityId: members[0] }));
+    type(getInputs(root, 'Rotation')[1], '90');
+    const quaternion = world.getComponent(members[0], ComponentType.TRANSFORM)!.quaternion;
+    expect(quaternion.y).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(quaternion.w).toBeCloseTo(Math.SQRT1_2, 6);
+    type(getInputs(root, 'Scale')[0], '2');
+    expect(world.getComponent(members[0], ComponentType.TRANSFORM)!.scale.x).toBe(2);
+    expect(
+      _getUndoRedoHistory().filter((e) => e.actionType === MERGE_MEMBER_TRANSFORM_ACTION)
+    ).toHaveLength(2);
+
+    // A fixed body's stand-in: the scale field is disabled with its reason
+    world.addComponent(members[1], ComponentType.BODY_STATIC, {} as never);
+    const bodyRoot = show(createMemberWindowContent({ entityId: members[1] }));
+    expect(getField(bodyRoot, 'Scale').hasAttribute('data-disabled')).toBe(true);
+    expect(getField(root, 'Scale').hasAttribute('data-disabled')).toBe(false);
+    expect(getField(bodyRoot, 'Scale').textContent).toContain('colliders don’t scale');
+    world.removeComponent(members[1], ComponentType.BODY_STATIC);
+  });
+
+  it("disables the fields of a member that left its group, and doesn't undo a deleted one", async () => {
+    const { members } = await createGroupAsync();
+    const root = show(createMemberWindowContent({ entityId: members[0] }));
+    type(getInputs(root, 'Position')[2], '5');
+    world.deleteEntity(members[0]);
+    _undoLastAction();
+    expect(fns.lwarn).toHaveBeenCalledWith(
+      `Merging: can't undo the move of entity ${members[0]}: it was deleted.`
+    );
+
+    const other = show(createMemberWindowContent({ entityId: members[1] }));
+    expect(getField(other, 'Position').hasAttribute('data-disabled')).toBe(false);
+    click(getButton(other, 'Remove from group'));
+    // The grid's refresh reads the disabled state
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(getField(other, 'Position').hasAttribute('data-disabled')).toBe(true);
   });
 });
 

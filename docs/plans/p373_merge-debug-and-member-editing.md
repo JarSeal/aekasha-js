@@ -501,6 +501,36 @@ As built, section 1 (2026-11-11):
   `tsc`, lint and the docs ratchet (merging 74 → 81, 100 %; `docs.json` recorded in section 3)
   pass.
 
+As built, section 2 (2026-11-11):
+
+- `debug/_dbg__MergingMemberPose.ts`: `getMergeMemberPoseItems(entityId, world)` → `{ items,
+  onRemove }`. Position (a vector field), Rotation (`kind: 'rotation'`, degrees; the shown Euler
+  kept while the `TRANSFORM`'s quaternion is the one it made, within 1e-6, so typed angles stay) and
+  Scale, each `{ get, set }` on the `TRANSFORM` read at every call (a typed store's copy is fresh
+  each time). A `set` opens the session if none is open and writes (`setTransform` for position and
+  rotation, the scale on the `TRANSFORM` with `commitTransform`); `onChange` with `last: true` ends
+  it, records one `merge.memberTransform` (nothing when the pose didn't change) and refreshes the
+  tab. Disabled when the entity is gone or no member; Scale also with a `BODY_STATIC` (the hint
+  "Read-only: its physics body’s colliders don’t scale.", read at the build). The kit's defaults:
+  no step or precision (as the light window's position).
+- The member window: the three fields replace Phase 1's read-only monitors and their note (a new
+  note says the move draws it on its own and writes in place; undo puts it back); its grid's
+  `onRemove` ends a session a gesture left open (`createRefreshedGrid(items, onRemove?)`). The
+  state "being moved: drawn on its own until the move ends" (after "waiting for its group's build",
+  before "disabled"); "Remove from group" reads "It’s being moved: finish the move first." while a
+  session is open (on the grid's 250 ms refresh).
+- `debug/_dbg__MergingUndo.ts`: `MERGE_MEMBER_TRANSFORM_ACTION` (`merge.memberTransform`),
+  `recordMergeMemberTransform(entityId, groupId, prev, next)`, `MergeMemberPose` (position,
+  quaternion and scale arrays). Undo and redo apply the pose (`setTransform`, then the scale), then
+  `updateMergeMember` when it's still a member and not in a session; another visit warns (the
+  visit token), a deleted entity warns ("it was deleted").
+- Tests (`debug/_dbg__MergingWindows.test.ts`, 5): a typed position moving the member in place in
+  one session (its baked matrix, no rebuild), the undo entry's poses, undo and redo; a key gesture
+  held open (drawn on its own, the state, the remove button's reason) until its keyup, one entry;
+  a window removed mid-gesture ending and recording it; rotation by degrees, scale, a body's scale
+  disabled; a deleted member's undo warning, a removed member's fields disabled. `yarn test`
+  (3091), both `tsc`, lint and the docs ratchet pass.
+
 ### Phase 4 — Docs and versioning
 
 1. `features/merging/CLAUDE.md` (the tab, windows, edit sessions), the Hub's Mesh merging page (a
