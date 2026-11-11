@@ -196,6 +196,9 @@ export type MergeMemberData = {
   /** A `BATCHED` member's place in the order members joined its group, given at its first build
    * (`JOIN` draws a transparent batch in it; a rebuild keeps it). */
   _joinSeq?: number;
+  /** A `BATCHED` member's colour and opacity (`setMergeMemberColor`), its instance's colour in the
+   * batch; undefined: white and opaque. */
+  _color?: { r: number; g: number; b: number; a: number };
   /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
    * joined; undefined in a group of one material. */
   _paletteIndex?: number;

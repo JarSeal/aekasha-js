@@ -8,6 +8,8 @@ export {
   updateMergeMember,
 } from './MergeGroups';
 export type { CreateMergeGroupOptions } from './MergeGroups';
+export { setMergeMemberColor } from './MergeMemberColor';
+export type { MergeMemberColorOptions } from './MergeMemberColor';
 export {
   beginMergeMemberEdit,
   cancelMergeMemberEdit,

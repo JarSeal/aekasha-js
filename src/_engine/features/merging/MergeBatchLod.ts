@@ -23,6 +23,7 @@ import {
   isBatchMemberShown,
   noteBatchLodMember,
   setInstanceGeometry,
+  writeMemberColor,
 } from './MergeBatch';
 import { setInstanceFade } from './MergeBatchFades';
 import { setInstanceSlot } from './MergeBatchSlots';
@@ -49,6 +50,7 @@ const startLevelFade = (state: BatchState, member: MergeMemberData) => {
   const fadeId = batch.addInstance(geometryId);
   setInstanceSlot(state, fadeId, geometryId);
   state.joinSeq[fadeId] = state.joinSeq[id];
+  writeMemberColor(state, member, fadeId);
   batch.getMatrixAt(id, fadeMatrix);
   batch.setMatrixAt(fadeId, fadeMatrix);
   batch.setVisibleAt(fadeId, batch.getVisibleAt(id));

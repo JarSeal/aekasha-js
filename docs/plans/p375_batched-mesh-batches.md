@@ -764,6 +764,33 @@ moving members.
      `tsc`, the docs ratchet clean (merging's exports 163 / 163).
    - **`yarn sbp`:** every budget passes: `merging` 9.6 kB of 10 KiB (+0.1 on S1), the lazy
      `MergeBatch.js` 4.5 kB (+0.2), the initial 393.7 of 394 KiB, `assets/index.js` 389.5 of 390.
+     `yarn verify:scenes --only batchedMeshSpike` after S1 (before S2's commit, `aa4e93ac`): see
+     S1's results.
+
+   **S3 results** (2026-11-11):
+   - **Built:** `setMergeMemberColor(entityId, { color?, opacity? }, world?)` and
+     `MergeMemberColorOptions` on `aekasha/merging` (`MergeMemberColor.ts`, its own module: a build
+     drops it until an app calls it, so the first download didn't change). The options object, not
+     an optional positional `opacity` (the coding standards: `world` is the only optional
+     positional parameter); an option left out keeps the member's. Kept on `MERGE_MEMBER._color`
+     (made at the first colour other than white and opaque, then changed in place), written only on
+     a change; the batch side is `writeBatchMemberColor` / `writeMemberColor` (`MergeBatch.ts`):
+     every new instance (a member's, a compaction's ids, a level fade's second instance) is written
+     its member's colour, or white and opaque once the batch has colours. **Found:** three r187's
+     `addInstance` resets a reused id's colour with a `Color`, which writes RGB only, so a
+     faded-out member's alpha 0 would hide the next member in its id (a FIFO pool's every spawn).
+     The batch's first colour sets the material's `needsUpdate` (S4's `growInstances` trap: the
+     shader reads `batchColor` only when the colours texture was there at its build);
+     `setInstanceCount` copies the colours, so growth keeps them. A baked member or an entity in no
+     group warns.
+   - **Tests:** `MergeMemberColor.test.ts` (6: the options kept, a write per change and one shader
+     rebuild, a waiting member, a freed id's newcomer white and opaque, a compaction, a rebuild and
+     growth keeping each member's colour, the warnings), `MergeBatchLod.test.ts` (+1: a level
+     fade's second instance takes the colour, set before and during it). Removing the white reset
+     or the `needsUpdate` fails its test. `yarn test` 3 314 passed; lint, both `tsc`, the docs
+     ratchet clean (merging's exports 167 / 167, the `@example` included).
+   - **`yarn sbp`:** every budget passes, the first download unchanged (`merging` 9.6 kB, the
+     initial 393.7 kB); the lazy `MergeBatch.js` 4.6 kB (+0.1).
 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
 

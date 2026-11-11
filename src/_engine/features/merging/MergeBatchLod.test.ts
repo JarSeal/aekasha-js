@@ -51,6 +51,7 @@ import { createBatchFades } from './MergeBatchFades';
 import { isLodDitherEnabled, LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
 import { getMaterial } from '../../kernel/assets/Material';
 import { getGroups } from './MergeState';
+import { setMergeMemberColor } from './MergeMemberColor';
 
 // p375 Phase 2 (docs/plans/p375_batched-mesh-batches.md): a batched member's LOD levels. S2: a
 // BAKED group still refuses a LOD; a BATCHED one takes a member whose levels its batch can draw
@@ -538,6 +539,19 @@ describe('a batched member LOD: a level fade', () => {
     expect(member._lodFade).toBeUndefined();
     expect(batch.instanceCount).toBe(1);
     expect([fadeAt(state(), id), fadeAt(state(), fadeId)]).toEqual([1, 1]);
+  });
+
+  test("its second instance takes the member's colour, set before or during it (Phase 3 S3)", async () => {
+    const { batch, members } = await createBuiltLodGroupAsync([FADED]);
+    setMergeMemberColor(members[0], { opacity: 0.5 });
+    stepNear();
+    stepAt(5);
+    const member = getMember(members[0]);
+    const colorAt = (id: number) => batch.getColorAt(id, new THREE.Vector4()).toArray();
+    expect(colorAt(member._fadeInstanceId)).toEqual([1, 1, 1, 0.5]);
+    setMergeMemberColor(members[0], { opacity: 0.25 });
+    expect(colorAt(member.instanceId)).toEqual([1, 1, 1, 0.25]);
+    expect(colorAt(member._fadeInstanceId)).toEqual([1, 1, 1, 0.25]);
   });
 
   test('dithers the group material: the LOD enabled it on its levels', async () => {

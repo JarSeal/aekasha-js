@@ -169,6 +169,7 @@ const scratchBox = new THREE.Box3();
 const bounds = new THREE.Box3();
 const instanceMatrix = new THREE.Matrix4();
 const memberSphere = new THREE.Sphere();
+const instanceColor = new THREE.Vector4();
 
 /** Writes `instanceMatrix`, a member's world matrix, as its instance's (the batch's centre taken
  * off, in place). */
@@ -312,6 +313,44 @@ export const growInstances = (state: BatchState, needed: number) => {
   state.fades = createBatchFades(batch, batch.maxInstanceCount, state.fades);
 };
 
+/** Whether a batch has colours (three makes its colours texture at the first `setColorAt`). */
+const hasColors = (batch: THREE.BatchedMesh) =>
+  (batch as unknown as { _colorsTexture: THREE.DataTexture | null })._colorsTexture !== null;
+
+/**
+ * Writes a member's colour (`setMergeMemberColor`) on one of its instances, or white and opaque
+ * when it has none and the batch has colours: three's `addInstance` resets a reused id's RGB but
+ * not its alpha, so a faded-out member's id would hide the next one. A batch's first colour sets
+ * its material's `needsUpdate`: three reads the colours in the shader only when the texture was
+ * there at its build (`growInstances`' trap).
+ * @internal
+ */
+export const writeMemberColor = (
+  state: BatchState,
+  member: MergeMemberData,
+  instanceId: number
+) => {
+  const { batch } = state;
+  const color = member._color;
+  const hadColors = hasColors(batch);
+  if (!color && !hadColors) return;
+  instanceColor.set(color?.r ?? 1, color?.g ?? 1, color?.b ?? 1, color?.a ?? 1);
+  batch.setColorAt(instanceId, instanceColor);
+  if (!hadColors) (batch.material as THREE.Material).needsUpdate = true;
+};
+
+/**
+ * Writes a batched member's colour on its instance and its level fade's outgoing one
+ * (`setMergeMemberColor`; a member without an instance gets it at its build).
+ * @internal
+ */
+export const writeBatchMemberColor = (member: MergeMemberData, group: MergeGroupData) => {
+  const state = states.get(group);
+  if (!state || member.instanceId < 0) return;
+  writeMemberColor(state, member, member.instanceId);
+  if (member._fadeInstanceId >= 0) writeMemberColor(state, member, member._fadeInstanceId);
+};
+
 /**
  * Deletes a member's level fade's outgoing instance, if it has one.
  * @internal
@@ -337,6 +376,7 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   member.instanceId = state.batch.addInstance(geometryId);
   setInstanceSlot(state, member.instanceId, geometryId);
   state.joinSeq[member.instanceId] = member._joinSeq ?? 0;
+  writeMemberColor(state, member, member.instanceId);
   // Drawn whole: a fade the previous batch drew ended with it
   member._fadeInstanceId = -1;
   member._lodFade = undefined;
@@ -665,6 +705,7 @@ const compactBatch = (state: BatchState, world: ECSWorld) => {
     batch.setGeometryIdAt(id, geometryId);
     setInstanceFade(fades, id, entry.fade);
     state.joinSeq[id] = member._joinSeq ?? 0;
+    writeMemberColor(state, member, id);
     const object = world.getComponent(entityId, ComponentType.OBJECT3D)!;
     const mesh = object.value as THREE.Mesh;
     instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
