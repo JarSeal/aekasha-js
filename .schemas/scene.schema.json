@@ -45,28 +45,31 @@
       "$ref": "#/definitions/__schema249"
     },
     "importedAssets": {
-      "$ref": "#/definitions/__schema302"
+      "$ref": "#/definitions/__schema305"
     },
     "skyboxes": {
-      "$ref": "#/definitions/__schema335"
+      "$ref": "#/definitions/__schema338"
     },
     "postFx": {
-      "$ref": "#/definitions/__schema488"
+      "$ref": "#/definitions/__schema491"
     },
     "postFxEnabled": {
-      "$ref": "#/definitions/__schema507"
+      "$ref": "#/definitions/__schema510"
     },
     "spatialDomains": {
-      "$ref": "#/definitions/__schema508"
+      "$ref": "#/definitions/__schema511"
     },
     "impostors": {
-      "$ref": "#/definitions/__schema519"
+      "$ref": "#/definitions/__schema522"
     },
     "streaming": {
-      "$ref": "#/definitions/__schema521"
+      "$ref": "#/definitions/__schema524"
     },
     "mergeGroups": {
-      "$ref": "#/definitions/__schema536"
+      "$ref": "#/definitions/__schema539"
+    },
+    "mergeMaterials": {
+      "$ref": "#/definitions/__schema550"
     },
     "id": {
       "type": "string",
@@ -87,7 +90,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema544"
+          "$ref": "#/definitions/__schema553"
         }
       ]
     }
@@ -3631,6 +3634,9 @@
             },
             "maxVertices": {
               "$ref": "#/definitions/__schema300"
+            },
+            "palettes": {
+              "$ref": "#/definitions/__schema302"
             }
           },
           "additionalProperties": false,
@@ -3687,7 +3693,6 @@
       "description": "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
     },
     "__schema302": {
-      "description": "Imported asset ids, or inline imports of src/public files.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema303"
@@ -3695,6 +3700,25 @@
       ]
     },
     "__schema303": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema304"
+      },
+      "description": "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
+    },
+    "__schema304": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema305": {
+      "description": "Imported asset ids, or inline imports of src/public files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema306"
+        }
+      ]
+    },
+    "__schema306": {
       "type": "array",
       "items": {
         "anyOf": [
@@ -3712,28 +3736,28 @@
                 ]
               },
               "id": {
-                "$ref": "#/definitions/__schema304"
+                "$ref": "#/definitions/__schema307"
               },
               "fileName": {
                 "$ref": "#/definitions/__schema192"
               },
               "importTextures": {
-                "$ref": "#/definitions/__schema306"
-              },
-              "meshIndex": {
                 "$ref": "#/definitions/__schema309"
               },
+              "meshIndex": {
+                "$ref": "#/definitions/__schema312"
+              },
               "isPersistent": {
-                "$ref": "#/definitions/__schema311"
+                "$ref": "#/definitions/__schema314"
               },
               "lodChain": {
-                "$ref": "#/definitions/__schema313"
+                "$ref": "#/definitions/__schema316"
               },
               "throwOnError": {
-                "$ref": "#/definitions/__schema330"
+                "$ref": "#/definitions/__schema333"
               },
               "debugData": {
-                "$ref": "#/definitions/__schema332"
+                "$ref": "#/definitions/__schema335"
               },
               "__sourcePath": {
                 "allOf": [
@@ -3746,7 +3770,7 @@
                 "description": "Set by the gatherer: the file's bytes on disk (not a .gltf's external buffers).",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema333"
+                    "$ref": "#/definitions/__schema336"
                   }
                 ]
               },
@@ -3754,7 +3778,7 @@
                 "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema334"
+                    "$ref": "#/definitions/__schema337"
                   }
                 ]
               }
@@ -3767,26 +3791,26 @@
         ]
       }
     },
-    "__schema304": {
+    "__schema307": {
       "description": "The import id, also its geometries' and textures' id prefix. Default: the file's name.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema305"
+          "$ref": "#/definitions/__schema308"
         }
       ]
     },
-    "__schema305": {
+    "__schema308": {
       "type": "string"
     },
-    "__schema306": {
+    "__schema309": {
       "description": "Also registers the glTF material slots' textures (<id>/<textureName>); an object sets their texOpts and isPersistent. Default false.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema307"
+          "$ref": "#/definitions/__schema310"
         }
       ]
     },
-    "__schema307": {
+    "__schema310": {
       "anyOf": [
         {
           "type": "boolean"
@@ -3805,7 +3829,7 @@
               "description": "The textures' own. Default: the import's.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema308"
+                  "$ref": "#/definitions/__schema311"
                 }
               ]
             }
@@ -3814,18 +3838,18 @@
         }
       ]
     },
-    "__schema308": {
+    "__schema311": {
       "type": "boolean"
     },
-    "__schema309": {
+    "__schema312": {
       "description": "Only imports one node: a root child's index, or an index path ([2, 0]).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema310"
+          "$ref": "#/definitions/__schema313"
         }
       ]
     },
-    "__schema310": {
+    "__schema313": {
       "anyOf": [
         {
           "type": "number"
@@ -3838,65 +3862,65 @@
         }
       ]
     },
-    "__schema311": {
+    "__schema314": {
       "description": "Registers the geometries as persistent (kept when their scene releases them).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema312"
+          "$ref": "#/definitions/__schema315"
         }
       ]
     },
-    "__schema312": {
+    "__schema315": {
       "type": "boolean"
     },
-    "__schema313": {
+    "__schema316": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema314"
+          "$ref": "#/definitions/__schema317"
         },
         {
-          "$ref": "#/definitions/__schema315"
+          "$ref": "#/definitions/__schema318"
         }
       ],
       "description": "Generates a LOD chain for every rendered geometry of the import after it loads: true for the default options, or the options. A mesh's lod (AUTO) selects its levels. Skinned and morph-target geometry is skipped."
     },
-    "__schema314": {
+    "__schema317": {
       "type": "boolean"
     },
-    "__schema315": {
+    "__schema318": {
       "type": "object",
       "properties": {
         "ratios": {
-          "$ref": "#/definitions/__schema316"
+          "$ref": "#/definitions/__schema319"
         },
         "maxError": {
-          "$ref": "#/definitions/__schema318"
+          "$ref": "#/definitions/__schema321"
         },
         "attributeWeights": {
-          "$ref": "#/definitions/__schema320"
+          "$ref": "#/definitions/__schema323"
         },
         "compactVertices": {
-          "$ref": "#/definitions/__schema324"
+          "$ref": "#/definitions/__schema327"
         },
         "lockBorder": {
-          "$ref": "#/definitions/__schema326"
+          "$ref": "#/definitions/__schema329"
         },
         "permissive": {
-          "$ref": "#/definitions/__schema328"
+          "$ref": "#/definitions/__schema331"
         }
       },
       "additionalProperties": false,
       "description": "generateLodChain options."
     },
-    "__schema316": {
+    "__schema319": {
       "description": "Target triangle counts, as ratios of the base's, one per level. Default [0.5, 0.25, 0.1].",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema317"
+          "$ref": "#/definitions/__schema320"
         }
       ]
     },
-    "__schema317": {
+    "__schema320": {
       "type": "array",
       "items": {
         "type": "number",
@@ -3904,35 +3928,35 @@
         "exclusiveMaximum": 1
       }
     },
-    "__schema318": {
+    "__schema321": {
       "description": "meshoptimizer's target error cap, relative to the mesh's extent (its largest bounding box side). Default 0.05.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema319"
+          "$ref": "#/definitions/__schema322"
         }
       ]
     },
-    "__schema319": {
+    "__schema322": {
       "type": "number",
       "exclusiveMinimum": 0,
       "maximum": 1
     },
-    "__schema320": {
+    "__schema323": {
       "description": "How much normal and uv deviation count against a collapse. Default 0.5 each (0 ignores it).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema321"
+          "$ref": "#/definitions/__schema324"
         }
       ]
     },
-    "__schema321": {
+    "__schema324": {
       "type": "object",
       "properties": {
         "normal": {
           "description": "The normals' weight. Default 0.5.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema322"
+              "$ref": "#/definitions/__schema325"
             }
           ]
         },
@@ -3940,76 +3964,76 @@
           "description": "The uvs' weight. Default 0.5.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema323"
+              "$ref": "#/definitions/__schema326"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema322": {
+    "__schema325": {
       "type": "number",
       "minimum": 0
     },
-    "__schema323": {
+    "__schema326": {
       "type": "number",
       "minimum": 0
     },
-    "__schema324": {
+    "__schema327": {
       "description": "Each level gets its own trimmed vertex arrays instead of sharing the base's. Better for large meshes whose far levels use few vertices. Default false.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema325"
+          "$ref": "#/definitions/__schema328"
         }
       ]
     },
-    "__schema325": {
+    "__schema328": {
       "type": "boolean"
     },
-    "__schema326": {
+    "__schema329": {
       "description": "Keeps the mesh's open borders in place, so tiling geometry still meets its neighbours. Default false.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema327"
+          "$ref": "#/definitions/__schema330"
         }
       ]
     },
-    "__schema327": {
+    "__schema330": {
       "type": "boolean"
     },
-    "__schema328": {
+    "__schema331": {
       "description": "Lets collapses cross attribute seams. Flat-shaded geometry (a normal per face) doesn't simplify without it. Default false.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema329"
+          "$ref": "#/definitions/__schema332"
         }
       ]
     },
-    "__schema329": {
+    "__schema332": {
       "type": "boolean"
     },
-    "__schema330": {
+    "__schema333": {
       "description": "Fails the load when the file can't import. Default: logs it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema331"
+          "$ref": "#/definitions/__schema334"
         }
       ]
     },
-    "__schema331": {
+    "__schema334": {
       "type": "boolean"
     },
-    "__schema332": {
+    "__schema335": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema57"
         }
       ]
     },
-    "__schema333": {
+    "__schema336": {
       "type": "number"
     },
-    "__schema334": {
+    "__schema337": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -4027,7 +4051,7 @@
               ]
             },
             "id": {
-              "$ref": "#/definitions/__schema304"
+              "$ref": "#/definitions/__schema307"
             },
             "fileName": {
               "allOf": [
@@ -4037,29 +4061,29 @@
               ]
             },
             "importTextures": {
-              "$ref": "#/definitions/__schema306"
-            },
-            "meshIndex": {
               "$ref": "#/definitions/__schema309"
             },
+            "meshIndex": {
+              "$ref": "#/definitions/__schema312"
+            },
             "isPersistent": {
-              "$ref": "#/definitions/__schema311"
+              "$ref": "#/definitions/__schema314"
             },
             "lodChain": {
-              "$ref": "#/definitions/__schema313"
+              "$ref": "#/definitions/__schema316"
             },
             "throwOnError": {
-              "$ref": "#/definitions/__schema330"
+              "$ref": "#/definitions/__schema333"
             },
             "debugData": {
-              "$ref": "#/definitions/__schema332"
+              "$ref": "#/definitions/__schema335"
             }
           },
           "additionalProperties": false
         }
       }
     },
-    "__schema335": {
+    "__schema338": {
       "type": "array",
       "items": {
         "anyOf": [
@@ -4070,58 +4094,58 @@
             "type": "object",
             "properties": {
               "id": {
-                "$ref": "#/definitions/__schema336"
-              },
-              "isDefault": {
-                "$ref": "#/definitions/__schema337"
-              },
-              "preset": {
-                "$ref": "#/definitions/__schema338"
-              },
-              "base": {
                 "$ref": "#/definitions/__schema339"
               },
+              "isDefault": {
+                "$ref": "#/definitions/__schema340"
+              },
+              "preset": {
+                "$ref": "#/definitions/__schema341"
+              },
+              "base": {
+                "$ref": "#/definitions/__schema342"
+              },
               "env": {
-                "$ref": "#/definitions/__schema348"
+                "$ref": "#/definitions/__schema351"
               },
               "atmosphere": {
-                "$ref": "#/definitions/__schema357"
+                "$ref": "#/definitions/__schema360"
               },
               "suns": {
-                "$ref": "#/definitions/__schema370"
+                "$ref": "#/definitions/__schema373"
               },
               "moons": {
-                "$ref": "#/definitions/__schema393"
+                "$ref": "#/definitions/__schema396"
               },
               "stars": {
-                "$ref": "#/definitions/__schema416"
+                "$ref": "#/definitions/__schema419"
               },
               "nebulae": {
-                "$ref": "#/definitions/__schema431"
+                "$ref": "#/definitions/__schema434"
               },
               "ambientLight": {
-                "$ref": "#/definitions/__schema447"
+                "$ref": "#/definitions/__schema450"
               },
               "clouds": {
-                "$ref": "#/definitions/__schema453"
+                "$ref": "#/definitions/__schema456"
               },
               "ground": {
-                "$ref": "#/definitions/__schema462"
+                "$ref": "#/definitions/__schema465"
               },
               "dayNight": {
-                "$ref": "#/definitions/__schema468"
+                "$ref": "#/definitions/__schema471"
               },
               "debugData": {
-                "$ref": "#/definitions/__schema479"
+                "$ref": "#/definitions/__schema482"
               },
               "$schema": {
-                "$ref": "#/definitions/__schema480"
+                "$ref": "#/definitions/__schema483"
               },
               "__sourcePath": {
-                "$ref": "#/definitions/__schema481"
+                "$ref": "#/definitions/__schema484"
               },
               "__saveData": {
-                "$ref": "#/definitions/__schema482"
+                "$ref": "#/definitions/__schema485"
               }
             },
             "required": [
@@ -4132,13 +4156,13 @@
         ]
       }
     },
-    "__schema336": {
+    "__schema339": {
       "type": "string"
     },
-    "__schema337": {
+    "__schema340": {
       "type": "boolean"
     },
-    "__schema338": {
+    "__schema341": {
       "type": "string",
       "enum": [
         "DAY_SKY",
@@ -4147,7 +4171,7 @@
         "SPACE"
       ]
     },
-    "__schema339": {
+    "__schema342": {
       "oneOf": [
         {
           "type": "object",
@@ -4170,25 +4194,25 @@
           "type": "object",
           "properties": {
             "type": {
-              "$ref": "#/definitions/__schema340"
-            },
-            "file": {
-              "$ref": "#/definitions/__schema341"
-            },
-            "path": {
-              "$ref": "#/definitions/__schema342"
-            },
-            "textureId": {
               "$ref": "#/definitions/__schema343"
             },
-            "colorSpace": {
+            "file": {
               "$ref": "#/definitions/__schema344"
             },
-            "rotate": {
+            "path": {
               "$ref": "#/definitions/__schema345"
             },
-            "intensity": {
+            "textureId": {
               "$ref": "#/definitions/__schema346"
+            },
+            "colorSpace": {
+              "$ref": "#/definitions/__schema347"
+            },
+            "rotate": {
+              "$ref": "#/definitions/__schema348"
+            },
+            "intensity": {
+              "$ref": "#/definitions/__schema349"
             }
           },
           "required": [
@@ -4208,7 +4232,7 @@
               "maxItems": 6,
               "type": "array",
               "items": {
-                "$ref": "#/definitions/__schema347"
+                "$ref": "#/definitions/__schema350"
               }
             },
             "path": {
@@ -4243,80 +4267,80 @@
         }
       ]
     },
-    "__schema340": {
+    "__schema343": {
       "type": "string",
       "const": "EQUIRECTANGULAR"
     },
-    "__schema341": {
-      "type": "string"
-    },
-    "__schema342": {
-      "type": "string"
-    },
-    "__schema343": {
-      "type": "string"
-    },
     "__schema344": {
+      "type": "string"
+    },
+    "__schema345": {
+      "type": "string"
+    },
+    "__schema346": {
+      "type": "string"
+    },
+    "__schema347": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema214"
         }
       ]
     },
-    "__schema345": {
+    "__schema348": {
       "type": "number"
     },
-    "__schema346": {
+    "__schema349": {
       "type": "number",
       "minimum": 0
     },
-    "__schema347": {
+    "__schema350": {
       "type": "string"
     },
-    "__schema348": {
+    "__schema351": {
       "type": "object",
       "properties": {
         "backgroundRoughness": {
-          "$ref": "#/definitions/__schema349"
-        },
-        "backgroundIntensity": {
-          "$ref": "#/definitions/__schema350"
-        },
-        "environmentIntensity": {
-          "$ref": "#/definitions/__schema351"
-        },
-        "size": {
           "$ref": "#/definitions/__schema352"
         },
-        "dynamic": {
+        "backgroundIntensity": {
           "$ref": "#/definitions/__schema353"
         },
-        "updateAngleDeg": {
+        "environmentIntensity": {
           "$ref": "#/definitions/__schema354"
         },
-        "maxUpdatesPerSec": {
+        "size": {
           "$ref": "#/definitions/__schema355"
         },
-        "nebulaSize": {
+        "dynamic": {
           "$ref": "#/definitions/__schema356"
+        },
+        "updateAngleDeg": {
+          "$ref": "#/definitions/__schema357"
+        },
+        "maxUpdatesPerSec": {
+          "$ref": "#/definitions/__schema358"
+        },
+        "nebulaSize": {
+          "$ref": "#/definitions/__schema359"
         }
       },
       "additionalProperties": false
     },
-    "__schema349": {
+    "__schema352": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema350": {
+    "__schema353": {
       "type": "number",
       "minimum": 0
     },
-    "__schema351": {
+    "__schema354": {
       "type": "number",
       "minimum": 0
     },
-    "__schema352": {
+    "__schema355": {
       "anyOf": [
         {
           "type": "number",
@@ -4336,18 +4360,18 @@
         }
       ]
     },
-    "__schema353": {
+    "__schema356": {
       "type": "boolean"
     },
-    "__schema354": {
+    "__schema357": {
       "type": "number",
       "minimum": 0
     },
-    "__schema355": {
+    "__schema358": {
       "type": "number",
       "minimum": 0
     },
-    "__schema356": {
+    "__schema359": {
       "anyOf": [
         {
           "type": "number",
@@ -4363,64 +4387,51 @@
         }
       ]
     },
-    "__schema357": {
+    "__schema360": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema358"
-        },
-        "turbidity": {
-          "$ref": "#/definitions/__schema359"
-        },
-        "rayleigh": {
-          "$ref": "#/definitions/__schema360"
-        },
-        "mieCoefficient": {
           "$ref": "#/definitions/__schema361"
         },
-        "mieDirectionalG": {
+        "turbidity": {
           "$ref": "#/definitions/__schema362"
         },
-        "exposure": {
+        "rayleigh": {
           "$ref": "#/definitions/__schema363"
         },
-        "sunIntensity": {
+        "mieCoefficient": {
           "$ref": "#/definitions/__schema364"
         },
-        "nightSkyColor": {
+        "mieDirectionalG": {
           "$ref": "#/definitions/__schema365"
         },
-        "twilightLength": {
+        "exposure": {
+          "$ref": "#/definitions/__schema366"
+        },
+        "sunIntensity": {
           "$ref": "#/definitions/__schema367"
         },
-        "horizonTint": {
+        "nightSkyColor": {
           "$ref": "#/definitions/__schema368"
         },
+        "twilightLength": {
+          "$ref": "#/definitions/__schema370"
+        },
+        "horizonTint": {
+          "$ref": "#/definitions/__schema371"
+        },
         "zenithTint": {
-          "$ref": "#/definitions/__schema369"
+          "$ref": "#/definitions/__schema372"
         }
       },
       "additionalProperties": false
     },
-    "__schema358": {
-      "type": "boolean"
-    },
-    "__schema359": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema360": {
-      "type": "number",
-      "minimum": 0
-    },
     "__schema361": {
-      "type": "number",
-      "minimum": 0
+      "type": "boolean"
     },
     "__schema362": {
       "type": "number",
-      "minimum": 0,
-      "maximum": 0.999
+      "minimum": 0
     },
     "__schema363": {
       "type": "number",
@@ -4431,13 +4442,26 @@
       "minimum": 0
     },
     "__schema365": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.999
+    },
+    "__schema366": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema367": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema368": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema366"
+          "$ref": "#/definitions/__schema369"
         }
       ]
     },
-    "__schema366": {
+    "__schema369": {
       "anyOf": [
         {
           "type": "string",
@@ -4448,99 +4472,99 @@
         }
       ]
     },
-    "__schema367": {
+    "__schema370": {
       "type": "number",
       "minimum": 0.05
     },
-    "__schema368": {
+    "__schema371": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"
         }
       ]
     },
-    "__schema369": {
+    "__schema372": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"
         }
       ]
     },
-    "__schema370": {
+    "__schema373": {
       "maxItems": 4,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema371"
+        "$ref": "#/definitions/__schema374"
       }
     },
-    "__schema371": {
+    "__schema374": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema372"
-        },
-        "elevation": {
-          "$ref": "#/definitions/__schema373"
-        },
-        "azimuth": {
-          "$ref": "#/definitions/__schema374"
-        },
-        "discSize": {
           "$ref": "#/definitions/__schema375"
         },
-        "discIntensity": {
+        "elevation": {
           "$ref": "#/definitions/__schema376"
         },
-        "glowIntensity": {
+        "azimuth": {
           "$ref": "#/definitions/__schema377"
         },
-        "glowSize": {
+        "discSize": {
           "$ref": "#/definitions/__schema378"
         },
-        "color": {
+        "discIntensity": {
           "$ref": "#/definitions/__schema379"
         },
-        "rotateWithSky": {
+        "glowIntensity": {
           "$ref": "#/definitions/__schema380"
+        },
+        "glowSize": {
+          "$ref": "#/definitions/__schema381"
+        },
+        "color": {
+          "$ref": "#/definitions/__schema382"
+        },
+        "rotateWithSky": {
+          "$ref": "#/definitions/__schema383"
         },
         "light": {
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "#/definitions/__schema381"
-            },
-            "intensity": {
-              "$ref": "#/definitions/__schema382"
-            },
-            "color": {
-              "$ref": "#/definitions/__schema383"
-            },
-            "castShadow": {
               "$ref": "#/definitions/__schema384"
             },
-            "shadowPreset": {
+            "intensity": {
               "$ref": "#/definitions/__schema385"
             },
-            "shadowBias": {
+            "color": {
               "$ref": "#/definitions/__schema386"
             },
-            "shadowNormalBias": {
+            "castShadow": {
               "$ref": "#/definitions/__schema387"
             },
-            "shadowMapSize": {
+            "shadowPreset": {
               "$ref": "#/definitions/__schema388"
             },
-            "shadowFrustumSize": {
+            "shadowBias": {
               "$ref": "#/definitions/__schema389"
             },
-            "distance": {
+            "shadowNormalBias": {
               "$ref": "#/definitions/__schema390"
             },
-            "shadowFollow": {
+            "shadowMapSize": {
               "$ref": "#/definitions/__schema391"
             },
-            "horizonFade": {
+            "shadowFrustumSize": {
               "$ref": "#/definitions/__schema392"
+            },
+            "distance": {
+              "$ref": "#/definitions/__schema393"
+            },
+            "shadowFollow": {
+              "$ref": "#/definitions/__schema394"
+            },
+            "horizonFade": {
+              "$ref": "#/definitions/__schema395"
             }
           },
           "additionalProperties": false
@@ -4548,95 +4572,95 @@
       },
       "additionalProperties": false
     },
-    "__schema372": {
+    "__schema375": {
       "type": "boolean"
     },
-    "__schema373": {
+    "__schema376": {
       "type": "number",
       "minimum": -90,
       "maximum": 90
     },
-    "__schema374": {
+    "__schema377": {
       "type": "number"
     },
-    "__schema375": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema376": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema377": {
-      "type": "number",
-      "minimum": 0
-    },
     "__schema378": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema379": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema380": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema381": {
       "type": "number",
       "minimum": 0.1,
       "maximum": 90
     },
-    "__schema379": {
+    "__schema382": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema366"
+          "$ref": "#/definitions/__schema369"
         }
       ]
-    },
-    "__schema380": {
-      "type": "boolean"
-    },
-    "__schema381": {
-      "type": "boolean"
-    },
-    "__schema382": {
-      "type": "number",
-      "minimum": 0
     },
     "__schema383": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema366"
-        }
-      ]
+      "type": "boolean"
     },
     "__schema384": {
       "type": "boolean"
     },
     "__schema385": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema386": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema369"
+        }
+      ]
+    },
+    "__schema387": {
+      "type": "boolean"
+    },
+    "__schema388": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema102"
         }
       ]
     },
-    "__schema386": {
+    "__schema389": {
       "type": "number"
     },
-    "__schema387": {
+    "__schema390": {
       "type": "number"
     },
-    "__schema388": {
+    "__schema391": {
       "type": "integer",
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema389": {
+    "__schema392": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema390": {
+    "__schema393": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema391": {
+    "__schema394": {
       "type": "string",
       "enum": [
         "ACTIVE_CAMERA",
         "ORIGIN"
       ]
     },
-    "__schema392": {
+    "__schema395": {
       "type": "array",
       "items": [
         {
@@ -4650,93 +4674,93 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "__schema393": {
+    "__schema396": {
       "maxItems": 2,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema394"
+        "$ref": "#/definitions/__schema397"
       }
     },
-    "__schema394": {
+    "__schema397": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema395"
-        },
-        "elevation": {
-          "$ref": "#/definitions/__schema396"
-        },
-        "azimuth": {
-          "$ref": "#/definitions/__schema397"
-        },
-        "discSize": {
           "$ref": "#/definitions/__schema398"
         },
-        "intensity": {
+        "elevation": {
           "$ref": "#/definitions/__schema399"
         },
-        "color": {
+        "azimuth": {
           "$ref": "#/definitions/__schema400"
         },
-        "limbDarkening": {
+        "discSize": {
           "$ref": "#/definitions/__schema401"
         },
-        "earthshine": {
+        "intensity": {
           "$ref": "#/definitions/__schema402"
         },
-        "texture": {
+        "color": {
           "$ref": "#/definitions/__schema403"
         },
+        "limbDarkening": {
+          "$ref": "#/definitions/__schema404"
+        },
+        "earthshine": {
+          "$ref": "#/definitions/__schema405"
+        },
+        "texture": {
+          "$ref": "#/definitions/__schema406"
+        },
         "phase": {
-          "$ref": "#/definitions/__schema409"
+          "$ref": "#/definitions/__schema412"
         },
         "phaseMode": {
-          "$ref": "#/definitions/__schema410"
+          "$ref": "#/definitions/__schema413"
         },
         "lunarCycleDays": {
-          "$ref": "#/definitions/__schema411"
+          "$ref": "#/definitions/__schema414"
         },
         "inclination": {
-          "$ref": "#/definitions/__schema412"
+          "$ref": "#/definitions/__schema415"
         },
         "light": {
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "#/definitions/__schema381"
+              "$ref": "#/definitions/__schema384"
             },
             "intensity": {
-              "$ref": "#/definitions/__schema413"
+              "$ref": "#/definitions/__schema416"
             },
             "color": {
-              "$ref": "#/definitions/__schema414"
+              "$ref": "#/definitions/__schema417"
             },
             "castShadow": {
-              "$ref": "#/definitions/__schema415"
+              "$ref": "#/definitions/__schema418"
             },
             "shadowPreset": {
-              "$ref": "#/definitions/__schema385"
-            },
-            "shadowBias": {
-              "$ref": "#/definitions/__schema386"
-            },
-            "shadowNormalBias": {
-              "$ref": "#/definitions/__schema387"
-            },
-            "shadowMapSize": {
               "$ref": "#/definitions/__schema388"
             },
-            "shadowFrustumSize": {
+            "shadowBias": {
               "$ref": "#/definitions/__schema389"
             },
-            "distance": {
+            "shadowNormalBias": {
               "$ref": "#/definitions/__schema390"
             },
-            "shadowFollow": {
+            "shadowMapSize": {
               "$ref": "#/definitions/__schema391"
             },
-            "horizonFade": {
+            "shadowFrustumSize": {
               "$ref": "#/definitions/__schema392"
+            },
+            "distance": {
+              "$ref": "#/definitions/__schema393"
+            },
+            "shadowFollow": {
+              "$ref": "#/definitions/__schema394"
+            },
+            "horizonFade": {
+              "$ref": "#/definitions/__schema395"
             }
           },
           "additionalProperties": false
@@ -4744,174 +4768,174 @@
       },
       "additionalProperties": false
     },
-    "__schema395": {
+    "__schema398": {
       "type": "boolean"
     },
-    "__schema396": {
+    "__schema399": {
       "type": "number",
       "minimum": -90,
       "maximum": 90
     },
-    "__schema397": {
+    "__schema400": {
       "type": "number"
     },
-    "__schema398": {
+    "__schema401": {
       "type": "number",
       "minimum": 0
     },
-    "__schema399": {
+    "__schema402": {
       "type": "number",
       "minimum": 0
     },
-    "__schema400": {
+    "__schema403": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"
         }
       ]
     },
-    "__schema401": {
+    "__schema404": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema402": {
+    "__schema405": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema403": {
+    "__schema406": {
       "type": "object",
       "properties": {
         "file": {
-          "$ref": "#/definitions/__schema404"
-        },
-        "path": {
-          "$ref": "#/definitions/__schema405"
-        },
-        "textureId": {
-          "$ref": "#/definitions/__schema406"
-        },
-        "colorSpace": {
           "$ref": "#/definitions/__schema407"
         },
-        "projection": {
+        "path": {
           "$ref": "#/definitions/__schema408"
+        },
+        "textureId": {
+          "$ref": "#/definitions/__schema409"
+        },
+        "colorSpace": {
+          "$ref": "#/definitions/__schema410"
+        },
+        "projection": {
+          "$ref": "#/definitions/__schema411"
         }
       },
       "additionalProperties": false
     },
-    "__schema404": {
-      "type": "string"
-    },
-    "__schema405": {
-      "type": "string"
-    },
-    "__schema406": {
-      "type": "string"
-    },
     "__schema407": {
+      "type": "string"
+    },
+    "__schema408": {
+      "type": "string"
+    },
+    "__schema409": {
+      "type": "string"
+    },
+    "__schema410": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema214"
         }
       ]
     },
-    "__schema408": {
+    "__schema411": {
       "type": "string",
       "enum": [
         "DISC",
         "EQUIRECTANGULAR"
       ]
     },
-    "__schema409": {
+    "__schema412": {
       "type": "number",
       "minimum": 0,
       "exclusiveMaximum": 1
     },
-    "__schema410": {
+    "__schema413": {
       "type": "string",
       "enum": [
         "FIXED",
         "CYCLE"
       ]
     },
-    "__schema411": {
+    "__schema414": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema412": {
+    "__schema415": {
       "type": "number",
       "minimum": 0,
       "maximum": 90
     },
-    "__schema413": {
+    "__schema416": {
       "type": "number",
       "minimum": 0
     },
-    "__schema414": {
+    "__schema417": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema366"
+          "$ref": "#/definitions/__schema369"
         }
       ]
     },
-    "__schema415": {
+    "__schema418": {
       "type": "boolean"
     },
-    "__schema416": {
+    "__schema419": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema417"
-        },
-        "density": {
-          "$ref": "#/definitions/__schema418"
-        },
-        "brightness": {
-          "$ref": "#/definitions/__schema419"
-        },
-        "size": {
           "$ref": "#/definitions/__schema420"
         },
-        "colorVariance": {
+        "density": {
           "$ref": "#/definitions/__schema421"
+        },
+        "brightness": {
+          "$ref": "#/definitions/__schema422"
+        },
+        "size": {
+          "$ref": "#/definitions/__schema423"
+        },
+        "colorVariance": {
+          "$ref": "#/definitions/__schema424"
         },
         "twinkle": {
           "type": "object",
           "properties": {
             "amount": {
-              "$ref": "#/definitions/__schema422"
+              "$ref": "#/definitions/__schema425"
             },
             "frequency": {
-              "$ref": "#/definitions/__schema423"
+              "$ref": "#/definitions/__schema426"
             }
           },
           "additionalProperties": false
         },
         "fadeRange": {
-          "$ref": "#/definitions/__schema424"
+          "$ref": "#/definitions/__schema427"
         },
         "rotateWithSky": {
-          "$ref": "#/definitions/__schema425"
+          "$ref": "#/definitions/__schema428"
         },
         "seed": {
-          "$ref": "#/definitions/__schema426"
+          "$ref": "#/definitions/__schema429"
         },
         "milkyWay": {
           "type": "object",
           "properties": {
             "enabled": {
-              "$ref": "#/definitions/__schema427"
+              "$ref": "#/definitions/__schema430"
             },
             "intensity": {
-              "$ref": "#/definitions/__schema428"
+              "$ref": "#/definitions/__schema431"
             },
             "direction": {
-              "$ref": "#/definitions/__schema429"
+              "$ref": "#/definitions/__schema432"
             },
             "width": {
-              "$ref": "#/definitions/__schema430"
+              "$ref": "#/definitions/__schema433"
             }
           },
           "additionalProperties": false
@@ -4919,21 +4943,8 @@
       },
       "additionalProperties": false
     },
-    "__schema417": {
-      "type": "boolean"
-    },
-    "__schema418": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "__schema419": {
-      "type": "number",
-      "minimum": 0
-    },
     "__schema420": {
-      "type": "number",
-      "minimum": 0
+      "type": "boolean"
     },
     "__schema421": {
       "type": "number",
@@ -4942,14 +4953,27 @@
     },
     "__schema422": {
       "type": "number",
-      "minimum": 0,
-      "maximum": 1
+      "minimum": 0
     },
     "__schema423": {
       "type": "number",
       "minimum": 0
     },
     "__schema424": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema425": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema426": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema427": {
       "type": "array",
       "items": [
         {
@@ -4963,22 +4987,22 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "__schema425": {
+    "__schema428": {
       "type": "boolean"
     },
-    "__schema426": {
+    "__schema429": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema427": {
+    "__schema430": {
       "type": "boolean"
     },
-    "__schema428": {
+    "__schema431": {
       "type": "number",
       "minimum": 0
     },
-    "__schema429": {
+    "__schema432": {
       "type": "array",
       "items": [
         {
@@ -4995,75 +5019,75 @@
       "maxItems": 3,
       "additionalItems": false
     },
-    "__schema430": {
+    "__schema433": {
       "type": "number",
       "minimum": 0.1,
       "maximum": 90
     },
-    "__schema431": {
+    "__schema434": {
       "maxItems": 8,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema432"
+        "$ref": "#/definitions/__schema435"
       }
     },
-    "__schema432": {
+    "__schema435": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema433"
-        },
-        "seed": {
-          "$ref": "#/definitions/__schema434"
-        },
-        "direction": {
-          "$ref": "#/definitions/__schema435"
-        },
-        "size": {
           "$ref": "#/definitions/__schema436"
         },
-        "falloff": {
+        "seed": {
           "$ref": "#/definitions/__schema437"
         },
-        "stretch": {
+        "direction": {
           "$ref": "#/definitions/__schema438"
         },
-        "orientation": {
+        "size": {
           "$ref": "#/definitions/__schema439"
         },
-        "colors": {
+        "falloff": {
           "$ref": "#/definitions/__schema440"
         },
-        "density": {
+        "stretch": {
           "$ref": "#/definitions/__schema441"
         },
-        "octaves": {
+        "orientation": {
           "$ref": "#/definitions/__schema442"
         },
-        "warp": {
+        "colors": {
           "$ref": "#/definitions/__schema443"
         },
-        "dust": {
+        "density": {
           "$ref": "#/definitions/__schema444"
         },
-        "brightness": {
+        "octaves": {
           "$ref": "#/definitions/__schema445"
         },
-        "starBoost": {
+        "warp": {
           "$ref": "#/definitions/__schema446"
+        },
+        "dust": {
+          "$ref": "#/definitions/__schema447"
+        },
+        "brightness": {
+          "$ref": "#/definitions/__schema448"
+        },
+        "starBoost": {
+          "$ref": "#/definitions/__schema449"
         }
       },
       "additionalProperties": false
     },
-    "__schema433": {
+    "__schema436": {
       "type": "boolean"
     },
-    "__schema434": {
+    "__schema437": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema435": {
+    "__schema438": {
       "type": "array",
       "items": [
         {
@@ -5080,25 +5104,25 @@
       "maxItems": 3,
       "additionalItems": false
     },
-    "__schema436": {
+    "__schema439": {
       "type": "number",
       "minimum": 1,
       "maximum": 180
     },
-    "__schema437": {
+    "__schema440": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema438": {
+    "__schema441": {
       "type": "number",
       "minimum": 1,
       "maximum": 10
     },
-    "__schema439": {
+    "__schema442": {
       "type": "number"
     },
-    "__schema440": {
+    "__schema443": {
       "minItems": 2,
       "maxItems": 3,
       "type": "array",
@@ -5106,147 +5130,147 @@
         "$ref": "#/definitions/__schema13"
       }
     },
-    "__schema441": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "__schema442": {
-      "type": "integer",
-      "minimum": 2,
-      "maximum": 6
-    },
-    "__schema443": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 2
-    },
     "__schema444": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
     "__schema445": {
-      "type": "number",
-      "minimum": 0
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 6
     },
     "__schema446": {
       "type": "number",
       "minimum": 0,
-      "maximum": 1
+      "maximum": 2
     },
     "__schema447": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema448": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema449": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema450": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema448"
-        },
-        "type": {
-          "$ref": "#/definitions/__schema449"
-        },
-        "intensity": {
-          "$ref": "#/definitions/__schema450"
-        },
-        "skyColor": {
           "$ref": "#/definitions/__schema451"
         },
-        "groundColor": {
+        "type": {
           "$ref": "#/definitions/__schema452"
+        },
+        "intensity": {
+          "$ref": "#/definitions/__schema453"
+        },
+        "skyColor": {
+          "$ref": "#/definitions/__schema454"
+        },
+        "groundColor": {
+          "$ref": "#/definitions/__schema455"
         }
       },
       "additionalProperties": false
     },
-    "__schema448": {
+    "__schema451": {
       "type": "boolean"
     },
-    "__schema449": {
+    "__schema452": {
       "type": "string",
       "enum": [
         "HEMISPHERE",
         "AMBIENT"
       ]
     },
-    "__schema450": {
+    "__schema453": {
       "type": "number",
       "minimum": 0
     },
-    "__schema451": {
+    "__schema454": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema366"
+          "$ref": "#/definitions/__schema369"
         }
       ]
     },
-    "__schema452": {
+    "__schema455": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema366"
+          "$ref": "#/definitions/__schema369"
         }
       ]
     },
-    "__schema453": {
+    "__schema456": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema454"
-        },
-        "coverage": {
-          "$ref": "#/definitions/__schema455"
-        },
-        "density": {
-          "$ref": "#/definitions/__schema456"
-        },
-        "scale": {
           "$ref": "#/definitions/__schema457"
         },
-        "speed": {
+        "coverage": {
           "$ref": "#/definitions/__schema458"
         },
-        "elevation": {
+        "density": {
           "$ref": "#/definitions/__schema459"
         },
-        "color": {
+        "scale": {
           "$ref": "#/definitions/__schema460"
         },
-        "windDirection": {
+        "speed": {
           "$ref": "#/definitions/__schema461"
+        },
+        "elevation": {
+          "$ref": "#/definitions/__schema462"
+        },
+        "color": {
+          "$ref": "#/definitions/__schema463"
+        },
+        "windDirection": {
+          "$ref": "#/definitions/__schema464"
         }
       },
       "additionalProperties": false
     },
-    "__schema454": {
-      "type": "boolean"
-    },
-    "__schema455": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "__schema456": {
-      "type": "number",
-      "minimum": 0
-    },
     "__schema457": {
-      "type": "number",
-      "minimum": 0
+      "type": "boolean"
     },
     "__schema458": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 1
     },
     "__schema459": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema460": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema461": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema462": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema460": {
+    "__schema463": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"
         }
       ]
     },
-    "__schema461": {
+    "__schema464": {
       "type": "array",
       "items": [
         {
@@ -5260,104 +5284,104 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "__schema462": {
+    "__schema465": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema463"
-        },
-        "color": {
-          "$ref": "#/definitions/__schema464"
-        },
-        "horizonBlend": {
-          "$ref": "#/definitions/__schema465"
-        },
-        "height": {
           "$ref": "#/definitions/__schema466"
         },
-        "useAtmosphereHorizon": {
+        "color": {
           "$ref": "#/definitions/__schema467"
+        },
+        "horizonBlend": {
+          "$ref": "#/definitions/__schema468"
+        },
+        "height": {
+          "$ref": "#/definitions/__schema469"
+        },
+        "useAtmosphereHorizon": {
+          "$ref": "#/definitions/__schema470"
         }
       },
       "additionalProperties": false
     },
-    "__schema463": {
+    "__schema466": {
       "type": "boolean"
     },
-    "__schema464": {
+    "__schema467": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"
         }
       ]
     },
-    "__schema465": {
+    "__schema468": {
       "type": "number",
       "minimum": 0
     },
-    "__schema466": {
+    "__schema469": {
       "type": "number",
       "minimum": -90,
       "maximum": 90
     },
-    "__schema467": {
+    "__schema470": {
       "type": "boolean"
     },
-    "__schema468": {
+    "__schema471": {
       "type": "object",
       "properties": {
         "enabled": {
-          "$ref": "#/definitions/__schema469"
-        },
-        "timeOfDay": {
-          "$ref": "#/definitions/__schema470"
-        },
-        "cycleDurationSec": {
-          "$ref": "#/definitions/__schema471"
-        },
-        "speed": {
           "$ref": "#/definitions/__schema472"
         },
-        "playing": {
+        "timeOfDay": {
           "$ref": "#/definitions/__schema473"
         },
-        "timeSource": {
+        "cycleDurationSec": {
           "$ref": "#/definitions/__schema474"
         },
-        "latitude": {
+        "speed": {
           "$ref": "#/definitions/__schema475"
         },
-        "dayOfYear": {
+        "playing": {
           "$ref": "#/definitions/__schema476"
         },
-        "axialTilt": {
+        "timeSource": {
           "$ref": "#/definitions/__schema477"
         },
-        "northOffset": {
+        "latitude": {
           "$ref": "#/definitions/__schema478"
+        },
+        "dayOfYear": {
+          "$ref": "#/definitions/__schema479"
+        },
+        "axialTilt": {
+          "$ref": "#/definitions/__schema480"
+        },
+        "northOffset": {
+          "$ref": "#/definitions/__schema481"
         }
       },
       "additionalProperties": false
     },
-    "__schema469": {
+    "__schema472": {
       "type": "boolean"
     },
-    "__schema470": {
+    "__schema473": {
       "type": "number",
       "minimum": 0,
       "exclusiveMaximum": 24
     },
-    "__schema471": {
+    "__schema474": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema472": {
+    "__schema475": {
       "type": "number"
     },
-    "__schema473": {
+    "__schema476": {
       "type": "boolean"
     },
-    "__schema474": {
+    "__schema477": {
       "type": "string",
       "enum": [
         "APP",
@@ -5365,46 +5389,46 @@
         "MANUAL"
       ]
     },
-    "__schema475": {
+    "__schema478": {
       "type": "number",
       "minimum": -90,
       "maximum": 90
     },
-    "__schema476": {
+    "__schema479": {
       "type": "number",
       "minimum": 0,
       "maximum": 366
     },
-    "__schema477": {
+    "__schema480": {
       "type": "number",
       "minimum": 0,
       "maximum": 90
     },
-    "__schema478": {
+    "__schema481": {
       "type": "number"
     },
-    "__schema479": {
+    "__schema482": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema57"
         }
       ]
     },
-    "__schema480": {
+    "__schema483": {
       "type": "string"
     },
-    "__schema481": {
+    "__schema484": {
       "type": "string"
     },
-    "__schema482": {
+    "__schema485": {
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema483"
+          "$ref": "#/definitions/__schema486"
         }
       ]
     },
-    "__schema483": {
+    "__schema486": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -5432,7 +5456,7 @@
                   "maxItems": 6,
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/__schema484"
+                    "$ref": "#/definitions/__schema487"
                   }
                 },
                 "path": {
@@ -5467,56 +5491,56 @@
                 "backgroundRoughness": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema349"
+                      "$ref": "#/definitions/__schema352"
                     }
                   ]
                 },
                 "backgroundIntensity": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema350"
+                      "$ref": "#/definitions/__schema353"
                     }
                   ]
                 },
                 "environmentIntensity": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema351"
+                      "$ref": "#/definitions/__schema354"
                     }
                   ]
                 },
                 "size": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema352"
+                      "$ref": "#/definitions/__schema355"
                     }
                   ]
                 },
                 "dynamic": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema353"
+                      "$ref": "#/definitions/__schema356"
                     }
                   ]
                 },
                 "updateAngleDeg": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema354"
+                      "$ref": "#/definitions/__schema357"
                     }
                   ]
                 },
                 "maxUpdatesPerSec": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema355"
+                      "$ref": "#/definitions/__schema358"
                     }
                   ]
                 },
                 "nebulaSize": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema356"
+                      "$ref": "#/definitions/__schema359"
                     }
                   ]
                 }
@@ -5529,77 +5553,77 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema358"
+                      "$ref": "#/definitions/__schema361"
                     }
                   ]
                 },
                 "turbidity": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema359"
+                      "$ref": "#/definitions/__schema362"
                     }
                   ]
                 },
                 "rayleigh": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema360"
+                      "$ref": "#/definitions/__schema363"
                     }
                   ]
                 },
                 "mieCoefficient": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema361"
+                      "$ref": "#/definitions/__schema364"
                     }
                   ]
                 },
                 "mieDirectionalG": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema362"
+                      "$ref": "#/definitions/__schema365"
                     }
                   ]
                 },
                 "exposure": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema363"
+                      "$ref": "#/definitions/__schema366"
                     }
                   ]
                 },
                 "sunIntensity": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema364"
+                      "$ref": "#/definitions/__schema367"
                     }
                   ]
                 },
                 "nightSkyColor": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema365"
+                      "$ref": "#/definitions/__schema368"
                     }
                   ]
                 },
                 "twilightLength": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema367"
+                      "$ref": "#/definitions/__schema370"
                     }
                   ]
                 },
                 "horizonTint": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema368"
+                      "$ref": "#/definitions/__schema371"
                     }
                   ]
                 },
                 "zenithTint": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema369"
+                      "$ref": "#/definitions/__schema372"
                     }
                   ]
                 }
@@ -5612,7 +5636,7 @@
                   "maxItems": 4,
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/__schema485"
+                    "$ref": "#/definitions/__schema488"
                   }
                 },
                 {
@@ -5622,7 +5646,7 @@
                     "pattern": "^(0|[1-9]\\d*)$"
                   },
                   "additionalProperties": {
-                    "$ref": "#/definitions/__schema485"
+                    "$ref": "#/definitions/__schema488"
                   }
                 }
               ]
@@ -5633,7 +5657,7 @@
                   "maxItems": 2,
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/__schema486"
+                    "$ref": "#/definitions/__schema489"
                   }
                 },
                 {
@@ -5643,7 +5667,7 @@
                     "pattern": "^(0|[1-9]\\d*)$"
                   },
                   "additionalProperties": {
-                    "$ref": "#/definitions/__schema486"
+                    "$ref": "#/definitions/__schema489"
                   }
                 }
               ]
@@ -5654,7 +5678,7 @@
                   "maxItems": 8,
                   "type": "array",
                   "items": {
-                    "$ref": "#/definitions/__schema487"
+                    "$ref": "#/definitions/__schema490"
                   }
                 },
                 {
@@ -5664,7 +5688,7 @@
                     "pattern": "^(0|[1-9]\\d*)$"
                   },
                   "additionalProperties": {
-                    "$ref": "#/definitions/__schema487"
+                    "$ref": "#/definitions/__schema490"
                   }
                 }
               ]
@@ -5675,35 +5699,35 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema417"
+                      "$ref": "#/definitions/__schema420"
                     }
                   ]
                 },
                 "density": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema418"
+                      "$ref": "#/definitions/__schema421"
                     }
                   ]
                 },
                 "brightness": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema419"
+                      "$ref": "#/definitions/__schema422"
                     }
                   ]
                 },
                 "size": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema420"
+                      "$ref": "#/definitions/__schema423"
                     }
                   ]
                 },
                 "colorVariance": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema421"
+                      "$ref": "#/definitions/__schema424"
                     }
                   ]
                 },
@@ -5713,14 +5737,14 @@
                     "amount": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema422"
+                          "$ref": "#/definitions/__schema425"
                         }
                       ]
                     },
                     "frequency": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema423"
+                          "$ref": "#/definitions/__schema426"
                         }
                       ]
                     }
@@ -5730,21 +5754,21 @@
                 "fadeRange": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema424"
+                      "$ref": "#/definitions/__schema427"
                     }
                   ]
                 },
                 "rotateWithSky": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema425"
+                      "$ref": "#/definitions/__schema428"
                     }
                   ]
                 },
                 "seed": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema426"
+                      "$ref": "#/definitions/__schema429"
                     }
                   ]
                 },
@@ -5754,28 +5778,28 @@
                     "enabled": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema427"
+                          "$ref": "#/definitions/__schema430"
                         }
                       ]
                     },
                     "intensity": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema428"
+                          "$ref": "#/definitions/__schema431"
                         }
                       ]
                     },
                     "direction": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema429"
+                          "$ref": "#/definitions/__schema432"
                         }
                       ]
                     },
                     "width": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/__schema430"
+                          "$ref": "#/definitions/__schema433"
                         }
                       ]
                     }
@@ -5791,35 +5815,35 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema448"
+                      "$ref": "#/definitions/__schema451"
                     }
                   ]
                 },
                 "type": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema449"
+                      "$ref": "#/definitions/__schema452"
                     }
                   ]
                 },
                 "intensity": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema450"
+                      "$ref": "#/definitions/__schema453"
                     }
                   ]
                 },
                 "skyColor": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema451"
+                      "$ref": "#/definitions/__schema454"
                     }
                   ]
                 },
                 "groundColor": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema452"
+                      "$ref": "#/definitions/__schema455"
                     }
                   ]
                 }
@@ -5832,56 +5856,56 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema454"
+                      "$ref": "#/definitions/__schema457"
                     }
                   ]
                 },
                 "coverage": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema455"
+                      "$ref": "#/definitions/__schema458"
                     }
                   ]
                 },
                 "density": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema456"
+                      "$ref": "#/definitions/__schema459"
                     }
                   ]
                 },
                 "scale": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema457"
+                      "$ref": "#/definitions/__schema460"
                     }
                   ]
                 },
                 "speed": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema458"
+                      "$ref": "#/definitions/__schema461"
                     }
                   ]
                 },
                 "elevation": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema459"
+                      "$ref": "#/definitions/__schema462"
                     }
                   ]
                 },
                 "color": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema460"
+                      "$ref": "#/definitions/__schema463"
                     }
                   ]
                 },
                 "windDirection": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema461"
+                      "$ref": "#/definitions/__schema464"
                     }
                   ]
                 }
@@ -5894,35 +5918,35 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema463"
+                      "$ref": "#/definitions/__schema466"
                     }
                   ]
                 },
                 "color": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema464"
+                      "$ref": "#/definitions/__schema467"
                     }
                   ]
                 },
                 "horizonBlend": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema465"
+                      "$ref": "#/definitions/__schema468"
                     }
                   ]
                 },
                 "height": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema466"
+                      "$ref": "#/definitions/__schema469"
                     }
                   ]
                 },
                 "useAtmosphereHorizon": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema467"
+                      "$ref": "#/definitions/__schema470"
                     }
                   ]
                 }
@@ -5935,70 +5959,70 @@
                 "enabled": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema469"
+                      "$ref": "#/definitions/__schema472"
                     }
                   ]
                 },
                 "timeOfDay": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema470"
+                      "$ref": "#/definitions/__schema473"
                     }
                   ]
                 },
                 "cycleDurationSec": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema471"
+                      "$ref": "#/definitions/__schema474"
                     }
                   ]
                 },
                 "speed": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema472"
+                      "$ref": "#/definitions/__schema475"
                     }
                   ]
                 },
                 "playing": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema473"
+                      "$ref": "#/definitions/__schema476"
                     }
                   ]
                 },
                 "timeSource": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema474"
+                      "$ref": "#/definitions/__schema477"
                     }
                   ]
                 },
                 "latitude": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema475"
+                      "$ref": "#/definitions/__schema478"
                     }
                   ]
                 },
                 "dayOfYear": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema476"
+                      "$ref": "#/definitions/__schema479"
                     }
                   ]
                 },
                 "axialTilt": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema477"
+                      "$ref": "#/definitions/__schema480"
                     }
                   ]
                 },
                 "northOffset": {
                   "allOf": [
                     {
-                      "$ref": "#/definitions/__schema478"
+                      "$ref": "#/definitions/__schema481"
                     }
                   ]
                 }
@@ -6017,259 +6041,72 @@
         }
       }
     },
-    "__schema484": {
+    "__schema487": {
       "type": "string"
     },
-    "__schema485": {
+    "__schema488": {
       "type": "object",
       "properties": {
         "enabled": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema372"
-            }
-          ]
-        },
-        "elevation": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema373"
-            }
-          ]
-        },
-        "azimuth": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema374"
-            }
-          ]
-        },
-        "discSize": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema375"
             }
           ]
         },
-        "discIntensity": {
+        "elevation": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema376"
             }
           ]
         },
-        "glowIntensity": {
+        "azimuth": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema377"
             }
           ]
         },
-        "glowSize": {
+        "discSize": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema378"
             }
           ]
         },
-        "color": {
+        "discIntensity": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema379"
             }
           ]
         },
-        "rotateWithSky": {
+        "glowIntensity": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema380"
             }
           ]
         },
-        "light": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema381"
-                }
-              ]
-            },
-            "intensity": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema382"
-                }
-              ]
-            },
-            "color": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema383"
-                }
-              ]
-            },
-            "castShadow": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema384"
-                }
-              ]
-            },
-            "shadowPreset": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema385"
-                }
-              ]
-            },
-            "shadowBias": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema386"
-                }
-              ]
-            },
-            "shadowNormalBias": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema387"
-                }
-              ]
-            },
-            "shadowMapSize": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema388"
-                }
-              ]
-            },
-            "shadowFrustumSize": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema389"
-                }
-              ]
-            },
-            "distance": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema390"
-                }
-              ]
-            },
-            "shadowFollow": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema391"
-                }
-              ]
-            },
-            "horizonFade": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/__schema392"
-                }
-              ]
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema486": {
-      "type": "object",
-      "properties": {
-        "enabled": {
+        "glowSize": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema395"
-            }
-          ]
-        },
-        "elevation": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema396"
-            }
-          ]
-        },
-        "azimuth": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema397"
-            }
-          ]
-        },
-        "discSize": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema398"
-            }
-          ]
-        },
-        "intensity": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema399"
+              "$ref": "#/definitions/__schema381"
             }
           ]
         },
         "color": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema400"
+              "$ref": "#/definitions/__schema382"
             }
           ]
         },
-        "limbDarkening": {
+        "rotateWithSky": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema401"
-            }
-          ]
-        },
-        "earthshine": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema402"
-            }
-          ]
-        },
-        "texture": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema403"
-            }
-          ]
-        },
-        "phase": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema409"
-            }
-          ]
-        },
-        "phaseMode": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema410"
-            }
-          ]
-        },
-        "lunarCycleDays": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema411"
-            }
-          ]
-        },
-        "inclination": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema412"
+              "$ref": "#/definitions/__schema383"
             }
           ]
         },
@@ -6279,84 +6116,84 @@
             "enabled": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema381"
+                  "$ref": "#/definitions/__schema384"
                 }
               ]
             },
             "intensity": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema413"
+                  "$ref": "#/definitions/__schema385"
                 }
               ]
             },
             "color": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema414"
+                  "$ref": "#/definitions/__schema386"
                 }
               ]
             },
             "castShadow": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema415"
+                  "$ref": "#/definitions/__schema387"
                 }
               ]
             },
             "shadowPreset": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema385"
+                  "$ref": "#/definitions/__schema388"
                 }
               ]
             },
             "shadowBias": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema386"
+                  "$ref": "#/definitions/__schema389"
                 }
               ]
             },
             "shadowNormalBias": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema387"
+                  "$ref": "#/definitions/__schema390"
                 }
               ]
             },
             "shadowMapSize": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema388"
+                  "$ref": "#/definitions/__schema391"
                 }
               ]
             },
             "shadowFrustumSize": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema389"
+                  "$ref": "#/definitions/__schema392"
                 }
               ]
             },
             "distance": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema390"
+                  "$ref": "#/definitions/__schema393"
                 }
               ]
             },
             "shadowFollow": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema391"
+                  "$ref": "#/definitions/__schema394"
                 }
               ]
             },
             "horizonFade": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema392"
+                  "$ref": "#/definitions/__schema395"
                 }
               ]
             }
@@ -6366,111 +6203,298 @@
       },
       "additionalProperties": false
     },
-    "__schema487": {
+    "__schema489": {
       "type": "object",
       "properties": {
         "enabled": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema433"
+              "$ref": "#/definitions/__schema398"
             }
           ]
         },
-        "seed": {
+        "elevation": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema434"
+              "$ref": "#/definitions/__schema399"
             }
           ]
         },
-        "direction": {
+        "azimuth": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema435"
+              "$ref": "#/definitions/__schema400"
             }
           ]
         },
-        "size": {
+        "discSize": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema401"
+            }
+          ]
+        },
+        "intensity": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema402"
+            }
+          ]
+        },
+        "color": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema403"
+            }
+          ]
+        },
+        "limbDarkening": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema404"
+            }
+          ]
+        },
+        "earthshine": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema405"
+            }
+          ]
+        },
+        "texture": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema406"
+            }
+          ]
+        },
+        "phase": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema412"
+            }
+          ]
+        },
+        "phaseMode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema413"
+            }
+          ]
+        },
+        "lunarCycleDays": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema414"
+            }
+          ]
+        },
+        "inclination": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema415"
+            }
+          ]
+        },
+        "light": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema384"
+                }
+              ]
+            },
+            "intensity": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema416"
+                }
+              ]
+            },
+            "color": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema417"
+                }
+              ]
+            },
+            "castShadow": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema418"
+                }
+              ]
+            },
+            "shadowPreset": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema388"
+                }
+              ]
+            },
+            "shadowBias": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema389"
+                }
+              ]
+            },
+            "shadowNormalBias": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema390"
+                }
+              ]
+            },
+            "shadowMapSize": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema391"
+                }
+              ]
+            },
+            "shadowFrustumSize": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema392"
+                }
+              ]
+            },
+            "distance": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema393"
+                }
+              ]
+            },
+            "shadowFollow": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema394"
+                }
+              ]
+            },
+            "horizonFade": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema395"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema490": {
+      "type": "object",
+      "properties": {
+        "enabled": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema436"
             }
           ]
         },
-        "falloff": {
+        "seed": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema437"
             }
           ]
         },
-        "stretch": {
+        "direction": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema438"
             }
           ]
         },
-        "orientation": {
+        "size": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema439"
             }
           ]
         },
-        "colors": {
+        "falloff": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema440"
             }
           ]
         },
-        "density": {
+        "stretch": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema441"
             }
           ]
         },
-        "octaves": {
+        "orientation": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema442"
             }
           ]
         },
-        "warp": {
+        "colors": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema443"
             }
           ]
         },
-        "dust": {
+        "density": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema444"
             }
           ]
         },
-        "brightness": {
+        "octaves": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema445"
             }
           ]
         },
-        "starBoost": {
+        "warp": {
           "allOf": [
             {
               "$ref": "#/definitions/__schema446"
+            }
+          ]
+        },
+        "dust": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema447"
+            }
+          ]
+        },
+        "brightness": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema448"
+            }
+          ]
+        },
+        "starBoost": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema449"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema488": {
+    "__schema491": {
       "type": "array",
       "items": {
         "anyOf": [
@@ -6492,14 +6516,14 @@
                 "description": "Whether the pass is part of the chain. Default true.",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema489"
+                    "$ref": "#/definitions/__schema492"
                   }
                 ]
               },
               "params": {
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema490"
+                    "$ref": "#/definitions/__schema493"
                   }
                 ]
               },
@@ -6507,14 +6531,14 @@
                 "description": "The debugger's control hints per param key (the pass never reads them).",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema493"
+                    "$ref": "#/definitions/__schema496"
                   }
                 ]
               },
               "staticDefines": {
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema502"
+                    "$ref": "#/definitions/__schema505"
                   }
                 ]
               },
@@ -6550,7 +6574,7 @@
                 "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/__schema505"
+                    "$ref": "#/definitions/__schema508"
                   }
                 ]
               }
@@ -6564,24 +6588,24 @@
         ]
       }
     },
-    "__schema489": {
+    "__schema492": {
       "type": "boolean"
     },
-    "__schema490": {
+    "__schema493": {
       "type": "object",
       "propertyNames": {
-        "$ref": "#/definitions/__schema491"
+        "$ref": "#/definitions/__schema494"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema492"
+        "$ref": "#/definitions/__schema495"
       },
       "description": "Flat params, handed to the pass's fxNode as JSON values (not uniforms)."
     },
-    "__schema491": {
+    "__schema494": {
       "type": "string"
     },
-    "__schema492": {},
-    "__schema493": {
+    "__schema495": {},
+    "__schema496": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -6590,58 +6614,58 @@
         "type": "object",
         "properties": {
           "label": {
-            "$ref": "#/definitions/__schema494"
-          },
-          "min": {
-            "$ref": "#/definitions/__schema495"
-          },
-          "max": {
-            "$ref": "#/definitions/__schema496"
-          },
-          "step": {
             "$ref": "#/definitions/__schema497"
           },
-          "options": {
+          "min": {
             "$ref": "#/definitions/__schema498"
           },
-          "hidden": {
+          "max": {
+            "$ref": "#/definitions/__schema499"
+          },
+          "step": {
+            "$ref": "#/definitions/__schema500"
+          },
+          "options": {
             "$ref": "#/definitions/__schema501"
+          },
+          "hidden": {
+            "$ref": "#/definitions/__schema504"
           }
         },
         "additionalProperties": false,
         "description": "The debugger's hints for the param's control."
       }
     },
-    "__schema494": {
+    "__schema497": {
       "type": "string",
       "description": "The control's label. Default: the param's key."
     },
-    "__schema495": {
+    "__schema498": {
       "type": "number",
       "description": "A number param's slider minimum."
     },
-    "__schema496": {
+    "__schema499": {
       "type": "number",
       "description": "A number param's slider maximum."
     },
-    "__schema497": {
+    "__schema500": {
       "type": "number",
       "description": "A number param's slider step."
     },
-    "__schema498": {
+    "__schema501": {
       "type": "object",
       "propertyNames": {
-        "$ref": "#/definitions/__schema499"
+        "$ref": "#/definitions/__schema502"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema500"
+        "$ref": "#/definitions/__schema503"
       },
       "description": "A drop-down: each option's text → the param's value."
     },
-    "__schema499": {
+    "__schema502": {
       "type": "string"
     },
-    "__schema500": {
+    "__schema503": {
       "anyOf": [
         {
           "type": "string"
@@ -6654,25 +6678,25 @@
         }
       ]
     },
-    "__schema501": {
+    "__schema504": {
       "type": "boolean",
       "description": "Leaves the param out of the debugger."
     },
-    "__schema502": {
+    "__schema505": {
       "type": "object",
       "propertyNames": {
-        "$ref": "#/definitions/__schema503"
+        "$ref": "#/definitions/__schema506"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema504"
+        "$ref": "#/definitions/__schema507"
       },
       "description": "Handed to the pass's fxNode as its third argument (build-time flags)."
     },
-    "__schema503": {
+    "__schema506": {
       "type": "string"
     },
-    "__schema504": {},
-    "__schema505": {
+    "__schema507": {},
+    "__schema508": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -6693,21 +6717,21 @@
               "description": "Whether the pass is part of the chain. Default true.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema506"
+                  "$ref": "#/definitions/__schema509"
                 }
               ]
             },
             "params": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema490"
+                  "$ref": "#/definitions/__schema493"
                 }
               ]
             },
             "staticDefines": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema502"
+                  "$ref": "#/definitions/__schema505"
                 }
               ]
             },
@@ -6730,36 +6754,36 @@
         }
       }
     },
-    "__schema506": {
+    "__schema509": {
       "type": "boolean"
     },
-    "__schema507": {
+    "__schema510": {
       "type": "boolean"
     },
-    "__schema508": {
+    "__schema511": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema509"
+        "$ref": "#/definitions/__schema512"
       },
       "description": "The spatial domains the scene registers, each id once; dropped on the scene's exit."
     },
-    "__schema509": {
+    "__schema512": {
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/definitions/__schema510"
-        },
-        "cellSize": {
-          "$ref": "#/definitions/__schema511"
-        },
-        "maxMembers": {
           "$ref": "#/definitions/__schema513"
         },
+        "cellSize": {
+          "$ref": "#/definitions/__schema514"
+        },
+        "maxMembers": {
+          "$ref": "#/definitions/__schema516"
+        },
         "update": {
-          "$ref": "#/definitions/__schema515"
+          "$ref": "#/definitions/__schema518"
         },
         "oversizedRadiusMultiplier": {
-          "$ref": "#/definitions/__schema517"
+          "$ref": "#/definitions/__schema520"
         }
       },
       "required": [
@@ -6768,45 +6792,45 @@
       "additionalProperties": false,
       "description": "A spatial domain the scene registers: DEFAULT partly, the others with cellSize and maxMembers."
     },
-    "__schema510": {
+    "__schema513": {
       "type": "string",
       "minLength": 1,
       "description": "The domain's id; DEFAULT is the world's own."
     },
-    "__schema511": {
+    "__schema514": {
       "description": "The world-space edge length of one grid cell.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema512"
+          "$ref": "#/definitions/__schema515"
         }
       ]
     },
-    "__schema512": {
+    "__schema515": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema513": {
+    "__schema516": {
       "description": "How many members the domain can hold at once.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema514"
+          "$ref": "#/definitions/__schema517"
         }
       ]
     },
-    "__schema514": {
+    "__schema517": {
       "type": "integer",
       "minimum": 1,
       "maximum": 9007199254740991
     },
-    "__schema515": {
+    "__schema518": {
       "description": "Grid rebuilds: every frame (DYNAMIC, default), when a member joins or leaves (STATIC), or on request (MANUAL).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema516"
+          "$ref": "#/definitions/__schema519"
         }
       ]
     },
-    "__schema516": {
+    "__schema519": {
       "type": "string",
       "enum": [
         "DYNAMIC",
@@ -6814,55 +6838,55 @@
         "MANUAL"
       ]
     },
-    "__schema517": {
+    "__schema520": {
       "description": "A member with a radius over cellSize × this goes into the oversized tier. Default 2.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema518"
+          "$ref": "#/definitions/__schema521"
         }
       ]
     },
-    "__schema518": {
+    "__schema521": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema519": {
+    "__schema522": {
       "description": "Exported impostors (`*.impostor.json` ids): their atlases load with the scene's textures, and generateOctahedralImpostor / generateCrossQuads called with one's id builds from it instead of baking.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema520"
+          "$ref": "#/definitions/__schema523"
         }
       ]
     },
-    "__schema520": {
+    "__schema523": {
       "type": "array",
       "items": {
         "type": "string"
       }
     },
-    "__schema521": {
+    "__schema524": {
       "type": "object",
       "properties": {
         "cellSize": {
-          "$ref": "#/definitions/__schema522"
+          "$ref": "#/definitions/__schema525"
         },
         "rings": {
-          "$ref": "#/definitions/__schema523"
-        },
-        "margin": {
           "$ref": "#/definitions/__schema526"
         },
+        "margin": {
+          "$ref": "#/definitions/__schema529"
+        },
         "nearbyPhysicsTier": {
-          "$ref": "#/definitions/__schema528"
+          "$ref": "#/definitions/__schema531"
         },
         "fadeSeconds": {
-          "$ref": "#/definitions/__schema530"
+          "$ref": "#/definitions/__schema533"
         },
         "base": {
-          "$ref": "#/definitions/__schema532"
+          "$ref": "#/definitions/__schema535"
         },
         "radii": {
-          "$ref": "#/definitions/__schema534"
+          "$ref": "#/definitions/__schema537"
         }
       },
       "required": [
@@ -6870,55 +6894,12 @@
       ],
       "additionalProperties": false
     },
-    "__schema522": {
+    "__schema525": {
       "type": "number",
       "description": "The cell side in metres: a power of two, at least 32."
     },
-    "__schema523": {
-      "description": "Each state's outermost ring, in cells from the focus cell.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema524"
-        }
-      ]
-    },
-    "__schema524": {
-      "type": "object",
-      "properties": {
-        "resident": {
-          "description": "The outermost RESIDENT ring, in cells from the focus cell. Default 1.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema525"
-            }
-          ]
-        },
-        "nearby": {
-          "description": "The outermost NEARBY ring, in cells from the focus cell. Default 2.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema525"
-            }
-          ]
-        },
-        "far": {
-          "description": "The outermost FAR ring, in cells from the focus cell; beyond it a cell is unloaded. Default 5.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema525"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema525": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991
-    },
     "__schema526": {
-      "description": "Metres past a ring before a cell is demoted. Default cellSize / 4.",
+      "description": "Each state's outermost ring, in cells from the focus cell.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema527"
@@ -6926,59 +6907,102 @@
       ]
     },
     "__schema527": {
-      "type": "number",
-      "minimum": 0
+      "type": "object",
+      "properties": {
+        "resident": {
+          "description": "The outermost RESIDENT ring, in cells from the focus cell. Default 1.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema528"
+            }
+          ]
+        },
+        "nearby": {
+          "description": "The outermost NEARBY ring, in cells from the focus cell. Default 2.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema528"
+            }
+          ]
+        },
+        "far": {
+          "description": "The outermost FAR ring, in cells from the focus cell; beyond it a cell is unloaded. Default 5.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema528"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "__schema528": {
-      "description": "A NEARBY cell's dynamic bodies' physics tier: STATIC (default) or DISABLED.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema529": {
+      "description": "Metres past a ring before a cell is demoted. Default cellSize / 4.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema529"
+          "$ref": "#/definitions/__schema530"
         }
       ]
     },
-    "__schema529": {
+    "__schema530": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema531": {
+      "description": "A NEARBY cell's dynamic bodies' physics tier: STATIC (default) or DISABLED.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema532"
+        }
+      ]
+    },
+    "__schema532": {
       "type": "string",
       "enum": [
         "STATIC",
         "DISABLED"
       ]
     },
-    "__schema530": {
+    "__schema533": {
       "description": "Seconds a streamed entity dithers in and out (0: at once). Default AppConfig.lod.fadeSeconds.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema531"
+          "$ref": "#/definitions/__schema534"
         }
       ]
     },
-    "__schema531": {
+    "__schema534": {
       "type": "number",
       "minimum": 0
     },
-    "__schema532": {
+    "__schema535": {
       "description": "Build time only: mesh and light app ids and asset ids kept in the scene's base (loaded with the scene) instead of in a cell.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema533"
+          "$ref": "#/definitions/__schema536"
         }
       ]
     },
-    "__schema533": {
+    "__schema536": {
       "type": "array",
       "items": {
         "type": "string"
       }
     },
-    "__schema534": {
+    "__schema537": {
       "description": "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema535"
+          "$ref": "#/definitions/__schema538"
         }
       ]
     },
-    "__schema535": {
+    "__schema538": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -6988,33 +7012,36 @@
         "minimum": 0
       }
     },
-    "__schema536": {
-      "description": "Merge group settings for the groups made in this scene, and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices? }).",
+    "__schema539": {
+      "description": "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? }).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema537"
+          "$ref": "#/definitions/__schema540"
         }
       ]
     },
-    "__schema537": {
+    "__schema540": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema538"
+        "$ref": "#/definitions/__schema541"
       }
     },
-    "__schema538": {
+    "__schema541": {
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/definitions/__schema539"
+              "$ref": "#/definitions/__schema542"
             },
             "cellSize": {
-              "$ref": "#/definitions/__schema540"
+              "$ref": "#/definitions/__schema543"
             },
             "maxVertices": {
-              "$ref": "#/definitions/__schema541"
+              "$ref": "#/definitions/__schema544"
+            },
+            "palettes": {
+              "$ref": "#/definitions/__schema545"
             }
           },
           "required": [
@@ -7030,10 +7057,13 @@
               "$ref": "#/definitions/__schema295"
             },
             "castShadow": {
-              "$ref": "#/definitions/__schema542"
+              "$ref": "#/definitions/__schema546"
             },
             "receiveShadow": {
-              "$ref": "#/definitions/__schema543"
+              "$ref": "#/definitions/__schema547"
+            },
+            "palette": {
+              "$ref": "#/definitions/__schema548"
             }
           },
           "required": [
@@ -7044,31 +7074,68 @@
         }
       ]
     },
-    "__schema539": {
+    "__schema542": {
       "type": "string",
       "const": "AUTO"
     },
-    "__schema540": {
+    "__schema543": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema299"
         }
       ]
     },
-    "__schema541": {
+    "__schema544": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema301"
         }
       ]
     },
-    "__schema542": {
+    "__schema545": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema303"
+        }
+      ]
+    },
+    "__schema546": {
       "type": "boolean"
     },
-    "__schema543": {
+    "__schema547": {
       "type": "boolean"
     },
-    "__schema544": {
+    "__schema548": {
+      "description": "A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema549"
+        }
+      ]
+    },
+    "__schema549": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema550": {
+      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema551"
+        }
+      ]
+    },
+    "__schema551": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema552"
+      }
+    },
+    "__schema552": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema553": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -7128,28 +7195,31 @@
               "$ref": "#/definitions/__schema249"
             },
             "importedAssets": {
-              "$ref": "#/definitions/__schema302"
+              "$ref": "#/definitions/__schema305"
             },
             "skyboxes": {
-              "$ref": "#/definitions/__schema335"
+              "$ref": "#/definitions/__schema338"
             },
             "postFx": {
-              "$ref": "#/definitions/__schema488"
+              "$ref": "#/definitions/__schema491"
             },
             "postFxEnabled": {
-              "$ref": "#/definitions/__schema507"
+              "$ref": "#/definitions/__schema510"
             },
             "spatialDomains": {
-              "$ref": "#/definitions/__schema508"
+              "$ref": "#/definitions/__schema511"
             },
             "impostors": {
-              "$ref": "#/definitions/__schema519"
+              "$ref": "#/definitions/__schema522"
             },
             "streaming": {
-              "$ref": "#/definitions/__schema521"
+              "$ref": "#/definitions/__schema524"
             },
             "mergeGroups": {
-              "$ref": "#/definitions/__schema536"
+              "$ref": "#/definitions/__schema539"
+            },
+            "mergeMaterials": {
+              "$ref": "#/definitions/__schema550"
             }
           },
           "additionalProperties": false

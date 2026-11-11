@@ -37,6 +37,10 @@ export type SceneHooks = {
   /** After the next scene's cameras exist, before its assets load (imports can create entities).
    * Awaited. */
   beforeAssets?: () => void | Promise<void>;
+  /** After the next scene's assets (its data's lists) have loaded, before its scene code runs, with
+   * its data: what the scene code and its JSON objects use that is made from those assets (the
+   * merge materials of its palettes). Awaited. */
+  assetsLoaded?: (sceneData: SceneData) => void | Promise<void>;
   /** After the scene code has run and the scene is current, before its JSON objects are created.
    * Awaited. */
   created?: (sceneId: string) => void | Promise<void>;
@@ -118,6 +122,16 @@ export const runSceneWorldClearedHooks = (
 export const runSceneBeforeAssetsHooksAsync = async () => {
   for (const hooks of sceneHooks.slice()) {
     if (hooks.beforeAssets) await hooks.beforeAssets();
+  }
+};
+
+/**
+ * Runs the `assetsLoaded` hooks, awaiting each.
+ * @internal
+ */
+export const runSceneAssetsLoadedHooksAsync = async (sceneData: SceneData) => {
+  for (const hooks of sceneHooks.slice()) {
+    if (hooks.assetsLoaded) await hooks.assetsLoaded(sceneData);
   }
 };
 

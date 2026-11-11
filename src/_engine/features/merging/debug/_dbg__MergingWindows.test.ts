@@ -167,6 +167,7 @@ describe('the group window', () => {
     expect(getMonitorText(root, 'State')).toBe('built');
     expect(getMonitorText(root, 'Kind')).toBe('explicit (named)');
     expect(getMonitorText(root, 'Material')).toBe('mergeWinMat');
+    expect(getMonitorText(root, 'Palette')).toBe('none');
     expect(getMonitorText(root, 'Members')).toBe('3 (3 merged)');
     expect(getMonitorText(root, 'Vertices')).toBe('72');
     expect(getMonitorText(root, 'Name')).toBe(groupId);
@@ -240,6 +241,7 @@ describe('the member window', () => {
     expect(getMonitorText(root, 'Merged into')).toBe(groupId);
     expect(getMonitorText(root, 'State')).toBe('merged');
     expect(getMonitorText(root, 'Geometry')).toBe('mergeWinBox');
+    expect(getMonitorText(root, 'Palette index')).toBe('none (a group of one material)');
     // A box: 24 vertices, 36 indices; the second part
     expect(getMemberPartText(members[1], world)).toBe('#1: vertices 24-47, indices 36-71');
     click(getButton(root, 'Open the group’s window'));

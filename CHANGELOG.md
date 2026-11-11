@@ -4,6 +4,52 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-11 — p374_multi-material-merging
+
+Multi-material merging (p374, the fourth child of the merging epic p370): meshes of different materials share one merge group and one draw through a palette (`*.mergeMaterial.json`). The asset pipeline builds each map slot of the palette's `STANDARD` materials into one texture array, a layer per material; a merge material reads each vertex's material index, a table of each material's values and the arrays, and draws them all. A scene lists its palettes, and a named group's `palette` or an `AUTO` entry's `palettes` puts their meshes together: on the verification scene's field, 9 groups instead of 36. Measured there, a palette trades pixels for draws (its merge material costs 0.6-1.9 ms more GPU time a frame than the members' own materials, for 27 fewer draws), so the handbook says when it pays. Nothing breaks.
+
+### Engine 6.7.0 (Sunset)
+
+**Added**
+
+- Merge material palettes (`*.mergeMaterial.json`, `MergeMaterialAssetSchema` on `aekasha/schemas`): 2-256 `STANDARD` material JSON ids, the slots `map`, `normalMap`, `orm` (packed from the members' `aoMap`, `roughnessMap` and `metalnessMap`) and `emissiveMap`, each with its `size` and `missing` (`NEUTRAL`, a neutral layer for a member without the map, or `SKIP`, a per-member branch), and `optimize`. The gather checks the members' class: a TSL or non-`STANDARD` material, `transparent`, a map no slot takes and any state the members don't agree on (`side`, `alphaTest`, `flatShading`, …) fail it, naming the material and the property; a slot no member uses and a feature only one member uses warn.
+- A scene's `mergeMaterials` list (merging's schema part, so the feature manifest names `merging`): the gather inlines each palette (`SceneMergeMaterial`: its slots, each member's table values and their agreed state) and adds its slot arrays (the textures `<paletteId>.<slot>`) to the scene's `textures`, so a build carries a palette only for a scene that lists it.
+- The merge material: `merging()` registers each listed palette's under the palette's id, with its table as the texture `<paletteId>.table`, owned by the scene, before the scene's code runs (a JSON mesh's `mat` can name it). A `MeshStandardNodeMaterial` reading the vertex's `aekMatIndex` through a flat varying, its table entry (an RGBA32F texture, 5 texels a member) and each slot's array (`sampleArrayLayer`), one path on WebGPU and WebGL2. The next scene listing the palette shares it. Its code is a lazy chunk (`MergeMaterialRegister.js`, 2.2 kB gzip) loaded by the first scene with a palette.
+- Palette groups: `palette` on `createMergeGroup` (`MergeGroupSettings`) and on a scene's `mergeGroups` group entry, and `palettes` on the `AUTO` entry and a mesh's `merge` options (`MeshMergeOptions`; a mesh's list replaces the scene's, `[]` none). A palette group's material is the merge material, and it takes meshes whose material is the registered instance of one of the palette's materials (each joins with its palette index). `AUTO` keys a palette member by its palette, so a cell's materials of one palette share a group. The gather fails on a group or `AUTO` palette the scene doesn't list; `createMergeGroup` throws for an unregistered palette and for `palette` with `persistent`; a persistent mesh ignores `AUTO`'s palettes.
+- `createMergeMaterialAsync(palette, tableId)` on `aekasha/merging`: a merge material made from (a copy of) a listed palette's data, unregistered, for a variant without a second palette JSON. The types `SceneMergeMaterial`, `MergeMaterialEntry` and `MergeMaterialSlotInfo` on `aekasha/merging` and `aekasha/schemas`.
+- `MergePart.paletteIndex` (`mergeGeometryParts` and its async and register forms): the merge writes the `aekMatIndex` attribute (`Uint8`, `Uint16` past 255, `gpuType = IntType`) and each `MergePartRange` keeps the index.
+- `SceneHooks.assetsLoaded(sceneData)`: a scene hook run, awaited, after the scene's assets loaded and before its code runs.
+- `TransferableAttribute.isInteger`, so an integer attribute crosses to the assets worker and back as one.
+
+**Changed**
+
+- A merge keeps an integer attribute (`gpuType` `IntType` on every part) an integer, in the widest of its parts' arrays; it used to become a `Float32` and lose `gpuType`.
+- The material array refusal says what to do: split the mesh into one per material, which a palette can merge.
+- The app's first download: `merging()` 7.2 → 7.7 kB gzip (within its 8 KiB), the initial budget 386 → 387 KiB and `assets/index.js`' 382 → 383 KiB (`sbp.config.ts`).
+
+**Fixed**
+
+- `createMaterial` makes a `normalScale` or `clearcoatNormalScale` given as `[x, y]` or `{ x, y }` (a material JSON's) a `Vector2`: three's `setValues` left it a plain array, which three's node materials drew with a wrong normal scale.
+
+### App 1.22.0 (Preschooler)
+
+**Added**
+
+- The `mergeMaterials` debug scene (p374's verification): the palette `ruinsPalette` (`ruinStone`, `ruinBrick`, `ruinMoss`, `ruinPlaster`, each building its layers another way; 11 procedural 256² textures from `devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts`, with their outputs) on eight meshes drawn by the members' own materials, as a baked material array (the control), by the merge material and by a `SKIP` variant (`window.__mergeMaterials.show(variant)`), and a field of 1 600 meshes in 3 × 3 `AUTO` cells merged by palette, by palette capped at 65 535 vertices a group, by material or not, seen from above or close (`field(mode)`, `fieldView(view)`), each mode's groups and draws in `results`.
+
+### Project
+
+**Added**
+
+- The asset pipeline builds a palette's slot arrays (a texture array job per slot a member uses, layer by member: its map, a packed ORM or a neutral layer; the slot's textures must agree on their sampler state), records them in `assets.lock.json` and rebuilds them when a member's material or texture JSON changes. The gather registers them, writes the palette's table entries and state, checks a shipped scene's palette outputs, and writes `.schemas/mergeMaterial.schema.json`.
+- The Hub's Mesh merging page: "Palettes: several materials in one draw", with "When a palette pays" (the measurements and when not to use one). The asset optimization page: "Texture arrays" and "A palette's arrays". `docs/techniques/terrain-modular-kits.md`: the palette variation. `src/_engine/features/merging/CLAUDE.md`'s Merge materials section.
+
+**Changed**
+
+- The root, `merging/`, `devTools/gather/` and `devTools/assetPipeline/` `CLAUDE.md` and the readme (palettes in mesh merging, texture arrays in asset optimization).
+- The bundle, API and docs baselines.
+- The plans: p374 is `_DONE_` (its measurements in D5); the p370 epic's status and Branches and PRs follow it.
+
 ## 2026-11-11 — p373_merge-debug-and-member-editing
 
 Merge debugging and member editing (p373, the third child of the merging epic p370): in debug mode, a Merging drawer tab lists the merge groups and what they save, a group's and a member's window rebuild, dissolve, remove and move them with undo, an overlay outlines a group's members and a group can be drawn unmerged for an A/B of its image and draw count. Edit sessions, on `aekasha/merging`, move a member over many frames without a write per frame (drawn on its own meanwhile, written back in place at the end), and a raycast hit on a group resolves to its member. A production build carries none of the debugger. Nothing breaks.

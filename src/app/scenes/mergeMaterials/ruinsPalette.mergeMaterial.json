@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../.schemas/mergeMaterial.schema.json",
+  "id": "ruinsPalette",
+  "materials": ["ruinStone", "ruinBrick", "ruinMoss", "ruinPlaster"],
+  "slots": {
+    "map": {
+      "size": [256, 256]
+    },
+    "normalMap": {
+      "size": [256, 256]
+    },
+    "orm": {
+      "size": [256, 256],
+      "from": ["aoMap", "roughnessMap", "metalnessMap"]
+    }
+  },
+  "optimize": {
+    "profile": "prop"
+  },
+  "debugData": {
+    "name": "Ruins palette",
+    "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+  }
+}

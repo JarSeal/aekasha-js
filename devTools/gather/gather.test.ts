@@ -394,3 +394,237 @@ describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
     expect(out.__streaming).toBeUndefined();
   });
 });
+
+describe('merge material palettes (p374 D1, D2)', () => {
+  const standard = (id: string, params: Record<string, unknown> = {}) => ({
+    [`app/materials/${id}.material.json`]: { id, type: 'STANDARD', params },
+  });
+  const palette = (fields: Record<string, unknown> = {}) => ({
+    'app/palettes/stones.mergeMaterial.json': {
+      materials: ['stoneA', 'stoneB'],
+      slots: { map: { size: [64, 64] } },
+      ...fields,
+    },
+  });
+  const logErrors = () => vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  it('registers a palette in the materials’ id space, its id from the file name', () => {
+    const { isGathered, output } = gather({
+      ...scene('a'),
+      ...standard('stoneA', { color: '#808080', roughness: 0.9 }),
+      ...standard('stoneB', { color: '#a0a0a0', roughness: 0.4, metalness: 0.2 }),
+      ...palette(),
+    });
+    expect(isGathered).toBe(true);
+    const palettes = (output?.json as Record<string, unknown>).mergeMaterials;
+    expect(palettes).toEqual({
+      stones: expect.objectContaining({
+        id: 'stones',
+        materials: ['stoneA', 'stoneB'],
+        __sourcePath: 'src/app/palettes/stones.mergeMaterial.json',
+      }),
+    });
+  });
+
+  it('fails on a class violation, naming the material and the property', () => {
+    const errorSpy = logErrors();
+    const { isGathered } = gather({
+      ...scene('a'),
+      ...standard('stoneA', { side: 2 }),
+      ...standard('stoneB', { bumpMap: 'bumps' }),
+      ...palette(),
+    });
+    expect(isGathered).toBe(false);
+    const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('params.side differs: 2 in "stoneA"; 0 in "stoneB"');
+    expect(logged).toContain('materials[1] "stoneB"');
+    expect(logged).toContain('params.bumpMap: a merge material has no bumpMap');
+  });
+
+  it('registers each used slot’s array as the texture <paletteId>.<slot>, listed by a scene', () => {
+    const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+    const {
+      isGathered,
+      output,
+      scene: getScene,
+    } = gather({
+      ...scene('a', { textures: ['stones.map'] }),
+      'app/textures/rust.texture.json': { id: 'rust', fileName: albedo, texOpts: { wrapS: 1000 } },
+      ...standard('stoneA', { map: 'rust' }),
+      ...standard('stoneB'),
+      ...palette({ slots: { map: { size: [64, 64], missing: 'SKIP' }, orm: { size: [64, 64] } } }),
+    });
+    expect(isGathered).toBe(true);
+    const json = output?.json as Record<string, Record<string, Record<string, unknown>>>;
+    const slotTexture = {
+      id: 'stones.map',
+      texOpts: { colorSpace: 'srgb', wrapS: 1000 },
+      __layers: ['stoneA', 'stoneB'],
+      __mergeMaterial: { id: 'stones', slot: 'map' },
+    };
+    expect(json.textures['stones.map']).toEqual({
+      ...slotTexture,
+      __sourcePath: 'src/app/palettes/stones.mergeMaterial.json',
+    });
+    expect(json.textures['stones.orm']).toBeUndefined();
+    expect(json.mergeMaterials.stones.__slots).toEqual({
+      map: { texture: 'stones.map', has: [true, false], missing: 'SKIP' },
+    });
+    expect(getScene('a')?.textures).toEqual([slotTexture]);
+  });
+
+  it('bakes each member’s table entry into the palette (p374 D3)', () => {
+    const { output } = gather({
+      ...scene('a'),
+      ...standard('stoneA', { color: '#808080', roughness: 0.9, normalScale: [0.5, 0.5] }),
+      ...standard('stoneB'),
+      ...palette(),
+    });
+    const json = output?.json as Record<string, Record<string, Record<string, unknown>>>;
+    expect(json.mergeMaterials.stones.__entries).toEqual([
+      {
+        color: '#808080',
+        opacity: 1,
+        emissive: 0,
+        emissiveIntensity: 1,
+        roughness: 0.9,
+        metalness: 0,
+        normalScale: [0.5, 0.5],
+        aoMapIntensity: 1,
+      },
+      expect.objectContaining({ color: 0xffffff, roughness: 1, normalScale: [1, 1] }),
+    ]);
+  });
+
+  describe('a scene’s mergeMaterials (p374 Phase 2)', () => {
+    const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+    const files = (sceneFields: Record<string, unknown>) => ({
+      ...scene('a', sceneFields),
+      ...scene('b'),
+      'app/textures/rust.texture.json': { id: 'rust', fileName: albedo },
+      ...standard('stoneA', { map: 'rust', roughness: 0.5 }),
+      ...standard('stoneB', { map: 'rust' }),
+      ...palette({ debugData: { name: 'Stones' } }),
+    });
+
+    it('inlines each palette and adds its slot textures once, naming the feature', () => {
+      const { isGathered, scene: getScene } = gather(
+        files({ mergeMaterials: ['stones'], textures: ['stones.map'] })
+      );
+      expect(isGathered).toBe(true);
+      const a = getScene('a')!;
+      expect(a.mergeMaterials).toEqual([
+        {
+          id: 'stones',
+          materials: ['stoneA', 'stoneB'],
+          debugData: { name: 'Stones' },
+          __slots: { map: { texture: 'stones.map', has: [true, true] } },
+          __entries: [
+            expect.objectContaining({ roughness: 0.5 }),
+            expect.objectContaining({ roughness: 1 }),
+          ],
+        },
+      ]);
+      // Listed by the scene already: not added again
+      expect((a.textures as { id: string }[]).map((texture) => texture.id)).toEqual(['stones.map']);
+      expect(a.__features).toEqual(['merging']);
+      // A scene that doesn't list it carries none of it
+      const b = getScene('b')!;
+      expect(b.mergeMaterials).toBeUndefined();
+      expect(b.__features).toEqual([]);
+    });
+
+    it('adds the slot textures to a scene that lists none', () => {
+      const { scene: getScene } = gather(files({ mergeMaterials: ['stones'] }));
+      expect((getScene('a')!.textures as { id: string }[]).map((texture) => texture.id)).toEqual([
+        'stones.map',
+      ]);
+    });
+
+    it('a production build drops the palette’s debugData', () => {
+      const { isGathered, scene: getScene } = gather(files({ mergeMaterials: ['stones'] }), {
+        isProduction: true,
+      });
+      expect(isGathered).toBe(true);
+      const [palette] = getScene('a')!.mergeMaterials as Record<string, unknown>[];
+      expect(palette).not.toHaveProperty('debugData');
+      expect(palette.__entries).toHaveLength(2);
+      expect(palette).not.toHaveProperty('__state');
+    });
+
+    it('carries the state the members agree on', () => {
+      const { scene: getScene } = gather({
+        ...scene('a', { mergeMaterials: ['stones'] }),
+        ...standard('stoneA', { side: 2, roughness: 0.5 }),
+        ...standard('stoneB', { side: 2 }),
+        ...palette({ slots: { map: { size: [64, 64] } } }),
+      });
+      const [resolved] = getScene('a')!.mergeMaterials as Record<string, unknown>[];
+      expect(resolved.__state).toEqual({ side: 2 });
+    });
+
+    it('fails on an id no palette has', () => {
+      const errorSpy = logErrors();
+      const { isGathered } = gather(files({ mergeMaterials: ['pebbles'] }));
+      expect(isGathered).toBe(false);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(logged).toContain('Scene "a" lists the merge material "pebbles"');
+    });
+
+    it('fails on a mergeGroups entry naming a palette the scene doesn’t list (p374 Phase 3)', () => {
+      const ruins = { id: 'ruins', palette: 'stones' };
+      expect(gather(files({ mergeMaterials: ['stones'], mergeGroups: [ruins] })).isGathered).toBe(
+        true
+      );
+      const errorSpy = logErrors();
+      expect(gather(files({ mergeGroups: [ruins] })).isGathered).toBe(false);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(logged).toContain(
+        'mergeGroups entry "ruins" names the palette "stones", which the scene\'s mergeMaterials doesn\'t list'
+      );
+    });
+
+    it('fails on an AUTO palette the scene doesn’t list, and warns on a material two share', () => {
+      const pebbles = {
+        'app/palettes/pebbles.mergeMaterial.json': {
+          materials: ['stoneB', 'stoneA'],
+          slots: { map: { size: [64, 64] } },
+        },
+      };
+      const errorSpy = logErrors();
+      const auto = { id: 'AUTO', palettes: ['stones', 'pebbles'] };
+      const unlisted = gather({
+        ...files({ mergeMaterials: ['stones'], mergeGroups: [auto] }),
+        ...pebbles,
+      });
+      expect(unlisted.isGathered).toBe(false);
+      expect(errorSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+        'mergeGroups entry "AUTO" names the palette "pebbles"'
+      );
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      warnSpy.mockClear();
+      const shared = gather({
+        ...files({ mergeMaterials: ['stones', 'pebbles'], mergeGroups: [auto] }),
+        ...pebbles,
+      });
+      expect(shared.isGathered).toBe(true);
+      const warned = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(warned).toContain(
+        'the AUTO palettes "stones" and "pebbles" both have the material "stoneB": its meshes go into "stones"\'s groups'
+      );
+      expect(warned).toContain('both have the material "stoneA"');
+    });
+  });
+
+  it('fails on a palette id a material has', () => {
+    const files = {
+      ...scene('a'),
+      ...standard('stoneA'),
+      ...standard('stoneB'),
+      ...standard('stones'),
+      ...palette(),
+    };
+    expect(gather(files).isGathered).toBe(false);
+  });
+});

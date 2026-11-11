@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ruinStoneOrm",
+  "fileName": "./source/ruinStone_orm.png",
+  "texOpts": {
+    "wrapS": 1000,
+    "wrapT": 1000
+  },
+  "optimize": {
+    "slot": "orm"
+  }
+}

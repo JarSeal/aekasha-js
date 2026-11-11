@@ -194,17 +194,39 @@ export type ArraySource = {
   layers: TextureArrayLayer[];
   /** The JSON's `size`; unset: the layers' own, which must agree */
   size?: [number, number];
+  /** The output's logical path when it isn't the JSON's (`getArrayLogicalPath`): a merge
+   * material palette's slot (p374) */
+  logicalPath?: string;
+  /** The other asset JSONs it's built from (absolute) besides its layers' textures': a palette's
+   * member materials and the textures packed into its layers */
+  jsonFiles?: string[];
 };
 
-/** A texture array's source: its layers, named after the array's JSON */
+/**
+ * A texture array's source: its layers, named after the array's JSON (or `opts.logicalPath`)
+ * @param opts.jsonFiles The other asset JSONs it's built from (see {@link ArraySource})
+ */
 export const createArraySource = (
   jsonFile: string,
   layers: TextureArrayLayer[],
-  size?: [number, number]
+  size?: [number, number],
+  opts: { logicalPath?: string; jsonFiles?: string[] } = {}
 ): ArraySource => {
   const file = path.resolve(jsonFile);
-  return { kind: 'array', jsonFile: file, repoPath: toRepoPath(file), layers, size };
+  return {
+    kind: 'array',
+    jsonFile: file,
+    repoPath: toRepoPath(file),
+    layers,
+    size,
+    ...(opts.logicalPath ? { logicalPath: opts.logicalPath } : {}),
+    ...(opts.jsonFiles ? { jsonFiles: opts.jsonFiles } : {}),
+  };
 };
+
+/** Where an array's output goes: its own logical path, else its JSON's */
+const getArraySourceLogicalPath = (source: ArraySource) =>
+  source.logicalPath ?? getArrayLogicalPath(source.jsonFile);
 
 /** Every file a layer's (or an atlas cell's) source reads: its file, or a pack's in its order */
 export const listTextureSourceFiles = ({ source }: TextureArrayLayer) =>
@@ -230,7 +252,7 @@ export const listTextureArrayFiles = (source: ArraySource) =>
 export const getTextureArrayKeyParams = (source: ArraySource) => ({
   size: source.size ?? null,
   layers: source.layers.map(getTextureSourceKeyParam),
-  output: getArrayLogicalPath(source.jsonFile),
+  output: getArraySourceLogicalPath(source),
 });
 
 /**
@@ -368,7 +390,7 @@ export const encodeTextureArray = async (
     settings,
     { channels, isSrgb: opts.isSrgb, isNormal, getKtx: opts.getKtx }
   );
-  const output = writeOutput(getArrayLogicalPath(source.jsonFile), '.ktx2', bytes);
+  const output = writeOutput(getArraySourceLogicalPath(source), '.ktx2', bytes);
   const sourceBytes = [...new Set(listTextureArrayFiles(source))].reduce(
     (sum, file) => sum + fs.statSync(file).size,
     0

@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { mergeGeometryPartsCore, type MergedGeometry } from './GeometryMergeCore';
+import {
+  MERGE_PALETTE_INDEX_ATTRIBUTE,
+  mergeGeometryPartsCore,
+  type MergedGeometry,
+} from './GeometryMergeCore';
 
 const merge = (...args: Parameters<typeof mergeGeometryPartsCore>) =>
   mergeGeometryPartsCore(...args).geometry;
@@ -265,5 +269,98 @@ describe('index and parts', () => {
     ]);
     expect(merged.boundingBox!.min.x).toBe(-1);
     expect(merged.boundingBox!.max.x).toBe(11);
+  });
+});
+
+describe('palette index (p374 D3)', () => {
+  const paletteValues = (geometry: THREE.BufferGeometry) =>
+    Array.from(geometry.getAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE).array as Uint8Array);
+  const gpuTypeOf = (geometry: THREE.BufferGeometry, name: string) =>
+    (geometry.getAttribute(name) as THREE.BufferAttribute).gpuType;
+
+  test("writes each part's index into its vertices as an integer, 0 for a part without", () => {
+    const tri = new THREE.BufferGeometry();
+    tri.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(9), 3));
+    const merged = merge([
+      { geometry: tri, paletteIndex: 3 },
+      { geometry: tri },
+      { geometry: tri, paletteIndex: 1, key: 'c' },
+    ]);
+    const attr = merged.getAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE) as THREE.BufferAttribute;
+    expect(attr.array).toBeInstanceOf(Uint8Array);
+    expect(attr.itemSize).toBe(1);
+    expect(attr.normalized).toBe(false);
+    expect(attr.gpuType).toBe(THREE.IntType);
+    expect(paletteValues(merged)).toEqual([3, 3, 3, 0, 0, 0, 1, 1, 1]);
+    expect(merged.userData.mergeParts.map((part) => part.paletteIndex)).toEqual([3, 0, 1]);
+  });
+
+  test('no part with an index: no attribute, no index in the ranges', () => {
+    const merged = merge([{ geometry: new THREE.BoxGeometry() }]);
+    expect(merged.getAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE)).toBeUndefined();
+    expect(merged.userData.mergeParts[0]).not.toHaveProperty('paletteIndex');
+  });
+
+  test('is Uint16 past index 255, and follows BY_SLOT’s order', () => {
+    const box = new THREE.BoxGeometry();
+    const merged = merge(
+      [
+        { geometry: box, materialSlot: 1, paletteIndex: 300 },
+        { geometry: box, materialSlot: 0, paletteIndex: 7 },
+      ],
+      { groups: 'BY_SLOT' }
+    );
+    const array = merged.getAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE).array;
+    expect(array).toBeInstanceOf(Uint16Array);
+    expect(array[0]).toBe(7);
+    expect(array[24]).toBe(300);
+    expect(merged.userData.mergeParts.map((part) => part.paletteIndex)).toEqual([7, 300]);
+  });
+
+  test("replaces a part's own index; without new indices an integer attribute stays one", () => {
+    const first = merge([{ geometry: new THREE.BoxGeometry(), paletteIndex: 5 }]);
+    const again = merge([
+      { geometry: first, paletteIndex: 2 },
+      { geometry: new THREE.BoxGeometry() },
+    ]);
+    expect(paletteValues(again).slice(0, 24)).toEqual(new Array(24).fill(2));
+    // Merged again as it is: copied raw into an integer array, a part without it filled with 0
+    const kept = merge([{ geometry: first }, { geometry: new THREE.BoxGeometry() }]);
+    expect(kept.getAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE).array).toBeInstanceOf(Uint8Array);
+    expect(gpuTypeOf(kept, MERGE_PALETTE_INDEX_ATTRIBUTE)).toBe(THREE.IntType);
+    expect(paletteValues(kept)).toEqual([...new Array(24).fill(5), ...new Array(24).fill(0)]);
+    expect(kept.userData.mergeParts[0]).not.toHaveProperty('paletteIndex');
+  });
+
+  test('integer attributes of different widths merge into the widest', () => {
+    const narrow = new THREE.BoxGeometry();
+    const narrowIds = new THREE.BufferAttribute(new Uint8Array(24).fill(200), 1);
+    narrowIds.gpuType = THREE.IntType;
+    narrow.setAttribute('ids', narrowIds);
+    const wide = new THREE.BoxGeometry();
+    const wideIds = new THREE.BufferAttribute(new Uint16Array(24).fill(40000), 1);
+    wideIds.gpuType = THREE.IntType;
+    wide.setAttribute('ids', wideIds);
+    const merged = merge([{ geometry: narrow }, { geometry: wide }]);
+    const ids = merged.getAttribute('ids');
+    expect(ids.array).toBeInstanceOf(Uint16Array);
+    expect(gpuTypeOf(merged, 'ids')).toBe(THREE.IntType);
+    expect([ids.array[0], ids.array[24]]).toEqual([200, 40000]);
+  });
+
+  test('a non-indexed result keeps the integer type', () => {
+    const merged = merge([{ geometry: new THREE.BoxGeometry(), paletteIndex: 4 }], {
+      indexed: false,
+    });
+    expect(merged.index).toBeNull();
+    expect(gpuTypeOf(merged, MERGE_PALETTE_INDEX_ATTRIBUTE)).toBe(THREE.IntType);
+    expect(paletteValues(merged)).toEqual(new Array(36).fill(4));
+  });
+
+  test('throws for an index that is not an integer from 0 to 65 535', () => {
+    const box = new THREE.BoxGeometry();
+    for (const paletteIndex of [-1, 1.5, 65536, Number.NaN]) {
+      expect(() => merge([{ geometry: box, paletteIndex }])).toThrow(/paletteIndex/);
+    }
   });
 });

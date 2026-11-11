@@ -1,0 +1,271 @@
+import { z } from 'zod';
+import { DebugDataSchema, UserDataSchema } from '../../schemas/_HelperSchemas';
+import { JsonSchemaRefSchema, SourcePathSchema } from '../../schemas/_SaveDataSchema';
+import {
+  GeneratedAssetFieldsSchema,
+  TextureArrayOptimizeSchema,
+} from '../../schemas/AssetsConfigSchema';
+import { TexOptsSchema } from '../../schemas/TextureSchema';
+
+// A merge material's palette (`*.mergeMaterial.json`,
+// docs/plans/_DONE_p374_multi-material-merging.md D2): the materials one merge material stands in
+// for, and a texture array per map slot. The gatherer checks the members' class (D1) from their
+// material JSONs; the asset pipeline builds each slot's array.
+
+/**
+ * A palette's map slots: the merge material's array per map. `orm` packs a member's `aoMap` (r),
+ * `roughnessMap` (g) and `metalnessMap` (b), as three reads them.
+ */
+export const MERGE_MATERIAL_SLOTS = ['map', 'normalMap', 'orm', 'emissiveMap'] as const;
+
+/** A palette's map slot, one of {@link MERGE_MATERIAL_SLOTS}. */
+export type MergeMaterialSlot = (typeof MERGE_MATERIAL_SLOTS)[number];
+
+/** The material maps an `orm` slot packs, in its channel order (r, g, b). */
+export const ORM_SOURCE_MAP_KEYS = ['aoMap', 'roughnessMap', 'metalnessMap'] as const;
+
+/**
+ * The most materials a palette holds: an array's layers, the floor on both backends (WebGPU's
+ * default `maxTextureArrayLayers`, WebGL2's minimum `MAX_ARRAY_TEXTURE_LAYERS`).
+ */
+export const MAX_MERGE_MATERIAL_ENTRIES = 256;
+
+/** A palette slot's texture id, `<paletteId>.<slot>`: its array in the textures' id space. */
+export const getMergeMaterialSlotTextureId = (paletteId: string, slot: MergeMaterialSlot) =>
+  `${paletteId}.${slot}`;
+
+const SlotSizeSchema = z
+  .tuple([z.number().int().min(1), z.number().int().min(1)])
+  .describe(
+    "Width and height every layer is resized to (then fit to the optimize step's maxSize and to multiples of 4, as an array's)."
+  );
+
+const SlotMissingSchema = z
+  .enum(['NEUTRAL', 'SKIP'])
+  .optional()
+  .describe(
+    'A member without this map: NEUTRAL (default) samples a neutral layer (white, a flat normal), which keeps its scalars; SKIP skips the fetch for it (a uniform branch per triangle). Its layer is neutral either way.'
+  );
+
+const MergeMaterialSlotSchema = z
+  .strictObject({
+    /** The size every layer is resized to. */
+    size: SlotSizeSchema,
+    /** A member without this map: a neutral layer (`NEUTRAL`, default) or no fetch (`SKIP`). */
+    missing: SlotMissingSchema,
+  })
+  .describe("One map slot's array: its layer size and what a member without the map gets.");
+
+const OrmSourceKeySchema = z.enum(ORM_SOURCE_MAP_KEYS);
+
+const MergeMaterialOrmSlotSchema = MergeMaterialSlotSchema.extend({
+  /** The member maps packed into it. Default: all three. */
+  from: z
+    .array(OrmSourceKeySchema)
+    .min(1)
+    .refine((keys) => new Set(keys).size === keys.length, { message: 'a map is listed twice' })
+    .optional()
+    .describe(
+      "The member maps packed into it (default all three): aoMap into r, roughnessMap into g, metalnessMap into b, as three reads them. A member's map left out fails the palette."
+    ),
+}).describe(
+  'The packed occlusion / roughness / metalness array: its layer size, its source maps and what a member without them gets.'
+);
+
+/** One map slot of a palette (`slots.<name>`): its layer size and `missing`; `orm`'s also its
+ * `from`. */
+export type MergeMaterialSlotDef = z.infer<typeof MergeMaterialOrmSlotSchema>;
+
+// A palette slot's entry in the palette's `__slots`, baked in by the gatherer
+const MergeMaterialSlotInfoSchema = z.object({
+  /** The slot's array texture id, `<paletteId>.<slot>`. */
+  texture: z.string(),
+  /** By palette index: whether the member has a map in the slot (else its layer is neutral). */
+  has: z.array(z.boolean()),
+  /** Set when the slot's `missing` is `SKIP`: a member without the map skips the fetch. */
+  missing: z.literal('SKIP').optional(),
+});
+
+/**
+ * A palette slot as the gatherer bakes it into the palette's `__slots`: its array's texture id,
+ * which members have a map in it, and `missing: 'SKIP'`.
+ */
+export type MergeMaterialSlotInfo = z.infer<typeof MergeMaterialSlotInfoSchema>;
+
+/**
+ * A colour parameter as a material JSON gives it (`'#rrggbb'`, a CSS colour or a hex number):
+ * what `THREE.Color.set` takes, in sRGB.
+ */
+const ColorValueSchema = z.union([z.string(), z.number()]);
+
+const MergeMaterialEntrySchema = z.object({
+  /** The base colour (`color`). */
+  color: ColorValueSchema,
+  /** The alpha the albedo's alpha is multiplied by (`opacity`). */
+  opacity: z.number(),
+  /** The emissive colour (`emissive`). */
+  emissive: ColorValueSchema,
+  /** The emissive colour's multiplier (`emissiveIntensity`). */
+  emissiveIntensity: z.number(),
+  /** The scalar the ORM array's green channel is multiplied by (`roughness`). */
+  roughness: z.number(),
+  /** The scalar the ORM array's blue channel is multiplied by (`metalness`). */
+  metalness: z.number(),
+  /** `normalScale` as `[x, y]`. */
+  normalScale: z.tuple([z.number(), z.number()]),
+  /** How much the ORM array's red channel darkens the indirect light (`aoMapIntensity`). */
+  aoMapIntensity: z.number(),
+});
+
+/**
+ * A palette member's parameter table entry (p374 D3), baked by the gatherer from its material
+ * JSON's `params`: each value as the JSON gives it, three's default where it gives none. Colours
+ * are sRGB values the runtime converts with `THREE.Color`, as a material's parameters are.
+ */
+export type MergeMaterialEntry = z.infer<typeof MergeMaterialEntrySchema>;
+
+/**
+ * A merge material's palette JSON (`*.mergeMaterial.json`): the materials one merge material
+ * stands in for, in palette index order, and a texture array per map slot, each member's map as
+ * its layer (built by the asset pipeline). The members must share a compatibility class (one
+ * shader, one draw's state): the gatherer checks it from their material JSONs.
+ */
+export const MergeMaterialAssetSchema = z.object({
+  /** The JSON Schema an editor validates the file with. */
+  $schema: JsonSchemaRefSchema.optional(),
+  /** The registry id, in the materials' id space. Default: the file's name. */
+  id: z
+    .string()
+    .optional()
+    .describe(
+      "The registry id, in the materials' id space (it becomes a material). Default: the file's name."
+    ),
+  /** The member materials' ids, in palette index order (a layer index in every slot). */
+  materials: z
+    .array(z.string().min(1).describe("A material JSON's id (*.material.json)."))
+    .min(2)
+    .max(MAX_MERGE_MATERIAL_ENTRIES)
+    .superRefine((ids, ctx) => {
+      const seen = new Map<string, number>();
+      ids.forEach((id, index) => {
+        const other = seen.get(id);
+        if (other !== undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [index],
+            message: `"${id}" is listed twice (also at ${other})`,
+          });
+        }
+        seen.set(id, index);
+      });
+    })
+    .describe(
+      `The member materials' ids (*.material.json), in palette index order: material i is layer i of every slot. 2-${MAX_MERGE_MATERIAL_ENTRIES}, each once.`
+    ),
+  /** The map slots, one texture array each. */
+  slots: z
+    .strictObject({
+      /** The albedo array (sRGB). */
+      map: MergeMaterialSlotSchema.optional().describe('The albedo array (sRGB).'),
+      /** The normal map array. */
+      normalMap: MergeMaterialSlotSchema.optional().describe('The normal map array.'),
+      /** The packed occlusion / roughness / metalness array. */
+      orm: MergeMaterialOrmSlotSchema.optional(),
+      /** The emissive map array (sRGB). */
+      emissiveMap: MergeMaterialSlotSchema.optional().describe('The emissive map array (sRGB).'),
+    })
+    .refine((slots) => Object.values(slots).some(Boolean), { message: 'no slots' })
+    .describe(
+      "The map slots, one texture array each: map, normalMap, orm (aoMap, roughnessMap and metalnessMap packed) and emissiveMap. A member's map needs its slot."
+    ),
+  /** Build time only: the asset pipeline's settings for every slot's array. */
+  optimize: TextureArrayOptimizeSchema.omit({ slot: true })
+    .optional()
+    .describe(
+      "The asset pipeline's settings for every slot's array: a profile and per-slot overrides (textures.baseColor, .normal, .orm, .emissive). Each array's slot is its own; the codec can't be none."
+    ),
+  /** Fails the load when an array can't load. Default: logs and uses an empty stand-in. */
+  throwOnError: z
+    .boolean()
+    .optional()
+    .describe("Fails the load when an array can't load. Default: logs it."),
+  /** The merge material's `userData`. */
+  userData: UserDataSchema.optional(),
+  /** What the debug tools show for the palette. */
+  debugData: DebugDataSchema.optional(),
+  /** Set by the gatherer: the file it came from. */
+  __sourcePath: SourcePathSchema.optional(),
+  /** Set by the gatherer: each slot that has an array, its texture and the members with a map
+   * in it. */
+  __slots: z
+    .partialRecord(z.enum(MERGE_MATERIAL_SLOTS), MergeMaterialSlotInfoSchema)
+    .optional()
+    .describe('Set by the gatherer: each slot that has an array, its texture and members.'),
+  /** Set by the gatherer: each member's parameter table entry, by palette index. */
+  __entries: z
+    .array(MergeMaterialEntrySchema)
+    .optional()
+    .describe("Set by the gatherer: each member's parameter table entry, by palette index."),
+  /** Set by the gatherer: the state parameters the members set and agree on (`side`,
+   * `alphaTest`, …), which the merge material takes. */
+  __state: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'Set by the gatherer: the state parameters the members set and agree on, which the merge material takes.'
+    ),
+});
+
+/** A merge material's palette JSON (`*.mergeMaterial.json`), as {@link MergeMaterialAssetSchema}
+ * validates it. */
+export type MergeMaterialAsset = z.infer<typeof MergeMaterialAssetSchema>;
+
+/**
+ * A palette as a scene's generated data carries it (the scene's `mergeMaterials`, p374 Phase 2):
+ * the gatherer's resolved palette without its build-time fields, its slot textures in the scene's
+ * `textures`.
+ */
+export type SceneMergeMaterial = Pick<
+  MergeMaterialAsset,
+  'id' | 'materials' | 'throwOnError' | 'userData' | 'debugData'
+> & {
+  /** The registry id. */
+  id: string;
+  /** Each slot that has an array: its texture, the members with a map in it, `missing`. */
+  __slots: NonNullable<MergeMaterialAsset['__slots']>;
+  /** Each member's parameter table entry, by palette index. */
+  __entries: MergeMaterialEntry[];
+  /** The state parameters the members set and agree on (`side`, `alphaTest`, …): the merge
+   * material's own. */
+  __state?: Record<string, unknown>;
+};
+
+// A slot's array as a texture in the generated data: written by the gatherer, never validated, so
+// the schema is only its type's
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the type's source
+const MergeMaterialSlotTextureSchema = z.object({
+  /** The slot's texture id, `<paletteId>.<slot>`. */
+  id: z.string(),
+  /** The array's sampler state (its members' textures', which agree) and colour space. */
+  texOpts: TexOptsSchema.optional(),
+  /** The palette's `throwOnError`. */
+  throwOnError: z.boolean().optional(),
+  /** The palette's `userData`. */
+  userData: UserDataSchema.optional(),
+  /** The palette's `debugData`. */
+  debugData: DebugDataSchema.optional(),
+  /** The palette JSON it came from. */
+  __sourcePath: z.string().optional(),
+  /** The member materials' ids, by layer: what makes the runtime load it as an array. */
+  __layers: z.array(z.string()),
+  /** The palette and the slot. */
+  __mergeMaterial: z.object({ id: z.string(), slot: z.enum(MERGE_MATERIAL_SLOTS) }),
+  ...GeneratedAssetFieldsSchema.omit({ __lodChain: true, __sourceUrl: true }).shape,
+});
+
+/**
+ * A palette slot's array as a texture in the generated data: the array's texture settings, its
+ * layers (the members' ids), its palette and slot, and its pipeline output. The runtime loads it
+ * as a texture array (`__layers`).
+ */
+export type MergeMaterialSlotTexture = z.infer<typeof MergeMaterialSlotTextureSchema>;

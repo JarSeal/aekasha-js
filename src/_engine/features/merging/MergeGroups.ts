@@ -46,6 +46,7 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import { getMergeRefusal } from './MergeEligibility';
+import { findPaletteMaterial, getGroupPaletteIndex } from './MergePalettes';
 import {
   getActiveSceneMergeSettings,
   keepSceneMergeSettings,
@@ -130,11 +131,14 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
 /**
  * Creates an empty merge group: its members (`addToMergeGroup`) are drawn as one merged mesh,
  * built in the frame after they join. Its entity is managed (`MANAGED_BY` `MERGE`): it has no mesh
- * until its first build, and goes with the scene that created it unless `persistent`.
+ * until its first build, and goes with the scene that created it unless `persistent`. With a
+ * `palette` (one the scene lists in `mergeMaterials`), its members may have any of the palette's
+ * materials, drawn in one draw by the palette's merge material.
  * @param world the group's world (default: the default world)
  * @returns the group's entity id
  * @throws for an id the world has a group with already, a reserved id (`AUTO`, or one starting
- * with `auto:`, the automatic groups'), or without the `merging()` feature
+ * with `auto:`, the automatic groups'), a `palette` the scene doesn't list (no merge material is
+ * registered under its id) or with `persistent`, or without the `merging()` feature
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -158,23 +162,30 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
   if (getGroups(ecsWorld).has(opts.id)) {
     throw new Error(`createMergeGroup: the world has a merge group "${opts.id}" already.`);
   }
+  const { palette } = opts;
+  if (palette !== undefined && (opts.persistent || !findPaletteMaterial(palette))) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
+    );
+  }
   return createGroup(opts, ecsWorld, false);
 };
 
 /**
  * Adds mesh entities to a merge group (created when the world has none with this id, with the
- * settings of the loading or current scene's `mergeGroups` entry for it, else the defaults). They're drawn merged from the group's next build, in the next frame's render sync (a
- * large group's builds in the assets worker, and its new members are drawn on their own until it's
- * in). A member keeps its entity, transform, physics body and assets; its own mesh is hidden.
- * A disabled member (`setDisabled`) isn't drawn in the merged mesh either, and is again when
- * it's enabled, without a rebuild. `'AUTO'` queues them as a mesh's `merge: 'AUTO'` does: each
- * joins the automatic group of its material and cell at the next build.
+ * settings of the loading or current scene's `mergeGroups` entry for it, else the defaults).
+ * They're drawn merged from the group's next build, in the next frame's render sync (a large
+ * group's builds in the assets worker, and its new members are drawn on their own until it's in).
+ * A member keeps its entity, transform, physics body and assets; its own mesh is hidden. A
+ * disabled member (`setDisabled`) isn't drawn in the merged mesh either, and is again when it's
+ * enabled, without a rebuild. `'AUTO'` queues them as a mesh's `merge: 'AUTO'` does: each joins
+ * the automatic group of its material and cell at the next build.
  *
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
  * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
- * material array or another material than the group's, a dynamic or kinematic body, a manager, a
- * `LOD`, attributes the group's can't take, or a group already; a persistent one, unless the
- * group is persistent.
+ * material array or another material than the group's (a palette group's: one its palette doesn't
+ * have), a dynamic or kinematic body, a manager, a `LOD`, attributes the group's can't take, or a
+ * group already; a persistent one, unless the group is persistent.
  * @param world the group's world (default: the default world)
  * @remarks Members are static: a member moved later is drawn where it was merged until
  * `updateMergeMember` moves its part.
@@ -216,11 +227,9 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       if (IS_DEBUG_ENV) noteMergeRefusal(ecsWorld, entityId, groupId, refusal);
       continue;
     }
-    if (!group._material) {
-      group._material = (
-        ecsWorld.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh
-      ).material as THREE.Material;
-    }
+    const { material } = ecsWorld.getComponent(entityId, ComponentType.OBJECT3D)!
+      .value as THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+    group._material ??= material;
     ecsWorld.addComponent(entityId, ComponentType.MERGE_MEMBER, {
       groupEntityId,
       groupId,
@@ -228,6 +237,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       _wasSpatialIndexed: false,
       _bakedMatrix: new THREE.Matrix4(),
       _isCollapsed: false,
+      _paletteIndex: getGroupPaletteIndex(group, material),
     });
     group.members.push(entityId);
     holdForSceneLoad(entityId, ecsWorld);
@@ -371,10 +381,22 @@ export const getMergeGroupOf = (entityId: number, world?: ECSWorld): string | un
 
 // --- MEMBERSHIP ---
 
-/** Joins the queued `merge`s to their groups (MergeAuto.ts picks the `AUTO` ones). */
+/** Joins the queued `merge`s to their groups (MergeAuto.ts picks the `AUTO` ones). A group that
+ * can't be made on first use (its scene entry's palette isn't registered) is logged, and its
+ * meshes are drawn on their own. */
 const resolveQueuedMerges = (world: ECSWorld) => {
   const joins = collectQueuedJoins(world);
-  if (joins) for (const [groupId, entityIds] of joins) addToMergeGroup(groupId, entityIds, world);
+  if (!joins) return;
+  for (const [groupId, entityIds] of joins) {
+    try {
+      addToMergeGroup(groupId, entityIds, world);
+    } catch (err) {
+      lerror(
+        `Merge group "${groupId}": entities ${entityIds.join(', ')} are drawn on their own.`,
+        err
+      );
+    }
+  }
 };
 
 /** A group entity's deletion (a dissolve, its scene's exit): its members go free. */
@@ -442,6 +464,7 @@ const getBuildParts = (members: number[], world: ECSWorld): BuildParts => {
       geo: mesh.geometry,
       matrix: new THREE.Matrix4().multiplyMatrices(toGroupSpace, mesh.matrixWorld),
       key: String(entityId),
+      paletteIndex: world.getComponent(entityId, ComponentType.MERGE_MEMBER)!._paletteIndex,
     };
   });
   return { parts, worldMatrices, centre: groupCentre.clone(), vertexCount };

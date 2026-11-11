@@ -15,6 +15,7 @@ import {
 } from './Geometry';
 import {
   assertMergeableParts,
+  assertPaletteIndices,
   mergeGeometryPartsCore,
   type MergedGeometry,
   type MergeGeometryOptions,
@@ -30,6 +31,10 @@ export type MergePart = {
   /** Its material slot: the geometry group (`materialIndex`) it lands in with `groups: 'BY_SLOT'`.
    * Default 0. */
   materialSlot?: number;
+  /** Its entry in a merge material's palette (p374): when any part has one, every merged vertex
+   * gets its part's index (0 for a part without) in the integer attribute `aekMatIndex` (`Uint8`,
+   * `Uint16` past 255), which the merge material reads. An integer from 0 to 65 535. */
+  paletteIndex?: number;
   /** The caller's id for the part, kept in its `userData.mergeParts` entry. */
   key?: string;
 };
@@ -63,12 +68,15 @@ const logWarnings = (warnings: string[], caller: string) => {
  * - Attributes are unified (`attributes`, default `UNION`: a missing one filled with uv 0,
  *   colour 1, others 0, a missing tangent computed or else dropped with a warning) and read as
  *   values, so quantized (normalized) and interleaved ones merge with float ones.
+ * - A part's `paletteIndex` (p374) goes into every one of its vertices' `aekMatIndex`, an
+ *   integer attribute (`gpuType` `IntType`), when any part has one. Other integer attributes stay
+ *   integers.
  * - The index is `Uint16` up to 65 535 vertices, else `Uint32`.
  * - `userData.mergeParts` lists each part's vertex and index ranges, in the merged order
  *   (`groups: 'BY_SLOT'` sorts the parts by slot, one group per slot).
  * - No parts give an empty geometry.
  * @throws for an unregistered id, a morphed or skinned part, one without a 3-component position,
- * or one attribute with different item sizes across parts
+ * one attribute with different item sizes across parts, or a `paletteIndex` out of range
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';
@@ -125,7 +133,7 @@ const serializeParts = (parts: ResolvedMergePart[]) => {
   const geometries: TransferableGeometry[] = [];
   const indexOf = new Map<THREE.BufferGeometry, number>();
   const transferableParts: TransferableMergePart[] = parts.map(
-    ({ geometry, matrix, materialSlot, key }) => {
+    ({ geometry, matrix, materialSlot, paletteIndex, key }) => {
       let geometryIndex = indexOf.get(geometry);
       if (geometryIndex === undefined) {
         // Not the geometry itself: its userData and groups needn't (or can't) be cloned
@@ -141,6 +149,7 @@ const serializeParts = (parts: ResolvedMergePart[]) => {
         geometryIndex,
         ...(matrix ? { matrix: [...matrix.elements] } : {}),
         ...(materialSlot !== undefined ? { materialSlot } : {}),
+        ...(paletteIndex !== undefined ? { paletteIndex } : {}),
         ...(key !== undefined ? { key } : {}),
       };
     }
@@ -153,6 +162,7 @@ const serializeParts = (parts: ResolvedMergePart[]) => {
 const mergeWithReportAsync = async (parts: MergePart[], opts?: MergeGeometryOptions) => {
   const resolved = resolveParts(parts);
   assertMergeableParts(resolved.map((part) => part.geometry));
+  assertPaletteIndices(resolved);
   const options: MergeGeometryOptions = { ...opts };
   const { result, report } = await runAssetTask(
     'MERGE',

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ruinPlasterMetalness",
+  "fileName": "./source/ruinPlaster_metalness.png",
+  "texOpts": {
+    "wrapS": 1000,
+    "wrapT": 1000
+  },
+  "optimize": {
+    "slot": "metallicRoughness"
+  }
+}

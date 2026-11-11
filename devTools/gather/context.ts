@@ -8,6 +8,8 @@ import type {
   ImpostorAsset,
   LightAsset,
   MaterialAsset,
+  MergeMaterialAsset,
+  MergeMaterialSlotTexture,
   PostFxAsset,
   SkyBoxAsset,
   TextureArrayAsset,
@@ -65,6 +67,11 @@ export type Registries = {
   atlasSlotIds: Record<string, string[]>;
   impostors: Record<string, ImpostorAsset>;
   materials: Record<string, MaterialAsset>;
+  /** Merge material palettes (p374), in the materials' id space */
+  mergeMaterials: Record<string, MergeMaterialAsset>;
+  /** Each palette slot's array, by its texture id (`<paletteId>.<slot>`), in the textures' id
+   * space */
+  mergeMaterialSlots: Record<string, MergeMaterialSlotTexture>;
   meshes: Record<string, EngineMeshAsset>;
   importedAssets: Record<string, ImportedAsset>;
   skyboxes: Record<string, SkyBoxAsset>;
@@ -73,7 +80,7 @@ export type Registries = {
   loaders: GeneratedLoaders;
 };
 
-/** The id spaces: textures, arrays, atlases and their slots share one */
+/** The id spaces: textures, arrays, atlases and their slots (and palette slots) share one */
 export type IdSpace =
   | 'scenes'
   | 'cameras'
@@ -103,6 +110,8 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     atlasSlotIds: {},
     impostors: {},
     materials: {},
+    mergeMaterials: {},
+    mergeMaterialSlots: {},
     meshes: {},
     importedAssets: {},
     skyboxes: {},
@@ -171,6 +180,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   textureAtlas: 'texture atlas',
   impostor: 'impostor',
   material: 'material',
+  mergeMaterial: 'merge material',
   mesh: 'mesh',
   importedAsset: 'imported asset',
   skybox: 'skybox',

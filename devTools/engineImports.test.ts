@@ -50,6 +50,10 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/utils/CellKey.ts': {
     reason: 'the cell keys the streaming manifest is keyed by, the runtime’s own (p353 Phase 3)',
   },
+  'src/_engine/utils/Constants.ts': {
+    reason:
+      'the material texture map keys a merge material palette’s members are checked against (p374 D1)',
+  },
   'src/_engine/utils/StableStringify.ts': {
     reason: 'the asset cache keys’ JSON, the engine’s own (material variants, impostor hashes)',
   },

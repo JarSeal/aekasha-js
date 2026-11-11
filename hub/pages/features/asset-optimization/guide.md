@@ -99,6 +99,51 @@ part. A slot can also be a ready-made image of the whole layout (`image`, every 
 `rect`), and `mipChain: "FULL"` builds every mip level down to 1 × 1. Exported impostors use both
 (see [LOD and impostors](hub:features/lod#exporting-an-impostor)).
 
+## Texture arrays
+
+A `*.textureArray.json` builds several images into one KTX2 array texture, a layer each, all
+resized to one `size`: one texture binding where a shader would otherwise need one per image.
+
+```json
+{
+  "id": "groundLayers",
+  "layers": ["grass", "dirt", "./source/rock.png"],
+  "size": [1024, 1024],
+  "texOpts": { "colorSpace": "srgb", "wrapS": 1000, "wrapT": 1000 },
+  "optimize": { "slot": "baseColor" }
+}
+```
+
+- **`layers`** are texture assets' ids (their source or pack, not their output) or source images,
+  in layer order. `optimize` applies to every layer, and `texOpts` is the array's one sampler.
+- **At runtime** a scene lists it in its `textures` like any texture, and
+  [`loadTextureAsync`](api:loadTextureAsync) loads it as an array. A node material samples a
+  layer by name or index with [`sampleArrayLayer`](api:sampleArrayLayer).
+- Textures that already share a size and codec can be put together at runtime instead, without
+  a build step ([`buildTextureArray`](api:buildTextureArray)): KTX2 can't be resized or encoded
+  in the browser.
+
+### A palette's arrays
+
+A [merge material palette](hub:features/mesh-merging#palettes-several-materials-in-one-draw)
+(`*.mergeMaterial.json`) generates its arrays: the pipeline builds one per slot a member uses
+(`map`, `normalMap`, `orm`, `emissiveMap`), layer `i` from member `i`'s map at the slot's `size`,
+with the palette's `optimize` and the slot's codec (`baseColor`, `normal`, `orm`, `emissive`).
+
+- **A member without the map** gets a neutral layer made of constants: white for colour and ORM
+  (so the member's own roughness and metalness stand), a flat normal for the normal map.
+- **`orm` packs** a member's separate `aoMap`, `roughnessMap` and `metalnessMap` into the red,
+  green and blue of its layer (a missing one white); a member whose three are one texture uses it
+  as it is.
+- **One sampler per slot:** the members' textures in a slot must agree on wrapping, filtering and
+  anisotropy, or the palette fails, naming them.
+- Each array has its lock entry and output like any asset, and is rebuilt when a member's
+  material or texture JSON changes. A scene listing the palette (`mergeMaterials`) loads its
+  arrays with its textures, and `yarn build` checks their outputs as it checks a texture's.
+
+The layers take the slot's size whatever the member's texture is, so keep a palette's textures at
+one size: a 256² map in a 1024² slot takes 16 times its memory.
+
 ## Budgets
 
 `budget: { vramMB, downloadMB }` on any settings level limits an asset, and every encoded texture

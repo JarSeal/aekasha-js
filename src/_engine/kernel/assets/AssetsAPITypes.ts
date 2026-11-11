@@ -226,6 +226,7 @@ export type TransferableMergePart = {
   /** Its local → merged space transform (`Matrix4.elements`); identity when left out. */
   matrix?: number[];
   materialSlot?: number;
+  paletteIndex?: number;
   key?: string;
 };
 

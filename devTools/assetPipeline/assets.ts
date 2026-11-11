@@ -4,10 +4,14 @@ import path from 'path';
 import {
   getAtlasSlotTextureId,
   ImportedAssetSchema,
+  MaterialAssetSchema,
+  MergeMaterialAssetSchema,
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
   type ImportedAsset,
+  type MaterialAsset,
+  type MergeMaterialAsset,
   type TextureArrayAsset,
   type TextureAsset,
   type TextureAtlasAsset,
@@ -17,6 +21,8 @@ import {
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
 import { resolveMergeOptions } from './gltfMergeOptions';
+import type { MaterialLookup } from './mergeMaterialClass';
+import { resolveMergeMaterial } from './mergeMaterials';
 import type { PipelineAsset } from './pipeline';
 import { createArraySource, resolveTextureArrayLayers, type TextureLookup } from './textureArrays';
 import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';
@@ -33,7 +39,9 @@ import { ROOT, SRC_DIR } from '../paths';
  * The pipeline's asset list (p300 Phase 2 step 7): every source file a `*.texture.json` or
  * `*.importedAsset.json` loads, its own and each scene's latest save entry's (step 2's decision:
  * a scene's file is optimized with the asset's one `optimize`), every `*.textureArray.json`
- * (p299 D2) and every slot of a `*.textureAtlas.json` (p299 D3). One {@link PipelineAsset} per
+ * (p299 D2), every slot of a `*.textureAtlas.json` (p299 D3) and every slot a
+ * `*.mergeMaterial.json` palette's members use (p374 D2, its members read from their
+ * `*.material.json`s). One {@link PipelineAsset} per
  * distinct encode, and a key both the run and the gatherer compute the same way, so the gatherer
  * finds each scene entry's output.
  */
@@ -50,6 +58,14 @@ type AssetData = {
   lodChain?: ImportedAsset['lodChain'];
   __saveData?: Record<string, object[] | undefined>;
 };
+
+/**
+ * A merge material palette slot's key (p374 D2): its palette's JSON and the slot's name. One use
+ * each, with no scene entries.
+ * @param jsonFile The palette's JSON, absolute or relative to the repo root
+ */
+export const getMergeMaterialSlotAssetKey = (jsonFile: string, slot: string) =>
+  `mergeMaterial:${toRepoPath(path.resolve(ROOT, jsonFile))}:${slot}`;
 
 /** One use of an asset: the JSON as it is, or merged with a scene's latest save entry. */
 type AssetUse = {
@@ -130,13 +146,17 @@ export type AssetJson =
   | (AssetJsonBase & { type: 'texture'; data: TextureAsset })
   | (AssetJsonBase & { type: 'importedAsset'; data: ImportedAsset })
   | (AssetJsonBase & { type: 'textureArray'; data: TextureArrayAsset })
-  | (AssetJsonBase & { type: 'textureAtlas'; data: TextureAtlasAsset });
+  | (AssetJsonBase & { type: 'textureAtlas'; data: TextureAtlasAsset })
+  | (AssetJsonBase & { type: 'material'; data: MaterialAsset })
+  | (AssetJsonBase & { type: 'mergeMaterial'; data: MergeMaterialAsset });
 
 const ASSET_SCHEMAS = {
   texture: { suffix: '.texture.json', schema: TextureAssetSchema },
   importedAsset: { suffix: '.importedAsset.json', schema: ImportedAssetSchema },
   textureArray: { suffix: '.textureArray.json', schema: TextureArrayAssetSchema },
   textureAtlas: { suffix: '.textureAtlas.json', schema: TextureAtlasAssetSchema },
+  material: { suffix: '.material.json', schema: MaterialAssetSchema },
+  mergeMaterial: { suffix: '.mergeMaterial.json', schema: MergeMaterialAssetSchema },
 } as const;
 
 /**
@@ -150,8 +170,9 @@ export type DroppedAsset = {
 };
 
 /**
- * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json` and
- * `*.textureAtlas.json` under `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
+ * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json`,
+ * `*.textureAtlas.json`, `*.material.json` (a palette's members) and `*.mergeMaterial.json` under
+ * `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
  * out and listed in `dropped`: the gatherer reports it.
  */
 export const readAssetJsons = (
@@ -160,7 +181,15 @@ export const readAssetJsons = (
   const files = listSourceFiles(srcDir).sort();
   const assets: AssetJson[] = [];
   const dropped: DroppedAsset[] = [];
-  for (const type of ['texture', 'importedAsset', 'textureArray', 'textureAtlas'] as const) {
+  const types = [
+    'texture',
+    'importedAsset',
+    'textureArray',
+    'textureAtlas',
+    'material',
+    'mergeMaterial',
+  ] as const;
+  for (const type of types) {
     const { suffix, schema } = ASSET_SCHEMAS[type];
     for (const file of files.filter((f) => f.endsWith(suffix))) {
       const jsonFile = path.join(srcDir, file);
@@ -233,9 +262,27 @@ const collectTextureAtlas = (
 };
 
 /**
+ * A palette's slots, one encode each by its key, or why its class or layers fail (the gatherer
+ * reports it)
+ */
+const collectMergeMaterial = (
+  { id, jsonFile, data }: Extract<AssetJson, { type: 'mergeMaterial' }>,
+  findMaterial: MaterialLookup,
+  findTexture: TextureLookup
+): [string, PipelineAsset][] | { error: string } => {
+  const { slots, errors } = resolveMergeMaterial(jsonFile, id, data, findMaterial, findTexture);
+  if (errors.length) return { error: errors.join('; ') };
+  return slots.map(({ slot, id: slotId, source, optimize, isSrgb }) => [
+    getMergeMaterialSlotAssetKey(jsonFile, slot),
+    { type: 'textureArray', id: slotId, jsonFile: toRepoPath(jsonFile), source, optimize, isSrgb },
+  ]);
+};
+
+/**
  * Every encode the asset JSONs need, one per key ({@link getPipelineAssetKey},
- * {@link getTextureArrayAssetKey}, {@link getTextureAtlasSlotAssetKey}). A use whose source
- * doesn't resolve, an array whose layers don't and an atlas whose layout fails are left out and
+ * {@link getTextureArrayAssetKey}, {@link getTextureAtlasSlotAssetKey},
+ * {@link getMergeMaterialSlotAssetKey}). A use whose source doesn't resolve, an array whose layers
+ * don't, an atlas whose layout fails and a palette whose class or layers fail are left out and
  * listed in `dropped` (the gatherer reports them).
  */
 export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
@@ -247,11 +294,22 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
     assetJsons.flatMap((asset) => (asset.type === 'texture' ? [[asset.id, asset] as const] : []))
   );
   const findTexture: TextureLookup = (id) => textures.get(id);
+  const materials = new Map(
+    assetJsons.flatMap((asset) => (asset.type === 'material' ? [[asset.id, asset] as const] : []))
+  );
+  const findMaterial: MaterialLookup = (id) => materials.get(id);
   for (const assetJson of assetJsons) {
     if (assetJson.type === 'textureArray') {
       const asset = collectTextureArray(assetJson, findTexture);
       if ('error' in asset) drop(assetJson.jsonFile, asset.error);
       else assets.set(getTextureArrayAssetKey(assetJson.jsonFile), asset);
+      continue;
+    }
+    if (assetJson.type === 'material') continue;
+    if (assetJson.type === 'mergeMaterial') {
+      const slots = collectMergeMaterial(assetJson, findMaterial, findTexture);
+      if ('error' in slots) drop(assetJson.jsonFile, slots.error);
+      else for (const [key, asset] of slots) assets.set(key, asset);
       continue;
     }
     if (assetJson.type === 'textureAtlas') {

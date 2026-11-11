@@ -91,6 +91,52 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "1f0b4e62efd18ac1cdba623e640ac67ca55dce649848680f25293545a7093aa6": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinBrick_albedo.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_albedo.77d92cf8.ktx2",
+      "bytes": 32664,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 32664,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 26822
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "34b95eeb611e989360c240752fb09058e53dfb64822fb5937870cec60d8cbce4": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinStone_albedo.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_albedo.16a6b69f.ktx2",
+      "bytes": 28434,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 28434,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 36277
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "3612e3cc3ccbf312801a83b2ba884d62c90ee20a63eeaa6b7a9a7790723665bf": {
       "source": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
       "url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlasImage.atlas.albedo.26184dd3.ktx2",
@@ -111,6 +157,30 @@
           "mipmaps": true,
           "normalMode": false,
           "levels": 8
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "44a20507e10a16d5a58d5c7728d9cc00d7598cd3a0e69ada8b9f6f64301e0410": {
+      "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.normalMap.efa18477.ktx2",
+      "bytes": 74445,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 74445,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 157767
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false,
+          "layers": 4
         }
       ],
       "ktxVersion": "4.4.2"
@@ -139,6 +209,98 @@
       ],
       "warnings": [
         "layers[1] (\"l1\"): 256×256 is upscaled to 512×512"
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "52c04ad516d4f97a9d3eb212b2f0725e588e2c2a3fcbebd33afa7ad8f356363d": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinStone_orm.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_orm.44a424b5.ktx2",
+      "bytes": 37749,
+      "textures": [
+        {
+          "slot": "orm",
+          "bytes": 37749,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 85539
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "54c875ba557cbede620f15469ba08250d75557a0f8d8d1dc662919dece9c93d6": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinBrick_roughness.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_roughness.c75b87c4.ktx2",
+      "bytes": 37262,
+      "textures": [
+        {
+          "slot": "metallicRoughness",
+          "bytes": 37262,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 21119
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "5bd3a819aee6b6653f94131616f0f1680c47e916005a84827e8d13b375507b6a": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinMoss_albedo.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinMoss_albedo.064dc521.ktx2",
+      "bytes": 32051,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 32051,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 37366
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "68971abe800f1b2e9de967f143cbd3c7d2e41fbb71cc7f7a060b5636d46e2ced": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_albedo.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_albedo.ae174de6.ktx2",
+      "bytes": 26094,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 26094,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 27369
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
       ],
       "ktxVersion": "4.4.2"
     },
@@ -188,6 +350,52 @@
           "mipmaps": true,
           "normalMode": false,
           "levels": 8
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "847901abe7554b09a218f171d1bf92e6579722b84bd1519ac15b804a11b631a0": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinBrick_normal.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_normal.a0d0784b.ktx2",
+      "bytes": 28285,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 28285,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 49391
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "869a5b19e961ed175b47188d9e21719b64297aa521af1ad9d61bee84c5fc2bc7": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_metalness.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_metalness.cdc8b0b9.ktx2",
+      "bytes": 1020,
+      "textures": [
+        {
+          "slot": "metallicRoughness",
+          "bytes": 1020,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 323
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
         }
       ],
       "ktxVersion": "4.4.2"
@@ -264,6 +472,29 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "a3ac2ad27e55fbbf3d3f71a97ae66fbe8e16e26e93a3481357e06abc1172f1ca": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_roughness.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_roughness.1afc41c7.ktx2",
+      "bytes": 42210,
+      "textures": [
+        {
+          "slot": "metallicRoughness",
+          "bytes": 42210,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 32651
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "a4dac3e060141cace4276ad43926d2f44d8ffbff135f3592208a5f812055de4e": {
       "source": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
       "url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.mask.91a3bdbd.ktx2",
@@ -293,6 +524,29 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "b6fe103ee2f3f07452b7f085cd9bf70984f73f21df6f6c25f0711de70ab9f8b9": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinStone_normal.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_normal.ae256cf3.ktx2",
+      "bytes": 46331,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 46331,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 108376
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "bb41509e55e41c15158e076d861356eed3de426d22937c669ec6c46688d5362c": {
       "source": "src/public/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
       "url": "/aek-assets/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.316c3c57.ktx2",
@@ -312,6 +566,77 @@
           "hasAlpha": false,
           "mipmaps": true,
           "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "c47d39d543e26a9b7446fdda2dacc0e490cf779675f920f20722a74cbc7775c2": {
+      "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_ao.png",
+      "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_ao.ae421bb3.ktx2",
+      "bytes": 36198,
+      "textures": [
+        {
+          "slot": "occlusion",
+          "bytes": 36198,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 18180
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "c6cb1790168d858266a948ba1541c8bcde3b516a9293e55a1c902ccf304bc12b": {
+      "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.map.f1b34851.ktx2",
+      "bytes": 116748,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 116748,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 127834
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false,
+          "layers": 4
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "c9244f6d9f5669cfa8ea5d7ae3323f2ce4da951b56fdbc25d596090c8ba364a9": {
+      "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.orm.49e62c29.ktx2",
+      "bytes": 106618,
+      "textures": [
+        {
+          "slot": "orm",
+          "bytes": 106618,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 157812
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false,
+          "layers": 4
         }
       ],
       "ktxVersion": "4.4.2"

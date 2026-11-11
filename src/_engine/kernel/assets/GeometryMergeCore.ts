@@ -11,8 +11,19 @@ export type ResolvedMergePart = {
   geometry: THREE.BufferGeometry;
   matrix?: THREE.Matrix4;
   materialSlot?: number;
+  paletteIndex?: number;
   key?: string;
 };
+
+/**
+ * The per-vertex attribute a merge writes each part's `paletteIndex` into (p374 D3): an integer
+ * (`gpuType` `IntType`), which the merge material reads as a flat `uint`.
+ * @internal
+ */
+export const MERGE_PALETTE_INDEX_ATTRIBUTE = 'aekMatIndex';
+
+/** The largest palette index (a `Uint16` attribute). */
+const MAX_PALETTE_INDEX = 65535;
 
 /** How a merge builds its geometry (`mergeGeometryParts`' options). */
 export type MergeGeometryOptions = {
@@ -41,6 +52,9 @@ export type MergePartRange = {
   indexCount: number;
   /** Its material slot (0 when it had none). */
   materialSlot: number;
+  /** Its palette index, when the merge wrote `aekMatIndex` (some part had one; 0 for a part
+   * without). */
+  paletteIndex?: number;
 };
 
 /** A merged geometry: a `BufferGeometry` whose `userData.mergeParts` maps each part to its
@@ -67,6 +81,8 @@ type AttributePlan = {
   rawCopy: boolean;
   /** The default component, as written into `arrayType` */
   fill: number;
+  /** `IntType` when every part's attribute is read as an integer (and copied raw) */
+  gpuType?: typeof THREE.IntType;
 };
 
 const getArray = (attr: AnyAttribute) =>
@@ -139,6 +155,33 @@ export const assertMergeableParts = (geometries: readonly THREE.BufferGeometry[]
   });
 };
 
+/**
+ * Throws for a part whose `paletteIndex` isn't an integer from 0 to 65 535 (a `Uint16`
+ * attribute). `mergeGeometryPartsAsync` runs it on the main thread before it sends anything.
+ * @internal
+ */
+export const assertPaletteIndices = (parts: readonly { paletteIndex?: number }[]) => {
+  parts.forEach(({ paletteIndex }, i) => {
+    if (paletteIndex === undefined) return;
+    if (!Number.isInteger(paletteIndex) || paletteIndex < 0 || paletteIndex > MAX_PALETTE_INDEX) {
+      throw new Error(
+        `Merge part ${i}'s paletteIndex is ${paletteIndex}: an integer from 0 to ${MAX_PALETTE_INDEX}.`
+      );
+    }
+  });
+};
+
+/** The palette index attribute's array: `Uint8` up to index 255, else `Uint16`; undefined when
+ * no part has a palette index. */
+const getPaletteIndexArrayType = (parts: ResolvedMergePart[]) => {
+  let max = -1;
+  for (const part of parts) {
+    if (part.paletteIndex !== undefined) max = Math.max(max, part.paletteIndex);
+  }
+  if (max < 0) return undefined;
+  return max > 255 ? Uint16Array : Uint8Array;
+};
+
 /** A temporary geometry with the part's tangents computed (the part itself is only read), or
  * null when it lacks the normals or uvs that takes. */
 const computePartTangents = (geometry: THREE.BufferGeometry) => {
@@ -159,19 +202,45 @@ const createTrivialIndex = (count: number) => {
   return new THREE.BufferAttribute(array, 1);
 };
 
+/** Whether an attribute is read as an integer in the shader (`gpuType` `IntType`, which only a
+ * plain `BufferAttribute` carries). */
+const isIntegerAttribute = (attr: AnyAttribute) =>
+  (attr as THREE.BufferAttribute).gpuType === THREE.IntType && !attr.normalized;
+
+/** The widest of the parts' integer array types, or undefined when one isn't an integer array. */
+const getWidestIntegerArray = (arrays: Set<unknown>) => {
+  let widest: TypedArrayConstructor | undefined;
+  for (const array of arrays) {
+    if (array === Float32Array || array === Float64Array) return undefined;
+    const type = array as TypedArrayConstructor & { BYTES_PER_ELEMENT: number };
+    if (!widest || type.BYTES_PER_ELEMENT > (widest as typeof type).BYTES_PER_ELEMENT) {
+      widest = type;
+    }
+  }
+  return widest;
+};
+
 /** The merged attributes, from the parts' attributes and the attribute mode (the parts checked
- * by {@link assertMergeableParts}). */
+ * by {@link assertMergeableParts}). `skip` is an attribute the merge writes itself. */
 const planAttributes = (
   parts: ResolvedMergePart[],
   mode: 'UNION' | 'INTERSECTION',
   tangents: (AnyAttribute | null)[],
-  warnings: string[]
+  warnings: string[],
+  skip?: string
 ): AttributePlan[] => {
-  type Seen = { itemSize: number; count: number; arrays: Set<unknown>; normalized: Set<boolean> };
+  type Seen = {
+    itemSize: number;
+    count: number;
+    arrays: Set<unknown>;
+    normalized: Set<boolean>;
+    isInteger: boolean;
+  };
   const seen = new Map<string, Seen>();
   for (let i = 0; i < parts.length; i++) {
     const attributes = parts[i].geometry.attributes;
     for (const name in attributes) {
+      if (name === skip) continue;
       const attr = attributes[name] as AnyAttribute;
       const entry = seen.get(name);
       if (!entry) {
@@ -180,12 +249,14 @@ const planAttributes = (
           count: 1,
           arrays: new Set([getArray(attr).constructor]),
           normalized: new Set([attr.normalized]),
+          isInteger: isIntegerAttribute(attr),
         });
         continue;
       }
       entry.count++;
       entry.arrays.add(getArray(attr).constructor);
       entry.normalized.add(attr.normalized);
+      entry.isInteger &&= isIntegerAttribute(attr);
     }
   }
 
@@ -205,6 +276,22 @@ const planAttributes = (
       }
     }
     const isFloat = FLOAT_ATTRIBUTES.has(name);
+    // An integer attribute (eg. a palette index) stays one: its values copied raw into the
+    // widest of its parts' integer arrays
+    const integerArray =
+      entry.isInteger && !isFloat ? getWidestIntegerArray(entry.arrays) : undefined;
+    if (integerArray) {
+      plans.push({
+        name,
+        itemSize: entry.itemSize,
+        arrayType: integerArray,
+        normalized: false,
+        rawCopy: true,
+        fill: 0,
+        gpuType: THREE.IntType,
+      });
+      continue;
+    }
     const sameStorage = entry.arrays.size === 1 && entry.normalized.size === 1;
     const rawCopy = !isFloat && sameStorage;
     const arrayType = rawCopy
@@ -334,6 +421,7 @@ export const mergeGeometryPartsCore = (
   const warnings: string[] = [];
   if (!parts.length) return { geometry: createEmpty(), warnings };
   assertMergeableParts(parts.map((part) => part.geometry));
+  assertPaletteIndices(parts);
 
   // A part missing tangents others have gets its own computed (UNION only)
   const hasTangents = parts.some((part) => part.geometry.attributes.tangent);
@@ -342,7 +430,15 @@ export const mergeGeometryPartsCore = (
       ? computePartTangents(part.geometry)
       : null
   );
-  const plans = planAttributes(parts, attributes, tangents, warnings);
+  // Any part with a palette index: every vertex gets one (p374 D3), replacing a part's own
+  const paletteType = getPaletteIndexArrayType(parts);
+  const plans = planAttributes(
+    parts,
+    attributes,
+    tangents,
+    warnings,
+    paletteType ? MERGE_PALETTE_INDEX_ATTRIBUTE : undefined
+  );
 
   const order = orderParts(parts, groups);
   let vertexTotal = 0;
@@ -354,6 +450,7 @@ export const mergeGeometryPartsCore = (
   }
 
   const arrays = plans.map((plan) => new plan.arrayType(vertexTotal * plan.itemSize));
+  const paletteArray = paletteType && new paletteType(vertexTotal);
   const indexArray =
     vertexTotal > 65535 ? new Uint32Array(indexTotal) : new Uint16Array(indexTotal);
   const ranges: MergePartRange[] = [];
@@ -366,6 +463,8 @@ export const mergeGeometryPartsCore = (
     const indexCount = part.geometry.index ? part.geometry.index.count : vertexCount;
     writePartAttributes(part, tangents[i], plans, arrays, vertexStart, isMirrored);
     writePartIndex(part.geometry, indexArray, indexStart, vertexStart, isMirrored);
+    const paletteIndex = part.paletteIndex ?? 0;
+    paletteArray?.fill(paletteIndex, vertexStart, vertexStart + vertexCount);
     ranges.push({
       ...(part.key !== undefined ? { key: part.key } : {}),
       vertexStart,
@@ -373,18 +472,24 @@ export const mergeGeometryPartsCore = (
       indexStart,
       indexCount,
       materialSlot: part.materialSlot ?? 0,
+      ...(paletteArray ? { paletteIndex } : {}),
     });
     vertexStart += vertexCount;
     indexStart += indexCount;
   }
 
   let geometry = new THREE.BufferGeometry();
-  plans.forEach((plan, p) =>
-    geometry.setAttribute(
-      plan.name,
-      new THREE.BufferAttribute(arrays[p], plan.itemSize, plan.normalized)
-    )
-  );
+  plans.forEach((plan, p) => {
+    const attr = new THREE.BufferAttribute(arrays[p], plan.itemSize, plan.normalized);
+    if (plan.gpuType) attr.gpuType = plan.gpuType;
+    geometry.setAttribute(plan.name, attr);
+  });
+  if (paletteArray) {
+    const attr = new THREE.BufferAttribute(paletteArray, 1);
+    // WebGL2 reads it as an integer (vertexAttribIPointer) only so
+    attr.gpuType = THREE.IntType;
+    geometry.setAttribute(MERGE_PALETTE_INDEX_ATTRIBUTE, attr);
+  }
   geometry.setIndex(new THREE.BufferAttribute(indexArray, 1));
   if (groups === 'BY_SLOT') {
     for (const range of ranges) {
@@ -396,6 +501,15 @@ export const mergeGeometryPartsCore = (
   if (!indexed) {
     // Each index becomes a vertex: a part's vertices are its index range now
     geometry = geometry.toNonIndexed();
+    // three's toNonIndexed makes new attributes without their gpuType
+    for (const plan of plans) {
+      if (plan.gpuType)
+        (geometry.attributes[plan.name] as THREE.BufferAttribute).gpuType = plan.gpuType;
+    }
+    if (paletteArray) {
+      (geometry.attributes[MERGE_PALETTE_INDEX_ATTRIBUTE] as THREE.BufferAttribute).gpuType =
+        THREE.IntType;
+    }
     for (const range of ranges) {
       range.vertexStart = range.indexStart;
       range.vertexCount = range.indexCount;

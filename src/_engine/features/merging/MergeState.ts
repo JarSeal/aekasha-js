@@ -6,6 +6,7 @@ import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
 import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
+import { findPaletteMaterial } from './MergePalettes';
 import type { MergeGroupData, MergeGroupSettings, MeshMergeDef } from './MergeTypes';
 
 /** Per world: the group entities by group id, the groups waiting for a build, and the meshes
@@ -42,7 +43,8 @@ export const findPending = (world: ECSWorld) => pendingByWorld.get(world);
 
 /**
  * Creates a group's entity and its `MERGE_GROUP`, and lists it under its id (no checks: the API's
- * `createMergeGroup` and the `AUTO` groups' resolution make them).
+ * `createMergeGroup` and the `AUTO` groups' resolution make them). A palette group's material is
+ * the palette's merge material, which the caller checked is registered.
  * @internal
  */
 export const createGroup = (
@@ -65,7 +67,7 @@ export const createGroup = (
     partIndex: new Map(),
     wasted: 0,
     rebuilds: 0,
-    _material: null,
+    _material: (settings.palette && findPaletteMaterial(settings.palette)) || null,
     _isPending: false,
     _buildToken: 0,
     _isBuilding: false,

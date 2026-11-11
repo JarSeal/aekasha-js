@@ -145,9 +145,9 @@ describe('mergeGeometryPartsAsync', () => {
     // A function can't be cloned: the request carries attributes and index, not userData
     box.userData.notCloneable = () => {};
     return [
-      { geo: 'geometryMergeTestAsyncBox', key: 'a' },
+      { geo: 'geometryMergeTestAsyncBox', paletteIndex: 2, key: 'a' },
       { geo: new THREE.SphereGeometry(1, 8, 6), materialSlot: 1, key: 'b' },
-      { geo: 'geometryMergeTestAsyncBox', matrix: mirrored, key: 'c' },
+      { geo: 'geometryMergeTestAsyncBox', matrix: mirrored, paletteIndex: 1, key: 'c' },
     ];
   };
 
@@ -159,7 +159,13 @@ describe('mergeGeometryPartsAsync', () => {
     for (const name in expected.attributes) {
       expect(merged.attributes[name].array).toEqual(expected.attributes[name].array);
       expect(merged.attributes[name].itemSize).toBe(expected.attributes[name].itemSize);
+      const gpuType = (attr: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) =>
+        (attr as THREE.BufferAttribute).gpuType;
+      expect(gpuType(merged.attributes[name])).toBe(gpuType(expected.attributes[name]));
     }
+    // The palette index comes back an integer attribute
+    expect(merged.attributes.aekMatIndex.array).toBeInstanceOf(Uint8Array);
+    expect((merged.attributes.aekMatIndex as THREE.BufferAttribute).gpuType).toBe(THREE.IntType);
     expect(merged.index!.array).toEqual(expected.index!.array);
     expect(merged.groups).toEqual(expected.groups);
     expect(merged.userData.mergeParts).toEqual(expected.userData.mergeParts);
@@ -177,6 +183,9 @@ describe('mergeGeometryPartsAsync', () => {
     await expect(mergeGeometryPartsAsync([{ geo: 'geometryMergeTestNone' }])).rejects.toThrow(
       /geometryMergeTestNone/
     );
+    await expect(
+      mergeGeometryPartsAsync([{ geo: new THREE.BoxGeometry(), paletteIndex: -1 }])
+    ).rejects.toThrow(/paletteIndex is -1/);
     expect(worker.requests).toBe(0);
   });
 

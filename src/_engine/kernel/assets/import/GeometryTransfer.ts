@@ -16,6 +16,8 @@ export type TransferableAttribute = {
   normalized: boolean;
   /** The BufferAttribute's own `name` (its key in the geometry's attributes is apart). */
   name: string;
+  /** Set for an attribute the shader reads as an integer (`gpuType` `IntType`). */
+  isInteger?: true;
 };
 
 /** Everything of a BufferGeometry that GLTFLoader sets, as structured-clone-safe data (see
@@ -61,7 +63,14 @@ const toTransferableAttribute = (
   // A Set: several attributes can be views into one buffer (eg. a .glb's binary chunk), and a
   // buffer can only be listed once for transfer
   transfer.add(array.buffer as ArrayBuffer);
-  return { array, itemSize: attr.itemSize, normalized: attr.normalized, name: attr.name };
+  const isInteger = (attr as THREE.BufferAttribute).gpuType === THREE.IntType;
+  return {
+    array,
+    itemSize: attr.itemSize,
+    normalized: attr.normalized,
+    name: attr.name,
+    ...(isInteger ? { isInteger } : {}),
+  };
 };
 
 /**
@@ -119,9 +128,11 @@ export const deserializeAttribute = ({
   itemSize,
   normalized,
   name,
+  isInteger,
 }: TransferableAttribute) => {
   const attr = new THREE.BufferAttribute(array, itemSize, normalized);
   attr.name = name;
+  if (isInteger) attr.gpuType = THREE.IntType;
   return attr;
 };
 

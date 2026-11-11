@@ -246,12 +246,30 @@ export const decMaterialRef = (id: string) => {
   }
 };
 
+/** The classic params three keeps as a `Vector2`: its `setValues` copies one only from a
+ * `Vector2`, so a JSON's `[x, y]` would replace it with a plain array (a `uniformArray` in the
+ * node material three builds for it) */
+const VECTOR2_PARAMS = ['normalScale', 'clearcoatNormalScale'] as const;
+
+/** A JSON's `[x, y]` or `{ x, y }` as a `Vector2`; any other value as it is */
+const toVector2Param = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value.length === 2 && value.every((n) => typeof n === 'number')
+      ? new THREE.Vector2(value[0] as number, value[1] as number)
+      : value;
+  }
+  if (!value || typeof value !== 'object' || (value as THREE.Vector2).isVector2) return value;
+  const { x, y } = value as { x?: unknown; y?: unknown };
+  return typeof x === 'number' && typeof y === 'number' ? new THREE.Vector2(x, y) : value;
+};
+
 /**
  * Creates and registers a three material from its props (see {@link MatProps}): owned by the
  * scene loading (or current), released with it when nothing holds a ref. An `id` already
  * registered returns that material, re-tagged to the scene getting it, and builds nothing (the
  * props are ignored). A texture id that isn't registered is left out of `params` (warned); in a
- * TSL input it samples one white texel (warned).
+ * TSL input it samples one white texel (warned). A `normalScale` or `clearcoatNormalScale` given as
+ * `[x, y]` or `{ x, y }` (a material JSON's) becomes a `Vector2`.
  * @throws for an unknown `type`; for a TSL material whose file isn't loaded (see
  * {@link loadTslMaterialFileAsync}), whose socket function is empty, or whose input value can't be
  * made into a uniform
@@ -299,6 +317,9 @@ export const createMaterial = (props: MatProps) => {
           delete processedParams[key];
         }
       }
+    }
+    for (const key of VECTOR2_PARAMS) {
+      if (key in processedParams) processedParams[key] = toVector2Param(processedParams[key]);
     }
   }
 

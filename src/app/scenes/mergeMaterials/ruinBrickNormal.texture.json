@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ruinBrickNormal",
+  "fileName": "./source/ruinBrick_normal.png",
+  "texOpts": {
+    "wrapS": 1000,
+    "wrapT": 1000
+  },
+  "optimize": {
+    "slot": "normal"
+  }
+}

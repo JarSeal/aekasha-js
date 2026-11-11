@@ -13012,6 +13012,511 @@
         "lod"
       ]
     },
+    "mergeMaterials": {
+      "isDebugScene": true,
+      "name": "Merge materials (p374)",
+      "description": "p374's verification scene: the palette ruinsPalette (four STANDARD materials) on eight meshes, drawn as eight entities with the members' own materials (REFERENCE), as one geometry with a group per member drawn by the four materials (BAKED, the control), and as one geometry with a per-vertex aekMatIndex drawn by the palette's merge material (MERGED) and by one made from a copy of its data with SKIP slots (SKIP). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant). The field (Phase 3, D5): 1600 meshes of the four members on 3 x 3 AUTO cells of 8 m, merged by palette (9 groups), by material (36) or not: window.__mergeMaterials.field(mode).",
+      "textures": [
+        {
+          "id": "ruinStoneAlbedo",
+          "fileName": "./source/ruinStone_albedo.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "__fileSize": 36277,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_albedo.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_albedo.16a6b69f.ktx2",
+          "__bytes": {
+            "in": 36277,
+            "out": 28434
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinStoneNormal",
+          "fileName": "./source/ruinStone_normal.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 108376,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_normal.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_normal.ae256cf3.ktx2",
+          "__bytes": {
+            "in": 108376,
+            "out": 46331
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinStoneOrm",
+          "fileName": "./source/ruinStone_orm.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 85539,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_orm.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_orm.44a424b5.ktx2",
+          "__bytes": {
+            "in": 85539,
+            "out": 37749
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinBrickAlbedo",
+          "fileName": "./source/ruinBrick_albedo.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "__fileSize": 26822,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_albedo.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_albedo.77d92cf8.ktx2",
+          "__bytes": {
+            "in": 26822,
+            "out": 32664
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinBrickNormal",
+          "fileName": "./source/ruinBrick_normal.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 49391,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_normal.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_normal.a0d0784b.ktx2",
+          "__bytes": {
+            "in": 49391,
+            "out": 28285
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinBrickRoughness",
+          "fileName": "./source/ruinBrick_roughness.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 21119,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_roughness.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_roughness.c75b87c4.ktx2",
+          "__bytes": {
+            "in": 21119,
+            "out": 37262
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinMossAlbedo",
+          "fileName": "./source/ruinMoss_albedo.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "__fileSize": 37366,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinMoss_albedo.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinMoss_albedo.064dc521.ktx2",
+          "__bytes": {
+            "in": 37366,
+            "out": 32051
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinPlasterAlbedo",
+          "fileName": "./source/ruinPlaster_albedo.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "__fileSize": 27369,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_albedo.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_albedo.ae174de6.ktx2",
+          "__bytes": {
+            "in": 27369,
+            "out": 26094
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinPlasterAo",
+          "fileName": "./source/ruinPlaster_ao.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 18180,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_ao.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_ao.ae421bb3.ktx2",
+          "__bytes": {
+            "in": 18180,
+            "out": 36198
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinPlasterRoughness",
+          "fileName": "./source/ruinPlaster_roughness.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 32651,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_roughness.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_roughness.1afc41c7.ktx2",
+          "__bytes": {
+            "in": 32651,
+            "out": 42210
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinPlasterMetalness",
+          "fileName": "./source/ruinPlaster_metalness.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "__fileSize": 323,
+          "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_metalness.png",
+          "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_metalness.cdc8b0b9.ktx2",
+          "__bytes": {
+            "in": 323,
+            "out": 1020
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinsPalette.map",
+          "texOpts": {
+            "colorSpace": "srgb",
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Ruins palette",
+            "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+          },
+          "__layers": [
+            "ruinStone",
+            "ruinBrick",
+            "ruinMoss",
+            "ruinPlaster"
+          ],
+          "__mergeMaterial": {
+            "id": "ruinsPalette",
+            "slot": "map"
+          },
+          "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.map.f1b34851.ktx2",
+          "__bytes": {
+            "in": 127834,
+            "out": 116748
+          },
+          "__vramBytes": {
+            "in": 1398096,
+            "out": 349632
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinsPalette.normalMap",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Ruins palette",
+            "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+          },
+          "__layers": [
+            "ruinStone",
+            "ruinBrick",
+            "ruinMoss",
+            "ruinPlaster"
+          ],
+          "__mergeMaterial": {
+            "id": "ruinsPalette",
+            "slot": "normalMap"
+          },
+          "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.normalMap.efa18477.ktx2",
+          "__bytes": {
+            "in": 157767,
+            "out": 74445
+          },
+          "__vramBytes": {
+            "in": 1398096,
+            "out": 349632
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "ruinsPalette.orm",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Ruins palette",
+            "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+          },
+          "__layers": [
+            "ruinStone",
+            "ruinBrick",
+            "ruinMoss",
+            "ruinPlaster"
+          ],
+          "__mergeMaterial": {
+            "id": "ruinsPalette",
+            "slot": "orm"
+          },
+          "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.orm.49e62c29.ktx2",
+          "__bytes": {
+            "in": 157812,
+            "out": 106618
+          },
+          "__vramBytes": {
+            "in": 1398096,
+            "out": 349632
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "materials": [
+        {
+          "id": "ruinStone",
+          "params": {
+            "map": "ruinStoneAlbedo",
+            "normalMap": "ruinStoneNormal",
+            "aoMap": "ruinStoneOrm",
+            "roughnessMap": "ruinStoneOrm",
+            "metalnessMap": "ruinStoneOrm",
+            "roughness": 1,
+            "metalness": 1
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "ruinBrick",
+          "params": {
+            "map": "ruinBrickAlbedo",
+            "normalMap": "ruinBrickNormal",
+            "normalScale": [
+              0.8,
+              0.8
+            ],
+            "roughnessMap": "ruinBrickRoughness",
+            "roughness": 1,
+            "metalness": 0
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "ruinMoss",
+          "params": {
+            "map": "ruinMossAlbedo",
+            "color": "#d8ecc8",
+            "roughness": 0.95,
+            "metalness": 0
+          },
+          "type": "STANDARD"
+        },
+        {
+          "id": "ruinPlaster",
+          "params": {
+            "map": "ruinPlasterAlbedo",
+            "aoMap": "ruinPlasterAo",
+            "aoMapIntensity": 0.8,
+            "roughnessMap": "ruinPlasterRoughness",
+            "metalnessMap": "ruinPlasterMetalness",
+            "roughness": 1,
+            "metalness": 1
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 8,
+          "palettes": [
+            "ruinsPalette"
+          ]
+        }
+      ],
+      "mergeMaterials": [
+        {
+          "id": "ruinsPalette",
+          "materials": [
+            "ruinStone",
+            "ruinBrick",
+            "ruinMoss",
+            "ruinPlaster"
+          ],
+          "debugData": {
+            "name": "Ruins palette",
+            "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+          },
+          "__slots": {
+            "map": {
+              "texture": "ruinsPalette.map",
+              "has": [
+                true,
+                true,
+                true,
+                true
+              ]
+            },
+            "normalMap": {
+              "texture": "ruinsPalette.normalMap",
+              "has": [
+                true,
+                true,
+                false,
+                false
+              ]
+            },
+            "orm": {
+              "texture": "ruinsPalette.orm",
+              "has": [
+                true,
+                true,
+                false,
+                true
+              ]
+            }
+          },
+          "__entries": [
+            {
+              "color": 16777215,
+              "opacity": 1,
+              "emissive": 0,
+              "emissiveIntensity": 1,
+              "roughness": 1,
+              "metalness": 1,
+              "normalScale": [
+                1,
+                1
+              ],
+              "aoMapIntensity": 1
+            },
+            {
+              "color": 16777215,
+              "opacity": 1,
+              "emissive": 0,
+              "emissiveIntensity": 1,
+              "roughness": 1,
+              "metalness": 0,
+              "normalScale": [
+                0.8,
+                0.8
+              ],
+              "aoMapIntensity": 1
+            },
+            {
+              "color": "#d8ecc8",
+              "opacity": 1,
+              "emissive": 0,
+              "emissiveIntensity": 1,
+              "roughness": 0.95,
+              "metalness": 0,
+              "normalScale": [
+                1,
+                1
+              ],
+              "aoMapIntensity": 1
+            },
+            {
+              "color": 16777215,
+              "opacity": 1,
+              "emissive": 0,
+              "emissiveIntensity": 1,
+              "roughness": 1,
+              "metalness": 1,
+              "normalScale": [
+                1,
+                1
+              ],
+              "aoMapIntensity": 0.8
+            }
+          ]
+        }
+      ],
+      "id": "mergeMaterials",
+      "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "__features": [
+        "merging"
+      ]
+    },
     "physicsTest": {
       "name": "Physics API test",
       "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
@@ -19434,6 +19939,274 @@
       "__vramBytes": {
         "in": 22369620,
         "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "ruinBrickAlbedo": {
+      "id": "ruinBrickAlbedo",
+      "fileName": "./source/ruinBrick_albedo.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinBrickAlbedo.texture.json",
+      "__fileSize": 26822,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_albedo.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_albedo.77d92cf8.ktx2",
+      "__bytes": {
+        "in": 26822,
+        "out": 32664
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinBrickNormal": {
+      "id": "ruinBrickNormal",
+      "fileName": "./source/ruinBrick_normal.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "normal"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinBrickNormal.texture.json",
+      "__fileSize": 49391,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_normal.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_normal.a0d0784b.ktx2",
+      "__bytes": {
+        "in": 49391,
+        "out": 28285
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinBrickRoughness": {
+      "id": "ruinBrickRoughness",
+      "fileName": "./source/ruinBrick_roughness.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "metallicRoughness"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinBrickRoughness.texture.json",
+      "__fileSize": 21119,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinBrick_roughness.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_roughness.c75b87c4.ktx2",
+      "__bytes": {
+        "in": 21119,
+        "out": 37262
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinMossAlbedo": {
+      "id": "ruinMossAlbedo",
+      "fileName": "./source/ruinMoss_albedo.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinMossAlbedo.texture.json",
+      "__fileSize": 37366,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinMoss_albedo.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinMoss_albedo.064dc521.ktx2",
+      "__bytes": {
+        "in": 37366,
+        "out": 32051
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinPlasterAlbedo": {
+      "id": "ruinPlasterAlbedo",
+      "fileName": "./source/ruinPlaster_albedo.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinPlasterAlbedo.texture.json",
+      "__fileSize": 27369,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_albedo.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_albedo.ae174de6.ktx2",
+      "__bytes": {
+        "in": 27369,
+        "out": 26094
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinPlasterAo": {
+      "id": "ruinPlasterAo",
+      "fileName": "./source/ruinPlaster_ao.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "occlusion"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinPlasterAo.texture.json",
+      "__fileSize": 18180,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_ao.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_ao.ae421bb3.ktx2",
+      "__bytes": {
+        "in": 18180,
+        "out": 36198
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinPlasterMetalness": {
+      "id": "ruinPlasterMetalness",
+      "fileName": "./source/ruinPlaster_metalness.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "metallicRoughness"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinPlasterMetalness.texture.json",
+      "__fileSize": 323,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_metalness.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_metalness.cdc8b0b9.ktx2",
+      "__bytes": {
+        "in": 323,
+        "out": 1020
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinPlasterRoughness": {
+      "id": "ruinPlasterRoughness",
+      "fileName": "./source/ruinPlaster_roughness.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "metallicRoughness"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinPlasterRoughness.texture.json",
+      "__fileSize": 32651,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinPlaster_roughness.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_roughness.1afc41c7.ktx2",
+      "__bytes": {
+        "in": 32651,
+        "out": 42210
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinStoneAlbedo": {
+      "id": "ruinStoneAlbedo",
+      "fileName": "./source/ruinStone_albedo.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinStoneAlbedo.texture.json",
+      "__fileSize": 36277,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_albedo.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_albedo.16a6b69f.ktx2",
+      "__bytes": {
+        "in": 36277,
+        "out": 28434
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinStoneNormal": {
+      "id": "ruinStoneNormal",
+      "fileName": "./source/ruinStone_normal.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "normal"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinStoneNormal.texture.json",
+      "__fileSize": 108376,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_normal.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_normal.ae256cf3.ktx2",
+      "__bytes": {
+        "in": 108376,
+        "out": 46331
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "ruinStoneOrm": {
+      "id": "ruinStoneOrm",
+      "fileName": "./source/ruinStone_orm.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "optimize": {
+        "slot": "orm"
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinStoneOrm.texture.json",
+      "__fileSize": 85539,
+      "__sourceUrl": "/app/scenes/mergeMaterials/source/ruinStone_orm.png",
+      "__url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_orm.44a424b5.ktx2",
+      "__bytes": {
+        "in": 85539,
+        "out": 37749
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
       },
       "__codec": "uastc"
     },
@@ -27328,6 +28101,103 @@
         "out": 49200
       },
       "__codec": "uastc"
+    },
+    "ruinsPalette.map": {
+      "id": "ruinsPalette.map",
+      "texOpts": {
+        "colorSpace": "srgb",
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "Ruins palette",
+        "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "__layers": [
+        "ruinStone",
+        "ruinBrick",
+        "ruinMoss",
+        "ruinPlaster"
+      ],
+      "__mergeMaterial": {
+        "id": "ruinsPalette",
+        "slot": "map"
+      },
+      "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.map.f1b34851.ktx2",
+      "__bytes": {
+        "in": 127834,
+        "out": 116748
+      },
+      "__vramBytes": {
+        "in": 1398096,
+        "out": 349632
+      },
+      "__codec": "uastc"
+    },
+    "ruinsPalette.normalMap": {
+      "id": "ruinsPalette.normalMap",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "Ruins palette",
+        "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "__layers": [
+        "ruinStone",
+        "ruinBrick",
+        "ruinMoss",
+        "ruinPlaster"
+      ],
+      "__mergeMaterial": {
+        "id": "ruinsPalette",
+        "slot": "normalMap"
+      },
+      "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.normalMap.efa18477.ktx2",
+      "__bytes": {
+        "in": 157767,
+        "out": 74445
+      },
+      "__vramBytes": {
+        "in": 1398096,
+        "out": 349632
+      },
+      "__codec": "uastc"
+    },
+    "ruinsPalette.orm": {
+      "id": "ruinsPalette.orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "Ruins palette",
+        "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+      },
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
+      "__layers": [
+        "ruinStone",
+        "ruinBrick",
+        "ruinMoss",
+        "ruinPlaster"
+      ],
+      "__mergeMaterial": {
+        "id": "ruinsPalette",
+        "slot": "orm"
+      },
+      "__url": "/aek-assets/app/scenes/mergeMaterials/ruinsPalette.palette.orm.49e62c29.ktx2",
+      "__bytes": {
+        "in": 157812,
+        "out": 106618
+      },
+      "__vramBytes": {
+        "in": 1398096,
+        "out": 349632
+      },
+      "__codec": "uastc"
     }
   },
   "materials": {
@@ -27368,6 +28238,61 @@
       },
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphere.material.json"
+    },
+    "ruinBrick": {
+      "id": "ruinBrick",
+      "params": {
+        "map": "ruinBrickAlbedo",
+        "normalMap": "ruinBrickNormal",
+        "normalScale": [
+          0.8,
+          0.8
+        ],
+        "roughnessMap": "ruinBrickRoughness",
+        "roughness": 1,
+        "metalness": 0
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinBrick.material.json"
+    },
+    "ruinMoss": {
+      "id": "ruinMoss",
+      "params": {
+        "map": "ruinMossAlbedo",
+        "color": "#d8ecc8",
+        "roughness": 0.95,
+        "metalness": 0
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinMoss.material.json"
+    },
+    "ruinPlaster": {
+      "id": "ruinPlaster",
+      "params": {
+        "map": "ruinPlasterAlbedo",
+        "aoMap": "ruinPlasterAo",
+        "aoMapIntensity": 0.8,
+        "roughnessMap": "ruinPlasterRoughness",
+        "metalnessMap": "ruinPlasterMetalness",
+        "roughness": 1,
+        "metalness": 1
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinPlaster.material.json"
+    },
+    "ruinStone": {
+      "id": "ruinStone",
+      "params": {
+        "map": "ruinStoneAlbedo",
+        "normalMap": "ruinStoneNormal",
+        "aoMap": "ruinStoneOrm",
+        "roughnessMap": "ruinStoneOrm",
+        "metalnessMap": "ruinStoneOrm",
+        "roughness": 1,
+        "metalness": 1
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinStone.material.json"
     },
     "testTslMat": {
       "id": "testTslMat",
@@ -27479,6 +28404,133 @@
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
+    }
+  },
+  "mergeMaterials": {
+    "ruinsPalette": {
+      "id": "ruinsPalette",
+      "materials": [
+        "ruinStone",
+        "ruinBrick",
+        "ruinMoss",
+        "ruinPlaster"
+      ],
+      "slots": {
+        "map": {
+          "size": [
+            256,
+            256
+          ]
+        },
+        "normalMap": {
+          "size": [
+            256,
+            256
+          ]
+        },
+        "orm": {
+          "size": [
+            256,
+            256
+          ],
+          "from": [
+            "aoMap",
+            "roughnessMap",
+            "metalnessMap"
+          ]
+        }
+      },
+      "optimize": {
+        "profile": "prop"
+      },
+      "debugData": {
+        "name": "Ruins palette",
+        "description": "p374 Phase 1: four STANDARD materials, each building its palette layers another way (ruinStone: one ORM map as it is; ruinBrick: a separate roughness map packed; ruinMoss: albedo only, neutral layers; ruinPlaster: separate AO, roughness and metalness maps packed, no normal map). Sources: devTools/assetPipeline/fixtures/mergeMaterialsFiles.ts."
+      },
+      "__slots": {
+        "map": {
+          "texture": "ruinsPalette.map",
+          "has": [
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "normalMap": {
+          "texture": "ruinsPalette.normalMap",
+          "has": [
+            true,
+            true,
+            false,
+            false
+          ]
+        },
+        "orm": {
+          "texture": "ruinsPalette.orm",
+          "has": [
+            true,
+            true,
+            false,
+            true
+          ]
+        }
+      },
+      "__entries": [
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 1,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 0,
+          "normalScale": [
+            0.8,
+            0.8
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": "#d8ecc8",
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 0.95,
+          "metalness": 0,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 1,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 0.8
+        }
+      ],
+      "__sourcePath": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json"
     }
   },
   "meshes": {

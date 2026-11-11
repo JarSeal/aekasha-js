@@ -12,6 +12,11 @@ export type MergeGroupSettings = {
    * Default false: the group goes with the scene it was created in. Only a persistent group takes
    * persistent members. */
   persistent?: boolean;
+  /** A merge material palette's id (`*.mergeMaterial.json`, p374): the group takes meshes of any
+   * of the palette's materials and draws them in one draw with the palette's merge material. The
+   * scene must list the palette (`mergeMaterials`), and a palette group can't be `persistent`
+   * (the merge material is the scene's). Default: none, one material per group. */
+  palette?: string;
 };
 
 /**
@@ -34,7 +39,8 @@ export type MergeGroupData = {
   wasted: number;
   /** How many times the group's geometry was built. */
   rebuilds: number;
-  /** The members' material (the first member's): every member shares it. */
+  /** The members' material (the first member's): every member shares it. A palette group's is
+   * the palette's merge material, from its creation. */
   _material: THREE.Material | null;
   /** A build is due: the build system builds the group at its next run. */
   _isPending: boolean;
@@ -59,6 +65,12 @@ export type MeshMergeOptions = {
   /** `AUTO` only: an automatic group's vertex cap; a full one opens another in its cell.
    * Default 262 144. */
   maxVertices?: number;
+  /** `AUTO` only: the merge material palettes (`*.mergeMaterial.json` ids, p374) whose materials
+   * share an automatic group: a mesh of a palette's material goes into its cell's group of that
+   * palette, drawn by the palette's merge material. The first palette in the list that has its
+   * material wins. Replaces the scene's `AUTO` entry's list; `[]`: none. The scene must list each
+   * (`mergeMaterials`); one it doesn't is warned about and left out. */
+  palettes?: string[];
 };
 
 /**
@@ -75,6 +87,10 @@ export type SceneAutoMergeEntry = {
   cellSize?: number;
   /** The vertex cap for the scene's meshes that don't give one. Default 262 144. */
   maxVertices?: number;
+  /** The merge material palettes (p374) whose materials share an automatic group, for the
+   * scene's meshes that don't give their own list: palettes the scene lists (`mergeMaterials`).
+   * Default: none, one material per automatic group. */
+  palettes?: string[];
 };
 
 /** A scene's `mergeGroups` entry for one of its groups: its settings when it's made on first use
@@ -86,6 +102,9 @@ export type SceneMergeGroupEntry = {
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's. */
   receiveShadow?: boolean;
+  /** A merge material palette the scene lists (`mergeMaterials`): the group takes meshes of any
+   * of its materials, drawn by its merge material. */
+  palette?: string;
 };
 
 /**
@@ -108,6 +127,9 @@ export type MergeMemberData = {
   /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
    * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
+   * joined; undefined in a group of one material. */
+  _paletteIndex?: number;
   /** Its `TRANSFORM`'s pose when its edit session began (`beginMergeMemberEdit`), while one is
    * open: it's drawn by its own mesh, its range collapsed. */
   _editPose?: MergeMemberEditPose;

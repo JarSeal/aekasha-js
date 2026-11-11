@@ -33,6 +33,22 @@ export { LightAssetSchema } from './LightSchema';
 export { lodSchemaPart } from '../features/lod/LodSchema';
 export type { LightAsset } from './LightSchema';
 export { MaterialAssetSchema } from './MaterialSchema';
+export {
+  getMergeMaterialSlotTextureId,
+  MAX_MERGE_MATERIAL_ENTRIES,
+  MERGE_MATERIAL_SLOTS,
+  MergeMaterialAssetSchema,
+  ORM_SOURCE_MAP_KEYS,
+} from '../features/merging/MergeMaterialSchema';
+export type {
+  MergeMaterialAsset,
+  MergeMaterialEntry,
+  MergeMaterialSlot,
+  MergeMaterialSlotDef,
+  MergeMaterialSlotInfo,
+  MergeMaterialSlotTexture,
+  SceneMergeMaterial,
+} from '../features/merging/MergeMaterialSchema';
 export { mergingSchemaPart } from '../features/merging/MergingSchema';
 export type { MaterialAsset, PerType } from './MaterialSchema';
 export { createMeshAssetSchema } from './MeshSchema';

@@ -785,6 +785,7 @@
     "src/_engine/features/merging/MergeAuto.ts": {
       "AUTO": "Variable",
       "AUTO_ID_PREFIX": "Variable",
+      "AutoGroupBounds": "TypeAlias",
       "AutoGroupPick": "TypeAlias",
       "collectQueuedJoins": "Function",
       "getAutoCompatibilityKey": "Function",
@@ -817,12 +818,50 @@
       "restoreEnabledMember": "Function",
       "rewriteMember": "Function"
     },
+    "src/_engine/features/merging/MergeMaterial.ts": {
+      "createMergeMaterial": "Function",
+      "createMergeMaterialTable": "Function",
+      "MERGE_MATERIAL_INDEX_ATTRIBUTE": "Variable",
+      "MERGE_MATERIAL_RUNTIME_SLOTS": "Variable",
+      "MERGE_TABLE_TEXELS": "Variable",
+      "MergeMaterialInfo": "TypeAlias",
+      "packMergeMaterialTable": "Function"
+    },
+    "src/_engine/features/merging/MergeMaterialLoad.ts": {
+      "createMergeMaterialAsync": "Function",
+      "createSceneMergeMaterialsAsync": "Function"
+    },
+    "src/_engine/features/merging/MergeMaterialRegister.ts": {
+      "createMergeMaterialFromData": "Function",
+      "getMergeMaterialTableId": "Function",
+      "registerMergeMaterial": "Function"
+    },
+    "src/_engine/features/merging/MergeMaterialSchema.ts": {
+      "getMergeMaterialSlotTextureId": "Function",
+      "MAX_MERGE_MATERIAL_ENTRIES": "Variable",
+      "MERGE_MATERIAL_SLOTS": "Variable",
+      "MergeMaterialAsset": "TypeAlias",
+      "MergeMaterialAssetSchema": "Variable",
+      "MergeMaterialEntry": "TypeAlias",
+      "MergeMaterialSlot": "TypeAlias",
+      "MergeMaterialSlotDef": "TypeAlias",
+      "MergeMaterialSlotInfo": "TypeAlias",
+      "MergeMaterialSlotTexture": "TypeAlias",
+      "ORM_SOURCE_MAP_KEYS": "Variable",
+      "SceneMergeMaterial": "TypeAlias"
+    },
     "src/_engine/features/merging/MergeMemberEdit.ts": {
       "beginMergeMemberEdit": "Function",
       "cancelMergeMemberEdit": "Function",
       "endMergeMemberEdit": "Function",
       "getMergeMemberAtFace": "Function",
       "isMergeMemberInEdit": "Function"
+    },
+    "src/_engine/features/merging/MergePalettes.ts": {
+      "findPaletteMaterial": "Function",
+      "getGroupPaletteIndex": "Function",
+      "getMergeMaterialInfo": "Function",
+      "getPaletteIndex": "Function"
     },
     "src/_engine/features/merging/MergeRanges.ts": {
       "collapsePartIndex": "Function",
@@ -838,7 +877,8 @@
       "keepSceneMergeSettings": "Function",
       "SceneMergeSettings": "TypeAlias",
       "warnIfCellSizeSplitsStreaming": "Function",
-      "warnIfGroupSpansStreamingCells": "Function"
+      "warnIfGroupSpansStreamingCells": "Function",
+      "warnPaletteNotRegistered": "Function"
     },
     "src/_engine/features/merging/MergeState.ts": {
       "createGroup": "Function",
@@ -2167,6 +2207,8 @@
     },
     "src/_engine/kernel/assets/GeometryMergeCore.ts": {
       "assertMergeableParts": "Function",
+      "assertPaletteIndices": "Function",
+      "MERGE_PALETTE_INDEX_ATTRIBUTE": "Variable",
       "MergedGeometry": "TypeAlias",
       "MergeGeometryOptions": "TypeAlias",
       "mergeGeometryPartsCore": "Function",
@@ -3016,6 +3058,7 @@
     "src/_engine/kernel/scene/SceneHooks.ts": {
       "addSceneHooks": "Function",
       "getSceneRetainedTextures": "Function",
+      "runSceneAssetsLoadedHooksAsync": "Function",
       "runSceneBeforeAssetsHooksAsync": "Function",
       "runSceneCreatedHooksAsync": "Function",
       "runSceneEnteredHooksAsync": "Function",
@@ -5126,16 +5169,20 @@
       "CreateMergeGroupOptions",
       "MergeGroupData",
       "MergeGroupSettings",
+      "MergeMaterialEntry",
+      "MergeMaterialSlotInfo",
       "MergeMemberData",
       "MergeMemberEditPose",
       "MeshMergeDef",
       "MeshMergeOptions",
       "SceneAutoMergeEntry",
       "SceneMergeGroupEntry",
+      "SceneMergeMaterial",
       "addToMergeGroup",
       "beginMergeMemberEdit",
       "cancelMergeMemberEdit",
       "createMergeGroup",
+      "createMergeMaterialAsync",
       "dissolveMergeGroup",
       "endMergeMemberEdit",
       "getMergeGroupOf",
@@ -5256,12 +5303,22 @@
       "ImpostorDef",
       "LightAsset",
       "LightAssetSchema",
+      "MAX_MERGE_MATERIAL_ENTRIES",
+      "MERGE_MATERIAL_SLOTS",
       "MaterialAsset",
       "MaterialAssetSchema",
+      "MergeMaterialAsset",
+      "MergeMaterialAssetSchema",
+      "MergeMaterialEntry",
+      "MergeMaterialSlot",
+      "MergeMaterialSlotDef",
+      "MergeMaterialSlotInfo",
+      "MergeMaterialSlotTexture",
       "MeshAsset",
       "MeshSettings",
       "MetaSchema",
       "NON_COVERAGE_SLOTS",
+      "ORM_SOURCE_MAP_KEYS",
       "OptimizeLevel",
       "OptimizeObjectSchema",
       "PACK_TARGETS",
@@ -5270,6 +5327,7 @@
       "PostFxAssetSchema",
       "PostFxParamMeta",
       "SceneAsset",
+      "SceneMergeMaterial",
       "SceneSpatialDomainEntry",
       "SceneStreamingSchema",
       "ShadowQuality",
@@ -5303,6 +5361,7 @@
       "createSceneAssetSchema",
       "getAtlasSlotTextureId",
       "getFullMipLevelCount",
+      "getMergeMaterialSlotTextureId",
       "isJsonRelativeFileName",
       "isTextureArrayLayerFile",
       "lodSchemaPart",

@@ -3,6 +3,7 @@
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { getGroupPaletteIndex } from './MergePalettes';
 import type { MergeGroupData } from './MergeTypes';
 
 /** A geometry's attribute sizes differ from the other's where both have one: the merge throws on
@@ -58,10 +59,14 @@ export const getMergeRefusal = (
   const position = geometry.getAttribute('position');
   if (!position || position.itemSize !== 3) return 'its geometry has no 3-component position';
   if (Array.isArray(mesh.material)) {
-    return 'it has a material array (multi-material merging is p374)';
+    return 'it has a material array (one draw per material): split it into one mesh per material, which a palette can merge';
   }
   if (mesh.material.transparent) return 'its material is transparent (drawn sorted per object)';
-  if (group?._material && mesh.material !== group._material) {
+  const paletteIndex = group && getGroupPaletteIndex(group, mesh.material);
+  if (paletteIndex === -1) {
+    return `its material isn't one of the palette "${group!.settings.palette}"'s (a variant or a clone of a member is another material)`;
+  }
+  if (paletteIndex === undefined && group?._material && mesh.material !== group._material) {
     return "its material isn't the group's (one material per group)";
   }
   if (

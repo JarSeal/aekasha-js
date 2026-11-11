@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "ruinStone",
+  "type": "STANDARD",
+  "params": {
+    "map": "ruinStoneAlbedo",
+    "normalMap": "ruinStoneNormal",
+    "aoMap": "ruinStoneOrm",
+    "roughnessMap": "ruinStoneOrm",
+    "metalnessMap": "ruinStoneOrm",
+    "roughness": 1,
+    "metalness": 1
+  }
+}

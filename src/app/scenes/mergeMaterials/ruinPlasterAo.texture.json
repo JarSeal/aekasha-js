@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ruinPlasterAo",
+  "fileName": "./source/ruinPlaster_ao.png",
+  "texOpts": {
+    "wrapS": 1000,
+    "wrapT": 1000
+  },
+  "optimize": {
+    "slot": "occlusion"
+  }
+}

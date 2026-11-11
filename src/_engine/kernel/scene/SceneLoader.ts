@@ -41,6 +41,7 @@ import { createCameras, createNextSceneObject3Ds, loadNextSceneAssets } from './
 import { releaseSceneOwnedAssets } from '../assets/SceneAssetRelease';
 import {
   addSceneHooks,
+  runSceneAssetsLoadedHooksAsync,
   runSceneBeforeAssetsHooksAsync,
   runSceneCreatedHooksAsync,
   runSceneEnteredHooksAsync,
@@ -392,6 +393,8 @@ const loadNextSceneAsync = async (load: ActiveLoad, prevSceneId: string | undefi
 
   // Create / load all next scene assets before the scene file
   const nextSceneAssets = await loadNextSceneAssets(sceneData);
+  // What's made from the assets, before the scene code uses it (merging's merge materials)
+  await runSceneAssetsLoadedHooksAsync(sceneData);
   const runSceneCode = () => load.nextSceneFn({ sceneData, assets: nextSceneAssets });
   if (loader.loadFn) {
     await loader.loadFn(loader, runSceneCode);
