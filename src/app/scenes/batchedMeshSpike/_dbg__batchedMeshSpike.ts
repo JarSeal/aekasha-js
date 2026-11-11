@@ -6,7 +6,7 @@ import {
   getRenderer,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
-import { setLodBias, setLodFadeSeconds } from 'aekasha/lod';
+import { getLodFrameStats, setLodBias, setLodFadeSeconds } from 'aekasha/lod';
 import type * as THREE from 'three/webgpu';
 import {
   bmsSettings,
@@ -24,7 +24,10 @@ import {
 // batch syncs: the hand-built one's, and in the ENGINE way the engine's (physics' interpolation
 // too, with bodies). The batch figures are the hand-built batch's, or the engine group's. `window.__aekBms.measure(frames)` gives each
 // figure's median and 90th percentile over the next `frames` frames; `churnInstances` and
-// `churnGeometries` are spike item 6's slot reuse, on a batch only.
+// `churnGeometries` are spike item 6's slot reuse, on a batch only. p375 Phase 2 S6: each frame's
+// LOD swaps and fading members (`getLodFrameStats`) and the batch's merged draws, the swaps a
+// second over the measure, and `engineGroup()` (the engine group's data: the bench reads its
+// batch's runs and compactions through the page's own merging module).
 
 const PREFIX = 'bms:';
 const FIRST = 1e9;
@@ -36,8 +39,22 @@ type Frame = {
   syncMs: number;
   drawCalls: number;
   triangles: number;
+  /** The LOD's level swaps this frame, and its members fading */
+  lodApplies: number;
+  lodFading: number;
+  /** The batch's merged draws at its last pass (three r187's count; -1 without a batch) */
+  mergedDraws: number;
 };
-const KEYS: (keyof Frame)[] = ['cpuMs', 'renderMs', 'syncMs', 'drawCalls', 'triangles'];
+const KEYS: (keyof Frame)[] = [
+  'cpuMs',
+  'renderMs',
+  'syncMs',
+  'drawCalls',
+  'triangles',
+  'lodApplies',
+  'lodFading',
+  'mergedDraws',
+];
 
 /** A batch's private draw figures (three r187): the visible members and the merged draws */
 type BatchPrivates = {
@@ -84,9 +101,23 @@ const readBatch = (world: ECSWorld) => {
 
 /** Installs the measuring systems and the window global for this load (removed on its exit). */
 export const installBmsProbe = (world: ECSWorld) => {
-  const frame: Frame = { cpuMs: 0, renderMs: 0, syncMs: 0, drawCalls: 0, triangles: 0 };
+  const frame: Frame = {
+    cpuMs: 0,
+    renderMs: 0,
+    syncMs: 0,
+    drawCalls: 0,
+    triangles: 0,
+    lodApplies: 0,
+    lodFading: 0,
+    mergedDraws: -1,
+  };
   const marks = { frameStart: 0, syncStart: 0, renderStart: 0 };
-  let pending: { frames: Frame[]; left: number; resolve: (f: Frame[]) => void } | null = null;
+  let pending: {
+    frames: Frame[];
+    left: number;
+    start: number;
+    resolve: (f: Frame[], seconds: number) => void;
+  } | null = null;
 
   const systems: [ECSSystemStage, string, () => void, number][] = [
     [ECSSystemStage.MAIN, 'frameStart', () => (marks.frameStart = performance.now()), FIRST],
@@ -119,10 +150,18 @@ export const installBmsProbe = (world: ECSWorld) => {
         const render = getRenderer()?.info.render;
         frame.drawCalls = render?.drawCalls ?? 0;
         frame.triangles = render?.triangles ?? 0;
+        // Read after the frame's figures: not in its CPU time
+        const lod = getLodFrameStats(world);
+        frame.lodApplies = lod.applies;
+        frame.lodFading = lod.fading;
+        const batch = (bmsState.batch ?? findEngineBatch(world)) as
+          | (THREE.BatchedMesh & BatchPrivates)
+          | null;
+        frame.mergedDraws = batch ? batch._mergedDrawCount : -1;
         if (pending) {
           pending.frames.push({ ...frame });
           if (--pending.left <= 0) {
-            pending.resolve(pending.frames);
+            pending.resolve(pending.frames, (now - pending.start) / 1000);
             pending = null;
           }
         }
@@ -159,15 +198,20 @@ export const installBmsProbe = (world: ECSWorld) => {
         pending = {
           frames: [],
           left: Math.max(1, frames),
-          resolve: (list) => {
+          start: performance.now(),
+          resolve: (list, seconds) => {
             const result: Record<string, number> = {};
             for (const key of KEYS) {
               const values = list.map((f) => f[key]);
               result[key] = median(values);
               result[`${key}P90`] = median(values, 0.9);
             }
+            let swaps = 0;
+            for (const f of list) swaps += f.lodApplies;
             resolve({
               frames: list.length,
+              seconds,
+              swapsPerSecond: seconds > 0 ? swaps / seconds : 0,
               ...result,
               settings: { ...bmsSettings },
               backend: (getRenderer()?.backend as { isWebGPUBackend?: boolean } | undefined)
@@ -181,6 +225,15 @@ export const installBmsProbe = (world: ECSWorld) => {
         };
       }),
     batch: () => readBatch(world),
+    /** The ENGINE way's group data (`MERGE_GROUP`), the key of its batch's state, else null */
+    engineGroup: () => {
+      const first = bmsState.members[0];
+      if (bmsSettings.way !== 'ENGINE' || !first) return null;
+      const member = world.getComponent(first.entityId, ComponentType.MERGE_MEMBER);
+      return (
+        (member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP)) ?? null
+      );
+    },
     /** p375 Phase 2 (`?bmsLod`): the global LOD bias and fade seconds. A long fade and a new bias
      * start fades on many members at once, for a look mid-way */
     lod: (options: { bias?: number; fadeSeconds?: number }) => {

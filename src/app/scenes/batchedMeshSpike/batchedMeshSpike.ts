@@ -33,7 +33,8 @@ import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 //   p375 §3's sync would do, `MAP` storage only: the spike warns in `TYPED_ARRAY` mode);
 // - ENGINE (p375 Phase 1's exit, D2): the mesh entities of SEPARATE in one engine batched merge
 //   group (`merge: { group, mode: 'BATCHED' }`), which groups them by geometry and draws unsorted
-//   whatever `?bmsOrder` and `?bmsSort` say (`?bmsCull` is its `perMemberCulling`).
+//   whatever `?bmsOrder` and `?bmsSort` say (`?bmsCull` is its `perMemberCulling`; with `?bmsLod`
+//   on WebGPU it sorts by geometry range itself, p375 Phase 2 S6).
 // The members are placed the same way in every case (seeded); `?bmsOrder=grouped` only changes
 // the order they're added in, so a batch's instance ids run by geometry (r187's merged draws).
 // `?bmsBodies=kinematic` (SEPARATE and ENGINE) gives each member a kinematic body (a ball),
@@ -41,7 +42,9 @@ import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 // runner's probe and snapshot cover it.
 // `?bmsLod=2|3` (SEPARATE and ENGINE; p375 Phase 2) gives each member a LOD of that many levels:
 // its geometry's maker at half and a quarter of the segments (`bmsGeo<i>_l<n>`), the thresholds
-// set for the OVER camera (its near rows level 0, its far ones the coarsest).
+// set for the OVER camera (its near rows level 0, its far ones the coarsest). `?bmsDolly=true` moves
+// the camera from OVER's place halfway to the field's centre and back, every DOLLY_SECONDS by the
+// app loop's time (the same path on every run), sweeping the levels' bands across the field.
 // The measuring (`_dbg__batchedMeshSpike.ts`) and the page calls (`churn…`) are the debug module's.
 
 export const BMS_SCENE_ID = 'batchedMeshSpike';
@@ -83,6 +86,8 @@ export const bmsSettings = {
   hidden: 0,
   /** Each member's LOD levels (SEPARATE and ENGINE); 0: no LOD */
   lod: 0,
+  /** The camera dollies in and out (OVER only) */
+  dolly: false,
 };
 
 /** A member: its entity, its geometry's index, its place, and in a batch its instance id */
@@ -142,6 +147,11 @@ const readUrlOverrides = () => {
   if (s.bodies !== 'NONE' && s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
     lwarn(`BatchedMesh spike: ?bmsBodies is for the separate and engine ways, not ${s.way}.`);
     s.bodies = 'NONE';
+  }
+  s.dolly = params.get('bmsDolly') === 'true';
+  if (s.dolly && s.camera !== 'OVER') {
+    lwarn('BatchedMesh spike: ?bmsDolly is for the OVER camera.');
+    s.dolly = false;
   }
   if (s.lod > 0 && s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
     lwarn(`BatchedMesh spike: ?bmsLod is for the separate and engine ways, not ${s.way}.`);
@@ -458,6 +468,29 @@ const startMovingBodies = (world: ECSWorld, members: BmsMember[]) => {
   onBmsExit(() => world.removeSystem(BODY_MOVER_ID));
 };
 
+/** The OVER camera's place, and where the dolly takes it at its nearest */
+const OVER_EYE = new THREE.Vector3(0, 95, 110);
+const DOLLY_NEAR_EYE = new THREE.Vector3(0, 45, 50);
+/** A dolly's cycle: in and back out */
+const DOLLY_SECONDS = 10;
+
+/** `?bmsDolly=true`: the camera eases from OVER's place to DOLLY_NEAR_EYE and back, looking at the
+ * field's centre (by the app loop's time: the same path on every run) */
+const startDolly = (world: ECSWorld) => {
+  const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
+  if (cameraId === undefined) return;
+  const eye = new THREE.PerspectiveCamera();
+  const pose = { pos: eye.position, rot: eye.quaternion };
+  let time = 0;
+  createSceneAppLooper((delta) => {
+    time += delta;
+    const t = (1 - Math.cos((time / DOLLY_SECONDS) * Math.PI * 2)) / 2;
+    eye.position.lerpVectors(OVER_EYE, DOLLY_NEAR_EYE, t);
+    eye.lookAt(0, 0, 0);
+    world.setTransform(cameraId, pose);
+  }, BMS_SCENE_ID);
+};
+
 /** Over the field, or in its middle looking along +x */
 const placeCamera = (world: ECSWorld) => {
   const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
@@ -467,7 +500,7 @@ const placeCamera = (world: ECSWorld) => {
   }
   const eye = new THREE.PerspectiveCamera();
   if (bmsSettings.camera === 'OVER') {
-    eye.position.set(0, 95, 110);
+    eye.position.copy(OVER_EYE);
     eye.lookAt(0, 0, 0);
   } else {
     eye.position.set(0, 3, 0);
@@ -512,6 +545,7 @@ export const scene = async () => {
   readUrlOverrides();
   registerOnSceneEnter(BMS_SCENE_ID, () => {
     placeCamera(world);
+    if (bmsSettings.dolly) startDolly(world);
     if (bmsSettings.shadow) startSunShadow(world);
   });
 

@@ -1,8 +1,16 @@
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 
-// The main loop's frame and the main camera, set by each step
-const loop = vi.hoisted(() => ({ frame: 1, camera: undefined as unknown }));
+// The main loop's frame and the main camera, set by each step; a renderer for the WebGL2 test
+const loop = vi.hoisted(() => ({
+  frame: 1,
+  camera: undefined as unknown,
+  renderer: null as unknown,
+}));
+vi.mock(import('../../kernel/render/Renderer'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getRenderer: () => loop.renderer as never,
+}));
 vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
   ...(await importOriginal()),
   getMainLoopFrame: () => loop.frame,
@@ -38,7 +46,7 @@ import {
   rebuildMergeGroup,
   removeFromMergeGroup,
 } from './MergeGroups';
-import { getBatchState } from './MergeBatch';
+import { type BatchState, getBatchState, setBatchOrder } from './MergeBatch';
 import { createBatchFades } from './MergeBatchFades';
 import { isLodDitherEnabled, LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
 import { getMaterial } from '../../kernel/assets/Material';
@@ -91,6 +99,7 @@ beforeAll(() => {
 
 afterEach(() => {
   setLodDebugOptions({ forceLevel: -1 });
+  loop.renderer = null;
   world.clearWorld();
   fns.lwarn.mockClear();
 });
@@ -301,18 +310,40 @@ describe('a batched member LOD: levels', () => {
     expect(batch.getGeometryIdAt(instanceId)).toBe(batchGeometryId(state(), 'batchLodBox'));
   });
 
-  test('swaps split the runs; past twice the geometries in use the sync compacts them', async () => {
-    // Five members alternating: the even ones go to level 1, the odd ones keep level 0
-    const defs = [INSTANT, NEAR_ONLY, INSTANT, NEAR_ONLY, INSTANT].map((def) => ({
-      ...def,
-      fadeSeconds: 0,
-    }));
-    const { state, members } = await createBuiltLodGroupAsync(defs);
+  /** Five members alternating: the even ones go to level 1 at 8 m, the odd ones keep level 0 */
+  const ALTERNATING = [INSTANT, NEAR_ONLY, INSTANT, NEAR_ONLY, INSTANT].map((def) => ({
+    ...def,
+    fadeSeconds: 0,
+  }));
+
+  test('a LOD batch sorts each pass by geometry range: swaps split the runs, no compaction', async () => {
+    const { state, batch } = await createBuiltLodGroupAsync(ALTERNATING);
+    expect(state().order).toBe('RANGE_SORT');
+    expect(batch.sortObjects).toBe(true);
+    stepNear();
+    stepAt(8, 2);
+    // [low, box, low, box, low]: 5 runs of 2 geometries, left so
+    expect(state().runs).toBe(5);
+    expect(state().compactions).toBe(0);
+    // The sort puts each geometry's draws together (r187 merges them), front to back within one
+    const list = [
+      { start: 30, count: 3, z: 2, index: 0 },
+      { start: 0, count: 3, z: 5, index: 1 },
+      { start: 30, count: 3, z: 1, index: 2 },
+      { start: 0, count: 3, z: 4, index: 3 },
+    ];
+    batch.customSort!.call(batch, list, new THREE.PerspectiveCamera());
+    expect(list.map((item) => item.index)).toEqual([3, 1, 2, 0]);
+  });
+
+  test('compacting (a LOD batch forced to), swaps past twice the geometries compact the next frame', async () => {
+    const { state, members } = await createBuiltLodGroupAsync(ALTERNATING);
+    setBatchOrder(state() as BatchState, 'COMPACT');
     stepNear();
     expect(state().runs).toBe(1);
     stepAt(8);
-    // [low, box, low, box, low]: 5 runs of 2 geometries. The sync runs before the LOD's apply
-    // (APP_RENDER_SYNC_ORDER), so it counts and compacts them in the next frame
+    // The sync runs before the LOD's apply (APP_RENDER_SYNC_ORDER), so it counts and compacts
+    // them in the next frame
     expect(state().compactions).toBe(0);
     stepAt(8);
     expect(state().compactions).toBe(1);
@@ -321,6 +352,28 @@ describe('a batched member LOD: levels', () => {
     const geometryOf = (entityId: number) =>
       state().geometryAt[getInstanceId(entityId)] === low ? 'low' : 'box';
     expect(members.map(geometryOf)).toEqual(['low', 'box', 'low', 'box', 'low']);
+  });
+
+  test('on WebGL2 a batch neither sorts nor compacts: its multi-draw is one draw in any order', async () => {
+    loop.renderer = { backend: { isWebGPUBackend: false } };
+    const { state, batch } = await createBuiltLodGroupAsync(ALTERNATING);
+    expect(state().order).toBe('NONE');
+    expect(batch.sortObjects).toBe(false);
+    stepNear();
+    stepAt(8, 2);
+    expect(state().runs).toBe(5);
+    expect(state().compactions).toBe(0);
+  });
+
+  test('on WebGPU a batch without a LOD compacts, and sorts by range from its first LOD', async () => {
+    loop.renderer = { backend: { isWebGPUBackend: true } };
+    const { state, batch, members } = await createBuiltLodGroupAsync([undefined]);
+    expect(state().order).toBe('COMPACT');
+    expect(batch.sortObjects).toBe(false);
+    await setMeshLod(members[0], INSTANT, world);
+    stepNear();
+    expect(state().order).toBe('RANGE_SORT');
+    expect(batch.sortObjects).toBe(true);
   });
 
   test("a LOD added after the member's build adds its levels at its first apply", async () => {
@@ -404,6 +457,7 @@ describe('a batched member LOD: culling', () => {
       INSTANT,
       cullEarly,
     ]);
+    setBatchOrder(state() as BatchState, 'COMPACT');
     stepNear();
     stepAt(8);
     const culled = members[5];
@@ -497,6 +551,7 @@ describe('a batched member LOD: a level fade', () => {
       nearOnly,
       FADED,
     ]);
+    setBatchOrder(state() as BatchState, 'COMPACT');
     stepNear();
     stepAt(8);
     const faded = [members[0], members[2], members[4]];

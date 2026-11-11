@@ -273,9 +273,13 @@ const getBatchItems = (group: MergeGroupData, world: ECSWorld): PropertyGridItem
       () => {
         const f = figures();
         if (!f) return NOT_BUILT;
-        return `${formatCount(f.runs)} (${formatCount(f.geometriesInUse)} geometries in use), ${formatCountOf(f.compactions, 'compaction')}`;
+        const runs = `${formatCount(f.runs)} (${formatCount(f.geometriesInUse)} geometries in use)`;
+        if (f.order === 'RANGE_SORT')
+          return `${runs}, drawn sorted by range: ${formatCountOf(f.draws, 'draw')}`;
+        if (f.order === 'NONE') return `${runs}, one multi-draw (WebGL2)`;
+        return `${runs}, ${formatCountOf(f.compactions, 'compaction')}`;
       },
-      "A run is a geometry's instances in a row: one draw on WebGPU. Past twice the geometries in use, the batch compacts its ids."
+      "A run is a geometry's instances in a row (in id order): one draw on WebGPU. Past twice the geometries in use, the batch compacts its ids; one with LOD members sorts each pass by geometry range instead, and WebGL2 draws it in one multi-draw."
     ),
     live('Per-member culling', () => {
       const f = figures();

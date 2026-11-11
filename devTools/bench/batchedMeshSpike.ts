@@ -14,6 +14,15 @@
  * the stats panel's figure. The `check:` cases screenshot to `.cache/bench/batchedMeshSpike/`;
  * the `churn:` cases run the scene's churn calls before measuring. Output:
  * `.cache/bench/progress.log` too.
+ *
+ * p375 Phase 2's exit (S6): the `lod` cases give every member a LOD of three levels (`?bmsLod=3`),
+ * still or with the camera dollying (`?bmsDolly=true`), separate LOD meshes against the engine's
+ * batch (which sorts by geometry range on WebGPU with LOD members, D1's fallback). The LOD columns are the
+ * swaps a second and the members fading; for the engine's batch, its geometry runs and the
+ * geometries in use at the end, and its compactions a second, read from the page's own
+ * `MergeBatch.ts` module (n/a when the page's resource entries don't name exactly one). The
+ * `check: lod fades` pair starts 20 s fades on many members, shoots both ways 7 s in and diffs them
+ * (the share of pixels over 8/255).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,6 +32,7 @@ import { ROOT } from '../paths';
 import { out, setProgressLogFile } from '../progressLog';
 import { EVALUATE_MARGIN_MS, launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
 import { startVerifyServerAsync } from '../verify/devServer';
+import { compareSnapshots } from '../verify/snapshotDiff';
 
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -39,7 +49,17 @@ type Backend = 'webgpu' | 'webgl';
 type Churn =
   | { kind: 'instances'; share: number; rounds: number }
   | { kind: 'geometries'; mode: 'DELETE_ADD' | 'OPTIMIZE' | 'SET_AT'; rounds: number };
-type Case = { name: string; params: Record<string, string>; churn?: Churn; shot?: boolean };
+/** Starts LOD fades (the scene's `lod`), then shoots after `waitMs`, before measuring */
+type FadeShot = { fadeSeconds: number; bias: number; waitMs: number };
+type Case = {
+  name: string;
+  params: Record<string, string>;
+  churn?: Churn;
+  shot?: boolean;
+  fadeShot?: FadeShot;
+  /** A case whose shot this one's is diffed with */
+  compareWith?: string;
+};
 
 const batched = (extra: Record<string, string> = {}) => ({ bmsWay: 'batched', ...extra });
 const grouped = { bmsOrder: 'grouped', bmsSort: 'none' };
@@ -47,6 +67,11 @@ const grouped = { bmsOrder: 'grouped', bmsSort: 'none' };
 const engine = (extra: Record<string, string> = {}) => ({ bmsWay: 'engine', ...extra });
 /** Every member a kinematic body, all moved each fixed step */
 const kinematic = { bmsBodies: 'kinematic', bmsMove: '1' };
+/** Every member a LOD of three levels; with the camera dollying in and out */
+const lod = { bmsLod: '3' };
+const dolly = { bmsLod: '3', bmsDolly: 'true' };
+/** Mid-fade: 20 s fades started by a bias of 0.15, shot 7 s in (p375 Phase 2 S4's check) */
+const LOD_FADE_SHOT: FadeShot = { fadeSeconds: 20, bias: 0.15, waitMs: 7000 };
 
 /** The spike's cases, by item (§2) */
 const CASES: Case[] = [
@@ -97,6 +122,27 @@ const CASES: Case[] = [
     params: batched({ bmsSort: 'range', bmsCamera: 'inside' }),
   },
   { name: 'inside: engine', params: engine({ bmsCamera: 'inside' }) },
+  // p375 Phase 2's exit: per-member LOD, separate LOD meshes against the engine's batch
+  { name: 'lod still: separate', params: { bmsWay: 'separate', ...lod } },
+  { name: 'lod still: engine', params: engine(lod) },
+  { name: 'lod dolly: separate', params: { bmsWay: 'separate', ...dolly } },
+  { name: 'lod dolly: engine', params: engine(dolly) },
+  {
+    name: 'lod dolly shadow: separate',
+    params: { bmsWay: 'separate', ...dolly, bmsShadow: 'true' },
+  },
+  { name: 'lod dolly shadow: engine', params: engine({ ...dolly, bmsShadow: 'true' }) },
+  {
+    name: 'check: lod fades separate',
+    params: { bmsWay: 'separate', ...lod, bmsCamera: 'inside', bmsShadow: 'true' },
+    fadeShot: LOD_FADE_SHOT,
+  },
+  {
+    name: 'check: lod fades engine',
+    params: engine({ ...lod, bmsCamera: 'inside', bmsShadow: 'true' }),
+    fadeShot: LOD_FADE_SHOT,
+    compareWith: 'check: lod fades separate',
+  },
   // Item 4: per-member colour and visibility (screenshots)
   {
     name: 'check: colours hidden',
@@ -191,18 +237,54 @@ type Summary = {
   triangles: number;
   backend: string;
   batch: Record<string, unknown> | null;
+  seconds: number;
+  swapsPerSecond: number;
+  lodFading: number;
+  mergedDraws: number;
 };
 type BmsApi = {
   measure: (frames: number) => Promise<Summary>;
   churnInstances: (share: number, rounds: number) => unknown;
   churnGeometries: (mode: string, rounds: number) => unknown;
+  lod: (options: { bias?: number; fadeSeconds?: number }) => void;
+  engineGroup: () => object | null;
 };
+/** The engine batch's state, read through the page's own `MergeBatch.ts` */
+type EngineBatch = { runs: number; geometriesInUse: number; compactions: number };
 type BmsWindow = Window & {
   __aekBms?: BmsApi;
   __benchGpu?: { samples: number[]; timer: number };
 };
 
-type Run = { summary: Summary | null; gpuMs: number; churn?: unknown; errors: string[] };
+type Run = {
+  summary: Summary | null;
+  gpuMs: number;
+  churn?: unknown;
+  /** The engine batch's state after the measure, its compactions a second during it */
+  engineBatch?: (EngineBatch & { compactionsPerSecond: number }) | null;
+  shotFile?: string;
+  errors: string[];
+};
+
+/** The engine batch's runs, geometries in use and compactions, from the page's own merging batch
+ * module: the one resource entry naming it (a bare `import()` could be a second instance), else
+ * null; null too without an engine group or a batch. */
+const readEngineBatchAsync = (page: Page) =>
+  page.evaluate(async (): Promise<EngineBatch | null> => {
+    const group = (window as BmsWindow).__aekBms?.engineGroup();
+    if (!group) return null;
+    const entries = performance
+      .getEntriesByType('resource')
+      .filter((e) => new URL(e.name).pathname.endsWith('/_engine/features/merging/MergeBatch.ts'));
+    if (entries.length !== 1) return null;
+    const mod = (await import(/* @vite-ignore */ entries[0].name)) as {
+      getBatchState?: (g: object) => EngineBatch | undefined;
+    };
+    const state = mod.getBatchState?.(group);
+    return state
+      ? { runs: state.runs, geometriesInUse: state.geometriesInUse, compactions: state.compactions }
+      : null;
+  });
 
 const STATS_SETTINGS = JSON.stringify({
   enabled: true,
@@ -236,6 +318,8 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
   });
   await page.addInitScript(
     ({ stats, webgl }) => {
+      // Every module's entry kept: readEngineBatchAsync finds the page's own merging module by it
+      performance.setResourceTimingBufferSize(100_000);
       localStorage.setItem('AEK_debugStats', stats);
       if (webgl) localStorage.setItem('debugRenderer', JSON.stringify({ forceWebGL: true }));
       else localStorage.removeItem('debugRenderer');
@@ -272,6 +356,15 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
     );
   }
   if (args.warmup > 0) await measureAsync(args.warmup);
+  if (c.fadeShot) {
+    const { fadeSeconds, bias, waitMs } = c.fadeShot;
+    await page.evaluate((o) => (window as BmsWindow).__aekBms!.lod(o), { fadeSeconds, bias });
+    await page.waitForTimeout(waitMs);
+    fs.mkdirSync(SHOT_DIR, { recursive: true });
+    run.shotFile = path.join(SHOT_DIR, `${c.name.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`);
+    await page.screenshot({ path: run.shotFile });
+  }
+  const before = await readEngineBatchAsync(page);
   await page.evaluate((everyMs) => {
     const gpu = { samples: [] as number[], timer: 0 };
     gpu.timer = window.setInterval(() => {
@@ -281,6 +374,14 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
     (window as BmsWindow).__benchGpu = gpu;
   }, GPU_SAMPLE_MS);
   run.summary = await measureAsync(args.frames);
+  const after = await readEngineBatchAsync(page);
+  run.engineBatch =
+    before && after
+      ? {
+          ...after,
+          compactionsPerSecond: (after.compactions - before.compactions) / run.summary.seconds,
+        }
+      : null;
   const samples = await page.evaluate(() => {
     const gpu = (window as BmsWindow).__benchGpu!;
     window.clearInterval(gpu.timer);
@@ -305,24 +406,60 @@ const fmt = (n: number, digits = 2) => (Number.isNaN(n) ? 'n/a' : n.toFixed(digi
 const formatTable = (backend: string, rows: { c: Case; runs: Run[] }[]) => {
   const lines = [
     `\n${backend}: medians of the runs (CPU spread min-max)`,
-    '| Case | Draws | Triangles | CPU frame (ms) | spread | Render submit (ms) | Sync (ms) | GPU (ms) | Batch |',
-    '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |',
+    '| Case | Draws | Triangles | CPU frame (ms) | spread | Render submit (ms) | Sync (ms) | GPU (ms) | LOD swaps/s, fading | Batch |',
+    '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- | --- |',
   ];
   for (const { c, runs } of rows) {
     const ok = runs.filter((r) => r.summary);
     if (ok.length === 0) {
-      lines.push(`| ${c.name} | failed | | | | | | | |`);
+      lines.push(`| ${c.name} | failed | | | | | | | | |`);
       continue;
     }
     const pick = (key: keyof Summary) => med(ok.map((r) => r.summary![key] as number));
     const cpus = ok.map((r) => r.summary!.cpuMs);
     const b = ok[ok.length - 1].summary!.batch;
-    const batch = b ? `visible ${b.visible}, merged draws ${b.mergedDraws}` : '';
+    let batch = b ? `visible ${b.visible}, merged draws ${b.mergedDraws}` : '';
+    const engineRuns = ok.map((r) => r.engineBatch).filter((e) => e);
+    if (engineRuns.length) {
+      const e = engineRuns[engineRuns.length - 1]!;
+      batch += `, merged median ${fmt(pick('mergedDraws'), 0)}, runs ${e.runs} of ${e.geometriesInUse} geometries in use, compactions ${fmt(med(engineRuns.map((r) => r!.compactionsPerSecond)), 1)}/s`;
+    }
+    const lodText =
+      pick('swapsPerSecond') > 0 || pick('lodFading') > 0
+        ? `${fmt(pick('swapsPerSecond'), 0)}, ${fmt(pick('lodFading'), 0)}`
+        : '';
     lines.push(
-      `| ${c.name} | ${fmt(pick('drawCalls'), 0)} | ${Math.round(pick('triangles')).toLocaleString('en')} | ${fmt(pick('cpuMs'))} | ${fmt(Math.min(...cpus))}-${fmt(Math.max(...cpus))} | ${fmt(pick('renderMs'))} | ${fmt(pick('syncMs'), 3)} | ${fmt(med(ok.map((r) => r.gpuMs)))} | ${batch} |`
+      `| ${c.name} | ${fmt(pick('drawCalls'), 0)} | ${Math.round(pick('triangles')).toLocaleString('en')} | ${fmt(pick('cpuMs'))} | ${fmt(Math.min(...cpus))}-${fmt(Math.max(...cpus))} | ${fmt(pick('renderMs'))} | ${fmt(pick('syncMs'), 3)} | ${fmt(med(ok.map((r) => r.gpuMs)))} | ${lodText} | ${batch} |`
     );
   }
   return lines;
+};
+
+/** Diffs each `compareWith` case's shots with its pair's, run by run (the share of pixels over
+ * 8/255, as the scene runner's tolerance counts them) */
+const compareShotsAsync = async (backend: string, rows: { c: Case; runs: Run[] }[]) => {
+  for (const { c, runs } of rows) {
+    if (!c.compareWith) continue;
+    const pair = rows.find((row) => row.c.name === c.compareWith);
+    if (!pair) continue;
+    for (let r = 0; r < runs.length; r++) {
+      const shot = runs[r].shotFile;
+      const other = pair.runs[r]?.shotFile;
+      if (!shot || !other) continue;
+      const diffFile = shot.replace(/\.png$/, '.diff.png');
+      const diff = await compareSnapshots(
+        fs.readFileSync(shot),
+        other,
+        { maxMeanDelta: 0, maxChangedRatio: 0, pixelThreshold: 8 },
+        diffFile
+      );
+      out(
+        'sizeMismatch' in diff
+          ? `${backend} ${c.name} #${r + 1} against ${c.compareWith}: ${diff.sizeMismatch}`
+          : `${backend} ${c.name} #${r + 1} against ${c.compareWith}: ${(diff.changedRatio * 100).toFixed(3)} % of pixels over 8/255, mean delta ${diff.meanDelta.toFixed(3)}`
+      );
+    }
+  }
 };
 
 const main = async () => {
@@ -386,6 +523,7 @@ const main = async () => {
   }
   for (const backend of args.backends) {
     for (const line of formatTable(backend, results[backend])) out(line);
+    await compareShotsAsync(backend, results[backend]);
   }
   if (args.json) {
     fs.writeFileSync(args.json, `${JSON.stringify({ args, results }, null, 2)}\n`);

@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 implemented
+Status: in progress | Phase 0 (spike) done, gate passed; Phases 1-2 implemented
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
@@ -199,6 +199,8 @@ moving members.
   2 000, shadow passes included) is the fallback, decided in Phase 2 if LOD swaps fragment a batch
   often enough to make compactions frequent. Transparent members stay refused (p372's rule), so no
   batch needs the depth sort.
+  **Decided in Phase 2 S6:** they do (a LOD dolly compacted every frame), so a batch with LOD
+  members sorts by range on WebGPU, one without compacts, and neither on WebGL2 ("S6 decisions").
 - **D2 — The spike scene is Phase 1's exit scene.** `batchedMeshSpike` (an `isDebugScene`) and
   `devTools/bench/batchedMeshSpike.ts` are committed with Phase 1 (after `yarn sbp` and
   `yarn verify:scenes --only batchedMeshSpike` pass). Phase 1 adds an `ENGINE` way to the scene
@@ -364,7 +366,7 @@ moving members.
    `MergeBatch.test.ts`, `MergingSchema.test.ts`, `ECSCoreSystems.test.ts`,
    `debug/_dbg__MergingBatched.test.ts`.
 
-2. LOD per member (with p348). Candidate from Phase 1's exit: a batched member's own mesh out of
+2. **Done.** LOD per member (with p348). Candidate from Phase 1's exit: a batched member's own mesh out of
    the scene graph while it's batched (three's world matrix update walks the hidden member meshes:
    0.22 ms at 2 000 on WebGL2), back in on a leave and in "Show unmerged"; measure with the bench's
    `engine` case against `batch grouped none`. Per-member LOD adds a second instance per fading
@@ -389,7 +391,7 @@ moving members.
    - S5 — the debugger — done ("S5 results" below): the batch's fading instances and level
      geometries, the member window's level and fade instance; the LOD tab and overlay checked with
      batched members.
-   - S6 — the exit: `?bmsLod=…` in `batchedMeshSpike` (two or three hand-made levels per
+   - S6 — the exit — done ("S6 decisions" and "Phase 2's S6 results" below): `?bmsLod=…` in `batchedMeshSpike` (two or three hand-made levels per
      geometry) and a camera dolly; the bench's separate LOD meshes against the engine batch, still
      and dollying (swaps a second, compactions, runs), and a range `customSort` against compaction
      (decides D1's fallback); `scenes.config.ts` variants, `yarn sbp`, `yarn verify:baselines`,
@@ -581,6 +583,78 @@ moving members.
    - **Tests:** `debug/_dbg__MergingBatchedLod.test.ts` (10; the cull-whole test fails with the old
      count). `yarn test` 3 281 passed; lint, both `tsc`, the docs ratchet clean. Not in a browser
      (S6's scene).
+
+   **S6 decisions** (2026-11-11):
+   - **D1's fallback decided: per backend and LOD.** A smoke run of the dolly (`?bmsLod=3&bmsDolly=true`,
+     one run, 120 frames) found the engine's batch compacting every frame (60 a second; its sync
+     bracket 1.4 ms against 0.09 still, so a compaction is ~1.3 ms at 2 000 members, not §3's 0.4)
+     and ending at 180 runs of 58 geometries in use: compaction leaves the level fades' second
+     instances in place, and ~180 members always fade, so the runs never fell under twice the
+     geometries. With a range `customSort` on top (still compacting) WebGPU drew 60 instead of 240
+     (CPU 2.98 against 2.58 ms: the sort ~0.4 ms a pass). WebGL2 drew 2 either way. So a batch's
+     `order` (`MergeBatch.ts`' `BatchOrder`): `NONE` on WebGL2 (no compaction, no sort: its
+     multi-draw is one draw in any order), `COMPACT` on WebGPU, and `RANGE_SORT` on WebGPU once a
+     member has a LOD (at the build, or a later LOD's first apply; for good), three sorting each
+     pass by geometry range then depth. Compaction still carries fades (a batch can compact
+     before its first LOD). Without a renderer (the tests) a batch is drawn as on WebGPU.
+   - The smoke run's exit margin, before the change: dolly separate 9.41 ms against engine 2.58
+     (WebGPU), 8.64 against 2.41 (WebGL2); mid-fade (S4's check) 17.6 against 1.9 ms.
+
+   **Phase 2's S6 results** (2026-11-11; Phase 0's machine and setup, §2's Results):
+   - **Built:** `?bmsDolly=true` in `batchedMeshSpike` (OVER only: the camera eases from (0, 95,
+     110) to (0, 45, 50) and back every 10 s of app-loop time, looking at the centre, so the
+     levels' bands sweep the field); the probe's per-frame LOD swaps and fading members
+     (`getLodFrameStats`), the batch's merged draws, the swaps a second and `engineGroup()`; the
+     bench's `lod still`, `lod dolly` and `lod dolly shadow` cases (separate and engine, `?bmsLod=3`)
+     and the `check: lod fades` pair (S4's mid-fade shot, now diffed by the bench), the engine
+     batch's runs, geometries in use and compactions read from the page's own `MergeBatch.ts`
+     (the resource entry, `setResourceTimingBufferSize`); `scenes.config.ts`' `lodSeparate` and
+     `lodEngine` variants. A range sort set by the scene on the engine's batch (the smoke run's
+     comparison) went with D1's decision: the engine sorts a LOD batch itself.
+   - **CPU frame** (medians of 3 runs, 120 + 300 frames; separate LOD meshes → engine batch):
+
+     | Case               | WebGPU (ms)          | WebGL2 (ms)          |
+     | ------------------ | -------------------: | -------------------: |
+     | still              | 6.45 → 1.23 (−81 %)  | 5.50 → 1.25 (−77 %)  |
+     | dolly              | 7.70 → 2.93 (−62 %)  | 5.34 → 1.40 (−74 %)  |
+     | dolly, sun shadow  | 10.77 → 3.33 (−69 %) | 12.00 → 1.39 (−88 %) |
+     | mid-fade (1 865)   | 14.89 → 3.86 (−74 %) | 16.59 → 1.51 (−91 %) |
+
+     The engine's WebGPU dolly spread is 1.30-3.12 ms (§2's two clock states); WebGL2's spreads are
+     under 0.05 ms. The dolly swaps ~340 levels a second with ~75 members fading, the same counts
+     both ways. GPU time is about the same (WebGPU dolly 3.78 / 3.92 ms; WebGL2's timer unreliable,
+     §2).
+   - **Draws** (WebGPU): the engine's batch 55-58 merged draws for 58 geometry-levels in use on the
+     dolly (the scene's 56 in all, 115 with the shadow), 55 still, 50 mid-fade, against separate
+     meshes' 1 601-4 802; no compaction. WebGL2: 2-7 draws in the scene.
+   - **Fades:** mid-fade, the engine's shot differs from separate meshes' by 0.17 % of pixels
+     over 8/255 on WebGPU and 0.16 % on WebGL2 (the same in all 3 runs; S4's 0.12 % was by eye of
+     one page each). The scene runner's still `@lodEngine` against `@lodSeparate`: no pixel over
+     8/255 (max delta 2) in all three physics targets. No pops: a faded level change and a cull
+     fade are the unit tests' (`MergeBatchLod.test.ts`).
+   - **Memory** (the LOD levels in the batch): 60 geometry slots (20 geometries × 3 levels) in
+     10 842 of 13 553 reserved vertices and 48 927 of 61 159 indices. The scene's levels are made
+     on their own (not a shared-vertex chain), so the duplicated chain vertices of Phase 2's
+     decision weren't measured here: sharing them through `BatchedMesh`'s private `_geometryInfo`
+     stays a follow-up for a scene with chains.
+   - **Checks:** `yarn test` 3 284 passed; lint, both `tsc`, the docs ratchet clean. `yarn sbp`:
+     every budget passes (`merging` 9.4 of 10 KiB, the initial 393.4 of 394, `assets/index.js`
+     389.2 of 390; the lazy `MergeBatch.js` 3.7 kB, `MergeBatchLod.js` 0.7 kB). `yarn
+     verify:baselines`: Phase 2's bundle growth and `@internal` exports, and `getMergeMemberAtBatchId`
+     on `aekasha/merging`; no debug code in the production build; recorded (`--update`).
+     `yarn verify:scenes --only batchedMeshSpike`: all 28 runs load without errors (new: the scene
+     has no recorded baselines), the probe hashes equal per pair.
+   - **Exit: met** on both backends (≥ 30 % CPU, WebGPU draws one per geometry-level in use, fades
+     matching separate meshes).
+
+   **As built** (Phase 2; the detail is `features/merging/CLAUDE.md`'s "The mode" bullet): S1 a
+   batched member's own mesh out of the scene graph and `getMergeMemberAtBatchId`; S2 the kernel's
+   mesh draw delegate (`kernel/ecs/LodTargets.ts`) and `BATCHED`'s LOD refusals; S3 level swaps in
+   place and LOD culling; S4 the batch's fade texture and a level fade's second instance; S5 the
+   debugger's LOD figures and the overlay's cull-whole fix; S6 the batch's order (D1's fallback:
+   `RANGE_SORT` for a LOD batch on WebGPU, `NONE` on WebGL2) and the exit. Tests:
+   `MergeBatchDetach.test.ts`, `MergeBatchLod.test.ts`, `features/lod/LodMeshDrawDelegate.test.ts`,
+   `debug/_dbg__MergingBatchedLod.test.ts`.
 
    3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if

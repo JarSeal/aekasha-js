@@ -418,6 +418,16 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
         reason:
           "the same bodies in an engine batch: its sync draws them from their own meshes' interpolated poses",
       },
+      {
+        id: 'lodSeparate',
+        params: { bmsWay: 'separate', bmsLod: '3' },
+        reason: 'every member a LOD of three levels, drawn on its own (p375 Phase 2)',
+      },
+      {
+        id: 'lodEngine',
+        params: { bmsWay: 'engine', bmsLod: '3' },
+        reason: "the same LODs in an engine batch: the batch draws each member's level",
+      },
     ],
   },
   lodShowcase: {

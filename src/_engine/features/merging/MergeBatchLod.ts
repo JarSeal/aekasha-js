@@ -21,6 +21,7 @@ import {
   getMemberState,
   growInstances,
   isBatchMemberShown,
+  noteBatchLodMember,
   setInstanceGeometry,
 } from './MergeBatch';
 import { setInstanceFade } from './MergeBatchFades';
@@ -70,6 +71,8 @@ export const applyBatchMemberLevel = (
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const state = getMemberState(member, world);
   if (!state) return;
+  // A LOD that came after the build: the batch sorts by range from now on (WebGPU)
+  noteBatchLodMember(state);
   if (fade) startLevelFade(state, member!);
   setInstanceGeometry(state, entityId, member!.instanceId, level.geometry, world);
 };

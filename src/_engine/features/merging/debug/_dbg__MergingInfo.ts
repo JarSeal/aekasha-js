@@ -63,8 +63,20 @@ export type MergeBatchFigures = {
   runs: number;
   /** Its compactions so far */
   compactions: number;
+  /** How it keeps a geometry's instances in one draw (MergeBatch.ts' `BatchOrder`) */
+  order: 'COMPACT' | 'RANGE_SORT' | 'NONE';
+  /** Its draws per pass with every member in view: its runs (`COMPACT`), the geometries in use
+   * (`RANGE_SORT`), one multi-draw (`NONE`, WebGL2) */
+  draws: number;
   /** Whether each member is frustum-culled on its own */
   perMemberCulling: boolean;
+};
+
+/** A batch's draws per pass with every member in view, by its order; one before the sync's first
+ * count. */
+const getBatchDraws = (state: { order: string; runs: number; geometriesInUse: number }) => {
+  if (state.order === 'NONE') return 1;
+  return Math.max(state.order === 'RANGE_SORT' ? state.geometriesInUse : state.runs, 1);
 };
 
 /** A batched group's batch figures, or null before its first build (or for a baked group). */
@@ -118,6 +130,8 @@ export const getMergeBatchFigures = (
     maxVertices: state.maxVertexCount,
     runs: state.runs,
     compactions: state.compactions,
+    order: state.order,
+    draws: getBatchDraws(state),
     perMemberCulling: batch.perObjectFrustumCulled,
   };
 };
@@ -189,8 +203,9 @@ export type MergeSummary = {
   mergedVertices: number;
   /** Of those, the collapsed ones a compacting build drops */
   wastedVertices: number;
-  /** The main pass's draws now: the drawn groups (a batched one's geometry runs, a draw each on
-   * WebGPU), and the members drawn on their own meanwhile */
+  /** The main pass's draws now: the drawn groups (a batched one's by its order: its geometry runs,
+   * the geometries in use when sorted by range, one multi-draw on WebGL2), and the members drawn
+   * on their own meanwhile */
   drawsNow: number;
   /** …and with every member drawn on its own */
   drawsUnmerged: number;
@@ -235,7 +250,7 @@ export const getMergeSummary = (world: ECSWorld): MergeSummary => {
       : mesh.geometry.getAttribute('position').count;
     if (!isGroupDrawn(groupEntityId, world)) continue;
     // A batch's runs are counted by its sync: one draw before its first
-    const draws = batch ? Math.max(batch.runs, 1) : 1;
+    const draws = batch ? getBatchDraws(batch) : 1;
     summary.drawnGroups++;
     summary.drawsNow += draws;
     if (mesh.castShadow) summary.shadowDrawsNow += draws;

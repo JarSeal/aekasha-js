@@ -794,22 +794,45 @@
       "queueMerge": "Function"
     },
     "src/_engine/features/merging/MergeBatch.ts": {
+      "BatchOrder": "TypeAlias",
+      "BatchState": "TypeAlias",
       "buildBatchGroup": "Function",
       "COMPACT_RUNS_FACTOR": "Variable",
       "deleteBatchInstance": "Function",
+      "deleteFadeInstance": "Function",
       "getBatchState": "Function",
+      "getMemberState": "Function",
+      "growInstances": "Function",
       "isBatchMemberShown": "Function",
       "mergeBatchSyncSystem": "Function",
+      "noteBatchLodMember": "Function",
       "requestBatchRebuild": "Function",
-      "setBatchMemberVisible": "Function"
+      "setBatchMemberVisible": "Function",
+      "setBatchOrder": "Function",
+      "setInstanceGeometry": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchFades.ts": {
+      "BatchFades": "TypeAlias",
+      "createBatchFades": "Function",
+      "setInstanceFade": "Function"
     },
     "src/_engine/features/merging/MergeBatchFront.ts": {
+      "batchMemberLodDelegate": "Variable",
       "BatchVisibilityOverrides": "TypeAlias",
+      "detachBatchedMemberMesh": "Function",
       "dropBatchMember": "Function",
       "getMergeBatchModule": "Function",
       "installBatchMemberVisibility": "Function",
       "isBatchedGroup": "Function",
-      "loadMergeBatchModuleAsync": "Function"
+      "loadMergeBatchModuleAsync": "Function",
+      "reattachMemberMesh": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchLod.ts": {
+      "applyBatchMemberLevel": "Function",
+      "endBatchMemberFade": "Function",
+      "refreshBatchMember": "Function",
+      "setBatchMemberFade": "Function",
+      "setBatchMemberLodCulled": "Function"
     },
     "src/_engine/features/merging/MergeBuild.ts": {
       "buildPendingGroups": "Function",
@@ -820,6 +843,7 @@
       "WORKER_BUILD_VERTICES": "Variable"
     },
     "src/_engine/features/merging/MergeEligibility.ts": {
+      "getBatchLodRefusal": "Function",
       "getMergeRefusal": "Function"
     },
     "src/_engine/features/merging/MergeGroups.ts": {
@@ -880,6 +904,7 @@
       "beginMergeMemberEdit": "Function",
       "cancelMergeMemberEdit": "Function",
       "endMergeMemberEdit": "Function",
+      "getMergeMemberAtBatchId": "Function",
       "getMergeMemberAtFace": "Function",
       "isMergeMemberInEdit": "Function"
     },
@@ -2557,16 +2582,19 @@
     "src/_engine/kernel/ecs/LodTargets.ts": {
       "getLodContentDebugSources": "Function",
       "getLodFrameInputs": "Function",
+      "getLodMeshDrawDelegateFor": "Function",
       "getLodTargets": "Function",
       "LodContentDebugInfo": "TypeAlias",
       "LodContentDebugSource": "TypeAlias",
       "LodContentDebugStats": "TypeAlias",
       "LodContentDebugToggle": "TypeAlias",
       "LodFrameInputs": "TypeAlias",
+      "LodMeshDrawDelegate": "TypeAlias",
       "LodTargetEntry": "TypeAlias",
       "registerLodContentDebugSource": "Function",
       "registerLodTarget": "Function",
-      "setLodFrameInputs": "Function"
+      "setLodFrameInputs": "Function",
+      "setLodMeshDrawDelegate": "Function"
     },
     "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
@@ -5214,6 +5242,7 @@
       "dissolveMergeGroup",
       "endMergeMemberEdit",
       "getMergeGroupOf",
+      "getMergeMemberAtBatchId",
       "getMergeMemberAtFace",
       "isMergeMemberInEdit",
       "merging",

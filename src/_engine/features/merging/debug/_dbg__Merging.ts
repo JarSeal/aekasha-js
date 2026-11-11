@@ -113,13 +113,20 @@ const getGroupBadge = (group: MergeGroupData) => {
 };
 
 /** A group row's figures: its members and vertices; a built batched group's members, visible
- * members, geometry runs and compactions, and its LOD fades while there are some. */
+ * members, its draws by its order (geometry runs and compactions, draws sorted by range, or one
+ * multi-draw), and its LOD fades while there are some. */
 const getGroupRowFigures = (groupEntityId: number, group: MergeGroupData, world: ECSWorld) => {
   const members = formatCountOf(group.members.length, 'member');
   const batch = getMergeBatchFigures(group, world);
   if (batch) {
     const fading = batch.levelFades + batch.cullFades;
-    return `${members} (${formatCount(batch.visible)} visible), ${formatCountOf(batch.runs, 'run')}, ${formatCountOf(batch.compactions, 'compaction')}${fading ? `, ${formatCount(fading)} fading` : ''}`;
+    const order =
+      batch.order === 'COMPACT'
+        ? `${formatCountOf(batch.runs, 'run')}, ${formatCountOf(batch.compactions, 'compaction')}`
+        : batch.order === 'RANGE_SORT'
+          ? `${formatCountOf(batch.draws, 'draw')} sorted by range`
+          : 'one multi-draw';
+    return `${members} (${formatCount(batch.visible)} visible), ${order}${fading ? `, ${formatCount(fading)} fading` : ''}`;
   }
   return `${members}, ${formatCount(getGroupVertexCount(groupEntityId, group, world))} v`;
 };

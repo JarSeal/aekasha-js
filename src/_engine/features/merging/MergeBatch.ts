@@ -26,7 +26,11 @@
 // from its own geometry-per-id list) and, past COMPACT_RUNS_FACTOR times the geometries in use,
 // compacts in the sync that frame (`compactBatch`): the same ids, each given the next member in
 // geometry order (`setGeometryIdAt`, its matrix and visibility written again), so nothing is
-// reallocated.
+// reallocated. That's a batch's `order` (`BatchOrder`, p375 Phase 2 S6, D1's fallback decided):
+// `COMPACT` on WebGPU; `RANGE_SORT` on WebGPU once a member has a LOD (its swaps and fades split
+// the runs every frame: compacting each frame cost ~1.3 ms at 2 000 members and its fades' second
+// instances kept the runs past the limit), three sorting each pass's list by geometry range then
+// depth; `NONE` on WebGL2, whose multi-draw is one draw in any order.
 //
 // LOD per member (p375 Phase 2): `lod()` keeps a member's levels and sets each on its own mesh; the
 // kernel's mesh draw delegate (MergeBatchFront.ts' forwarding stub, registered by merging's
@@ -46,6 +50,7 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { incMaterialRef } from '../../kernel/assets/Material';
+import { getRenderer } from '../../kernel/render/Renderer';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
@@ -71,6 +76,14 @@ export const COMPACT_RUNS_FACTOR = 2;
 const BATCH_RESERVE = 1.25;
 /** And at least this many instances more. */
 const MIN_SPARE_INSTANCES = 16;
+
+/**
+ * How a batch keeps each geometry's instances in one draw (D1): `COMPACT` regroups its ids past
+ * COMPACT_RUNS_FACTOR (WebGPU), `RANGE_SORT` has three sort each pass's list by geometry range then
+ * depth (WebGPU, once a member has a LOD), `NONE` does neither (WebGL2: one multi-draw anyway).
+ * @internal
+ */
+export type BatchOrder = 'COMPACT' | 'RANGE_SORT' | 'NONE';
 
 /**
  * A batched group's batch and its bookkeeping.
@@ -100,6 +113,10 @@ export type BatchState = {
   geometriesInUse: number;
   /** Compactions so far. */
   compactions: number;
+  /** How it keeps a geometry's instances in one draw, and whether a member had a LOD (which
+   * turned `COMPACT` into `RANGE_SORT` for good). */
+  order: BatchOrder;
+  hasLodMembers: boolean;
   /** The run count's per-geometry marks, and the count's stamp. */
   seen: number[];
   countStamp: number;
@@ -150,6 +167,43 @@ const growBatchSphere = (state: BatchState, geometry: THREE.BufferGeometry) => {
   sphere.union(memberSphere);
   state.batch.geometry.boundingSphere?.copy(sphere);
   return true;
+};
+
+/** A WebGL2 renderer (three's WebGL backend, which multi-draws a batch); without a renderer (the
+ * tests) a batch is drawn as on WebGPU. */
+const isMultiDrawBackend = () => {
+  const renderer = getRenderer();
+  return Boolean(renderer) && !(renderer!.backend as { isWebGPUBackend?: boolean }).isWebGPUBackend;
+};
+
+/** The range sort's order: by geometry range, then front to back. */
+const compareByRange = (a: { start: number; z: number }, b: { start: number; z: number }) =>
+  a.start - b.start || a.z - b.z;
+/** The batch's `customSort` for `RANGE_SORT`: each geometry's draws adjacent, so r187 merges them. */
+const sortByRange = (list: { start: number; z: number }[]) => {
+  list.sort(compareByRange);
+};
+
+/**
+ * Sets a batch's order, and three's sort to match.
+ * @internal
+ */
+export const setBatchOrder = (state: BatchState, order: BatchOrder) => {
+  state.order = order;
+  const isSorted = order === 'RANGE_SORT';
+  state.batch.sortObjects = isSorted;
+  state.batch.setCustomSort(isSorted ? sortByRange : null);
+};
+
+/**
+ * Notes that a batch draws a member with a LOD: a compacting batch sorts by range from now on
+ * (its swaps and fades split the runs every frame).
+ * @internal
+ */
+export const noteBatchLodMember = (state: BatchState) => {
+  if (state.hasLodMembers) return;
+  state.hasLodMembers = true;
+  if (state.order === 'COMPACT') setBatchOrder(state, 'RANGE_SORT');
 };
 
 /** The group joins the spatial index again, so it measures the grown sphere. */
@@ -372,7 +426,7 @@ const createBatch = (
   batch.userData.entityId = groupEntityId;
   batch.castShadow = group.settings.castShadow ?? firstMember.castShadow;
   batch.receiveShadow = group.settings.receiveShadow ?? firstMember.receiveShadow;
-  // Grouped by geometry, unsorted: one draw per geometry on WebGPU (D1)
+  // Grouped by geometry, unsorted: one draw per geometry on WebGPU (D1; `setBatchOrder` below)
   batch.sortObjects = false;
   batch.perObjectFrustumCulled = group.settings.perMemberCulling ?? true;
   const centre = getMembersCentre(members, world);
@@ -415,6 +469,8 @@ const createBatch = (
     runs: 0,
     geometriesInUse: 0,
     compactions: 0,
+    order: 'NONE',
+    hasLodMembers: false,
     seen: [],
     countStamp: 0,
     // Before the batch's first build: its material's LOD dither reads them
@@ -441,6 +497,10 @@ const createBatch = (
   for (const geometry of geometries) {
     if (!state.geometryIds.has(geometry))
       state.geometryIds.set(geometry, batch.addGeometry(geometry));
+  }
+  setBatchOrder(state, isMultiDrawBackend() ? 'NONE' : 'COMPACT');
+  if (members.some((entityId) => world.hasComponent(entityId, ComponentType.LOD))) {
+    noteBatchLodMember(state);
   }
   return state;
 };
@@ -626,7 +686,9 @@ export const mergeBatchSyncSystem = (world: ECSWorld) => {
     if (state.isOrderDirty) {
       state.isOrderDirty = false;
       countRuns(state);
-      if (state.runs > COMPACT_RUNS_FACTOR * state.geometriesInUse) compactBatch(state, world);
+      if (state.order === 'COMPACT' && state.runs > COMPACT_RUNS_FACTOR * state.geometriesInUse) {
+        compactBatch(state, world);
+      }
     }
   }
 };
