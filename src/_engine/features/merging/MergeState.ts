@@ -188,6 +188,107 @@ export const syncMemberPose = (entityId: number, mesh: THREE.Mesh, world: ECSWor
   mesh.updateWorldMatrix(true, false);
 };
 
+// --- DEBUG FIGURES (p373 D1: the Merging tab's) ---
+//
+// Written only behind `if (IS_DEBUG_ENV)` at their call sites, so a production build folds the
+// calls away and these functions with them.
+
+/** An entity whose `merge` (or `addToMergeGroup`) was refused: the group it asked for and why. */
+export type MergeRefusalRecord = { groupId: string; reason: string };
+
+/** The merging figures the Merging tab shows that the components don't keep, per world. */
+export type MergeDebugStats = {
+  /** Builds applied since the world started (every group's, deleted ones included). */
+  builds: number;
+  /** In-place range writes (a move, a remove or delete, a disable, an enable). */
+  inPlaceUpdates: number;
+  /** The last build applied: its group, the time from its start to applied, and whether it ran
+   * in the worker (then the time includes the wait). */
+  lastBuild: { groupId: string; ms: number; isWorker: boolean } | null;
+  /** The refused entities, by entity id, oldest first (at most MAX_REFUSALS). */
+  refusals: Map<number, MergeRefusalRecord>;
+};
+
+/** The refusals kept per world, the newest. */
+export const MAX_MERGE_REFUSALS = 200;
+
+const debugStatsByWorld = new WeakMap<ECSWorld, MergeDebugStats>();
+
+/**
+ * The world's merging debug figures (made on first use). Debug env only.
+ * @internal
+ */
+export const getMergeDebugStats = (world: ECSWorld) => {
+  let stats = debugStatsByWorld.get(world);
+  if (!stats) {
+    stats = { builds: 0, inPlaceUpdates: 0, lastBuild: null, refusals: new Map() };
+    debugStatsByWorld.set(world, stats);
+  }
+  return stats;
+};
+
+/**
+ * Records a refused entity (its latest refusal replaces an earlier one). Call behind
+ * `IS_DEBUG_ENV`.
+ * @internal
+ */
+export const noteMergeRefusal = (
+  world: ECSWorld,
+  entityId: number,
+  groupId: string,
+  reason: string
+) => {
+  const { refusals } = getMergeDebugStats(world);
+  refusals.delete(entityId);
+  refusals.set(entityId, { groupId, reason });
+  if (refusals.size > MAX_MERGE_REFUSALS) refusals.delete(refusals.keys().next().value!);
+};
+
+/**
+ * Records an applied build. Call behind `IS_DEBUG_ENV`.
+ * @internal
+ */
+export const noteMergeBuild = (world: ECSWorld, groupId: string, ms: number, isWorker: boolean) => {
+  const stats = getMergeDebugStats(world);
+  stats.builds++;
+  stats.lastBuild = { groupId, ms, isWorker };
+};
+
+/**
+ * Records an in-place range write. Call behind `IS_DEBUG_ENV`.
+ * @internal
+ */
+export const noteMergeInPlaceUpdate = (world: ECSWorld) => {
+  getMergeDebugStats(world).inPlaceUpdates++;
+};
+
+// --- SHOWN UNMERGED (p373 D3: the Merging tab's A/B) ---
+//
+// Read only behind `IS_DEBUG_ENV` at its call site (applyBuild), so a production build folds it.
+
+/** Per world: the groups shown unmerged (their entities), each with whether the view added its
+ * `TAG_DRAW_HELD` (a hold something else made is left alone). */
+const unmergedViewsByWorld = new WeakMap<ECSWorld, Map<number, boolean>>();
+
+/**
+ * The world's groups shown unmerged, by group entity, each with whether the view added the
+ * group's hold (made on first use). Debug env only.
+ * @internal
+ */
+export const getMergeUnmergedViews = (world: ECSWorld) => {
+  let views = unmergedViewsByWorld.get(world);
+  if (!views) unmergedViewsByWorld.set(world, (views = new Map()));
+  return views;
+};
+
+/**
+ * Whether a group is shown unmerged: its build leaves its members drawn on their own. Call behind
+ * `IS_DEBUG_ENV`.
+ * @internal
+ */
+export const isMergeGroupShownUnmerged = (groupEntityId: number, world: ECSWorld) =>
+  unmergedViewsByWorld.get(world)?.has(groupEntityId) ?? false;
+
 /**
  * Lets a member go: drawn on its own again, back in the spatial index if it was.
  * @internal

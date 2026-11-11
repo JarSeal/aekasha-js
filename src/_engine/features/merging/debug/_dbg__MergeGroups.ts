@@ -32,7 +32,8 @@ const isSameMatrix = (a: THREE.Matrix4, b: THREE.Matrix4) => {
 
 /**
  * Warns once about each built member of the world whose world matrix isn't the one it was merged
- * with. The members waiting for a build are skipped: the build reads their pose.
+ * with. The members waiting for a build are skipped (the build reads their pose), and those in an
+ * edit session (its end writes their range).
  * @internal
  * @returns the entities warned about in this check
  */
@@ -43,7 +44,8 @@ export const _checkMovedMergeMembers = (world: ECSWorld): number[] => {
   if (!warned) warnedByWorld.set(world, (warned = new Set()));
   const found: number[] = [];
   for (const [entityId, member] of storage) {
-    if (member.partIndex === -1 || warned.has(entityId)) continue;
+    // One waiting for its build, or in an edit session (drawn by its own mesh, merged at its end)
+    if (member.partIndex === -1 || member._editPose || warned.has(entityId)) continue;
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (!mesh) continue;
     mesh.updateWorldMatrix(true, false);

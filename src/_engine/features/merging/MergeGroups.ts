@@ -24,6 +24,7 @@
 // and joins at the next build (`resolveQueuedMerges`), so the refusals see what was added after
 // the mesh (an import's bodies) and `AUTO` (MergeAuto.ts) picks the cell from the final pose.
 import * as THREE from 'three/webgpu';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
@@ -64,8 +65,11 @@ import {
   getMemberMesh,
   getPending,
   holdForSceneLoad,
+  isMergeGroupShownUnmerged,
   isMergeSceneLoading,
   markPending,
+  noteMergeBuild,
+  noteMergeRefusal,
   releaseMember,
   releaseSceneLoadHolds,
   setMergeSceneLoading,
@@ -86,7 +90,12 @@ const IS_UNMERGED = Object.freeze({ isMerged: false });
 
 let isInstalled = false;
 
-const assertInstalled = (fn: string) => {
+/**
+ * Throws, naming `fn`, unless the `merging()` feature is installed (every API function's first
+ * check; MergeMemberEdit.ts' too).
+ * @internal
+ */
+export const assertMergingInstalled = (fn: string) => {
   if (!isInstalled) {
     throw new Error(
       `${fn}: merge groups need the merging() feature (from 'aekasha/merging') in InitEngine's \`features\`.`
@@ -139,7 +148,7 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
  * ```
  */
 export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld): number => {
-  assertInstalled('createMergeGroup');
+  assertMergingInstalled('createMergeGroup');
   const ecsWorld = world ?? getECSWorld();
   if (opts.id === AUTO || opts.id.startsWith(AUTO_ID_PREFIX)) {
     throw new Error(
@@ -179,7 +188,7 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * ```
  */
 export const addToMergeGroup = (groupId: string, entityIds: number[], world?: ECSWorld) => {
-  assertInstalled('addToMergeGroup');
+  assertMergingInstalled('addToMergeGroup');
   const ecsWorld = world ?? getECSWorld();
   if (groupId === AUTO) {
     for (const entityId of entityIds) queueMerge(entityId, AUTO, ecsWorld);
@@ -204,6 +213,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
     const refusal = getMergeRefusal(entityId, ecsWorld, group);
     if (refusal) {
       lwarn(`addToMergeGroup("${groupId}"): entity ${entityId} is drawn on its own: ${refusal}.`);
+      if (IS_DEBUG_ENV) noteMergeRefusal(ecsWorld, entityId, groupId, refusal);
       continue;
     }
     if (!group._material) {
@@ -238,7 +248,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
  * ```
  */
 export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
-  assertInstalled('rebuildMergeGroup');
+  assertMergingInstalled('rebuildMergeGroup');
   const ecsWorld = world ?? getECSWorld();
   const groupEntityId = getGroups(ecsWorld).get(groupId);
   const group =
@@ -272,7 +282,7 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * ```
  */
 export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
-  assertInstalled('updateMergeMember');
+  assertMergingInstalled('updateMergeMember');
   const ecsWorld = world ?? getECSWorld();
   const member = ecsWorld.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const group = member && ecsWorld.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
@@ -308,7 +318,7 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
  * ```
  */
 export const removeFromMergeGroup = (entityIds: number[], world?: ECSWorld) => {
-  assertInstalled('removeFromMergeGroup');
+  assertMergingInstalled('removeFromMergeGroup');
   const ecsWorld = world ?? getECSWorld();
   const queued = findQueued(ecsWorld);
   for (const entityId of entityIds) {
@@ -336,7 +346,7 @@ export const removeFromMergeGroup = (entityIds: number[], world?: ECSWorld) => {
  * ```
  */
 export const dissolveMergeGroup = (groupId: string, world?: ECSWorld) => {
-  assertInstalled('dissolveMergeGroup');
+  assertMergingInstalled('dissolveMergeGroup');
   const ecsWorld = world ?? getECSWorld();
   const groupEntityId = getGroups(ecsWorld).get(groupId);
   // The group's delete hook lets its members go
@@ -507,16 +517,26 @@ const applyBuild = (
   if (!mesh.parent) existsOrThrow(getRootScene(), 'Merge groups need the root scene.').add(mesh);
 
   group.partIndex.clear();
+  // The Merging tab's A/B (debug env only): a group shown unmerged keeps its members drawn
+  const isShownUnmerged = IS_DEBUG_ENV && isMergeGroupShownUnmerged(groupEntityId, world);
   members.forEach((entityId, partIndex) => {
     group.partIndex.set(entityId, partIndex);
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
+    // Merged for the first time (a member already built may be without TAG_MERGED: the A/B)
+    const isFirstBuild = member.partIndex === -1;
     member.partIndex = partIndex;
     member._bakedMatrix = worldMatrices[partIndex];
     member._isCollapsed = false;
-    if (world.hasComponent(entityId, ComponentType.TAG_MERGED)) return;
-    member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
-    world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
-    world.addComponent(entityId, ComponentType.TAG_MERGED, true);
+    if (isFirstBuild) {
+      member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
+      world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
+    }
+    // One in an edit session stays drawn by its own mesh, its new range collapsed (the session's
+    // end writes it)
+    if (member._editPose) collapseDisabledMember(entityId, world);
+    else if (!isShownUnmerged && !world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
+      world.addComponent(entityId, ComponentType.TAG_MERGED, true);
+    }
   });
   // The built members first, in part order, then those that joined while it built
   const waiting = group.members.filter((entityId) => !group.partIndex.has(entityId));
@@ -561,6 +581,8 @@ const buildGroup = (
   const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
   if (!group) return;
   group._isPending = false;
+  // The Merging tab's last build time (debug env only)
+  const start = IS_DEBUG_ENV ? performance.now() : 0;
   const token = ++group._buildToken;
   const members = getLiveMembers(groupEntityId, group, world);
   group.members = members.concat();
@@ -588,6 +610,7 @@ const buildGroup = (
         build,
         world
       );
+      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, false);
     } catch (err) {
       fail(err);
     }
@@ -608,6 +631,7 @@ const buildGroup = (
         return;
       }
       applyBuild(groupEntityId, group, members, geometry, build, world);
+      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, true);
     },
     (err: unknown) => {
       settle();
@@ -698,13 +722,17 @@ const onSceneLoadSettled = () => {
 };
 
 /**
- * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts): the `merging()`
- * feature's `onDebug` hook.
+ * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts) and the Merging tab with
+ * its windows (debug/_dbg__Merging.ts, p373): the `merging()` feature's `onDebug` hook.
  * @internal
  */
 export const registerMergeDebug = async () => {
-  const debug = await loadDebugModuleAsync(() => import('./debug/_dbg__MergeGroups'));
-  useDebug(debug)?._installMergeDebug();
+  const [check, tab] = await Promise.all([
+    loadDebugModuleAsync(() => import('./debug/_dbg__MergeGroups')),
+    loadDebugModuleAsync(() => import('./debug/_dbg__Merging')),
+  ]);
+  useDebug(check)?._installMergeDebug();
+  useDebug(tab)?._createMergingDebugGUI();
 };
 
 /**

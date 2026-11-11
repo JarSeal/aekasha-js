@@ -48,7 +48,8 @@ the first frame already draws them merged.
 
 The draw count is three's `renderer.info.render.drawCalls`, read in `LATE_MAIN`, right after the
 frame's render. In debug mode the profiler (F8) shows the same count, and its Objects tab the
-group meshes.
+group meshes; the drawer's Merging tab lists the groups, outlines their members and draws one
+unmerged for comparison (see [Debugging](hub:features/mesh-merging#debugging)).
 
 ## Other ways in
 

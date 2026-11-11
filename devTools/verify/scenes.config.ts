@@ -328,8 +328,25 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
     },
   },
   // No physics bodies (an empty hash): the steps only set the frames before the snapshot, and
-  // its frames take about 1 s each on SwiftShader
-  largeWorld: { probeSteps: 30 },
+  // its frames take about 1 s each on SwiftShader. Its 28 AUTO merge groups are the Merging tab's
+  // and windows' check (p373)
+  largeWorld: {
+    probeSteps: 30,
+    debugger: {
+      tabs: ['mergingControls'],
+      windows: [
+        { name: 'mergeGroup', tab: 'mergingControls', row: 0 },
+        {
+          name: 'mergeMember',
+          tab: 'mergingControls',
+          row: 0,
+          // The first group's first member row in its window (a kit list's option is named by
+          // its text: the entity id, then the name; the scene creates its entities in one order)
+          press: ['[3812]largeWorldRock1'],
+        },
+      ],
+    },
+  },
   // World streaming's test scene (p353): no physics bodies; the camera flies and the cells load
   // under per-frame budgets, so what a snapshot shows depends on frame timing
   streamingGrid: {

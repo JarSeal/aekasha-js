@@ -1,0 +1,636 @@
+Status: implemented (Phases 1-4)
+Category: Merging, Debug, Editor
+Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
+Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
+
+# Merge Debugging & Member Editing
+
+Makes merging visible and editable in debug mode:
+
+- a **"Merging" drawer tab** listing groups and their members, with what each group saves;
+- **group and member windows**, with links between them;
+- an **overlay** showing which meshes a group is made of, and an A/B toggle that draws a group
+  unmerged;
+- an **edit-session API**: a member is detached from its group while it's being moved, then merged
+  back. The member window's transform fields use it now; the select/transform tools (not planned
+  yet) will use it later.
+
+---
+
+## 1. Grounding
+
+The debugger is built on the UI kit (`src/_engine/debug/CLAUDE.md`): a drawer tab's content is
+CMPs and declarative panes (a property grid of the kit's fields), lists are the kit's list, edit
+windows are the kit's draggable windows with a property grid. Checked 2026-11-04:
+
+- **No Meshes tab or mesh edit window exists** (`DEFAULT_DEBUG_DRAWER_TAB_ORDER`,
+  `kernel/config/Config.ts`). The pattern for a feature's entity list with edit windows is the LOD
+  tab: `lod()`'s install registers it with `if (IS_DEBUG_ENV) ctx.onDebug(registerLodDebugGUI)`,
+  which loads `features/lod/debug/_dbg__LOD.ts` (`createDebuggerTab`, its rows a
+  `debuggerListCMP`); its entity window (`_dbg__LodEntityWindow.ts`) registers its kind with
+  `registerDraggableWindowKind` at the module's load (`ui/overlays/windows/DraggableWindow.ts`),
+  opens with `toggleDraggableWindow` and `getKindWindowId`, and is an `EntityWindowOpener` for the
+  profiler (`registerEntityWindowOpener`). The Lights tab (`kernel/light/debug/_dbg__LightGUI.ts`,
+  `_dbg__LightEditWindow.ts`) is the kernel's.
+- **Drawer tabs**: `createDebuggerTab({ id, title, icon, content, refreshIntervalMs, onOpen, ... })`
+  (`debug/DebuggerGUI.ts`, on `aekasha/debug`); `content` returns sections, `{ pane: true,
+content: [...] }` a property grid (bindings, folders, buttons, `custom`); `updateDebuggerTab` is
+  a no-op unless the tab is visible. A `debuggerListCMP` row click is `onActivate`, its toggles
+  the row's actions. An icon names a registered icon (`ui/core/icons/`).
+- **Edit windows**: `createDebugWindowGrid` (`debug/_dbg__DebugWindowGrid.ts`): its own
+  scheduler, `getEntityInfoItems` (the entity's ids, type, name), `getReasonedButtonItem` (a
+  disabled button with its reason), `getInfoRowItem`, `getNoteItem`. A field's `onChange` gets
+  `last: true` at a gesture's end with `prev` the value before it, where the light window saves
+  and records undo.
+- **Managed entities**: `_registerManagerDebugInfo(manager, { label, icon, tabId })` and
+  `_getEntityManagerInfo` (`debug/_dbg__ManagedEntities.ts`). A managed entity's window is
+  read-only with a link to its manager's tab (the sky box's lights do this).
+- **Debug helpers** added to the root scene are marked with `markDebugHelper(obj)`
+  (`debug/Profiler.ts`, on `aekasha/debug`), so the profiler census counts them in their own row.
+- **Undo** (`debug/UndoRedo.ts`, `registerUndoRedoActionHandler`; the engine's debug modules
+  import `debug/_dbg__UndoRedo.ts`): per-scene buckets; actions registered by type with do/undo
+  handlers; `recordOrCoalesceUndoRedoAction` merges a field's ticks within 800 ms.
+- **Lines** (`features/lines/`, `features/lines/CLAUDE.md`): the line system the LOD overlay
+  (`features/lod/debug/_dbg__LodOverlay.ts`) also uses; without `lines()` a debug tool that draws
+  lines is off with one log line (`isLinesInstalledFor`).
+- **Checks**: the scene runner's `debugger` configuration (`devTools/verify/CLAUDE.md`) shoots
+  every tab and window of the scenes with a `debugger` entry and runs axe on them.
+- p372 gives `MERGE_GROUP`, `MERGE_MEMBER`, `TAG_MERGED`, `updateMergeMember` and the part table;
+  group entities are `MANAGED_BY` `MERGE`.
+
+## 2. Design
+
+### D1 — "Merging" drawer tab (`features/merging/debug/_dbg__Merging.ts`)
+
+Registered by `merging()`'s install with `if (IS_DEBUG_ENV) ctx.onDebug(registerMergingDebugGUI)`,
+which loads the `_dbg__` module through the debug loader (`loadDebugModuleAsync`), as `lod()`
+does; a new `mergingControls` id in `DEFAULT_DEBUG_DRAWER_TAB_ORDER` and a built-in icon. A
+production build carries none of it (`yarn verify:baselines`' debug code check).
+
+- **Summary pane** (a property grid of monitors): groups, members, merged vertices, draws now vs.
+  draws if unmerged (members + groups, main pass; × shadow casters for the shadow passes), wasted
+  vertices, rebuilds and in-place updates last second, build time.
+- **Group list** (`debuggerListCMP`): one row per group (id, `AUTO` cell, material, members,
+  vertices); row actions for "highlight" (D3) and "show unmerged" (D3); activating a row opens the
+  group window.
+- **Refusals:** a folder (closed by default) listing the entities that asked for `merge` and were
+  refused (p372 §5), with the reason.
+- `refreshIntervalMs: 500` while visible.
+
+### D2 — Windows
+
+Two window kinds (`registerDraggableWindowKind` at the `_dbg__` module's load), opened with
+`toggleDraggableWindow` and `getKindWindowId(kind, entityId)`, each a `createDebugWindowGrid`:
+
+- **Group window** (`mergeGroup`): settings, stats, member list (a kit list; columns would need a treegrid, which the kit's table doesn't have
+  (p805 D1); activating a row
+  opens the member window), buttons: rebuild, compact, dissolve (undoable: re-creates the group
+  with the same members).
+- **Member window** (`mergeMember`): `getEntityInfoItems`, geometry and material ids, its part
+  range, "Merged into <group>" (a link to the group window), transform fields (the kit's vector
+  and rotation fields, D4), "remove from group" (undoable; a reasoned button while an edit session
+  is open).
+- `_registerManagerDebugInfo('MERGE', { label: 'Merge group', icon, tabId })`, so anything that
+  shows a managed entity links to the group window, and a `registerEntityWindowOpener` for both
+  kinds, so the profiler's Objects tab opens them.
+- A future Meshes tab (not planned) opens the member window for merged meshes.
+
+### D3 — Overlay and A/B
+
+- **Highlight:** member bounding boxes drawn with the line system in one colour per group (a
+  stable hash of the group id), only for groups in view; marked with `markDebugHelper`; off with
+  one log line without `lines()`. "Highlight all" in the summary pane.
+- **Show unmerged** per group: hides the group mesh and shows its members' own meshes (removes
+  `TAG_MERGED` visibility without leaving the group), for an A/B of image and draw count. Runtime
+  only, cleared on scene exit.
+- **Colour by member** (open question): a debug-only vertex colour attribute on the group mesh.
+
+### D4 — Edit sessions and picking
+
+```ts
+beginMergeMemberEdit(entityId: number, world?): void;
+endMergeMemberEdit(entityId: number, world?): void; // in-place rewrite via updateMergeMember
+cancelMergeMemberEdit(entityId: number, world?): void; // restores the transform at begin
+getMergeMemberAtFace(groupEntityId: number, faceIndex: number, world?): number | undefined;
+```
+
+- **Begin** collapses the member's range in the group (like a disable) and shows its own mesh, so
+  moving it costs nothing per frame in the group. **End** writes the new transform into its range
+  once. A physics member's body is moved with the same transform (`world.setTransform`), since a
+  static body doesn't follow its mesh.
+- **Picking:** a binary search over the group's part table by `faceIndex × 3` (index start). The
+  future select tool raycasts as usual and resolves a group hit to the member.
+- **Undo:** one `merge.memberTransform` action per session (transform before and after); undo
+  and redo go through `updateMergeMember`.
+- **First user:** the member window's position / rotation / scale fields (D2) open a session on
+  the first change and end it at the gesture's end (the field's `onChange` with `last: true`,
+  where the light window records its undo), or when the window closes.
+- **Persistence:** none here. Writing an edited transform back to the scene JSON is the editor
+  epic's save plan (p083 "Future plans").
+
+## 3. Phases
+
+### Phase 1 — Tab and windows (D1, D2) — done
+
+**Exit:** largeWorld's groups are listed with correct counts; group and member windows open from
+rows and link to each other; the profiler's Objects tab links a group entity to its window; the
+scene runner's `debugger` configuration shoots the tab and both windows on largeWorld (a
+`debugger` entry in `scenes.config.ts`), axe clean, in both debugger themes.
+
+Decided when it started (2026-11-11):
+
+- **Branch:** p372 merged into `main` on its own (PR #82, engine 6.5.0), so p373 is on
+  `p373_merge-debug-and-member-editing` from that merge, with its own bump and changelog entry
+  (Phase 4: engine 6.5.0 → 6.6.0); p370 §14's row is corrected in Phase 4.
+- **The figures the merging code doesn't keep** (builds and in-place updates counted, the last
+  build's time, the refusals) are recorded by it behind `if (IS_DEBUG_ENV)`, as LOD's frame stats
+  (`LodSystem.ts`): a production build folds them away, so `merging`'s first-download size stays.
+  The refusals are kept per world (the entity, the group asked for, the reason), the newest 200;
+  the tab lists those still alive and not in a group.
+- **Rebuild and compact are one button:** every build merges the live members only, so a rebuild
+  compacts (`wasted` back to 0). The group window has "Rebuild"; its wasted row says so.
+- **Draws are per pass, without culling:** "draws now" is the built groups, "unmerged" the built
+  members not disabled; the shadow pass's the same for the shadow casters (a light's passes,
+  cascades and cube faces, aren't counted: per shadow pass).
+- **Phase 1's member window shows the transform read-only** (live monitors); Phase 3's edit
+  sessions make the fields editable.
+- `_registerManagerDebugInfo('MERGE', …)` names the tab (`ManagerDebugInfo` has no window opener);
+  the profiler opens the windows through `registerEntityWindowOpener` (the group's at the default
+  priority, the member's at -1, after physics' and the character's, as LOD's).
+
+Sections:
+
+1. The tab: the debug counters and refusals in the merging code, `registerMergeDebug` loading
+   `debug/_dbg__Merging.ts` too, `mergingControls` in `DEFAULT_DEBUG_DRAWER_TAB_ORDER`, a built-in
+   `merge` icon; the summary pane, the group list and the refusals folder; unit tests.
+2. The windows: group (`mergeGroup`) and member (`mergeMember`) kinds, their links, rebuild and
+   dissolve / remove with undo, the manager info and the entity window openers; unit tests.
+3. The checks: largeWorld's `debugger` entry in `scenes.config.ts` (the tab, both windows), the
+   scene runner in both debugger themes, the profiler's Objects link, `yarn sbp` and
+   `yarn verify:baselines` (no debug code in a build, `merging` unchanged).
+
+As built, section 1 (2026-11-11):
+
+- The merging code's debug figures (`MergeState.ts`: `getMergeDebugStats(world)` →
+  `{ builds, inPlaceUpdates, lastBuild, refusals }`, `noteMergeRefusal`, `noteMergeBuild`,
+  `noteMergeInPlaceUpdate`, `MAX_MERGE_REFUSALS` 200), each call behind `if (IS_DEBUG_ENV)`:
+  `buildGroup` times a build from its start to applied (`performance.now()`, as LOD's frame
+  stats; a worker build's time includes the wait), the four in-place writes count
+  (`rewriteMember`, `dropMember`, `collapseDisabledMember`, `restoreEnabledMember`), and the
+  refusals are `addToMergeGroup`'s, `AUTO`'s and an invalid `merge` (`queueMerge`'s warning, the
+  reason "invalid merge …"). A later refusal of the same entity replaces its record.
+- `registerMergeDebug` loads `debug/_dbg__MergeGroups.ts` (the moved-member check) and
+  `debug/_dbg__Merging.ts` (the tab) together. `mergingControls` is last in
+  `DEFAULT_DEBUG_DRAWER_TAB_ORDER`, after `streamingControls`.
+- The `merge` icon (`svg/merge-group.svg`, drawn in the line form: two boxes bracketed into one):
+  `mergeIcon` in `BuiltInIcons.ts` and `merge` in `SvgIcon.ts`, not on the `aekasha/ui` entry
+  (as `streamingIcon`: the debugger reaches it by name through `registerBuiltInIcons`).
+- The tab (`debug/_dbg__Merging.ts`, default world, nothing persisted, `refreshIntervalMs` 500,
+  `keepOnSceneChange`: everything is read through getters, the rate restarts on a scene change):
+  a summary pane of monitors (groups drawn and pending; members merged, waiting and queued; merged
+  and wasted vertices; draws per pass, main and shadow, "N merged · M unmerged", with a note that
+  they're before culling; builds and in-place updates in the last second with the totals; the
+  last build; the refused count), the group list (`mergeGroups`, the tab's first list: the id as
+  the title, `[entityId]`, an `AUTO` badge, the material and the `AUTO` cell, members, vertices
+  and "pending"), and a titled pane "Refused entities", closed, holding a static list
+  (`mergeRefusals`: newest first, those alive and in no group). The group rows' click is
+  section 2's. Its reads are `debug/_dbg__MergingInfo.ts` (`getMergeSummary`,
+  `createMergeRateMeter`: the counts since the newest sample at least a second old,
+  `getStandingRefusals`, the names), which section 2's windows share.
+- An entity's name is its fixed app id, else its debug name, else "Entity N": a mesh made in code
+  without an id has its uuid as its mesh id (largeWorld's ruins have debug names only).
+- Tests: `debug/_dbg__Merging.test.ts` (the counters through a build, a move, a disable and enable
+  and a remove; the three kinds of refusal, newest first, a deleted or joined entity dropped; the
+  cap; the summary's counts and texts, waste; the rate meter; the group and refusal rows; the
+  tab's refresh). `yarn test`, both `tsc`, lint and the docs ratchet (merging 65 → 72 exports,
+  100 %) pass.
+
+As built, section 2 (2026-11-11):
+
+- `debug/_dbg__MergingWindows.ts`: the kinds `mergeGroup` and `mergeMember` (registered at the
+  module's load), opened by `toggleMergeGroupWindow(groupEntityId)` /
+  `toggleMergeMemberWindow(entityId)` (`removeOnSceneChange`: entity ids don't outlive a scene,
+  as the streaming cell window's), each a `createDebugWindowGrid` refreshed every 250 ms (the
+  buttons' reasons, the notes) with live monitors.
+  - Group: its state (built, pending, building in the worker, not built yet, no members), kind
+    (`AUTO` with its cell, or explicit), material, both shadow flags (the mesh's, else the
+    setting's, else "its first member's"), persistent, members (merged of all), vertices, wasted
+    vertices, builds; Rebuild and Dissolve (reasoned buttons), a note; the members as a kit list
+    (`createList`, read every 250 ms, at most 200 rows; a row's suffix is its state unless merged;
+    activating a row opens the member's window); the entity's info rows. Dissolve closes the window
+    and refreshes the tab.
+  - Member: a note when it's deleted or left its group, "Merged into" with a button "Open the
+    group's window" (a button, not a link: the grid's buttons are its controls), its state
+    (merged, waiting for its group's build, disabled with its range collapsed), geometry, material,
+    vertices, its part (`#n: vertices a-b, indices c-d`), its pose read-only (position, rotation in
+    degrees, scale; the own mesh's, which `object3DSyncSystem` keeps synced while hidden), "Remove
+    from group" (reasoned), the entity's info rows.
+- The tab's group rows open the group window, their selection the open group windows (as LOD's).
+- Undo (`debug/_dbg__MergingUndo.ts`, handlers registered at the module's load, per scene):
+  `merge.dissolve` (undo makes the group again with its id, kind and settings, an `AUTO` one
+  through `createGroup` as its bucket made it, and adds back the members still alive; redo
+  dissolves) and `merge.removeMember` (undo adds the member back, making its group again when it
+  went, as an emptied `AUTO` group does at its next build; redo removes). **Entries carry a scene
+  visit token** (new on every page load and scene exit, `registerOnAllSceneExits`): members are
+  named by entity id (they rarely have a stable app id), which means another entity after a reload
+  or on another visit, so an entry from another visit warns and does nothing. A re-made `AUTO`
+  group doesn't touch `MergeAuto.ts`' buckets (their counts are only a cap's).
+- `_registerMergingWindowLinks()`, called by the tab's creation (the boot's debug step), not at
+  the module's load: `registerEntityWindowOpener` is a no-op until the environment says the
+  profiler loads. It registers `_registerManagerDebugInfo('MERGE', { label: 'Merge group', icon:
+'merge', tabId: 'mergingControls' })` and the openers (`mergeGroup` at the default priority,
+  `mergeMember` at -1).
+- Tests: `debug/_dbg__MergingWindows.test.ts` (the group window's figures, member rows opening
+  their windows; dissolve, its window closed, undo and redo, an `AUTO` group made again as one;
+  the member window's figures, part and group link; remove, undo and redo; no undo across a scene
+  exit; the manager info and both openers). `yarn test` (3051), both `tsc`, lint and the docs
+  ratchet pass.
+
+As built, section 3 (2026-11-11):
+
+- largeWorld's `debugger` entry (`scenes.config.ts`): the Merging tab and two windows, the group's
+  (the tab's row 0, `auto:1k567so:-1,-1:0`) and the member's (then Enter on the group window's
+  first member row: a kit list option is named by its text, `[3812]largeWorldRock1`, so the step
+  names the entity id; it holds while the scene creates its entities in one order).
+  `devTools/verify/CLAUDE.md` lists it.
+- Dark (the runner, the default theme): the tab and both windows axe clean, shot. Light: a harness
+  in the session's scratchpad (not committed; `AEK_debugTools`' `appearance.theme: 'light'`, then
+  the same steps through the test bridge, axe with `UI_AXE_TAGS`): the tab and both windows axe
+  clean, their roots `data-aek-theme="light"`. Read on the unmasked shots: 28 groups (all drawn),
+  409 members merged, 12 180 merged vertices, none wasted, draws 28 merged · 409 unmerged in both
+  passes, 28 builds, 0 refused (p372 Phase 4's largeWorld). The member window's link brought the
+  open group window to the front.
+- The profiler's Objects tab: one group mesh among the heaviest rows, its Edit button
+  ("Merge group: Mesh": the profiler names a row's button by its object's name) opened its group's
+  window (axe clean, light). The rows' second line already shows the entity's debug name.
+- Found: an `AUTO` group of one member read "1 members"; the row says "1 member".
+- `yarn verify:scenes --config debugger` (9 scenes): every scene's drawer tab order has
+  `mergingControls` (the template lists `merging()`, so every scene has the tab), and
+  testDebugScene's and the gym's `ALL` shoot it; `stats.panels` was p372 Phase 4's TFPS mask
+  flake. Recorded with `--update` (9). Then the full matrix: 137 passed (the known warnings:
+  `space`'s worker targets, assetCompare's load order).
+- `yarn sbp --profile all`: unchanged against `bundle.json`, `_engine/features/merging` 7.0 kB in
+  the first download (the debug figures fold away), every budget kept (its one note, `character`
+  well under, isn't this plan's). `yarn verify:baselines`: no debug code in any build; `api.json`
+  records `MergeState.ts`' seven debug exports (`@internal`) and `mergeIcon` in `BuiltInIcons.ts`
+  (not on an entry); `docs.json` merging 65 → 72, 100 %. `bundle.json` left as it was (the rebuild
+  moved gzip sizes by a few bytes only).
+
+### Phase 2 — Overlay and A/B (D3) — done
+
+**Exit:** highlighting a group outlines its members; "show unmerged" changes the draw count by the
+member count and leaves the image unchanged.
+
+Decided when it started (2026-11-11):
+
+- **The overlay** (`debug/_dbg__MergingOverlay.ts`, as LOD's `_dbg__LodOverlay.ts`, default world):
+  a palette of 8 colours, one 1px `THIN` line each (`persistent`, `FIXED`, created on the first
+  use, `markDebugHelper`); a group's colour is `hashStringFNV1a(group.id)` (`utils/Hash.ts`) modulo
+  8, so it's the same on every visit and after a rebuild. A member's box is its geometry's local
+  bounding box oriented by the matrix it's drawn with (`_bakedMatrix` once built, its own world
+  matrix while it waits), `writeBoxEdges`. Refilled every frame (`APP_RENDER_SYNC`, at
+  `LOD_SELECTION`'s order: after the camera's final pose and culling, before the render) while
+  something is highlighted, and once at a toggle (a paused app loop doesn't run the system). In
+  view is the active camera's frustum (the debug camera's too: it's what the image shows): a
+  built group whose world sphere is outside is skipped, then each member box outside.
+- **The cap** (§5's risk): 1024 boxes per colour; a box past its colour's cap isn't written but
+  counted, and the tab's summary says how many weren't drawn (no line warning).
+- **What's highlighted:** "Highlight all groups" (the summary pane's checkbox) or a group by its id
+  (the group list's row toggle, the group window's checkbox): by id, so a rebuild or an `AUTO` group
+  made again keeps it. A row of a group drawn by "all" shows pressed; turning it off turns "all" off
+  and keeps every other group of the world highlighted. The per-group ids are cleared on scene exit
+  (a group id can come back on another visit); "all" stays (runtime, nothing persisted). Without
+  `lines()`: one log line (`isLinesInstalledFor('merge group overlay')`) and the checkbox reads off
+  again.
+- **Show unmerged** (section 2): a debug-only set per world in `MergeState.ts` (the shown groups'
+  entity ids). On: the group entity gets `TAG_DRAW_HELD` (the kernel's reconcile hides its mesh;
+  only when nothing held it already, and only that hold let go), and its built members lose
+  `TAG_MERGED` (drawn on their own, their own culling back). `applyBuild` adds `TAG_MERGED` to a
+  shown group's members only behind `!(IS_DEBUG_ENV && …)` (folded in a build), and its first-merge
+  guard reads the member's `partIndex !== -1` from before the build instead of `TAG_MERGED`, so a
+  rebuild during the A/B keeps `_wasSpatialIndexed`. Off: `TAG_MERGED` back on the built members,
+  the hold let go. Every view ends at scene exit (a persistent group's too); a dissolve, removal or
+  deletion during it needs nothing (`releaseMember`). No undo (a view, not an edit). The tab's draw
+  figures follow by themselves (`isGroupDrawn`, `isDrawnOnItsOwn`).
+- Open question 1 ("colour by member") isn't built here: the boxes show the members.
+
+Sections:
+
+1. The highlight: `debug/_dbg__MergingOverlay.ts` (the lines, the system, the cap), the summary
+   pane's checkbox and cap note, the group rows' toggle, the group window's checkbox, the scene
+   exit; unit tests.
+2. Show unmerged: `MergeState.ts`' set, `applyBuild`'s two changes, the toggle (row, group window
+   with its state text), the scene exit; unit tests.
+3. The checks: on largeWorld and testDebugScene in the browser, the highlight shot and show
+   unmerged's draw count (the profiler's draws) and image (a diff against merged); `yarn sbp`,
+   `yarn verify:baselines`, the scene runner's `debugger` configuration.
+
+As built, section 1 (2026-11-11):
+
+- `debug/_dbg__MergingOverlay.ts` as decided: `MERGE_OVERLAY_COLORS` (red, orange, yellow, green,
+  cyan, blue, violet, pink), `MAX_BOXES_PER_COLOR` 1024, the lines `MERGE_DEBUG_OVERLAY_<n>`;
+  `writeMergeOverlayBoxes(world, frustum, writers)` (the fill on plain writers, allocation-free,
+  what the tests drive), `setMergeHighlightAll`, `setMergeGroupHighlighted(groupId, isOn, world?)`
+  (each returning whether it's on now: false without `lines()`), `isMergeHighlightAll`,
+  `isMergeGroupHighlighted`, `getMergeOverlayCounts` (the last fill's drawn and skipped boxes),
+  `getMergeGroupColorIndex`. The scene exit is registered at the module's load (a `_dbg__`
+  module, as `_dbg__MergingUndo.ts`' visit token). A disabled group or member isn't outlined.
+- The tab: "Highlight all groups" (a `{ get, set }` checkbox, so a refusal without `lines()` reads
+  off at the next refresh) and the cap's note (`getMergeOverlayNote`, empty unless boxes were
+  skipped) at the end of the summary pane; the group rows' toggle "Highlight the members"
+  (`objectsCubes`; the list refreshes itself after a toggle). The group window: a "Highlight
+  members" checkbox after Builds, which refreshes the tab.
+- Tests: `debug/_dbg__MergingOverlay.test.ts` (one group's boxes in its colour only, the colour's
+  stability; a built member at its baked pose and a waiting one at its own; a rotation and scale;
+  the frustum and a disabled member; the cap and the note; "all" and one turned off; the lines
+  filled at once, marked, hidden when nothing's highlighted; the scene exit; a group made again
+  under its id; off without `lines()`), and the group window's checkbox in
+  `_dbg__MergingWindows.test.ts` (which now installs `lines()`). `yarn test` (3063), both `tsc`,
+  lint and the docs ratchet pass. Not yet seen in a browser (section 3).
+
+As built, section 2 (2026-11-11):
+
+- `MergeState.ts`: `getMergeUnmergedViews(world)` (group entity → whether the view added its hold)
+  and `isMergeGroupShownUnmerged(groupEntityId, world)`, both `@internal`. `applyBuild` reads the
+  view once per build (`IS_DEBUG_ENV && …`) and its first-merge guard is `partIndex === -1` from
+  before the build (a member already in a group is refused, so that is having `TAG_MERGED` outside
+  the view). `MergeGroups.ts` is at 765 lines.
+- `debug/_dbg__MergingUnmerged.ts`: `setMergeGroupUnmergedView(groupEntityId, isOn, world?)`
+  (returns whether it's shown unmerged now), `isMergeGroupUnmergedView`, `getUnmergedViewRefusal`
+  (gone, or not built yet) and `getUnmergedViewCount` (dropping a dissolved group's view); the
+  scene exit at the module's load. **Only a built group** (one with a mesh): `OBJECT3D`'s add hook
+  doesn't run the visibility reconcile, so a hold made before the first build wouldn't hide the mesh
+  it adds. Views are by group entity (an `AUTO` group deleted at an empty build and made again
+  starts merged).
+- The tab: the group rows' second toggle "Show unmerged (A/B)" (`geometry`; hidden on a group not
+  built), which refreshes the tab; the summary's groups line adds ", N shown unmerged". The group
+  window: a "Show unmerged" checkbox after the highlight's (disabled while refused), its state "shown
+  unmerged: its members are drawn on their own", a member's "merged, drawn on its own (shown
+  unmerged)" (also its member list row's suffix).
+- Tests: `debug/_dbg__MergingUnmerged.test.ts` (the mesh hidden and the members drawn with their
+  parts kept, the summary's draws, the state texts, and back; a join and rebuild during the view
+  keeping the members drawn and their `_wasSpatialIndexed`, checked to fail with the old guard; a
+  disabled member and a hold made elsewhere; a group not built refused, its row's toggle hidden; a
+  dissolve; the scene exit), the window's checkbox in `_dbg__MergingWindows.test.ts`. `yarn test`
+  (3070), both `tsc`, lint pass; the docs ratchet: merging 72 → 74 exports, 100 % (`docs.json` to
+  record in section 3).
+
+As built, section 3 (2026-11-11):
+
+- A Playwright harness in the session's scratchpad (not committed; the runner's server and Chrome,
+  `?isDebug=true&aekTest=true&startScene=…`, frozen, `takeSnapshotAsync` at 1280×800, the app's own
+  module instances by their resource URLs; three's `info.reset` stubbed around each shot, since three
+  resets `info.render` in its own animation frame during the readback; one warm-up shot, as the
+  first after a load drew twice the triangles). The draws, main and shadow passes together:
+
+  |                                            | largeWorld                | testDebugScene          |
+  | ------------------------------------------ | ------------------------- | ----------------------- |
+  | merged                                     | 105                       | 49                      |
+  | the biggest group shown unmerged           | 153 (25 members: +24 × 2) | 248 (200 members: +199) |
+  | every group shown unmerged                 | 820                       | 736 (49 + 700 − 13)     |
+  | merged again                               | 105, the image identical  | 49, the image identical |
+  | pixels changed, every group (of 1 024 000) | 132, max 94               | 1                       |
+
+  largeWorld's 132 pixels are single pixels on the ruins, where members' faces touch: coplanar faces
+  resolve by draw order, which one merged draw and separate draws don't share. Every group unmerged
+  draws fewer triangles there (422 535 against 424 679): its members are culled one by one. The
+  exit's "by the member count" holds per group and pass (less culling). No console errors.
+
+- The highlight (`hideDebugHelpers: false`; the bridge's snapshot hides debug helpers): largeWorld
+  384 boxes in view of 409 members, testDebugScene 700, none over the cap; the boxes outline each
+  ruin block, a colour per group, depth-tested. The tab and the group window through the bridge
+  (`openDebuggerTab({ host: 'DRAWER', … })`, `openDebuggerListRow`, `markDebuggerWindows`): both
+  window checkboxes worked, the state "shown unmerged: …", the summary's groups line and the member
+  rows' state.
+- Found: with a group shown unmerged, the draws read "212 merged · 700 unmerged", the first figure
+  being the draws now. Now "N now · M unmerged" (`formatDraws`).
+- `yarn sbp --profile all`: every budget kept; `_engine/features/merging` 7 041 → 7 144 B gzip in
+  the first download (24 B under its 7 KiB budget). Built with Phase 1's `MergeGroups.ts`: 7 137 B,
+  so section 2's `applyBuild` costs 7 B (the A/B check folds: the build's `applyBuild` has none of it,
+  and `MergeState.ts`' view map isn't in the bundle); the other 96 B were Phase 1's, under the
+  report's threshold then. **Phase 3's edit sessions go over the budget if they ship in the first
+  download**: decide the budget there.
+- `yarn verify:baselines`: no debug code in any build; recorded with `--update`: `api.json` (the two
+  `@internal` `MergeState.ts` exports), `docs.json` (merging 72 → 74, 100 %), `bundle.json`
+  (merging's growth; the other groups moved a few bytes).
+- `yarn verify:scenes --config debugger` (9 scenes): the Merging tab's shot changed in largeWorld,
+  testDebugScene and the gym (the checkbox and its hint, the rows' toggles, "now"), and largeWorld's
+  group window; axe clean; recorded with `--update --only` those three. assetCompare's tab shot
+  warned as before (its load order).
+
+### Phase 3 — Edit sessions, picking, undo (D4) — done
+
+**Exit:** moving a merged member from its window moves it smoothly, merges it back without a
+rebuild (rebuild count unchanged), and undo restores it; `getMergeMemberAtFace` returns the right
+member for raycasts on 3 members of one group.
+
+Decided when it started (2026-11-11):
+
+- **The API** (`MergeMemberEdit.ts`, on `aekasha/merging`, each throwing without the feature as the
+  others): D4's four and `isMergeMemberInEdit(entityId, world?)` (the window's reasons). A session
+  is the member's own state, `MERGE_MEMBER._editPose` (its `TRANSFORM`'s position, quaternion and
+  scale at begin), not a map: a removed or deleted member's session goes with its component.
+  - **Begin**: a non-member warns; a second begin keeps the first pose. A built member's range
+    collapses (`collapseDisabledMember`'s write, `_isCollapsed`, no waste) and it loses
+    `TAG_MERGED` (drawn by its own mesh, which `object3DSyncSystem` keeps at its `TRANSFORM`). A
+    member waiting for its build only records the pose. The caller moves the member as it likes
+    (`setTransform`, a `TRANSFORM` write); nothing runs per frame.
+  - **End**: the `TRANSFORM`'s position and rotation go through `world.setTransform` (a body
+    follows, D4), then `updateMergeMember`'s write (a running worker build dropped), then, unless
+    it's disabled, the index restored with the new pose's winding (`restoreEnabledMember`) and
+    `TAG_MERGED` back (not while its group is shown unmerged). Not built yet: nothing to write
+    (the build reads the pose). No session: nothing (a window's close ends unconditionally).
+  - **Cancel**: the pose at begin applied (`setTransform` and the scale), then End.
+  - **The shipping code** (always in the first download, the only part that is: the module is
+    tree-shaken unless an app calls it, and the debugger's import is in a lazy chunk):
+    `applyBuild` leaves a member in a session without `TAG_MERGED` and collapses it after the build
+    (a build during a session bakes the mid-move pose; End writes the final one), and
+    `restoreEnabledMember` skips a member in a session (an enable mid-session would draw it twice).
+    A disable mid-session hides its own mesh and leaves the range collapsed.
+  - **A scene exit** cancels every open session (the risk table's), registered with
+    `registerOnAllSceneExits` on the first begin (no module side effect), over every world's
+    `MERGE_MEMBER`s: a persistent member gets its pose back; the scene's go with it anyway.
+  - The debug side: the moved-member check skips a member in a session, the A/B's end doesn't give
+    it `TAG_MERGED`, the overlay draws its box at its own pose.
+- **Picking**: `getMergeMemberAtFace(groupEntityId, faceIndex, world?)`: a binary search of the
+  group geometry's `mergeParts` by `indexStart` for `faceIndex × 3`, the part's `key` (the member's
+  entity id, `getBuildParts`') checked against `group.partIndex` (a removed member's range answers
+  undefined). A raycast's `object.userData.entityId` is the group entity.
+- **The budget** (Phase 2's note): only the two guards ship; measured in section 3, and when
+  `merging` passes 7 KiB the budget goes to 8 KiB with a comment (`sbp.config.ts`).
+
+Sections:
+
+1. The API and picking: `MergeMemberEdit.ts`, the `_editPose` field, `applyBuild`'s and
+   `restoreEnabledMember`'s guards, the scene exit, the debug modules' three skips, the entry and
+   `MergeGroups.ts`' `assertMergingInstalled`; unit tests (sessions across a build, a worker build,
+   a disable, a remove, a delete, a scene exit; picking by raycast on 3 members).
+2. The member window: editable position, rotation (degrees) and scale (read-only with a reason
+   for a member with a body: colliders don't scale) opening a session on the first change and
+   ending it at the gesture's end and on the window's close; one `merge.memberTransform` undo
+   entry per session (the visit token's rules), undo and redo through `updateMergeMember`; "Remove
+   from group" reasoned while a session is open; the state "being edited"; unit tests.
+3. The checks: in the browser on largeWorld and testDebugScene (a member moved from its window,
+   its own mesh drawn during the drag, the rebuild count unchanged, undo and redo; picking from a
+   raycast), `yarn sbp` (the budget), `yarn verify:baselines`, the scene runner's `debugger`
+   configuration.
+
+As built, section 1 (2026-11-11):
+
+- `MergeMemberEdit.ts` as decided: `beginMergeMemberEdit`, `endMergeMemberEdit`,
+  `cancelMergeMemberEdit`, `isMergeMemberInEdit` and `getMergeMemberAtFace` on `aekasha/merging`,
+  with `MergeMemberEditPose` (the type of `MERGE_MEMBER._editPose`, in `MergeTypes.ts`). Begin reads
+  the pose through `syncMemberPose` (either storage mode) and collapses through
+  `collapseDisabledMember`; End is `setTransform` from the `TRANSFORM`, then `updateMergeMember`,
+  `restoreEnabledMember` unless disabled, and `TAG_MERGED` back even when disabled (an enable
+  later restores the index only, so the member would otherwise be drawn twice). Cancel writes the
+  begin pose on the `TRANSFORM` (`commitTransform`) and ends. Getters don't assert the feature;
+  the three session functions do (`assertMergingInstalled`, exported from `MergeGroups.ts`, now
+  781 lines).
+- The shipping guards: `applyBuild` (no `TAG_MERGED` for a member in a session, collapsed after
+  the build; section 3 moved it from the disabled members' loop into the member loop) and
+  `restoreEnabledMember` (`|| member._editPose`).
+- The debug skips: the moved-member check, the A/B's end and the overlay (a session's member at
+  its own world matrix).
+- Tests: `MergeMemberEdit.test.ts` (13: a session's collapse, moves writing nothing, the end
+  matching a fresh merge with no rebuild; a mirroring during it; the body's `setTransform` at the
+  end; cancel; a member not built yet; a rebuild and a worker build during it; a disable and an
+  enable during it; a remove and a delete; a scene exit; the non-member warning and the no-ops;
+  picking by raycast on 3 members, a part's first and last face, a removed member, a group not
+  built, another entity) and one each in the debug tests (the moved check, the A/B, the overlay).
+  Each guard and skip was checked to fail its tests when taken out. `yarn test` (3086), both
+  `tsc`, lint and the docs ratchet (merging 74 → 81, 100 %; `docs.json` recorded in section 3)
+  pass.
+
+As built, section 2 (2026-11-11):
+
+- `debug/_dbg__MergingMemberPose.ts`: `getMergeMemberPoseItems(entityId, world)` returns
+  `{ items, onRemove }`. Position (a vector field), Rotation (`kind: 'rotation'`, degrees; the shown Euler
+  kept while the `TRANSFORM`'s quaternion is the one it made, within 1e-6, so typed angles stay) and
+  Scale, each `{ get, set }` on the `TRANSFORM` read at every call (a typed store's copy is fresh
+  each time). A `set` opens the session if none is open and writes (`setTransform` for position and
+  rotation, the scale on the `TRANSFORM` with `commitTransform`); `onChange` with `last: true` ends
+  it, records one `merge.memberTransform` (nothing when the pose didn't change) and refreshes the
+  tab. Disabled when the entity is gone or no member; Scale also with a `BODY_STATIC` (the hint
+  "Read-only: its physics body’s colliders don’t scale.", read at the build). The kit's defaults:
+  no step or precision (as the light window's position).
+- The member window: the three fields replace Phase 1's read-only monitors and their note (a new
+  note says the move draws it on its own and writes in place; undo puts it back); its grid's
+  `onRemove` ends a session a gesture left open (`createRefreshedGrid(items, onRemove?)`). The
+  state "being moved: drawn on its own until the move ends" (after "waiting for its group's build",
+  before "disabled"); "Remove from group" reads "It’s being moved: finish the move first." while a
+  session is open (on the grid's 250 ms refresh).
+- `debug/_dbg__MergingUndo.ts`: `MERGE_MEMBER_TRANSFORM_ACTION` (`merge.memberTransform`),
+  `recordMergeMemberTransform(entityId, groupId, prev, next)`, `MergeMemberPose` (position,
+  quaternion and scale arrays). Undo and redo apply the pose (`setTransform`, then the scale), then
+  `updateMergeMember` when it's still a member and not in a session; another visit warns (the
+  visit token), a deleted entity warns ("it was deleted").
+- Tests (`debug/_dbg__MergingWindows.test.ts`, 5): a typed position moving the member in place in
+  one session (its baked matrix, no rebuild), the undo entry's poses, undo and redo; a key gesture
+  held open (drawn on its own, the state, the remove button's reason) until its keyup, one entry;
+  a window removed mid-gesture ending and recording it; rotation by degrees, scale, a body's scale
+  disabled; a deleted member's undo warning, a removed member's fields disabled. `yarn test`
+  (3091), both `tsc`, lint and the docs ratchet pass.
+
+As built, section 3 (2026-11-11):
+
+- A Playwright harness in the session's scratchpad (not committed; Phase 2's: the runner's server
+  and Chrome, `?isDebug=true&aekTest=true&startScene=…`, frozen, the app's module instances by
+  their resource URLs, `takeSnapshotAsync` at 1280×800; a frozen loop doesn't run
+  `object3DSyncSystem`, so the harness syncs the edited member's own mesh before a shot). On each
+  scene's biggest group, through the member window's own fields (Position Y held on ArrowUp three
+  times, then X typed with Enter):
+
+  |                                                | largeWorld (`auto:diy9gm:1,-1:0`) | testDebugScene (`p372_grid`) |
+  | ---------------------------------------------- | --------------------------------- | ---------------------------- |
+  | rays down onto the group mesh, one per member  | 25, each its own member           | 200, 20 their own (stacked)  |
+  | the answer's member box holding the hit point  | 25 / 25                           | 200 / 200                    |
+  | during the key gesture                         | own mesh drawn, range collapsed   | the same                     |
+  | draws (both passes) before / during / after    | 105 / 107 / 105                   | 49 / 50 / 49                 |
+  | pixels changed, during vs after (of 1 024 000) | 0                                 | 0                            |
+  | pixels changed, before vs after the move       | 45                                | 703                          |
+  | undo vs before, redo vs after                  | 0, 0                              | 0, 0                         |
+  | builds and the group's rebuilds, throughout    | 28 and 1, unchanged               | 13 and 1, unchanged          |
+
+  So the move is drawn by the member's own mesh exactly where the merged range lands (the image
+  during equals the one after), merged back with 3 in-place writes per session (collapse, rewrite,
+  restore) and no build; undo and redo through `updateMergeMember` give back the same images; the
+  typed move is a second undo entry. The state text and the remove button's reason showed during
+  the gesture. No console errors, no merging warnings (the moved-member check stayed quiet).
+
+- Found: `yarn sbp` put `_engine/features/merging` at 7 171 B gzip (7 144 after Phase 2: +27 B,
+  the two guards), 3 B over its 7 KiB budget, `MergeMemberEdit.ts` not in the first download.
+  `applyBuild`'s guard moved into the member loop it already has (collapsing there, the disabled
+  loop as it was: one `getComponent` less, 33 B minified) changed gzip by +2 B (7 173 B), so the
+  budget went 7 → 8 KiB with its comment in `sbp.config.ts`, as decided. Every profile's budgets
+  pass (the `character` note isn't this plan's).
+- `yarn verify:baselines`: no debug code in any build; recorded with `--update`: `api.json` (the
+  five functions and `MergeMemberEditPose` on `aekasha/merging`, `assertMergingInstalled`
+  internal), `docs.json` (merging 74 → 81, 100 %), `bundle.json` (merging's 7 173 B; the other
+  groups moved a few bytes, the rebuild's noise).
+- `yarn verify:scenes --config debugger` (9 scenes): largeWorld's member window shot changed (the
+  three pose fields editable, their note), axe clean; recorded with `--update --only largeWorld`.
+  testDebugScene's `stats.panels` is the TFPS mask flake (Phases 1 and 2), assetCompare's tab shot
+  warned as before (its load order).
+- Seen: the position fields show a value's own decimals (the kit's default, as the light window's
+  position), so a largeWorld member's Y reads `0.2160874`, cut by the box; no step or precision
+  is set, so the arrows step 1 m.
+
+### Phase 4 — Docs and versioning — done
+
+1. `features/merging/CLAUDE.md` (the tab, windows, edit sessions), the Hub's Mesh merging page (a
+   debugging section with a shot of the tab) and the debug suite page's list of drawer tabs;
+   `yarn hub:build`.
+2. Engine minor; `CHANGELOG.md`.
+
+As built, section 1 (2026-11-11):
+
+- `features/merging/CLAUDE.md`: the Mesh merging section gains `MergeMemberEdit.ts`, `_editPose`,
+  the five functions, the Edit sessions and Picking bullets, the moved-member check's skip, the
+  tests and the SBP figures (8 KiB, 7.2 kB); a new `## Merge debugging` section (the debug
+  figures, the tab, the windows, the pose fields, undo, the overlay, show unmerged, the tests).
+  The root map line names both; `debug/CLAUDE.md` adds Merging to the kept tabs and the merge
+  windows to the edit windows; `readme.md`'s mesh merging feature (sessions, picking, the tab) and
+  its drawer tab list (streaming and merging were both missing).
+- The Hub's Mesh merging page: `aek:covers` "Mesh merging, Merge debugging", tags; "Moving a
+  member over many frames" and "Which member a ray hit" under Members are static; a Debugging
+  section with `merging-tab.png` (the tab on exampleMerging, 1600×1000, every group highlighted:
+  largeWorld's overview camera showed the outlines too small to read; a scratchpad harness, not
+  committed); "Not yet" loses the debug tab; Key APIs and the plans' links. The debug suite page's
+  drawer tabs (streaming and merging) and edit windows (merge groups and members; those that close
+  with their scene). The merging example's walkthrough points at the tab.
+- `yarn hub:build`: 114 pages, no dead link, no coverage warning; the search index's size warning
+  (553 KiB gzip, over 450) stands.
+- Seen: exampleMerging's tab reads 281 members, its pages say 282 pieces (p372's text, not
+  changed here).
+
+As built, section 2 (2026-11-11):
+
+- Engine and project 6.5.0 → 6.6.0 (Sunset kept: a minor); toolkit and app unchanged (the branch
+  touches neither). `CHANGELOG.md`'s entry `2026-11-11 — p373_merge-debug-and-member-editing`
+  (Engine, Project); p372's entry's note that p373 would extend it now points at this one.
+  `yarn checkVersions --against main` passes.
+- The plan is `_DONE_`: the paths in the merging code's file headers, its `CLAUDE.md` and the Hub
+  page follow; `_DONE_p372`'s `Blocks`. p370: its status (p371-p373 implemented), `Blocks`, the
+  roadmap's row 1.3 and §14 (p372 merged on its own, PR #82, engine 6.5.0; p373 on its own branch,
+  engine 6.6.0).
+- `yarn hub:build` (the homepage's What's new reads 6.6.0) and `yarn test` (3091) pass.
+- The PR: `p373_merge-debug-and-member-editing` into `main` (p370 §14), opened when asked.
+
+## 4. Versioning
+
+Engine minor (debug tab, public edit-session API).
+
+## 5. Risks
+
+| Risk                                                                              | Mitigation                                                                |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| A session left open (window closed mid-drag, scene exit) leaves a member detached | Sessions end on window close and are cancelled on scene exit              |
+| Overlay lines for thousands of members cost more than what they show              | Only groups in view, only toggled groups, capped line count with a notice |
+| Moving a physics member's mesh without its body                                   | `endMergeMemberEdit` moves both (D4)                                      |
+
+## 6. Open questions
+
+1. "Colour by member" (D3): worth a debug-only attribute, or is the bounding-box overlay enough?
+2. Should a member window exist for unmerged meshes too, as the start of a Meshes tab? Out of scope
+   here; it would fit p150.
