@@ -1,15 +1,18 @@
 /**
  * Pass 1's merge material palettes (`*.mergeMaterial.json`, p374 D2): each checked against the
  * merge material's class from its members' material JSONs (D1) and resolved into its slots'
- * arrays (`resolveMergeMaterial`), then registered in the materials' id space, and each slot's
- * array as the texture `<paletteId>.<slot>` with its pipeline output. A class violation fails the
- * gather, naming the member and the property.
+ * arrays (`resolveMergeMaterial`), then registered in the materials' id space with its members'
+ * parameter table entries (`__entries`, D3), and each slot's array as the texture
+ * `<paletteId>.<slot>` with its pipeline output. A class violation fails the gather, naming the
+ * member and the property. The scene pass inlines the palettes a scene lists
+ * (`resolveSceneMergeMaterials`, p374 Phase 2).
  */
 import path from 'path';
 import {
   MergeMaterialAssetSchema,
   type MergeMaterialAsset,
   type MergeMaterialSlotInfo,
+  type SceneMergeMaterial,
 } from '../../src/_engine/schemas';
 import { getMergeMaterialSlotGeneratedFields } from '../assetPipeline/generated';
 import type { MaterialLookup } from '../assetPipeline/mergeMaterialClass';
@@ -24,6 +27,7 @@ import {
   type TakenIds,
 } from './context';
 import { getIdFromFileName } from './gatheredJson';
+import type { SceneRun } from './sceneAssets';
 
 /** Pass 1's palettes, after the textures and the materials (a palette's members are material
  * JSONs, their maps texture JSONs) */
@@ -44,7 +48,7 @@ export const readMergeMaterials = (ctx: GatherContext, reg: Registries, taken: T
     MergeMaterialAssetSchema,
     (paletteJSON, { file, fullPath, sourcePath }) => {
       const paletteId = paletteJSON.id || getIdFromFileName(file, 'mergeMaterial');
-      const { slots, errors, warnings } = resolveMergeMaterial(
+      const { slots, entries, errors, warnings } = resolveMergeMaterial(
         fullPath,
         paletteId,
         paletteJSON,
@@ -71,6 +75,7 @@ export const readMergeMaterials = (ctx: GatherContext, reg: Registries, taken: T
       if (!claimIds(ctx, taken.materials, 'material (or merge material)', file, paletteId)) return;
       registerSlots(ctx, reg, paletteJSON, paletteId, slots, { fullPath, sourcePath });
       paletteJSON.id = paletteId;
+      paletteJSON.__entries = entries;
       paletteJSON.__sourcePath = sourcePath;
       delete paletteJSON.$schema;
       reg.mergeMaterials[paletteId] = paletteJSON;
@@ -104,4 +109,41 @@ const registerSlots = (
     };
   }
   paletteJSON.__slots = info;
+};
+
+/**
+ * A scene's `mergeMaterials` (p374 Phase 2): each palette id replaced by its palette without the
+ * build-time fields (`slots`, `optimize`; a production build without `debugData`), and its slot
+ * textures added to the scene's `textures` (an id the scene lists already isn't added again), so
+ * they load with them and get the production output check. Runs before the textures are
+ * resolved.
+ */
+export const resolveSceneMergeMaterials = (run: SceneRun) => {
+  const { ctx, reg, scene, reportUnknownId } = run;
+  if (!Array.isArray(scene.mergeMaterials)) return;
+  const palettes: SceneMergeMaterial[] = [];
+  const slotIds: string[] = [];
+  for (const paletteId of scene.mergeMaterials) {
+    const palette = reg.mergeMaterials[paletteId];
+    if (!palette) {
+      reportUnknownId('merge material', paletteId);
+      continue;
+    }
+    const { materials, throwOnError, userData, debugData, __slots = {}, __entries = [] } = palette;
+    palettes.push({
+      id: paletteId,
+      materials,
+      ...(throwOnError !== undefined ? { throwOnError } : {}),
+      ...(userData ? { userData } : {}),
+      ...(debugData && !ctx.isProduction ? { debugData } : {}),
+      __slots,
+      __entries,
+    });
+    for (const info of Object.values(__slots)) slotIds.push(info.texture);
+  }
+  // The generated data's shape: the palettes in place of the ids
+  scene.mergeMaterials = palettes as unknown as string[];
+  const listed = new Set((scene.textures ?? []).filter((texId) => typeof texId === 'string'));
+  const added = slotIds.filter((texId) => !listed.has(texId));
+  if (added.length) scene.textures = [...(scene.textures ?? []), ...added];
 };

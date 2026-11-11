@@ -25,4 +25,9 @@ export type {
   SceneAutoMergeEntry,
   SceneMergeGroupEntry,
 } from './MergeTypes';
+export type {
+  MergeMaterialEntry,
+  MergeMaterialSlotInfo,
+  SceneMergeMaterial,
+} from './MergeMaterialSchema';
 export { merging } from './MergingFeature';

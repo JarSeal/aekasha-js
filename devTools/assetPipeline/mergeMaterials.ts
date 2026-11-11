@@ -6,6 +6,7 @@ import {
   ORM_SOURCE_MAP_KEYS,
   type AssetOptimize,
   type MergeMaterialAsset,
+  type MergeMaterialEntry,
   type MergeMaterialSlot,
   type TexturePack,
   type TextureSlot,
@@ -76,6 +77,8 @@ export type MergeMaterialSlotBuild = {
 /** A palette's arrays, or its problems (each naming the member and the property, or the slot) */
 export type ResolvedMergeMaterial = {
   slots: MergeMaterialSlotBuild[];
+  /** Each member's parameter table entry, by palette index (empty on an error) */
+  entries: MergeMaterialEntry[];
   errors: string[];
   warnings: string[];
 };
@@ -280,8 +283,11 @@ export const resolveMergeMaterial = (
   findMaterial: MaterialLookup,
   findTexture: TextureLookup
 ): ResolvedMergeMaterial => {
-  const { errors, warnings, members, maps } = checkMergeMaterialClass(palette, findMaterial);
-  if (errors.length) return { slots: [], errors, warnings };
+  const { errors, warnings, members, entries, maps } = checkMergeMaterialClass(
+    palette,
+    findMaterial
+  );
+  if (errors.length) return { slots: [], entries: [], errors, warnings };
   const memberJsonFiles = members.flatMap((member) =>
     member ? [path.resolve(member.jsonFile)] : []
   );
@@ -299,5 +305,7 @@ export const resolveMergeMaterial = (
     const build = resolveSlot(ctx, paletteId, slot, slotMaps, memberJsonFiles);
     if (build) slots.push(build);
   }
-  return { slots: errors.length ? [] : slots, errors, warnings };
+  return errors.length
+    ? { slots: [], entries: [], errors, warnings }
+    : { slots, entries: entries as MergeMaterialEntry[], errors, warnings };
 };

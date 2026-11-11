@@ -106,7 +106,29 @@ export const SceneMergeGroupEntrySchema = z.union([
     ) satisfies z.ZodType<SceneMergeGroupEntry>,
 ]);
 
-/** The merging feature's fields (p372 §4): a mesh's `merge` and a scene's `mergeGroups`. */
+/** A scene's palettes: `*.mergeMaterial.json` ids, each once. */
+const SceneMergeMaterialsSchema = z
+  .array(z.string().min(1))
+  .superRefine((ids, ctx) => {
+    const seen = new Set<string>();
+    ids.forEach((id, index) => {
+      if (seen.has(id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index],
+          message: `The merge material "${id}" is listed twice.`,
+        });
+      }
+      seen.add(id);
+    });
+  })
+  .optional()
+  .describe(
+    "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it."
+  );
+
+/** The merging feature's fields (p372 §4, p374): a mesh's `merge`, a scene's `mergeGroups` and
+ * `mergeMaterials`. */
 export const mergingSchemaPart = {
   feature: 'merging',
   scene: {
@@ -130,6 +152,8 @@ export const mergingSchemaPart = {
       .describe(
         "Merge group settings for the groups made in this scene, and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices? })."
       ),
+    /** The merge material palettes the scene uses (p374): their arrays load with its textures. */
+    mergeMaterials: SceneMergeMaterialsSchema,
   },
   mesh: {
     /** Draws the mesh merged into a merge group: its id, `AUTO`, or the options. In a save entry

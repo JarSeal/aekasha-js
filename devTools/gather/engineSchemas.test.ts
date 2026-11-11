@@ -86,6 +86,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'lod',
       'streaming',
       'mergeGroups',
+      'mergeMaterials',
       'merge',
     ]);
   });

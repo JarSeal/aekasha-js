@@ -42,10 +42,12 @@ export {
 } from '../features/merging/MergeMaterialSchema';
 export type {
   MergeMaterialAsset,
+  MergeMaterialEntry,
   MergeMaterialSlot,
   MergeMaterialSlotDef,
   MergeMaterialSlotInfo,
   MergeMaterialSlotTexture,
+  SceneMergeMaterial,
 } from '../features/merging/MergeMaterialSchema';
 export { mergingSchemaPart } from '../features/merging/MergingSchema';
 export type { MaterialAsset, PerType } from './MaterialSchema';

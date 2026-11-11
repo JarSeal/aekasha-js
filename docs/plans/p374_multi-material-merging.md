@@ -372,6 +372,36 @@ As built, section 1 (`aekMatIndex` in the merge):
 - `api.json` gains `MERGE_PALETTE_INDEX_ATTRIBUTE` and `assertPaletteIndices`: recorded
   (`yarn verify:baselines --update`) at the phase's end.
 
+As built, section 2 (the palette in a scene's data):
+
+- **The table entries** (`MergeMaterialEntry`, `MergeMaterialSchema.ts`: `color`, `opacity`,
+  `emissive`, `emissiveIntensity`, `roughness`, `metalness`, `normalScale` as `[x, y]`,
+  `aoMapIntensity`) are read by the class check (`checkMergeMaterialClass` → `entries`, by palette
+  index; `ENTRY_DEFAULTS`, three's `MeshStandardMaterial` values, replace the old `ENTRY_PARAMS`
+  list and give its keys). A colour stays as the JSON gives it (a string or a hex number, sRGB:
+  the runtime converts it with `THREE.Color.set`, as `setValues` does for the member); `normalScale`
+  takes `[x, y]` or `{ x, y }`. A value of the wrong kind (a colour array, a number as a string,
+  a single-number `normalScale`) is a class error naming the member and the property.
+  `resolveMergeMaterial` returns them (`entries`, empty on an error), and pass 1 writes them into
+  the palette's `__entries` (the dev data has them too).
+- **The scene's list:** `mergeMaterials` in `mergingSchemaPart.scene` (after `mergeGroups`, so the
+  JSON Schema's existing order stays; ids, each once), so a scene listing a palette gets
+  `merging` in its feature manifest. `resolveSceneMergeMaterials` (`devTools/gather/mergeMaterials.ts`,
+  run by `resolveSceneAssets` after the impostors, before the textures) replaces each id with a
+  `SceneMergeMaterial` (`id`, `materials`, `throwOnError`, `userData`, `debugData` (not in
+  production), `__slots`, `__entries`; no `slots`, `optimize` or `__sourcePath`) and appends its
+  slot textures to the scene's `textures` unless the scene lists them already, so they load with
+  the scene and `checkMergeMaterialSlot` checks their outputs in a production gather. An unknown
+  id fails the gather (`reportUnknownId`). `SceneData.mergeMaterials` (`Scene.ts`, the type
+  `import type`d from merging) is the runtime's view; `SceneMergeMaterial`,
+  `MergeMaterialEntry` and `MergeMaterialSlotInfo` are on `aekasha/merging` and
+  `aekasha/schemas`. No scene lists a palette yet (section 4's does).
+- **For section 4:** three's `setValues` copies a `Vector2` only from a `Vector2`, so a material
+  JSON's `normalScale: [0.8, 0.8]` (`ruinBrick`) makes the member's `normalScale` a plain array.
+  The merge material uses `[0.8, 0.8]` from its entry; the reference member may render with a
+  wrong or missing normal scale. Check `ruinBrick` alone in the reference first; if it's wrong,
+  `createMaterial` converts a two-number array for a `Vector2` parameter (a kernel fix of its own).
+
 ### Phase 3 — Group integration (D4)
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.

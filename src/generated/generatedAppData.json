@@ -27994,6 +27994,60 @@
           ]
         }
       },
+      "__entries": [
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 1,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 0,
+          "normalScale": [
+            0.8,
+            0.8
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": "#d8ecc8",
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 0.95,
+          "metalness": 0,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 1
+        },
+        {
+          "color": 16777215,
+          "opacity": 1,
+          "emissive": 0,
+          "emissiveIntensity": 1,
+          "roughness": 1,
+          "metalness": 1,
+          "normalScale": [
+            1,
+            1
+          ],
+          "aoMapIntensity": 0.8
+        }
+      ],
       "__sourcePath": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json"
     }
   },

@@ -17,6 +17,7 @@ import { mergeSkyBoxPreset } from '../../src/_engine/features/skybox/Presets';
 import type { GatherContext, Registries } from './context';
 import { EngineMeshAssetSchema, type EngineSceneAsset } from './engineSchemas';
 import { checkSceneMergedGeometries } from './mergedGeometries';
+import { resolveSceneMergeMaterials } from './mergeMaterials';
 import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
@@ -340,13 +341,14 @@ const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
   });
 };
 
-/** Resolves every list of a scene, in the scene pass's order (impostors before textures: they
- * add their atlas slots) */
+/** Resolves every list of a scene, in the scene pass's order (impostors and merge materials
+ * before textures: they add their atlas and array slots) */
 export const resolveSceneAssets = (run: SceneRun) => {
   resolveCameras(run);
   resolveLights(run);
   resolveGeometries(run);
   resolveImpostors(run);
+  resolveSceneMergeMaterials(run);
   resolveTextures(run);
   resolveMaterials(run);
   resolveMeshes(run);

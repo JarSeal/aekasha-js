@@ -31,6 +31,20 @@ describe("a mesh's merge", () => {
   });
 });
 
+describe("a scene's mergeMaterials (p374)", () => {
+  const parse = (mergeMaterials: unknown) =>
+    SceneSchema.safeParse({ id: 's', sceneFile: 's.ts', mergeMaterials });
+
+  test('takes palette ids, each once', () => {
+    expect(parse(['ruinsPalette', 'propsPalette']).success).toBe(true);
+    expect(parse([]).success).toBe(true);
+    expect(parse(['']).success).toBe(false);
+    const twice = parse(['ruinsPalette', 'ruinsPalette']);
+    expect(twice.success).toBe(false);
+    expect(twice.error?.issues[0].message).toMatch(/"ruinsPalette" is listed twice/);
+  });
+});
+
 describe("a scene's mergeGroups", () => {
   test("takes groups' shadow flags and AUTO's defaults", () => {
     expect(

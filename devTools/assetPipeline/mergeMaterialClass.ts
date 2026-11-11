@@ -4,6 +4,7 @@ import {
   ORM_SOURCE_MAP_KEYS,
   type MaterialAsset,
   type MergeMaterialAsset,
+  type MergeMaterialEntry,
   type MergeMaterialSlot,
 } from '../../src/_engine/schemas';
 import { textureMapKeys } from '../../src/_engine/utils/Constants';
@@ -41,6 +42,8 @@ export type MergeMaterialClass = {
   /** By palette index: undefined for an id that isn't a material JSON's, or a member of another
    * type */
   members: (MergeMaterialMember | undefined)[];
+  /** By palette index: each member's parameter table entry (undefined as in `members`) */
+  entries: (MergeMaterialEntry | undefined)[];
   /**
    * Per slot the palette has, each member's maps in it by key (a texture's id), by palette index:
    * `{}` for a member without one. `orm` holds only the keys its `from` lists.
@@ -48,17 +51,20 @@ export type MergeMaterialClass = {
   maps: Partial<Record<MergeMaterialSlot, Record<string, string>[]>>;
 };
 
-/** The table's parameters (D3): one entry per member, so they may differ */
-const ENTRY_PARAMS = new Set([
-  'color',
-  'opacity',
-  'emissive',
-  'emissiveIntensity',
-  'roughness',
-  'metalness',
-  'normalScale',
-  'aoMapIntensity',
-]);
+/** The table's parameters (D3), one entry per member, so they may differ: three's
+ * `MeshStandardMaterial` values for the ones a member's JSON leaves out */
+const ENTRY_DEFAULTS: MergeMaterialEntry = {
+  color: 0xffffff,
+  opacity: 1,
+  emissive: 0x000000,
+  emissiveIntensity: 1,
+  roughness: 1,
+  metalness: 0,
+  normalScale: [1, 1],
+  aoMapIntensity: 1,
+};
+
+const ENTRY_PARAMS = new Set(Object.keys(ENTRY_DEFAULTS));
 
 /** Not the material's state */
 const IGNORED_PARAMS = new Set(['name']);
@@ -164,6 +170,57 @@ const checkMemberMaps = (
   }
 };
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+/** A `normalScale` as `[x, y]`: an array or `{ x, y }` of two numbers, else undefined */
+const readNormalScale = (value: unknown): [number, number] | undefined => {
+  const [x, y] = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object'
+      ? [(value as { x?: unknown }).x, (value as { y?: unknown }).y]
+      : [];
+  if (Array.isArray(value) && value.length !== 2) return undefined;
+  return isFiniteNumber(x) && isFiniteNumber(y) ? [x, y] : undefined;
+};
+
+/** A member's table entry from its `params` (three's default for a missing one); an error for a
+ * value of the wrong kind */
+const readEntry = (
+  params: Record<string, unknown>,
+  label: string,
+  errors: string[]
+): MergeMaterialEntry => {
+  const entry: MergeMaterialEntry = { ...ENTRY_DEFAULTS, normalScale: [1, 1] };
+  const fail = (key: string, expected: string) =>
+    errors.push(`${label}: params.${key} is ${formatValue(params[key])}: ${expected}`);
+  for (const key of ['color', 'emissive'] as const) {
+    const value = params[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' || isFiniteNumber(value)) entry[key] = value;
+    else fail(key, "a colour (a '#rrggbb' or CSS string, or a hex number)");
+  }
+  const numberKeys = [
+    'opacity',
+    'emissiveIntensity',
+    'roughness',
+    'metalness',
+    'aoMapIntensity',
+  ] as const;
+  for (const key of numberKeys) {
+    const value = params[key];
+    if (value === undefined || value === null) continue;
+    if (isFiniteNumber(value)) entry[key] = value;
+    else fail(key, 'a number');
+  }
+  if (params.normalScale !== undefined && params.normalScale !== null) {
+    const normalScale = readNormalScale(params.normalScale);
+    if (normalScale) entry.normalScale = normalScale;
+    else fail('normalScale', 'two numbers, [x, y] or { x, y }');
+  }
+  return entry;
+};
+
 /** A member's own checks; returns it when it can join (a `STANDARD` material) */
 const checkMember = (
   palette: MergeMaterialAsset,
@@ -198,6 +255,7 @@ const checkMember = (
     );
   }
   checkMemberMaps(palette, params, label, result.errors);
+  result.entries[index] = readEntry(params, label, result.errors);
   const scenes = Object.entries(found.data.__saveData ?? {})
     .filter(([, entries]) => entries?.[0] && 'params' in entries[0] && entries[0].params)
     .map(([sceneId]) => sceneId);
@@ -278,7 +336,8 @@ const collectSlotMaps = (
  * Checks a palette's members against the merge material's class (p374 D1). Errors (each naming
  * the member and the property): an id that isn't a material JSON's, a type other than `STANDARD`,
  * `transparent`, a map without its slot (or left out of `orm`'s `from`), a map a merge material
- * doesn't have, and a state parameter the members don't agree on (a missing one is three's
+ * doesn't have, a table parameter of the wrong kind (a colour, a number, `normalScale`'s two
+ * numbers), and a state parameter the members don't agree on (a missing one is three's
  * default). Warnings: a slot no member uses, a feature (a slot, emissive) only one member uses, a
  * member whose scene save entries change its params.
  */
@@ -286,7 +345,13 @@ export const checkMergeMaterialClass = (
   palette: MergeMaterialAsset,
   findMaterial: MaterialLookup
 ): MergeMaterialClass => {
-  const result: MergeMaterialClass = { errors: [], warnings: [], members: [], maps: {} };
+  const result: MergeMaterialClass = {
+    errors: [],
+    warnings: [],
+    members: [],
+    entries: [],
+    maps: {},
+  };
   result.members = palette.materials.map((_, index) =>
     checkMember(palette, index, findMaterial, result)
   );

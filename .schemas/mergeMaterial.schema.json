@@ -101,6 +101,14 @@
           "$ref": "#/definitions/__schema51"
         }
       ]
+    },
+    "__entries": {
+      "description": "Set by the gatherer: each member's parameter table entry, by palette index.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema52"
+        }
+      ]
     }
   },
   "required": [
@@ -638,6 +646,70 @@
         ],
         "additionalProperties": false
       }
+    },
+    "__schema52": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "$ref": "#/definitions/__schema53"
+          },
+          "opacity": {
+            "type": "number"
+          },
+          "emissive": {
+            "$ref": "#/definitions/__schema53"
+          },
+          "emissiveIntensity": {
+            "type": "number"
+          },
+          "roughness": {
+            "type": "number"
+          },
+          "metalness": {
+            "type": "number"
+          },
+          "normalScale": {
+            "type": "array",
+            "items": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2,
+            "additionalItems": false
+          },
+          "aoMapIntensity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "color",
+          "opacity",
+          "emissive",
+          "emissiveIntensity",
+          "roughness",
+          "metalness",
+          "normalScale",
+          "aoMapIntensity"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema53": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        }
+      ]
     }
   }
 }

@@ -43,6 +43,66 @@ describe('checkMergeMaterialClass', () => {
     ]);
   });
 
+  it('reads each member’s table entry, three’s default for a missing parameter', () => {
+    const result = checkMergeMaterialClass(
+      palette(['a', 'b', 'c']),
+      lookup({
+        a: standard({
+          color: '#ff8000',
+          opacity: 0.5,
+          emissive: 0x202060,
+          emissiveIntensity: 2,
+          roughness: 0.3,
+          metalness: 0.7,
+          normalScale: [0.6, -0.6],
+          aoMapIntensity: 0.8,
+        }),
+        b: standard(),
+        c: standard({ normalScale: { x: 2, y: 3 } }),
+      })
+    );
+    expect(result.errors).toEqual([]);
+    const defaults = {
+      color: 0xffffff,
+      opacity: 1,
+      emissive: 0x000000,
+      emissiveIntensity: 1,
+      roughness: 1,
+      metalness: 0,
+      normalScale: [1, 1],
+      aoMapIntensity: 1,
+    };
+    expect(result.entries).toEqual([
+      {
+        color: '#ff8000',
+        opacity: 0.5,
+        emissive: 0x202060,
+        emissiveIntensity: 2,
+        roughness: 0.3,
+        metalness: 0.7,
+        normalScale: [0.6, -0.6],
+        aoMapIntensity: 0.8,
+      },
+      defaults,
+      { ...defaults, normalScale: [2, 3] },
+    ]);
+  });
+
+  it('refuses a table parameter of the wrong kind, naming the member', () => {
+    const result = checkMergeMaterialClass(
+      palette(['a', 'b']),
+      lookup({
+        a: standard({ color: [1, 0, 0], roughness: '0.5' }),
+        b: standard({ normalScale: 2 }),
+      })
+    );
+    expect(result.errors).toEqual([
+      expect.stringMatching(/^materials\[0\] "a" .*: params\.color is \[1,0,0\]: a colour/),
+      expect.stringMatching(/^materials\[0\] "a" .*: params\.roughness is "0\.5": a number$/),
+      expect.stringMatching(/^materials\[1\] "b" .*: params\.normalScale is 2: two numbers/),
+    ]);
+  });
+
   it('refuses ids that aren’t material JSONs’ and members of another type', () => {
     const { errors, members } = checkMergeMaterialClass(
       palette(['missing', 'phong', 'physical', 'tsl', 'ok']),
