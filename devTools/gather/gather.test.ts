@@ -441,6 +441,38 @@ describe('merge material palettes (p374 D1, D2)', () => {
     expect(logged).toContain('params.bumpMap: a merge material has no bumpMap');
   });
 
+  it('registers each used slot’s array as the texture <paletteId>.<slot>, listed by a scene', () => {
+    const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+    const {
+      isGathered,
+      output,
+      scene: getScene,
+    } = gather({
+      ...scene('a', { textures: ['stones.map'] }),
+      'app/textures/rust.texture.json': { id: 'rust', fileName: albedo, texOpts: { wrapS: 1000 } },
+      ...standard('stoneA', { map: 'rust' }),
+      ...standard('stoneB'),
+      ...palette({ slots: { map: { size: [64, 64], missing: 'SKIP' }, orm: { size: [64, 64] } } }),
+    });
+    expect(isGathered).toBe(true);
+    const json = output?.json as Record<string, Record<string, Record<string, unknown>>>;
+    const slotTexture = {
+      id: 'stones.map',
+      texOpts: { colorSpace: 'srgb', wrapS: 1000 },
+      __layers: ['stoneA', 'stoneB'],
+      __mergeMaterial: { id: 'stones', slot: 'map' },
+    };
+    expect(json.textures['stones.map']).toEqual({
+      ...slotTexture,
+      __sourcePath: 'src/app/palettes/stones.mergeMaterial.json',
+    });
+    expect(json.textures['stones.orm']).toBeUndefined();
+    expect(json.mergeMaterials.stones.__slots).toEqual({
+      map: { texture: 'stones.map', has: [true, false], missing: 'SKIP' },
+    });
+    expect(getScene('a')?.textures).toEqual([slotTexture]);
+  });
+
   it('fails on a palette id a material has', () => {
     const files = {
       ...scene('a'),

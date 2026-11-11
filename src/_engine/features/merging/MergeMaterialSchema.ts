@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { DebugDataSchema, UserDataSchema } from '../../schemas/_HelperSchemas';
 import { JsonSchemaRefSchema, SourcePathSchema } from '../../schemas/_SaveDataSchema';
-import { TextureArrayOptimizeSchema } from '../../schemas/AssetsConfigSchema';
+import {
+  GeneratedAssetFieldsSchema,
+  TextureArrayOptimizeSchema,
+} from '../../schemas/AssetsConfigSchema';
+import { TexOptsSchema } from '../../schemas/TextureSchema';
 
 // A merge material's palette (`*.mergeMaterial.json`, docs/plans/p374_multi-material-merging.md
 // D2): the materials one merge material stands in for, and a texture array per map slot. The
@@ -25,6 +29,10 @@ export const ORM_SOURCE_MAP_KEYS = ['aoMap', 'roughnessMap', 'metalnessMap'] as 
  * default `maxTextureArrayLayers`, WebGL2's minimum `MAX_ARRAY_TEXTURE_LAYERS`).
  */
 export const MAX_MERGE_MATERIAL_ENTRIES = 256;
+
+/** A palette slot's texture id, `<paletteId>.<slot>`: its array in the textures' id space. */
+export const getMergeMaterialSlotTextureId = (paletteId: string, slot: MergeMaterialSlot) =>
+  `${paletteId}.${slot}`;
 
 const SlotSizeSchema = z
   .tuple([z.number().int().min(1), z.number().int().min(1)])
@@ -67,6 +75,22 @@ const MergeMaterialOrmSlotSchema = MergeMaterialSlotSchema.extend({
 /** One map slot of a palette (`slots.<name>`): its layer size and `missing`; `orm`'s also its
  * `from`. */
 export type MergeMaterialSlotDef = z.infer<typeof MergeMaterialOrmSlotSchema>;
+
+// A palette slot's entry in the palette's `__slots`, baked in by the gatherer
+const MergeMaterialSlotInfoSchema = z.object({
+  /** The slot's array texture id, `<paletteId>.<slot>`. */
+  texture: z.string(),
+  /** By palette index: whether the member has a map in the slot (else its layer is neutral). */
+  has: z.array(z.boolean()),
+  /** Set when the slot's `missing` is `SKIP`: a member without the map skips the fetch. */
+  missing: z.literal('SKIP').optional(),
+});
+
+/**
+ * A palette slot as the gatherer bakes it into the palette's `__slots`: its array's texture id,
+ * which members have a map in it, and `missing: 'SKIP'`.
+ */
+export type MergeMaterialSlotInfo = z.infer<typeof MergeMaterialSlotInfoSchema>;
 
 /**
  * A merge material's palette JSON (`*.mergeMaterial.json`): the materials one merge material
@@ -139,8 +163,44 @@ export const MergeMaterialAssetSchema = z.object({
   debugData: DebugDataSchema.optional(),
   /** Set by the gatherer: the file it came from. */
   __sourcePath: SourcePathSchema.optional(),
+  /** Set by the gatherer: each slot that has an array, its texture and the members with a map
+   * in it. */
+  __slots: z
+    .partialRecord(z.enum(MERGE_MATERIAL_SLOTS), MergeMaterialSlotInfoSchema)
+    .optional()
+    .describe('Set by the gatherer: each slot that has an array, its texture and members.'),
 });
 
 /** A merge material's palette JSON (`*.mergeMaterial.json`), as {@link MergeMaterialAssetSchema}
  * validates it. */
 export type MergeMaterialAsset = z.infer<typeof MergeMaterialAssetSchema>;
+
+// A slot's array as a texture in the generated data: written by the gatherer, never validated, so
+// the schema is only its type's
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the type's source
+const MergeMaterialSlotTextureSchema = z.object({
+  /** The slot's texture id, `<paletteId>.<slot>`. */
+  id: z.string(),
+  /** The array's sampler state (its members' textures', which agree) and colour space. */
+  texOpts: TexOptsSchema.optional(),
+  /** The palette's `throwOnError`. */
+  throwOnError: z.boolean().optional(),
+  /** The palette's `userData`. */
+  userData: UserDataSchema.optional(),
+  /** The palette's `debugData`. */
+  debugData: DebugDataSchema.optional(),
+  /** The palette JSON it came from. */
+  __sourcePath: z.string().optional(),
+  /** The member materials' ids, by layer: what makes the runtime load it as an array. */
+  __layers: z.array(z.string()),
+  /** The palette and the slot. */
+  __mergeMaterial: z.object({ id: z.string(), slot: z.enum(MERGE_MATERIAL_SLOTS) }),
+  ...GeneratedAssetFieldsSchema.omit({ __lodChain: true, __sourceUrl: true }).shape,
+});
+
+/**
+ * A palette slot's array as a texture in the generated data: the array's texture settings, its
+ * layers (the members' ids), its palette and slot, and its pipeline output. The runtime loads it
+ * as a texture array (`__layers`).
+ */
+export type MergeMaterialSlotTexture = z.infer<typeof MergeMaterialSlotTextureSchema>;

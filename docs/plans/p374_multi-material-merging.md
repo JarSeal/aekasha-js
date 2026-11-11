@@ -245,6 +245,34 @@ Decisions (2026-11-11, at the phase's start):
   member's maps share one moves to Phase 2 (code-made materials).
 - **Tangents** (D1's vertex requirements) are the geometry's: Phase 3, when members join a group.
 
+As built, section 2 (the array jobs):
+
+- **The resolver** `resolveMergeMaterial` (`devTools/assetPipeline/mergeMaterials.ts`), shared by the
+  gather and the pipeline: the class check, then per slot a member uses one `ArraySource` (layer
+  `i` keyed by member `i`'s id) at the slot's `size`. A member without the map gets a neutral layer,
+  a pack of constants (`rgb: 1`; the normal map's `0.5, 0.5, 1`; alpha 1 when another layer makes the
+  array RGBA). `orm`: a member whose `aoMap`, `roughnessMap` and `metalnessMap` are one texture
+  gets it as its layer; else a pack of their r, g and b (a missing map's channel 1, so the scalar
+  stays), each from a texture's file (a packed or cube texture there is an error). A slot no
+  member uses has no job.
+- **Sampler state per slot:** the textures of a slot's members must agree on `mapping`, `wrapS`,
+  `wrapT`, `magFilter`, `minFilter` and `anisotropy` (a missing one is three's default: clamp,
+  linear, trilinear, 1); the array's `texOpts` carries what one of them sets, plus `srgb` for
+  `map` and `emissiveMap`.
+- **The pipeline:** each slot is a `textureArray` job (key `mergeMaterial:<json>:<slot>`, id
+  `<paletteId>.<slot>`, the palette's `optimize` with the slot's pipeline slot: `baseColor`,
+  `normal`, `orm`, `emissive`), its output `<json path>.palette.<slot>.ktx2` (`ArraySource` gained
+  `logicalPath` and `jsonFiles`: the members' and packed textures' JSONs, so the dev plugin
+  rebuilds a palette when one changes). `readAssetJsons` reads the material and palette JSONs too;
+  a palette whose class or layers fail is dropped (no prune). The dev plugin runs the pipeline on
+  a `*.material.json` change now (a cache look-up for a material in no palette).
+- **The gather:** each slot's array is registered in its own registry (`mergeMaterialSlots`, the
+  textures' id space) as an array texture (`MergeMaterialSlotTexture`: `__layers` the member ids,
+  so the runtime loads it as an array; `__mergeMaterial: { id, slot }`; the generated fields), and
+  the palette gets `__slots` (`MergeMaterialSlotInfo` per slot: its texture, `has` by member, and
+  `missing: 'SKIP'`). A scene can list a slot's texture id in `textures` (dev and production, with
+  the production output check, `checkMergeMaterialSlot`); how a scene names a palette is Phase 3.
+
 ### Phase 2 — Runtime material and table (D3)
 
 **Exit:** a 4-material palette renders identically to the 4 materials (screenshot diff within

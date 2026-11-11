@@ -1,6 +1,7 @@
 import path from 'path';
 import type { GeneratedAssetFields, TextureCodec } from '../../src/_engine/schemas';
 import {
+  getMergeMaterialSlotAssetKey,
   getPipelineAssetKey,
   getTextureArrayAssetKey,
   getTextureAtlasSlotAssetKey,
@@ -142,7 +143,17 @@ export const getTextureArrayResult = (run: PipelineRun, jsonFile: string) =>
 export const getTextureAtlasSlotResult = (run: PipelineRun, jsonFile: string, slot: string) =>
   run.results.get(getTextureAtlasSlotAssetKey(jsonFile, slot)) ?? null;
 
-/** A texture array (p299 D2) or an atlas slot (D3): only ever a KTX2 output, never passed through */
+/**
+ * The run's result for a merge material palette slot (p374 D2), for the production gather's
+ * checks. Null when the run has none (its palette's class or layers fail: the gatherer reports
+ * that).
+ * @param jsonFile The palette's JSON, absolute or relative to the repo root
+ */
+export const getMergeMaterialSlotResult = (run: PipelineRun, jsonFile: string, slot: string) =>
+  run.results.get(getMergeMaterialSlotAssetKey(jsonFile, slot)) ?? null;
+
+/** A texture array (p299 D2, a palette slot's too) or an atlas slot (D3): only ever a KTX2 output,
+ * never passed through */
 export const isKtxOnlyAsset = (result: PipelineRunResult) =>
   result.asset.type === 'textureArray' || result.asset.type === 'textureAtlas';
 
@@ -224,4 +235,19 @@ export const getTextureAtlasSlotGeneratedFields = (
 ): GeneratedAssetFields =>
   run
     ? getOutputFields('textureAtlas', run.results.get(getTextureAtlasSlotAssetKey(jsonFile, slot)))
+    : {};
+
+/**
+ * A merge material palette slot's generated fields (p374 D2), an array's: its output's `__url`,
+ * `__bytes`, `__vramBytes` (every layer) and `__codec`. None without a run, or for a slot the run
+ * has no output for.
+ * @param jsonFile The palette's JSON, absolute or relative to the repo root
+ */
+export const getMergeMaterialSlotGeneratedFields = (
+  run: PipelineRun | undefined,
+  jsonFile: string,
+  slot: string
+): GeneratedAssetFields =>
+  run
+    ? getOutputFields('textureArray', run.results.get(getMergeMaterialSlotAssetKey(jsonFile, slot)))
     : {};

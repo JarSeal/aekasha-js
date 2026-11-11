@@ -45,6 +45,14 @@ export const getPackLogicalPath = (source: PackSource) =>
 export const getArrayLogicalPath = (jsonFile: string) => getJsonLogicalPath(jsonFile, '.array');
 
 /**
+ * A merge material palette slot's array's logical path (p374 D2): its JSON's, eg.
+ * 'app/scenes/ruins/ruinsPalette.palette.map' for the slot "map" of ruinsPalette.mergeMaterial.json
+ * @param jsonFile Absolute
+ */
+export const getMergeMaterialSlotLogicalPath = (jsonFile: string, slot: string) =>
+  getJsonLogicalPath(jsonFile, `.palette.${slot}`);
+
+/**
  * A texture atlas slot's logical path (p299 D3): its JSON's, eg. 'app/textures/decals.atlas.albedo'
  * for the slot "albedo" of decals.textureAtlas.json
  * @param jsonFile Absolute

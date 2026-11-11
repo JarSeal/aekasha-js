@@ -183,6 +183,13 @@ const resolveTextures = (run: SceneRun) => {
       if (ctx.isProduction) delete slotData.debugData;
       return slotData;
     }
+    if (reg.mergeMaterialSlots[texId]) {
+      // A merge material palette slot's array (p374): loaded like an array (`__layers`)
+      const { __sourcePath, ...slotData } = reg.mergeMaterialSlots[texId];
+      ship.checkMergeMaterialSlot(__sourcePath || '', slotData.__mergeMaterial.slot, sceneId);
+      if (ctx.isProduction) delete slotData.debugData;
+      return slotData;
+    }
     return reportUnknownId('texture', texId);
   });
 };

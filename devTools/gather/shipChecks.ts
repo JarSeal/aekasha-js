@@ -6,6 +6,7 @@
 import { BUDGET_FIX, getBudgetViolations } from '../assetPipeline/budgets';
 import {
   getAssetResult,
+  getMergeMaterialSlotResult,
   getTextureArrayResult,
   getTextureAtlasSlotResult,
   isKtxOnlyAsset,
@@ -27,6 +28,8 @@ export type ShipChecks = {
   ) => void;
   checkArray: (jsonFile: string, sceneId: string) => void;
   checkAtlasSlot: (jsonFile: string, slot: string, sceneId: string) => void;
+  /** A merge material palette slot's array (p374) */
+  checkMergeMaterialSlot: (jsonFile: string, slot: string, sceneId: string) => void;
   /** Logs the assets without an output or over their budget, and fails the gather on one */
   report: () => void;
 };
@@ -114,6 +117,9 @@ export const createShipChecks = (ctx: GatherContext): ShipChecks => {
     },
     checkAtlasSlot: (jsonFile, slot, sceneId) => {
       if (pipeline) checkResult(getTextureAtlasSlotResult(pipeline, jsonFile, slot), sceneId);
+    },
+    checkMergeMaterialSlot: (jsonFile, slot, sceneId) => {
+      if (pipeline) checkResult(getMergeMaterialSlotResult(pipeline, jsonFile, slot), sceneId);
     },
     report: () => {
       if (missingOutputs.size) reportMissingOutputs(ctx, missingOutputs);

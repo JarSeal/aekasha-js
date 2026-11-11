@@ -239,7 +239,8 @@ export const listAssetSourceFiles = (asset: PipelineAsset) => {
 
 /**
  * The asset JSONs an asset is built from (absolute): its own and, for an array, its layers'
- * texture JSONs (their source or pack is the layer); for an atlas slot, its cells'.
+ * texture JSONs (their source or pack is the layer) and its other JSONs (a merge material
+ * palette's members and packed textures, p374); for an atlas slot, its cells'.
  */
 export const listAssetJsonFiles = (asset: PipelineAsset) => {
   const { source } = asset;
@@ -252,6 +253,7 @@ export const listAssetJsonFiles = (asset: PipelineAsset) => {
   return [
     path.resolve(ROOT, asset.jsonFile),
     ...refs.flatMap((ref) => (ref.texture ? [ref.texture.jsonFile] : [])),
+    ...(source.kind === 'array' ? source.jsonFiles ?? [] : []),
   ];
 };
 

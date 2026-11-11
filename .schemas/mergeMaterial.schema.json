@@ -93,6 +93,14 @@
     "__sourcePath": {
       "type": "string",
       "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    },
+    "__slots": {
+      "description": "Set by the gatherer: each slot that has an array, its texture and members.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema51"
+        }
+      ]
     }
   },
   "required": [
@@ -595,6 +603,41 @@
         "type": "string"
       },
       "additionalProperties": {}
+    },
+    "__schema51": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "enum": [
+          "map",
+          "normalMap",
+          "orm",
+          "emissiveMap"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "texture": {
+            "type": "string"
+          },
+          "has": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "missing": {
+            "type": "string",
+            "const": "SKIP"
+          }
+        },
+        "required": [
+          "texture",
+          "has"
+        ],
+        "additionalProperties": false
+      }
     }
   }
 }

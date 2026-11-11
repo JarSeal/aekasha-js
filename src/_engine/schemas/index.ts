@@ -34,6 +34,7 @@ export { lodSchemaPart } from '../features/lod/LodSchema';
 export type { LightAsset } from './LightSchema';
 export { MaterialAssetSchema } from './MaterialSchema';
 export {
+  getMergeMaterialSlotTextureId,
   MAX_MERGE_MATERIAL_ENTRIES,
   MERGE_MATERIAL_SLOTS,
   MergeMaterialAssetSchema,
@@ -43,6 +44,8 @@ export type {
   MergeMaterialAsset,
   MergeMaterialSlot,
   MergeMaterialSlotDef,
+  MergeMaterialSlotInfo,
+  MergeMaterialSlotTexture,
 } from '../features/merging/MergeMaterialSchema';
 export { mergingSchemaPart } from '../features/merging/MergingSchema';
 export type { MaterialAsset, PerType } from './MaterialSchema';

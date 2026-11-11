@@ -101,7 +101,12 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
           cameras: reg.cameras,
           lights: reg.lights,
           geometries: reg.geometries,
-          textures: { ...reg.textures, ...reg.textureArrays, ...reg.atlasSlots },
+          textures: {
+            ...reg.textures,
+            ...reg.textureArrays,
+            ...reg.atlasSlots,
+            ...reg.mergeMaterialSlots,
+          },
           materials: reg.materials,
           mergeMaterials: reg.mergeMaterials,
           meshes: reg.meshes,
