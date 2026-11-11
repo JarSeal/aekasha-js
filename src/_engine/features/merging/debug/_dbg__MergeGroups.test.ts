@@ -13,6 +13,7 @@ import {
   installMergeGroups,
   updateMergeMember,
 } from '../MergeGroups';
+import { beginMergeMemberEdit, endMergeMemberEdit } from '../MergeMemberEdit';
 import {
   _checkMovedMergeMembers,
   _installMergeDebug,
@@ -88,6 +89,18 @@ describe('the moved-member check', () => {
     world.setTransform(members[2], { pos: { x: 7, y: 0, z: 0 } });
     runFrame();
     expect(_checkMovedMergeMembers(world)).toEqual([]);
+  });
+
+  test('skips a member in an edit session: its end writes the range', async () => {
+    const { members } = await createGroupAsync();
+    beginMergeMemberEdit(members[1]);
+    world.setTransform(members[1], { pos: { x: 3, y: 2, z: 0 } });
+    runFrame();
+    expect(_checkMovedMergeMembers(world)).toEqual([]);
+    endMergeMemberEdit(members[1]);
+    runFrame();
+    expect(_checkMovedMergeMembers(world)).toEqual([]);
+    expect(fns.lwarn).not.toHaveBeenCalled();
   });
 
   test('skips a member waiting for its build: the build reads its pose', () => {

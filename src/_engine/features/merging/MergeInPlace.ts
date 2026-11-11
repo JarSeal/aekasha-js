@@ -123,9 +123,9 @@ export const dropMember = (
 };
 
 /**
- * A built member disabled (`DISABLED`'s add hook, and a build of a disabled member): its range
- * collapses, not counted as waste. Again on a member collapsed already does nothing (a `DISABLED`
- * replaced runs the hook again).
+ * A built member disabled (`DISABLED`'s add hook, and a build of a disabled member) or in an edit
+ * session: its range collapses, not counted as waste. Again on a member collapsed already does
+ * nothing (a `DISABLED` replaced runs the hook again).
  * @internal
  */
 export const collapseDisabledMember = (entityId: number, world: ECSWorld) => {
@@ -139,14 +139,15 @@ export const collapseDisabledMember = (entityId: number, world: ECSWorld) => {
 };
 
 /**
- * A collapsed member enabled (`DISABLED`'s remove hook): its triangles written back from its
- * geometry, with the winding of the pose it's baked with. A member whose geometry was replaced
- * since (another vertex or index count) makes its group build again.
+ * A collapsed member enabled (`DISABLED`'s remove hook, an edit session's end): its triangles
+ * written back from its geometry, with the winding of the pose it's baked with. A member whose
+ * geometry was replaced since (another vertex or index count) makes its group build again. One in
+ * an edit session stays collapsed (it's drawn by its own mesh until the session ends).
  * @internal
  */
 export const restoreEnabledMember = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  if (!member?._isCollapsed) return;
+  if (!member?._isCollapsed || member._editPose) return;
   member._isCollapsed = false;
   const found = getMemberRange(member, world);
   const group = world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);

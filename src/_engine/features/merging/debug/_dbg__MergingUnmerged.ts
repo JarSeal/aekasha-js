@@ -39,7 +39,10 @@ const endView = (groupEntityId: number, world: ECSWorld) => {
   }
   for (const entityId of group.members) {
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-    if (member?.groupEntityId !== groupEntityId || member.partIndex === -1) continue;
+    // One in an edit session stays drawn on its own: its session's end merges it
+    if (member?.groupEntityId !== groupEntityId || member.partIndex === -1 || member._editPose) {
+      continue;
+    }
     if (!world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
       world.addComponent(entityId, ComponentType.TAG_MERGED, true);
     }

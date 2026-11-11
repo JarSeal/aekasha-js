@@ -8,10 +8,18 @@ export {
   updateMergeMember,
 } from './MergeGroups';
 export type { CreateMergeGroupOptions } from './MergeGroups';
+export {
+  beginMergeMemberEdit,
+  cancelMergeMemberEdit,
+  endMergeMemberEdit,
+  getMergeMemberAtFace,
+  isMergeMemberInEdit,
+} from './MergeMemberEdit';
 export type {
   MergeGroupData,
   MergeGroupSettings,
   MergeMemberData,
+  MergeMemberEditPose,
   MeshMergeDef,
   MeshMergeOptions,
   SceneAutoMergeEntry,

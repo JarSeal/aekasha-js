@@ -1,10 +1,10 @@
 // The merge groups' highlight (docs/plans/p373_merge-debug-and-member-editing.md D3): a wire box
 // around each member of the highlighted groups, in the group's colour, so a merged mesh shows what
 // it's made of. A box is the member's local bounding box oriented by the matrix it's drawn with
-// (`_bakedMatrix` once built: where the group draws it; its own world matrix while it waits). A
-// line has one colour, so each palette colour has its own line, refilled every frame while
-// something is highlighted, like the LOD overlay (`features/lod/debug/_dbg__LodOverlay.ts`).
-// Default world only.
+// (`_bakedMatrix` once built: where the group draws it; its own world matrix while it waits or is in
+// an edit session). A line has one colour, so each palette colour has its own line, refilled every
+// frame while something is highlighted, like the LOD overlay
+// (`features/lod/debug/_dbg__LodOverlay.ts`). Default world only.
 //
 // "In view" is the active camera's frustum (the debug camera's too: it's what the image shows).
 // Each colour holds MAX_BOXES_PER_COLOR boxes; the rest are counted, not drawn (the tab says so).
@@ -105,8 +105,9 @@ export const writeMergeOverlayBoxes = (
       if (!geometry) continue;
       if (!geometry.boundingBox) geometry.computeBoundingBox();
       const local = geometry.boundingBox!;
+      // Where it's drawn: its baked pose, or its own while it waits or is in an edit session
       const matrix =
-        member.partIndex !== -1
+        member.partIndex !== -1 && !member._editPose
           ? member._bakedMatrix
           : world.getComponent(entityId, ComponentType.OBJECT3D)!.value.matrixWorld;
       if (frustum && !frustum.intersectsBox(_box.copy(local).applyMatrix4(matrix))) continue;

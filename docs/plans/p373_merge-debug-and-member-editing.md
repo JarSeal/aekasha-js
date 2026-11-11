@@ -424,6 +424,83 @@ As built, section 3 (2026-11-11):
 rebuild (rebuild count unchanged), and undo restores it; `getMergeMemberAtFace` returns the right
 member for raycasts on 3 members of one group.
 
+Decided when it started (2026-11-11):
+
+- **The API** (`MergeMemberEdit.ts`, on `aekasha/merging`, each throwing without the feature as the
+  others): D4's four and `isMergeMemberInEdit(entityId, world?)` (the window's reasons). A session
+  is the member's own state, `MERGE_MEMBER._editPose` (its `TRANSFORM`'s position, quaternion and
+  scale at begin), not a map: a removed or deleted member's session goes with its component.
+  - **Begin**: a non-member warns; a second begin keeps the first pose. A built member's range
+    collapses (`collapseDisabledMember`'s write, `_isCollapsed`, no waste) and it loses
+    `TAG_MERGED` (drawn by its own mesh, which `object3DSyncSystem` keeps at its `TRANSFORM`). A
+    member waiting for its build only records the pose. The caller moves the member as it likes
+    (`setTransform`, a `TRANSFORM` write); nothing runs per frame.
+  - **End**: the `TRANSFORM`'s position and rotation go through `world.setTransform` (a body
+    follows, D4), then `updateMergeMember`'s write (a running worker build dropped), then, unless
+    it's disabled, the index restored with the new pose's winding (`restoreEnabledMember`) and
+    `TAG_MERGED` back (not while its group is shown unmerged). Not built yet: nothing to write
+    (the build reads the pose). No session: nothing (a window's close ends unconditionally).
+  - **Cancel**: the pose at begin applied (`setTransform` and the scale), then End.
+  - **The shipping code** (always in the first download, the only part that is: the module is
+    tree-shaken unless an app calls it, and the debugger's import is in a lazy chunk):
+    `applyBuild` leaves a member in a session without `TAG_MERGED` and collapses it after the build
+    (a build during a session bakes the mid-move pose; End writes the final one), and
+    `restoreEnabledMember` skips a member in a session (an enable mid-session would draw it twice).
+    A disable mid-session hides its own mesh and leaves the range collapsed.
+  - **A scene exit** cancels every open session (the risk table's), registered with
+    `registerOnAllSceneExits` on the first begin (no module side effect), over every world's
+    `MERGE_MEMBER`s: a persistent member gets its pose back; the scene's go with it anyway.
+  - The debug side: the moved-member check skips a member in a session, the A/B's end doesn't give
+    it `TAG_MERGED`, the overlay draws its box at its own pose.
+- **Picking**: `getMergeMemberAtFace(groupEntityId, faceIndex, world?)`: a binary search of the
+  group geometry's `mergeParts` by `indexStart` for `faceIndex × 3`, the part's `key` (the member's
+  entity id, `getBuildParts`') checked against `group.partIndex` (a removed member's range answers
+  undefined). A raycast's `object.userData.entityId` is the group entity.
+- **The budget** (Phase 2's note): only the two guards ship; measured in section 3, and when
+  `merging` passes 7 KiB the budget goes to 8 KiB with a comment (`sbp.config.ts`).
+
+Sections:
+
+1. The API and picking: `MergeMemberEdit.ts`, the `_editPose` field, `applyBuild`'s and
+   `restoreEnabledMember`'s guards, the scene exit, the debug modules' three skips, the entry and
+   `MergeGroups.ts`' `assertMergingInstalled`; unit tests (sessions across a build, a worker build,
+   a disable, a remove, a delete, a scene exit; picking by raycast on 3 members).
+2. The member window: editable position, rotation (degrees) and scale (read-only with a reason
+   for a member with a body: colliders don't scale) opening a session on the first change and
+   ending it at the gesture's end and on the window's close; one `merge.memberTransform` undo
+   entry per session (the visit token's rules), undo and redo through `updateMergeMember`; "Remove
+   from group" reasoned while a session is open; the state "being edited"; unit tests.
+3. The checks: in the browser on largeWorld and testDebugScene (a member moved from its window,
+   its own mesh drawn during the drag, the rebuild count unchanged, undo and redo; picking from a
+   raycast), `yarn sbp` (the budget), `yarn verify:baselines`, the scene runner's `debugger`
+   configuration.
+
+As built, section 1 (2026-11-11):
+
+- `MergeMemberEdit.ts` as decided: `beginMergeMemberEdit`, `endMergeMemberEdit`,
+  `cancelMergeMemberEdit`, `isMergeMemberInEdit` and `getMergeMemberAtFace` on `aekasha/merging`,
+  with `MergeMemberEditPose` (the type of `MERGE_MEMBER._editPose`, in `MergeTypes.ts`). Begin reads
+  the pose through `syncMemberPose` (either storage mode) and collapses through
+  `collapseDisabledMember`; End is `setTransform` from the `TRANSFORM`, then `updateMergeMember`,
+  `restoreEnabledMember` unless disabled, and `TAG_MERGED` back even when disabled (an enable
+  later restores the index only, so the member would otherwise be drawn twice). Cancel writes the
+  begin pose on the `TRANSFORM` (`commitTransform`) and ends. Getters don't assert the feature;
+  the three session functions do (`assertMergingInstalled`, exported from `MergeGroups.ts`, now
+  781 lines).
+- The shipping guards: `applyBuild` (no `TAG_MERGED` for a member in a session, collapsed after
+  the build, in the disabled members' loop) and `restoreEnabledMember` (`|| member._editPose`).
+- The debug skips: the moved-member check, the A/B's end and the overlay (a session's member at
+  its own world matrix).
+- Tests: `MergeMemberEdit.test.ts` (13: a session's collapse, moves writing nothing, the end
+  matching a fresh merge with no rebuild; a mirroring during it; the body's `setTransform` at the
+  end; cancel; a member not built yet; a rebuild and a worker build during it; a disable and an
+  enable during it; a remove and a delete; a scene exit; the non-member warning and the no-ops;
+  picking by raycast on 3 members, a part's first and last face, a removed member, a group not
+  built, another entity) and one each in the debug tests (the moved check, the A/B, the overlay).
+  Each guard and skip was checked to fail its tests when taken out. `yarn test` (3086), both
+  `tsc`, lint and the docs ratchet (merging 74 → 81, 100 %; `docs.json` recorded in section 3)
+  pass.
+
 ### Phase 4 — Docs and versioning
 
 1. `features/merging/CLAUDE.md` (the tab, windows, edit sessions), the Hub's Mesh merging page (a

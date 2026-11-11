@@ -21,6 +21,7 @@ import { BOX_EDGE_SEGMENT_COUNT } from '../../lines/LineBuilders';
 import { getLine, installLines } from '../../lines/Lines';
 import { createArrayWriteTarget, FLOATS_PER_SEGMENT, LineWriter } from '../../lines/LineWriter';
 import { addToMergeGroup, buildPendingMergeGroupsAsync, installMergeGroups } from '../MergeGroups';
+import { beginMergeMemberEdit } from '../MergeMemberEdit';
 import { getGroups } from '../MergeState';
 import { getMergeGroupListData, getMergeOverlayNote } from './_dbg__Merging';
 import {
@@ -148,6 +149,23 @@ describe('the boxes', () => {
       getWrittenBounds(writers[getMergeGroupColorIndex(groupId)]),
       [-3.5, -0.5, -0.5],
       [0.5, 0.5, 0.5]
+    );
+  });
+
+  test('a member in an edit session is outlined where it is', async () => {
+    const { groupId, members } = await createGroupAsync([0]);
+    beginMergeMemberEdit(members[0]);
+    world.setTransform(members[0], { pos: { x: 5, y: 0, z: 0 } });
+    const mesh = world.getComponent(members[0], ComponentType.OBJECT3D)!.value;
+    mesh.position.set(5, 0, 0);
+    mesh.updateMatrixWorld();
+    setMergeGroupHighlighted(groupId, true);
+    const writers = createWriters();
+    writeMergeOverlayBoxes(world, null, writers);
+    expectBox(
+      getWrittenBounds(writers[getMergeGroupColorIndex(groupId)]),
+      [4.5, -0.5, -0.5],
+      [5.5, 0.5, 0.5]
     );
   });
 

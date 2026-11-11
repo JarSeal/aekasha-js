@@ -105,7 +105,20 @@ export type MergeMemberData = {
   /** The world matrix its range in the merged geometry was written with (its build, or its last
    * `updateMergeMember`). */
   _bakedMatrix: THREE.Matrix4;
-  /** Its range in the merged index is collapsed because it's disabled (`DISABLED`): enabling it
-   * writes the range again from its geometry. */
+  /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
+   * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** Its `TRANSFORM`'s pose when its edit session began (`beginMergeMemberEdit`), while one is
+   * open: it's drawn by its own mesh, its range collapsed. */
+  _editPose?: MergeMemberEditPose;
+};
+
+/** A merge member's pose when its edit session began: what `cancelMergeMemberEdit` restores. */
+export type MergeMemberEditPose = {
+  /** Its position. */
+  position: THREE.Vector3;
+  /** Its rotation. */
+  quaternion: THREE.Quaternion;
+  /** Its scale. */
+  scale: THREE.Vector3;
 };

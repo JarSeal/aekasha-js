@@ -16,6 +16,7 @@ import {
   rebuildMergeGroup,
   removeFromMergeGroup,
 } from '../MergeGroups';
+import { beginMergeMemberEdit, endMergeMemberEdit } from '../MergeMemberEdit';
 import { getGroupMesh, getGroups } from '../MergeState';
 import { formatMergeSummary, getMergeGroupListData } from './_dbg__Merging';
 import { getMergeSummary } from './_dbg__MergingInfo';
@@ -144,6 +145,24 @@ describe('show unmerged', () => {
     expect(isVisible(members[0])).toBe(true);
     setMergeGroupUnmergedView(groupEntityId, false);
     expect(world.hasComponent(groupEntityId, ComponentType.TAG_DRAW_HELD)).toBe(true);
+  });
+
+  test("an edit session's member stays drawn on its own past the view's end, and its end keeps the view", async () => {
+    const { members, groupEntityId } = await createGroupAsync();
+    setMergeGroupUnmergedView(groupEntityId, true);
+    beginMergeMemberEdit(members[0]);
+    setMergeGroupUnmergedView(groupEntityId, false);
+    expect(isVisible(members[0])).toBe(true);
+    expect(isVisible(members[1])).toBe(false);
+    endMergeMemberEdit(members[0]);
+    expect(isVisible(members[0])).toBe(false);
+
+    // Ended while the group is shown unmerged: drawn on its own with the others
+    setMergeGroupUnmergedView(groupEntityId, true);
+    beginMergeMemberEdit(members[1]);
+    endMergeMemberEdit(members[1]);
+    expect(members.every(isVisible)).toBe(true);
+    expect(world.hasComponent(members[1], ComponentType.TAG_MERGED)).toBe(false);
   });
 
   test('refuses a group not built yet', () => {
