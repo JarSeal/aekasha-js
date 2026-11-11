@@ -183,8 +183,8 @@ describe('the summary', () => {
     const text = formatMergeSummary(world, { builds: 2, updates: 1 });
     expect(text.groups).toBe('2 (2 drawn, 1 pending)');
     expect(text.members).toBe('6 (5 merged, 1 waiting, 0 queued)');
-    expect(text.draws).toBe('3 merged · 5 unmerged');
-    expect(text.shadowDraws).toBe('1 merged · 3 unmerged');
+    expect(text.draws).toBe('3 now · 5 unmerged');
+    expect(text.shadowDraws).toBe('1 now · 3 unmerged');
     expect(text.builds).toBe('2 (2 in total)');
     expect(text.lastBuild).toMatch(/^\d+\.\d ms, main thread: tabGroup\d+$/);
   });

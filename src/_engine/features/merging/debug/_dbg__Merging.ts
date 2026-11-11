@@ -66,9 +66,10 @@ type Readouts = {
   refused: string;
 };
 
-/** "now merged · unmerged", eg. "28 merged · 409 unmerged". */
+/** The draws now against every member drawn on its own, eg. "28 now · 409 unmerged" ("now"
+ * counts a group shown unmerged and the members waiting for a build by their own draws). */
 const formatDraws = (now: number, unmerged: number) =>
-  `${formatCount(now)} merged · ${formatCount(unmerged)} unmerged`;
+  `${formatCount(now)} now · ${formatCount(unmerged)} unmerged`;
 
 /** The summary's texts for a world (`rates`: the last second's builds and updates). */
 export const formatMergeSummary = (

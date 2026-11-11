@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
@@ -34,7 +34,7 @@ windows are the kit's draggable windows with a property grid. Checked 2026-11-04
   `_dbg__LightEditWindow.ts`) is the kernel's.
 - **Drawer tabs**: `createDebuggerTab({ id, title, icon, content, refreshIntervalMs, onOpen, ... })`
   (`debug/DebuggerGUI.ts`, on `aekasha/debug`); `content` returns sections, `{ pane: true,
-  content: [...] }` a property grid (bindings, folders, buttons, `custom`); `updateDebuggerTab` is
+content: [...] }` a property grid (bindings, folders, buttons, `custom`); `updateDebuggerTab` is
   a no-op unless the tab is visible. A `debuggerListCMP` row click is `onActivate`, its toggles
   the row's actions. An icon names a registered icon (`ui/core/icons/`).
 - **Edit windows**: `createDebugWindowGrid` (`debug/_dbg__DebugWindowGrid.ts`): its own
@@ -238,7 +238,7 @@ As built, section 2 (2026-11-11):
 - `_registerMergingWindowLinks()`, called by the tab's creation (the boot's debug step), not at
   the module's load: `registerEntityWindowOpener` is a no-op until the environment says the
   profiler loads. It registers `_registerManagerDebugInfo('MERGE', { label: 'Merge group', icon:
-  'merge', tabId: 'mergingControls' })` and the openers (`mergeGroup` at the default priority,
+'merge', tabId: 'mergingControls' })` and the openers (`mergeGroup` at the default priority,
   `mergeMember` at -1).
 - Tests: `debug/_dbg__MergingWindows.test.ts` (the group window's figures, member rows opening
   their windows; dissolve, its window closed, undo and redo, an `AUTO` group made again as one;
@@ -276,7 +276,7 @@ As built, section 3 (2026-11-11):
   (not on an entry); `docs.json` merging 65 → 72, 100 %. `bundle.json` left as it was (the rebuild
   moved gzip sizes by a few bytes only).
 
-### Phase 2 — Overlay and A/B (D3)
+### Phase 2 — Overlay and A/B (D3) — done
 
 **Exit:** highlighting a group outlines its members; "show unmerged" changes the draw count by the
 member count and leaves the image unchanged.
@@ -374,6 +374,49 @@ As built, section 2 (2026-11-11):
   dissolve; the scene exit), the window's checkbox in `_dbg__MergingWindows.test.ts`. `yarn test`
   (3070), both `tsc`, lint pass; the docs ratchet: merging 72 → 74 exports, 100 % (`docs.json` to
   record in section 3).
+
+As built, section 3 (2026-11-11):
+
+- A Playwright harness in the session's scratchpad (not committed; the runner's server and Chrome,
+  `?isDebug=true&aekTest=true&startScene=…`, frozen, `takeSnapshotAsync` at 1280×800, the app's own
+  module instances by their resource URLs; three's `info.reset` stubbed around each shot, since three
+  resets `info.render` in its own animation frame during the readback; one warm-up shot, as the
+  first after a load drew twice the triangles). The draws, main and shadow passes together:
+
+  |                                            | largeWorld                | testDebugScene          |
+  | ------------------------------------------ | ------------------------- | ----------------------- |
+  | merged                                     | 105                       | 49                      |
+  | the biggest group shown unmerged           | 153 (25 members: +24 × 2) | 248 (200 members: +199) |
+  | every group shown unmerged                 | 820                       | 736 (49 + 700 − 13)     |
+  | merged again                               | 105, the image identical  | 49, the image identical |
+  | pixels changed, every group (of 1 024 000) | 132, max 94               | 1                       |
+
+  largeWorld's 132 pixels are single pixels on the ruins, where members' faces touch: coplanar faces
+  resolve by draw order, which one merged draw and separate draws don't share. Every group unmerged
+  draws fewer triangles there (422 535 against 424 679): its members are culled one by one. The
+  exit's "by the member count" holds per group and pass (less culling). No console errors.
+
+- The highlight (`hideDebugHelpers: false`; the bridge's snapshot hides debug helpers): largeWorld
+  384 boxes in view of 409 members, testDebugScene 700, none over the cap; the boxes outline each
+  ruin block, a colour per group, depth-tested. The tab and the group window through the bridge
+  (`openDebuggerTab({ host: 'DRAWER', … })`, `openDebuggerListRow`, `markDebuggerWindows`): both
+  window checkboxes worked, the state "shown unmerged: …", the summary's groups line and the member
+  rows' state.
+- Found: with a group shown unmerged, the draws read "212 merged · 700 unmerged", the first figure
+  being the draws now. Now "N now · M unmerged" (`formatDraws`).
+- `yarn sbp --profile all`: every budget kept; `_engine/features/merging` 7 041 → 7 144 B gzip in
+  the first download (24 B under its 7 KiB budget). Built with Phase 1's `MergeGroups.ts`: 7 137 B,
+  so section 2's `applyBuild` costs 7 B (the A/B check folds: the build's `applyBuild` has none of it,
+  and `MergeState.ts`' view map isn't in the bundle); the other 96 B were Phase 1's, under the
+  report's threshold then. **Phase 3's edit sessions go over the budget if they ship in the first
+  download**: decide the budget there.
+- `yarn verify:baselines`: no debug code in any build; recorded with `--update`: `api.json` (the two
+  `@internal` `MergeState.ts` exports), `docs.json` (merging 72 → 74, 100 %), `bundle.json`
+  (merging's growth; the other groups moved a few bytes).
+- `yarn verify:scenes --config debugger` (9 scenes): the Merging tab's shot changed in largeWorld,
+  testDebugScene and the gym (the checkbox and its hint, the rows' toggles, "now"), and largeWorld's
+  group window; axe clean; recorded with `--update --only` those three. assetCompare's tab shot
+  warned as before (its load order).
 
 ### Phase 3 — Edit sessions, picking, undo (D4)
 
