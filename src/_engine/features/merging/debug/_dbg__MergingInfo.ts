@@ -12,6 +12,7 @@ import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { AUTO_ID_PREFIX } from '../MergeAuto';
 import { getMergeBatchModule, isBatchedGroup } from '../MergeBatchFront';
 import { findPending, findQueued, getGroupMesh, getMergeDebugStats } from '../MergeState';
+import type { BatchOrder } from '../MergeBatch';
 import type { MergeGroupData, MergeMemberData } from '../MergeTypes';
 
 /** The Merging drawer tab's id. */
@@ -63,8 +64,8 @@ export type MergeBatchFigures = {
   runs: number;
   /** Its compactions so far */
   compactions: number;
-  /** How it keeps a geometry's instances in one draw (MergeBatch.ts' `BatchOrder`) */
-  order: 'COMPACT' | 'RANGE_SORT' | 'NONE';
+  /** How it orders its draws (MergeBatch.ts' `BatchOrder`; S4 shows the transparent ones) */
+  order: BatchOrder;
   /** Its draws per pass with every member in view: its runs (`COMPACT`), the geometries in use
    * (`RANGE_SORT`), one multi-draw (`NONE`, WebGL2) */
   draws: number;

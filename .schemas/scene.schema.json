@@ -69,7 +69,7 @@
       "$ref": "#/definitions/__schema541"
     },
     "mergeMaterials": {
-      "$ref": "#/definitions/__schema555"
+      "$ref": "#/definitions/__schema559"
     },
     "id": {
       "type": "string",
@@ -90,7 +90,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema558"
+          "$ref": "#/definitions/__schema562"
         }
       ]
     }
@@ -7031,7 +7031,7 @@
       }
     },
     "__schema541": {
-      "description": "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? }).",
+      "description": "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling?, geometryReserve?, transparentOrder? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? }).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema542"
@@ -7088,6 +7088,12 @@
             },
             "perMemberCulling": {
               "$ref": "#/definitions/__schema553"
+            },
+            "geometryReserve": {
+              "$ref": "#/definitions/__schema555"
+            },
+            "transparentOrder": {
+              "$ref": "#/definitions/__schema557"
             }
           },
           "required": [
@@ -7160,7 +7166,7 @@
       "type": "boolean"
     },
     "__schema555": {
-      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "description": "BATCHED only: the least room each geometry's slot in the batch reserves ({ vertices, indices? }; its own size when larger), so a pool whose geometries come and go (decals) reuses its slots and its buffers stop growing.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema556"
@@ -7168,16 +7174,58 @@
       ]
     },
     "__schema556": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/__schema557"
-      }
+      "type": "object",
+      "properties": {
+        "vertices": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "indices": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "vertices"
+      ],
+      "additionalProperties": false
     },
     "__schema557": {
+      "description": "BATCHED only, for a transparent material: the order the batch draws its members in, DEPTH (back to front, the default) or JOIN (the order they joined, the newest on top: decals).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema558"
+        }
+      ]
+    },
+    "__schema558": {
+      "type": "string",
+      "enum": [
+        "DEPTH",
+        "JOIN"
+      ]
+    },
+    "__schema559": {
+      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema560"
+        }
+      ]
+    },
+    "__schema560": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema561"
+      }
+    },
+    "__schema561": {
       "type": "string",
       "minLength": 1
     },
-    "__schema558": {
+    "__schema562": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -7261,7 +7309,7 @@
               "$ref": "#/definitions/__schema541"
             },
             "mergeMaterials": {
-              "$ref": "#/definitions/__schema555"
+              "$ref": "#/definitions/__schema559"
             }
           },
           "additionalProperties": false

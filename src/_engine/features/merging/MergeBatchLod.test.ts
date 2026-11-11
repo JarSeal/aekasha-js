@@ -387,6 +387,28 @@ describe('a batched member LOD: levels', () => {
     );
   });
 
+  test("a level's slot stays while no instance draws it, until a full build (p375 Phase 3 S1)", async () => {
+    const { groupId, state, members } = await createBuiltLodGroupAsync([INSTANT, undefined]);
+    stepNear();
+    const box = batchGeometryId(state(), 'batchLodBox')!;
+    const low = batchGeometryId(state(), 'batchLodBoxLow')!;
+    expect([state().slotIsLevel[box], state().slotIsLevel[low]]).toEqual([true, true]);
+    expect(state().slotInstances[low]).toBe(0);
+
+    // The LOD member at level 1, then gone: no member has the LOD, its levels stay held
+    stepAt(5);
+    expect(state().slotInstances[low]).toBe(1);
+    removeFromMergeGroup([members[0]]);
+    expect(state().slotInstances[low]).toBe(0);
+    expect(batchGeometryId(state(), 'batchLodBoxLow')).toBe(low);
+    expect(state().freeSlots).toEqual([]);
+
+    rebuildMergeGroup(groupId);
+    await buildPendingMergeGroupsAsync();
+    expect(batchGeometryId(state(), 'batchLodBoxLow')).toBeUndefined();
+    expect(state().slotIsLevel).toEqual([false]);
+  });
+
   test('a rebuild keeps the level each member shows; a leave shows it on its own mesh', async () => {
     const { groupId, groupEntityId, state, members } = await createBuiltLodGroupAsync([
       INSTANT,

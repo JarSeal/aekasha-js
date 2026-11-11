@@ -1,8 +1,9 @@
 // Which mesh entities a merge group takes (docs/plans/_DONE_p372_mesh-merge-groups.md §5): a refused one
 // is drawn on its own, with a warning naming the reason (`addToMergeGroup`). A `BATCHED` group
-// (p375) takes moving bodies, but only a mesh directly under the root scene whose geometry's
-// attributes and index are the group's exactly (`BatchedMesh` copies every geometry into one set
-// of buffers). A `BAKED` group refuses a `LOD` (until p376); a `BATCHED` one draws a member's
+// (p375) takes moving bodies and transparent materials (its batch sorts its members, Phase 3), but
+// only a mesh directly under the root scene whose geometry's attributes and index are the group's
+// exactly (`BatchedMesh` copies every geometry into one set of buffers) and whose `renderOrder` is
+// the group's (a batch is drawn at one place in the render order). A `BAKED` group refuses a `LOD` (until p376); a `BATCHED` one draws a member's
 // levels (p375 Phase 2) when each is drawable in its batch (`getBatchLodRefusal`).
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
@@ -46,13 +47,11 @@ const getBatchMismatch = (
   return undefined;
 };
 
-/** The first live member's geometry, for the attribute check. */
-const getGroupGeometry = (group: MergeGroupData, world: ECSWorld) => {
+/** The first live member's mesh, for the attribute and render order checks. */
+const getGroupMesh = (group: MergeGroupData, world: ECSWorld) => {
   for (const entityId of group.members) {
     const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
-    if ((object as Partial<THREE.Mesh> | undefined)?.isMesh) {
-      return (object as THREE.Mesh).geometry as THREE.BufferGeometry;
-    }
+    if ((object as Partial<THREE.Mesh> | undefined)?.isMesh) return object as THREE.Mesh;
   }
   return undefined;
 };
@@ -130,7 +129,9 @@ export const getMergeRefusal = (
   if (Array.isArray(mesh.material)) {
     return 'it has a material array (one draw per material): split it into one mesh per material, which a palette can merge';
   }
-  if (mesh.material.transparent) return 'its material is transparent (drawn sorted per object)';
+  if (mesh.material.transparent && mode === 'BAKED') {
+    return 'its material is transparent (drawn sorted per object: a BATCHED group sorts its members)';
+  }
   const paletteIndex = group && getGroupPaletteIndex(group, mesh.material);
   if (paletteIndex === -1) {
     return `its material isn't one of the palette "${group!.settings.palette}"'s (a variant or a clone of a member is another material)`;
@@ -161,9 +162,13 @@ export const getMergeRefusal = (
   if (world.hasComponent(entityId, ComponentType.PERSISTENT) && !group.settings.persistent) {
     return "it's persistent and the group isn't";
   }
-  const groupGeometry = getGroupGeometry(group, world);
-  if (!groupGeometry) return null;
+  const groupMesh = getGroupMesh(group, world);
+  if (!groupMesh) return null;
+  const groupGeometry = groupMesh.geometry as THREE.BufferGeometry;
   if (mode === 'BATCHED') {
+    if (mesh.renderOrder !== groupMesh.renderOrder) {
+      return "its renderOrder isn't the group's (a batch is drawn at one place in the render order)";
+    }
     const mismatch = getBatchMismatch(geometry, groupGeometry);
     return mismatch ? `its geometry has ${mismatch} (a batch's geometries agree exactly)` : null;
   }

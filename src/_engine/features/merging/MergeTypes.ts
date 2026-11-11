@@ -10,6 +10,21 @@ import type * as THREE from 'three/webgpu';
  */
 export type MergeGroupMode = 'BAKED' | 'BATCHED';
 
+/**
+ * The order a transparent `BATCHED` group draws its members in (`transparentOrder`): `DEPTH` back
+ * to front (three's transparent sort), `JOIN` in the order they joined, the newest last (on top:
+ * decals on one surface, which a depth sort would reorder as the camera moves).
+ */
+export type MergeTransparentOrder = 'DEPTH' | 'JOIN';
+
+/** The least room a `BATCHED` group reserves for each geometry (`geometryReserve`). */
+export type MergeGeometryReserve = {
+  /** Vertices: a positive integer. */
+  vertices: number;
+  /** Indices (an indexed geometry's): a positive integer. Default: each geometry's own. */
+  indices?: number;
+};
+
 /** A merge group's settings: `createMergeGroup`'s options, kept on its `MERGE_GROUP`. */
 export type MergeGroupSettings = {
   /** How the group draws its members. Default `BAKED`. A `BATCHED` group takes moving bodies,
@@ -19,6 +34,16 @@ export type MergeGroupSettings = {
    * included). Turn it off for a batch that is always in view: the per-member walk is then skipped.
    * Default true. */
   perMemberCulling?: boolean;
+  /** `BATCHED` only: the least room each geometry's slot in the batch reserves (its own size when
+   * larger). A geometry no member uses any more frees its slot, which the next geometry that fits
+   * takes, so a pool whose geometries come and go (decals) gives them all one reserve and its
+   * buffers stop growing; `updateMergeMember` rewrites a slot in place while the geometry fits it.
+   * `indices` only for indexed geometries. Default: each geometry's own size. */
+  geometryReserve?: MergeGeometryReserve;
+  /** `BATCHED` only, for a transparent material: the order the batch draws its members in, each
+   * pass (the batch itself is sorted with the scene's other transparent objects as one, at its
+   * members' `renderOrder`). Default `DEPTH`. */
+  transparentOrder?: MergeTransparentOrder;
   /** Whether the group's mesh casts shadows. Default: its first member's `castShadow`. */
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's `receiveShadow`. */
@@ -128,6 +153,10 @@ export type SceneMergeGroupEntry = {
   mode?: MergeGroupMode;
   /** `BATCHED` only: each member culled on its own. Default true. */
   perMemberCulling?: boolean;
+  /** `BATCHED` only: the least room each geometry's slot reserves. Default: its own size. */
+  geometryReserve?: MergeGeometryReserve;
+  /** `BATCHED` only: a transparent batch's order, `DEPTH` (the default) or `JOIN`. */
+  transparentOrder?: MergeTransparentOrder;
 };
 
 /**
@@ -164,6 +193,9 @@ export type MergeMemberData = {
    * `_fadeInstanceId`), fading out to LOD culled (`OUT`) or in from it (`IN`); undefined while
    * none runs (or one runs that its batch didn't start: it then draws the member whole). */
   _lodFade?: 'LEVEL' | 'OUT' | 'IN';
+  /** A `BATCHED` member's place in the order members joined its group, given at its first build
+   * (`JOIN` draws a transparent batch in it; a rebuild keeps it). */
+  _joinSeq?: number;
   /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
    * joined; undefined in a group of one material. */
   _paletteIndex?: number;

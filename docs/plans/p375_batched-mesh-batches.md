@@ -656,8 +656,115 @@ moving members.
    `MergeBatchDetach.test.ts`, `MergeBatchLod.test.ts`, `features/lod/LodMeshDrawDelegate.test.ts`,
    `debug/_dbg__MergingBatchedLod.test.ts`.
 
-   3. p309's decal pools on batched groups (if p309 has shipped, port;
-   if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
+3. p309's decal pools on batched groups (if p309 has shipped, port;
+   if not, p309 uses this). p309 hasn't shipped (2026-11-11: draft, blocked by p306, p304 and
+   p307), so Phase 3 builds what its runtime pools (its D4) use and checks it with a stand-in pool.
+   **Grounding** (r187, read 2026-11-11): merged draws join only entries of equal start and count,
+   so only instances of one geometry merge: a pool of 128 conformed patches (a geometry each) is 128
+   draws on WebGPU inside one render object, one multi-draw on WebGL2; a batch never freed a
+   geometry (`BatchState.geometryIds` held each for good, its buffers growing with every new one);
+   `BATCHED` refused transparent members, and p309's default is `BLEND`; three's batch colour is a
+   `vec4` multiplied into the material's vertex colour, so `setColorAt`'s alpha fades a `BLEND`
+   decal, but `_colorsTexture` appears at the first `setColorAt` (a drawn batch's render object
+   must rebuild, S4's `growInstances` trap).
+   **Decisions** (2026-11-11): (1) a decal is a member entity (a mesh with `merge: { group, mode:
+   'BATCHED' }`), the pool an explicit batched group: scene ownership, `DISABLED`, per-member
+   culling, the debugger, picking and Phases 1-2's r187 fixes come with it; (2) geometry slots
+   (D5): a geometry no instance uses frees its slot (the batch drops it), a new one reuses a free
+   slot it fits (`setGeometryAt`) before `addGeometry`; the group setting `geometryReserve: {
+   vertices, indices }` sizes every slot alike (a FIFO pool's), and `updateMergeMember` on a
+   batched member rewrites its geometry's slot, so a pool can keep N registered geometries and
+   rewrite them; (3) `BATCHED` takes a transparent material, the group setting `transparentOrder:
+   'DEPTH' | 'JOIN'` (default `DEPTH`, three's back to front; `JOIN` draws in join order, newest on
+   top, for decals) orders it, and a member's `renderOrder` must be the batch's; (4)
+   `setMergeMemberColor(entityId, color, opacity?, world?)` on `aekasha/merging`, batched members
+   only (a baked one warns), written only on a change, no allocation. Out of scope (p309's): the
+   toolkit pool (`createDecalPool`, `spawnDecal`, terrain patches, ribbons), atlases and material.
+   A `merging` budget over 10 KiB stops for a decision.
+   **Sections** (each stopped for review):
+   - S1 — geometry slots: instance counts per geometry (members, LOD levels, fade second
+     instances), a freed slot and its reuse by fit, `geometryReserve` (schema too),
+     `updateMergeMember` rewriting a batched member's slot (a geometry past its reserve warns);
+     three's per-geometry bounds after `setGeometryAt` checked. Tests: `MergeBatchSlots.test.ts`.
+   - S2 — transparent batched groups: the refusal lifted for `BATCHED`, `transparentOrder` as
+     `customSort`s (depth, or a join sequence per member), a transparent batch sorted on both
+     backends and never compacted, the `renderOrder` rule.
+   - S3 — `setMergeMemberColor` (a first-download stub, the work lazy), the colours texture's first
+     appearance rebuilding the render object, colours kept through growth and compaction; JSDoc
+     with `@example`.
+   - S4 — the debugger: slots (in use, free, reserve), the transparent order, coloured members.
+   - S5 — the exit: a decal stand-in in `batchedMeshSpike` (`?bmsDecals=blend|cutout`: conformed
+     grid patches on a heightfield ground, spawned FIFO into a pool of 128 or 512, faded by
+     opacity) against separate meshes in the bench (CPU frame, spawn cost, draws, buffers stable
+     over a long churn), `scenes.config.ts` variants, `yarn sbp`, `yarn verify:baselines`,
+     `yarn verify:scenes`; then p309's D4, its Phase 4 exit and its risk row rewritten from the
+     results (the single-geometry pool kept or dropped). **Exit:** ≥ 30 % CPU frame against
+     separate meshes on both backends, buffers that stop growing over 10 minutes of churn, `BLEND`
+     decals matching separate meshes in a pixel diff.
+
+   **S1 results** (2026-11-11):
+   - **Built:** `MergeBatchSlots.ts` (in `MergeBatch.ts`' lazy chunk; `MergeBatch.ts` stays at
+     ~750 lines): `BatchState`'s `slotGeometries`, `slotInstances`, `slotIsLevel` and `freeSlots`;
+     `setInstanceSlot` (every instance add, delete and geometry change in `MergeBatch.ts` and
+     `MergeBatchLod.ts` goes through it; a compaction only permutes, so it doesn't), a slot left
+     with no instance freed (the batch drops the geometry) unless it holds a member's LOD level
+     (`markLevelSlots` at a build and a later LOD's first apply; kept until a full build);
+     `addGeometries` moved here, a new geometry taking the best-fitting free slot (the fewest
+     reserved vertices, `setGeometryAt`) before `addGeometry`. Freed slots stay active in three
+     (its `deleteGeometry` would let `addGeometry` reuse the id and append: the spike's leak).
+     `geometryReserve: { vertices, indices? }` (`MergeGroupSettings`, the type
+     `MergeGeometryReserve` on `aekasha/merging`, the scene's group entry: strict, positive
+     integers, `BATCHED` only; `createMergeGroup` throws the same). `updateMergeMember` on a
+     batched member (`updateBatchMemberGeometry`): a mesh with another geometry has its instance
+     take it; changed data rewrites the slot (`rewriteGeometry`, bounds measured first: three
+     keeps a copy of the geometry's own), or past the reserve moves it, every instance of it with
+     it, to a slot that fits. The decision's "a geometry past its reserve warns" became that move,
+     without a warning: nothing is lost, and the old slot is free for the next geometry.
+   - **Tests:** `MergeBatchSlots.test.ts` (13: a slot freed and a shared one kept, reuse in place
+     with the buffers unchanged, the best fit and a new slot, a full build without free slots, a
+     freed slot not drawn (three's merged draws), a FIFO churn of 200 rounds with
+     `geometryReserve` and 100 without (one buffer size throughout), a geometry past the reserve,
+     `updateMergeMember`'s rewrite, move and new geometry, `geometryReserve`'s throws),
+     `MergeBatchLod.test.ts` (+1: a level's slot kept with no instance, until a full build),
+     `MergingSchema.test.ts` (+1). `yarn test` 3 299 passed; lint, both `tsc`, the docs ratchet
+     clean (merging's exports 162 / 162).
+   - **`yarn sbp`:** every budget passes: `merging` 9.5 kB of 10 KiB (+0.1), the lazy
+     `MergeBatch.js` 3.7 → 4.3 kB, the initial 393.6 kB of 394 KiB, `assets/index.js` 389.4 of
+     390. `yarn verify:scenes --only batchedMeshSpike` (a regression check: S1 changes every
+     batch's bookkeeping): all 28 runs load without errors (the scene still has no recorded
+     baselines), the kinematic probe hash `2fd77609` for both ways and all three targets, and the
+     snapshot pairs as Phase 2's: engine against the hand-built batch and `@lodEngine` against
+     `@lodSeparate` max delta 2, engine against separate 0.001 % over 8/255;
+     `@kinematicEngine` against `@kinematicSeparate` max 6 in two runs but one `mainThread` page
+     at 0.002 % (max 32), which the second run didn't repeat (the interpolated poses' frame timing).
+     **For S2-S3:** the initial download has 0.4 kB left, so their first-download parts
+     (`setMergeMemberColor`'s stub, the transparent rule) may cross it.
+
+   **S2 results** (2026-11-11):
+   - **Built:** `MergeEligibility.ts` refuses a transparent material in a `BAKED` group only (the
+     reason now points at `BATCHED`), and a `BATCHED` member whose `renderOrder` isn't the
+     group's first member's (`getGroupMesh` in place of `getGroupGeometry`); the batch takes that
+     `renderOrder`. `BatchOrder` gains `DEPTH` and `JOIN`: a batch whose group's material is
+     transparent gets its group's `transparentOrder` (`MergeTransparentOrder` on
+     `aekasha/merging`, the schema's group entry, `createMergeGroup`'s throw), sorted every pass on
+     both backends (WebGL2's multi-draw follows the sorted list) and never compacted; a LOD member
+     leaves it (`noteBatchLodMember` turns only `COMPACT` into `RANGE_SORT`). `DEPTH` is three's
+     own sort (`customSort` null), `JOIN` a per-batch `customSort` (`createJoinSort`, made once a
+     batch) by `BatchState.joinSeq`, each instance's member's `MERGE_MEMBER._joinSeq`: given at the
+     member's first build in `group.members`' order (`assignJoinSeqs`, before the build groups by
+     geometry, one module-wide count), kept through a rebuild, carried by a compaction and to a
+     level fade's outgoing instance. three types `customSort`'s items without `index`, which its
+     render list sets: the sort reads it through a cast. The debugger's `order` type widened only
+     (S4 shows the new orders).
+   - **Tests:** `MergeBatchTransparent.test.ts` (7: `BAKED` refusing and `BATCHED` taking a
+     transparent member; `DEPTH` back to front and `JOIN` in three's draw list (the indirect ids),
+     through a newcomer in a freed id and a rebuild; sorted on WebGL2, not compacted at 5 runs of 2
+     geometries, a LOD member leaving the order; an opaque batch's `COMPACT` / `NONE`;
+     `renderOrder`; the throws), `MergingSchema.test.ts` (+1). `yarn test` 3 307 passed; lint, both
+     `tsc`, the docs ratchet clean (merging's exports 163 / 163).
+   - **`yarn sbp`:** every budget passes: `merging` 9.6 kB of 10 KiB (+0.1 on S1), the lazy
+     `MergeBatch.js` 4.5 kB (+0.2), the initial 393.7 of 394 KiB, `assets/index.js` 389.5 of 390.
+4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
 
 ## 5. Risks

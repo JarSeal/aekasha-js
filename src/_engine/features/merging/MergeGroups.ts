@@ -115,8 +115,10 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
  * @returns the group's entity id
  * @throws for an id the world has a group with already, a reserved id (`AUTO`, or one starting
  * with `auto:`, the automatic groups'), a `palette` the scene doesn't list (no merge material is
- * registered under its id), with `persistent` or with `BATCHED`, an unknown `mode`, or without
- * the `merging()` feature
+ * registered under its id), with `persistent` or with `BATCHED`, an unknown `mode`, a
+ * `geometryReserve` without `BATCHED` or whose counts aren't positive integers, a
+ * `transparentOrder` without `BATCHED` or that isn't `DEPTH` or `JOIN`, or without the
+ * `merging()` feature
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -154,8 +156,27 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
       `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : mode === 'BATCHED' ? "a palette group can't be BATCHED (its merge material reads the merged vertices' palette index)" : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
     );
   }
+  const reserve = opts.geometryReserve;
+  if (
+    reserve &&
+    (mode !== 'BATCHED' ||
+      !isPositiveInteger(reserve.vertices) ||
+      (reserve.indices !== undefined && !isPositiveInteger(reserve.indices)))
+  ) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): geometryReserve is a BATCHED group's setting, its counts positive integers.`
+    );
+  }
+  const order = opts.transparentOrder;
+  if (order !== undefined && (mode !== 'BATCHED' || (order !== 'DEPTH' && order !== 'JOIN'))) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): transparentOrder is a BATCHED group's setting, DEPTH or JOIN.`
+    );
+  }
   return createGroup(opts, ecsWorld, false);
 };
+
+const isPositiveInteger = (value: number) => Number.isInteger(value) && value > 0;
 
 /**
  * Adds mesh entities to a merge group (created when the world has none with this id, with the
@@ -168,11 +189,12 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * the automatic group of its material and cell at the next build.
  *
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
- * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
- * material array or another material than the group's (a palette group's: one its palette doesn't
- * have), a manager, a `LOD`, attributes the group's can't take, or a group already; a persistent
- * one, unless the group is persistent. A `BAKED` group refuses a dynamic or kinematic body; a
- * `BATCHED` one a mesh that isn't directly under the root scene.
+ * entity that isn't a plain mesh (skinned, morphed, instanced), has a material array or another
+ * material than the group's (a palette group's: one its palette doesn't have), a manager,
+ * attributes the group's can't take, or a group already; a persistent one, unless the group is
+ * persistent. A `BAKED` group refuses a transparent material, a `LOD` and a dynamic or kinematic
+ * body; a `BATCHED` one a mesh that isn't directly under the root scene, or whose `renderOrder`
+ * isn't the group's.
  * @param world the group's world (default: the default world)
  * @remarks Members are static: a member moved later is drawn where it was merged until
  * `updateMergeMember` moves its part.
@@ -278,12 +300,15 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * Moves a merged member's part of its group's mesh to where the member is now: call it after
  * changing a member's `TRANSFORM` (`setTransform`, a fixed body moved). Only the member's range of
  * the merged geometry is written again, without a rebuild. A member waiting for its group's build
- * is merged where it is then and needs no call, and so does a `BATCHED` group's member (its
- * instance follows its `TRANSFORM` every frame).
+ * is merged where it is then and needs no call, and so does a `BATCHED` group's member's move (its
+ * instance follows its `TRANSFORM` every frame). For a `BATCHED` member it writes the member's
+ * geometry into the batch again instead: call it after changing its geometry's vertices or index
+ * (every member sharing the geometry draws the new data), or after giving its mesh another
+ * geometry.
  * @param world the member's world (default: the default world)
  * @remarks Members are static by contract: a member moved without this call is still drawn where
- * it was merged (the debug env warns once per member). Its geometry's vertex count can't change in
- * place: a member whose geometry was replaced makes its group build again.
+ * it was merged (the debug env warns once per member). A `BAKED` member's geometry's vertex count
+ * can't change in place: a member whose geometry was replaced makes its group build again.
  * @example
  * ```ts
  * import { getEntityIdByAppId, getECSWorld } from 'aekasha';
@@ -310,6 +335,9 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
     markPending(ecsWorld, member.groupEntityId, group);
   }
   if (member.partIndex !== -1) rewriteMember(entityId, member, group, ecsWorld);
+  else if (member.instanceId !== -1) {
+    getMergeBatchModule()?.updateBatchMemberGeometry(entityId, member, group, ecsWorld);
+  }
 };
 
 /**

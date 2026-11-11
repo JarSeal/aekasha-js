@@ -45,6 +45,30 @@ describe('the mode (p375)', () => {
     expect(isGroupsValid([{ id: 'props', mode: 'BATCHED', palette: 'ruinsPalette' }])).toBe(false);
     expect(isGroupsValid([{ id: 'AUTO', mode: 'BATCHED' }])).toBe(false);
   });
+
+  test('geometryReserve only with BATCHED, its counts positive integers (Phase 3 S1)', () => {
+    const reserve = { vertices: 64, indices: 192 };
+    expect(isGroupsValid([{ id: 'decals', mode: 'BATCHED', geometryReserve: reserve }])).toBe(true);
+    expect(
+      isGroupsValid([{ id: 'decals', mode: 'BATCHED', geometryReserve: { vertices: 64 } }])
+    ).toBe(true);
+    expect(isGroupsValid([{ id: 'decals', geometryReserve: reserve }])).toBe(false);
+    for (const geometryReserve of [{ vertices: 0 }, { vertices: 2.5 }, { indices: 6 }, {}]) {
+      expect(isGroupsValid([{ id: 'decals', mode: 'BATCHED', geometryReserve }])).toBe(false);
+    }
+    expect(
+      isGroupsValid([{ id: 'decals', mode: 'BATCHED', geometryReserve: { ...reserve, extra: 1 } }])
+    ).toBe(false);
+  });
+
+  test('transparentOrder only with BATCHED, DEPTH or JOIN (Phase 3 S2)', () => {
+    expect(isGroupsValid([{ id: 'decals', mode: 'BATCHED', transparentOrder: 'JOIN' }])).toBe(true);
+    expect(isGroupsValid([{ id: 'glass', mode: 'BATCHED', transparentOrder: 'DEPTH' }])).toBe(true);
+    expect(isGroupsValid([{ id: 'decals', transparentOrder: 'JOIN' }])).toBe(false);
+    expect(isGroupsValid([{ id: 'decals', mode: 'BATCHED', transparentOrder: 'SPAWN' }])).toBe(
+      false
+    );
+  });
 });
 
 describe("a scene's mergeMaterials (p374)", () => {

@@ -17,11 +17,13 @@ export {
   isMergeMemberInEdit,
 } from './MergeMemberEdit';
 export type {
+  MergeGeometryReserve,
   MergeGroupData,
   MergeGroupMode,
   MergeGroupSettings,
   MergeMemberData,
   MergeMemberEditPose,
+  MergeTransparentOrder,
   MeshMergeDef,
   MeshMergeOptions,
   SceneAutoMergeEntry,

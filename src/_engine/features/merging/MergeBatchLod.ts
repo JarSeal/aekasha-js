@@ -25,6 +25,7 @@ import {
   setInstanceGeometry,
 } from './MergeBatch';
 import { setInstanceFade } from './MergeBatchFades';
+import { setInstanceSlot } from './MergeBatchSlots';
 import { getMemberMesh } from './MergeState';
 import type { MergeMemberData } from './MergeTypes';
 
@@ -46,8 +47,8 @@ const startLevelFade = (state: BatchState, member: MergeMemberData) => {
   growInstances(state, batch.instanceCount + 1);
   const geometryId = state.geometryAt[id];
   const fadeId = batch.addInstance(geometryId);
-  state.geometryAt[fadeId] = geometryId;
-  state.isOrderDirty = true;
+  setInstanceSlot(state, fadeId, geometryId);
+  state.joinSeq[fadeId] = state.joinSeq[id];
   batch.getMatrixAt(id, fadeMatrix);
   batch.setMatrixAt(fadeId, fadeMatrix);
   batch.setVisibleAt(fadeId, batch.getVisibleAt(id));

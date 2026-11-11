@@ -30,7 +30,10 @@
 // `COMPACT` on WebGPU; `RANGE_SORT` on WebGPU once a member has a LOD (its swaps and fades split
 // the runs every frame: compacting each frame cost ~1.3 ms at 2 000 members and its fades' second
 // instances kept the runs past the limit), three sorting each pass's list by geometry range then
-// depth; `NONE` on WebGL2, whose multi-draw is one draw in any order.
+// depth; `NONE` on WebGL2, whose multi-draw is one draw in any order. A transparent batch (p375
+// Phase 3) is sorted on both backends instead, never compacted: `DEPTH` (three's back-to-front
+// sort) or `JOIN` (the order its members joined, `MERGE_MEMBER._joinSeq`, the newest drawn last),
+// its group's `transparentOrder`.
 //
 // LOD per member (p375 Phase 2): `lod()` keeps a member's levels and sets each on its own mesh; the
 // kernel's mesh draw delegate (MergeBatchFront.ts' forwarding stub, registered by merging's
@@ -55,6 +58,15 @@ import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
 import { type BatchFades, createBatchFades, setInstanceFade } from './MergeBatchFades';
+import {
+  BATCH_RESERVE,
+  addGeometries,
+  getReservedIndices,
+  getReservedVertices,
+  markLevelSlots,
+  rewriteGeometry,
+  setInstanceSlot,
+} from './MergeBatchSlots';
 import type { BatchVisibilityOverrides } from './MergeBatchFront';
 import { clearEmptyGroup, getLiveMembers } from './MergeBuild';
 import {
@@ -72,18 +84,24 @@ import type { MergeGroupData, MergeMemberData } from './MergeTypes';
  */
 export const COMPACT_RUNS_FACTOR = 2;
 
-/** A batch is made, and grows, with this share of room over what it holds. */
-const BATCH_RESERVE = 1.25;
-/** And at least this many instances more. */
+/** A batch is made, and grows, with BATCH_RESERVE's room over what it holds, and at least this
+ * many instances more. */
 const MIN_SPARE_INSTANCES = 16;
 
 /**
- * How a batch keeps each geometry's instances in one draw (D1): `COMPACT` regroups its ids past
- * COMPACT_RUNS_FACTOR (WebGPU), `RANGE_SORT` has three sort each pass's list by geometry range then
- * depth (WebGPU, once a member has a LOD), `NONE` does neither (WebGL2: one multi-draw anyway).
+ * How a batch orders its draws. An opaque one keeps each geometry's instances in one draw (D1):
+ * `COMPACT` regroups its ids past COMPACT_RUNS_FACTOR (WebGPU), `RANGE_SORT` has three sort each
+ * pass's list by geometry range then depth (WebGPU, once a member has a LOD), `NONE` does neither
+ * (WebGL2: one multi-draw anyway). A transparent one is sorted each pass on both backends, its
+ * group's `transparentOrder`: `DEPTH` back to front, `JOIN` by its members' join order.
  * @internal
  */
-export type BatchOrder = 'COMPACT' | 'RANGE_SORT' | 'NONE';
+export type BatchOrder = 'COMPACT' | 'RANGE_SORT' | 'NONE' | 'DEPTH' | 'JOIN';
+
+/** An item of three's per-pass draw list (`customSort`'s): the geometry's range and the depth, as
+ * three types it, and the instance id, which its render list sets too. */
+type DrawItem = { start: number; count: number; z: number };
+type SortItem = DrawItem & { index: number };
 
 /**
  * A batched group's batch and its bookkeeping.
@@ -94,8 +112,16 @@ export type BatchState = {
   group: MergeGroupData;
   groupEntityId: number;
   batch: THREE.BatchedMesh;
-  /** The batch's geometry id of each member geometry it holds. */
+  /** The batch's geometry id (its slot) of each geometry it holds (MergeBatchSlots.ts). */
   geometryIds: Map<THREE.BufferGeometry, number>;
+  /** Each slot's geometry while the batch holds it (undefined: free). */
+  slotGeometries: (THREE.BufferGeometry | undefined)[];
+  /** Each slot's instances (the members' and their level fades' outgoing ones). */
+  slotInstances: number[];
+  /** Slots holding a member's LOD level: kept while no instance uses them, until a full build. */
+  slotIsLevel: boolean[];
+  /** Free slots, refilled by a geometry that fits (`setGeometryAt`). */
+  freeSlots: number[];
   /** The batch's place: its members' bounds' centre when it was made. */
   centre: THREE.Vector3;
   /** The vertex and index buffers' sizes (`BatchedMesh` keeps them private). */
@@ -122,6 +148,10 @@ export type BatchState = {
   countStamp: number;
   /** Its instances' LOD fades (MergeBatchFades.ts), grown with its instances. */
   fades: BatchFades;
+  /** Each instance id's member's `_joinSeq` (a level fade's outgoing instance its member's), and
+   * the `customSort` that draws in it (`JOIN`). */
+  joinSeq: number[];
+  sortByJoin: (list: DrawItem[]) => void;
 };
 
 const states = new WeakMap<MergeGroupData, BatchState>();
@@ -139,9 +169,6 @@ const scratchBox = new THREE.Box3();
 const bounds = new THREE.Box3();
 const instanceMatrix = new THREE.Matrix4();
 const memberSphere = new THREE.Sphere();
-
-/** A geometry's index count, or 0 without an index (a batch's geometries agree on it). */
-const getIndexCount = (geometry: THREE.BufferGeometry) => geometry.index?.count ?? 0;
 
 /** Writes `instanceMatrix`, a member's world matrix, as its instance's (the batch's centre taken
  * off, in place). */
@@ -184,15 +211,36 @@ const sortByRange = (list: { start: number; z: number }[]) => {
   list.sort(compareByRange);
 };
 
+/** A batch's `JOIN` sort: by its instances' join order, the newest drawn last. */
+const createJoinSort = (joinSeq: number[]) => {
+  const compare = (a: SortItem, b: SortItem) => joinSeq[a.index] - joinSeq[b.index];
+  return (list: DrawItem[]) => {
+    (list as SortItem[]).sort(compare);
+  };
+};
+
+/** The next member's place in the join order (an order within a batch: one count for all). */
+let nextJoinSeq = 0;
+
+/** Gives the members without a place in the join order the next ones, in `members`' order (a
+ * group's members are in the order they joined). */
+const assignJoinSeqs = (members: readonly number[], world: ECSWorld) => {
+  for (const entityId of members) {
+    const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
+    member._joinSeq ??= nextJoinSeq++;
+  }
+};
+
 /**
- * Sets a batch's order, and three's sort to match.
+ * Sets a batch's order, and three's sort to match (`DEPTH`: three's own transparent sort).
  * @internal
  */
 export const setBatchOrder = (state: BatchState, order: BatchOrder) => {
   state.order = order;
-  const isSorted = order === 'RANGE_SORT';
-  state.batch.sortObjects = isSorted;
-  state.batch.setCustomSort(isSorted ? sortByRange : null);
+  state.batch.sortObjects = order === 'RANGE_SORT' || order === 'DEPTH' || order === 'JOIN';
+  state.batch.setCustomSort(
+    order === 'RANGE_SORT' ? sortByRange : order === 'JOIN' ? state.sortByJoin : null
+  );
 };
 
 /**
@@ -272,9 +320,8 @@ export const deleteFadeInstance = (state: BatchState, member: MergeMemberData) =
   const fadeId = member._fadeInstanceId;
   if (fadeId < 0) return;
   state.batch.deleteInstance(fadeId);
-  state.geometryAt[fadeId] = -1;
+  setInstanceSlot(state, fadeId, -1);
   setInstanceFade(state.fades, fadeId, LOD_FADE_OPAQUE);
-  state.isOrderDirty = true;
   member._fadeInstanceId = -1;
 };
 
@@ -288,8 +335,8 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   const isFirstBuild = member.instanceId === -1;
   const geometryId = state.geometryIds.get(mesh.geometry)!;
   member.instanceId = state.batch.addInstance(geometryId);
-  state.geometryAt[member.instanceId] = geometryId;
-  state.isOrderDirty = true;
+  setInstanceSlot(state, member.instanceId, geometryId);
+  state.joinSeq[member.instanceId] = member._joinSeq ?? 0;
   // Drawn whole: a fade the previous batch drew ended with it
   member._fadeInstanceId = -1;
   member._lodFade = undefined;
@@ -327,31 +374,6 @@ const collectGeometries = (members: readonly number[], world: ECSWorld) => {
   const add = (geometry: THREE.BufferGeometry) => geometries.add(geometry);
   for (const entityId of members) forEachMemberGeometry(entityId, world, add);
   return geometries;
-};
-
-/** Adds the geometries the batch doesn't hold yet, growing its buffers when they're full. */
-const addGeometries = (state: BatchState, geometries: Iterable<THREE.BufferGeometry>) => {
-  const { batch, geometryIds } = state;
-  const added: THREE.BufferGeometry[] = [];
-  let vertices = 0;
-  let indices = 0;
-  for (const geometry of geometries) {
-    if (geometryIds.has(geometry) || added.includes(geometry)) continue;
-    added.push(geometry);
-    vertices += geometry.getAttribute('position').count;
-    indices += getIndexCount(geometry);
-  }
-  if (vertices > batch.unusedVertexCount || indices > batch.unusedIndexCount) {
-    state.maxVertexCount = Math.ceil(
-      (state.maxVertexCount - batch.unusedVertexCount + vertices) * BATCH_RESERVE
-    );
-    state.maxIndexCount = Math.max(
-      Math.ceil((state.maxIndexCount - batch.unusedIndexCount + indices) * BATCH_RESERVE),
-      1
-    );
-    batch.setGeometrySize(state.maxVertexCount, state.maxIndexCount);
-  }
-  for (const geometry of added) geometryIds.set(geometry, batch.addGeometry(geometry));
 };
 
 /** The members' geometries in first-seen order, and the members grouped by them in that order
@@ -401,14 +423,16 @@ const createBatch = (
   members: readonly number[],
   world: ECSWorld
 ) => {
+  assignJoinSeqs(members, world);
   const byGeometry = groupByGeometry(members, world);
   // The buffers hold the members' LOD levels too
   const geometries = collectGeometries(members, world);
+  const { settings } = group;
   let vertices = 0;
   let indices = 0;
   for (const geometry of geometries) {
-    vertices += geometry.getAttribute('position').count;
-    indices += getIndexCount(geometry);
+    vertices += getReservedVertices(settings, geometry);
+    indices += getReservedIndices(settings, geometry);
   }
   const material = existsOrThrow(group._material, `Merge group "${group.id}" has no material.`);
   const maxVertexCount = Math.ceil(vertices * BATCH_RESERVE);
@@ -426,6 +450,8 @@ const createBatch = (
   batch.userData.entityId = groupEntityId;
   batch.castShadow = group.settings.castShadow ?? firstMember.castShadow;
   batch.receiveShadow = group.settings.receiveShadow ?? firstMember.receiveShadow;
+  // Its members' (a member of another is refused)
+  batch.renderOrder = firstMember.renderOrder;
   // Grouped by geometry, unsorted: one draw per geometry on WebGPU (D1; `setBatchOrder` below)
   batch.sortObjects = false;
   batch.perObjectFrustumCulled = group.settings.perMemberCulling ?? true;
@@ -455,11 +481,16 @@ const createBatch = (
     world.commitTransform(groupEntityId, transform);
   }
 
+  const joinSeq: number[] = [];
   const state: BatchState = {
     group,
     groupEntityId,
     batch,
     geometryIds: new Map(),
+    slotGeometries: [],
+    slotInstances: [],
+    slotIsLevel: [],
+    freeSlots: [],
     centre,
     maxVertexCount,
     maxIndexCount: Math.max(maxIndexCount, 1),
@@ -475,6 +506,8 @@ const createBatch = (
     countStamp: 0,
     // Before the batch's first build: its material's LOD dither reads them
     fades: createBatchFades(batch, batch.maxInstanceCount),
+    joinSeq,
+    sortByJoin: createJoinSort(joinSeq),
   };
   batch.addEventListener('dispose', () => state.fades.texture.dispose());
   const previousState = states.get(group);
@@ -489,16 +522,14 @@ const createBatch = (
     mergeBatchSyncSystem,
     APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC
   );
-  for (const [geometry, ids] of byGeometry) {
-    state.geometryIds.set(geometry, batch.addGeometry(geometry));
+  // The members' geometries and their levels, the levels no member shows now too
+  addGeometries(state, geometries);
+  markLevelSlots(state, members, world);
+  for (const ids of byGeometry.values()) {
     for (const entityId of ids) addMemberInstance(entityId, state, world);
   }
-  // The levels no member shows now
-  for (const geometry of geometries) {
-    if (!state.geometryIds.has(geometry))
-      state.geometryIds.set(geometry, batch.addGeometry(geometry));
-  }
-  setBatchOrder(state, isMultiDrawBackend() ? 'NONE' : 'COMPACT');
+  const opaqueOrder = isMultiDrawBackend() ? 'NONE' : 'COMPACT';
+  setBatchOrder(state, material.transparent ? settings.transparentOrder ?? 'DEPTH' : opaqueOrder);
   if (members.some((entityId) => world.hasComponent(entityId, ComponentType.LOD))) {
     noteBatchLodMember(state);
   }
@@ -510,6 +541,7 @@ const createBatch = (
 const growBatch = (state: BatchState, newcomers: readonly number[], world: ECSWorld) => {
   const { batch } = state;
   addGeometries(state, collectGeometries(newcomers, world));
+  markLevelSlots(state, newcomers, world);
   growInstances(state, batch.instanceCount + newcomers.length);
 };
 
@@ -536,6 +568,7 @@ export const buildBatchGroup = (groupEntityId: number, group: MergeGroupData, wo
       (entityId) => world.getComponent(entityId, ComponentType.MERGE_MEMBER)!.instanceId === -1
     );
     if (newcomers.length > 0) {
+      assignJoinSeqs(newcomers, world);
       growBatch(state, newcomers, world);
       // Grouped by geometry: a block of ids each, as far as freed ids allow
       for (const ids of groupByGeometry(newcomers, world).values()) {
@@ -571,9 +604,8 @@ export const deleteBatchInstance = (member: MergeMemberData, group: MergeGroupDa
   deleteFadeInstance(state, member);
   member._lodFade = undefined;
   state.batch.deleteInstance(member.instanceId);
-  state.geometryAt[member.instanceId] = -1;
+  setInstanceSlot(state, member.instanceId, -1);
   setInstanceFade(state.fades, member.instanceId, LOD_FADE_OPAQUE);
-  state.isOrderDirty = true;
 };
 
 /** Counts the batch's geometry runs in instance id order, freed ids skipped (three skips them
@@ -632,6 +664,7 @@ const compactBatch = (state: BatchState, world: ECSWorld) => {
     geometryAt[id] = geometryId;
     batch.setGeometryIdAt(id, geometryId);
     setInstanceFade(fades, id, entry.fade);
+    state.joinSeq[id] = member._joinSeq ?? 0;
     const object = world.getComponent(entityId, ComponentType.OBJECT3D)!;
     const mesh = object.value as THREE.Mesh;
     instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
@@ -723,12 +756,43 @@ export const setInstanceGeometry = (
     const geometries = collectGeometries([entityId], world);
     geometries.add(geometry);
     addGeometries(state, geometries);
+    markLevelSlots(state, [entityId], world);
     geometryId = state.geometryIds.get(geometry)!;
   }
   if (state.geometryAt[instanceId] === geometryId) return;
   state.batch.setGeometryIdAt(instanceId, geometryId);
-  state.geometryAt[instanceId] = geometryId;
-  state.isOrderDirty = true;
+  setInstanceSlot(state, instanceId, geometryId);
   state.batch.getMatrixAt(instanceId, instanceMatrix);
   if (growBatchSphere(state, geometry)) rejoinSpatialIndex(state.groupEntityId, world);
+};
+
+/**
+ * Writes a batched member's geometry into its batch again (`updateMergeMember`): its own mesh's
+ * geometry rewritten in its slot (every instance of it then draws the new data), or, when its mesh
+ * has another geometry now, its instance given that one (the old one's slot freed when no instance
+ * uses it). Its batch's sphere grows to hold what the geometry's instances draw.
+ * @internal
+ */
+export const updateBatchMemberGeometry = (
+  entityId: number,
+  member: MergeMemberData,
+  group: MergeGroupData,
+  world: ECSWorld
+) => {
+  const state = states.get(group);
+  if (!state || member.instanceId < 0) return;
+  const { geometry } = getMemberMesh(entityId, world);
+  const { geometryAt, batch } = state;
+  if (state.slotGeometries[geometryAt[member.instanceId]] !== geometry) {
+    setInstanceGeometry(state, entityId, member.instanceId, geometry, world);
+    return;
+  }
+  const slot = rewriteGeometry(state, geometry);
+  let hasGrown = false;
+  for (let id = 0; id < geometryAt.length; id++) {
+    if (geometryAt[id] !== slot) continue;
+    batch.getMatrixAt(id, instanceMatrix);
+    if (growBatchSphere(state, geometry)) hasGrown = true;
+  }
+  if (hasGrown) rejoinSpatialIndex(state.groupEntityId, world);
 };
