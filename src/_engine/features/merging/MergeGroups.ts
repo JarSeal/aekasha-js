@@ -304,7 +304,8 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * instance follows its `TRANSFORM` every frame). For a `BATCHED` member it writes the member's
  * geometry into the batch again instead: call it after changing its geometry's vertices or index
  * (every member sharing the geometry draws the new data), or after giving its mesh another
- * geometry.
+ * geometry. It counts as the member joining again: a `transparentOrder: 'JOIN'` batch draws it
+ * last, on top (a decal pool rewriting its oldest decal).
  * @param world the member's world (default: the default world)
  * @remarks Members are static by contract: a member moved without this call is still drawn where
  * it was merged (the debug env warns once per member). A `BAKED` member's geometry's vertex count

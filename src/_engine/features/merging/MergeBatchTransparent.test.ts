@@ -30,6 +30,7 @@ import {
   createMergeGroup,
   installMergeGroups,
   rebuildMergeGroup,
+  updateMergeMember,
 } from './MergeGroups';
 import type { MergeTransparentOrder } from './MergeTypes';
 import { getGroups } from './MergeState';
@@ -175,6 +176,24 @@ describe("a transparent batch's order", () => {
     const order = [members[1], members[2], late].map(getInstanceId);
     expect(order).not.toEqual([0, 1, 2]);
     expect(getDrawOrder(state().batch)).toEqual(order);
+  });
+
+  test('JOIN draws a member updateMergeMember rewrote last, as a newcomer (a FIFO pool)', async () => {
+    // A geometry each, as a decal pool's patches
+    const geometries = [0, 1, 2].map((i) => saveBufferGeometry(new THREE.PlaneGeometry(1, 1 + i)));
+    const members = geometries.map((geo, i) => createGlass('', -i, { geo }));
+    const { state } = await createBuiltGroupAsync(members, 'JOIN');
+    const ids = members.map(getInstanceId);
+    expect(getDrawOrder(state().batch)).toEqual(ids);
+
+    // The oldest is respawned in place: its patch rewritten, its slot kept, drawn on top
+    const position = geometries[0].getAttribute('position') as THREE.BufferAttribute;
+    position.setY(0, position.getY(0) + 0.25);
+    updateMergeMember(members[0]);
+    expect(getInstanceId(members[0])).toBe(ids[0]);
+    expect(getDrawOrder(state().batch)).toEqual([ids[1], ids[2], ids[0]]);
+    updateMergeMember(members[1]);
+    expect(getDrawOrder(state().batch)).toEqual([ids[2], ids[0], ids[1]]);
   });
 
   test("sorted on WebGL2 too, never compacted, and a member's LOD doesn't change it", async () => {

@@ -1,6 +1,7 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phases 1-2 implemented
+Status: in progress | Phase 0 (spike) done, gate passed; Phases 1-3 implemented
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
+Blocks: p309_terrain-decals.md (soft: its Phase 4's runtime pools are `BATCHED` merge groups, D4)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
 
 # BatchedMesh Batches (movable and per-member-culled content)
@@ -656,7 +657,7 @@ moving members.
    `MergeBatchDetach.test.ts`, `MergeBatchLod.test.ts`, `features/lod/LodMeshDrawDelegate.test.ts`,
    `debug/_dbg__MergingBatchedLod.test.ts`.
 
-3. p309's decal pools on batched groups (if p309 has shipped, port;
+3. **Done.** p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). p309 hasn't shipped (2026-11-11: draft, blocked by p306, p304 and
    p307), so Phase 3 builds what its runtime pools (its D4) use and checks it with a stand-in pool.
    **Grounding** (r187, read 2026-11-11): merged draws join only entries of equal start and count,
@@ -682,18 +683,18 @@ moving members.
    toolkit pool (`createDecalPool`, `spawnDecal`, terrain patches, ribbons), atlases and material.
    A `merging` budget over 10 KiB stops for a decision.
    **Sections** (each stopped for review):
-   - S1 — geometry slots: instance counts per geometry (members, LOD levels, fade second
+   - S1 — geometry slots — done: instance counts per geometry (members, LOD levels, fade second
      instances), a freed slot and its reuse by fit, `geometryReserve` (schema too),
      `updateMergeMember` rewriting a batched member's slot (a geometry past its reserve warns);
      three's per-geometry bounds after `setGeometryAt` checked. Tests: `MergeBatchSlots.test.ts`.
-   - S2 — transparent batched groups: the refusal lifted for `BATCHED`, `transparentOrder` as
+   - S2 — transparent batched groups — done: the refusal lifted for `BATCHED`, `transparentOrder` as
      `customSort`s (depth, or a join sequence per member), a transparent batch sorted on both
      backends and never compacted, the `renderOrder` rule.
-   - S3 — `setMergeMemberColor` (a first-download stub, the work lazy), the colours texture's first
+   - S3 — `setMergeMemberColor` — done: a first-download stub, the work lazy, the colours texture's first
      appearance rebuilding the render object, colours kept through growth and compaction; JSDoc
      with `@example`.
-   - S4 — the debugger: slots (in use, free, reserve), the transparent order, coloured members.
-   - S5 — the exit: a decal stand-in in `batchedMeshSpike` (`?bmsDecals=blend|cutout`: conformed
+   - S4 — the debugger — done: slots (in use, free, reserve), the transparent order, coloured members.
+   - S5 — the exit — done ("S5 results" below): a decal stand-in in `batchedMeshSpike` (`?bmsDecals=blend|cutout`: conformed
      grid patches on a heightfield ground, spawned FIFO into a pool of 128 or 512, faded by
      opacity) against separate meshes in the bench (CPU frame, spawn cost, draws, buffers stable
      over a long churn), `scenes.config.ts` variants, `yarn sbp`, `yarn verify:baselines`,
@@ -810,8 +811,117 @@ moving members.
    - **Tests:** `debug/_dbg__MergingBatchedPools.test.ts` (5). `yarn test` 3 319 passed; lint,
      both `tsc`, the docs ratchet clean. `yarn sbp`: the first download unchanged, the lazy
      `MergeBatch.js` 4.7 kB (+0.1: the flag).
+   **S5 results** (2026-11-12; Phase 0's machine and setup, §2's Results):
+   - **Found and fixed (an engine change):** a member's `_joinSeq` was given once, at its first
+     build, so a FIFO pool rewriting its oldest member through `updateMergeMember` (decision 2)
+     drew the newest decal under the others in a `JOIN` batch. `updateBatchMemberGeometry` now
+     gives the member the next place in the join order (a rewrite is a respawn; a level fade's
+     outgoing instance follows it), documented on `updateMergeMember`. Test:
+     `MergeBatchTransparent.test.ts` (+1, fails without the change).
+   - **Built:** `?bmsDecals=blend|cutout` in `batchedMeshSpike` (SEPARATE and ENGINE;
+     `batchedMeshSpikeDecals.ts`, the scene at 608 lines): the field off, a 64 m heightfield
+     (`generateTerrain`, its `getHeightAt` standing in for p306's block grid), a FIFO pool
+     (`?bmsDecalPool`, default 128) of k × k grid patches (k ≤ 8: 81 vertices, 384 indices, at 0.25
+     or 0.5 m spacing by size) conformed to it around their entity's place and lifted 2 cm along
+     its normal, spawned along a seeded walk (footprints beside it, wider splats near it,
+     overlapping) at `?bmsDecalRate` a second (30), a seeded tint each and the oldest quarter faded
+     by its FIFO place. A generated 64² blob texture; `BLEND` (transparent, no depth write, polygon
+     offset −1/−4, `renderOrder` 10) or `CUTOUT` (alpha test 0.5). ENGINE: an explicit `BATCHED`
+     group (`geometryReserve` 81 / 384, `transparentOrder` from `?bmsDecalOrder`, default `join`),
+     joined by `addToMergeGroup` (a `merge` prop only queues an entity until the build, and
+     `setMergeMemberColor` needs a member), tint and fade by `setMergeMemberColor`. SEPARATE: a
+     material clone per pool place (opacity per mesh), a `renderOrder` rising per spawn (`JOIN`'s
+     order). `?bmsDecalSpawn=rewrite` (default): ENGINE writes the oldest's patch into its geometry
+     and calls `updateMergeMember`, SEPARATE gives its mesh a new geometry and releases the old;
+     `entity` deletes the oldest decal's entity and creates one. The spawner is a `MAIN` system
+     ahead of `object3DSyncSystem`, so a respawned decal's pose and patch draw in the same frame;
+     the load spawns the pool full and the first frame (the batch built) half a pool more, so the
+     picture at `?bmsDecalRate=0` is the same on every load. The probe: the spawner's time and
+     spawns per frame, `spawnDecals(n)`, `decals({ rate })`, `decalBuffers()`. The bench: the
+     `decals` cases, a Spawns column, `decals burst`, the `check: decals` pairs (its shots now hide
+     the stats panels' figures: Phase 2's 0.17 % mid-fade diff counted them too), the `long:`
+     cases (only with `--only long`; `--long-seconds`, `--sample-seconds`) and a page crash or
+     second load logged. `scenes.config.ts`: `decalsBlendSeparate`, `decalsBlendEngine`,
+     `decalsCutoutSeparate`, `decalsCutoutEngine` (rate 0).
+   - **CPU frame** (medians of 3 runs, 120 + 300 frames, 30 spawns a second; separate meshes →
+     the engine's batch):
+
+     | Case              | WebGPU (ms)         | WebGL2 (ms)         |
+     | ----------------- | ------------------: | ------------------: |
+     | blend 128         | 1.16 → 0.49 (−58 %) | 2.28 → 1.14 (−50 %) |
+     | blend 512         | 3.01 → 1.48 (−51 %) | 3.41 → 0.66 (−81 %) |
+     | cutout 128        | 2.26 → 1.46 (−35 %) | 2.30 → 1.01 (−56 %) |
+     | cutout 512        | 3.06 → 1.48 (−52 %) | 3.35 → 0.65 (−81 %) |
+     | blend 512, entity | 3.11 → 1.59 (−49 %) | 3.32 → 0.91 (−73 %) |
+     | still (rate 0), blend 128 | 2.35 → 1.32 (−44 %) | 2.16 → 0.98 (−55 %) |
+     | still (rate 0), cutout 128 | 2.42 → 1.30 (−46 %) | 2.24 → 0.95 (−58 %) |
+
+     WebGPU's 128-decal pairs ran in §2's two clock states (blend 128 at 1.16 / 0.49, cutout 128
+     at 2.26 / 1.46): compare within a pair. At 512 the engine's WebGPU render submit is ~1.0 ms
+     (the 509 `drawIndexed` in one render object) against WebGL2's 0.4. `DEPTH` against `JOIN`
+     (blend 512): 1.63 against 1.48 ms (WebGPU), 0.77 against 0.66 (WebGL2): the join sort is the
+     cheaper. GPU time: WebGPU the same or lower (512: 2.02 → 1.80 ms); WebGL2's timer read
+     5.0-5.3 ms separate against 5.7-8.0 for the batch in every run, unproven (§2: that timer is
+     unreliable), handed to p309 Phase 4 to profile.
+   - **Draws:** WebGPU one per visible decal (128, 509) inside one render object: three r187's
+     merged draws equal the visible decals, since every patch is its own geometry (the grounding
+     above), and no compaction ran (runs = geometries in use). WebGL2: one multi-draw (3 in the
+     scene). Separate meshes: one each (130, 513).
+   - **Spawn cost** (the spawner's time per spawn, the fades included): at 30 a second, WebGPU 128
+     0.111 → 0.093 ms, 512 0.075 → 0.245; WebGL2 0.243 → 0.228, 0.107 → 0.174. At 512 the fade
+     band is 128 decals whose opacity changes on every spawn: `setMergeMemberColor` costs ~1-1.5 µs
+     a call against a material field, so a fade changing many members a frame is the spawner's
+     main cost (p309 D4 says fade by time and write only the fading). A burst of 512 (one fade
+     pass): 0.019 → 0.034 ms a spawn on WebGPU (the patch 0.009 / 0.014), 0.025 → 0.028 on WebGL2
+     (the burst `separate` row on WebGL2 is 2 runs: one page lost its context to a navigation).
+     `entity` against `rewrite` (512, engine): +0.15-0.19 ms a spawn, +0.1 / +0.25 ms CPU frame. A
+     new decal joined before the frame's build (`MERGE_BUILD`) is never drawn on its own: the
+     draws didn't change, so the own-mesh frame proposed as a trap applies only to a spawn after
+     the build.
+   - **Buffers over 10 minutes** (`long:` cases, pool 128, 60 spawns a second, 600 s, sampled
+     every 10 s; WebGPU and WebGL2, `rewrite` and `entity`: 31 318-36 347 spawns): the batch's
+     instance capacity (176), reserved vertices (12 960) and indices (61 440), its 128 slots, and
+     the renderer's geometries (3) and textures (7) the same from the first sample to the last; the
+     JS heap a GC sawtooth, 54-82 MB, no trend. The WebGPU `entity` run's first page lost its
+     context to a navigation 230 s in with no Vite reload line (every figure flat until then); the
+     re-run, with the bench now logging a crash or second load, went the 600 s with neither.
+   - **Pixels:** the `check: decals` pairs (rate 0, pool 128, the stats figures hidden): `BLEND`
+     0.000 % of pixels over 8/255 in all 6 runs on both backends; `CUTOUT` 0.001 % (WebGPU) and
+     0.002 % (WebGL2): overlapping alpha-tested decals are coplanar, so the one that shows follows
+     the draw order, which a multi-draw and separate meshes order differently. The scene runner
+     (WebGPU, the three physics targets): `@decalsBlendEngine` against `@decalsBlendSeparate` max
+     delta 1, `@decalsCutoutEngine` against `@decalsCutoutSeparate` 0.001 % (max 11); the older
+     pairs as Phase 2's, the kinematic probe hash `2fd77609` for both ways and all three targets.
+   - **Checks:** `yarn test` 3 320 passed; lint, both `tsc`, the docs ratchet clean. `yarn sbp`:
+     every budget passes (`merging` 9.6 kB of 10 KiB, the initial 393.7 of 394, `assets/index.js`
+     389.5 of 390; the lazy `MergeBatch.js` 4.8 kB). `yarn verify:baselines`: Phase 3's growth
+     (`MergeBatch.js` 3.7 → 4.7 kB gzip, `merging` +0.2 kB) and its exports (S1-S3's `@internal`
+     ones; `setMergeMemberColor`, `MergeMemberColorOptions`, `MergeGeometryReserve` and
+     `MergeTransparentOrder` on `aekasha/merging`); no debug code in the production build;
+     recorded (`--update`). `yarn verify:scenes --only batchedMeshSpike`: all 44 runs load without
+     errors (new: the scene still has no recorded baselines).
+   - **Exit: met** on both backends: 35-81 % CPU frame against separate meshes, buffers that stop
+     growing over 10 minutes of churn, `BLEND` decals matching separate meshes in a pixel diff.
+   - **p309 rewritten** from these: D4's pool is an explicit `BATCHED` group of member entities
+     rewritten FIFO through `updateMergeMember`, with `geometryReserve`, `JOIN` and
+     `setMergeMemberColor`; the single-geometry pool dropped; D3's `BLEND` mesh decals may join a
+     `BATCHED` group; Phase 4's exit and the risk row from the results; p375 a soft blocker.
+
+   **As built** (Phase 3; the detail is `features/merging/CLAUDE.md`'s "The mode" bullet): S1
+   geometry slots (`MergeBatchSlots.ts`, `geometryReserve`, `updateMergeMember` rewriting a
+   batched member's slot); S2 transparent batched groups (`transparentOrder`: `DEPTH`, `JOIN`;
+   the `renderOrder` rule); S3 `setMergeMemberColor` (`MergeMemberColor.ts`); S4 the debugger's
+   slot, colour and order rows; S5 `updateMergeMember` putting a batched member last in the join
+   order, and the decal stand-in. The decision "a geometry past its reserve warns" became a move
+   to a slot that fits, without a warning (S1). Tests: `MergeBatchSlots.test.ts`,
+   `MergeBatchTransparent.test.ts`, `MergeMemberColor.test.ts`,
+   `debug/_dbg__MergingBatchedPools.test.ts`.
+
 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
-   per-member LOD lands), versioning (engine minor).
+   per-member LOD lands), versioning (engine minor). The Mesh merging page has no `BATCHED` yet:
+   the mode, per-member LOD, pools (`geometryReserve`, `transparentOrder`, `setMergeMemberColor`,
+   `updateMergeMember` putting a batched member last in the join order), picking
+   (`getMergeMemberAtBatchId`) and when a batch pays (Phases 0-3's numbers).
 
 ## 5. Risks
 

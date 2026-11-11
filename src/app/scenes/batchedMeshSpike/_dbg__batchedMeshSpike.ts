@@ -16,6 +16,7 @@ import {
   writeBmsMatrix,
   type BmsMember,
 } from './batchedMeshSpike';
+import { bmsDecalSettings, bmsDecalState, getBmsDecalEntity } from './batchedMeshSpikeDecals';
 
 // The BatchedMesh spike's measuring (p375 Phase 0): systems at the stages' far ends bracket the
 // CPU frame (the first MAIN system to the first LATE_MAIN one: the update and the render submit)
@@ -27,7 +28,10 @@ import {
 // `churnGeometries` are spike item 6's slot reuse, on a batch only. p375 Phase 2 S6: each frame's
 // LOD swaps and fading members (`getLodFrameStats`) and the batch's merged draws, the swaps a
 // second over the measure, and `engineGroup()` (the engine group's data: the bench reads its
-// batch's runs and compactions through the page's own merging module).
+// batch's runs and compactions through the page's own merging module). p375 Phase 3 S5 (`?bmsDecals`):
+// each frame's spawns and the spawner's time, `spawnDecals(n)` (a timed burst), `decals({ rate })`
+// and `decalBuffers()` (the batch's reserved sizes, the renderer's geometries and textures and the
+// JS heap: the long churn's samples); the engine group is the decal pool's then.
 
 const PREFIX = 'bms:';
 const FIRST = 1e9;
@@ -44,6 +48,9 @@ type Frame = {
   lodFading: number;
   /** The batch's merged draws at its last pass (three r187's count; -1 without a batch) */
   mergedDraws: number;
+  /** The decal spawner's time (ms) and spawns this frame */
+  spawnMs: number;
+  spawns: number;
 };
 const KEYS: (keyof Frame)[] = [
   'cpuMs',
@@ -54,6 +61,8 @@ const KEYS: (keyof Frame)[] = [
   'lodApplies',
   'lodFading',
   'mergedDraws',
+  'spawnMs',
+  'spawns',
 ];
 
 /** A batch's private draw figures (three r187): the visible members and the merged draws */
@@ -73,11 +82,15 @@ const median = (values: number[], q = 0.5) => {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
 };
 
+/** An entity of the ENGINE way's group: the field's first member, or the decal pool's */
+const getEngineEntity = () =>
+  bmsSettings.way === 'ENGINE' ? bmsState.members[0]?.entityId ?? getBmsDecalEntity() : undefined;
+
 /** The ENGINE way's batch: its group's mesh, through its first member, once built. */
 const findEngineBatch = (world: ECSWorld) => {
-  const first = bmsState.members[0];
-  if (bmsSettings.way !== 'ENGINE' || !first) return null;
-  const member = world.getComponent(first.entityId, ComponentType.MERGE_MEMBER);
+  const first = getEngineEntity();
+  if (first === undefined) return null;
+  const member = world.getComponent(first, ComponentType.MERGE_MEMBER);
   const object = member && world.getComponent(member.groupEntityId, ComponentType.OBJECT3D)?.value;
   return (object as Partial<THREE.BatchedMesh> | undefined)?.isBatchedMesh
     ? (object as THREE.BatchedMesh)
@@ -110,6 +123,8 @@ export const installBmsProbe = (world: ECSWorld) => {
     lodApplies: 0,
     lodFading: 0,
     mergedDraws: -1,
+    spawnMs: 0,
+    spawns: 0,
   };
   const marks = { frameStart: 0, syncStart: 0, renderStart: 0 };
   let pending: {
@@ -158,6 +173,8 @@ export const installBmsProbe = (world: ECSWorld) => {
           | (THREE.BatchedMesh & BatchPrivates)
           | null;
         frame.mergedDraws = batch ? batch._mergedDrawCount : -1;
+        frame.spawnMs = bmsDecalState.frameMs;
+        frame.spawns = bmsDecalState.frameSpawns;
         if (pending) {
           pending.frames.push({ ...frame });
           if (--pending.left <= 0) {
@@ -207,11 +224,19 @@ export const installBmsProbe = (world: ECSWorld) => {
               result[`${key}P90`] = median(values, 0.9);
             }
             let swaps = 0;
-            for (const f of list) swaps += f.lodApplies;
+            let spawns = 0;
+            let spawnMs = 0;
+            for (const f of list) {
+              swaps += f.lodApplies;
+              spawns += f.spawns;
+              spawnMs += f.spawnMs;
+            }
             resolve({
               frames: list.length,
               seconds,
               swapsPerSecond: seconds > 0 ? swaps / seconds : 0,
+              spawnsPerSecond: seconds > 0 ? spawns / seconds : 0,
+              msPerSpawn: spawns > 0 ? spawnMs / spawns : NaN,
               ...result,
               settings: { ...bmsSettings },
               backend: (getRenderer()?.backend as { isWebGPUBackend?: boolean } | undefined)
@@ -227,9 +252,9 @@ export const installBmsProbe = (world: ECSWorld) => {
     batch: () => readBatch(world),
     /** The ENGINE way's group data (`MERGE_GROUP`), the key of its batch's state, else null */
     engineGroup: () => {
-      const first = bmsState.members[0];
-      if (bmsSettings.way !== 'ENGINE' || !first) return null;
-      const member = world.getComponent(first.entityId, ComponentType.MERGE_MEMBER);
+      const first = getEngineEntity();
+      if (first === undefined) return null;
+      const member = world.getComponent(first, ComponentType.MERGE_MEMBER);
       return (
         (member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP)) ?? null
       );
@@ -239,6 +264,42 @@ export const installBmsProbe = (world: ECSWorld) => {
     lod: (options: { bias?: number; fadeSeconds?: number }) => {
       if (options.fadeSeconds !== undefined) setLodFadeSeconds(options.fadeSeconds);
       if (options.bias !== undefined) setLodBias(options.bias);
+    },
+    /** `?bmsDecals`: spawns `count` decals now (then the fades); the time, its patch builds' */
+    spawnDecals: (count: number) => {
+      if (!bmsDecalState.spawnNow) throw new Error('no decal pool (?bmsDecals=blend|cutout)');
+      const { ms, patchMs } = bmsDecalState.spawnNow(count);
+      return { count, ms, patchMs, msPerSpawn: ms / count, patchMsPerSpawn: patchMs / count };
+    },
+    /** `?bmsDecals`: the spawns a second from now on */
+    decals: (options: { rate?: number }) => {
+      if (options.rate !== undefined) bmsDecalSettings.rate = Math.max(0, options.rate);
+    },
+    /** `?bmsDecals`: what a long churn watches: the batch's reserved sizes and slots, the
+     * renderer's geometries and textures, the JS heap (Chromium's), the spawns so far */
+    decalBuffers: () => {
+      const batch = (bmsState.batch ?? findEngineBatch(world)) as
+        | (THREE.BatchedMesh & BatchPrivates)
+        | null;
+      const memory = getRenderer()?.info.memory as
+        | { geometries?: number; textures?: number }
+        | undefined;
+      const heap = (performance as { memory?: { usedJSHeapSize: number } }).memory;
+      return {
+        spawned: bmsDecalState.spawned,
+        batch: batch
+          ? {
+              maxInstances: batch.maxInstanceCount,
+              instances: batch.instanceCount,
+              maxVertices: batch._maxVertexCount,
+              maxIndices: batch._maxIndexCount,
+              geometrySlots: batch._geometryCount,
+            }
+          : null,
+        geometries: memory?.geometries ?? NaN,
+        textures: memory?.textures ?? NaN,
+        heapMb: heap ? heap.usedJSHeapSize / 1048576 : NaN,
+      };
     },
     /** Item 6, members: `rounds` times, a seeded `share` of the members leave the batch and come
      * back with a random geometry (freed ids are reused lowest first) */

@@ -428,6 +428,27 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
         params: { bmsWay: 'engine', bmsLod: '3' },
         reason: "the same LODs in an engine batch: the batch draws each member's level",
       },
+      {
+        id: 'decalsBlendSeparate',
+        params: { bmsWay: 'separate', bmsDecals: 'blend', bmsDecalRate: '0' },
+        reason: 'a FIFO pool of 128 blended decals on a heightfield, a mesh each (p375 Phase 3)',
+      },
+      {
+        id: 'decalsBlendEngine',
+        params: { bmsWay: 'engine', bmsDecals: 'blend', bmsDecalRate: '0' },
+        reason:
+          'the same pool in an engine batch: join order, per-member tint and fade, slots rewritten',
+      },
+      {
+        id: 'decalsCutoutSeparate',
+        params: { bmsWay: 'separate', bmsDecals: 'cutout', bmsDecalRate: '0' },
+        reason: 'the pool alpha-tested, a mesh each',
+      },
+      {
+        id: 'decalsCutoutEngine',
+        params: { bmsWay: 'engine', bmsDecals: 'cutout', bmsDecalRate: '0' },
+        reason: 'the alpha-tested pool in an engine batch (opaque: compacting, never sorted)',
+      },
     ],
   },
   lodShowcase: {

@@ -23,6 +23,7 @@ import { loadDebugModuleAsync } from 'aekasha/debug';
 import { addToMergeGroup, createMergeGroup, updateMergeMember } from 'aekasha/merging';
 import { createPhysicsEntity } from 'aekasha/physics';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
+import { bmsDecalSettings, createBmsDecals, readBmsDecalSettings } from './batchedMeshSpikeDecals';
 
 // p375 Phase 0's spike (docs/plans/p375_batched-mesh-batches.md §2): the same field of members,
 // 20 geometries and one material, drawn three ways:
@@ -45,6 +46,8 @@ import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 // set for the OVER camera (its near rows level 0, its far ones the coarsest). `?bmsDolly=true` moves
 // the camera from OVER's place halfway to the field's centre and back, every DOLLY_SECONDS by the
 // app loop's time (the same path on every run), sweeping the levels' bands across the field.
+// `?bmsDecals=blend|cutout` (SEPARATE and ENGINE; p375 Phase 3 S5) replaces the field with a decal
+// pool on a heightfield ground, seen from the DECALS camera: `batchedMeshSpikeDecals.ts`.
 // The measuring (`_dbg__batchedMeshSpike.ts`) and the page calls (`churn…`) are the debug module's.
 
 export const BMS_SCENE_ID = 'batchedMeshSpike';
@@ -63,8 +66,9 @@ export type BmsBodies = 'NONE' | 'KINEMATIC';
 export type BmsOrder = 'RANDOM' | 'GROUPED';
 /** A batch's sort: three's depth sort (the default), none, or by geometry range then depth */
 export type BmsSort = 'DEPTH' | 'NONE' | 'RANGE';
-/** Over the whole field, or inside it looking along it (most members out of view) */
-export type BmsCamera = 'OVER' | 'INSIDE';
+/** Over the whole field, inside it looking along it (most members out of view), or over the
+ * decals' ground (`?bmsDecals`, set by it) */
+export type BmsCamera = 'OVER' | 'INSIDE' | 'DECALS';
 
 /** The settings, from the URL at every load */
 export const bmsSettings = {
@@ -156,6 +160,21 @@ const readUrlOverrides = () => {
   if (s.lod > 0 && s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
     lwarn(`BatchedMesh spike: ?bmsLod is for the separate and engine ways, not ${s.way}.`);
     s.lod = 0;
+  }
+  readBmsDecalSettings(params);
+  if (bmsDecalSettings.mode !== 'NONE') {
+    if (s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
+      lwarn(`BatchedMesh spike: ?bmsDecals is for the separate and engine ways, not ${s.way}.`);
+      bmsDecalSettings.mode = 'NONE';
+    } else {
+      if (s.lod || s.bodies !== 'NONE' || s.move || s.shadow || s.dolly) {
+        lwarn(
+          'BatchedMesh spike: ?bmsDecals drops the field: no LOD, bodies, moves, shadow or dolly.'
+        );
+      }
+      Object.assign(s, { lod: 0, bodies: 'NONE', move: 0, shadow: false, dolly: false });
+      s.camera = 'DECALS';
+    }
   }
 };
 
@@ -502,6 +521,9 @@ const placeCamera = (world: ECSWorld) => {
   if (bmsSettings.camera === 'OVER') {
     eye.position.copy(OVER_EYE);
     eye.lookAt(0, 0, 0);
+  } else if (bmsSettings.camera === 'DECALS') {
+    eye.position.set(0, 28, 36);
+    eye.lookAt(0, 0, 2);
   } else {
     eye.position.set(0, 3, 0);
     eye.lookAt(60, 1, 0);
@@ -536,6 +558,16 @@ const startSunShadow = (world: ECSWorld) => {
   });
 };
 
+/** The measuring module, in prod test mode too (as instanceStress's probe) */
+const installProbeAsync = async (world: ECSWorld) => {
+  const probe = await loadDebugModuleAsync(
+    () => import('./_dbg__batchedMeshSpike'),
+    true,
+    'BatchedMesh spike probe'
+  );
+  await probe?.current?.installBmsProbe(world);
+};
+
 export const scene = async () => {
   const world = getECSWorld();
   exitTasks.length = 0;
@@ -549,14 +581,20 @@ export const scene = async () => {
     if (bmsSettings.shadow) startSunShadow(world);
   });
 
+  bmsState.batch = null;
+  bmsState.batchGeometryIds = [];
+  bmsState.members = [];
+  if (bmsDecalSettings.mode !== 'NONE') {
+    createBmsDecals(world, bmsSettings.way as 'SEPARATE' | 'ENGINE', onBmsExit);
+    await installProbeAsync(world);
+    return;
+  }
   const material = createMaterial({
     id: MATERIAL_ID,
     type: 'STANDARD',
     params: { color: '#c9c4bb', roughness: 0.6, metalness: 0 },
   });
   bmsState.geometries = createGeometries();
-  bmsState.batch = null;
-  bmsState.batchGeometryIds = [];
   const members = createPlacements();
   bmsState.members = members;
   if (bmsSettings.way === 'BATCHED') createBatchMembers(world, members, material);
@@ -568,11 +606,5 @@ export const scene = async () => {
     startMoving(world, members);
   }
 
-  // In prod test mode too, as instanceStress's probe
-  const probe = await loadDebugModuleAsync(
-    () => import('./_dbg__batchedMeshSpike'),
-    true,
-    'BatchedMesh spike probe'
-  );
-  await probe?.current?.installBmsProbe(world);
+  await installProbeAsync(world);
 };

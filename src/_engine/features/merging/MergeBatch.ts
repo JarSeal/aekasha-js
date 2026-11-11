@@ -814,7 +814,9 @@ export const setInstanceGeometry = (
  * Writes a batched member's geometry into its batch again (`updateMergeMember`): its own mesh's
  * geometry rewritten in its slot (every instance of it then draws the new data), or, when its mesh
  * has another geometry now, its instance given that one (the old one's slot freed when no instance
- * uses it). Its batch's sphere grows to hold what the geometry's instances draw.
+ * uses it). Its batch's sphere grows to hold what the geometry's instances draw. The member goes
+ * last in the join order, as if it had just joined: a pool that rewrites its oldest member (p309's
+ * decals) draws the rewritten one on top in a `JOIN` batch.
  * @internal
  */
 export const updateBatchMemberGeometry = (
@@ -825,6 +827,10 @@ export const updateBatchMemberGeometry = (
 ) => {
   const state = states.get(group);
   if (!state || member.instanceId < 0) return;
+  // A rewrite is a respawn: last in the join order (`JOIN` draws it on top, p375 Phase 3 S5)
+  member._joinSeq = nextJoinSeq++;
+  state.joinSeq[member.instanceId] = member._joinSeq;
+  if (member._fadeInstanceId >= 0) state.joinSeq[member._fadeInstanceId] = member._joinSeq;
   const { geometry } = getMemberMesh(entityId, world);
   const { geometryAt, batch } = state;
   if (state.slotGeometries[geometryAt[member.instanceId]] !== geometry) {

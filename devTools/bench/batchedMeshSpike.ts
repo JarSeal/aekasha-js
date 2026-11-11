@@ -7,6 +7,7 @@
  *
  *   npx tsx devTools/bench/batchedMeshSpike.ts [--backends webgpu,webgl] [--only <case>[,…]]
  *     [--runs 3] [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
+ *     [--long-seconds 600] [--sample-seconds 10]
  *
  * Each case is a page of its own (its own dev server, the scene runner's, unless `--url`), run
  * `--runs` times; the table gives the median of the runs' medians, and the runs' spread. The CPU
@@ -23,6 +24,14 @@
  * `MergeBatch.ts` module (n/a when the page's resource entries don't name exactly one). The
  * `check: lod fades` pair starts 20 s fades on many members, shoots both ways 7 s in and diffs them
  * (the share of pixels over 8/255).
+ *
+ * p375 Phase 3's exit (S5): the `decals` cases (`?bmsDecals=blend|cutout`, a FIFO pool of 128 or 512
+ * conformed patches on a heightfield, 30 spawns a second) against separate meshes; the Spawns
+ * column is the spawns a second and the spawner's time per spawn. `decals burst` times
+ * `spawnDecals(512)` at once; the `check: decals` pairs shoot both ways at rate 0 and diff them.
+ * The `long:` cases (only with an `--only` naming `long`) churn the pool at 60 spawns a second for
+ * `--long-seconds`, one run, sampling the batch's reserved sizes, the renderer's geometries and
+ * textures and the JS heap every `--sample-seconds`, and print the first, last and largest.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,6 +68,10 @@ type Case = {
   fadeShot?: FadeShot;
   /** A case whose shot this one's is diffed with */
   compareWith?: string;
+  /** Decals spawned at once after the warm-up (`spawnDecals`), timed */
+  burst?: number;
+  /** A long churn: run only when `--only` names `long`, sampled (`decalBuffers`) */
+  long?: boolean;
 };
 
 const batched = (extra: Record<string, string> = {}) => ({ bmsWay: 'batched', ...extra });
@@ -70,6 +83,25 @@ const kinematic = { bmsBodies: 'kinematic', bmsMove: '1' };
 /** Every member a LOD of three levels; with the camera dollying in and out */
 const lod = { bmsLod: '3' };
 const dolly = { bmsLod: '3', bmsDolly: 'true' };
+/** A decal pool (`?bmsDecals`): the way, the mode, the pool's size */
+const decal = (
+  way: 'separate' | 'engine',
+  mode: 'blend' | 'cutout',
+  pool: number,
+  extra: Record<string, string> = {}
+) => ({ bmsWay: way, bmsDecals: mode, bmsDecalPool: String(pool), ...extra });
+/** Both ways of a decal case, separate first */
+const decalPair = (
+  name: string,
+  mode: 'blend' | 'cutout',
+  pool: number,
+  extra: Record<string, string> = {},
+  more: Partial<Case> = {}
+): Case[] => [
+  { name: `${name}: separate`, params: decal('separate', mode, pool, extra), ...more },
+  { name: `${name}: engine`, params: decal('engine', mode, pool, extra), ...more },
+];
+const still = { bmsDecalRate: '0' };
 /** Mid-fade: 20 s fades started by a bias of 0.15, shot 7 s in (p375 Phase 2 S4's check) */
 const LOD_FADE_SHOT: FadeShot = { fadeSeconds: 20, bias: 0.15, waitMs: 7000 };
 
@@ -143,6 +175,49 @@ const CASES: Case[] = [
     fadeShot: LOD_FADE_SHOT,
     compareWith: 'check: lod fades separate',
   },
+  // p375 Phase 3's exit (S5): decal pools, separate meshes against the engine's batch
+  ...decalPair('decals blend 128', 'blend', 128),
+  ...decalPair('decals blend 512', 'blend', 512),
+  ...decalPair('decals cutout 128', 'cutout', 128),
+  ...decalPair('decals cutout 512', 'cutout', 512),
+  {
+    name: 'decals blend 512 depth: engine',
+    params: decal('engine', 'blend', 512, { bmsDecalOrder: 'depth' }),
+  },
+  ...decalPair('decals blend 512 entity', 'blend', 512, { bmsDecalSpawn: 'entity' }),
+  ...decalPair('decals burst 512', 'blend', 512, still, { burst: 512 }),
+  {
+    name: 'check: decals blend separate',
+    params: decal('separate', 'blend', 128, still),
+    shot: true,
+  },
+  {
+    name: 'check: decals blend engine',
+    params: decal('engine', 'blend', 128, still),
+    shot: true,
+    compareWith: 'check: decals blend separate',
+  },
+  {
+    name: 'check: decals cutout separate',
+    params: decal('separate', 'cutout', 128, still),
+    shot: true,
+  },
+  {
+    name: 'check: decals cutout engine',
+    params: decal('engine', 'cutout', 128, still),
+    shot: true,
+    compareWith: 'check: decals cutout separate',
+  },
+  {
+    name: 'long: decals blend 128 rewrite: engine',
+    params: decal('engine', 'blend', 128, { bmsDecalRate: '60' }),
+    long: true,
+  },
+  {
+    name: 'long: decals blend 128 entity: engine',
+    params: decal('engine', 'blend', 128, { bmsDecalRate: '60', bmsDecalSpawn: 'entity' }),
+    long: true,
+  },
   // Item 4: per-member colour and visibility (screenshots)
   {
     name: 'check: colours hidden',
@@ -189,6 +264,8 @@ type Args = {
   url: string | null;
   headed: boolean;
   json: string | null;
+  longSeconds: number;
+  sampleSeconds: number;
 };
 
 const fail = (message: string): never => {
@@ -206,6 +283,8 @@ const parseArgs = (argv: string[]): Args => {
     url: null,
     headed: false,
     json: null,
+    longSeconds: 600,
+    sampleSeconds: 10,
   };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
@@ -221,6 +300,8 @@ const parseArgs = (argv: string[]): Args => {
     else if (flag === '--url') args.url = value();
     else if (flag === '--headed') args.headed = true;
     else if (flag === '--json') args.json = value();
+    else if (flag === '--long-seconds') args.longSeconds = Math.max(1, Number(value()));
+    else if (flag === '--sample-seconds') args.sampleSeconds = Math.max(1, Number(value()));
     else fail(`unknown option ${flag}`);
   }
   return args;
@@ -241,6 +322,30 @@ type Summary = {
   swapsPerSecond: number;
   lodFading: number;
   mergedDraws: number;
+  spawnsPerSecond: number;
+  msPerSpawn: number;
+};
+/** `spawnDecals`' result */
+type Burst = {
+  count: number;
+  ms: number;
+  patchMs: number;
+  msPerSpawn: number;
+  patchMsPerSpawn: number;
+};
+/** `decalBuffers`' result: a long churn's sample */
+type DecalBuffers = {
+  spawned: number;
+  batch: {
+    maxInstances: number;
+    instances: number;
+    maxVertices: number;
+    maxIndices: number;
+    geometrySlots: number;
+  } | null;
+  geometries: number;
+  textures: number;
+  heapMb: number;
 };
 type BmsApi = {
   measure: (frames: number) => Promise<Summary>;
@@ -248,6 +353,8 @@ type BmsApi = {
   churnGeometries: (mode: string, rounds: number) => unknown;
   lod: (options: { bias?: number; fadeSeconds?: number }) => void;
   engineGroup: () => object | null;
+  spawnDecals: (count: number) => Burst;
+  decalBuffers: () => DecalBuffers;
 };
 /** The engine batch's state, read through the page's own `MergeBatch.ts` */
 type EngineBatch = { runs: number; geometriesInUse: number; compactions: number };
@@ -263,6 +370,9 @@ type Run = {
   /** The engine batch's state after the measure, its compactions a second during it */
   engineBatch?: (EngineBatch & { compactionsPerSecond: number }) | null;
   shotFile?: string;
+  burst?: Burst;
+  /** A long churn's samples, with their time (s) */
+  samples?: (DecalBuffers & { seconds: number })[];
   errors: string[];
 };
 
@@ -326,6 +436,14 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
     },
     { stats: STATS_SETTINGS, webgl: backend === 'webgl' }
   );
+  // What ends a page early (a long churn lost one at 230 s with no Vite reload line, p375 S5)
+  page.on('crash', () => run.errors.push('[crash] the page crashed'));
+  let loads = 0;
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame() && ++loads > 1) {
+      run.errors.push(`[navigated] the page loaded again: ${frame.url()}`);
+    }
+  });
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
   const ready = await withTimeout(
@@ -362,8 +480,13 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
     await page.waitForTimeout(waitMs);
     fs.mkdirSync(SHOT_DIR, { recursive: true });
     run.shotFile = path.join(SHOT_DIR, `${c.name.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`);
-    await page.screenshot({ path: run.shotFile });
+    await shootAsync(page, run.shotFile);
   }
+  if (c.burst) {
+    const count = c.burst;
+    run.burst = await page.evaluate((n) => (window as BmsWindow).__aekBms!.spawnDecals(n), count);
+  }
+  if (c.long) run.samples = await sampleLongAsync(page, args);
   const before = await readEngineBatchAsync(page);
   await page.evaluate((everyMs) => {
     const gpu = { samples: [] as number[], timer: 0 };
@@ -391,10 +514,40 @@ const runCaseAsync = async (page: Page, url: string, args: Args, c: Case, backen
   run.gpuMs = usable.length ? usable.reduce((a, b) => a + b, 0) / usable.length : NaN;
   if (c.shot) {
     fs.mkdirSync(SHOT_DIR, { recursive: true });
-    const file = `${c.name.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`;
-    await page.screenshot({ path: path.join(SHOT_DIR, file) });
+    run.shotFile = path.join(SHOT_DIR, `${c.name.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`);
+    await shootAsync(page, run.shotFile);
   }
   return run;
+};
+
+/** A screenshot without the stats panels' figures (they differ run to run, which a diff of two
+ * ways' shots would count) */
+const shootAsync = async (page: Page, file: string) => {
+  const hide = (hidden: boolean) =>
+    page.evaluate((h) => {
+      for (const el of document.querySelectorAll<HTMLElement>('[data-panel]')) {
+        el.style.visibility = h ? 'hidden' : '';
+      }
+    }, hidden);
+  await hide(true);
+  await page.screenshot({ path: file });
+  await hide(false);
+};
+
+/** A long churn: `decalBuffers()` now and every `--sample-seconds` until `--long-seconds` */
+const sampleLongAsync = async (page: Page, args: Args) => {
+  const samples: (DecalBuffers & { seconds: number })[] = [];
+  const start = Date.now();
+  for (;;) {
+    const seconds = (Date.now() - start) / 1000;
+    const sample = await page.evaluate(() => (window as BmsWindow).__aekBms!.decalBuffers());
+    samples.push({ ...sample, seconds });
+    if (seconds >= args.longSeconds) return samples;
+    out(
+      `${DIM}    ${Math.round(seconds)} s: ${sample.spawned} spawned, ${JSON.stringify(sample.batch)}, geometries ${sample.geometries}, textures ${sample.textures}, heap ${fmt(sample.heapMb, 1)} MB${RESET}`
+    );
+    await page.waitForTimeout(Math.min(args.sampleSeconds, args.longSeconds - seconds) * 1000);
+  }
 };
 
 const med = (values: number[]) => {
@@ -406,13 +559,13 @@ const fmt = (n: number, digits = 2) => (Number.isNaN(n) ? 'n/a' : n.toFixed(digi
 const formatTable = (backend: string, rows: { c: Case; runs: Run[] }[]) => {
   const lines = [
     `\n${backend}: medians of the runs (CPU spread min-max)`,
-    '| Case | Draws | Triangles | CPU frame (ms) | spread | Render submit (ms) | Sync (ms) | GPU (ms) | LOD swaps/s, fading | Batch |',
-    '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- | --- |',
+    '| Case | Draws | Triangles | CPU frame (ms) | spread | Render submit (ms) | Sync (ms) | GPU (ms) | LOD swaps/s, fading | Spawns/s, ms each | Batch |',
+    '| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- | --- | --- |',
   ];
   for (const { c, runs } of rows) {
     const ok = runs.filter((r) => r.summary);
     if (ok.length === 0) {
-      lines.push(`| ${c.name} | failed | | | | | | | | |`);
+      lines.push(`| ${c.name} | failed | | | | | | | | | |`);
       continue;
     }
     const pick = (key: keyof Summary) => med(ok.map((r) => r.summary![key] as number));
@@ -428,9 +581,51 @@ const formatTable = (backend: string, rows: { c: Case; runs: Run[] }[]) => {
       pick('swapsPerSecond') > 0 || pick('lodFading') > 0
         ? `${fmt(pick('swapsPerSecond'), 0)}, ${fmt(pick('lodFading'), 0)}`
         : '';
+    const bursts = ok.map((r) => r.burst).filter((b) => b);
+    const spawnText = bursts.length
+      ? `burst ${bursts[0]!.count}: ${fmt(med(bursts.map((b) => b!.msPerSpawn)), 3)} (patch ${fmt(med(bursts.map((b) => b!.patchMsPerSpawn)), 3)})`
+      : pick('spawnsPerSecond') > 0
+        ? `${fmt(pick('spawnsPerSecond'), 0)}, ${fmt(pick('msPerSpawn'), 3)}`
+        : '';
     lines.push(
-      `| ${c.name} | ${fmt(pick('drawCalls'), 0)} | ${Math.round(pick('triangles')).toLocaleString('en')} | ${fmt(pick('cpuMs'))} | ${fmt(Math.min(...cpus))}-${fmt(Math.max(...cpus))} | ${fmt(pick('renderMs'))} | ${fmt(pick('syncMs'), 3)} | ${fmt(med(ok.map((r) => r.gpuMs)))} | ${lodText} | ${batch} |`
+      `| ${c.name} | ${fmt(pick('drawCalls'), 0)} | ${Math.round(pick('triangles')).toLocaleString('en')} | ${fmt(pick('cpuMs'))} | ${fmt(Math.min(...cpus))}-${fmt(Math.max(...cpus))} | ${fmt(pick('renderMs'))} | ${fmt(pick('syncMs'), 3)} | ${fmt(med(ok.map((r) => r.gpuMs)))} | ${lodText} | ${spawnText} | ${batch} |`
     );
+  }
+  return lines;
+};
+
+/** A long churn's samples: the first, the last and each figure's largest; a figure that grew past
+ * its first sample after the first minute is flagged */
+const formatLong = (backend: string, rows: { c: Case; runs: Run[] }[]) => {
+  const lines: string[] = [];
+  for (const { c, runs } of rows) {
+    const samples = runs.find((r) => r.samples?.length)?.samples;
+    if (!c.long || !samples) continue;
+    const first = samples[0];
+    const settled = samples.find((x) => x.seconds >= 60) ?? first;
+    const last = samples[samples.length - 1];
+    const figures = {
+      maxInstances: (x: DecalBuffers) => x.batch?.maxInstances ?? NaN,
+      maxVertices: (x: DecalBuffers) => x.batch?.maxVertices ?? NaN,
+      maxIndices: (x: DecalBuffers) => x.batch?.maxIndices ?? NaN,
+      geometrySlots: (x: DecalBuffers) => x.batch?.geometrySlots ?? NaN,
+      geometries: (x: DecalBuffers) => x.geometries,
+      textures: (x: DecalBuffers) => x.textures,
+      heapMb: (x: DecalBuffers) => x.heapMb,
+    };
+    lines.push(
+      `\n${backend} ${c.name}: ${last.spawned} spawned in ${Math.round(last.seconds)} s`,
+      '| Figure | first | at 60 s | last | largest | grew after 60 s |',
+      '| --- | ---: | ---: | ---: | ---: | --- |'
+    );
+    for (const [name, read] of Object.entries(figures)) {
+      const largest = Math.max(...samples.map(read));
+      const grew = samples.some((x) => x.seconds > settled.seconds && read(x) > read(settled));
+      const digits = name === 'heapMb' ? 1 : 0;
+      lines.push(
+        `| ${name} | ${fmt(read(first), digits)} | ${fmt(read(settled), digits)} | ${fmt(read(last), digits)} | ${fmt(largest, digits)} | ${grew && name !== 'heapMb' ? `${RED}yes${RESET}` : grew ? 'yes (heap: GC)' : 'no'} |`
+      );
+    }
   }
   return lines;
 };
@@ -464,9 +659,10 @@ const compareShotsAsync = async (backend: string, rows: { c: Case; runs: Run[] }
 
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
-  const cases = args.only.length
-    ? CASES.filter((c) => args.only.some((o) => c.name.includes(o)))
-    : CASES;
+  const isLongAsked = args.only.some((o) => o.includes('long'));
+  const cases = (
+    args.only.length ? CASES.filter((c) => args.only.some((o) => c.name.includes(o))) : CASES
+  ).filter((c) => !c.long || isLongAsked);
   if (cases.length === 0) fail('no case matches --only');
   const watch = setProgressLogFile(LOG_FILE);
   const server = args.url
@@ -490,7 +686,7 @@ const main = async () => {
       results[backend] = [];
       for (const c of cases) {
         const runs: Run[] = [];
-        for (let r = 0; r < args.runs; r++) {
+        for (let r = 0; r < (c.long ? 1 : args.runs); r++) {
           const page = await launched.browser.newPage({ viewport: VIEWPORT });
           try {
             runs.push(await runCaseAsync(page, buildUrl(baseUrl, c), args, c, backend));
@@ -510,6 +706,7 @@ const main = async () => {
             out(`    ${RED}asked for ${backend}, drew on ${s.backend}${RESET}`);
           }
           if (last.churn) out(`    churn: ${JSON.stringify(last.churn)}`);
+          if (last.burst) out(`    burst: ${JSON.stringify(last.burst)}`);
           for (const e of [...new Set(last.errors)].slice(0, 5)) {
             out(`    ${RED}${e.slice(0, 300)}${RESET}`);
           }
@@ -523,6 +720,7 @@ const main = async () => {
   }
   for (const backend of args.backends) {
     for (const line of formatTable(backend, results[backend])) out(line);
+    for (const line of formatLong(backend, results[backend])) out(line);
     await compareShotsAsync(backend, results[backend]);
   }
   if (args.json) {
