@@ -113,6 +113,22 @@ const registerSlots = (
 };
 
 /**
+ * Fails the gather on a scene's `mergeGroups` entry naming a palette the scene doesn't list in
+ * `mergeMaterials` (p374 Phase 3): only a listed palette's merge material is made in the scene.
+ * Runs before the list is resolved (its ids).
+ */
+const checkMergeGroupPalettes = ({ ctx, sceneId, scene }: SceneRun) => {
+  const listed = new Set(scene.mergeMaterials ?? []);
+  for (const entry of scene.mergeGroups ?? []) {
+    const paletteId = 'palette' in entry ? entry.palette : undefined;
+    if (paletteId === undefined || listed.has(paletteId)) continue;
+    ctx.log.error(
+      `Scene "${sceneId}": its mergeGroups entry "${entry.id}" names the palette "${paletteId}", which the scene's mergeMaterials doesn't list: add "${paletteId}" there.`
+    );
+  }
+};
+
+/**
  * A scene's `mergeMaterials` (p374 Phase 2): each palette id replaced by its palette without the
  * build-time fields (`slots`, `optimize`; a production build without `debugData`), and its slot
  * textures added to the scene's `textures` (an id the scene lists already isn't added again), so
@@ -121,6 +137,7 @@ const registerSlots = (
  */
 export const resolveSceneMergeMaterials = (run: SceneRun) => {
   const { ctx, reg, scene, reportUnknownId } = run;
+  checkMergeGroupPalettes(run);
   if (!Array.isArray(scene.mergeMaterials)) return;
   const palettes: SceneMergeMaterial[] = [];
   const slotIds: string[] = [];

@@ -12,6 +12,11 @@ export type MergeGroupSettings = {
    * Default false: the group goes with the scene it was created in. Only a persistent group takes
    * persistent members. */
   persistent?: boolean;
+  /** A merge material palette's id (`*.mergeMaterial.json`, p374): the group takes meshes of any
+   * of the palette's materials and draws them in one draw with the palette's merge material. The
+   * scene must list the palette (`mergeMaterials`), and a palette group can't be `persistent`
+   * (the merge material is the scene's). Default: none, one material per group. */
+  palette?: string;
 };
 
 /**
@@ -34,7 +39,8 @@ export type MergeGroupData = {
   wasted: number;
   /** How many times the group's geometry was built. */
   rebuilds: number;
-  /** The members' material (the first member's): every member shares it. */
+  /** The members' material (the first member's): every member shares it. A palette group's is
+   * the palette's merge material, from its creation. */
   _material: THREE.Material | null;
   /** A build is due: the build system builds the group at its next run. */
   _isPending: boolean;
@@ -86,6 +92,9 @@ export type SceneMergeGroupEntry = {
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's. */
   receiveShadow?: boolean;
+  /** A merge material palette the scene lists (`mergeMaterials`): the group takes meshes of any
+   * of its materials, drawn by its merge material. */
+  palette?: string;
 };
 
 /**
@@ -108,6 +117,9 @@ export type MergeMemberData = {
   /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
    * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
+   * joined; undefined in a group of one material. */
+  _paletteIndex?: number;
   /** Its `TRANSFORM`'s pose when its edit session began (`beginMergeMemberEdit`), while one is
    * open: it's drawn by its own mesh, its range collapsed. */
   _editPose?: MergeMemberEditPose;

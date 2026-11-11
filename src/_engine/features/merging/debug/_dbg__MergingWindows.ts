@@ -178,6 +178,11 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
       group._isAuto ? `AUTO${cell ? `, cell ${cell}` : ''}` : 'explicit (named)'
     ),
     live('Material', () => getMaterialLabel(group._material)),
+    live(
+      'Palette',
+      () => group.settings.palette ?? 'none',
+      'A palette group takes meshes of any of its materials, drawn by its merge material.'
+    ),
     live('Cast shadow', () => getShadowText(groupEntityId, world, 'castShadow')),
     live('Receive shadow', () => getShadowText(groupEntityId, world, 'receiveShadow')),
     live('Persistent', () => (group.settings.persistent ? 'yes' : 'no')),
@@ -290,6 +295,10 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
     }),
     live('Vertices', () => formatCount(mesh()?.geometry.getAttribute('position')?.count ?? 0)),
     live('Part', () => getMemberPartText(entityId, world)),
+    live('Palette index', () => {
+      const index = member()?._paletteIndex;
+      return index === undefined ? 'none (a group of one material)' : String(index);
+    }),
     ...pose.items,
     getNoteItem(
       'Moving it draws it on its own until the change ends, then writes its part of the group’s mesh in place (no rebuild); undo puts it back.'

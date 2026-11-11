@@ -4,6 +4,7 @@ import { retagAssetOwner } from '../../kernel/assets/AssetOwners';
 import { deleteMaterial, getMaterial, saveMaterial } from '../../kernel/assets/Material';
 import { deleteTexture, getTexture, saveTexture } from '../../kernel/assets/Texture';
 import { createMergeMaterial, type MergeMaterialInfo } from './MergeMaterial';
+import { getMergeMaterialInfo } from './MergePalettes';
 import type { MergeMaterialSlot, SceneMergeMaterial } from './MergeMaterialSchema';
 
 // A scene's merge materials registered (docs/plans/p374_multi-material-merging.md Phase 2): in
@@ -15,13 +16,6 @@ import type { MergeMaterialSlot, SceneMergeMaterial } from './MergeMaterialSchem
  * @internal
  */
 export const getMergeMaterialTableId = (paletteId: string) => `${paletteId}.table`;
-
-/**
- * The merge material info of a registered material, or undefined for any other material.
- * @internal
- */
-export const getMergeMaterialInfo = (material: THREE.Material | undefined) =>
-  material?.userData.mergeMaterial as MergeMaterialInfo | undefined;
 
 const isArrayTexture = (texture: THREE.Texture) =>
   !!(

@@ -69,7 +69,7 @@
       "$ref": "#/definitions/__schema536"
     },
     "mergeMaterials": {
-      "$ref": "#/definitions/__schema544"
+      "$ref": "#/definitions/__schema546"
     },
     "id": {
       "type": "string",
@@ -90,7 +90,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema547"
+          "$ref": "#/definitions/__schema549"
         }
       ]
     }
@@ -7037,6 +7037,9 @@
             },
             "receiveShadow": {
               "$ref": "#/definitions/__schema543"
+            },
+            "palette": {
+              "$ref": "#/definitions/__schema544"
             }
           },
           "required": [
@@ -7072,7 +7075,7 @@
       "type": "boolean"
     },
     "__schema544": {
-      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "description": "A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema545"
@@ -7080,16 +7083,28 @@
       ]
     },
     "__schema545": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/__schema546"
-      }
-    },
-    "__schema546": {
       "type": "string",
       "minLength": 1
     },
+    "__schema546": {
+      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema547"
+        }
+      ]
+    },
     "__schema547": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema548"
+      }
+    },
+    "__schema548": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema549": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -7173,7 +7188,7 @@
               "$ref": "#/definitions/__schema536"
             },
             "mergeMaterials": {
-              "$ref": "#/definitions/__schema544"
+              "$ref": "#/definitions/__schema546"
             }
           },
           "additionalProperties": false

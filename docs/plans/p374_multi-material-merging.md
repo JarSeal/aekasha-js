@@ -518,6 +518,111 @@ per channel):
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.
 
+Starts from (Phase 2): a scene that lists a palette (`mergeMaterials`) has its merge material
+registered under the palette's id before its scene code runs (`assetsLoaded`), owned by the scene,
+with `userData.mergeMaterial` (`MergeMaterialInfo`: `paletteId`, `materials` by palette index,
+`tableId`, `arrays`); `mergeGeometryParts` writes `aekMatIndex` from each part's `paletteIndex`.
+p372's groups take one material (`MergeGroupData._material`, the first member's), and `AUTO`'s key
+starts with the material's registered id.
+
+Decisions (2026-11-11, at the phase's start):
+
+- **Where a palette is named.** An explicit group: `palette` in `MergeGroupSettings`, so
+  `createMergeGroup({ id, palette })` and a scene's `mergeGroups` group entry
+  `{ id, palette }` (a group made on first use takes it, as it takes the shadow flags). `AUTO`:
+  the scene's `AUTO` entry's `palettes` (default none: D4's explicit list), and a mesh's `merge`
+  options `palettes`, which replaces the scene's for that mesh (`[]`: none), as its `cellSize` and
+  `maxVertices` replace the scene's (the test scene's per-material field uses it). A palette is
+  one the scene lists (Phase 2): the gather fails on a `mergeGroups` entry naming one its scene's
+  `mergeMaterials` doesn't list, naming the fix. At runtime the palette is the merge material
+  registered under its id: `createMergeGroup` throws without one (and `addToMergeGroup`'s group on
+  first use with it, which the queue's joins catch and log, the members then drawn on their own);
+  an `AUTO` palette without one warns once per scene and palette and is ignored (the meshes take
+  their per-material groups).
+- **A palette group isn't persistent.** The merge material, its table and its arrays are the
+  scene's (Phase 2), so `createMergeGroup` throws for `palette` with `persistent`, and a
+  persistent mesh's `AUTO` key ignores the palettes (it goes into its per-material persistent
+  group).
+- **Members.** A palette group's material is the palette's merge material (`_material`, set when
+  the group is made, not by its first member) and it takes a mesh whose material is the registered
+  instance of one of the palette's member ids (`getMaterial(material.userData.id) === material`,
+  the id in `materials`). Refused, naming the palette: another material, a variant
+  (`<id>#<hash>`, so D4's "listed in the palette or refused" is always refused: a palette lists
+  material JSON ids), a clone carrying a member's id. A member's palette index is recorded when it
+  joins (`MERGE_MEMBER._paletteIndex`) and each build passes it as the part's `paletteIndex`. A
+  member's parameter overrides from a scene's save entry still aren't in the table (Phase 1's
+  warning).
+- **A material array stays refused** (D4's open point), its refusal reworded: "it has a material
+  array (one draw per material): split it into one mesh per material, which a palette can merge".
+  No importer makes one (three's `GLTFLoader` makes a mesh per primitive), an indexed geometry's
+  groups can share vertices (a per-vertex palette index would need the merge to split them and to
+  scan every index at the join), and D1-D3 merge members of one material each. Open question 4.
+- **Vertex requirements (D1):** nothing new. The merge's `UNION` computes a missing tangent per
+  part (p371), and `AUTO`'s key keeps the attributes' signature, so a palette group merges what a
+  per-material group would.
+- **`AUTO`'s key:** a mesh whose material is a member (as above) of one of its palettes (the
+  first in list order that has it) is keyed by `palette:<id>` in place of the material's id; the
+  rest of the key is unchanged. Two palettes of one list sharing a material: the gather warns (the
+  first wins). The bucket's group is made with the palette, so its material is the merge material
+  from its first build.
+- **`getMergeMaterialInfo`** moves into the first download (a new `MergePalettes.ts`, with the
+  palette look-up the groups use), as Phase 2 foresaw; `MergeMaterialRegister.ts` imports it.
+- **A `MERGED` geometry JSON's parts** get no `paletteIndex` (Phase 2's open point): nothing uses
+  one, and a group or `mergeGeometryParts` in code covers it.
+- **The test scene's field** (D5's): `mergeMaterials` gets 1 600 meshes (4 members × 400, Phase 0's
+  shapes) on a 3 × 3 grid of `AUTO` cells (the scene's `AUTO` entry's `cellSize`), seen by a camera
+  of its own, made in one of three modes at runtime (`window.__mergeMaterials.field(mode)`):
+  `PALETTE` (`merge: 'AUTO'`, the scene's `AUTO` `palettes: ["ruinsPalette"]`), `MATERIAL`
+  (`merge: { palettes: [] }`) and `UNMERGED`, each counted (groups, draws). Phase 4 measures on it.
+
+Sections (each stopped for review):
+
+1. **Explicit palette groups.** `palette` in the settings, the scene entry's schema and the
+   gather's check; `MergePalettes.ts`; the group's material and index map at creation, the
+   refusals, `_paletteIndex` at the join, `paletteIndex` in the build; the material array's
+   refusal reworded; the Merging tab's group and member windows show the palette and the index.
+   Tests.
+2. **`AUTO` with palettes.** The `AUTO` entry's and the mesh options' `palettes` (types, schema,
+   `queueMerge`'s check, the scene settings), the key, the bucket's group made with its palette,
+   the warnings, the gather's checks. Tests (a 4-material, 9-cell scene: 36 groups without
+   palettes, 9 with).
+3. **The test scene's field** and the exit on both backends; `features/merging/CLAUDE.md`; the
+   baselines and `yarn sbp`.
+
+As built, section 1 (explicit palette groups):
+
+- **`MergePalettes.ts`** (first download): `getMergeMaterialInfo` (moved from
+  `MergeMaterialRegister.ts`, which imports it now), `findPaletteMaterial(paletteId)` (the
+  material registered under the id when its info names that palette), `getPaletteIndex(info,
+  material)` (-1 unless it's the registered instance of a member id) and
+  `getGroupPaletteIndex(group, material)` (undefined for a group of one material), all
+  `@internal`.
+- **The settings:** `MergeGroupSettings.palette` (so `CreateMergeGroupOptions` and the undo's
+  group snapshot carry it), `SceneMergeGroupEntry.palette` and its schema (`min(1)`).
+  `createGroup` (`MergeState.ts`) sets a palette group's `_material` to the merge material;
+  `createMergeGroup` throws first for an unregistered palette ("the scene lists no such palette")
+  and for `palette` with `persistent`.
+- **Members:** `getMergeRefusal` refuses a material the group's palette doesn't have (naming the
+  palette, a variant or a clone included); a group of one material keeps its identity check, so a
+  palette material is another material there. `addToMergeGroup` records
+  `MERGE_MEMBER._paletteIndex`, and `getBuildParts` passes it as the part's `paletteIndex` (none for
+  a group of one material: no `aekMatIndex`). The material array's refusal is reworded.
+- **The queue's joins** (`resolveQueuedMerges`): a group that can't be made on first use (its
+  scene entry's palette isn't registered) is logged with its entities, which are drawn on their
+  own; the other joins go on.
+- **The gather** (`checkMergeGroupPalettes`, `devTools/gather/mergeMaterials.ts`, at the start of
+  `resolveSceneMergeMaterials`): a `mergeGroups` entry's `palette` the scene's `mergeMaterials`
+  doesn't list fails the gather, naming the entry and the fix.
+- **The debugger:** the group window's "Palette" row, the member window's "Palette index" (the
+  group's material row already reads the palette's id: the merge material is registered under
+  it).
+- **Tests:** `MergePalettes.test.ts` (the look-ups; a palette group's material, indices and
+  `aekMatIndex` per part, one draw; the refusals; a group of one material untagged; the throws; a
+  scene entry's palette on first use, and an unregistered one logged), the gather's check in
+  `gather.test.ts`, the windows' rows.
+- `MergeGroups.ts` is 794 lines: section 2's `AUTO` work goes into `MergeAuto.ts`,
+  `MergePalettes.ts` and `MergeSceneSettings.ts`.
+
 ### Phase 4 — Measurements, handbook, versioning (D5)
 
 1. D5's numbers in this file.
@@ -556,3 +661,7 @@ Engine minor (asset type, merge material, group palettes).
    variants as instances): meshes whose materials differ only in values could share one node
    build without merging. Fewer builds and pipelines, the same draw count. Decide once p302's
    Phase 3 spike has counted it.
+4. **Members with a material array** (refused, Phase 3): merging one into a palette group would
+   give each geometry group's vertices its material's palette index. It needs a vertex no two
+   groups of different materials share (else the merge splits it), checked at the join over every
+   index. Wait for a use case (an importer that makes material arrays, a code-made kit).

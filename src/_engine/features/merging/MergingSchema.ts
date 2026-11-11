@@ -100,6 +100,14 @@ export const SceneMergeGroupEntrySchema = z.union([
       castShadow: z.boolean().optional(),
       /** Whether the group's mesh receives shadows (default: its first member's). */
       receiveShadow: z.boolean().optional(),
+      /** A palette the scene lists: the group takes any of its materials (p374). */
+      palette: z
+        .string()
+        .min(1)
+        .optional()
+        .describe(
+          'A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material.'
+        ),
     })
     .describe(
       "A group's settings, when a mesh's merge or addToMergeGroup makes it in this scene."

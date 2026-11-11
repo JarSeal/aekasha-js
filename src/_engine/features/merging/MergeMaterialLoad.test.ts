@@ -11,7 +11,8 @@ import { deleteTexture, getTexture, saveTexture } from '../../kernel/assets/Text
 import { createRootScene, type SceneData } from '../../kernel/scene/Scene';
 import type { SceneMergeMaterial } from './MergeMaterialSchema';
 import { createMergeMaterialAsync, createSceneMergeMaterialsAsync } from './MergeMaterialLoad';
-import { getMergeMaterialInfo, getMergeMaterialTableId } from './MergeMaterialRegister';
+import { getMergeMaterialTableId } from './MergeMaterialRegister';
+import { getMergeMaterialInfo } from './MergePalettes';
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({

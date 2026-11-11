@@ -570,6 +570,19 @@ describe('merge material palettes (p374 D1, D2)', () => {
       const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(logged).toContain('Scene "a" lists the merge material "pebbles"');
     });
+
+    it('fails on a mergeGroups entry naming a palette the scene doesn’t list (p374 Phase 3)', () => {
+      const ruins = { id: 'ruins', palette: 'stones' };
+      expect(gather(files({ mergeMaterials: ['stones'], mergeGroups: [ruins] })).isGathered).toBe(
+        true
+      );
+      const errorSpy = logErrors();
+      expect(gather(files({ mergeGroups: [ruins] })).isGathered).toBe(false);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(logged).toContain(
+        'mergeGroups entry "ruins" names the palette "stones", which the scene\'s mergeMaterials doesn\'t list'
+      );
+    });
   });
 
   it('fails on a palette id a material has', () => {
