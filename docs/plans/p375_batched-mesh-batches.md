@@ -368,7 +368,88 @@ moving members.
    the scene graph while it's batched (three's world matrix update walks the hidden member meshes:
    0.22 ms at 2 000 on WebGL2), back in on a leave and in "Show unmerged"; measure with the bench's
    `engine` case against `batch grouped none`. Per-member LOD adds a second instance per fading
-   member, so the members' cost matters more there. 3. p309's decal pools on batched groups (if p309 has shipped, port;
+   member, so the members' cost matters more there.
+   **Sections** (the breakdown agreed 2026-11-11; each stopped for review):
+   - S1 — a batched member's own mesh out of the scene graph (the candidate above) — done (its
+     results: "S1 results" below).
+   - S2 — the seam and the refusals: a kernel draw delegate next to the LOD targets
+     (`kernel/ecs/LodTargets.ts`), set by `merging()`'s install, which `LodFades.ts`' plain-mesh
+     apply, cull and fade ask per call whether something else draws the entity. LOD keeps
+     resolving the levels (refs, `AUTO`, pre-warm, dither) and the hidden mesh still gets each
+     level (a leave shows the right one). `BATCHED` stops refusing `LOD` (`BAKED` keeps it until
+     p376); each level's geometry must match the batch, its material be the group's and its
+     `castShadow` the batch's; impostor levels refused.
+   - S3 — level swaps and LOD culling, no fades: the batch holds every level geometry of its
+     members; the apply swaps in place (`setGeometryIdAt`, not a remove and an add);
+     `TAG_LOD_CULLED` joins the batched members' visibility.
+   - S4 — cross-fades: a per-batch fade texture read at `batchIndirectIndex` through
+     `setObjectLodFadeNode` (before the batch's first build; the shadow pass reads it too), a
+     second instance per fading member with the outgoing level (`MERGE_MEMBER._fadeInstanceId`),
+     cull fades, and the second instance through fade end, delete, leave, compaction and rebuild.
+   - S5 — the debugger: the batch's fading instances and level geometries, the member window's
+     level and fade instance; the LOD tab and overlay checked with batched members.
+   - S6 — the exit: `?bmsLod=…` in `batchedMeshSpike` (two or three hand-made levels per
+     geometry) and a camera dolly; the bench's separate LOD meshes against the engine batch, still
+     and dollying (swaps a second, compactions, runs), and a range `customSort` against compaction
+     (decides D1's fallback); `scenes.config.ts` variants, `yarn sbp`, `yarn verify:baselines`,
+     `yarn verify:scenes`. **Exit:** ≥ 30 % CPU frame against separate LOD meshes on both
+     backends, WebGPU draws near one per geometry-level in use, fades without pops.
+
+   **Decisions** (2026-11-11, before S1): the delegate, not a `LodTarget` resolved again at the
+   join and leave; a level change in place; a shared-vertex chain level's duplicated vertices are
+   accepted and their memory recorded in S6 (sharing them through `BatchedMesh`'s private
+   `_geometryInfo` is a follow-up); S1 first and droppable. A `merging` budget over 9 KiB stops
+   for a decision, not a raise.
+
+   **S1 results** (2026-11-11; Phase 0's machine and setup):
+   - **Built:** `TAG_MERGED`'s hooks (`MergeGroups.ts`) take a batched member's own mesh out of
+     the scene graph (`detachBatchedMemberMesh`, `MergeBatchFront.ts`: a member with an instance)
+     and put a mesh merging took out back under the root scene (`reattachMemberMesh`, a `WeakSet`
+     of the detached meshes). So a leave, a dissolve or deleted group (`releaseMember`) and "Show
+     unmerged" put it back; a rebuild, which keeps `TAG_MERGED`, leaves it out; a deleted member
+     isn't put back (`deleteEntity` runs no remove hook). No rebuild handover was needed.
+   - **Readers checked:** the sync and compaction compose the pose from position, quaternion and
+     scale; `addMemberInstance`'s `syncMemberPose` updates the matrix itself; LOD's
+     `measureEntity` reads a mesh without a parent as one at the root; frustum culling's
+     `getMeshWorldBoundingSphere` calls `getWorldPosition` (updates the matrix); streaming's
+     priming and fades traverse the object itself; `disposeMesh` takes it from no parent; the
+     eligibility's root-scene check runs only at a join, after the member check.
+   - **Raycasts:** three's `Raycaster` doesn't skip hidden objects, so a root-scene raycast hit a
+     batched member's hidden mesh before (and the batch at the same distance); now it hits only
+     the batch. New public `getMergeMemberAtBatchId(groupEntityId, batchId, world?)`
+     (`MergeMemberEdit.ts`, on `aekasha/merging`: a walk of the group's members, no allocation)
+     maps a hit's `batchId` to its member. Its Hub mention is Phase 4's (the Mesh merging page's
+     picking). A baked group's hidden members are still hit by a root-scene raycast (unchanged,
+     p372's).
+   - **Measured** (`--only "engine,batch grouped none,engine nocull,batch grouped none nocull"`,
+     every case containing those names, 3 runs each, before and after on the same day; the
+     hand-built batch's rows don't run the engine's code, so they show the run's drift). WebGL2,
+     CPU frame (render submit), engine against the hand-built batch in the same run:
+
+     | Case          | Before: engine / batch | After: engine / batch | Gap before → after |
+     | ------------- | ---------------------: | --------------------: | -----------------: |
+     | still         |  1.26 (0.87) / 0.78 (0.61) | 1.10 (0.61) / 0.87 (0.67) | 0.48 → 0.23 ms |
+     | still, nocull |  0.98 (0.56) / 0.76 (0.45) | 0.82 (0.32) / 0.73 (0.45) | 0.22 → 0.09 ms |
+     | shadow        |  1.37 (1.05) / 0.86 (0.74) | 1.06 (0.73) / 0.94 (0.81) | 0.51 → 0.12 ms |
+     | move 10 %     |  1.40 (0.91) / 0.88 (0.66) | 1.19 (0.64) / 0.88 (0.66) | 0.52 → 0.31 ms |
+     | inside        |  2.11 (1.53) / 1.26 (0.93) | 1.51 (0.84) / 1.31 (0.97) | 0.85 → 0.20 ms |
+
+     The render submit gap is gone in every case (the scene update no longer walks the members);
+     what's left is the sync's version checks and `object3DSyncSystem` (Phase 1's profile: 0.08
+     and 0.05 ms). Kinematic, every member a moving body: 4.96 → 4.67 ms on WebGL2, 5.11 → 4.74
+     on WebGPU (render submit 0.42 → 0.25 and 0.48 → 0.34). WebGPU's pages switch between two
+     clock states (the sync's pure-JS time 0.09-0.10 ms on a fast page, 0.33-0.40 on a slow one;
+     §2's noise): on the fast pages `engine` is 0.66-0.81 ms against the hand-built 0.55-0.60, its
+     render submit 0.40-0.45 against 0.45 (1.06-1.20 before); `engine nocull`'s three pages all
+     ran slow (1.92-1.94, sync 0.39), so its row isn't a result. No errors but WebGL2's known
+     shadow `.toInspector()` warning (§2), the same before. Draws unchanged (23 / 4). Kept.
+   - **Tests:** `MergeBatchDetach.test.ts` (out with the build, a baked member stays, a waiting
+     member stays until its build, back on a leave and a dissolve, out through a rebuild, a
+     deleted member's not put back; a raycast hits only the batch and `getMergeMemberAtBatchId`
+     maps it, undefined for a freed or unknown id and a baked group), and
+     `_dbg__MergingBatched.test.ts`' "Show unmerged" checks the meshes' place both ways.
+
+   3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
 

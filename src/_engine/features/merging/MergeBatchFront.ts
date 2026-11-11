@@ -4,9 +4,20 @@
 // batched group's build, so an app that lists `merging()` without one never downloads it. A member
 // that has an instance (`instanceId >= 0`) was added by that code, so it's loaded whenever one
 // needs it.
+//
+// A batched member's own mesh is out of the scene graph while the batch draws it (p375 Phase 2
+// S1): three's scene update walked the hidden meshes (0.22 ms at 2 000 members). `TAG_MERGED`'s
+// hooks take it out and put it back under the root scene (its parent: `BATCHED` refuses a mesh
+// anywhere else), so a leave, a deleted group and "Show unmerged" put it back, and a full
+// rebuild, which keeps `TAG_MERGED`, leaves it out. Its readers don't need its place: the sync and
+// the overlay compose its pose, LOD's `measureEntity` reads a mesh without a parent as one at the
+// root, frustum culling's `getWorldPosition` updates its matrix itself, and a deleted entity's
+// `disposeMesh` takes it from no parent. A raycast of the root scene hits the batch instead
+// (`getMergeMemberAtBatchId` maps its `batchId` to the member).
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
+import { getRootScene } from '../../kernel/scene/Scene';
 import { markPending } from './MergeState';
 import type { MergeGroupData, MergeMemberData } from './MergeTypes';
 
@@ -56,6 +67,35 @@ export const dropBatchMember = (
   if (member.instanceId >= 0) batchModule?.deleteBatchInstance(member, group);
   member.instanceId = -1;
   if (group.members.length === 0) markPending(world, member.groupEntityId, group);
+};
+
+/** The batched members' own meshes merging took out of the scene graph. */
+const detachedMeshes = new WeakSet<object>();
+
+/**
+ * Takes a batched member's own mesh out of the scene graph (`TAG_MERGED`'s add hook): its batch
+ * draws it. A baked member, or a member without an instance yet, stays.
+ * @internal
+ */
+export const detachBatchedMemberMesh = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (!member || member.instanceId < 0) return;
+  const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (!object?.parent) return;
+  object.removeFromParent();
+  detachedMeshes.add(object);
+};
+
+/**
+ * Puts a member's own mesh back under the root scene when merging took it out (`TAG_MERGED`'s
+ * remove hook: it's drawn on its own again).
+ * @internal
+ */
+export const reattachMemberMesh = (entityId: number, world: ECSWorld) => {
+  const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (!object || !detachedMeshes.has(object)) return;
+  detachedMeshes.delete(object);
+  getRootScene()?.add(object);
 };
 
 /**

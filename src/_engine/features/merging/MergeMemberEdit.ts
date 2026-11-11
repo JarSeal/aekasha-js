@@ -225,3 +225,46 @@ export const getMergeMemberAtFace = (
   }
   return undefined;
 };
+
+/**
+ * The member a raycast hit of a batched merge group (`mode: 'BATCHED'`) belongs to: its
+ * intersection's `batchId` is the member's instance. A batched member's own mesh is out of the
+ * scene graph while its batch draws it, so a raycast of the root scene hits the batch, whose
+ * `userData.entityId` is the group's entity. A walk of the group's members, no allocation.
+ * @param groupEntityId the entity the raycast hit (its batch's `userData.entityId`)
+ * @param batchId the instance the raycast hit (its intersection's `batchId`)
+ * @param world the group's world (default: the default world)
+ * @returns the member's entity id, or undefined for an instance of no member, or an entity that
+ * isn't a batched merge group
+ * @example
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { getRootScene } from 'aekasha';
+ * import { getMergeMemberAtBatchId } from 'aekasha/merging';
+ *
+ * const ray = new THREE.Raycaster(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));
+ * const [hit] = ray.intersectObject(getRootScene()!, true);
+ * const hitEntityId = hit?.object.userData.entityId as number | undefined;
+ * const memberId =
+ *   hitEntityId !== undefined && hit.batchId !== undefined
+ *     ? getMergeMemberAtBatchId(hitEntityId, hit.batchId)
+ *     : undefined;
+ * ```
+ */
+export const getMergeMemberAtBatchId = (
+  groupEntityId: number,
+  batchId: number,
+  world?: ECSWorld
+): number | undefined => {
+  const ecsWorld = world ?? getECSWorld();
+  const group = ecsWorld.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
+  if (!group || group.settings.mode !== 'BATCHED' || batchId < 0) return undefined;
+  const { members } = group;
+  for (let i = 0; i < members.length; i++) {
+    const member = ecsWorld.getComponent(members[i], ComponentType.MERGE_MEMBER);
+    if (member?.groupEntityId === groupEntityId && member.instanceId === batchId) {
+      return members[i];
+    }
+  }
+  return undefined;
+};

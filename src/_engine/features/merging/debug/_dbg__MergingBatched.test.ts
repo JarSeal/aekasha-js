@@ -38,7 +38,7 @@ import { createFeatureHost } from '../../../kernel/init/Features';
 import { createGeometry } from '../../../kernel/assets/Geometry';
 import { createMaterial } from '../../../kernel/assets/Material';
 import { createMeshEntity, installMeshes } from '../../../kernel/mesh/Mesh';
-import { createRootScene, runOnAllSceneExits } from '../../../kernel/scene/Scene';
+import { createRootScene, getRootScene, runOnAllSceneExits } from '../../../kernel/scene/Scene';
 import { _getUndoRedoHistory, _initUndoRedo, _undoLastAction } from '../../../debug/_dbg__UndoRedo';
 import { BOX_EDGE_SEGMENT_COUNT } from '../../lines/LineBuilders';
 import { installLines } from '../../lines/Lines';
@@ -247,18 +247,22 @@ describe('the tab', () => {
 
 describe('show unmerged', () => {
   const isOwnVisible = (entityId: number) => getOwnMesh(entityId).visible;
+  /** Its own mesh under the root scene (out of the scene graph while its batch draws it) */
+  const isOwnInScene = (entityId: number) => getOwnMesh(entityId).parent === getRootScene();
 
   it("holds the batch and draws the members' own meshes, then merges them again", async () => {
     const { groupEntityId, members, batch } = await createBatchedGroupAsync();
     expect(setMergeGroupUnmergedView(groupEntityId, true)).toBe(true);
     expect(batch.visible).toBe(false);
     expect(members.every(isOwnVisible)).toBe(true);
+    expect(members.every(isOwnInScene)).toBe(true);
     expect(getMemberStateText(members[0], world)).toBe('merged, drawn on its own (shown unmerged)');
     expect(getMergeSummary(world).drawsNow).toBe(4);
 
     setMergeGroupUnmergedView(groupEntityId, false);
     expect(batch.visible).toBe(true);
     expect(members.some(isOwnVisible)).toBe(false);
+    expect(members.some(isOwnInScene)).toBe(false);
     expect(members.every((id) => world.hasComponent(id, ComponentType.TAG_MERGED))).toBe(true);
   });
 
@@ -276,10 +280,12 @@ describe('show unmerged', () => {
     const rebuilt = getBatch(groupEntityId);
     expect(rebuilt.visible).toBe(false);
     expect([...members, late].every(isOwnVisible)).toBe(true);
+    expect([...members, late].every(isOwnInScene)).toBe(true);
 
     setMergeGroupUnmergedView(groupEntityId, false);
     expect(rebuilt.visible).toBe(true);
     expect([...members, late].some(isOwnVisible)).toBe(false);
+    expect([...members, late].some(isOwnInScene)).toBe(false);
   });
 
   it('a rebuild of a disabled batched group keeps its new batch hidden', async () => {

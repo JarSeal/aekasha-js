@@ -32,10 +32,12 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import {
+  detachBatchedMemberMesh,
   dropBatchMember,
   getMergeBatchModule,
   installBatchMemberVisibility,
   isBatchedGroup,
+  reattachMemberMesh,
 } from './MergeBatchFront';
 import {
   buildPendingGroups,
@@ -525,10 +527,16 @@ export const installMergeGroups = (ctx: FeatureContext) => {
     entered: buildSceneMergeGroupsAsync,
     loadSettled: onSceneLoadSettled,
   });
+  // A batched member's own mesh leaves the scene graph too, and comes back (MergeBatchFront.ts)
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
-    onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_MERGED),
-    onRemoveComponent: (entityId, world) =>
-      reconcileObject3DVisibility(entityId, world, IS_UNMERGED),
+    onAddComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, IS_MERGED);
+      detachBatchedMemberMesh(entityId, world);
+    },
+    onRemoveComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, IS_UNMERGED);
+      reattachMemberMesh(entityId, world);
+    },
   });
   ctx.registerComponentHooks(ComponentType.MERGE_GROUP, { onDeleteEntity: onGroupDeleted });
   ctx.registerComponentHooks(ComponentType.MERGE_MEMBER, { onDeleteEntity: onMemberDeleted });

@@ -12,6 +12,7 @@ export {
   beginMergeMemberEdit,
   cancelMergeMemberEdit,
   endMergeMemberEdit,
+  getMergeMemberAtBatchId,
   getMergeMemberAtFace,
   isMergeMemberInEdit,
 } from './MergeMemberEdit';
