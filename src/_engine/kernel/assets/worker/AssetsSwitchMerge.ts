@@ -22,10 +22,11 @@ export const assetsSwitchMerge = (
 ) => {
   const { type, requestId, options } = data;
   const geometries = data.geometries.map(deserializeGeometry);
-  const parts = data.parts.map(({ geometryIndex, matrix, materialSlot, key }) => ({
+  const parts = data.parts.map(({ geometryIndex, matrix, materialSlot, paletteIndex, key }) => ({
     geometry: geometries[geometryIndex],
     ...(matrix ? { matrix: new THREE.Matrix4().fromArray(matrix) } : {}),
     ...(materialSlot !== undefined ? { materialSlot } : {}),
+    ...(paletteIndex !== undefined ? { paletteIndex } : {}),
     ...(key !== undefined ? { key } : {}),
   }));
   const { geometry, warnings } = mergeGeometryPartsCore(parts, options);

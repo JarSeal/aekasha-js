@@ -312,6 +312,66 @@ palette's data at runtime (a production scene carries only what it lists: decide
 `palette` on groups, or have the scene list the slot textures). Diff against the `BAKED` control
 (Phase 0).
 
+Decisions (2026-11-11, at the phase's start):
+
+- **The table is a float texture** (`DataTexture`, RGBA32F, `TABLE_VEC4S` texels wide, one row
+  per entry, read with `textureLoad`): one path on both backends, no entry cap (the 256 maximum
+  stays), no sampler, and a fetch whose index differs across a warp (at member borders) costs
+  little. It takes one sampled-texture binding: four arrays and the table are 5 of WebGPU's 16.
+- **A scene lists its palettes** (`mergeMaterials: ["ruinsPalette"]`, merging's schema part, so
+  the feature manifest names `merging`). The gather inlines each palette into the scene's data
+  and adds its slot textures to the scene's `textures` (deduplicated), so production carries a
+  palette only for a scene that lists it. Phase 3's group `palette` and `AUTO` `palettes` name a
+  palette the scene lists.
+- **The gather bakes the table's values** (`__entries`, one per member: the table parameters of
+  its material JSON, three's default for a missing one); the runtime converts them (a colour
+  string through `THREE.Color`, so into the working colour space). The merge material needs
+  neither its members' materials nor their textures. A JSON member's UV transform is always the
+  identity (Phase 1), so the shared-UV check is dropped until a code-made palette API exists
+  (none in Phase 2). A scene's save entry over a member's `params` isn't read (Phase 1's warning
+  stands).
+
+Sections (each stopped for review):
+
+1. **`aekMatIndex` in the merge (kernel).** `MergePart.paletteIndex`, kept in its
+   `MergePartRange`; when a part has one, `mergeGeometryPartsCore` writes `aekMatIndex` (`Uint8`,
+   `Uint16` past 255; `gpuType = IntType`; a part without one gets 0), the worker path keeps it,
+   the in-place writes leave it. Tests.
+2. **The palette in a scene's data (gather).** The scene's `mergeMaterials` list (schema part),
+   the palette inlined with `__entries`, its slot textures added to the scene's `textures`, the
+   production output checks. Tests.
+3. **The merge material (runtime).** `features/merging/MergeMaterial.ts`, loaded with an
+   `import()` on the first palette: the table texture, the node graph (Phase 0's, plus the
+   `emissiveMap` slot and `SKIP`'s per-entry flags), one per palette registered under the
+   palette's id with `saveMaterial`, released with its scene; its API on `aekasha/merging`.
+   Tests.
+4. **The test scene.** `mergeMaterials` on `ruinsPalette`: `REFERENCE` (the members with their
+   own materials and textures), `BAKED` and the merge material; the diff on both backends (the
+   exit); Phase 0's prototype removed; `features/merging/CLAUDE.md`.
+
+As built, section 1 (`aekMatIndex` in the merge):
+
+- **`MergePart.paletteIndex`** (public, `mergeGeometryParts` and its async and register forms;
+  `ResolvedMergePart`, `TransferableMergePart` and the worker job carry it). When any part has
+  one, `mergeGeometryPartsCore` writes `MERGE_PALETTE_INDEX_ATTRIBUTE` (`'aekMatIndex'`,
+  `@internal`, `GeometryMergeCore.ts`): `Uint8` up to index 255, else `Uint16`, `gpuType =
+  IntType`, a part without an index 0; it replaces a part's own `aekMatIndex` (a merged geometry
+  merged again), and each `MergePartRange` gets `paletteIndex`. Without any index, no attribute
+  and no `paletteIndex` in the ranges (the existing range tests unchanged).
+  `assertPaletteIndices` (`@internal`) throws for an index that isn't an integer 0-65 535, in the
+  core and, before anything is sent, in `mergeGeometryPartsAsync`.
+- **Integer attributes stay integers** (any attribute, not only the palette index): one whose
+  every part has `gpuType` `IntType` (not normalized) is copied raw into the widest of its parts'
+  integer arrays, keeps `IntType`, and a part without it gets 0. Before, it became a `Float32` and
+  lost `gpuType`. three's `toNonIndexed` drops `gpuType`, so a non-indexed merge sets it again.
+- **The worker hop:** `TransferableAttribute` (on `aekasha`) gained `isInteger?: true`, so
+  `serializeGeometry` / `deserializeGeometry` keep `IntType` both ways.
+- The in-place writes (`MergeRanges.ts`) touch position, normal and tangent only: nothing to
+  change. A `MERGED` geometry JSON's parts have no `paletteIndex` (Phase 3 decides whether they
+  need one).
+- `api.json` gains `MERGE_PALETTE_INDEX_ATTRIBUTE` and `assertPaletteIndices`: recorded
+  (`yarn verify:baselines --update`) at the phase's end.
+
 ### Phase 3 — Group integration (D4)
 
 **Exit:** the test scene's `AUTO` groups drop from 36 (4 materials × 9 cells) to 9.
