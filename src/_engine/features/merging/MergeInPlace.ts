@@ -5,6 +5,7 @@
 // COMPACT_WASTE_SHARE of the merged vertices the group builds again, compact. A disabled member
 // (`DISABLED`) is collapsed without counting as waste, and enabling it writes its triangles back.
 import * as THREE from 'three/webgpu';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { lwarn } from '../../utils/Logger';
@@ -15,7 +16,13 @@ import {
   restorePartIndex,
   rewritePartVertices,
 } from './MergeRanges';
-import { getGroupMesh, getMemberMesh, markPending, syncMemberPose } from './MergeState';
+import {
+  getGroupMesh,
+  getMemberMesh,
+  markPending,
+  noteMergeInPlaceUpdate,
+  syncMemberPose,
+} from './MergeState';
 import type { MergeGroupData, MergeMemberData } from './MergeTypes';
 
 /**
@@ -77,6 +84,7 @@ export const rewriteMember = (
   // A collapsed (disabled) member's winding is written when it's enabled, from its baked matrix
   if (mirrorChanged && !member._isCollapsed) flipPartWinding(merged, range);
   member._bakedMatrix.copy(mesh.matrixWorld);
+  if (IS_DEBUG_ENV) noteMergeInPlaceUpdate(world);
   if (
     growMergedBounds(merged, mesh.geometry, partMatrix) &&
     world.hasComponent(groupEntityId, ComponentType.SPATIAL_INDEXED)
@@ -107,6 +115,7 @@ export const dropMember = (
   if (!found) return;
   const merged = found.groupMesh.geometry;
   if (!member._isCollapsed) collapsePartIndex(merged, found.range);
+  if (IS_DEBUG_ENV) noteMergeInPlaceUpdate(world);
   group.wasted += found.range.vertexCount;
   if (group.wasted > merged.getAttribute('position').count * COMPACT_WASTE_SHARE) {
     markPending(world, member.groupEntityId, group);
@@ -126,6 +135,7 @@ export const collapseDisabledMember = (entityId: number, world: ECSWorld) => {
   if (!found) return;
   collapsePartIndex(found.groupMesh.geometry, found.range);
   member._isCollapsed = true;
+  if (IS_DEBUG_ENV) noteMergeInPlaceUpdate(world);
 };
 
 /**
@@ -155,4 +165,5 @@ export const restoreEnabledMember = (entityId: number, world: ECSWorld) => {
   // The group's mesh is only moved, never turned or scaled: the world matrix's mirroring is the
   // part's
   restorePartIndex(groupMesh.geometry, range, source, member._bakedMatrix.determinant() < 0);
+  if (IS_DEBUG_ENV) noteMergeInPlaceUpdate(world);
 };

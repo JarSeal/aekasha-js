@@ -48,6 +48,7 @@ export { default as lockIcon } from './svg/lock-fill.svg?raw';
 export { default as lodIcon } from './svg/lod.svg?raw';
 export { default as materialIcon } from './svg/material-sphere.svg?raw';
 export { default as memoryIcon } from './svg/memory.svg?raw';
+export { default as mergeIcon } from './svg/merge-group.svg?raw';
 export { default as objectsCubesIcon } from './svg/cubes-wireframe.svg?raw';
 export { default as pauseIcon } from './svg/pause-fill.svg?raw';
 export { default as personArmsUpIcon } from './svg/person-arms-up.svg?raw';

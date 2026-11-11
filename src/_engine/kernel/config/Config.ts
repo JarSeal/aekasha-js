@@ -33,6 +33,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'spatialGridControls',
   'lodControls',
   'streamingControls',
+  'mergingControls',
 ];
 
 /**

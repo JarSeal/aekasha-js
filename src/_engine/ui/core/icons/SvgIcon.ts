@@ -38,6 +38,7 @@ export type BuiltInIconName =
   | 'lod'
   | 'material'
   | 'memory'
+  | 'merge'
   | 'objectsCubes'
   | 'pause'
   | 'personArmsUp'
@@ -91,6 +92,7 @@ const BUILT_IN_ICONS = {
   lod: builtIn.lodIcon,
   material: builtIn.materialIcon,
   memory: builtIn.memoryIcon,
+  merge: builtIn.mergeIcon,
   objectsCubes: builtIn.objectsCubesIcon,
   pause: builtIn.pauseIcon,
   personArmsUp: builtIn.personArmsUpIcon,

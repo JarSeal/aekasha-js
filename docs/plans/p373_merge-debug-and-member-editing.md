@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 started
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
@@ -136,6 +136,74 @@ getMergeMemberAtFace(groupEntityId: number, faceIndex: number, world?): number |
 rows and link to each other; the profiler's Objects tab links a group entity to its window; the
 scene runner's `debugger` configuration shoots the tab and both windows on largeWorld (a
 `debugger` entry in `scenes.config.ts`), axe clean, in both debugger themes.
+
+Decided when it started (2026-11-11):
+
+- **Branch:** p372 merged into `main` on its own (PR #82, engine 6.5.0), so p373 is on
+  `p373_merge-debug-and-member-editing` from that merge, with its own bump and changelog entry
+  (Phase 4: engine 6.5.0 → 6.6.0); p370 §14's row is corrected in Phase 4.
+- **The figures the merging code doesn't keep** (builds and in-place updates counted, the last
+  build's time, the refusals) are recorded by it behind `if (IS_DEBUG_ENV)`, as LOD's frame stats
+  (`LodSystem.ts`): a production build folds them away, so `merging`'s first-download size stays.
+  The refusals are kept per world (the entity, the group asked for, the reason), the newest 200;
+  the tab lists those still alive and not in a group.
+- **Rebuild and compact are one button:** every build merges the live members only, so a rebuild
+  compacts (`wasted` back to 0). The group window has "Rebuild"; its wasted row says so.
+- **Draws are per pass, without culling:** "draws now" is the built groups, "unmerged" the built
+  members not disabled; the shadow pass's the same for the shadow casters (a light's passes,
+  cascades and cube faces, aren't counted: per shadow pass).
+- **Phase 1's member window shows the transform read-only** (live monitors); Phase 3's edit
+  sessions make the fields editable.
+- `_registerManagerDebugInfo('MERGE', …)` names the tab (`ManagerDebugInfo` has no window opener);
+  the profiler opens the windows through `registerEntityWindowOpener` (the group's at the default
+  priority, the member's at -1, after physics' and the character's, as LOD's).
+
+Sections:
+
+1. The tab: the debug counters and refusals in the merging code, `registerMergeDebug` loading
+   `debug/_dbg__Merging.ts` too, `mergingControls` in `DEFAULT_DEBUG_DRAWER_TAB_ORDER`, a built-in
+   `merge` icon; the summary pane, the group list and the refusals folder; unit tests.
+2. The windows: group (`mergeGroup`) and member (`mergeMember`) kinds, their links, rebuild and
+   dissolve / remove with undo, the manager info and the entity window openers; unit tests.
+3. The checks: largeWorld's `debugger` entry in `scenes.config.ts` (the tab, both windows), the
+   scene runner in both debugger themes, the profiler's Objects link, `yarn sbp` and
+   `yarn verify:baselines` (no debug code in a build, `merging` unchanged).
+
+As built, section 1 (2026-11-11):
+
+- The merging code's debug figures (`MergeState.ts`: `getMergeDebugStats(world)` →
+  `{ builds, inPlaceUpdates, lastBuild, refusals }`, `noteMergeRefusal`, `noteMergeBuild`,
+  `noteMergeInPlaceUpdate`, `MAX_MERGE_REFUSALS` 200), each call behind `if (IS_DEBUG_ENV)`:
+  `buildGroup` times a build from its start to applied (`performance.now()`, as LOD's frame
+  stats; a worker build's time includes the wait), the four in-place writes count
+  (`rewriteMember`, `dropMember`, `collapseDisabledMember`, `restoreEnabledMember`), and the
+  refusals are `addToMergeGroup`'s, `AUTO`'s and an invalid `merge` (`queueMerge`'s warning, the
+  reason "invalid merge …"). A later refusal of the same entity replaces its record.
+- `registerMergeDebug` loads `debug/_dbg__MergeGroups.ts` (the moved-member check) and
+  `debug/_dbg__Merging.ts` (the tab) together. `mergingControls` is last in
+  `DEFAULT_DEBUG_DRAWER_TAB_ORDER`, after `streamingControls`.
+- The `merge` icon (`svg/merge-group.svg`, drawn in the line form: two boxes bracketed into one):
+  `mergeIcon` in `BuiltInIcons.ts` and `merge` in `SvgIcon.ts`, not on the `aekasha/ui` entry
+  (as `streamingIcon`: the debugger reaches it by name through `registerBuiltInIcons`).
+- The tab (`debug/_dbg__Merging.ts`, default world, nothing persisted, `refreshIntervalMs` 500,
+  `keepOnSceneChange`: everything is read through getters, the rate restarts on a scene change):
+  a summary pane of monitors (groups drawn and pending; members merged, waiting and queued; merged
+  and wasted vertices; draws per pass, main and shadow, "N merged · M unmerged", with a note that
+  they're before culling; builds and in-place updates in the last second with the totals; the
+  last build; the refused count), the group list (`mergeGroups`, the tab's first list: the id as
+  the title, `[entityId]`, an `AUTO` badge, the material and the `AUTO` cell, members, vertices
+  and "pending"), and a titled pane "Refused entities", closed, holding a static list
+  (`mergeRefusals`: newest first, those alive and in no group). The group rows' click is
+  section 2's. Its reads are `debug/_dbg__MergingInfo.ts` (`getMergeSummary`,
+  `createMergeRateMeter`: the counts since the newest sample at least a second old,
+  `getStandingRefusals`, the names), which section 2's windows share.
+- An entity's name is its fixed app id, else its debug name, else "Entity N": a mesh made in code
+  without an id has its uuid as its mesh id (largeWorld's ruins have debug names only).
+- Tests: `debug/_dbg__Merging.test.ts` (the counters through a build, a move, a disable and enable
+  and a remove; the three kinds of refusal, newest first, a deleted or joined entity dropped; the
+  cap; the summary's counts and texts, waste; the rate meter; the group and refusal rows; the
+  tab's refresh). `yarn test`, both `tsc`, lint and the docs ratchet (merging 65 → 72 exports,
+  100 %) pass.
 
 ### Phase 2 — Overlay and A/B (D3)
 

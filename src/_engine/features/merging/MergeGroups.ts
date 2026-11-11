@@ -24,6 +24,7 @@
 // and joins at the next build (`resolveQueuedMerges`), so the refusals see what was added after
 // the mesh (an import's bodies) and `AUTO` (MergeAuto.ts) picks the cell from the final pose.
 import * as THREE from 'three/webgpu';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
@@ -66,6 +67,8 @@ import {
   holdForSceneLoad,
   isMergeSceneLoading,
   markPending,
+  noteMergeBuild,
+  noteMergeRefusal,
   releaseMember,
   releaseSceneLoadHolds,
   setMergeSceneLoading,
@@ -204,6 +207,7 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
     const refusal = getMergeRefusal(entityId, ecsWorld, group);
     if (refusal) {
       lwarn(`addToMergeGroup("${groupId}"): entity ${entityId} is drawn on its own: ${refusal}.`);
+      if (IS_DEBUG_ENV) noteMergeRefusal(ecsWorld, entityId, groupId, refusal);
       continue;
     }
     if (!group._material) {
@@ -561,6 +565,8 @@ const buildGroup = (
   const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
   if (!group) return;
   group._isPending = false;
+  // The Merging tab's last build time (debug env only)
+  const start = IS_DEBUG_ENV ? performance.now() : 0;
   const token = ++group._buildToken;
   const members = getLiveMembers(groupEntityId, group, world);
   group.members = members.concat();
@@ -588,6 +594,7 @@ const buildGroup = (
         build,
         world
       );
+      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, false);
     } catch (err) {
       fail(err);
     }
@@ -608,6 +615,7 @@ const buildGroup = (
         return;
       }
       applyBuild(groupEntityId, group, members, geometry, build, world);
+      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, true);
     },
     (err: unknown) => {
       settle();
@@ -698,13 +706,17 @@ const onSceneLoadSettled = () => {
 };
 
 /**
- * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts): the `merging()`
- * feature's `onDebug` hook.
+ * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts) and the Merging tab with
+ * its windows (debug/_dbg__Merging.ts, p373): the `merging()` feature's `onDebug` hook.
  * @internal
  */
 export const registerMergeDebug = async () => {
-  const debug = await loadDebugModuleAsync(() => import('./debug/_dbg__MergeGroups'));
-  useDebug(debug)?._installMergeDebug();
+  const [check, tab] = await Promise.all([
+    loadDebugModuleAsync(() => import('./debug/_dbg__MergeGroups')),
+    loadDebugModuleAsync(() => import('./debug/_dbg__Merging')),
+  ]);
+  useDebug(check)?._installMergeDebug();
+  useDebug(tab)?._createMergingDebugGUI();
 };
 
 /**

@@ -5,6 +5,7 @@
 // one streaming cell). A bucket whose group would pass `maxVertices` opens another in that cell.
 // Ids are derived: `auto:<key hash>:<cx>,<cz>:<n>`.
 import type * as THREE from 'three/webgpu';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { worldToCell } from '../../utils/CellKey';
@@ -18,6 +19,7 @@ import {
   getMemberMesh,
   getQueued,
   holdForSceneLoad,
+  noteMergeRefusal,
   syncMemberPose,
 } from './MergeState';
 import type { MeshMergeDef } from './MergeTypes';
@@ -149,6 +151,9 @@ export const queueMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld)
     lwarn(
       `Entity ${entityId}'s merge ${JSON.stringify(def)} is invalid (a group id, 'AUTO', or { group?, cellSize?, maxVertices? } with sizes over 0; 'auto:' ids are reserved): it's drawn on its own.`
     );
+    if (IS_DEBUG_ENV) {
+      noteMergeRefusal(world, entityId, String(groupId), `invalid merge ${JSON.stringify(def)}`);
+    }
     return;
   }
   getQueued(world).set(entityId, def);
@@ -186,6 +191,7 @@ export const collectQueuedJoins = (world: ECSWorld) => {
     const refusal = getMergeRefusal(entityId, world);
     if (refusal) {
       lwarn(`merge 'AUTO': entity ${entityId} is drawn on its own: ${refusal}.`);
+      if (IS_DEBUG_ENV) noteMergeRefusal(world, entityId, AUTO, refusal);
       continue;
     }
     const options = typeof def === 'string' ? undefined : def;
