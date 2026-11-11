@@ -767,6 +767,30 @@ As built, section 1 (the measurements; D5 has the figures and the "when not" lis
 - **Not bisected:** what makes the merge material's pixels cost more (D5's candidates). A
   follow-up if a palette scene ever needs it; until then the handbook says to measure.
 
+As built, section 2 (the handbook):
+
+- **The Hub's Mesh merging page** (`guide.md`): a section "Palettes: several materials in one
+  draw" after Joining a group (the palette JSON, the class rule, the slots and `SKIP`, a scene's
+  `mergeMaterials`, `AUTO`'s `palettes` and a named group's `palette` in JSON and code, the
+  refusals, `persistent`, the save entry's overrides) with "When a palette pays" (D5's table,
+  rounded, and the "when not" list); the `merge` options' `palettes`, `AUTO`'s key, the refusals'
+  material lines, a palette row in "When to merge", "Not yet" (one material per group gone; a
+  material array, custom TSL and `PHYSICAL` in), the plan in "Read more" (its link goes to
+  `_DONE_` in section 4), `MeshMergeOptions`, `MergeGroupSettings` and `SceneMergeMaterial` in
+  Key APIs; the description and tags.
+- **The asset optimization page:** a "Texture arrays" section (none before: p299 had no Hub text;
+  a `*.textureArray.json` example, `loadTextureAsync`, `sampleArrayLayer`, `buildTextureArray`)
+  with "A palette's arrays" (a slot per array, neutral layers, the `orm` pack, one sampler per
+  slot, lock entries and rebuilds, the build's output check, the size rule), linked from the
+  merging page; tags.
+- **`docs/techniques/terrain-modular-kits.md`:** the palette variation (what it is, fetches per
+  pixel with `SKIP`'s cost, D5's figures, VRAM and the 16-bit cap, what can't join), the
+  settings table's `palettes`, `palette` and `mergeMaterials` rows, the maps notes, the quality
+  tier, the checklist's material line, `mergeMaterials` in the example scenes; the tile-chunk
+  variation's "p374" note replaced.
+- `yarn hub:build`: 114 pages, no dead link. Its one warning, the search index over 450 KiB gzip,
+  was there before (554 → 558 KiB).
+
 ## 4. Versioning
 
 Engine minor (asset type, merge material, group palettes).

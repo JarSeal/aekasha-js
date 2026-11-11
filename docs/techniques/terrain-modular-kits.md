@@ -32,7 +32,7 @@ Poor fits also: transparent kits (glass, water: refused, drawn sorted per object
 - **VRAM**: the merged geometry holds every placed piece's vertices (a module placed 100 times is 100 copies, unlike instancing: about 32 bytes a vertex for position, normal and uv, so 10 000 vertices ≈ 320 KB). A module's own geometry is never uploaded when only merged pieces use it (the scene's groups are built during its load, before anything draws).
 - **Draw calls**: one per group per pass: the main pass, and every shadow pass whose light reaches the group. Unmerged, one per piece per pass.
 - **CPU**: fewer render objects to sort and submit. A move (`updateMergeMember`) rewrites one piece's range; adding or removing pieces in bulk rebuilds the group (a merge, in the assets worker above 65 536 vertices).
-- **Quality tier**: none. Merging changes no shader.
+- **Quality tier**: none. Merging changes no shader, unless the group is on a palette (the variation below), whose merge material costs more per pixel.
 - **Measured** (CPU, not GPU: p310's gallery hasn't measured this technique): `largeWorld`'s 409 static pieces in 28 groups take the main camera's draws from 381 to 38 per pass and the day-night sun's shadow pass from 53 to 15, and the CPU frame from 3.2-3.8 ms to 2.3-2.5 ms, on WebGPU and WebGL2 (Chrome on macOS; the table is on the Hub page). The `exampleMerging` courtyard: 423 draws a frame on its own, 16 merged.
 
 ## Maps
@@ -45,9 +45,9 @@ The kit's material is any opaque engine material: merging adds no maps of its ow
 | Normal | optional          | RG (+ derived B)                      | linear       | UASTC, the `normal` slot          | as the albedo                 |
 | ORM    | optional          | R occlusion, G roughness, B metalness | linear       | the `orm` slot                    | as the albedo, or half        |
 
-- **One material per group**: a kit that should merge into one draw per cell shares one material, so its pieces share one texture set (a trim sheet, or one tiling set in world space). Each extra material is one more group per cell.
+- **One material per group**: a kit that should merge into one draw per cell shares one material, so its pieces share one texture set (a trim sheet, or one tiling set in world space). Each extra material is one more group per cell, unless the materials share a palette (see [Variations](#variations)).
 - Vertex colours (tint, baked AO) are fine, but on every piece or none: `AUTO`'s key includes the attributes, so pieces with and without `COLOR_0` make separate groups.
-- Several kit materials in one draw (texture arrays, a palette per vertex) is p374's merge material: not yet.
+- Several kit materials in one draw: a palette (see [Variations](#variations)). Its slots take these same maps, built into one texture array per slot at one size, so give the kit's materials maps of one size.
 
 ## Blender, step by step
 
@@ -120,21 +120,29 @@ List `merging()` in `InitEngine`'s `features`, after `physics()`.
 
 ## Set-up and parameters
 
-| Setting                       | Where                                                                                                  | Default            | What it does                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------ | ---------------------------------------------------------------- |
-| `merge`                       | a mesh's props (code, mesh JSON, scene mesh), a node's custom property, `spawnImportedAsset`'s `merge` | none               | `'AUTO'`, a group's id, or `{ group?, cellSize?, maxVertices? }` |
-| `mergeGroups` `AUTO` entry    | scene JSON                                                                                             | —                  | the scene's `cellSize` and `maxVertices` for `AUTO`              |
-| `cellSize`                    | `AUTO` entry, a mesh's `merge`                                                                         | 32 m               | square x/z cells; a group never spans two                        |
-| `maxVertices`                 | `AUTO` entry, a mesh's `merge`                                                                         | 262 144            | a full group opens the next one in its cell                      |
-| `castShadow`, `receiveShadow` | a named group's entry, `createMergeGroup`                                                              | the first member's | the group mesh's shadow flags                                    |
-| `persistent`                  | `createMergeGroup`                                                                                     | false              | keeps the group across scene switches                            |
-| `streaming.cellSize`          | scene JSON                                                                                             | —                  | the `AUTO` cell size should divide it (warned otherwise)         |
+| Setting                       | Where                                                                                                  | Default            | What it does                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------ | --------------------------------------------------------------------------- |
+| `merge`                       | a mesh's props (code, mesh JSON, scene mesh), a node's custom property, `spawnImportedAsset`'s `merge` | none               | `'AUTO'`, a group's id, or `{ group?, cellSize?, maxVertices?, palettes? }` |
+| `mergeGroups` `AUTO` entry    | scene JSON                                                                                             | —                  | the scene's `cellSize`, `maxVertices` and `palettes` for `AUTO`             |
+| `cellSize`                    | `AUTO` entry, a mesh's `merge`                                                                         | 32 m               | square x/z cells; a group never spans two                                   |
+| `maxVertices`                 | `AUTO` entry, a mesh's `merge`                                                                         | 262 144            | a full group opens the next one in its cell                                 |
+| `castShadow`, `receiveShadow` | a named group's entry, `createMergeGroup`                                                              | the first member's | the group mesh's shadow flags                                               |
+| `persistent`                  | `createMergeGroup`                                                                                     | false              | keeps the group across scene switches                                       |
+| `streaming.cellSize`          | scene JSON                                                                                             | —                  | the `AUTO` cell size should divide it (warned otherwise)                    |
+| `mergeMaterials`              | scene JSON                                                                                             | none               | the palettes (`*.mergeMaterial.json` ids) the scene loads                   |
+| `palettes`                    | `AUTO` entry, a mesh's `merge`                                                                         | none               | the palettes whose materials share an `AUTO` group; `[]` none               |
+| `palette`                     | a named group's entry, `createMergeGroup`                                                              | none               | the palette whose materials the group takes                                 |
 
 Choosing the cell size: big enough that a cell holds many pieces (a cell of three pieces saves two draws), small enough that most of a group is in view when any of it is (a group is drawn whole). About the distance across a room or a street for third-person, a few chunks for top-down. A group's radius under twice the spatial index's cell size keeps it out of the oversized tier (`largeWorld`: 50 m `AUTO` cells, 24 m spatial cells).
 
 ## Variations
 
-- **Tile-chunk worlds.** The `AUTO` cell size is the chunk size, so each chunk's tiles of a material are a group. Raising or turning a tile is `setTransform` then `updateMergeMember` (in place, no rebuild). Changing a tile's type is a new piece: `removeFromMergeGroup` (or delete) the old one and create the new one with `merge`: the new one rebuilds its chunk's group in the next frame. Keep chunks small enough that the rebuild is cheap: p371 measured a warm 100k-vertex merge at about 11 ms on the main thread, so a chunk of a few thousand vertices costs a fraction of a millisecond (above 65 536 vertices the merge goes to the worker). Tile types as texture array layers in one material is p374.
+- **Tile-chunk worlds.** The `AUTO` cell size is the chunk size, so each chunk's tiles of a material are a group. Raising or turning a tile is `setTransform` then `updateMergeMember` (in place, no rebuild). Changing a tile's type is a new piece: `removeFromMergeGroup` (or delete) the old one and create the new one with `merge`: the new one rebuilds its chunk's group in the next frame. Keep chunks small enough that the rebuild is cheap: p371 measured a warm 100k-vertex merge at about 11 ms on the main thread, so a chunk of a few thousand vertices costs a fraction of a millisecond (above 65 536 vertices the merge goes to the worker). Tile types of different materials share a chunk's group through a palette (next).
+- **Several materials in one draw (a palette).** A `*.mergeMaterial.json` lists 2-256 `STANDARD` materials that agree on their state and maps; the pipeline builds each map slot (`map`, `normalMap`, `orm`, `emissiveMap`) as a texture array, a layer per material, and a merge material draws them all, each vertex carrying its material's index and a table holding each material's values. A scene lists the palette (`mergeMaterials`), and an `AUTO` entry's `palettes` (or a named group's `palette`) puts a cell's pieces of those materials into one group: stone, brick, moss and plaster pieces are one draw per cell instead of four. The Hub page's [Palettes](../../hub/pages/features/mesh-merging/guide.md) section has the files and settings.
+  - **Fetches per pixel**: every slot the palette has, for every member (a member without the map samples a neutral layer), plus five texel reads of the table; a member's own material samples only its own maps. `"missing": "SKIP"` on a slot skips the sample for the members without the map (a branch per triangle), but its explicit gradients pick slightly other mip levels than a plain sample (on high-frequency texels, up to 32/255 apart in p374's verification scene).
+  - **Measured** (p374 D5: 1 600 pieces of four materials in nine cells, Chrome on an Apple M2): 10 draws by palette against 37 by material, but 0.6-0.8 ms more GPU time a frame with the field in view from above and 1.8-1.9 ms with it filling the view, on WebGPU and WebGL2, while the 27 fewer draws saved about 0.03 ms of CPU. A palette pays where the draws are short: many materials a cell, many cells, shadow passes, a device whose draws cost more. With two to four materials a cell, keep a group per material, and measure before switching.
+  - **VRAM**: the merged geometry gains the index attribute (4 bytes a vertex on WebGPU, 1 on WebGL2), and a palette group, all its materials' pieces together, passes 65 535 vertices sooner, where its index goes from 16 to 32 bits: `maxVertices: 65535` keeps it at 16. The arrays cost what the members' textures do when the textures share a size; a smaller one is scaled up to the slot's size.
+  - Transparent materials, `PHYSICAL` features and custom TSL materials can't share a palette; a `matOverrides` variant of a member is another material, refused by its group.
 - **World-space material** (the toolkit's `triplanarProjection`): pieces need no matching UVs, and walls, ledges and cliffs share one material, so one group per cell. Three times the texture fetches (`T` = 3), less with slope gating.
 - **Build-time merge** (an imported asset's `merge`, the asset optimization guide's "Merging pieces"): no merge at load and nothing per piece at runtime, but the pieces are no longer entities. Use it for a level section that never changes; keep groups where pieces are picked, moved, destroyed or have colliders of their own.
 - **A merged geometry** (`MERGED`, the scenes and assets page): a fixed assembly (a wall section of five modules) registered once and placed as one mesh. It combines with groups: a placed section can join a group.
@@ -143,7 +151,7 @@ Choosing the cell size: big enough that a cell holds many pieces (a cell of thre
 
 ## Pitfalls and checklist
 
-- [ ] Every piece that should merge shares the material instance (`mat` by the same id; a `matOverrides` variant is another material and another group).
+- [ ] Every piece that should merge shares the material instance (`mat` by the same id; a `matOverrides` variant is another material and another group), or its material is in the palette its group or `AUTO` entry names.
 - [ ] The kit's pieces have the same attributes (all with vertex colours, or none).
 - [ ] No transparent material, no material array, no `LOD`, no dynamic or kinematic body on a merged piece (each is refused with a warning naming the entity).
 - [ ] A piece moved after it merged is followed by `updateMergeMember` (the debug env warns once for each that isn't).
@@ -161,4 +169,5 @@ Examples in the repo:
 
 - `exampleMerging` (`src/app/examples/merging/`): the kit `exampleMergingTile`, `exampleMergingBlock`, `exampleMergingPillar` and `exampleMergingGate`, the materials `exampleMergingTile` and `exampleMergingStone`, a named group and `AUTO` cells of 16 m; the Hub's example page walks through it.
 - `largeWorld` (`src/app/scenes/largeWorld/largeWorldRuins.ts`): eight ruin sites from `largeWorldRuin{Floor,Wall,Pillar,Rubble}Geo` in three materials, `AUTO` cells of 50 m.
+- `mergeMaterials` (`src/app/scenes/mergeMaterials/`, a debug scene): the palette `ruinsPalette` (`ruinStone`, `ruinBrick`, `ruinMoss`, `ruinPlaster`) on a field of 1 600 pieces in `AUTO` cells of 8 m, merged by palette, by material or not (`window.__mergeMaterials.field(mode)`).
 - `testDebugScene`'s `p371MergeKit`: a 20-piece GLB kit merged at build time instead, its doors excluded.
