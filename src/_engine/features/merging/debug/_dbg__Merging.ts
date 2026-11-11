@@ -3,6 +3,7 @@ import {
   debuggerListCMP,
   type DebuggerListItem,
   type DebuggerPaneItem,
+  updateDebuggerTab,
 } from '../../../debug/DebuggerGUI';
 import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
@@ -19,11 +20,17 @@ import {
   getStandingRefusals,
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
+import {
+  _registerMergingWindowLinks,
+  getOpenMergeGroupWindowIds,
+  toggleMergeGroupWindow,
+} from './_dbg__MergingWindows';
 
 // The Merging tab (docs/plans/p373_merge-debug-and-member-editing.md D1): the default world's
 // merge groups at a glance (the groups, members and vertices, the draws per pass merged against
 // unmerged, the waste, the builds and in-place updates of the last second, the last build's time),
-// a row per group, and the entities whose `merge` was refused with the reason. Nothing is
+// a row per group opening its window (_dbg__MergingWindows.ts), and the entities whose `merge` was
+// refused with the reason. Nothing is
 // persisted: it's all for inspecting. Default world only.
 
 /** Rows the group list shows at most */
@@ -121,6 +128,7 @@ export const getMergeRefusalListData = (world: ECSWorld): DebuggerListItem[] =>
 /** Creates the "Merging" drawer tab (`mergingControls`): the merging debug module's entry, which
  * `registerMergeDebug` loads. */
 export const _createMergingDebugGUI = () => {
+  _registerMergingWindowLinks();
   const world = getECSWorld();
   const rates = createMergeRateMeter();
   const readouts: Readouts = formatMergeSummary(world, { builds: 0, updates: 0 });
@@ -169,6 +177,15 @@ export const _createMergingDebugGUI = () => {
         heading: 'Merge groups',
         emptyText: 'No merge groups in this world.',
         data: () => getMergeGroupListData(world),
+        selectedItemId: getOpenMergeGroupWindowIds,
+        perItemConfig: {
+          onClick: (itemId) => {
+            if (itemId === 'more') return;
+            toggleMergeGroupWindow(Number(itemId));
+            // The row selection follows the window
+            queueMicrotask(() => updateDebuggerTab(MERGING_TAB_ID));
+          },
+        },
       }),
       {
         pane: true,

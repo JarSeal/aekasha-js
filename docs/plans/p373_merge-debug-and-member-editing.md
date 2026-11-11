@@ -205,6 +205,47 @@ As built, section 1 (2026-11-11):
   tab's refresh). `yarn test`, both `tsc`, lint and the docs ratchet (merging 65 → 72 exports,
   100 %) pass.
 
+As built, section 2 (2026-11-11):
+
+- `debug/_dbg__MergingWindows.ts`: the kinds `mergeGroup` and `mergeMember` (registered at the
+  module's load), opened by `toggleMergeGroupWindow(groupEntityId)` /
+  `toggleMergeMemberWindow(entityId)` (`removeOnSceneChange`: entity ids don't outlive a scene,
+  as the streaming cell window's), each a `createDebugWindowGrid` refreshed every 250 ms (the
+  buttons' reasons, the notes) with live monitors.
+  - Group: its state (built, pending, building in the worker, not built yet, no members), kind
+    (`AUTO` with its cell, or explicit), material, both shadow flags (the mesh's, else the
+    setting's, else "its first member's"), persistent, members (merged of all), vertices, wasted
+    vertices, builds; Rebuild and Dissolve (reasoned buttons), a note; the members as a kit list
+    (`createList`, read every 250 ms, at most 200 rows; a row's suffix is its state unless merged;
+    activating a row opens the member's window); the entity's info rows. Dissolve closes the window
+    and refreshes the tab.
+  - Member: a note when it's deleted or left its group, "Merged into" with a button "Open the
+    group's window" (a button, not a link: the grid's buttons are its controls), its state
+    (merged, waiting for its group's build, disabled with its range collapsed), geometry, material,
+    vertices, its part (`#n: vertices a-b, indices c-d`), its pose read-only (position, rotation in
+    degrees, scale; the own mesh's, which `object3DSyncSystem` keeps synced while hidden), "Remove
+    from group" (reasoned), the entity's info rows.
+- The tab's group rows open the group window, their selection the open group windows (as LOD's).
+- Undo (`debug/_dbg__MergingUndo.ts`, handlers registered at the module's load, per scene):
+  `merge.dissolve` (undo makes the group again with its id, kind and settings, an `AUTO` one
+  through `createGroup` as its bucket made it, and adds back the members still alive; redo
+  dissolves) and `merge.removeMember` (undo adds the member back, making its group again when it
+  went, as an emptied `AUTO` group does at its next build; redo removes). **Entries carry a scene
+  visit token** (new on every page load and scene exit, `registerOnAllSceneExits`): members are
+  named by entity id (they rarely have a stable app id), which means another entity after a reload
+  or on another visit, so an entry from another visit warns and does nothing. A re-made `AUTO`
+  group doesn't touch `MergeAuto.ts`' buckets (their counts are only a cap's).
+- `_registerMergingWindowLinks()`, called by the tab's creation (the boot's debug step), not at
+  the module's load: `registerEntityWindowOpener` is a no-op until the environment says the
+  profiler loads. It registers `_registerManagerDebugInfo('MERGE', { label: 'Merge group', icon:
+  'merge', tabId: 'mergingControls' })` and the openers (`mergeGroup` at the default priority,
+  `mergeMember` at -1).
+- Tests: `debug/_dbg__MergingWindows.test.ts` (the group window's figures, member rows opening
+  their windows; dissolve, its window closed, undo and redo, an `AUTO` group made again as one;
+  the member window's figures, part and group link; remove, undo and redo; no undo across a scene
+  exit; the manager info and both openers). `yarn test` (3051), both `tsc`, lint and the docs
+  ratchet pass.
+
 ### Phase 2 — Overlay and A/B (D3)
 
 **Exit:** highlighting a group outlines its members; "show unmerged" changes the draw count by the
