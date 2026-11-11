@@ -181,6 +181,11 @@ addToMergeGroup('courtyard', pieces);
 A member's values in the table are its material JSON's: a scene's saved overrides of a member's
 parameters don't reach the merge material.
 
+A variant of a listed palette (the same arrays with another slot's `missing`, say) is
+[`createMergeMaterialAsync`](api:createMergeMaterialAsync) on a copy of the palette's data from
+the scene's generated data: you register it under an id of its own, and it draws the meshes you
+give it, never a palette group.
+
 ### When a palette pays
 
 A palette trades pixels for draws. It saves `materials − 1` draws a cell in each pass that draws
@@ -414,7 +419,7 @@ and written in place when you let go.
 
 See the plans, [merge groups](repo:docs/plans/_DONE_p372_mesh-merge-groups.md),
 [merge debugging and member editing](repo:docs/plans/_DONE_p373_merge-debug-and-member-editing.md)
-and [multi-material merging](repo:docs/plans/p374_multi-material-merging.md),
+and [multi-material merging](repo:docs/plans/_DONE_p374_multi-material-merging.md),
 and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs
@@ -430,8 +435,9 @@ and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-a
   [`isMergeMemberInEdit`](api:isMergeMemberInEdit).
 - [`getMergeGroupOf`](api:getMergeGroupOf) and [`getMergeMemberAtFace`](api:getMergeMemberAtFace).
 - [`MeshMergeDef`](api:MeshMergeDef): a mesh's `merge` ([`MeshMergeOptions`](api:MeshMergeOptions)).
-- Palettes: [`MergeGroupSettings`](api:MergeGroupSettings)' `palette`, and the palette data a
-  scene carries, [`SceneMergeMaterial`](api:SceneMergeMaterial).
+- Palettes: [`MergeGroupSettings`](api:MergeGroupSettings)' `palette`, the palette data a scene
+  carries, [`SceneMergeMaterial`](api:SceneMergeMaterial), and
+  [`createMergeMaterialAsync`](api:createMergeMaterialAsync) for a variant.
 
 ## Read more
 

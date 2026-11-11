@@ -1,8 +1,8 @@
-// Merge groups on a palette (docs/plans/p374_multi-material-merging.md D4, Phase 3): a group whose
-// `palette` names a merge material palette draws its members, each of one of the palette's
-// materials, with the palette's merge material (registered under the palette's id by the scene
-// that lists it, MergeMaterialLoad.ts), each member's vertices tagged with its material's palette
-// index. In the first download with the groups: the merge material's code isn't (a look-up of the
+// Merge groups on a palette (docs/plans/_DONE_p374_multi-material-merging.md D4, Phase 3): a group
+// whose `palette` names a merge material palette draws its members, each of one of the palette's
+// materials, with the palette's merge material (registered under the palette's id by the scene that
+// lists it, MergeMaterialLoad.ts), each member's vertices tagged with its material's palette index.
+// In the first download with the groups: the merge material's code isn't (a look-up of the
 // registered material and its `userData` only).
 import type * as THREE from 'three/webgpu';
 import { getMaterial } from '../../kernel/assets/Material';

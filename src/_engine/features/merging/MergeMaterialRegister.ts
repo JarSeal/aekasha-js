@@ -7,8 +7,8 @@ import { createMergeMaterial, type MergeMaterialInfo } from './MergeMaterial';
 import { getMergeMaterialInfo } from './MergePalettes';
 import type { MergeMaterialSlot, SceneMergeMaterial } from './MergeMaterialSchema';
 
-// A scene's merge materials registered (docs/plans/p374_multi-material-merging.md Phase 2): in
-// the lazy chunk with the material code, loaded by `MergeMaterialLoad.ts`' scene hook.
+// A scene's merge materials registered (docs/plans/_DONE_p374_multi-material-merging.md Phase 2):
+// in the lazy chunk with the material code, loaded by `MergeMaterialLoad.ts`' scene hook.
 
 /**
  * A palette's table texture's registry id: `<paletteId>.table`, next to its slot arrays'

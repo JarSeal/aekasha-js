@@ -7,10 +7,10 @@ import {
 } from '../../schemas/AssetsConfigSchema';
 import { TexOptsSchema } from '../../schemas/TextureSchema';
 
-// A merge material's palette (`*.mergeMaterial.json`, docs/plans/p374_multi-material-merging.md
-// D2): the materials one merge material stands in for, and a texture array per map slot. The
-// gatherer checks the members' class (D1) from their material JSONs; the asset pipeline builds
-// each slot's array.
+// A merge material's palette (`*.mergeMaterial.json`,
+// docs/plans/_DONE_p374_multi-material-merging.md D2): the materials one merge material stands in
+// for, and a texture array per map slot. The gatherer checks the members' class (D1) from their
+// material JSONs; the asset pipeline builds each slot's array.
 
 /**
  * A palette's map slots: the merge material's array per map. `orm` packs a member's `aoMap` (r),

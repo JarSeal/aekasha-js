@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented
+Status: implemented (Phases 0-4)
 Category: Merging, Materials, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.1)
 Blocked by: p299_texture-arrays-and-atlases.md (only its Phases 2 and 4, done: build-time arrays, `sampleArrayLayer`)
@@ -729,7 +729,7 @@ As built, section 3 (the field; verified 2026-11-11 on macOS Chrome, WebGPU and 
 - **Not done here** (Phase 4, as planned): the Hub's Mesh merging page (its `merge` options list
   lacks `palettes`, its palette section), `readme.md`, `CHANGELOG.md` and the version bump.
 
-### Phase 4 — Measurements, handbook, versioning (D5)
+### Phase 4 — Measurements, handbook, versioning (D5) — done
 
 1. D5's numbers in this file.
 2. The array-material variation in `docs/techniques/terrain-modular-kits.md` (p372 Phase 5, with
@@ -807,6 +807,25 @@ As built, section 3 (the notes):
   `createMergeMaterialAsync` is on `aekasha/merging` but `@internal` (Phase 2's choice, section
   4's `As built`: the verification scene's entry point). Not changed here: making it public or
   moving the `SKIP` variant's construction is a decision for section 4 or a follow-up.
+
+As built, section 4 (versioning):
+
+- **`createMergeMaterialAsync` is public** (the Hub's warning): its JSDoc rewritten for a user
+  (a variant of a listed palette without a second palette JSON; a variant under another id never
+  draws a palette group) with an `@example`; the Mesh merging page names it (the palette section,
+  Key APIs), `features/merging/CLAUDE.md`'s API item too.
+- **Versions:** engine (and the project) 6.6.0 → 6.7.0 (Sunset), app 1.21.2 → 1.22.0
+  (Preschooler: the `mergeMaterials` scene); the toolkit didn't change (3.0.1).
+  `yarn checkVersions --against main` passes. `CHANGELOG.md`'s entry: Engine (the palettes, the
+  merge material, palette groups, `createMergeMaterialAsync`, `MergePart.paletteIndex`,
+  `SceneHooks.assetsLoaded`, `TransferableAttribute.isInteger`; integer attributes kept, the
+  refusal's text, the first download; `createMaterial`'s `normalScale` fix), App, Project.
+- **The plan is `_DONE_`:** the `Blocks` lines of `_DONE_p372`, p299 and the epic p370, p370's
+  roadmap row, status and Branches and PRs (p374's own branch, engine and app minors), the code
+  comments' and `features/merging/CLAUDE.md`'s paths and the Hub's "Read more" link.
+- `yarn verify:baselines`: every baseline unchanged (`api.json` records the entry's names, not
+  the tag; `docs.json` at 100 %), no debug code in the production or embed builds; `yarn test`,
+  `yarn hub:build` (the `@internal` warning gone) and `yarn checkVersions --against main` pass.
 
 ## 4. Versioning
 

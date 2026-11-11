@@ -22,12 +22,12 @@ import type { Node } from 'three/webgpu';
 import { sampleArrayLayer } from '../../kernel/assets/TextureArray';
 import type { MergeMaterialSlot, SceneMergeMaterial } from './MergeMaterialSchema';
 
-// The merge material (docs/plans/p374_multi-material-merging.md D3): one MeshStandardNodeMaterial
-// for a palette of STANDARD materials. Each vertex carries its member's palette index
-// (`aekMatIndex`, a flat varying), a float texture holds each member's parameter table entry, and
-// one texture array per map slot holds each member's map as a layer. Loaded with an `import()` by
-// the first scene that lists a palette (MergeMaterialLoad.ts), so an app without palettes never
-// downloads it.
+// The merge material (docs/plans/_DONE_p374_multi-material-merging.md D3): one
+// MeshStandardNodeMaterial for a palette of STANDARD materials. Each vertex carries its member's
+// palette index (`aekMatIndex`, a flat varying), a float texture holds each member's parameter
+// table entry, and one texture array per map slot holds each member's map as a layer. Loaded with
+// an `import()` by the first scene that lists a palette (MergeMaterialLoad.ts), so an app without
+// palettes never downloads it.
 
 /**
  * The palette index attribute, `GeometryMergeCore.ts`' `MERGE_PALETTE_INDEX_ATTRIBUTE` (a copy:

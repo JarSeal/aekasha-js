@@ -34,7 +34,7 @@ import {
 } from '../../shared/verifyHarness';
 
 /**
- * p374's verification scene (docs/plans/p374_multi-material-merging.md, Phase 2). The palette
+ * p374's verification scene (docs/plans/_DONE_p374_multi-material-merging.md, Phase 2). The palette
  * `ruinsPalette` (four STANDARD materials: `ruinStone`, `ruinBrick`, `ruinMoss`, `ruinPlaster`,
  * each building its layers another way) on eight meshes, two per member (spheres, boxes, tori,
  * cylinders, one mirrored), drawn
