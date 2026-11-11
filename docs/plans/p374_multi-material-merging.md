@@ -1,8 +1,8 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Merging, Materials, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.1)
-Blocked by: p299_texture-arrays-and-atlases.md, p302_material-and-texture-system-refactor.md (the `setup` entry and input resolvers)
-Related: p303_texture-sets-and-terrain-texture-library.md (layer arrays: the terrain case of the same idea), p305_terrain-material-generator.md (binding budget), \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p085_material-editor-params-and-persistence.md
+Blocked by: p299_texture-arrays-and-atlases.md (only its Phases 2 and 4, done: build-time arrays, `sampleArrayLayer`)
+Related: p302_material-and-texture-system-refactor.md (was a blocker, dropped 2026-11-11: see §1), p303_texture-sets-and-terrain-texture-library.md (layer arrays: the terrain case of the same idea), p305_terrain-material-generator.md (binding budget), \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p085_material-editor-params-and-persistence.md
 
 # Multi-Material Merging (Merge Materials)
 
@@ -28,17 +28,27 @@ back to one group per material (p372).
   per-socket `nodes` (a TSL material's file loads with its scene's assets, `devTools/gather/CLAUDE.md`).
   `createMaterial` caches by id and stores its `props`; variants are `${baseId}#hash`
   (`getMaterialVariant`).
-- **After p302:** a multi-socket `setup` entry sets several sockets from one graph; runtime
-  `registerTslMaterial(id, fns)`; an input resolver registry.
-- **p299 (Phases 0-4 built):** build-time KTX2 arrays (`*.textureArray.json`, layers resized to
+- **p302 is not a blocker (decided 2026-11-11).** p302 (`setup` entry, `registerTslMaterial`,
+  input resolvers) is still `draft | not-implemented`. p374 used only `registerTslMaterial` (D3,
+  to register the merge material as `aek:merge`) and none of the resolvers. The merge material is
+  built in code, one per palette, with no JSON, variants or editor params, so `MergeMaterial.ts`
+  makes a `MeshStandardNodeMaterial`, sets its sockets and registers it with `saveMaterial` (as
+  the p299 scenes do). Once p302 lands it may move onto `registerTslMaterial`; open question 3
+  still waits on p302's Phase 3 spike.
+- **p299 (Phases 0-4 built; Phase 5, the JSON binding, isn't needed here):** build-time KTX2 arrays (`*.textureArray.json`, layers resized to
   one size, `ktx create --layers`), runtime assembly for same-sized members (`buildTextureArray`),
   `sampleArrayLayer` (`kernel/assets/TextureArray.ts`), and their debug views (the Assets tab's
   info window). Its JSON binding (Phase 5) waits for p302 D4, as this plan does.
-- **After p372:** groups of same-material members, `mergeGeometryParts` with a part table, `AUTO`
-  buckets keyed by material ref.
+- **p372 (built):** groups of same-material members (`MergeGroupData._material`, the first
+  member's; `getMergeRefusal` refuses another material and a material array, the latter's text
+  naming p374), `mergeGeometryParts` with a part table (`MergePart`: `geo`, `matrix`,
+  `materialSlot`, `key`; `userData.mergeParts`: `MergePartRange`), `AUTO` buckets keyed by the
+  material's `userData.id` (`getAutoCompatibilityKey`). The in-place writes (`MergeRanges.ts`)
+  rewrite only position, normal and tangent, so `aekMatIndex` survives them.
 - **Binding budget:** WebGPU's default is 16 sampled textures per stage, and shadow maps and the
   environment PMREM count against it (p301 §6).
-- **WebGL2 backend:** array textures work; storage buffers don't.
+- **WebGL2 backend:** array textures work; storage buffers don't (Phase 0: three r187's PBO path
+  for a storage read in a fragment shader fails the draw, "Vertex buffer is not big enough").
 - **Draw behaviour** (p370 §2.1): a multi-material mesh is one draw per group, so a material array
   is no draw-count win; only one material is.
 
@@ -78,8 +88,9 @@ materials don't merge automatically (open question 1).
   p299 `*.textureArray.json` job per slot: layer `i` is material `i`'s map, resized to the slot
   size. `orm` packs AO, roughness and metalness through p300's `pack` when the members have
   separate maps.
-- **Missing maps** get a neutral layer (white albedo, flat normal `(0.5, 0.5, 1)`, ORM `(1, 1, 0)`
-  scaled by the table's scalars), or, per slot, `"missing": "SKIP"`: a per-entry flag that skips
+- **Missing maps** get a neutral layer (white albedo, flat normal `(0.5, 0.5, 1)`, ORM `(1, 1, 1)`
+  scaled by the table's scalars: three multiplies the scalar roughness and metalness by the map's
+  g and b, so white keeps a member's scalars; Phase 0 verified it with a metalness 0.3 member), or, per slot, `"missing": "SKIP"`: a per-entry flag that skips
   the fetch (a uniform branch per triangle).
 - Arrays are built at build time: KTX2 can't be resized or re-encoded in the browser. A palette
   whose member textures already share size and codec can opt into runtime assembly
@@ -87,19 +98,32 @@ materials don't merge automatically (open question 1).
 
 ### D3 — The merge material
 
-- **`aekMatIndex`**: a per-vertex `Uint8` (`Uint16` past 256 materials) attribute, written by
-  `mergeGeometryParts` from each part's palette index (p371 D1 gains `paletteIndex` per part).
-  Flat per triangle by construction.
-- **Parameter table** per palette entry: base colour (vec4), emissive (vec3) + intensity,
-  roughness, metalness, normal scale, AO intensity, UV transform (offset, repeat, rotation), slot
-  flags. Stored as:
-  - WebGPU: a storage buffer (`storage(..., 'vec4', n)` in TSL);
-  - WebGL2: a uniform array, capped at 64 entries (UBO size), or a float `DataTexture` above that.
-- **TSL `setup` entry** (`features/merging/MergeMaterial.ts`, `merging()`'s, loaded with an
-  `import()` on the first palette a scene uses (p370 §13), registered with
-  `registerTslMaterial('aek:merge', …)`): reads the entry by `aekMatIndex` (a flat varying),
-  applies its UV transform, samples each slot's array with `sampleArrayLayer(arr, uv, layer)`, and
-  sets `colorNode`, `normalNode`, `roughnessNode`, `metalnessNode`, `aoNode`, `emissiveNode`.
+- **`aekMatIndex`**: a per-vertex `Uint8` (`Uint16` past 256 materials) attribute with
+  `gpuType = IntType` (WebGL2 reads it as an integer only so), read as a `uint` through a flat
+  varying. Written by `mergeGeometryParts` from each part's palette index (`MergePart` gains
+  `paletteIndex`, kept in its `MergePartRange`), so worker builds carry it too. Flat per triangle by
+  construction. Phase 0: `Uint8`, `Uint16`, `Uint32` and `Float32` all render the same on both
+  backends (three's WebGPU backend widens 8- and 16-bit integer vertex attributes to 32 bits on
+  upload, so `Uint8` saves CPU and transfer memory only there).
+- **Parameter table** per palette entry, 5 vec4s: colour rgb + opacity; emissive rgb +
+  intensity; roughness, metalness, normal scale xy; UV row 0 (the maps' `texture.matrix`:
+  m00, m01, m02) + AO intensity; UV row 1 (m10, m11, m12) + slot flags. The UV transform is the
+  member's first map's `matrix` (offset, repeat, rotation, centre), applied as three applies it,
+  `(M * vec3(uv, 1)).xy`; a member's maps must share it (Phase 1 validates). Stored as (decide at
+  Phase 2's start, from Phase 0's "As built"):
+  - one path on both backends: a uniform array (`uniformArray(vec4[])`, capped by the UBO size:
+    16 KiB on WebGL2 at least, ~204 entries) or a float `DataTexture` read with `textureLoad`
+    (no cap). Both render identically in Phase 0;
+  - the plan's first split (a WebGPU storage buffer, a WebGL2 uniform array or texture) isn't
+    needed: the storage buffer renders the same as the other two on WebGPU and fails on WebGL2.
+- **The merge material** (`features/merging/MergeMaterial.ts`, `merging()`'s, loaded with an
+  `import()` on the first palette a scene uses (p370 §13)): a `MeshStandardNodeMaterial` built in
+  code and registered with `saveMaterial` (no p302: §1). It reads the entry by `aekMatIndex` (a
+  flat varying), applies its UV transform, samples each slot's array with
+  `sampleArrayLayer(arr, uv, layer)`, and sets `colorNode` (colour × albedo, opacity × alpha),
+  `normalNode` (`normalMap(sample, normalScale)`), `roughnessNode` (× ORM g), `metalnessNode`
+  (× ORM b), `aoNode` (`(ORM r - 1) × intensity + 1`, as three's `aoMap`), `emissiveNode`. Phase 0's
+  `src/app/scenes/mergeMaterials/mergeMaterialPrototype.ts` is its first version.
 - One merge material per palette, shared by every group that uses it, so the pipeline compiles
   once.
 
@@ -112,6 +136,10 @@ materials don't merge automatically (open question 1).
   members with different palette materials in one cell land in one group.
 - Material variants (`matOverrides`) of a palette material are separate materials: listed in the
   palette or refused.
+- **A member with a material array** (geometry groups) is refused today with "multi-material
+  merging is p374" (`MergeEligibility.ts`), but D1-D3 merge only members of one material each.
+  Decide at Phase 3: merge it when every material of the array is in the palette (each group's
+  vertices get that material's palette index), or keep refusing it and reword the refusal.
 
 ### D5 — Measurements and the "when not" list
 
@@ -126,10 +154,45 @@ backends. Recorded here and in the handbook:
 
 ## 3. Phases
 
-### Phase 0 — Prototype (1 day)
+### Phase 0 — Prototype (1 day) — done
 
 Two standard materials, hand-made 2-layer arrays, a hand-written table, one merged geometry with
 `aekMatIndex`. **Exit:** same image as two separate meshes on WebGPU and WebGL2, one draw.
+
+As built (verified 2026-11-11 on macOS Chrome, WebGPU and WebGL2 (`navigator.gpu` hidden; ANGLE on
+Metal), `?isProdTest=true`, 1200 × 800 screenshots diffed per channel):
+
+- **The scene** `mergeMaterials` (`src/app/scenes/mergeMaterials/`, a debug scene, D5's test scene
+  later): two `STANDARD` materials made with `createMaterial` (A: albedo, normal and ORM maps,
+  `aoMapIntensity` 0.8; B: albedo and normal maps with a UV transform (offset, repeat, rotation,
+  centre), no ORM map, metalness 0.3, emissive, normal scale `(0.6, -0.6)`) on eight members
+  (spheres, boxes, tori, cylinders, one mirrored). Textures are made in code (256², RGBA8, GPU
+  mips), the same bytes in a material's map and its `DataArrayTexture` layer. Orthographic camera,
+  so a variant shown alone at the origin (`window.__mergeMaterials.show(variant)`) is diffable
+  pixel for pixel. Variants: `REFERENCE` (eight entities), `BAKED` (the control: the members merged
+  with `groups: 'BY_SLOT'`, drawn by the two materials as a material array), and one merged
+  geometry with `aekMatIndex` drawn by the merge material per table kind (`UNIFORM`, `TEXTURE`,
+  `STORAGE`; `STORAGE` WebGPU only). `?aekMatIndex=uint8|uint16|uint32|float32`; `?aekMips=false`
+  and `?aekStrip=normal,ao,orm,emissive` were the bisection switches.
+- **One draw:** draws per frame with each variant shown alone, both backends: none 1,
+  `REFERENCE` 9, `BAKED` 3, each merge variant 2.
+- **Same image:** WebGL2: each merge variant against `BAKED` differs on 3 pixels by 1/255. WebGPU:
+  the three table kinds render bit-identical to each other; against `BAKED`, mean 0.007/255,
+  855 pixels over 2/255, 27 over 16 (max 52), on internal triangle edges, texel edges and
+  silhouettes of the curved members; the bake alone (`REFERENCE` against `BAKED`) is 47 over
+  2/255. Bisected: with only the albedo map and no mips it stays (143 over 2/255, the bake alone
+  max 49 too), and A's UV transform is the identity there, so it's no UV or table error: two
+  pipelines compiled apart (Metal) round interpolation and coverage differently. Phase 2's exit
+  ("within compression error") should diff against the `BAKED` control, not the separate meshes.
+- **Index types:** all four render the same on both backends with no error (D3).
+- **Neutral ORM** is white `(1, 1, 1)`, not D2's first `(1, 1, 0)`: B (no ORM map, metalness 0.3)
+  matches with a white layer (D2 corrected).
+- **The table:** the storage buffer fails on WebGL2 (§1); the uniform array and the float texture
+  match each other bit for bit on both backends (D3 lists the choice).
+- Not covered by Phase 0, for later phases: tangents (the members had none, so both sides used the
+  derivative frame; a member with a `tangent` attribute and one without in one group get the
+  merge's computed tangents: D1's vertex requirements), compressed (KTX2) arrays, and a palette
+  of more than two entries.
 
 ### Phase 1 — Palette asset and build (D1, D2)
 

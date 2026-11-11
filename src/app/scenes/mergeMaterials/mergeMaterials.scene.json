@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "mergeMaterials",
+  "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
+  "isDebugScene": true,
+  "name": "Merge materials (p374)",
+  "description": "p374's verification scene. Phase 0: two STANDARD materials drawn as separate meshes, next to the same meshes merged into one geometry (a per-vertex aekMatIndex) drawn by one merge material that samples per-slot texture arrays and a parameter table, once per table kind (uniform array, float texture, storage buffer). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant)."
+}

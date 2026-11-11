@@ -13012,6 +13012,29 @@
         "lod"
       ]
     },
+    "mergeMaterials": {
+      "isDebugScene": true,
+      "name": "Merge materials (p374)",
+      "description": "p374's verification scene. Phase 0: two STANDARD materials drawn as separate meshes, next to the same meshes merged into one geometry (a per-vertex aekMatIndex) drawn by one merge material that samples per-slot texture arrays and a parameter table, once per table kind (uniform array, float texture, storage buffer). Orthographic, so every variant shown alone at the origin renders the same pixels: window.__mergeMaterials.show(variant).",
+      "id": "mergeMaterials",
+      "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "__features": []
+    },
     "physicsTest": {
       "name": "Physics API test",
       "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
