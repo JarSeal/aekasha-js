@@ -1,6 +1,6 @@
 // The Merging tab's windows (docs/plans/p373_merge-debug-and-member-editing.md D2): a merge group's
-// (its kind, settings and figures, its members as a list whose rows open their windows, Rebuild and
-// Dissolve) and a member's (its group with a link to the group's window, its state, assets and
+// (its kind, settings and figures, its members' highlight (D3), its members as a list whose rows
+// open their windows, Rebuild and Dissolve) and a member's (its group with a link to the group's window, its state, assets and
 // part range, its pose, Remove from group). Group and member entities don't outlive their scene, so
 // the windows are removed on a scene change and not saved. Default world only.
 import * as THREE from 'three/webgpu';
@@ -35,6 +35,7 @@ import {
   isGroupDrawn,
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
+import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
 import { dissolveMergeGroupRecorded, removeMergeMemberRecorded } from './_dbg__MergingUndo';
 
 const GROUP_WIN_KIND = 'mergeGroup';
@@ -172,6 +173,16 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
       'Left by removed members: a rebuild compacts.'
     ),
     live('Builds', () => formatCount(group.rebuilds)),
+    {
+      label: 'Highlight members',
+      get: () => isMergeGroupHighlighted(group.id),
+      set: (value) => {
+        setMergeGroupHighlighted(group.id, Boolean(value), world);
+        // The tab's row toggle follows
+        updateDebuggerTab(MERGING_TAB_ID);
+      },
+      hint: "Outlines its members in the group's colour (in view only).",
+    },
     getReasonedButtonItem({
       title: 'Rebuild',
       getDisabledReason: () => {

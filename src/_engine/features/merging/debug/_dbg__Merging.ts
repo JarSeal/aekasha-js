@@ -21,6 +21,14 @@ import {
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
 import {
+  getMergeOverlayCounts,
+  isMergeGroupHighlighted,
+  isMergeHighlightAll,
+  MAX_BOXES_PER_COLOR,
+  setMergeGroupHighlighted,
+  setMergeHighlightAll,
+} from './_dbg__MergingOverlay';
+import {
   _registerMergingWindowLinks,
   getOpenMergeGroupWindowIds,
   toggleMergeGroupWindow,
@@ -30,7 +38,7 @@ import {
 // merge groups at a glance (the groups, members and vertices, the draws per pass merged against
 // unmerged, the waste, the builds and in-place updates of the last second, the last build's time),
 // a row per group opening its window (_dbg__MergingWindows.ts), and the entities whose `merge` was
-// refused with the reason. Nothing is
+// refused with the reason. A group's members can be outlined (_dbg__MergingOverlay.ts). Nothing is
 // persisted: it's all for inspecting. Default world only.
 
 /** Rows the group list shows at most */
@@ -104,6 +112,7 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
       ...(group._isAuto ? { badge: 'AUTO' } : {}),
       description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}`,
       suffix: `${formatCount(n)} ${n === 1 ? 'member' : 'members'}, ${vertices} v${state}`,
+      toggleValues: [isMergeGroupHighlighted(group.id)],
     });
   }
   if (more) {
@@ -115,6 +124,20 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
     });
   }
   return items;
+};
+
+/** The highlight's note: the member boxes over the overlay's cap, if any. */
+export const getMergeOverlayNote = () => {
+  const { skipped } = getMergeOverlayCounts();
+  return skipped
+    ? `${formatCount(skipped)} member boxes in view aren't outlined: each colour draws ${formatCount(MAX_BOXES_PER_COLOR)} at most.`
+    : '';
+};
+
+/** A group row's highlight toggle: the group's members outlined, by the row's group entity. */
+const toggleGroupHighlight = (world: ECSWorld, itemId: string, isOn: boolean) => {
+  const group = world.getComponent(Number(itemId), ComponentType.MERGE_GROUP);
+  if (group) setMergeGroupHighlighted(group.id, isOn, world);
 };
 
 /** A row per refused entity still standing, newest first. */
@@ -171,6 +194,17 @@ export const _createMergingDebugGUI = () => {
           monitor('updates', 'In-place updates, last second'),
           monitor('lastBuild', 'Last build'),
           monitor('refused', 'Refused entities'),
+          {
+            label: 'Highlight all groups',
+            get: isMergeHighlightAll,
+            set: (value) => {
+              setMergeHighlightAll(Boolean(value));
+              // The rows' toggles follow
+              updateDebuggerTab(MERGING_TAB_ID);
+            },
+            hint: "Outlines every group's members in the group's colour (in view only).",
+          },
+          getNoteItem(getMergeOverlayNote),
         ],
       },
       debuggerListCMP({
@@ -180,6 +214,13 @@ export const _createMergingDebugGUI = () => {
         data: () => getMergeGroupListData(world),
         selectedItemId: getOpenMergeGroupWindowIds,
         perItemConfig: {
+          toggles: [
+            {
+              icon: 'objectsCubes',
+              title: 'Highlight the members',
+              fn: (itemId, isOn) => toggleGroupHighlight(world, itemId, isOn),
+            },
+          ],
           onClick: (itemId) => {
             if (itemId === 'more') return;
             toggleMergeGroupWindow(Number(itemId));

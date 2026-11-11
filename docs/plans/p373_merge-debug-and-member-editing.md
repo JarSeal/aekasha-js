@@ -281,6 +281,73 @@ As built, section 3 (2026-11-11):
 **Exit:** highlighting a group outlines its members; "show unmerged" changes the draw count by the
 member count and leaves the image unchanged.
 
+Decided when it started (2026-11-11):
+
+- **The overlay** (`debug/_dbg__MergingOverlay.ts`, as LOD's `_dbg__LodOverlay.ts`, default world):
+  a palette of 8 colours, one 1px `THIN` line each (`persistent`, `FIXED`, created on the first
+  use, `markDebugHelper`); a group's colour is `hashStringFNV1a(group.id)` (`utils/Hash.ts`) modulo
+  8, so it's the same on every visit and after a rebuild. A member's box is its geometry's local
+  bounding box oriented by the matrix it's drawn with (`_bakedMatrix` once built, its own world
+  matrix while it waits), `writeBoxEdges`. Refilled every frame (`APP_RENDER_SYNC`, at
+  `LOD_SELECTION`'s order: after the camera's final pose and culling, before the render) while
+  something is highlighted, and once at a toggle (a paused app loop doesn't run the system). In
+  view is the active camera's frustum (the debug camera's too: it's what the image shows): a
+  built group whose world sphere is outside is skipped, then each member box outside.
+- **The cap** (§5's risk): 1024 boxes per colour; a box past its colour's cap isn't written but
+  counted, and the tab's summary says how many weren't drawn (no line warning).
+- **What's highlighted:** "Highlight all groups" (the summary pane's checkbox) or a group by its id
+  (the group list's row toggle, the group window's checkbox): by id, so a rebuild or an `AUTO` group
+  made again keeps it. A row of a group drawn by "all" shows pressed; turning it off turns "all" off
+  and keeps every other group of the world highlighted. The per-group ids are cleared on scene exit
+  (a group id can come back on another visit); "all" stays (runtime, nothing persisted). Without
+  `lines()`: one log line (`isLinesInstalledFor('merge group overlay')`) and the checkbox reads off
+  again.
+- **Show unmerged** (section 2): a debug-only set per world in `MergeState.ts` (the shown groups'
+  entity ids). On: the group entity gets `TAG_DRAW_HELD` (the kernel's reconcile hides its mesh;
+  only when nothing held it already, and only that hold let go), and its built members lose
+  `TAG_MERGED` (drawn on their own, their own culling back). `applyBuild` adds `TAG_MERGED` to a
+  shown group's members only behind `!(IS_DEBUG_ENV && …)` (folded in a build), and its first-merge
+  guard reads the member's `partIndex !== -1` from before the build instead of `TAG_MERGED`, so a
+  rebuild during the A/B keeps `_wasSpatialIndexed`. Off: `TAG_MERGED` back on the built members,
+  the hold let go. Every view ends at scene exit (a persistent group's too); a dissolve, removal or
+  deletion during it needs nothing (`releaseMember`). No undo (a view, not an edit). The tab's draw
+  figures follow by themselves (`isGroupDrawn`, `isDrawnOnItsOwn`).
+- Open question 1 ("colour by member") isn't built here: the boxes show the members.
+
+Sections:
+
+1. The highlight: `debug/_dbg__MergingOverlay.ts` (the lines, the system, the cap), the summary
+   pane's checkbox and cap note, the group rows' toggle, the group window's checkbox, the scene
+   exit; unit tests.
+2. Show unmerged: `MergeState.ts`' set, `applyBuild`'s two changes, the toggle (row, group window
+   with its state text), the scene exit; unit tests.
+3. The checks: on largeWorld and testDebugScene in the browser, the highlight shot and show
+   unmerged's draw count (the profiler's draws) and image (a diff against merged); `yarn sbp`,
+   `yarn verify:baselines`, the scene runner's `debugger` configuration.
+
+As built, section 1 (2026-11-11):
+
+- `debug/_dbg__MergingOverlay.ts` as decided: `MERGE_OVERLAY_COLORS` (red, orange, yellow, green,
+  cyan, blue, violet, pink), `MAX_BOXES_PER_COLOR` 1024, the lines `MERGE_DEBUG_OVERLAY_<n>`;
+  `writeMergeOverlayBoxes(world, frustum, writers)` (the fill on plain writers, allocation-free,
+  what the tests drive), `setMergeHighlightAll`, `setMergeGroupHighlighted(groupId, isOn, world?)`
+  (each returning whether it's on now: false without `lines()`), `isMergeHighlightAll`,
+  `isMergeGroupHighlighted`, `getMergeOverlayCounts` (the last fill's drawn and skipped boxes),
+  `getMergeGroupColorIndex`. The scene exit is registered at the module's load (a `_dbg__`
+  module, as `_dbg__MergingUndo.ts`' visit token). A disabled group or member isn't outlined.
+- The tab: "Highlight all groups" (a `{ get, set }` checkbox, so a refusal without `lines()` reads
+  off at the next refresh) and the cap's note (`getMergeOverlayNote`, empty unless boxes were
+  skipped) at the end of the summary pane; the group rows' toggle "Highlight the members"
+  (`objectsCubes`; the list refreshes itself after a toggle). The group window: a "Highlight
+  members" checkbox after Builds, which refreshes the tab.
+- Tests: `debug/_dbg__MergingOverlay.test.ts` (one group's boxes in its colour only, the colour's
+  stability; a built member at its baked pose and a waiting one at its own; a rotation and scale;
+  the frustum and a disabled member; the cap and the note; "all" and one turned off; the lines
+  filled at once, marked, hidden when nothing's highlighted; the scene exit; a group made again
+  under its id; off without `lines()`), and the group window's checkbox in
+  `_dbg__MergingWindows.test.ts` (which now installs `lines()`). `yarn test` (3063), both `tsc`,
+  lint and the docs ratchet pass. Not yet seen in a browser (section 3).
+
 ### Phase 3 — Edit sessions, picking, undo (D4)
 
 **Exit:** moving a merged member from its window moves it smoothly, merges it back without a

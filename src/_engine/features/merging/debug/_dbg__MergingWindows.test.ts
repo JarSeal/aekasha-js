@@ -47,6 +47,7 @@ import {
 } from '../../../debug/_dbg__UndoRedo';
 import { _getEntityManagerInfo } from '../../../debug/_dbg__ManagedEntities';
 import { _getEntityWindowOpener } from '../../../debug/Profiler';
+import { installLines } from '../../lines/Lines';
 import { addToMergeGroup, buildPendingMergeGroupsAsync, installMergeGroups } from '../MergeGroups';
 import { getGroups } from '../MergeState';
 import {
@@ -55,6 +56,7 @@ import {
   createMemberWindowContent,
   getMemberPartText,
 } from './_dbg__MergingWindows';
+import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
 import { MERGE_DISSOLVE_ACTION, MERGE_REMOVE_ACTION } from './_dbg__MergingUndo';
 
 // p373 D2: the group and member windows, their links, and the dissolve and removal with undo
@@ -68,6 +70,8 @@ beforeAll(async () => {
   const { ctx } = createFeatureHost(getConfig());
   installCoreSystems(ctx);
   installMeshes(ctx);
+  // The highlight's lines
+  installLines(ctx);
   installMergeGroups(ctx);
   createGeometry({
     id: 'mergeWinBox',
@@ -149,6 +153,16 @@ describe('the group window', () => {
     expect(win.toggle).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'mergeMember', data: { entityId: members[1] } })
     );
+  });
+
+  it("highlights its members from its checkbox, as the tab's row does", async () => {
+    const { groupId, groupEntityId } = await createGroupAsync();
+    const root = show(createGroupWindowContent({ groupEntityId }));
+    const checkbox = getField(root, 'Highlight members').querySelector('input')!;
+    expect(checkbox.checked).toBe(false);
+    checkbox.click();
+    expect(isMergeGroupHighlighted(groupId)).toBe(true);
+    setMergeGroupHighlighted(groupId, false);
   });
 
   it('dissolves the group, closes its window, and undo merges the same members again', async () => {
