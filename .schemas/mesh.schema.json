@@ -63,28 +63,28 @@
       "type": "object",
       "properties": {
         "appId": {
-          "$ref": "#/definitions/__schema159"
+          "$ref": "#/definitions/__schema160"
         },
         "disabled": {
-          "$ref": "#/definitions/__schema161"
+          "$ref": "#/definitions/__schema162"
         },
         "persistent": {
-          "$ref": "#/definitions/__schema163"
+          "$ref": "#/definitions/__schema164"
         },
         "doNotAddToScene": {
-          "$ref": "#/definitions/__schema165"
+          "$ref": "#/definitions/__schema166"
         },
         "userData": {
-          "$ref": "#/definitions/__schema167"
-        },
-        "debugData": {
           "$ref": "#/definitions/__schema168"
         },
-        "spatialIndex": {
+        "debugData": {
           "$ref": "#/definitions/__schema169"
         },
+        "spatialIndex": {
+          "$ref": "#/definitions/__schema170"
+        },
         "ecsFrustumCullingEnabled": {
-          "$ref": "#/definitions/__schema171"
+          "$ref": "#/definitions/__schema172"
         }
       },
       "additionalProperties": false,
@@ -101,7 +101,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema173"
+          "$ref": "#/definitions/__schema174"
         }
       ]
     }
@@ -1624,18 +1624,21 @@
             "group": {
               "$ref": "#/definitions/__schema153"
             },
-            "cellSize": {
+            "mode": {
               "$ref": "#/definitions/__schema155"
             },
-            "maxVertices": {
+            "cellSize": {
               "$ref": "#/definitions/__schema156"
             },
-            "palettes": {
+            "maxVertices": {
               "$ref": "#/definitions/__schema157"
+            },
+            "palettes": {
+              "$ref": "#/definitions/__schema158"
             }
           },
           "additionalProperties": false,
-          "description": "A merge group, and the automatic groups' bounds."
+          "description": "A merge group, its mode, and the automatic groups' bounds."
         }
       ]
     },
@@ -1663,108 +1666,116 @@
       ]
     },
     "__schema155": {
+      "type": "string",
+      "enum": [
+        "BAKED",
+        "BATCHED"
+      ],
+      "description": "How the group draws its members: BAKED (the default) merges them into one geometry, for static content; BATCHED draws them as instances of one BatchedMesh, each member's matrix written when it moves and each culled on its own, for moving members (bodies included)."
+    },
+    "__schema156": {
       "type": "number",
       "exclusiveMinimum": 0,
       "description": "AUTO only: the side of the square x/z cells that bound an automatic group, in metres (default 32). In a streaming scene it divides the streaming cell size, or a group can span two streaming cells."
     },
-    "__schema156": {
+    "__schema157": {
       "type": "integer",
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991,
       "description": "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
     },
-    "__schema157": {
+    "__schema158": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema158"
+        "$ref": "#/definitions/__schema159"
       },
       "description": "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
     },
-    "__schema158": {
+    "__schema159": {
       "type": "string",
       "minLength": 1
     },
-    "__schema159": {
+    "__schema160": {
       "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema160"
+          "$ref": "#/definitions/__schema161"
         }
       ]
     },
-    "__schema160": {
+    "__schema161": {
       "type": "string"
     },
-    "__schema161": {
+    "__schema162": {
       "description": "Creates the entity disabled.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema162"
+          "$ref": "#/definitions/__schema163"
         }
       ]
     },
-    "__schema162": {
+    "__schema163": {
       "type": "boolean"
     },
-    "__schema163": {
+    "__schema164": {
       "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema164"
+          "$ref": "#/definitions/__schema165"
         }
       ]
     },
-    "__schema164": {
+    "__schema165": {
       "type": "boolean"
     },
-    "__schema165": {
+    "__schema166": {
       "description": "Leaves the entity's object out of the root scene.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema166"
+          "$ref": "#/definitions/__schema167"
         }
       ]
     },
-    "__schema166": {
+    "__schema167": {
       "type": "boolean"
     },
-    "__schema167": {
+    "__schema168": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema79"
         }
       ]
     },
-    "__schema168": {
+    "__schema169": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema7"
         }
       ]
     },
-    "__schema169": {
+    "__schema170": {
       "description": "false keeps a mesh or a point or spot light out of the spatial index.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema170"
+          "$ref": "#/definitions/__schema171"
         }
       ]
     },
-    "__schema170": {
+    "__schema171": {
       "type": "boolean"
     },
-    "__schema171": {
+    "__schema172": {
       "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema172"
+          "$ref": "#/definitions/__schema173"
         }
       ]
     },
-    "__schema172": {
+    "__schema173": {
       "type": "boolean"
     },
-    "__schema173": {
+    "__schema174": {
       "type": "object",
       "propertyNames": {
         "type": "string"

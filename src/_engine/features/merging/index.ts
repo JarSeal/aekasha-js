@@ -17,6 +17,7 @@ export {
 } from './MergeMemberEdit';
 export type {
   MergeGroupData,
+  MergeGroupMode,
   MergeGroupSettings,
   MergeMemberData,
   MergeMemberEditPose,

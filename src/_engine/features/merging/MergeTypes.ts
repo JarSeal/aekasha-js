@@ -2,8 +2,23 @@
 // which the kernel names with `import type` (its component registry, ECSCoreComponents.ts).
 import type * as THREE from 'three/webgpu';
 
+/**
+ * How a merge group draws its members. `BAKED` (the default, p372): merged into one geometry, one
+ * draw, culled whole; for static content. `BATCHED` (p375): instances of one `BatchedMesh`, each
+ * member's matrix written when it moves and each culled on its own; for members that move (bodies
+ * included), or that need their own culling.
+ */
+export type MergeGroupMode = 'BAKED' | 'BATCHED';
+
 /** A merge group's settings: `createMergeGroup`'s options, kept on its `MERGE_GROUP`. */
 export type MergeGroupSettings = {
+  /** How the group draws its members. Default `BAKED`. A `BATCHED` group takes moving bodies,
+   * but no `palette`. */
+  mode?: MergeGroupMode;
+  /** `BATCHED` only: each member is frustum-culled on its own, in every pass (shadow passes
+   * included). Turn it off for a batch that is always in view: the per-member walk is then skipped.
+   * Default true. */
+  perMemberCulling?: boolean;
   /** Whether the group's mesh casts shadows. Default: its first member's `castShadow`. */
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's `receiveShadow`. */
@@ -15,7 +30,7 @@ export type MergeGroupSettings = {
   /** A merge material palette's id (`*.mergeMaterial.json`, p374): the group takes meshes of any
    * of the palette's materials and draws them in one draw with the palette's merge material. The
    * scene must list the palette (`mergeMaterials`), and a palette group can't be `persistent`
-   * (the merge material is the scene's). Default: none, one material per group. */
+   * (the merge material is the scene's) or `BATCHED`. Default: none, one material per group. */
   palette?: string;
 };
 
@@ -59,6 +74,10 @@ export type MeshMergeOptions = {
   /** The group's id, or `'AUTO'` (the default): a group the engine picks by the mesh's material,
    * attributes, shadow flags, layers and cell. */
   group?: string;
+  /** The mode of the group the mesh joins: a group made on first use takes it (unless its scene
+   * entry gives one), and a group of the other mode refuses the mesh. `AUTO` keeps each mode's
+   * groups apart. Default: the group's (`BAKED` for one it makes). */
+  mode?: MergeGroupMode;
   /** `AUTO` only: the side of the square x/z cells that bound an automatic group, in metres.
    * Default 32. */
   cellSize?: number;
@@ -103,8 +122,12 @@ export type SceneMergeGroupEntry = {
   /** Whether the group's mesh receives shadows. Default: its first member's. */
   receiveShadow?: boolean;
   /** A merge material palette the scene lists (`mergeMaterials`): the group takes meshes of any
-   * of its materials, drawn by its merge material. */
+   * of its materials, drawn by its merge material. Not with `BATCHED`. */
   palette?: string;
+  /** How the group draws its members. Default `BAKED`. */
+  mode?: MergeGroupMode;
+  /** `BATCHED` only: each member culled on its own. Default true. */
+  perMemberCulling?: boolean;
 };
 
 /**

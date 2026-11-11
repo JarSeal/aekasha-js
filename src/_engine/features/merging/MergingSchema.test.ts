@@ -31,6 +31,22 @@ describe("a mesh's merge", () => {
   });
 });
 
+describe('the mode (p375)', () => {
+  test("a mesh's merge takes BAKED or BATCHED", () => {
+    expect(isMergeValid({ mode: 'BATCHED' })).toBe(true);
+    expect(isMergeValid({ group: 'props', mode: 'BAKED' })).toBe(true);
+    expect(isMergeValid({ mode: 'MERGED' })).toBe(false);
+  });
+
+  test("a group's entry takes it, perMemberCulling only with BATCHED, no palette with BATCHED", () => {
+    expect(isGroupsValid([{ id: 'props', mode: 'BATCHED', perMemberCulling: false }])).toBe(true);
+    expect(isGroupsValid([{ id: 'props', mode: 'BAKED', palette: 'ruinsPalette' }])).toBe(true);
+    expect(isGroupsValid([{ id: 'props', perMemberCulling: true }])).toBe(false);
+    expect(isGroupsValid([{ id: 'props', mode: 'BATCHED', palette: 'ruinsPalette' }])).toBe(false);
+    expect(isGroupsValid([{ id: 'AUTO', mode: 'BATCHED' }])).toBe(false);
+  });
+});
+
 describe("a scene's mergeMaterials (p374)", () => {
   const parse = (mergeMaterials: unknown) =>
     SceneSchema.safeParse({ id: 's', sceneFile: 's.ts', mergeMaterials });

@@ -76,7 +76,7 @@ import {
   setMergeSceneLoading,
   syncMemberPose,
 } from './MergeState';
-import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
+import type { MergeGroupData, MergeGroupMode, MergeGroupSettings } from './MergeTypes';
 
 /**
  * A build of more vertices than this merges in the assets worker (`mergeGeometryPartsAsync`):
@@ -133,12 +133,15 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
  * built in the frame after they join. Its entity is managed (`MANAGED_BY` `MERGE`): it has no mesh
  * until its first build, and goes with the scene that created it unless `persistent`. With a
  * `palette` (one the scene lists in `mergeMaterials`), its members may have any of the palette's
- * materials, drawn in one draw by the palette's merge material.
+ * materials, drawn in one draw by the palette's merge material. With `mode: 'BATCHED'` its
+ * members are instances of one `BatchedMesh`: they may move (bodies included), each drawn where it
+ * is and culled on its own.
  * @param world the group's world (default: the default world)
  * @returns the group's entity id
  * @throws for an id the world has a group with already, a reserved id (`AUTO`, or one starting
  * with `auto:`, the automatic groups'), a `palette` the scene doesn't list (no merge material is
- * registered under its id) or with `persistent`, or without the `merging()` feature
+ * registered under its id), with `persistent` or with `BATCHED`, an unknown `mode`, or without
+ * the `merging()` feature
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -162,10 +165,18 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
   if (getGroups(ecsWorld).has(opts.id)) {
     throw new Error(`createMergeGroup: the world has a merge group "${opts.id}" already.`);
   }
-  const { palette } = opts;
-  if (palette !== undefined && (opts.persistent || !findPaletteMaterial(palette))) {
+  const { palette, mode } = opts;
+  if (mode !== undefined && mode !== 'BAKED' && mode !== 'BATCHED') {
     throw new Error(
-      `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
+      `createMergeGroup("${opts.id}"): the mode "${String(mode)}" isn't BAKED or BATCHED.`
+    );
+  }
+  if (
+    palette !== undefined &&
+    (opts.persistent || mode === 'BATCHED' || !findPaletteMaterial(palette))
+  ) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : mode === 'BATCHED' ? "a palette group can't be BATCHED (its merge material reads the merged vertices' palette index)" : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
     );
   }
   return createGroup(opts, ecsWorld, false);
@@ -184,8 +195,9 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
  * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
  * material array or another material than the group's (a palette group's: one its palette doesn't
- * have), a dynamic or kinematic body, a manager, a `LOD`, attributes the group's can't take, or a
- * group already; a persistent one, unless the group is persistent.
+ * have), a manager, a `LOD`, attributes the group's can't take, or a group already; a persistent
+ * one, unless the group is persistent. A `BAKED` group refuses a dynamic or kinematic body; a
+ * `BATCHED` one a mesh that isn't directly under the root scene.
  * @param world the group's world (default: the default world)
  * @remarks Members are static: a member moved later is drawn where it was merged until
  * `updateMergeMember` moves its part.
@@ -200,7 +212,18 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  */
 export const addToMergeGroup = (groupId: string, entityIds: number[], world?: ECSWorld) => {
   assertMergingInstalled('addToMergeGroup');
-  const ecsWorld = world ?? getECSWorld();
+  joinMergeGroup(groupId, entityIds, world ?? getECSWorld());
+};
+
+/** `addToMergeGroup`, with the mode each entity's `merge` names (`modes`, the queue's), which a
+ * group of the other mode refuses, and the first of which a group made on first use takes unless
+ * its scene entry gives one. */
+const joinMergeGroup = (
+  groupId: string,
+  entityIds: number[],
+  ecsWorld: ECSWorld,
+  modes?: ReadonlyMap<number, MergeGroupMode>
+) => {
   if (groupId === AUTO) {
     for (const entityId of entityIds) queueMerge(entityId, AUTO, ecsWorld);
     return;
@@ -209,19 +232,18 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
   const queued = findQueued(ecsWorld);
   if (queued?.size) for (const entityId of entityIds) queued.delete(entityId);
   // Made on first use with the scene's `mergeGroups` entry's settings, if it lists one
+  const entry = getActiveSceneMergeSettings().groups.get(groupId);
+  const mode = entry?.mode ?? entityIds.map((id) => modes?.get(id)).find(Boolean);
   const groupEntityId =
     getGroups(ecsWorld).get(groupId) ??
-    createMergeGroup(
-      { ...getActiveSceneMergeSettings().groups.get(groupId), id: groupId },
-      ecsWorld
-    );
+    createMergeGroup({ ...entry, ...(mode && { mode }), id: groupId }, ecsWorld);
   const group = existsOrThrow(
     ecsWorld.getComponent(groupEntityId, ComponentType.MERGE_GROUP),
     `addToMergeGroup: the merge group "${groupId}" has no MERGE_GROUP component.`
   );
   let added = 0;
   for (const entityId of entityIds) {
-    const refusal = getMergeRefusal(entityId, ecsWorld, group);
+    const refusal = getMergeRefusal(entityId, ecsWorld, group, modes?.get(entityId));
     if (refusal) {
       lwarn(`addToMergeGroup("${groupId}"): entity ${entityId} is drawn on its own: ${refusal}.`);
       if (IS_DEBUG_ENV) noteMergeRefusal(ecsWorld, entityId, groupId, refusal);
@@ -385,11 +407,11 @@ export const getMergeGroupOf = (entityId: number, world?: ECSWorld): string | un
  * can't be made on first use (its scene entry's palette isn't registered) is logged, and its
  * meshes are drawn on their own. */
 const resolveQueuedMerges = (world: ECSWorld) => {
-  const joins = collectQueuedJoins(world);
-  if (!joins) return;
-  for (const [groupId, entityIds] of joins) {
+  const queued = collectQueuedJoins(world);
+  if (!queued) return;
+  for (const [groupId, entityIds] of queued.joins) {
     try {
-      addToMergeGroup(groupId, entityIds, world);
+      joinMergeGroup(groupId, entityIds, world, queued.modes);
     } catch (err) {
       lerror(
         `Merge group "${groupId}": entities ${entityIds.join(', ')} are drawn on their own.`,
@@ -604,6 +626,8 @@ const buildGroup = (
   const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
   if (!group) return;
   group._isPending = false;
+  // TODO(p375_batched-mesh-batches Phase 1 S2): the batch build; until then drawn on their own
+  if (group.settings.mode === 'BATCHED') return;
   // The Merging tab's last build time (debug env only)
   const start = IS_DEBUG_ENV ? performance.now() : 0;
   const token = ++group._buildToken;
