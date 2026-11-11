@@ -791,6 +791,23 @@ As built, section 2 (the handbook):
 - `yarn hub:build`: 114 pages, no dead link. Its one warning, the search index over 450 KiB gzip,
   was there before (554 → 558 KiB).
 
+As built, section 3 (the notes):
+
+- **`features/merging/CLAUDE.md`** (Merge materials): a "What it costs" item (D5's figures, the
+  candidates for the pixel cost, the memory and the 16-bit cap, where the "when not" list is),
+  and the field's `PALETTE_16` mode and `fieldView` in the Tests item. Its "Phases 1-3 built" and
+  the plan's path change with the rename in section 4. No new `##` section.
+- **`devTools/gather/CLAUDE.md`:** `*.mergeMaterial.json` in the suffixes, and `mergeMaterials.ts`
+  among the gather's modules (pass 1's palette, the scene's list, the group palette checks).
+- **`devTools/assetPipeline/CLAUDE.md`:** the palettes' slot arrays in `yarn assets`' line.
+- **The root `CLAUDE.md`:** `merging()`'s line in Bootstrap flow names p374's palettes.
+- **`readme.md`** Features: palettes in Mesh merging (with "it trades pixels for draws"), texture
+  arrays in Asset optimization.
+- `yarn hub:build` and `yarn test` pass. With TypeDoc converting again, the Hub warns that
+  `createMergeMaterialAsync` is on `aekasha/merging` but `@internal` (Phase 2's choice, section
+  4's `As built`: the verification scene's entry point). Not changed here: making it public or
+  moving the `SKIP` variant's construction is a decision for section 4 or a follow-up.
+
 ## 4. Versioning
 
 Engine minor (asset type, merge material, group palettes).
