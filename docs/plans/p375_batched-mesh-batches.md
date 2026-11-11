@@ -1,4 +1,4 @@
-Status: draft | Phase 0 (spike) done, gate passed; Phase 1 not started
+Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 next
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
@@ -182,7 +182,33 @@ members in one block), or a range `customSort` always (0.6 ms per pass at 2 000)
 swaps (Phase 2) and decal pools (Phase 3) churn every frame, so this matters there more than for
 moving members.
 
-## 3. Design (if the gate passes)
+## 3. Design (the gate passed)
+
+### Decisions (2026-11-11, after the spike)
+
+- **D1 — Grouped ids, no sort, compaction when fragmented.** A batch adds its members in geometry
+  order at its build and draws with `sortObjects = false`: one draw per geometry on WebGPU, no
+  per-pass sort. The batch counts its merged draws (`_mergedDrawCount`, read after a render, or
+  its own count of geometry runs in id order, kept on add and remove). When that count passes twice the batch's geometry count, a
+  compaction re-adds every member in geometry order in that frame (2 000 members: about 0.4 ms, the
+  matrix writes), as p372 compacts a group past 25% waste. A range `customSort` (0.6 ms a pass at
+  2 000, shadow passes included) is the fallback, decided in Phase 2 if LOD swaps fragment a batch
+  often enough to make compactions frequent. Transparent members stay refused (p372's rule), so no
+  batch needs the depth sort.
+- **D2 — The spike scene is Phase 1's exit scene.** `batchedMeshSpike` (an `isDebugScene`) and
+  `devTools/bench/batchedMeshSpike.ts` are committed with Phase 1 (after `yarn sbp` and
+  `yarn verify:scenes --only batchedMeshSpike` pass). Phase 1 adds an `ENGINE` way to the scene
+  (the same members in an engine batched group, `mode: "BATCHED"`) next to the spike's hand-built
+  `BATCHED` way, which stays as the baseline, and the bench compares them.
+- **D3 — p372's build starvation is its own fix**, not p375's: `docs/issues/merge-update-starves-worker-build.md`
+  (an engine patch on its own branch). Batched groups don't build in the worker.
+- **D4 — Per-member culling on by default** (`perObjectFrustumCulled`): with most members out of
+  view it halved the GPU time; a group setting turns it off for a batch that is always in view.
+- **D5 — Geometry slots** (Phase 3's decal pools, and any batch whose geometries change): reserve
+  each slot at `addGeometry` and refill it with `setGeometryAt`; never `deleteGeometry` +
+  `addGeometry` without `optimize()` (the buffer space leaks, spike item 6).
+
+### Design
 
 - **Mode:** `merge: { group: "<id>" | "AUTO", mode: "BATCHED" }`; a group setting
   (`mergeGroups` entry `"mode": "BATCHED"`). Same eligibility as p372, except that kinematic and
@@ -199,9 +225,9 @@ moving members.
   storage modes. Storages read once per frame, no allocation.
 - **Visibility:** `DISABLED`, frustum and object culling map to `setVisibleAt` per member; the
   batch itself is never hidden for one member.
-- **LOD (with p348):** a member's level is a different geometry id in the same batch (p347 chains
-  share one vertex buffer, so `addGeometryLOD`-style index ranges are cheap if the spike's
-  extension works; otherwise a geometry per level). A level change cross-fades instead of popping
+- **LOD (with p348):** a member's level is a different geometry id in the same batch, a geometry
+  per level (`@three.ez/batched-mesh-extensions`' shared-vertex `addGeometryLOD` is out, spike item
+  7). A level change is a remove and an add, which fragments the runs (D1). A level change cross-fades instead of popping
   (p351 Phase 2): for `fadeSeconds` the member has a second batch instance with the outgoing
   level's geometry, each with its signed fade for `lodDither`, and culling fades the same way;
   `fadeSeconds: 0` swaps instantly.
@@ -212,8 +238,12 @@ moving members.
 
 ## 4. Phases (after the gate)
 
-1. Batched groups, sync, visibility. **Exit:** 2 000 moving kinematic boxes in one batch match the
-   spike's numbers in the engine.
+1. Batched groups, sync, visibility, grouping and compaction (D1), `BatchedMesh` behind `import()`.
+   Tests: the sync in both storage modes, compaction after removes and adds, `DISABLED` and
+   culling to `setVisibleAt`. Commit the spike scene and bench (D2) and add the `ENGINE` way.
+   **Exit:** 2 000 moving kinematic boxes in one engine batch match the spike's hand-built batch
+   (CPU frame within the runs' noise, 23 draws on WebGPU) on both backends, and `yarn sbp` shows no
+   `BatchedMesh` in the first download.
 2. LOD per member (with p348). 3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
@@ -224,7 +254,7 @@ moving members.
 | --------------------------------------------- | --------------------------------------------------------------------------------- |
 | No CPU win worth the code on WebGPU           | The gate; the spike's numbers stay recorded, and p372/instancing cover the cases  |
 | Per-instance features differ between backends | Spike items 4–6 on both backends                                                  |
-| Merged draws need grouped members (r187)      | The sync keeps members grouped by geometry and the batch's sort by range (§1)     |
+| Merged draws need grouped members (r187)      | Grouped ids, no sort, compaction past twice the geometry count (D1); range sort the fallback |
 | WebGPU gains multi-draw-indirect later        | Fewer draws still for interleaved members; re-run the spike (p370 open question 4) |
 
 ## 6. Open questions
