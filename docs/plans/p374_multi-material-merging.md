@@ -152,6 +152,52 @@ backends. Recorded here and in the handbook:
 - don't merge across alpha modes;
 - prefer per-material groups when there are only 2–3 materials per cell (the gain is small).
 
+Measured (Phase 4, 2026-11-11; Apple M2, macOS Chrome, 1200 × 800, the debug env's stats panels
+and GPU memory figures; the field of Phase 3: 1 600 meshes, 4 materials, 9 cells, no shadows;
+GPU ms the median of four runs, WebGL2's of a figure that swings by about ±1 ms between runs and
+holds a fixed 3.6 ms; the per-mode differences are the same within each run):
+
+| Mode                               | Groups | Draws | Merged geometry (WebGPU / WebGL2) | GPU ms, overview (WebGPU / WebGL2) | GPU ms, close (WebGPU / WebGL2) |
+| ---------------------------------- | ------ | ----- | --------------------------------- | ---------------------------------- | ------------------------------- |
+| nothing drawn                      | —      | 1     | —                                 | 0.68 / 3.56                        | —                               |
+| `PALETTE` (32-bit index)           | 9      | 10    | 43.6 / 41.3 MB                    | 4.82 / 8.55                        | 6.71 / 10.85                    |
+| `PALETTE_16` (`maxVertices` 65535) | 18     | 19    | 35.8 / 33.5 MB                    | 4.78 / 8.47                        | 6.76 / 10.31                    |
+| `MATERIAL`                         | 36     | 37    | 32.7 / 32.7 MB                    | 4.11 / 7.55                        | 4.78 / 8.85                     |
+| `UNMERGED`                         | —      | 1 601 | — (the shapes' own: 82 KB)        | 5.14 / 8.89                        | 4.71 / 7.93                     |
+
+- **Pixels:** the merge material costs more per pixel than the members' own materials: in the
+  close view (the meshes fill the frame) `PALETTE` takes 1.8-1.9 ms more GPU time a frame than
+  `MATERIAL` on both backends (paired within each run), about 45 % more than the field's own cost
+  there; in the overview 0.6-0.8 ms more. Not bisected: the table's five fetches per fragment,
+  every slot sampled (and normal-mapped) for every member where a member's own material samples
+  only its maps (`ruinMoss` one), and the array sampling are the candidates.
+- **Draws:** the JavaScript side of a draw is about 1 µs here (`UNMERGED`'s 1 600 more draws cost
+  1-2 ms of the CPU frame; the merged modes' CPU frames are within the figure's run-to-run swing,
+  0.6-2.3 ms), so `PALETTE`'s 27 fewer draws than `MATERIAL` save about 0.03 ms. A palette pays
+  where draws are what's short: hundreds of draws saved (many materials a cell, many cells, every
+  shadow pass), or a device whose draws cost more.
+- **Memory:** both merged modes hold 776 800 vertices (position, normal, uv: 24.9 MB) and
+  3 912 000 indices. A per-material group (~21 k vertices) has a 16-bit index (7.8 MB in all); a
+  palette group of ~86 k a 32-bit one (15.6 MB): a palette makes groups N times bigger, so they
+  pass 65 535 vertices sooner. `aekMatIndex` adds 3.1 MB on WebGPU (three widens the `Uint8` to a
+  `Uint32Array` on upload) and 0.8 MB on WebGL2. `maxVertices: 65535` keeps the index 16-bit at no
+  measurable GPU cost (`PALETTE_16`: twice the groups, the same GPU time). The palette's three
+  arrays and table (1.05 MB, 12 layers at 256²) cost what the members' 11 textures do (0.96 MB).
+
+So the "when not" list, as measured:
+
+- **Measure first: a palette trades pixels for draws.** It saves `(materials − 1)` draws a cell
+  and pass and costs every pixel its members draw. Here, 4 materials a cell, it lost: per-material
+  groups were faster on both backends. Prefer them unless the draws are the bottleneck.
+- Cap a palette group at 65 535 vertices (`maxVertices: 65535`): its index stays 16-bit.
+- Don't palette materials with very different texture sizes: a slot's layers are the slot's size,
+  so a 256² member in a 1024² slot takes 16 times its memory (at one size, as here, the arrays cost
+  what the members' textures do).
+- Don't palette a feature only one member uses: every member samples every slot (the class check
+  warns), unless the slot is `SKIP` (whose explicit gradients pick slightly other mip levels,
+  Phase 2's "As built").
+- Don't merge across alpha modes: the class check refuses it.
+
 ## 3. Phases
 
 ### Phase 0 — Prototype (1 day) — done
@@ -694,6 +740,32 @@ As built, section 3 (the field; verified 2026-11-11 on macOS Chrome, WebGPU and 
    measurements), `devTools/gather/CLAUDE.md` (the
    `*.mergeMaterial.json` suffix), `readme.md` Features.
 4. Engine minor; `CHANGELOG.md`.
+
+Sections (each stopped for review): 1. the measurements (D5's numbers, the field's close view
+and `PALETTE_16`); 2. the handbook (the modular kits guide, the Hub's Mesh merging and asset
+optimization pages, `yarn hub:build`); 3. the notes (`features/merging/CLAUDE.md`,
+`devTools/gather/CLAUDE.md`, `readme.md`); 4. versioning (engine minor, app minor for the
+scene, `CHANGELOG.md`, the plan marked done).
+
+As built, section 1 (the measurements; D5 has the figures and the "when not" list):
+
+- **The field** (`mergeMaterialsField.ts`) gained a second camera, `CLOSE` (2.5 m over the
+  field's +z edge, looking 4 m in: the meshes fill the frame and hide each other), switched by
+  `window.__mergeMaterials.fieldView('OVERVIEW' | 'CLOSE')` (a field shown next keeps it), and a
+  fourth mode, `PALETTE_16` (`merge: { maxVertices: 65535 }`: the scene's palettes, two groups a
+  cell, each with a 16-bit index). `measureField()` counts all four.
+- **How it was measured** (a one-off script, not committed): the verify dev server, Chrome
+  headless on WebGPU and on WebGL2 (`navigator.gpu` deleted in an init script: ANGLE on Metal,
+  not the verify helpers' SwiftShader, whose timings mean nothing), `?isDebug=true&aekTest=true`,
+  the stats panels on (`AEK_debugStats`: CPU, GPU), per mode and view 2.5 s of warm-up and 10 s
+  of the panels' figures every 250 ms (the first second dropped), the median; the GPU memory tab's
+  rows (`collectGPUAssets`, imported from the app's own module instance) and the merged groups'
+  layouts once per mode; an empty frame (`show('NONE')`) for the fixed cost. Four runs per backend
+  (`PALETTE_16` in two). No console error but the WASM init deprecation warning (not this plan's).
+- **Draws** in the debug env are 2 more than the prod test figures in the overview (its helpers):
+  the table gives prod test's (Phase 3's, `PALETTE_16`'s as groups + 1).
+- **Not bisected:** what makes the merge material's pixels cost more (D5's candidates). A
+  follow-up if a palette scene ever needs it; until then the handbook says to measure.
 
 ## 4. Versioning
 

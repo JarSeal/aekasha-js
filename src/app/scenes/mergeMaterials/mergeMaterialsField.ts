@@ -14,21 +14,32 @@ import { nextFrames } from '../../shared/verifyHarness';
  * The `mergeMaterials` scene's field (docs/plans/p374_multi-material-merging.md, Phase 3, D5's
  * test scene): 1 600 meshes, 400 of each `ruinsPalette` member (Phase 0's shapes, each material
  * on every shape), on a 40 × 40 grid over 3 × 3 cells of the scene's `AUTO` cell size, away from
- * the verification variants at the origin and seen by a camera of its own. Made in one of three
+ * the verification variants at the origin and seen by a camera of its own. Made in one of four
  * modes:
  * - `PALETTE`: `merge: 'AUTO'`, so the scene's `AUTO` entry's `palettes: ["ruinsPalette"]` puts
- *   the four materials of a cell into one group, drawn by the merge material (9 groups);
+ *   the four materials of a cell into one group, drawn by the merge material (9 groups of ~86 k
+ *   vertices, so each has a 32-bit index);
+ * - `PALETTE_16`: the same with `maxVertices: 65535`, so each group keeps a 16-bit index (Phase 4,
+ *   D5's measurements: two groups a cell);
  * - `MATERIAL`: `merge: { palettes: [] }`, one group per material and cell (36);
  * - `UNMERGED`: no `merge`, a draw per mesh.
  *
  * `showFieldAsync(mode)` deletes the field it showed before, makes the new one, waits for its
  * groups' builds (the palette groups build in the assets worker: each is over 65 536 vertices)
  * and counts its groups and draws.
+ *
+ * Two views (Phase 4, D5's measurements): `OVERVIEW`, the whole field from above (every group in
+ * view, the meshes small: what the draws cost), and `CLOSE`, low over its near edge, where the
+ * meshes fill the frame and hide each other (what a pixel costs). `setFieldView(view)` switches.
  */
 
 /** The field's modes */
-export const FIELD_MODES = ['PALETTE', 'MATERIAL', 'UNMERGED'] as const;
+export const FIELD_MODES = ['PALETTE', 'PALETTE_16', 'MATERIAL', 'UNMERGED'] as const;
 export type FieldMode = (typeof FIELD_MODES)[number];
+
+/** The field's views: from above, or low over its near edge */
+export const FIELD_VIEWS = ['OVERVIEW', 'CLOSE'] as const;
+export type FieldView = (typeof FIELD_VIEWS)[number];
 
 /** One mode's figures: its meshes, the merge groups they're in, the frame's draws */
 export type FieldFigures = { meshes: number; groups: number; draws: number };
@@ -47,9 +58,13 @@ const MAX_BUILD_FRAMES = 600;
 
 const ORIGIN = FIRST_CELL * CELL_SIZE;
 const CENTRE = ORIGIN + (CELL_SIZE * CELLS) / 2;
+/** The field's +z edge, the close view's side */
+const EDGE_Z = ORIGIN + CELL_SIZE * CELLS;
 
 const MERGE_DEFS: Record<FieldMode, MeshMergeDef | undefined> = {
   PALETTE: 'AUTO',
+  // The merge writes a 16-bit index up to 65 535 vertices
+  PALETTE_16: { maxVertices: 65535 },
   MATERIAL: { palettes: [] },
   UNMERGED: undefined,
 };
@@ -65,15 +80,27 @@ type FieldOptions = {
 
 /** Makes the field's camera, and returns the function that shows a mode (or none) */
 export const createField = ({ members, getGeometry, variantsCameraId }: FieldOptions) => {
-  const cameraId = createCameraEntity(
-    {
-      type: 'PERSPECTIVE',
-      fov: 50,
-      position: { x: CENTRE, y: 18, z: CENTRE + 30 },
-      lookAtPoint: { x: CENTRE, y: 0, z: CENTRE },
-    },
-    { appId: 'mergeMaterialsFieldCam', debugData: { name: 'Merge materials field' } }
-  );
+  const cameraIds: Record<FieldView, number> = {
+    OVERVIEW: createCameraEntity(
+      {
+        type: 'PERSPECTIVE',
+        fov: 50,
+        position: { x: CENTRE, y: 18, z: CENTRE + 30 },
+        lookAtPoint: { x: CENTRE, y: 0, z: CENTRE },
+      },
+      { appId: 'mergeMaterialsFieldCam', debugData: { name: 'Merge materials field' } }
+    ),
+    CLOSE: createCameraEntity(
+      {
+        type: 'PERSPECTIVE',
+        fov: 50,
+        position: { x: CENTRE, y: 2.5, z: EDGE_Z + 0.4 },
+        lookAtPoint: { x: CENTRE, y: 0, z: EDGE_Z - 4 },
+      },
+      { appId: 'mergeMaterialsFieldCloseCam', debugData: { name: 'Merge materials field, close' } }
+    ),
+  };
+  let view: FieldView = 'OVERVIEW';
   let entityIds: number[] = [];
 
   const createMeshes = (merge: MeshMergeDef | undefined) => {
@@ -125,7 +152,7 @@ export const createField = ({ members, getGeometry, variantsCameraId }: FieldOpt
       setMainCamera(world, variantsCameraId);
       return undefined;
     }
-    setMainCamera(world, cameraId);
+    setMainCamera(world, cameraIds[view]);
     const merge = MERGE_DEFS[mode];
     entityIds = createMeshes(merge);
     if (merge !== undefined) await waitForBuildsAsync(entityIds);
@@ -135,5 +162,11 @@ export const createField = ({ members, getGeometry, variantsCameraId }: FieldOpt
     return { meshes: entityIds.length, groups: groups.size, draws: renderer.info.render.drawCalls };
   };
 
-  return { showFieldAsync };
+  /** Switches the field's camera (the next field shown keeps it); a frame later it draws so */
+  const setFieldView = (next: FieldView) => {
+    view = next;
+    if (entityIds.length) setMainCamera(getECSWorld(), cameraIds[view]);
+  };
+
+  return { showFieldAsync, setFieldView };
 };

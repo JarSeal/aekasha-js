@@ -19,7 +19,13 @@ import {
   saveTexture,
 } from 'aekasha';
 import { createMergeMaterialAsync, type SceneMergeMaterial } from 'aekasha/merging';
-import { createField, FIELD_MODES, type FieldFigures, type FieldMode } from './mergeMaterialsField';
+import {
+  createField,
+  FIELD_MODES,
+  type FieldFigures,
+  type FieldMode,
+  type FieldView,
+} from './mergeMaterialsField';
 import {
   getBackendName,
   getErrorMessage,
@@ -48,11 +54,13 @@ import {
  * the merge material is right. `measureDraws()` counts each variant's draws.
  *
  * The field (Phase 3, `mergeMaterialsField.ts`): 1 600 meshes of the four members on 3 × 3 of the
- * scene's `AUTO` cells, merged by palette (`PALETTE`: the scene's `AUTO` `palettes`), by material
- * (`MATERIAL`) or not (`UNMERGED`), seen by its own camera: `field(mode)` shows one and resolves
+ * scene's `AUTO` cells, merged by palette (`PALETTE`: the scene's `AUTO` `palettes`; `PALETTE_16`
+ * capped at 65 535 vertices a group), by material (`MATERIAL`) or not (`UNMERGED`), seen by its own
+ * camera: `field(mode)` shows one and resolves
  * with its groups and draws, `field('NONE')` goes back to the variants, `measureField()` counts
- * each mode. `results` holds the draws, the field's figures, the backend and `ruinBrick`'s
- * `normalScale` kind (`done` once measured).
+ * each mode, `fieldView('OVERVIEW' | 'CLOSE')` switches its camera (Phase 4's measurements).
+ * `results` holds the draws, the field's figures, the backend and `ruinBrick`'s `normalScale` kind
+ * (`done` once measured).
  */
 
 const SCENE_ID = 'mergeMaterials';
@@ -232,6 +240,9 @@ const state = {
     state.show('NONE');
     return current.showFieldAsync(mode);
   },
+  /** The field's camera: from above (the default) or low over its near edge */
+  fieldView: (view: FieldView) =>
+    existsOrThrow(field, 'The field is made with the scene.').setFieldView(view),
   /** Each field mode's figures, then back to the variants */
   measureField: async () => {
     const figures: Partial<Record<FieldMode, FieldFigures>> = {};
