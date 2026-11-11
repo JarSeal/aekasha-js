@@ -65,6 +65,12 @@ export type MeshMergeOptions = {
   /** `AUTO` only: an automatic group's vertex cap; a full one opens another in its cell.
    * Default 262 144. */
   maxVertices?: number;
+  /** `AUTO` only: the merge material palettes (`*.mergeMaterial.json` ids, p374) whose materials
+   * share an automatic group: a mesh of a palette's material goes into its cell's group of that
+   * palette, drawn by the palette's merge material. The first palette in the list that has its
+   * material wins. Replaces the scene's `AUTO` entry's list; `[]`: none. The scene must list each
+   * (`mergeMaterials`); one it doesn't is warned about and left out. */
+  palettes?: string[];
 };
 
 /**
@@ -81,6 +87,10 @@ export type SceneAutoMergeEntry = {
   cellSize?: number;
   /** The vertex cap for the scene's meshes that don't give one. Default 262 144. */
   maxVertices?: number;
+  /** The merge material palettes (p374) whose materials share an automatic group, for the
+   * scene's meshes that don't give their own list: palettes the scene lists (`mergeMaterials`).
+   * Default: none, one material per automatic group. */
+  palettes?: string[];
 };
 
 /** A scene's `mergeGroups` entry for one of its groups: its settings when it's made on first use

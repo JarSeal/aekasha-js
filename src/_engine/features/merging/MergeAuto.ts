@@ -3,7 +3,9 @@
 // layers, and whether it's persistent) and its x/z cell (`worldToCell` of its world position, the
 // cells streaming uses, so a cell size that divides a streaming scene's keeps each group inside
 // one streaming cell). A bucket whose group would pass `maxVertices` opens another in that cell.
-// Ids are derived: `auto:<key hash>:<cx>,<cz>:<n>`.
+// Ids are derived: `auto:<key hash>:<cx>,<cz>:<n>`. A mesh of a material in one of its `AUTO`
+// palettes (p374 D4) is keyed by the palette in place of its material, so the palette's materials
+// share its cell's group, drawn by the palette's merge material.
 import type * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
@@ -11,7 +13,12 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { worldToCell } from '../../utils/CellKey';
 import { lwarn } from '../../utils/Logger';
 import { getMergeRefusal } from './MergeEligibility';
-import { getActiveSceneMergeSettings, warnIfCellSizeSplitsStreaming } from './MergeSceneSettings';
+import { findPaletteMaterial, getMergeMaterialInfo, getPaletteIndex } from './MergePalettes';
+import {
+  getActiveSceneMergeSettings,
+  warnIfCellSizeSplitsStreaming,
+  warnPaletteNotRegistered,
+} from './MergeSceneSettings';
 import {
   createGroup,
   findQueued,
@@ -61,10 +68,14 @@ const hashKey = (key: string) => {
 /**
  * A mesh's `AUTO` compatibility key: what its group's members must share. The material by its
  * registered id (the same instance: a clone carrying the id is refused by the group), else its
- * uuid.
+ * uuid; a palette member's palette in its place (`palette:<id>`).
  * @internal
  */
-export const getAutoCompatibilityKey = (mesh: THREE.Mesh, isPersistent: boolean) => {
+export const getAutoCompatibilityKey = (
+  mesh: THREE.Mesh,
+  isPersistent: boolean,
+  paletteId?: string
+) => {
   const material = mesh.material as THREE.Material;
   const { attributes } = mesh.geometry;
   const signature = Object.keys(attributes)
@@ -72,7 +83,9 @@ export const getAutoCompatibilityKey = (mesh: THREE.Mesh, isPersistent: boolean)
     .map((name) => `${name}:${attributes[name].itemSize}`)
     .join(',');
   return [
-    (material.userData.id as string | undefined) ?? material.uuid,
+    paletteId !== undefined
+      ? `palette:${paletteId}`
+      : (material.userData.id as string | undefined) ?? material.uuid,
     signature,
     mesh.castShadow ? 1 : 0,
     mesh.receiveShadow ? 1 : 0,
@@ -81,30 +94,55 @@ export const getAutoCompatibilityKey = (mesh: THREE.Mesh, isPersistent: boolean)
   ].join('|');
 };
 
-/** The `AUTO` group a mesh joins: its id, and whether it's a persistent one. */
-export type AutoGroupPick = { groupId: string; isPersistent: boolean };
+/** The `AUTO` group a mesh joins: its id, whether it's a persistent one, and its palette. */
+export type AutoGroupPick = { groupId: string; isPersistent: boolean; palette?: string };
+
+/** What bounds a mesh's `AUTO` group: its scene's defaults or its own `merge` options. */
+export type AutoGroupBounds = {
+  /** The cells' side, in metres. */
+  cellSize: number;
+  /** A group's vertex cap. */
+  maxVertices: number;
+  /** The palettes whose materials share a group, first match wins. */
+  palettes: readonly string[];
+};
+
+/** The first of `palettes` that has the mesh's material (a registered member instance), if any.
+ * One with no merge material registered warns once per scene and is skipped. */
+const findMeshPalette = (material: THREE.Material, palettes: readonly string[]) => {
+  for (const paletteId of palettes) {
+    const info = getMergeMaterialInfo(findPaletteMaterial(paletteId));
+    if (!info) warnPaletteNotRegistered(paletteId);
+    else if (getPaletteIndex(info, material) !== -1) return paletteId;
+  }
+  return undefined;
+};
 
 /**
  * Picks the `AUTO` group a mesh entity joins, from its pose now (its `TRANSFORM`), and counts its
  * vertices into the bucket. Call it once per joining member, in a fixed order (the same groups on
- * every load).
+ * every load). A persistent mesh ignores the palettes (a palette group is its scene's).
  * @internal
  */
 export const pickAutoGroup = (
   entityId: number,
-  cellSize: number,
-  maxVertices: number,
+  bounds: AutoGroupBounds,
   world: ECSWorld
 ): AutoGroupPick => {
+  const { cellSize, maxVertices, palettes } = bounds;
   const mesh = getMemberMesh(entityId, world);
   syncMemberPose(entityId, mesh, world);
   const isPersistent = world.hasComponent(entityId, ComponentType.PERSISTENT);
+  const palette =
+    isPersistent || palettes.length === 0
+      ? undefined
+      : findMeshPalette(mesh.material as THREE.Material, palettes);
   const { elements } = mesh.matrixWorld;
   const invCellSize = 1 / cellSize;
   const cx = worldToCell(elements[12], invCellSize);
   const cz = worldToCell(elements[14], invCellSize);
   // The cell size is in the key: two sizes' cells with the same coordinates are other places
-  const hash = hashKey(`${getAutoCompatibilityKey(mesh, isPersistent)}|${cellSize}`);
+  const hash = hashKey(`${getAutoCompatibilityKey(mesh, isPersistent, palette)}|${cellSize}`);
   const bucketKey = `${hash}:${cx},${cz}`;
   const buckets = getBuckets(world);
   let bucket = buckets.get(bucketKey);
@@ -123,7 +161,7 @@ export const pickAutoGroup = (
     bucket.vertices = 0;
   }
   bucket.vertices += vertices;
-  return { groupId: idOf(bucket.n), isPersistent };
+  return { groupId: idOf(bucket.n), isPersistent, ...(palette ? { palette } : {}) };
 };
 
 /** `createPhysicsEntity` tags the entity at once and adds its colliders (`COLLIDER`, with its
@@ -142,14 +180,18 @@ export const queueMerge = (entityId: number, def: MeshMergeDef, world: ECSWorld)
   const groupId = typeof def === 'string' ? def : def.group ?? AUTO;
   const isPositive = (value: number | undefined) =>
     value === undefined || (Number.isFinite(value) && value > 0);
+  const isPaletteList = (value: unknown) =>
+    value === undefined ||
+    (Array.isArray(value) && value.every((id) => typeof id === 'string' && id !== ''));
   const isValid =
     typeof groupId === 'string' &&
     groupId !== '' &&
     (groupId === AUTO || !groupId.startsWith(AUTO_ID_PREFIX)) &&
-    (typeof def === 'string' || (isPositive(def.cellSize) && isPositive(def.maxVertices)));
+    (typeof def === 'string' ||
+      (isPositive(def.cellSize) && isPositive(def.maxVertices) && isPaletteList(def.palettes)));
   if (!isValid) {
     lwarn(
-      `Entity ${entityId}'s merge ${JSON.stringify(def)} is invalid (a group id, 'AUTO', or { group?, cellSize?, maxVertices? } with sizes over 0; 'auto:' ids are reserved): it's drawn on its own.`
+      `Entity ${entityId}'s merge ${JSON.stringify(def)} is invalid (a group id, 'AUTO', or { group?, cellSize?, maxVertices?, palettes? } with sizes over 0 and palette ids; 'auto:' ids are reserved): it's drawn on its own.`
     );
     if (IS_DEBUG_ENV) {
       noteMergeRefusal(world, entityId, String(groupId), `invalid merge ${JSON.stringify(def)}`);
@@ -199,12 +241,21 @@ export const collectQueuedJoins = (world: ECSWorld) => {
     warnIfCellSizeSplitsStreaming(settings, cellSize);
     const pick = pickAutoGroup(
       entityId,
-      cellSize,
-      options?.maxVertices ?? settings.autoMaxVertices,
+      {
+        cellSize,
+        maxVertices: options?.maxVertices ?? settings.autoMaxVertices,
+        palettes: options?.palettes ?? settings.autoPalettes,
+      },
       world
     );
     if (!getGroups(world).has(pick.groupId)) {
-      createGroup({ id: pick.groupId, persistent: pick.isPersistent || undefined }, world, true);
+      const { groupId: id, isPersistent, palette } = pick;
+      const groupSettings = {
+        id,
+        persistent: isPersistent || undefined,
+        ...(palette && { palette }),
+      };
+      createGroup(groupSettings, world, true);
     }
     join(pick.groupId, entityId);
   }

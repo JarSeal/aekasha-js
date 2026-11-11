@@ -18,6 +18,7 @@ import {
   installMergeGroups,
 } from './MergeGroups';
 import type { MergeMaterialInfo } from './MergeMaterial';
+import type { MeshMergeDef } from './MergeTypes';
 import {
   findPaletteMaterial,
   getGroupPaletteIndex,
@@ -34,7 +35,7 @@ vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
 }));
 
 const PALETTE = 'palTestPalette';
-const MEMBERS = ['palTestStone', 'palTestBrick', 'palTestMoss'];
+const MEMBERS = ['palTestStone', 'palTestBrick', 'palTestMoss', 'palTestPlaster'];
 
 // The default world and the root scene; the hooks are static, registered once for this file
 let world: ECSWorld;
@@ -222,5 +223,116 @@ describe("a scene's group entry with a palette", () => {
     expect(String(fns.lerror.mock.calls[0][0])).toContain(
       `Merge group "ruins": entities ${mesh} are drawn on their own.`
     );
+  });
+});
+
+describe("AUTO's palettes", () => {
+  /** Registers a scene whose AUTO entry has 10 m cells and these palettes, and loads it. */
+  const loadScene = (sceneId: string, palettes?: string[]) => {
+    keepSceneMergeSettings(sceneId, {
+      id: sceneId,
+      sceneFile: `${sceneId}.ts`,
+      mergeGroups: [{ id: 'AUTO', cellSize: 10, ...(palettes && { palettes }) }],
+    });
+    setLoadingSceneId(sceneId);
+  };
+
+  const createAutoBox = (x: number, z: number, mat: string, merge: MeshMergeDef = 'AUTO') =>
+    createMeshEntity({ geo: 'palTestBox', mat, position: { x, y: 1, z }, merge });
+
+  /** Two boxes of each member material in each of 3 × 3 cells of 10 m */
+  const createField = (merge?: MeshMergeDef) => {
+    const ids: number[] = [];
+    for (let cx = 0; cx < 3; cx++) {
+      for (let cz = 0; cz < 3; cz++) {
+        MEMBERS.forEach((mat, i) => {
+          for (const offset of [1, 6]) {
+            ids.push(createAutoBox(cx * 10 + offset, cz * 10 + i + 1, mat, merge));
+          }
+        });
+      }
+    }
+    return ids;
+  };
+
+  const getGroupsData = () =>
+    [...world.getStorage(ComponentType.MERGE_GROUP).entries()].map(([, group]) => group);
+
+  test('a palette groups its materials per cell: 36 groups become 9', async () => {
+    loadScene('palAutoNone');
+    createField();
+    await buildPendingMergeGroupsAsync();
+    expect(getGroupsData()).toHaveLength(36);
+
+    world.clearWorld();
+    loadScene('palAuto', [PALETTE]);
+    const members = createField();
+    await buildPendingMergeGroupsAsync();
+    const groups = getGroupsData();
+    expect(groups).toHaveLength(9);
+    for (const group of groups) {
+      expect(group.settings.palette).toBe(PALETTE);
+      expect(group._material).toBe(getMaterial(PALETTE));
+      expect(group.members).toHaveLength(8);
+    }
+    expect(fns.lwarn).not.toHaveBeenCalled();
+    // Each member tagged with its material's index
+    const indices = members.map(
+      (id) => world.getComponent(id, ComponentType.MERGE_MEMBER)!._paletteIndex
+    );
+    expect(indices.slice(0, 8)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+  });
+
+  test("a mesh's own list replaces the scene's", async () => {
+    loadScene('palAutoOwn', [PALETTE]);
+    const own = [createAutoBox(1, 1, MEMBERS[0], { palettes: [] })];
+    own.push(createAutoBox(2, 1, MEMBERS[1], { palettes: [] }));
+    const scenes = [createAutoBox(3, 1, MEMBERS[0]), createAutoBox(4, 1, MEMBERS[1])];
+    await buildPendingMergeGroupsAsync();
+    expect(getMergeGroupOf(own[0])).not.toBe(getMergeGroupOf(own[1]));
+    expect(getMergeGroupOf(scenes[0])).toBe(getMergeGroupOf(scenes[1]));
+
+    world.clearWorld();
+    loadScene('palAutoOwnOnly');
+    const listed = [0, 1].map((i) => createAutoBox(i, 1, MEMBERS[i], { palettes: [PALETTE] }));
+    await buildPendingMergeGroupsAsync();
+    expect(getMergeGroupOf(listed[0])).toBe(getMergeGroupOf(listed[1]));
+  });
+
+  test('another material, a persistent mesh and an unregistered palette take their own groups', async () => {
+    loadScene('palAutoOthers', ['noSuchPalette', PALETTE]);
+    const member = createAutoBox(1, 1, MEMBERS[0]);
+    const other = createAutoBox(2, 1, 'palTestOther');
+    const persistent = createAutoBox(3, 1, MEMBERS[1]);
+    world.addComponent(persistent, ComponentType.PERSISTENT, true);
+    createAutoBox(4, 1, MEMBERS[2]);
+    await buildPendingMergeGroupsAsync();
+
+    const groupOf = (id: number) =>
+      world.getComponent(
+        world.getComponent(id, ComponentType.MERGE_MEMBER)!.groupEntityId,
+        ComponentType.MERGE_GROUP
+      )!;
+    expect(groupOf(member).settings.palette).toBe(PALETTE);
+    expect(groupOf(member).members).toHaveLength(2);
+    expect(groupOf(other).settings.palette).toBeUndefined();
+    expect(groupOf(other)._material).toBe(getMaterial('palTestOther'));
+    expect(groupOf(persistent).settings).toEqual({ persistent: true });
+    expect(groupOf(persistent)._material).toBe(getMaterial(MEMBERS[1]));
+    // The unregistered palette warned once for the scene, for the three meshes it was tried on
+    expect(getWarnings()).toEqual([
+      expect.stringContaining(
+        'merge \'AUTO\' in the scene "palAutoOthers": no merge material "noSuchPalette"'
+      ),
+    ]);
+  });
+
+  test('an invalid palettes list is warned about and the mesh drawn on its own', async () => {
+    const lists = [[''], 'ruins', [3]] as unknown as string[][];
+    const meshes = lists.map((palettes, i) => createAutoBox(i, 1, MEMBERS[0], { palettes }));
+    await buildPendingMergeGroupsAsync();
+    expect(getWarnings()).toHaveLength(3);
+    expect(getWarnings()[0]).toContain('palettes?');
+    for (const id of meshes) expect(getMergeGroupOf(id)).toBeUndefined();
   });
 });

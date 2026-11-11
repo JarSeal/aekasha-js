@@ -34,6 +34,8 @@ export type SceneMergeSettings = {
   autoCellSize: number;
   /** `AUTO`'s vertex cap for a mesh that doesn't give one. */
   autoMaxVertices: number;
+  /** `AUTO`'s palettes for a mesh that doesn't give its own list (p374). */
+  autoPalettes: readonly string[];
   /** The JSON's streaming cell size, when the scene streams. */
   streamingCellSize: number | undefined;
 };
@@ -42,12 +44,13 @@ const DEFAULT_SETTINGS: SceneMergeSettings = Object.freeze({
   groups: new Map<string, SceneMergeGroupEntry>(),
   autoCellSize: DEFAULT_AUTO_CELL_SIZE,
   autoMaxVertices: DEFAULT_AUTO_MAX_VERTICES,
+  autoPalettes: [],
   streamingCellSize: undefined,
 });
 
 const settingsByScene = new Map<string, SceneMergeSettings>();
-/** The streaming warnings given, once each per scene: `<sceneId>|cell|<size>`,
- * `<sceneId>|span|<groupId>`. */
+/** The warnings given, once each per scene: `<sceneId>|cell|<size>`, `<sceneId>|span|<groupId>`
+ * (streaming's), `<sceneId>|palette|<paletteId>`. */
 const warned = new Set<string>();
 
 const isAutoEntry = (
@@ -75,6 +78,7 @@ export const keepSceneMergeSettings = (sceneId: string, data: SceneData) => {
     groups,
     autoCellSize: auto?.cellSize ?? DEFAULT_AUTO_CELL_SIZE,
     autoMaxVertices: auto?.maxVertices ?? DEFAULT_AUTO_MAX_VERTICES,
+    autoPalettes: auto?.palettes ?? [],
     streamingCellSize,
   });
 };
@@ -133,4 +137,19 @@ export const warnIfGroupSpansStreamingCells = (
     );
     return;
   }
+};
+
+/**
+ * Warns, once per scene and palette, that an `AUTO` palette has no merge material registered (the
+ * scene doesn't list it in `mergeMaterials`): its materials' meshes take their own groups.
+ * @internal
+ */
+export const warnPaletteNotRegistered = (paletteId: string) => {
+  const sceneId = getActiveSceneId();
+  const key = `${sceneId}|palette|${paletteId}`;
+  if (warned.has(key)) return;
+  warned.add(key);
+  lwarn(
+    `merge 'AUTO' in the scene "${sceneId}": no merge material "${paletteId}" (the scene's mergeMaterials doesn't list the palette), so its materials' meshes are grouped one material per group.`
+  );
 };

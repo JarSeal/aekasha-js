@@ -114,17 +114,34 @@ const registerSlots = (
 
 /**
  * Fails the gather on a scene's `mergeGroups` entry naming a palette the scene doesn't list in
- * `mergeMaterials` (p374 Phase 3): only a listed palette's merge material is made in the scene.
- * Runs before the list is resolved (its ids).
+ * `mergeMaterials` (p374 Phase 3: a group's `palette`, the `AUTO` entry's `palettes`): only a
+ * listed palette's merge material is made in the scene. Warns when two of the `AUTO` entry's
+ * palettes share a material (the first wins). Runs before the list is resolved (its ids).
  */
-const checkMergeGroupPalettes = ({ ctx, sceneId, scene }: SceneRun) => {
+const checkMergeGroupPalettes = ({ ctx, reg, sceneId, scene }: SceneRun) => {
   const listed = new Set(scene.mergeMaterials ?? []);
   for (const entry of scene.mergeGroups ?? []) {
-    const paletteId = 'palette' in entry ? entry.palette : undefined;
-    if (paletteId === undefined || listed.has(paletteId)) continue;
-    ctx.log.error(
-      `Scene "${sceneId}": its mergeGroups entry "${entry.id}" names the palette "${paletteId}", which the scene's mergeMaterials doesn't list: add "${paletteId}" there.`
-    );
+    const named = 'palettes' in entry ? [...(entry.palettes ?? [])] : [];
+    if ('palette' in entry && entry.palette !== undefined) named.push(entry.palette);
+    for (const paletteId of named) {
+      if (listed.has(paletteId)) continue;
+      ctx.log.error(
+        `Scene "${sceneId}": its mergeGroups entry "${entry.id}" names the palette "${paletteId}", which the scene's mergeMaterials doesn't list: add "${paletteId}" there.`
+      );
+    }
+    if (entry.id !== 'AUTO') continue;
+    const owner = new Map<string, string>();
+    for (const paletteId of named) {
+      for (const materialId of reg.mergeMaterials[paletteId]?.materials ?? []) {
+        const first = owner.get(materialId);
+        if (first === undefined) owner.set(materialId, paletteId);
+        else {
+          ctx.log.warn(
+            `Scene "${sceneId}": the AUTO palettes "${first}" and "${paletteId}" both have the material "${materialId}": its meshes go into "${first}"'s groups.`
+          );
+        }
+      }
+    }
   }
 };
 

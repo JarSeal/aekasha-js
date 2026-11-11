@@ -35,6 +35,26 @@ const MaxVerticesSchema = z
     "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
   );
 
+/** A list of ids, each once (`kind` names them in the issue). */
+const createUniqueIdsSchema = (kind: string) =>
+  z.array(z.string().min(1)).superRefine((ids, ctx) => {
+    const seen = new Set<string>();
+    ids.forEach((id, index) => {
+      if (seen.has(id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index],
+          message: `The ${kind} "${id}" is listed twice.`,
+        });
+      }
+      seen.add(id);
+    });
+  });
+
+const AutoPalettesSchema = createUniqueIdsSchema('palette').describe(
+  "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
+);
+
 /**
  * `merge`'s object form (MeshMergeOptions).
  * A part of {@link mergingSchemaPart}.
@@ -51,6 +71,8 @@ export const MeshMergeOptionsSchema = z
     cellSize: CellSizeSchema.optional(),
     /** `AUTO` only: a group's vertex cap. */
     maxVertices: MaxVerticesSchema.optional(),
+    /** `AUTO` only: the palettes whose materials share a group (the scene's list's place). */
+    palettes: AutoPalettesSchema.optional(),
   })
   .describe(
     "A merge group, and the automatic groups' bounds."
@@ -88,6 +110,9 @@ export const SceneMergeGroupEntrySchema = z.union([
       cellSize: CellSizeSchema.optional(),
       /** The vertex cap for the scene's meshes that don't give one. */
       maxVertices: MaxVerticesSchema.optional(),
+      /** The palettes whose materials share a group, for the scene's meshes that don't give
+       * their own list (default none). */
+      palettes: AutoPalettesSchema.optional(),
     })
     .describe(
       "The scene's defaults for its automatic groups."
@@ -115,21 +140,7 @@ export const SceneMergeGroupEntrySchema = z.union([
 ]);
 
 /** A scene's palettes: `*.mergeMaterial.json` ids, each once. */
-const SceneMergeMaterialsSchema = z
-  .array(z.string().min(1))
-  .superRefine((ids, ctx) => {
-    const seen = new Set<string>();
-    ids.forEach((id, index) => {
-      if (seen.has(id)) {
-        ctx.addIssue({
-          code: 'custom',
-          path: [index],
-          message: `The merge material "${id}" is listed twice.`,
-        });
-      }
-      seen.add(id);
-    });
-  })
+const SceneMergeMaterialsSchema = createUniqueIdsSchema('merge material')
   .optional()
   .describe(
     "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it."
@@ -158,7 +169,7 @@ export const mergingSchemaPart = {
       })
       .optional()
       .describe(
-        "Merge group settings for the groups made in this scene, and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices? })."
+        "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? })."
       ),
     /** The merge material palettes the scene uses (p374): their arrays load with its textures. */
     mergeMaterials: SceneMergeMaterialsSchema,

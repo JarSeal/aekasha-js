@@ -623,6 +623,30 @@ As built, section 1 (explicit palette groups):
 - `MergeGroups.ts` is 794 lines: section 2's `AUTO` work goes into `MergeAuto.ts`,
   `MergePalettes.ts` and `MergeSceneSettings.ts`.
 
+As built, section 2 (`AUTO` with palettes; `MergeGroups.ts` untouched):
+
+- **The lists:** `SceneAutoMergeEntry.palettes` and `MeshMergeOptions.palettes` (types and schema:
+  one `createUniqueIdsSchema` list of non-empty ids, each once, which the scene's
+  `mergeMaterials` uses too). `queueMerge` drops a `merge` whose `palettes` isn't an array of
+  non-empty strings, warning as for a bad size. `SceneMergeSettings.autoPalettes` (default `[]`).
+- **The pick:** `pickAutoGroup(entityId, { cellSize, maxVertices, palettes }, world)` (an options
+  object now, `AutoGroupBounds`): unless the mesh is persistent, the first palette of the list
+  whose merge material is registered and has the mesh's material (`getPaletteIndex`) keys it
+  (`getAutoCompatibilityKey`'s third parameter: `palette:<id>` in the material's place), and
+  `AutoGroupPick.palette` makes the bucket's group with it (`createGroup`, so its material is the
+  merge material and its members get their indices through `addToMergeGroup`). A palette without
+  a merge material warns once per scene and palette (`warnPaletteNotRegistered`,
+  `MergeSceneSettings.ts`, `<sceneId>|palette|<id>` in the warnings' set) and is skipped.
+- **The gather** (`checkMergeGroupPalettes`): the `AUTO` entry's `palettes` must be listed too;
+  two of them sharing a material warns, naming the palette that takes its meshes. A mesh's own
+  `merge.palettes` isn't checked there (most meshes are made in code): the runtime warning covers
+  it.
+- **Tests** (`MergePalettes.test.ts`, `AUTO's palettes`): 4 members × 2 boxes × 3 × 3 cells of
+  10 m make 36 groups without palettes and 9 with (each of 8 members, the merge material, the
+  indices); a mesh's list replaces the scene's (`[]` and the other way); another material, a
+  persistent mesh and an unregistered palette (warned once) take their own groups; an invalid list
+  is dropped. The gather's in `gather.test.ts`.
+
 ### Phase 4 — Measurements, handbook, versioning (D5)
 
 1. D5's numbers in this file.

@@ -583,6 +583,38 @@ describe('merge material palettes (p374 D1, D2)', () => {
         'mergeGroups entry "ruins" names the palette "stones", which the scene\'s mergeMaterials doesn\'t list'
       );
     });
+
+    it('fails on an AUTO palette the scene doesn’t list, and warns on a material two share', () => {
+      const pebbles = {
+        'app/palettes/pebbles.mergeMaterial.json': {
+          materials: ['stoneB', 'stoneA'],
+          slots: { map: { size: [64, 64] } },
+        },
+      };
+      const errorSpy = logErrors();
+      const auto = { id: 'AUTO', palettes: ['stones', 'pebbles'] };
+      const unlisted = gather({
+        ...files({ mergeMaterials: ['stones'], mergeGroups: [auto] }),
+        ...pebbles,
+      });
+      expect(unlisted.isGathered).toBe(false);
+      expect(errorSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+        'mergeGroups entry "AUTO" names the palette "pebbles"'
+      );
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      warnSpy.mockClear();
+      const shared = gather({
+        ...files({ mergeMaterials: ['stones', 'pebbles'], mergeGroups: [auto] }),
+        ...pebbles,
+      });
+      expect(shared.isGathered).toBe(true);
+      const warned = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(warned).toContain(
+        'the AUTO palettes "stones" and "pebbles" both have the material "stoneB": its meshes go into "stones"\'s groups'
+      );
+      expect(warned).toContain('both have the material "stoneA"');
+    });
   });
 
   it('fails on a palette id a material has', () => {
