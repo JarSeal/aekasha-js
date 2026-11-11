@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 started
+Status: in progress | Phase 1 implemented
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
@@ -130,7 +130,7 @@ getMergeMemberAtFace(groupEntityId: number, faceIndex: number, world?): number |
 
 ## 3. Phases
 
-### Phase 1 — Tab and windows (D1, D2)
+### Phase 1 — Tab and windows (D1, D2) — done
 
 **Exit:** largeWorld's groups are listed with correct counts; group and member windows open from
 rows and link to each other; the profiler's Objects tab links a group entity to its window; the
@@ -245,6 +245,36 @@ As built, section 2 (2026-11-11):
   the member window's figures, part and group link; remove, undo and redo; no undo across a scene
   exit; the manager info and both openers). `yarn test` (3051), both `tsc`, lint and the docs
   ratchet pass.
+
+As built, section 3 (2026-11-11):
+
+- largeWorld's `debugger` entry (`scenes.config.ts`): the Merging tab and two windows, the group's
+  (the tab's row 0, `auto:1k567so:-1,-1:0`) and the member's (then Enter on the group window's
+  first member row: a kit list option is named by its text, `[3812]largeWorldRock1`, so the step
+  names the entity id; it holds while the scene creates its entities in one order).
+  `devTools/verify/CLAUDE.md` lists it.
+- Dark (the runner, the default theme): the tab and both windows axe clean, shot. Light: a harness
+  in the session's scratchpad (not committed; `AEK_debugTools`' `appearance.theme: 'light'`, then
+  the same steps through the test bridge, axe with `UI_AXE_TAGS`): the tab and both windows axe
+  clean, their roots `data-aek-theme="light"`. Read on the unmasked shots: 28 groups (all drawn),
+  409 members merged, 12 180 merged vertices, none wasted, draws 28 merged · 409 unmerged in both
+  passes, 28 builds, 0 refused (p372 Phase 4's largeWorld). The member window's link brought the
+  open group window to the front.
+- The profiler's Objects tab: one group mesh among the heaviest rows, its Edit button
+  ("Merge group: Mesh": the profiler names a row's button by its object's name) opened its group's
+  window (axe clean, light). The rows' second line already shows the entity's debug name.
+- Found: an `AUTO` group of one member read "1 members"; the row says "1 member".
+- `yarn verify:scenes --config debugger` (9 scenes): every scene's drawer tab order has
+  `mergingControls` (the template lists `merging()`, so every scene has the tab), and
+  testDebugScene's and the gym's `ALL` shoot it; `stats.panels` was p372 Phase 4's TFPS mask
+  flake. Recorded with `--update` (9). Then the full matrix: 137 passed (the known warnings:
+  `space`'s worker targets, assetCompare's load order).
+- `yarn sbp --profile all`: unchanged against `bundle.json`, `_engine/features/merging` 7.0 kB in
+  the first download (the debug figures fold away), every budget kept (its one note, `character`
+  well under, isn't this plan's). `yarn verify:baselines`: no debug code in any build; `api.json`
+  records `MergeState.ts`' seven debug exports (`@internal`) and `mergeIcon` in `BuiltInIcons.ts`
+  (not on an entry); `docs.json` merging 65 → 72, 100 %. `bundle.json` left as it was (the rebuild
+  moved gzip sizes by a few bytes only).
 
 ### Phase 2 — Overlay and A/B (D3)
 

@@ -94,6 +94,7 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
       continue;
     }
     const cell = getAutoCellLabel(group.id);
+    const n = group.members.length;
     const vertices = formatCount(getGroupVertexCount(groupEntityId, group, world));
     const state = group._isPending ? ', pending' : '';
     items.push({
@@ -102,7 +103,7 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
       subTitle: `[${groupEntityId}]`,
       ...(group._isAuto ? { badge: 'AUTO' } : {}),
       description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}`,
-      suffix: `${formatCount(group.members.length)} members, ${vertices} v${state}`,
+      suffix: `${formatCount(n)} ${n === 1 ? 'member' : 'members'}, ${vertices} v${state}`,
     });
   }
   if (more) {
