@@ -28,16 +28,23 @@ import { markPending } from './MergeState';
 import type { MergeGroupData, MergeMemberData } from './MergeTypes';
 
 type BatchModule = typeof import('./MergeBatch');
+type BatchLodModule = typeof import('./MergeBatchLod');
 let batchModule: BatchModule | null = null;
+/** Its members' LOD (MergeBatchLod.ts), loaded with it. */
+let lodModule: BatchLodModule | null = null;
 let batchModulePromise: Promise<BatchModule> | null = null;
 
 /**
- * Loads the batch code (once; a failed load is tried again by the next call).
+ * Loads the batch code and its members' LOD code (once; a failed load is tried again by the next
+ * call).
  * @internal
  */
 export const loadMergeBatchModuleAsync = () =>
-  (batchModulePromise ??= import('./MergeBatch').then(
-    (module) => (batchModule = module),
+  (batchModulePromise ??= Promise.all([import('./MergeBatch'), import('./MergeBatchLod')]).then(
+    ([module, lod]) => {
+      lodModule = lod;
+      return (batchModule = module);
+    },
     (err: unknown) => {
       batchModulePromise = null;
       throw err;
@@ -87,7 +94,7 @@ export const detachBatchedMemberMesh = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   if (!member || member.instanceId < 0) return;
   // Its LOD changed its own mesh while that was drawn (an instance means the code is loaded)
-  batchModule?.refreshBatchMember(entityId, world);
+  lodModule?.refreshBatchMember(entityId, world);
   const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   if (!object?.parent) return;
   object.removeFromParent();
@@ -100,6 +107,8 @@ export const detachBatchedMemberMesh = (entityId: number, world: ECSWorld) => {
  * @internal
  */
 export const reattachMemberMesh = (entityId: number, world: ECSWorld) => {
+  // Its LOD no longer tells the batch ("Show unmerged"): a fade the batch drew ends
+  lodModule?.endBatchMemberFade(entityId, world);
   const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   if (!object || !detachedMeshes.has(object)) return;
   detachedMeshes.delete(object);
@@ -128,15 +137,14 @@ export type BatchVisibilityOverrides = Readonly<{
  */
 export const batchMemberLodDelegate: LodMeshDrawDelegate = {
   isDrawing: (entityId, world) =>
-    batchModule !== null &&
+    lodModule !== null &&
     (world.getComponent(entityId, ComponentType.MERGE_MEMBER)?.instanceId ?? -1) >= 0 &&
     world.hasComponent(entityId, ComponentType.TAG_MERGED),
-  applyLevel: (entityId, world, level) =>
-    batchModule!.applyBatchMemberLevel(entityId, world, level),
+  applyLevel: (entityId, world, level, fade) =>
+    lodModule!.applyBatchMemberLevel(entityId, world, level, fade),
   setCulled: (entityId, world, isCulled, fade) =>
-    batchModule!.setBatchMemberLodCulled(entityId, world, isCulled, fade),
-  setFade: (entityId, world, progress) =>
-    batchModule!.setBatchMemberFade(entityId, world, progress),
+    lodModule!.setBatchMemberLodCulled(entityId, world, isCulled, fade),
+  setFade: (entityId, world, progress) => lodModule!.setBatchMemberFade(entityId, world, progress),
 };
 
 // The visibility hooks' overrides: the value of the tag a hook changes (a remove hook runs before

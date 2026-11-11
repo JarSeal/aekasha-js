@@ -30,13 +30,15 @@
 //
 // LOD per member (p375 Phase 2): `lod()` keeps a member's levels and sets each on its own mesh; the
 // kernel's mesh draw delegate (MergeBatchFront.ts' forwarding stub, registered by merging's
-// install) hands the batch the level, the cull and the fade steps. The batch holds every level
-// geometry of its members (added with them; a LOD that came later adds its levels at its first
-// apply), and a level change gives the instance the level's geometry in place (`setGeometryIdAt`:
+// install) hands MergeBatchLod.ts the level, the cull and the fade steps. The batch holds every
+// level geometry of its members (added with them; a LOD that came later adds its levels at its
+// first apply), and a level change gives the instance the level's geometry in place (`setGeometryIdAt`:
 // the id stays, its run may split, D1's compaction regroups: in the next frame's sync, which runs
 // before the LOD's apply, APP_RENDER_SYNC_ORDER). LOD culling hides the instance
-// (`isBatchMemberShown`), and a cull fading out keeps it until its fade ends. S3: a level change
-// or a fade in switches at once; S4 cross-fades them.
+// (`isBatchMemberShown`), and a cull fading out keeps it until its fade ends. The fades dither
+// through the batch's fade texture (MergeBatchFades.ts), a level fade's outgoing level as a second
+// instance (`MERGE_MEMBER._fadeInstanceId`), which this module keeps with its member: deleted
+// with it, moved by the sync, shown and hidden with it, and left in place by a compaction.
 import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
@@ -46,6 +48,8 @@ import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemS
 import { incMaterialRef } from '../../kernel/assets/Material';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
+import { LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
+import { type BatchFades, createBatchFades, setInstanceFade } from './MergeBatchFades';
 import type { BatchVisibilityOverrides } from './MergeBatchFront';
 import { clearEmptyGroup, getLiveMembers } from './MergeBuild';
 import {
@@ -68,8 +72,11 @@ const BATCH_RESERVE = 1.25;
 /** And at least this many instances more. */
 const MIN_SPARE_INSTANCES = 16;
 
-/** A batched group's batch and its bookkeeping. */
-type BatchState = {
+/**
+ * A batched group's batch and its bookkeeping.
+ * @internal
+ */
+export type BatchState = {
   /** Its group, and the group's entity. */
   group: MergeGroupData;
   groupEntityId: number;
@@ -96,6 +103,8 @@ type BatchState = {
   /** The run count's per-geometry marks, and the count's stamp. */
   seen: number[];
   countStamp: number;
+  /** Its instances' LOD fades (MergeBatchFades.ts), grown with its instances. */
+  fades: BatchFades;
 };
 
 const states = new WeakMap<MergeGroupData, BatchState>();
@@ -178,7 +187,41 @@ export const setBatchMemberVisible = (
   isVisible: boolean
 ) => {
   const state = states.get(group);
-  if (state && member.instanceId >= 0) state.batch.setVisibleAt(member.instanceId, isVisible);
+  if (!state || member.instanceId < 0) return;
+  state.batch.setVisibleAt(member.instanceId, isVisible);
+  // A level fade's outgoing instance with it
+  if (member._fadeInstanceId >= 0) state.batch.setVisibleAt(member._fadeInstanceId, isVisible);
+};
+
+/**
+ * Makes room for `needed` instances, the fades too (three remakes its textures, so the batch's
+ * next build is a new one, reading the grown fades).
+ * @internal
+ */
+export const growInstances = (state: BatchState, needed: number) => {
+  const { batch } = state;
+  if (needed <= batch.maxInstanceCount) return;
+  batch.setInstanceCount(Math.ceil(needed * BATCH_RESERVE) + MIN_SPARE_INSTANCES);
+  // three (r187) replaces the batch's indirect, matrices and colour textures here, but keeps a
+  // drawn batch's render objects (whose shaders read the old ones) until its material's version
+  // changes: the batch's rebuild at its next draw (its key has the new matrices texture; other
+  // objects on the material keep theirs)
+  (batch.material as THREE.Material).needsUpdate = true;
+  state.fades = createBatchFades(batch, batch.maxInstanceCount, state.fades);
+};
+
+/**
+ * Deletes a member's level fade's outgoing instance, if it has one.
+ * @internal
+ */
+export const deleteFadeInstance = (state: BatchState, member: MergeMemberData) => {
+  const fadeId = member._fadeInstanceId;
+  if (fadeId < 0) return;
+  state.batch.deleteInstance(fadeId);
+  state.geometryAt[fadeId] = -1;
+  setInstanceFade(state.fades, fadeId, LOD_FADE_OPAQUE);
+  state.isOrderDirty = true;
+  member._fadeInstanceId = -1;
 };
 
 /** Adds a member's instance of its geometry (in the batch already): its matrix, its visibility,
@@ -193,6 +236,10 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   member.instanceId = state.batch.addInstance(geometryId);
   state.geometryAt[member.instanceId] = geometryId;
   state.isOrderDirty = true;
+  // Drawn whole: a fade the previous batch drew ended with it
+  member._fadeInstanceId = -1;
+  member._lodFade = undefined;
+  setInstanceFade(state.fades, member.instanceId, LOD_FADE_OPAQUE);
   syncMemberPose(entityId, mesh, world);
   instanceMatrix.copy(mesh.matrixWorld);
   writeInstanceMatrix(state, member.instanceId);
@@ -370,7 +417,10 @@ const createBatch = (
     compactions: 0,
     seen: [],
     countStamp: 0,
+    // Before the batch's first build: its material's LOD dither reads them
+    fades: createBatchFades(batch, batch.maxInstanceCount),
   };
+  batch.addEventListener('dispose', () => state.fades.texture.dispose());
   const previousState = states.get(group);
   states.set(group, state);
   let batches = batchesByWorld.get(world);
@@ -400,10 +450,7 @@ const createBatch = (
 const growBatch = (state: BatchState, newcomers: readonly number[], world: ECSWorld) => {
   const { batch } = state;
   addGeometries(state, collectGeometries(newcomers, world));
-  const needed = batch.instanceCount + newcomers.length;
-  if (needed > batch.maxInstanceCount) {
-    batch.setInstanceCount(Math.ceil(needed * BATCH_RESERVE) + MIN_SPARE_INSTANCES);
-  }
+  growInstances(state, batch.instanceCount + newcomers.length);
 };
 
 /**
@@ -461,8 +508,11 @@ export const requestBatchRebuild = (group: MergeGroupData) => {
 export const deleteBatchInstance = (member: MergeMemberData, group: MergeGroupData) => {
   const state = states.get(group);
   if (!state) return;
+  deleteFadeInstance(state, member);
+  member._lodFade = undefined;
   state.batch.deleteInstance(member.instanceId);
   state.geometryAt[member.instanceId] = -1;
+  setInstanceFade(state.fades, member.instanceId, LOD_FADE_OPAQUE);
   state.isOrderDirty = true;
 };
 
@@ -488,23 +538,30 @@ const countRuns = (state: BatchState) => {
   state.geometriesInUse = geometries;
 };
 
-/** A member being compacted: its geometry and its instance before. */
-type CompactEntry = { entityId: number; member: MergeMemberData; geometryId: number; id: number };
+/** A member being compacted: its geometry, its instance before and that instance's fade. */
+type CompactEntry = {
+  entityId: number;
+  member: MergeMemberData;
+  geometryId: number;
+  id: number;
+  fade: number;
+};
 
 /**
- * Compacts a batch (D1): its live instance ids, in order, each given the next member in geometry
- * order (by its id before within a geometry), so each geometry's instances are one run. Its matrix
- * from its own mesh (the sync's source) and its visibility are written again. A rare frame's
- * work: it allocates its lists.
+ * Compacts a batch (D1): its members' live instance ids, in order, each given the next member in
+ * geometry order (by its id before within a geometry), so each geometry's instances are one run.
+ * Its matrix from its own mesh (the sync's source), its visibility and its fade are written again.
+ * A level fade's outgoing instances stay where they are (they go when their fades end). A rare
+ * frame's work: it allocates its lists.
  */
 const compactBatch = (state: BatchState, world: ECSWorld) => {
-  const { batch, geometryAt } = state;
+  const { batch, geometryAt, fades } = state;
   const entries: CompactEntry[] = [];
   for (const entityId of state.group.members) {
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
     if (!member || member.instanceId < 0) continue;
     const { instanceId: id } = member;
-    entries.push({ entityId, member, geometryId: geometryAt[id], id });
+    entries.push({ entityId, member, geometryId: geometryAt[id], id, fade: fades.data[id] });
   }
   const ids = entries.map((entry) => entry.id).sort((a, b) => a - b);
   entries.sort((a, b) => a.geometryId - b.geometryId || a.id - b.id);
@@ -514,6 +571,7 @@ const compactBatch = (state: BatchState, world: ECSWorld) => {
     member.instanceId = id;
     geometryAt[id] = geometryId;
     batch.setGeometryIdAt(id, geometryId);
+    setInstanceFade(fades, id, entry.fade);
     const object = world.getComponent(entityId, ComponentType.OBJECT3D)!;
     const mesh = object.value as THREE.Mesh;
     instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
@@ -559,6 +617,9 @@ export const mergeBatchSyncSystem = (world: ECSWorld) => {
       const mesh = object.value as THREE.Mesh;
       instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
       writeInstanceMatrix(state, member.instanceId);
+      // A level fade's outgoing instance moves with it
+      if (member._fadeInstanceId >= 0)
+        state.batch.setMatrixAt(member._fadeInstanceId, instanceMatrix);
       if (growBatchSphere(state, mesh.geometry)) hasGrown = true;
     }
     if (hasGrown) rejoinSpatialIndex(groupEntityId, world);
@@ -570,29 +631,25 @@ export const mergeBatchSyncSystem = (world: ECSWorld) => {
   }
 };
 
-// --- LOD PER MEMBER (p375 Phase 2) ---
-//
-// The kernel's mesh draw delegate's work (MergeBatchFront.ts forwards to it): `lod()` has set the
-// level on the member's own mesh already.
+// --- LOD PER MEMBER (p375 Phase 2): what MergeBatchLod.ts' delegate work uses ---
 
-// The cull's overrides (constants: a cull allocates nothing). The cull's add hook runs before its
-// fade's tag is added: with a fade, the member is the outgoing copy until the fade ends
-const LOD_CULLED = Object.freeze({ isLodCulled: true, isLodFading: false });
-const LOD_CULLED_FADING = Object.freeze({ isLodCulled: true, isLodFading: true });
-const LOD_SHOWN = Object.freeze({ isLodCulled: false });
-const LOD_FADE_ENDED = Object.freeze({ isLodFading: false });
-
-/** A member's batch, while it has an instance in one. */
-const getMemberState = (member: MergeMemberData | undefined, world: ECSWorld) => {
+/**
+ * A member's batch, while it has an instance in one.
+ * @internal
+ */
+export const getMemberState = (member: MergeMemberData | undefined, world: ECSWorld) => {
   if (!member || member.instanceId < 0) return undefined;
   const group = world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
   return group && states.get(group);
 };
 
-/** Gives a member's instance `geometry` (one of its levels) in place, adding the member's levels
+/**
+ * Gives a member's instance `geometry` (one of its levels) in place, adding the member's levels
  * first when the batch doesn't hold it (a LOD that came after the member's build), and grows the
- * batch's sphere to hold it there. */
-const setInstanceGeometry = (
+ * batch's sphere to hold it there.
+ * @internal
+ */
+export const setInstanceGeometry = (
   state: BatchState,
   entityId: number,
   instanceId: number,
@@ -612,65 +669,4 @@ const setInstanceGeometry = (
   state.isOrderDirty = true;
   state.batch.getMatrixAt(instanceId, instanceMatrix);
   if (growBatchSphere(state, geometry)) rejoinSpatialIndex(state.groupEntityId, world);
-};
-
-/**
- * The LOD delegate's `applyLevel`: the member's instance shows the level's geometry. S3: at once,
- * a faded change too (S4 cross-fades).
- * @internal
- */
-export const applyBatchMemberLevel = (
-  entityId: number,
-  world: ECSWorld,
-  level: { geometry: THREE.BufferGeometry }
-) => {
-  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  const state = getMemberState(member, world);
-  if (state) setInstanceGeometry(state, entityId, member!.instanceId, level.geometry, world);
-};
-
-/**
- * The LOD delegate's `setCulled`: hides or shows the member's instance (a cull fading out keeps
- * it until its fade ends).
- * @internal
- */
-export const setBatchMemberLodCulled = (
-  entityId: number,
-  world: ECSWorld,
-  isCulled: boolean,
-  fade: boolean
-) => {
-  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  const state = getMemberState(member, world);
-  if (!state) return;
-  const overrides = isCulled ? (fade ? LOD_CULLED_FADING : LOD_CULLED) : LOD_SHOWN;
-  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world, overrides));
-};
-
-/**
- * The LOD delegate's `setFade`. S3: its end hides a member faded out to LOD culled (its fade's
- * tag goes right after); the steps draw nothing yet (S4).
- * @internal
- */
-export const setBatchMemberFade = (entityId: number, world: ECSWorld, progress: number) => {
-  if (progress < 1) return;
-  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  const state = getMemberState(member, world);
-  if (!state) return;
-  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world, LOD_FADE_ENDED));
-};
-
-/**
- * A batched member merged again (`TAG_MERGED`'s add hook: a build, "Show unmerged" turned off):
- * its instance takes the level its own mesh shows and its visibility now, which the LOD changed
- * on its own mesh meanwhile.
- * @internal
- */
-export const refreshBatchMember = (entityId: number, world: ECSWorld) => {
-  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
-  const state = getMemberState(member, world);
-  if (!state) return;
-  const { geometry } = getMemberMesh(entityId, world);
-  setInstanceGeometry(state, entityId, member!.instanceId, geometry, world);
-  state.batch.setVisibleAt(member!.instanceId, isBatchMemberShown(entityId, world));
 };

@@ -27,6 +27,7 @@ import {
 } from '../../kernel/mesh/Mesh';
 import { createRootScene, getRootScene } from '../../kernel/scene/Scene';
 import { installLodSystem } from '../lod/LodSystem';
+import { setLodDebugOptions } from '../lod/LodSettings';
 import type { LodDef } from '../lod/LodTypes';
 import {
   addToMergeGroup,
@@ -38,6 +39,9 @@ import {
   removeFromMergeGroup,
 } from './MergeGroups';
 import { getBatchState } from './MergeBatch';
+import { createBatchFades } from './MergeBatchFades';
+import { isLodDitherEnabled, LOD_FADE_OPAQUE } from '../../kernel/render/LodFade';
+import { getMaterial } from '../../kernel/assets/Material';
 import { getGroups } from './MergeState';
 
 // p375 Phase 2 (docs/plans/p375_batched-mesh-batches.md): a batched member's LOD levels. S2: a
@@ -46,7 +50,8 @@ import { getGroups } from './MergeState';
 // LOD comes later. lod()'s install comes first, as in the template: merging's later-LOD check
 // runs after the LOD's add hook resolved the levels. S3: the batch holds the levels, a level change
 // swaps an instance's geometry in place, LOD culling hides it, and a member merged again takes what
-// its own mesh shows.
+// its own mesh shows. S4: the cross-fades (a level fade's second instance, the batch's fades, a
+// cull's fade out and in) and what ends them.
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
@@ -85,6 +90,7 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  setLodDebugOptions({ forceLevel: -1 });
   world.clearWorld();
   fns.lwarn.mockClear();
 });
@@ -232,6 +238,13 @@ const stepAt = (distance: number, frames = 1) => {
   }
 };
 
+/** One frame with every LOD forced to level 0 (each member's first apply, which never fades). */
+const stepNear = () => {
+  setLodDebugOptions({ forceLevel: 0 });
+  stepAt(1);
+  setLodDebugOptions({ forceLevel: -1 });
+};
+
 /** A built BATCHED group of LOD boxes at x = 0, 2, 4, …; `defs` gives each one's LOD. */
 const createBuiltLodGroupAsync = async (defs: (LodDef | undefined)[]) => {
   const groupId = nextGroupId();
@@ -275,7 +288,7 @@ describe('a batched member LOD: levels', () => {
 
   test("a level change swaps the instance's geometry in place, and on its own mesh", async () => {
     const { state, batch, members } = await createBuiltLodGroupAsync([INSTANT]);
-    stepAt(1);
+    stepNear();
     const instanceId = getInstanceId(members[0]);
     stepAt(5);
     expect(getInstanceId(members[0])).toBe(instanceId);
@@ -288,17 +301,6 @@ describe('a batched member LOD: levels', () => {
     expect(batch.getGeometryIdAt(instanceId)).toBe(batchGeometryId(state(), 'batchLodBox'));
   });
 
-  test('a faded level change switches the instance at once (S3), with no fade copy', async () => {
-    const { state, batch, members } = await createBuiltLodGroupAsync([LOD]);
-    stepAt(1);
-    stepAt(5);
-    expect(world.hasComponent(members[0], ComponentType.TAG_LOD_TRANSITIONING)).toBe(true);
-    expect(batch.getGeometryIdAt(getInstanceId(members[0]))).toBe(
-      batchGeometryId(state(), 'batchLodBoxLow')
-    );
-    expect(getOwnMesh(members[0]).children).toEqual([]);
-  });
-
   test('swaps split the runs; past twice the geometries in use the sync compacts them', async () => {
     // Five members alternating: the even ones go to level 1, the odd ones keep level 0
     const defs = [INSTANT, NEAR_ONLY, INSTANT, NEAR_ONLY, INSTANT].map((def) => ({
@@ -306,7 +308,7 @@ describe('a batched member LOD: levels', () => {
       fadeSeconds: 0,
     }));
     const { state, members } = await createBuiltLodGroupAsync(defs);
-    stepAt(1);
+    stepNear();
     expect(state().runs).toBe(1);
     stepAt(8);
     // [low, box, low, box, low]: 5 runs of 2 geometries. The sync runs before the LOD's apply
@@ -325,7 +327,7 @@ describe('a batched member LOD: levels', () => {
     const { state, batch, members } = await createBuiltLodGroupAsync([undefined]);
     expect(batchGeometryId(state(), 'batchLodBoxLow')).toBeUndefined();
     await setMeshLod(members[0], INSTANT, world);
-    stepAt(1);
+    stepNear();
     stepAt(5);
     expect(batch.getGeometryIdAt(getInstanceId(members[0]))).toBe(
       batchGeometryId(state(), 'batchLodBoxLow')
@@ -337,7 +339,7 @@ describe('a batched member LOD: levels', () => {
       INSTANT,
       INSTANT,
     ]);
-    stepAt(1);
+    stepNear();
     stepAt(5);
     rebuildMergeGroup(groupId);
     await buildPendingMergeGroupsAsync();
@@ -353,7 +355,7 @@ describe('a batched member LOD: levels', () => {
 
   test('merged again, an instance takes the level its own mesh got meanwhile', async () => {
     const { state, batch, members } = await createBuiltLodGroupAsync([INSTANT]);
-    stepAt(1);
+    stepNear();
     // Drawn on its own (as "Show unmerged" does): the LOD's plain path, the batch not told
     world.removeComponent(members[0], ComponentType.TAG_MERGED);
     stepAt(5);
@@ -367,7 +369,7 @@ describe('a batched member LOD: levels', () => {
 describe('a batched member LOD: culling', () => {
   test('hides and shows the instance, never the batch', async () => {
     const { batch, members } = await createBuiltLodGroupAsync([INSTANT, NEAR_ONLY]);
-    stepAt(1);
+    stepNear();
     stepAt(100);
     expect(world.hasComponent(members[0], ComponentType.TAG_LOD_CULLED)).toBe(true);
     expect(members.map((id) => batch.getVisibleAt(getInstanceId(id)))).toEqual([false, true]);
@@ -380,7 +382,7 @@ describe('a batched member LOD: culling', () => {
     const { batch, members } = await createBuiltLodGroupAsync([
       { ...LOD, cullScreenSize: 0.02, fadeSeconds: 0.1 },
     ]);
-    stepAt(1);
+    stepNear();
     stepAt(5, 7);
     const instanceId = getInstanceId(members[0]);
     stepAt(100);
@@ -402,7 +404,7 @@ describe('a batched member LOD: culling', () => {
       INSTANT,
       cullEarly,
     ]);
-    stepAt(1);
+    stepNear();
     stepAt(8);
     const culled = members[5];
     expect(world.hasComponent(culled, ComponentType.TAG_LOD_CULLED)).toBe(true);
@@ -421,5 +423,204 @@ describe('a batched member LOD: culling', () => {
     world.addComponent(culled, ComponentType.DISABLED, true);
     world.removeComponent(culled, ComponentType.DISABLED);
     expect(batch.getVisibleAt(getInstanceId(culled))).toBe(false);
+  });
+});
+
+// --- S4: the cross-fades ---
+
+/** 0.1 s: 6 frames at DT */
+const FADED: LodDef = { ...LOD, cullScreenSize: 0.02, fadeSeconds: 0.1 };
+
+/** The batch's fade at an instance. */
+const fadeAt = (state: ReturnType<typeof getBatchState>, instanceId: number) =>
+  state!.fades.data[instanceId];
+const getMember = (entityId: number) => world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
+
+describe('a batched member LOD: a level fade', () => {
+  test('draws the outgoing level as a second instance, the two dithering into each other', async () => {
+    const { state, batch, members } = await createBuiltLodGroupAsync([FADED]);
+    stepNear();
+    stepAt(5);
+    const member = getMember(members[0]);
+    const { instanceId: id, _fadeInstanceId: fadeId } = member;
+    expect(fadeId).toBeGreaterThanOrEqual(0);
+    expect(member._lodFade).toBe('LEVEL');
+    expect(batch.instanceCount).toBe(2);
+    expect(batch.getGeometryIdAt(id)).toBe(batchGeometryId(state(), 'batchLodBoxLow'));
+    expect(batch.getGeometryIdAt(fadeId)).toBe(batchGeometryId(state(), 'batchLodBox'));
+    expect(batch.getVisibleAt(fadeId)).toBe(true);
+    // The apply and the first step in one frame: 1/6 in, 1/6 - 1 out
+    expect(fadeAt(state(), id)).toBeCloseTo(1 / 6, 6);
+    expect(fadeAt(state(), fadeId)).toBeCloseTo(1 / 6 - 1, 6);
+    stepAt(5, 2);
+    expect(fadeAt(state(), id)).toBeCloseTo(3 / 6, 6);
+    expect(fadeAt(state(), fadeId)).toBeCloseTo(3 / 6 - 1, 6);
+
+    stepAt(5, 3);
+    expect(world.hasComponent(members[0], ComponentType.TAG_LOD_TRANSITIONING)).toBe(false);
+    expect(member._fadeInstanceId).toBe(-1);
+    expect(member._lodFade).toBeUndefined();
+    expect(batch.instanceCount).toBe(1);
+    expect([fadeAt(state(), id), fadeAt(state(), fadeId)]).toEqual([1, 1]);
+  });
+
+  test('dithers the group material: the LOD enabled it on its levels', async () => {
+    await createBuiltLodGroupAsync([FADED]);
+    expect(isLodDitherEnabled(getMaterial('batchLodMat')!)).toBe(true);
+  });
+
+  test('its second instance moves with the member and hides with it', async () => {
+    const { batch, members } = await createBuiltLodGroupAsync([FADED]);
+    stepNear();
+    stepAt(5);
+    const { instanceId: id, _fadeInstanceId: fadeId } = getMember(members[0]);
+    const transform = world.getComponent(members[0], ComponentType.TRANSFORM)!;
+    transform.position.set(0.5, 1.5, 0);
+    transform.setDirty();
+    world.commitTransform(members[0], transform);
+    stepAt(5);
+    const at = (instanceId: number) => batch.getMatrixAt(instanceId, new THREE.Matrix4()).elements;
+    expect(at(fadeId)).toEqual(at(id));
+
+    world.addComponent(members[0], ComponentType.DISABLED, true);
+    expect([batch.getVisibleAt(id), batch.getVisibleAt(fadeId)]).toEqual([false, false]);
+    world.removeComponent(members[0], ComponentType.DISABLED);
+    expect([batch.getVisibleAt(id), batch.getVisibleAt(fadeId)]).toEqual([true, true]);
+  });
+
+  test("a compaction mid-fade carries each member's fade to its new id; the second instances stay", async () => {
+    const nearOnly = { ...FADED, bias: 100 };
+    const { state, members } = await createBuiltLodGroupAsync([
+      FADED,
+      nearOnly,
+      FADED,
+      nearOnly,
+      FADED,
+    ]);
+    stepNear();
+    stepAt(8);
+    const faded = [members[0], members[2], members[4]];
+    const fadeIds = faded.map((id) => getMember(id)._fadeInstanceId);
+    // The next frame's sync compacts: [low, box, low, box, low, box, box, box] is 6 runs of 2
+    stepAt(8);
+    expect(state().compactions).toBe(1);
+    expect(faded.map((id) => getMember(id)._fadeInstanceId)).toEqual(fadeIds);
+    for (const entityId of faded) {
+      const { instanceId, _fadeInstanceId: fadeId } = getMember(entityId);
+      expect(fadeAt(state(), instanceId)).toBeCloseTo(2 / 6, 6);
+      expect(fadeAt(state(), fadeId)).toBeCloseTo(2 / 6 - 1, 6);
+    }
+    for (const entityId of [members[1], members[3]]) {
+      expect(fadeAt(state(), getMember(entityId).instanceId)).toBe(LOD_FADE_OPAQUE);
+    }
+  });
+
+  test('a leave, a delete, "Show unmerged" and a rebuild mid-fade take its second instance', async () => {
+    const { groupId, batch, state, members } = await createBuiltLodGroupAsync([
+      FADED,
+      FADED,
+      FADED,
+      FADED,
+    ]);
+    stepNear();
+    stepAt(5);
+    expect(batch.instanceCount).toBe(8);
+
+    removeFromMergeGroup([members[0]]);
+    expect(batch.instanceCount).toBe(6);
+    world.deleteEntity(members[1]);
+    expect(batch.instanceCount).toBe(4);
+    // Drawn on its own: the LOD no longer tells the batch
+    world.removeComponent(members[2], ComponentType.TAG_MERGED);
+    expect(batch.instanceCount).toBe(3);
+    expect(getMember(members[2])._lodFade).toBeUndefined();
+    expect(fadeAt(state(), getMember(members[2]).instanceId)).toBe(LOD_FADE_OPAQUE);
+
+    rebuildMergeGroup(groupId);
+    await buildPendingMergeGroupsAsync();
+    const rebuilt = state();
+    expect(rebuilt.batch.instanceCount).toBe(2);
+    expect(getMember(members[3])._fadeInstanceId).toBe(-1);
+    expect(fadeAt(rebuilt, getMember(members[3]).instanceId)).toBe(LOD_FADE_OPAQUE);
+    // The rest of its fade draws it whole, and its end changes nothing
+    stepAt(5, 6);
+    expect(rebuilt.batch.instanceCount).toBe(2);
+    expect(fadeAt(rebuilt, getMember(members[3]).instanceId)).toBe(LOD_FADE_OPAQUE);
+  });
+});
+
+describe('a batched member LOD: a cull fade', () => {
+  test('dithers the instance out, hiding it at the end, and back in', async () => {
+    const { state, batch, members } = await createBuiltLodGroupAsync([FADED]);
+    stepNear();
+    stepAt(5, 7);
+    const id = getInstanceId(members[0]);
+    stepAt(100);
+    expect(getMember(members[0])._lodFade).toBe('OUT');
+    expect(batch.getVisibleAt(id)).toBe(true);
+    expect(fadeAt(state(), id)).toBeCloseTo(1 / 6 - 1, 6);
+    expect(batch.instanceCount).toBe(1);
+    stepAt(100, 5);
+    expect(batch.getVisibleAt(id)).toBe(false);
+    expect(fadeAt(state(), id)).toBe(LOD_FADE_OPAQUE);
+
+    stepAt(5);
+    expect(getMember(members[0])._lodFade).toBe('IN');
+    expect(batch.getVisibleAt(id)).toBe(true);
+    expect(fadeAt(state(), id)).toBeCloseTo(1 / 6, 6);
+    stepAt(5, 5);
+    expect(getMember(members[0])._lodFade).toBeUndefined();
+    expect(fadeAt(state(), id)).toBe(LOD_FADE_OPAQUE);
+  });
+});
+
+describe("a batch's fades", () => {
+  test('are a square float texture of its capacity, opaque, grown with their values kept', () => {
+    const batch = new THREE.BatchedMesh(10, 24, 36);
+    const fades = createBatchFades(batch, 10);
+    expect([fades.texture.image.width, fades.texture.image.height]).toEqual([4, 4]);
+    expect(Array.from(fades.data).every((fade) => fade === LOD_FADE_OPAQUE)).toBe(true);
+    fades.data[3] = 0.5;
+    const disposed = vi.fn();
+    fades.texture.addEventListener('dispose', disposed);
+    const grown = createBatchFades(batch, 40, fades);
+    expect(grown.texture.image.width).toBe(7);
+    expect(grown.data[3]).toBe(0.5);
+    expect(grown.data[48]).toBe(LOD_FADE_OPAQUE);
+    expect(disposed).toHaveBeenCalledOnce();
+    // One node a batch: it reads the grown texture at the grown width (the same shader code)
+    expect(grown.textureNode).toBe(fades.textureNode);
+    expect(grown.textureNode.value).toBe(grown.texture);
+    expect(grown.width.value).toBe(7);
+  });
+
+  test("a batch grown past its capacity rebuilds at its next draw: its material's version", async () => {
+    const { groupId, state } = await createBuiltLodGroupAsync([FADED]);
+    const material = getMaterial('batchLodMat')!;
+    const { maxInstanceCount } = state().batch;
+    const version = material.version;
+    const fadesNode = state().fades.textureNode;
+    // three (r187) keeps a drawn batch's render objects, reading the textures setInstanceCount
+    // replaced, until its material's version changes
+    addToMergeGroup(
+      groupId,
+      Array.from({ length: maxInstanceCount }, (_, i) => createLodMember(i * 2 + 2))
+    );
+    await buildPendingMergeGroupsAsync();
+    expect(state().batch.maxInstanceCount).toBeGreaterThan(maxInstanceCount);
+    expect(material.version).toBeGreaterThan(version);
+    expect(state().fades.textureNode).toBe(fadesNode);
+    expect(state().fades.texture.image.width ** 2).toBeGreaterThanOrEqual(
+      state().batch.maxInstanceCount
+    );
+  });
+
+  test('go with the batch', async () => {
+    const { groupId, state } = await createBuiltLodGroupAsync([FADED]);
+    const disposed = vi.fn();
+    state().fades.texture.addEventListener('dispose', disposed);
+    rebuildMergeGroup(groupId);
+    await buildPendingMergeGroupsAsync();
+    expect(disposed).toHaveBeenCalledOnce();
   });
 });

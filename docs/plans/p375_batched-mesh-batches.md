@@ -382,7 +382,7 @@ moving members.
    - S3 — level swaps and LOD culling, no fades — done ("S3 results" below): the batch holds every level geometry of its
      members; the apply swaps in place (`setGeometryIdAt`, not a remove and an add);
      `TAG_LOD_CULLED` joins the batched members' visibility.
-   - S4 — cross-fades: a per-batch fade texture read at `batchIndirectIndex` through
+   - S4 — cross-fades — done ("S4 results" below): a per-batch fade texture read at `batchIndirectIndex` through
      `setObjectLodFadeNode` (before the batch's first build; the shadow pass reads it too), a
      second instance per fading member with the outgoing level (`MERGE_MEMBER._fadeInstanceId`),
      cull fades, and the second instance through fade end, delete, leave, compaction and rebuild.
@@ -515,6 +515,42 @@ moving members.
    - **`yarn sbp`:** `merging` 9.4 kB (of 10 KiB), the lazy `MergeBatch.js` 2.7 → 3.1 kB, the
      initial 393.4 kB (of 394); `assets/index.js` 389.1 kB went over its 389 KiB: raised to 390 KiB
      with the initial's reason (S2's decision; Phase 1 raised the two together).
+
+   **S4 results** (2026-11-11):
+   - **Built:** `MergeBatchFades.ts` (`createBatchFades`: a square `RedFormat` float texture of the
+     batch's instance capacity, opaque, its node a `textureLoad` at three's `batchIndirectIndex`
+     with a width uniform, registered with `setObjectLodFadeNode` before the batch's first build;
+     grown by swapping the node's texture and width, so one node and the same shader code a batch;
+     `setInstanceFade` writes one and flags the upload only on a change) and `MergeBatchLod.ts`
+     (the delegate's work, moved out of `MergeBatch.ts`, which stays at 672 lines: a level fade's
+     second instance with the outgoing geometry, `MERGE_MEMBER._fadeInstanceId`; cull fades;
+     `MERGE_MEMBER._lodFade` the fade the batch draws; `endBatchMemberFade` for "Show unmerged").
+     `MergeBatch.ts`: the fades in `BatchState`, `growInstances` and `deleteFadeInstance`, the
+     second instance through the sync (its matrix), `setBatchMemberVisible`, a leave or delete and a
+     compaction (each member's fade carried to its new id; the second instances stay put). The
+     loader loads `MergeBatch.ts` and `MergeBatchLod.ts` together (two lazy chunks, 3.5 and 0.7 kB).
+   - **Found (a Phase 1 bug):** three r187's `BatchedMesh.setInstanceCount` replaces the batch's
+     indirect, matrices and colour textures, but `RenderObjects.get` rebuilds a render object only
+     when its material's version (or its environment) changed, so a drawn batch kept reading the
+     old textures. Seen in the browser check: mid-fade, the batch had grown (2 516 → 3 971) and
+     the outgoing instances (ids past the old capacity) read nothing. Phase 1's joins past a drawn
+     batch's capacity had the same fault (no browser check covered them). Fixed in
+     `growInstances`: the material's `needsUpdate` after `setInstanceCount` (only the batch's cache
+     key changed, so only it rebuilds). A three issue to report upstream, not filed.
+   - **Browser check** (a scratch Playwright script on the bench's helpers, both backends,
+     `?bmsWay=engine|separate&bmsLod=3&bmsCamera=inside&bmsShadow=true`; `?bmsLod` and
+     `__aekBms.lod({ bias, fadeSeconds })` added to the scene for it, S6 extends them): settled,
+     then 20 s fades started by a bias of 0.15 and shot 7 s in. No errors (Rapier's deprecated init
+     warning only). The engine's batch held 3 865 instances (1 865 fading members' second
+     instances): 473 merged draws on WebGPU until the fades end. Engine against separate: 0.08 %
+     of pixels over 8/255 settled and 0.12 % mid-fade on both backends (the fade's progress differs
+     a little between the pages): the batch dithers like separate meshes, the shadows too.
+   - **Tests:** `MergeBatchLod.test.ts` (28, 8 new: a level fade's second instance and its steps
+     and end, the dithered material, the second instance moving and hiding with the member, a
+     compaction mid-fade, a leave, a delete, "Show unmerged" and a rebuild mid-fade, a cull fade
+     out and in, the fade texture and its growth, a grown batch's rebuild). `yarn test` 3 271
+     passed; lint, both `tsc`, the docs ratchet clean. `yarn sbp`: every budget passes (`merging`
+     9.4 of 10 KiB, the initial 393.4 of 394, `assets/index.js` 389.2 of 390).
 
    3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if

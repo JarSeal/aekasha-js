@@ -39,6 +39,9 @@ import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 // `?bmsBodies=kinematic` (SEPARATE and ENGINE) gives each member a kinematic body (a ball),
 // moved in `APP_PHYSICS_STEP` by `?bmsMove`'s share per step: deterministic, so the scene
 // runner's probe and snapshot cover it.
+// `?bmsLod=2|3` (SEPARATE and ENGINE; p375 Phase 2) gives each member a LOD of that many levels:
+// its geometry's maker at half and a quarter of the segments (`bmsGeo<i>_l<n>`), the thresholds
+// set for the OVER camera (its near rows level 0, its far ones the coarsest).
 // The measuring (`_dbg__batchedMeshSpike.ts`) and the page calls (`churn…`) are the debug module's.
 
 export const BMS_SCENE_ID = 'batchedMeshSpike';
@@ -78,6 +81,8 @@ export const bmsSettings = {
   colors: false,
   /** A batch's every Nth member hidden (`setVisibleAt`); 0: none */
   hidden: 0,
+  /** Each member's LOD levels (SEPARATE and ENGINE); 0: no LOD */
+  lod: 0,
 };
 
 /** A member: its entity, its geometry's index, its place, and in a batch its instance id */
@@ -128,6 +133,8 @@ const readUrlOverrides = () => {
   const move = Number(params.get('bmsMove'));
   s.move = move > 0 ? Math.min(move, 1) : 0;
   s.shadow = params.get('bmsShadow') === 'true';
+  const lod = Number(params.get('bmsLod'));
+  s.lod = lod === 2 || lod === 3 ? lod : 0;
   s.colors = params.get('bmsColors') === 'true';
   const hidden = Number(params.get('bmsHidden'));
   s.hidden = hidden > 1 ? Math.round(hidden) : 0;
@@ -136,6 +143,10 @@ const readUrlOverrides = () => {
     lwarn(`BatchedMesh spike: ?bmsBodies is for the separate and engine ways, not ${s.way}.`);
     s.bodies = 'NONE';
   }
+  if (s.lod > 0 && s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
+    lwarn(`BatchedMesh spike: ?bmsLod is for the separate and engine ways, not ${s.way}.`);
+    s.lod = 0;
+  }
 };
 
 /** A lathe's profile: a vase */
@@ -143,37 +154,59 @@ const VASE = [0.3, 0.45, 0.5, 0.35, 0.2, 0.25, 0.35, 0.3].map(
   (r, i) => new THREE.Vector2(r, i * 0.2 - 0.7)
 );
 
-/** 20 indexed geometries of 400 to 1,100 triangles, each about a metre, with the same attributes
- * (position, normal, uv): a batch takes them all */
-const GEOMETRY_MAKERS: (() => THREE.BufferGeometry)[] = [
-  () => new THREE.BoxGeometry(1, 1, 1, 8, 8, 8),
-  () => new THREE.BoxGeometry(1.4, 0.6, 0.8, 10, 6, 6),
-  () => new THREE.SphereGeometry(0.6, 24, 16),
-  () => new THREE.SphereGeometry(0.5, 32, 12),
-  () => new THREE.CylinderGeometry(0.5, 0.5, 1.2, 24, 8),
-  () => new THREE.CylinderGeometry(0.3, 0.6, 1.4, 32, 6),
-  () => new THREE.ConeGeometry(0.6, 1.3, 32, 8),
-  () => new THREE.ConeGeometry(0.4, 1.6, 20, 12),
-  () => new THREE.TorusGeometry(0.5, 0.18, 12, 32),
-  () => new THREE.TorusGeometry(0.45, 0.1, 8, 48),
-  () => new THREE.TorusKnotGeometry(0.4, 0.12, 64, 8),
-  () => new THREE.TorusKnotGeometry(0.35, 0.1, 48, 8, 3, 4),
-  () => new THREE.CapsuleGeometry(0.35, 0.7, 8, 16),
-  () => new THREE.CapsuleGeometry(0.25, 1.0, 6, 24),
-  () => new THREE.CylinderGeometry(0.6, 0.6, 0.4, 40, 4),
-  () => new THREE.SphereGeometry(0.6, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2),
-  () => new THREE.LatheGeometry(VASE, 24),
-  () => new THREE.BoxGeometry(0.5, 1.6, 0.5, 4, 12, 4),
-  () => new THREE.ConeGeometry(0.7, 0.8, 6, 16),
-  () => new THREE.TorusGeometry(0.4, 0.25, 16, 24),
+/** `n` segments at detail `d` (1 the finest), at least `min` */
+const seg = (n: number, d: number, min = 3) => Math.max(min, Math.round(n * d));
+
+/** 20 indexed geometries of 400 to 1,100 triangles at detail 1, each about a metre, with the same
+ * attributes (position, normal, uv): a batch takes them all. A lower detail is a LOD level. */
+const GEOMETRY_MAKERS: ((d: number) => THREE.BufferGeometry)[] = [
+  (d) => new THREE.BoxGeometry(1, 1, 1, seg(8, d, 1), seg(8, d, 1), seg(8, d, 1)),
+  (d) => new THREE.BoxGeometry(1.4, 0.6, 0.8, seg(10, d, 1), seg(6, d, 1), seg(6, d, 1)),
+  (d) => new THREE.SphereGeometry(0.6, seg(24, d), seg(16, d, 2)),
+  (d) => new THREE.SphereGeometry(0.5, seg(32, d), seg(12, d, 2)),
+  (d) => new THREE.CylinderGeometry(0.5, 0.5, 1.2, seg(24, d), seg(8, d, 1)),
+  (d) => new THREE.CylinderGeometry(0.3, 0.6, 1.4, seg(32, d), seg(6, d, 1)),
+  (d) => new THREE.ConeGeometry(0.6, 1.3, seg(32, d), seg(8, d, 1)),
+  (d) => new THREE.ConeGeometry(0.4, 1.6, seg(20, d), seg(12, d, 1)),
+  (d) => new THREE.TorusGeometry(0.5, 0.18, seg(12, d), seg(32, d)),
+  (d) => new THREE.TorusGeometry(0.45, 0.1, seg(8, d), seg(48, d)),
+  (d) => new THREE.TorusKnotGeometry(0.4, 0.12, seg(64, d), seg(8, d)),
+  (d) => new THREE.TorusKnotGeometry(0.35, 0.1, seg(48, d), seg(8, d), 3, 4),
+  (d) => new THREE.CapsuleGeometry(0.35, 0.7, seg(8, d, 1), seg(16, d)),
+  (d) => new THREE.CapsuleGeometry(0.25, 1.0, seg(6, d, 1), seg(24, d)),
+  (d) => new THREE.CylinderGeometry(0.6, 0.6, 0.4, seg(40, d), seg(4, d, 1)),
+  (d) => new THREE.SphereGeometry(0.6, seg(20, d), seg(20, d, 2), 0, Math.PI * 2, 0, Math.PI / 2),
+  (d) => new THREE.LatheGeometry(VASE, seg(24, d)),
+  (d) => new THREE.BoxGeometry(0.5, 1.6, 0.5, seg(4, d, 1), seg(12, d, 1), seg(4, d, 1)),
+  (d) => new THREE.ConeGeometry(0.7, 0.8, 6, seg(16, d, 1)),
+  (d) => new THREE.TorusGeometry(0.4, 0.25, seg(16, d), seg(24, d)),
 ];
 
-/** The geometries, registered once (a reload finds them) */
+/** A LOD level's detail: half, then a quarter of the segments */
+const LOD_DETAILS = [1, 0.5, 0.25];
+/** The levels' screen sizes, for the OVER camera (100-190 m): level 0 its near rows */
+const LOD_SCREEN_SIZES = [0.013, 0.0105, 0];
+
+/** The geometries, registered once (a reload finds them); with `?bmsLod` their levels too */
 const createGeometries = () =>
   GEOMETRY_MAKERS.slice(0, bmsSettings.geometries).map((make, i) => {
+    for (let level = 1; level < bmsSettings.lod; level++) {
+      const id = `bmsGeo${i}_l${level}`;
+      if (!getGeometry(id)) saveBufferGeometry(make(LOD_DETAILS[level]), { id });
+    }
     const id = `bmsGeo${i}`;
-    return getGeometry(id) ?? saveBufferGeometry(make(), { id });
+    return getGeometry(id) ?? saveBufferGeometry(make(1), { id });
   });
+
+/** A member's LOD (`?bmsLod`), or none */
+const getMemberLod = (geometry: number) =>
+  bmsSettings.lod === 0
+    ? undefined
+    : {
+        levels: LOD_SCREEN_SIZES.slice(0, bmsSettings.lod).map((screenSize, level) =>
+          level === 0 ? { screenSize } : { screenSize, geo: `bmsGeo${geometry}_l${level}` }
+        ),
+      };
 
 /** The members' places and geometries, the same on every load; in the order they're added */
 const createPlacements = () => {
@@ -231,6 +264,7 @@ const createMeshMembers = (members: BmsMember[], material: THREE.Material) => {
       scale: { x: m.scale, y: m.scale, z: m.scale },
       castShadow: shadow,
       receiveShadow: shadow,
+      lod: way === 'BAKED' ? undefined : getMemberLod(m.geometry),
       ...(way === 'ENGINE' ? { merge: { group: GROUP_ID, mode: 'BATCHED' as const } } : {}),
     });
   }

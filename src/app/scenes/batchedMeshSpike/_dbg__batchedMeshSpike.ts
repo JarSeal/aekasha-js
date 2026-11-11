@@ -6,6 +6,7 @@ import {
   getRenderer,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
+import { setLodBias, setLodFadeSeconds } from 'aekasha/lod';
 import type * as THREE from 'three/webgpu';
 import {
   bmsSettings,
@@ -180,6 +181,12 @@ export const installBmsProbe = (world: ECSWorld) => {
         };
       }),
     batch: () => readBatch(world),
+    /** p375 Phase 2 (`?bmsLod`): the global LOD bias and fade seconds. A long fade and a new bias
+     * start fades on many members at once, for a look mid-way */
+    lod: (options: { bias?: number; fadeSeconds?: number }) => {
+      if (options.fadeSeconds !== undefined) setLodFadeSeconds(options.fadeSeconds);
+      if (options.bias !== undefined) setLodBias(options.bias);
+    },
     /** Item 6, members: `rounds` times, a seeded `share` of the members leave the batch and come
      * back with a random geometry (freed ids are reused lowest first) */
     churnInstances: (share: number, rounds = 1) => {

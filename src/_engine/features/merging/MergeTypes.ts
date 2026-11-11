@@ -157,6 +157,13 @@ export type MergeMemberData = {
   /** A `BATCHED` member's own mesh's `OBJECT3D._lastVersion` its instance was last written at
    * (the batch sync writes it again when that changed). */
   _batchVersion?: number;
+  /** A `BATCHED` member's second instance while its LOD cross-fades from one level to another
+   * (the outgoing level's geometry, p375 Phase 2), or -1. */
+  _fadeInstanceId: number;
+  /** A `BATCHED` member's LOD fade its batch draws: a level change (`LEVEL`, with
+   * `_fadeInstanceId`), fading out to LOD culled (`OUT`) or in from it (`IN`); undefined while
+   * none runs (or one runs that its batch didn't start: it then draws the member whole). */
+  _lodFade?: 'LEVEL' | 'OUT' | 'IN';
   /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
    * joined; undefined in a group of one material. */
   _paletteIndex?: number;

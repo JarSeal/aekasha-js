@@ -232,6 +232,7 @@ const joinMergeGroup = (
       groupId,
       partIndex: -1,
       instanceId: -1,
+      _fadeInstanceId: -1,
       _wasSpatialIndexed: false,
       _bakedMatrix: new THREE.Matrix4(),
       _isCollapsed: false,
