@@ -2,9 +2,11 @@ import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { getConfig } from '../../kernel/config/Config';
 import { ECSWorld } from '../../kernel/ecs/ECS';
+import type { ECSStorageMode } from '../../kernel/ecs/ECSComponentStorage';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { installCoreSystems } from '../../kernel/ecs/ECSCoreSystems';
 import { createFeatureHost } from '../../kernel/init/Features';
+import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { createGeometry, saveBufferGeometry } from '../../kernel/assets/Geometry';
 import { createMaterial } from '../../kernel/assets/Material';
 import { createMeshEntity, installMeshes, type MeshProps } from '../../kernel/mesh/Mesh';
@@ -33,7 +35,8 @@ import { getGroups } from './MergeState';
 import type { MeshMergeDef } from './MergeTypes';
 
 // p375's batched groups (docs/plans/p375_batched-mesh-batches.md): the mode, its refusals and
-// AUTO's batched buckets (Phase 1 S1); the batch build, leaving and visibility (S2).
+// AUTO's batched buckets (Phase 1 S1); the batch build, leaving and visibility (S2); the sync
+// and the growing bounds in both storage modes (S3).
 
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
@@ -43,6 +46,7 @@ vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
 
 // The default world and the root scene; the hooks are static, registered once for this file
 let world: ECSWorld;
+const spatialJoins: number[] = [];
 beforeAll(() => {
   world = new ECSWorld();
   createRootScene();
@@ -50,6 +54,10 @@ beforeAll(() => {
   installCoreSystems(ctx);
   installMeshes(ctx);
   installMergeGroups(ctx);
+  // The spatial index's joins (spatial() isn't installed): a group re-joins when its sphere grew
+  ctx.registerComponentHooks(ComponentType.SPATIAL_INDEXED, {
+    onAddComponent: (entityId) => spatialJoins.push(entityId),
+  });
   // Persistent: a deleted mesh's last ref would release them. A box has 24 vertices.
   createGeometry({
     id: 'batchTestBox',
@@ -114,10 +122,14 @@ const fnv1a = (key: string) => {
 const warnings = () => fns.lwarn.mock.calls.map((call) => String(call[0]));
 
 /** A stand-in body of a kind: physics isn't installed, so no hook reads it. */
-const addBody = (entityId: number, kind: 'BODY_DYNAMIC_VISUAL' | 'PHYSICS_SIM_TIER') => {
-  world.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
-  world.addComponent(entityId, ComponentType.COLLIDER, []);
-  world.addComponent(entityId, ComponentType[kind], {} as never);
+const addBody = (
+  entityId: number,
+  kind: 'BODY_DYNAMIC_VISUAL' | 'PHYSICS_SIM_TIER',
+  w: ECSWorld = world
+) => {
+  w.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
+  w.addComponent(entityId, ComponentType.COLLIDER, []);
+  w.addComponent(entityId, ComponentType[kind], {} as never);
 };
 
 /** The group's batch, once built. */
@@ -132,8 +144,10 @@ const getBatch = (groupId: string) => {
 
 const getMember = (entityId: number) => world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
 
-const getOwnMesh = (entityId: number) =>
-  world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+const getOwnMesh = (entityId: number) => getOwnMeshIn(world, entityId);
+
+const getOwnMeshIn = (w: ECSWorld, entityId: number) =>
+  w.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
 
 /** A BATCHED group of members at x = 0, 2, 4, …, box and sphere alternating. */
 const createBatchedGroup = (count: number, opts: { perMemberCulling?: boolean } = {}) => {
@@ -538,5 +552,124 @@ describe("a batched member's visibility", () => {
     expect(ids.map((id) => batch.getVisibleAt(id))).toEqual([false, false]);
     world.removeComponent(members[0], ComponentType.TAG_DRAW_HELD);
     expect(batch.getVisibleAt(ids[0])).toBe(true);
+  });
+});
+
+describe('the sync', () => {
+  const syncWorlds: ECSWorld[] = [];
+  afterEach(() => {
+    for (const w of syncWorlds.splice(0)) ECSWorld.deleteWorld(w.id);
+  });
+
+  /** A world of its own, two boxes at x 0 and 2 (y 1) in one built BATCHED group: its batch sits
+   * at (1, 1, 0). */
+  const createSyncedBatchAsync = async (storageMode: ECSStorageMode) => {
+    const w = new ECSWorld({ id: `batchSync${seq++}`, storageMode });
+    syncWorlds.push(w);
+    const groupId = nextGroupId();
+    const groupEntityId = createMergeGroup({ id: groupId, mode: 'BATCHED' }, w);
+    const members = [0, 2].map((x) =>
+      createMeshEntity(
+        { geo: 'batchTestBox', mat: 'batchTestMat', position: { x, y: 1, z: 0 } },
+        { world: w }
+      )
+    );
+    addToMergeGroup(groupId, members, w);
+    await buildPendingMergeGroupsAsync(w);
+    const batch = w.getComponent(groupEntityId, ComponentType.OBJECT3D)!.value as THREE.BatchedMesh;
+    const frame = () => {
+      w.updateMainLoop(0.016);
+      w.updateAppLoop(0.016);
+    };
+    /** The instance's place in world space. */
+    const placeOf = (entityId: number) => {
+      const matrix = new THREE.Matrix4();
+      batch.getMatrixAt(w.getComponent(entityId, ComponentType.MERGE_MEMBER)!.instanceId, matrix);
+      return new THREE.Vector3().setFromMatrixPosition(matrix).add(batch.position).toArray();
+    };
+    return { w, groupEntityId, members, batch, frame, placeOf };
+  };
+
+  test.each(['MAP', 'TYPED_ARRAY'] as const)(
+    "writes a moved member's instance when its own mesh moves, and none for one that stayed (%s)",
+    async (storageMode) => {
+      const { w, members, batch, frame, placeOf } = await createSyncedBatchAsync(storageMode);
+      frame(); // the meshes' first sync
+      const writes = vi.spyOn(batch, 'setMatrixAt');
+      frame();
+      expect(writes).not.toHaveBeenCalled();
+
+      w.setTransform(members[0], { pos: { x: -4, y: 1, z: 3 } });
+      frame();
+      expect(writes).toHaveBeenCalledTimes(1);
+      expect(placeOf(members[0])).toEqual([-4, 1, 3]);
+      expect(placeOf(members[1])).toEqual([2, 1, 0]);
+
+      // Moved after MAIN: its own mesh is moved at the next frame's MAIN, and so is its instance
+      // (in TYPED_ARRAY that MAIN clears the dirty flag: the version says it moved)
+      writes.mockClear();
+      w.updateMainLoop(0.016);
+      w.setTransform(members[1], { pos: { x: 6, y: 1, z: 0 } });
+      w.updateAppLoop(0.016);
+      expect(placeOf(members[1])).toEqual([2, 1, 0]);
+      frame();
+      expect(placeOf(members[1])).toEqual([6, 1, 0]);
+      expect(writes).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  test("a body's member follows its mesh every frame, after the pose producers", async () => {
+    const { w, members, frame, placeOf } = await createSyncedBatchAsync('MAP');
+    addBody(members[0], 'BODY_DYNAMIC_VISUAL', w);
+    const mesh = getOwnMeshIn(w, members[0]);
+    // physics' interpolation: it moves the mesh, not the TRANSFORM, at POSE_PRODUCERS
+    let x = 0;
+    w.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      'fakeInterpolation',
+      () => {
+        mesh.position.x = x;
+      },
+      APP_RENDER_SYNC_ORDER.POSE_PRODUCERS
+    );
+    for (x of [0.5, 1, 1.5]) {
+      frame();
+      expect(placeOf(members[0])).toEqual([x, 1, 0]);
+    }
+    expect(w.getSystemOrder(ECSSystemStage.APP_RENDER_SYNC)).toContainEqual(
+      expect.objectContaining({
+        id: 'mergeBatchSync',
+        order: APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC,
+      })
+    );
+  });
+
+  test('grows the batch sphere for a member moved out of it, never shrinks it, and re-joins the spatial index', async () => {
+    const { w, groupEntityId, members, batch, frame } = await createSyncedBatchAsync('MAP');
+    frame();
+    const radius = batch.boundingSphere!.radius;
+    const joins = spatialJoins.filter((id) => id === groupEntityId).length;
+
+    w.setTransform(members[0], { pos: { x: 50, y: 1, z: 0 } });
+    frame();
+    const grown = batch.boundingSphere!.radius;
+    expect(grown).toBeGreaterThan(radius);
+    expect(batch.boundingSphere!.containsPoint(new THREE.Vector3(49, 0, 0))).toBe(true);
+    expect(batch.geometry.boundingSphere!.equals(batch.boundingSphere!)).toBe(true);
+    expect(spatialJoins.filter((id) => id === groupEntityId).length).toBe(joins + 1);
+
+    w.setTransform(members[0], { pos: { x: 0, y: 1, z: 0 } });
+    frame();
+    expect(batch.boundingSphere!.radius).toBe(grown);
+    expect(spatialJoins.filter((id) => id === groupEntityId).length).toBe(joins + 1);
+  });
+
+  test("a deleted group's batch leaves the sync", async () => {
+    const { w, groupEntityId, members, batch, frame } = await createSyncedBatchAsync('MAP');
+    w.deleteEntity(groupEntityId);
+    const writes = vi.spyOn(batch, 'setMatrixAt');
+    w.setTransform(members[0], { pos: { x: 5, y: 1, z: 0 } });
+    frame();
+    expect(writes).not.toHaveBeenCalled();
   });
 });

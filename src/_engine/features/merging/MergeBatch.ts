@@ -10,10 +10,20 @@
 // mesh does, each instance's matrix its member's world matrix less that centre; its internal
 // geometry carries the members' bounding sphere, which the spatial index measures a mesh by. Built
 // on the main thread: there is no geometry to merge (D3).
+//
+// The sync (`mergeBatchSyncSystem`, APP_RENDER_SYNC at MERGE_BATCH_SYNC, after the pose
+// producers) writes an instance's matrix from its member's own mesh, which the member keeps hidden:
+// the batch draws a member where its mesh would be drawn on its own. A mesh moved by
+// `object3DSyncSystem` is seen by its `OBJECT3D._lastVersion` (the transform's version in `MAP`
+// storage, a count of the copies in `TYPED_ARRAY`); a body's mesh (`BODY_DYNAMIC_VISUAL`) is
+// written every frame, as physics' interpolation moves it without a version. The batch's sphere
+// grows with what's written (never shrinks: the next full build measures it again), so three
+// culls it whole only when no member can be in view.
 import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { incMaterialRef } from '../../kernel/assets/Material';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
@@ -29,6 +39,9 @@ const MIN_SPARE_INSTANCES = 16;
 
 /** A batched group's batch and its bookkeeping. */
 type BatchState = {
+  /** Its group, and the group's entity. */
+  group: MergeGroupData;
+  groupEntityId: number;
   batch: THREE.BatchedMesh;
   /** The batch's geometry id of each member geometry it holds. */
   geometryIds: Map<THREE.BufferGeometry, number>;
@@ -42,6 +55,8 @@ type BatchState = {
 };
 
 const states = new WeakMap<MergeGroupData, BatchState>();
+/** Per world: its batches, for the sync (a deleted group's goes at the sync's next run). */
+const batchesByWorld = new WeakMap<ECSWorld, Set<BatchState>>();
 
 /**
  * A batched group's batch, once built (the debugger's figures read it).
@@ -53,27 +68,42 @@ export const getBatchState = (group: MergeGroupData): Readonly<BatchState> | und
 const scratchBox = new THREE.Box3();
 const bounds = new THREE.Box3();
 const instanceMatrix = new THREE.Matrix4();
+const memberSphere = new THREE.Sphere();
 
 /** A geometry's index count, or 0 without an index (a batch's geometries agree on it). */
 const getIndexCount = (geometry: THREE.BufferGeometry) => geometry.index?.count ?? 0;
 
-/**
- * Writes a member's instance matrix from its own mesh's world matrix (the batch's centre taken
- * off). The mesh's matrix must be current.
- * @internal
- */
-export const writeBatchMatrix = (
-  state: BatchState,
-  member: MergeMemberData,
-  matrixWorld: THREE.Matrix4
-) => {
+/** Writes `instanceMatrix`, a member's world matrix, as its instance's (the batch's centre taken
+ * off, in place). */
+const writeInstanceMatrix = (state: BatchState, instanceId: number) => {
   const { centre } = state;
-  instanceMatrix.copy(matrixWorld);
   const e = instanceMatrix.elements;
   e[12] -= centre.x;
   e[13] -= centre.y;
   e[14] -= centre.z;
-  state.batch.setMatrixAt(member.instanceId, instanceMatrix);
+  state.batch.setMatrixAt(instanceId, instanceMatrix);
+};
+
+/** Grows the batch's sphere, and its geometry's copy, to hold a member's geometry at
+ * `instanceMatrix`. Whether it grew. */
+const growBatchSphere = (state: BatchState, geometry: THREE.BufferGeometry) => {
+  const sphere = state.batch.boundingSphere;
+  if (!sphere) return false;
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  memberSphere.copy(geometry.boundingSphere!).applyMatrix4(instanceMatrix);
+  if (memberSphere.center.distanceTo(sphere.center) + memberSphere.radius <= sphere.radius) {
+    return false;
+  }
+  sphere.union(memberSphere);
+  state.batch.geometry.boundingSphere?.copy(sphere);
+  return true;
+};
+
+/** The group joins the spatial index again, so it measures the grown sphere. */
+const rejoinSpatialIndex = (groupEntityId: number, world: ECSWorld) => {
+  if (!world.hasComponent(groupEntityId, ComponentType.SPATIAL_INDEXED)) return;
+  world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
+  world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
 };
 
 /**
@@ -112,7 +142,9 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
   const isFirstBuild = member.instanceId === -1;
   member.instanceId = state.batch.addInstance(state.geometryIds.get(mesh.geometry)!);
   syncMemberPose(entityId, mesh, world);
-  writeBatchMatrix(state, member, mesh.matrixWorld);
+  instanceMatrix.copy(mesh.matrixWorld);
+  writeInstanceMatrix(state, member.instanceId);
+  member._batchVersion = world.getComponent(entityId, ComponentType.OBJECT3D)!._lastVersion;
   if (!isBatchMemberShown(entityId, world)) state.batch.setVisibleAt(member.instanceId, false);
   if (isFirstBuild) {
     member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
@@ -148,19 +180,18 @@ const getMembersCentre = (members: readonly number[], world: ECSWorld) => {
   return bounds.getCenter(new THREE.Vector3());
 };
 
-/** The batch's bounds from its instances (its own sphere, which three culls it whole by, and its
- * geometry's, which the spatial index measures it by); the group joins the index again when its
- * radius grew. */
-const updateBatchBounds = (groupEntityId: number, state: BatchState, world: ECSWorld) => {
+/** The batch's sphere measured from its instances: its own, which three culls it whole by, and a
+ * copy as its geometry's, which the spatial index measures it by (a copy: a geometry's sphere is
+ * recomputed in place from its vertices by whoever calls `computeBoundingSphere`). The group joins
+ * the index again when the radius grew (or the batch is new). */
+const updateBatchBounds = (state: BatchState, world: ECSWorld) => {
   const { batch } = state;
   const previous = batch.geometry.boundingSphere?.radius ?? -1;
-  batch.computeBoundingBox();
   batch.computeBoundingSphere();
   batch.geometry.boundingSphere = batch.boundingSphere!.clone();
-  batch.geometry.boundingBox = batch.boundingBox!.clone();
   if (batch.boundingSphere!.radius > previous) {
-    world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
-    world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
+    world.removeComponent(state.groupEntityId, ComponentType.SPATIAL_INDEXED);
+    world.addComponent(state.groupEntityId, ComponentType.SPATIAL_INDEXED, true);
   }
 };
 
@@ -222,6 +253,8 @@ const createBatch = (
   }
 
   const state: BatchState = {
+    group,
+    groupEntityId,
     batch,
     geometryIds: new Map(),
     centre,
@@ -229,7 +262,18 @@ const createBatch = (
     maxIndexCount: Math.max(maxIndexCount, 1),
     isRebuildDue: false,
   };
+  const previousState = states.get(group);
   states.set(group, state);
+  let batches = batchesByWorld.get(world);
+  if (!batches) batchesByWorld.set(world, (batches = new Set()));
+  if (previousState) batches.delete(previousState);
+  batches.add(state);
+  world.addSystem(
+    ECSSystemStage.APP_RENDER_SYNC,
+    'mergeBatchSync',
+    mergeBatchSyncSystem,
+    APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC
+  );
   for (const [geometry, ids] of byGeometry) {
     state.geometryIds.set(geometry, batch.addGeometry(geometry));
     for (const entityId of ids) addMemberInstance(entityId, state, world);
@@ -300,7 +344,7 @@ export const buildBatchGroup = (groupEntityId: number, group: MergeGroupData, wo
   if (!state.batch.parent) {
     existsOrThrow(getRootScene(), 'Merge groups need the root scene.').add(state.batch);
   }
-  updateBatchBounds(groupEntityId, state, world);
+  updateBatchBounds(state, world);
   group.rebuilds++;
   if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, false);
 };
@@ -321,4 +365,44 @@ export const requestBatchRebuild = (group: MergeGroupData) => {
  */
 export const deleteBatchInstance = (member: MergeMemberData, group: MergeGroupData) => {
   states.get(group)?.batch.deleteInstance(member.instanceId);
+};
+
+/**
+ * Writes the batched members' instance matrices whose own meshes moved (a body's every frame) and
+ * grows their batches' spheres (APP_RENDER_SYNC, MERGE_BATCH_SYNC; added with a world's first
+ * batch). Storages read once, no allocation.
+ * @internal
+ */
+export const mergeBatchSyncSystem = (world: ECSWorld) => {
+  const batches = batchesByWorld.get(world);
+  if (!batches?.size) return;
+  const members = world.getStorage(ComponentType.MERGE_MEMBER);
+  const objects = world.getStorage(ComponentType.OBJECT3D);
+  const bodies = world.getStorage(ComponentType.BODY_DYNAMIC_VISUAL);
+  for (const state of batches) {
+    const { group, groupEntityId } = state;
+    // A deleted group's, or one a full build replaced
+    if (
+      states.get(group) !== state ||
+      world.getComponent(groupEntityId, ComponentType.MERGE_GROUP) !== group
+    ) {
+      batches.delete(state);
+      continue;
+    }
+    let hasGrown = false;
+    const ids = group.members;
+    for (let i = 0; i < ids.length; i++) {
+      const entityId = ids[i];
+      const member = members.get(entityId);
+      const object = objects.get(entityId);
+      if (!member || member.instanceId < 0 || !object) continue;
+      if (object._lastVersion === member._batchVersion && !bodies.has(entityId)) continue;
+      member._batchVersion = object._lastVersion;
+      const mesh = object.value as THREE.Mesh;
+      instanceMatrix.compose(mesh.position, mesh.quaternion, mesh.scale);
+      writeInstanceMatrix(state, member.instanceId);
+      if (growBatchSphere(state, mesh.geometry)) hasGrown = true;
+    }
+    if (hasGrown) rejoinSpatialIndex(groupEntityId, world);
+  }
 };

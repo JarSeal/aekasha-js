@@ -49,6 +49,9 @@ export enum ECSSystemStage {
  *   frame's build and the group mesh replacing it are in this frame's poses and culling.
  * - POSE_PRODUCERS: systems that write the final Object3D render pose (physicsInterpolationSystem,
  *   lookAtSystem). Plain default order.
+ * - MERGE_BATCH_SYNC: mergeBatchSyncSystem (features/merging/MergeBatch.ts, p375), which writes a
+ *   batched merge group's members' instance matrices from their own Object3Ds' final poses: after
+ *   every producer, before the consumers (nothing reads a batch's matrices).
  * - POSE_CONSUMERS: systems that read the final render pose of another entity (camera rigs).
  *   Deliberately fractional: it has to run after every order-0 producer whatever their
  *   registration sequence (the follow camera rig registers before physics() does), and
@@ -64,6 +67,7 @@ export enum ECSSystemStage {
 export const APP_RENDER_SYNC_ORDER = {
   MERGE_BUILD: 0.5,
   POSE_PRODUCERS: 0,
+  MERGE_BATCH_SYNC: -0.25,
   POSE_CONSUMERS: -0.5,
   SHADOW_FIT: -0.75,
   FRUSTUM_CULLING: -1,

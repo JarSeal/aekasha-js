@@ -154,6 +154,9 @@ export type MergeMemberData = {
   /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
    * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** A `BATCHED` member's own mesh's `OBJECT3D._lastVersion` its instance was last written at
+   * (the batch sync writes it again when that changed). */
+  _batchVersion?: number;
   /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
    * joined; undefined in a group of one material. */
   _paletteIndex?: number;
