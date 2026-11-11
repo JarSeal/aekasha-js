@@ -1,4 +1,10 @@
-import { APP_RENDER_SYNC_ORDER, ECSSystemStage, createSeededRandom, getRenderer } from 'aekasha';
+import {
+  APP_RENDER_SYNC_ORDER,
+  ComponentType,
+  ECSSystemStage,
+  createSeededRandom,
+  getRenderer,
+} from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 import type * as THREE from 'three/webgpu';
 import {
@@ -13,7 +19,9 @@ import {
 // The BatchedMesh spike's measuring (p375 Phase 0): systems at the stages' far ends bracket the
 // CPU frame (the first MAIN system to the first LATE_MAIN one: the update and the render submit)
 // and the render submit (the last APP_RENDER_SYNC system to the first LATE_MAIN one), and the
-// pose producers' order brackets the batch sync. `window.__aekBms.measure(frames)` gives each
+// pose producers' order to just after the engine's batch sync (MERGE_BATCH_SYNC) brackets the
+// batch syncs: the hand-built one's, and in the ENGINE way the engine's (physics' interpolation
+// too, with bodies). The batch figures are the hand-built batch's, or the engine group's. `window.__aekBms.measure(frames)` gives each
 // figure's median and 90th percentile over the next `frames` frames; `churnInstances` and
 // `churnGeometries` are spike item 6's slot reuse, on a batch only.
 
@@ -47,8 +55,21 @@ const median = (values: number[], q = 0.5) => {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
 };
 
-const readBatch = () => {
-  const batch = bmsState.batch as (THREE.BatchedMesh & BatchPrivates) | null;
+/** The ENGINE way's batch: its group's mesh, through its first member, once built. */
+const findEngineBatch = (world: ECSWorld) => {
+  const first = bmsState.members[0];
+  if (bmsSettings.way !== 'ENGINE' || !first) return null;
+  const member = world.getComponent(first.entityId, ComponentType.MERGE_MEMBER);
+  const object = member && world.getComponent(member.groupEntityId, ComponentType.OBJECT3D)?.value;
+  return (object as Partial<THREE.BatchedMesh> | undefined)?.isBatchedMesh
+    ? (object as THREE.BatchedMesh)
+    : null;
+};
+
+const readBatch = (world: ECSWorld) => {
+  const batch = (bmsState.batch ?? findEngineBatch(world)) as
+    | (THREE.BatchedMesh & BatchPrivates)
+    | null;
   if (!batch) return null;
   return {
     instances: batch.instanceCount,
@@ -78,7 +99,8 @@ export const installBmsProbe = (world: ECSWorld) => {
       ECSSystemStage.APP_RENDER_SYNC,
       'syncEnd',
       () => (frame.syncMs = performance.now() - marks.syncStart),
-      APP_RENDER_SYNC_ORDER.POSE_PRODUCERS - 0.25,
+      // After the engine's batch sync, before the pose consumers
+      (APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC + APP_RENDER_SYNC_ORDER.POSE_CONSUMERS) / 2,
     ],
     [
       ECSSystemStage.APP_RENDER_SYNC,
@@ -111,7 +133,7 @@ export const installBmsProbe = (world: ECSWorld) => {
 
   const random = createSeededRandom(3751);
   const batchOrThrow = () => {
-    if (!bmsState.batch) throw new Error('not a batch (?bmsWay=batched)');
+    if (!bmsState.batch) throw new Error('not a hand-built batch (?bmsWay=batched)');
     return bmsState.batch;
   };
   /** Takes the members out of the batch, then adds each back, with `nextGeometry`'s geometry */
@@ -151,13 +173,13 @@ export const installBmsProbe = (world: ECSWorld) => {
                 ?.isWebGPUBackend
                 ? 'WebGPU'
                 : 'WebGL2',
-              batch: readBatch(),
+              batch: readBatch(world),
               moveWaitFrames: bmsState.moveWaitFrames,
             });
           },
         };
       }),
-    batch: readBatch,
+    batch: () => readBatch(world),
     /** Item 6, members: `rounds` times, a seeded `share` of the members leave the batch and come
      * back with a random geometry (freed ids are reused lowest first) */
     churnInstances: (share: number, rounds = 1) => {
@@ -168,7 +190,7 @@ export const installBmsProbe = (world: ECSWorld) => {
         while (picked.size < n) picked.add(members[Math.floor(random() * members.length)]);
         reAdd([...picked], () => Math.floor(random() * bmsSettings.geometries));
       }
-      return readBatch();
+      return readBatch(world);
     },
     /** Item 6, geometries: `rounds` times, a geometry's members leave, the geometry is replaced
      * and they come back. `DELETE_ADD`: `deleteGeometry`, then `addGeometry` (a freed id, but
@@ -200,9 +222,9 @@ export const installBmsProbe = (world: ECSWorld) => {
           }
           done++;
         }
-        return { done, error: null, batch: readBatch() };
+        return { done, error: null, batch: readBatch(world) };
       } catch (err) {
-        return { done, error: (err as Error).message, batch: readBatch() };
+        return { done, error: (err as Error).message, batch: readBatch(world) };
       }
     },
   };

@@ -790,7 +790,34 @@
       "collectQueuedJoins": "Function",
       "getAutoCompatibilityKey": "Function",
       "pickAutoGroup": "Function",
+      "QueuedJoins": "TypeAlias",
       "queueMerge": "Function"
+    },
+    "src/_engine/features/merging/MergeBatch.ts": {
+      "buildBatchGroup": "Function",
+      "COMPACT_RUNS_FACTOR": "Variable",
+      "deleteBatchInstance": "Function",
+      "getBatchState": "Function",
+      "isBatchMemberShown": "Function",
+      "mergeBatchSyncSystem": "Function",
+      "requestBatchRebuild": "Function",
+      "setBatchMemberVisible": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchFront.ts": {
+      "BatchVisibilityOverrides": "TypeAlias",
+      "dropBatchMember": "Function",
+      "getMergeBatchModule": "Function",
+      "installBatchMemberVisibility": "Function",
+      "isBatchedGroup": "Function",
+      "loadMergeBatchModuleAsync": "Function"
+    },
+    "src/_engine/features/merging/MergeBuild.ts": {
+      "buildPendingGroups": "Function",
+      "clearEmptyGroup": "Function",
+      "getLiveMembers": "Function",
+      "loadPendingBuildCodeAsync": "Function",
+      "startPendingBuildCodeLoads": "Function",
+      "WORKER_BUILD_VERTICES": "Variable"
     },
     "src/_engine/features/merging/MergeEligibility.ts": {
       "getMergeRefusal": "Function"
@@ -808,8 +835,7 @@
       "rebuildMergeGroup": "Function",
       "registerMergeDebug": "Function",
       "removeFromMergeGroup": "Function",
-      "updateMergeMember": "Function",
-      "WORKER_BUILD_VERTICES": "Variable"
+      "updateMergeMember": "Function"
     },
     "src/_engine/features/merging/MergeInPlace.ts": {
       "collapseDisabledMember": "Function",
@@ -908,6 +934,7 @@
     },
     "src/_engine/features/merging/MergeTypes.ts": {
       "MergeGroupData": "TypeAlias",
+      "MergeGroupMode": "TypeAlias",
       "MergeGroupSettings": "TypeAlias",
       "MergeMemberData": "TypeAlias",
       "MergeMemberEditPose": "TypeAlias",
@@ -5168,6 +5195,7 @@
     "aekasha/merging": [
       "CreateMergeGroupOptions",
       "MergeGroupData",
+      "MergeGroupMode",
       "MergeGroupSettings",
       "MergeMaterialEntry",
       "MergeMaterialSlotInfo",

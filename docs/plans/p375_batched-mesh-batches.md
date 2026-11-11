@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 in progress (S1-S5 done)
+Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 implemented
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
@@ -44,6 +44,10 @@ This plan is adopted only if Phase 0 measures a CPU or draw-count win that matte
     `_updateDrawParameters` returns at once: the cheapest setup, without per-member culling.
   - `BatchedMesh` is about 18 kB minified, and `MergeEligibility.ts` reads type flags so that
     `merging()` doesn't ship it (its budget is 8 KiB): a `BATCHED` mode loads it behind `import()`.
+    **Wrong for three's class** (found in Phase 1 S6): the `import()` keeps the engine's batch code
+    lazy, but `BatchedMesh` is a statement of `three.core.js`, one module, whose kept statements
+    stay in its chunk, the main one: +4.6 KiB gzip with `merging()`
+    (`docs/issues/three-classes-ship-with-their-chunk.md`).
 - The WebGPU path no longer sets draw parameters in `onBeforeRender`, which
   `@three.ez/batched-mesh-extensions` overrides: the extension (item 7) is even less usable.
 - `BatchedMesh` keeps member matrices in a data texture, supports per-member visibility, colour,
@@ -88,8 +92,8 @@ WebGL2 (−76%), its draws 23 against 2 003 (WebGPU, members grouped, no sort) a
 multi-draw), and per-member colour, visibility and slot reuse work the same on both backends.
 
 How it was measured: the `batchedMeshSpike` scene (`src/app/scenes/batchedMeshSpike/`, an
-`isDebugScene`) and `npx tsx devTools/bench/batchedMeshSpike.ts` (both kept uncommitted until the
-gate's decision). The members are 20 indexed primitives of 400-1 100 triangles (1.2 M triangles in
+`isDebugScene`) and `npx tsx devTools/bench/batchedMeshSpike.ts` (committed with Phase 0,
+`af9d4fa2`). The members are 20 indexed primitives of 400-1 100 triangles (1.2 M triangles in
 all), one standard material, on a 45 × 45 grid of 3 m, seeded. Separate: a mesh entity each.
 Baked: the same entities in one p372 group. Batched: one `BatchedMesh`, each member an entity with
 only a `Transform`, its matrix written by a sync system at `POSE_PRODUCERS` when the `Transform`'s
@@ -232,13 +236,13 @@ moving members.
   level's geometry, each with its signed fade for `lodDither`, and culling fades the same way;
   `fadeSeconds: 0` swaps instantly.
 - **Debug:** p373's tab lists batched groups with their member count and visible count.
-- **Smallest build:** `BatchedMesh` loads behind `import()` on the first batched group, so an app
-  that lists `merging()` without one doesn't download it (§1); `yarn sbp` checks the feature's
-  budget.
+- **Smallest build:** the batch code (`MergeBatch.ts`) loads behind `import()` on the first
+  batched group; three's `BatchedMesh` ships with `merging()` all the same (§1's correction), until
+  the issue's fix; `yarn sbp` checks the feature's budget.
 
 ## 4. Phases (after the gate)
 
-1. Batched groups, sync, visibility, grouping and compaction (D1), `BatchedMesh` behind `import()`.
+1. **Done.** Batched groups, sync, visibility, grouping and compaction (D1), `BatchedMesh` behind `import()`.
    Tests: the sync in both storage modes, compaction after removes and adds, `DISABLED` and
    culling to `setVisibleAt`. Commit the spike scene and bench (D2) and add the `ENGINE` way.
    **Exit:** 2 000 moving kinematic boxes in one engine batch match the spike's hand-built batch
@@ -253,13 +257,65 @@ moving members.
      the overlay outlines it at its own mesh's pose, "Show unmerged" holds the batch, the windows
      and the tab's rows show the mode and the batch's figures, the pose fields move a batched
      member without a session. Tests: `debug/_dbg__MergingBatched.test.ts`.
-   - S6 — the exit: `?bmsWay=engine` in `batchedMeshSpike` (mesh entities with
+   - S6 — the exit — done (its decisions: "S6 results"): `?bmsWay=engine` in `batchedMeshSpike` (mesh entities with
      `merge: { group, mode: 'BATCHED' }`) and `?bmsBodies=kinematic` (kinematic bodies moved in
      `APP_PHYSICS_STEP`, on the separate and engine ways), the bench's cases, a `scenes.config.ts`
      entry, then `yarn sbp` (no `BatchedMesh` in the first download; the `merging` budget, 8 KiB,
      was 7.7 KiB before S1), `yarn verify:baselines` (the new `APP_RENDER_SYNC_ORDER` key and
      `MergeGroupMode` change the API baseline), `yarn verify:scenes --only batchedMeshSpike`, and
      the numbers recorded here.
+
+   **S6 results** (2026-11-11; the spike's machine and setup, §2's Results):
+   - **Built:** `?bmsWay=engine` (mesh entities with `merge: { group, mode: 'BATCHED' }` into a
+     group made with `perMemberCulling` from `?bmsCull`), `?bmsBodies=kinematic` (SEPARATE and
+     ENGINE: a kinematic ball per member, `?bmsMove`'s share moved per fixed step in
+     `APP_PHYSICS_STEP`; the scene is on the simulation lint's list), the probe reading the engine
+     group's batch and its sync bracket reaching past `MERGE_BATCH_SYNC`, the bench's `engine`,
+     `shadow: engine`, `move …: engine`, `inside: engine` and `kinematic move 100%: …` cases, and
+     `scenes.config.ts`' `batchedMeshSpike` variants (`separate`, `batched`, `engine`,
+     `kinematicSeparate`, `kinematicEngine`).
+   - **Scene runner** (WebGPU, all four configurations): every variant loads without errors (17
+     new, then `@separate` again: its first run met `yarn sbp`'s production gather). The
+     snapshots: `@engine` against `@batched` and `@kinematicEngine` against `@kinematicSeparate`
+     are pixel-identical, `@engine` against `@separate` 0.001 % of pixels over 8/255; the kinematic
+     ones differ from the still ones (the members moved). The kinematic probe hash is the same for
+     both ways and all three physics targets (`2fd77609`).
+   - **Draws:** the engine's batch is 23 draws on WebGPU (20 merged runs) and 4 on WebGL2, as the
+     hand-built one, in every case (shadow 45 and 7, inside 21 and 2, 483 of 2 000 visible).
+   - **Kinematic** (every member a moving body; CPU frame, medians of 3 runs): separate 8.82 ms →
+     engine 4.98 ms on WebGPU (−44 %), 9.69 → 4.98 ms on WebGL2 (−49 %); render submit 5.25 → 0.49
+     and 6.07 → 0.43 ms.
+   - **Engine against the hand-built batch** (still, the field in view; CPU frame): WebGL2 1.31
+     against 0.87 ms (nocull 1.09 / 0.80, shadow 1.38 / 0.96, move 100 % 2.15 / 1.41, inside 2.27 /
+     1.31), tight spreads; WebGPU 2.96 against 0.53 ms, its spread 0.94-3.16 (one page measured 1.07
+     ms, then about 3 ms: §2's noise, a light load's clock). A CPU profile on WebGL2 (one page each,
+     600 frames: 0.85 against 0.54 ms) puts the engine's extra 0.31 ms in three's
+     `updateMatrixWorld` and `multiplyMatrices` over the 2 000 hidden member meshes (0.22 ms: the
+     root scene's update forces every child's world matrix, so turning a member's
+     `matrixAutoUpdate` off changes nothing, A/B measured), `mergeBatchSyncSystem` (0.08 ms: the
+     version checks) and `object3DSyncSystem` (0.05 ms). The separate way pays the first and the
+     last too.
+   - **`yarn sbp` fails three budgets:** `BatchedMesh` is in the first download (three +4.6 kB
+     gzip, the main chunk 382.6 → 388.6 kB, initial 392.8 kB against 387 kB). Its class is a
+     statement of `three.core.js`, one module, and Rollup keeps a module's kept statements in that
+     module's chunk: the `import()` of `MergeBatch.ts` (its own 2.7 kB lazy chunk) keeps
+     `BatchedMesh` alive but can't move it out of three's chunk, so §1's "loads it behind
+     `import()`" doesn't hold for three's class. And `_engine/features/merging` is 8.9 kB against
+     its 8 KiB budget (22.3 → 26.0 kB minified, 10 → 12 modules: the mode, its refusals, `AUTO`'s
+     batched key, the build dispatch in `MergeBuild.ts`, `MergeBatchFront.ts` 0.6 kB).
+   - **`yarn verify:baselines --no-build`:** the same bundle growth, and the API changes S1-S5
+     made (the new modules' `@internal` exports, `WORKER_BUILD_VERTICES` moved to `MergeBuild.ts`,
+     `MergeGroupMode` on `aekasha/merging`); no debug code in the production build. Not recorded
+     (`--update`) until the budget decisions.
+   - **Decided (2026-11-11):** (1) `BatchedMesh` in the first download is accepted: the initial
+     budget 387 → 393 KiB, `assets/index.js` 383 → 389 KiB (`sbp.config.ts`), and the fix (three
+     resolved to its sources for the build) is its own issue,
+     `docs/issues/three-classes-ship-with-their-chunk.md`; (2) the `merging` budget 8 → 9 KiB;
+     (3) exit parity accepted: the engine's +0.3 ms at 2 000 still members is under the 1 ms the
+     runs' noise allows, and separate meshes pay its largest part too. Taking a batched member's
+     own mesh out of the scene graph while it's batched (the 0.22 ms) is a Phase 2 candidate
+     (below). `yarn sbp` passes, and `yarn verify:baselines --update` recorded the bundle (the
+     embeds' 16 B: S3's kernel change), API and docs baselines.
 
    **Decisions while building** (2026-11-11):
    - Exit parity is measured `ENGINE` against the spike's hand-built `BATCHED` way, the same field,
@@ -308,7 +364,11 @@ moving members.
    `MergeBatch.test.ts`, `MergingSchema.test.ts`, `ECSCoreSystems.test.ts`,
    `debug/_dbg__MergingBatched.test.ts`.
 
-2. LOD per member (with p348). 3. p309's decal pools on batched groups (if p309 has shipped, port;
+2. LOD per member (with p348). Candidate from Phase 1's exit: a batched member's own mesh out of
+   the scene graph while it's batched (three's world matrix update walks the hidden member meshes:
+   0.22 ms at 2 000 on WebGL2), back in on a leave and in "Show unmerged"; measure with the bench's
+   `engine` case against `batch grouped none`. Per-member LOD adds a second instance per fading
+   member, so the members' cost matters more there. 3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
 

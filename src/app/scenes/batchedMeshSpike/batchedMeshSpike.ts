@@ -7,6 +7,7 @@ import {
   createMeshEntity,
   createSceneAppLooper,
   createSeededRandom,
+  existsOrThrow,
   getECSWorld,
   getEntityIdByAppId,
   getGeometry,
@@ -20,6 +21,7 @@ import {
 import type { ECSWorld } from 'aekasha';
 import { loadDebugModuleAsync } from 'aekasha/debug';
 import { addToMergeGroup, createMergeGroup, updateMergeMember } from 'aekasha/merging';
+import { createPhysicsEntity } from 'aekasha/physics';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 
 // p375 Phase 0's spike (docs/plans/p375_batched-mesh-batches.md §2): the same field of members,
@@ -28,9 +30,15 @@ import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 // - BAKED: the same mesh entities in one p372 merge group (`updateMergeMember` when one moves);
 // - BATCHED: one `BatchedMesh`, each member an entity with only a Transform, its matrix written by
 //   this scene's sync system in `APP_RENDER_SYNC` when its Transform's version changed (what
-//   p375 §3's sync would do, `MAP` storage only: the spike warns in `TYPED_ARRAY` mode).
+//   p375 §3's sync would do, `MAP` storage only: the spike warns in `TYPED_ARRAY` mode);
+// - ENGINE (p375 Phase 1's exit, D2): the mesh entities of SEPARATE in one engine batched merge
+//   group (`merge: { group, mode: 'BATCHED' }`), which groups them by geometry and draws unsorted
+//   whatever `?bmsOrder` and `?bmsSort` say (`?bmsCull` is its `perMemberCulling`).
 // The members are placed the same way in every case (seeded); `?bmsOrder=grouped` only changes
 // the order they're added in, so a batch's instance ids run by geometry (r187's merged draws).
+// `?bmsBodies=kinematic` (SEPARATE and ENGINE) gives each member a kinematic body (a ball),
+// moved in `APP_PHYSICS_STEP` by `?bmsMove`'s share per step: deterministic, so the scene
+// runner's probe and snapshot cover it.
 // The measuring (`_dbg__batchedMeshSpike.ts`) and the page calls (`churn…`) are the debug module's.
 
 export const BMS_SCENE_ID = 'batchedMeshSpike';
@@ -42,7 +50,9 @@ const GROUP_ID = 'bmsGroup';
 const SPACING = 3;
 const JITTER = 0.8;
 
-export type BmsWay = 'SEPARATE' | 'BAKED' | 'BATCHED';
+export type BmsWay = 'SEPARATE' | 'BAKED' | 'BATCHED' | 'ENGINE';
+/** The members' bodies: none, or a kinematic one each (SEPARATE and ENGINE) */
+export type BmsBodies = 'NONE' | 'KINEMATIC';
 /** The order the members are added in: the grid's (geometries interleaved) or by geometry */
 export type BmsOrder = 'RANDOM' | 'GROUPED';
 /** A batch's sort: three's depth sort (the default), none, or by geometry range then depth */
@@ -62,6 +72,7 @@ export const bmsSettings = {
   /** The share of members moved each frame (0 to 1), a block of them round-robin */
   move: 0,
   shadow: false,
+  bodies: 'NONE' as BmsBodies,
   camera: 'OVER' as BmsCamera,
   /** A batch's members coloured by geometry (`setColorAt`) */
   colors: false,
@@ -106,7 +117,8 @@ const pick = <T extends string>(value: string | null | undefined, options: reado
 const readUrlOverrides = () => {
   const params = new URLSearchParams(window.location.search);
   const s = bmsSettings;
-  s.way = pick(params.get('bmsWay'), ['SEPARATE', 'BAKED', 'BATCHED'] as const) ?? 'SEPARATE';
+  s.way =
+    pick(params.get('bmsWay'), ['SEPARATE', 'BAKED', 'BATCHED', 'ENGINE'] as const) ?? 'SEPARATE';
   s.order = pick(params.get('bmsOrder'), ['RANDOM', 'GROUPED'] as const) ?? 'RANDOM';
   s.sort = pick(params.get('bmsSort'), ['DEPTH', 'NONE', 'RANGE'] as const) ?? 'DEPTH';
   s.camera = pick(params.get('bmsCamera'), ['OVER', 'INSIDE'] as const) ?? 'OVER';
@@ -119,6 +131,11 @@ const readUrlOverrides = () => {
   s.colors = params.get('bmsColors') === 'true';
   const hidden = Number(params.get('bmsHidden'));
   s.hidden = hidden > 1 ? Math.round(hidden) : 0;
+  s.bodies = pick(params.get('bmsBodies'), ['NONE', 'KINEMATIC'] as const) ?? 'NONE';
+  if (s.bodies !== 'NONE' && s.way !== 'SEPARATE' && s.way !== 'ENGINE') {
+    lwarn(`BatchedMesh spike: ?bmsBodies is for the separate and engine ways, not ${s.way}.`);
+    s.bodies = 'NONE';
+  }
 };
 
 /** A lathe's profile: a vase */
@@ -191,10 +208,20 @@ const _quaternion = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
 const _matrix = new THREE.Matrix4();
 
-/** SEPARATE and BAKED: a mesh entity per member (BAKED: all in one merge group) */
+/** SEPARATE, BAKED and ENGINE: a mesh entity per member (BAKED: all in one merge group; ENGINE:
+ * each joining one batched group by its `merge`, at the scene step) */
 const createMeshMembers = (members: BmsMember[], material: THREE.Material) => {
-  const { shadow, way } = bmsSettings;
+  const { shadow, way, cull } = bmsSettings;
   const geometries = bmsState.geometries;
+  if (way === 'ENGINE') {
+    createMergeGroup({
+      id: GROUP_ID,
+      mode: 'BATCHED',
+      perMemberCulling: cull,
+      castShadow: shadow,
+      receiveShadow: shadow,
+    });
+  }
   for (const m of members) {
     m.entityId = createMeshEntity({
       geo: geometries[m.geometry],
@@ -204,6 +231,7 @@ const createMeshMembers = (members: BmsMember[], material: THREE.Material) => {
       scale: { x: m.scale, y: m.scale, z: m.scale },
       castShadow: shadow,
       receiveShadow: shadow,
+      ...(way === 'ENGINE' ? { merge: { group: GROUP_ID, mode: 'BATCHED' as const } } : {}),
     });
   }
   if (way === 'BAKED') {
@@ -350,6 +378,52 @@ const startMoving = (world: ECSWorld, members: BmsMember[]) => {
   }, BMS_SCENE_ID);
 };
 
+/** `?bmsBodies=kinematic`: a kinematic ball per member, at its place (plain data: the worker
+ * target clones it). Started before any await, so an ENGINE member waits for its body to join
+ * (merging keeps a mesh whose physics creation is pending queued). */
+const createKinematicBodiesAsync = (members: BmsMember[]) =>
+  Promise.all(
+    members.map((m) => {
+      _quaternion.setFromAxisAngle(UP, m.yaw);
+      return createPhysicsEntity({
+        colliders: { type: 'BALL', radius: 0.5 * m.scale },
+        body: {
+          rigidType: 'POS_BASED',
+          translation: { x: m.base.x, y: m.base.y, z: m.base.z },
+          rotation: { x: _quaternion.x, y: _quaternion.y, z: _quaternion.z, w: _quaternion.w },
+        },
+        target: m.entityId,
+      });
+    })
+  );
+
+const BODY_MOVER_ID = 'bmsBodyMover';
+
+/** `?bmsBodies=kinematic` with `?bmsMove=`: a block of bodies each fixed step, round-robin, each
+ * swaying up to half a metre along x by the steps' time (deterministic: step time, no frame time) */
+const startMovingBodies = (world: ECSWorld, members: BmsMember[]) => {
+  const perStep = Math.max(1, Math.round(members.length * bmsSettings.move));
+  const bodies = members.map((m) =>
+    existsOrThrow(world.getRigidBody(m.entityId), `BatchedMesh spike: no body for ${m.entityId}.`)
+  );
+  const target = { x: 0, y: 0, z: 0 };
+  let cursor = 0;
+  let time = 0;
+  world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, BODY_MOVER_ID, (_world, dt) => {
+    time += dt;
+    for (let n = 0; n < perStep; n++) {
+      const m = members[cursor];
+      const body = bodies[cursor];
+      cursor = (cursor + 1) % members.length;
+      target.x = m.base.x + Math.sin(time * 2 + cursor) * 0.5;
+      target.y = m.base.y;
+      target.z = m.base.z;
+      body.setNextKinematicTranslation(target);
+    }
+  });
+  onBmsExit(() => world.removeSystem(BODY_MOVER_ID));
+};
+
 /** Over the field, or in its middle looking along +x */
 const placeCamera = (world: ECSWorld) => {
   const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
@@ -419,7 +493,12 @@ export const scene = async () => {
   bmsState.members = members;
   if (bmsSettings.way === 'BATCHED') createBatchMembers(world, members, material);
   else createMeshMembers(members, material);
-  if (bmsSettings.move > 0) startMoving(world, members);
+  if (bmsSettings.bodies === 'KINEMATIC') {
+    await createKinematicBodiesAsync(members);
+    if (bmsSettings.move > 0) startMovingBodies(world, members);
+  } else if (bmsSettings.move > 0) {
+    startMoving(world, members);
+  }
 
   // In prod test mode too, as instanceStress's probe
   const probe = await loadDebugModuleAsync(

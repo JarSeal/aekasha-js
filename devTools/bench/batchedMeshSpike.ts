@@ -1,6 +1,7 @@
 /**
  * p375 Phase 0's spike bench (docs/plans/p375_batched-mesh-batches.md §2): the `batchedMeshSpike`
- * scene's ways (separate meshes, a baked merge group, a `BatchedMesh`) in each case below, on
+ * scene's ways (separate meshes, a baked merge group, a hand-built `BatchedMesh`, and Phase 1's
+ * engine batched merge group: the `engine` and `kinematic` cases, its exit) in each case below, on
  * WebGPU and on WebGL2, both on the machine's GPU (WebGL2 through the renderer tab's persisted
  * "Force WebGL", so the debug env), printing a table per backend.
  *
@@ -42,6 +43,10 @@ type Case = { name: string; params: Record<string, string>; churn?: Churn; shot?
 
 const batched = (extra: Record<string, string> = {}) => ({ bmsWay: 'batched', ...extra });
 const grouped = { bmsOrder: 'grouped', bmsSort: 'none' };
+/** The engine's batched group: grouped by geometry and unsorted by itself */
+const engine = (extra: Record<string, string> = {}) => ({ bmsWay: 'engine', ...extra });
+/** Every member a kinematic body, all moved each fixed step */
+const kinematic = { bmsBodies: 'kinematic', bmsMove: '1' };
 
 /** The spike's cases, by item (§2) */
 const CASES: Case[] = [
@@ -53,6 +58,9 @@ const CASES: Case[] = [
   { name: 'batch random range', params: batched({ bmsSort: 'range' }) },
   { name: 'batch grouped none', params: batched(grouped) },
   { name: 'batch grouped none nocull', params: batched({ ...grouped, bmsCull: 'false' }) },
+  // Phase 1's exit: the engine's batch against the hand-built one above
+  { name: 'engine', params: engine() },
+  { name: 'engine nocull', params: engine({ bmsCull: 'false' }) },
   // Item 1 with the sun's shadow
   { name: 'shadow: separate', params: { bmsWay: 'separate', bmsShadow: 'true' } },
   { name: 'shadow: baked', params: { bmsWay: 'baked', bmsShadow: 'true' } },
@@ -63,6 +71,7 @@ const CASES: Case[] = [
     name: 'shadow: batch grouped none nocull',
     params: batched({ ...grouped, bmsCull: 'false', bmsShadow: 'true' }),
   },
+  { name: 'shadow: engine', params: engine({ bmsShadow: 'true' }) },
   // Item 3: members moving
   { name: 'move 10%: separate', params: { bmsWay: 'separate', bmsMove: '0.1' } },
   { name: 'move 10%: baked', params: { bmsWay: 'baked', bmsMove: '0.1' } },
@@ -70,6 +79,11 @@ const CASES: Case[] = [
   { name: 'move 100%: separate', params: { bmsWay: 'separate', bmsMove: '1' } },
   { name: 'move 100%: baked', params: { bmsWay: 'baked', bmsMove: '1' } },
   { name: 'move 100%: batch grouped none', params: batched({ ...grouped, bmsMove: '1' }) },
+  { name: 'move 10%: engine', params: engine({ bmsMove: '0.1' }) },
+  { name: 'move 100%: engine', params: engine({ bmsMove: '1' }) },
+  // Phase 1's exit: every member a moving kinematic body
+  { name: 'kinematic move 100%: separate', params: { bmsWay: 'separate', ...kinematic } },
+  { name: 'kinematic move 100%: engine', params: engine(kinematic) },
   // Item 5: most members out of view
   { name: 'inside: separate', params: { bmsWay: 'separate', bmsCamera: 'inside' } },
   { name: 'inside: baked', params: { bmsWay: 'baked', bmsCamera: 'inside' } },
@@ -82,6 +96,7 @@ const CASES: Case[] = [
     name: 'inside: batch random range',
     params: batched({ bmsSort: 'range', bmsCamera: 'inside' }),
   },
+  { name: 'inside: engine', params: engine({ bmsCamera: 'inside' }) },
   // Item 4: per-member colour and visibility (screenshots)
   {
     name: 'check: colours hidden',
