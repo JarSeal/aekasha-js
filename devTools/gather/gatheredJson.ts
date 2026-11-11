@@ -11,6 +11,7 @@ import {
   ImpostorAssetSchema,
   LightAssetSchema,
   MaterialAssetSchema,
+  MergeMaterialAssetSchema,
   PostFxAssetSchema,
   SkyBoxAssetSchema,
   TextureArrayAssetSchema,
@@ -30,6 +31,7 @@ export const GATHERED_SUFFIXES = {
   textureAtlas: '.textureAtlas.json',
   impostor: '.impostor.json',
   material: '.material.json',
+  mergeMaterial: '.mergeMaterial.json',
   mesh: '.mesh.json',
   importedAsset: '.importedAsset.json',
   skybox: '.skybox.json',
@@ -52,6 +54,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   textureAtlas: TextureAtlasAssetSchema,
   impostor: ImpostorAssetSchema,
   material: MaterialAssetSchema,
+  mergeMaterial: MergeMaterialAssetSchema,
   mesh: EngineMeshAssetSchema,
   importedAsset: ImportedAssetSchema,
   skybox: SkyBoxAssetSchema,
@@ -63,6 +66,7 @@ const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
   'textureArray',
   'textureAtlas',
   'impostor',
+  'mergeMaterial',
 ]);
 
 /** A file's gathered type by its name, or undefined when it isn't one */

@@ -103,6 +103,7 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
           geometries: reg.geometries,
           textures: { ...reg.textures, ...reg.textureArrays, ...reg.atlasSlots },
           materials: reg.materials,
+          mergeMaterials: reg.mergeMaterials,
           meshes: reg.meshes,
           importedAssets: reg.importedAssets,
           skyboxes: reg.skyboxes,

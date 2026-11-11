@@ -394,3 +394,61 @@ describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
     expect(out.__streaming).toBeUndefined();
   });
 });
+
+describe('merge material palettes (p374 D1, D2)', () => {
+  const standard = (id: string, params: Record<string, unknown> = {}) => ({
+    [`app/materials/${id}.material.json`]: { id, type: 'STANDARD', params },
+  });
+  const palette = (fields: Record<string, unknown> = {}) => ({
+    'app/palettes/stones.mergeMaterial.json': {
+      materials: ['stoneA', 'stoneB'],
+      slots: { map: { size: [64, 64] } },
+      ...fields,
+    },
+  });
+  const logErrors = () => vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  it('registers a palette in the materials’ id space, its id from the file name', () => {
+    const { isGathered, output } = gather({
+      ...scene('a'),
+      ...standard('stoneA', { color: '#808080', roughness: 0.9 }),
+      ...standard('stoneB', { color: '#a0a0a0', roughness: 0.4, metalness: 0.2 }),
+      ...palette(),
+    });
+    expect(isGathered).toBe(true);
+    const palettes = (output?.json as Record<string, unknown>).mergeMaterials;
+    expect(palettes).toEqual({
+      stones: expect.objectContaining({
+        id: 'stones',
+        materials: ['stoneA', 'stoneB'],
+        __sourcePath: 'src/app/palettes/stones.mergeMaterial.json',
+      }),
+    });
+  });
+
+  it('fails on a class violation, naming the material and the property', () => {
+    const errorSpy = logErrors();
+    const { isGathered } = gather({
+      ...scene('a'),
+      ...standard('stoneA', { side: 2 }),
+      ...standard('stoneB', { bumpMap: 'bumps' }),
+      ...palette(),
+    });
+    expect(isGathered).toBe(false);
+    const logged = errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('params.side differs: 2 in "stoneA"; 0 in "stoneB"');
+    expect(logged).toContain('materials[1] "stoneB"');
+    expect(logged).toContain('params.bumpMap: a merge material has no bumpMap');
+  });
+
+  it('fails on a palette id a material has', () => {
+    const files = {
+      ...scene('a'),
+      ...standard('stoneA'),
+      ...standard('stoneB'),
+      ...standard('stones'),
+      ...palette(),
+    };
+    expect(gather(files).isGathered).toBe(false);
+  });
+});

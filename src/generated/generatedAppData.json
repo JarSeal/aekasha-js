@@ -27504,6 +27504,7 @@
       "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
     }
   },
+  "mergeMaterials": {},
   "meshes": {
     "lodShowcaseHandMade": {
       "props": {

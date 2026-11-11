@@ -200,6 +200,51 @@ Schema, class validation, generated array jobs, `orm` packing, neutral layers. *
 `yarn assets` builds `ruinsPalette`'s three arrays; a class violation fails the gather with the
 material and property named.
 
+Sections (each stopped for review):
+
+1. **Schema and class (D1).** `MergeMaterialAssetSchema` (`features/merging/MergeMaterialSchema.ts`,
+   on `aekasha/schemas`), the `*.mergeMaterial.json` suffix in the gather (its JSON Schema in
+   `.schemas/`), the class check over the member material JSONs
+   (`devTools/assetPipeline/mergeMaterialClass.ts`), and the palette registered in pass 1 after the
+   materials (`devTools/gather/mergeMaterials.ts`): a violation fails the gather naming the
+   material and the property.
+2. **Array jobs (D2).** Each slot one array job (`ArraySource` with its own output name): a
+   member's map as its layer, a neutral layer (a pack of constants at the slot size) for a member
+   without one, `orm` packed from separate AO, roughness and metalness maps; the pipeline reads
+   the palettes and materials (`readAssetJsons`), the dev plugin rebuilds on a member's change,
+   the gather registers each slot as the texture `<paletteId>.<slot>` with its `__url`s and writes
+   the per-entry flags into the palette's generated entry. Members' textures must agree on their
+   sampler state (wrap, filters) per slot: an array has one sampler.
+3. **The test palette.** `ruinsPalette` and its four materials in `src/app/scenes/mergeMaterials/`
+   (sources from a fixture generator, plus the MetalRust set's separate maps for the `orm` pack),
+   `yarn assets` building its three arrays, a class violation checked by hand and in a test.
+
+Decisions (2026-11-11, at the phase's start):
+
+- **The asset.** `slots` takes four fixed names, the merge material's: `map`, `normalMap`, `orm`
+  (`from`: a subset of `aoMap`, `roughnessMap`, `metalnessMap`, default all three) and
+  `emissiveMap`. Each needs its `size`; `missing` is `NEUTRAL` (default) or `SKIP`. `materials`
+  is 2-256 unique `*.material.json` ids: 256 is both backends' array layer floor (WebGPU's default
+  `maxTextureArrayLayers`, WebGL2's minimum `MAX_ARRAY_TEXTURE_LAYERS`). `optimize` is an array's
+  without `slot` (each slot's pipeline slot is implied: `baseColor`, `normal`, `orm`, `emissive`).
+  `"assembly": "RUNTIME"` (D2) isn't in Phase 1.
+- **Ids.** A palette's id is in the materials' id space (Phase 2 registers its merge material),
+  its slot arrays in the textures' (`<paletteId>.<slot>`, like an atlas slot). The dev data gets a
+  `mergeMaterials` section; nothing ships to production until a scene uses a palette (Phase 3).
+- **The class (D1), from each member's own JSON** (a scene's save entry over a member's `params`
+  isn't read: warned). Errors: an id that isn't a material JSON's, a TSL material (open question
+  1), a type other than `STANDARD` (`PHYSICAL` named for its features), `transparent`, a map with
+  no slot (or left out of `orm`'s `from`) and a map the merge material doesn't have (`bumpMap`,
+  `alphaMap`, …), and any other parameter the members don't agree on (`side`, `alphaTest`,
+  `flatShading`, `envMapIntensity`, …; a missing one counts as three's default). The table's
+  parameters (colour, opacity, emissive and its intensity, roughness, metalness, normal scale, AO
+  intensity) may differ. Warnings: a slot no member uses (no array is built), and a feature (a
+  slot, emissive) only one member uses.
+- **The UV transform** isn't in a material or texture JSON (`TexOpts` has no offset or repeat), so
+  every JSON member's is the identity and Phase 1 has nothing to validate: the check that a
+  member's maps share one moves to Phase 2 (code-made materials).
+- **Tangents** (D1's vertex requirements) are the geometry's: Phase 3, when members join a group.
+
 ### Phase 2 — Runtime material and table (D3)
 
 **Exit:** a 4-material palette renders identically to the 4 materials (screenshot diff within

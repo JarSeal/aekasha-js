@@ -8,6 +8,7 @@ import type {
   ImpostorAsset,
   LightAsset,
   MaterialAsset,
+  MergeMaterialAsset,
   PostFxAsset,
   SkyBoxAsset,
   TextureArrayAsset,
@@ -65,6 +66,8 @@ export type Registries = {
   atlasSlotIds: Record<string, string[]>;
   impostors: Record<string, ImpostorAsset>;
   materials: Record<string, MaterialAsset>;
+  /** Merge material palettes (p374), in the materials' id space */
+  mergeMaterials: Record<string, MergeMaterialAsset>;
   meshes: Record<string, EngineMeshAsset>;
   importedAssets: Record<string, ImportedAsset>;
   skyboxes: Record<string, SkyBoxAsset>;
@@ -103,6 +106,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     atlasSlotIds: {},
     impostors: {},
     materials: {},
+    mergeMaterials: {},
     meshes: {},
     importedAssets: {},
     skyboxes: {},
@@ -171,6 +175,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   textureAtlas: 'texture atlas',
   impostor: 'impostor',
   material: 'material',
+  mergeMaterial: 'merge material',
   mesh: 'mesh',
   importedAsset: 'imported asset',
   skybox: 'skybox',
