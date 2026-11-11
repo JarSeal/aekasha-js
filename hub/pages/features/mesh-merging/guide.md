@@ -303,7 +303,7 @@ and written in place when you let go.
 - A group's level of detail: members with a `LOD` are refused.
 
 See the plans, [merge groups](repo:docs/plans/_DONE_p372_mesh-merge-groups.md) and
-[merge debugging and member editing](repo:docs/plans/p373_merge-debug-and-member-editing.md),
+[merge debugging and member editing](repo:docs/plans/_DONE_p373_merge-debug-and-member-editing.md),
 and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs

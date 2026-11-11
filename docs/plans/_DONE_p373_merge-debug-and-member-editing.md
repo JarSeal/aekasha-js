@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: implemented (Phases 1-4)
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
@@ -576,7 +576,7 @@ As built, section 3 (2026-11-11):
   position), so a largeWorld member's Y reads `0.2160874`, cut by the box; no step or precision
   is set, so the arrows step 1 m.
 
-### Phase 4 — Docs and versioning
+### Phase 4 — Docs and versioning — done
 
 1. `features/merging/CLAUDE.md` (the tab, windows, edit sessions), the Hub's Mesh merging page (a
    debugging section with a shot of the tab) and the debug suite page's list of drawer tabs;
@@ -603,6 +603,19 @@ As built, section 1 (2026-11-11):
   (553 KiB gzip, over 450) stands.
 - Seen: exampleMerging's tab reads 281 members, its pages say 282 pieces (p372's text, not
   changed here).
+
+As built, section 2 (2026-11-11):
+
+- Engine and project 6.5.0 → 6.6.0 (Sunset kept: a minor); toolkit and app unchanged (the branch
+  touches neither). `CHANGELOG.md`'s entry `2026-11-11 — p373_merge-debug-and-member-editing`
+  (Engine, Project); p372's entry's note that p373 would extend it now points at this one.
+  `yarn checkVersions --against main` passes.
+- The plan is `_DONE_`: the paths in the merging code's file headers, its `CLAUDE.md` and the Hub
+  page follow; `_DONE_p372`'s `Blocks`. p370: its status (p371-p373 implemented), `Blocks`, the
+  roadmap's row 1.3 and §14 (p372 merged on its own, PR #82, engine 6.5.0; p373 on its own branch,
+  engine 6.6.0).
+- `yarn hub:build` (the homepage's What's new reads 6.6.0) and `yarn test` (3091) pass.
+- The PR: `p373_merge-debug-and-member-editing` into `main` (p370 §14), opened when asked.
 
 ## 4. Versioning
 

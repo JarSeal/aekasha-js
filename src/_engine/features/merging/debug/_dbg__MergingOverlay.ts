@@ -1,4 +1,4 @@
-// The merge groups' highlight (docs/plans/p373_merge-debug-and-member-editing.md D3): a wire box
+// The merge groups' highlight (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D3): a wire box
 // around each member of the highlighted groups, in the group's colour, so a merged mesh shows what
 // it's made of. A box is the member's local bounding box oriented by the matrix it's drawn with
 // (`_bakedMatrix` once built: where the group draws it; its own world matrix while it waits or is in

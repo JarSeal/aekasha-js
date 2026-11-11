@@ -1,4 +1,4 @@
-// The member window's pose fields (docs/plans/p373_merge-debug-and-member-editing.md D2, D4): the
+// The member window's pose fields (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D2, D4): the
 // position, rotation (degrees) and scale of a merge member's `TRANSFORM`, editable through an edit
 // session. The first write of a gesture opens it (the member drawn on its own, its range
 // collapsed), every write moves the member (`setTransform`, so a body follows; the scale on the

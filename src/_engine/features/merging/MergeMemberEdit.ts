@@ -1,4 +1,4 @@
-// A merge member's edit sessions and face picking (docs/plans/p373_merge-debug-and-member-editing.md
+// A merge member's edit sessions and face picking (docs/plans/_DONE_p373_merge-debug-and-member-editing.md
 // D4). A session takes a member out of its group's drawing while it's moved: its range collapses
 // (as a disabled member's, no waste) and its own mesh is drawn, following its `TRANSFORM` with no
 // per-frame cost in the group; the end writes its range once for where it is then (the in-place

@@ -1,4 +1,4 @@
-// A merge group shown unmerged (docs/plans/p373_merge-debug-and-member-editing.md D3): the
+// A merge group shown unmerged (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D3): the
 // Merging tab's A/B of image and draws. The group's mesh is held from drawing (`TAG_DRAW_HELD`,
 // the kernel's visibility reconcile) and its built members lose `TAG_MERGED`, so each is drawn by
 // its own mesh, with its own culling, while staying in the group: its range, part and bookkeeping

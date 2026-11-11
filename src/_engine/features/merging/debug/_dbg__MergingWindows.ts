@@ -1,4 +1,4 @@
-// The Merging tab's windows (docs/plans/p373_merge-debug-and-member-editing.md D2): a merge group's
+// The Merging tab's windows (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D2): a merge group's
 // (its kind, settings and figures, its members' highlight and the unmerged A/B (D3), its members as
 // a list whose rows open their windows, Rebuild and Dissolve) and a member's (its group with a link
 // to the group's window, its state, assets and part range, its pose, editable through an edit

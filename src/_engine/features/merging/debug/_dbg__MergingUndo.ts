@@ -1,4 +1,4 @@
-// The Merging windows' undo / redo (docs/plans/p373_merge-debug-and-member-editing.md D2, D4): a
+// The Merging windows' undo / redo (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D2, D4): a
 // dissolve (undone by making the group again with the same members), a member's removal (undone
 // by adding it back) and a member's move (an edit session's poses, applied through
 // `updateMergeMember`). Entries are per scene, and their entities are named by entity id: members

@@ -1,4 +1,4 @@
-// What the Merging tab and its windows read of the merge groups (docs/plans/p373_merge-debug-and-member-editing.md
+// What the Merging tab and its windows read of the merge groups (docs/plans/_DONE_p373_merge-debug-and-member-editing.md
 // D1, D2): names, a group's vertices and cell, the summary's figures (counts, draws per pass,
 // waste), the build and update rates, and the refusals still standing. Pure reads of the
 // components and of the merging code's debug figures (MergeState.ts' `getMergeDebugStats`).

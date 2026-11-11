@@ -39,7 +39,7 @@ import {
   toggleMergeGroupWindow,
 } from './_dbg__MergingWindows';
 
-// The Merging tab (docs/plans/p373_merge-debug-and-member-editing.md D1): the default world's
+// The Merging tab (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D1): the default world's
 // merge groups at a glance (the groups, members and vertices, the draws per pass merged against
 // unmerged, the waste, the builds and in-place updates of the last second, the last build's time),
 // a row per group opening its window (_dbg__MergingWindows.ts), and the entities whose `merge` was

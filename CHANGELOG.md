@@ -4,9 +4,42 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-11 — p373_merge-debug-and-member-editing
+
+Merge debugging and member editing (p373, the third child of the merging epic p370): in debug mode, a Merging drawer tab lists the merge groups and what they save, a group's and a member's window rebuild, dissolve, remove and move them with undo, an overlay outlines a group's members and a group can be drawn unmerged for an A/B of its image and draw count. Edit sessions, on `aekasha/merging`, move a member over many frames without a write per frame (drawn on its own meanwhile, written back in place at the end), and a raycast hit on a group resolves to its member. A production build carries none of the debugger. Nothing breaks.
+
+### Engine 6.6.0 (Sunset)
+
+**Added**
+
+- Edit sessions: `beginMergeMemberEdit(entityId, world?)` collapses the member's range in its group (in place, no rebuild) and draws its own mesh, which follows its `TRANSFORM`; `endMergeMemberEdit` writes the range where the member is now, draws it merged again and moves its physics body there (a fixed body doesn't follow its mesh); `cancelMergeMemberEdit` puts back the pose at the begin and ends; `isMergeMemberInEdit`. The session is the member's `MERGE_MEMBER._editPose` (`MergeMemberEditPose`), so a removed or deleted member's ends with it; a scene exit cancels the open ones, and a group rebuilt meanwhile keeps the member on its own until the end. The three session functions throw without `merging()`.
+- `getMergeMemberAtFace(groupEntityId, faceIndex, world?)`: the member a raycast's face on a group's mesh belongs to (a binary search of the part table, no allocation); undefined for a member removed since the build or an entity that isn't a built group.
+- The Merging drawer tab (`mergingControls`, last in `DEFAULT_DEBUG_DRAWER_TAB_ORDER`; the built-in `merge` icon): a summary (groups, members, merged and wasted vertices, each pass's draws now and unmerged, builds and in-place updates in the last second, the last build, the refusals), the group list and the refused entities with their reasons. In every scene of an app that lists `merging()`.
+- The group window (state, settings, members, vertices, wasted vertices; Rebuild, which compacts, and Dissolve; its members' rows open their windows) and the member window ("Merged into" its group's window, its state, geometry, material and part, its position, rotation and scale as fields that move it in an edit session, "Remove from group"). Dissolve, remove and each move are undoable within the scene visit they were made in. The profiler's Objects tab opens both, and a group entity's manager links the tab.
+- The highlight: each highlighted group's members outlined in view, in a colour per group that's the same on every visit, from the tab ("Highlight all groups", a row's toggle) or the group window; capped at 1 024 boxes a colour, the tab saying how many weren't drawn. It draws with `lines()`, and without it logs once.
+- Show unmerged (a group's row or window): the group's mesh hidden and its members drawn on their own, their own culling back, until it's turned off or the scene exits.
+
+**Changed**
+
+- A merge build leaves a member in an edit session drawn on its own (collapsed in the new mesh), and enabling a member doesn't restore its range during a session. The debug env's moved-member check skips a member in a session.
+- The app's first download: `merging()` is 7.2 kB gzip (7.0 kB in 6.5.0: the session guards and the debug figures' calls, which fold away), its budget 8 KiB (from 7). `MergeMemberEdit.ts` ships only once an app calls a session function.
+
+### Project
+
+**Added**
+
+- The Hub's Mesh merging page: "Moving a member over many frames", "Which member a ray hit" and a Debugging section with a screenshot of the tab on the merging example. `src/_engine/features/merging/CLAUDE.md`'s Merge debugging section.
+- The scene runner's `debugger` configuration shoots the Merging tab in every scene with a `debugger` entry, and largeWorld's group and member windows (`scenes.config.ts`).
+
+**Changed**
+
+- The Hub's debug suite page (the drawer's tabs and edit windows) and the merging example page; the root and `debug/` `CLAUDE.md`, `devTools/verify/CLAUDE.md` and the readme (mesh merging's debugging and edit sessions, the drawer's tab list).
+- The bundle, API and docs baselines (the five functions and `MergeMemberEditPose` on `aekasha/merging`; merging 65 → 81 documented exports, 100 %; no debug code in any build).
+- The plans: p373 is `_DONE_`; the p370 epic's status, roadmap and Branches and PRs (p372 merged on its own, p373 on its own branch) follow it.
+
 ## 2026-11-10 — p372_mesh-merge-groups
 
-Mesh merge groups (p372, the second child of the merging epic p370): the `merging()` feature, the twelfth, on `aekasha/merging`. Static meshes that share a material are drawn as one merged mesh per group, in the main pass and in every shadow pass, while each piece stays an entity with its own transform, physics body and data. A mesh joins a named group or `AUTO`, which groups meshes by material, attributes, shadow flags, layers and a cell of the world. A scene's groups are built during its load, so its first frame is already merged and the pieces' own geometry is never uploaded. A merged piece can still be moved, disabled or removed: only its range in the merged mesh is rewritten. In `largeWorld`, 409 ruin pieces and props in 28 groups take the main camera's draws from 381 to 38 per pass and the CPU frame time down by 30-37 %. Nothing breaks. (p373, the groups' debug tools and member editing, shares this branch and extends this entry.)
+Mesh merge groups (p372, the second child of the merging epic p370): the `merging()` feature, the twelfth, on `aekasha/merging`. Static meshes that share a material are drawn as one merged mesh per group, in the main pass and in every shadow pass, while each piece stays an entity with its own transform, physics body and data. A mesh joins a named group or `AUTO`, which groups meshes by material, attributes, shadow flags, layers and a cell of the world. A scene's groups are built during its load, so its first frame is already merged and the pieces' own geometry is never uploaded. A merged piece can still be moved, disabled or removed: only its range in the merged mesh is rewritten. In `largeWorld`, 409 ruin pieces and props in 28 groups take the main camera's draws from 381 to 38 per pass and the CPU frame time down by 30-37 %. Nothing breaks. (p373, the groups' debug tools and member editing, followed on its own branch: the entry above.)
 
 ### Engine 6.5.0 (Sunset)
 
