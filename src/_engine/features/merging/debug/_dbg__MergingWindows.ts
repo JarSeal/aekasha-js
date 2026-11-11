@@ -43,7 +43,10 @@ import {
   getGroupVertexCount,
   getMaterialLabel,
   getMergeBatchFigures,
+  getMemberColorText,
   getMergeEntityName,
+  getReserveText,
+  getSortedOrderText,
   isGroupDrawn,
   isMergeMemberBuilt,
   MERGING_TAB_ID,
@@ -269,17 +272,42 @@ const getBatchItems = (group: MergeGroupData, world: ECSWorld): PropertyGridItem
       "A level fade draws the outgoing level as a second instance until it ends; a cull fade dithers the member's own instance."
     ),
     live(
+      'Geometry slots',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        return `${formatCountOf(f.slots, 'slot')}: ${formatCount(f.geometries)} held, ${formatCount(f.freeSlots)} free; each reserves ${getReserveText(f.reserve)}`;
+      },
+      'A geometry no instance uses frees its slot, which the next geometry that fits takes; geometryReserve gives every slot that room, so a pool whose geometries come and go stops growing.'
+    ),
+    live(
       'Draw runs',
       () => {
         const f = figures();
         if (!f) return NOT_BUILT;
+        const sorted = getSortedOrderText(f.order);
+        if (sorted) {
+          const draws = f.isMultiDraw
+            ? 'one multi-draw (WebGL2)'
+            : `up to ${formatCountOf(f.draws, 'draw')}`;
+          return `transparent: ${sorted} each pass, ${draws}`;
+        }
         const runs = `${formatCount(f.runs)} (${formatCount(f.geometriesInUse)} geometries in use)`;
         if (f.order === 'RANGE_SORT')
           return `${runs}, drawn sorted by range: ${formatCountOf(f.draws, 'draw')}`;
         if (f.order === 'NONE') return `${runs}, one multi-draw (WebGL2)`;
         return `${runs}, ${formatCountOf(f.compactions, 'compaction')}`;
       },
-      "A run is a geometry's instances in a row (in id order): one draw on WebGPU. Past twice the geometries in use, the batch compacts its ids; one with LOD members sorts each pass by geometry range instead, and WebGL2 draws it in one multi-draw."
+      "A run is a geometry's instances in a row (in id order): one draw on WebGPU. Past twice the geometries in use, the batch compacts its ids; one with LOD members sorts each pass by geometry range instead, and WebGL2 draws it in one multi-draw. A transparent batch is sorted each pass (its group's transparentOrder), a geometry's instances one draw only where they're adjacent."
+    ),
+    live(
+      'Colours',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        return f.colored ? `${formatCountOf(f.colored, 'member')} with a colour` : 'none set';
+      },
+      "setMergeMemberColor: a colour and opacity multiplied into the material for one member (its instance's colour)."
     ),
     live('Per-member culling', () => {
       const f = figures();
@@ -455,6 +483,14 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
             () => getMemberLodText(entityId, world),
             "A level fade draws the outgoing level as a second instance of the batch; the LOD tab's window has the switch distances."
           ),
+        ]
+      : []),
+    ...(joined && isBatchedGroup(joined)
+      ? [
+          live('Colour', () => {
+            const current = member();
+            return current ? getMemberColorText(current) : 'none (not in a group)';
+          }),
         ]
       : []),
     live('Palette index', () => {

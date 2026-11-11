@@ -21,6 +21,7 @@ import {
   getMergeBatchFigures,
   getMergeEntityName,
   getMergeSummary,
+  getSortedOrderText,
   getStandingRefusals,
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
@@ -113,15 +114,18 @@ const getGroupBadge = (group: MergeGroupData) => {
 };
 
 /** A group row's figures: its members and vertices; a built batched group's members, visible
- * members, its draws by its order (geometry runs and compactions, draws sorted by range, or one
- * multi-draw), and its LOD fades while there are some. */
+ * members, its draws by its order (geometry runs and compactions, draws sorted by range, a
+ * transparent batch's draws at most and its order, or one multi-draw), and its LOD fades while
+ * there are some. */
 const getGroupRowFigures = (groupEntityId: number, group: MergeGroupData, world: ECSWorld) => {
   const members = formatCountOf(group.members.length, 'member');
   const batch = getMergeBatchFigures(group, world);
   if (batch) {
     const fading = batch.levelFades + batch.cullFades;
-    const order =
-      batch.order === 'COMPACT'
+    const sorted = getSortedOrderText(batch.order);
+    const order = sorted
+      ? `${batch.isMultiDraw ? 'one multi-draw' : `up to ${formatCountOf(batch.draws, 'draw')}`} ${sorted}`
+      : batch.order === 'COMPACT'
         ? `${formatCountOf(batch.runs, 'run')}, ${formatCountOf(batch.compactions, 'compaction')}`
         : batch.order === 'RANGE_SORT'
           ? `${formatCountOf(batch.draws, 'draw')} sorted by range`

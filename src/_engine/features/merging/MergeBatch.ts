@@ -143,6 +143,8 @@ export type BatchState = {
    * turned `COMPACT` into `RANGE_SORT` for good). */
   order: BatchOrder;
   hasLodMembers: boolean;
+  /** Drawn by a multi-draw backend (WebGL2): one draw in any order. */
+  isMultiDraw: boolean;
   /** The run count's per-geometry marks, and the count's stamp. */
   seen: number[];
   countStamp: number;
@@ -542,6 +544,7 @@ const createBatch = (
     compactions: 0,
     order: 'NONE',
     hasLodMembers: false,
+    isMultiDraw: isMultiDrawBackend(),
     seen: [],
     countStamp: 0,
     // Before the batch's first build: its material's LOD dither reads them
@@ -568,7 +571,7 @@ const createBatch = (
   for (const ids of byGeometry.values()) {
     for (const entityId of ids) addMemberInstance(entityId, state, world);
   }
-  const opaqueOrder = isMultiDrawBackend() ? 'NONE' : 'COMPACT';
+  const opaqueOrder = state.isMultiDraw ? 'NONE' : 'COMPACT';
   setBatchOrder(state, material.transparent ? settings.transparentOrder ?? 'DEPTH' : opaqueOrder);
   if (members.some((entityId) => world.hasComponent(entityId, ComponentType.LOD))) {
     noteBatchLodMember(state);

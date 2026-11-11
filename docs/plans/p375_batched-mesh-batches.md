@@ -791,6 +791,25 @@ moving members.
      ratchet clean (merging's exports 167 / 167, the `@example` included).
    - **`yarn sbp`:** every budget passes, the first download unchanged (`merging` 9.6 kB, the
      initial 393.7 kB); the lazy `MergeBatch.js` 4.6 kB (+0.1).
+
+   **S4 results** (2026-11-11):
+   - **Built** (debug code, `_dbg__` modules, but one field): `getMergeBatchFigures` adds
+     `slots`, `freeSlots`, `reserve`, `colored` and `isMultiDraw`; `getBatchDraws` counts a sorted
+     (`DEPTH`, `JOIN`) batch's draws as at most its shown instances (a geometry's instances merge
+     only where adjacent in the sorted list; the summary, which doesn't walk the members, its
+     instance count), one on WebGL2 (`NONE` still one: a test may set it without a renderer). The
+     group window: Geometry slots ("2 slots: 1 held, 1 free; each reserves 64 vertices, 192
+     indices") and Colours rows, Draw runs for a sorted batch ("transparent: in join order each
+     pass, up to 3 draws", or "one multi-draw (WebGL2)"); the tab's row "up to 3 draws in join
+     order" / "one multi-draw sorted back to front"; the member window's Colour row on a batched
+     member ("#ff8040, opacity 0.5", sRGB; "white, opaque (none set)"). `BatchState.isMultiDraw`
+     (`MergeBatch.ts`, set at the batch's making, its opaque order read from it): on WebGL2 a
+     transparent batch's order is `DEPTH` or `JOIN`, not `NONE`, so the debugger couldn't tell.
+     The rows are a batched group's only: `largeWorld`'s (baked) window shots don't change, and an
+     opaque batched group's tab row reads as before.
+   - **Tests:** `debug/_dbg__MergingBatchedPools.test.ts` (5). `yarn test` 3 319 passed; lint,
+     both `tsc`, the docs ratchet clean. `yarn sbp`: the first download unchanged, the lazy
+     `MergeBatch.js` 4.7 kB (+0.1: the flag).
 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor).
 

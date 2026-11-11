@@ -6,14 +6,14 @@
 // components, of the merging code's debug figures (MergeState.ts' `getMergeDebugStats`) and of a
 // batch's state (MergeBatch.ts' `getBatchState`, through the loader: the batch code isn't pulled
 // into the debugger's chunk, and no batch exists before it's loaded).
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { AUTO_ID_PREFIX } from '../MergeAuto';
 import { getMergeBatchModule, isBatchedGroup } from '../MergeBatchFront';
 import { findPending, findQueued, getGroupMesh, getMergeDebugStats } from '../MergeState';
 import type { BatchOrder } from '../MergeBatch';
-import type { MergeGroupData, MergeMemberData } from '../MergeTypes';
+import type { MergeGeometryReserve, MergeGroupData, MergeMemberData } from '../MergeTypes';
 
 /** The Merging drawer tab's id. */
 export const MERGING_TAB_ID = 'mergingControls';
@@ -48,6 +48,13 @@ export type MergeBatchFigures = {
   /** Geometries the batch holds, and those its instances use */
   geometries: number;
   geometriesInUse: number;
+  /** Its geometry slots, of which free (a geometry no instance used any more: the next one that
+   * fits takes it), and the room its group reserves for each (`geometryReserve`) */
+  slots: number;
+  freeSlots: number;
+  reserve: MergeGeometryReserve | undefined;
+  /** Members with a colour (`setMergeMemberColor`) */
+  colored: number;
   /** Of the geometries it holds, those a member's LOD has as a level */
   levelGeometries: number;
   /** Members with an instance and a `LOD` */
@@ -67,18 +74,32 @@ export type MergeBatchFigures = {
   /** How it orders its draws (MergeBatch.ts' `BatchOrder`; S4 shows the transparent ones) */
   order: BatchOrder;
   /** Its draws per pass with every member in view: its runs (`COMPACT`), the geometries in use
-   * (`RANGE_SORT`), one multi-draw (`NONE`, WebGL2) */
+   * (`RANGE_SORT`), at most its shown instances (`DEPTH`, `JOIN`: sorted, a geometry's instances
+   * merge only where they're adjacent), one multi-draw (WebGL2) */
   draws: number;
+  /** Drawn by a multi-draw backend (WebGL2) */
+  isMultiDraw: boolean;
   /** Whether each member is frustum-culled on its own */
   perMemberCulling: boolean;
 };
 
-/** A batch's draws per pass with every member in view, by its order; one before the sync's first
- * count. */
-const getBatchDraws = (state: { order: string; runs: number; geometriesInUse: number }) => {
-  if (state.order === 'NONE') return 1;
+/** A batch's draws per pass with every member in view, by its order (a sorted one's at most its
+ * `shown` instances); one before the sync's first count. */
+const getBatchDraws = (
+  state: { order: BatchOrder; runs: number; geometriesInUse: number; isMultiDraw: boolean },
+  shown: number
+) => {
+  if (state.isMultiDraw || state.order === 'NONE') return 1;
+  if (state.order === 'DEPTH' || state.order === 'JOIN') return Math.max(shown, 1);
   return Math.max(state.order === 'RANGE_SORT' ? state.geometriesInUse : state.runs, 1);
 };
+
+/**
+ * A transparent batch's order in words ("sorted back to front", "in join order"), or undefined
+ * for an opaque one.
+ */
+export const getSortedOrderText = (order: BatchOrder) =>
+  order === 'DEPTH' ? 'sorted back to front' : order === 'JOIN' ? 'in join order' : undefined;
 
 /** A batched group's batch figures, or null before its first build (or for a baked group). */
 export const getMergeBatchFigures = (
@@ -94,12 +115,14 @@ export const getMergeBatchFigures = (
   let levelFades = 0;
   let cullFades = 0;
   let lodCulled = 0;
+  let colored = 0;
   const levelGeometries = new Set<THREE.BufferGeometry>();
   for (const entityId of group.members) {
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
     if (!member || member.instanceId < 0) continue;
     instances++;
     if (batch.getVisibleAt(member.instanceId)) visible++;
+    if (member._color) colored++;
     if (member._fadeInstanceId >= 0) levelFades++;
     else if (member._lodFade) cullFades++;
     const lod = world.getComponent(entityId, ComponentType.LOD);
@@ -122,6 +145,10 @@ export const getMergeBatchFigures = (
     maxInstances: batch.maxInstanceCount,
     geometries: state.geometryIds.size,
     geometriesInUse: state.geometriesInUse,
+    slots: state.slotGeometries.length,
+    freeSlots: state.freeSlots.length,
+    reserve: group.settings.geometryReserve,
+    colored,
     levelGeometries: levelGeometries.size,
     lodMembers,
     levelFades,
@@ -132,9 +159,28 @@ export const getMergeBatchFigures = (
     runs: state.runs,
     compactions: state.compactions,
     order: state.order,
-    draws: getBatchDraws(state),
+    draws: getBatchDraws(state, visible + levelFades),
+    isMultiDraw: state.isMultiDraw,
     perMemberCulling: batch.perObjectFrustumCulled,
   };
+};
+
+/**
+ * A batched member's colour (`setMergeMemberColor`), eg. "#ff8040, opacity 0.5": its hex in sRGB,
+ * as a material's colour is written; "white, opaque (none set)" without one.
+ */
+export const getMemberColorText = (member: MergeMemberData) => {
+  const color = member._color;
+  if (!color) return 'white, opaque (none set)';
+  const hex = new THREE.Color(color.r, color.g, color.b).getHexString();
+  return `#${hex}, opacity ${Math.round(color.a * 100) / 100}`;
+};
+
+/** A geometry reserve in words: "64 vertices, 192 indices", or each geometry's own size. */
+export const getReserveText = (reserve: MergeGeometryReserve | undefined) => {
+  if (!reserve) return "each geometry's own size";
+  const indices = reserve.indices === undefined ? '' : `, ${formatCount(reserve.indices)} indices`;
+  return `${formatCount(reserve.vertices)} vertices${indices}`;
 };
 
 /** An entity's readable name: its fixed app id (a mesh's id when it was given one), its debug
@@ -250,8 +296,9 @@ export const getMergeSummary = (world: ECSWorld): MergeSummary => {
       ? getGroupVertexCount(groupEntityId, group, world)
       : mesh.geometry.getAttribute('position').count;
     if (!isGroupDrawn(groupEntityId, world)) continue;
-    // A batch's runs are counted by its sync: one draw before its first
-    const draws = batch ? getBatchDraws(batch) : 1;
+    // A batch's runs are counted by its sync: one draw before its first (a sorted one's at most its
+    // instances, hidden ones included: the summary doesn't walk the members)
+    const draws = batch ? getBatchDraws(batch, batch.batch.instanceCount) : 1;
     summary.drawnGroups++;
     summary.drawsNow += draws;
     if (mesh.castShadow) summary.shadowDrawsNow += draws;
