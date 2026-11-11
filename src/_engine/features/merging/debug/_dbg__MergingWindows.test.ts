@@ -57,6 +57,7 @@ import {
   getMemberPartText,
 } from './_dbg__MergingWindows';
 import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
+import { isMergeGroupUnmergedView, setMergeGroupUnmergedView } from './_dbg__MergingUnmerged';
 import { MERGE_DISSOLVE_ACTION, MERGE_REMOVE_ACTION } from './_dbg__MergingUndo';
 
 // p373 D2: the group and member windows, their links, and the dissolve and removal with undo
@@ -163,6 +164,16 @@ describe('the group window', () => {
     checkbox.click();
     expect(isMergeGroupHighlighted(groupId)).toBe(true);
     setMergeGroupHighlighted(groupId, false);
+  });
+
+  it('shows the group unmerged from its checkbox', async () => {
+    const { groupEntityId } = await createGroupAsync();
+    const root = show(createGroupWindowContent({ groupEntityId }));
+    const checkbox = getField(root, 'Show unmerged').querySelector('input')!;
+    expect(checkbox.disabled).toBe(false);
+    checkbox.click();
+    expect(isMergeGroupUnmergedView(groupEntityId)).toBe(true);
+    setMergeGroupUnmergedView(groupEntityId, false);
   });
 
   it('dissolves the group, closes its window, and undo merges the same members again', async () => {

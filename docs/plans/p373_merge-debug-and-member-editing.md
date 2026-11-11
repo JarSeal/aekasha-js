@@ -348,6 +348,33 @@ As built, section 1 (2026-11-11):
   `_dbg__MergingWindows.test.ts` (which now installs `lines()`). `yarn test` (3063), both `tsc`,
   lint and the docs ratchet pass. Not yet seen in a browser (section 3).
 
+As built, section 2 (2026-11-11):
+
+- `MergeState.ts`: `getMergeUnmergedViews(world)` (group entity → whether the view added its hold)
+  and `isMergeGroupShownUnmerged(groupEntityId, world)`, both `@internal`. `applyBuild` reads the
+  view once per build (`IS_DEBUG_ENV && …`) and its first-merge guard is `partIndex === -1` from
+  before the build (a member already in a group is refused, so that is having `TAG_MERGED` outside
+  the view). `MergeGroups.ts` is at 765 lines.
+- `debug/_dbg__MergingUnmerged.ts`: `setMergeGroupUnmergedView(groupEntityId, isOn, world?)`
+  (returns whether it's shown unmerged now), `isMergeGroupUnmergedView`, `getUnmergedViewRefusal`
+  (gone, or not built yet) and `getUnmergedViewCount` (dropping a dissolved group's view); the
+  scene exit at the module's load. **Only a built group** (one with a mesh): `OBJECT3D`'s add hook
+  doesn't run the visibility reconcile, so a hold made before the first build wouldn't hide the mesh
+  it adds. Views are by group entity (an `AUTO` group deleted at an empty build and made again
+  starts merged).
+- The tab: the group rows' second toggle "Show unmerged (A/B)" (`geometry`; hidden on a group not
+  built), which refreshes the tab; the summary's groups line adds ", N shown unmerged". The group
+  window: a "Show unmerged" checkbox after the highlight's (disabled while refused), its state "shown
+  unmerged: its members are drawn on their own", a member's "merged, drawn on its own (shown
+  unmerged)" (also its member list row's suffix).
+- Tests: `debug/_dbg__MergingUnmerged.test.ts` (the mesh hidden and the members drawn with their
+  parts kept, the summary's draws, the state texts, and back; a join and rebuild during the view
+  keeping the members drawn and their `_wasSpatialIndexed`, checked to fail with the old guard; a
+  disabled member and a hold made elsewhere; a group not built refused, its row's toggle hidden; a
+  dissolve; the scene exit), the window's checkbox in `_dbg__MergingWindows.test.ts`. `yarn test`
+  (3070), both `tsc`, lint pass; the docs ratchet: merging 72 → 74 exports, 100 % (`docs.json` to
+  record in section 3).
+
 ### Phase 3 — Edit sessions, picking, undo (D4)
 
 **Exit:** moving a merged member from its window moves it smoothly, merges it back without a

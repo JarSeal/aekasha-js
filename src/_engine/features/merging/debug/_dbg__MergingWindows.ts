@@ -1,6 +1,6 @@
 // The Merging tab's windows (docs/plans/p373_merge-debug-and-member-editing.md D2): a merge group's
-// (its kind, settings and figures, its members' highlight (D3), its members as a list whose rows
-// open their windows, Rebuild and Dissolve) and a member's (its group with a link to the group's window, its state, assets and
+// (its kind, settings and figures, its members' highlight and the unmerged A/B (D3), its members as
+// a list whose rows open their windows, Rebuild and Dissolve) and a member's (its group with a link to the group's window, its state, assets and
 // part range, its pose, Remove from group). Group and member entities don't outlive their scene, so
 // the windows are removed on a scene change and not saved. Default world only.
 import * as THREE from 'three/webgpu';
@@ -36,6 +36,11 @@ import {
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
 import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
+import {
+  getUnmergedViewRefusal,
+  isMergeGroupUnmergedView,
+  setMergeGroupUnmergedView,
+} from './_dbg__MergingUnmerged';
 import { dissolveMergeGroupRecorded, removeMergeMemberRecorded } from './_dbg__MergingUndo';
 
 const GROUP_WIN_KIND = 'mergeGroup';
@@ -78,6 +83,9 @@ export const getGroupStateText = (groupEntityId: number, world: ECSWorld) => {
   if (group._isPending) return 'pending: builds in the next frame';
   if (!getGroupMesh(groupEntityId, world)) return 'not built yet';
   if (group.members.length === 0) return 'no members: its mesh is out of the scene';
+  if (isMergeGroupUnmergedView(groupEntityId, world)) {
+    return 'shown unmerged: its members are drawn on their own';
+  }
   return isGroupDrawn(groupEntityId, world) ? 'built' : 'built, not drawn';
 };
 
@@ -102,6 +110,9 @@ export const getMemberStateText = (entityId: number, world: ECSWorld) => {
   if (!member) return 'not in a merge group';
   if (member.partIndex === -1) return "waiting for its group's build";
   if (member._isCollapsed) return 'disabled: its range collapsed';
+  if (isMergeGroupUnmergedView(member.groupEntityId, world)) {
+    return 'merged, drawn on its own (shown unmerged)';
+  }
   return 'merged';
 };
 
@@ -182,6 +193,16 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
         updateDebuggerTab(MERGING_TAB_ID);
       },
       hint: "Outlines its members in the group's colour (in view only).",
+    },
+    {
+      label: 'Show unmerged',
+      get: () => isMergeGroupUnmergedView(groupEntityId, world),
+      set: (value) => {
+        setMergeGroupUnmergedView(groupEntityId, Boolean(value), world);
+        updateDebuggerTab(MERGING_TAB_ID);
+      },
+      disabled: () => getUnmergedViewRefusal(groupEntityId, world) !== null,
+      hint: 'Hides the merged mesh and draws each member on its own: an A/B of the image and the draws. Until the scene changes.',
     },
     getReasonedButtonItem({
       title: 'Rebuild',

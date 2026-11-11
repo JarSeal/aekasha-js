@@ -262,6 +262,33 @@ export const noteMergeInPlaceUpdate = (world: ECSWorld) => {
   getMergeDebugStats(world).inPlaceUpdates++;
 };
 
+// --- SHOWN UNMERGED (p373 D3: the Merging tab's A/B) ---
+//
+// Read only behind `IS_DEBUG_ENV` at its call site (applyBuild), so a production build folds it.
+
+/** Per world: the groups shown unmerged (their entities), each with whether the view added its
+ * `TAG_DRAW_HELD` (a hold something else made is left alone). */
+const unmergedViewsByWorld = new WeakMap<ECSWorld, Map<number, boolean>>();
+
+/**
+ * The world's groups shown unmerged, by group entity, each with whether the view added the
+ * group's hold (made on first use). Debug env only.
+ * @internal
+ */
+export const getMergeUnmergedViews = (world: ECSWorld) => {
+  let views = unmergedViewsByWorld.get(world);
+  if (!views) unmergedViewsByWorld.set(world, (views = new Map()));
+  return views;
+};
+
+/**
+ * Whether a group is shown unmerged: its build leaves its members drawn on their own. Call behind
+ * `IS_DEBUG_ENV`.
+ * @internal
+ */
+export const isMergeGroupShownUnmerged = (groupEntityId: number, world: ECSWorld) =>
+  unmergedViewsByWorld.get(world)?.has(groupEntityId) ?? false;
+
 /**
  * Lets a member go: drawn on its own again, back in the spatial index if it was.
  * @internal

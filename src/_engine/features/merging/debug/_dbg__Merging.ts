@@ -29,6 +29,11 @@ import {
   setMergeHighlightAll,
 } from './_dbg__MergingOverlay';
 import {
+  getUnmergedViewCount,
+  isMergeGroupUnmergedView,
+  setMergeGroupUnmergedView,
+} from './_dbg__MergingUnmerged';
+import {
   _registerMergingWindowLinks,
   getOpenMergeGroupWindowIds,
   toggleMergeGroupWindow,
@@ -38,7 +43,8 @@ import {
 // merge groups at a glance (the groups, members and vertices, the draws per pass merged against
 // unmerged, the waste, the builds and in-place updates of the last second, the last build's time),
 // a row per group opening its window (_dbg__MergingWindows.ts), and the entities whose `merge` was
-// refused with the reason. A group's members can be outlined (_dbg__MergingOverlay.ts). Nothing is
+// refused with the reason. A group's members can be outlined (_dbg__MergingOverlay.ts), and a group
+// shown unmerged for an A/B (_dbg__MergingUnmerged.ts). Nothing is
 // persisted: it's all for inspecting. Default world only.
 
 /** Rows the group list shows at most */
@@ -75,8 +81,10 @@ export const formatMergeSummary = (
     ? ` (${Math.round((s.wastedVertices / s.mergedVertices) * 100)} %)`
     : '';
   const last = stats.lastBuild;
+  const unmerged = getUnmergedViewCount(world);
+  const shownUnmerged = unmerged ? `, ${formatCount(unmerged)} shown unmerged` : '';
   return {
-    groups: `${formatCount(s.groups)} (${formatCount(s.drawnGroups)} drawn, ${formatCount(s.pendingGroups)} pending)`,
+    groups: `${formatCount(s.groups)} (${formatCount(s.drawnGroups)} drawn, ${formatCount(s.pendingGroups)} pending${shownUnmerged})`,
     members: `${formatCount(s.members)} (${formatCount(s.builtMembers)} merged, ${formatCount(s.members - s.builtMembers)} waiting, ${formatCount(s.queued)} queued)`,
     vertices: formatCount(s.mergedVertices),
     wasted: `${formatCount(s.wastedVertices)}${wastedShare}`,
@@ -112,7 +120,13 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
       ...(group._isAuto ? { badge: 'AUTO' } : {}),
       description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}`,
       suffix: `${formatCount(n)} ${n === 1 ? 'member' : 'members'}, ${vertices} v${state}`,
-      toggleValues: [isMergeGroupHighlighted(group.id)],
+      // Right to left: the highlight, then the A/B (a built group's only)
+      toggleValues: [
+        isMergeGroupHighlighted(group.id),
+        world.hasComponent(groupEntityId, ComponentType.OBJECT3D)
+          ? isMergeGroupUnmergedView(groupEntityId, world)
+          : null,
+      ],
     });
   }
   if (more) {
@@ -219,6 +233,15 @@ export const _createMergingDebugGUI = () => {
               icon: 'objectsCubes',
               title: 'Highlight the members',
               fn: (itemId, isOn) => toggleGroupHighlight(world, itemId, isOn),
+            },
+            {
+              icon: 'geometry',
+              title: 'Show unmerged (A/B)',
+              fn: (itemId, isOn) => {
+                setMergeGroupUnmergedView(Number(itemId), isOn, world);
+                // The summary's draws follow
+                queueMicrotask(() => updateDebuggerTab(MERGING_TAB_ID));
+              },
             },
           ],
           onClick: (itemId) => {

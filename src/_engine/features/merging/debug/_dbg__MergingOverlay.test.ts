@@ -218,7 +218,7 @@ describe('the highlight', () => {
     const b = await createGroupAsync([5]);
     expect(setMergeHighlightAll(true)).toBe(true);
     expect(isMergeGroupHighlighted(a.groupId) && isMergeGroupHighlighted(b.groupId)).toBe(true);
-    expect(getMergeGroupListData(world).map((row) => row.toggleValues)).toEqual([[true], [true]]);
+    expect(getMergeGroupListData(world).map((row) => row.toggleValues?.[0])).toEqual([true, true]);
 
     setMergeGroupHighlighted(a.groupId, false);
     expect(isMergeHighlightAll()).toBe(false);

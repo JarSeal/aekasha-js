@@ -65,6 +65,7 @@ import {
   getMemberMesh,
   getPending,
   holdForSceneLoad,
+  isMergeGroupShownUnmerged,
   isMergeSceneLoading,
   markPending,
   noteMergeBuild,
@@ -511,16 +512,23 @@ const applyBuild = (
   if (!mesh.parent) existsOrThrow(getRootScene(), 'Merge groups need the root scene.').add(mesh);
 
   group.partIndex.clear();
+  // The Merging tab's A/B (debug env only): a group shown unmerged keeps its members drawn
+  const isShownUnmerged = IS_DEBUG_ENV && isMergeGroupShownUnmerged(groupEntityId, world);
   members.forEach((entityId, partIndex) => {
     group.partIndex.set(entityId, partIndex);
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
+    // Merged for the first time (a member already built may be without TAG_MERGED: the A/B)
+    const isFirstBuild = member.partIndex === -1;
     member.partIndex = partIndex;
     member._bakedMatrix = worldMatrices[partIndex];
     member._isCollapsed = false;
-    if (world.hasComponent(entityId, ComponentType.TAG_MERGED)) return;
-    member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
-    world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
-    world.addComponent(entityId, ComponentType.TAG_MERGED, true);
+    if (isFirstBuild) {
+      member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
+      world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
+    }
+    if (!isShownUnmerged && !world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
+      world.addComponent(entityId, ComponentType.TAG_MERGED, true);
+    }
   });
   // The built members first, in part order, then those that joined while it built
   const waiting = group.members.filter((entityId) => !group.partIndex.has(entityId));
