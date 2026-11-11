@@ -531,12 +531,10 @@ const applyBuild = (
       member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
       world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
     }
-    // One in an edit session stays drawn by its own mesh, collapsed below
-    if (
-      !isShownUnmerged &&
-      !member._editPose &&
-      !world.hasComponent(entityId, ComponentType.TAG_MERGED)
-    ) {
+    // One in an edit session stays drawn by its own mesh, its new range collapsed (the session's
+    // end writes it)
+    if (member._editPose) collapseDisabledMember(entityId, world);
+    else if (!isShownUnmerged && !world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
       world.addComponent(entityId, ComponentType.TAG_MERGED, true);
     }
   });
@@ -545,15 +543,9 @@ const applyBuild = (
   group.members = [...members, ...waiting];
   group.wasted = 0;
   group.rebuilds++;
-  // A disabled member (or one in an edit session) is merged as it is and collapsed, so enabling it
-  // (the session's end) needs no build
+  // A disabled member is merged as it is and collapsed, so enabling it needs no build
   for (const entityId of members) {
-    if (
-      world.isDisabled(entityId) ||
-      world.getComponent(entityId, ComponentType.MERGE_MEMBER)!._editPose
-    ) {
-      collapseDisabledMember(entityId, world);
-    }
+    if (world.isDisabled(entityId)) collapseDisabledMember(entityId, world);
   }
 
   // Joined again, so the spatial index measures the new bounds

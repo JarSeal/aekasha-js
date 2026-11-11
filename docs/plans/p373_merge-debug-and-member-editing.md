@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Merging, Debug, Editor
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
@@ -418,7 +418,7 @@ As built, section 3 (2026-11-11):
   group window; axe clean; recorded with `--update --only` those three. assetCompare's tab shot
   warned as before (its load order).
 
-### Phase 3 — Edit sessions, picking, undo (D4)
+### Phase 3 — Edit sessions, picking, undo (D4) — done
 
 **Exit:** moving a merged member from its window moves it smoothly, merges it back without a
 rebuild (rebuild count unchanged), and undo restores it; `getMergeMemberAtFace` returns the right
@@ -488,7 +488,8 @@ As built, section 1 (2026-11-11):
   the three session functions do (`assertMergingInstalled`, exported from `MergeGroups.ts`, now
   781 lines).
 - The shipping guards: `applyBuild` (no `TAG_MERGED` for a member in a session, collapsed after
-  the build, in the disabled members' loop) and `restoreEnabledMember` (`|| member._editPose`).
+  the build; section 3 moved it from the disabled members' loop into the member loop) and
+  `restoreEnabledMember` (`|| member._editPose`).
 - The debug skips: the moved-member check, the A/B's end and the overlay (a session's member at
   its own world matrix).
 - Tests: `MergeMemberEdit.test.ts` (13: a session's collapse, moves writing nothing, the end
@@ -503,8 +504,8 @@ As built, section 1 (2026-11-11):
 
 As built, section 2 (2026-11-11):
 
-- `debug/_dbg__MergingMemberPose.ts`: `getMergeMemberPoseItems(entityId, world)` → `{ items,
-  onRemove }`. Position (a vector field), Rotation (`kind: 'rotation'`, degrees; the shown Euler
+- `debug/_dbg__MergingMemberPose.ts`: `getMergeMemberPoseItems(entityId, world)` returns
+  `{ items, onRemove }`. Position (a vector field), Rotation (`kind: 'rotation'`, degrees; the shown Euler
   kept while the `TRANSFORM`'s quaternion is the one it made, within 1e-6, so typed angles stay) and
   Scale, each `{ get, set }` on the `TRANSFORM` read at every call (a typed store's copy is fresh
   each time). A `set` opens the session if none is open and writes (`setTransform` for position and
@@ -530,6 +531,50 @@ As built, section 2 (2026-11-11):
   a window removed mid-gesture ending and recording it; rotation by degrees, scale, a body's scale
   disabled; a deleted member's undo warning, a removed member's fields disabled. `yarn test`
   (3091), both `tsc`, lint and the docs ratchet pass.
+
+As built, section 3 (2026-11-11):
+
+- A Playwright harness in the session's scratchpad (not committed; Phase 2's: the runner's server
+  and Chrome, `?isDebug=true&aekTest=true&startScene=…`, frozen, the app's module instances by
+  their resource URLs, `takeSnapshotAsync` at 1280×800; a frozen loop doesn't run
+  `object3DSyncSystem`, so the harness syncs the edited member's own mesh before a shot). On each
+  scene's biggest group, through the member window's own fields (Position Y held on ArrowUp three
+  times, then X typed with Enter):
+
+  |                                                | largeWorld (`auto:diy9gm:1,-1:0`) | testDebugScene (`p372_grid`) |
+  | ---------------------------------------------- | --------------------------------- | ---------------------------- |
+  | rays down onto the group mesh, one per member  | 25, each its own member           | 200, 20 their own (stacked)  |
+  | the answer's member box holding the hit point  | 25 / 25                           | 200 / 200                    |
+  | during the key gesture                         | own mesh drawn, range collapsed   | the same                     |
+  | draws (both passes) before / during / after    | 105 / 107 / 105                   | 49 / 50 / 49                 |
+  | pixels changed, during vs after (of 1 024 000) | 0                                 | 0                            |
+  | pixels changed, before vs after the move       | 45                                | 703                          |
+  | undo vs before, redo vs after                  | 0, 0                              | 0, 0                         |
+  | builds and the group's rebuilds, throughout    | 28 and 1, unchanged               | 13 and 1, unchanged          |
+
+  So the move is drawn by the member's own mesh exactly where the merged range lands (the image
+  during equals the one after), merged back with 3 in-place writes per session (collapse, rewrite,
+  restore) and no build; undo and redo through `updateMergeMember` give back the same images; the
+  typed move is a second undo entry. The state text and the remove button's reason showed during
+  the gesture. No console errors, no merging warnings (the moved-member check stayed quiet).
+
+- Found: `yarn sbp` put `_engine/features/merging` at 7 171 B gzip (7 144 after Phase 2: +27 B,
+  the two guards), 3 B over its 7 KiB budget, `MergeMemberEdit.ts` not in the first download.
+  `applyBuild`'s guard moved into the member loop it already has (collapsing there, the disabled
+  loop as it was: one `getComponent` less, 33 B minified) changed gzip by +2 B (7 173 B), so the
+  budget went 7 → 8 KiB with its comment in `sbp.config.ts`, as decided. Every profile's budgets
+  pass (the `character` note isn't this plan's).
+- `yarn verify:baselines`: no debug code in any build; recorded with `--update`: `api.json` (the
+  five functions and `MergeMemberEditPose` on `aekasha/merging`, `assertMergingInstalled`
+  internal), `docs.json` (merging 74 → 81, 100 %), `bundle.json` (merging's 7 173 B; the other
+  groups moved a few bytes, the rebuild's noise).
+- `yarn verify:scenes --config debugger` (9 scenes): largeWorld's member window shot changed (the
+  three pose fields editable, their note), axe clean; recorded with `--update --only largeWorld`.
+  testDebugScene's `stats.panels` is the TFPS mask flake (Phases 1 and 2), assetCompare's tab shot
+  warned as before (its load order).
+- Seen: the position fields show a value's own decimals (the kit's default, as the light window's
+  position), so a largeWorld member's Y reads `0.2160874`, cut by the box; no step or precision
+  is set, so the arrows step 1 m.
 
 ### Phase 4 — Docs and versioning
 

@@ -65,7 +65,11 @@ const profiles: SbpProfile[] = [
         // Phase 5: 6.0 → 6.9 KiB, `MergeRanges` and `MergeInPlace` in full once the example
         // calls `updateMergeMember` and `removeFromMergeGroup` (only the debug-only
         // `testDebugScene` did): 6 → 7 KiB
-        '_engine/features/merging': 7 * KIB,
+        // p373: 7.0 KiB (7,173 B): Phase 1's debug figures and Phase 2's A/B fold away, but the
+        // edit sessions' two guards ship (`applyBuild`, `restoreEnabledMember`: a member in a
+        // session stays collapsed), 3 B over 7 KiB with Phase 2's growth. The sessions themselves
+        // (`MergeMemberEdit.ts`) are tree-shaken unless an app calls them: 7 → 8 KiB
+        '_engine/features/merging': 8 * KIB,
         '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,
