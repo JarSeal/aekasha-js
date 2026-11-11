@@ -1,19 +1,89 @@
 // What the Merging tab and its windows read of the merge groups (docs/plans/_DONE_p373_merge-debug-and-member-editing.md
 // D1, D2): names, a group's vertices and cell, the summary's figures (counts, draws per pass,
-// waste), the build and update rates, and the refusals still standing. Pure reads of the
-// components and of the merging code's debug figures (MergeState.ts' `getMergeDebugStats`).
+// waste), the build and update rates, and the refusals still standing; a batched group's batch
+// figures (p375 S5: its instances, visible ones, geometry runs and compactions). Pure reads of the
+// components, of the merging code's debug figures (MergeState.ts' `getMergeDebugStats`) and of a
+// batch's state (MergeBatch.ts' `getBatchState`, through the loader: the batch code isn't pulled
+// into the debugger's chunk, and no batch exists before it's loaded).
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { AUTO_ID_PREFIX } from '../MergeAuto';
+import { getMergeBatchModule, isBatchedGroup } from '../MergeBatchFront';
 import { findPending, findQueued, getGroupMesh, getMergeDebugStats } from '../MergeState';
-import type { MergeGroupData } from '../MergeTypes';
+import type { MergeGroupData, MergeMemberData } from '../MergeTypes';
 
 /** The Merging drawer tab's id. */
 export const MERGING_TAB_ID = 'mergingControls';
 
 /** A count with thousands separators. */
 export const formatCount = (n: number) => n.toLocaleString('en-US');
+
+/** A count and its noun, eg. "1 run", "20 runs" (`plural`: the noun's plural, default `<noun>s`). */
+export const formatCountOf = (n: number, noun: string, plural = `${noun}s`) =>
+  `${formatCount(n)} ${n === 1 ? noun : plural}`;
+
+/** Whether a member is drawn by its group's build: a part of a baked group's geometry, or an
+ * instance of a batched group's batch. */
+export const isMergeMemberBuilt = (member: MergeMemberData) =>
+  member.partIndex !== -1 || member.instanceId >= 0;
+
+/** A batched group's batch, once built (the batch code loaded), else undefined. */
+export const getGroupBatchState = (group: MergeGroupData) =>
+  isBatchedGroup(group) ? getMergeBatchModule()?.getBatchState(group) : undefined;
+
+/** A batched group's batch figures. */
+export type MergeBatchFigures = {
+  /** Members with an instance */
+  instances: number;
+  /** …of which shown (`setVisibleAt`: not disabled, held or culled by the engine; three's own
+   * per-member culling is per pass, not counted) */
+  visible: number;
+  /** The instances the batch has room for */
+  maxInstances: number;
+  /** Geometries the batch holds, and those its instances use */
+  geometries: number;
+  geometriesInUse: number;
+  /** The vertices its geometries take, and its vertex buffer's size */
+  vertices: number;
+  maxVertices: number;
+  /** Its geometry runs in instance id order at the sync's last count (a draw each on WebGPU) */
+  runs: number;
+  /** Its compactions so far */
+  compactions: number;
+  /** Whether each member is frustum-culled on its own */
+  perMemberCulling: boolean;
+};
+
+/** A batched group's batch figures, or null before its first build (or for a baked group). */
+export const getMergeBatchFigures = (
+  group: MergeGroupData,
+  world: ECSWorld
+): MergeBatchFigures | null => {
+  const state = getGroupBatchState(group);
+  if (!state) return null;
+  const { batch } = state;
+  let instances = 0;
+  let visible = 0;
+  for (const entityId of group.members) {
+    const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+    if (!member || member.instanceId < 0) continue;
+    instances++;
+    if (batch.getVisibleAt(member.instanceId)) visible++;
+  }
+  return {
+    instances,
+    visible,
+    maxInstances: batch.maxInstanceCount,
+    geometries: state.geometryIds.size,
+    geometriesInUse: state.geometriesInUse,
+    vertices: state.maxVertexCount - batch.unusedVertexCount,
+    maxVertices: state.maxVertexCount,
+    runs: state.runs,
+    compactions: state.compactions,
+    perMemberCulling: batch.perObjectFrustumCulled,
+  };
+};
 
 /** An entity's readable name: its fixed app id (a mesh's id when it was given one), its debug
  * name, else "Entity N" (a mesh made without an id has its uuid as its mesh id: no name). */
@@ -46,13 +116,14 @@ const getMemberVertices = (entityId: number, world: ECSWorld) => {
   return mesh?.geometry?.getAttribute('position')?.count ?? 0;
 };
 
-/** A group's merged vertices once built (collapsed ones included), else its members' sum. */
+/** A baked group's merged vertices once built (collapsed ones included), else its members' sum; a
+ * batched group's members' sum (what its instances draw: its batch holds each geometry once). */
 export const getGroupVertexCount = (
   groupEntityId: number,
   group: MergeGroupData,
   world: ECSWorld
 ) => {
-  const mesh = getGroupMesh(groupEntityId, world);
+  const mesh = isBatchedGroup(group) ? undefined : getGroupMesh(groupEntityId, world);
   if (mesh) return mesh.geometry.getAttribute('position').count;
   let sum = 0;
   for (const entityId of group.members) sum += getMemberVertices(entityId, world);
@@ -77,11 +148,12 @@ export type MergeSummary = {
   builtMembers: number;
   /** Meshes whose `merge` waits for the next build to join */
   queued: number;
-  /** Vertices in the merged geometries */
+  /** Vertices in the merged geometries, and those batched groups' members draw */
   mergedVertices: number;
   /** Of those, the collapsed ones a compacting build drops */
   wastedVertices: number;
-  /** The main pass's draws now: the drawn groups, and the members drawn on their own meanwhile */
+  /** The main pass's draws now: the drawn groups (a batched one's geometry runs, a draw each on
+   * WebGPU), and the members drawn on their own meanwhile */
   drawsNow: number;
   /** …and with every member drawn on its own */
   drawsUnmerged: number;
@@ -120,15 +192,20 @@ export const getMergeSummary = (world: ECSWorld): MergeSummary => {
     summary.wastedVertices += group.wasted;
     const mesh = getGroupMesh(groupEntityId, world);
     if (!mesh) continue;
-    summary.mergedVertices += mesh.geometry.getAttribute('position').count;
+    const batch = getGroupBatchState(group);
+    summary.mergedVertices += batch
+      ? getGroupVertexCount(groupEntityId, group, world)
+      : mesh.geometry.getAttribute('position').count;
     if (!isGroupDrawn(groupEntityId, world)) continue;
+    // A batch's runs are counted by its sync: one draw before its first
+    const draws = batch ? Math.max(batch.runs, 1) : 1;
     summary.drawnGroups++;
-    summary.drawsNow++;
-    if (mesh.castShadow) summary.shadowDrawsNow++;
+    summary.drawsNow += draws;
+    if (mesh.castShadow) summary.shadowDrawsNow += draws;
   }
   for (const [entityId, member] of world.getStorage(ComponentType.MERGE_MEMBER)) {
     summary.members++;
-    if (member.partIndex !== -1) summary.builtMembers++;
+    if (isMergeMemberBuilt(member)) summary.builtMembers++;
     if (world.isDisabled(entityId)) continue;
     const castShadow = Boolean(
       world.getComponent(entityId, ComponentType.OBJECT3D)?.value.castShadow

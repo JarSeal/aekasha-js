@@ -31,13 +31,19 @@ import * as THREE from 'three/webgpu';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { incMaterialRef } from '../../kernel/assets/Material';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import type { BatchVisibilityOverrides } from './MergeBatchFront';
 import { clearEmptyGroup, getLiveMembers } from './MergeBuild';
-import { getMemberMesh, noteMergeBuild, syncMemberPose } from './MergeState';
+import {
+  getMemberMesh,
+  isMergeGroupShownUnmerged,
+  noteMergeBuild,
+  syncMemberPose,
+} from './MergeState';
 import type { MergeGroupData, MergeMemberData } from './MergeTypes';
 
 /**
@@ -163,7 +169,9 @@ export const setBatchMemberVisible = (
 };
 
 /** Adds a member's instance of its geometry (in the batch already): its matrix, its visibility,
- * and on its first build its own mesh hidden and out of the spatial index. */
+ * and on its first build its own mesh out of the spatial index; its own mesh hidden
+ * (`TAG_MERGED`) unless the Merging tab shows its group unmerged (debug env only, as
+ * `applyBuild`). */
 const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
   const mesh = getMemberMesh(entityId, world);
@@ -181,6 +189,7 @@ const addMemberInstance = (entityId: number, state: BatchState, world: ECSWorld)
     member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
     world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
   }
+  if (IS_DEBUG_ENV && isMergeGroupShownUnmerged(state.groupEntityId, world)) return;
   if (!world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
     world.addComponent(entityId, ComponentType.TAG_MERGED, true);
   }
@@ -276,6 +285,8 @@ const createBatch = (
       world.addComponent(groupEntityId, ComponentType.TAG_IS_MESH, true);
     }
   }
+  // A new batch is visible: hidden now if its group is (disabled, held: the Merging tab's A/B)
+  reconcileObject3DVisibility(groupEntityId, world);
   const transform = world.getComponent(groupEntityId, ComponentType.TRANSFORM);
   if (transform) {
     transform.position.copy(centre);

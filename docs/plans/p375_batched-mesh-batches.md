@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 in progress (S1-S4 done)
+Status: in progress | Phase 0 (spike) done, gate passed; Phase 1 in progress (S1-S5 done)
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
@@ -249,12 +249,10 @@ moving members.
    - S2 — the batch build behind `import()` — done.
    - S3 — the sync and the growing bounds — done.
    - S4 — grouping and compaction (D1) — done.
-   - S5 — the debugger: the moved-member check, the overlay, "Show unmerged" and the member window
-     read `_bakedMatrix` or part ranges, so each skips a batched member or group (or shows it its
-     own way); the Merging tab's group rows get a mode badge and, for a batched group, its members,
-     visible members, runs and compactions (`getBatchState`); the group window the same. Read
-     `features/merging/CLAUDE.md`'s Merge debugging first. Tests in the debug folder's files (or a
-     new one: `MergeBatch.test.ts` is at about 800 lines).
+   - S5 — the debugger — done: the moved-member check skips a batched member (its `partIndex`),
+     the overlay outlines it at its own mesh's pose, "Show unmerged" holds the batch, the windows
+     and the tab's rows show the mode and the batch's figures, the pose fields move a batched
+     member without a session. Tests: `debug/_dbg__MergingBatched.test.ts`.
    - S6 — the exit: `?bmsWay=engine` in `batchedMeshSpike` (mesh entities with
      `merge: { group, mode: 'BATCHED' }`) and `?bmsBodies=kinematic` (kinematic bodies moved in
      `APP_PHYSICS_STEP`, on the separate and engine ways), the bench's cases, a `scenes.config.ts`
@@ -291,14 +289,24 @@ moving members.
      reallocate the textures or sort the freed ids per add.
    - `updateMergeMember` does nothing for a batched member; `beginMergeMemberEdit` warns.
      `rebuildMergeGroup` makes a fresh batch in geometry order.
+   - S5: only `BATCHED` gets a badge on the tab's rows (`BAKED` is the default and has none, so the
+     baked rows and the scene runner's tab shots don't change); the group window's Mode row is on
+     both modes (largeWorld's group window shot gains a row). A batched group's draws in the
+     summary are its runs (WebGPU's count; the note says WebGL2 draws it in one). Found on the way
+     (fixed in `MergeBatch.ts`): a full build's new batch was visible in a disabled or held group
+     entity (`OBJECT3D`'s value replaced without the reconcile), and the build gave `TAG_MERGED`
+     back to a group shown unmerged.
 
-   **As built** (S1-S4; the detail is `features/merging/CLAUDE.md`'s "The mode" bullet): the builds
+   **As built** (S1-S5; the detail is `features/merging/CLAUDE.md`'s "The mode" bullet): the builds
    moved out of `MergeGroups.ts` into `MergeBuild.ts` (both modes' dispatch, the `BAKED` build);
    `MergeBatch.ts` (the lazy chunk: build, sync, compaction) and `MergeBatchFront.ts` (the loader, a
    leaving member, the visibility hooks); `MERGE_MEMBER.instanceId` (`partIndex` stays -1 for a
    batched member, so the baked in-place paths skip it) and `_batchVersion`; the kernel's
-   `APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC` (-0.25) and the typed-mode version bump. Tests:
-   `MergeBatch.test.ts`, `MergingSchema.test.ts`, `ECSCoreSystems.test.ts`.
+   `APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC` (-0.25) and the typed-mode version bump; S5's debugger
+   reads a batch through the loader (`getGroupBatchState`, `getMergeBatchFigures`,
+   `isMergeMemberBuilt` in `debug/_dbg__MergingInfo.ts`; Merge debugging's "Batched groups"). Tests:
+   `MergeBatch.test.ts`, `MergingSchema.test.ts`, `ECSCoreSystems.test.ts`,
+   `debug/_dbg__MergingBatched.test.ts`.
 
 2. LOD per member (with p348). 3. p309's decal pools on batched groups (if p309 has shipped, port;
    if not, p309 uses this). 4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
