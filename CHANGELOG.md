@@ -4,6 +4,38 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-12 — p376_hlod-merged-cluster-proxies
+
+HLOD merged cluster proxies (p376, Tier 3.1 of the merging epic p370), not adopted: its Phase 0 measured simplified proxies of merge groups on a far field of ruin sites (largeWorld, up to 400 sites and 1,838 groups) and failed its gate. The proxies cut 39-50 % of the groups' triangles in view without saving GPU time on WebGL2, and the CPU frame followed the draws, one per group, which a proxy level doesn't change. So no group proxies are built; far static content in few draws continues as p377, from draws rather than triangles. The branch keeps the results, the spike's tools and a debugger fix found while measuring.
+
+### Engine 6.8.1 (Sunset)
+
+**Fixed**
+
+- The debugger's GPU frame time on WebGPU: a render pass resolving with a negative duration counts as 0 instead of sinking the frame's sum (`_sumGpuMs`). Three r187 gives a shadow map pass with no caster in its frustum a stale timestamp, thousands of ms below its other one, so the stats panels' and the profiler's GPU figure read low or negative. That the figure sums passes which overlap on a tile-based GPU is still open (`docs/issues/gpu-timer-webgpu-frame-sum.md`).
+
+### App 1.23.1 (Preschooler)
+
+**Added**
+
+- largeWorld's HLOD far field (`?hlodField=<sites>`, the debug env and prod test mode; `_dbg__largeWorldHlodField.ts`): ruin sites 200 m-1 km out, merged `AUTO`, and the spike's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`) in largeWorld and testDebugScene, which the bench reads.
+
+**Changed**
+
+- largeWorld's `createRuins` takes the ground's height as a function and options (`RuinsOptions`: its sites, seed and `merge`), so the far field builds its sites with it; the scene's own ruins are unchanged.
+
+### Project
+
+**Added**
+
+- `devTools/bench/hlodSpike.ts` (`--step simplify`: the proxies' simplification per variant and ratio; `--step frames`: the CPU and GPU frame, draws and triangles with and without proxies, on both backends, with `--field` for the far field), with `hlodSpikeFrames.ts` and `hlodSpikePage.ts`.
+- The issue `gpu-timer-webgpu-frame-sum.md`.
+
+**Changed**
+
+- The `debug/`, `lod/` and `merging/` `CLAUDE.md` (p376 not adopted; the GPU timer's negative durations).
+- The plans: p376 not adopted, with its Phase 0's results; p377 split from it, its Phase 0 written around draws; the p370 epic's status and tiers follow them.
+
 ## 2026-11-12 — p375_batched-mesh-batches
 
 Batched merge groups (p375, the fifth child of the merging epic p370): a merge group's `mode: 'BATCHED'` draws its members as instances of one three.js `BatchedMesh`, for what a baked group can't take: members that move every frame (bodies included), transparent members and members with their own LOD. Each member is drawn where its own mesh would be, culled on its own, at its own LOD level with cross-fades, and the batch keeps each geometry's members together so WebGPU draws it in one draw per geometry (WebGL2 in one multi-draw). Its geometry slots are reused and a member can be rewritten in place, so a decal pool keeps the same buffers however long it churns, and a member can have its own colour and opacity. Measured on the spike scene, a batch takes 35-90 % off the CPU frame of drawing each mesh on its own, with moving bodies, a LOD field and decal pools; static content in view stays the baked group's. Nothing breaks.
