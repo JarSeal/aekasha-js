@@ -4,6 +4,55 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-12 — p377_hlod-streaming-cell-proxies
+
+HLOD streaming cell proxies (p377, Tier 3.2 of the merging epic p370): far static content drawn in few draws. Its Phase 0 measured four ways to fewer draws on p376's far field (400 ruin sites, 20,000 pieces) and chose the cheapest that paid: a streamed cell's kit meshes (a JSON mesh without `lod`: a wall piece, a pillar, rubble) are now their own far entries, so a `FAR` cell draws its kit as one `InstancedMesh` per geometry and material instead of nothing, measured as cheap as the cell merged into one mesh. No build-time cell proxy is built. For far content that doesn't stream, larger `AUTO` merge cells are a recommendation on the Hub (128-256 m save 2.8-6.2 ms of CPU a frame at 400 sites); the hidden members' scene graph walk it found is p378's. Nothing breaks: `instances` is deprecated, not removed.
+
+### Engine 6.9.0 (Sunset)
+
+**Added**
+
+- `streaming.farEntries` (`'ALL'`, the default, or `'LOD_LEVELS'`, the rule before this version) in a scene's JSON (`SceneStreamingSettings`): which of a streamed cell's meshes get a far entry. Build time only, like `base` and `radii`: the gather reads it, the runtime settings drop it, and `setSceneStreamingSettings` warns once (one warning naming all three) and ignores it.
+- `StreamingFarMesh.entries` (`aekasha/schemas`): a far group names its near entries by their index in the manifest's `meshes`, whose transforms are its instances. The gather writes it for every group (explicit-levels ones too), so a far instance costs the app's first download an index instead of a second transform (`streamingGrid`'s `__streaming` 6 % smaller before its ruins).
+
+**Changed**
+
+- A streamed cell's JSON mesh without `lod` is its own far entry (its `geo`, `mat` and shadows at its transform, in its cell's far group of that geometry and material), when it groups: a registered `geo` and `mat` and no `matOverrides`; one that wouldn't group gets none. Unchanged: a mesh with explicit `levels` (its coarsest level), `AUTO` and a `cullScreenSize` over 0 (none), an oversized mesh (kept), a light (none). Neither streaming scene's data changed with the rule.
+- The far layer draws a group from `entries` (the near entries' `position`, `rotation` or `quaternion`, and `scale`), else from `instances`; no allocation per instance.
+- The Streaming tab's JSON content: the manifest's cells, meshes and lights, then its far meshes as groups (with their instances) and meshes of their own; its note says a mesh without `lod` is its own far entry.
+
+**Deprecated**
+
+- `StreamingFarMesh.instances` and `StreamingFarInstance`: replaced by `entries`, which the gather writes instead; still drawn when a group has no `entries`, removed in engine 7.0.0.
+
+**Fixed**
+
+- A far mesh of its own (a far entry that doesn't group) no longer keeps the mesh's `merge`, so a far copy never joins a merge group from a `FAR` cell (a `BATCHED` member with explicit levels and an inline `geo` / `mat` or `matOverrides` reached it).
+
+### App 1.24.0 (Preschooler)
+
+**Added**
+
+- `streamingGrid`'s ruins: a small kit (`streamingGridRuinBlock`, `streamingGridRuinSlab`, `streamingGridRuinPost` in the materials `streamingGridRuinStone` and `streamingGridRuinTimber`, cell-only) and a six-piece ruin in 16 cells (`cx` and `cz` each -7, -3, 1 or 5; 96 meshes), each piece `merge: 'AUTO'` (the scene's `mergeGroups` `AUTO` entry at 32 m) and, without `lod`, its own far entry: merged near, a ruin cell's three far groups far. Its Hub image shows a ruin.
+- largeWorld's HLOD far field's ways (debug env and prod test mode): `?hlodFieldCell=<m>` (the `AUTO` cell size) and `?hlodFieldAs=members|proxy|instanced` (merged members, a cell's pieces of one material merged into one mesh, or one `InstancedMesh` per cell, geometry and material). The spike's probe gains `screenSizes`, `setCull`, `cpuSplitAsync`, `fieldDraws` and `rebuildAsync` (`src/app/shared/_dbg__hlodSpikeDraws.ts`), and `setupSkyAsync`'s `holdClouds`.
+
+**Changed**
+
+- largeWorld's ruins: `layoutRuins` places the pieces without making them (`RuinPiece`, `getRuinGeometries`, `getRuinMaterial`), and `createRuins` makes them from it, so the far field draws the same pieces each way; the scene's own ruins are unchanged.
+
+### Project
+
+**Added**
+
+- `hlodSpike.ts --step draws` (`devTools/bench/hlodSpikeDraws.ts`): largeWorld's far field drawn each way (`floor`, `<as>@<cell>`, with `+cull25|50|75`), a page per case and run on both backends and three views: the CPU frame and its split (the submit, three's scene walk, the systems), the WebGPU scene passes and WebGL2's GPU frame, the draws, the rebuild and load times, and a screenshot compared with the reference's.
+- The Hub's streaming page: a mesh without `lod` as its own far stand-in, `farEntries` and the two ways out, a merged kit's near ↔ far fade, the test scene's ruins. The Mesh merging page: "A large far field" (larger `AUTO` cells for far content that doesn't stream, with Phase 0's figures, and what they don't reach: p378), and its Streaming section's far entries.
+
+**Changed**
+
+- The SBP budgets for `streamingGrid`'s ruins (every scene's JSON is in the app's first download): the initial 394 → 398 KiB, `assets/index.js` 390 → 394 KiB and the `app` group 15 → 19 KiB (`sbp.config.ts`); the bundle baseline recorded again.
+- The `streaming/`, `merging/` and gather `CLAUDE.md`, and `readme.md`'s streaming line.
+- The plans: p377 done, with its Phase 0 results; p378 (a baked member's mesh out of the scene graph) written from them; the p370 epic and p990 follow them.
+
 ## 2026-11-12 — p376_hlod-merged-cluster-proxies
 
 HLOD merged cluster proxies (p376, Tier 3.1 of the merging epic p370), not adopted: its Phase 0 measured simplified proxies of merge groups on a far field of ruin sites (largeWorld, up to 400 sites and 1,838 groups) and failed its gate. The proxies cut 39-50 % of the groups' triangles in view without saving GPU time on WebGL2, and the CPU frame followed the draws, one per group, which a proxy level doesn't change. So no group proxies are built; far static content in few draws continues as p377, from draws rather than triangles. The branch keeps the results, the spike's tools and a debugger fix found while measuring.
