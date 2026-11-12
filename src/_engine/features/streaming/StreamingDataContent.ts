@@ -3,8 +3,9 @@
 // (StreamingCells.ts) runs ahead of a cell's code-registered ones, per content layer. Each layer:
 // one async unit loading its cell-only assets in its owner key, then its entries a few a unit, the
 // first of them waiting for the assets. The near layer's entries are its lights and meshes; the far
-// layer's its meshes' far representations (an `InstancedMesh` per group, a mesh of its own
-// otherwise); the kept layer's the oversized meshes it overlaps, one entity across their cells:
+// layer's its meshes' far representations (an `InstancedMesh` per group, its instances at the near
+// entries' transforms it names, p377 D3; a mesh of its own otherwise); the kept layer's the
+// oversized meshes it overlaps, one entity across their cells:
 // the first cell to load creates it, every holder's unit returns it, the last to unload deletes it,
 // and `getHolders` tells the machine which holder shows and fades it (D8).
 import * as THREE from 'three/webgpu';
@@ -13,6 +14,7 @@ import { getGeometry, incGeometryRef } from '../../kernel/assets/Geometry';
 import { getMaterial, incMaterialRef } from '../../kernel/assets/Material';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import type { MeshProps } from '../../kernel/mesh/Mesh';
 import { getRootScene } from '../../kernel/scene/Scene';
 import { createSceneObject3Ds, loadSceneAssetsAsync } from '../../kernel/scene/SceneDataLoader';
 import type { StreamingCellUnitSource } from './StreamingCells';
@@ -88,14 +90,38 @@ const _quaternion = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
 const _euler = new THREE.Euler();
 
+/** A far instance's transform: a near entry's props, or a deprecated `instances` item */
+type FarTransform = Pick<MeshProps, 'position' | 'rotation' | 'quaternion' | 'scale'>;
+
+/** Writes instance `i`'s matrix from a transform: `quaternion` over `rotation`, scale 1 by
+ * default (the module's scratch objects, nothing allocated) */
+const setFarInstanceMatrix = (mesh: THREE.InstancedMesh, i: number, t: FarTransform) => {
+  const { position: p, rotation: r, quaternion: q, scale: s } = t;
+  _position.set(p?.x ?? 0, p?.y ?? 0, p?.z ?? 0);
+  if (q) _quaternion.set(q.x, q.y, q.z, q.w);
+  else _quaternion.setFromEuler(_euler.set(r?.x ?? 0, r?.y ?? 0, r?.z ?? 0));
+  _scale.set(s?.x ?? 1, s?.y ?? 1, s?.z ?? 1);
+  mesh.setMatrixAt(i, _matrix.compose(_position, _quaternion, _scale));
+};
+
+/** Whether a far representation is a group (drawn by `createFarGroupEntity`) rather than a mesh
+ * of its own: it names its entries, or has the deprecated instances */
+const isFarGroup = (far: StreamingFarMesh) => !!(far.entries ?? far.instances);
+
 /**
- * A far group's entity (Phase 5 D7): one `InstancedMesh` of the group's registered geometry and
- * material, an instance per entry, holding a ref on both (the mesh tag's delete hook releases
- * them). Not in the ECS frustum culling (it measures one instance at the origin): three culls the
- * mesh by its bounds over every instance. Throws when its geometry or material isn't registered.
+ * A far group's entity (p353 Phase 5 D7): one `InstancedMesh` of the group's registered geometry
+ * and material, an instance per entry, holding a ref on both (the mesh tag's delete hook releases
+ * them). An instance is at its near entry's transform (`far.entries`, indices into the manifest's
+ * `meshes`, p377 D3), or at the deprecated `far.instances`' when the group has no `entries`. Not in
+ * the ECS frustum culling (it measures one instance at the origin): three culls the mesh by its
+ * bounds over every instance. Throws when its geometry or material isn't registered.
  * @internal
  */
-export const createFarGroupEntity = (world: ECSWorld, far: StreamingFarMesh) => {
+export const createFarGroupEntity = (
+  world: ECSWorld,
+  far: StreamingFarMesh,
+  meshes: StreamingManifest['meshes']
+) => {
   const { geo, mat, castShadow, receiveShadow } = far.props;
   const geometry = typeof geo === 'string' ? getGeometry(geo) : undefined;
   const material = typeof mat === 'string' ? getMaterial(mat) : undefined;
@@ -104,15 +130,15 @@ export const createFarGroupEntity = (world: ECSWorld, far: StreamingFarMesh) => 
       `a far group's ${geometry ? `material "${String(mat)}"` : `geometry "${String(geo)}"`} isn't registered`
     );
   }
-  const instances = far.instances ?? [];
-  const mesh = new THREE.InstancedMesh(geometry, material, instances.length);
-  for (let i = 0; i < instances.length; i++) {
-    const { position: p, rotation: r, quaternion: q, scale: s } = instances[i];
-    _position.set(p?.x ?? 0, p?.y ?? 0, p?.z ?? 0);
-    if (q) _quaternion.set(q.x, q.y, q.z, q.w);
-    else _quaternion.setFromEuler(_euler.set(r?.x ?? 0, r?.y ?? 0, r?.z ?? 0));
-    _scale.set(s?.x ?? 1, s?.y ?? 1, s?.z ?? 1);
-    mesh.setMatrixAt(i, _matrix.compose(_position, _quaternion, _scale));
+  const { entries } = far;
+  // The deprecated instances, drawn until engine 7.0.0 (p377 D3)
+  const instances = entries ? undefined : far.instances;
+  const count = entries?.length ?? instances?.length ?? 0;
+  const mesh = new THREE.InstancedMesh(geometry, material, count);
+  if (entries) {
+    for (let i = 0; i < count; i++) setFarInstanceMatrix(mesh, i, meshes[entries[i]].props);
+  } else if (instances) {
+    for (let i = 0; i < count; i++) setFarInstanceMatrix(mesh, i, instances[i]);
   }
   mesh.computeBoundingSphere();
   mesh.castShadow = castShadow ?? false;
@@ -180,7 +206,7 @@ export const createStreamingDataContent = (
     load: ({ world }) =>
       indices.flatMap((index) => {
         const far = farMeshes[index];
-        if (far.instances) return [createFarGroupEntity(world, far)];
+        if (isFarGroup(far)) return [createFarGroupEntity(world, far, manifest.meshes)];
         return createSceneObject3Ds({ meshes: [{ props: far.props }] });
       }),
   });
