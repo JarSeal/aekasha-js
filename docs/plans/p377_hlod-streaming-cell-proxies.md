@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
+Status: in progress | Phases 0-2 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -461,7 +461,7 @@ Exit: `yarn test`, lint and both `tsc` clean; `yarn gatherAppData` leaves `strea
 - The Hub's streaming page still says only a mesh with LOD `levels` gets a far stand-in
   (`guide.md`'s Far representations and its limits list): Phase 6 step 1.
 
-## Phase 2 — The far layer: groups by their entries
+## Phase 2 — The far layer: groups by their entries — done
 
 D3: a far group names its near entries; the gather writes them, the runtime reads them.
 
@@ -490,6 +490,35 @@ D3: a far group names its near entries; the gather writes them, the runtime read
 
 Exit: as Phase 1's, and `streamingGrid` draws its far beacons as before (`yarn verify:scenes --only
 streamingGrid` inside its baseline).
+
+**As built** (2026-11-12):
+
+- `getFarMeshProps` returns `{ props, kind }`: the props keep the transform (a far mesh of its own
+  draws at it; a group writes only its four fields), `kind` stays (Phase 1's As built).
+  `addFarEntry` takes the mesh's manifest index (`cellMeshes.forEach`'s `index`, the same as its
+  place in `manifest.meshes`, base meshes left out).
+- `createFarGroupEntity(world, far, meshes)`: `entries` wins when a group has both; the instance
+  matrix is `setFarInstanceMatrix` (the module's scratch objects) for either source, and the far
+  unit tells a group by `isFarGroup` (`entries ?? instances`). The deprecated field is read
+  without a lint suppression: the config doesn't enable `no-deprecated`.
+- The tab's JSON content readout is five lines: the manifest's cells, meshes and lights, then
+  `N far meshes: G groups (I instances), K of their own`. Its note now says Phase 1's rule too (a
+  mesh without `lod` is its own far entry), which it didn't.
+- `devTools/gather/CLAUDE.md`'s step 3 names `entries` as well.
+- **The size** (`streamingGrid`, its 32 far groups of one beacon piece each, compact JSON as the
+  build ships it): `__streaming` 19,636 → 18,450 bytes (-1,186, -6 %), its `farMeshes` 5,129 →
+  3,943; `generatedAppData.json` on disk (pretty printed) 775,602 → 770,896. The only change in
+  the generated data is those 32 groups.
+- Exit: `yarn test` 353 files, 3,328 tests (1 skipped), lint and both `tsc` clean. `yarn
+  verify:scenes --only streamingGrid`: all five configurations pass on the baseline's hash
+  (`811c9dc5`; its snapshot is skipped), the Streaming tab's drawer shot 6.09 % changed (an
+  unstable shot: its masked readouts, the JSON content box a row taller).
+- `yarn verify:baselines`: `api.json` unchanged (it records exports and their kinds, not a type's
+  fields, so `entries` doesn't show and nothing is updated), the docs ratchet unchanged, no debug
+  code; the streaming chunks inside the tolerance. It flags two bundle changes this phase didn't
+  make: a new `assets/DebugModules.js` (0.1 kB gzip) and `assets/largeWorld.js` +0.2 kB gzip,
+  from the commits since `bundle.json` was last recorded (p376's and p377 Phase 0's, on
+  largeWorld's spike modules). Left for Phase 5's `yarn verify:baselines --update`.
 
 ## Phase 3 — streamingGrid: kit content near and far
 
