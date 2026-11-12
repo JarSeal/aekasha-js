@@ -41,6 +41,7 @@ import {
   saveLargeWorldRockGeometry,
 } from '../../shared/largeWorldRock';
 import { createRuins } from './largeWorldRuins';
+import type { RuinMaterials } from './largeWorldRuins';
 
 const LARGE_WORLD_SCENE_ID = 'largeWorld';
 
@@ -193,7 +194,8 @@ export const scene = async () => {
   createBushPool(ctx);
   createRockPool(ctx);
   const propMaterials = createStaticProps(ctx);
-  createRuins(ctx.world, ctx.terrain, propMaterials);
+  createRuins(ctx.world, (x, z) => ctx.terrain.getHeightAt(x, z), propMaterials);
+  await createHlodFieldAsync(ctx.world, propMaterials);
   createLanterns(ctx);
   const restingMaterial = createRestingObjects(ctx);
   const crateStackId = createCrateStack(ctx, restingMaterial);
@@ -204,6 +206,17 @@ export const scene = async () => {
   await installHlodSpikeAsync(ctx.world);
 
   updateLoaderFn({ loadedCount: 1, totalCount: 1 });
+};
+
+/** p376 Phase 0's far field (`?hlodField=<sites>`, `_dbg__largeWorldHlodField.ts`), in the debug
+ * env and prod test mode. */
+const createHlodFieldAsync = async (world: ECSWorld, materials: RuinMaterials) => {
+  const field = await loadDebugModuleAsync(
+    () => import('./_dbg__largeWorldHlodField'),
+    true,
+    'HLOD spike far field'
+  );
+  field?.current?.createHlodField(world, materials);
 };
 
 /** p376 Phase 0's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`), in the debug

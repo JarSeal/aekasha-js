@@ -8,6 +8,11 @@
  * frustum, the renderer's triangles and draws (every pass), the CPU frame and render submit, and
  * the stats panel's GPU figure. Each backend and run is a page of its own; the level order is
  * reversed on every second run, so a drift over the page's life doesn't favour one.
+ *
+ * Step 3 is the same with `--field <sites>` (largeWorld's `?hlodField`, the far field). On WebGPU
+ * the frame figure sums overlapping passes (docs/issues/gpu-timer-webgpu-frame-sum.md), so the
+ * passes that draw the scene are read one by one meanwhile (the probe's `gpuContextsAsync`: the
+ * scene pass, the AO pre-pass and the sun's shadow, each its median), and their sum compared.
  */
 import type { Browser, Page } from 'playwright-core';
 import { out } from '../progressLog';
@@ -31,11 +36,13 @@ const SCENE_ID = 'largeWorld';
 /** A camera pose: where it is and the point it looks at */
 type Pose = { position: [number, number, number]; target: [number, number, number] };
 
-/** The views: the overview camera's own pose (`largeWorldOverview.camera.json`), and the same
- * line pulled back 2.5 times, the whole terrain small in the frame */
+/** The views: the overview camera's own pose (`largeWorldOverview.camera.json`), the same line
+ * pulled back 2.5 times (the whole terrain small in the frame), and 8 m up at the terrain's edge
+ * looking out across the far field's ring (`ground`) */
 export const FRAME_VIEWS: Record<string, Pose> = {
   start: { position: [0, 60, 120], target: [0, 0, 0] },
   far: { position: [0, 150, 300], target: [0, 0, 0] },
+  ground: { position: [0, 8, 95], target: [0, 0, -1000] },
 };
 
 const MODES = ['FULL', 'AUTO', 'COARSEST'] as const;
@@ -51,20 +58,35 @@ export type FramesArgs = {
   maxPixelError: number;
   /** The proxies' chain options (`prune` added by the probe) */
   chain: { permissive: boolean; maxError: number; ratios?: number[]; prune: boolean };
+  /** The far field's sites (`?hlodField`), 0 for none */
+  field: number;
 };
 
 /** `measure`'s figures */
 type Measure = Record<'cpuMs' | 'renderMs' | 'drawCalls' | 'triangles' | 'seconds', number>;
 type PassCount = { triangles: number; groups: number };
 type Passes = { all: number; main: PassCount | null; shadows: PassCount[] };
-type CaseRun = { measure: Measure; gpuMs: number; byLevel: number[]; passes: Passes };
+/** A render context's GPU durations over a case (`gpuContextsAsync`) */
+type GpuContext = { context: string; drew: string; samples: number; medianMs: number };
+type CaseRun = {
+  measure: Measure;
+  gpuMs: number;
+  /** WebGPU: the scene-drawing passes' medians summed (the scene pass, the pre-pass, the shadow) */
+  scenePassesMs: number;
+  contexts: GpuContext[];
+  byLevel: number[];
+  passes: Passes;
+};
 type FramesApi = {
   setupSkyAsync: (hours: number) => Promise<void>;
-  prepareLevelsAsync: (options: object) => Promise<{ groups: number; withLevels: number }>;
+  prepareLevelsAsync: (
+    options: object
+  ) => Promise<{ groups: number; withLevels: number; ms: number }>;
   view: (pose: Pose) => void;
   setLevel: (mode: Mode, maxPixelError: number) => number[];
   passTriangles: () => Passes;
   measure: (frames: number) => Promise<Measure>;
+  gpuContextsAsync: (ms: number) => Promise<GpuContext[]>;
   backend: () => string;
   restore: () => void;
 };
@@ -83,9 +105,14 @@ const measureAsync = (page: Page, frames: number) =>
     `measure(${frames})`
   );
 
+/** Whether a context draws the scene: a perspective camera's (the scene pass, the AO pre-pass) or
+ * a shadow map's */
+const isScenePass = (c: GpuContext) => /^PerspectiveCamera|ShadowMap/.test(c.drew);
+
 /** The next `frames` frames' figures, with the stats panel's GPU figure sampled meanwhile (its
- * first second left out: the panel's average still holds the previous case) */
-const measureWithGpuAsync = async (page: Page, frames: number) => {
+ * first second left out: the panel's average still holds the previous case) and, on WebGPU, each
+ * render context's durations */
+const measureWithGpuAsync = async (page: Page, frames: number, backend: Backend) => {
   await page.evaluate((everyMs) => {
     const gpu = { samples: [] as number[], timer: 0 };
     gpu.timer = window.setInterval(() => {
@@ -94,7 +121,14 @@ const measureWithGpuAsync = async (page: Page, frames: number) => {
     }, everyMs);
     (window as FramesWindow).__benchGpu = gpu;
   }, GPU_SAMPLE_MS);
-  const measure = await measureAsync(page, frames);
+  // At 60 fps; the contexts' read starts with the measure and stops a little before it ends
+  const contextsMs = Math.max(500, (frames / 60) * 1000 - 500);
+  const [measure, contexts] = await Promise.all([
+    measureAsync(page, frames),
+    backend === 'webgpu'
+      ? page.evaluate((ms) => (window as FramesWindow).__aekHlod!.gpuContextsAsync(ms), contextsMs)
+      : Promise.resolve([] as GpuContext[]),
+  ]);
   const samples = await page.evaluate(() => {
     const gpu = (window as FramesWindow).__benchGpu!;
     window.clearInterval(gpu.timer);
@@ -102,7 +136,11 @@ const measureWithGpuAsync = async (page: Page, frames: number) => {
   });
   const usable = samples.slice(Math.ceil(1000 / GPU_SAMPLE_MS)).filter((s) => !Number.isNaN(s));
   const gpuMs = usable.length ? usable.reduce((a, b) => a + b, 0) / usable.length : NaN;
-  return { measure, gpuMs };
+  const scene = contexts.filter(isScenePass);
+  const scenePassesMs = scene.length
+    ? scene.reduce((sum, c) => sum + Math.max(0, c.medianMs), 0)
+    : NaN;
+  return { measure, gpuMs, contexts, scenePassesMs };
 };
 
 /** One page: every view and mode, in `order` */
@@ -125,7 +163,9 @@ const runPageAsync = async (
   if (!drawnOn.toLowerCase().startsWith(backend)) {
     out(`    ${RED}asked for ${backend}, drew on ${drawnOn}${RESET}`);
   }
-  out(`    ${prepared.withLevels} of ${prepared.groups} groups with proxy levels, on ${drawnOn}`);
+  out(
+    `    ${prepared.withLevels} of ${prepared.groups} groups with proxy levels (${fmt(prepared.ms, 0)} ms on the main thread), on ${drawnOn}`
+  );
   for (const viewName of args.views) {
     await page.evaluate(
       (pose) => (window as FramesWindow).__aekHlod!.view(pose),
@@ -138,11 +178,15 @@ const runPageAsync = async (
         { m: mode, mpe: args.maxPixelError }
       );
       if (args.warmup > 0) await measureAsync(page, args.warmup);
-      const { measure, gpuMs } = await measureWithGpuAsync(page, args.frames);
+      const { measure, gpuMs, contexts, scenePassesMs } = await measureWithGpuAsync(
+        page,
+        args.frames,
+        backend
+      );
       const passes = await page.evaluate(() => (window as FramesWindow).__aekHlod!.passTriangles());
-      results[viewName][mode].push({ measure, gpuMs, byLevel, passes });
+      results[viewName][mode].push({ measure, gpuMs, scenePassesMs, contexts, byLevel, passes });
       out(
-        `    ${viewName} ${mode}: levels [${byLevel.join(', ')}], CPU ${fmt(measure.cpuMs)} ms, GPU ${fmt(gpuMs)} ms, ${int(measure.triangles)} triangles`
+        `    ${viewName} ${mode}: levels [${byLevel.join(', ')}], CPU ${fmt(measure.cpuMs)} ms, GPU ${fmt(gpuMs)} ms${backend === 'webgpu' ? ` (scene passes ${fmt(scenePassesMs)} ms)` : ''}, ${int(measure.drawCalls)} draws, ${int(measure.triangles)} triangles`
       );
     }
   }
@@ -162,7 +206,9 @@ export const runFramesStepAsync = async (browser: Browser, baseUrl: string, args
       const page = await browser.newPage({ viewport: VIEWPORT });
       const errors: string[] = [];
       try {
-        await openSceneAsync(page, buildSceneUrl(baseUrl, SCENE_ID), backend, errors);
+        const extra: Record<string, string> =
+          args.field > 0 ? { hlodField: String(args.field) } : {};
+        await openSceneAsync(page, buildSceneUrl(baseUrl, SCENE_ID, extra), backend, errors);
         await runPageAsync(page, args, backend, order, byView);
       } catch (err) {
         out(`${RED}✗ ${backend} run ${run + 1}: ${(err as Error).message}${RESET}`);
@@ -183,28 +229,28 @@ export const formatFrames = (results: FramesResults, args: FramesArgs) => {
   for (const [backend, byView] of Object.entries(results)) {
     lines.push(
       `\n${backend}: medians of ${args.runs} run(s), ${args.frames} frames each, ${args.timeOfDay}:00, proxies ${JSON.stringify(args.chain)}, maxPixelError ${args.maxPixelError}`,
-      "| View | Levels | Groups per level (0, 1, …) | Groups' triangles: all / in view (drawn twice: the scene pass and the AO pre-pass) / in the sun's shadow | Renderer triangles (every pass) | Draws | CPU frame (ms) | Render submit (ms) | GPU (ms) | GPU spread |",
-      '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |'
+      "| View | Levels | Groups per level (0, 1, …) | Groups' triangles: all / in view (drawn twice: the scene pass and the AO pre-pass) / in the sun's shadow | Renderer triangles (every pass) | Draws | CPU frame (ms) | Render submit (ms) | GPU (ms) | GPU spread | Scene passes GPU (ms, WebGPU) |",
+      '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: |'
     );
     for (const [view, byMode] of Object.entries(byView)) {
       for (const mode of MODES) {
         const runs = byMode[mode];
         if (!runs.length) {
-          lines.push(`| ${view} | ${mode} | failed | | | | | | | |`);
+          lines.push(`| ${view} | ${mode} | failed | | | | | | | | |`);
           continue;
         }
         const pick = (key: keyof Measure) => med(runs.map((r) => r.measure[key]));
         const gpus = runs.map((r) => r.gpuMs);
         const last = runs[runs.length - 1];
         lines.push(
-          `| ${view} | ${mode} | ${last.byLevel.join(', ')} | ${int(last.passes.all)} / ${int(last.passes.main?.triangles ?? NaN)} / ${int(sumShadows(last.passes))}${last.passes.shadows.length !== 1 ? ` (${last.passes.shadows.length} shadow suns)` : ''} | ${int(pick('triangles'))} | ${fmt(pick('drawCalls'), 0)} | ${fmt(pick('cpuMs'))} | ${fmt(pick('renderMs'))} | ${fmt(med(gpus))} | ${fmt(Math.min(...gpus))}-${fmt(Math.max(...gpus))} |`
+          `| ${view} | ${mode} | ${last.byLevel.join(', ')} | ${int(last.passes.all)} / ${int(last.passes.main?.triangles ?? NaN)} / ${int(sumShadows(last.passes))}${last.passes.shadows.length !== 1 ? ` (${last.passes.shadows.length} shadow suns)` : ''} | ${int(pick('triangles'))} | ${fmt(pick('drawCalls'), 0)} | ${fmt(pick('cpuMs'))} | ${fmt(pick('renderMs'))} | ${fmt(med(gpus))} | ${fmt(Math.min(...gpus))}-${fmt(Math.max(...gpus))} | ${fmt(med(runs.map((r) => r.scenePassesMs)))} |`
         );
       }
     }
     lines.push(
       `\n${backend}: against FULL (the median of the runs' differences, each run against its own FULL)`,
-      '| View | Levels | Renderer triangles saved | GPU (ms) saved | GPU spread | CPU frame (ms) saved |',
-      '| --- | --- | ---: | ---: | --- | ---: |'
+      '| View | Levels | Renderer triangles saved | GPU (ms) saved | GPU spread | Scene passes GPU (ms) saved | its spread | CPU frame (ms) saved |',
+      '| --- | --- | ---: | ---: | --- | ---: | --- | ---: |'
     );
     for (const [view, byMode] of Object.entries(byView)) {
       for (const mode of ['AUTO', 'COARSEST'] as const) {
@@ -213,8 +259,9 @@ export const formatFrames = (results: FramesResults, args: FramesArgs) => {
           .filter((p) => p.full);
         if (!pairs.length) continue;
         const gpu = pairs.map((p) => p.full.gpuMs - p.r.gpuMs);
+        const scene = pairs.map((p) => p.full.scenePassesMs - p.r.scenePassesMs);
         lines.push(
-          `| ${view} | ${mode} | ${int(med(pairs.map((p) => p.full.measure.triangles - p.r.measure.triangles)))} | ${fmt(med(gpu), 3)} | ${fmt(Math.min(...gpu), 3)} to ${fmt(Math.max(...gpu), 3)} | ${fmt(med(pairs.map((p) => p.full.measure.cpuMs - p.r.measure.cpuMs)), 3)} |`
+          `| ${view} | ${mode} | ${int(med(pairs.map((p) => p.full.measure.triangles - p.r.measure.triangles)))} | ${fmt(med(gpu), 3)} | ${fmt(Math.min(...gpu), 3)} to ${fmt(Math.max(...gpu), 3)} | ${fmt(med(scene), 3)} | ${fmt(Math.min(...scene), 3)} to ${fmt(Math.max(...scene), 3)} | ${fmt(med(pairs.map((p) => p.full.measure.cpuMs - p.r.measure.cpuMs)), 3)} |`
         );
       }
     }

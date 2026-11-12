@@ -14,12 +14,13 @@
  * own (its own dev server, the scene runner's, unless `--url`), in the debug env on WebGPU.
  *
  *   npx tsx devTools/bench/hlodSpike.ts --step frames [--backends webgpu,webgl] [--views start,far]
- *     [--proxy permissive] [--max-error 0.2] [--ratios …] [--max-pixel-error 1] [--time 10]
+ *     [--proxy permissive] [--max-error 0.2] [--ratios …] [--max-pixel-error 1] [--time 10] [--field <sites>]
  *     [--runs 3] [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
  *
  * Step 2 (`frames`, `hlodSpikeFrames.ts`): largeWorld's frame with the groups at full detail, at
  * the level `AUTO` would pick and at their coarsest proxy level (`--proxy`'s variant at
- * `--max-error`, default 0.2 here), on each backend.
+ * `--max-error`, default 0.2 here), on each backend. Step 3 is `frames` with `--field <sites>`
+ * (largeWorld's far field, `?hlodField`) and `--views` naming `ground` (8 m up, looking across it).
  * Output: `.cache/bench/progress.log` too.
  */
 import fs from 'node:fs';
@@ -78,6 +79,7 @@ type Args = {
   timeOfDay: number;
   warmup: number;
   frames: number;
+  field: number;
 };
 
 const parseArgs = (argv: string[]): Args => {
@@ -99,6 +101,7 @@ const parseArgs = (argv: string[]): Args => {
     timeOfDay: 10,
     warmup: 120,
     frames: 300,
+    field: 0,
   };
   const variant = (v: string) =>
     (VARIANTS as readonly string[]).includes(v) ? (v as VariantName) : fail(`unknown variant ${v}`);
@@ -123,6 +126,7 @@ const parseArgs = (argv: string[]): Args => {
     else if (flag === '--time') args.timeOfDay = Number(value());
     else if (flag === '--warmup') args.warmup = Math.max(0, Number(value()));
     else if (flag === '--frames') args.frames = Math.max(1, Number(value()));
+    else if (flag === '--field') args.field = Math.max(0, Math.floor(Number(value())));
     else if (flag === '--ratios') args.ratios = value().split(',').map(Number);
     else if (flag === '--max-error') args.maxError = Number(value());
     else if (flag === '--runs') args.runs = Math.max(1, Number(value()));
@@ -254,7 +258,9 @@ const runSimplifyStepAsync = async (browser: Browser, baseUrl: string, args: Arg
     const page = await browser.newPage({ viewport: VIEWPORT });
     const errors: string[] = [];
     try {
-      await openSceneAsync(page, buildSceneUrl(baseUrl, sceneId), 'webgpu', errors);
+      const extra: Record<string, string> =
+        args.field > 0 && sceneId === 'largeWorld' ? { hlodField: String(args.field) } : {};
+      await openSceneAsync(page, buildSceneUrl(baseUrl, sceneId, extra), 'webgpu', errors);
       const options = {
         variants: args.variants,
         runs: args.runs,
@@ -288,6 +294,7 @@ const toFramesArgs = (args: Args): FramesArgs => ({
   views: args.views,
   timeOfDay: args.timeOfDay,
   maxPixelError: args.maxPixelError,
+  field: args.field,
   chain: {
     permissive: args.proxy === 'permissive' || args.proxy === 'prunePermissive',
     prune: args.proxy === 'prune' || args.proxy === 'prunePermissive',

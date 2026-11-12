@@ -119,6 +119,20 @@ describe('GPU frame times (p807 D5)', () => {
     remove();
   });
 
+  it("counts a context's negative duration (a stale timestamp) as 0", async () => {
+    const { renderer, pools } = createRenderer();
+    _acquireGpuFrameTimes('RENDER');
+    const { times, remove } = collect();
+
+    runFrame(renderer, ['r:1:a:f1', 'r:3:shadow:f1']);
+    pools.render?.timestamps.set('r:1:a:f1', 0.5);
+    pools.render?.timestamps.set('r:3:shadow:f1', -4959.68);
+    await settleResolves();
+
+    expect(times).toEqual([{ renderMs: 0.5, computeMs: null }]);
+    remove();
+  });
+
   it('waits for a missing uid, then drops the frame after 8 batches', async () => {
     const { renderer, pools } = createRenderer();
     _acquireGpuFrameTimes('RENDER');

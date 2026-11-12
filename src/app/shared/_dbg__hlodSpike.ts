@@ -397,6 +397,7 @@ const createFrameApi = (world: ECSWorld) => {
       prepared.length = 0;
       const { prune, ...chainOptions } = options;
       const resolved = resolveLodChainOptions(chainOptions);
+      const startedAt = performance.now();
       for (const { mesh } of getBakedGroups(world)) {
         const base = mesh.geometry;
         const data = serializeForSimplify(base);
@@ -417,6 +418,8 @@ const createFrameApi = (world: ECSWorld) => {
         prune: Boolean(prune),
         groups: prepared.length,
         withLevels: prepared.filter((g) => g.levels.length > 0).length,
+        /** The simplifier's main thread time for every group, one after another */
+        ms: performance.now() - startedAt,
       };
     },
     /**
@@ -486,6 +489,65 @@ const createFrameApi = (world: ECSWorld) => {
           },
         };
       });
+    },
+    /**
+     * WebGPU's GPU timing check: for `ms`, every render context's resolved durations (three's
+     * render timestamp pool, polled every 50 ms; the stats panels' GPU panel must hold the timer)
+     * by context id, with what it drew (its camera, target and scene, from the inspector's
+     * `beginRender`). Returns each context's sample count and min / median / max ms.
+     */
+    gpuContextsAsync: async (ms: number) => {
+      type Inspector = { beginRender: (uid: string, ...args: unknown[]) => void };
+      type Pool = { timestamps: Map<string, number> };
+      const renderer = getRenderer();
+      const inspector = renderer?.inspector as unknown as Inspector | undefined;
+      const pools = (renderer?.backend as unknown as { timestampQueryPool?: Record<string, Pool> })
+        ?.timestampQueryPool;
+      if (!renderer || !inspector || !pools?.render) {
+        throw new Error('No render timestamp pool: is the GPU stats panel on?');
+      }
+      const contextKey = (uid: string) => uid.replace(/:f\d+$/, '');
+      const described = new Map<string, string>();
+      const durations = new Map<string, number[]>();
+      const beginRender = inspector.beginRender;
+      inspector.beginRender = function (uid: string, ...args: unknown[]) {
+        const [scene, camera, target] = args as [
+          THREE.Scene | undefined,
+          THREE.Camera | undefined,
+          THREE.RenderTarget | null | undefined,
+        ];
+        const key = contextKey(uid);
+        if (!described.has(key)) {
+          described.set(
+            key,
+            `${camera?.type ?? '?'} → ${target ? `${target.texture?.name || 'target'} ${target.width}×${target.height}` : 'canvas'} (${scene?.type ?? '?'}${scene?.name ? ` ${scene.name}` : ''})`
+          );
+        }
+        return beginRender.call(this, uid, ...args);
+      };
+      // A uid is a context and a frame: each resolved frame's duration counted once
+      const counted = new Set<string>();
+      const timer = window.setInterval(() => {
+        for (const [uid, duration] of pools.render.timestamps) {
+          if (counted.has(uid)) continue;
+          counted.add(uid);
+          const key = contextKey(uid);
+          const list = durations.get(key) ?? [];
+          list.push(duration);
+          durations.set(key, list);
+        }
+      }, 50);
+      await new Promise((resolve) => window.setTimeout(resolve, ms));
+      window.clearInterval(timer);
+      inspector.beginRender = beginRender;
+      return [...durations].map(([key, list]) => ({
+        context: key,
+        drew: described.get(key) ?? '(not seen beginning)',
+        samples: list.length,
+        minMs: Math.min(...list),
+        medianMs: quantile(list, 0.5),
+        maxMs: Math.max(...list),
+      }));
     },
     /** The renderer's backend. */
     backend: () =>

@@ -237,6 +237,90 @@ saving in view plus the shadow's (15,650 = 2 × 7,469 + 712 at `start`).
   `AUTO` at `far`, 32 %), the GPU time isn't. So step 3 runs (§3: "when step 2's savings are
   small").
 
+**The WebGPU GPU figure, looked into** (between steps 2 and 3,
+`docs/issues/gpu-timer-webgpu-frame-sum.md`). Each render context's duration from three's
+timestamp pool (the probe's `gpuContextsAsync`) showed two faults in the debugger's frame figure:
+`far`'s shadow pass, with no caster in its frustum, resolves with a stale timestamp (-2,000 to
+-5,000 ms), and the frame sums passes that overlap on the M2's tile-based GPU (the PostFX output
+pass reads about what GTAO does, 9 ms; the frame 29 ms against WebGL2's 11.5). Fixed: a negative
+duration counts as 0 (`_sumGpuMs`, `_dbg__GPUTimer.ts`, debug only, with a test). Not fixed: the
+overlap (it needs each pass's raw begin and end, which three's pool doesn't keep). So from step 3
+on, WebGPU is compared by its **scene passes**: the scene pass, the AO pre-pass and the sun's
+shadow, each pass's median duration over the case, summed (the bench's "Scene passes GPU").
+
+**Step 3: a far field.** `?hlodField=<sites>` (`src/app/scenes/largeWorld/_dbg__largeWorldHlodField.ts`,
+loaded like the probe; `createRuins` now takes its sites, a ground height and the `merge`): ruin
+sites spread evenly over a ring 200 m-1 km out, on a flat ground of their own at y = 0, merged
+`AUTO` in 32 m cells, the overview camera's far plane at 3 km. A third view, `ground`: 8 m up at
+the terrain's edge (0, 8, 95), looking out across the ring. Otherwise as step 2.
+
+150 sites: **743 groups, 149,392 triangles** (699 groups with proxy levels; 400-920 ms of
+simplifier work on the main thread for all of them, one after another, at maxError 0.2).
+
+| View | Groups per level, `AUTO` (0, 1, 2, 3) | Groups' triangles in view: FULL / AUTO / COARSEST | Renderer triangles saved: AUTO / COARSEST | Draws | WebGL2 GPU saved (ms): AUTO / COARSEST | WebGPU scene passes saved (ms): AUTO / COARSEST |
+| --- | --- | --- | --- | ---: | --- | --- |
+| start | 386, 144, 45, 168 | 48,452 / 29,618 / 6,183 | 37,668 / 85,250 | 574 | -0.31 / -0.31 | 0.41 (0.34 to 1.73) / 0.45 (-0.03 to 1.94) |
+| far | 359, 158, 58, 168 | 59,306 / 29,697 / 7,405 | 59,218 / 103,802 | 647 | -0.11 / -0.17 | -0.08 (-1.46 to 0.05) / 0.26 (-0.03 to 0.61) |
+| ground | 387, 145, 42, 169 | 47,632 / 29,170 / 6,065 | 36,924 / 83,846 | 563 | -0.28 / -0.31 | -0.91 (-2.94 to -0.23) / 0.86 (0.59 to 0.93) |
+
+(Medians of three runs' differences against each run's own FULL, the spread in brackets; the
+WebGL2 spreads are about -1.2 to 1.2 ms.) The frame: WebGL2 GPU 10-11.5 ms, CPU 4.7 ms; WebGPU
+CPU 6-7 ms (the 560-650 draws), unchanged by the levels.
+
+- **`AUTO` now picks proxies**: about half the groups take a level at `maxPixelError` 1, saving
+  39-50 % of the groups' triangles in view (the gate's quarter, at every view), and the cull-free
+  `COARSEST` 87 %.
+- **No GPU time follows on WebGL2**: every median is slightly negative, inside the runs' spread.
+  Removing 37,000-104,000 triangles from a 300,000-730,000 frame doesn't show on the M2, whose
+  frame here is fill and AO bound (GTAO alone is several ms).
+- **WebGPU's scene passes don't agree with themselves**: 0.4-0.9 ms saved in some cases, 0.9 ms
+  lost in `ground` `AUTO` (all three runs). The passes' own durations overlap their neighbours'
+  (the issue above), so they still carry other passes' time; they aren't a figure the gate can rest
+  on alone.
+
+400 sites: **1,838 groups, 387,048 triangles** (1,738 with levels; 0.9-1.2 s of simplifier work).
+The Stop hook's unit test run overlapped the first WebGPU page, so that page's CPU figures are
+high; the GPU figures are the GPU's own.
+
+| View | Groups' triangles in view: FULL / AUTO / COARSEST | Renderer triangles saved: AUTO / COARSEST | Draws | CPU frame (ms) | WebGL2 GPU saved (ms): AUTO / COARSEST | WebGPU scene passes saved (ms): AUTO / COARSEST |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| start | 122,566 / 71,414 / 15,423 | 102,304 / 214,998 | 1,262 | 12-17 | -0.73 (-1.95 to 0.95) / 0.36 (-0.27 to 1.18) | 0.89 (0.03 to 1.38) / 1.43 (0.33 to 1.78) |
+| far | 164,762 / 82,447 / 20,253 | 164,630 / 289,018 | 1,605 | 14-17 | -0.02 (-0.50 to 0.43) / -0.13 (-0.48 to 0.29) | 0.26 (-0.04 to 0.53) / 0.06 (-0.21 to 2.23) |
+| ground | 121,252 / 70,448 / 15,197 | 101,608 / 212,822 | 1,245 | 12-15 | -0.11 (-0.28 to 0.56) / -0.18 (-0.96 to -0.04) | -0.13 (-0.49 to 0.55) / 0.55 (-0.06 to 2.17) |
+
+- **WebGL2 still shows nothing**: up to 289,000 triangles fewer (57 % of the `far` frame's) and
+  the GPU time is the same within its spread. **WebGPU's scene passes save at `start` only**
+  (0.9 ms `AUTO`, 1.4 ms `COARSEST`, positive in all three runs), not at `far` or `ground`.
+- **The cost is the draws**: 1,245-1,605 draws, 12-17 ms of CPU a frame on both backends,
+  against 4.7 ms at 150 sites' 560-650. Proxies change none of it (a level swaps a group's index,
+  not its draw); only a cull or fewer, larger groups would.
+
+**Step 4: load cost**, the chains at the chosen options (`permissive`, maxError 0.2), one after
+another: largeWorld's 28 groups take **25 ms on the worker** (18 ms of simplifier work), under the
+gate's 100 ms; the 150-site field's 743 take 648 ms on the worker (327 ms of simplifier work): a
+group's chain is about 0.9 ms on the worker, mostly the round trip, so D2's scene step grows with
+the group count, not the triangles.
+
+**The gate: not passed.**
+
+| Condition | Result |
+| --- | --- |
+| A quarter of the groups' triangles saved in a far view | Yes: 32 % at largeWorld's `far` (`AUTO`), 39-50 % in every far-field view |
+| ≥ 0.2 ms GPU time on the M2, both backends, in one view | No: WebGL2 never (150 and 400 sites, every view, both level choices); WebGPU's scene passes at 400 sites' `start` only (0.9-1.4 ms) |
+| Load cost under 100 ms for largeWorld | Yes: 25 ms on the worker |
+
+On this hardware the merged far field's triangles aren't what it pays for: removing up to 57 %
+of a frame's triangles doesn't move WebGL2's GPU time, and WebGPU's shows it in one view of
+three. The frame's cost is the draws (one per group, 32 m cells), which proxies don't touch.
+What would pay is fewer draws: a cull (`cullScreenSize`, D6, without the levels), larger `AUTO`
+cells for far content, or p377's cell proxies (one draw per streaming cell). Phase 0 didn't
+measure those.
+
+**Defaults, had it passed** (D4): `permissive: true` (box kit pieces don't simplify without it),
+`maxError: 0.2` (all three levels for the floor tiles; 0.05 left most kit groups without levels),
+ratios `[0.5, 0.25, 0.1]`, `prune: false` (no measurable gain over `permissive`, and it ends a
+chain early when every piece is below the error).
+
 ## 4. Phases (after the gate)
 
 ### Phase 1: `lod()` — `prune`, `AUTO`'s `chain`, the resolve seam

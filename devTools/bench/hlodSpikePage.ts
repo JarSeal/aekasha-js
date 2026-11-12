@@ -34,8 +34,17 @@ const STATS_SETTINGS = JSON.stringify({
   horizontal: false,
 });
 
-export const buildSceneUrl = (base: string, sceneId: string) => {
-  const params = new URLSearchParams({ isDebug: 'true', aekTest: 'true', startScene: sceneId });
+export const buildSceneUrl = (
+  base: string,
+  sceneId: string,
+  extra: Record<string, string> = {}
+) => {
+  const params = new URLSearchParams({
+    isDebug: 'true',
+    aekTest: 'true',
+    startScene: sceneId,
+    ...extra,
+  });
   return `${base.replace(/\/$/, '')}/?${params}`;
 };
 
