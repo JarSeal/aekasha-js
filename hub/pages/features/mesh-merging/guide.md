@@ -374,6 +374,9 @@ A member with a `LOD` keeps it in a batched group: the batch holds every level's
 level change gives the member's instance the level's geometry in place. A cross-fade adds a
 second instance with the outgoing level for `fadeSeconds`, both dithered as a
 [plain mesh's](hub:features/lod#cross-fades) are, shadows too; hiding and showing fade the same.
+The `lodShowcase` scene's batched lane gives each member its shape's levels and its group:
+
+<<< src/app/scenes/lodShowcase/lanes/batchedMembers.ts#batched-lod-member
 
 - Each level must be drawable by the batch: the group's material, the batch's `castShadow`, and a
   geometry that agrees with the group's exactly. Impostor levels are refused.

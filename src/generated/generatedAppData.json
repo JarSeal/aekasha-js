@@ -5621,7 +5621,7 @@
     },
     "lodShowcase": {
       "name": "LOD showcase",
-      "description": "The LOD system lane by lane: each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; the same trees as an instance set (GPU culled and LOD-selected on WebGPU, its CPU backend on WebGL2); hand-made levels in JSON; a generated chain (AUTO); a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
+      "description": "The LOD system lane by lane: each lane runs away from the start camera along -z, with an object in every level band. Left to right: an instanced tree pool ending in exported cross-quads and a cull fade; the same trees as an instance set (GPU culled and LOD-selected on WebGPU, its CPU backend on WebGL2); hand-made levels in JSON; a generated chain (AUTO); three shapes with hand-made levels in one BATCHED merge group, each member at its own level; a pool ending in an exported octahedral impostor; a rock impostor baked and exported side by side; a static instance cell. Debug env: the scene's own \"LOD demo\" tab.",
       "cameras": [
         {
           "camProps": {
@@ -5711,7 +5711,7 @@
             "castShadow": true,
             "receiveShadow": true,
             "position": {
-              "x": -12,
+              "x": -10.5,
               "y": 1,
               "z": -2
             },
@@ -5738,7 +5738,7 @@
           "entityOpts": {
             "debugData": {
               "name": "LOD showcase: hand-made levels",
-              "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+              "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-10.5)."
             }
           }
         }
@@ -28610,7 +28610,7 @@
         "castShadow": true,
         "receiveShadow": true,
         "position": {
-          "x": -12,
+          "x": -10.5,
           "y": 1,
           "z": -2
         },
@@ -28637,7 +28637,7 @@
       "entityOpts": {
         "debugData": {
           "name": "LOD showcase: hand-made levels",
-          "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+          "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-10.5)."
         }
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseHandMade.mesh.json"

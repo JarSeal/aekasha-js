@@ -191,7 +191,8 @@ describe("a batched group's LOD figures", () => {
     });
     // A LOD batch sorts by range: a draw per geometry in use
     expect(getMergeBatchFigures(group, world)).toMatchObject({ order: 'RANGE_SORT' });
-    expect(row().suffix).toMatch(/^3 members \(3 visible\), \d+ draws? sorted by range$/);
+    expect(row().suffix).toBe('3 members (3 visible)');
+    expect(row().description).toMatch(/ · \d+ draws? sorted by range$/);
 
     // Both LOD members fade to level 1: an outgoing instance each
     stepAt(5);
@@ -201,10 +202,10 @@ describe("a batched group's LOD figures", () => {
       levelFades: 2,
       cullFades: 0,
     });
-    expect(row().suffix).toMatch(/, 2 fading$/);
+    expect(row().description).toMatch(/, 2 fading$/);
     stepAt(5, 6);
     expect(getMergeBatchFigures(group, world)).toMatchObject({ batchInstances: 3, levelFades: 0 });
-    expect(row().suffix).not.toMatch(/fading/);
+    expect(row().description).not.toMatch(/fading/);
 
     // Culled: fading out, drawn until the fade ends, then hidden
     stepAt(100);

@@ -190,7 +190,8 @@ describe("a transparent batch's order", () => {
     const { groupId, groupEntityId } = await createPoolAsync('poolGlass', {
       transparentOrder: 'JOIN',
     });
-    expect(rowOf(groupId).suffix).toBe('3 members (3 visible), up to 3 draws in join order');
+    expect(rowOf(groupId).suffix).toBe('3 members (3 visible)');
+    expect(rowOf(groupId).description).toMatch(/ · up to 3 draws in join order$/);
     const root = show(createGroupWindowContent({ groupEntityId }));
     expect(getMonitorText(root, 'Draw runs')).toBe(
       'transparent: in join order each pass, up to 3 draws'
@@ -198,17 +199,13 @@ describe("a transparent batch's order", () => {
     expect(getMergeSummary(world).drawsNow).toBe(3);
 
     const depth = await createPoolAsync('poolGlass');
-    expect(rowOf(depth.groupId).suffix).toBe(
-      '3 members (3 visible), up to 3 draws sorted back to front'
-    );
+    expect(rowOf(depth.groupId).description).toMatch(/ · up to 3 draws sorted back to front$/);
   });
 
   it('one multi-draw on WebGL2', async () => {
     loop.renderer = { backend: { isWebGPUBackend: false } };
     const { groupId, groupEntityId } = await createPoolAsync('poolGlass');
-    expect(rowOf(groupId).suffix).toBe(
-      '3 members (3 visible), one multi-draw sorted back to front'
-    );
+    expect(rowOf(groupId).description).toMatch(/ · one multi-draw sorted back to front$/);
     const root = show(createGroupWindowContent({ groupEntityId }));
     expect(getMonitorText(root, 'Draw runs')).toBe(
       'transparent: sorted back to front each pass, one multi-draw (WebGL2)'

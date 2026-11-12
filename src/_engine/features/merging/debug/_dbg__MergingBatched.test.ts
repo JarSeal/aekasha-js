@@ -217,7 +217,8 @@ describe('the tab', () => {
     world.setDisabled(members[1], true);
     const row = getMergeGroupListData(world).find((item) => item.title === groupId)!;
     expect(row.badge).toBe('BATCHED');
-    expect(row.suffix).toBe('4 members (3 visible), 2 runs, 0 compactions');
+    expect(row.suffix).toBe('4 members (3 visible)');
+    expect(row.description).toMatch(/ · 2 runs, 0 compactions$/);
   });
 
   it("badges an AUTO batched group's row with both", async () => {
@@ -232,7 +233,8 @@ describe('the tab', () => {
     const groupId = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!.groupId;
     const row = getMergeGroupListData(world).find((item) => item.title === groupId)!;
     expect(row.badge).toBe('AUTO · BATCHED');
-    expect(row.suffix).toBe('1 member (1 visible), 1 run, 0 compactions');
+    expect(row.suffix).toBe('1 member (1 visible)');
+    expect(row.description).toMatch(/ · 1 run, 0 compactions$/);
   });
 
   it("leaves a baked group's row as it was", async () => {

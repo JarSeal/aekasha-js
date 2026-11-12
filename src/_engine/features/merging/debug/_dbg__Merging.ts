@@ -113,11 +113,15 @@ const getGroupBadge = (group: MergeGroupData) => {
   return badge ? { badge } : {};
 };
 
-/** A group row's figures: its members and vertices; a built batched group's members, visible
- * members, its draws by its order (geometry runs and compactions, draws sorted by range, a
- * transparent batch's draws at most and its order, or one multi-draw), and its LOD fades while
- * there are some. */
-const getGroupRowFigures = (groupEntityId: number, group: MergeGroupData, world: ECSWorld) => {
+/** A group row's figures: its members and vertices as the suffix; a built batched group's members
+ * and visible members as the suffix, and as the detail its draws by its order (geometry runs and
+ * compactions, draws sorted by range, a transparent batch's draws at most and its order, or one
+ * multi-draw) and its LOD fades while there are some. */
+const getGroupRowFigures = (
+  groupEntityId: number,
+  group: MergeGroupData,
+  world: ECSWorld
+): { suffix: string; detail?: string } => {
   const members = formatCountOf(group.members.length, 'member');
   const batch = getMergeBatchFigures(group, world);
   if (batch) {
@@ -130,13 +134,21 @@ const getGroupRowFigures = (groupEntityId: number, group: MergeGroupData, world:
         : batch.order === 'RANGE_SORT'
           ? `${formatCountOf(batch.draws, 'draw')} sorted by range`
           : 'one multi-draw';
-    return `${members} (${formatCount(batch.visible)} visible), ${order}${fading ? `, ${formatCount(fading)} fading` : ''}`;
+    // The draws in the description, which wraps: a long suffix squeezed the title to a letter a
+    // line
+    return {
+      suffix: `${members} (${formatCount(batch.visible)} visible)`,
+      detail: `${order}${fading ? `, ${formatCount(fading)} fading` : ''}`,
+    };
   }
-  return `${members}, ${formatCount(getGroupVertexCount(groupEntityId, group, world))} v`;
+  return {
+    suffix: `${members}, ${formatCount(getGroupVertexCount(groupEntityId, group, world))} v`,
+  };
 };
 
 /** A row per group of the world, in creation order: its id, its badge (`AUTO`, `BATCHED`), `AUTO`
- * cell, material, members and vertices, or a batched group's figures (the first MAX_GROUP_ROWS). */
+ * cell, material, members and vertices, or a batched group's members and visible members, its
+ * draws in the description (the first MAX_GROUP_ROWS). */
 export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
   const items: DebuggerListItem[] = [];
   let more = 0;
@@ -147,13 +159,14 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
     }
     const cell = getAutoCellLabel(group.id);
     const state = group._isPending ? ', pending' : '';
+    const { suffix, detail } = getGroupRowFigures(groupEntityId, group, world);
     items.push({
       itemId: String(groupEntityId),
       title: group.id,
       subTitle: `[${groupEntityId}]`,
       ...getGroupBadge(group),
-      description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}`,
-      suffix: `${getGroupRowFigures(groupEntityId, group, world)}${state}`,
+      description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}${detail ? ` · ${detail}` : ''}`,
+      suffix: `${suffix}${state}`,
       // Right to left: the highlight, then the A/B (a built group's only)
       toggleValues: [
         isMergeGroupHighlighted(group.id),

@@ -237,7 +237,8 @@ shows its live screen size and the distance of each switch.
 
 ::: scene lodShowcase
 **The full demo:** every LOD feature in its own lane, every level of every lane on screen from
-the start camera, an instanced pool's trees and the same trees as an instance set side by side. Its LOD demo tab has camera stops on both sides of every switch and a dolly
+the start camera, an instanced pool's trees and the same trees as an instance set side by side,
+and hand-made levels on plain meshes and on a batched merge group's members. Its LOD demo tab has camera stops on both sides of every switch and a dolly
 down the lanes.
 :::
 

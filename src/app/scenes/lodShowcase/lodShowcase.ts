@@ -25,6 +25,7 @@ import { instanceSetGroveLane } from './lanes/instanceSetGrove';
 import { instanceCellLane } from './lanes/instanceCell';
 import { knotImpostorLane } from './lanes/knotImpostor';
 import { rockImpostorsLane } from './lanes/rockImpostors';
+import { batchedMembersLane } from './lanes/batchedMembers';
 
 export const LOD_SHOWCASE_SCENE_ID = 'lodShowcase';
 /** lodShowcaseCamera.camera.json: the lanes are laid out from its pose. */
@@ -32,23 +33,25 @@ export const SHOWCASE_CAMERA_APP_ID = 'lodShowcaseCamera';
 
 /** The time of day the sky holds on every enter (the demo tab plays it). */
 export const SHOWCASE_START_TIME_OF_DAY = 15;
-const LANE_SPACING = 8;
-/** Slots side by side, centred on the camera: lane `slot` stands at x = (slot - 3) × spacing. */
-const LANE_SLOT_COUNT = 7;
+const LANE_SPACING = 7;
+/** Slots side by side, centred on the camera: lane `slot` stands at x = (slot - 3.5) × spacing. */
+const LANE_SLOT_COUNT = 8;
 /**
  * The lanes and their slots, left to right: a new lane is a module and an entry here. A lane
  * whose finest level needs the camera close (the generated chain's, within 21 m) takes a centre
  * slot: an outer lane only comes into view farther down (lodShowcase/layout.ts). The pool's trees
- * and the instance set's stand side by side, to compare.
+ * and the instance set's stand side by side, to compare, and so do the hand-made levels on plain
+ * meshes and on a batched merge group's members (with the generated chain between them).
  */
 const LANES: { lane: ShowcaseLane; slot: number }[] = [
   { lane: treeGroveLane, slot: 0 },
   { lane: instanceSetGroveLane, slot: 1 },
   { lane: handMadeLevelsLane, slot: 2 },
   { lane: generatedChainLane, slot: 3 },
-  { lane: knotImpostorLane, slot: 4 },
-  { lane: rockImpostorsLane, slot: 5 },
-  { lane: instanceCellLane, slot: 6 },
+  { lane: batchedMembersLane, slot: 4 },
+  { lane: knotImpostorLane, slot: 5 },
+  { lane: rockImpostorsLane, slot: 6 },
+  { lane: instanceCellLane, slot: 7 },
 ];
 
 export type ShowcaseLaneEntry = { lane: ShowcaseLane; x: number; state: ShowcaseLaneState };

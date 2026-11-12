@@ -6,7 +6,7 @@
     "mat": "lodShowcaseSphere",
     "castShadow": true,
     "receiveShadow": true,
-    "position": { "x": -12, "y": 1, "z": -2 },
+    "position": { "x": -10.5, "y": 1, "z": -2 },
     "lod": {
       "levels": [
         { "screenSize": 0.06 },
@@ -20,7 +20,7 @@
   "entityOpts": {
     "debugData": {
       "name": "LOD showcase: hand-made levels",
-      "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-12)."
+      "description": "The lodShowcase scene's hand-made levels lane: levels authored in JSON, the same sphere at fewer segments. This is the lane's first object (level 0's band); the lane places copies of this definition in the farther bands (lodShowcase/lanes/handMadeLevels.ts), so keep it at the lane's x (-10.5)."
     }
   }
 }

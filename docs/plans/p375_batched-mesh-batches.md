@@ -922,6 +922,37 @@ moving members.
    the mode, per-member LOD, pools (`geometryReserve`, `transparentOrder`, `setMergeMemberColor`,
    `updateMergeMember` putting a batched member last in the join order), picking
    (`getMergeMemberAtBatchId`) and when a batch pays (Phases 0-3's numbers).
+   **Sections** (2026-11-12; each stopped for review):
+   - S1 — the Hub — done (`bf435b3c`): the Mesh merging page's "Batched groups: members that
+     move" (the mode, how it draws, its refusals; Per-member LOD; Pools; Which member of a batch a
+     ray hit; When a batch pays, Phases 0-3's CPU frames in one table), the mode through the
+     page's other sections (joining, `AUTO`'s key and cap, imported moving pieces, the refusals by
+     mode, "When to merge", streaming, debugging, Not yet, Key APIs), its intro, tags and
+     description; the physics page's imported moving nodes, a LOD page paragraph and the
+     Documentation page's `aekasha/merging` row.
+   - S2 — the `lodShowcase` lane — done ("S2 results" below).
+   - S3 — the CLAUDE.md files and readme, versioning (engine minor, app minor), the changelog and
+     marking the plan done.
+
+   **S2 results** (2026-11-12):
+   - **Built:** `lanes/batchedMembers.ts` ("Batched group"): a sphere, a torus and a capsule of
+     about 1 m radius, three hand-made levels each (fewer segments; the hand-made lane's
+     thresholds 0.06 / 0.025 / 0 and cull 0.01), one of each shape per level band and one past the
+     cull, all in the explicit `BATCHED` group `lodShowcaseBatch` (`merge: <id>`, made by
+     `createMergeGroup`). Its member creation is a Hub region (`batched-lod-member`, on the Mesh
+     merging page's Per-member LOD). The showcase has 8 slots of 7 m (was 7 of 8: an eighth slot
+     at 8 m put the outer lane at x = 28, out of view of the instance cell's level 0 band, warned);
+     the lane is slot 4, right of the generated chain. The hand-made mesh JSON moved to its lane's
+     line, x −10.5 (it stood at −12, the 6-slot layout's, off its line since the instance set's
+     lane was added). The scene's Hub image saved again.
+   - **Seen in the browser** (the dev server, Chrome on the MacBook): one batch of 10 members, 9
+     visible (one LOD culled), 9 draws sorted by range on WebGPU (the geometry-levels in use), one
+     multi-draw on WebGL2, no refusal; no warning or error but Rapier's deprecated init.
+   - **Found and fixed (the debugger):** the Merging tab's batched row put its figures in the
+     list row's suffix, which doesn't shrink: "10 members (9 visible), 9 draws sorted by range"
+     squeezed the group's id to one letter a line. The suffix is now the members and visible
+     members, and the draws and fades follow the material in the description (a baked row is
+     unchanged). Tests: the three `_dbg__MergingBatched*.test.ts` files' row assertions.
 
 ## 5. Risks
 
