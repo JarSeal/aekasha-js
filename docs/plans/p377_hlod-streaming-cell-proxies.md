@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented (2026-11-12); Phases 1-6 written from its Results (far entries for kit meshes, the larger-cells recommendation)
+Status: in progress | Phases 0-1 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -415,7 +415,7 @@ p376's ruins are. What the far layer does with one today, and what the change to
   none. Project: Phase 0's bench and spike tools. All of it on p377's branch, bumped against
   `main` with p376 in it (merged into the branch): engine 6.8.1 → 6.9.0, app 1.23.1 → 1.24.0.
 
-## Phase 1 — The gather: kit meshes' far entries
+## Phase 1 — The gather: kit meshes' far entries — done
 
 D1, D2 and D4, in `devTools/gather/streamingManifest.ts` and the streaming schema. The output's
 shape doesn't change (groups still with `instances`; Phase 2 changes it), so the runtime draws
@@ -444,6 +444,22 @@ the new far entries as it draws the beacons'.
 
 Exit: `yarn test`, lint and both `tsc` clean; `yarn gatherAppData` leaves `streamingGrid`'s and
 `streamingPhysics`' generated data unchanged (neither has a kit mesh).
+
+**As built** (2026-11-12):
+
+- `getFarMeshProps` also returns `kind: 'SELF' | 'LEVELS'`, and a self entry's props are the
+  mesh's whole props (without `lod`, `appId`, `merge` and the transform), not only D1's four:
+  `getFarGroupKey` needs `matOverrides` to refuse it. A group writes only `geo`, `mat` and the two
+  shadows either way, so the output is D1's. `addFarEntry` returns before listing any asset for a
+  self entry that doesn't group, so its assets stay out of the far layer.
+- `farEntries`' JSDoc and `describe` name engine 6.9.0 as the version `'ALL'` became the default
+  (D10's minor).
+- `setSceneStreamingSettings`' warning got a test of its own: `Streaming.ts` had no test file, so
+  `Streaming.test.ts` installs the feature with a stand-in context.
+- Exit: the generated data (`src/generated/`, every profile) is byte-identical before and after
+  the rule; `yarn test` 353 files, 3,327 tests.
+- The Hub's streaming page still says only a mesh with LOD `levels` gets a far stand-in
+  (`guide.md`'s Far representations and its limits list): Phase 6 step 1.
 
 ## Phase 2 — The far layer: groups by their entries
 
