@@ -70,12 +70,12 @@ const getBatch = (groupEntityId: number) =>
 const isInScene = (entityId: number) => getOwnMesh(entityId).parent === getRootScene();
 
 describe("a batched member's own mesh", () => {
-  test('leaves the scene graph with its build; a baked member stays', async () => {
+  test('leaves the scene graph with its build, as a baked member does (p378)', async () => {
     const batched = await createBuiltGroupAsync(3);
     const baked = await createBuiltGroupAsync(2, 'BAKED');
     expect(batched.members.map((id) => getOwnMesh(id).parent)).toEqual([null, null, null]);
     expect(getBatch(batched.groupEntityId).parent).toBe(getRootScene());
-    expect(baked.members.map(isInScene)).toEqual([true, true]);
+    expect(baked.members.map(isInScene)).toEqual([false, false]);
   });
 
   test('a member waiting for its build stays in the scene until the build', async () => {

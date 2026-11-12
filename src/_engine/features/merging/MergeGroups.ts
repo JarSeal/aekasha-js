@@ -3,6 +3,8 @@
 // keeping its entity, transform, body and asset refs. A built member is hidden by `TAG_MERGED`,
 // a reason of the kernel's visibility reconcile (`reconcileObject3DVisibility`), whose hooks this
 // feature registers, as `lod()` does `TAG_LOD_CULLED`'s, and leaves the DEFAULT spatial domain.
+// The same hooks take its own mesh out of the scene graph while its group draws it, in both modes
+// (MergeSceneGraph.ts, p378), and put it back when it's drawn on its own again.
 //
 // Adds mark the group pending; `mergeGroupBuildSystem` (APP_RENDER_SYNC, before the pose
 // producers) builds the pending groups once a frame (MergeBuild.ts): a `BAKED` group with p371's
@@ -34,12 +36,12 @@ import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
 import {
   batchMemberLodDelegate,
-  detachBatchedMemberMesh,
   dropBatchMember,
+  endUnmergedBatchMemberFade,
   getMergeBatchModule,
   installBatchMemberVisibility,
   isBatchedGroup,
-  reattachMemberMesh,
+  refreshMergedBatchMember,
 } from './MergeBatchFront';
 import {
   buildPendingGroups,
@@ -55,6 +57,7 @@ import {
   restoreEnabledMember,
   rewriteMember,
 } from './MergeInPlace';
+import { detachMemberMesh, reattachMemberMesh } from './MergeSceneGraph';
 import {
   createGroup,
   findPending,
@@ -576,14 +579,18 @@ export const installMergeGroups = (ctx: FeatureContext) => {
     entered: buildSceneMergeGroupsAsync,
     loadSettled: onSceneLoadSettled,
   });
-  // A batched member's own mesh leaves the scene graph too, and comes back (MergeBatchFront.ts)
+  // A merged member's own mesh also leaves the scene graph, both modes, and comes back when it's
+  // drawn on its own again (MergeSceneGraph.ts); a batched member's instance follows its LOD
+  // (MergeBatchFront.ts)
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
     onAddComponent: (entityId, world) => {
       reconcileObject3DVisibility(entityId, world, IS_MERGED);
-      detachBatchedMemberMesh(entityId, world);
+      refreshMergedBatchMember(entityId, world);
+      detachMemberMesh(entityId, world);
     },
     onRemoveComponent: (entityId, world) => {
       reconcileObject3DVisibility(entityId, world, IS_UNMERGED);
+      endUnmergedBatchMemberFade(entityId, world);
       reattachMemberMesh(entityId, world);
     },
   });
