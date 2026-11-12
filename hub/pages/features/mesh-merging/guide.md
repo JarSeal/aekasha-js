@@ -42,6 +42,12 @@ addToMergeGroup('ruins', walls);
 - **Culled whole.** The group is one bounding sphere: in view, all of it is drawn. It's the entry
   in the spatial index too (its members leave the `DEFAULT` domain while merged), and a member's
   own culling and LOD settings do nothing while it's merged.
+- **Out of the scene graph.** While its group draws it, a member's own mesh is taken out of the
+  scene graph, so three's scene update, its render walks and a raycast skip it (see
+  [what that saves](#a-large-far-field)). Leaving the group, a dissolve, an
+  [edit session](#moving-a-member-over-many-frames) and "Show unmerged" put it back under the root
+  scene. A member under another parent (a group entity's child) or with children of its own stays
+  in the graph, hidden.
 - **Scene-scoped.** A group goes with the scene it was made in, and its members with theirs.
   `persistent: true` keeps a group across scene switches, and only such a group takes
   `persistent` members.
@@ -289,7 +295,10 @@ endMergeMemberEdit(gate);
 
 ### Which member a ray hit
 
-A raycast hits the group's mesh, whose `userData.entityId` is the group's entity.
+A raycast hits the group's mesh, whose `userData.entityId` is the group's entity, and not the
+members: their own meshes are out of the scene graph while the group draws them. (Before engine
+6.10.0, a raycast of the root scene also hit a baked group's hidden members next to its mesh; a
+member under another parent still is, as three's raycast doesn't check visibility.)
 [`getMergeMemberAtFace`](api:getMergeMemberAtFace) resolves the hit's face to the member drawn
 there (a search of the group's part table, no allocation):
 
@@ -358,9 +367,8 @@ groups, which never share a group with its baked ones):
 - **One entry in the spatial index**, as a baked group; its bounds grow as members move away, and
   shrink at its next full build ([`rebuildMergeGroup`](api:rebuildMergeGroup), which also makes a
   fresh batch in geometry order).
-- **A member's own mesh** is hidden and out of the scene graph while the batch draws it, so three's
-  scene update and a raycast skip it; leaving the group, a dissolve or "Show unmerged" puts it
-  back.
+- **A member's own mesh** is hidden and out of the scene graph while the batch draws it, as a
+  baked member's is (see [A merge group](#a-merge-group)): a raycast hits only the batch.
 - **Code size:** the batch code loads with a scene's first batched group, but three's
   `BatchedMesh` class is in the first download of every app that lists `merging()`
   ([why](hub:issues/three-classes-ship-with-their-chunk)).
@@ -585,8 +593,9 @@ the CPU frame saved at the start, far and ground views):
 | 128 m     | 2.8 / 3.4 / 2.9 ms      | 4.2 / 5.1 / 4.2 ms      |
 | 256 m     | 3.5 / 3.9 / 3.6 ms      | 4.9 / 6.2 / 4.7 ms      |
 
-- At 32 m the CPU frame is 10.6-11.5 ms on WebGPU and 11.7-13.7 ms on WebGL2, so 256 m cells take
-  a third of it off.
+- At 32 m the CPU frame was 10.6-11.5 ms on WebGPU and 11.7-13.7 ms on WebGL2, so 256 m cells
+  took a third of it off. These figures are from engine 6.9.0, with the members still in the scene
+  graph (below); larger cells take off draws, which that change doesn't touch.
 - **Drawing a group whole costs nothing here.** A larger group is drawn whole once any of it is in
   view (see [When to merge](#when-to-merge)), but a field seen from a distance is mostly in view
   anyway: WebGL2's GPU time didn't change beyond the runs' spread at any size, and the images
@@ -598,13 +607,27 @@ the CPU frame saved at the start, far and ground views):
 - **Only a large field pays.** With 150 sites, 256 m cells save under 1 ms: keep the default for
   content around the player, and take larger cells when hundreds of sites are in view at once.
 
-Larger cells take off draws, not members. Every baked member's own mesh stays in the scene graph,
-hidden, and three's scene update walks it twice a frame (the main pass and the ambient occlusion's
-pre-pass): at 400 sites that's 20,808 hidden objects and 3.6-4.9 ms of the frame, and the members
-are about 60 % of the field's CPU cost in all, the draws the other 40 %. A
-[batched group](#batched-groups-members-that-move) already takes its members out of the scene
-graph; doing that for baked members is planned
-([p378](repo:docs/plans/p378_baked-members-out-of-the-scene-graph.md)).
+Larger cells take off draws, not members. Until engine 6.10.0 a baked member's own mesh stayed in
+the scene graph, hidden, and three walked it in every scene update (twice a frame: the main pass
+and the ambient occlusion's pre-pass) and every render's projection (those two and the shadow
+pass): at 400 sites, 20,770 hidden objects, about 60 % of the field's CPU cost, the draws the
+other 40 %. Now a built member is [out of the scene graph](#a-merge-group). The same field at
+32 m cells, CPU frame (medians over the three views):
+
+| 400 sites, 32 m cells              | WebGPU      | WebGL2       |
+| ---------------------------------- | ----------- | ------------ |
+| Members in the scene graph (6.9.0) | 9.5-11.8 ms | 10.8-13.2 ms |
+| Members out of it                  | 5.7-6.3 ms  | 5.9-6.5 ms   |
+| The same draws without any members | 5.0-5.7 ms  | 5.1-5.6 ms   |
+
+- **The scene graph** went from 22,741 objects to 1,971, the two scene updates from 3.1-4.8 ms to
+  0.35-0.44 ms, and the projections lost the 0.5-1.6 ms the hidden members cost them. The image
+  is the same.
+- **What's left** of the members' cost, 0.6-0.85 ms over the same draws without them, is the
+  engine's transform sync, which visits every mesh entity each frame (about 55 ns each), merged or
+  not.
+- **With 150 sites** (about 8,000 members) the frame is 1.0-1.6 ms shorter, and `largeWorld`
+  alone (409 members) 0.13-0.23 ms.
 
 The field is a debug-mode addition to `largeWorld`:
 `?isDebug=true&startScene=largeWorld&hlodField=400&hlodFieldCell=256` (`hlodField` the sites,
@@ -680,8 +703,9 @@ batch".
 
 See the plans, [merge groups](repo:docs/plans/_DONE_p372_mesh-merge-groups.md),
 [merge debugging and member editing](repo:docs/plans/_DONE_p373_merge-debug-and-member-editing.md),
-[multi-material merging](repo:docs/plans/_DONE_p374_multi-material-merging.md) and
-[batched groups](repo:docs/plans/_DONE_p375_batched-mesh-batches.md),
+[multi-material merging](repo:docs/plans/_DONE_p374_multi-material-merging.md),
+[batched groups](repo:docs/plans/_DONE_p375_batched-mesh-batches.md) and
+[baked members out of the scene graph](repo:docs/plans/p378_baked-members-out-of-the-scene-graph.md),
 and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs
