@@ -75,6 +75,10 @@ entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`
 ([`setLodMaxSelectionsPerFrame`](api:setLodMaxSelectionsPerFrame)) spreads it over frames when
 there are very many.
 
+Meshes of different geometries that share a material, each with its own `LOD` (rocks of several
+shapes), can be one [batched merge group](hub:features/mesh-merging#per-member-lod) instead: one
+object for the renderer, a draw per geometry and level on WebGPU, with the same cross-fades.
+
 ## Instance sets
 
 A pool's cost grows with its instances: every instance is an entity, selected and synced on the
