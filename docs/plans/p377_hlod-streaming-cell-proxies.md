@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
+Status: in progress | Phases 0-5 implemented (2026-11-12; Phase 5 step 2, the second machine, not run: p990); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -693,7 +693,7 @@ D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`);
 - `yarn hub:build` passes (117 pages). Its search index warning (573 KiB gzipped, over 450) was
   there before this phase (467 KiB against 468 without the API docs, `--no-api`).
 
-## Phase 5 — Verification
+## Phase 5 — Verification — done
 
 1. `yarn test`, `yarn lint`, both `tsc`, `yarn verify:baselines` (the API's `entries`, the bundle:
    `StreamingDataContent`'s chunk; the docs ratchet: no new undocumented export), `yarn sbp`
@@ -741,6 +741,28 @@ and step 3 ran on the M2):
   M2 would only repeat Phase 0's figures. It doesn't gate (D9), so open question 4 stays open and
   the run moved to `p990_follow-ups-from-done-plans.md` (Rendering) with its command, for when
   that machine is back.
+- Step 3, `streamingGrid` flying with the far ruins, **on the M2**: p353 Phase 5 section 5's exit
+  check again, out and back (2,240 m) at 30 and 60 m/s, WebGPU and WebGL2, two runs each (Chrome
+  headless, 1600 × 900, prod test mode through the dev server, the test bridge's fixed 1/60 s
+  frame; a script in the scratchpad, not committed, recording each frame's wall time, CPU frame,
+  submit, draws and the objects the primer lets go of, `TAG_DRAW_HELD` removals, the ruins' far
+  groups among them). Every run:
+  - **The frame**: no frame over 33 ms; the wall frame's median 16.7 ms, p99 17.3-17.8, the
+    longest 22.2-24.8 (WebGPU) and 24.5-27.4 ms (WebGL2), against p353's 24.6-25.8 and
+    30.7-32.2. The CPU frame's median 2.5-3.2 ms (p99 5.4-6.3), the submit's 1.9-2.4; draws
+    149-154 at the median, 229-235 at most, as Phase 3's.
+  - **The priming's paced first draws**: about 3,100 objects let go of a flight over 326-345
+    frames, at most 16 a frame on WebGL2 (`maxShownObjectsPerFrame`) and 38 on WebGPU (not
+    paced). On WebGL2 the pacing's frames near the grid's -x end, where the flight turns, are
+    among the five longest in every run (x ≈ -505: 16 let go of in it and 16 before, 23.6-27.4
+    ms; x ≈ -440: 3 and 14 before, 21.6-24.1 ms); the other long frames, and WebGPU's five
+    longest but one (18.8 ms, 16 and 34 before), let go of nothing.
+  - **The far ruins**: 75 far groups let go of a flight (25 ruin cells reaching `FAR`, three groups
+    each), each cell's three in one frame, over 24-25 frames; the wall frame around them at most
+    17.7 ms on both backends, so their first draws cost nothing visible. Up to 24 alive at once.
+  - **The counters**: `unitErrors`, `lateResults`, `fadesReversed`, `unfadedTakeDowns` and
+    `primingStalls` 0; 764-769 unloads and 1,532-1,560 fades a flight, all finished; compiles 12-13
+    (WebGPU) and 25-27 (WebGL2) for 11-12 new structures; no console error.
 
 ## Phase 6 — Hub, versions, done
 
