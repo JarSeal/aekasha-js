@@ -15,7 +15,8 @@
  */
 import type * as THREE from 'three/webgpu';
 import { getActiveViewId, registerView } from '../../../kernel/render/Views';
-import { createMaterial, loadTslMaterialFileAsync } from '../../../kernel/assets/Material';
+import { createMaterial } from '../../../kernel/assets/Material';
+import { loadTslMaterialFileAsync } from '../../../kernel/assets/MaterialTsl';
 import { getTexture } from '../../../kernel/assets/Texture';
 import { getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../../../ui/core/HUD';
 import type { CMPHandle } from '../../../ui/core/CMPTypes';

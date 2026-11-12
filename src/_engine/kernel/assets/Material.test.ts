@@ -3,12 +3,10 @@ import * as THREE from 'three/webgpu';
 import { createRootScene, getRootScene } from '../scene/Scene';
 import { addSceneHooks } from '../scene/SceneHooks';
 import { setAppData } from '../scene/AppData';
-import {
-  createMaterial,
-  decMaterialRef,
-  incMaterialRef,
-  loadTslMaterialFileAsync,
-} from './Material';
+import { float } from 'three/tsl';
+import { initEnvironment } from '../config/Config';
+import { createMaterial, decMaterialRef, getMaterialVariant, incMaterialRef } from './Material';
+import { loadTslMaterialFileAsync, registerTslMaterial, type TslMaterialFns } from './MaterialTsl';
 import { getTexture, saveTexture } from './Texture';
 
 // The warning log is a stand-in
@@ -76,6 +74,159 @@ describe('createMaterial', () => {
       params: { normalScale: given },
     }) as THREE.MeshStandardMaterial;
     expect(fromVector.normalScale.toArray()).toEqual([2, 3]);
+  });
+});
+
+describe('the TSL setup entry and registerTslMaterial (p302 D2, D3)', () => {
+  beforeAll(() => {
+    // The debug env: its warnings (a socket replaced, a registration with other functions)
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+  });
+
+  afterEach(() => {
+    fns.lwarn.mockClear();
+  });
+
+  // Three sockets from one graph: colour and emissive share the tint node
+  type SetupInputs = { tint: THREE.Node<'color'>; roughness: THREE.Node<'float'> };
+  const setupFns: TslMaterialFns = {
+    setup: (inputs: SetupInputs, material, staticDefines) => {
+      const tint = staticDefines.isDark ? inputs.tint.mul(0.5) : inputs.tint;
+      material.colorNode = tint;
+      material.emissiveNode = tint;
+      material.roughnessNode = inputs.roughness;
+    },
+  };
+
+  test('runs setup with the material inputs, kept as setup_<key> uniforms', () => {
+    registerTslMaterial('materialTest.setup', setupFns);
+    const mat = createMaterial({
+      id: 'materialTestSetup',
+      type: 'STANDARDNODEMATERIAL',
+      tslMaterialId: 'materialTest.setup',
+      inputs: { tint: '#ff8000', roughness: 0.25 },
+    }) as THREE.MeshStandardNodeMaterial;
+
+    const uniforms = mat.userData.uniforms as Record<string, { value: unknown }>;
+    expect(mat.colorNode).toBe(uniforms.setup_tint);
+    expect(mat.emissiveNode).toBe(mat.colorNode);
+    expect(mat.roughnessNode).toBe(uniforms.setup_roughness);
+    expect(uniforms.setup_roughness.value).toBe(0.25);
+    expect(mat.userData.hasTslFile).toBe(true);
+  });
+
+  test('gives setup the static defines, and runs the nodes sockets after it', () => {
+    registerTslMaterial('materialTest.setup', setupFns);
+    const roughness = float(0.9);
+    registerTslMaterial('materialTest.setupAndSocket', {
+      ...setupFns,
+      roughnessNode: () => roughness,
+    });
+    const mat = createMaterial({
+      id: 'materialTestSetupAndSocket',
+      type: 'STANDARDNODEMATERIAL',
+      tslMaterialId: 'materialTest.setupAndSocket',
+      staticDefines: { isDark: true },
+      inputs: { tint: '#ff8000', roughness: 0.25 },
+      nodes: { roughnessNode: {} },
+    }) as THREE.MeshStandardNodeMaterial;
+
+    expect(mat.colorNode).not.toBe(mat.userData.uniforms.setup_tint);
+    expect(mat.roughnessNode).toBe(roughness);
+    expect(fns.lwarn).toHaveBeenCalledWith(
+      expect.stringContaining('roughnessNode function replaces the roughnessNode setup set')
+    );
+  });
+
+  test('looks up a registration before a loaded TSL file of the id', async () => {
+    const fromFile = float(1);
+    const registered = float(2);
+    setAppData({
+      json: { scenes: {} },
+      sceneFiles: {},
+      tslMaterialFiles: { materialTestBoth: async () => ({ colorNode: () => fromFile }) },
+      postFxFiles: {},
+    });
+    await loadTslMaterialFileAsync('materialTestBoth');
+    registerTslMaterial('materialTestBoth', { colorNode: () => registered });
+
+    const mat = createMaterial({
+      id: 'materialTestBoth',
+      type: 'BASICNODEMATERIAL',
+      tslFile: 'materialTestBoth.tsl.ts',
+      nodes: { colorNode: {} },
+    }) as THREE.MeshBasicNodeMaterial;
+    expect(mat.colorNode).toBe(registered);
+  });
+
+  test('keeps the first functions of an id registered again with other ones (warned)', () => {
+    const first = float(1);
+    const firstFns = { colorNode: () => first };
+    registerTslMaterial('materialTest.duplicate', firstFns);
+    registerTslMaterial('materialTest.duplicate', firstFns);
+    expect(fns.lwarn).not.toHaveBeenCalled();
+
+    registerTslMaterial('materialTest.duplicate', { colorNode: () => float(2) });
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining('"materialTest.duplicate"'));
+    const mat = createMaterial({
+      id: 'materialTestDuplicate',
+      type: 'BASICNODEMATERIAL',
+      tslMaterialId: 'materialTest.duplicate',
+      nodes: { colorNode: {} },
+    }) as THREE.MeshBasicNodeMaterial;
+    expect(mat.colorNode).toBe(first);
+  });
+
+  test("never calls a function for a nodes key named setup (NodeMaterial's own method)", () => {
+    const setup = vi.fn<NonNullable<TslMaterialFns['setup']>>();
+    registerTslMaterial('materialTest.setupAsSocket', { setup });
+    const mat = createMaterial({
+      id: 'materialTestSetupAsSocket',
+      type: 'BASICNODEMATERIAL',
+      tslMaterialId: 'materialTest.setupAsSocket',
+      nodes: { setup: { value: 1 } },
+    });
+    expect(setup).toHaveBeenCalledTimes(1);
+    expect(mat.setup).toBe(THREE.MeshBasicNodeMaterial.prototype.setup);
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringContaining("setup isn't a socket"));
+  });
+
+  test('throws for a tslFile that no file and no registration has', () => {
+    expect(() =>
+      createMaterial({
+        id: 'materialTestNoFunctions',
+        type: 'BASICNODEMATERIAL',
+        tslFile: 'materialTestNoFunctions.tsl.ts',
+        nodes: { colorNode: {} },
+      })
+    ).toThrow('no TSL file');
+  });
+
+  test("gives a registered material's variant the base's functions", () => {
+    registerTslMaterial('materialTest.setup', setupFns);
+    createMaterial({
+      id: 'materialTestVariantBase',
+      type: 'STANDARDNODEMATERIAL',
+      tslMaterialId: 'materialTest.setup',
+      inputs: { tint: '#ff8000', roughness: 0.25 },
+    });
+    const variant = getMaterialVariant('materialTestVariantBase', {
+      params: { metalness: 1 },
+    }) as THREE.MeshStandardNodeMaterial;
+    expect(variant.metalness).toBe(1);
+    expect(variant.colorNode).toBe(variant.userData.uniforms.setup_tint);
+  });
+
+  test('gives a plain material no TSL functions, though its id names some', () => {
+    registerTslMaterial('materialTestPlainBase', { colorNode: () => float(1) });
+    const mat = createMaterial({
+      id: 'materialTestPlainBase',
+      type: 'BASIC',
+      params: { color: '#00ff00' },
+    });
+    const variant = getMaterialVariant('materialTestPlainBase', { params: { opacity: 0.5 } });
+    expect(mat.userData.hasTslFile).toBeUndefined();
+    expect(variant.userData.hasTslFile).toBeUndefined();
   });
 });
 

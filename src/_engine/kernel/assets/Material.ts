@@ -1,22 +1,19 @@
 // The material registry: createMaterial builds a material from its props (a `*.material.json`'s,
-// or code's) and registers it, ref counted and owned by a scene like every registered asset.
-// createMaterial is over the 150-line limit: most of it is the TSL path (a material JSON's
-// `tslFile` and `nodes`), which p302's resolver registry rewrites, so it isn't split before that
-// (p613 D2).
+// or code's) and registers it, ref counted and owned by a scene like every registered asset. A
+// node material's TSL graph (its TSL file's or registered functions, its inputs) is
+// MaterialTsl.ts' (p302 D2, D3).
 import * as THREE from 'three/webgpu';
 import { deleteTexture, getTexture, getTextureRegistry } from './Texture';
 import { getRootScene } from '../scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
-import { getAppData } from '../scene/AppData';
 import { lerror, lwarn } from '../../utils/Logger';
-import type { Node } from 'three/tsl';
-import { color, texture, uniform } from 'three/tsl';
 import { textureMapKeys } from '../../utils/Constants';
 import { hashStringFNV1a } from '../../utils/Hash';
 import { stableStringify } from '../../utils/StableStringify';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
 import { getSceneRetainedTextures } from '../scene/SceneHooks';
+import { applyTslGraph } from './MaterialTsl';
 
 /**
  * A material the registry holds: any of three's materials. The same type as `THREE.Material`
@@ -56,12 +53,33 @@ export type AllowTextureStrings<T> = T extends unknown
   : never;
 
 /**
+ * A node material's TSL graph, in {@link MatProps}: the functions (a TSL file's exports, or
+ * {@link registerTslMaterial}'s) and the inputs made into the uniforms and texture nodes they get.
+ * An input is a texture id, a `'#rrggbb'` colour, a number, a boolean, or a vector as an array or
+ * `{ x, y, z }`.
+ */
+export type TslMaterialProps = {
+  /** The TSL file exporting the functions (a material JSON's, which a JSON material has). A
+   * material whose `tslMaterialId` names a {@link registerTslMaterial} registration needs none. */
+  tslFile?: string;
+  /** The inputs of the functions' `setup` (`{ albedo: 'sand01', scale: 4 }`), each kept as the
+   * `setup_<key>` uniform. */
+  inputs?: Record<string, unknown>;
+  /** Per socket (`colorNode`, …), the inputs of the function of that name (`colorNode: { lineColor:
+   * '#4fc3f7' }`), each kept as the `<socket>_<key>` uniform. A socket's `staticDefines` input is
+   * merged over the material's for that socket. */
+  nodes?: Record<string, Record<string, unknown>>;
+  /** Build-time flags the functions branch on: another set is another shader. */
+  staticDefines?: Record<string, unknown>;
+};
+
+/**
  * A material {@link createMaterial} builds: its `type` and that three material's parameters in
  * `params` (a texture slot also takes a registered texture's id). A node material type also takes
- * a TSL file (`tslFile`, a material JSON's): `nodes` holds each socket's inputs (`colorNode: {
- * lineColor: '#4fc3f7' }`: a texture id, a `'#rrggbb'` colour, a number, a boolean, or a vector as
- * an array or `{ x, y, z }`), made into uniforms the file's socket function gets, and
- * `staticDefines` the build-time flags it branches on. A `*.material.json`'s props.
+ * a TSL graph ({@link TslMaterialProps}): a `setup` function building any sockets from one graph
+ * with the material's `inputs`, and a function per socket with that socket's inputs under `nodes`,
+ * from a TSL file (`tslFile`, a material JSON's) or registered from code ({@link
+ * registerTslMaterial}, named by `tslMaterialId`). A `*.material.json`'s props.
  */
 export type MatProps = {
   /** The registry id. A registered id returns the registered material (see
@@ -73,7 +91,8 @@ export type MatProps = {
   debugData?: { name?: string; description?: string };
   /** The material's `userData` (the engine adds its own keys: `id`, `type`, `uniforms`, …). */
   userData?: Record<string, unknown>;
-  /** Registry id of the TSL functions (tslFile) to use, defaults to `id` (variants use their base's) */
+  /** The id of the TSL functions: a {@link registerTslMaterial} registration (looked up first) or
+   * a loaded TSL file's material id. Default: `id` (variants use their base's). */
   tslMaterialId?: string;
 } & (
   | { type: 'LINEBASIC'; params?: AllowTextureStrings<THREE.LineBasicMaterialParameters> }
@@ -93,119 +112,39 @@ export type MatProps = {
   | { type: 'SHADER'; params?: AllowTextureStrings<THREE.ShaderMaterialParameters> }
   | { type: 'SHADOW'; params?: AllowTextureStrings<THREE.ShadowMaterialParameters> }
   | { type: 'SPRITE'; params?: AllowTextureStrings<THREE.SpriteMaterialParameters> }
-  | {
+  | ({
       type: 'BASICNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshBasicNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'LAMBERTNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshLambertNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'PHONGNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshPhongNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'PHYSICALNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshPhysicalNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'STANDARDNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshStandardNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'MATCAPNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshMatcapNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'NORMALNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshNormalNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
-  | {
+    } & TslMaterialProps)
+  | ({
       type: 'TOONNODEMATERIAL';
       params?: AllowTextureStrings<THREE.MeshToonNodeMaterialParameters>;
-      tslFile?: string;
-      nodes?: Record<string, Record<string, unknown>>;
-      staticDefines?: Record<string, unknown>;
-    }
+    } & TslMaterialProps)
 );
-
-/** The TSL material files loaded so far, by material id (see loadTslMaterialFileAsync) */
-const loadedTslMaterialFiles = new Map<string, Record<string, unknown>>();
-
-// A TSL texture input whose id isn't registered samples this: one white texel, made on the first
-// one, shared and never disposed (it isn't registered, so no release reaches it)
-let missingTexture: THREE.DataTexture | null = null;
-const getMissingTexture = () => {
-  if (!missingTexture) {
-    missingTexture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-    missingTexture.name = 'aekMissingTexture';
-    missingTexture.needsUpdate = true;
-  }
-  return missingTexture;
-};
-
-/**
- * Loads a material's TSL file (its material JSON's `tslFile`) so {@link createMaterial} can build
- * it: the gathered data loads these files on demand (p607 D11). A scene load does it for the
- * scene's materials; code that creates such a material at another time awaits this first. A file
- * loads once. A production build has the files of the materials its scenes list (a development
- * one has all).
- * @param materialId the material JSON's id
- * @returns false when the app's data has no TSL file for this id
- * @example
- * ```ts
- * import { createMaterial, loadTslMaterialFileAsync } from 'aekasha';
- *
- * // A grid of its own, from the toolkit's triplanarGrid material file
- * if (await loadTslMaterialFileAsync('triplanarGrid')) {
- *   createMaterial({
- *     id: 'wideGrid',
- *     tslMaterialId: 'triplanarGrid',
- *     type: 'STANDARDNODEMATERIAL',
- *     tslFile: 'materials/triplanarGrid.tsl.ts',
- *     staticDefines: { minorLines: false },
- *     nodes: {
- *       colorNode: {
- *         lineThickness: 0.05,
- *         lineFrequency: 0.25,
- *         lineColor: '#4fc3f7',
- *         backgroundColor: '#202020',
- *       },
- *     },
- *   });
- * }
- * ```
- */
-export const loadTslMaterialFileAsync = async (materialId: string) => {
-  if (loadedTslMaterialFiles.has(materialId)) return true;
-  const load = getAppData().tslMaterialFiles[materialId];
-  if (!load) return false;
-  const exports = await load();
-  loadedTslMaterialFiles.set(materialId, exports);
-  return true;
-};
 
 /**
  * Takes a ref on a registered material: it isn't released (by {@link decMaterialRef} or its
@@ -263,16 +202,73 @@ const toVector2Param = (value: unknown) => {
   return typeof x === 'number' && typeof y === 'number' ? new THREE.Vector2(x, y) : value;
 };
 
+type MaterialClass = new (params?: Record<string, unknown>) => Materials;
+
+/** Each material type's three class: `params` is given to its constructor */
+const MATERIAL_CLASSES: Record<MatProps['type'], MaterialClass> = {
+  LINEBASIC: THREE.LineBasicMaterial,
+  LINEDASHED: THREE.LineDashedMaterial,
+  BASIC: THREE.MeshBasicMaterial,
+  DEPTH: THREE.MeshDepthMaterial,
+  DISTANCE: THREE.MeshDistanceMaterial,
+  LAMBERT: THREE.MeshLambertMaterial,
+  MATCAP: THREE.MeshMatcapMaterial,
+  NORMAL: THREE.MeshNormalMaterial,
+  PHONG: THREE.MeshPhongMaterial,
+  PHYSICAL: THREE.MeshPhysicalMaterial,
+  STANDARD: THREE.MeshStandardMaterial,
+  TOON: THREE.MeshToonMaterial,
+  POINTS: THREE.PointsMaterial,
+  SHADERRAW: THREE.ShaderMaterial,
+  SHADER: THREE.ShaderMaterial,
+  SHADOW: THREE.ShadowMaterial,
+  SPRITE: THREE.SpriteMaterial,
+  BASICNODEMATERIAL: THREE.MeshBasicNodeMaterial,
+  LAMBERTNODEMATERIAL: THREE.MeshLambertNodeMaterial,
+  PHONGNODEMATERIAL: THREE.MeshPhongNodeMaterial,
+  PHYSICALNODEMATERIAL: THREE.MeshPhysicalNodeMaterial,
+  STANDARDNODEMATERIAL: THREE.MeshStandardNodeMaterial,
+  MATCAPNODEMATERIAL: THREE.MeshMatcapNodeMaterial,
+  NORMALNODEMATERIAL: THREE.MeshNormalNodeMaterial,
+  TOONNODEMATERIAL: THREE.MeshToonNodeMaterial,
+};
+
+/** A material's `params` as its constructor takes them: a texture slot's id as the registered
+ * texture (an unregistered one left out, warned), a `[x, y]` normal scale as a `Vector2` */
+const resolveMaterialParams = (params: MatProps['params'], id: string | undefined) => {
+  if (!params) return undefined;
+  const resolved: Record<string, unknown> = { ...params };
+  for (const key of textureMapKeys) {
+    const texId = resolved[key];
+    if (typeof texId !== 'string') continue;
+    const texResource = getTexture(texId);
+    if (texResource) {
+      resolved[key] = texResource;
+    } else {
+      lwarn(
+        `Could not locate texture resource "${texId}" for parameter field "${key}" in material "${id}". Safely stripping field.`
+      );
+      delete resolved[key];
+    }
+  }
+  for (const key of VECTOR2_PARAMS) {
+    if (key in resolved) resolved[key] = toVector2Param(resolved[key]);
+  }
+  return resolved;
+};
+
 /**
  * Creates and registers a three material from its props (see {@link MatProps}): owned by the
  * scene loading (or current), released with it when nothing holds a ref. An `id` already
  * registered returns that material, re-tagged to the scene getting it, and builds nothing (the
  * props are ignored). A texture id that isn't registered is left out of `params` (warned); in a
  * TSL input it samples one white texel (warned). A `normalScale` or `clearcoatNormalScale` given as
- * `[x, y]` or `{ x, y }` (a material JSON's) becomes a `Vector2`.
+ * `[x, y]` or `{ x, y }` (a material JSON's) becomes a `Vector2`. A node material's TSL graph
+ * ({@link TslMaterialProps}) runs its `setup` first, then its `nodes` sockets' functions, which
+ * may set a socket `setup` set again (the debug env warns).
  * @throws for an unknown `type`; for a TSL material whose file isn't loaded (see
- * {@link loadTslMaterialFileAsync}), whose socket function is empty, or whose input value can't be
- * made into a uniform
+ * {@link loadTslMaterialFileAsync}) and that no {@link registerTslMaterial} call registered, whose
+ * TSL export isn't a function, or whose input value can't be made into a uniform
  * @example
  * ```ts
  * import { createMaterial } from 'aekasha';
@@ -292,265 +288,19 @@ export const createMaterial = (props: MatProps) => {
     return materials[id].resource;
   }
 
-  let mat: Materials | null = null;
-
-  // Standard Static Parameters Definitions
   const type = props.type;
-  const params = props.params;
-
-  let processedParams: Record<string, unknown> | undefined = undefined;
-
-  if (params) {
-    processedParams = { ...params };
-
-    for (const key of textureMapKeys) {
-      if (typeof processedParams[key] === 'string') {
-        const texId = processedParams[key] as string;
-        const texResource = getTexture(texId);
-
-        if (texResource) {
-          processedParams[key] = texResource;
-        } else {
-          lwarn(
-            `Could not locate texture resource "${texId}" for parameter field "${key}" in material "${id}". Safely stripping field.`
-          );
-          delete processedParams[key];
-        }
-      }
-    }
-    for (const key of VECTOR2_PARAMS) {
-      if (key in processedParams) processedParams[key] = toVector2Param(processedParams[key]);
-    }
-  }
-
-  switch (type) {
-    case 'LINEBASIC':
-      mat = new THREE.LineBasicMaterial(processedParams);
-      break;
-    case 'LINEDASHED':
-      mat = new THREE.LineDashedMaterial(processedParams);
-      break;
-    case 'BASIC':
-      mat = new THREE.MeshBasicMaterial(processedParams);
-      break;
-    case 'DEPTH':
-      mat = new THREE.MeshDepthMaterial(processedParams);
-      break;
-    case 'DISTANCE':
-      mat = new THREE.MeshDistanceMaterial(processedParams);
-      break;
-    case 'LAMBERT':
-      mat = new THREE.MeshLambertMaterial(processedParams);
-      break;
-    case 'MATCAP':
-      mat = new THREE.MeshMatcapMaterial(processedParams);
-      break;
-    case 'NORMAL':
-      mat = new THREE.MeshNormalMaterial(processedParams);
-      break;
-    case 'PHONG':
-      mat = new THREE.MeshPhongMaterial(processedParams);
-      break;
-    case 'PHYSICAL':
-      mat = new THREE.MeshPhysicalMaterial(processedParams);
-      break;
-    case 'STANDARD':
-      mat = new THREE.MeshStandardMaterial(processedParams);
-      break;
-    case 'TOON':
-      mat = new THREE.MeshToonMaterial(processedParams);
-      break;
-    case 'POINTS':
-      mat = new THREE.PointsMaterial(processedParams);
-      break;
-    case 'SHADERRAW':
-    case 'SHADER':
-      mat = new THREE.ShaderMaterial(processedParams);
-      break;
-    case 'SHADOW':
-      mat = new THREE.ShadowMaterial(processedParams);
-      break;
-    case 'SPRITE':
-      mat = new THREE.SpriteMaterial(processedParams);
-      break;
-    case 'BASICNODEMATERIAL':
-      mat = new THREE.MeshBasicNodeMaterial(processedParams);
-      break;
-    case 'LAMBERTNODEMATERIAL':
-      mat = new THREE.MeshLambertNodeMaterial(processedParams);
-      break;
-    case 'PHONGNODEMATERIAL':
-      mat = new THREE.MeshPhongNodeMaterial(processedParams);
-      break;
-    case 'PHYSICALNODEMATERIAL':
-      mat = new THREE.MeshPhysicalNodeMaterial(processedParams);
-      break;
-    case 'STANDARDNODEMATERIAL':
-      mat = new THREE.MeshStandardNodeMaterial(processedParams);
-      break;
-    case 'MATCAPNODEMATERIAL':
-      mat = new THREE.MeshMatcapNodeMaterial(processedParams);
-      break;
-    case 'NORMALNODEMATERIAL':
-      mat = new THREE.MeshNormalNodeMaterial(processedParams);
-      break;
-    case 'TOONNODEMATERIAL':
-      mat = new THREE.MeshToonNodeMaterial(processedParams);
-      break;
-  }
-
-  if (mat) {
-    if (props.userData) mat.userData = props.userData;
-    mat.userData.type = type;
-  } else {
+  const MaterialClass: MaterialClass | undefined = MATERIAL_CLASSES[type];
+  if (!MaterialClass) {
     const msg = `Incomplete properties for material (id: ${id}).`;
     lerror(msg);
     throw new Error(msg);
   }
+  const mat = new MaterialClass(resolveMaterialParams(props.params, id));
+  if (props.userData) mat.userData = props.userData;
+  mat.userData.type = type;
 
-  // TSL file
-  if ('tslFile' in props && props.tslFile) {
-    const tslMaterialId = props.tslMaterialId || id || '';
-    if (
-      !loadedTslMaterialFiles.has(tslMaterialId) &&
-      getAppData().tslMaterialFiles[tslMaterialId]
-    ) {
-      const msg = `The TSL file of material "${tslMaterialId}" isn't loaded: a scene load loads its materials' files, other code awaits loadTslMaterialFileAsync("${tslMaterialId}") before createMaterial.`;
-      lerror(msg);
-      throw new Error(msg);
-    }
-    const activeMaterialRegistry = existsOrThrow(
-      loadedTslMaterialFiles.get(tslMaterialId),
-      `Could not locate compiled TSL Master Graph registry entry for material ID "${id}. Materials with a TSL file must have a *.material.json file."`
-    );
-
-    const staticDefines = props.staticDefines || {};
-
-    if (props.nodes) {
-      for (const nodeSocket of Object.keys(props.nodes)) {
-        const masterGraphFunction = activeMaterialRegistry[nodeSocket];
-
-        // If a named layout node function isn't explicitly exported or the node socket does not exist, gracefully pass it
-        if (!masterGraphFunction || !(nodeSocket in mat)) {
-          if (mat.type.endsWith('NodeMaterial')) {
-            lwarn(`Could not locate node "${nodeSocket}" for material id "${id}".`);
-          } else {
-            lwarn(
-              `Material id "${id}" is not a node material, it does not have node sockets (in this case "${nodeSocket}").`
-            );
-          }
-          continue;
-        }
-
-        if (masterGraphFunction === ' ' || masterGraphFunction === '') {
-          const msg = `Empty TSL function export caught at socket "${nodeSocket}" for material entry ID: "${id}".`;
-          lerror(msg);
-          throw new Error(msg);
-        }
-
-        const genericGraphFn = masterGraphFunction as (
-          inputs: Record<string, unknown>,
-          material: THREE.NodeMaterial,
-          defines?: Record<string, unknown>
-        ) => Node;
-
-        const rawInputs = props.nodes[nodeSocket];
-        const uniformNodesPayload: Record<string, unknown> = {};
-        let nodeStaticDefines: Record<string, unknown> | undefined = undefined;
-
-        for (const inputKey of Object.keys(rawInputs)) {
-          const value = rawInputs[inputKey];
-          let instantiatedNode;
-
-          // Handle Texture Asset References
-          if (inputKey === 'staticDefines' && typeof value === 'object' && value !== null) {
-            nodeStaticDefines = { ...staticDefines, ...(value as Record<string, unknown>) };
-          }
-          // Handle textures
-          else if (typeof value === 'string' && !value.startsWith('#')) {
-            let texResource = getTexture(value);
-            if (!texResource) {
-              lwarn(
-                `Could not locate texture resource for input "${inputKey}" in material "${id}" with value "${value}": it samples one white texel.`
-              );
-              // A sampler still, so the TSL function gets the node type it expects
-              texResource = getMissingTexture();
-            }
-            // Convert directly into a sampler node, not a uniform buffer allocation
-            instantiatedNode = texture(texResource);
-          }
-          // Handle Hex Color Strings
-          else if (typeof value === 'string' && value.startsWith('#')) {
-            instantiatedNode = uniform(color(value));
-          }
-          // Handle Booleans (Flags / Switches)
-          else if (typeof value === 'boolean') {
-            instantiatedNode = uniform(value);
-          }
-          // Handle Arrays (Alternative Vector Format: [x, y] or [x, y, z])
-          else if (Array.isArray(value)) {
-            if (value.length === 4) {
-              instantiatedNode = uniform(new THREE.Vector4(value[0], value[1], value[2], value[3]));
-            } else if (value.length === 3) {
-              instantiatedNode = uniform(new THREE.Vector3(value[0], value[1], value[2]));
-            } else if (value.length === 2) {
-              instantiatedNode = uniform(new THREE.Vector2(value[0], value[1]));
-            } else {
-              const msg = `Unsupported array length (${value.length}) for input "${inputKey}" in material "${id}".`;
-              lerror(msg);
-              throw new Error(msg);
-            }
-          }
-          // Handle Vector and Color Objects
-          else if (typeof value === 'object' && value !== null) {
-            const obj = value as Record<string, number>;
-
-            if ('w' in obj) {
-              instantiatedNode = uniform(
-                new THREE.Vector4(obj.x || 0, obj.y || 0, obj.z || 0, obj.w || 0)
-              );
-            } else if ('z' in obj) {
-              instantiatedNode = uniform(new THREE.Vector3(obj.x || 0, obj.y || 0, obj.z || 0));
-            } else if ('y' in obj) {
-              instantiatedNode = uniform(new THREE.Vector2(obj.x || 0, obj.y || 0));
-            } else if ('r' in obj && 'g' in obj && 'b' in obj && 'a' in obj) {
-              instantiatedNode = uniform(new THREE.Vector4(obj.r, obj.g, obj.b, obj.a));
-            } else if ('r' in obj && 'g' in obj && 'b' in obj) {
-              instantiatedNode = uniform(new THREE.Color(obj.r, obj.g, obj.b));
-            } else {
-              const msg = `Unknown object footprint for input "${inputKey}" in material "${id}". Keys: ${Object.keys(obj).join(', ')}`;
-              lerror(msg);
-              throw new Error(msg);
-            }
-          }
-          // Handle Standard Float / Scalar Numbers
-          else if (typeof value === 'number') {
-            instantiatedNode = uniform(value);
-          }
-          // Everything else is forbidden
-          else {
-            const msg = `Unsupported input value type at socket "${nodeSocket}" for input "${inputKey}" in material entry ID: "${id}". Value: ${JSON.stringify(value)}.`;
-            lerror(msg);
-            throw new Error(msg);
-          }
-
-          // Cache dynamically so runtime update scripts can pinpoint the uniform
-          if (!mat.userData.uniforms) mat.userData.uniforms = {};
-          mat.userData.uniforms[`${nodeSocket}_${inputKey}`] = instantiatedNode;
-          uniformNodesPayload[inputKey] = instantiatedNode;
-        }
-
-        // Execute graph function with its flat parameter values and assign directly to material socket
-        mat[nodeSocket] = genericGraphFn(
-          uniformNodesPayload,
-          mat as THREE.NodeMaterial,
-          nodeStaticDefines || staticDefines
-        );
-      }
-    }
-
-    mat.userData.hasTslFile = true;
-  }
+  // Only a node material has a TSL graph (a plain one's id may name a registration)
+  if ((mat as THREE.NodeMaterial).isNodeMaterial) applyTslGraph(mat as THREE.NodeMaterial, props);
 
   if (props.debugData) {
     if (props.debugData.name) {
@@ -637,7 +387,10 @@ export const getMaterialVariant = (baseId: string, overrides: MaterialVariantOve
     ...props,
     id: variantId,
     isPersistent: false,
-    tslMaterialId: baseProps.tslMaterialId || baseId,
+    // The base's TSL functions, for a TSL material only
+    ...(base.resource.userData.hasTslFile
+      ? { tslMaterialId: baseProps.tslMaterialId || baseId }
+      : {}),
   } as MatProps);
   materials[variantId].variantKey = variantKey;
   variant.userData.variantOf = baseId;

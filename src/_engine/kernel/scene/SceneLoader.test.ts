@@ -63,8 +63,8 @@ vi.mock(import('../assets/Texture'), () => ({
 vi.mock(import('../assets/Material'), () => ({
   createMaterial: fns.createMaterial as never,
   getMaterial: vi.fn(),
-  loadTslMaterialFileAsync: vi.fn(),
 }));
+vi.mock(import('../assets/MaterialTsl'), () => ({ loadTslMaterialFileAsync: vi.fn() }));
 vi.mock(import('../assets/Geometry'), () => ({
   createGeometry: vi.fn(),
   doesGeoExist: vi.fn(),

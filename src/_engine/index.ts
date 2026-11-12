@@ -226,7 +226,6 @@ export {
   getMaterial,
   getMaterialVariant,
   incMaterialRef,
-  loadTslMaterialFileAsync,
   saveMaterial,
 } from './kernel/assets/Material';
 export type {
@@ -235,7 +234,15 @@ export type {
   MaterialVariantOverrides,
   MatProps,
   TextureMapKeys,
+  TslMaterialProps,
 } from './kernel/assets/Material';
+export { loadTslMaterialFileAsync, registerTslMaterial } from './kernel/assets/MaterialTsl';
+export type {
+  TslInputs,
+  TslMaterialFns,
+  TslSetupFn,
+  TslSocketFn,
+} from './kernel/assets/MaterialTsl';
 export {
   createMeshEntity,
   getMeshByAppId,
