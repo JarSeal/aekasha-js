@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
+Status: in progress | Phases 0-3 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -523,7 +523,7 @@ streamingGrid` inside its baseline).
   from the commits since `bundle.json` was last recorded (p376's and p377 Phase 0's, on
   largeWorld's spike modules). Left for Phase 5's `yarn verify:baselines --update`.
 
-## Phase 3 — streamingGrid: kit content near and far
+## Phase 3 — streamingGrid: kit content near and far — done
 
 D7: the far layer's real path on kit content, merged near.
 
@@ -638,6 +638,19 @@ Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGr
   frustum; three culls a far group by its bounds): at Phase 0's 2.1-2.8 µs a draw, about 0.01 ms,
   well inside the runs' spread (a run's median moves 1-1.5 ms between runs of one case, both
   ways: Chrome's frame pacing, not the content). So no cost measurable at this size; not gating.
+
+**As built** (2026-11-12, section 4):
+
+- **The scene runner**: `yarn verify:scenes --only streamingGrid --update` recorded all five
+  configurations (`workerSab`, `workerMsg`, `mainThread`, `prodTest`, `debugger`) on the same hash
+  as before, `811c9dc5` (no bodies; its snapshot is skipped, so the ruins change no recorded
+  figure but the debugger's shots, which are unstable by its settings); then the plain run: 5
+  passed. That's the exit.
+- **The Hub image** (`streamingGrid.hub.png`, 1600 × 1000, the Hub tab's `saveHubImageAsync`
+  through the dev files, called by a script): a still camera at (68, 11, 72) looking towards
+  (180, 0, 165), the cells settled (loaded, primed, no fade running): the merged ruin of cell
+  (1, 1) in front, a beacon near and three far, the far rings to the skyline. It was the flight's
+  start before (no ruin in view).
 
 ## Phase 4 — The Hub: larger cells for a large far field
 
