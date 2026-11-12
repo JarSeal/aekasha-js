@@ -240,7 +240,9 @@ floor. Saved: the 50 % cull 0.0-0.7 ms, `members@256` 0.6-1.0 ms, `proxy@256` 2.
 `instanced@256` 2.1-2.4 ms on both backends. Only `proxy` and `instanced` pay: the cull and
 larger cells pay only with the larger field.
 
-**A second machine**: not run (open question 4 stays open).
+**A second machine**: not run (open question 4 stays open). Phase 5 didn't run it either: the
+WSL2 machine was in repair (2026-11-12); the run is a follow-up in
+`p990_follow-ups-from-done-plans.md` (Rendering).
 
 **What the table says** (cheapest first; the plan's phases are written from it once reviewed):
 
@@ -709,7 +711,8 @@ D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`);
 
 Exit: every check passes, the figures recorded; what fails goes back to its phase.
 
-**As built** (2026-11-12, step 1, on the Apple M2; steps 2-3 need the WSL2 machine):
+**As built** (2026-11-12, on the Apple M2; the WSL2 machine was in repair, so step 2 wasn't run
+and step 3 ran on the M2):
 
 - `yarn test` 353 files, 3,328 tests (1 skipped); `yarn lint`, `tsc` and `tsc -p hub` clean.
 - `yarn build` passes: the SBP of every profile within its budgets (app initial 397.4 KiB of 398,
@@ -734,6 +737,10 @@ Exit: every check passes, the figures recorded; what fails goes back to its phas
   and its longer note, the box taller); `drawer.mergingControls`, `window.mergeGroup` and
   `window.mergeMember` (largeWorld, testDebugScene, thirdPersonGymScene) p373-p375's rows,
   `materialEditor.selector` p376's ruin materials, `window.about` p376's versions.
+- Step 2, the second machine: **not run**. The WSL2 machine was in repair, and running it on the
+  M2 would only repeat Phase 0's figures. It doesn't gate (D9), so open question 4 stays open and
+  the run moved to `p990_follow-ups-from-done-plans.md` (Rendering) with its command, for when
+  that machine is back.
 
 ## Phase 6 — Hub, versions, done
 
@@ -791,7 +798,8 @@ proxy would take (D6: not built). The far entries' own grounding is above.
 4. Does the draws' cost hold on other hardware (a discrete GPU, a phone)? p376 measured one
    machine, where the frame was bound by its draws and fill, not its triangles. Phase 0 runs the
    reference and each way's best on a second machine when one is at hand. (Phase 0: not run.
-   Phase 5 runs the reference and `instanced@256` on the WSL2 machine, not gating: D9.)
+   Phase 5 runs the reference and `instanced@256` on the WSL2 machine, not gating: D9. Phase 5:
+   not run, the WSL2 machine in repair; open, a follow-up in `p990_follow-ups-from-done-plans.md`.)
 5. The hidden members' scene graph walk: should Phase 0 step 1 find it a real share of the frame,
    taking a baked member's mesh out of the scene graph (as p375 does for a batched member) helps
    every merged scene, not only far content. A merging change of its own: here, or a follow-up in
