@@ -6,6 +6,7 @@ import { getGeneratedAppData } from '../../../kernel/scene/Scene';
 import type { MatProps } from '../../../kernel/assets/Material';
 import { getTexture, loadTextureAsync, type TextureProps } from '../../../kernel/assets/Texture';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
+import { getMaterialInputDependencies } from '../../../kernel/assets/MaterialInputResolvers';
 import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import { textureMapKeys } from '../../../utils/Constants';
@@ -99,8 +100,9 @@ export const getCopyProps = (asset: MaterialAsset, tslOverrides: MaterialTslInpu
 };
 
 /**
- * The texture ids a material asset uses: its `params` texture slots and its TSL string inputs
- * (`nodes` and `inputs`; a string not starting with `#` is a texture id, as in createMaterial).
+ * The texture ids a material asset uses: its `params` texture slots and its TSL inputs' (`nodes`
+ * and `inputs`): a bare texture id (a string not starting with `#`), an object-form texture ref
+ * and what a registered input resolver's `dependencies` name (p302 D4).
  * @returns (string[]) the texture ids, without duplicates
  */
 export const getMaterialTextureIds = (asset: MaterialAsset) => {
@@ -114,8 +116,9 @@ export const getMaterialTextureIds = (asset: MaterialAsset) => {
   }
   for (const inputs of Object.values(getAssetNodeInputs(asset) ?? {})) {
     for (const [key, value] of Object.entries(inputs)) {
-      if (key !== 'staticDefines' && typeof value === 'string' && !value.startsWith('#')) {
-        ids.add(value);
+      if (key === 'staticDefines') continue;
+      for (const dependency of getMaterialInputDependencies(value)) {
+        if (dependency.type === 'texture') ids.add(dependency.id);
       }
     }
   }

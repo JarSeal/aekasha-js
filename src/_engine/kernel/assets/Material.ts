@@ -63,11 +63,13 @@ export type TslMaterialProps = {
    * material whose `tslMaterialId` names a {@link registerTslMaterial} registration needs none. */
   tslFile?: string;
   /** The inputs of the functions' `setup` (`{ albedo: 'sand01', scale: 4 }`), each kept as the
-   * `setup_<key>` uniform. */
+   * `setup_<key>` uniform: a texture id (or `{ texture: 'sand01', channel: 'r' }`, its sample's
+   * channels), a colour, a number, a boolean or a vector, or a form a registered resolver takes
+   * ({@link registerMaterialInputResolver}; a bundle's nodes kept as `setup_<key>_<field>`). */
   inputs?: Record<string, unknown>;
   /** Per socket (`colorNode`, …), the inputs of the function of that name (`colorNode: { lineColor:
-   * '#4fc3f7' }`), each kept as the `<socket>_<key>` uniform. A socket's `staticDefines` input is
-   * merged over the material's for that socket. */
+   * '#4fc3f7' }`), each kept as the `<socket>_<key>` uniform, the same forms as `inputs`. A
+   * socket's `staticDefines` input is merged over the material's for that socket. */
   nodes?: Record<string, Record<string, unknown>>;
   /** Build-time flags the functions branch on: another set is another shader. */
   staticDefines?: Record<string, unknown>;

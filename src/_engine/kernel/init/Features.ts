@@ -7,6 +7,10 @@ import {
 } from '../ecs/ECS';
 import type { ComponentType } from '../ecs/ECSCoreComponents';
 import { type ImportExtension, registerImportExtension } from '../assets/import/ImportExtensions';
+import {
+  type MaterialInputResolver,
+  registerMaterialInputResolver,
+} from '../assets/MaterialInputResolvers';
 import { type FixedStepDriver, setFixedStepDriver } from '../loop/MainLoop';
 import {
   addAfterRender,
@@ -74,6 +78,9 @@ export type FeatureContext = {
    * @internal
    */
   registerImportExtension: (extension: ImportExtension) => void;
+  /** {@link registerMaterialInputResolver}: a new form of TSL material input value, resolved
+   * before the built-in ones (an app feature's texture set, …). */
+  registerMaterialInputResolver: <T>(resolver: MaterialInputResolver<T>) => void;
   /**
    * Runs `fn` in `InitEngine`'s debug block, before the app's `start`, in install order (the
    * debug env only: `?isDebug=true` in a development or test build). Load the debug code there,
@@ -159,6 +166,7 @@ export const createFeatureHost = (config: AppConfig): FeatureHost => {
     setRenderPipeline,
     addAfterRender,
     registerImportExtension,
+    registerMaterialInputResolver,
     // A production build keeps none (and runs none: InitEngine's debug blocks fold away)
     onDebug: (fn) => {
       if (__AEK_DEBUG__) debugHooks.push(fn);

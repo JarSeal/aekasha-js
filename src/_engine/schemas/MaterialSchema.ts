@@ -24,13 +24,13 @@ const StaticDefinesSchema = z
 const InputsSchema = z
   .record(z.string(), z.unknown())
   .describe(
-    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id (a texture node), or a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }."
+    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
   );
 
 const NodesSchema = z
   .record(z.string(), TslNodeInputsSchema)
   .describe(
-    "Per socket (colorNode, …), its inputs: a texture id, a '#rrggbb' colour, a number, a boolean, or a vector as an array or { x, y, z }. Each becomes a uniform the TSL file's socket function gets."
+    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
   );
 
 const MaterialOverridesSchema = z.object({
@@ -109,11 +109,12 @@ const TslMaterialSchema = MaterialBaseProps.extend({
     ),
   /** Build-time flags the TSL file branches on. */
   staticDefines: StaticDefinesSchema.optional(),
-  /** Per socket, its inputs: each becomes a uniform the file's socket function gets. */
+  /** Per socket, its inputs: each becomes a node the file's socket function gets (as `inputs`). */
   nodes: NodesSchema.optional(),
   /** The inputs of the file's `setup` function, which sets any sockets from one graph: a texture
-   * id becomes a texture node, any other value a uniform. `setup` runs before the `nodes` sockets'
-   * functions. */
+   * id (or `{ "texture": id, "channel": "r" }`, its sample's channels) becomes a texture node, a
+   * form a registered input resolver takes its node or bundle (`registerMaterialInputResolver`),
+   * any other value a uniform. `setup` runs before the `nodes` sockets' functions. */
   inputs: InputsSchema.optional(),
   /** A node material type: three's node material of that name, with the TSL file's sockets. */
   type: z

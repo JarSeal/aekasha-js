@@ -6,10 +6,11 @@ import { installMeshes } from '../mesh/Mesh';
 import { installRaycast } from '../render/Raycast';
 import { installCameras } from '../camera/Camera';
 import { installLights } from '../light/Light';
+import { installMaterialInputResolvers } from '../assets/MaterialInputResolvers';
 
 /**
  * Installs the kernel's systems and hooks (p607 D2): the core ECS plumbing, frustum culling,
- * meshes, groups, ray casting, cameras and lights. Always installed, never listed in `features`.
+ * meshes, groups, ray casting, cameras and lights, and the material input resolvers. Always installed, never listed in `features`.
  * `InitEngine` calls it before the first world, so the core plugin's systems come first in every
  * world. Their debug modules load later in the boot (debug env), before the features install; the
  * input devices register nothing here: each adds its listeners on its first binding.
@@ -27,4 +28,6 @@ export const installKernel = (ctx: FeatureContext) => {
   // 3D symbols, whose hooks on the same tags are add hooks (these are delete hooks)
   installCameras(ctx);
   installLights(ctx);
+  // The object-form texture ref (p302 D4): first, so before any feature's or the app's
+  installMaterialInputResolvers(ctx);
 };

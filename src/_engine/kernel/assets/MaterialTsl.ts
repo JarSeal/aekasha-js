@@ -3,9 +3,12 @@
 // (registerTslMaterial, p302 D3), and the material's inputs made into the uniforms and texture
 // nodes those functions get. A `setup` function builds any sockets from one graph with the
 // material's `inputs`; each `nodes` socket's function builds that socket from its own (p302 D2).
+// An input value a registered resolver matches is its node or bundle (MaterialInputResolvers.ts,
+// p302 D4); the built-in rules here make the rest.
 import * as THREE from 'three/webgpu';
 import { color, texture, uniform } from 'three/tsl';
 import { getTexture } from './Texture';
+import { type MaterialInputContext, resolveRegisteredInput } from './MaterialInputResolvers';
 import { getAppData } from '../scene/AppData';
 import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
@@ -13,8 +16,10 @@ import { IS_DEBUG_ENV } from '../config/Config';
 /**
  * What a TSL material's functions get as `inputs`: each input of the material (`inputs` for
  * `setup`, a socket's under `nodes` for that socket's function) by its key, as a TSL node: a
- * texture id as a texture node, any other value as a uniform. A function types its own inputs by
- * key (`{ albedo: TextureNode; scale: Node<'float'> }`): three's node types differ by value type.
+ * texture id as a texture node, any other value as a uniform, and a value a registered resolver
+ * matches as its node or its bundle (an object of nodes; `registerMaterialInputResolver`). A
+ * function types its own inputs by key (`{ albedo: TextureNode; scale: Node<'float'> }`): three's
+ * node types differ by value type.
  */
 export type TslInputs = Record<string, unknown>;
 
@@ -198,24 +203,27 @@ const getTslMaterialFns = (props: TslGraphProps): Record<string, unknown> | null
   );
 };
 
+/** A TSL texture input's texture: the registered one, else one white texel (warned) */
+const getInputTexture = (textureId: string, where: string, id: string | undefined) => {
+  const texResource = getTexture(textureId);
+  if (texResource) return texResource;
+  lwarn(
+    `Could not locate texture resource for ${where} in material "${id}" with value "${textureId}": it samples one white texel.`
+  );
+  // A sampler still, so the TSL function gets the node type it expects
+  return getMissingTexture();
+};
+
 /**
- * One TSL input as its node: a texture id as a texture node (one white texel when it isn't
- * registered, warned), a `#rrggbb` colour, a boolean, a number, a 2-4 array or a `{ x, y(, z, w) }`
- * or `{ r, g, b(, a) }` object as a uniform. Throws for anything else.
+ * One TSL input as its node by the built-in rules: a texture id as a texture node (one white
+ * texel when it isn't registered, warned), a `#rrggbb` colour, a boolean, a number, a 2-4 array or
+ * a `{ x, y(, z, w) }` or `{ r, g, b(, a) }` object as a uniform. Throws for anything else.
  */
 const createTslInputNode = (value: unknown, where: string, id: string | undefined) => {
   if (typeof value === 'string') {
     if (value.startsWith('#')) return uniform(color(value));
-    let texResource = getTexture(value);
-    if (!texResource) {
-      lwarn(
-        `Could not locate texture resource for ${where} in material "${id}" with value "${value}": it samples one white texel.`
-      );
-      // A sampler still, so the TSL function gets the node type it expects
-      texResource = getMissingTexture();
-    }
     // A sampler node, not a uniform buffer allocation
-    return texture(texResource);
+    return texture(getInputTexture(value, where, id));
   }
   if (typeof value === 'boolean') return uniform(value);
   if (typeof value === 'number') return uniform(value);
@@ -251,17 +259,20 @@ const createTslInputNode = (value: unknown, where: string, id: string | undefine
 
 /**
  * A set of TSL inputs (the material's `inputs`, or a socket's under `nodes`) as the nodes its
- * function gets, each kept at `uniforms[<prefix>_<key>]` (where the material editor and runtime
- * code find it), and the static defines it gets: the material's, with an input named
- * `staticDefines` merged over them.
+ * function gets, and the static defines it gets: the material's, with an input named
+ * `staticDefines` merged over them. A value a registered resolver matches is its node or bundle,
+ * any other is made by the built-in rules. Each node is kept at `uniforms[<prefix>_<key>]`, each of
+ * a bundle at `uniforms[<prefix>_<key>_<field>]` (where the material editor and runtime code find
+ * them).
  */
 const createTslInputs = (
   rawInputs: Record<string, unknown>,
   prefix: string,
   staticDefines: Record<string, unknown>,
-  uniforms: Record<string, unknown>,
+  mat: THREE.NodeMaterial,
   id: string | undefined
 ) => {
+  const uniforms = mat.userData.uniforms as Record<string, unknown>;
   const inputs: TslInputs = {};
   let defines = staticDefines;
   for (const key of Object.keys(rawInputs)) {
@@ -271,7 +282,22 @@ const createTslInputs = (
       continue;
     }
     const where = prefix === 'setup' ? `input "${key}"` : `socket "${prefix}" input "${key}"`;
-    const node = createTslInputNode(value, where, id);
+    const ctx: MaterialInputContext = {
+      materialId: id,
+      group: prefix,
+      key,
+      material: mat,
+      getTexture: (textureId) => getInputTexture(textureId, where, id),
+    };
+    const resolved = resolveRegisteredInput(value, ctx);
+    if (resolved?.bundle) {
+      for (const field of Object.keys(resolved.bundle)) {
+        uniforms[`${prefix}_${key}_${field}`] = resolved.bundle[field];
+      }
+      inputs[key] = resolved.bundle;
+      continue;
+    }
+    const node = resolved ? resolved.node : createTslInputNode(value, where, id);
     uniforms[`${prefix}_${key}`] = node;
     inputs[key] = node;
   }
@@ -323,7 +349,7 @@ export const applyTslGraph = (mat: THREE.NodeMaterial, props: TslGraphProps) => 
   }
 
   const staticDefines = props.staticDefines || {};
-  const uniforms = (mat.userData.uniforms ??= {}) as Record<string, unknown>;
+  mat.userData.uniforms ??= {};
   const sockets = mat as unknown as Record<string, unknown>;
   const nodes = props.nodes ?? {};
 
@@ -331,7 +357,7 @@ export const applyTslGraph = (mat: THREE.NodeMaterial, props: TslGraphProps) => 
   if (fns.setup !== undefined) {
     const setup = asTslGraphFn(fns.setup, 'setup', id);
     const rawInputs = props.inputs ?? {};
-    const { inputs, defines } = createTslInputs(rawInputs, 'setup', staticDefines, uniforms, id);
+    const { inputs, defines } = createTslInputs(rawInputs, 'setup', staticDefines, mat, id);
     if (IS_DEBUG_ENV) setBySetup = readSocketValues(mat, nodes);
     setup(inputs, mat, defines);
   } else if (props.inputs && Object.keys(props.inputs).length) {
@@ -352,7 +378,7 @@ export const applyTslGraph = (mat: THREE.NodeMaterial, props: TslGraphProps) => 
       continue;
     }
     const socketFn = asTslGraphFn(fn, socket, id);
-    const { inputs, defines } = createTslInputs(nodes[socket], socket, staticDefines, uniforms, id);
+    const { inputs, defines } = createTslInputs(nodes[socket], socket, staticDefines, mat, id);
     if (setBySetup?.has(socket) && setBySetup.get(socket) !== sockets[socket]) {
       lwarn(`Material "${id}": its nodes' ${socket} function replaces the ${socket} setup set.`);
     }

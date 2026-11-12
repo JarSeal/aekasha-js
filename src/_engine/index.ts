@@ -237,6 +237,14 @@ export type {
   TslMaterialProps,
 } from './kernel/assets/Material';
 export { loadTslMaterialFileAsync, registerTslMaterial } from './kernel/assets/MaterialTsl';
+export { registerMaterialInputResolver } from './kernel/assets/MaterialInputResolvers';
+export type {
+  MaterialInputContext,
+  MaterialInputResolver,
+  ResolvedInput,
+  ResolvedInputNode,
+} from './kernel/assets/MaterialInputResolvers';
+export type { MaterialInputDependency, TextureInputRef } from './kernel/assets/MaterialInputRefs';
 export type {
   TslInputs,
   TslMaterialFns,
