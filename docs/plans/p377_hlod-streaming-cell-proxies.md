@@ -551,6 +551,49 @@ D7: the far layer's real path on kit content, merged near.
 
 Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGrid` passes.
 
+**As built** (2026-11-12, sections 1-2):
+
+- **The kit**: `streamingGridRuinBlock` (box 3 × 2 × 2), `streamingGridRuinSlab` (box 4 × 0.5 × 3)
+  and `streamingGridRuinPost` (cylinder r 0.4 × 5, 8 segments); `streamingGridRuinStone` (block,
+  slab) and `streamingGridRuinTimber` (post), so geometry and material go together and a ruin cell's
+  far layer is exactly three groups. A ruin: three blocks (two in a row, one stacked), a leaning
+  slab, a standing post and one leaning or fallen; off the cell's centre by up to 12 m and turned,
+  from the cell's seed (`getCellSeed + 3`). No `appId` (the data's size). The heights come from
+  `streamingGrid.ts`' `createHeightField(53)`, each piece sunk 0.35 m (a slope, the far terrain's
+  coarse level); the file header says changing it leaves them floating. The scene's `mergeGroups`
+  entry follows `streaming`.
+- **The gather's output**: 417 manifest meshes (33 + 384), 224 far meshes, all groups (192 the
+  ruins': 64 per kind, 384 instances; 32 the beacons'), none of their own; a ruin cell's near and
+  far layers both list the kit's two materials and three geometries, the base none.
+- **The data's size** (compact JSON, as the build ships it): streamingGrid's scene 20,497 →
+  137,119 bytes (`__streaming` 18,450 → 135,018: its `meshes` 79.7 KB, about 190 bytes a piece;
+  `farMeshes` 29.5 KB, about 130 a group; `cells` 23.9 KB), `generatedAppData.json` 340,770 →
+  457,392. Section 3's `yarn sbp` gives the first download's gzip.
+- **What it shows** (Apple M2, Chrome headless through the dev server, debug env, 1600 × 900; a
+  Playwright script reading the runtime: `rt.cells`, `rt.stats`, the root scene's ruin
+  `InstancedMesh`es, the `AUTO` groups of ruin material, `getMergeDebugStats`; then the tab's
+  monitors). WebGPU a 73 s flight (two crossings), WebGL2 40 s:
+  - far: the ruin far groups alive are always three per ruin cell at `FAR`, two instances each
+    (30-96 groups as the flight moves; the tab's "224 far meshes: 224 groups (416 instances), 0 of
+    their own");
+  - near: every ruin `AUTO` group built (4-30 groups, 12-66 members), no refusal, no merging
+    streaming warning; the console only Rapier's deprecated init warning (known);
+  - the counters: `unitErrors`, `lateResults`, `loadsCancelled`, `unfadedTakeDowns`,
+    `primingStalls` and `fadesReversed` 0 on both; the cell releases run (710 in the WebGPU flight)
+    but free nothing (`assetsReleased` 0): the kit's assets (as the beacons') are held by many
+    tracked cells, so they count under the scene and stay while any holds them (the Grounding's
+    Assets and memory). So the tab's GPU memory is near 0 B, far 0 B, kept 787.5 KB (the terrain
+    blocks): the far layer holds nothing per cell;
+  - **the fade** (D5): the tab shows `fadeSeconds` but has no control for it, so the script set
+    `rt.settings.fadeSeconds = 2` (read live). The hover doesn't switch a cell's level (its ±6 m
+    stays inside the 16 m margin; it moves the focus cell only), so the switch was forced with the
+    focus override (the tab's Freeze focus): at cell (-1, 1) the ruin cell (1, 1) is `NEARBY`, at
+    (-2, 1) `FAR`; the camera still, 20 m from that ruin. Near → far and back, the near layer's
+    fade out and the far layer's fade in ran together and ended by 2.4 s; in frames 0.4-1.9 s into
+    each the ruin looks unchanged on both backends (no dither, no z-fight: the merged group draws
+    whole, the far group dithers in or out on the same surfaces), while the cell's crates dither
+    and its rocks turn to impostors. Nothing for p990.
+
 ## Phase 4 — The Hub: larger cells for a large far field
 
 D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`); nothing to build.
