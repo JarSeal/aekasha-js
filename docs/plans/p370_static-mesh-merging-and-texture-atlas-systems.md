@@ -340,11 +340,12 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   the branch also carries the debugger's GPU timer fix found during the measurements, so it takes
   an engine patch (and an app patch) after all (p376 §7).
 - p377 (decided 2026-11-12, when it stopped being a stub) is its own branch, from p376's (its
-  Phase 0 builds on p376's spike tools), rebased onto `main` once p376's PR merges. Phase 0 decides
-  what it builds; nothing paying ends the branch with the results and an app patch (p377's
-  Branches and PRs). Something paid (2026-11-12): the branch carries Phases 1-6, the far entries
-  for kit meshes and the larger-cells recommendation, with an engine minor and an app minor
-  (p377 D10), rebased onto `main` past p376's merge before its verification.
+  Phase 0 builds on p376's spike tools). Phase 0 decides what it builds; nothing paying ends the
+  branch with the results and an app patch (p377's Branches and PRs). Something paid
+  (2026-11-12): the branch carries Phases 1-6, the far entries for kit meshes and the
+  larger-cells recommendation, with an engine minor and an app minor (p377 D10). p376 merged
+  (PR #86, versioned engine 6.8.1 / app 1.23.1 on `main`), and `main` was merged into p377's
+  branch instead of a rebase; its Phase 6 bumps from there (engine 6.9.0, app 1.24.0).
 - p378 (proposed 2026-11-12 from p377's Phase 0, its open question 5) is its own branch from
   `main`, after p376's and p377's PRs merge (their bench and far field are its measurement): a
   merging change for every merged scene, not far content, so not on p377's branch.

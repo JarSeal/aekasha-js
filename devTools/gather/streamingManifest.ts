@@ -241,9 +241,10 @@ type CellBuild = {
 /** A build's three reference sets: its near, far and kept layers' */
 const getBuildRefs = (build: CellBuild) => [build.refs, build.far.refs, build.kept.refs];
 
-/** The streaming settings the runtime reads: the build-time `base` and `radii` dropped (D3) */
+/** The streaming settings the runtime reads: the build-time `base`, `radii` and `farEntries`
+ * dropped (D3; p377 D2) */
 const toRuntimeSettings = (settings: NonNullable<SceneJSON['streaming']>) => {
-  const { base, radii, ...runtime } = settings;
+  const { base, radii, farEntries, ...runtime } = settings;
   return runtime;
 };
 

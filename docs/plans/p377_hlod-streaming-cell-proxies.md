@@ -413,7 +413,7 @@ p376's ruins are. What the far layer does with one today, and what the change to
 - **D10: versions.** Engine minor: kit meshes' far entries (a changed default, D1), `farEntries`
   (D2), `entries` (D3), the `merge` fix (D4). App minor: `streamingGrid`'s kit (D7). Toolkit
   none. Project: Phase 0's bench and spike tools. All of it on p377's branch, bumped against
-  `main` once it's rebased past p376's merge.
+  `main` with p376 in it (merged into the branch): engine 6.8.1 → 6.9.0, app 1.23.1 → 1.24.0.
 
 ## Phase 1 — The gather: kit meshes' far entries
 
@@ -615,9 +615,11 @@ patch, as p376's did; the bumps of the later phases are decided with them. The P
 last phase, when asked.
 
 Updated after Phase 0 (2026-11-12): something paid, so the branch carries Phases 1-6 too, with an
-engine minor and an app minor (D10; Project for Phase 0's bench). The rebase onto `main` waits
-for p376's PR and comes before Phase 5 at the latest, so the verification and the version check
-(`yarn checkVersions --against main`) run against `main` with p376 in it; the bumps are then
-p377's own over p376's. p378 (open question 5) isn't on this branch: its own branch from `main`
-(the p370 epic's Branches and PRs), after p377's merge or beside it (they touch other files:
-the gather and streaming here, merging there).
+engine minor and an app minor (D10; Project for Phase 0's bench). p378 (open question 5) isn't on
+this branch: its own branch from `main` (the p370 epic's Branches and PRs), after p377's merge or
+beside it (they touch other files: the gather and streaming here, merging there).
+
+Updated before Phase 1 (2026-11-12): p376 merged (PR #86, versioned engine 6.8.1 / app 1.23.1 on
+`main`), and `main` was merged into this branch instead of a rebase. So the verification and the
+version check (`yarn checkVersions --against main`) run against `main` with p376 in it, and
+Phase 6 bumps from there: engine 6.9.0, app 1.24.0.

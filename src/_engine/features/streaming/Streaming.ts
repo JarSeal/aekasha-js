@@ -193,10 +193,10 @@ export const setSceneStreamingSettings = (
   if (settings) {
     const problem = getStreamingSettingsProblem(settings);
     if (problem) throw new Error(`setSceneStreamingSettings('${sceneId}'): ${problem}`);
-    if ((settings.base || settings.radii) && !hasWarnedBuildTimeFields) {
+    if ((settings.base || settings.radii || settings.farEntries) && !hasWarnedBuildTimeFields) {
       hasWarnedBuildTimeFields = true;
       lwarn(
-        `setSceneStreamingSettings('${sceneId}'): base and radii are read by the gather only (they cut the scene JSON's content into cells); ignored here.`
+        `setSceneStreamingSettings('${sceneId}'): base, radii and farEntries are read by the gather only (they cut the scene JSON's content into cells); ignored here.`
       );
     }
   }
