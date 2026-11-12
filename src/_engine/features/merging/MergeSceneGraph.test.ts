@@ -29,7 +29,7 @@ import {
 } from './MergeMemberEdit';
 import { getGroupMesh, getGroups } from './MergeState';
 
-// p378 Phase 1 (docs/plans/p378_baked-members-out-of-the-scene-graph.md): a baked member's own
+// p378 Phase 1 (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md): a baked member's own
 // mesh is out of the scene graph while its group's mesh draws it, as a batched member's
 // (MergeBatchDetach.test.ts), and back under the root scene when it's drawn on its own again. A
 // member anywhere but directly under the root scene, or with children, stays in the graph. The

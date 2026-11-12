@@ -2,7 +2,7 @@ import type * as THREE from 'three/webgpu';
 import { ECSSystemStage, getRenderer, getRootScene, registerOnAllSceneExits } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 
-// p378 Phase 0's probe additions (docs/plans/p378_baked-members-out-of-the-scene-graph.md, "What
+// p378 Phase 0's probe additions (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md, "What
 // the spike adds"), for `cpuSplitAsync` (`_dbg__hlodSpikeDraws.ts`): the rest of the CPU frame's
 // split, and one walk a frame.
 //

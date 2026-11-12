@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-6; Phase 5 step 2, the second machine, not run: a p990 item)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
-Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
+Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), \_DONE_p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
 
 # HLOD: Streaming Cell Proxies
 
@@ -853,7 +853,7 @@ proxy would take (D6: not built). The far entries' own grounding is above.
    every merged scene, not only far content. A merging change of its own: here, or a follow-up in
    `p990_follow-ups-from-done-plans.md`? (Phase 0: a real share, 60 % of the far field's CPU
    cost at 400 sites, the walk alone 3.6-4.9 ms of it. Decided: a plan of its own in the epic,
-   `p378_baked-members-out-of-the-scene-graph.md`, with its own branch.)
+   `_DONE_p378_baked-members-out-of-the-scene-graph.md`, with its own branch.)
 
 ## Branches and PRs
 

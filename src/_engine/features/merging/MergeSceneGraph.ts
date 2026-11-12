@@ -1,5 +1,5 @@
 // A merge member's own mesh out of the scene graph while its group draws it, both modes (p375
-// Phase 2 S1 for a batched member, docs/plans/p378_baked-members-out-of-the-scene-graph.md D2 for a
+// Phase 2 S1 for a batched member, docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md D2 for a
 // baked one). The mesh is hidden (`TAG_MERGED`), but three's walks still visit it: the scene's
 // `updateMatrixWorld` (twice a frame with PostFX's pre-pass) and every render's projection walk
 // (p378 Phase 0: 3.1-6.7 ms of CPU a frame at 20 770 baked members). `TAG_MERGED`'s hooks

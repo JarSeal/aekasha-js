@@ -44,7 +44,7 @@ import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeW
 // The probe (`src/app/shared/_dbg__hlodSpike.ts`) finds what the field draws through
 // `window.__aekHlodField` (`HlodFieldInfo`), set on every load (undefined without a field).
 //
-// p378 Phase 0 (docs/plans/p378_baked-members-out-of-the-scene-graph.md) adds
+// p378 Phase 0 (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md) adds
 // `?hlodFieldMembers=graph|detached|frozen` (default `graph`, today's), with or without a field:
 // once every merge member of the world is built (the scene step's builds), each built baked
 // member (`TAG_MERGED`, `partIndex >= 0`: the field's and largeWorld's own) is taken out of the

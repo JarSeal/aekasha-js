@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 and 3 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
+Status: implemented (Phases 0-1 and 3-4; Phase 2 dropped; written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
 Category: Merging, Performance
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.3)
 Related: \_DONE_p377_hlod-streaming-cell-proxies.md (Phase 0 measured the cost; its far field, `?hlodField`, and bench are this plan's measurement), \_DONE_p375_batched-mesh-batches.md (Phase 2 S1 took a batched member's mesh out of the scene graph), \_DONE_p372_mesh-merge-groups.md (the baked groups), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, "Show unmerged", picking), \_DONE_p353_macro-streaming-grid.md (a streamed member's priming and fades)
@@ -463,7 +463,7 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
   - No console error in either scene (the one warning, Rapier's deprecated init parameters,
     is there on `main`).
 
-## Phase 4 — Hub, docs, versions, done
+## Phase 4 — Hub, docs, versions, done — done
 
 1. The Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`): "Which member a ray
    hit" (a raycast hits the group's mesh only, both modes), the cost of merged content (the
@@ -474,6 +474,26 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
    and PRs row (the bump decided).
 4. Versions (D6), `CHANGELOG.md` (Engine, App, Project), `yarn checkVersions --against main`; mark
    the plan done (`git mv` to `_DONE_`, the references in p370, p377 and the merging `CLAUDE.md`).
+
+**As built** (2026-11-12):
+
+- Step 1: the Mesh merging page has a merge group's "Out of the scene graph" bullet (D2's rule,
+  what puts a member back), "Which member a ray hit" with D3 (and the behaviour before 6.10.0),
+  the batched bullet pointing at it, and "A large far field" with a table of the CPU frame at 400
+  sites (members in the graph, Phase 0's reference; out of it and the same draws without members,
+  Phase 3's session) and what's left (`object3DSyncSystem`). The cell-size table keeps p377's
+  figures, marked as engine 6.9.0's (not measured again with the members out). `yarn hub:build
+  --no-api --no-embed` passes (its one warning, the search index's size, is p990's).
+- Step 2: the merging `CLAUDE.md`'s Mesh merging has an "Out of the scene graph" bullet after
+  Builds (the hooks' order, D2's rule, the readers, the figures); the mode's block points at it.
+  The debug `CLAUDE.md`'s census line says its totals leave the members out (Phase 3's decision).
+- Step 3: p990 has a new ECS section (`object3DSyncSystem`, D4, with the spatial index's and the
+  move check's shares) and a Rendering item (one scene update a frame, D5).
+- Step 4: engine 6.9.0 → 6.10.0, app 1.24.0 → 1.24.1, the toolkit unchanged. The root
+  `CLAUDE.md`'s `merging()` line and `readme.md`'s Mesh merging line name the change too. The
+  references to this file in the code's comments (the merging modules and tests, the spike's
+  `_dbg__` modules, the bench), p370, p377, p990, the Hub page and the merging `CLAUDE.md` point
+  at `_DONE_`; the branch's name stays.
 
 ## Open questions
 
@@ -496,4 +516,5 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
 
 Its own branch, `p378_baked-members-out-of-the-scene-graph`, from `main` after p377's PR merged
 (PR #87, 2308fbec: p376's and p377's bench and far field are on `main`), merged into `main` with
-an engine minor and an app patch (D6). The PR opens after Phase 4, when asked.
+an engine minor and an app patch (D6): engine 6.10.0, app 1.24.1, a Project section for the
+bench. Done 2026-11-12: the PR (this branch into `main`) opens when asked.

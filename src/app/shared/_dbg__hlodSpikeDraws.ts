@@ -25,7 +25,7 @@ import { createProjectionTimer, createSystemTimer, installWalkOnce } from './_db
 //   root scene's `updateMatrixWorld` timed on its own inside it (three's walk over every object,
 //   hidden members included; summed per frame, with its calls: one per render call), the systems
 //   (the rest), and the scene graph's objects, the hidden ones apart. p378 Phase 0
-//   (docs/plans/p378_baked-members-out-of-the-scene-graph.md) adds each system's time
+//   (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md) adds each system's time
 //   (`systems`, `systemsTimedMs` their sum outside `LATE_MAIN`), the projection walks per render
 //   kind (`projection`, `projectMs` their sum) and walk-once's skipped calls
 //   (`_dbg__hlodSpikeSplit.ts`).
