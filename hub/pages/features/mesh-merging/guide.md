@@ -103,7 +103,9 @@ A scene sets its own defaults, and gives a named group its settings:
 
 Pick the cell size from the view: large enough that a cell holds many pieces, small enough that
 most of a group is in view when any of it is. `largeWorld` (a 200 m terrain) uses 50 m cells, the
-example's 24 m courtyard 16 m ones.
+example's 24 m courtyard 16 m ones. Far content in a scene that doesn't stream, hundreds of kit
+pieces seen whole from a distance, takes larger cells, 128-256 m: see
+[A large far field](#a-large-far-field).
 
 ### Imported models
 
