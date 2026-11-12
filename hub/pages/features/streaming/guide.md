@@ -99,14 +99,15 @@ directional lights stay with the scene.
   A box, sphere, cylinder, capsule or cone is measured from its geometry; an imported model or a
   [merged geometry](hub:features/scenes-and-assets#merged-geometries) isn't, so give it a radius
   in `streaming.radii`. A cell that loads a merged geometry loads its parts with it.
-- `base` and `radii` are read when the scene is gathered: setting them in code changes nothing.
-  A cell size set in code has to be the JSON's, which the content was cut at.
+- `base`, `radii` and `farEntries` ([below](#far-representations)) are read when the scene is
+  gathered: setting them in code changes nothing (and warns once). A cell size set in code has to
+  be the JSON's, which the content was cut at.
 - The Streaming tab shows each cell's JSON content and the estimated GPU memory of its own
   assets before it loads.
 
-The test scene's beacons and wall are JSON: each beacon's textured material and geometries load
-with the cells that have a beacon, and the wall, 320 m long, stays while any of its six cells is
-loaded.
+The test scene's beacons, ruins and wall are JSON: each beacon's textured material and geometries,
+and the ruins' kit, load with the cells that have them, and the wall, 320 m long, stays while any
+of its six cells is loaded.
 
 ## Far representations
 
@@ -144,32 +145,72 @@ instance where each rock is:
   unit's own LOD draws it coarsely far away (the test scene's terrain blocks have a hand-made
   4 × 4 level).
 
-From the scene JSON, a mesh with LOD `levels` gets a far stand-in on its own: its coarsest level,
-at the mesh's place. A cell's stand-ins with the same geometry, material and shadows are one
-`InstancedMesh`, so a far cell costs a draw call per kind of stand-in:
+From the scene JSON, a cell's meshes get far stand-ins on their own, each at its mesh's place:
+
+- **A mesh with LOD `levels`** gets its coarsest level.
+- **A mesh without `lod`** is its own stand-in, when it can share a draw: a registered `geo` and
+  `mat` (ids, not inline) and no `matOverrides`. That's a kit's pieces (walls, pillars, floor
+  tiles, rubble), which would otherwise be drawn up to the `nearby` ring and be gone past it,
+  where the far ring is there to show them. One that can't share a draw gets none: a stand-in of
+  its own would cost the draw its near content does.
 
 ```json
 {
-  "props": {
-    "geo": "pillar",
-    "mat": "stone",
-    "position": { "x": 160, "y": 8, "z": 96 },
-    "lod": { "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "pillarFar" }] }
-  }
+  "meshes": [
+    {
+      "props": {
+        "geo": "pillar",
+        "mat": "stone",
+        "position": { "x": 160, "y": 8, "z": 96 },
+        "lod": { "levels": [{ "screenSize": 0.15 }, { "screenSize": 0, "geo": "pillarFar" }] }
+      }
+    },
+    {
+      "props": {
+        "geo": "ruinBlock",
+        "mat": "stone",
+        "position": { "x": 172, "y": 2, "z": 90 },
+        "merge": "AUTO"
+      }
+    }
+  ]
 }
 ```
 
-- A mesh whose LOD culls it (`cullScreenSize` over 0) gets none: it's hidden far away anyway. Nor
-  does an `AUTO` one, nor a light.
+A cell's stand-ins with the same geometry, material and shadows are one `InstancedMesh`, so a far
+cell costs a draw call per kind of stand-in: as few as its content merged into one mesh per
+material, and measured as fast (within 0.2 ms of CPU a frame at 400 ruin sites, 20,000 pieces).
+An instance is placed where its near mesh is, so a stand-in costs the app's first
+download an index into the scene's data, not a second transform.
+
+- **Two ways out.** A mesh that should vanish far away takes a LOD that culls it
+  (`"lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.02 }`): a mesh whose LOD culls
+  it (`cullScreenSize` over 0) gets no stand-in. That needs [`lod()`](hub:features/lod) and costs
+  a LOD near, which only clutter wants. A whole scene takes `streaming.farEntries: "LOD_LEVELS"`
+  (`"ALL"` by default): only meshes with LOD `levels` get stand-ins, the rule before engine 6.9.0.
+  It's read when the scene is gathered.
+- An `AUTO` LOD gets none (its levels aren't known when the scene is gathered), nor a light.
+- A stand-in is a copy of the mesh's look, not of the mesh: it has no app id and joins no
+  [merge group](hub:features/mesh-merging), even when the mesh does.
+- **Merged near, instanced far.** A kit merged with `merge: 'AUTO'` is merge groups near and
+  stand-ins far. A merge group doesn't fade with a cell
+  ([mesh merging's Streaming](hub:features/mesh-merging#streaming)), so while a cell switches the
+  group draws its pieces whole and the stand-ins dither in or out on the same surfaces, for a
+  fade's length. It looks the same: in the test scene, a switch's frames show the ruins unchanged
+  on both backends.
 - Big content (more than half a cell across) is kept: one entity while any of its cells is loaded
   at any level, its own LOD drawing it far away. It fades out only when the last of its cells
   takes it down.
 - The far content's assets load with it: a cell switching to `FAR` loads the coarse geometry, and
-  frees the full one once its near content is gone. The Streaming tab shows each cell's GPU memory
-  per content (near, far, kept).
+  frees the full one once its near content is gone. A kit's pieces are their own stand-ins, so
+  every far cell holds the kit's geometries and materials: once in memory, shared with the near
+  cells, kept while any cell has them. The Streaming tab shows each cell's GPU memory per content
+  (near, far, kept).
 
-The test scene's beacons have a coarse level each, so its far cells draw them as far groups, and
-its wall, 320 m long, is kept while any of its six cells is loaded.
+The test scene's beacons have a coarse level each, so its far cells draw them as far groups. Its
+ruins, six pieces of a small kit (a block, a slab and a post in two materials) in 16 cells, merge
+`AUTO` near and are their own stand-ins far: a ruin cell's far content is three `InstancedMesh`es.
+Its wall, 320 m long, is kept while any of its six cells is loaded.
 
 ## Priming
 
@@ -290,7 +331,10 @@ the GPU memory, registries and entities exactly as the first, and no frame over 
 backend once WebGL 2's newly shown objects were paced (5 frames of 33-37 ms a flight before, where
 a column of cells changed level at once). `streamingPhysics` with a far ring: every
 crate back from `REMOVED` exactly where it was left, chains `STATIC` far away, in all three
-targets. The plan's
+targets. With the ruins' stand-ins (16 ruin cells): two flights out and back at 30 and 60 m/s on
+each backend, 75 far groups let go of a flight, each cell's three in one frame, the frames around
+them at most 17.7 ms; the far ruins add 3 draws at the median and 6 at most, no CPU time
+measurable. The plan's
 [Phase 1](repo:docs/plans/_DONE_p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
 and Phases 2 to 5 have the numbers.
 :::
@@ -298,7 +342,8 @@ and Phases 2 to 5 have the numbers.
 ## Not yet
 
 - An `AUTO` LOD gets no far stand-in from the JSON (its levels aren't known when the scene is
-  gathered): give a far unit in code, or explicit levels.
+  gathered): give a far unit in code, or explicit levels. Nor does a mesh without `lod` whose
+  `geo` or `mat` is inline or that has `matOverrides`: give it registered ones, or explicit levels.
 - An instanced LOD pool's instances don't fade (they share their pool's meshes): stream a pool
   whole, or keep it out of cells.
 - An imported model's or a merged geometry's size isn't measured: give a big one a radius in
@@ -306,7 +351,8 @@ and Phases 2 to 5 have the numbers.
 - A cell's state isn't saved when it unloads: a crate moved in it is back where it started next
   time (it keeps its place while the cell is `FAR`).
 
-See [the plan](repo:docs/plans/_DONE_p353_macro-streaming-grid.md).
+See [the plan](repo:docs/plans/_DONE_p353_macro-streaming-grid.md), and
+[p377](repo:docs/plans/p377_hlod-streaming-cell-proxies.md) for a kit's far stand-ins.
 
 ## Key APIs
 
