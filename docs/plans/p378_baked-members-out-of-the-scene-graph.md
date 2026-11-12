@@ -387,6 +387,49 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
   has merging) and were left as they were. No debug code in any build.
 - `yarn sbp --profile all`: every budget within; merging 9.7 kB of its 10 KiB (64 B more than on
   `main`).
+- Step 1's decision (2026-11-12): the Objects tab's new totals are accepted (what's in the scene
+  graph, both modes alike; the Merging tab counts the members), and the shot recorded on the branch
+  (`--only testDebugScene --config debugger --update`). Phase 4 says so in the debug `CLAUDE.md`'s
+  census line.
+- Step 2, the bench (`hlodSpike.ts --step draws`, Phase 0's setup: 3 runs a backend, 120 + 300
+  frames, the views `start`, `far` and `ground`), the cases `members@32` (the engine's change, no
+  mode), `proxy@32` and `members@32:detached` at 400 and 150 sites, and `floor`, `floor:detached`
+  alone (`--field 0`); the figures `.cache/bench/hlodSpike-p378-p3-400.json`, `-150.json` and
+  `-alone.json`, the logs `.cache/runs/p378-p3-*.log`. The spike's `detached` mode found nothing
+  left to take out on every page (`0 (20,770 skipped)`, `0 (7,987 skipped)`, `0 (409 skipped)`),
+  and every image is 0.00 % changed. CPU frame medians, ranges over the three views (ms):
+
+  | | WebGPU | WebGL2 |
+  | --- | --- | --- |
+  | 400 sites: the engine (`members@32`) | 5.69-6.30 | 5.87-6.47 |
+  | Phase 0's reference (`graph`) | 9.49-11.80 | 10.81-13.18 |
+  | saved against it | 3.8-5.5 | 4.9-6.7 |
+  | the engine against Phase 0's `detached` | -0.63 to -0.67 | -0.07 to +0.05 |
+  | its walk / projection | 0.35-0.44 / 0.83-0.98 | 0.37-0.43 / 0.85-0.96 |
+  | the engine over `proxy@32` (same session) | 0.57-0.70 | 0.74-0.85 |
+  | 150 sites: the engine | 3.90-4.02 | 3.84-3.91 |
+  | saved against Phase 0's reference | 1.15-1.58 | 0.99-1.36 |
+  | the engine against Phase 0's `detached` | -0.29 to -0.05 | -0.03 to +0.09 |
+
+  - **The engine is Phase 0's `detached`**: within its runs' spread on WebGL2 and at 150 sites,
+    and at or under its spread's low end on WebGPU at 400 sites. The scene graph at 400 sites is
+    1,971 objects (35-38 hidden), from 22,741 (20,805-20,808 hidden); at 150 sites 876 from
+    8,863.
+  - WebGPU at 400 sites is 0.6 ms under Phase 0's `detached` because of `object3DSyncSystem`:
+    1.00-1.05 ms on the engine's page, 1.46-1.52 on a spike-mode page (Phase 0's and this
+    session's `:detached` alike), 1.34-1.39 on Phase 0's reference. The spike's system removes
+    itself once applied, and WebGL2 shows none of it (1.17-1.21 on every page): page-to-page
+    variance of that one system on WebGPU, not followed further. The same session's `:detached`
+    page is 0.52-0.62 ms over the engine's for it.
+  - What's left over `proxy@32` is the members' `object3DSyncSystem` share (Phase 0's step 1:
+    the kernel's follow-up). `proxy@32`'s page now has largeWorld's own 409 members out too
+    (2,380 objects → 1,971).
+  - **largeWorld alone** (409 members): the scene graph 569 → 160 objects; the walk 0.18-0.26 →
+    0.05-0.09 ms, the projection 0.11-0.16 → 0.08-0.12 ms. CPU frame on WebGPU 2.57-2.66 ms against
+    Phase 0's `graph` 2.70-2.84 (0.13-0.22 saved) and its `detached` 2.57-2.65. On WebGL2 the
+    medians are 2.09-2.27 against 2.54-2.72 and 2.36-2.49, but its three runs spread 1.47-2.55
+    (the first 2.51-2.55; the second 1.47-1.65; the third 2.09-2.27), so
+    its saving reads as Phase 0's `detached` (0.15-0.23 ms), not more.
 
 ## Phase 4 — Hub, docs, versions, done
 
