@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   ComponentType,
+  ECSSystemStage,
   createMaterial,
   createMeshEntity,
   createSeededRandom,
@@ -12,6 +13,7 @@ import {
   llog,
   lwarn,
   mergeGeometryParts,
+  registerOnAllSceneExits,
   saveBufferGeometry,
 } from 'aekasha';
 import type { ECSWorld, MergePart } from 'aekasha';
@@ -41,6 +43,15 @@ import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeW
 //   entries (p353 D7): the kit's four geometries in three materials make four a cell.
 // The probe (`src/app/shared/_dbg__hlodSpike.ts`) finds what the field draws through
 // `window.__aekHlodField` (`HlodFieldInfo`), set on every load (undefined without a field).
+//
+// p378 Phase 0 (docs/plans/p378_baked-members-out-of-the-scene-graph.md) adds
+// `?hlodFieldMembers=graph|detached|frozen` (default `graph`, today's), with or without a field:
+// once every merge member of the world is built (the scene step's builds), each built baked
+// member (`TAG_MERGED`, `partIndex >= 0`: the field's and largeWorld's own) is taken out of the
+// scene graph (`detached`, `removeFromParent`; only one directly under the root scene with no
+// children, D2's rule) or keeps its place with `matrixAutoUpdate` and `matrixWorldAutoUpdate` off
+// (`frozen`), its world matrix composed first. The scene's exit puts them back. The bench waits for
+// `window.__aekHlodMembers.applied` (`HlodMembersInfo`) before it measures.
 
 const RING = { inner: 200, outer: 1000 };
 const FIELD_SEED = 3760;
@@ -71,7 +82,115 @@ export type HlodFieldInfo = {
   createMs: number;
 };
 
-type FieldWindow = Window & { __aekHlodField?: HlodFieldInfo };
+/** What happens to the built baked members' own meshes (p378 Phase 0). */
+export type HlodFieldMembers = 'graph' | 'detached' | 'frozen';
+const FIELD_MEMBERS: readonly HlodFieldMembers[] = ['graph', 'detached', 'frozen'];
+
+/** The members mode's outcome, for the bench (`window.__aekHlodMembers`). */
+export type HlodMembersInfo = {
+  mode: HlodFieldMembers;
+  /** null until applied; then the members taken out or frozen */
+  applied: number | null;
+  /** Built baked members left as they were: not directly under the root scene, or with children */
+  skipped: number;
+  /** Frames waited for the builds */
+  frames: number;
+};
+
+type FieldWindow = Window & { __aekHlodField?: HlodFieldInfo; __aekHlodMembers?: HlodMembersInfo };
+
+const MEMBERS_SYSTEM_ID = 'hlodField:members';
+/** Frames to wait for every member's build before applying to the built ones (warned) */
+const MEMBERS_TIMEOUT_FRAMES = 600;
+
+/**
+ * Whether the scene step's builds are done: the world has members (they join at the step, after
+ * the scene code), each built (a baked part or a batched instance) and no longer held by the load
+ * (the step lets go of its holds after its builds).
+ */
+const areMembersBuilt = (world: ECSWorld) => {
+  const members = world.getStorage(ComponentType.MERGE_MEMBER);
+  if (members.size === 0) return false;
+  for (const [entityId, member] of members) {
+    if (member.partIndex < 0 && member.instanceId < 0) return false;
+    if (world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) return false;
+  }
+  return true;
+};
+
+/**
+ * `?hlodFieldMembers`: once the world's members are built, `detached` takes each built baked
+ * member's mesh out of the scene graph and `frozen` turns its matrix updates off; the scene's exit
+ * undoes it (before the entities are deleted). `graph` does nothing.
+ */
+const setUpMembersMode = (world: ECSWorld, mode: HlodFieldMembers) => {
+  const fieldWindow = window as FieldWindow;
+  const info: HlodMembersInfo = { mode, applied: null, skipped: 0, frames: 0 };
+  fieldWindow.__aekHlodMembers = info;
+  if (mode === 'graph') {
+    info.applied = 0;
+    return;
+  }
+  const rootScene = getRootScene();
+  if (!rootScene) throw new Error('The members mode needs the root scene.');
+  const changed: THREE.Object3D[] = [];
+
+  const apply = () => {
+    for (const [entityId, member] of world.getStorage(ComponentType.MERGE_MEMBER)) {
+      if (member.partIndex < 0 || !world.hasComponent(entityId, ComponentType.TAG_MERGED)) continue;
+      const object = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+      if (!object) continue;
+      if (object.parent !== rootScene || object.children.length > 0) {
+        info.skipped++;
+        continue;
+      }
+      // Its world matrix as the walk would leave it, then nothing composes it again
+      object.updateWorldMatrix(true, false);
+      if (mode === 'detached') object.removeFromParent();
+      else {
+        object.matrixAutoUpdate = false;
+        object.matrixWorldAutoUpdate = false;
+      }
+      changed.push(object);
+    }
+    info.applied = changed.length;
+    llog(
+      `[HLOD spike] Members ${mode}: ${changed.length} baked members${info.skipped ? ` (${info.skipped} skipped: another parent or children)` : ''}, after ${info.frames} frame(s).`
+    );
+  };
+
+  world.addSystem(
+    ECSSystemStage.MAIN,
+    MEMBERS_SYSTEM_ID,
+    () => {
+      info.frames++;
+      const built = areMembersBuilt(world);
+      if (!built && info.frames < MEMBERS_TIMEOUT_FRAMES) return;
+      if (!built) {
+        lwarn(
+          `[HLOD spike] Not every merge member was built after ${MEMBERS_TIMEOUT_FRAMES} frames: the members mode applies to the built ones.`
+        );
+      }
+      world.removeSystem(MEMBERS_SYSTEM_ID);
+      apply();
+    },
+    1e9
+  );
+
+  registerOnAllSceneExits(MEMBERS_SYSTEM_ID, () => {
+    world.removeSystem(MEMBERS_SYSTEM_ID);
+    for (const object of changed) {
+      if (mode === 'detached') {
+        if (!object.parent) rootScene.add(object);
+      } else {
+        object.matrixAutoUpdate = true;
+        object.matrixWorldAutoUpdate = true;
+      }
+    }
+    // A later scene's exit finds nothing to undo
+    changed.length = 0;
+  });
+};
 
 /** `count` sites spread evenly over the ring's area, each 4-7 × 3-5 tiles, turned at random. */
 const createFieldSites = (count: number): RuinSite[] => {
@@ -220,19 +339,22 @@ const readFieldParams = () => {
   const sites = Math.floor(Number(params.get('hlodField')));
   const cell = Number(params.get('hlodFieldCell') ?? DEFAULT_CELL_SIZE);
   const as = (params.get('hlodFieldAs') ?? 'members') as HlodFieldAs;
-  if (!(cell > 0) || !FIELD_AS.includes(as)) {
+  const members = (params.get('hlodFieldMembers') ?? 'graph') as HlodFieldMembers;
+  if (!(cell > 0) || !FIELD_AS.includes(as) || !FIELD_MEMBERS.includes(members)) {
     throw new Error(
-      `[HLOD spike] ?hlodFieldCell must be a size over 0 and ?hlodFieldAs one of ${FIELD_AS.join(', ')} (got ${String(params.get('hlodFieldCell'))}, ${as}).`
+      `[HLOD spike] ?hlodFieldCell must be a size over 0, ?hlodFieldAs one of ${FIELD_AS.join(', ')} and ?hlodFieldMembers one of ${FIELD_MEMBERS.join(', ')} (got ${String(params.get('hlodFieldCell'))}, ${as}, ${members}).`
     );
   }
-  return { sites: sites > 0 ? sites : 0, cellSize: cell, as };
+  return { sites: sites > 0 ? sites : 0, cellSize: cell, as, members };
 };
 
-/** With `?hlodField=<sites>`: the far field, its ground and the camera's far plane; else nothing. */
+/** With `?hlodField=<sites>`: the far field, its ground and the camera's far plane; else nothing.
+ * `?hlodFieldMembers` either way. */
 export const createHlodField = (world: ECSWorld, materials: RuinMaterials) => {
   const fieldWindow = window as FieldWindow;
   fieldWindow.__aekHlodField = undefined;
-  const { sites: count, cellSize, as } = readFieldParams();
+  const { sites: count, cellSize, as, members } = readFieldParams();
+  setUpMembersMode(world, members);
   if (count === 0) return;
 
   // The ground: its top just under the terrain's lowest point (0), so the terrain covers it

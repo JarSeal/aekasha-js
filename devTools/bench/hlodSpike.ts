@@ -22,16 +22,18 @@
  * `--max-error`, default 0.2 here), on each backend. Step 3 is `frames` with `--field <sites>`
  * (largeWorld's far field, `?hlodField`) and `--views` naming `ground` (8 m up, looking across it).
  *
- *   npx tsx devTools/bench/hlodSpike.ts --step draws [--field 400] [--cases floor,members@32,…]
- *     [--rebuilds 8] [--backends webgpu,webgl] [--views start,far,ground] [--time 10] [--runs 3]
- *     [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
+ *   npx tsx devTools/bench/hlodSpike.ts --step draws [--field 400] [--cases floor,members@32,… | p377 | p378]
+ *     [--reference members@32] [--rebuilds 8] [--backends webgpu,webgl] [--views start,far,ground]
+ *     [--time 10] [--runs 3] [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
  *
  * p377 Phase 0 (`draws`, `hlodSpikeDraws.ts`): which way to fewer draws on the far field
  * (`--field`, default 400 sites here): the floor, the reference (`members@32`) and its culls
  * (`+cull25|50|75`), larger cells (`members@<m>`), a cell as one mesh (`proxy@<m>`) and today's far
  * layer (`instanced@<m>`); `--cases` names any of them (default steps 1-4's). Each case's CPU
  * split, draws, GPU and a snapshot against the reference's, each page's load and (members) its
- * rebuilds. The results also go to `.cache/bench/hlodSpike/draws/<sites>-sites/results.json`.
+ * rebuilds. p378 Phase 0 adds the members' modes (`members@32:detached|frozen|walk-once`, `floor`
+ * too), `--cases p378` and `--reference` (`hlodSpikeDraws.ts`' header). The results also go to
+ * `.cache/bench/hlodSpike/draws/<sites>-sites/results.json`.
  * Output: `.cache/bench/progress.log` too.
  */
 import fs from 'node:fs';
@@ -44,6 +46,8 @@ import { launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
 import { startVerifyServerAsync } from '../verify/devServer';
 import {
   DEFAULT_DRAW_CASES,
+  DEFAULT_DRAW_REFERENCE,
+  DRAW_CASE_PRESETS,
   formatDraws,
   getDrawsDir,
   parseDrawCase,
@@ -99,9 +103,10 @@ type Args = {
   warmup: number;
   frames: number;
   field: number;
-  /** Step `draws`' (p377) */
+  /** Step `draws`' (p377; p378's `reference`) */
   cases: string[];
   rebuilds: number;
+  reference: string;
 };
 
 const parseArgs = (argv: string[]): Args => {
@@ -126,6 +131,7 @@ const parseArgs = (argv: string[]): Args => {
     field: -1,
     cases: DEFAULT_DRAW_CASES,
     rebuilds: 8,
+    reference: DEFAULT_DRAW_REFERENCE,
   };
   const variant = (v: string) =>
     (VARIANTS as readonly string[]).includes(v) ? (v as VariantName) : fail(`unknown variant ${v}`);
@@ -155,13 +161,21 @@ const parseArgs = (argv: string[]): Args => {
     else if (flag === '--frames') args.frames = Math.max(1, Number(value()));
     else if (flag === '--field') args.field = Math.max(0, Math.floor(Number(value())));
     else if (flag === '--cases') {
-      args.cases = value().split(',');
+      const list = value();
+      args.cases = DRAW_CASE_PRESETS[list] ?? list.split(',');
       for (const name of args.cases) {
         try {
           parseDrawCase(name);
         } catch (err) {
           fail((err as Error).message);
         }
+      }
+    } else if (flag === '--reference') {
+      args.reference = value();
+      try {
+        parseDrawCase(args.reference);
+      } catch (err) {
+        fail((err as Error).message);
       }
     } else if (flag === '--rebuilds') args.rebuilds = Math.max(0, Math.floor(Number(value())));
     else if (flag === '--ratios') args.ratios = value().split(',').map(Number);
@@ -175,6 +189,9 @@ const parseArgs = (argv: string[]): Args => {
   }
   // The field: none by default, 400 sites for p377's draws
   if (args.field < 0) args.field = args.step === 'draws' ? 400 : 0;
+  if (args.step === 'draws' && !args.cases.includes(args.reference)) {
+    fail(`--reference ${args.reference} isn't one of the cases (${args.cases.join(', ')})`);
+  }
   return args;
 };
 
@@ -353,6 +370,7 @@ const toDrawsArgs = (args: Args): DrawsArgs => ({
   field: args.field,
   cases: args.cases,
   rebuilds: args.rebuilds,
+  reference: args.reference,
 });
 
 const main = async () => {

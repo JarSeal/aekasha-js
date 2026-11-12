@@ -1,4 +1,4 @@
-Status: draft | not-implemented (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
+Status: in progress | Phase 0 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
 Category: Merging, Performance
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.3)
 Related: \_DONE_p377_hlod-streaming-cell-proxies.md (Phase 0 measured the cost; its far field, `?hlodField`, and bench are this plan's measurement), \_DONE_p375_batched-mesh-batches.md (Phase 2 S1 took a batched member's mesh out of the scene graph), \_DONE_p372_mesh-merge-groups.md (the baked groups), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, "Show unmerged", picking), \_DONE_p353_macro-streaming-grid.md (a streamed member's priming and fades)
@@ -149,7 +149,7 @@ ones apart).
 - **D7. No example scene**: nothing changes on screen; the Hub's Mesh merging page and its
   existing examples carry the change.
 
-## Phase 0 — The split and the two ways (spike)
+## Phase 0 — The split and the two ways (spike) — done
 
 No engine change: app debug modules and the bench, on p377's far field and tools. Apple M2,
 Chrome, both backends, the debug env, set up as p377's Phase 0 (the sky at 10:00, clouds held,
@@ -175,6 +175,39 @@ members' cost `proxy@32` (the same draws, no members).
   `members@32` and `proxy@32` (`hlodSpikeDraws.ts`), with the image checked against the
   reference's (the field is static, so the three must match it within the noise).
 
+**As built** (where the spike differs from the above; 2026-11-12):
+
+- `?hlodFieldMembers` applies to **every built baked member of the world** (`TAG_MERGED`,
+  `partIndex >= 0`: the field's and largeWorld's own 409), with or without a field, not only the
+  field's: step 3's "largeWorld without the field" has no field members, and Phase 1 takes every
+  member out. It waits for the scene step's builds with a `MAIN` system: the world has members
+  (they join at the step, after the scene code), each built and none `TAG_DRAW_HELD` (the step
+  lets go of its holds after its builds); a frozen member's world matrix is composed before its
+  flags go off. D2's rule decides which are taken (directly under the root scene, no children; the
+  rest counted as skipped). The bench waits for `window.__aekHlodMembers.applied`.
+- The split is `src/app/shared/_dbg__hlodSpikeSplit.ts`: the system timer (each `systems` entry's
+  `fn` swapped for a timed one while `cpuSplitAsync` runs, the probe's own `hlodSpike:` systems
+  left out; `systemsTimedMs` is their sum outside `LATE_MAIN`, which runs after the probe's frame
+  end), the projection timer (the root scene's top-level `project` calls; its recursion runs the
+  original, so the wrapper costs a call per render; a render's kind: another camera than the
+  active one is a shadow's, the active one with an MRT the PostFX pre-pass, else the scene pass)
+  and walk-once (the frame's first root walk runs, a later one returns and is counted, until a
+  system after every other `APP_RENDER_SYNC` one starts the next frame). `performance.now()` is
+  coarsened to 5 µs in the cross-origin isolated page: the systems table shows each system's mean
+  a frame, not its median.
+- The bench: a case is `floor` or a field case with `:detached`, `:frozen` or `:walk-once`;
+  `--cases p378` is the list above (`p377` the default), `--reference <case>` the case the others
+  are measured against (step 3's largeWorld alone: `--field 0 --cases floor,floor:detached
+  --reference floor`). A mode case's image is compared with its base's (the page without the
+  mode), the rebuilds run only on a `members` page without a mode, and p377's "what decides"
+  leaves the mode cases out. The new tables (`formatMembersParts`): the CPU frame's parts per case
+  and view with each run's difference from the reference's (the walk and its skipped calls, the
+  projection by render kind, the systems, the submit less walk and projection), each system's mean
+  ms a frame per case, and `frozen` against `detached` per view by D2's 0.3 ms.
+- Smoke run (20 sites, one view, one run, 30 frames, both backends): 1,365 members detached or
+  frozen after one frame, 0 skipped; the scene graph from 1,636 objects to 271 detached; walk-once
+  skips one walk a frame; every mode's image 0.00 % changed. Not figures to decide on.
+
 **Steps**
 
 1. **The systems**: the reference and `proxy@32`, each system's median. Which systems the
@@ -190,6 +223,77 @@ members' cost `proxy@32` (the same draws, no members).
 on both backends (then Phase 1 freezes instead, and its steps are written again). Phase 2 is
 written or dropped by D4's rule from steps 1-2; D5's follow-up from step 4. The figures go in a
 Results subsection here.
+
+### Results
+
+Measured 2026-11-12, Apple M2, Chrome, debug env (`hlodSpike.ts --step draws`): 3 runs a
+backend, 120 + 300 frames a case, the views `start`, `far` and `ground`, the sky at 10:00, clouds
+held. The figures: `.cache/bench/hlodSpike-p378-400.json`, `-150.json` and `-alone.json`, the full
+tables in `.cache/runs/p378-400.log`, `-150.log` and `-alone.log`. Ranges are over the three views;
+"saved" is the median of each run against the reference's run of the same index. WebGPU's GPU
+figure doesn't decide (p377's Phase 0 As built); WebGL2's GPU lost nothing beyond the reference's
+spread in any case, and every image was 0.00 % changed against its base.
+
+**At 400 sites** (20,770 baked members, 22,741 objects in the scene graph; ms):
+
+| | WebGPU | WebGL2 |
+| --- | --- | --- |
+| The reference (`members@32`): the CPU frame | 9.5-11.8 | 10.8-13.2 |
+| its scene walk (two a frame) | 3.1-4.1 | 3.8-4.8 |
+| its projection walks (scene + pre-pass + shadow) | 1.4-2.0 | 1.7-2.6 |
+| its systems | 2.2-2.3 | 2.2 |
+| `members@32:detached`: CPU saved | 3.1-5.1 | 5.0-6.7 |
+| its walk / projection | 0.44-0.55 / 0.86-1.00 | 0.34-0.41 / 0.85-0.97 |
+| `members@32:frozen`: CPU saved | 1.1-1.9 | 2.6-3.0 |
+| its walk / projection | 2.1-2.4 / 1.3-1.8 | 2.2-2.8 / 1.3-2.0 |
+| `frozen` against `detached` (CPU, positive = frozen costs more) | 2.2-3.1 | 2.4-3.7 |
+| `proxy@32` (the same draws, no members): CPU saved | 4.5-6.2 | 5.8-7.6 |
+| `members@32:walk-once`: CPU saved (its walk) | 1.8-3.1 (1.6) | 2.7-3.8 (1.8-1.9) |
+
+- **Step 1, the systems**: the members' systems cost (reference against `proxy@32`, 1.2-1.3 ms) is
+  `object3DSyncSystem`: 1.27-1.37 ms a frame with the members, 0.10-0.12 without, so 1.15-1.25 ms
+  for 20,770 members (55-60 ns a member a frame, every frame, for no work: nothing is dirty). Out
+  of the graph or frozen doesn't change it (1.17-1.52 ms), since the system iterates every
+  `OBJECT3D` entity. The rest is small: `spatialIndexRebuildSystem` 0.06-0.07 ms more with the
+  members, and the moved-member check (`mergeMoveCheckSystem`, debug env only) 0.08-0.09 ms on
+  average.
+- **Step 2, the submit**: p377's unsplit 0.5-2 ms is mostly **the projection walks over the hidden
+  members**: 0.5-1.0 ms on WebGPU and 0.8-1.6 ms on WebGL2 over three renders (9-25 ns per hidden
+  member per render, at the `visible === false` return). `detached` takes all of it (its projection
+  equals `proxy@32`'s). What's left of the submit (less the walk and the projection) moves by
+  -0.1 to -0.5 ms.
+- **Step 3, the two ways**: the walk costs 68-106 ns an object a walk; `frozen` still costs 45-61
+  ns an object (the call, the flag checks, the empty child loop), so it saves 40 % of the walk and
+  little of the projection. `detached` saves 2.2-3.7 ms more than `frozen` at 400 sites, far past
+  D2's 0.3 ms. `detached` comes within 0.8-1.2 ms of `proxy@32`, and that gap is the systems'
+  `object3DSyncSystem` (above).
+- **At 150 sites** (7,987 members): `detached` saves 1.1-1.4 ms on WebGPU and 1.0-1.4 ms on WebGL2,
+  `frozen` 0.6-0.7 ms, `frozen` against `detached` 0.4-0.8 ms. `object3DSyncSystem`'s share is
+  0.35-0.39 ms (45-50 ns a member).
+- **largeWorld without the field** (409 members, `floor:detached` against `floor`): 0.05-0.21 ms
+  saved (the walk 0.11-0.17 ms less), more than the 0.07-0.09 ms expected but within its runs'
+  spread in two views; the image is unchanged.
+- **Step 4, one walk a frame**: it halves the walk, as expected: one walk at 400 sites is 1.6-1.9
+  ms of the reference's 3.1-4.8 ms, and the CPU saved is 1.8-3.8 ms, the image unchanged. Once the
+  members are out (Phase 1), the walk at 400 sites is 0.34-0.55 ms, so one walk would save
+  0.17-0.28 ms there, and 0.03-0.05 ms in largeWorld alone: about 35-50 ns per object in the
+  graph a frame, for every scene.
+
+**Decided after Phase 0** (2026-11-12):
+
+- **D2 stands: out of the scene graph.** `frozen` is 2.2-3.7 ms behind `detached` at 400 sites on
+  both backends (0.4-0.8 ms at 150), so Phase 1 is unchanged.
+- **D4: Phase 2 is dropped.** The only member share of 0.5 ms or more is `object3DSyncSystem`'s
+  (1.15-1.25 ms at 400 sites), and its fix is the kernel's for every static mesh: the system
+  iterates every `OBJECT3D` entity each frame to find the dirty ones, so a member's cost is the
+  iteration, which a merging-side skip can't avoid (the member is still in the storage it walks).
+  The fix (the sync walking only dirty transforms, or the static ones kept apart) goes to
+  `p990_follow-ups-from-done-plans.md` with these figures, and is worth a plan of its own: about
+  55 ns per static mesh a frame in every scene. The spatial index's and the move check's shares
+  (under 0.1 ms) go in the same follow-up, as figures only.
+- **D5's follow-up**: one walk a frame halves the walk for every scene (about 35-50 ns per object
+  in the graph a frame); with the members out it's 0.17-0.28 ms at 400 sites. A follow-up in
+  `p990_follow-ups-from-done-plans.md` (Rendering) with these figures (Phase 4 step 3).
 
 ## Phase 1 — A baked member's mesh out of the scene graph
 
@@ -216,10 +320,12 @@ The engine change (D2), in the merging feature's first download:
    disposes; the moved-member check still warns for a moved detached member
    (`debug/_dbg__MergeGroups.test.ts`). `yarn test`.
 
-## Phase 2 — The members' other costs (written from Phase 0, or dropped)
+## Phase 2 — The members' other costs — dropped
 
-Written from Phase 0 steps 1-2 by D4's rule: a merged member's share of a system or of the submit
-at 0.5 ms or more at 400 sites, with its fix, or "dropped" with the figures and the follow-up.
+Dropped by D4's rule (Phase 0's Results, "Decided after Phase 0"): the submit's unsplit part was
+the hidden members' projection walks, which Phase 1 takes away with the walk. The one system share
+over 0.5 ms, `object3DSyncSystem`'s (1.15-1.25 ms at 400 sites), needs a kernel fix for every
+static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3).
 
 ## Phase 3 — Verification
 
