@@ -1,14 +1,20 @@
 // The merge groups' moved-member check (docs/plans/_DONE_p372_mesh-merge-groups.md §3, debug env only):
 // a member is static by contract, and one moved without `updateMergeMember` is still drawn where
-// it was merged. Every MOVE_CHECK_FRAMES frames (LATE_MAIN, after the render updated the world
-// matrices), each built member's world matrix is compared with the one its range was written
-// with (`MERGE_MEMBER._bakedMatrix`), and a member that differs is warned about once.
+// it was merged. Every MOVE_CHECK_FRAMES frames (LATE_MAIN, after object3DSyncSystem's copy in
+// MAIN), each built member's world matrix, updated by the check, is compared with the one its
+// range was written with (`MERGE_MEMBER._bakedMatrix`), and a member that differs is warned about
+// once.
 //
 // Remerging is never driven by this (§3): a TRANSFORM can change without a member moving (a fixed
 // body's one-off sync), so the check only tells.
 //
 // A batched group's member (p375) moves by contract: its batch sync writes its instance, and its
 // `partIndex` stays -1, so the check skips it as one waiting for a build.
+//
+// A built member's own mesh is usually out of the scene graph (MergeSceneGraph.ts, p378), so no
+// render updates its world matrix: the check's `updateWorldMatrix` does, and for a parentless
+// mesh that's its local matrix, as under the (untransformed) root scene. Its auto-update flags
+// stay on, so the matrix is composed from its pose, never stale.
 import type * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
@@ -52,6 +58,7 @@ export const _checkMovedMergeMembers = (world: ECSWorld): number[] => {
     if (member.partIndex === -1 || member._editPose || warned.has(entityId)) continue;
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (!mesh) continue;
+    // Out of the scene graph, no render updates it (MergeSceneGraph.ts)
     mesh.updateWorldMatrix(true, false);
     if (isSameMatrix(mesh.matrixWorld, member._bakedMatrix)) continue;
     warned.add(entityId);

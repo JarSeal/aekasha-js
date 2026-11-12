@@ -7,7 +7,7 @@ import { createFeatureHost } from '../../../kernel/init/Features';
 import { createGeometry } from '../../../kernel/assets/Geometry';
 import { createMaterial } from '../../../kernel/assets/Material';
 import { createMeshEntity, installMeshes } from '../../../kernel/mesh/Mesh';
-import { createRootScene, runOnAllSceneExits } from '../../../kernel/scene/Scene';
+import { createRootScene, getRootScene, runOnAllSceneExits } from '../../../kernel/scene/Scene';
 import {
   addToMergeGroup,
   buildPendingMergeGroupsAsync,
@@ -78,6 +78,9 @@ const createGroupAsync = async () => {
 
 const isVisible = (entityId: number) =>
   world.getComponent(entityId, ComponentType.OBJECT3D)!.value.visible;
+/** Its own mesh under the root scene (out of the scene graph while its group draws it, p378) */
+const isInScene = (entityId: number) =>
+  world.getComponent(entityId, ComponentType.OBJECT3D)!.value.parent === getRootScene();
 
 describe('show unmerged', () => {
   test('hides the group mesh and draws the members, still in their group, and back', async () => {
@@ -85,10 +88,12 @@ describe('show unmerged', () => {
     const parts = members.map(
       (id) => world.getComponent(id, ComponentType.MERGE_MEMBER)!.partIndex
     );
+    expect(members.some(isInScene)).toBe(false);
     expect(setMergeGroupUnmergedView(groupEntityId, true)).toBe(true);
     expect(isMergeGroupUnmergedView(groupEntityId)).toBe(true);
     expect(getGroupMesh(groupEntityId, world)!.visible).toBe(false);
     expect(members.every(isVisible)).toBe(true);
+    expect(members.every(isInScene)).toBe(true);
     expect(members.some((id) => world.hasComponent(id, ComponentType.TAG_MERGED))).toBe(false);
     expect(
       members.map((id) => world.getComponent(id, ComponentType.MERGE_MEMBER)!.partIndex)
@@ -103,6 +108,7 @@ describe('show unmerged', () => {
     expect(setMergeGroupUnmergedView(groupEntityId, false)).toBe(false);
     expect(getGroupMesh(groupEntityId, world)!.visible).toBe(true);
     expect(members.some(isVisible)).toBe(false);
+    expect(members.some(isInScene)).toBe(false);
     expect(world.hasComponent(groupEntityId, ComponentType.TAG_DRAW_HELD)).toBe(false);
     expect(getMergeSummary(world)).toMatchObject({ drawnGroups: 1, drawsNow: 1, drawsUnmerged: 3 });
   });
@@ -124,6 +130,7 @@ describe('show unmerged', () => {
       all.every((id) => world.getComponent(id, ComponentType.MERGE_MEMBER)!.partIndex >= 0)
     ).toBe(true);
     expect(all.every(isVisible)).toBe(true);
+    expect(all.every(isInScene)).toBe(true);
     expect(getGroupMesh(groupEntityId, world)!.visible).toBe(false);
     expect(
       members.map((id) => world.getComponent(id, ComponentType.MERGE_MEMBER)!._wasSpatialIndexed)
@@ -131,6 +138,7 @@ describe('show unmerged', () => {
 
     setMergeGroupUnmergedView(groupEntityId, false);
     expect(all.every((id) => world.hasComponent(id, ComponentType.TAG_MERGED))).toBe(true);
+    expect(all.some(isInScene)).toBe(false);
     // Let go, a member gets its spatial membership back
     removeFromMergeGroup([members[0]]);
     expect(world.hasComponent(members[0], ComponentType.SPATIAL_INDEXED)).toBe(true);

@@ -4,6 +4,37 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-12 — p378_baked-members-out-of-the-scene-graph
+
+Baked merge members out of the scene graph (p378, Tier 3.3 of the merging epic p370). A baked member's own mesh stayed in the scene graph, hidden, while its group's mesh drew it, and three walked it in every scene update and every render's projection: p377's far field found that walk to be about 60 % of the field's CPU cost. Its Phase 0 measured the member out of the graph against frozen in it (both matrix updates off) and split the rest of the members' cost. Out of the graph won by 2.2-3.7 ms at 400 sites, so a built member's mesh now leaves the scene graph in both modes, as a batched member's did since p375. On the far field (400 sites, 20,770 members, Apple M2, Chrome) the CPU frame went from 9.5-11.8 to 5.7-6.3 ms on WebGPU and from 10.8-13.2 to 5.9-6.5 ms on WebGL2, the image unchanged; `largeWorld` alone saves 0.13-0.23 ms. What the members still cost, the kernel's transform sync visiting every mesh entity (0.6-0.85 ms there), and a second scene walk a frame for every scene are follow-ups. The one behaviour change: a raycast of the root scene no longer hits a baked group's hidden members.
+
+### Engine 6.10.0 (Sunset)
+
+**Changed**
+
+- A merge member's own mesh leaves the scene graph when its group draws it (`TAG_MERGED`'s add hook; `MergeSceneGraph.ts`): a built baked member now, as a batched member already did. Only a mesh directly under the root scene with no children leaves; a leave, a dissolve, a deleted group, an edit session and "Show unmerged" put it back under the root scene, and a rebuild and a disabled member leave it out. three's scene update, its render projections and a raycast skip it. Its readers (the builds, the in-place writes, the moved-member check, the overlay, LOD's measure, frustum culling, a deletion) don't need its place in the graph.
+- A raycast of the root scene hits a baked group's mesh only, as it already hit only a batched group's batch: `getMergeMemberAtFace` maps a hit to its member. A member under another parent is still hit, hidden.
+- A batched member with children of its own (an app's attachment) now stays in the scene graph, hidden, as a baked one does, where p375 took it out with its child. Nothing draws differently.
+- The profiler's Objects tab totals count the scene graph, so they leave a scene's merged members out (testDebugScene's Mesh 24 / 734 → 24 / 34); the Merging tab counts them.
+
+### App 1.24.1 (Preschooler)
+
+**Added**
+
+- largeWorld's far field's members modes (the debug env and prod test mode): `?hlodFieldMembers=graph|detached|frozen` (every built baked member of the world taken out of the scene graph, or its matrix updates turned off, once the scene step's builds are done; `window.__aekHlodMembers`) and `?hlodFieldWalk=once` (the root scene's walk run once a frame). The spike's probe splits the CPU frame further: each system's time and the projection walks per render (`src/app/shared/_dbg__hlodSpikeSplit.ts`).
+
+### Project
+
+**Added**
+
+- `hlodSpike.ts --step draws`' members cases (`members@32:detached|frozen|walk-once`, `floor` with the same modes), `--cases p378` and `--reference <case>`, and the CPU frame's parts tables (the walk, the projection by render kind, the systems one by one, the rest of the submit; `frozen` against `detached`).
+
+**Changed**
+
+- The Hub's Mesh merging page: a member out of the scene graph, which member a ray hit, and "A large far field"'s figures with the members out.
+- The `merging/` and debug `CLAUDE.md`; the bundle, API and docs baselines (the merging group 12 → 13 modules, 9,837 → 9,901 B gzip).
+- The plans: p378 done, with its Phase 0 results; Phase 2 dropped. The p370 epic follows it, and p990 has its two follow-ups: `object3DSyncSystem` visiting every mesh entity each frame, and one scene update a frame instead of two.
+
 ## 2026-11-12 — p377_hlod-streaming-cell-proxies
 
 HLOD streaming cell proxies (p377, Tier 3.2 of the merging epic p370): far static content drawn in few draws. Its Phase 0 measured four ways to fewer draws on p376's far field (400 ruin sites, 20,000 pieces) and chose the cheapest that paid: a streamed cell's kit meshes (a JSON mesh without `lod`: a wall piece, a pillar, rubble) are now their own far entries, so a `FAR` cell draws its kit as one `InstancedMesh` per geometry and material instead of nothing, measured as cheap as the cell merged into one mesh. No build-time cell proxy is built. For far content that doesn't stream, larger `AUTO` merge cells are a recommendation on the Hub (128-256 m save 2.8-6.2 ms of CPU a frame at 400 sites); the hidden members' scene graph walk it found is p378's. Nothing breaks: `instances` is deprecated, not removed.

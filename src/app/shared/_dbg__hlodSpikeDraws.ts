@@ -5,6 +5,7 @@ import { getLodBias } from 'aekasha/lod';
 import { rebuildMergeGroup } from 'aekasha/merging';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import { getSkyLightIds } from 'aekasha/skybox';
+import { createProjectionTimer, createSystemTimer, installWalkOnce } from './_dbg__hlodSpikeSplit';
 
 // p377 Phase 0's probe additions (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md,
 // "What the spike adds"), on `window.__aekHlod` next to p376's (`_dbg__hlodSpike.ts`), for
@@ -23,7 +24,11 @@ import { getSkyLightIds } from 'aekasha/skybox';
 // - `cpuSplit(frames)`: `measure`'s figures with the CPU frame's parts: the render submit, the
 //   root scene's `updateMatrixWorld` timed on its own inside it (three's walk over every object,
 //   hidden members included; summed per frame, with its calls: one per render call), the systems
-//   (the rest), and the scene graph's objects, the hidden ones apart.
+//   (the rest), and the scene graph's objects, the hidden ones apart. p378 Phase 0
+//   (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md) adds each system's time
+//   (`systems`, `systemsTimedMs` their sum outside `LATE_MAIN`), the projection walks per render
+//   kind (`projection`, `projectMs` their sum) and walk-once's skipped calls
+//   (`_dbg__hlodSpikeSplit.ts`).
 // - `fieldDraws()`: the field's objects drawn in the main camera's frustum (the scene pass and the
 //   AO pre-pass both draw them) and in each shadow-casting sky sun's (the casters), as three culls
 //   them (visible, then the object's bounding sphere), from the last render's matrices.
@@ -128,6 +133,8 @@ const getTriangles = (mesh: THREE.Mesh) => {
 
 /** p377's probe functions, spread into `window.__aekHlod`. */
 export const createDrawsApi = (world: ECSWorld, hooks: SpikeFrameHooks) => {
+  // p378 D5: `?hlodFieldWalk=once`, for the scene's life
+  const walkOnce = installWalkOnce(world);
   const sphere = new THREE.Sphere();
   const frustum = new THREE.Frustum();
   const viewProjection = new THREE.Matrix4();
@@ -280,18 +287,36 @@ export const createDrawsApi = (world: ECSWorld, hooks: SpikeFrameHooks) => {
         walkMs += performance.now() - startedAt;
         walkCalls++;
       };
+      // p378: each system and the projection walks, per frame
+      const systemTimer = createSystemTimer(world);
+      const projectionTimer = createProjectionTimer(hooks.getActiveCamera);
+      walkOnce?.takeSkipped();
       const startedAt = performance.now();
-      let list: (SpikeFrame & { walkMs: number; walkCalls: number })[];
+      let list: (SpikeFrame & {
+        walkMs: number;
+        walkCalls: number;
+        walkSkipped: number;
+        systemsTimedMs: number;
+        projectMs: number;
+      })[];
       try {
         list = await collectFrames(frames, () => {
-          const walk = { walkMs, walkCalls };
+          const split = {
+            walkMs,
+            walkCalls,
+            walkSkipped: walkOnce?.takeSkipped() ?? 0,
+            systemsTimedMs: systemTimer.takeFrame(),
+            projectMs: projectionTimer.takeFrame(),
+          };
           walkMs = 0;
           walkCalls = 0;
-          return walk;
+          return split;
         });
       } finally {
         if (hadOwn) root.updateMatrixWorld = original;
         else delete (root as Partial<THREE.Scene>).updateMatrixWorld;
+        systemTimer.restore();
+        projectionTimer.restore();
       }
       let objects = 0;
       let hidden = 0;
@@ -320,6 +345,9 @@ export const createDrawsApi = (world: ECSWorld, hooks: SpikeFrameHooks) => {
         systemsMs: list.map((f) => f.cpuMs - f.renderMs),
         walkMs: list.map((f) => f.walkMs),
         walkCalls: list.map((f) => f.walkCalls),
+        walkSkipped: list.map((f) => f.walkSkipped),
+        systemsTimedMs: list.map((f) => f.systemsTimedMs),
+        projectMs: list.map((f) => f.projectMs),
         drawCalls: list.map((f) => f.drawCalls),
         triangles: list.map((f) => f.triangles),
       };
@@ -327,7 +355,21 @@ export const createDrawsApi = (world: ECSWorld, hooks: SpikeFrameHooks) => {
         result[key] = quantile(values, 0.5);
         result[`${key}P90`] = quantile(values, 0.9);
       }
-      return result;
+      // Each system's median and mean per frame (the mean holds what the 5 µs clock rounds off)
+      const systems: Record<string, { ms: number; meanMs: number }> = {};
+      for (const { id, values } of systemTimer.series()) {
+        systems[id] = {
+          ms: quantile(values, 0.5),
+          meanMs: values.reduce((sum, v) => sum + v, 0) / Math.max(1, values.length),
+        };
+      }
+      const projection = Object.fromEntries(
+        Object.entries(projectionTimer.series()).map(([kind, s]) => [
+          kind,
+          { ms: quantile(s.ms, 0.5), msP90: quantile(s.ms, 0.9), calls: quantile(s.calls, 0.5) },
+        ])
+      );
+      return { ...result, systems, projection };
     },
     /**
      * `n` field groups (evenly spread by id) rebuilt one at a time: each one's frame that applied

@@ -25,7 +25,8 @@ import { getGroups } from './MergeState';
 // p375 Phase 2 S1 (docs/plans/_DONE_p375_batched-mesh-batches.md): a batched member's own mesh is out of
 // the scene graph while its batch draws it, back under the root scene when it's drawn on its own
 // again; a raycast hits the batch, and `getMergeMemberAtBatchId` maps the hit to the member.
-// MergeBatch.test.ts has the rest of the batch (the sync's tests run with the meshes out).
+// MergeBatch.test.ts has the rest of the batch (the sync's tests run with the meshes out). The
+// detach is both modes' (MergeSceneGraph.ts, p378): a baked member's is MergeSceneGraph.test.ts'.
 
 let world: ECSWorld;
 beforeAll(() => {
@@ -70,12 +71,12 @@ const getBatch = (groupEntityId: number) =>
 const isInScene = (entityId: number) => getOwnMesh(entityId).parent === getRootScene();
 
 describe("a batched member's own mesh", () => {
-  test('leaves the scene graph with its build; a baked member stays', async () => {
+  test('leaves the scene graph with its build, as a baked member does (p378)', async () => {
     const batched = await createBuiltGroupAsync(3);
     const baked = await createBuiltGroupAsync(2, 'BAKED');
     expect(batched.members.map((id) => getOwnMesh(id).parent)).toEqual([null, null, null]);
     expect(getBatch(batched.groupEntityId).parent).toBe(getRootScene());
-    expect(baked.members.map(isInScene)).toEqual([true, true]);
+    expect(baked.members.map(isInScene)).toEqual([false, false]);
   });
 
   test('a member waiting for its build stays in the scene until the build', async () => {
