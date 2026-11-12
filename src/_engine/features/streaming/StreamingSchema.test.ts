@@ -34,6 +34,14 @@ describe('SceneStreamingSchema', () => {
     expect(isValid({ cellSize: 64, nearbyPhysicsTier: 'FULL' })).toBe(false);
   });
 
+  test('takes farEntries ALL or LOD_LEVELS, build time only (p377 D2)', () => {
+    expect(isValid({ cellSize: 64, farEntries: 'ALL' })).toBe(true);
+    expect(isValid({ cellSize: 64, farEntries: 'LOD_LEVELS' })).toBe(true);
+    expect(isValid({ cellSize: 64, farEntries: 'NONE' })).toBe(false);
+    expect(isValid({ cellSize: 64, farEntries: 'all' })).toBe(false);
+    expect(isValid({ cellSize: 64, farEntries: true })).toBe(false);
+  });
+
   test('takes a fade of 0 seconds or more, resolved to the install default (p353 Phase 5 D4)', () => {
     expect(isValid({ cellSize: 64, fadeSeconds: 0 })).toBe(true);
     expect(isValid({ cellSize: 64, fadeSeconds: 0.4 })).toBe(true);

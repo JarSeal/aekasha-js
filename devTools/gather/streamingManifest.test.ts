@@ -288,6 +288,99 @@ describe('buildStreamingManifest', () => {
     expect(cell?.far?.materials).toEqual([0]);
   });
 
+  it('gives LOD_LEVELS today’s far entries: explicit levels only, the build-time field dropped (p377 D2)', () => {
+    const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox' }];
+    const scene = (farEntries?: 'ALL' | 'LOD_LEVELS') =>
+      baseScene({
+        geometries: [
+          { id: 'box', type: 'BOX' },
+          { id: 'lowBox', type: 'BOX' },
+        ],
+        meshes: [
+          mesh('a', 10, 10, { lod: { levels } }),
+          mesh('plain', 20, 10, { geo: 'lowBox' }),
+          mesh('crate', 100, 10),
+        ],
+        streaming: { cellSize: 64, farEntries },
+      });
+    const { out } = build(scene('LOD_LEVELS'));
+    expect(out.streaming).toEqual({ cellSize: 64 });
+    const manifest = out.__streaming;
+    expect(manifest?.farMeshes).toEqual([
+      {
+        props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
+        instances: [{ position: { x: 10, y: 0, z: 10 } }],
+      },
+    ]);
+    // The crate's cell has no far layer, the level's only its level's assets
+    expect(manifest?.cells[key(1, 0)]?.far).toBeUndefined();
+    expect(manifest?.cells[key(0, 0)]?.far).toEqual({
+      meshes: [0],
+      materials: [0],
+      geometries: [1],
+      bytesEstimate: 0,
+    });
+    // ALL (the default, and given) adds plain to a's group and gives the crate's cell one
+    const all = build(scene('ALL')).out;
+    expect(all.streaming).toEqual({ cellSize: 64 });
+    expect(all.__streaming?.farMeshes?.[0].instances).toHaveLength(2);
+    expect(all.__streaming?.cells[key(1, 0)]?.far?.meshes).toEqual([1]);
+    expect(build(scene()).out.__streaming).toEqual(all.__streaming);
+  });
+
+  it('gives a mesh without lod no far entry when it wouldn’t group, nor its assets (p377 D1)', () => {
+    const scene = baseScene({
+      textures: [{ id: 'bark', fileName: 'bark.png', __vramBytes: { in: 8, out: 4 } }],
+      materials: [
+        { id: 'grey', type: 'BASIC' },
+        { id: 'barkMat', type: 'STANDARD', params: { map: 'bark' } },
+      ],
+      meshes: [
+        mesh('inlineGeo', 10, 10, { geo: { type: 'BOX' }, mat: 'barkMat' }),
+        mesh('inlineMat', 20, 10, { mat: { type: 'BASIC', params: { map: 'bark' } } }),
+        mesh('overrides', 30, 10, { mat: 'barkMat', matOverrides: { params: { map: 'bark' } } }),
+      ],
+    });
+    const manifest = build(scene).out.__streaming;
+    const cell = manifest?.cells[key(0, 0)];
+    expect(cell?.meshes).toEqual([0, 1, 2]);
+    expect(cell?.far).toBeUndefined();
+    expect(manifest?.farMeshes).toBeUndefined();
+  });
+
+  it('gives a culled, AUTO or oversized mesh no far entry, and a far mesh of its own no merge (p377 D1, D4)', () => {
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'wall', type: 'BOX', params: { width: 100, height: 2, depth: 4 } },
+      ],
+      meshes: [
+        // D2's per-mesh way out: a LOD that only culls
+        mesh('clutter', 10, 10, { lod: { levels: [{ screenSize: 0 }], cullScreenSize: 0.01 } }),
+        mesh('auto', 20, 10, { lod: 'AUTO' }),
+        mesh('autoObject', 30, 10, { lod: { auto: true, maxPixelError: 2 } }),
+        mesh('wall', 64, 40, { geo: 'wall' }),
+        mesh('own', 40, 10, {
+          merge: 'AUTO',
+          matOverrides: { params: { color: '#ff0000' } },
+          lod: { levels: [{ screenSize: 0.2 }, { screenSize: 0.05 }] },
+        }),
+      ],
+    });
+    const manifest = build(scene).out.__streaming;
+    // Only own's far entry, a mesh of its own (matOverrides) without merge, lod or app id
+    expect(manifest?.cells[key(0, 0)]?.far?.meshes).toEqual([0]);
+    expect(manifest?.cells[key(1, 0)]?.far).toBeUndefined();
+    expect(manifest?.farMeshes).toHaveLength(1);
+    const own = manifest?.farMeshes?.[0];
+    expect(own?.instances).toBeUndefined();
+    expect(own?.props).toMatchObject({ geo: 'box', mat: 'grey', matOverrides: {} });
+    for (const field of ['merge', 'lod', 'appId']) expect(own?.props).not.toHaveProperty(field);
+    // The wall is kept content in both its cells
+    expect(manifest?.cells[key(0, 0)]?.kept?.meshes).toEqual([3]);
+    expect(manifest?.cells[key(1, 0)]?.kept?.meshes).toEqual([3]);
+  });
+
   it('lists each layer’s cell-only assets and their estimate (Phase 5 D9)', () => {
     const scene = baseScene({
       textures: [{ id: 'bark', fileName: 'bark.png', __vramBytes: { in: 8, out: 4 } }],
