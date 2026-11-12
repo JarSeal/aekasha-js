@@ -186,8 +186,9 @@ const formatMemory = (rt: StreamingRuntime | null) => {
   ].join('\n');
 };
 
-/** The scene's JSON cell content (the gather's manifest): its cells and entries, the estimated
- * GPU memory of the tracked cells' cell-only assets, and the oversized meshes alive. */
+/** The scene's JSON cell content (the gather's manifest): its cells and entries, its far meshes
+ * (the groups and their instances, the meshes of their own), the estimated GPU memory of the
+ * tracked cells' cell-only assets, the far groups alive and the oversized meshes alive. */
 const formatDataContent = (rt: StreamingRuntime | null) => {
   const content = getStreamingDataContent();
   if (!rt || !content) return 'none (code content only)';
@@ -208,8 +209,20 @@ const formatDataContent = (rt: StreamingRuntime | null) => {
     groups += far.groups;
     instances += far.instances;
   }
+  // The manifest's far groups and their instances (p377 D3: by `entries`, or the deprecated
+  // `instances`), so the scene's far layer reads in one line
+  const farMeshes = manifest.farMeshes ?? [];
+  let farGroups = 0;
+  let farInstances = 0;
+  for (const far of farMeshes) {
+    const count = far.entries?.length ?? far.instances?.length;
+    if (count === undefined) continue;
+    farGroups++;
+    farInstances += count;
+  }
   return [
-    `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.farMeshes?.length ?? 0} far meshes, ${manifest.lights.length} lights`,
+    `${Object.keys(manifest.cells).length} cells, ${manifest.meshes.length} meshes, ${manifest.lights.length} lights`,
+    `${farMeshes.length} far meshes: ${farGroups} groups (${farInstances} instances), ${farMeshes.length - farGroups} of their own`,
     `estimated for the tracked cells: ${formatBytes(estimate)}`,
     `far groups alive: ${groups} (${instances} instances)`,
     `oversized meshes alive: ${content.shared.size}`,
@@ -492,11 +505,11 @@ export const _createStreamingDebugGUI = () => {
             label: 'JSON content',
             readonly: true,
             multiline: true,
-            rows: 4,
+            rows: 5,
             interval: 'refresh',
           },
           getNoteItem(
-            'The scene JSON’s content the gather cut into cells: an asset only cells use loads with them (the estimate sums their textures’ and imports’ encoded GPU size), a mesh with LOD levels gives its FAR cell its coarsest level (alike ones one InstancedMesh, a far group), an oversized mesh is kept while any of its cells is loaded.'
+            'The scene JSON’s content the gather cut into cells: an asset only cells use loads with them (the estimate sums their textures’ and imports’ encoded GPU size), a mesh with LOD levels gives its FAR cell its coarsest level and one without lod itself (alike ones one InstancedMesh, a far group, its instances the near entries it names), an oversized mesh is kept while any of its cells is loaded.'
           ),
           getFocusFolder(teleport),
           getBudgetsFolder(),

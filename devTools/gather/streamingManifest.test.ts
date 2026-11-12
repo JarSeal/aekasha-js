@@ -284,6 +284,46 @@ describe('buildStreamingManifest', () => {
     expect(cell?.far?.materials).toEqual([0]);
   });
 
+  it('names a far group’s near entries by their manifest index, never their transforms (p377 D3)', () => {
+    const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox' }];
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'lowBox', type: 'BOX' },
+      ],
+      meshes: [
+        // A base mesh first: the manifest's indices aren't the scene's
+        mesh('tower', 0, 0),
+        mesh('a', 10, 10, { lod: { levels }, rotation: { x: 0, y: 1, z: 0 } }),
+        mesh('plain', 20, 10, { geo: 'lowBox', scale: { x: 2, y: 2, z: 2 } }),
+        mesh('crate', 100, 10, { quaternion: { x: 0, y: 0, z: 0, w: 1 } }),
+        mesh('own', 30, 10, { lod: { levels }, matOverrides: { params: { color: '#ff0000' } } }),
+      ],
+      streaming: { cellSize: 64, base: ['tower'] },
+    });
+    const manifest = build(scene).out.__streaming;
+    const far = manifest?.farMeshes ?? [];
+    const appIdsOf = (entries: number[] = []) =>
+      entries.map((index) => manifest?.meshes[index].props.appId);
+    // The explicit level and the mesh's own entry in one group; the crate's cell its own group
+    expect(far.map((f) => appIdsOf(f.entries))).toEqual([['a', 'plain'], ['crate'], []]);
+    for (const f of far) expect(f).not.toHaveProperty('instances');
+    // Each index is a near entry of the cell whose far layer holds the group
+    for (const [cellKey, cell] of Object.entries(manifest?.cells ?? {})) {
+      for (const farIndex of cell.far?.meshes ?? []) {
+        for (const entry of far[farIndex].entries ?? []) {
+          expect(cell.meshes, `cell ${cellKey}`).toContain(entry);
+        }
+      }
+    }
+    // A group's props carry no transform; a far mesh of its own (matOverrides) keeps its own
+    expect(Object.keys(far[0].props).sort()).toEqual(
+      ['castShadow', 'geo', 'mat', 'receiveShadow'].sort()
+    );
+    expect(far[2].entries).toBeUndefined();
+    expect(far[2].props).toMatchObject({ geo: 'lowBox', position: { x: 30, y: 0, z: 10 } });
+  });
+
   it('gives LOD_LEVELS today’s far entries: explicit levels only, the build-time field dropped (p377 D2)', () => {
     const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox' }];
     const scene = (farEntries?: 'ALL' | 'LOD_LEVELS') =>
