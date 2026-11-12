@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
+Status: in progress | Phases 0-1 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
 Category: Merging, Performance
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.3)
 Related: \_DONE_p377_hlod-streaming-cell-proxies.md (Phase 0 measured the cost; its far field, `?hlodField`, and bench are this plan's measurement), \_DONE_p375_batched-mesh-batches.md (Phase 2 S1 took a batched member's mesh out of the scene graph), \_DONE_p372_mesh-merge-groups.md (the baked groups), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, "Show unmerged", picking), \_DONE_p353_macro-streaming-grid.md (a streamed member's priming and fades)
@@ -295,7 +295,7 @@ spread in any case, and every image was 0.00 % changed against its base.
   in the graph a frame); with the members out it's 0.17-0.28 ms at 400 sites. A follow-up in
   `p990_follow-ups-from-done-plans.md` (Rendering) with these figures (Phase 4 step 3).
 
-## Phase 1 — A baked member's mesh out of the scene graph
+## Phase 1 — A baked member's mesh out of the scene graph — done
 
 The engine change (D2), in the merging feature's first download:
 
@@ -319,6 +319,30 @@ The engine change (D2), in the merging feature's first download:
    of a detached member write the same positions as a fresh merge; a deleted detached member
    disposes; the moved-member check still warns for a moved detached member
    (`debug/_dbg__MergeGroups.test.ts`). `yarn test`.
+
+**As built** (2026-11-12):
+
+- The detach is its own module, `MergeSceneGraph.ts` (`detachMemberMesh`, `reattachMemberMesh`,
+  the `WeakSet`; its header has D2's rule and why each reader doesn't need the mesh's place). The
+  batch front kept only the batch's LOD calls, as `refreshMergedBatchMember` (a member with an
+  instance) and `endUnmergedBatchMemberFade`; `TAG_MERGED`'s hooks call the visibility reconcile,
+  the batch's LOD call, then the detach or reattach, in the order they ran before.
+- D2's no-children rule applies to a batched member too: one with a child (an app's attachment)
+  now stays in the graph, hidden, where p375 took it out with its child. Nothing draws differently.
+- The tests are `MergeSceneGraph.test.ts` (beside the module, not `MergeDetach.test.ts`): all of
+  step 4's list but two, which went to the files that already set them up: "Show unmerged" and its
+  end (and a build during it) in `debug/_dbg__MergingUnmerged.test.ts` (the debug env; a `_dbg__`
+  module isn't imported outside `_dbg__` files), the moved-member check in
+  `debug/_dbg__MergeGroups.test.ts` (its members asserted out of the graph). The new file's tests
+  fail 8 of 9 with the detach made batched-only again (the ninth, a member under a group entity
+  or with a child staying in, passes either way). `MergeBatchDetach.test.ts`' first test now
+  expects a baked member out too.
+- The moved-member check's header no longer says the render updated the matrices: the check's
+  own `updateWorldMatrix` does, a parentless mesh's being its local matrix.
+- `devTools/verify/baselines/api.json` still lists `detachBatchedMemberMesh` and
+  `reattachMemberMesh` under `MergeBatchFront.ts`: Phase 3's `yarn verify:baselines --update`
+  records the moved and renamed `@internal` exports.
+- `yarn test` (354 files, 3 337 tests), lint and `tsc` pass.
 
 ## Phase 2 — The members' other costs — dropped
 

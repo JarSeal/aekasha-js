@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { getConfig } from '../../../kernel/config/Config';
 import { ECSWorld } from '../../../kernel/ecs/ECS';
+import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { installCoreSystems } from '../../../kernel/ecs/ECSCoreSystems';
 import { createFeatureHost } from '../../../kernel/init/Features';
 import { createGeometry } from '../../../kernel/assets/Geometry';
@@ -72,6 +73,10 @@ const createGroupAsync = async () => {
 describe('the moved-member check', () => {
   test('warns once about a member moved without updateMergeMember', async () => {
     const { groupId, members } = await createGroupAsync();
+    // Out of the scene graph (p378): no render updates its world matrix, the check does
+    expect(
+      members.map((id) => world.getComponent(id, ComponentType.OBJECT3D)!.value.parent)
+    ).toEqual([null, null, null]);
     expect(_checkMovedMergeMembers(world)).toEqual([]);
 
     // Moved and updated: no warning; moved only: one
