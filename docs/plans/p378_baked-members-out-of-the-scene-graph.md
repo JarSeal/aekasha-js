@@ -363,6 +363,31 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
 3. In the browser (largeWorld, `exampleMerging`): the Merging tab's "Show unmerged" and the pose
    fields' edit session on a baked member, its overlay box, the Ray tester's hit on a group.
 
+**As built** (2026-11-12, Apple M2, Chrome, WebGPU):
+
+- Step 1: `yarn test` (354 files, 3 337 tests) passes. `yarn verify:scenes`: every scene recorded
+  on `main` (2308fbec, 185 runs), then the branch: 183 passed. Every merged scene is unchanged:
+  largeWorld (with its Merging tab and windows), testDebugScene, `exampleMerging`,
+  `batchedMeshSpike`'s 11 variants, `lodShowcase`, `mergeMaterials` and `streamingGrid`, every
+  configuration. Two failed:
+  - thirdPersonGymScene `workerMsg`'s snapshot (45 % changed): its worker targets' characters
+    (p428; the gym has no merged content). A rerun passes, with `main`'s hash.
+  - testDebugScene's `debugger` shot of the profiler's Objects tab: the census (`_dbg__Census.ts`)
+    counts every object in the root scene, hidden ones included (Grounding's "hidden objects are
+    skipped either way" holds for its in-view figures only), so its totals lose the 700 baked
+    members of `p372_grid` and the lattice: Mesh 24 / 734 → 24 / 34, Scene entities 24 / 724 →
+    24 / 24, the in-view figures and the ECS entities (739) unchanged. A batched group's members
+    left the totals the same way with p375.
+- `yarn verify:baselines`: the five `@internal` export changes Phase 1 made (`reattachMemberMesh`
+  moved to `MergeSceneGraph.ts`, `detachMemberMesh` there in place of `MergeBatchFront.ts`'
+  `detachBatchedMemberMesh`, `refreshMergedBatchMember` and `endUnmergedBatchMemberFade` added
+  there), recorded with `--update`: `api.json`, `docs.json` (merging 167 → 169 exports, all
+  documented) and `bundle.json` (the merging group 12 → 13 modules, 9 837 → 9 901 B gzip; the
+  main chunk +194 B, +72 B gzip). The embeds' files moved by a byte or two of gzip only (neither
+  has merging) and were left as they were. No debug code in any build.
+- `yarn sbp --profile all`: every budget within; merging 9.7 kB of its 10 KiB (64 B more than on
+  `main`).
+
 ## Phase 4 — Hub, docs, versions, done
 
 1. The Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`): "Which member a ray

@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3553,
-      "total": 3553
+      "documented": 3555,
+      "total": 3555
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3470,
-        "total": 3470
+        "documented": 3472,
+        "total": 3472
       },
       "members": {
         "documented": 953,
@@ -175,8 +175,8 @@
     },
     "engine/features/merging": {
       "exports": {
-        "documented": 167,
-        "total": 167
+        "documented": 169,
+        "total": 169
       },
       "members": {
         "documented": 0,

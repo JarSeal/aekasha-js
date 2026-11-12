@@ -822,13 +822,13 @@
     "src/_engine/features/merging/MergeBatchFront.ts": {
       "batchMemberLodDelegate": "Variable",
       "BatchVisibilityOverrides": "TypeAlias",
-      "detachBatchedMemberMesh": "Function",
       "dropBatchMember": "Function",
+      "endUnmergedBatchMemberFade": "Function",
       "getMergeBatchModule": "Function",
       "installBatchMemberVisibility": "Function",
       "isBatchedGroup": "Function",
       "loadMergeBatchModuleAsync": "Function",
-      "reattachMemberMesh": "Function"
+      "refreshMergedBatchMember": "Function"
     },
     "src/_engine/features/merging/MergeBatchLod.ts": {
       "applyBatchMemberLevel": "Function",
@@ -936,6 +936,10 @@
       "growMergedBounds": "Function",
       "restorePartIndex": "Function",
       "rewritePartVertices": "Function"
+    },
+    "src/_engine/features/merging/MergeSceneGraph.ts": {
+      "detachMemberMesh": "Function",
+      "reattachMemberMesh": "Function"
     },
     "src/_engine/features/merging/MergeSceneSettings.ts": {
       "DEFAULT_AUTO_CELL_SIZE": "Variable",
