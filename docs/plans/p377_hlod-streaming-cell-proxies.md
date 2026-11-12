@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-3 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
+Status: in progress | Phases 0-4 implemented (2026-11-12); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -652,7 +652,7 @@ Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGr
   (1, 1) in front, a beacon near and three far, the far rings to the skyline. It was the flight's
   start before (no ruin in view).
 
-## Phase 4 — The Hub: larger cells for a large far field
+## Phase 4 — The Hub: larger cells for a large far field — done
 
 D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`); nothing to build.
 
@@ -668,6 +668,28 @@ D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`);
    rings draw the kit's far entries ([streaming](hub:features/streaming#far-representations)):
    so larger cells are for a world that doesn't stream.
 4. `aek:tags` gain `cell size`, `far field`; `yarn hub:build`.
+
+**As built** (2026-11-12):
+
+- **AUTO**: the "Pick the cell size" paragraph ends with far content in a scene that doesn't stream
+  taking 128-256 m cells, linking `#a-large-far-field`.
+- **A large far field** (after Measured): the field (400 sites 200 m-1 km out, about 20,000 pieces,
+  1,838 groups at 32 m; Apple M2, Chrome, 1600 × 900), a table of the CPU frame saved at 64, 128 and
+  256 m against 32 m per view and backend (Phase 0's Steps 2-4 rows), the 32 m frame (10.6-13.7 ms),
+  then four points: a group drawn whole costs nothing here (WebGL2's GPU inside the spread, the
+  images matched; WebGPU's GPU figure left out, as Phase 0 decided it doesn't decide), a rebuild one
+  main-thread frame (0.4-1.2 ms, under the worker's 65,536 vertices; the load unchanged), only a
+  large field pays (150 sites: under 1 ms). Then what larger cells don't reach: the hidden members'
+  walk (20,808 objects, 3.6-4.9 ms, about 60 % of the field's cost), a batched group already out of
+  the scene graph, p378 as a `repo:` link. Its last line gives the debug URL that makes the field
+  (`?isDebug=true&startScene=largeWorld&hlodField=400&hlodFieldCell=256`).
+- **Streaming**: a third bullet: larger cells are for a world that doesn't stream; in a streaming
+  scene the `AUTO` cell divides the streaming cell (the test scene's 32 in 64 m) and the far rings
+  draw the kit's far entries (`hub:features/streaming#far-representations`), measured as cheap as a
+  cell merged into one mesh. That section of the streaming page still says only a mesh with LOD
+  `levels` gets a far stand-in until Phase 6 step 1.
+- `yarn hub:build` passes (117 pages). Its search index warning (573 KiB gzipped, over 450) was
+  there before this phase (467 KiB against 468 without the API docs, `--no-api`).
 
 ## Phase 5 — Verification
 
