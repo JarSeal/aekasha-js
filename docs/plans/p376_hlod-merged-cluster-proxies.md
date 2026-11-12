@@ -200,6 +200,43 @@ What it says:
   the gate asks for (a quarter) is there from level 1 with `permissive`; whether 8,336 triangles
   are worth a GPU figure is step 2's question.
 
+**Step 2: what drawing proxies saves in largeWorld** (`hlodSpike.ts --step frames`,
+`hlodSpikeFrames.ts`). The day-night sky box paused at 10:00, 1600 × 900, the proxies `permissive`
+at maxError 0.2, three runs a backend (a page each, the level order reversed on the second), 120
++ 300 frames a case. Views: `start` (the overview camera's own pose, 134 m from the origin) and
+`far` (the same line pulled back 2.5 times, 335 m). `AUTO` is the level each group's `AUTO` LOD
+would pick at `maxPixelError` 1 from the camera's pose, without the hysteresis.
+
+A frame has three passes: the scene pass, the AO pre-pass (`PostFX.ts`' non-MSAA depth and
+normal pass for `ambientOcclusion`, a second render of everything in view) and the sun's shadow:
+a 60 m frustum following the camera (`SUN_LIGHT_DEFAULTS.shadowFrustumSize` 30), holding 800 of
+the groups' triangles at `start` and none at `far`. So the renderer's saving is twice the groups'
+saving in view plus the shadow's (15,650 = 2 × 7,469 + 712 at `start`).
+
+| View | Levels | Groups per level (0, 1, 2, 3) | Groups' triangles drawn | Renderer triangles (every pass) | Saved | WebGL2 GPU saved (ms, median; spread) | CPU frame |
+| --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| start | FULL | 28 | 8,336 | 471,374 | | (11.51 ms) | 2.6-2.7 ms, both backends |
+| start | AUTO | 25, 2, 1 | 7,868 | 470,438 | 936 (0.2 %) | -0.39 (-0.97 to 0.01) | no change |
+| start | COARSEST | 1, 0, 1, 26 | 867 | 455,724 | 15,650 (3.3 %) | 0.18 (0.17 to 0.36) | no change |
+| far | FULL | 28 | 8,336 | 193,140 | | (8.52 ms) | |
+| far | AUTO | 17, 2, 8, 1 | 5,663 | 187,794 | 5,346 (2.8 %) | 0.56 (0.00 to 0.59) | no change |
+| far | COARSEST | 1, 0, 1, 26 | 867 | 178,202 | 14,938 (7.7 %) | -0.13 (-0.42 to 0.63) | no change |
+
+- **The groups are 1.8 % of the scene pass** at `start` (8,336 of about 230,000 triangles a
+  pass), so even every group at its coarsest (2 m errors, a visible change) saves 3 % of the
+  frame's triangles. On WebGL2 only `start` `COARSEST` is consistent (0.17-0.36 ms over its three
+  runs, median 0.18: under the gate's 0.2); the rest is inside the runs' noise (±0.5 ms). The
+  draws and the CPU frame don't change (the same 28 meshes, only their indices), as expected.
+- **WebGPU's GPU figure can't be read here.** At `start` it's 24-31 ms (WebGL2: 11.5) with a
+  spread far above any saving; at `far` it's negative and falls by about 7,000 ms per case, as a
+  timestamp left from an earlier frame would. Likely `far`'s shadow pass, which draws nothing (its
+  frustum is 300 m from the terrain), but not looked into (Phase 0 makes no engine change): the
+  debugger's GPU timer (`debug/_dbg__GPUTimer.ts`, `_dbg__GPUFrameTimes.ts`) needs an issue file,
+  and step 3 needs a WebGPU GPU figure that works (the gate asks for both backends).
+- **Step 2 doesn't pass the gate**: the triangle share is there (a quarter of the groups' from
+  `AUTO` at `far`, 32 %), the GPU time isn't. So step 3 runs (§3: "when step 2's savings are
+  small").
+
 ## 4. Phases (after the gate)
 
 ### Phase 1: `lod()` — `prune`, `AUTO`'s `chain`, the resolve seam

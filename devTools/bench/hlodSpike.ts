@@ -12,24 +12,42 @@
  * on a registered copy). Then the totals: the groups' triangles at each level (a group whose chain
  * stopped counts its last level) and the share of the base they save. Each scene is a page of its
  * own (its own dev server, the scene runner's, unless `--url`), in the debug env on WebGPU.
+ *
+ *   npx tsx devTools/bench/hlodSpike.ts --step frames [--backends webgpu,webgl] [--views start,far]
+ *     [--proxy permissive] [--max-error 0.2] [--ratios …] [--max-pixel-error 1] [--time 10]
+ *     [--runs 3] [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
+ *
+ * Step 2 (`frames`, `hlodSpikeFrames.ts`): largeWorld's frame with the groups at full detail, at
+ * the level `AUTO` would pick and at their coarsest proxy level (`--proxy`'s variant at
+ * `--max-error`, default 0.2 here), on each backend.
  * Output: `.cache/bench/progress.log` too.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Page } from 'playwright-core';
+import type { Browser } from 'playwright-core';
 import { ROOT } from '../paths';
 import { out, setProgressLogFile } from '../progressLog';
-import { EVALUATE_MARGIN_MS, launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
+import { launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
 import { startVerifyServerAsync } from '../verify/devServer';
+import { FRAME_VIEWS, formatFrames, runFramesStepAsync, type FramesArgs } from './hlodSpikeFrames';
+import {
+  buildSceneUrl,
+  DIM,
+  fail,
+  fmt,
+  int,
+  openSceneAsync,
+  pct,
+  printErrors,
+  RED,
+  RESET,
+  VIEWPORT,
+  YELLOW,
+  type Backend,
+} from './hlodSpikePage';
 
-const RED = '\x1b[31m';
-const YELLOW = '\x1b[33m';
-const DIM = '\x1b[2m';
-const RESET = '\x1b[0m';
 const LOG_FILE = path.join(ROOT, '.cache/bench/progress.log');
-const VIEWPORT = { width: 1600, height: 900 };
-const READY_TIMEOUT_MS = 180_000;
 const SIMPLIFY_TIMEOUT_MS = 600_000;
 
 const VARIANTS = ['default', 'permissive', 'prune', 'prunePermissive'] as const;
@@ -42,7 +60,7 @@ const VARIANT_LABELS: Record<VariantName, string> = {
 };
 
 type Args = {
-  step: 'simplify';
+  step: 'simplify' | 'frames';
   scenes: string[];
   variants: VariantName[];
   ratios: number[] | null;
@@ -52,11 +70,14 @@ type Args = {
   url: string | null;
   headed: boolean;
   json: string | null;
-};
-
-const fail = (message: string): never => {
-  out(`${RED}${message}${RESET}`, true);
-  process.exit(2);
+  /** Step 2's */
+  backends: Backend[];
+  views: string[];
+  proxy: VariantName;
+  maxPixelError: number;
+  timeOfDay: number;
+  warmup: number;
+  frames: number;
 };
 
 const parseArgs = (argv: string[]): Args => {
@@ -71,23 +92,38 @@ const parseArgs = (argv: string[]): Args => {
     url: null,
     headed: false,
     json: null,
+    backends: ['webgpu', 'webgl'],
+    views: Object.keys(FRAME_VIEWS),
+    proxy: 'permissive',
+    maxPixelError: 1,
+    timeOfDay: 10,
+    warmup: 120,
+    frames: 300,
   };
+  const variant = (v: string) =>
+    (VARIANTS as readonly string[]).includes(v) ? (v as VariantName) : fail(`unknown variant ${v}`);
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = () => argv[++i] ?? fail(`${flag} needs a value`);
     if (flag === '--step') {
       const step = value();
-      if (step !== 'simplify') fail(`unknown step ${step}`);
+      args.step = step === 'simplify' || step === 'frames' ? step : fail(`unknown step ${step}`);
     } else if (flag === '--scenes') args.scenes = value().split(',');
-    else if (flag === '--variants') {
-      args.variants = value()
+    else if (flag === '--variants') args.variants = value().split(',').map(variant);
+    else if (flag === '--proxy') args.proxy = variant(value());
+    else if (flag === '--backends') {
+      args.backends = value()
         .split(',')
-        .map((v) =>
-          (VARIANTS as readonly string[]).includes(v)
-            ? (v as VariantName)
-            : fail(`unknown variant ${v}`)
-        );
-    } else if (flag === '--ratios') args.ratios = value().split(',').map(Number);
+        .map((b) => (b === 'webgpu' || b === 'webgl' ? b : fail(`unknown backend ${b}`)));
+    } else if (flag === '--views') {
+      args.views = value()
+        .split(',')
+        .map((v) => (FRAME_VIEWS[v] ? v : fail(`unknown view ${v}`)));
+    } else if (flag === '--max-pixel-error') args.maxPixelError = Number(value());
+    else if (flag === '--time') args.timeOfDay = Number(value());
+    else if (flag === '--warmup') args.warmup = Math.max(0, Number(value()));
+    else if (flag === '--frames') args.frames = Math.max(1, Number(value()));
+    else if (flag === '--ratios') args.ratios = value().split(',').map(Number);
     else if (flag === '--max-error') args.maxError = Number(value());
     else if (flag === '--runs') args.runs = Math.max(1, Number(value()));
     else if (flag === '--no-worker') args.worker = false;
@@ -128,36 +164,6 @@ type HlodWindow = Window & {
     simplifyAsync: (options: object) => Promise<SimplifyResult>;
   };
 };
-
-const buildUrl = (base: string, sceneId: string) => {
-  const params = new URLSearchParams({ isDebug: 'true', aekTest: 'true', startScene: sceneId });
-  return `${base.replace(/\/$/, '')}/?${params}`;
-};
-
-/** Opens the scene and waits for its load and the probe. */
-const openSceneAsync = async (page: Page, url: string, errors: string[]) => {
-  page.on('pageerror', (err) => errors.push(`[pageerror] ${err.message}`));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
-  const ready = await withTimeout(
-    page.evaluate((ms) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }), READY_TIMEOUT_MS),
-    READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
-    'whenSceneReady'
-  );
-  if (ready.status !== 'READY') throw new Error(`the scene didn't load (${ready.status})`);
-  await page.waitForFunction(() => Boolean((window as HlodWindow).__aekHlod), null, {
-    timeout: 60_000,
-  });
-};
-
-const fmt = (n: number | null | undefined, digits = 2) =>
-  n === null || n === undefined || Number.isNaN(n) ? 'n/a' : n.toFixed(digits);
-const int = (n: number) => Math.round(n).toLocaleString('en');
-const pct = (part: number, whole: number) =>
-  whole > 0 ? `${((part / whole) * 100).toFixed(1)} %` : 'n/a';
 
 /** An `AUTO` group's id as its material and cell (`auto:<hash>:<cx>,<cz>:<n>`), else the id */
 const shortGroupName = (g: GroupResult) => {
@@ -241,6 +247,55 @@ const formatSimplify = (result: SimplifyResult, args: Args) => {
   return lines;
 };
 
+/** Step 1: each scene's groups simplified in each variant */
+const runSimplifyStepAsync = async (browser: Browser, baseUrl: string, args: Args) => {
+  const results: SimplifyResult[] = [];
+  for (const sceneId of args.scenes) {
+    const page = await browser.newPage({ viewport: VIEWPORT });
+    const errors: string[] = [];
+    try {
+      await openSceneAsync(page, buildSceneUrl(baseUrl, sceneId), 'webgpu', errors);
+      const options = {
+        variants: args.variants,
+        runs: args.runs,
+        worker: args.worker,
+        ...(args.ratios ? { ratios: args.ratios } : {}),
+        ...(args.maxError !== null ? { maxError: args.maxError } : {}),
+      };
+      const result = await withTimeout(
+        page.evaluate((o) => (window as HlodWindow).__aekHlod!.simplifyAsync(o), options),
+        SIMPLIFY_TIMEOUT_MS,
+        'simplifyAsync'
+      );
+      results.push(result);
+      out(`  ${sceneId}: ${result.groups.length} groups simplified`);
+    } catch (err) {
+      out(`${RED}✗ ${sceneId}: ${(err as Error).message}${RESET}`);
+    } finally {
+      printErrors(errors);
+      await withTimeout(page.close(), 30_000, 'closing the page').catch(() => undefined);
+    }
+  }
+  return results;
+};
+
+/** Step 2's arguments: the proxies' chain from `--proxy` and `--max-error` (0.2 by default) */
+const toFramesArgs = (args: Args): FramesArgs => ({
+  backends: args.backends,
+  runs: args.runs,
+  warmup: args.warmup,
+  frames: args.frames,
+  views: args.views,
+  timeOfDay: args.timeOfDay,
+  maxPixelError: args.maxPixelError,
+  chain: {
+    permissive: args.proxy === 'permissive' || args.proxy === 'prunePermissive',
+    prune: args.proxy === 'prune' || args.proxy === 'prunePermissive',
+    maxError: args.maxError ?? 0.2,
+    ...(args.ratios ? { ratios: args.ratios } : {}),
+  },
+});
+
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   const watch = setProgressLogFile(LOG_FILE);
@@ -255,44 +310,30 @@ const main = async () => {
     onNote: (note) => out(`${YELLOW}${note}${RESET}`),
   });
   out(
-    `HLOD spike, step ${args.step}, against ${baseUrl} (${launched.label}): ${args.scenes.join(', ')}; ${args.variants.join(', ')}; ${args.runs} run(s)`
+    args.step === 'simplify'
+      ? `HLOD spike, step 1 (simplify), against ${baseUrl} (${launched.label}): ${args.scenes.join(', ')}; ${args.variants.join(', ')}; ${args.runs} run(s)`
+      : `HLOD spike, step 2 (frames), against ${baseUrl} (${launched.label}): ${args.backends.join(', ')} × ${args.views.join(', ')} × ${args.runs} run(s), ${args.warmup} + ${args.frames} frames`
   );
   out(`${DIM}Watch it: cd ${ROOT} && ${watch}${RESET}\n`);
 
-  const results: SimplifyResult[] = [];
+  let lines: string[] = [];
+  let results: unknown;
   try {
-    for (const sceneId of args.scenes) {
-      const page = await launched.browser.newPage({ viewport: VIEWPORT });
-      const errors: string[] = [];
-      try {
-        await openSceneAsync(page, buildUrl(baseUrl, sceneId), errors);
-        const options = {
-          variants: args.variants,
-          runs: args.runs,
-          worker: args.worker,
-          ...(args.ratios ? { ratios: args.ratios } : {}),
-          ...(args.maxError !== null ? { maxError: args.maxError } : {}),
-        };
-        const result = await withTimeout(
-          page.evaluate((o) => (window as HlodWindow).__aekHlod!.simplifyAsync(o), options),
-          SIMPLIFY_TIMEOUT_MS,
-          'simplifyAsync'
-        );
-        results.push(result);
-        out(`  ${sceneId}: ${result.groups.length} groups simplified`);
-      } catch (err) {
-        out(`${RED}✗ ${sceneId}: ${(err as Error).message}${RESET}`);
-      } finally {
-        for (const e of [...new Set(errors)].slice(0, 5))
-          out(`    ${RED}${e.slice(0, 300)}${RESET}`);
-        await withTimeout(page.close(), 30_000, 'closing the page').catch(() => undefined);
-      }
+    if (args.step === 'simplify') {
+      const simplified = await runSimplifyStepAsync(launched.browser, baseUrl, args);
+      results = simplified;
+      lines = simplified.flatMap((result) => formatSimplify(result, args));
+    } else {
+      const framesArgs = toFramesArgs(args);
+      const frames = await runFramesStepAsync(launched.browser, baseUrl, framesArgs);
+      results = frames;
+      lines = formatFrames(frames, framesArgs);
     }
   } finally {
     await launched.closeAsync().catch(() => undefined);
     await server?.server.close();
   }
-  for (const result of results) for (const line of formatSimplify(result, args)) out(line);
+  for (const line of lines) out(line);
   if (args.json) {
     fs.writeFileSync(args.json, `${JSON.stringify({ args, results }, null, 2)}\n`);
     out(`\n${DIM}Results: ${args.json}${RESET}`);

@@ -1,14 +1,20 @@
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import {
   ComponentType,
+  ECSSystemStage,
+  cameraLookAtPoint,
   deleteGeometry,
+  getActiveCameraId,
   getCurrentSceneId,
   getGeometryRegistry,
+  getRenderer,
+  registerOnAllSceneExits,
   saveBufferGeometry,
 } from 'aekasha';
 import type { ECSWorld } from 'aekasha';
 import { generateLodChain, resolveLodChainOptions, simplifyLodChain } from 'aekasha/lod';
 import type { LodChainOptions } from 'aekasha/lod';
+import { getSkyLightIds, pauseDayNight, setActiveSkyBox, setTimeOfDay } from 'aekasha/skybox';
 import { MeshoptSimplifier } from 'meshoptimizer/simplifier';
 import type { Flags } from 'meshoptimizer/simplifier';
 
@@ -24,6 +30,14 @@ import type { Flags } from 'meshoptimizer/simplifier';
 // `LodChainOptions` field yet (Phase 1, D4): the probe adds meshoptimizer's `Prune` flag to the
 // engine's calls by wrapping this page's `MeshoptSimplifier` while it runs (the engine's main
 // thread path imports the same module), and fails when no call went through the wrapper.
+//
+// Step 2, what drawing proxies saves: `prepareLevelsAsync` makes each group's proxy levels with
+// the engine's simplifier (geometries sharing the group's vertex buffers, as a chain's levels do,
+// never registered), `setLevel` swaps every group mesh's geometry by hand (`FULL`, the level a
+// group's `AUTO` LOD would pick from the camera's pose now, or the coarsest), `view` moves the
+// active camera, `measure` gives the next frames' CPU figures and the renderer's draws and
+// triangles (every pass), and `passTriangles` the groups' triangles in the main camera's and each
+// shadow-casting sky sun's frustum. `restore` (and a scene exit) puts the groups' geometries back.
 
 /** A group's figures before any simplification. */
 type HlodGroupInfo = {
@@ -235,9 +249,257 @@ const simplifyVariantAsync = async (
   return { levels, mainMs: median(times), workerMs, workerLoadedOn, workerTriangles };
 };
 
+/** A camera pose: where it is and the point it looks at. */
+type HlodPose = { position: [number, number, number]; target: [number, number, number] };
+
+/** Which geometry `setLevel` gives every group. */
+type HlodLevelMode = 'FULL' | 'AUTO' | 'COARSEST';
+
+/** A group's proxy levels (`prepareLevelsAsync`), drawn by swapping its mesh's geometry. */
+type PreparedGroup = {
+  mesh: THREE.Mesh;
+  base: THREE.BufferGeometry;
+  levels: { geometry: THREE.BufferGeometry; triangles: number; errorM: number }[];
+};
+
+/** `AUTO`'s reference viewport height (`LOD_AUTO_REFERENCE_HEIGHT`, `LodAuto.ts`). */
+const AUTO_REFERENCE_HEIGHT = 1080;
+
+/** One frame's figures (`measure`). */
+type HlodFrame = { cpuMs: number; renderMs: number; drawCalls: number; triangles: number };
+const FRAME_KEYS: (keyof HlodFrame)[] = ['cpuMs', 'renderMs', 'drawCalls', 'triangles'];
+const SYSTEM_PREFIX = 'hlodSpike:';
+
+const quantile = (values: number[], q: number) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
+};
+
+/** A group's level as its own geometry: the level's index over the base's vertex buffers. */
+const toLevelGeometry = (base: THREE.BufferGeometry, index: Uint16Array | Uint32Array) => {
+  const geometry = new THREE.BufferGeometry();
+  for (const [name, attr] of Object.entries(base.attributes)) geometry.setAttribute(name, attr);
+  geometry.setIndex(new THREE.BufferAttribute(index, 1));
+  geometry.boundingBox = base.boundingBox!.clone();
+  geometry.boundingSphere = base.boundingSphere!.clone();
+  return geometry;
+};
+
+/** The active camera's object, or undefined. */
+const getActiveCamera = (world: ECSWorld) => {
+  const id = getActiveCameraId();
+  return id === null
+    ? undefined
+    : (world.getComponent(id, ComponentType.OBJECT3D)?.value as THREE.Camera | undefined);
+};
+
+/** Step 2's controls, for `installHlodSpike`'s API. */
+const createFrameApi = (world: ECSWorld) => {
+  const prepared: PreparedGroup[] = [];
+  const frame: HlodFrame = { cpuMs: 0, renderMs: 0, drawCalls: 0, triangles: 0 };
+  const marks = { frameStart: 0, renderStart: 0 };
+  let pending: { frames: HlodFrame[]; left: number; resolve: (f: HlodFrame[]) => void } | null =
+    null;
+  let hasSystems = false;
+
+  const restore = () => {
+    for (const group of prepared) group.mesh.geometry = group.base;
+  };
+  const removeSystems = () => {
+    if (!hasSystems) return;
+    hasSystems = false;
+    for (const id of ['frameStart', 'renderStart', 'frameEnd']) {
+      world.removeSystem(SYSTEM_PREFIX + id);
+    }
+  };
+  // The CPU frame: the first MAIN system to the first LATE_MAIN one; the render submit: the last
+  // APP_RENDER_SYNC system to it (as the batchedMeshSpike probe)
+  const addSystems = () => {
+    if (hasSystems) return;
+    hasSystems = true;
+    world.addSystem(
+      ECSSystemStage.MAIN,
+      `${SYSTEM_PREFIX}frameStart`,
+      () => (marks.frameStart = performance.now()),
+      1e9
+    );
+    world.addSystem(
+      ECSSystemStage.APP_RENDER_SYNC,
+      `${SYSTEM_PREFIX}renderStart`,
+      () => (marks.renderStart = performance.now()),
+      -1e9
+    );
+    world.addSystem(
+      ECSSystemStage.LATE_MAIN,
+      `${SYSTEM_PREFIX}frameEnd`,
+      () => {
+        const now = performance.now();
+        frame.cpuMs = now - marks.frameStart;
+        frame.renderMs = now - marks.renderStart;
+        const render = getRenderer()?.info.render;
+        frame.drawCalls = render?.drawCalls ?? 0;
+        frame.triangles = render?.triangles ?? 0;
+        if (!pending) return;
+        pending.frames.push({ ...frame });
+        if (--pending.left <= 0) {
+          pending.resolve(pending.frames);
+          pending = null;
+        }
+      },
+      1e9
+    );
+  };
+  registerOnAllSceneExits('hlodSpike', () => {
+    restore();
+    prepared.length = 0;
+    removeSystems();
+  });
+
+  const frustum = new THREE.Frustum();
+  const viewProjection = new THREE.Matrix4();
+  const sphere = new THREE.Sphere();
+  /** The groups' drawn triangles inside a camera's frustum (the casters only for a shadow). */
+  const countInFrustum = (camera: THREE.Camera, castersOnly: boolean) => {
+    viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(viewProjection, camera.coordinateSystem);
+    let triangles = 0;
+    let groups = 0;
+    for (const { mesh } of prepared) {
+      if (!mesh.visible || (castersOnly && !mesh.castShadow)) continue;
+      sphere.copy(mesh.geometry.boundingSphere!).applyMatrix4(mesh.matrixWorld);
+      if (!frustum.intersectsSphere(sphere)) continue;
+      triangles += (mesh.geometry.index?.count ?? 0) / 3;
+      groups++;
+    }
+    return { triangles, groups };
+  };
+
+  return {
+    /** The day-night sky box, paused at `timeOfDay` (its sun's shadow follows the camera). */
+    setupSkyAsync: async (timeOfDay: number) => {
+      await setActiveSkyBox('dayNight');
+      pauseDayNight();
+      setTimeOfDay(timeOfDay);
+    },
+    /** Moves the active camera to `pose`. */
+    view: ({ position, target }: HlodPose) => {
+      const id = getActiveCameraId();
+      const transform = id === null ? undefined : world.getComponent(id, ComponentType.TRANSFORM);
+      if (id === null || !transform) throw new Error('No active camera with a transform.');
+      transform.position.set(...position);
+      transform.setDirty();
+      world.commitTransform(id, transform);
+      cameraLookAtPoint(id, { x: target[0], y: target[1], z: target[2] }, world);
+    },
+    /** Every BAKED group's proxy levels with these chain options (and `prune`). */
+    prepareLevelsAsync: async (options: LodChainOptions & { prune?: boolean } = {}) => {
+      restore();
+      prepared.length = 0;
+      const { prune, ...chainOptions } = options;
+      const resolved = resolveLodChainOptions(chainOptions);
+      for (const { mesh } of getBakedGroups(world)) {
+        const base = mesh.geometry;
+        const data = serializeForSimplify(base);
+        const simplify = () => simplifyLodChain(data, resolved, new Set());
+        const chain = await (prune ? withPruneAsync(simplify) : simplify());
+        prepared.push({
+          mesh,
+          base,
+          levels: chain.levels.map((level) => ({
+            geometry: toLevelGeometry(base, level.index),
+            triangles: level.triangles,
+            errorM: level.error * chain.extent,
+          })),
+        });
+      }
+      return {
+        options: resolved,
+        prune: Boolean(prune),
+        groups: prepared.length,
+        withLevels: prepared.filter((g) => g.levels.length > 0).length,
+      };
+    },
+    /**
+     * Gives every prepared group its full geometry, its coarsest level, or the level its `AUTO`
+     * LOD would pick from the active camera's pose now: the coarsest whose error projects to at
+     * most `maxPixelError` pixels at 1080 px, from the camera to the group's centre (the
+     * selection's hysteresis left out). Returns how many groups draw each level.
+     */
+    setLevel: (mode: HlodLevelMode, maxPixelError = 1) => {
+      const camera = getActiveCamera(world) as THREE.PerspectiveCamera | undefined;
+      if (!camera?.isPerspectiveCamera) throw new Error('No active perspective camera.');
+      const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
+      const pixelsPerMetreAtOne =
+        AUTO_REFERENCE_HEIGHT / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+      const byLevel: number[] = [];
+      for (const group of prepared) {
+        let level = 0;
+        if (mode === 'COARSEST') level = group.levels.length;
+        else if (mode === 'AUTO') {
+          sphere.copy(group.base.boundingSphere!).applyMatrix4(group.mesh.matrixWorld);
+          const distance = Math.max(1e-6, sphere.center.distanceTo(cameraPosition));
+          group.levels.forEach((l, i) => {
+            if ((l.errorM * pixelsPerMetreAtOne) / distance <= maxPixelError) level = i + 1;
+          });
+        }
+        group.mesh.geometry = level === 0 ? group.base : group.levels[level - 1].geometry;
+        byLevel[level] = (byLevel[level] ?? 0) + 1;
+      }
+      return Array.from(byLevel, (n) => n ?? 0);
+    },
+    /** The groups' triangles drawn in the main camera's frustum and in each shadow-casting sky
+     * sun's (its shadow camera's: the casters only), from the last render's matrices. */
+    passTriangles: () => {
+      const camera = getActiveCamera(world);
+      const shadows: { triangles: number; groups: number }[] = [];
+      for (const id of getSkyLightIds().suns) {
+        if (id === null) continue;
+        const light = world.getComponent(id, ComponentType.OBJECT3D)?.value as
+          | THREE.DirectionalLight
+          | undefined;
+        if (light?.castShadow && light.shadow?.camera) {
+          shadows.push(countInFrustum(light.shadow.camera, true));
+        }
+      }
+      const all = prepared.reduce((sum, g) => sum + (g.mesh.geometry.index?.count ?? 0) / 3, 0);
+      return { all, main: camera ? countInFrustum(camera, false) : null, shadows };
+    },
+    /** The medians and 90th percentiles of the next `frames` frames' figures. */
+    measure: (frames: number) => {
+      addSystems();
+      return new Promise<Record<string, number>>((resolve) => {
+        const startedAt = performance.now();
+        pending = {
+          frames: [],
+          left: Math.max(1, frames),
+          resolve: (list) => {
+            const result: Record<string, number> = {
+              frames: list.length,
+              seconds: (performance.now() - startedAt) / 1000,
+            };
+            for (const key of FRAME_KEYS) {
+              const values = list.map((f) => f[key]);
+              result[key] = quantile(values, 0.5);
+              result[`${key}P90`] = quantile(values, 0.9);
+            }
+            resolve(result);
+          },
+        };
+      });
+    },
+    /** The renderer's backend. */
+    backend: () =>
+      (getRenderer()?.backend as { isWebGPUBackend?: boolean } | undefined)?.isWebGPUBackend
+        ? 'WebGPU'
+        : 'WebGL2',
+    restore,
+  };
+};
+
 /** Installs `window.__aekHlod` for the current scene's world (replacing an earlier scene's). */
 export const installHlodSpike = (world: ECSWorld) => {
   const api = {
+    ...createFrameApi(world),
     /** The scene and its built BAKED merge groups. */
     groups: () => ({
       sceneId: getCurrentSceneId(),
