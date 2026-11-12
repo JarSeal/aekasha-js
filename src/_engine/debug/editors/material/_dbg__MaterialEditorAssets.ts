@@ -11,7 +11,13 @@ import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import { textureMapKeys } from '../../../utils/Constants';
 import { lerror, lwarn } from '../../../utils/Logger';
 import type { MaterialSelectorEntry } from './_dbg__MaterialEditorSelector';
-import { mergeNodeOverrides } from './_dbg__MaterialEditorParams';
+import {
+  fromNodeInputGroups,
+  getAssetNodeInputs,
+  mergeNodeOverrides,
+  toNodeInputGroups,
+  type MaterialTslInputs,
+} from './_dbg__MaterialEditorParams';
 
 type GeneratedData = {
   materials?: Record<string, MaterialAsset>;
@@ -75,23 +81,26 @@ const getMaterialProps = (asset: MaterialAsset): MatProps => {
 };
 
 /** The copy's creation props: the asset's, with the editor's TSL input overrides merged over its
- * `nodes` (before creation: an input's uniform kind comes from its value, and a graph may read a
- * value at build time). The param overrides are set on the created copy instead
+ * `nodes` and `inputs` (before creation: an input's uniform kind comes from its value, and a graph
+ * may read a value at build time). The param overrides are set on the created copy instead
  * (`applyParamOverrides`), where only the params the copy has are taken. */
-export const getCopyProps = (
-  asset: MaterialAsset,
-  nodeOverrides: Record<string, Record<string, unknown>>
-) => {
-  const props = getMaterialProps(asset) as MatProps & {
-    nodes?: Record<string, Record<string, unknown>>;
-  };
-  if (props.nodes) props.nodes = mergeNodeOverrides(props.nodes, nodeOverrides);
+export const getCopyProps = (asset: MaterialAsset, tslOverrides: MaterialTslInputs) => {
+  const props = getMaterialProps(asset) as MatProps & MaterialTslInputs;
+  const merged = mergeNodeOverrides(
+    getAssetNodeInputs(asset),
+    toNodeInputGroups(tslOverrides) ?? {}
+  );
+  if (merged) {
+    const { nodes, inputs } = fromNodeInputGroups(merged);
+    if (props.nodes) props.nodes = nodes;
+    if (props.inputs) props.inputs = inputs;
+  }
   return props as MatProps;
 };
 
 /**
- * The texture ids a material asset uses: its `params` texture slots and its TSL node string
- * inputs (a string not starting with `#` is a texture id, as in createMaterial).
+ * The texture ids a material asset uses: its `params` texture slots and its TSL string inputs
+ * (`nodes` and `inputs`; a string not starting with `#` is a texture id, as in createMaterial).
  * @returns (string[]) the texture ids, without duplicates
  */
 export const getMaterialTextureIds = (asset: MaterialAsset) => {
@@ -103,12 +112,10 @@ export const getMaterialTextureIds = (asset: MaterialAsset) => {
       if (typeof value === 'string') ids.add(value);
     }
   }
-  if ('nodes' in asset && asset.nodes) {
-    for (const inputs of Object.values(asset.nodes)) {
-      for (const [key, value] of Object.entries(inputs)) {
-        if (key !== 'staticDefines' && typeof value === 'string' && !value.startsWith('#')) {
-          ids.add(value);
-        }
+  for (const inputs of Object.values(getAssetNodeInputs(asset) ?? {})) {
+    for (const [key, value] of Object.entries(inputs)) {
+      if (key !== 'staticDefines' && typeof value === 'string' && !value.startsWith('#')) {
+        ids.add(value);
       }
     }
   }
@@ -161,8 +168,8 @@ export const retagLoadedTextures = () => {
 /** A CSS colour of the material's first colour: `params.color`, else the first `#` TSL input. */
 const getSwatch = (asset: MaterialAsset) => {
   let value: unknown = (asset.params as Record<string, unknown> | undefined)?.color;
-  if (value === undefined && 'nodes' in asset && asset.nodes) {
-    for (const inputs of Object.values(asset.nodes)) {
+  if (value === undefined) {
+    for (const inputs of Object.values(getAssetNodeInputs(asset) ?? {})) {
       value = Object.values(inputs).find((v) => typeof v === 'string' && v.startsWith('#'));
       if (value !== undefined) break;
     }

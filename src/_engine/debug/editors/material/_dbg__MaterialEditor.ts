@@ -252,7 +252,7 @@ export const loadEditorMaterial = async (materialId: string | null) => {
     if (tslFileError) throw tslFileError;
     const overrides = readMaterialOverrides(materialId);
     const copy = createMaterial({
-      ...getCopyProps(asset, overrides.nodes),
+      ...getCopyProps(asset, overrides),
       id: copyId,
       tslMaterialId: materialId,
       // A scene loaded while the view is active (app code, HMR) must not release it
