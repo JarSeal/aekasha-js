@@ -1,7 +1,7 @@
 /**
- * p377 Phase 0 (`hlodSpike.ts --step draws`, docs/plans/p377_hlod-streaming-cell-proxies.md): which
- * way to fewer draws. largeWorld's far field (`?hlodField=<sites>`) drawn each way, a page per case
- * and run, under the day-night sky box paused at `--time`, on each backend, from each view.
+ * p377 Phase 0 (`hlodSpike.ts --step draws`,
+ * docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md): which way to fewer draws. largeWorld's
+ * far field (`?hlodField=<sites>`) drawn each way, a page per case and run, under the day-night sky box paused at `--time`, on each backend, from each view.
  *
  * Cases (`--cases`, default all of steps 1-4):
  * - `floor`: no field (step 1's floor).

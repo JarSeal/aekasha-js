@@ -24,7 +24,8 @@ import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeW
 // §10 makes HLOD for. The overview camera's far plane goes to 3 km so the ring isn't clipped. The
 // same field on every load (seeded).
 //
-// p377 Phase 0 (docs/plans/p377_hlod-streaming-cell-proxies.md) draws the same pieces three ways:
+// p377 Phase 0 (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) draws the same pieces
+// three ways:
 // - `?hlodFieldCell=<m>`: the cell size (default 32), `AUTO`'s for `members`, the proxies' and
 //   the instanced meshes' cells for the others (x/z, `Math.floor(coord / size)`, as `AUTO`'s).
 // - `?hlodFieldAs=members` (default): every piece a mesh entity, merged `AUTO` (p376's field).

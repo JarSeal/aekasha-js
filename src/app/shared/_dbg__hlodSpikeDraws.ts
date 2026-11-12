@@ -6,10 +6,10 @@ import { rebuildMergeGroup } from 'aekasha/merging';
 import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import { getSkyLightIds } from 'aekasha/skybox';
 
-// p377 Phase 0's probe additions (docs/plans/p377_hlod-streaming-cell-proxies.md, "What the spike
-// adds"), on `window.__aekHlod` next to p376's (`_dbg__hlodSpike.ts`), for largeWorld's far field
-// (`?hlodField`, `src/app/scenes/largeWorld/_dbg__largeWorldHlodField.ts`, which says what it drew
-// in `window.__aekHlodField`). The field's objects are its groups (`members`: the groups its
+// p377 Phase 0's probe additions (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md,
+// "What the spike adds"), on `window.__aekHlod` next to p376's (`_dbg__hlodSpike.ts`), for
+// largeWorld's far field (`?hlodField`, `src/app/scenes/largeWorld/_dbg__largeWorldHlodField.ts`,
+// which says what it drew in `window.__aekHlodField`). The field's objects are its groups (`members`: the groups its
 // pieces are in), its proxy meshes (`proxy`) or its instanced meshes (`instanced`).
 //
 // - `screenSizes()`: the objects' screen sizes from the camera now, as the LOD selection measures

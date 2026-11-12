@@ -352,7 +352,7 @@ and Phases 2 to 5 have the numbers.
   time (it keeps its place while the cell is `FAR`).
 
 See [the plan](repo:docs/plans/_DONE_p353_macro-streaming-grid.md), and
-[p377](repo:docs/plans/p377_hlod-streaming-cell-proxies.md) for a kit's far stand-ins.
+[p377](repo:docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) for a kit's far stand-ins.
 
 ## Key APIs
 

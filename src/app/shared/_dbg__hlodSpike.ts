@@ -47,8 +47,9 @@ import type { SpikeFrame } from './_dbg__hlodSpikeDraws';
 // triangles (every pass), and `passTriangles` the groups' triangles in the main camera's and each
 // shadow-casting sky sun's frustum. `restore` (and a scene exit) puts the groups' geometries back.
 //
-// p377 Phase 0 (docs/plans/p377_hlod-streaming-cell-proxies.md) adds the far field's draws, cull,
-// CPU split and rebuilds: `_dbg__hlodSpikeDraws.ts`, on this module's frame systems (`onFrame`).
+// p377 Phase 0 (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) adds the far field's
+// draws, cull, CPU split and rebuilds: `_dbg__hlodSpikeDraws.ts`, on this module's frame systems
+// (`onFrame`).
 
 /** A group's figures before any simplification. */
 type HlodGroupInfo = {

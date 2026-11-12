@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-5 implemented (2026-11-12; Phase 5 step 2, the second machine, not run: p990); Phases 2-6 written from Phase 0's Results (far entries for kit meshes, the larger-cells recommendation)
+Status: implemented (Phases 0-6; Phase 5 step 2, the second machine, not run: a p990 item)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
@@ -764,7 +764,7 @@ and step 3 ran on the M2):
     `primingStalls` 0; 764-769 unloads and 1,532-1,560 fades a flight, all finished; compiles 12-13
     (WebGPU) and 25-27 (WebGL2) for 11-12 new structures; no console error.
 
-## Phase 6 — Hub, versions, done
+## Phase 6 — Hub, versions, done — done
 
 1. **The Hub's streaming page** (`hub/pages/features/streaming/guide.md`, Far representations): a
    JSON mesh without `lod` is its own far entry when it groups, `farEntries`, the two ways out
@@ -779,6 +779,32 @@ and step 3 ran on the M2):
    Phase 0) and Project (the HLOD bench's `draws` step); `yarn checkVersions --against main`.
 4. **Done**: Status `implemented (Phases 0-6)`, `git mv` to `_DONE_p377_…`, the references: p370's
    Blocks, tier table and Branches and PRs, p378's Related, p376's mentions, the CLAUDE files.
+
+**As built** (2026-11-12):
+
+- **The Hub's streaming page**: Far representations' "From the scene JSON" is two rules (a mesh
+  with `levels`, its coarsest; a mesh without `lod`, itself when it can share a draw), a JSON
+  example of both (a pillar with levels, a kit block with `merge: 'AUTO'`), what a far group costs
+  (Phase 0's figure; an index in the first download, not a transform), then the two ways out (D2),
+  `AUTO` and lights, a stand-in without app id or `merge` (D4), "Merged near, instanced far" (D5,
+  as Phase 3 saw it), the kit's assets in every far cell, and the test scene's ruins. Also: the
+  JSON content's build-time bullet names `farEntries`, Not yet a mesh without `lod` that can't
+  group, the dev-only Measured block Phase 5 step 3's far ruins, the intro's scene panel the
+  ruins, `aek:tags` `far stand-ins`, `far entries`, `kit`, `HLOD`, and a `repo:` link to this
+  plan. `yarn hub:build`: 117 pages, the search index 575 KiB gzipped (573 before; its warning
+  was there before Phase 4).
+- **CLAUDE files**: the streaming and gather ones were current (checked against the code: the
+  schema, `toRuntimeSettings`, the one warning, `createFarGroupEntity`, `isFarGroup`, the
+  deprecations, `countFarGroups`, the 96 ruin pieces); the merging one's Streaming bullet gained
+  the far layer of a merged near layer (D1, D4, D5) and the larger cells' place. `readme.md`'s
+  streaming line names a kit piece as its own stand-in.
+- **Versions**: engine (and the project) 6.8.1 → 6.9.0, app 1.23.1 → 1.24.0, toolkit unchanged;
+  the `CHANGELOG.md` entry's Project section also has the Hub pages, the SBP budgets and the
+  bundle baseline (as p375's entry did). `yarn checkVersions --against main` passes.
+- **Done**: also renamed in the source comments naming the plan (`streamingGrid.ts`,
+  `_dbg__largeWorldHlodField.ts`, `_dbg__hlodSpike.ts`, `_dbg__hlodSpikeDraws.ts`,
+  `hlodSpikeDraws.ts`) and p990's two items (Rendering, Smallest build); p376's mentions say what
+  p377 became.
 
 ## What was known before Phase 0 (way 3, not built)
 
