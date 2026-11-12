@@ -50,7 +50,8 @@ export const buildSceneUrl = (
 
 /**
  * Opens the scene on `backend` and waits for its load and the probe; the page's errors (and a
- * second load) go to `errors`.
+ * second load) go to `errors`. Resolves with the load's time: the page's navigation to the scene
+ * ready (loaded, the physics hold released and two frames rendered), read on the page.
  */
 export const openSceneAsync = async (
   page: Page,
@@ -74,7 +75,14 @@ export const openSceneAsync = async (
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(window.__AEK_TEST__), null, { timeout: 60_000 });
   const ready = await withTimeout(
-    page.evaluate((ms) => window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }), READY_TIMEOUT_MS),
+    page.evaluate(
+      (ms) =>
+        window.__AEK_TEST__!.whenSceneReady({ timeoutMs: ms }).then((result) => ({
+          ...result,
+          readyAtMs: performance.now(),
+        })),
+      READY_TIMEOUT_MS
+    ),
     READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
     'whenSceneReady'
   );
@@ -84,6 +92,7 @@ export const openSceneAsync = async (
     null,
     { timeout: 60_000 }
   );
+  return { loadMs: ready.readyAtMs };
 };
 
 /** Prints a page's first five distinct errors */

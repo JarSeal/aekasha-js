@@ -14,7 +14,13 @@ import {
 import type { ECSWorld } from 'aekasha';
 import { generateLodChain, resolveLodChainOptions, simplifyLodChain } from 'aekasha/lod';
 import type { LodChainOptions } from 'aekasha/lod';
-import { getSkyLightIds, pauseDayNight, setActiveSkyBox, setTimeOfDay } from 'aekasha/skybox';
+import {
+  getSkyLightIds,
+  pauseDayNight,
+  setActiveSkyBox,
+  setTimeOfDay,
+  updateSkyBox,
+} from 'aekasha/skybox';
 import { MeshoptSimplifier } from 'meshoptimizer/simplifier';
 import type { Flags } from 'meshoptimizer/simplifier';
 import { createDrawsApi } from './_dbg__hlodSpikeDraws';
@@ -384,10 +390,13 @@ const createFrameApi = (world: ECSWorld) => {
 
   return {
     /** The day-night sky box, paused at `timeOfDay` (its sun's shadow follows the camera). */
-    setupSkyAsync: async (timeOfDay: number) => {
+    /** With `holdClouds` (p377), the clouds' drift speed 0: they stay where they start, so pages
+     * that ran different frame counts shoot the same sky (the clouds still drawn). */
+    setupSkyAsync: async (timeOfDay: number, holdClouds = false) => {
       await setActiveSkyBox('dayNight');
       pauseDayNight();
       setTimeOfDay(timeOfDay);
+      if (holdClouds) await updateSkyBox('dayNight', { clouds: { speed: 0 } });
     },
     /** Moves the active camera to `pose`. */
     view: ({ position, target }: HlodPose) => {

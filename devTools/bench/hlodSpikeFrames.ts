@@ -67,7 +67,7 @@ type Measure = Record<'cpuMs' | 'renderMs' | 'drawCalls' | 'triangles' | 'second
 type PassCount = { triangles: number; groups: number };
 type Passes = { all: number; main: PassCount | null; shadows: PassCount[] };
 /** A render context's GPU durations over a case (`gpuContextsAsync`) */
-type GpuContext = { context: string; drew: string; samples: number; medianMs: number };
+export type GpuContext = { context: string; drew: string; samples: number; medianMs: number };
 type CaseRun = {
   measure: Measure;
   gpuMs: number;
@@ -98,7 +98,7 @@ type FramesWindow = Window & {
 /** Results by backend, view and mode: one entry per run */
 export type FramesResults = Record<string, Record<string, Record<Mode, CaseRun[]>>>;
 
-const measureAsync = (page: Page, frames: number) =>
+export const measureAsync = (page: Page, frames: number) =>
   withTimeout(
     page.evaluate((n) => (window as FramesWindow).__aekHlod!.measure(n), frames),
     (frames / 20) * 1000 + EVALUATE_MARGIN_MS,
@@ -109,10 +109,15 @@ const measureAsync = (page: Page, frames: number) =>
  * a shadow map's */
 const isScenePass = (c: GpuContext) => /^PerspectiveCamera|ShadowMap/.test(c.drew);
 
-/** The next `frames` frames' figures, with the stats panel's GPU figure sampled meanwhile (its
- * first second left out: the panel's average still holds the previous case) and, on WebGPU, each
- * render context's durations */
-const measureWithGpuAsync = async (page: Page, frames: number, backend: Backend) => {
+/** The next `frames` frames' figures (`measureFn`'s, default the probe's `measure`), with the
+ * stats panel's GPU figure sampled meanwhile (its first second left out: the panel's average still
+ * holds the previous case) and, on WebGPU, each render context's durations */
+export const measureWithGpuAsync = async <T = Measure>(
+  page: Page,
+  frames: number,
+  backend: Backend,
+  measureFn: (page: Page, frames: number) => Promise<T> = measureAsync as never
+) => {
   await page.evaluate((everyMs) => {
     const gpu = { samples: [] as number[], timer: 0 };
     gpu.timer = window.setInterval(() => {
@@ -124,7 +129,7 @@ const measureWithGpuAsync = async (page: Page, frames: number, backend: Backend)
   // At 60 fps; the contexts' read starts with the measure and stops a little before it ends
   const contextsMs = Math.max(500, (frames / 60) * 1000 - 500);
   const [measure, contexts] = await Promise.all([
-    measureAsync(page, frames),
+    measureFn(page, frames),
     backend === 'webgpu'
       ? page.evaluate((ms) => (window as FramesWindow).__aekHlod!.gpuContextsAsync(ms), contextsMs)
       : Promise.resolve([] as GpuContext[]),
