@@ -1,6 +1,6 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not started
+Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 planned (its Phase 0 gates it); p377 a stub
 Category: Rendering, Merging, Texture atlas
-Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
+Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md, p377_hlod-streaming-cell-proxies.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
 
 # Static Mesh Merging & Texture Arrays/Atlases — Research & Epic
@@ -136,7 +136,7 @@ Rules of thumb, written into the handbook (p372):
 | Transparent materials                                        | no              | they need back-to-front sorting per object                             |
 | `InstancedMesh` / pool instances                             | no              | already one draw                                                       |
 | `managedBy` entities (sky lights etc.)                       | no              | their manager owns their Object3D                                      |
-| Entities with `LOD` (p348)                                   | not before p376 | a group's level is the group's (HLOD)                                  |
+| Entities with `LOD` (p348)                                   | no              | a group's level is the group's (HLOD, p376); `BATCHED` draws them      |
 
 ## 5. Different materials in one draw
 
@@ -216,11 +216,12 @@ longer dirty their transforms every frame (§2), but a dirty flag is still set b
 | ----------------------- | ------------------------------------------------------- | --------------------------------------------- |
 | p299 arrays and atlases | **yes, and it should**: p303 D4 and p309 D1 build on it | yes: nothing in LOD needs it                  |
 | p371 geometry merging   | yes: no terrain dependency                              | yes                                           |
-| p372 mesh merge groups  | yes                                                     | yes, but `LOD` members are refused until p376 |
+| p372 mesh merge groups  | yes                                                     | yes, but `LOD` members are refused (HLOD)     |
 | p373 debug and editing  | yes                                                     | yes                                           |
 | p374 merge materials    | after p299 (p302 dropped 2026-11-11: built in code)     | yes                                           |
 | p375 `BatchedMesh`      | yes                                                     | its spike is p348 §4.4's; run it once         |
-| p376 HLOD               | no: needs p306 blocks for the terrain case              | no: needs p347 and p348                       |
+| p376 HLOD group proxies | yes (the terrain case moved to p377)                    | no: needs p347 and p348                       |
+| p377 HLOD cell proxies  | no: needs p306 blocks for the terrain case              | no: needs p347, p348 and p353                 |
 
 The intended order: p299 before p303; the merge plans after the LOD plans, as requested. Nothing
 in the terrain plans is blocked by p371–p376; they get better with them (§10).
@@ -238,7 +239,7 @@ Merging and arrays add terrain processes the terrain epic doesn't have:
    rewrites its range. Same page.
 3. **A block merged with its static dressing.** A terrain block's static props and mesh decals
    (p309 mesh decals share one atlas material) merge into one draw per material per block.
-4. **HLOD far blocks** (p376): a cell's merged content, simplified as a whole, as p353's FAR
+4. **HLOD far blocks** (p377, built when the data is gathered): a cell's merged content, simplified as a whole, as p353's FAR
    representation.
 
 Heightfield blocks themselves gain little: each is already one mesh.
@@ -253,7 +254,8 @@ Heightfield blocks themselves gain little: each is already one mesh.
 | 1.3  | `_DONE_p373_merge-debug-and-member-editing` | "Merging" drawer tab, group and member windows, overlay, A/B toggle, edit sessions, face picking                               | p372                                |
 | 2.1  | `_DONE_p374_multi-material-merging`         | Merge materials: palettes, per-slot arrays, parameter table, compatibility classes                                             | p372, p299                          |
 | 2.2  | `_DONE_p375_batched-mesh-batches`           | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
-| 3    | `p376_hlod-merged-cluster-proxies` (stub)   | Simplified merged groups as far LOD levels and FAR cells                                                                       | p372, p347, p348 (p353)             |
+| 3.1  | `p376_hlod-merged-cluster-proxies`          | A `BAKED` group's simplified proxy levels and cull at runtime, members kept in sync in place (gated by its Phase 0)            | p372, p347, p348                    |
+| 3.2  | `p377_hlod-streaming-cell-proxies` (stub)   | A streaming cell's static content as one proxy for `FAR`, built when the data is gathered                                      | p376, p353 (p306 for terrain)       |
 
 ## 12. Open questions
 
@@ -299,7 +301,8 @@ plans to follow; each child's paths below say the same.
   of p372 Phase 3 (`AUTO` buckets) and p353 Phase 1 (streaming cells) comes first.
 - **Heavy parts behind `import()`:** the worker merge (p371 D4, an assets worker job module the
   worker loads on its first job, as LOD's `AssetsSwitchSimplify`), the HLOD simplifier (p376:
-  `lod()`'s `AUTO`, p347's lazy chunk, so `merging()` imports none of `lod()`) and the merge
+  `lod()`'s `AUTO` with its `chain` option, through the kernel's resolver seam, p347's lazy chunk,
+  so `merging()` imports none of `lod()`) and the merge
   material's TSL (p374) load on first use.
 
 ## 14. Branches and PRs
@@ -314,6 +317,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
 | `p373_merge-debug-and-member-editing` | p373  | `main`      | engine minor (the debug tab, the edit-session API) | after p373's last phase |
 | `p374_multi-material-merging`         | p374  | `main`      | engine minor (merge material palettes), app minor  | after p374's last phase |
 | own branch                            | p375  | `main`      | engine minor                                       | after p375's last phase |
+| `p376_hlod-merged-cluster-proxies`    | p376  | `main`      | engine minor (group proxies), app minor (the lane) | after p376's Phase 4    |
 
 - p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
   that is useful without the groups.
@@ -321,5 +325,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   their debug tools and member editing). p372 merged into `main` on its own instead (PR #82, engine
   6.5.0), as the groups stand without the debugger; p373 followed on its own branch from that merge
   (engine 6.5.0 → 6.6.0, corrected 2026-11-11).
-- p375 runs only if its spike passes; p376 is a stub until p372 has numbers (its branch is decided
-  when it stops being one).
+- p375 runs only if its spike passes.
+- p376 (decided 2026-11-12, when it stopped being a stub) is its own branch; its Phase 0 gates it,
+  and a failed gate ends the branch with the results only (no bump). p377 stays a stub until p376's
+  numbers are in; its branch is decided then.
