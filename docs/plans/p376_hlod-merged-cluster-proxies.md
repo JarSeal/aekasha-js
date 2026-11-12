@@ -1,8 +1,7 @@
-Status: draft | not-implemented (Phase 0, the measurements, gates the rest)
+Status: feasibility — not adopted (Phase 0 done 2026-11-12, its gate failed: §3 Results)
 Category: Merging, LOD
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.1)
-Blocks: p377_hlod-streaming-cell-proxies.md
-Related: \_DONE_p347_lod-chain-generation.md (the simplifier that makes the proxies), \_DONE_p348_ecs-lod-selection.md (the selection, `AUTO`), \_DONE_p351_impostor-billboard-lod.md (the plain-mesh fade), \_DONE_p372_mesh-merge-groups.md (the groups, the in-place writes), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, the Merging tab), \_DONE_p374_multi-material-merging.md (palette groups), \_DONE_p375_batched-mesh-batches.md (`BATCHED` groups have per-member LOD already), \_DONE_p353_macro-streaming-grid.md (why cell proxies are p377's)
+Related: p377_hlod-streaming-cell-proxies.md (rewritten around draws after this plan's Phase 0), \_DONE_p347_lod-chain-generation.md (the simplifier that makes the proxies), \_DONE_p348_ecs-lod-selection.md (the selection, `AUTO`), \_DONE_p351_impostor-billboard-lod.md (the plain-mesh fade), \_DONE_p372_mesh-merge-groups.md (the groups, the in-place writes), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, the Merging tab), \_DONE_p374_multi-material-merging.md (palette groups), \_DONE_p375_batched-mesh-batches.md (`BATCHED` groups have per-member LOD already), \_DONE_p353_macro-streaming-grid.md (why cell proxies are p377's)
 
 # HLOD: Merged Cluster Proxies
 
@@ -15,6 +14,13 @@ in its proxies at once, without a rebuild.
 largeWorld table counts draws (686 → 76 a frame), and its triangles are the same merged and
 dissolved. Phase 0 measures how far merged content simplifies and what drawing the proxies saves,
 and the rest is built only if it pays (§3).
+
+**Not adopted (2026-11-12).** Phase 0's gate failed (§3 Results): proxies saved 39-50 % of the
+merged groups' triangles in a far view, up to 289,000 triangles a frame, and the GPU time didn't
+follow on WebGL2 in any view (Apple M2), and on WebGPU only in one view of three. What merged far
+content costs is its draws (one per group: 1,245-1,605 draws, 12-17 ms of CPU a frame at 400 far
+sites), which proxies don't change. §1-§2 and §4 stay as the design, should another measurement
+(other hardware, a frame bound by its triangles) reopen it; p377 now starts from draws.
 
 Written 2026-11-12 from the stub, after p372-p375 had shipped; the stub's claims were checked
 against the code (§1), and several had moved.
@@ -323,6 +329,10 @@ chain early when every piece is below the error).
 
 ## 4. Phases (after the gate)
 
+Not built: the gate failed (§3 Results). The phases are kept as the design. Had it passed, Phase 0
+set the group chain's defaults (D4): `permissive: true`, `maxError: 0.2`, ratios `[0.5, 0.25,
+0.1]`, `prune: false` (`prune` measured no gain, so D4's `LodChainOptions.prune` would go too).
+
 ### Phase 1: `lod()` — `prune`, `AUTO`'s `chain`, the resolve seam
 
 1. `LodChainOptions.prune` (`LodChainOptions.ts`; `resolveLodChainOptions` records it only when
@@ -415,5 +425,11 @@ status and §11 updated.
 
 ## 7. Branches and PRs
 
-One branch, `p376_hlod-merged-cluster-proxies`, from `main` into `main`, with its own bump (engine
-minor, app minor); the PR opens after Phase 4. p377 gets its own branch when it stops being a stub.
+One branch, `p376_hlod-merged-cluster-proxies`, from `main` into `main`. The gate failed, so the
+branch ends with Phase 0: the results, the spike's tools (`src/app/shared/_dbg__hlodSpike.ts`,
+`src/app/scenes/largeWorld/_dbg__largeWorldHlodField.ts`, `devTools/bench/hlodSpike*.ts`;
+`createRuins` taking its sites) and the debugger's GPU timer fix found on the way (`_sumGpuMs`
+counts a negative duration as 0, `docs/issues/gpu-timer-webgpu-frame-sum.md`). That fix is an
+engine change, so the branch takes an engine patch (and an app patch for the ruins' signature, the
+debug field and the probe), not the epic's "no bump" for a failed gate; the PR opens when asked.
+p377 gets its own branch when it stops being a stub.

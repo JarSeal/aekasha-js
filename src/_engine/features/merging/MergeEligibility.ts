@@ -3,7 +3,7 @@
 // (p375) takes moving bodies and transparent materials (its batch sorts its members, Phase 3), but
 // only a mesh directly under the root scene whose geometry's attributes and index are the group's
 // exactly (`BatchedMesh` copies every geometry into one set of buffers) and whose `renderOrder` is
-// the group's (a batch is drawn at one place in the render order). A `BAKED` group refuses a `LOD` (until p376); a `BATCHED` one draws a member's
+// the group's (a batch is drawn at one place in the render order). A `BAKED` group refuses a `LOD` (p376 not adopted); a `BATCHED` one draws a member's
 // levels (p375 Phase 2) when each is drawable in its batch (`getBatchLodRefusal`).
 import type * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';

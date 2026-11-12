@@ -1,4 +1,4 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 planned (its Phase 0 gates it); p377 a stub
+Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not adopted (its Phase 0's gate failed, 2026-11-12); p377 a stub, rewritten around draws
 Category: Rendering, Merging, Texture atlas
 Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md, p377_hlod-streaming-cell-proxies.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
@@ -202,7 +202,8 @@ longer dirty their transforms every frame (§2), but a dirty flag is still set b
   are therefore bounded by a cell (the `CellKey.ts` maths) and a vertex cap, and the group entity,
   not its members, is in the DEFAULT spatial domain and frustum culling.
 - **LOD:** a group's LOD unit is the group. Simplifying a merged group as a whole is HLOD (p376),
-  which reuses p347's simplifier and p348's selection.
+  which reuses p347's simplifier and p348's selection. Not adopted: p376's Phase 0 measured its
+  proxies cutting triangles without saving GPU time; far merged content costs its draws (p377).
 - **Streaming:** groups never cross a p353 cell; an `AUTO` cell size divides the streaming cell
   size, and explicit groups spanning cells get a dev warning.
 - **Editing:** a member's vertex range in the merged buffers is known, so moving a member rewrites
@@ -254,8 +255,8 @@ Heightfield blocks themselves gain little: each is already one mesh.
 | 1.3  | `_DONE_p373_merge-debug-and-member-editing` | "Merging" drawer tab, group and member windows, overlay, A/B toggle, edit sessions, face picking                               | p372                                |
 | 2.1  | `_DONE_p374_multi-material-merging`         | Merge materials: palettes, per-slot arrays, parameter table, compatibility classes                                             | p372, p299                          |
 | 2.2  | `_DONE_p375_batched-mesh-batches`           | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
-| 3.1  | `p376_hlod-merged-cluster-proxies`          | A `BAKED` group's simplified proxy levels and cull at runtime, members kept in sync in place (gated by its Phase 0)            | p372, p347, p348                    |
-| 3.2  | `p377_hlod-streaming-cell-proxies` (stub)   | A streaming cell's static content as one proxy for `FAR`, built when the data is gathered                                      | p376, p353 (p306 for terrain)       |
+| 3.1  | `p376_hlod-merged-cluster-proxies`          | Not adopted: its Phase 0 measured proxies cutting triangles without saving GPU time (the far field's cost is its draws)        | p372, p347, p348                    |
+| 3.2  | `p377_hlod-streaming-cell-proxies` (stub)   | Far static content in few draws: a cull, larger `AUTO` cells or a cell proxy, decided by its own Phase 0 on p376's tools        | p353 (p306 for terrain)             |
 
 ## 12. Open questions
 
@@ -327,5 +328,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   (engine 6.5.0 → 6.6.0, corrected 2026-11-11).
 - p375 runs only if its spike passes.
 - p376 (decided 2026-11-12, when it stopped being a stub) is its own branch; its Phase 0 gates it,
-  and a failed gate ends the branch with the results only (no bump). p377 stays a stub until p376's
-  numbers are in; its branch is decided then.
+  and a failed gate ends the branch with the results only (no bump). It failed (2026-11-12), and
+  the branch also carries the debugger's GPU timer fix found during the measurements, so it takes
+  an engine patch (and an app patch) after all (p376 §7). p377 stays a stub, rewritten around
+  draws; its branch is decided when it stops being one.
