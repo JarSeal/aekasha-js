@@ -3,12 +3,15 @@
   "id": "testTslMat",
   "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
   "type": "STANDARDNODEMATERIAL",
-  "nodes": {
-    "colorNode": {
-      "baseColor": "#1c233a",
-      "panelColor": "#ffaa00",
-      "gridScale": 1.0,
-      "texture": "testTexture"
-    }
+  "inputs": {
+    "baseColor": "#1c233a",
+    "panelColor": "#ffaa00",
+    "gridScale": 1.0,
+    "glow": 0.6,
+    "texture": "testTexture"
+  },
+  "debugData": {
+    "name": "Test TSL material",
+    "description": "The reference setup material: one scrolling texture sample drives the colour, roughness and emissive sockets."
   }
 }

@@ -13998,14 +13998,17 @@
       "materials": [
         {
           "id": "testTslMat",
+          "debugData": {
+            "name": "Test TSL material",
+            "description": "The reference setup material: one scrolling texture sample drives the colour, roughness and emissive sockets."
+          },
           "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
-          "nodes": {
-            "colorNode": {
-              "baseColor": "#1c233a",
-              "panelColor": "#ffaa00",
-              "gridScale": 1,
-              "texture": "testTexture"
-            }
+          "inputs": {
+            "baseColor": "#1c233a",
+            "panelColor": "#ffaa00",
+            "gridScale": 1,
+            "glow": 0.6,
+            "texture": "testTexture"
           },
           "type": "STANDARDNODEMATERIAL"
         }
@@ -31216,14 +31219,17 @@
     },
     "testTslMat": {
       "id": "testTslMat",
+      "debugData": {
+        "name": "Test TSL material",
+        "description": "The reference setup material: one scrolling texture sample drives the colour, roughness and emissive sockets."
+      },
       "tslFile": "scenes/sceneTestECS/testTslMat.tsl.ts",
-      "nodes": {
-        "colorNode": {
-          "baseColor": "#1c233a",
-          "panelColor": "#ffaa00",
-          "gridScale": 1,
-          "texture": "testTexture"
-        }
+      "inputs": {
+        "baseColor": "#1c233a",
+        "panelColor": "#ffaa00",
+        "gridScale": 1,
+        "glow": 0.6,
+        "texture": "testTexture"
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/scenes/sceneTestECS/testTslMat.material.json"

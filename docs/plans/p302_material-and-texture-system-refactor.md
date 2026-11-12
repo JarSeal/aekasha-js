@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1 and 3 implemented (Phase 2 by p613)
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -256,7 +256,7 @@ p613 did both fixes and their tests (see "From p613"); what's left is the in-bro
 (enter → leave → enter in `sceneTestECS` or `testDebugScene`, no disposed-texture warning), optional
 now that the unit test covers the cached params: run it with Phase 1's exit check if at all.
 
-### Phase 3 — `setup` entry + runtime registration (D2, D3)
+### Phase 3 — `setup` entry + runtime registration (D2, D3) — done
 
 1. `Material.ts` setup path, `registerTslMaterial` (summary and `@example`: it's on the `aekasha` entry), and `createMaterial` split below the 150-line limit as its file header promises (the TSL path into its own functions).
 2. Schema `inputs` (both documentation layers, "From p619"), variant merge of `inputs`. No gather change (D2).
@@ -271,6 +271,77 @@ now that the unit test covers the cached params: run it with Phase 1's exit chec
 - **Spike (D2's variants as instances):** count node builds and pipelines for 10 variants of one
   `setup` material made with `createMaterial` (today) and as `NodeMaterialInstance`s; decide
   whether variants become instances in this plan or a follow-up.
+
+As built (2026-11-13; section 1 is commit `3f084323`):
+
+- **Drift found:** `Material.ts` was 860 lines (over the file limit too, its header naming only
+  `createMaterial`'s length), and `MatProps` already typed `tslFile` optional on every node member,
+  so D3's type-level union was there; what was missing was a way into the TSL path without one.
+  NodeMaterial has a `setup(builder)` method, so `'setup' in mat` is true: a `nodes.setup` would
+  have replaced three's method (now skipped, warned).
+- **`kernel/assets/MaterialTsl.ts`** holds the TSL path: the loaded files, the registry,
+  `loadTslMaterialFileAsync` (moved, still on `aekasha`), `registerTslMaterial`, the input
+  wrapping (`createTslInputNode`, where D4's resolvers go first) and `applyTslGraph` (`@internal`).
+  `Material.ts` (613 lines) keeps `createMaterial` (44 lines: a class table for the `switch`,
+  `resolveMaterialParams`); `MatProps`' node members share `TslMaterialProps` (`tslFile`,
+  `inputs`, `nodes`, `staticDefines`, documented per key). New on `aekasha`: `registerTslMaterial`,
+  `TslMaterialProps`, `TslMaterialFns`, `TslSetupFn`, `TslSocketFn`, `TslInputs`.
+- **When the TSL path runs:** a node material only (a plain one whose id names a registration
+  gets none), with a `tslFile` or a registration under `tslMaterialId` (default `id`): looked up in
+  the registry first, then the loaded files; neither with a `tslFile` throws, neither without one
+  is a plain node material (warned when it has `nodes` or `inputs`). `tslMaterialId` alone can't
+  be the trigger: the material editor passes it for every material. Any export that isn't a
+  function throws (before: only `''` / `' '`). A variant passes `tslMaterialId` only when its base
+  got a graph (`userData.hasTslFile`, set for a registration too).
+- **Order and warnings:** `setup` runs with `inputs` (uniforms `setup_<key>`; an input named
+  `staticDefines` merges over the material's, as in a socket), then the `nodes` sockets; the debug
+  env warns when a socket function replaces a socket `setup` set, and when an id is registered
+  again with other functions (the first stay; the same functions are silent). `inputs` without a
+  `setup` warns.
+- **Typing (differs from D2's signature):** `TslInputs` is `Record<string, unknown>`, and a function
+  types its inputs by key (`{ tint: Node<'color'> }`, `Node` from `three/webgpu`, as
+  `asteroid.tsl.ts` does): three r187's untyped `Node` takes no `TextureNode` (`Node<any>`), so
+  `Record<string, Node>` rejected real functions. The functions' types are methods' (bivariant
+  parameters), and a socket function returns `unknown`. D4's bundles fit `unknown` as they are.
+- **Schema and variants:** `inputs` on the TSL member, `MaterialOverridesSchema` and
+  `MaterialVariantOverridesSchema` (both documentation layers); `getMaterialVariant` merges it
+  shallowly, and `staticDefines`' shallow merge is documented (a nested define object replaces the
+  base's). **A gather change after all:** `mergeMaterialProps` (`devTools/gather/sceneAssets.ts`)
+  replaced any field it didn't list, so a save entry's `inputs` would have dropped the material's
+  others; it merges them key by key now (`gather.test.ts`). The gather emits nothing new. The
+  three docs of that merge rule (`devTools/gather/CLAUDE.md`, `MeshSchema.ts`' `mat`, the Hub's
+  scenes-and-assets guide) name `inputs`.
+- **The material editor:** `inputs` are the group `SETUP_INPUTS` (`'setup'`, "setup (inputs)",
+  first) beside the sockets, so the per-socket functions take their `setup_<key>` uniforms as
+  they are; `toNodeInputGroups` / `fromNodeInputGroups` convert for the copy's props and the LS
+  record (`overrides.inputs`, the schema's shape; an undo path is `setup.<key>`). The textures to
+  load and the selector's swatch read `inputs` too. `_dbg__MaterialEditorParams.test.ts`;
+  `src/_engine/debug/editors/CLAUDE.md`.
+- **`testTslMat`** is a `setup` material: one sample of `testTexture` drives the colour, the
+  roughness and the emissive (the brightest specks glow, `glow` input). `testTexture` has no colour
+  space, so the sample is its stored sRGB values (luminance 0.28-0.45): the thresholds are in that
+  space. `triplanarCheckerboard` stays the per-socket example. sceneTestECS looks different: its
+  scene baselines need `--update`.
+- **The exit checks** (Apple M2, Chrome, WebGPU, the dev server's `sceneTestECS` through the test
+  bridge): testTslMat's material has `colorNode`, `roughnessNode` and `emissiveNode` from one
+  graph; its fragment WGSL (`renderer.debug.getShaderAsync`) samples `testTexture` once (the other
+  samples are the BRDF LUT, the sun's shadow map and the environment cube twice); a variant with
+  `inputs: { glow: 3 }` has `setup_glow` 3 and the base 0.6; the editor's Params tab lists the
+  setup group, an ArrowUp on `glow` set the copy's uniform to 1.6 and `overrides.inputs.glow`, and
+  undo put back 0.6 and removed it. No new console message (Rapier's init deprecation is
+  pre-existing). The WebGL2 fallback wasn't checked.
+- **The spike** (same setup; node builds counted with `renderer.debug.onNodeBuilderCreated`,
+  pipelines and programs from `renderer._pipelines`): 10 `getMaterialVariant`s differing by one
+  input: 11 node builds, 1 new pipeline, 1 fragment and 1 vertex program (the variants share one);
+  a `NodeMaterialInstance` base reading the input through `materialReference`: 1 build and 1
+  pipeline, then 10 instances: 1 build, no pipeline or program (4 ms). A variant with another
+  texture id: 1 build, no new pipeline or program (the Risks table's question: variants differing
+  by texture share a pipeline). So instances save the CPU node builds only (about one per
+  variant), not GPU pipelines. **Recommended: a follow-up, not this plan:** the pipelines are
+  shared already, and instances need the inputs as material properties read through
+  `materialReference` instead of `uniform()`s (a rewrite of the input wrapping that D4 replaces
+  next), `userData` cloned one level (the editor's `userData.uniforms` would be shared), and an
+  API renamed within r187. **Decision: (to confirm in review).**
 
 ### Phase 4 — Input resolvers (D4)
 
