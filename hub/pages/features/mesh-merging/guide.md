@@ -103,7 +103,9 @@ A scene sets its own defaults, and gives a named group its settings:
 
 Pick the cell size from the view: large enough that a cell holds many pieces, small enough that
 most of a group is in view when any of it is. `largeWorld` (a 200 m terrain) uses 50 m cells, the
-example's 24 m courtyard 16 m ones.
+example's 24 m courtyard 16 m ones. Far content in a scene that doesn't stream, hundreds of kit
+pieces seen whole from a distance, takes larger cells, 128-256 m: see
+[A large far field](#a-large-far-field).
 
 ### Imported models
 
@@ -567,6 +569,47 @@ drawn whole whenever any of it is in the frustum.
   shadow pass gains nothing. The day-night sky's sun follows the camera, and its shadow pass drops
   from 53 draws to 15.
 
+### A large far field
+
+The default 32 m cell suits content around the player. A field of kit pieces spread far out, seen
+whole from a distance, makes hundreds of small groups at that size, each one draw in every pass.
+Larger cells make fewer, larger groups:
+
+`largeWorld` with 400 ruin sites 200 m to 1 km out (about 20,000 pieces, 1,838 groups at 32 m),
+`AUTO` at each cell size against 32 m (Chrome on an Apple M2, 1600 × 900, three runs a backend;
+the CPU frame saved at the start, far and ground views):
+
+| Cell size | WebGPU, CPU frame saved | WebGL2, CPU frame saved |
+| --------- | ----------------------- | ----------------------- |
+| 64 m      | 1.6 / 1.9 / 1.6 ms      | 2.5 / 2.3 / 2.8 ms      |
+| 128 m     | 2.8 / 3.4 / 2.9 ms      | 4.2 / 5.1 / 4.2 ms      |
+| 256 m     | 3.5 / 3.9 / 3.6 ms      | 4.9 / 6.2 / 4.7 ms      |
+
+- At 32 m the CPU frame is 10.6-11.5 ms on WebGPU and 11.7-13.7 ms on WebGL2, so 256 m cells take
+  a third of it off.
+- **Drawing a group whole costs nothing here.** A larger group is drawn whole once any of it is in
+  view (see [When to merge](#when-to-merge)), but a field seen from a distance is mostly in view
+  anyway: WebGL2's GPU time didn't change beyond the runs' spread at any size, and the images
+  matched the 32 m ones.
+- **A rebuild stays one frame.** A member's add rebuilds its group on the main thread at every
+  size measured, 0.4-1.2 ms over the median frame (a 256 m group here stays under the 65,536
+  vertices above which the build goes to a worker). Moving or removing a member is in place at any
+  size. The scene's load time didn't change (2.2-2.5 s).
+- **Only a large field pays.** With 150 sites, 256 m cells save under 1 ms: keep the default for
+  content around the player, and take larger cells when hundreds of sites are in view at once.
+
+Larger cells take off draws, not members. Every baked member's own mesh stays in the scene graph,
+hidden, and three's scene update walks it twice a frame (the main pass and the ambient occlusion's
+pre-pass): at 400 sites that's 20,808 hidden objects and 3.6-4.9 ms of the frame, and the members
+are about 60 % of the field's CPU cost in all, the draws the other 40 %. A
+[batched group](#batched-groups-members-that-move) already takes its members out of the scene
+graph; doing that for baked members is planned
+([p378](repo:docs/plans/p378_baked-members-out-of-the-scene-graph.md)).
+
+The field is a debug-mode addition to `largeWorld`:
+`?isDebug=true&startScene=largeWorld&hlodField=400&hlodFieldCell=256` (`hlodField` the sites,
+`hlodFieldCell` the `AUTO` cell size, 32 m by default).
+
 ## Streaming
 
 In a [streaming](hub:features/streaming) scene, keep each group inside a cell:
@@ -576,6 +619,11 @@ In a [streaming](hub:features/streaming) scene, keep each group inside a cell:
 - A group doesn't load, unload, prime or fade with a cell: a member whose cell unloads leaves the
   group's mesh collapsed in place (a batched group's instance is deleted), and a cell loaded during play draws its members on their own
   until the next frame merges them (the group's mesh may compile its shaders on its first draw).
+- [Larger cells](#a-large-far-field) are for a world that doesn't stream. In a streaming scene
+  the `AUTO` cell still divides the streaming cell (the test scene's ruins merge in 32 m cells of
+  its 64 m ones), and a `FAR` cell's members aren't loaded at all: the far rings draw the kit's
+  [far entries](hub:features/streaming#far-representations) instead, one `InstancedMesh` per
+  geometry and material a cell, which measured as cheap as a cell merged into one mesh.
 
 ## Debugging
 

@@ -241,7 +241,7 @@ describe('buildStreamingManifest', () => {
     expect(out.lights).toHaveLength(1);
   });
 
-  it('gives a mesh with LOD levels its coarsest level as a far entry, alike ones grouped (Phase 5 D7)', () => {
+  it('gives a mesh with LOD levels its coarsest level as a far entry, one without lod itself, alike ones grouped (Phase 5 D7, p377 D1)', () => {
     const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox', castShadow: false }];
     const scene = baseScene({
       geometries: [
@@ -254,7 +254,8 @@ describe('buildStreamingManifest', () => {
         mesh('own', 30, 30, { lod: { levels }, matOverrides: { params: { color: '#ff0000' } } }),
         mesh('culled', 40, 30, { lod: { levels, cullScreenSize: 0.01 } }),
         mesh('auto', 50, 30, { lod: 'AUTO' }),
-        mesh('plain', 60, 30),
+        // No lod, the a and b levels' coarsest geometry and shadows: itself, in their group
+        mesh('plain', 60, 30, { geo: 'lowBox' }),
         mesh('nextCell', 100, 30, { lod: { levels } }),
       ],
     });
@@ -262,16 +263,14 @@ describe('buildStreamingManifest', () => {
     const far = manifest?.farMeshes ?? [];
     expect(manifest?.cells[key(0, 0)]?.far?.meshes).toEqual([0, 1]);
     expect(manifest?.cells[key(1, 0)]?.far?.meshes).toEqual([2]);
-    // One group for a and b: the coarsest level's geometry, its castShadow, each entry's transform
+    // One group for a, b and plain: the coarsest level's geometry, its castShadow, each entry by
+    // its near entry's index (p377 D3); a group holds coarsest levels and meshes' own entries alike
     expect(far[0]).toEqual({
       props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
-      instances: [
-        { position: { x: 10, y: 0, z: 10 } },
-        { position: { x: 20, y: 0, z: 30 }, scale: { x: 2, y: 2, z: 2 } },
-      ],
+      entries: [0, 1, 5],
     });
     // matOverrides: a mesh of its own, no app id, no lod
-    expect(far[1].instances).toBeUndefined();
+    expect(far[1].entries).toBeUndefined();
     expect(far[1].props).toMatchObject({ geo: 'lowBox', position: { x: 30, y: 0, z: 30 } });
     expect(far[1].props).not.toHaveProperty('appId');
     expect(far[1].props).not.toHaveProperty('lod');
@@ -283,6 +282,139 @@ describe('buildStreamingManifest', () => {
     expect(cell?.geometries).toEqual([0, 1]);
     expect(cell?.far?.geometries).toEqual([1]);
     expect(cell?.far?.materials).toEqual([0]);
+  });
+
+  it('names a far group’s near entries by their manifest index, never their transforms (p377 D3)', () => {
+    const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox' }];
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'lowBox', type: 'BOX' },
+      ],
+      meshes: [
+        // A base mesh first: the manifest's indices aren't the scene's
+        mesh('tower', 0, 0),
+        mesh('a', 10, 10, { lod: { levels }, rotation: { x: 0, y: 1, z: 0 } }),
+        mesh('plain', 20, 10, { geo: 'lowBox', scale: { x: 2, y: 2, z: 2 } }),
+        mesh('crate', 100, 10, { quaternion: { x: 0, y: 0, z: 0, w: 1 } }),
+        mesh('own', 30, 10, { lod: { levels }, matOverrides: { params: { color: '#ff0000' } } }),
+      ],
+      streaming: { cellSize: 64, base: ['tower'] },
+    });
+    const manifest = build(scene).out.__streaming;
+    const far = manifest?.farMeshes ?? [];
+    const appIdsOf = (entries: number[] = []) =>
+      entries.map((index) => manifest?.meshes[index].props.appId);
+    // The explicit level and the mesh's own entry in one group; the crate's cell its own group
+    expect(far.map((f) => appIdsOf(f.entries))).toEqual([['a', 'plain'], ['crate'], []]);
+    for (const f of far) expect(f).not.toHaveProperty('instances');
+    // Each index is a near entry of the cell whose far layer holds the group
+    for (const [cellKey, cell] of Object.entries(manifest?.cells ?? {})) {
+      for (const farIndex of cell.far?.meshes ?? []) {
+        for (const entry of far[farIndex].entries ?? []) {
+          expect(cell.meshes, `cell ${cellKey}`).toContain(entry);
+        }
+      }
+    }
+    // A group's props carry no transform; a far mesh of its own (matOverrides) keeps its own
+    expect(Object.keys(far[0].props).sort()).toEqual(
+      ['castShadow', 'geo', 'mat', 'receiveShadow'].sort()
+    );
+    expect(far[2].entries).toBeUndefined();
+    expect(far[2].props).toMatchObject({ geo: 'lowBox', position: { x: 30, y: 0, z: 10 } });
+  });
+
+  it('gives LOD_LEVELS today’s far entries: explicit levels only, the build-time field dropped (p377 D2)', () => {
+    const levels = [{ screenSize: 0.2 }, { screenSize: 0.05, geo: 'lowBox' }];
+    const scene = (farEntries?: 'ALL' | 'LOD_LEVELS') =>
+      baseScene({
+        geometries: [
+          { id: 'box', type: 'BOX' },
+          { id: 'lowBox', type: 'BOX' },
+        ],
+        meshes: [
+          mesh('a', 10, 10, { lod: { levels } }),
+          mesh('plain', 20, 10, { geo: 'lowBox' }),
+          mesh('crate', 100, 10),
+        ],
+        streaming: { cellSize: 64, farEntries },
+      });
+    const { out } = build(scene('LOD_LEVELS'));
+    expect(out.streaming).toEqual({ cellSize: 64 });
+    const manifest = out.__streaming;
+    expect(manifest?.farMeshes).toEqual([
+      {
+        props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
+        entries: [0],
+      },
+    ]);
+    // The crate's cell has no far layer, the level's only its level's assets
+    expect(manifest?.cells[key(1, 0)]?.far).toBeUndefined();
+    expect(manifest?.cells[key(0, 0)]?.far).toEqual({
+      meshes: [0],
+      materials: [0],
+      geometries: [1],
+      bytesEstimate: 0,
+    });
+    // ALL (the default, and given) adds plain to a's group and gives the crate's cell one
+    const all = build(scene('ALL')).out;
+    expect(all.streaming).toEqual({ cellSize: 64 });
+    expect(all.__streaming?.farMeshes?.[0].entries).toEqual([0, 1]);
+    expect(all.__streaming?.cells[key(1, 0)]?.far?.meshes).toEqual([1]);
+    expect(build(scene()).out.__streaming).toEqual(all.__streaming);
+  });
+
+  it('gives a mesh without lod no far entry when it wouldn’t group, nor its assets (p377 D1)', () => {
+    const scene = baseScene({
+      textures: [{ id: 'bark', fileName: 'bark.png', __vramBytes: { in: 8, out: 4 } }],
+      materials: [
+        { id: 'grey', type: 'BASIC' },
+        { id: 'barkMat', type: 'STANDARD', params: { map: 'bark' } },
+      ],
+      meshes: [
+        mesh('inlineGeo', 10, 10, { geo: { type: 'BOX' }, mat: 'barkMat' }),
+        mesh('inlineMat', 20, 10, { mat: { type: 'BASIC', params: { map: 'bark' } } }),
+        mesh('overrides', 30, 10, { mat: 'barkMat', matOverrides: { params: { map: 'bark' } } }),
+      ],
+    });
+    const manifest = build(scene).out.__streaming;
+    const cell = manifest?.cells[key(0, 0)];
+    expect(cell?.meshes).toEqual([0, 1, 2]);
+    expect(cell?.far).toBeUndefined();
+    expect(manifest?.farMeshes).toBeUndefined();
+  });
+
+  it('gives a culled, AUTO or oversized mesh no far entry, and a far mesh of its own no merge (p377 D1, D4)', () => {
+    const scene = baseScene({
+      geometries: [
+        { id: 'box', type: 'BOX' },
+        { id: 'wall', type: 'BOX', params: { width: 100, height: 2, depth: 4 } },
+      ],
+      meshes: [
+        // D2's per-mesh way out: a LOD that only culls
+        mesh('clutter', 10, 10, { lod: { levels: [{ screenSize: 0 }], cullScreenSize: 0.01 } }),
+        mesh('auto', 20, 10, { lod: 'AUTO' }),
+        mesh('autoObject', 30, 10, { lod: { auto: true, maxPixelError: 2 } }),
+        mesh('wall', 64, 40, { geo: 'wall' }),
+        mesh('own', 40, 10, {
+          merge: 'AUTO',
+          matOverrides: { params: { color: '#ff0000' } },
+          lod: { levels: [{ screenSize: 0.2 }, { screenSize: 0.05 }] },
+        }),
+      ],
+    });
+    const manifest = build(scene).out.__streaming;
+    // Only own's far entry, a mesh of its own (matOverrides) without merge, lod or app id
+    expect(manifest?.cells[key(0, 0)]?.far?.meshes).toEqual([0]);
+    expect(manifest?.cells[key(1, 0)]?.far).toBeUndefined();
+    expect(manifest?.farMeshes).toHaveLength(1);
+    const own = manifest?.farMeshes?.[0];
+    expect(own?.entries).toBeUndefined();
+    expect(own?.props).toMatchObject({ geo: 'box', mat: 'grey', matOverrides: {} });
+    for (const field of ['merge', 'lod', 'appId']) expect(own?.props).not.toHaveProperty(field);
+    // The wall is kept content in both its cells
+    expect(manifest?.cells[key(0, 0)]?.kept?.meshes).toEqual([3]);
+    expect(manifest?.cells[key(1, 0)]?.kept?.meshes).toEqual([3]);
   });
 
   it('lists each layer’s cell-only assets and their estimate (Phase 5 D9)', () => {
@@ -308,8 +440,14 @@ describe('buildStreamingManifest', () => {
       bytesEstimate: 4,
     });
     expect(cell).toMatchObject({ meshes: [1], materials: [0], geometries: [0], bytesEstimate: 0 });
-    expect(cell?.far).toBeUndefined();
-    expect(manifest?.farMeshes).toBeUndefined();
+    // The crate (no lod) is its own far entry (p377 D1): its group and its assets in the far layer
+    expect(cell?.far).toEqual({ meshes: [0], materials: [0], geometries: [0], bytesEstimate: 0 });
+    expect(manifest?.farMeshes).toEqual([
+      {
+        props: { geo: 'box', mat: 'grey', castShadow: false, receiveShadow: false },
+        entries: [1],
+      },
+    ]);
   });
 
   it('loads a MERGED geometry’s parts with it, in each cell, unless the base has them (p371 D2)', () => {

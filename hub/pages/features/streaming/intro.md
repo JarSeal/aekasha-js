@@ -6,9 +6,10 @@ Further out, cells show cheap stand-ins (coarse levels, impostors), and everythi
 takes down during play fades in or out.
 
 ::: scene streamingGrid
-A 1 km square of 16 × 16 cells, each a terrain block with scattered rocks and crates, and beacons
-and a long wall from the scene's JSON, cut into cells when it's gathered. Far cells keep their
-terrain at a coarse level and draw their rocks as impostors and their beacons' coarse levels. The
+A 1 km square of 16 × 16 cells, each a terrain block with scattered rocks and crates, and beacons,
+ruins and a long wall from the scene's JSON, cut into cells when it's gathered. Far cells keep
+their terrain at a coarse level and draw their rocks as impostors, their beacons' coarse levels
+and their ruins' pieces instanced. The
 camera flies across it; the scene's tab hovers it on a cell boundary instead, and the Streaming
 tab's overlay shows each cell's state.
 :::

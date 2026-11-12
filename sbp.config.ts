@@ -42,11 +42,14 @@ const profiles: SbpProfile[] = [
     // is 392.8 and `assets/index.js` 388.6 KiB: 387 → 393 and 383 → 389 KiB. p375 Phase 2:
     // per-member LOD in batched groups (S1's scene graph detach, S2's level checks; S3-S4's
     // delegate and LOD-cull hooks are forwarding stubs, the batch side lazy): initial 393.2 KiB,
-    // 393 → 394 KiB; with S3's delegate `assets/index.js` 389.1 KiB, 389 → 390 KiB
+    // 393 → 394 KiB; with S3's delegate `assets/index.js` 389.1 KiB, 389 → 390 KiB. p377 Phase 3:
+    // `streamingGrid`'s ruin kit (96 meshes in 16 cells, their far groups and cells; every
+    // scene's JSON is in the first download) took the initial to 397.4 and `assets/index.js` to
+    // 393.2 KiB: 394 → 398 and 390 → 394 KiB
     budgets: {
-      initial: 394 * KIB,
+      initial: 398 * KIB,
       chunks: {
-        'assets/index.js': 390 * KIB,
+        'assets/index.js': 394 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -114,8 +117,9 @@ const profiles: SbpProfile[] = [
         // first load shows it, so it can't load later
         '_engine/ui': 7 * KIB,
         // p354 Phase 1: 14 → 15 KiB (14.06 KiB): the `instanceStress` verification scene's data
-        // (every scene's JSON is in the first download; its code loads with it, `instanceStress.js`)
-        app: 15 * KIB,
+        // (every scene's JSON is in the first download; its code loads with it, `instanceStress.js`).
+        // p377 Phase 3: 15 → 19 KiB (18.0 KiB): `streamingGrid`'s ruin kit, kept to 16 cells for it
+        app: 19 * KIB,
         toolkit: 7 * KIB,
       },
       modules: {

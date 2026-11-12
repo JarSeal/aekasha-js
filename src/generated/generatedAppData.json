@@ -14411,7 +14411,7 @@
     },
     "streamingGrid": {
       "name": "Streaming grid",
-      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell is code content: a procedural terrain block kept from FAR in (its ground, with a coarse LOD level), scattered rocks whose FAR stand-in is one InstancedMesh of an octahedral impostor, and crates (near only). And JSON content the gather cuts into cells: a beacon in every fourth cell, whose LOD levels give a FAR cell their coarsest level as far groups, and a 320 m wall across six cells, one entity kept while any of them is loaded. The camera flies across it and the cells around it load, switch between their near and far content and unload, fading in and out; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
+      "description": "World streaming's test scene (p353): a 1 km square cut into 16 × 16 cells of 64 m at rings 1 / 2 / 5. Each cell is code content: a procedural terrain block kept from FAR in (its ground, with a coarse LOD level), scattered rocks whose FAR stand-in is one InstancedMesh of an octahedral impostor, and crates (near only). And JSON content the gather cuts into cells: a beacon in every fourth cell, whose LOD levels give a FAR cell their coarsest level as far groups; a six-piece ruin of a small kit (a block, a slab and a post in two materials) in 16 cells (x and z each -7, -3, 1 or 5), merged AUTO in 32 m cells while near and drawn far as its cell's far groups, each piece its own far entry (p377); and a 320 m wall across six cells, one entity kept while any of them is loaded. The camera flies across it and the cells around it load, switch between their near and far content and unload, fading in and out; the scene's debug tab switches to hovering on a cell boundary, and the Streaming tab's overlay shows the cells' states.",
       "cameras": [
         {
           "camProps": {
@@ -14493,12 +14493,19 @@
           "far": 5
         }
       },
+      "mergeGroups": [
+        {
+          "id": "AUTO",
+          "cellSize": 32
+        }
+      ],
       "id": "streamingGrid",
       "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
       "__features": [
         "skybox",
         "lod",
-        "streaming"
+        "streaming",
+        "merging"
       ],
       "__streaming": {
         "cellSize": 64,
@@ -15268,6 +15275,1734 @@
               },
               "appId": "streamingGridWall"
             }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -414.74,
+                "y": -6.61,
+                "z": -416.14
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.657,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -414.6,
+                "y": -6.41,
+                "z": -412.94
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.765,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -414.78,
+                "y": -4.61,
+                "z": -416.04
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.653,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -417.66,
+                "y": -6.75,
+                "z": -412.31
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.884,
+                "z": 0.175
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -413.05,
+                "y": -4.59,
+                "z": -409.65
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.787,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -413.39,
+                "y": -7.26,
+                "z": -419.45
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.847,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -150.77,
+                "y": -6.75,
+                "z": -412.8
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.175,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -147.6,
+                "y": -6.11,
+                "z": -413.26
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.238,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -150.66,
+                "y": -4.72,
+                "z": -412.77
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.261,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -146.67,
+                "y": -6.09,
+                "z": -410.28
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.065,
+                "z": 0.209
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -144.48,
+                "y": -4.05,
+                "z": -415.14
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.176,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -154.2,
+                "y": -7.94,
+                "z": -413.82
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.09,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 94.2,
+                "y": -5.99,
+                "z": -422.83
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.836,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 97.15,
+                "y": -5.63,
+                "z": -421.6
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.86,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 94.27,
+                "y": -3.99,
+                "z": -422.75
+              },
+              "rotation": {
+                "x": 0,
+                "y": 6.05,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 96.43,
+                "y": -6.54,
+                "z": -418.56
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.825,
+                "z": 0.194
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 100.79,
+                "y": -3.46,
+                "z": -421.61
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.92,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 91.77,
+                "y": -6.15,
+                "z": -425.46
+              },
+              "rotation": {
+                "x": 0,
+                "y": 8.796,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 355.42,
+                "y": -5.43,
+                "z": -410.83
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.67,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 358.18,
+                "y": -6.41,
+                "z": -412.46
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.707,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 355.53,
+                "y": -3.45,
+                "z": -410.84
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.438,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 360.17,
+                "y": -6.07,
+                "z": -410.05
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.669,
+                "z": 0.187
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 360.35,
+                "y": -6.2,
+                "z": -415.37
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.564,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 351.86,
+                "y": -5.49,
+                "z": -410.47
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.768,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -417.35,
+                "y": 7.98,
+                "z": -153.08
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.757,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -418.15,
+                "y": 7.69,
+                "z": -156.18
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.931,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -417.33,
+                "y": 9.97,
+                "z": -153.19
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.881,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -415.28,
+                "y": 7.05,
+                "z": -157.43
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.795,
+                "z": 0.216
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -420.34,
+                "y": 8.96,
+                "z": -159.09
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.852,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -418,
+                "y": 7.85,
+                "z": -149.56
+              },
+              "rotation": {
+                "x": 0,
+                "y": 2.622,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -158.48,
+                "y": -4.37,
+                "z": -161.14
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.208,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -155.31,
+                "y": -5.12,
+                "z": -161.61
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.106,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -158.37,
+                "y": -2.39,
+                "z": -161.11
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.159,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -154.37,
+                "y": -5.48,
+                "z": -158.63
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.097,
+                "z": 0.142
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -152.2,
+                "y": -4.54,
+                "z": -163.49
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.177,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -161.91,
+                "y": -4.41,
+                "z": -162.15
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.533,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 107.07,
+                "y": -8.58,
+                "z": -154.13
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.267,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 105.9,
+                "y": -8.51,
+                "z": -151.16
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.506,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 106.99,
+                "y": -6.58,
+                "z": -154.06
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.412,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 102.84,
+                "y": -8.88,
+                "z": -151.83
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.268,
+                "z": 0.141
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 105.97,
+                "y": -6.67,
+                "z": -147.52
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.368,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 109.66,
+                "y": -7.01,
+                "z": -156.61
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.541,
+                "z": 0.334
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 339.93,
+                "y": -3.83,
+                "z": -167.96
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.422,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 342.24,
+                "y": -4.7,
+                "z": -165.74
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.47,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 339.97,
+                "y": -1.87,
+                "z": -167.86
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.531,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 340.45,
+                "y": -6.07,
+                "z": -163.17
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.542,
+                "z": 0.177
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 345.63,
+                "y": -3.69,
+                "z": -164.42
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.547,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 338.63,
+                "y": -1.18,
+                "z": -171.3
+              },
+              "rotation": {
+                "x": 0,
+                "y": 5.882,
+                "z": 0.261
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -426.09,
+                "y": -0.75,
+                "z": 100.61
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.653,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -426.29,
+                "y": -0.33,
+                "z": 103.81
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.78,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -426.15,
+                "y": 1.26,
+                "z": 100.71
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.539,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -429.4,
+                "y": -1.03,
+                "z": 104.11
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.557,
+                "z": 0.2
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -425.1,
+                "y": 1.58,
+                "z": 107.24
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.681,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -424.39,
+                "y": 0.32,
+                "z": 97.46
+              },
+              "rotation": {
+                "x": 0,
+                "y": 6.088,
+                "z": 0.313
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -170.53,
+                "y": -1.14,
+                "z": 105.38
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.049,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -167.33,
+                "y": -0.47,
+                "z": 105.22
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.076,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -170.42,
+                "y": 0.87,
+                "z": 105.42
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.213,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -166.68,
+                "y": -1.22,
+                "z": 108.27
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.198,
+                "z": 0.237
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -164.04,
+                "y": 2.02,
+                "z": 103.64
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.081,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -173.84,
+                "y": -1.91,
+                "z": 104.04
+              },
+              "rotation": {
+                "x": 0,
+                "y": 3.12,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 89.61,
+                "y": 6.4,
+                "z": 99.29
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.962,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 91.45,
+                "y": 5.65,
+                "z": 96.67
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.94,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 89.7,
+                "y": 8.38,
+                "z": 99.23
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.011,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 94.26,
+                "y": 4.86,
+                "z": 98.03
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.06,
+                "z": 0.121
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 92.23,
+                "y": 6.5,
+                "z": 93.11
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.989,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 86.51,
+                "y": 6.71,
+                "z": 101.08
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.924,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 348.08,
+                "y": -3.15,
+                "z": 93.01
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.348,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 351.16,
+                "y": -3.07,
+                "z": 92.15
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.326,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 348.19,
+                "y": -1.17,
+                "z": 93.03
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.287,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 352.48,
+                "y": -4.34,
+                "z": 94.98
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.187,
+                "z": 0.147
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 354.01,
+                "y": -0.88,
+                "z": 89.88
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.306,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 344.55,
+                "y": -0.84,
+                "z": 92.45
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.615,
+                "z": 0.241
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -427.06,
+                "y": -8.37,
+                "z": 340.72
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.323,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -428.14,
+                "y": -8.18,
+                "z": 343.73
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.446,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -427.14,
+                "y": -6.36,
+                "z": 340.8
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.393,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -431.21,
+                "y": -7.81,
+                "z": 343.16
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.285,
+                "z": 0.239
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -427.95,
+                "y": -6.23,
+                "z": 347.37
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.399,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -424.55,
+                "y": -6.92,
+                "z": 338.16
+              },
+              "rotation": {
+                "x": 0,
+                "y": 7.048,
+                "z": 0.322
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -172.61,
+                "y": -2.32,
+                "z": 348.42
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.589,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -169.74,
+                "y": -2.69,
+                "z": 347.02
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.588,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -172.5,
+                "y": -0.33,
+                "z": 348.42
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.442,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": -167.94,
+                "y": -3.26,
+                "z": 349.57
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.486,
+                "z": 0.153
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -167.34,
+                "y": -1.69,
+                "z": 344.28
+              },
+              "rotation": {
+                "x": 0,
+                "y": 0.486,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": -176.19,
+                "y": -2.58,
+                "z": 348.5
+              },
+              "rotation": {
+                "x": 0,
+                "y": 3.307,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 85.65,
+                "y": -5.98,
+                "z": 339.91
+              },
+              "rotation": {
+                "x": 0,
+                "y": 3.945,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 83.53,
+                "y": -6.07,
+                "z": 342.3
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.018,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 85.54,
+                "y": -3.99,
+                "z": 339.95
+              },
+              "rotation": {
+                "x": 0,
+                "y": 3.975,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 80.88,
+                "y": -7.16,
+                "z": 340.63
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.029,
+                "z": 0.184
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 82.36,
+                "y": -4.43,
+                "z": 345.75
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.02,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 88.92,
+                "y": -6.16,
+                "z": 338.46
+              },
+              "rotation": {
+                "x": 0,
+                "y": 6.49,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 341.25,
+                "y": 5.33,
+                "z": 347.37
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.414,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 341.52,
+                "y": 5.97,
+                "z": 344.18
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.4,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 341.31,
+                "y": 7.35,
+                "z": 347.27
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.543,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "position": {
+                "x": 344.63,
+                "y": 6.15,
+                "z": 343.94
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.444,
+                "z": 0.216
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 340.39,
+                "y": 7.94,
+                "z": 340.72
+              },
+              "rotation": {
+                "x": 0,
+                "y": 1.519,
+                "z": 0
+              },
+              "merge": "AUTO"
+            }
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "position": {
+                "x": 339.49,
+                "y": 4.16,
+                "z": 350.48
+              },
+              "rotation": {
+                "x": 0,
+                "y": 4.649,
+                "z": 1.571
+              },
+              "merge": "AUTO"
+            }
           }
         ],
         "lights": [],
@@ -15315,6 +17050,22 @@
               "params": {
                 "color": "#7b8496",
                 "roughness": 0.9
+              },
+              "type": "STANDARD"
+            },
+            {
+              "id": "streamingGridRuinStone",
+              "params": {
+                "color": "#a39a87",
+                "roughness": 0.95
+              },
+              "type": "STANDARD"
+            },
+            {
+              "id": "streamingGridRuinTimber",
+              "params": {
+                "color": "#6b5a45",
+                "roughness": 0.85
               },
               "type": "STANDARD"
             }
@@ -15366,11 +17117,211 @@
                 "height": 10,
                 "depth": 3
               }
+            },
+            {
+              "id": "streamingGridRuinBlock",
+              "type": "BOX",
+              "params": {
+                "width": 3,
+                "height": 2,
+                "depth": 2
+              }
+            },
+            {
+              "id": "streamingGridRuinSlab",
+              "type": "BOX",
+              "params": {
+                "width": 4,
+                "height": 0.5,
+                "depth": 3
+              }
+            },
+            {
+              "id": "streamingGridRuinPost",
+              "type": "CYLINDER",
+              "params": {
+                "radiusTop": 0.4,
+                "radiusBottom": 0.4,
+                "height": 5,
+                "radialSegments": 8
+              }
             }
           ],
           "importedAssets": []
         },
         "cells": {
+          "1125788237758457": {
+            "bounds": [
+              -420.17246890528025,
+              -421.98179778023444,
+              -410.51820221976556,
+              -407.1182022197655
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              33,
+              34,
+              35,
+              36,
+              37,
+              38
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                32,
+                33,
+                34
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125788237758461": {
+            "bounds": [
+              -422.87179778023443,
+              -161.62179778023443,
+              -412.76753109471974,
+              -147.02820221976557
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              57,
+              58,
+              59,
+              60,
+              61,
+              62
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                44,
+                45,
+                46
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125788237758465": {
+            "bounds": [
+              -431.9124689052802,
+              94.92820221976557,
+              -421.85820221976553,
+              109.77179778023442
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              81,
+              82,
+              83,
+              84,
+              85,
+              86
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                56,
+                57,
+                58
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125788237758469": {
+            "bounds": [
+              -433.7224689052802,
+              335.62820221976557,
+              -422.01820221976556,
+              349.90179778023446
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              105,
+              106,
+              107,
+              108,
+              109,
+              110
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                68,
+                69,
+                70
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
           "1125805417627642": {
             "bounds": [
               -372.0489401216124,
@@ -15547,6 +17498,92 @@
               3
             ]
           },
+          "1125856957235193": {
+            "bounds": [
+              -156.73179778023442,
+              -417.67179778023444,
+              -141.94820221976556,
+              -407.76753109471974
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              39,
+              40,
+              41,
+              42,
+              43,
+              44
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                35,
+                36,
+                37
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125856957235197": {
+            "bounds": [
+              -164.44179778023442,
+              -166.02179778023444,
+              -149.66820221976556,
+              -156.11753109471977
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              63,
+              64,
+              65,
+              66,
+              67,
+              68
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                47,
+                48,
+                49
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
           "1125856957235198": {
             "bounds": [
               -160,
@@ -15567,6 +17604,92 @@
                 32
               ]
             }
+          },
+          "1125856957235201": {
+            "bounds": [
+              -176.37179778023443,
+              101.10820221976557,
+              -161.50820221976556,
+              110.78246890528021
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              87,
+              88,
+              89,
+              90,
+              91,
+              92
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                59,
+                60,
+                61
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125856957235205": {
+            "bounds": [
+              -178.72179778023443,
+              341.7482022197655,
+              -164.80820221976558,
+              352.0824689052802
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              111,
+              112,
+              113,
+              114,
+              115,
+              116
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                71,
+                72,
+                73
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
           },
           "1125874137104378": {
             "bounds": [
@@ -15798,6 +17921,92 @@
               ]
             }
           },
+          "1125925676711929": {
+            "bounds": [
+              89.23820221976557,
+              -427.99179778023444,
+              103.32179778023443,
+              -416.0475310947198
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              45,
+              46,
+              47,
+              48,
+              49,
+              50
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                38,
+                39,
+                40
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125925676711933": {
+            "bounds": [
+              100.32753109471977,
+              -159.14179778023444,
+              112.19179778023442,
+              -144.98820221976558
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              69,
+              70,
+              71,
+              72,
+              73,
+              74
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                50,
+                51,
+                52
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
           "1125925676711934": {
             "bounds": [
               -160,
@@ -15818,6 +18027,92 @@
                 32
               ]
             }
+          },
+          "1125925676711937": {
+            "bounds": [
+              83.97820221976558,
+              90.57820221976557,
+              96.77246890528022,
+              103.61179778023443
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              93,
+              94,
+              95,
+              96,
+              97,
+              98
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                62,
+                63,
+                64
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125925676711941": {
+            "bounds": [
+              78.36753109471977,
+              335.9282022197655,
+              91.45179778023443,
+              348.28179778023446
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              117,
+              118,
+              119,
+              120,
+              121,
+              122
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                74,
+                75,
+                76
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
           },
           "1125942856581114": {
             "bounds": [
@@ -16007,6 +18302,178 @@
               3
             ]
           },
+          "1125994396188665": {
+            "bounds": [
+              349.32820221976556,
+              -417.90179778023446,
+              362.8817977802345,
+              -407.5375310947198
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              51,
+              52,
+              53,
+              54,
+              55,
+              56
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                41,
+                42,
+                43
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125994396188669": {
+            "bounds": [
+              336.09820221976554,
+              -173.83179778023444,
+              348.16179778023445,
+              -160.65753109471976
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              75,
+              76,
+              77,
+              78,
+              79,
+              80
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                53,
+                54,
+                55
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125994396188673": {
+            "bounds": [
+              342.01820221976556,
+              87.34820221976557,
+              356.54179778023445,
+              97.49246890528022
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              99,
+              100,
+              101,
+              102,
+              103,
+              104
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                65,
+                66,
+                67
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
+          "1125994396188677": {
+            "bounds": [
+              336.95820221976555,
+              338.18820221976557,
+              347.1424689052802,
+              353.0117977802345
+            ],
+            "bytesEstimate": 0,
+            "meshes": [
+              123,
+              124,
+              125,
+              126,
+              127,
+              128
+            ],
+            "far": {
+              "bytesEstimate": 0,
+              "materials": [
+                3,
+                4
+              ],
+              "geometries": [
+                5,
+                6,
+                7
+              ],
+              "meshes": [
+                77,
+                78,
+                79
+              ]
+            },
+            "materials": [
+              3,
+              4
+            ],
+            "geometries": [
+              5,
+              6,
+              7
+            ]
+          },
           "1126011576057850": {
             "bounds": [
               395.9510598783876,
@@ -16192,14 +18659,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              0
             ]
           },
           {
@@ -16209,14 +18670,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              1
             ]
           },
           {
@@ -16226,14 +18681,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              2
             ]
           },
           {
@@ -16243,14 +18692,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              3
             ]
           },
           {
@@ -16260,14 +18703,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              4
             ]
           },
           {
@@ -16277,14 +18714,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              5
             ]
           },
           {
@@ -16294,14 +18725,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              6
             ]
           },
           {
@@ -16311,14 +18736,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              7
             ]
           },
           {
@@ -16328,14 +18747,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              8
             ]
           },
           {
@@ -16345,14 +18758,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              9
             ]
           },
           {
@@ -16362,14 +18769,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              10
             ]
           },
           {
@@ -16379,14 +18780,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              11
             ]
           },
           {
@@ -16396,14 +18791,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              12
             ]
           },
           {
@@ -16413,14 +18802,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              13
             ]
           },
           {
@@ -16430,14 +18813,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              14
             ]
           },
           {
@@ -16447,14 +18824,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              15
             ]
           },
           {
@@ -16464,14 +18835,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              16
             ]
           },
           {
@@ -16481,14 +18846,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              17
             ]
           },
           {
@@ -16498,14 +18857,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              18
             ]
           },
           {
@@ -16515,14 +18868,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              19
             ]
           },
           {
@@ -16532,14 +18879,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              20
             ]
           },
           {
@@ -16549,14 +18890,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              21
             ]
           },
           {
@@ -16566,14 +18901,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              22
             ]
           },
           {
@@ -16583,14 +18912,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              23
             ]
           },
           {
@@ -16600,14 +18923,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              24
             ]
           },
           {
@@ -16617,14 +18934,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              25
             ]
           },
           {
@@ -16634,14 +18945,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              26
             ]
           },
           {
@@ -16651,14 +18956,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              27
             ]
           },
           {
@@ -16668,14 +18967,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              28
             ]
           },
           {
@@ -16685,14 +18978,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              29
             ]
           },
           {
@@ -16702,14 +18989,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              30
             ]
           },
           {
@@ -16719,14 +19000,584 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              31
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              33,
+              34,
+              35
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              36
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              37,
+              38
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              39,
+              40,
+              41
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              42
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              43,
+              44
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              45,
+              46,
+              47
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              48
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              49,
+              50
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              51,
+              52,
+              53
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              54
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              55,
+              56
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              57,
+              58,
+              59
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              60
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              61,
+              62
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              63,
+              64,
+              65
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              66
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              67,
+              68
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              69,
+              70,
+              71
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              72
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              73,
+              74
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              75,
+              76,
+              77
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              78
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              79,
+              80
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              81,
+              82,
+              83
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              84
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              85,
+              86
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              87,
+              88,
+              89
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              90
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              91,
+              92
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              93,
+              94,
+              95
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              96
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              97,
+              98
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              99,
+              100,
+              101
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              102
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              103,
+              104
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              105,
+              106,
+              107
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              108
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              109,
+              110
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              111,
+              112,
+              113
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              114
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              115,
+              116
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              117,
+              118,
+              119
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              120
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              121,
+              122
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinBlock",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              123,
+              124,
+              125
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinSlab",
+              "mat": "streamingGridRuinStone",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              126
+            ]
+          },
+          {
+            "props": {
+              "geo": "streamingGridRuinPost",
+              "mat": "streamingGridRuinTimber",
+              "castShadow": true,
+              "receiveShadow": false
+            },
+            "entries": [
+              127,
+              128
             ]
           }
         ]

@@ -1,6 +1,6 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not adopted (its Phase 0's gate failed, 2026-11-12); p377 a draft, its Phase 0 written (2026-11-12)
+Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not adopted (its Phase 0's gate failed, 2026-11-12); p377 implemented (2026-11-12: far entries for kit meshes and a larger-cells recommendation; its second-machine run a p990 item); p378 a stub (a baked member's mesh out of the scene graph, from p377's Phase 0)
 Category: Rendering, Merging, Texture atlas
-Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md, p377_hlod-streaming-cell-proxies.md
+Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md, \_DONE_p377_hlod-streaming-cell-proxies.md, p378_baked-members-out-of-the-scene-graph.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
 
 # Static Mesh Merging & Texture Arrays/Atlases — Research & Epic
@@ -204,6 +204,8 @@ longer dirty their transforms every frame (§2), but a dirty flag is still set b
 - **LOD:** a group's LOD unit is the group. Simplifying a merged group as a whole is HLOD (p376),
   which reuses p347's simplifier and p348's selection. Not adopted: p376's Phase 0 measured its
   proxies cutting triangles without saving GPU time; far merged content costs its draws (p377).
+  p377's Phase 0 split that cost: about 40 % the draws, 60 % the hidden members three still walks
+  (p378); a streamed cell's far kit content is the far layer's instanced far entries (p377 D1).
 - **Streaming:** groups never cross a p353 cell; an `AUTO` cell size divides the streaming cell
   size, and explicit groups spanning cells get a dev warning.
 - **Editing:** a member's vertex range in the merged buffers is known, so moving a member rewrites
@@ -222,7 +224,8 @@ longer dirty their transforms every frame (§2), but a dirty flag is still set b
 | p374 merge materials    | after p299 (p302 dropped 2026-11-11: built in code)     | yes                                           |
 | p375 `BatchedMesh`      | yes                                                     | its spike is p348 §4.4's; run it once         |
 | p376 HLOD group proxies | yes (the terrain case moved to p377)                    | no: needs p347 and p348                       |
-| p377 HLOD cell proxies  | no: needs p306 blocks for the terrain case              | no: needs p347, p348 and p353                 |
+| p377 far entries (kit)  | yes (a block's far proxy, the terrain case, not built)  | no: needs p353 (done)                         |
+| p378 baked members      | yes                                                     | yes                                           |
 
 The intended order: p299 before p303; the merge plans after the LOD plans, as requested. Nothing
 in the terrain plans is blocked by p371–p376; they get better with them (§10).
@@ -240,8 +243,10 @@ Merging and arrays add terrain processes the terrain epic doesn't have:
    rewrites its range. Same page.
 3. **A block merged with its static dressing.** A terrain block's static props and mesh decals
    (p309 mesh decals share one atlas material) merge into one draw per material per block.
-4. **HLOD far blocks** (p377, built when the data is gathered): a cell's merged content, simplified as a whole, as p353's FAR
-   representation.
+4. **HLOD far blocks** (p377's way 3, built when the data is gathered): a cell's merged content,
+   simplified as a whole, as p353's FAR representation. Not built: p377's Phase 0 found the far
+   layer's instanced far entries as cheap as a cell proxy (p377 D1, D6); a block with its
+   dressing as one far proxy waits for p306 and a case where a proxy pays.
 
 Heightfield blocks themselves gain little: each is already one mesh.
 
@@ -256,7 +261,8 @@ Heightfield blocks themselves gain little: each is already one mesh.
 | 2.1  | `_DONE_p374_multi-material-merging`         | Merge materials: palettes, per-slot arrays, parameter table, compatibility classes                                             | p372, p299                          |
 | 2.2  | `_DONE_p375_batched-mesh-batches`           | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
 | 3.1  | `p376_hlod-merged-cluster-proxies`          | Not adopted: its Phase 0 measured proxies cutting triangles without saving GPU time (the far field's cost is its draws)        | p372, p347, p348                    |
-| 3.2  | `p377_hlod-streaming-cell-proxies`          | Far static content in few draws: a cull, larger `AUTO` cells or a cell proxy, decided by its own Phase 0 on p376's tools        | p353 (p306 for terrain)             |
+| 3.2  | `_DONE_p377_hlod-streaming-cell-proxies`    | Far static content in few draws: far entries for kit meshes and a larger-cells recommendation (its Phase 0 chose them)         | p353                                |
+| 3.3  | `p378_baked-members-out-of-the-scene-graph` | A baked member's hidden mesh out of three's scene update (as p375 does for a batched one): 60 % of a far field's CPU cost      | p372, p375; p377's bench            |
 
 ## 12. Open questions
 
@@ -319,7 +325,8 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
 | `p374_multi-material-merging`         | p374  | `main`      | engine minor (merge material palettes), app minor  | after p374's last phase |
 | own branch                            | p375  | `main`      | engine minor                                       | after p375's last phase |
 | `p376_hlod-merged-cluster-proxies`    | p376  | `main`      | engine minor (group proxies), app minor (the lane) | after p376's Phase 4    |
-| `p377_hlod-streaming-cell-proxies`    | p377  | `main`      | from its Phase 0's result (app patch if none pays) | after p377's last phase |
+| `p377_hlod-streaming-cell-proxies`    | p377  | `main`      | engine minor (far entries), app minor (the ruins)  | after p377's Phase 6    |
+| own branch                            | p378  | `main`      | engine minor or patch, with its phases             | after p378's last phase |
 
 - p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
   that is useful without the groups.
@@ -333,6 +340,13 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   the branch also carries the debugger's GPU timer fix found during the measurements, so it takes
   an engine patch (and an app patch) after all (p376 §7).
 - p377 (decided 2026-11-12, when it stopped being a stub) is its own branch, from p376's (its
-  Phase 0 builds on p376's spike tools), rebased onto `main` once p376's PR merges. Phase 0 decides
-  what it builds; nothing paying ends the branch with the results and an app patch (p377's
-  Branches and PRs).
+  Phase 0 builds on p376's spike tools). Phase 0 decides what it builds; nothing paying ends the
+  branch with the results and an app patch (p377's Branches and PRs). Something paid
+  (2026-11-12): the branch carries Phases 1-6, the far entries for kit meshes and the
+  larger-cells recommendation, with an engine minor and an app minor (p377 D10). p376 merged
+  (PR #86, versioned engine 6.8.1 / app 1.23.1 on `main`), and `main` was merged into p377's
+  branch instead of a rebase; its Phase 6 bumped from there (engine 6.9.0, app 1.24.0). Done
+  2026-11-12: the PR (p377's branch into `main`) opens when asked.
+- p378 (proposed 2026-11-12 from p377's Phase 0, its open question 5) is its own branch from
+  `main`, after p376's and p377's PRs merge (their bench and far field are its measurement): a
+  merging change for every merged scene, not far content, so not on p377's branch.

@@ -1,7 +1,7 @@
 Status: feasibility — not adopted (Phase 0 done 2026-11-12, its gate failed: §3 Results)
 Category: Merging, LOD
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.1)
-Related: p377_hlod-streaming-cell-proxies.md (rewritten around draws after this plan's Phase 0), \_DONE_p347_lod-chain-generation.md (the simplifier that makes the proxies), \_DONE_p348_ecs-lod-selection.md (the selection, `AUTO`), \_DONE_p351_impostor-billboard-lod.md (the plain-mesh fade), \_DONE_p372_mesh-merge-groups.md (the groups, the in-place writes), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, the Merging tab), \_DONE_p374_multi-material-merging.md (palette groups), \_DONE_p375_batched-mesh-batches.md (`BATCHED` groups have per-member LOD already), \_DONE_p353_macro-streaming-grid.md (why cell proxies are p377's)
+Related: \_DONE_p377_hlod-streaming-cell-proxies.md (rewritten around draws after this plan's Phase 0), \_DONE_p347_lod-chain-generation.md (the simplifier that makes the proxies), \_DONE_p348_ecs-lod-selection.md (the selection, `AUTO`), \_DONE_p351_impostor-billboard-lod.md (the plain-mesh fade), \_DONE_p372_mesh-merge-groups.md (the groups, the in-place writes), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, the Merging tab), \_DONE_p374_multi-material-merging.md (palette groups), \_DONE_p375_batched-mesh-batches.md (`BATCHED` groups have per-member LOD already), \_DONE_p353_macro-streaming-grid.md (why cell proxies are p377's)
 
 # HLOD: Merged Cluster Proxies
 
@@ -20,7 +20,7 @@ merged groups' triangles in a far view, up to 289,000 triangles a frame, and the
 follow on WebGL2 in any view (Apple M2), and on WebGPU only in one view of three. What merged far
 content costs is its draws (one per group: 1,245-1,605 draws, 12-17 ms of CPU a frame at 400 far
 sites), which proxies don't change. §1-§2 and §4 stay as the design, should another measurement
-(other hardware, a frame bound by its triangles) reopen it; p377 now starts from draws.
+(other hardware, a frame bound by its triangles) reopen it; p377 started from draws (implemented: far entries for kit meshes, no cell proxy).
 
 Written 2026-11-12 from the stub, after p372-p375 had shipped; the stub's claims were checked
 against the code (§1), and several had moved.
@@ -71,8 +71,9 @@ against the code (§1), and several had moved.
 
 - **D1 Scope: group proxies only.** A `BAKED` group (palette groups included) gets proxy levels
   and an optional cull. Out of scope: a streaming cell's proxy (p377: built at build time, since a
-  `FAR` cell's members aren't loaded; the stub's open question 1 for cells), the terrain case
-  (p377, after p306), an impostor as a group's last level, and cheaper proxy materials (no normal
+  `FAR` cell's members aren't loaded; the stub's open question 1 for cells; p377's Phase 0 chose
+  the far layer's instanced far entries instead, so none was built), the terrain case
+  (p377, after p306; not built either, it waits for p306), an impostor as a group's last level, and cheaper proxy materials (no normal
   map, baked albedo; §6).
 - **D2 Runtime, per build** (the stub's open question 1, for groups): the members exist at
   runtime, so the chain is generated from each build's geometry, on the worker by
@@ -320,7 +321,8 @@ of a frame's triangles doesn't move WebGL2's GPU time, and WebGPU's shows it in 
 three. The frame's cost is the draws (one per group, 32 m cells), which proxies don't touch.
 What would pay is fewer draws: a cull (`cullScreenSize`, D6, without the levels), larger `AUTO`
 cells for far content, or p377's cell proxies (one draw per streaming cell). Phase 0 didn't
-measure those.
+measure those; p377's Phase 0 did: larger cells and the far layer's instanced far entries paid,
+the cull and the cell proxy didn't add enough to be built.
 
 **Defaults, had it passed** (D4): `permissive: true` (box kit pieces don't simplify without it),
 `maxError: 0.2` (all three levels for the floor tiles; 0.05 left most kit groups without levels),
@@ -432,4 +434,4 @@ branch ends with Phase 0: the results, the spike's tools (`src/app/shared/_dbg__
 counts a negative duration as 0, `docs/issues/gpu-timer-webgpu-frame-sum.md`). That fix is an
 engine change, so the branch takes an engine patch (and an app patch for the ruins' signature, the
 debug field and the probe), not the epic's "no bump" for a failed gate; the PR opens when asked.
-p377 gets its own branch when it stops being a stub.
+p377 got its own branch, from this one, and `main` with this PR merged into it.

@@ -2,13 +2,14 @@
  * The streaming cell manifest (p353 §3.1-3.2, Phase 3 D1-D5, Phase 5 D7-D9): a streaming scene's
  * resolved meshes and point and spot lights go into the cells their positions are in (the cells'
  * near content), an oversized mesh into every cell it overlaps (their kept content, loaded from
- * `FAR` in), a mesh with explicit LOD levels gets a far representation (its coarsest level, a
- * cell's alike ones one instanced group), and the assets only cell content uses move out of the
- * scene's lists with them, into `__streaming`, listed per layer. What stays in the scene's lists is
- * its base, loaded with the scene.
+ * `FAR` in), a cell's mesh gets a far representation (p377 D1-D2: with explicit LOD levels its
+ * coarsest level; without `lod` itself, when it groups and `streaming.farEntries` isn't
+ * `'LOD_LEVELS'`; a cell's alike ones one instanced group naming its near entries, p377 D3), and
+ * the assets only cell content uses
+ * move out of the scene's lists with them, into `__streaming`, listed per layer. What stays in the
+ * scene's lists is its base, loaded with the scene.
  */
 import type {
-  StreamingFarInstance,
   StreamingFarMesh,
   StreamingManifest,
   StreamingManifestCell,
@@ -241,9 +242,10 @@ type CellBuild = {
 /** A build's three reference sets: its near, far and kept layers' */
 const getBuildRefs = (build: CellBuild) => [build.refs, build.far.refs, build.kept.refs];
 
-/** The streaming settings the runtime reads: the build-time `base` and `radii` dropped (D3) */
+/** The streaming settings the runtime reads: the build-time `base`, `radii` and `farEntries`
+ * dropped (D3; p377 D2) */
 const toRuntimeSettings = (settings: NonNullable<SceneJSON['streaming']>) => {
-  const { base, radii, ...runtime } = settings;
+  const { base, radii, farEntries, ...runtime } = settings;
   return runtime;
 };
 
@@ -302,35 +304,46 @@ const getVramBytes = (entry: unknown) => {
 
 type LodLike = { levels?: unknown; cullScreenSize?: unknown; auto?: unknown };
 type LevelLike = { geo?: unknown; mat?: unknown; castShadow?: unknown };
+/** A scene's `streaming.farEntries` (p377 D2): which cell meshes get a far entry */
+type FarEntries = NonNullable<NonNullable<SceneJSON['streaming']>['farEntries']>;
+
+/** A mesh's far entry: its props (its transform included), and whether it's the mesh itself
+ * (`SELF`, a mesh without `lod`) or its coarsest explicit level (`LEVELS`) */
+type FarMeshProps = {
+  props: Record<string, unknown>;
+  kind: 'SELF' | 'LEVELS';
+};
 
 /**
- * A mesh's far representation (Phase 5 D7): with explicit `lod.levels`, its coarsest level (each
- * omitted `geo`, `mat` and `castShadow` the levels' before it, level 0's the mesh's own), at its
- * transform, without its `lod` and app id. None for a mesh without levels (`AUTO` included: its
- * chain isn't known here) or whose LOD hides it at a distance (`cullScreenSize` over 0).
+ * A mesh's far representation (p353 Phase 5 D7, p377 D1-D4), its transform kept, without its `lod`,
+ * app id and `merge` (a far copy never joins a merge group): with explicit `lod.levels`, its
+ * coarsest level (each omitted `geo`, `mat` and `castShadow` the levels' before it, level 0's the
+ * mesh's own); without `lod`, and `farEntries` `'ALL'` (the default), the mesh itself (`SELF`:
+ * the caller keeps it only when it groups, `getFarGroupKey`). None for `AUTO` (its chain isn't
+ * known here), a LOD that hides the mesh at a distance (`cullScreenSize` over 0), or a mesh without
+ * `lod` under `'LOD_LEVELS'`.
  */
 export const getFarMeshProps = (
-  props: Record<string, unknown>
-): { props: Record<string, unknown>; transform: StreamingFarInstance } | null => {
+  props: Record<string, unknown>,
+  farEntries: FarEntries = 'ALL'
+): FarMeshProps | null => {
   const lod = props.lod as LodLike | undefined;
-  if (!lod || typeof lod !== 'object' || lod.auto || !Array.isArray(lod.levels)) return null;
-  if (!lod.levels.length || num(lod.cullScreenSize, 0) > 0) return null;
   let { geo, mat, castShadow } = props;
-  for (const level of lod.levels as LevelLike[]) {
-    if (level.geo !== undefined) geo = level.geo;
-    if (level.mat !== undefined) mat = level.mat;
-    if (level.castShadow !== undefined) castShadow = level.castShadow;
+  let kind: FarMeshProps['kind'] = 'SELF';
+  if (lod === undefined) {
+    if (farEntries === 'LOD_LEVELS') return null;
+  } else {
+    if (typeof lod !== 'object' || lod.auto || !Array.isArray(lod.levels)) return null;
+    if (!lod.levels.length || num(lod.cullScreenSize, 0) > 0) return null;
+    kind = 'LEVELS';
+    for (const level of lod.levels as LevelLike[]) {
+      if (level.geo !== undefined) geo = level.geo;
+      if (level.mat !== undefined) mat = level.mat;
+      if (level.castShadow !== undefined) castShadow = level.castShadow;
+    }
   }
-  const { lod: _lod, appId: _appId, position, rotation, quaternion, scale, ...rest } = props;
-  const transform: Record<string, unknown> = {};
-  if (position !== undefined) transform.position = position;
-  if (rotation !== undefined) transform.rotation = rotation;
-  if (quaternion !== undefined) transform.quaternion = quaternion;
-  if (scale !== undefined) transform.scale = scale;
-  return {
-    props: { ...rest, geo, mat, castShadow },
-    transform: transform as StreamingFarInstance,
-  };
+  const { lod: _lod, appId: _appId, merge: _merge, ...rest } = props;
+  return { props: { ...rest, geo, mat, castShadow }, kind };
 };
 
 /** The key a far entry groups by in its cell: registered geometry and material ids, its shadows;
@@ -354,22 +367,28 @@ const addFarMeshRefs = (
 };
 
 /** Adds a mesh's far representation to the cell's far layer: into the cell's group of its kind,
- * or as a mesh of its own. */
+ * by the mesh's index in the manifest's `meshes` (p377 D3: the group names its near entries, whose
+ * transforms are its instances), or, for a coarsest explicit level, as a mesh of its own (at its
+ * transform). A mesh's own (`SELF`) entry that wouldn't group is none (p377 D1: a far mesh of its
+ * own is no fewer draws than its near one). */
 const addFarEntry = (
   scene: SceneJSON,
   build: CellBuild,
   mesh: Exclude<MeshEntry, string>,
+  meshIndex: number,
   listed: Listed,
-  farMeshes: StreamingFarMesh[]
+  farMeshes: StreamingFarMesh[],
+  farEntries: FarEntries | undefined
 ) => {
-  const far = getFarMeshProps(mesh.props as Record<string, unknown>);
+  const far = getFarMeshProps(mesh.props as Record<string, unknown>, farEntries);
   if (!far) return;
-  const { props, transform } = far;
-  addFarMeshRefs(scene, props, listed, build.far.refs);
+  const { props, kind } = far;
   const groupKey = getFarGroupKey(props);
+  if (groupKey === null && kind === 'SELF') return;
+  addFarMeshRefs(scene, props, listed, build.far.refs);
   if (groupKey === null) {
     build.far.meshes.push(farMeshes.length);
-    farMeshes.push({ props: { ...props, ...transform } as StreamingFarMesh['props'] });
+    farMeshes.push({ props: props as StreamingFarMesh['props'] });
     return;
   }
   let index = build.far.groups.get(groupKey);
@@ -385,10 +404,10 @@ const addFarEntry = (
         castShadow: !!castShadow,
         receiveShadow: !!receiveShadow,
       } as StreamingFarMesh['props'],
-      instances: [],
+      entries: [],
     });
   }
-  farMeshes[index].instances?.push(transform);
+  farMeshes[index].entries?.push(meshIndex);
 };
 
 /** A built far or kept layer, or undefined when it holds nothing. */
@@ -516,7 +535,7 @@ export const buildStreamingManifest = <S extends SceneJSON>(
       }
       pushIndex(build.cell, 'meshes', index);
       addMeshRefs(scene, mesh, listed, build.refs, false);
-      addFarEntry(scene, build, mesh, listed, farMeshes);
+      addFarEntry(scene, build, mesh, index, listed, farMeshes, settings.farEntries);
     }
   });
   cellLights.forEach((light, index) => {

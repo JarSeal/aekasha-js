@@ -34,6 +34,8 @@ export type StreamingManifestLayer = {
 /**
  * One instance of a far mesh group ({@link StreamingFarMesh}): an entry's transform, as its mesh
  * props had it.
+ * @deprecated A group names its near entries in `entries` (p377 D3), whose props hold the
+ * transforms. Removed in engine 7.0.0.
  */
 export type StreamingFarInstance = Pick<
   MeshProps,
@@ -41,15 +43,26 @@ export type StreamingFarInstance = Pick<
 >;
 
 /**
- * A far representation in a {@link StreamingManifest} (p353 Phase 5 D7): an entry's coarsest
- * LOD level. With `instances`, one `InstancedMesh` of the props' `geo`, `mat`, `castShadow` and
- * `receiveShadow` drawing every entry of a cell that shares them; without, one mesh of its own.
+ * A far representation in a {@link StreamingManifest} (p353 Phase 5 D7, p377 D1-D3): an entry's
+ * coarsest LOD level, or a mesh without `lod` itself. A group (with `entries`, or the deprecated
+ * `instances`) is one `InstancedMesh` of the props' `geo`, `mat`, `castShadow` and
+ * `receiveShadow` drawing every entry of a cell that shares them; without either, one mesh of its
+ * own.
  */
 export type StreamingFarMesh = {
-  /** The mesh's props: the entry's, its coarsest level's `geo`, `mat` and `castShadow`, no `lod`
-   * and no app id (the near entry keeps it). A group's: those four only. */
+  /** The mesh's props: the entry's (its transform included), its coarsest level's `geo`, `mat`
+   * and `castShadow`, no `lod`, app id or `merge` (the near entry keeps them). A group's: those
+   * four only. */
   props: MeshProps;
-  /** A group's instances, one per entry. */
+  /** A group's entries: indices into the manifest's `meshes`, an instance each at the near
+   * entry's `position`, `rotation` (or `quaternion`) and `scale` (p377 D3: an index in the first
+   * download instead of a second transform). */
+  entries?: number[];
+  /**
+   * A group's instances, one per entry. Still drawn when given (a group has `entries` or this).
+   * @deprecated Use `entries` (p377 D3): the gather writes it instead since engine 6.9.0.
+   * Removed in engine 7.0.0.
+   */
   instances?: StreamingFarInstance[];
 };
 
@@ -78,7 +91,7 @@ export type StreamingManifestCell = {
   /** The estimated GPU bytes of its near content's cell-only textures and imports (their
    * `__vramBytes.out`, where the asset pipeline gave one): what loading it adds. */
   bytesEstimate: number;
-  /** Its far content (loaded while `FAR`): its entries' coarsest LOD levels. */
+  /** Its far content (loaded while `FAR`): its entries' far representations. */
   far?: StreamingManifestLayer;
   /** Its kept content (loaded from `FAR` in): the oversized meshes it overlaps. */
   kept?: StreamingManifestLayer;
@@ -94,7 +107,7 @@ export type StreamingManifest = {
   cellSize: number;
   /** The cells' meshes, resolved (save entries applied). */
   meshes: { props: MeshProps; entityOpts?: CoreEntityOpts }[];
-  /** The cells' far representations (p353 Phase 5 D7); left out when there are none. */
+  /** The cells' far representations (p353 Phase 5 D7, p377 D1); left out when there are none. */
   farMeshes?: StreamingFarMesh[];
   /** The cells' point and spot lights, resolved. */
   lights: { lightProps: LightProps; entityOpts?: CoreEntityOpts }[];

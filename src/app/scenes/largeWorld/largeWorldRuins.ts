@@ -52,53 +52,69 @@ export interface RuinsOptions {
   merge?: MeshProps['merge'];
 }
 
+/** A ruin piece's kind: its geometry, and with it its material. */
+export type RuinPieceKind = 'floor' | 'wall' | 'pillar' | 'rubble';
+
+/** A ruin piece as `layoutRuins` places it: its kind, its site and its pose in the world. */
+export interface RuinPiece {
+  kind: RuinPieceKind;
+  /** Its site's index in the sites */
+  site: number;
+  position: { x: number; y: number; z: number };
+  /** Euler angles (radians) */
+  rotation: { x?: number; y?: number; z?: number };
+  scale?: { x: number; y: number; z: number };
+}
+
+/** The kit's four geometries (registered on the first call, then the registered ones). */
+export const getRuinGeometries = () => ({
+  floor: createGeometry({
+    id: 'largeWorldRuinFloorGeo',
+    type: 'BOX',
+    params: { width: 2, height: 0.3, depth: 2 },
+  }),
+  // 1 m high, scaled to each wall's and pillar's height
+  wall: createGeometry({
+    id: 'largeWorldRuinWallGeo',
+    type: 'BOX',
+    params: { width: 2, height: 1, depth: 0.5 },
+  }),
+  pillar: createGeometry({
+    id: 'largeWorldRuinPillarGeo',
+    type: 'CYLINDER',
+    params: { radiusTop: 0.3, radiusBottom: 0.38, height: 1, radialSegments: 8 },
+  }),
+  rubble: createGeometry({
+    id: 'largeWorldRuinRubbleGeo',
+    type: 'SPHERE',
+    params: { radius: 0.4, widthSegments: 5, heightSegments: 4 },
+  }),
+});
+
+/** A piece kind's material: the floor tiles the platform's, the rubble the rock's, the rest the
+ * wall's. */
+export const getRuinMaterial = (kind: RuinPieceKind, materials: RuinMaterials) =>
+  kind === 'floor' ? materials.platform : kind === 'rubble' ? materials.rock : materials.wall;
+
 /**
- * A modular ruins kit: 8 sites of floor tiles, broken walls, pillars and rubble on the terrain,
- * about 400 static pieces from four geometries in the props' three materials, all drawn merged
- * (`merge: 'AUTO'`): about 24 groups, one per site and material. The same ruins on every load
- * (a seeded random). `heightAt` is the ground's height under a point; `options` builds other sites
- * (p376's far field, `_dbg__largeWorldHlodField.ts`).
+ * Where the ruins' pieces go, without making them: every site's floor tiles, broken walls,
+ * pillars and rubble, the same on every call with the same sites and seed (a seeded random).
+ * `heightAt` is the ground's height under a point.
  */
-export const createRuins = (
-  world: ECSWorld,
+export const layoutRuins = (
   heightAt: (x: number, z: number) => number,
-  materials: RuinMaterials,
-  options: RuinsOptions = {}
+  options: Pick<RuinsOptions, 'sites' | 'seed'> = {}
 ) => {
-  const geometries = {
-    floor: createGeometry({
-      id: 'largeWorldRuinFloorGeo',
-      type: 'BOX',
-      params: { width: 2, height: 0.3, depth: 2 },
-    }),
-    // 1 m high, scaled to each wall's and pillar's height
-    wall: createGeometry({
-      id: 'largeWorldRuinWallGeo',
-      type: 'BOX',
-      params: { width: 2, height: 1, depth: 0.5 },
-    }),
-    pillar: createGeometry({
-      id: 'largeWorldRuinPillarGeo',
-      type: 'CYLINDER',
-      params: { radiusTop: 0.3, radiusBottom: 0.38, height: 1, radialSegments: 8 },
-    }),
-    rubble: createGeometry({
-      id: 'largeWorldRuinRubbleGeo',
-      type: 'SPHERE',
-      params: { radius: 0.4, widthSegments: 5, heightSegments: 4 },
-    }),
-  };
+  const pieces: RuinPiece[] = [];
   const random = createSeededRandom(options.seed ?? 7);
-  const merge = options.merge ?? 'AUTO';
   const between = (min: number, max: number) => min + random() * (max - min);
 
   (options.sites ?? RUIN_SITES).forEach((site, siteIndex) => {
     const cos = Math.cos(site.angle);
     const sin = Math.sin(site.angle);
-    const name = `Large world ruin ${siteIndex}`;
     /** A piece at the site's local (`lx`, `lz`), its `y` above the terrain there. */
     const place = (
-      kind: keyof typeof geometries,
+      kind: RuinPieceKind,
       lx: number,
       lz: number,
       y: number,
@@ -109,24 +125,13 @@ export const createRuins = (
       const rotation = opts.tumble
         ? { x: random() * Math.PI, y: random() * Math.PI, z: random() * Math.PI }
         : { y: site.angle + (opts.turn ?? 0) };
-      createMeshEntity(
-        {
-          geo: geometries[kind],
-          mat:
-            kind === 'floor'
-              ? materials.platform
-              : kind === 'rubble'
-                ? materials.rock
-                : materials.wall,
-          castShadow: true,
-          receiveShadow: true,
-          position: { x, y: heightAt(x, z) + y, z },
-          rotation,
-          scale: opts.scale,
-          merge,
-        },
-        { debugData: { name: `${name} ${kind}` }, world }
-      );
+      pieces.push({
+        kind,
+        site: siteIndex,
+        position: { x, y: heightAt(x, z) + y, z },
+        rotation,
+        scale: opts.scale,
+      });
     };
 
     // The floor: its tiles' tops 0.25 m above the terrain under each
@@ -184,4 +189,38 @@ export const createRuins = (
       );
     }
   });
+  return pieces;
+};
+
+/**
+ * A modular ruins kit: 8 sites of floor tiles, broken walls, pillars and rubble on the terrain,
+ * about 400 static pieces from four geometries in the props' three materials, all drawn merged
+ * (`merge: 'AUTO'`): about 24 groups, one per site and material. The same ruins on every load
+ * (a seeded random, `layoutRuins`). `heightAt` is the ground's height under a point; `options`
+ * builds other sites (p376's far field, `_dbg__largeWorldHlodField.ts`). Returns the pieces'
+ * entity ids.
+ */
+export const createRuins = (
+  world: ECSWorld,
+  heightAt: (x: number, z: number) => number,
+  materials: RuinMaterials,
+  options: RuinsOptions = {}
+) => {
+  const geometries = getRuinGeometries();
+  const merge = options.merge ?? 'AUTO';
+  return layoutRuins(heightAt, options).map(({ kind, site, position, rotation, scale }) =>
+    createMeshEntity(
+      {
+        geo: geometries[kind],
+        mat: getRuinMaterial(kind, materials),
+        castShadow: true,
+        receiveShadow: true,
+        position,
+        rotation,
+        scale,
+        merge,
+      },
+      { debugData: { name: `Large world ruin ${site} ${kind}` }, world }
+    )
+  );
 };

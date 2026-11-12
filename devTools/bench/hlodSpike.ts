@@ -21,6 +21,17 @@
  * the level `AUTO` would pick and at their coarsest proxy level (`--proxy`'s variant at
  * `--max-error`, default 0.2 here), on each backend. Step 3 is `frames` with `--field <sites>`
  * (largeWorld's far field, `?hlodField`) and `--views` naming `ground` (8 m up, looking across it).
+ *
+ *   npx tsx devTools/bench/hlodSpike.ts --step draws [--field 400] [--cases floor,members@32,…]
+ *     [--rebuilds 8] [--backends webgpu,webgl] [--views start,far,ground] [--time 10] [--runs 3]
+ *     [--warmup 120] [--frames 300] [--url <server>] [--headed] [--json <file>]
+ *
+ * p377 Phase 0 (`draws`, `hlodSpikeDraws.ts`): which way to fewer draws on the far field
+ * (`--field`, default 400 sites here): the floor, the reference (`members@32`) and its culls
+ * (`+cull25|50|75`), larger cells (`members@<m>`), a cell as one mesh (`proxy@<m>`) and today's far
+ * layer (`instanced@<m>`); `--cases` names any of them (default steps 1-4's). Each case's CPU
+ * split, draws, GPU and a snapshot against the reference's, each page's load and (members) its
+ * rebuilds. The results also go to `.cache/bench/hlodSpike/draws/<sites>-sites/results.json`.
  * Output: `.cache/bench/progress.log` too.
  */
 import fs from 'node:fs';
@@ -31,6 +42,14 @@ import { ROOT } from '../paths';
 import { out, setProgressLogFile } from '../progressLog';
 import { launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
 import { startVerifyServerAsync } from '../verify/devServer';
+import {
+  DEFAULT_DRAW_CASES,
+  formatDraws,
+  getDrawsDir,
+  parseDrawCase,
+  runDrawsStepAsync,
+  type DrawsArgs,
+} from './hlodSpikeDraws';
 import { FRAME_VIEWS, formatFrames, runFramesStepAsync, type FramesArgs } from './hlodSpikeFrames';
 import {
   buildSceneUrl,
@@ -61,7 +80,7 @@ const VARIANT_LABELS: Record<VariantName, string> = {
 };
 
 type Args = {
-  step: 'simplify' | 'frames';
+  step: 'simplify' | 'frames' | 'draws';
   scenes: string[];
   variants: VariantName[];
   ratios: number[] | null;
@@ -80,6 +99,9 @@ type Args = {
   warmup: number;
   frames: number;
   field: number;
+  /** Step `draws`' (p377) */
+  cases: string[];
+  rebuilds: number;
 };
 
 const parseArgs = (argv: string[]): Args => {
@@ -101,7 +123,9 @@ const parseArgs = (argv: string[]): Args => {
     timeOfDay: 10,
     warmup: 120,
     frames: 300,
-    field: 0,
+    field: -1,
+    cases: DEFAULT_DRAW_CASES,
+    rebuilds: 8,
   };
   const variant = (v: string) =>
     (VARIANTS as readonly string[]).includes(v) ? (v as VariantName) : fail(`unknown variant ${v}`);
@@ -110,7 +134,10 @@ const parseArgs = (argv: string[]): Args => {
     const value = () => argv[++i] ?? fail(`${flag} needs a value`);
     if (flag === '--step') {
       const step = value();
-      args.step = step === 'simplify' || step === 'frames' ? step : fail(`unknown step ${step}`);
+      args.step =
+        step === 'simplify' || step === 'frames' || step === 'draws'
+          ? step
+          : fail(`unknown step ${step}`);
     } else if (flag === '--scenes') args.scenes = value().split(',');
     else if (flag === '--variants') args.variants = value().split(',').map(variant);
     else if (flag === '--proxy') args.proxy = variant(value());
@@ -127,6 +154,16 @@ const parseArgs = (argv: string[]): Args => {
     else if (flag === '--warmup') args.warmup = Math.max(0, Number(value()));
     else if (flag === '--frames') args.frames = Math.max(1, Number(value()));
     else if (flag === '--field') args.field = Math.max(0, Math.floor(Number(value())));
+    else if (flag === '--cases') {
+      args.cases = value().split(',');
+      for (const name of args.cases) {
+        try {
+          parseDrawCase(name);
+        } catch (err) {
+          fail((err as Error).message);
+        }
+      }
+    } else if (flag === '--rebuilds') args.rebuilds = Math.max(0, Math.floor(Number(value())));
     else if (flag === '--ratios') args.ratios = value().split(',').map(Number);
     else if (flag === '--max-error') args.maxError = Number(value());
     else if (flag === '--runs') args.runs = Math.max(1, Number(value()));
@@ -136,6 +173,8 @@ const parseArgs = (argv: string[]): Args => {
     else if (flag === '--json') args.json = value();
     else fail(`unknown option ${flag}`);
   }
+  // The field: none by default, 400 sites for p377's draws
+  if (args.field < 0) args.field = args.step === 'draws' ? 400 : 0;
   return args;
 };
 
@@ -303,6 +342,19 @@ const toFramesArgs = (args: Args): FramesArgs => ({
   },
 });
 
+/** Step `draws`' arguments */
+const toDrawsArgs = (args: Args): DrawsArgs => ({
+  backends: args.backends,
+  runs: args.runs,
+  warmup: args.warmup,
+  frames: args.frames,
+  views: args.views,
+  timeOfDay: args.timeOfDay,
+  field: args.field,
+  cases: args.cases,
+  rebuilds: args.rebuilds,
+});
+
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   const watch = setProgressLogFile(LOG_FILE);
@@ -319,7 +371,9 @@ const main = async () => {
   out(
     args.step === 'simplify'
       ? `HLOD spike, step 1 (simplify), against ${baseUrl} (${launched.label}): ${args.scenes.join(', ')}; ${args.variants.join(', ')}; ${args.runs} run(s)`
-      : `HLOD spike, step 2 (frames), against ${baseUrl} (${launched.label}): ${args.backends.join(', ')} × ${args.views.join(', ')} × ${args.runs} run(s), ${args.warmup} + ${args.frames} frames`
+      : args.step === 'frames'
+        ? `HLOD spike, step 2 (frames), against ${baseUrl} (${launched.label}): ${args.backends.join(', ')} × ${args.views.join(', ')} × ${args.runs} run(s), ${args.warmup} + ${args.frames} frames`
+        : `HLOD spike, p377 draws, against ${baseUrl} (${launched.label}): ${args.field} sites; ${args.cases.join(', ')}; ${args.backends.join(', ')} × ${args.views.join(', ')} × ${args.runs} run(s), ${args.warmup} + ${args.frames} frames, ${args.rebuilds} rebuilds`
   );
   out(`${DIM}Watch it: cd ${ROOT} && ${watch}${RESET}\n`);
 
@@ -330,6 +384,15 @@ const main = async () => {
       const simplified = await runSimplifyStepAsync(launched.browser, baseUrl, args);
       results = simplified;
       lines = simplified.flatMap((result) => formatSimplify(result, args));
+    } else if (args.step === 'draws') {
+      const drawsArgs = toDrawsArgs(args);
+      const draws = await runDrawsStepAsync(launched.browser, baseUrl, drawsArgs);
+      results = draws;
+      lines = formatDraws(draws, drawsArgs);
+      fs.writeFileSync(
+        path.join(getDrawsDir(args.field), 'results.json'),
+        `${JSON.stringify({ args, results }, null, 2)}\n`
+      );
     } else {
       const framesArgs = toFramesArgs(args);
       const frames = await runFramesStepAsync(launched.browser, baseUrl, framesArgs);

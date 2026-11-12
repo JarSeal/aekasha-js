@@ -42,6 +42,14 @@ import {
 // - the rocks, `NEAR`, and their `FAR` stand-in: one InstancedMesh of the rock's octahedral impostor
 //   (baked once at the scene's load), an instance where each rock is;
 // - the crates, `NEAR` only.
+// The scene JSON adds content the gather cuts into cells (Phase 3's): a beacon in every fourth
+// cell (explicit LOD levels, so far groups), a 320 m wall (oversized, kept), and a six-piece ruin
+// of a small kit (block, slab, post in two materials;
+// docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md D7) in 16 cells (cx and cz each -7, -3, 1
+// or 5: few, as every scene's JSON is in the app's first download): merged `AUTO` in 32 m cells
+// while near (the JSON's `mergeGroups`), and while far each piece its own far entry, a cell's
+// ruin three far groups. The ruins' heights were baked into the JSON from this file's height
+// field (`createHeightField(53)`): changing it leaves them floating or buried.
 // The props share their geometry and materials, so a cell compiles no new shader; each unit gets
 // them by id in its load, since an asset goes on its last ref. The heights come from one
 // world-space noise, so the blocks meet at their edges. The main camera (the streaming focus)

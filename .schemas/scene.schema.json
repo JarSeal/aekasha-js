@@ -66,10 +66,10 @@
       "$ref": "#/definitions/__schema526"
     },
     "mergeGroups": {
-      "$ref": "#/definitions/__schema541"
+      "$ref": "#/definitions/__schema543"
     },
     "mergeMaterials": {
-      "$ref": "#/definitions/__schema559"
+      "$ref": "#/definitions/__schema561"
     },
     "id": {
       "type": "string",
@@ -90,7 +90,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema562"
+          "$ref": "#/definitions/__schema564"
         }
       ]
     }
@@ -6905,6 +6905,9 @@
         },
         "radii": {
           "$ref": "#/definitions/__schema539"
+        },
+        "farEntries": {
+          "$ref": "#/definitions/__schema541"
         }
       },
       "required": [
@@ -7031,7 +7034,7 @@
       }
     },
     "__schema541": {
-      "description": "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling?, geometryReserve?, transparentOrder? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? }).",
+      "description": "Build time only: which cell meshes get a far entry. ALL (default): explicit LOD levels' coarsest, and a mesh without lod itself when it groups (a registered geo and mat, no matOverrides); LOD_LEVELS: explicit levels only.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema542"
@@ -7039,27 +7042,42 @@
       ]
     },
     "__schema542": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/__schema543"
-      }
+      "type": "string",
+      "enum": [
+        "ALL",
+        "LOD_LEVELS"
+      ]
     },
     "__schema543": {
+      "description": "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling?, geometryReserve?, transparentOrder? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? }).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema544"
+        }
+      ]
+    },
+    "__schema544": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema545"
+      }
+    },
+    "__schema545": {
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "id": {
-              "$ref": "#/definitions/__schema544"
-            },
-            "cellSize": {
-              "$ref": "#/definitions/__schema545"
-            },
-            "maxVertices": {
               "$ref": "#/definitions/__schema546"
             },
-            "palettes": {
+            "cellSize": {
               "$ref": "#/definitions/__schema547"
+            },
+            "maxVertices": {
+              "$ref": "#/definitions/__schema548"
+            },
+            "palettes": {
+              "$ref": "#/definitions/__schema549"
             }
           },
           "required": [
@@ -7075,25 +7093,25 @@
               "$ref": "#/definitions/__schema295"
             },
             "castShadow": {
-              "$ref": "#/definitions/__schema548"
-            },
-            "receiveShadow": {
-              "$ref": "#/definitions/__schema549"
-            },
-            "palette": {
               "$ref": "#/definitions/__schema550"
             },
-            "mode": {
+            "receiveShadow": {
+              "$ref": "#/definitions/__schema551"
+            },
+            "palette": {
               "$ref": "#/definitions/__schema552"
             },
-            "perMemberCulling": {
-              "$ref": "#/definitions/__schema553"
+            "mode": {
+              "$ref": "#/definitions/__schema554"
             },
-            "geometryReserve": {
+            "perMemberCulling": {
               "$ref": "#/definitions/__schema555"
             },
-            "transparentOrder": {
+            "geometryReserve": {
               "$ref": "#/definitions/__schema557"
+            },
+            "transparentOrder": {
+              "$ref": "#/definitions/__schema559"
             }
           },
           "required": [
@@ -7104,69 +7122,58 @@
         }
       ]
     },
-    "__schema544": {
+    "__schema546": {
       "type": "string",
       "const": "AUTO"
     },
-    "__schema545": {
+    "__schema547": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema301"
         }
       ]
     },
-    "__schema546": {
+    "__schema548": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema303"
         }
       ]
     },
-    "__schema547": {
+    "__schema549": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema305"
         }
       ]
     },
-    "__schema548": {
-      "type": "boolean"
-    },
-    "__schema549": {
-      "type": "boolean"
-    },
     "__schema550": {
+      "type": "boolean"
+    },
+    "__schema551": {
+      "type": "boolean"
+    },
+    "__schema552": {
       "description": "A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material. Not with mode BATCHED.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema551"
+          "$ref": "#/definitions/__schema553"
         }
       ]
     },
-    "__schema551": {
+    "__schema553": {
       "type": "string",
       "minLength": 1
     },
-    "__schema552": {
+    "__schema554": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema299"
         }
       ]
     },
-    "__schema553": {
-      "description": "BATCHED only: each member is frustum-culled on its own, in every pass (default true). false skips the per-member walk, for a batch that is always in view.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema554"
-        }
-      ]
-    },
-    "__schema554": {
-      "type": "boolean"
-    },
     "__schema555": {
-      "description": "BATCHED only: the least room each geometry's slot in the batch reserves ({ vertices, indices? }; its own size when larger), so a pool whose geometries come and go (decals) reuses its slots and its buffers stop growing.",
+      "description": "BATCHED only: each member is frustum-culled on its own, in every pass (default true). false skips the per-member walk, for a batch that is always in view.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema556"
@@ -7174,6 +7181,17 @@
       ]
     },
     "__schema556": {
+      "type": "boolean"
+    },
+    "__schema557": {
+      "description": "BATCHED only: the least room each geometry's slot in the batch reserves ({ vertices, indices? }; its own size when larger), so a pool whose geometries come and go (decals) reuses its slots and its buffers stop growing.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema558"
+        }
+      ]
+    },
+    "__schema558": {
       "type": "object",
       "properties": {
         "vertices": {
@@ -7192,23 +7210,8 @@
       ],
       "additionalProperties": false
     },
-    "__schema557": {
-      "description": "BATCHED only, for a transparent material: the order the batch draws its members in, DEPTH (back to front, the default) or JOIN (the order they joined, the newest on top: decals).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema558"
-        }
-      ]
-    },
-    "__schema558": {
-      "type": "string",
-      "enum": [
-        "DEPTH",
-        "JOIN"
-      ]
-    },
     "__schema559": {
-      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "description": "BATCHED only, for a transparent material: the order the batch draws its members in, DEPTH (back to front, the default) or JOIN (the order they joined, the newest on top: decals).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema560"
@@ -7216,16 +7219,31 @@
       ]
     },
     "__schema560": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/__schema561"
-      }
+      "type": "string",
+      "enum": [
+        "DEPTH",
+        "JOIN"
+      ]
     },
     "__schema561": {
+      "description": "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema562"
+        }
+      ]
+    },
+    "__schema562": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema563"
+      }
+    },
+    "__schema563": {
       "type": "string",
       "minLength": 1
     },
-    "__schema562": {
+    "__schema564": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -7306,10 +7324,10 @@
               "$ref": "#/definitions/__schema526"
             },
             "mergeGroups": {
-              "$ref": "#/definitions/__schema541"
+              "$ref": "#/definitions/__schema543"
             },
             "mergeMaterials": {
-              "$ref": "#/definitions/__schema559"
+              "$ref": "#/definitions/__schema561"
             }
           },
           "additionalProperties": false

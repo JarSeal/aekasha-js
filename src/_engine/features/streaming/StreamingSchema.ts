@@ -96,6 +96,18 @@ export const SceneStreamingSchema = z
       .describe(
         "Build time only: bounding radii by mesh app id, for geometries the gather can't measure (an import's)."
       ),
+    /** Build time only: which cell meshes get a far entry, the stand-in a `FAR` cell draws. `ALL`
+     * (default): a mesh with explicit `lod` levels gets its coarsest level, and one without `lod`
+     * itself, when it groups with its cell's alike ones (a registered `geo` and `mat`, no
+     * `matOverrides`: one instanced draw per geometry and material); `LOD_LEVELS`: only the
+     * explicit levels' (before engine 6.9.0, the only rule). None either way for an `AUTO` LOD or
+     * one with a `cullScreenSize`. */
+    farEntries: z
+      .enum(['ALL', 'LOD_LEVELS'])
+      .optional()
+      .describe(
+        "Build time only: which cell meshes get a far entry. ALL (default): explicit LOD levels' coarsest, and a mesh without lod itself when it groups (a registered geo and mat, no matOverrides); LOD_LEVELS: explicit levels only."
+      ),
   })
   .strict()
   .superRefine((settings, ctx) => {
