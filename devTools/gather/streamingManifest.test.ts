@@ -263,18 +263,14 @@ describe('buildStreamingManifest', () => {
     const far = manifest?.farMeshes ?? [];
     expect(manifest?.cells[key(0, 0)]?.far?.meshes).toEqual([0, 1]);
     expect(manifest?.cells[key(1, 0)]?.far?.meshes).toEqual([2]);
-    // One group for a, b and plain: the coarsest level's geometry, its castShadow, each entry's
-    // transform; a group holds coarsest levels and meshes' own entries alike
+    // One group for a, b and plain: the coarsest level's geometry, its castShadow, each entry by
+    // its near entry's index (p377 D3); a group holds coarsest levels and meshes' own entries alike
     expect(far[0]).toEqual({
       props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
-      instances: [
-        { position: { x: 10, y: 0, z: 10 } },
-        { position: { x: 20, y: 0, z: 30 }, scale: { x: 2, y: 2, z: 2 } },
-        { position: { x: 60, y: 0, z: 30 } },
-      ],
+      entries: [0, 1, 5],
     });
     // matOverrides: a mesh of its own, no app id, no lod
-    expect(far[1].instances).toBeUndefined();
+    expect(far[1].entries).toBeUndefined();
     expect(far[1].props).toMatchObject({ geo: 'lowBox', position: { x: 30, y: 0, z: 30 } });
     expect(far[1].props).not.toHaveProperty('appId');
     expect(far[1].props).not.toHaveProperty('lod');
@@ -309,7 +305,7 @@ describe('buildStreamingManifest', () => {
     expect(manifest?.farMeshes).toEqual([
       {
         props: { geo: 'lowBox', mat: 'grey', castShadow: false, receiveShadow: false },
-        instances: [{ position: { x: 10, y: 0, z: 10 } }],
+        entries: [0],
       },
     ]);
     // The crate's cell has no far layer, the level's only its level's assets
@@ -323,7 +319,7 @@ describe('buildStreamingManifest', () => {
     // ALL (the default, and given) adds plain to a's group and gives the crate's cell one
     const all = build(scene('ALL')).out;
     expect(all.streaming).toEqual({ cellSize: 64 });
-    expect(all.__streaming?.farMeshes?.[0].instances).toHaveLength(2);
+    expect(all.__streaming?.farMeshes?.[0].entries).toEqual([0, 1]);
     expect(all.__streaming?.cells[key(1, 0)]?.far?.meshes).toEqual([1]);
     expect(build(scene()).out.__streaming).toEqual(all.__streaming);
   });
@@ -373,7 +369,7 @@ describe('buildStreamingManifest', () => {
     expect(manifest?.cells[key(1, 0)]?.far).toBeUndefined();
     expect(manifest?.farMeshes).toHaveLength(1);
     const own = manifest?.farMeshes?.[0];
-    expect(own?.instances).toBeUndefined();
+    expect(own?.entries).toBeUndefined();
     expect(own?.props).toMatchObject({ geo: 'box', mat: 'grey', matOverrides: {} });
     for (const field of ['merge', 'lod', 'appId']) expect(own?.props).not.toHaveProperty(field);
     // The wall is kept content in both its cells
@@ -409,7 +405,7 @@ describe('buildStreamingManifest', () => {
     expect(manifest?.farMeshes).toEqual([
       {
         props: { geo: 'box', mat: 'grey', castShadow: false, receiveShadow: false },
-        instances: [{ position: { x: 10, y: 0, z: 10 } }],
+        entries: [1],
       },
     ]);
   });

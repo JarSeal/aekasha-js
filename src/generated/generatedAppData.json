@@ -16192,14 +16192,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              0
             ]
           },
           {
@@ -16209,14 +16203,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              1
             ]
           },
           {
@@ -16226,14 +16214,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              2
             ]
           },
           {
@@ -16243,14 +16225,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              3
             ]
           },
           {
@@ -16260,14 +16236,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              4
             ]
           },
           {
@@ -16277,14 +16247,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              5
             ]
           },
           {
@@ -16294,14 +16258,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": -352
-                }
-              }
+            "entries": [
+              6
             ]
           },
           {
@@ -16311,14 +16269,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": -352
-                }
-              }
+            "entries": [
+              7
             ]
           },
           {
@@ -16328,14 +16280,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              8
             ]
           },
           {
@@ -16345,14 +16291,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              9
             ]
           },
           {
@@ -16362,14 +16302,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              10
             ]
           },
           {
@@ -16379,14 +16313,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              11
             ]
           },
           {
@@ -16396,14 +16324,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              12
             ]
           },
           {
@@ -16413,14 +16335,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              13
             ]
           },
           {
@@ -16430,14 +16346,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": -96
-                }
-              }
+            "entries": [
+              14
             ]
           },
           {
@@ -16447,14 +16357,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": -96
-                }
-              }
+            "entries": [
+              15
             ]
           },
           {
@@ -16464,14 +16368,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              16
             ]
           },
           {
@@ -16481,14 +16379,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              17
             ]
           },
           {
@@ -16498,14 +16390,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              18
             ]
           },
           {
@@ -16515,14 +16401,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              19
             ]
           },
           {
@@ -16532,14 +16412,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              20
             ]
           },
           {
@@ -16549,14 +16423,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              21
             ]
           },
           {
@@ -16566,14 +16434,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": 96
-                }
-              }
+            "entries": [
+              22
             ]
           },
           {
@@ -16583,14 +16445,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": 96
-                }
-              }
+            "entries": [
+              23
             ]
           },
           {
@@ -16600,14 +16456,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              24
             ]
           },
           {
@@ -16617,14 +16467,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -352,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              25
             ]
           },
           {
@@ -16634,14 +16478,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              26
             ]
           },
           {
@@ -16651,14 +16489,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": -96,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              27
             ]
           },
           {
@@ -16668,14 +16500,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              28
             ]
           },
           {
@@ -16685,14 +16511,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 160,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              29
             ]
           },
           {
@@ -16702,14 +16522,8 @@
               "castShadow": true,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 8,
-                  "z": 352
-                }
-              }
+            "entries": [
+              30
             ]
           },
           {
@@ -16719,14 +16533,8 @@
               "castShadow": false,
               "receiveShadow": false
             },
-            "instances": [
-              {
-                "position": {
-                  "x": 416,
-                  "y": 29,
-                  "z": 352
-                }
-              }
+            "entries": [
+              31
             ]
           }
         ]
