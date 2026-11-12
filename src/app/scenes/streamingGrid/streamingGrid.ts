@@ -45,7 +45,8 @@ import {
 // The scene JSON adds content the gather cuts into cells (Phase 3's): a beacon in every fourth
 // cell (explicit LOD levels, so far groups), a 320 m wall (oversized, kept), and a six-piece ruin
 // of a small kit (block, slab, post in two materials; docs/plans/p377_hlod-streaming-cell-proxies.md
-// D7) in every cell with odd cx and cz: merged `AUTO` in 32 m cells while near (the JSON's
+// D7) in 16 cells (cx and cz each -7, -3, 1 or 5: few, as every scene's JSON is in the app's
+// first download): merged `AUTO` in 32 m cells while near (the JSON's
 // `mergeGroups`), and while far each piece its own far entry, a cell's ruin three far groups. The
 // ruins' heights were baked into the JSON from this file's height field (`createHeightField(53)`):
 // changing it leaves them floating or buried.

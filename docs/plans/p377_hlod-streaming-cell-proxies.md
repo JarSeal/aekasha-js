@@ -396,7 +396,10 @@ p376's ruins are. What the far layer does with one today, and what the change to
   layer's groups: the combination a large streamed world has. 384 meshes keep the app's generated
   data small
   (`yarn sbp` reports the change); the far layer's real path (the gather, the units, priming,
-  the fades, the asset owners) runs on kit content for the first time.
+  the fades, the asset owners) runs on kit content for the first time. **Amended in Phase 3**
+  (2026-11-12): 16 ruin cells, 96 meshes (`cx` and `cz` each -7, -3, 1 or 5): the 64 cost
+  +11.6 KiB gzip on the app's first download, where every scene's JSON is; 16 cost +3.4 KiB, the
+  budgets raised by it (Phase 3's As built; scene data out of the first download is a p990 item).
 - **D8: larger cells are a recommendation, on the Hub's Mesh merging page.** For far content that
   doesn't stream: at a few hundred kit sites in view (Phase 0's 400 sites over a kilometre,
   20,000 pieces), `AUTO` in 128-256 m cells saves 2.8-6.2 ms of CPU a frame against 32 m on both
@@ -562,14 +565,25 @@ Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGr
   `streamingGrid.ts`' `createHeightField(53)`, each piece sunk 0.35 m (a slope, the far terrain's
   coarse level); the file header says changing it leaves them floating. The scene's `mergeGroups`
   entry follows `streaming`.
-- **The gather's output**: 417 manifest meshes (33 + 384), 224 far meshes, all groups (192 the
-  ruins': 64 per kind, 384 instances; 32 the beacons'), none of their own; a ruin cell's near and
-  far layers both list the kit's two materials and three geometries, the base none.
+- **16 ruin cells, not 64** (D7 amended in section 3, decided 2026-11-12): the cells whose `cx`
+  and `cz` are each -7, -3, 1 or 5 (one in four of the odd ones on each axis), 96 meshes. Every
+  scene's JSON is in the app's first download, and D7's 64 cells (384 meshes) cost +11.6 KiB gzip
+  on it (`yarn sbp`, below), the initial 405.6 against its 394 KiB budget; 16 cells cost +3.4 KiB.
+  The far ring still holds up to nine ruin cells, and cell (1, 1), beside the flight's row, is
+  one. The layout is per cell, so the 16 are the same ruins as before (the other 48 cells' blocks
+  dropped from the JSON).
+- **The gather's output** (16 cells): 129 manifest meshes (33 + 96), 80 far meshes, all groups (48
+  the ruins': 16 per kind, 96 instances; 32 the beacons'), none of their own; a ruin cell's near
+  and far layers both list the kit's two materials and three geometries, the base none. With 64
+  cells it was 417 meshes and 224 groups (sections 1-2 ran on those).
 - **The data's size** (compact JSON, as the build ships it): streamingGrid's scene 20,497 →
-  137,119 bytes (`__streaming` 18,450 → 135,018: its `meshes` 79.7 KB, about 190 bytes a piece;
-  `farMeshes` 29.5 KB, about 130 a group; `cells` 23.9 KB), `generatedAppData.json` 340,770 →
-  457,392. Section 3's `yarn sbp` gives the first download's gzip.
-- **What it shows** (Apple M2, Chrome headless through the dev server, debug env, 1600 × 900; a
+  50,202 bytes (`__streaming` 18,450 → 47,866), `generatedAppData.json` 340,770 → 370,475, gzip
+  41.1 → 45.2 KB. With 64 cells: 137,119 bytes (`meshes` 79.7 KB, about 190 bytes a piece;
+  `farMeshes` 29.5 KB, about 130 a group; `cells` 23.9 KB), gzip 53.6 KB, of which the ruin
+  meshes 6.2, the cells 3.5 (64 more cells' lists and their unrounded `bounds`) and the far
+  groups 1.2. Rounding the ruins' positions to 10 cm and turns to 0.01 rad would have saved
+  1.25 KB, the cells' bounds to the centimetre 0.55 KB.
+- **What it shows** (sections 1-2, with the 64 cells) (Apple M2, Chrome headless through the dev server, debug env, 1600 × 900; a
   Playwright script reading the runtime: `rt.cells`, `rt.stats`, the root scene's ruin
   `InstancedMesh`es, the `AUTO` groups of ruin material, `getMergeDebugStats`; then the tab's
   monitors). WebGPU a 73 s flight (two crossings), WebGL2 40 s:
@@ -593,6 +607,37 @@ Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGr
     each the ruin looks unchanged on both backends (no dither, no z-fight: the merged group draws
     whole, the far group dithers in or out on the same surfaces), while the cell's crates dither
     and its rocks turn to impostors. Nothing for p990.
+
+**As built** (2026-11-12, section 3):
+
+- **`yarn sbp`** (the app profile, gzip): with the 64 cells the initial 393.7 → 405.6 KiB
+  (`assets/index.js` 389.5 → 401.4, the `app` group 14.4 → 26.0), three budgets failed (initial
+  394, `assets/index.js` 390, `app` 15 KiB), so `yarn build` would have failed: hence the 16
+  cells (above). With them: initial 397.4 KiB, `assets/index.js` 393.2, `app` 18.0; the budgets
+  raised in `sbp.config.ts` with p377's note: initial 394 → 398, `assets/index.js` 390 → 394,
+  `app` 15 → 19 KiB. The report's other diffs (`assets/DebugModules.js` new, `assets/largeWorld.js`
+  +0.2 KiB) are Phase 2's known ones, for Phase 5's `yarn verify:baselines --update`. The app was
+  0.3 KiB under its initial budget before this phase, so any ruins needed a raise. p990's Smallest
+  build gains "Every scene's JSON is in the first download" (a scene's data loaded with it).
+- **The flight's CPU frame** with the far ruins (`farEntries` `'ALL'`, 80 far meshes) and without
+  (`'LOD_LEVELS'` in the scene JSON, 32: the beacons' only), 16 ruin cells. Apple M2, Chrome
+  headless, 1600 × 900, prod test mode through the dev server (not a build: the dev server's
+  modules, unminified), the test bridge's fixed 1/60 s frame, so each run is the same 2,240
+  frames: one crossing, -560 → 560 m at 30 m/s; the first 120 left out. The CPU frame is the first
+  `MAIN` system to the first `LATE_MAIN` one, the submit from the last `APP_RENDER_SYNC` one
+  (Phase 0's probe). Three runs a case and backend, the cases alternating (a script in the
+  scratchpad switching the JSON and gathering; the JSON restored after). Medians a run, ms:
+
+  | | WebGPU CPU | WebGPU submit | WebGL2 CPU | WebGL2 submit | Draws (med / max) |
+  | --- | --- | --- | --- | --- | --- |
+  | far ruins (`ALL`) | 2.15 / 2.88 / 2.89 | 1.61 / 2.16 / 2.14 | 1.53 / 2.89 / 3.28 | 1.21 / 2.14 / 2.60 | 154 / 235 |
+  | none (`LOD_LEVELS`) | 1.81 / 2.71 / 1.90 | 1.41 / 2.03 / 1.48 | 3.06 / 3.13 / 2.93 | 2.33 / 2.35 / 2.19 | 151 / 229 |
+
+  The p99 5.3-6.3 ms in every run, no frame over 33 ms, no error. The far ruins add 3 draws at
+  the median and 6 at most (the flight looks down along its row, so few far ruin cells are in the
+  frustum; three culls a far group by its bounds): at Phase 0's 2.1-2.8 µs a draw, about 0.01 ms,
+  well inside the runs' spread (a run's median moves 1-1.5 ms between runs of one case, both
+  ways: Chrome's frame pacing, not the content). So no cost measurable at this size; not gating.
 
 ## Phase 4 — The Hub: larger cells for a large far field
 
