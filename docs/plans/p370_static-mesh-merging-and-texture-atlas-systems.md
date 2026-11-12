@@ -326,7 +326,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
 | own branch                            | p375  | `main`      | engine minor                                       | after p375's last phase |
 | `p376_hlod-merged-cluster-proxies`    | p376  | `main`      | engine minor (group proxies), app minor (the lane) | after p376's Phase 4    |
 | `p377_hlod-streaming-cell-proxies`    | p377  | `main`      | engine minor (far entries), app minor (the ruins)  | after p377's Phase 6    |
-| `p378_baked-members-out-of-the-scene-graph` | p378  | `main`      | engine minor (a root-scene raycast hits a baked group only), app patch | after p378's Phase 4    |
+| `p378_baked-members-out-of-the-scene-graph` | p378  | `main`      | engine minor 6.9.0 → 6.10.0 (a root-scene raycast hits a baked group only), app patch 1.24.0 → 1.24.1 (the spike modes), Project (the bench's cases) | after p378's Phase 4    |
 
 - p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
   that is useful without the groups.
@@ -352,4 +352,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   merging change for every merged scene, not far content, so not on p377's branch.
   Written 2026-11-12, on its branch from `main` after p377's merge (PR #87): engine minor (p378
   D3, D6: a root-scene raycast no longer hits a baked group's hidden members) and an app patch
-  (its Phase 0's spike modes).
+  (its Phase 0's spike modes). Phase 0 kept D2 (out of the scene graph, not frozen in it) and
+  dropped Phase 2 (its one system share, `object3DSyncSystem`'s, is the kernel's: a p990 item), so
+  the branch carries Phases 0-1 and 3-4 with the bump as written: engine 6.10.0, app 1.24.1 and a
+  Project section for the bench's cases (decided 2026-11-12, p378 Phase 4).
