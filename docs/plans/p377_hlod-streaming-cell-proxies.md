@@ -1,7 +1,7 @@
-Status: in progress | Phase 0 implemented (2026-11-12; the rest is written from its Results once reviewed)
+Status: in progress | Phase 0 implemented (2026-11-12); Phases 1-6 written from its Results (far entries for kit meshes, the larger-cells recommendation)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
-Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph)
+Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
 
 # HLOD: Streaming Cell Proxies
 
@@ -12,9 +12,11 @@ not triangles.
 
 **It is measurement-first.** Four ways to fewer draws are on the table (a group cull, larger
 `AUTO` cells, a cell's content as one mesh, today's far entries for kit meshes), and Phase 0
-measures them on p376's far field before any is built. Only Phase 0 is written: its result says
-which way (or ways) this plan builds, and the grounding, decisions and phases are written from it.
-None paying closes the plan as p376 was closed.
+measures them on p376's far field before any is built. Its result chose the far entries for kit
+meshes (a gather change: the far layer draws a cell's kit as one `InstancedMesh` per geometry and
+material, as cheap as a merged proxy) and a larger-cells recommendation for far content that
+doesn't stream; no cell proxy and no cull are built. The grounding, decisions and Phases 1-6 are
+written from its Results, and the hidden members' cost it found is p378's.
 
 ## What p376 measured (Apple M2, Chrome; p376 §3 Results)
 
@@ -42,7 +44,8 @@ None paying closes the plan as p376 was closed.
 A streaming cell's (or a far region's) static content drawn, while far, in **few draws**: p353's
 far layer showing a cell's content as one mesh per material (or per palette, p374), not as the
 cell's groups one draw each. A simplified copy is secondary: it pays only where the frame is bound
-by its triangles, which p376 didn't find.
+by its triangles, which p376 didn't find. (After Phase 0: one `InstancedMesh` per geometry and
+material, the far layer's existing group, is as few draws as it takes; D1.)
 
 ## Phase 0 — Which way to fewer draws — done
 
@@ -275,7 +278,289 @@ larger cells pay only with the larger field.
   the M2 (7-11 ms at 400 sites). The reference and `instanced@256` on the WSL2 machine's Windows
   Chrome go with the far entries' verification phase.
 
-## What's known (for way 3 and the far entries)
+## Grounding: far entries for kit meshes (checked against the code, 2026-11-12)
+
+A kit mesh here is a streamed cell's JSON mesh with a registered `geo` and `mat` and no `lod`:
+a modular piece (a wall, a pillar, a floor tile, rubble), usually merged `AUTO` while near, as
+p376's ruins are. What the far layer does with one today, and what the change touches:
+
+- **The gather decides, in one function.** `getFarMeshProps` (`devTools/gather/streamingManifest.ts`)
+  returns null for a mesh without `lod`, with `AUTO`, with empty `levels` or with a
+  `cullScreenSize` over 0; `addFarEntry` adds nothing then. So a kit mesh's cell draws nothing of
+  it from `FAR`: the content appears at the `nearby` ring (2 cells by default) and is gone past
+  it, where the far ring (5) would show it. An oversized mesh is kept content and gets no far
+  entry either way (D8: a far copy beside the near one would z-fight); that stays.
+- **Grouping is already what Phase 0's `instanced` measured.** `getFarGroupKey` groups a cell's far
+  entries by the string `geo` and `mat`, no `matOverrides`, and both shadow flags, into one
+  `farMeshes` entry; `createFarGroupEntity` (`src/_engine/features/streaming/StreamingDataContent.ts`)
+  draws it as one `InstancedMesh` (refs on the geometry and material, bounds over every instance,
+  three's culling, not the ECS's). The spike's `instanced` (`_dbg__largeWorldHlodField.ts`) made
+  the same meshes by hand: one a geometry per cell, `castShadow` on. A far entry that doesn't group
+  (an inline `geo` or `mat`, or `matOverrides`) is a mesh of its own through `createSceneObject3Ds`:
+  one draw each, no saving over the near content.
+- **A far instance copies its transform.** `addFarEntry` pushes each entry's `position`, `rotation`,
+  `quaternion` and `scale` into its group's `instances` (`StreamingFarInstance`), though it is
+  the near entry's own transform (`getFarMeshProps` takes it from the mesh's props; the coarsest
+  level changes only `geo`, `mat` and `castShadow`). The manifest is in `generatedAppData.json`,
+  which `src/generated/index.ts` imports statically: the app's first download (775 KB before gzip
+  today). Every kit mesh getting a far entry would write each transform twice: about 40-90 bytes
+  each before gzip, so 0.8-1.8 MB for a 20,000-piece field. The near entry is already in the
+  manifest's `meshes`, by an index the gather has (`cellMeshes.forEach`'s `index`).
+- **A far mesh of its own keeps props it shouldn't.** `getFarMeshProps` drops `lod`, `appId` and the
+  transform and keeps the rest: `merge`, `preWarm`, `frustumCullingEnabled`, `matOverrides`,
+  `receiveShadow`. A far copy with `merge` would join a merge group from a `FAR` cell. Today only a
+  `BATCHED` member with explicit levels and an inline `geo` / `mat` or `matOverrides` reaches it
+  (a `BAKED` group refuses a `LOD`); a group's props are only `geo`, `mat` and the two shadows.
+- **The near layer is merged; the far layer isn't, and the fades meet there.** A near ↔ far switch
+  fades both layers at once (`releaseLeavingLayers`), but a merge group doesn't fade with a cell
+  (the merging `CLAUDE.md`'s Streaming): its mesh draws the leaving members whole until their
+  unload deletes them, and the incoming ones whole from the next build. So for `fadeSeconds` the
+  group and the far `InstancedMesh` draw the same surfaces, one dithered: another vertex path
+  (baked world positions against an instance matrix), so the dithered pixels can z-fight. Same
+  look; checked by eye in the test scene. Explicit-levels far entries never met it (a `BAKED`
+  group refuses a `LOD`, a `BATCHED` one fades its members).
+- **Assets and memory.** `addFarMeshRefs` lists the far entry's `geo` and `mat` (and its material's
+  textures) in the far layer, which loads them under its own owner key (`<sceneId>#<cellKey>/far`;
+  a cache hit while the near layer has them). For a kit that's every far cell holding the kit's
+  geometries, materials and textures: once in memory (registered by id), but held while any
+  tracked cell is loaded. `far.bytesEstimate` becomes the near layer's for kit content.
+- **The load cost.** A far layer's entries go 8 a unit (`ENTRIES_PER_UNIT`), a group one entry
+  whatever its instances; `createFarGroupEntity` writes a matrix per instance. Phase 0's field
+  created 20,000 instanced pieces in 14-16 ms in all, so a cell's groups are well inside
+  `maxCreateMsPerFrame` (2 ms). Priming paces a far layer streamed in during play as any other
+  (`maxShownObjectsPerFrame`, 16 on WebGL2: a kit's few groups a cell), and its fade dithers the
+  kit's materials (`enableLodDither`), as the near layer's does already.
+- **What reads the far data.** `createFarGroupEntity` (`far.instances`), the far unit
+  (`if (far.instances)` tells a group from a mesh of its own), the Streaming tab's
+  `countFarGroups` (the alive meshes' `count`, not the manifest) and the tests:
+  `streamingManifest.test.ts` (the far entry test lists a `plain` mesh with no far entry, and
+  "lists each layer's cell-only assets" expects none for its `crate`; both change),
+  `StreamingDataContent.test.ts` (a manifest with `instances`). `StreamingFarMesh` and
+  `StreamingFarInstance` are public types on `aekasha/schemas` (`devTools/verify/baselines/api.json`).
+- **The scenes.** Two stream: `streamingGrid` (JSON content: the beacons, explicit levels, so far
+  groups; the wall, oversized, kept) and `streamingPhysics` (code content only, no JSON meshes).
+  Neither has a kit mesh, so turning far entries on for kit meshes changes neither scene's data.
+  largeWorld, where Phase 0's field is, doesn't stream: its far field was code made, and the far
+  layer's real path (the gather, the units, priming, the fades) has no kit content to run on yet.
+- **Larger cells** need no code: `AUTO`'s `cellSize` is a scene's `mergeGroups` entry or a mesh's
+  `merge` option. The Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`) picks
+  the cell size from the view (its AUTO section: largeWorld's 50 m, the example's 16 m) and says
+  a group is drawn whole once any of it is in view (When to merge); it has no figure for a large
+  far field, and its Streaming section asks for an `AUTO` cell size dividing the streaming cell's.
+
+## Decisions (2026-11-12, after Phase 0)
+
+- **D1: a kit mesh is its own far entry, by default, when it groups.** A streamed cell's mesh (not
+  kept) without `lod` gets a far entry of itself: its `geo`, `mat`, `castShadow` and
+  `receiveShadow` at its transform, into its cell's group of that kind (`getFarGroupKey`). Only
+  when it groups: a string `geo` and `mat` and no `matOverrides`. One that wouldn't group gets
+  none, as today (a far mesh of its own is a draw a mesh: no fewer draws than its near content,
+  and more than today's none). Unchanged: a mesh with explicit `levels` (its coarsest level, as
+  p353 D7), `AUTO` (none: its chain isn't known at build time, the streaming `CLAUDE.md`'s
+  Limits), a `cullScreenSize` over 0 (none), an oversized mesh (kept, none), a light (none).
+  Default on: content that shows near and vanishes past the `nearby` ring is what a far ring is
+  there to avoid, Phase 0 measured the instanced far layer as cheap as a merged proxy, and no
+  scene's data changes (neither streaming scene has a kit mesh).
+- **D2: two ways out, both existing rules or build-time only.** Per mesh: a `lod` with a
+  `cullScreenSize` (`{ levels: [{ screenSize: 0 }], cullScreenSize }`) gets no far entry, as now:
+  a mesh that vanishes at a distance has no stand-in (it needs `lod()` and costs a `LOD` near,
+  which only clutter wants). Per scene: `streaming.farEntries: 'ALL' | 'LOD_LEVELS'` (default
+  `'ALL'`; `'LOD_LEVELS'` is today's rule), build time only like `base` and `radii`: the gather
+  reads it, the output drops it (`toRuntimeSettings`), `setSceneStreamingSettings` warns once and
+  ignores it. No per-mesh field: the mesh schema gains nothing for a choice the scene makes once.
+- **D3: a far group names its near entries, not their transforms.** `StreamingFarMesh` gains
+  `entries?: number[]`, indices into the manifest's `meshes`, whose `position`, `rotation`,
+  `quaternion` and `scale` are the instances. The gather writes `entries` for every group,
+  explicit-levels ones too (their transform is the near entry's): a far instance costs an index
+  in the first download instead of a second transform. `instances` stays in the type, still drawn
+  when given, `@deprecated` (replaced by `entries`, removed in engine 7.0.0); the gather no longer
+  writes it. A group is one with either; `createFarGroupEntity` takes the manifest's `meshes` to
+  read them (it's `@internal`). Additive on `aekasha/schemas` (the API baseline gains a field).
+- **D4: a far mesh of its own drops `merge`.** `getFarMeshProps` leaves `merge` out with `lod` and
+  `appId`: a far copy never joins a merge group. A fix of p353 D7's rule (a `BATCHED` member with
+  explicit levels and an inline `geo` / `mat` or `matOverrides` reaches it today), in the same
+  change.
+- **D5: the near ↔ far fade over a merge group is accepted.** For `fadeSeconds` the merged near
+  content draws whole while the far group dithers in or out on the same surfaces (Grounding). Same
+  look, one fade's length; Phase 3 checks it by eye at a far ring's edge. If it shows, it goes to
+  `p990_follow-ups-from-done-plans.md` (a far group drawn with a depth offset needs a material
+  variant per kit material), not into this plan.
+- **D6: code content is unchanged.** Code-registered content keeps registering its own `FAR` units
+  (`streamingGrid`'s rocks' impostor cells): the gather can't see code-made geometry. The cell
+  proxy (way 3) and its open questions 1-3 aren't built (Decided after Phase 0).
+- **D7: the test scene is `streamingGrid`**, the JSON content test scene. It gains a small kit in
+  its JSON: three registered geometries (a block, a slab, a post, a few metres each) in two
+  materials, a ruin of six pieces in each cell with odd `cx` and `cz` (64 cells, none a beacon's:
+  those are at even `cx`; 384 meshes), with `merge: 'AUTO'` (the scene's `mergeGroups` `AUTO`
+  entry at 32 m, which divides its 64 m cells). So near the ruins are merged, far they're the far
+  layer's groups: the combination a large streamed world has. 384 meshes keep the app's generated
+  data small
+  (`yarn sbp` reports the change); the far layer's real path (the gather, the units, priming,
+  the fades, the asset owners) runs on kit content for the first time.
+- **D8: larger cells are a recommendation, on the Hub's Mesh merging page.** For far content that
+  doesn't stream: at a few hundred kit sites in view (Phase 0's 400 sites over a kilometre,
+  20,000 pieces), `AUTO` in 128-256 m cells saves 2.8-6.2 ms of CPU a frame against 32 m on both
+  backends, a rebuild still one main-thread frame (0.4-1.2 ms over the median); at 150 sites under
+  1 ms, so the default holds for a normal scene. In a streaming scene the `AUTO` cell still
+  divides the streaming cell (the page's Streaming section), and the far content is the far
+  layer's (D1). The same section names what larger cells don't reach: the hidden members' walk
+  (p378).
+- **D9: the second machine is in the verification phase, and doesn't gate.** Phase 4 runs
+  `members@32` and `instanced@256` at 400 sites on the WSL2 machine's Windows Chrome on its own GPU
+  (`devTools/verify/CLAUDE.md`), both backends, and records them as open question 4's answer.
+  The far entries ship whatever it shows: they're the far layer's existing draw, and a far ring
+  showing kit content is the point of the ring.
+- **D10: versions.** Engine minor: kit meshes' far entries (a changed default, D1), `farEntries`
+  (D2), `entries` (D3), the `merge` fix (D4). App minor: `streamingGrid`'s kit (D7). Toolkit
+  none. Project: Phase 0's bench and spike tools. All of it on p377's branch, bumped against
+  `main` once it's rebased past p376's merge.
+
+## Phase 1 — The gather: kit meshes' far entries
+
+D1, D2 and D4, in `devTools/gather/streamingManifest.ts` and the streaming schema. The output's
+shape doesn't change (groups still with `instances`; Phase 2 changes it), so the runtime draws
+the new far entries as it draws the beacons'.
+
+1. **The setting** (D2): `farEntries: z.enum(['ALL', 'LOD_LEVELS']).optional()` in
+   `SceneStreamingSchema` (`StreamingSchema.ts`), documented as `base` and `radii` are (build time
+   only; JSDoc and `describe`), and its type in `SceneStreamingSettings`. `toRuntimeSettings`
+   drops it; `setSceneStreamingSettings` (`Streaming.ts`) warns for it in the same one-time
+   warning as `base` and `radii`, its text naming all three. `.schemas/` follows on the next gather.
+2. **The rule** (D1, D4): `getFarMeshProps(props, farEntries)`: with explicit `levels` as now;
+   without `lod` and `farEntries` `'ALL'`, the mesh's own `geo`, `mat`, `castShadow` and
+   `receiveShadow` at its transform; `AUTO`, a cull and anything else null. `merge` is dropped with
+   `lod` and `appId` (D4). `addFarEntry` adds a self entry only when `getFarGroupKey` gives a key
+   (D1: one that wouldn't group gets none); an explicit-levels entry that doesn't group stays a
+   mesh of its own. The file header and `getFarMeshProps`' JSDoc say the new rule.
+3. **Tests** (`streamingManifest.test.ts`): the far entry test's `plain` mesh joins the group of its
+   `geo` / `mat` (a group can hold self entries and coarsest levels alike), and "lists each layer's
+   cell-only assets" expects its `crate`'s far group and the far layer's assets. New: `'LOD_LEVELS'`
+   gives today's output exactly; a mesh without `lod` and an inline `geo`, an inline `mat` or
+   `matOverrides` gets none; a cull, `AUTO` and an oversized mesh none; a far mesh of its own has
+   no `merge`; `farEntries` is dropped from the output; the schema refuses another value
+   (`StreamingSchema`'s tests) and `setSceneStreamingSettings` warns once for it.
+4. **Docs**: the streaming `CLAUDE.md`'s JSON content (Far entries) and Limits, and
+   `devTools/gather/CLAUDE.md`'s step 3 (its far entry clause).
+
+Exit: `yarn test`, lint and both `tsc` clean; `yarn gatherAppData` leaves `streamingGrid`'s and
+`streamingPhysics`' generated data unchanged (neither has a kit mesh).
+
+## Phase 2 — The far layer: groups by their entries
+
+D3: a far group names its near entries; the gather writes them, the runtime reads them.
+
+1. **The types** (`StreamingManifest.ts`): `StreamingFarMesh.entries?: number[]` (indices into the
+   manifest's `meshes`, whose transforms are the instances), `instances` and `StreamingFarInstance`
+   `@deprecated` (replaced by `entries`; removed in engine 7.0.0), the JSDoc saying a group has
+   one of them.
+2. **The gather**: `addFarEntry` pushes the mesh's manifest index to its group's `entries` and no
+   longer writes `instances`; `getFarMeshProps` returns the props alone (the transform was only
+   for `instances`; a far mesh of its own still gets it in its props).
+3. **The runtime** (`StreamingDataContent.ts`): `createFarGroupEntity(world, far, meshes)` reads
+   each instance from `meshes[entry].props` (the same compose as now: `quaternion` over
+   `rotation`, scale 1 by default), or from `instances` when a group has them; the far unit tells a
+   group by `entries ?? instances`. No allocation per instance (the module's scratch objects).
+   `createFarGroupEntity` is `@internal`; its JSDoc and the module header say the change.
+4. **The Streaming tab**: its JSON content line counts the manifest's far instances
+   (`entries` or `instances`) next to the far meshes, so a scene's far layer reads in one line.
+5. **Tests**: `streamingManifest.test.ts` (groups by `entries`, none with `instances`, explicit-levels
+   groups included; the indices point at the near entries), `StreamingDataContent.test.ts` (a group
+   by `entries` draws its near entries' transforms, rotation and quaternion and scale included;
+   one by `instances` still draws; a far unit with both kinds).
+6. **The size**: `streamingGrid`'s `__streaming` before and after, in bytes (its 32 beacons' far
+   instances), noted under the phase; the API baseline (`yarn verify:baselines --update` if the
+   field shows in `api.json`).
+7. **Docs**: the streaming `CLAUDE.md`'s JSON content (`farMeshes`: `props` and `entries`).
+
+Exit: as Phase 1's, and `streamingGrid` draws its far beacons as before (`yarn verify:scenes --only
+streamingGrid` inside its baseline).
+
+## Phase 3 — streamingGrid: kit content near and far
+
+D7: the far layer's real path on kit content, merged near.
+
+1. **The kit**, in `streamingGrid.scene.json`: three geometries (a block, a slab, a post, a few
+   metres each, ids `streamingGridRuin*`) and two `STANDARD` materials, cell-only (the gather
+   moves them into the cells); a six-piece ruin in each cell with odd `cx` and `cz` (64 cells,
+   384 meshes), each piece `merge: 'AUTO'`, `castShadow` as the beacons; the scene's `mergeGroups`
+   `AUTO` entry at 32 m. The entries are written by a one-off script in the scratchpad (a seeded
+   layout per cell), the JSON committed, not the script. The scene's `description`, the file
+   header of `streamingGrid.ts` and the streaming `CLAUDE.md`'s test scene line say it.
+2. **What it shows**, in the debug env with the Streaming and Merging tabs, flying and hovering:
+   - far cells draw their ruins: far groups alive and their instances (a ruin cell's far layer
+     is up to three groups: geometry and material);
+   - near cells' ruins are merged (`AUTO` groups, none refused; the merging streaming warnings:
+     none, as 32 divides 64);
+   - the near ↔ far switch (the hover crosses a boundary every period): by eye, with the tab's
+     `fadeSeconds` at 2 s to see D5's fade over the merged ruins; a z-fight that shows is noted
+     and goes to p990 (D5);
+   - the counters stay clean: `unitErrors`, `unfadedTakeDowns` 0, `primingStalls` as before, the
+     asset releases running, the far layer's GPU memory (the ruins' materials) per cell in the
+     tab.
+3. **What it costs**: `yarn sbp` against its baseline (the generated data's growth in the app's
+   first download), and the flight's CPU frame with and without the far ruins (a build with
+   `farEntries: 'LOD_LEVELS'` in the scene, then without), WebGPU and WebGL2, noted, not gating.
+4. **Baselines**: the scene runner's `streamingGrid` baseline again (`yarn verify:scenes --only
+   streamingGrid --update`, the image changed), and its Hub image (`streamingGrid.hub.png`,
+   the Hub tab's Save Hub image).
+
+Exit: the above recorded under the phase; `yarn verify:scenes --only streamingGrid` passes.
+
+## Phase 4 — The Hub: larger cells for a large far field
+
+D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`); nothing to build.
+
+1. **AUTO** (its "Pick the cell size" paragraph): larger cells for far content that doesn't stream,
+   pointing at the new subsection.
+2. **A new "### A large far field"** under When to merge, after Measured: Phase 0's figures (400
+   sites over a kilometre, 20,000 pieces: 32 m against 64, 128 and 256 m, the CPU frame saved on
+   both backends, the rebuild still one main-thread frame; at 150 sites under 1 ms), what a group
+   drawn whole costs and why it doesn't here (far content is mostly in view), and what larger
+   cells don't reach: every hidden member still walked by three's scene update (p378, named as
+   a plan, `repo:` link).
+3. **Streaming**: in a streaming scene the `AUTO` cell still divides the streaming cell, and the far
+   rings draw the kit's far entries ([streaming](hub:features/streaming#far-representations)):
+   so larger cells are for a world that doesn't stream.
+4. `aek:tags` gain `cell size`, `far field`; `yarn hub:build`.
+
+## Phase 5 — Verification
+
+1. `yarn test`, `yarn lint`, both `tsc`, `yarn verify:baselines` (the API's `entries`, the bundle:
+   `StreamingDataContent`'s chunk; the docs ratchet: no new undocumented export), `yarn sbp`
+   (the streaming group's 4 KiB budget, the app's first download with Phase 3's data), `yarn
+   verify:scenes` (every scene; `streamingGrid`'s baseline is Phase 3's, the rest unchanged),
+   `yarn build`.
+2. **The second machine** (D9, open question 4): on the WSL2 machine's Windows Chrome on its own GPU
+   (`devTools/verify/CLAUDE.md`), `npx tsx devTools/bench/hlodSpike.ts --step draws --field 400
+   --cases members@32,instanced@256`, both backends, 3 runs. The CPU frame saved and the GPU
+   against Phase 0's M2 figures, into Phase 0's Results ("A second machine") and open question 4.
+   WebGPU's GPU figure doesn't decide there either unless that GPU shows it doesn't overlap (the
+   `floor` case added to the run tells: `--cases floor,members@32,instanced@256`).
+3. `streamingGrid` on the same machine, flying, WebGPU and WebGL2: the frame and the priming's
+   paced first draws with the far ruins (WebGL2's `maxShownObjectsPerFrame`), noted.
+
+Exit: every check passes, the figures recorded; what fails goes back to its phase.
+
+## Phase 6 — Hub, versions, done
+
+1. **The Hub's streaming page** (`hub/pages/features/streaming/guide.md`, Far representations): a
+   JSON mesh without `lod` is its own far entry when it groups, `farEntries`, the two ways out
+   (D2), the near ↔ far fade over merged content (D5), and the test scene's ruins; its "From the
+   scene JSON" list and the test scene's paragraph. `yarn hub:build`.
+2. **CLAUDE files**: the streaming one's JSON content, Limits and test scene (each phase's,
+   checked again), the merging one's Streaming bullet (a merged near layer's far layer: the far
+   entries); `readme.md` only if its streaming line names far stand-ins.
+3. **Versions** (D10): engine minor, app minor in `package.json`; a `CHANGELOG.md` entry with Engine
+   (far entries for kit meshes, `farEntries`, `entries` and the deprecated `instances`, the `merge`
+   fix), App (`streamingGrid`'s ruins; largeWorld's far field and the spike's debug modules from
+   Phase 0) and Project (the HLOD bench's `draws` step); `yarn checkVersions --against main`.
+4. **Done**: Status `implemented (Phases 0-6)`, `git mv` to `_DONE_p377_…`, the references: p370's
+   Blocks, tier table and Branches and PRs, p378's Related, p376's mentions, the CLAUDE files.
+
+## What was known before Phase 0 (way 3, not built)
+
+Written with Phase 0, for the cell proxy had it paid; kept as the record of what a build-time
+proxy would take (D6: not built). The far entries' own grounding is above.
 
 - **Today's far layer** (p353 D7): a `FAR` cell draws only its far entries, and a JSON mesh gets
   one only with explicit `lod` levels (its coarsest; none for `AUTO`, a cull or code content). So
@@ -302,20 +587,23 @@ larger cells pay only with the larger field.
 ## Open questions
 
 1. One proxy per cell, or per cell and material (palettes, p374, would make it one)? Phase 0 step
-   5 measures it, when way 3 pays. (Phase 0: way 3 didn't pay over the far entries; not run.)
+   5 measures it, when way 3 pays. (Closed: way 3 didn't pay over the far entries; step 5 not
+   run, D6.)
 2. The output format, if way 3 pays: a GLB per cell from the asset pipeline, or geometry data in
-   the manifest?
+   the manifest? (Closed with 1: no proxy is built.)
 3. Code content's far proxies: a runtime path that merges a cell's code content once while it's
-   near and keeps the proxy for `FAR` (memory held past the near layer's unload)?
+   near and keeps the proxy for `FAR` (memory held past the near layer's unload)? (Closed with 1:
+   code content keeps its own `FAR` units, D6.)
 4. Does the draws' cost hold on other hardware (a discrete GPU, a phone)? p376 measured one
    machine, where the frame was bound by its draws and fill, not its triangles. Phase 0 runs the
-   reference and each way's best on a second machine when one is at hand. (Phase 0: not run;
-   still open.)
+   reference and each way's best on a second machine when one is at hand. (Phase 0: not run.
+   Phase 5 runs the reference and `instanced@256` on the WSL2 machine, not gating: D9.)
 5. The hidden members' scene graph walk: should Phase 0 step 1 find it a real share of the frame,
    taking a baked member's mesh out of the scene graph (as p375 does for a batched member) helps
    every merged scene, not only far content. A merging change of its own: here, or a follow-up in
    `p990_follow-ups-from-done-plans.md`? (Phase 0: a real share, 60 % of the far field's CPU
-   cost at 400 sites, the walk alone 3.6-4.9 ms of it; where it goes is still to decide.)
+   cost at 400 sites, the walk alone 3.6-4.9 ms of it. Decided: a plan of its own in the epic,
+   `p378_baked-members-out-of-the-scene-graph.md`, with its own branch.)
 
 ## Branches and PRs
 
@@ -325,3 +613,11 @@ merges), rebased onto `main` once p376's PR merges, and merged into `main`. Phas
 app debug modules and dev tools: if nothing pays, the branch ends with the results and an app
 patch, as p376's did; the bumps of the later phases are decided with them. The PR opens after the
 last phase, when asked.
+
+Updated after Phase 0 (2026-11-12): something paid, so the branch carries Phases 1-6 too, with an
+engine minor and an app minor (D10; Project for Phase 0's bench). The rebase onto `main` waits
+for p376's PR and comes before Phase 5 at the latest, so the verification and the version check
+(`yarn checkVersions --against main`) run against `main` with p376 in it; the bumps are then
+p377's own over p376's. p378 (open question 5) isn't on this branch: its own branch from `main`
+(the p370 epic's Branches and PRs), after p377's merge or beside it (they touch other files:
+the gather and streaming here, merging there).
