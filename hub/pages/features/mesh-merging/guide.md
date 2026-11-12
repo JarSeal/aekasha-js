@@ -619,6 +619,11 @@ In a [streaming](hub:features/streaming) scene, keep each group inside a cell:
 - A group doesn't load, unload, prime or fade with a cell: a member whose cell unloads leaves the
   group's mesh collapsed in place (a batched group's instance is deleted), and a cell loaded during play draws its members on their own
   until the next frame merges them (the group's mesh may compile its shaders on its first draw).
+- [Larger cells](#a-large-far-field) are for a world that doesn't stream. In a streaming scene
+  the `AUTO` cell still divides the streaming cell (the test scene's ruins merge in 32 m cells of
+  its 64 m ones), and a `FAR` cell's members aren't loaded at all: the far rings draw the kit's
+  [far entries](hub:features/streaming#far-representations) instead, one `InstancedMesh` per
+  geometry and material a cell, which measured as cheap as a cell merged into one mesh.
 
 ## Debugging
 
