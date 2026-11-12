@@ -17,6 +17,8 @@ import type { LodChainOptions } from 'aekasha/lod';
 import { getSkyLightIds, pauseDayNight, setActiveSkyBox, setTimeOfDay } from 'aekasha/skybox';
 import { MeshoptSimplifier } from 'meshoptimizer/simplifier';
 import type { Flags } from 'meshoptimizer/simplifier';
+import { createDrawsApi } from './_dbg__hlodSpikeDraws';
+import type { SpikeFrame } from './_dbg__hlodSpikeDraws';
 
 // p376 Phase 0's probe (docs/plans/p376_hlod-merged-cluster-proxies.md §3), `window.__aekHlod`,
 // driven by `devTools/bench/hlodSpike.ts`. Shared by the scenes it measures (largeWorld,
@@ -38,6 +40,9 @@ import type { Flags } from 'meshoptimizer/simplifier';
 // active camera, `measure` gives the next frames' CPU figures and the renderer's draws and
 // triangles (every pass), and `passTriangles` the groups' triangles in the main camera's and each
 // shadow-casting sky sun's frustum. `restore` (and a scene exit) puts the groups' geometries back.
+//
+// p377 Phase 0 (docs/plans/p377_hlod-streaming-cell-proxies.md) adds the far field's draws, cull,
+// CPU split and rebuilds: `_dbg__hlodSpikeDraws.ts`, on this module's frame systems (`onFrame`).
 
 /** A group's figures before any simplification. */
 type HlodGroupInfo = {
@@ -301,6 +306,7 @@ const createFrameApi = (world: ECSWorld) => {
   let pending: { frames: HlodFrame[]; left: number; resolve: (f: HlodFrame[]) => void } | null =
     null;
   let hasSystems = false;
+  const frameListeners = new Set<(frame: SpikeFrame) => void>();
 
   const restore = () => {
     for (const group of prepared) group.mesh.geometry = group.base;
@@ -339,6 +345,7 @@ const createFrameApi = (world: ECSWorld) => {
         const render = getRenderer()?.info.render;
         frame.drawCalls = render?.drawCalls ?? 0;
         frame.triangles = render?.triangles ?? 0;
+        for (const listener of frameListeners) listener(frame);
         if (!pending) return;
         pending.frames.push({ ...frame });
         if (--pending.left <= 0) {
@@ -352,6 +359,7 @@ const createFrameApi = (world: ECSWorld) => {
   registerOnAllSceneExits('hlodSpike', () => {
     restore();
     prepared.length = 0;
+    frameListeners.clear();
     removeSystems();
   });
 
@@ -555,13 +563,27 @@ const createFrameApi = (world: ECSWorld) => {
         ? 'WebGPU'
         : 'WebGL2',
     restore,
+    /** Calls `listener` at every frame's end with its figures (adding the frame systems);
+     * returns the remover. A scene exit removes them all. */
+    onFrame: (listener: (frame: SpikeFrame) => void) => {
+      addSystems();
+      frameListeners.add(listener);
+      return () => {
+        frameListeners.delete(listener);
+      };
+    },
   };
 };
 
 /** Installs `window.__aekHlod` for the current scene's world (replacing an earlier scene's). */
 export const installHlodSpike = (world: ECSWorld) => {
+  const frameApi = createFrameApi(world);
   const api = {
-    ...createFrameApi(world),
+    ...frameApi,
+    ...createDrawsApi(world, {
+      onFrame: frameApi.onFrame,
+      getActiveCamera: () => getActiveCamera(world),
+    }),
     /** The scene and its built BAKED merge groups. */
     groups: () => ({
       sceneId: getCurrentSceneId(),
