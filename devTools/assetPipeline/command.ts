@@ -56,7 +56,8 @@ const getAssetLabel = (asset: PipelineAsset) => {
   const cut = asset.source.kind === 'atlas' ? asset.source.alphaCoverage : asset.alphaCoverage;
   const alphaCoverage = cut !== undefined ? `, alpha coverage ${cut}` : '';
   const colorSpace = asset.type !== 'importedAsset' && asset.isSrgb ? ', sRGB' : '';
-  return `${asset.id} ${DIM}(${source}${parts}${fullChain}${alphaCoverage}${colorSpace})${RESET}`;
+  const flip = asset.isUnflipped ? ', unflipped' : '';
+  return `${asset.id} ${DIM}(${source}${parts}${fullChain}${alphaCoverage}${colorSpace}${flip})${RESET}`;
 };
 
 const STATUS_LABELS: Record<PipelineRunResult['status'], string> = {

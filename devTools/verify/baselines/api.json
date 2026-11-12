@@ -2414,6 +2414,7 @@
       "setSceneImportRelease": "Function"
     },
     "src/_engine/kernel/assets/Texture.ts": {
+      "applyTexOpts": "Function",
       "deleteTexture": "Function",
       "doesTextureExist": "Function",
       "getAllTextures": "Function",
@@ -3281,7 +3282,9 @@
     },
     "src/_engine/schemas/TextureSchema.ts": {
       "InlineTextureSchema": "Variable",
+      "StoredFlippedTexOptsSchema": "Variable",
       "TexOptsSchema": "Variable",
+      "TEXTURE_CONSTANTS": "Variable",
       "TextureAsset": "TypeAlias",
       "TextureAssetSchema": "Variable"
     },

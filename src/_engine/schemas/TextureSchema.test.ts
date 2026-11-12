@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import * as THREE from 'three';
-import { TEXTURE_CONSTANTS, TexOptsSchema } from './TextureSchema';
+import { StoredFlippedTexOptsSchema, TEXTURE_CONSTANTS, TexOptsSchema } from './TextureSchema';
 
 /** three's constant for each table name, by the name three exports it under */
 const THREE_NAMES: { [K in keyof typeof TEXTURE_CONSTANTS]: Record<string, string> } = {
@@ -97,5 +97,17 @@ describe('TexOptsSchema', () => {
     expect(TexOptsSchema.safeParse({ anisotropy: 0 }).success).toBe(false);
     expect(TexOptsSchema.safeParse({ repeat: [1, 2, 3] }).success).toBe(false);
     expect(TexOptsSchema.safeParse({ anisotropy: 'MAX', repeat: [4, 4] }).success).toBe(true);
+  });
+});
+
+describe('StoredFlippedTexOptsSchema', () => {
+  test('refuses flipY false (an array or atlas slot is stored flipped), at its key', () => {
+    const result = StoredFlippedTexOptsSchema.safeParse({ flipY: false });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(['flipY']);
+    expect(StoredFlippedTexOptsSchema.safeParse({ flipY: true, wrapS: 'REPEAT' }).data).toEqual({
+      flipY: true,
+      wrapS: 1000,
+    });
   });
 });

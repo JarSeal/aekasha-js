@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -194,12 +194,56 @@ plan extends and left D1's named constants to it:
 
 ## Phases
 
-### Phase 1 — Texture JSON (D1)
+### Phase 1 — Texture JSON (D1) — done
 
 1. Schema additions + named enums; `setTextureOpts` fix.
 2. Recompile `.schemas/texture.schema.json`; check that every existing `*.texture.json` still validates.
 
 **Exit:** `testTexture.texture.json` with `"repeat": [4, 4]`, `"anisotropy": "MAX"` and `"flipY": false` renders as expected on WebGPU and the WebGL2 fallback.
+
+As built (2026-11-13; section 1 is commit `55425421`):
+
+- **Drift found:** `kernel/assets/TextureSync.ts` is gone (engine 6 removed the legacy loaders), so
+  `loadTextureAsync` is the only path. `isPersistent` was already in the runtime `TextureProps`.
+- **Named constants map at gather time.** `TEXTURE_CONSTANTS` (`TextureSchema.ts`, `@internal`) is
+  the one table: each constant field of `TexOptsSchema` is a name or a number, parsed to the number
+  by a zod transform, and the gather writes the parsed output, so the runtime sees three's numbers
+  only (no bytes for the names). The numbers are three's valid ones only (literal unions), so the
+  schema's output types are three's and `RuntimeTypes.test.ts`' `texOpts` swap went.
+  `TextureSchema.test.ts` checks the table against three's constants. The runtime `TexOpts` stays
+  numeric (code passes `THREE.RepeatWrapping`); its `mapping` widened to `THREE.AnyMapping`.
+- **The JSON Schemas:** `writeJsonSchemas` (`devTools/gather/jsonSchemas.ts`, `toJsonSchema`)
+  writes a transform's pipe as its input (`io: 'input'` would have dropped every object's
+  `additionalProperties: false`) and still throws on any other type JSON Schema can't hold
+  (`jsonSchemas.test.ts`). The `.schemas/` diff is mostly the `__schemaN` renumbering.
+- **New `texOpts`:** `repeat`, `offset`, `center` (`[x, y]` tuples), `rotation`, `flipY`,
+  `generateMipmaps`, `premultiplyAlpha`, `format`, `anisotropy` an integer ≥ 1 (WebGPU rejects 0)
+  or `"MAX"`; `isPersistent` in `TEXTURE_FIELDS` (the texture schema's only: the array and atlas
+  schemas have their own fields, without it).
+- **`applyTexOpts`** (`Texture.ts`, `@internal`) applies every defined value; `setTextureOpts` is
+  it plus the userData, and `GLTFTextures.ts`' copy went. `"MAX"` is the renderer's
+  `getMaxAnisotropy()`, 16 before it's initialised. It marks a texture that has data (version > 0)
+  for upload again; one without (version 0) isn't, as three warns about an image-less upload.
+  `getNoFileTexture` builds through it.
+- **`flipY` and `premultiplyAlpha` were baked in on two paths, which D1 didn't say:**
+  - The assets worker decoded every bitmap flipped (`texture.flipY` false after). Now
+    `loadTextureFileAsync(url, { useHDRLoader, texOpts })` sends `flipY` and `premultiplyAlpha` in
+    the `LOAD_TEXTURE` request and the worker bakes what they ask; `applyTexOpts` leaves both alone
+    on a worker bitmap and on a compressed texture.
+  - The asset pipeline stores a standalone texture's KTX2 output flipped. A texture with
+    `texOpts.flipY: false` is now its own encode (`isUnflipped` on the use and the
+    `PipelineAsset`, `:unflipped` on the key and `isUnflipped` in the cache key params, both only
+    when set, so no existing key or lock entry changed), stored as the source is; the run's line
+    says "unflipped". A texture array's and an atlas slot's own `texOpts` refuse `flipY: false`
+    (`StoredFlippedTexOptsSchema`: stored flipped), and a merge palette fails on a member texture
+    with it (`resolveSlotSampler`). `docs/techniques/asset-optimization.md`' Orientation says so.
+- **The exit check** (Apple M2, Chrome, `sceneTestECS` through the test bridge; `testTexture` is a
+  pipeline output, a `CompressedTexture`): with `"wrapS"/"wrapT": "REPEAT"`, `"repeat": [4, 4]`,
+  `"anisotropy": "MAX"`, `"flipY": false` the texture loaded with repeat `[4, 4]` and anisotropy
+  16 on WebGPU and the WebGL2 fallback, the sphere's rust tiled 4×, no new console message. The
+  unflipped KTX2 output's level 0 matched the source row for row (mean abs diff 2.2 of 255) and the
+  flipped output mirrored (0.4). `testTexture.texture.json` keeps only the named `"REPEAT"` (same
+  generated data); the exit's other options were reverted, so the scene baselines don't change.
 
 ### Phase 2 — Bugs (D5) — done by p613
 
@@ -222,7 +266,7 @@ now that the unit test covers the cached params: run it with Phase 1's exit chec
 **Exit:**
 
 - A `setup` material sets 3 sockets from one graph.
-- The generated WGSL samples each texture once. Check it in the browser devtools shader source, or with `renderer.debug.getShaderAsync` if available in r186.
+- The generated WGSL samples each texture once. Check it in the browser devtools shader source, or with `renderer.debug.getShaderAsync(scene, camera, object)` (there in three r187: the vertex and fragment code of the object's render object).
 - `getMaterialVariant` overriding an input works.
 - **Spike (D2's variants as instances):** count node builds and pipelines for 10 variants of one
   `setup` material made with `createMaterial` (today) and as `NodeMaterialInstance`s; decide

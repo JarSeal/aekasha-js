@@ -189,6 +189,20 @@ export const TexOptsSchema = z
     "The sampler state, UV transform and upload settings over the loader's, and the colour space."
   );
 
+/**
+ * `TexOptsSchema` for a texture whose KTX2 output is always stored flipped (a texture array, an
+ * atlas slot): `flipY: false` can't apply to it, so it's refused.
+ * @internal
+ */
+export const StoredFlippedTexOptsSchema = TexOptsSchema.refine(
+  (texOpts) => texOpts.flipY !== false,
+  {
+    message:
+      "flipY false isn't supported here: a texture array or atlas slot is stored flipped (its KTX2 output can't be flipped at load)",
+    path: ['flipY'],
+  }
+);
+
 // A texture's fields a save entry also takes
 const TEXTURE_FIELDS = {
   /** The registry id, which scenes and materials name the texture by. Default: the file's name. */

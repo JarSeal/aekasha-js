@@ -183,6 +183,21 @@ describe('resolveMergeMaterial', () => {
     ]);
   });
 
+  it('fails on a member texture meant unflipped: the array is stored flipped', () => {
+    const { slots, errors } = resolve(
+      { map: { size: SIZE } },
+      { a: { map: 'unflipped' }, b: { map: 'flipped' } },
+      {
+        unflipped: { fileName: `${RUST}BaseColor.jpg`, texOpts: { flipY: false } },
+        flipped: { fileName: `${RUST}BaseColor.jpg` },
+      }
+    );
+    expect(slots).toEqual([]);
+    expect(errors).toEqual([
+      "slots.map: \"a\"'s texture unflipped has texOpts.flipY false, which an array can't keep (it's stored flipped)",
+    ]);
+  });
+
   it('fails on a map that isn’t a texture JSON’s, and on a packed texture in a split ORM', () => {
     const { slots, errors } = resolve(
       { map: { size: SIZE }, orm: { size: SIZE } },

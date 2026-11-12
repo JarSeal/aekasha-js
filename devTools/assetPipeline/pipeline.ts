@@ -90,6 +90,9 @@ export type PipelineAsset = {
   /** A texture (or an array, an atlas slot) whose `texOpts.colorSpace` is sRGB: its colour
    * channels are sRGB-encoded */
   isSrgb?: boolean;
+  /** A texture whose `texOpts.flipY` is false (p302 D1): its KTX2 output is stored as the source
+   * is, not flipped. An array or atlas slot is always flipped (its schema refuses false). */
+  isUnflipped?: boolean;
   /**
    * An imported asset whose textures the runtime registers: `importTextures` in its JSON or in
    * a scene's latest entry that uses this file. Without it, an optimized GLB has no textures.
@@ -423,7 +426,8 @@ const planTextureEncode = (
       slot: settings.slot,
       settings: slotSettings,
       isSrgb: !!asset.isSrgb,
-      // Only when set, so the keys of the textures without it didn't change
+      // Only when set, so the keys of the textures without them didn't change
+      ...(asset.isUnflipped ? { isUnflipped: true } : {}),
       ...(asset.alphaCoverage !== undefined
         ? { alphaCoverage: { cut: asset.alphaCoverage, version: ALPHA_COVERAGE_VERSION } }
         : {}),
@@ -519,6 +523,7 @@ const encodeAsync = async (
   if (slotSettings) {
     const { output, texture } = await encodeTextureAsset(source, settings.slot, slotSettings, {
       isSrgb,
+      isUnflipped: !!asset.isUnflipped,
       alphaCoverage: asset.alphaCoverage,
       getKtx,
       warn,

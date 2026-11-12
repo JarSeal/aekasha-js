@@ -3,11 +3,11 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1250
+      "gzip": 1247
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 150090,
-      "gzip": 52292
+      "gzip": 52287
     },
     "assets/AssetsSwitchMerge.js": {
       "bytes": 6563,
@@ -18,16 +18,16 @@
       "gzip": 1893
     },
     "assets/AssetsSwitchTexture.js": {
-      "bytes": 4039,
-      "gzip": 1946
+      "bytes": 4093,
+      "gzip": 1965
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 159
+      "gzip": 157
     },
     "assets/AssetsWorker.js@AssetsWorker": {
       "bytes": 2180,
-      "gzip": 1094
+      "gzip": 1095
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -67,14 +67,14 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7636,
-      "gzip": 3098
+      "gzip": 3099
     },
     "assets/GeometryMerge.js": {
-      "bytes": 8248,
-      "gzip": 3428
+      "bytes": 8249,
+      "gzip": 3429
     },
     "assets/GeometryTransfer.js": {
-      "bytes": 1932,
+      "bytes": 1933,
       "gzip": 868
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
@@ -118,8 +118,8 @@
       "gzip": 45594
     },
     "assets/ImportRegistry.js": {
-      "bytes": 16144,
-      "gzip": 6507
+      "bytes": 15734,
+      "gzip": 6376
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
@@ -127,7 +127,7 @@
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
-      "gzip": 972
+      "gzip": 971
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -147,7 +147,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 181
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -158,8 +158,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 970435,
-      "gzip": 270853
+      "bytes": 970769,
+      "gzip": 271025
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -167,7 +167,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16883
+      "gzip": 16888
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -175,7 +175,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19024
+      "gzip": 19023
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -201,14 +201,14 @@
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 66,
-    "minified": 994387,
-    "gzip": 277094
+    "minified": 994715,
+    "gzip": 277289
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 12,
-      "minified": 29086,
-      "gzip": 10159
+      "minified": 29413,
+      "gzip": 10354
     },
     "_engine/kernel/camera": {
       "modules": 1,
@@ -217,7 +217,7 @@
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "minified": 2432,
+      "minified": 2433,
       "gzip": 1082
     },
     "_engine/kernel/ecs": {

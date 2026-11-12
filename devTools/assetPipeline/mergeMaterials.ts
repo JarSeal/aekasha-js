@@ -200,6 +200,14 @@ const resolveSlotSampler = (
   const texOpts: MergeMaterialSlotBuild['texOpts'] = SLOT_BUILDS[slot].isSrgb
     ? { colorSpace: 'srgb' }
     : {};
+  // An array is stored flipped: a map meant unflipped (p302 D1) would be upside down in it
+  for (const { member, textureId } of used) {
+    if (ctx.findTexture(textureId)?.data.texOpts?.flipY === false) {
+      ctx.errors.push(
+        `slots.${slot}: "${member}"'s texture ${textureId} has texOpts.flipY false, which an array can't keep (it's stored flipped)`
+      );
+    }
+  }
   for (const key of Object.keys(SAMPLER_DEFAULTS) as SamplerKey[]) {
     const byValue = new Map<number | 'MAX', string[]>();
     let isSet = false;
