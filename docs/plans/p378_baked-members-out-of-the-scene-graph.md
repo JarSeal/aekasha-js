@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
+Status: in progress | Phases 0-1 and 3 implemented; Phase 2 dropped (written 2026-11-12 from its stub, proposed from p377's Phase 0, its open question 5)
 Category: Merging, Performance
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.3)
 Related: \_DONE_p377_hlod-streaming-cell-proxies.md (Phase 0 measured the cost; its far field, `?hlodField`, and bench are this plan's measurement), \_DONE_p375_batched-mesh-batches.md (Phase 2 S1 took a batched member's mesh out of the scene graph), \_DONE_p372_mesh-merge-groups.md (the baked groups), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, "Show unmerged", picking), \_DONE_p353_macro-streaming-grid.md (a streamed member's priming and fades)
@@ -351,7 +351,7 @@ the hidden members' projection walks, which Phase 1 takes away with the walk. Th
 over 0.5 ms, `object3DSyncSystem`'s (1.15-1.25 ms at 400 sites), needs a kernel fix for every
 static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3).
 
-## Phase 3 — Verification
+## Phase 3 — Verification — done
 
 1. `yarn test`, `yarn verify:scenes` (baselines recorded on `main` first: largeWorld,
    testDebugScene's `p372_grid` and lattice, `exampleMerging`, `batchedMeshSpike`'s variants and
@@ -430,6 +430,38 @@ static mesh, so it goes to `p990_follow-ups-from-done-plans.md` (Phase 4 step 3)
     medians are 2.09-2.27 against 2.54-2.72 and 2.36-2.49, but its three runs spread 1.47-2.55
     (the first 2.51-2.55; the second 1.47-1.65; the third 2.09-2.27), so
     its saving reads as Phase 0's `detached` (0.15-0.23 ms), not more.
+- Step 3, in the browser (Chromium, WebGPU, the debug env, 1280 × 900; a Playwright script on the
+  test bridge with the scene runner's server and browser, `.cache/runs/p378browser.ts`, its
+  log `.cache/runs/p378-browser.log` and shots `.cache/runs/p378shots/`), in largeWorld and
+  `exampleMerging`. The first group of the Merging tab's list (largeWorld's
+  `auto:1k567so:-1,-1:0`, 13 members; `exampleMerging`'s `auto:1lrk6l2:-1,0:0`, 35) through
+  its window, the controls found by name (`focusDebuggerControl`) and pressed by key:
+  - At load every built baked member is out of the graph (largeWorld 409 of 409, `exampleMerging`
+    281 of 281), none under another parent.
+  - "Show unmerged": the group's members back under the root scene and without `TAG_MERGED`
+    (the root's children 96 → 109, 17 → 52), then out again when it's turned off. The image
+    against the merged one: 0.00-0.01 % of pixels changed, the same as two merged snapshots
+    (the noise).
+  - "Highlight members": a box for each member (13, 35), drawn at its `_bakedMatrix`, around
+    the merged mesh's part.
+  - The member window (the group window's first member row, Enter) and its Position x field
+    (ArrowUp, +1 m): the session is opened and ended in one gesture, the member is out of the
+    graph again with `TAG_MERGED`, and its `TRANSFORM`, mesh and `_bakedMatrix` are all at the new
+    x. The image moved (0.02 %, 0.16 % of pixels). Ctrl+Z (the focus on the page) puts it back
+    (`exampleMerging`'s image byte-identical, largeWorld's within the noise).
+  - A session through the API (`beginMergeMemberEdit`, then `setTransform` 2 m up): the mesh is
+    back under the root scene, visible, without `TAG_MERGED`, and drawn in the group's place
+    (the image at begin unchanged). Moved, the image changes and the member's overlay box follows
+    its own mesh (the cropped shots `*.4b-session-moved-crop.png`). `cancelMergeMemberEdit` takes
+    it out of the graph again at the begin pose (`exampleMerging`'s image byte-identical).
+  - The Ray tester's Three.js ray (`fireThreeRays`, `CURRENT_SCENE`), straight down onto the
+    member from 20 m above: the first hit is the group's mesh (its entity), and the member's own
+    mesh is neither in the tester's targets nor in the root scene. A root-scene raycast
+    (`castRayFromDirection`) hits only the group, and `getMergeMemberAtFace` maps its face to the
+    member (largeWorld) or to the member stacked 2 m above it (`exampleMerging`: 240 over 148, the
+    group's three hits at 18, 19 and 20 m).
+  - No console error in either scene (the one warning, Rapier's deprecated init parameters,
+    is there on `main`).
 
 ## Phase 4 — Hub, docs, versions, done
 
