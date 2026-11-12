@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { color, mix, uniform, uv } from 'three/tsl';
 import {
   createGeometry,
   createMaterial,
@@ -8,10 +9,17 @@ import {
   getTexture,
   loadTextureAsync,
   importAssetAsync,
+  registerMaterialInputResolver,
   registerMergedGeometry,
+  registerTslMaterial,
   spawnImportedAsset,
 } from 'aekasha';
-import type { ImportedAssetManifest, TexOpts } from 'aekasha';
+import type {
+  ImportedAssetManifest,
+  MaterialInputResolver,
+  TexOpts,
+  TslMaterialFns,
+} from 'aekasha';
 import { loadDebugModuleAsync } from 'aekasha/debug';
 import { addToMergeGroup, createMergeGroup } from 'aekasha/merging';
 
@@ -45,6 +53,69 @@ const createSlotMaterial = (manifest: ImportedAssetManifest) => {
   const params: Record<string, THREE.Texture | undefined> = {};
   for (const [slot, textureId] of Object.entries(slots)) params[slot] = getTexture(textureId);
   return createMaterial({ id: `${manifest.id}_material`, type: 'STANDARD', params });
+};
+
+// three/tsl's `uv()`, with the real type (the shim's is loose)
+const meshUv = uv as unknown as () => THREE.Node<'vec2'>;
+
+type GradientInput = { gradient: [string, string] };
+
+/** The input resolver check's resolver (p302 D4): `{ gradient: [from, to] }` → a bundle of two
+ * colour uniforms, kept as `setup_<key>_from` and `setup_<key>_to`. */
+const gradientResolver: MaterialInputResolver<GradientInput> = {
+  kind: 'testDebugScene.gradient',
+  match: (value) => typeof value === 'object' && value !== null && 'gradient' in value,
+  resolve: ({ gradient }) => ({
+    from: uniform(color(gradient[0])),
+    to: uniform(color(gradient[1])),
+  }),
+};
+
+/** The gradient check's graph: its `band` input's bundle, bottom to top. */
+const gradientFns = {
+  setup: (
+    inputs: { band: { from: THREE.Node<'color'>; to: THREE.Node<'color'> } },
+    material: THREE.MeshBasicNodeMaterial
+  ) => {
+    material.colorNode = mix(inputs.band.from, inputs.band.to, meshUv().y);
+  },
+} satisfies TslMaterialFns;
+
+/** Where the material input checks stand, either side of the top row. */
+const INPUT_CHECK_ROW = { y: 1.9, channelX: -4.0, gradientX: 4.0 };
+
+/**
+ * The material input checks (p302 Phase 4): left, `p302ChannelMat` (the scene JSON's), the
+ * texture on its left half and its red channel in grey on its right, from object-form texture
+ * refs; right, a gradient from navy to amber, bottom to top, its colours a bundle from this
+ * scene's input resolver. Each registration is on this call, never at the module's load (a visit
+ * again registers the same functions, which does nothing).
+ */
+const createMaterialInputChecks = (planeGeo: THREE.BufferGeometry) => {
+  registerMaterialInputResolver(gradientResolver);
+  registerTslMaterial('testDebugScene.gradient', gradientFns);
+  const gradientMat = createMaterial({
+    id: 'p302_gradientMat',
+    type: 'BASICNODEMATERIAL',
+    tslMaterialId: 'testDebugScene.gradient',
+    inputs: { band: { gradient: ['#1c233a', '#ffaa00'] } },
+  });
+  createMeshEntity(
+    {
+      geo: planeGeo,
+      mat: 'p302ChannelMat',
+      position: { x: INPUT_CHECK_ROW.channelX, y: INPUT_CHECK_ROW.y, z: 0 },
+    },
+    { appId: 'p302_channelPlane' }
+  );
+  createMeshEntity(
+    {
+      geo: planeGeo,
+      mat: gradientMat,
+      position: { x: INPUT_CHECK_ROW.gradientX, y: INPUT_CHECK_ROW.y, z: 0 },
+    },
+    { appId: 'p302_gradientPlane' }
+  );
 };
 
 /** The merge check's parts, in their group's space: a box, a sphere and a tilted, mirrored
@@ -241,7 +312,8 @@ const createAutoMergeCheck = () => {
  * tab (and reload) to check the assets worker path. Bottom row: the geometry merge check
  * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows. Left and right of
  * the rows, the merge group check (`createMergeGroupCheck`), and under the right block the AUTO
- * check (`createAutoMergeCheck`).
+ * check (`createAutoMergeCheck`). Either side of the top row, the material input checks
+ * (`createMaterialInputChecks`).
  */
 export const scene = async () => {
   const textures = await Promise.all(
@@ -266,6 +338,7 @@ export const scene = async () => {
       { appId: `${TEXTURES[i].id}_plane` }
     );
   });
+  createMaterialInputChecks(planeGeo);
   createMergeCheck(textures[0]);
   createMergeGroupCheck(textures[0]);
   createAutoMergeCheck();

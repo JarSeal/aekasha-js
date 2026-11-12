@@ -1,4 +1,4 @@
-Status: in progress | Phases 1 and 3 implemented (Phase 2 by p613)
+Status: in progress | Phases 1, 3 and 4 implemented (Phase 2 by p613)
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -68,7 +68,7 @@ Nothing here is terrain-specific, and nothing breaks existing JSON.
   export const setup = (inputs: Record<string, Node | ResolvedInput>, material: NodeMaterial, staticDefines: Record<string, unknown>) => void;
   ```
 - `setup` assigns any sockets it wants (`material.colorNode = …; material.normalNode = …; material.aoNode = …`) from **one** shared graph.
-- **Inputs** come from a new top-level `inputs` object in the material JSON, wrapped with the same rules as `nodes` inputs. They are cached at `mat.userData.uniforms[`setup\_${key}`]`, so the material editor's Params tab (`debug/editors/material/_dbg__MaterialEditorParams.ts`, which reads ``${socket}_${input}``) finds them once it lists `inputs` under a `setup` pseudo-socket (Phase 3).
+- **Inputs** come from a new top-level `inputs` object in the material JSON, wrapped with the same rules as `nodes` inputs. They are cached at `mat.userData.uniforms[`setup\_${key}`]`, so the material editor's Params tab (`debug/editors/material/_dbg__MaterialEditorParams.ts`, which reads ``${socket}\_${input}``) finds them once it lists `inputs`under a`setup` pseudo-socket (Phase 3).
 - **Order:** `setup` runs first. Then any `nodes` sockets run and may override a socket `setup` set. Existing per-socket materials are unaffected.
 - **The gather:** nothing to emit. The generated loader imports the whole TSL module (Context), so `createMaterial` finds `setup` among its exports and runs it when it's there (a file without one is a per-socket file as today); no `"tslEntry"` flag.
 - **Schema:** `inputs` on the TSL branch of `MaterialAssetSchema`; `inputs` in `MaterialOverridesSchema` and `MaterialVariantOverridesSchema`.
@@ -343,12 +343,67 @@ As built (2026-11-13; section 1 is commit `3f084323`):
   next), `userData` cloned one level (the editor's `userData.uniforms` would be shared), and an
   API renamed within r187. **Decision: (to confirm in review).**
 
-### Phase 4 — Input resolvers (D4)
+### Phase 4 — Input resolvers (D4) — done
 
 1. Registry, built-in object-form texture ref, bundle caching in `userData.uniforms`.
 2. Unit tests in `Material.test.ts` (the registry's order, a bundle's cached keys), and a dummy resolver in `testDebugScene` returning a bundle of two uniforms.
 
 **Exit:** a material JSON using `{ "texture": "testTexture", "channel": "r" }` works.
+
+As built (2026-11-14):
+
+- **Drift found:** the input wrapping D4 puts in `Material.ts` is `MaterialTsl.ts`' since Phase 3
+  (`createTslInputs`, `createTslInputNode`); the resolvers are asked there, before the built-in
+  rules. The schemas' input values were `z.any()` / `z.unknown()` already, so the object form
+  validates without a schema change (only both documentation layers name it).
+- **Two modules.** `kernel/assets/MaterialInputRefs.ts` is import-free (D6's risk): the texture
+  ref's type and `isTextureInputRef`, `MaterialInputDependency` (`{ type: 'texture', id }`; p303
+  widens the union) and `getTextureInputDependencies` (a bare id and the object form). Phase 5's
+  gather imports it, and lists it in `devTools/engineImports.test.ts` then.
+  `kernel/assets/MaterialInputResolvers.ts` is the registry: `registerMaterialInputResolver` (on
+  `aekasha`, with `MaterialInputResolver`, `MaterialInputContext`, `ResolvedInput`,
+  `ResolvedInputNode`, and `MaterialInputDependency` and `TextureInputRef` from the refs module),
+  `resolveRegisteredInput` and `getMaterialInputDependencies` (`@internal`: the first matching
+  resolver's `dependencies`, else the built-in forms'; `ensureMaterialDependencies`, Phase 5,
+  builds on it).
+- **The resolver:** `{ kind, match(value), resolve(value, ctx), dependencies?(value) }`, typed by
+  its value (`MaterialInputResolver<T>`, method parameters, so bivariant). `ctx` is `{ materialId,
+group ('setup' or the socket), key, material, getTexture(id) }`; `getTexture` falls back to the
+  shared white texel with the bare id's warning, so p303's and p299's resolvers miss a texture the
+  same way. A result that's neither a node (`isNode`) nor a non-empty object of nodes throws naming
+  the kind. A kind registered again with the same functions is silent, with others the first stay
+  (debug env warns), as `registerTslMaterial`. `ResolvedInputNode` is `{ isNode }`: three r187's
+  untyped `Node` rejects a `TextureNode` (Phase 3).
+- **Caching:** a node at `<group>_<key>`, each node of a bundle at `<group>_<key>_<field>`, the
+  bundle itself not kept; the function gets the bundle as is. The material editor shows a
+  resolver's value read-only (kind `OTHER`), and loads its textures through
+  `getMaterialInputDependencies` (`getMaterialTextureIds`), an object ref's included.
+- **The texture ref** (kind `'texture'`): `{ texture }` is the texture node the bare id makes (so
+  `.sample(uv)` works); `{ texture, channel }` (one to four of `r`, `g`, `b`, `a`, else it throws)
+  is TSL's swizzle of the sample at the default uv (a `SplitNode`, its components stored as
+  `xyzw`).
+- **Registration:** `FeatureContext.registerMaterialInputResolver` (the public function), which
+  `installKernel` calls last (`installMaterialInputResolvers`), so the kernel's resolver comes
+  before any feature's or the app's. No engine feature registers one yet: an app's own feature is
+  the place for one its JSON materials use, since a scene's JSON materials are created before its
+  scene code runs. `src/_engine/kernel/init/CLAUDE.md` says so.
+- **Tests:** `kernel/assets/MaterialInputResolvers.test.ts` (next to the registry, not
+  `Material.test.ts`): the order and resolvers before the built-in rules, a bundle's keys in a
+  `setup` and a socket group, a variant overriding a resolved input, a bad result, a duplicate
+  kind, the texture ref with and without `channel`, a missing texture, a bad channel, the
+  dependencies.
+- **testDebugScene:** beside the top row, `p302ChannelMat` (the scene folder's JSON material, a
+  `setup` with `albedo: { "texture": "testTexture" }` and `mask: { "texture": "testTexture",
+"channel": "r" }`: the texture on its left half, the red channel in grey on its right; the scene
+  lists `testTexture`) and `p302_gradientMat` (code: the scene file registers a dummy `{ gradient:
+[from, to] }` resolver returning a bundle of two colour uniforms, and a graph, on its call; navy
+  to amber, bottom to top). Its scene baselines need `--update`.
+- **The exit check** (Apple M2, Chrome, a dev server of its own, `?isDebug=true&aekTest=true`,
+  `whenSceneReady`): on WebGPU and the WebGL2 fallback both planes render as described;
+  `p302ChannelMat`'s uniforms are `setup_albedo` (a `TextureNode` of `testTexture`, not the
+  missing texel) and `setup_mask` (a `SplitNode`, `x`), the gradient's `setup_band_from` /
+  `setup_band_to` (`1c233a`, `ffaa00`). No new console message (Rapier's init deprecation and the
+  WebGL2 fallback's notice are pre-existing).
 
 ### Phase 5 — Dependency closure (D6)
 
@@ -372,9 +427,9 @@ As built (2026-11-13; section 1 is commit `3f084323`):
 
 ## Risks
 
-| Risk                                                                          | Mitigation                                                                                                                                                                                                                                                                       |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `setup` and per-socket functions both set the same socket                     | Documented order (setup first, sockets override), plus a dev warning when a socket is overwritten                                                                                                                                                                                |
+| Risk                                                                          | Mitigation                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup` and per-socket functions both set the same socket                     | Documented order (setup first, sockets override), plus a dev warning when a socket is overwritten                                                                                                                                                                                                                                              |
 | Variants differing only by textures compile separate pipelines                | Three caches programs by node graph structure; verify in Phase 3 that two variants with different texture ids share one pipeline (count pipelines via `renderer.info` / WebGPU devtools). If not, three r187's `NodeMaterialInstance` shares one build across them (D2's variants as instances), which also answers p305's per-block splat map |
-| The resolver dependency mirror in `devTools` drifts from the runtime resolver | Each resolver ships its dependency function in a side-effect-free module that both the gatherer and the runtime import (listed in `devTools/engineImports.test.ts` with its reason)                                                                                              |
-| The material editor assumes `${socket}_${input}` keys                         | `setup_${key}` follows the same pattern; Phase 3 makes the Params tab list them and updates `src/_engine/debug/editors/CLAUDE.md`                                                                                                                                                |
+| The resolver dependency mirror in `devTools` drifts from the runtime resolver | Each resolver ships its dependency function in a side-effect-free module that both the gatherer and the runtime import (listed in `devTools/engineImports.test.ts` with its reason)                                                                                                                                                            |
+| The material editor assumes `${socket}_${input}` keys                         | `setup_${key}` follows the same pattern; Phase 3 makes the Params tab list them and updates `src/_engine/debug/editors/CLAUDE.md`                                                                                                                                                                                                              |
