@@ -1,7 +1,6 @@
-Status: in progress | Phase 0 (spike) done, gate passed; Phases 1-3 implemented
+Status: implemented (Phases 0-4; Phase 0 the spike, its gate passed)
 Category: Merging, Rendering
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
-Blocks: p309_terrain-decals.md (soft: its Phase 4's runtime pools are `BATCHED` merge groups, D4)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
 
 # BatchedMesh Batches (movable and per-member-culled content)
@@ -917,7 +916,7 @@ moving members.
    `MergeBatchTransparent.test.ts`, `MergeMemberColor.test.ts`,
    `debug/_dbg__MergingBatchedPools.test.ts`.
 
-4. Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
+4. **Done.** Docs (the Hub's Mesh merging page and `features/merging/CLAUDE.md`, a `lodShowcase` lane if
    per-member LOD lands), versioning (engine minor). The Mesh merging page has no `BATCHED` yet:
    the mode, per-member LOD, pools (`geometryReserve`, `transparentOrder`, `setMergeMemberColor`,
    `updateMergeMember` putting a batched member last in the join order), picking
@@ -932,7 +931,9 @@ moving members.
      Documentation page's `aekasha/merging` row.
    - S2 — the `lodShowcase` lane — done ("S2 results" below).
    - S3 — the CLAUDE.md files and readme, versioning (engine minor, app minor), the changelog and
-     marking the plan done.
+     marking the plan done — done: engine 6.7.0 → 6.8.0, app 1.22.0 → 1.23.0 (the
+     `batchedMeshSpike` scene and the `lodShowcase` lane); the plan `_DONE_`, its references
+     updated (p309's `Blocked by` dropped it, p370's status).
 
    **S2 results** (2026-11-12):
    - **Built:** `lanes/batchedMembers.ts` ("Batched group"): a sphere, a torus and a capsule of

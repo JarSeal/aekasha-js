@@ -71,7 +71,7 @@ import {
 } from './_dbg__MergingWindows';
 import { MERGE_MEMBER_TRANSFORM_ACTION } from './_dbg__MergingUndo';
 
-// p375 S5: the debugger with BATCHED groups (docs/plans/p375_batched-mesh-batches.md): the moved-
+// p375 S5: the debugger with BATCHED groups (docs/plans/_DONE_p375_batched-mesh-batches.md): the moved-
 // member check skips their members, the overlay outlines them where their own meshes are, the tab
 // and the windows show their batch's figures, "Show unmerged" holds the batch, and the pose fields
 // move a member without an edit session

@@ -53,7 +53,7 @@ import { getMaterial } from '../../kernel/assets/Material';
 import { getGroups } from './MergeState';
 import { setMergeMemberColor } from './MergeMemberColor';
 
-// p375 Phase 2 (docs/plans/p375_batched-mesh-batches.md): a batched member's LOD levels. S2: a
+// p375 Phase 2 (docs/plans/_DONE_p375_batched-mesh-batches.md): a batched member's LOD levels. S2: a
 // BAKED group still refuses a LOD; a BATCHED one takes a member whose levels its batch can draw
 // (the mesh's material and castShadow, geometries agreeing exactly), checked at the join and when a
 // LOD comes later. lod()'s install comes first, as in the template: merging's later-LOD check

@@ -22,7 +22,7 @@ import {
 import type { MergeGroupSettings } from './MergeTypes';
 import { getGroups } from './MergeState';
 
-// p375 Phase 3 S1 (docs/plans/p375_batched-mesh-batches.md, D5): a batch's geometry slots. A
+// p375 Phase 3 S1 (docs/plans/_DONE_p375_batched-mesh-batches.md, D5): a batch's geometry slots. A
 // geometry no instance uses frees its slot (the batch lets go of it), the next geometry that fits
 // takes the best-fitting free slot (`setGeometryAt`) before a new one is added, `geometryReserve`
 // sizes every slot alike so a FIFO pool's buffers stop growing, and `updateMergeMember` writes a

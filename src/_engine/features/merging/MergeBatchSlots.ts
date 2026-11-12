@@ -1,4 +1,4 @@
-// A batched group's geometry slots (docs/plans/p375_batched-mesh-batches.md, Phase 3 S1, D5): a
+// A batched group's geometry slots (docs/plans/_DONE_p375_batched-mesh-batches.md, Phase 3 S1, D5): a
 // batch whose geometries change (a decal pool's patches, members leaving with geometries no other
 // member has) frees a geometry's slot when no instance uses it, and refills a free slot with a
 // geometry that fits (`setGeometryAt`) before it adds one. three's own `deleteGeometry` +

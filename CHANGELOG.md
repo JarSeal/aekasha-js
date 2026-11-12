@@ -4,6 +4,56 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-12 — p375_batched-mesh-batches
+
+Batched merge groups (p375, the fifth child of the merging epic p370): a merge group's `mode: 'BATCHED'` draws its members as instances of one three.js `BatchedMesh`, for what a baked group can't take: members that move every frame (bodies included), transparent members and members with their own LOD. Each member is drawn where its own mesh would be, culled on its own, at its own LOD level with cross-fades, and the batch keeps each geometry's members together so WebGPU draws it in one draw per geometry (WebGL2 in one multi-draw). Its geometry slots are reused and a member can be rewritten in place, so a decal pool keeps the same buffers however long it churns, and a member can have its own colour and opacity. Measured on the spike scene, a batch takes 35-90 % off the CPU frame of drawing each mesh on its own, with moving bodies, a LOD field and decal pools; static content in view stays the baked group's. Nothing breaks.
+
+### Engine 6.8.0 (Sunset)
+
+**Added**
+
+- `MergeGroupSettings.mode` (`MergeGroupMode`: `'BAKED'`, the default, or `'BATCHED'`) on `createMergeGroup` and a scene's `mergeGroups` group entry, and `MeshMergeOptions.mode` on a mesh's `merge`: a group made on first use takes its scene entry's mode, else the first joining `merge`'s; a `merge` naming the other mode is refused. `AUTO` keeps the modes apart (a `BAKED` key, and so its ids, unchanged) and counts each geometry once per batched group against its cap.
+- A batched group (`aekasha/merging`): one `BatchedMesh` built from its members, each geometry added once and each geometry's members a block of instance ids, `sortObjects` off. A system at `APP_RENDER_SYNC` (`APP_RENDER_SYNC_ORDER.MERGE_BATCH_SYNC`, -0.25: after the pose producers) writes the matrix of each member whose transform changed from its own mesh's pose, interpolated bodies included; `DISABLED`, a scene load's hold and the engine's frustum culling hide a member's instance, never the batch. The batch is one entry in the spatial index, its bounds growing with its members. A batched member's own mesh is out of the scene graph while it's batched (three's scene update and a raycast skip it) and back when it leaves. On WebGPU the batch compacts its ids in place once its geometry runs pass twice its geometries; WebGL2 draws it in one multi-draw. Its code is a lazy chunk, loaded with a scene's first batched group.
+- `perMemberCulling` (`BATCHED` only, default true): three's per-member frustum culling, in every pass; off for a batch always in view.
+- Per-member LOD in a batched group: a member with a `LOD` joins when every level is drawable by the batch (the group's material, the batch's `castShadow`, a geometry agreeing with the group's; impostor levels refused), and a later `LOD` that isn't takes the member out of its group with a warning. The batch holds every level's geometry; a level change swaps the instance's geometry in place, and a cross-fade adds a second instance with the outgoing level, dithered through a per-batch fade texture (shadow passes too); LOD culling hides the instance, its fade included. A batch with a LOD member sorts its draw list by geometry range each pass on WebGPU.
+- Geometry slots: a geometry no instance uses frees its slot, which the next geometry takes by best fit. `geometryReserve: { vertices, indices? }` (`MergeGeometryReserve`, `BATCHED` only) gives every slot at least that room, so a pool's buffers stop growing. `updateMergeMember` on a batched member writes its geometry into the batch again (rewritten in its slot, moved to one that fits past the reserve, or a new geometry on its mesh), and puts it last in the join order.
+- Transparent batched groups and `transparentOrder` (`MergeTransparentOrder`: `DEPTH`, the default, back to front, or `JOIN`, the order the members joined, the newest on top), sorted every pass on both backends; a batched member's `renderOrder` must be the group's first member's.
+- `setMergeMemberColor(entityId, { color?, opacity? }, world?)` and `MergeMemberColorOptions`: a batched member's colour and opacity multiplied into the group's material, written only on a change, without allocating; its own module, so a build carries it only when an app calls it.
+- `getMergeMemberAtBatchId(groupEntityId, batchId, world?)`: the member a raycast hit on a batch names by its `batchId`.
+- The Merging tab, windows and overlay with batched groups: a `BATCHED` badge, the members visible, the draw runs and compactions or the sort, the batch's geometries, vertices and instances, its slots and reserve, coloured members, its members' LOD levels and fades; a batched member's instance, colour and LOD, its pose fields moving it without an edit session. The LOD tab's window names a batched member's kind "mesh, drawn by its merge batch".
+
+**Changed**
+
+- A `BATCHED` group takes dynamic, kinematic and tier-frozen bodies, transparent materials and members with a `LOD`, which a `BAKED` group still refuses (its transparent and LOD refusals now name `BATCHED`); a `BATCHED` group refuses a mesh not directly under the root scene, a geometry whose index, attribute names, item sizes or normalization differ from the group's, another `renderOrder` and a `palette`. `createMergeGroup` throws for an unknown mode, a `BATCHED` palette group, and `perMemberCulling`, `geometryReserve` or `transparentOrder` without `BATCHED` (the schema refuses them too).
+- `object3DSyncSystem` bumps an `OBJECT3D`'s version with each copy in `TYPED_ARRAY` storage, so a system can see a transform written in either storage mode.
+- The kernel's LOD mesh draw delegate (`kernel/ecs/LodTargets.ts`, `@internal`): `lod()`'s plain-mesh level, cull and fade calls ask whether something else draws the entity (merging's batch does for a batched member); the `LOD`'s remove and delete hooks go through it.
+- The app's first download: three's `BatchedMesh` ships with `merging()` (+4.6 kB gzip of three: its class is a statement of `three.core.js`, whose chunk is the main one; `docs/issues/three-classes-ship-with-their-chunk.md`), and `merging()` is 9.6 kB gzip. The budgets: the initial 387 → 394 KiB, `assets/index.js` 383 → 390 KiB and `merging` 8 → 10 KiB (`sbp.config.ts`).
+
+### App 1.23.0 (Preschooler)
+
+**Added**
+
+- The `batchedMeshSpike` debug scene (p375's spike and each phase's exit): 2 000 members of 20 geometries as separate meshes, a baked group, a hand-built `BatchedMesh` or an engine batched group (`?bmsWay`), with kinematic bodies (`?bmsBodies`), three hand-made LOD levels and a camera dolly (`?bmsLod`, `?bmsDolly`), and a FIFO decal pool on a heightfield (`?bmsDecals=blend|cutout` and its pool size, rate, order and spawn mode), with a probe the bench reads.
+- A `lodShowcase` lane, "Batched group": a sphere, a torus and a capsule with hand-made levels, every member of one `BATCHED` group at its own level. The lanes are 8 slots of 7 m.
+
+**Fixed**
+
+- The `lodShowcase` scene's hand-made mesh stands on its lane's line again (x −10.5), without the off-line warning.
+
+### Project
+
+**Added**
+
+- `devTools/bench/batchedMeshSpike.ts`: the spike scene's bench (CPU and GPU frame, draws, the batch's runs and compactions, spawns, buffers over a long churn, pixel checks against separate meshes), and `scenes.config.ts`' `batchedMeshSpike` variants.
+- The Hub's Mesh merging page: "Batched groups: members that move" with Per-member LOD, Pools, Which member of a batch a ray hit and When a batch pays; the mode through the page's other sections. The LOD and physics pages' lines on batched groups.
+- Issues: `three-classes-ship-with-their-chunk.md` and `merge-update-starves-worker-build.md`.
+
+**Changed**
+
+- The root, `merging/` and `lod/` `CLAUDE.md` and the readme (batched groups in mesh merging, the `lodShowcase` lane).
+- The bundle, API and docs baselines.
+- The plans: p375 is `_DONE_` (Phases 0-4: the spike, the gate and each phase's measurements); p309's runtime decal pools are `BATCHED` groups (its D4 and Phase 4 rewritten from p375's results); the p370 epic's status follows it.
+
 ## 2026-11-11 — p374_multi-material-merging
 
 Multi-material merging (p374, the fourth child of the merging epic p370): meshes of different materials share one merge group and one draw through a palette (`*.mergeMaterial.json`). The asset pipeline builds each map slot of the palette's `STANDARD` materials into one texture array, a layer per material; a merge material reads each vertex's material index, a table of each material's values and the arrays, and draws them all. A scene lists its palettes, and a named group's `palette` or an `AUTO` entry's `palettes` puts their meshes together: on the verification scene's field, 9 groups instead of 36. Measured there, a palette trades pixels for draws (its merge material costs 0.6-1.9 ms more GPU time a frame than the members' own materials, for 27 fewer draws), so the handbook says when it pays. Nothing breaks.

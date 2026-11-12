@@ -27,7 +27,7 @@ import {
 import { setMergeMemberColor } from './MergeMemberColor';
 import { getGroups } from './MergeState';
 
-// p375 Phase 3 S3 (docs/plans/p375_batched-mesh-batches.md): a batched member's colour and opacity,
+// p375 Phase 3 S3 (docs/plans/_DONE_p375_batched-mesh-batches.md): a batched member's colour and opacity,
 // its instance's colour in the batch. Written only on a change; a member waiting for its build
 // gets it at the build; it follows the member through a compaction, a rebuild and the batch's
 // growth; a new instance in a freed id is white and opaque (three resets only the RGB); the batch's

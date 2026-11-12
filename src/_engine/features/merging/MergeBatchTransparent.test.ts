@@ -35,7 +35,7 @@ import {
 import type { MergeTransparentOrder } from './MergeTypes';
 import { getGroups } from './MergeState';
 
-// p375 Phase 3 S2 (docs/plans/p375_batched-mesh-batches.md): transparent batched groups. A BAKED
+// p375 Phase 3 S2 (docs/plans/_DONE_p375_batched-mesh-batches.md): transparent batched groups. A BAKED
 // group still refuses a transparent material; a BATCHED one takes it and sorts its batch every
 // pass on both backends, never compacting: `DEPTH` (three's back-to-front sort) or `JOIN` (the
 // members' join order, the newest last: decals). A batch is drawn at its members' renderOrder,

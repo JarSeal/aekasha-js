@@ -2,7 +2,7 @@
 
 Status: open
 Category: Smallest build, Merging
-Found: 2026-11-11, p375 Phase 1 S6 (`docs/plans/p375_batched-mesh-batches.md`, "S6 results")
+Found: 2026-11-11, p375 Phase 1 S6 (`docs/plans/_DONE_p375_batched-mesh-batches.md`, "S6 results")
 Our workaround: none; the budgets carry it (`sbp.config.ts`: `BatchedMesh`, +4.6 KiB gzip with `merging()`)
 
 ## What happens

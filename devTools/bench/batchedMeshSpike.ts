@@ -1,5 +1,5 @@
 /**
- * p375 Phase 0's spike bench (docs/plans/p375_batched-mesh-batches.md §2): the `batchedMeshSpike`
+ * p375 Phase 0's spike bench (docs/plans/_DONE_p375_batched-mesh-batches.md §2): the `batchedMeshSpike`
  * scene's ways (separate meshes, a baked merge group, a hand-built `BatchedMesh`, and Phase 1's
  * engine batched merge group: the `engine` and `kinematic` cases, its exit) in each case below, on
  * WebGPU and on WebGL2, both on the machine's GPU (WebGL2 through the renderer tab's persisted

@@ -1,4 +1,4 @@
-// The batched merge groups' part in the first download (docs/plans/p375_batched-mesh-batches.md):
+// The batched merge groups' part in the first download (docs/plans/_DONE_p375_batched-mesh-batches.md):
 // the batch code's loader and what the first-download paths do with a batched member. The batch
 // code (MergeBatch.ts, with three's `BatchedMesh`, about 18 kB minified) loads on the first
 // batched group's build, so an app that lists `merging()` without one never downloads it. A member

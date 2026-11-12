@@ -633,7 +633,7 @@ batch".
 See the plans, [merge groups](repo:docs/plans/_DONE_p372_mesh-merge-groups.md),
 [merge debugging and member editing](repo:docs/plans/_DONE_p373_merge-debug-and-member-editing.md),
 [multi-material merging](repo:docs/plans/_DONE_p374_multi-material-merging.md) and
-[batched groups](repo:docs/plans/p375_batched-mesh-batches.md),
+[batched groups](repo:docs/plans/_DONE_p375_batched-mesh-batches.md),
 and their epic, [static mesh merging](repo:docs/plans/p370_static-mesh-merging-and-texture-atlas-systems.md).
 
 ## Key APIs

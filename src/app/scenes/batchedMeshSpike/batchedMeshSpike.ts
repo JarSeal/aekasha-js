@@ -25,7 +25,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 import { SunShadowFitComponentType } from 'aekasha/toolkit/ecs';
 import { bmsDecalSettings, createBmsDecals, readBmsDecalSettings } from './batchedMeshSpikeDecals';
 
-// p375 Phase 0's spike (docs/plans/p375_batched-mesh-batches.md §2): the same field of members,
+// p375 Phase 0's spike (docs/plans/_DONE_p375_batched-mesh-batches.md §2): the same field of members,
 // 20 geometries and one material, drawn three ways:
 // - SEPARATE: a mesh entity per member (the engine's object sync and culling, three's render list);
 // - BAKED: the same mesh entities in one p372 merge group (`updateMergeMember` when one moves);

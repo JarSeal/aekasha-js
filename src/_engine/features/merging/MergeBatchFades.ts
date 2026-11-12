@@ -1,4 +1,4 @@
-// A batched merge group's LOD fades (docs/plans/p375_batched-mesh-batches.md Phase 2 S4): one
+// A batched merge group's LOD fades (docs/plans/_DONE_p375_batched-mesh-batches.md Phase 2 S4): one
 // signed fade per instance (`kernel/render/LodFade.ts`' encoding, LOD_FADE_OPAQUE while it isn't
 // fading) in a float texture the size of the batch's instance capacity, which the batch's
 // dither-enabled material reads at the drawn instance (`batchIndirectIndex`, three's varying) as the

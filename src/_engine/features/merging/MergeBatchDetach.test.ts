@@ -22,7 +22,7 @@ import {
 import { getMergeMemberAtBatchId, getMergeMemberAtFace } from './MergeMemberEdit';
 import { getGroups } from './MergeState';
 
-// p375 Phase 2 S1 (docs/plans/p375_batched-mesh-batches.md): a batched member's own mesh is out of
+// p375 Phase 2 S1 (docs/plans/_DONE_p375_batched-mesh-batches.md): a batched member's own mesh is out of
 // the scene graph while its batch draws it, back under the root scene when it's drawn on its own
 // again; a raycast hits the batch, and `getMergeMemberAtBatchId` maps the hit to the member.
 // MergeBatch.test.ts has the rest of the batch (the sync's tests run with the meshes out).

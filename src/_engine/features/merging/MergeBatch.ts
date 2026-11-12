@@ -1,4 +1,4 @@
-// Batched merge groups (docs/plans/p375_batched-mesh-batches.md §3): a `BATCHED` group draws its
+// Batched merge groups (docs/plans/_DONE_p375_batched-mesh-batches.md §3): a `BATCHED` group draws its
 // members as instances of one three `BatchedMesh`, each geometry added once and each member an
 // instance (`MERGE_MEMBER.instanceId`). Loaded behind `import()` on the first batched group's build
 // (MergeBatchFront.ts): `BatchedMesh` is about 18 kB minified.

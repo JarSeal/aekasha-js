@@ -76,7 +76,7 @@ import {
   getMemberStateText,
 } from './_dbg__MergingWindows';
 
-// p375 Phase 2 S5 (docs/plans/p375_batched-mesh-batches.md): the debugger with batched members'
+// p375 Phase 2 S5 (docs/plans/_DONE_p375_batched-mesh-batches.md): the debugger with batched members'
 // LOD: the group's LOD figures (its members with a LOD, its level geometries, level and cull fades,
 // the outgoing instances, LOD culled), the tab's fading count, a member's level and the fade its
 // batch draws, the merging overlay's boxes with level fades and LOD culling, and the LOD tab's

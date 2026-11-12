@@ -20,7 +20,7 @@ import {
 import type { MergeTransparentOrder } from 'aekasha/merging';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 
-// p375 Phase 3 S5's decal stand-in (docs/plans/p375_batched-mesh-batches.md; p309 D4's runtime
+// p375 Phase 3 S5's decal stand-in (docs/plans/_DONE_p375_batched-mesh-batches.md; p309 D4's runtime
 // pools, before p309 exists): `?bmsDecals=blend|cutout` replaces the spike's field with a
 // heightfield ground (the toolkit's `generateTerrain`, its `getHeightAt` standing in for p306's
 // block grid) and a FIFO pool of decals, each a k × k grid patch conformed to the ground around

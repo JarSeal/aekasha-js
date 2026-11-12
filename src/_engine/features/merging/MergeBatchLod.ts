@@ -1,4 +1,4 @@
-// A batched merge member's LOD (docs/plans/p375_batched-mesh-batches.md Phase 2): the work of the
+// A batched merge member's LOD (docs/plans/_DONE_p375_batched-mesh-batches.md Phase 2): the work of the
 // kernel's mesh draw delegate, which MergeBatchFront.ts' `batchMemberLodDelegate` forwards here for
 // a member its batch draws. `lod()` has set the level on the member's own mesh already. Part of the
 // lazy batch code, loaded with MergeBatch.ts.

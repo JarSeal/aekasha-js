@@ -1,4 +1,4 @@
-// A batched member's colour (docs/plans/p375_batched-mesh-batches.md, Phase 3 S3): a colour and an
+// A batched member's colour (docs/plans/_DONE_p375_batched-mesh-batches.md, Phase 3 S3): a colour and an
 // opacity multiplied into the group's material for one member, its batch instance's colour
 // (three's `setColorAt`, a `vec4` the material multiplies into its colour before its opacity, so
 // the alpha fades a transparent member: p309's decals). Kept on `MERGE_MEMBER._color` and written

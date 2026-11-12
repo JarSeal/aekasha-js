@@ -57,7 +57,7 @@ import { getMergeGroupListData } from './_dbg__Merging';
 import { getMergeSummary } from './_dbg__MergingInfo';
 import { createGroupWindowContent, createMemberWindowContent } from './_dbg__MergingWindows';
 
-// p375 Phase 3 S4 (docs/plans/p375_batched-mesh-batches.md): the debugger with a batch's geometry
+// p375 Phase 3 S4 (docs/plans/_DONE_p375_batched-mesh-batches.md): the debugger with a batch's geometry
 // slots, its transparent order and its members' colours: the group window's Geometry slots,
 // Colours and Draw runs rows, the tab's row and the summary's draws for a sorted batch, and the
 // member window's Colour row (a batched member's only).

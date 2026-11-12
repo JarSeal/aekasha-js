@@ -25,7 +25,7 @@ import { createRootScene } from '../../kernel/scene/Scene';
 import { installLodSystem, lodApplySystem, lodFadeSystem, lodSelectionSystem } from './LodSystem';
 import type { LodDef } from './LodTypes';
 
-// p375 Phase 2 S2 (docs/plans/p375_batched-mesh-batches.md): the kernel's mesh draw delegate. A
+// p375 Phase 2 S2 (docs/plans/_DONE_p375_batched-mesh-batches.md): the kernel's mesh draw delegate. A
 // plain mesh's levels still go on the mesh, and for an entity the delegate draws, its apply, cull
 // and fades go to the delegate instead of the plain path's fade copies; the plain path itself for
 // comparison.

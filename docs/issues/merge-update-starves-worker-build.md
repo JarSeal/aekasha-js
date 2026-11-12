@@ -2,7 +2,7 @@
 
 Status: open
 Category: Merging
-Found: 2026-11-11, p375 Phase 0's spike (`docs/plans/p375_batched-mesh-batches.md` §2 Results, item 3)
+Found: 2026-11-11, p375 Phase 0's spike (`docs/plans/_DONE_p375_batched-mesh-batches.md` §2 Results, item 3)
 Our workaround: don't call `updateMergeMember` on a group's members until it has built (`MERGE_MEMBER.partIndex >= 0`), or keep moving content out of merge groups (a `BatchedMesh` batch, p375)
 
 ## What happens

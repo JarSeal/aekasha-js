@@ -1,6 +1,6 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373 and p374 implemented; p375-p376 not started
+Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not started
 Category: Rendering, Merging, Texture atlas
-Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
+Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
 
 # Static Mesh Merging & Texture Arrays/Atlases — Research & Epic
@@ -252,7 +252,7 @@ Heightfield blocks themselves gain little: each is already one mesh.
 | 1.2  | `_DONE_p372_mesh-merge-groups`              | `MERGE_GROUP` / `MERGE_MEMBER`, `merge: id \| 'AUTO'`, in-place member updates, scene-load build                               | p371                                |
 | 1.3  | `_DONE_p373_merge-debug-and-member-editing` | "Merging" drawer tab, group and member windows, overlay, A/B toggle, edit sessions, face picking                               | p372                                |
 | 2.1  | `_DONE_p374_multi-material-merging`         | Merge materials: palettes, per-slot arrays, parameter table, compatibility classes                                             | p372, p299                          |
-| 2.2  | `p375_batched-mesh-batches`                 | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
+| 2.2  | `_DONE_p375_batched-mesh-batches`           | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
 | 3    | `p376_hlod-merged-cluster-proxies` (stub)   | Simplified merged groups as far LOD levels and FAR cells                                                                       | p372, p347, p348 (p353)             |
 
 ## 12. Open questions

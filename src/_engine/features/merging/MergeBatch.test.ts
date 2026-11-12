@@ -35,7 +35,7 @@ import { keepSceneMergeSettings } from './MergeSceneSettings';
 import { getGroups } from './MergeState';
 import type { MeshMergeDef } from './MergeTypes';
 
-// p375's batched groups (docs/plans/p375_batched-mesh-batches.md): the mode, its refusals and
+// p375's batched groups (docs/plans/_DONE_p375_batched-mesh-batches.md): the mode, its refusals and
 // AUTO's batched buckets (Phase 1 S1); the batch build, leaving and visibility (S2); the sync
 // and the growing bounds in both storage modes (S3); grouping and compaction (S4). The first test
 // needs the loader not to have run yet (`getMergeBatchModule()` is the loader's: this file's static
