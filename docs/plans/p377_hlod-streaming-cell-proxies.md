@@ -709,6 +709,32 @@ D8, on the Hub's Mesh merging page (`hub/pages/features/mesh-merging/guide.md`);
 
 Exit: every check passes, the figures recorded; what fails goes back to its phase.
 
+**As built** (2026-11-12, step 1, on the Apple M2; steps 2-3 need the WSL2 machine):
+
+- `yarn test` 353 files, 3,328 tests (1 skipped); `yarn lint`, `tsc` and `tsc -p hub` clean.
+- `yarn build` passes: the SBP of every profile within its budgets (app initial 397.4 KiB of 398,
+  the streaming group 2.6 KiB initial of 4 KiB, 10.1 KiB lazy; banner 267.3, uiKit 266.6; the
+  report's only hint is the character group's budget well under, not this branch's), the Hub 117
+  pages (its search index warning, 573 KiB, as before Phase 4).
+- `yarn verify:baselines --no-build` on that build: `api.json` unchanged (it lists exports, not a
+  type's fields: `entries` doesn't show, Phase 2's As built), the docs ratchet unchanged, no debug
+  code in any build. Three bundle changes, all known: `assets/index.js` +3.7 kB gzip (the `app`
+  group +3.6, Phase 3's ruins), `assets/largeWorld.js` +0.2 kB and the new `assets/DebugModules.js`
+  (52 bytes, `loadDebugModuleAsync` folded to `return null`, now a chunk of its own since largeWorld
+  calls it too: p376's and Phase 0's spike hook). `StreamingDataContent.js` 3,314 → 3,489 bytes
+  minified (Phase 2's `entries` read), inside the tolerance. Recorded with `--update` (only
+  `bundle.json`: the embed baselines differed by gzip bytes alone, restored).
+- `yarn verify:scenes` (WebGPU, every scene): 134 passed, 48 new, 3 failed. Every hash, error and
+  system order check passes; `streamingGrid` all five configurations on Phase 3's baseline,
+  `streamingPhysics` and largeWorld every configuration but the debugger's. The new: the
+  `batchedMeshSpike` variants and `mergeMaterials`, which this machine's local baseline never
+  recorded (p374, p375). The 3 failures are `debugger` shots, the baselines from 2026-11-11, before
+  this branch and the merging plans `main` gained since: `drawer.streamingControls`
+  (testDebugScene, thirdPersonGymScene) is this branch's (Phase 2's five-line JSON content readout
+  and its longer note, the box taller); `drawer.mergingControls`, `window.mergeGroup` and
+  `window.mergeMember` (largeWorld, testDebugScene, thirdPersonGymScene) p373-p375's rows,
+  `materialEditor.selector` p376's ruin materials, `window.about` p376's versions.
+
 ## Phase 6 — Hub, versions, done
 
 1. **The Hub's streaming page** (`hub/pages/features/streaming/guide.md`, Far representations): a
