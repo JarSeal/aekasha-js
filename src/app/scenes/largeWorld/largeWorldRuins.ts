@@ -1,7 +1,6 @@
 import type * as THREE from 'three/webgpu';
 import { createGeometry, createMeshEntity, createSeededRandom } from 'aekasha';
-import type { ECSWorld } from 'aekasha';
-import type { GeneratedTerrain } from 'aekasha/toolkit/geometry';
+import type { ECSWorld, MeshProps } from 'aekasha';
 
 /** The materials the ruins share with largeWorld's static props, so the props near a site merge
  * with it. */
@@ -15,7 +14,7 @@ export interface RuinMaterials {
 }
 
 /** A ruin site: a floor of `cols` × `rows` 2 m tiles at (`x`, `z`), turned `angle` about y. */
-interface RuinSite {
+export interface RuinSite {
   x: number;
   z: number;
   cols: number;
@@ -43,16 +42,28 @@ const RUBBLE_PER_SITE = 12;
 /** The share of each kind of piece left out, as fallen. */
 const MISSING = { floor: 0.15, wall: 0.3, pillar: 0.2 };
 
+/** Where `createRuins` builds, when not the scene's own eight sites. */
+export interface RuinsOptions {
+  /** The sites. Default: the scene's eight, on the terrain */
+  sites?: RuinSite[];
+  /** The seed of the pieces left out, their heights and the rubble. Default 7 */
+  seed?: number;
+  /** Every piece's `merge`. Default `'AUTO'` (the scene's 50 m cells) */
+  merge?: MeshProps['merge'];
+}
+
 /**
  * A modular ruins kit: 8 sites of floor tiles, broken walls, pillars and rubble on the terrain,
  * about 400 static pieces from four geometries in the props' three materials, all drawn merged
  * (`merge: 'AUTO'`): about 24 groups, one per site and material. The same ruins on every load
- * (a seeded random).
+ * (a seeded random). `heightAt` is the ground's height under a point; `options` builds other sites
+ * (p376's far field, `_dbg__largeWorldHlodField.ts`).
  */
 export const createRuins = (
   world: ECSWorld,
-  terrain: GeneratedTerrain,
-  materials: RuinMaterials
+  heightAt: (x: number, z: number) => number,
+  materials: RuinMaterials,
+  options: RuinsOptions = {}
 ) => {
   const geometries = {
     floor: createGeometry({
@@ -77,10 +88,11 @@ export const createRuins = (
       params: { radius: 0.4, widthSegments: 5, heightSegments: 4 },
     }),
   };
-  const random = createSeededRandom(7);
+  const random = createSeededRandom(options.seed ?? 7);
+  const merge = options.merge ?? 'AUTO';
   const between = (min: number, max: number) => min + random() * (max - min);
 
-  RUIN_SITES.forEach((site, siteIndex) => {
+  (options.sites ?? RUIN_SITES).forEach((site, siteIndex) => {
     const cos = Math.cos(site.angle);
     const sin = Math.sin(site.angle);
     const name = `Large world ruin ${siteIndex}`;
@@ -108,10 +120,10 @@ export const createRuins = (
                 : materials.wall,
           castShadow: true,
           receiveShadow: true,
-          position: { x, y: terrain.getHeightAt(x, z) + y, z },
+          position: { x, y: heightAt(x, z) + y, z },
           rotation,
           scale: opts.scale,
-          merge: 'AUTO',
+          merge,
         },
         { debugData: { name: `${name} ${kind}` }, world }
       );
