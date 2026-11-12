@@ -790,9 +790,72 @@
       "collectQueuedJoins": "Function",
       "getAutoCompatibilityKey": "Function",
       "pickAutoGroup": "Function",
+      "QueuedJoins": "TypeAlias",
       "queueMerge": "Function"
     },
+    "src/_engine/features/merging/MergeBatch.ts": {
+      "BatchOrder": "TypeAlias",
+      "BatchState": "TypeAlias",
+      "buildBatchGroup": "Function",
+      "COMPACT_RUNS_FACTOR": "Variable",
+      "deleteBatchInstance": "Function",
+      "deleteFadeInstance": "Function",
+      "getBatchState": "Function",
+      "getMemberState": "Function",
+      "growInstances": "Function",
+      "isBatchMemberShown": "Function",
+      "mergeBatchSyncSystem": "Function",
+      "noteBatchLodMember": "Function",
+      "requestBatchRebuild": "Function",
+      "setBatchMemberVisible": "Function",
+      "setBatchOrder": "Function",
+      "setInstanceGeometry": "Function",
+      "updateBatchMemberGeometry": "Function",
+      "writeBatchMemberColor": "Function",
+      "writeMemberColor": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchFades.ts": {
+      "BatchFades": "TypeAlias",
+      "createBatchFades": "Function",
+      "setInstanceFade": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchFront.ts": {
+      "batchMemberLodDelegate": "Variable",
+      "BatchVisibilityOverrides": "TypeAlias",
+      "detachBatchedMemberMesh": "Function",
+      "dropBatchMember": "Function",
+      "getMergeBatchModule": "Function",
+      "installBatchMemberVisibility": "Function",
+      "isBatchedGroup": "Function",
+      "loadMergeBatchModuleAsync": "Function",
+      "reattachMemberMesh": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchLod.ts": {
+      "applyBatchMemberLevel": "Function",
+      "endBatchMemberFade": "Function",
+      "refreshBatchMember": "Function",
+      "setBatchMemberFade": "Function",
+      "setBatchMemberLodCulled": "Function"
+    },
+    "src/_engine/features/merging/MergeBatchSlots.ts": {
+      "addGeometries": "Function",
+      "BATCH_RESERVE": "Variable",
+      "getReservedIndices": "Function",
+      "getReservedVertices": "Function",
+      "markLevelSlots": "Function",
+      "rewriteGeometry": "Function",
+      "setInstanceSlot": "Function"
+    },
+    "src/_engine/features/merging/MergeBuild.ts": {
+      "buildPendingGroups": "Function",
+      "clearEmptyGroup": "Function",
+      "getLiveMembers": "Function",
+      "loadPendingBuildCodeAsync": "Function",
+      "startPendingBuildCodeLoads": "Function",
+      "WORKER_BUILD_VERTICES": "Variable"
+    },
     "src/_engine/features/merging/MergeEligibility.ts": {
+      "getBatchLodRefusal": "Function",
       "getMergeRefusal": "Function"
     },
     "src/_engine/features/merging/MergeGroups.ts": {
@@ -808,8 +871,7 @@
       "rebuildMergeGroup": "Function",
       "registerMergeDebug": "Function",
       "removeFromMergeGroup": "Function",
-      "updateMergeMember": "Function",
-      "WORKER_BUILD_VERTICES": "Variable"
+      "updateMergeMember": "Function"
     },
     "src/_engine/features/merging/MergeInPlace.ts": {
       "collapseDisabledMember": "Function",
@@ -850,10 +912,15 @@
       "ORM_SOURCE_MAP_KEYS": "Variable",
       "SceneMergeMaterial": "TypeAlias"
     },
+    "src/_engine/features/merging/MergeMemberColor.ts": {
+      "MergeMemberColorOptions": "TypeAlias",
+      "setMergeMemberColor": "Function"
+    },
     "src/_engine/features/merging/MergeMemberEdit.ts": {
       "beginMergeMemberEdit": "Function",
       "cancelMergeMemberEdit": "Function",
       "endMergeMemberEdit": "Function",
+      "getMergeMemberAtBatchId": "Function",
       "getMergeMemberAtFace": "Function",
       "isMergeMemberInEdit": "Function"
     },
@@ -907,10 +974,13 @@
       "syncMemberPose": "Function"
     },
     "src/_engine/features/merging/MergeTypes.ts": {
+      "MergeGeometryReserve": "TypeAlias",
       "MergeGroupData": "TypeAlias",
+      "MergeGroupMode": "TypeAlias",
       "MergeGroupSettings": "TypeAlias",
       "MergeMemberData": "TypeAlias",
       "MergeMemberEditPose": "TypeAlias",
+      "MergeTransparentOrder": "TypeAlias",
       "MeshMergeDef": "TypeAlias",
       "MeshMergeOptions": "TypeAlias",
       "SceneAutoMergeEntry": "TypeAlias",
@@ -2530,16 +2600,19 @@
     "src/_engine/kernel/ecs/LodTargets.ts": {
       "getLodContentDebugSources": "Function",
       "getLodFrameInputs": "Function",
+      "getLodMeshDrawDelegateFor": "Function",
       "getLodTargets": "Function",
       "LodContentDebugInfo": "TypeAlias",
       "LodContentDebugSource": "TypeAlias",
       "LodContentDebugStats": "TypeAlias",
       "LodContentDebugToggle": "TypeAlias",
       "LodFrameInputs": "TypeAlias",
+      "LodMeshDrawDelegate": "TypeAlias",
       "LodTargetEntry": "TypeAlias",
       "registerLodContentDebugSource": "Function",
       "registerLodTarget": "Function",
-      "setLodFrameInputs": "Function"
+      "setLodFrameInputs": "Function",
+      "setLodMeshDrawDelegate": "Function"
     },
     "src/_engine/kernel/ecs/ObjectFrustumCullingSystem.ts": {
       "BoundingVolumeProvider": "TypeAlias",
@@ -5167,12 +5240,16 @@
     ],
     "aekasha/merging": [
       "CreateMergeGroupOptions",
+      "MergeGeometryReserve",
       "MergeGroupData",
+      "MergeGroupMode",
       "MergeGroupSettings",
       "MergeMaterialEntry",
       "MergeMaterialSlotInfo",
+      "MergeMemberColorOptions",
       "MergeMemberData",
       "MergeMemberEditPose",
+      "MergeTransparentOrder",
       "MeshMergeDef",
       "MeshMergeOptions",
       "SceneAutoMergeEntry",
@@ -5186,11 +5263,13 @@
       "dissolveMergeGroup",
       "endMergeMemberEdit",
       "getMergeGroupOf",
+      "getMergeMemberAtBatchId",
       "getMergeMemberAtFace",
       "isMergeMemberInEdit",
       "merging",
       "rebuildMergeGroup",
       "removeFromMergeGroup",
+      "setMergeMemberColor",
       "updateMergeMember"
     ],
     "aekasha/physics": [

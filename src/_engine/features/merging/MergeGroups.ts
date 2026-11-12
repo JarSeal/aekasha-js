@@ -4,15 +4,10 @@
 // a reason of the kernel's visibility reconcile (`reconcileObject3DVisibility`), whose hooks this
 // feature registers, as `lod()` does `TAG_LOD_CULLED`'s, and leaves the DEFAULT spatial domain.
 //
-// Adds mark the group pending; `mergeGroupBuildSystem` (APP_RENDER_SYNC, before the
-// pose producers) builds the pending groups once a frame with p371's merge (`GeometryMerge.ts`,
-// loaded on the first build, so an app that never merges doesn't download it), in the assets
-// worker above WORKER_BUILD_VERTICES. A member stays drawn on its own until a build includes it,
-// so a worker build never leaves a frame without it.
-//
-// The group's mesh is added at its first build (the material is its first member's), at the
-// centre of the members' bounds with the members baked relative to it: the spatial index measures
-// a mesh's radius from its origin, so a world-space merge at the origin would get a wrong one.
+// Adds mark the group pending; `mergeGroupBuildSystem` (APP_RENDER_SYNC, before the pose
+// producers) builds the pending groups once a frame (MergeBuild.ts): a `BAKED` group with p371's
+// merge, a `BATCHED` one (p375) as instances of one `BatchedMesh` (MergeBatch.ts). Each mode's code
+// loads with its first build. A member stays drawn on its own until a build includes it.
 //
 // A built member's changes are written in place (MergeInPlace.ts, MergeRanges.ts): a move with
 // `updateMergeMember` rewrites its range from the world matrix it was baked with
@@ -28,30 +23,32 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import { reconcileObject3DVisibility } from '../../kernel/ecs/ECSCoreSystems';
+import { setLodMeshDrawDelegate } from '../../kernel/ecs/LodTargets';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { APP_RENDER_SYNC_ORDER, ECSSystemStage } from '../../kernel/loop/SystemStages';
-import {
-  decGeometryRef,
-  getGeometry,
-  incGeometryRef,
-  saveBufferGeometry,
-} from '../../kernel/assets/Geometry';
-import { incMaterialRef } from '../../kernel/assets/Material';
 import { setMeshMergeHandler } from '../../kernel/mesh/Mesh';
-import type { MergePart } from '../../kernel/assets/GeometryMerge';
-import { getRootScene } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import { AUTO, AUTO_ID_PREFIX, collectQueuedJoins, queueMerge } from './MergeAuto';
-import { getMergeRefusal } from './MergeEligibility';
-import { findPaletteMaterial, getGroupPaletteIndex } from './MergePalettes';
 import {
-  getActiveSceneMergeSettings,
-  keepSceneMergeSettings,
-  warnIfGroupSpansStreamingCells,
-} from './MergeSceneSettings';
+  batchMemberLodDelegate,
+  detachBatchedMemberMesh,
+  dropBatchMember,
+  getMergeBatchModule,
+  installBatchMemberVisibility,
+  isBatchedGroup,
+  reattachMemberMesh,
+} from './MergeBatchFront';
+import {
+  buildPendingGroups,
+  loadPendingBuildCodeAsync,
+  startPendingBuildCodeLoads,
+} from './MergeBuild';
+import { getBatchLodRefusal, getMergeRefusal } from './MergeEligibility';
+import { findPaletteMaterial, getGroupPaletteIndex } from './MergePalettes';
+import { getActiveSceneMergeSettings, keepSceneMergeSettings } from './MergeSceneSettings';
 import {
   collapseDisabledMember,
   dropMember,
@@ -63,27 +60,21 @@ import {
   findPending,
   findQueued,
   getGroups,
-  getMemberMesh,
   getPending,
   holdForSceneLoad,
-  isMergeGroupShownUnmerged,
   isMergeSceneLoading,
   markPending,
-  noteMergeBuild,
   noteMergeRefusal,
   releaseMember,
   releaseSceneLoadHolds,
   setMergeSceneLoading,
-  syncMemberPose,
 } from './MergeState';
-import type { MergeGroupData, MergeGroupSettings } from './MergeTypes';
-
-/**
- * A build of more vertices than this merges in the assets worker (`mergeGeometryPartsAsync`):
- * p371 measured a warm 100k-vertex merge at about 11 ms on the main thread.
- * @internal
- */
-export const WORKER_BUILD_VERTICES = 65_536;
+import type {
+  MergeGroupData,
+  MergeGroupMode,
+  MergeGroupSettings,
+  MergeMemberData,
+} from './MergeTypes';
 
 // The TAG_MERGED hooks' overrides: constants, so a toggle allocates nothing
 const IS_MERGED = Object.freeze({ isMerged: true });
@@ -104,22 +95,6 @@ export const assertMergingInstalled = (fn: string) => {
   }
 };
 
-// --- THE MERGE CODE (loaded on the first build) ---
-
-type MergeModule = typeof import('../../kernel/assets/GeometryMerge');
-let mergeModule: MergeModule | null = null;
-let mergeModulePromise: Promise<MergeModule> | null = null;
-
-const loadMergeModuleAsync = () =>
-  (mergeModulePromise ??= import('../../kernel/assets/GeometryMerge').then(
-    (module) => (mergeModule = module),
-    (err: unknown) => {
-      // The next build tries again
-      mergeModulePromise = null;
-      throw err;
-    }
-  ));
-
 // --- API ---
 
 /** {@link createMergeGroup}'s options: the group's id and its settings. */
@@ -133,12 +108,17 @@ export type CreateMergeGroupOptions = MergeGroupSettings & {
  * built in the frame after they join. Its entity is managed (`MANAGED_BY` `MERGE`): it has no mesh
  * until its first build, and goes with the scene that created it unless `persistent`. With a
  * `palette` (one the scene lists in `mergeMaterials`), its members may have any of the palette's
- * materials, drawn in one draw by the palette's merge material.
+ * materials, drawn in one draw by the palette's merge material. With `mode: 'BATCHED'` its
+ * members are instances of one `BatchedMesh`: they may move (bodies included), each drawn where it
+ * is and culled on its own.
  * @param world the group's world (default: the default world)
  * @returns the group's entity id
  * @throws for an id the world has a group with already, a reserved id (`AUTO`, or one starting
  * with `auto:`, the automatic groups'), a `palette` the scene doesn't list (no merge material is
- * registered under its id) or with `persistent`, or without the `merging()` feature
+ * registered under its id), with `persistent` or with `BATCHED`, an unknown `mode`, a
+ * `geometryReserve` without `BATCHED` or whose counts aren't positive integers, a
+ * `transparentOrder` without `BATCHED` or that isn't `DEPTH` or `JOIN`, or without the
+ * `merging()` feature
  * @example
  * ```ts
  * import { createMeshEntity } from 'aekasha';
@@ -162,14 +142,41 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
   if (getGroups(ecsWorld).has(opts.id)) {
     throw new Error(`createMergeGroup: the world has a merge group "${opts.id}" already.`);
   }
-  const { palette } = opts;
-  if (palette !== undefined && (opts.persistent || !findPaletteMaterial(palette))) {
+  const { palette, mode } = opts;
+  if (mode !== undefined && mode !== 'BAKED' && mode !== 'BATCHED') {
     throw new Error(
-      `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
+      `createMergeGroup("${opts.id}"): the mode "${String(mode)}" isn't BAKED or BATCHED.`
+    );
+  }
+  if (
+    palette !== undefined &&
+    (opts.persistent || mode === 'BATCHED' || !findPaletteMaterial(palette))
+  ) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): ${opts.persistent ? `a palette group can't be persistent (the palette "${palette}"'s merge material is its scene's)` : mode === 'BATCHED' ? "a palette group can't be BATCHED (its merge material reads the merged vertices' palette index)" : `no merge material "${palette}": the scene lists no such palette (mergeMaterials)`}.`
+    );
+  }
+  const reserve = opts.geometryReserve;
+  if (
+    reserve &&
+    (mode !== 'BATCHED' ||
+      !isPositiveInteger(reserve.vertices) ||
+      (reserve.indices !== undefined && !isPositiveInteger(reserve.indices)))
+  ) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): geometryReserve is a BATCHED group's setting, its counts positive integers.`
+    );
+  }
+  const order = opts.transparentOrder;
+  if (order !== undefined && (mode !== 'BATCHED' || (order !== 'DEPTH' && order !== 'JOIN'))) {
+    throw new Error(
+      `createMergeGroup("${opts.id}"): transparentOrder is a BATCHED group's setting, DEPTH or JOIN.`
     );
   }
   return createGroup(opts, ecsWorld, false);
 };
+
+const isPositiveInteger = (value: number) => Number.isInteger(value) && value > 0;
 
 /**
  * Adds mesh entities to a merge group (created when the world has none with this id, with the
@@ -182,10 +189,12 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  * the automatic group of its material and cell at the next build.
  *
  * Refused with a warning naming the entity and the reason, the entity then drawn on its own: an
- * entity that isn't a plain mesh (skinned, morphed, instanced), has a transparent material, a
- * material array or another material than the group's (a palette group's: one its palette doesn't
- * have), a dynamic or kinematic body, a manager, a `LOD`, attributes the group's can't take, or a
- * group already; a persistent one, unless the group is persistent.
+ * entity that isn't a plain mesh (skinned, morphed, instanced), has a material array or another
+ * material than the group's (a palette group's: one its palette doesn't have), a manager,
+ * attributes the group's can't take, or a group already; a persistent one, unless the group is
+ * persistent. A `BAKED` group refuses a transparent material, a `LOD` and a dynamic or kinematic
+ * body; a `BATCHED` one a mesh that isn't directly under the root scene, or whose `renderOrder`
+ * isn't the group's.
  * @param world the group's world (default: the default world)
  * @remarks Members are static: a member moved later is drawn where it was merged until
  * `updateMergeMember` moves its part.
@@ -200,7 +209,18 @@ export const createMergeGroup = (opts: CreateMergeGroupOptions, world?: ECSWorld
  */
 export const addToMergeGroup = (groupId: string, entityIds: number[], world?: ECSWorld) => {
   assertMergingInstalled('addToMergeGroup');
-  const ecsWorld = world ?? getECSWorld();
+  joinMergeGroup(groupId, entityIds, world ?? getECSWorld());
+};
+
+/** `addToMergeGroup`, with the mode each entity's `merge` names (`modes`, the queue's), which a
+ * group of the other mode refuses, and the first of which a group made on first use takes unless
+ * its scene entry gives one. */
+const joinMergeGroup = (
+  groupId: string,
+  entityIds: number[],
+  ecsWorld: ECSWorld,
+  modes?: ReadonlyMap<number, MergeGroupMode>
+) => {
   if (groupId === AUTO) {
     for (const entityId of entityIds) queueMerge(entityId, AUTO, ecsWorld);
     return;
@@ -209,19 +229,18 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
   const queued = findQueued(ecsWorld);
   if (queued?.size) for (const entityId of entityIds) queued.delete(entityId);
   // Made on first use with the scene's `mergeGroups` entry's settings, if it lists one
+  const entry = getActiveSceneMergeSettings().groups.get(groupId);
+  const mode = entry?.mode ?? entityIds.map((id) => modes?.get(id)).find(Boolean);
   const groupEntityId =
     getGroups(ecsWorld).get(groupId) ??
-    createMergeGroup(
-      { ...getActiveSceneMergeSettings().groups.get(groupId), id: groupId },
-      ecsWorld
-    );
+    createMergeGroup({ ...entry, ...(mode && { mode }), id: groupId }, ecsWorld);
   const group = existsOrThrow(
     ecsWorld.getComponent(groupEntityId, ComponentType.MERGE_GROUP),
     `addToMergeGroup: the merge group "${groupId}" has no MERGE_GROUP component.`
   );
   let added = 0;
   for (const entityId of entityIds) {
-    const refusal = getMergeRefusal(entityId, ecsWorld, group);
+    const refusal = getMergeRefusal(entityId, ecsWorld, group, modes?.get(entityId));
     if (refusal) {
       lwarn(`addToMergeGroup("${groupId}"): entity ${entityId} is drawn on its own: ${refusal}.`);
       if (IS_DEBUG_ENV) noteMergeRefusal(ecsWorld, entityId, groupId, refusal);
@@ -234,6 +253,8 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
       groupEntityId,
       groupId,
       partIndex: -1,
+      instanceId: -1,
+      _fadeInstanceId: -1,
       _wasSpatialIndexed: false,
       _bakedMatrix: new THREE.Matrix4(),
       _isCollapsed: false,
@@ -248,7 +269,8 @@ export const addToMergeGroup = (groupId: string, entityIds: number[], world?: EC
 
 /**
  * Builds a merge group's mesh again from its members, in the next frame's render sync. A member
- * moved since the last build is drawn where it is now.
+ * moved since the last build is drawn where it is now. A `BATCHED` group's batch is made again
+ * from every member, its instances grouped by geometry.
  * @param world the group's world (default: the default world)
  * @example
  * ```ts
@@ -269,6 +291,8 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
     lwarn(`rebuildMergeGroup: no merge group "${groupId}".`);
     return;
   }
+  // A batch is made again from every member, grouped by geometry
+  if (isBatchedGroup(group)) getMergeBatchModule()?.requestBatchRebuild(group);
   markPending(ecsWorld, groupEntityId, group);
 };
 
@@ -276,11 +300,16 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * Moves a merged member's part of its group's mesh to where the member is now: call it after
  * changing a member's `TRANSFORM` (`setTransform`, a fixed body moved). Only the member's range of
  * the merged geometry is written again, without a rebuild. A member waiting for its group's build
- * is merged where it is then and needs no call.
+ * is merged where it is then and needs no call, and so does a `BATCHED` group's member's move (its
+ * instance follows its `TRANSFORM` every frame). For a `BATCHED` member it writes the member's
+ * geometry into the batch again instead: call it after changing its geometry's vertices or index
+ * (every member sharing the geometry draws the new data), or after giving its mesh another
+ * geometry. It counts as the member joining again: a `transparentOrder: 'JOIN'` batch draws it
+ * last, on top (a decal pool rewriting its oldest decal).
  * @param world the member's world (default: the default world)
  * @remarks Members are static by contract: a member moved without this call is still drawn where
- * it was merged (the debug env warns once per member). Its geometry's vertex count can't change in
- * place: a member whose geometry was replaced makes its group build again.
+ * it was merged (the debug env warns once per member). A `BAKED` member's geometry's vertex count
+ * can't change in place: a member whose geometry was replaced makes its group build again.
  * @example
  * ```ts
  * import { getEntityIdByAppId, getECSWorld } from 'aekasha';
@@ -307,6 +336,9 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
     markPending(ecsWorld, member.groupEntityId, group);
   }
   if (member.partIndex !== -1) rewriteMember(entityId, member, group, ecsWorld);
+  else if (member.instanceId !== -1) {
+    getMergeBatchModule()?.updateBatchMemberGeometry(entityId, member, group, ecsWorld);
+  }
 };
 
 /**
@@ -339,7 +371,7 @@ export const removeFromMergeGroup = (entityIds: number[], world?: ECSWorld) => {
       lwarn(`removeFromMergeGroup: entity ${entityId} isn't in a merge group.`);
       continue;
     }
-    dropMember(entityId, member, group, ecsWorld);
+    dropGroupMember(entityId, member, group, ecsWorld);
     releaseMember(entityId, ecsWorld);
   }
 };
@@ -385,11 +417,11 @@ export const getMergeGroupOf = (entityId: number, world?: ECSWorld): string | un
  * can't be made on first use (its scene entry's palette isn't registered) is logged, and its
  * meshes are drawn on their own. */
 const resolveQueuedMerges = (world: ECSWorld) => {
-  const joins = collectQueuedJoins(world);
-  if (!joins) return;
-  for (const [groupId, entityIds] of joins) {
+  const queued = collectQueuedJoins(world);
+  if (!queued) return;
+  for (const [groupId, entityIds] of queued.joins) {
     try {
-      addToMergeGroup(groupId, entityIds, world);
+      joinMergeGroup(groupId, entityIds, world, queued.modes);
     } catch (err) {
       lerror(
         `Merge group "${groupId}": entities ${entityIds.join(', ')} are drawn on their own.`,
@@ -414,271 +446,29 @@ const onGroupDeleted = (groupEntityId: number, world: ECSWorld) => {
   getPending(world).delete(groupEntityId);
 };
 
+/** A leaving member out of its group, by the group's mode: a baked range collapsed, or an
+ * instance deleted. */
+const dropGroupMember = (
+  entityId: number,
+  member: MergeMemberData,
+  group: MergeGroupData,
+  world: ECSWorld
+) =>
+  isBatchedGroup(group)
+    ? dropBatchMember(entityId, member, group, world)
+    : dropMember(entityId, member, group, world);
+
 /** A member's deletion: its range collapses, as a remove's (its components go with it). */
 const onMemberDeleted = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const group = member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
-  if (member && group) dropMember(entityId, member, group, world);
-};
-
-// --- BUILDS ---
-
-const scratchBox = new THREE.Box3();
-const groupBounds = new THREE.Box3();
-const groupCentre = new THREE.Vector3();
-const toGroupSpace = new THREE.Matrix4();
-
-/** The members still in the group, alive and pointing at it. */
-const getLiveMembers = (groupEntityId: number, group: MergeGroupData, world: ECSWorld) =>
-  group.members.filter(
-    (entityId) =>
-      world.getComponent(entityId, ComponentType.MERGE_MEMBER)?.groupEntityId === groupEntityId
-  );
-
-/** A build's input: the members as merge parts in the group's space (centred on their bounds),
- * the world matrices they were baked with, and that centre. */
-type BuildParts = {
-  parts: MergePart[];
-  worldMatrices: THREE.Matrix4[];
-  centre: THREE.Vector3;
-  vertexCount: number;
-};
-
-const getBuildParts = (members: number[], world: ECSWorld): BuildParts => {
-  groupBounds.makeEmpty();
-  for (const entityId of members) {
-    const mesh = getMemberMesh(entityId, world);
-    syncMemberPose(entityId, mesh, world);
-    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
-    groupBounds.union(scratchBox.copy(mesh.geometry.boundingBox!).applyMatrix4(mesh.matrixWorld));
-  }
-  groupBounds.getCenter(groupCentre);
-  toGroupSpace.makeTranslation(-groupCentre.x, -groupCentre.y, -groupCentre.z);
-  let vertexCount = 0;
-  const worldMatrices: THREE.Matrix4[] = [];
-  const parts: MergePart[] = members.map((entityId) => {
-    const mesh = getMemberMesh(entityId, world);
-    vertexCount += mesh.geometry.getAttribute('position').count;
-    worldMatrices.push(mesh.matrixWorld.clone());
-    return {
-      geo: mesh.geometry,
-      matrix: new THREE.Matrix4().multiplyMatrices(toGroupSpace, mesh.matrixWorld),
-      key: String(entityId),
-      paletteIndex: world.getComponent(entityId, ComponentType.MERGE_MEMBER)!._paletteIndex,
-    };
-  });
-  return { parts, worldMatrices, centre: groupCentre.clone(), vertexCount };
-};
-
-/** Registers a build's geometry as the group's, releasing the one it replaces. */
-const registerGroupGeometry = (
-  group: MergeGroupData,
-  geometry: THREE.BufferGeometry,
-  previous: THREE.BufferGeometry | undefined
-) => {
-  const baseId = `mergeGroup:${group.id}`;
-  // Its last ref: disposed and unregistered (never persistent: the group mesh's ref keeps it
-  // through a scene release, so a persistent group's survives too)
-  const previousId = previous?.userData.id as string | undefined;
-  if (previousId) decGeometryRef(previousId);
-  // Someone else still holds the previous one under the id: the new one takes another
-  const id = getGeometry(baseId) ? `${baseId}#${group.rebuilds}` : baseId;
-  saveBufferGeometry(geometry, { id });
-  incGeometryRef(id);
-};
-
-/** Makes the group's mesh at its first build: a mesh entity's components on the group entity. */
-const createGroupMesh = (
-  groupEntityId: number,
-  group: MergeGroupData,
-  geometry: THREE.BufferGeometry,
-  firstMember: THREE.Mesh,
-  world: ECSWorld
-) => {
-  const material = existsOrThrow(group._material, `Merge group "${group.id}" has no material.`);
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.userData.id = `mergeGroup:${group.id}`;
-  mesh.userData.entityId = groupEntityId;
-  mesh.castShadow = group.settings.castShadow ?? firstMember.castShadow;
-  mesh.receiveShadow = group.settings.receiveShadow ?? firstMember.receiveShadow;
-  if (material.userData.id) incMaterialRef(material.userData.id as string);
-  world.addComponent(groupEntityId, ComponentType.OBJECT3D, { value: mesh, _lastVersion: -1 });
-  if (!world.hasComponent(groupEntityId, ComponentType.TAG_IS_MESH)) {
-    world.addComponent(groupEntityId, ComponentType.TAG_IS_MESH, true);
-  }
-  return mesh;
-};
-
-/** Draws `members` merged as `geometry`, centred on the build's centre: the group's mesh takes
- * it, the members hide and leave the spatial index. */
-const applyBuild = (
-  groupEntityId: number,
-  group: MergeGroupData,
-  members: number[],
-  geometry: THREE.BufferGeometry,
-  build: BuildParts,
-  world: ECSWorld
-) => {
-  const { centre, worldMatrices } = build;
-  warnIfGroupSpansStreamingCells(group.id, worldMatrices);
-  let mesh = world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value as
-    | THREE.Mesh
-    | undefined;
-  const previous = mesh?.geometry;
-  if (mesh) mesh.geometry = geometry;
-  registerGroupGeometry(group, geometry, previous);
-  mesh ??= createGroupMesh(groupEntityId, group, geometry, getMemberMesh(members[0], world), world);
-
-  // Its pose at once (object3DSyncSystem ran in MAIN), and its TRANSFORM
-  mesh.position.copy(centre);
-  const transform = world.getComponent(groupEntityId, ComponentType.TRANSFORM);
-  if (transform) {
-    transform.position.copy(centre);
-    transform.setDirty();
-    world.commitTransform(groupEntityId, transform);
-  }
-  if (!mesh.parent) existsOrThrow(getRootScene(), 'Merge groups need the root scene.').add(mesh);
-
-  group.partIndex.clear();
-  // The Merging tab's A/B (debug env only): a group shown unmerged keeps its members drawn
-  const isShownUnmerged = IS_DEBUG_ENV && isMergeGroupShownUnmerged(groupEntityId, world);
-  members.forEach((entityId, partIndex) => {
-    group.partIndex.set(entityId, partIndex);
-    const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
-    // Merged for the first time (a member already built may be without TAG_MERGED: the A/B)
-    const isFirstBuild = member.partIndex === -1;
-    member.partIndex = partIndex;
-    member._bakedMatrix = worldMatrices[partIndex];
-    member._isCollapsed = false;
-    if (isFirstBuild) {
-      member._wasSpatialIndexed = world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED);
-      world.removeComponent(entityId, ComponentType.SPATIAL_INDEXED);
-    }
-    // One in an edit session stays drawn by its own mesh, its new range collapsed (the session's
-    // end writes it)
-    if (member._editPose) collapseDisabledMember(entityId, world);
-    else if (!isShownUnmerged && !world.hasComponent(entityId, ComponentType.TAG_MERGED)) {
-      world.addComponent(entityId, ComponentType.TAG_MERGED, true);
-    }
-  });
-  // The built members first, in part order, then those that joined while it built
-  const waiting = group.members.filter((entityId) => !group.partIndex.has(entityId));
-  group.members = [...members, ...waiting];
-  group.wasted = 0;
-  group.rebuilds++;
-  // A disabled member is merged as it is and collapsed, so enabling it needs no build
-  for (const entityId of members) {
-    if (world.isDisabled(entityId)) collapseDisabledMember(entityId, world);
-  }
-
-  // Joined again, so the spatial index measures the new bounds
-  world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
-  world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
-};
-
-/** A worker build's result is still the group's: no newer build started, and its members are
- * all still in it. */
-const isBuildCurrent = (
-  groupEntityId: number,
-  group: MergeGroupData,
-  token: number,
-  members: number[],
-  world: ECSWorld
-) =>
-  world.getComponent(groupEntityId, ComponentType.MERGE_GROUP) === group &&
-  group._buildToken === token &&
-  members.every(
-    (entityId) =>
-      world.getComponent(entityId, ComponentType.MERGE_MEMBER)?.groupEntityId === groupEntityId
-  );
-
-/**
- * Builds one group: at once on the main thread, or in the worker above WORKER_BUILD_VERTICES
- * (then the returned promise resolves when it's applied or dropped). Needs the merge module.
- */
-const buildGroup = (
-  groupEntityId: number,
-  world: ECSWorld,
-  merge: MergeModule
-): Promise<void> | undefined => {
-  const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP);
-  if (!group) return;
-  group._isPending = false;
-  // The Merging tab's last build time (debug env only)
-  const start = IS_DEBUG_ENV ? performance.now() : 0;
-  const token = ++group._buildToken;
-  const members = getLiveMembers(groupEntityId, group, world);
-  group.members = members.concat();
-  if (members.length === 0) {
-    // An automatic group is only its members': it goes (its id is free again)
-    if (group._isAuto) {
-      world.deleteEntity(groupEntityId);
-      return;
-    }
-    // Nothing to draw: the mesh leaves the scene until a member joins
-    world.getComponent(groupEntityId, ComponentType.OBJECT3D)?.value.removeFromParent();
-    group.partIndex.clear();
-    return;
-  }
-  const build = getBuildParts(members, world);
-  const fail = (err: unknown) => lerror(`Merge group "${group.id}" failed to build.`, err);
-
-  if (build.vertexCount <= WORKER_BUILD_VERTICES) {
-    try {
-      applyBuild(
-        groupEntityId,
-        group,
-        members,
-        merge.mergeGeometryParts(build.parts),
-        build,
-        world
-      );
-      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, false);
-    } catch (err) {
-      fail(err);
-    }
-    return;
-  }
-  group._isBuilding = true;
-  const settle = () => {
-    if (group._buildToken === token) group._isBuilding = false;
-  };
-  return merge.mergeGeometryPartsAsync(build.parts).then(
-    (geometry) => {
-      settle();
-      if (!isBuildCurrent(groupEntityId, group, token, members, world)) {
-        geometry.dispose();
-        // A member left while it ran (not a newer build, nor the group's deletion): build again
-        const isLive = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP) === group;
-        if (isLive && group._buildToken === token) markPending(world, groupEntityId, group);
-        return;
-      }
-      applyBuild(groupEntityId, group, members, geometry, build, world);
-      if (IS_DEBUG_ENV) noteMergeBuild(world, group.id, performance.now() - start, true);
-    },
-    (err: unknown) => {
-      settle();
-      fail(err);
-    }
-  );
-};
-
-/** Builds every pending group of the world; the worker builds' promises. */
-const buildPendingGroups = (world: ECSWorld, merge: MergeModule) => {
-  const pending = getPending(world);
-  const running: Promise<void>[] = [];
-  for (const groupEntityId of pending) {
-    const build = buildGroup(groupEntityId, world, merge);
-    if (build) running.push(build);
-  }
-  pending.clear();
-  return running;
+  if (member && group) dropGroupMember(entityId, member, group, world);
 };
 
 /**
  * Joins the queued `merge`s, then builds the pending merge groups, once a frame (APP_RENDER_SYNC,
- * `MERGE_BUILD`). Its first run with a pending group loads the merge code, and the run after it's
- * in builds. Not during a scene load: its scene step builds (`buildSceneMergeGroupsAsync`), once
+ * `MERGE_BUILD`). Its first run with a pending group loads its mode's code (the merge code, or
+ * the batch code), and the run after it's in builds. Not during a scene load: its scene step builds (`buildSceneMergeGroupsAsync`), once
  * the scene's code has placed its meshes and physics has created their bodies.
  */
 const mergeGroupBuildSystem = (world: ECSWorld) => {
@@ -686,13 +476,9 @@ const mergeGroupBuildSystem = (world: ECSWorld) => {
   resolveQueuedMerges(world);
   const pending = findPending(world);
   if (!pending || pending.size === 0) return;
-  if (!mergeModule) {
-    loadMergeModuleAsync().catch((err: unknown) =>
-      lerror('Merge groups: the merge code failed to load.', err)
-    );
-    return;
-  }
-  void buildPendingGroups(world, mergeModule);
+  // A group whose mode's code is still loading waits for a run after it's in
+  startPendingBuildCodeLoads(world);
+  void buildPendingGroups(world);
 };
 
 /**
@@ -705,8 +491,8 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
   const ecsWorld = world ?? getECSWorld();
   resolveQueuedMerges(ecsWorld);
   if (!findPending(ecsWorld)?.size) return;
-  const merge = await loadMergeModuleAsync();
-  await Promise.all(buildPendingGroups(ecsWorld, merge));
+  await loadPendingBuildCodeAsync(ecsWorld);
+  await Promise.all(buildPendingGroups(ecsWorld));
 };
 
 /** How many times the scene step builds again: a worker build dropped meanwhile (a member left
@@ -758,6 +544,23 @@ export const registerMergeDebug = async () => {
   useDebug(tab)?._createMergingDebugGUI();
 };
 
+/** A `LOD` added to a batched member after its join (an `AUTO` LOD whose chain came later,
+ * `setMeshLod`): its levels are checked as at a join (`getBatchLodRefusal`), and a member whose
+ * levels its batch can't draw leaves its group, warned, drawn on its own with its LOD. Registered
+ * after `lod()`'s add hook, which resolves the levels. */
+const checkBatchedMemberLod = (entityId: number, world: ECSWorld) => {
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  const group = member && world.getComponent(member.groupEntityId, ComponentType.MERGE_GROUP);
+  const lod = world.getComponent(entityId, ComponentType.LOD);
+  if (!group || !lod || !isBatchedGroup(group)) return;
+  const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)!.value as THREE.Mesh;
+  const refusal = getBatchLodRefusal(mesh, lod._levels);
+  if (!refusal) return;
+  lwarn(`Merge group "${group.id}": entity ${entityId} leaves it, drawn on its own: ${refusal}.`);
+  if (IS_DEBUG_ENV) noteMergeRefusal(world, entityId, group.id, refusal);
+  removeFromMergeGroup([entityId], world);
+};
+
 /**
  * Installs the merge groups (the `merging()` feature's install, MergingFeature.ts): the
  * `TAG_MERGED` visibility hooks, the groups' and members' deletion hooks, the `DISABLED` hooks
@@ -773,10 +576,16 @@ export const installMergeGroups = (ctx: FeatureContext) => {
     entered: buildSceneMergeGroupsAsync,
     loadSettled: onSceneLoadSettled,
   });
+  // A batched member's own mesh leaves the scene graph too, and comes back (MergeBatchFront.ts)
   ctx.registerComponentHooks(ComponentType.TAG_MERGED, {
-    onAddComponent: (entityId, world) => reconcileObject3DVisibility(entityId, world, IS_MERGED),
-    onRemoveComponent: (entityId, world) =>
-      reconcileObject3DVisibility(entityId, world, IS_UNMERGED),
+    onAddComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, IS_MERGED);
+      detachBatchedMemberMesh(entityId, world);
+    },
+    onRemoveComponent: (entityId, world) => {
+      reconcileObject3DVisibility(entityId, world, IS_UNMERGED);
+      reattachMemberMesh(entityId, world);
+    },
   });
   ctx.registerComponentHooks(ComponentType.MERGE_GROUP, { onDeleteEntity: onGroupDeleted });
   ctx.registerComponentHooks(ComponentType.MERGE_MEMBER, { onDeleteEntity: onMemberDeleted });
@@ -785,6 +594,15 @@ export const installMergeGroups = (ctx: FeatureContext) => {
     onAddComponent: collapseDisabledMember,
     onRemoveComponent: restoreEnabledMember,
   });
+  // A batched member's instance is shown and hidden instead (p375)
+  installBatchMemberVisibility(ctx);
+  // A batched member's LOD: its batch draws its levels (the kernel's seam, read by lod() whatever
+  // the install order), and one added later is checked after lod()'s add hook, which resolves its
+  // levels (p375 Phase 2; without lod() a LOD does nothing)
+  setLodMeshDrawDelegate(batchMemberLodDelegate);
+  if (ctx.isInstalled('lod')) {
+    ctx.registerComponentHooks(ComponentType.LOD, { onAddComponent: checkBatchedMemberLod });
+  }
   ctx.registerPlugin((world) => {
     world.addSystem(
       ECSSystemStage.APP_RENDER_SYNC,

@@ -4,6 +4,11 @@
 // to the group's window, its state, assets and part range, its pose, editable through an edit
 // session (D4, `_dbg__MergingMemberPose.ts`), Remove from group). Group and member entities don't outlive their scene, so
 // the windows are removed on a scene change and not saved. Default world only.
+//
+// A batched group's (p375 S5): its mode, its batch's figures (instances, visible ones, geometries,
+// vertices, runs, compactions, per-member culling) in place of the palette and the waste; a
+// batched member's state is its instance's, its part its instance and the batch's geometry. Its
+// LOD (p375 Phase 2 S5): the group's LOD figures, a member's level and the fade its batch draws.
 import type * as THREE from 'three/webgpu';
 import { registerEntityWindowOpener } from '../../../debug/Profiler';
 import { updateDebuggerTab } from '../../../debug/DebuggerGUI';
@@ -18,6 +23,7 @@ import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { createList } from '../../../ui/data/List';
 import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
+import type { MergeGroupData, MergeMemberData } from '../MergeTypes';
 import {
   closeDraggableWindow,
   getDraggableWindowsOfKind,
@@ -25,16 +31,24 @@ import {
   registerDraggableWindowKind,
   toggleDraggableWindow,
 } from '../../../ui/overlays/windows/DraggableWindow';
+import { isBatchedGroup } from '../MergeBatchFront';
 import { rebuildMergeGroup } from '../MergeGroups';
 import { isMergeMemberInEdit } from '../MergeMemberEdit';
 import { getGroupMesh } from '../MergeState';
 import {
   formatCount,
+  formatCountOf,
   getAutoCellLabel,
+  getGroupBatchState,
   getGroupVertexCount,
   getMaterialLabel,
+  getMergeBatchFigures,
+  getMemberColorText,
   getMergeEntityName,
+  getReserveText,
+  getSortedOrderText,
   isGroupDrawn,
+  isMergeMemberBuilt,
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
 import { isMergeGroupHighlighted, setMergeGroupHighlighted } from './_dbg__MergingOverlay';
@@ -110,12 +124,67 @@ const getShadowText = (
 
 type MemberRow = { entityId: number; name: string; state: string };
 
+/** A batched member's state, once it has its instance: shown unmerged, its instance hidden (and
+ * why), or merged. */
+const getBatchedMemberStateText = (entityId: number, member: MergeMemberData, world: ECSWorld) => {
+  if (isMergeGroupUnmergedView(member.groupEntityId, world)) {
+    return 'merged, drawn on its own (shown unmerged)';
+  }
+  if (world.isDisabled(entityId)) return 'disabled: its instance hidden';
+  if (world.hasComponent(entityId, ComponentType.TAG_DRAW_HELD)) return 'held: its instance hidden';
+  if (world.hasComponent(entityId, ComponentType.TAG_FRUSTUM_CULLED)) {
+    return 'frustum-culled: its instance hidden';
+  }
+  // A cull fading out is drawn until its fade ends
+  if (
+    world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED) &&
+    !world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING)
+  ) {
+    return 'LOD culled: its instance hidden';
+  }
+  return 'merged';
+};
+
+/** A batched member's level and the fade its batch draws, eg. "level 1 of 3, fading from level 0
+ * (instance #12), 40%". */
+const getBatchedMemberLodText = (entityId: number, member: MergeMemberData, world: ECSWorld) => {
+  const lod = world.getComponent(entityId, ComponentType.LOD)!;
+  const level = `level ${Math.max(lod.applied, 0)} of ${lod._levels.length}`;
+  const percent = `${Math.round((lod._fade ?? 0) * 100)}%`;
+  const isFading = world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING);
+  switch (member._lodFade) {
+    case 'LEVEL':
+      return `${level}, fading from level ${lod._fadeFrom ?? '?'} (instance #${member._fadeInstanceId}), ${percent}`;
+    case 'OUT':
+      return `${level}, fading out to LOD culled, ${percent}`;
+    case 'IN':
+      return `${level}, fading in from LOD culled, ${percent}`;
+  }
+  if (isFading) return `${level}, a fade it came with: drawn whole until it ends`;
+  if (world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED)) return `${level}, LOD culled`;
+  return lod.applied < 0 ? `${level} (not selected yet)` : level;
+};
+
+/** A member's LOD: none, a batched member's level and fade, or the level its own mesh shows (a
+ * baked group draws the geometry a member joined with). */
+export const getMemberLodText = (entityId: number, world: ECSWorld) => {
+  const lod = world.getComponent(entityId, ComponentType.LOD);
+  if (!lod || lod._levels.length === 0) return 'none';
+  const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (member && member.instanceId >= 0) return getBatchedMemberLodText(entityId, member, world);
+  const own = `level ${Math.max(lod.applied, 0)} of ${lod._levels.length} on its own mesh`;
+  return member && member.partIndex !== -1
+    ? `${own} (not drawn: its group draws the geometry it joined with)`
+    : own;
+};
+
 /** A member's state in a few words. */
 export const getMemberStateText = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   if (!world.isAlive(entityId)) return 'deleted';
   if (!member) return 'not in a merge group';
-  if (member.partIndex === -1) return "waiting for its group's build";
+  if (!isMergeMemberBuilt(member)) return "waiting for its group's build";
+  if (member.instanceId >= 0) return getBatchedMemberStateText(entityId, member, world);
   if (member._editPose) return 'being moved: drawn on its own until the move ends';
   if (member._isCollapsed) return 'disabled: its range collapsed';
   if (isMergeGroupUnmergedView(member.groupEntityId, world)) {
@@ -161,6 +230,102 @@ const getMemberListItem = (groupEntityId: number, world: ECSWorld): PropertyGrid
   },
 });
 
+/** A group's mode in a few words. */
+const getModeText = (group: MergeGroupData) =>
+  isBatchedGroup(group)
+    ? 'BATCHED: instances of one BatchedMesh'
+    : 'BAKED: one merged geometry, culled whole';
+
+/** A group's members, eg. "3 (3 merged)"; a batched group's with its visible ones. */
+const getMembersText = (group: MergeGroupData, world: ECSWorld) => {
+  const batch = getMergeBatchFigures(group, world);
+  if (batch) {
+    return `${formatCount(group.members.length)} (${formatCount(batch.instances)} batched, ${formatCount(batch.visible)} visible)`;
+  }
+  const built = group.members.filter((id) => group.partIndex.has(id)).length;
+  return `${formatCount(group.members.length)} (${formatCount(built)} merged)`;
+};
+
+/** A batched group's batch rows (its batch's figures; "not built yet" before its first build). */
+const getBatchItems = (group: MergeGroupData, world: ECSWorld): PropertyGridItem[] => {
+  const figures = () => getMergeBatchFigures(group, world);
+  const NOT_BUILT = 'not built yet';
+  return [
+    live(
+      'Batch',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        const levels = f.levelGeometries ? ` (${formatCount(f.levelGeometries)} LOD levels)` : '';
+        return `${formatCountOf(f.geometries, 'geometry', 'geometries')}${levels}, ${formatCount(f.vertices)} of ${formatCount(f.maxVertices)} vertices, ${formatCount(f.batchInstances)} of ${formatCount(f.maxInstances)} instances`;
+      },
+      "Its geometries are its members' and their LOD levels', each once; its instances are its members' and their level fades' outgoing ones."
+    ),
+    live(
+      'LOD',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        if (!f.lodMembers) return 'no member has a LOD';
+        return `${formatCountOf(f.lodMembers, 'member')} with a LOD: ${formatCountOf(f.levelFades, 'level fade')}, ${formatCountOf(f.cullFades, 'cull fade')}, ${formatCount(f.lodCulled)} LOD culled`;
+      },
+      "A level fade draws the outgoing level as a second instance until it ends; a cull fade dithers the member's own instance."
+    ),
+    live(
+      'Geometry slots',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        return `${formatCountOf(f.slots, 'slot')}: ${formatCount(f.geometries)} held, ${formatCount(f.freeSlots)} free; each reserves ${getReserveText(f.reserve)}`;
+      },
+      'A geometry no instance uses frees its slot, which the next geometry that fits takes; geometryReserve gives every slot that room, so a pool whose geometries come and go stops growing.'
+    ),
+    live(
+      'Draw runs',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        const sorted = getSortedOrderText(f.order);
+        if (sorted) {
+          const draws = f.isMultiDraw
+            ? 'one multi-draw (WebGL2)'
+            : `up to ${formatCountOf(f.draws, 'draw')}`;
+          return `transparent: ${sorted} each pass, ${draws}`;
+        }
+        const runs = `${formatCount(f.runs)} (${formatCount(f.geometriesInUse)} geometries in use)`;
+        if (f.order === 'RANGE_SORT')
+          return `${runs}, drawn sorted by range: ${formatCountOf(f.draws, 'draw')}`;
+        if (f.order === 'NONE') return `${runs}, one multi-draw (WebGL2)`;
+        return `${runs}, ${formatCountOf(f.compactions, 'compaction')}`;
+      },
+      "A run is a geometry's instances in a row (in id order): one draw on WebGPU. Past twice the geometries in use, the batch compacts its ids; one with LOD members sorts each pass by geometry range instead, and WebGL2 draws it in one multi-draw. A transparent batch is sorted each pass (its group's transparentOrder), a geometry's instances one draw only where they're adjacent."
+    ),
+    live(
+      'Colours',
+      () => {
+        const f = figures();
+        if (!f) return NOT_BUILT;
+        return f.colored ? `${formatCountOf(f.colored, 'member')} with a colour` : 'none set';
+      },
+      "setMergeMemberColor: a colour and opacity multiplied into the material for one member (its instance's colour)."
+    ),
+    live('Per-member culling', () => {
+      const f = figures();
+      if (!f) return group.settings.perMemberCulling === false ? 'no' : 'yes';
+      return f.perMemberCulling ? 'yes' : 'no';
+    }),
+  ];
+};
+
+/** A baked group's palette and waste rows. */
+const getBakedItems = (group: MergeGroupData): PropertyGridItem[] => [
+  live(
+    'Palette',
+    () => group.settings.palette ?? 'none',
+    'A palette group takes meshes of any of its materials, drawn by its merge material.'
+  ),
+];
+
 /** A group window's content (its kind's `content`, by the group's entity in `data`). */
 export const createGroupWindowContent = (data?: Record<string, unknown>) => {
   const groupEntityId = Number(data?.groupEntityId);
@@ -171,31 +336,34 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
     return createDebugWindowGrid({ items: [getNoteItem('The merge group no longer exists.')] }).cmp;
   }
   const cell = getAutoCellLabel(group.id);
+  const isBatched = isBatchedGroup(group);
   const items: PropertyGridItem[] = [
     getNoteItem(() => (has() ? '' : 'The merge group was dissolved.')),
     live('State', () => getGroupStateText(groupEntityId, world)),
     live('Kind', () =>
       group._isAuto ? `AUTO${cell ? `, cell ${cell}` : ''}` : 'explicit (named)'
     ),
+    live('Mode', () => getModeText(group)),
     live('Material', () => getMaterialLabel(group._material)),
-    live(
-      'Palette',
-      () => group.settings.palette ?? 'none',
-      'A palette group takes meshes of any of its materials, drawn by its merge material.'
-    ),
+    ...(isBatched ? [] : getBakedItems(group)),
     live('Cast shadow', () => getShadowText(groupEntityId, world, 'castShadow')),
     live('Receive shadow', () => getShadowText(groupEntityId, world, 'receiveShadow')),
     live('Persistent', () => (group.settings.persistent ? 'yes' : 'no')),
-    live('Members', () => {
-      const built = group.members.filter((id) => group.partIndex.has(id)).length;
-      return `${formatCount(group.members.length)} (${formatCount(built)} merged)`;
-    }),
-    live('Vertices', () => formatCount(getGroupVertexCount(groupEntityId, group, world))),
+    live('Members', () => getMembersText(group, world)),
     live(
-      'Wasted vertices',
-      () => formatCount(group.wasted),
-      'Left by removed members: a rebuild compacts.'
+      'Vertices',
+      () => formatCount(getGroupVertexCount(groupEntityId, group, world)),
+      isBatched ? 'What its instances draw: the batch holds each geometry once.' : undefined
     ),
+    ...(isBatched
+      ? getBatchItems(group, world)
+      : [
+          live(
+            'Wasted vertices',
+            () => formatCount(group.wasted),
+            'Left by removed members: a rebuild compacts.'
+          ),
+        ]),
     live('Builds', () => formatCount(group.rebuilds)),
     {
       label: 'Highlight members',
@@ -253,9 +421,18 @@ export const createGroupWindowContent = (data?: Record<string, unknown>) => {
 const getMemberMesh = (entityId: number, world: ECSWorld) =>
   world.getComponent(entityId, ComponentType.OBJECT3D)?.value as THREE.Mesh | undefined;
 
-/** A member's range in its group's merged geometry, eg. "#3: vertices 72-95, indices 108-143". */
+/** A batched member's instance, eg. "instance #12, geometry #3" (the batch's ids). */
+const getInstanceText = (member: MergeMemberData, world: ECSWorld) => {
+  const group = getGroup(member.groupEntityId, world);
+  const geometryId = group ? getGroupBatchState(group)?.geometryAt[member.instanceId] : undefined;
+  return `instance #${member.instanceId}${geometryId === undefined ? '' : `, geometry #${geometryId}`}`;
+};
+
+/** A member's range in its group's merged geometry, eg. "#3: vertices 72-95, indices 108-143"; a
+ * batched member's instance. */
 export const getMemberPartText = (entityId: number, world: ECSWorld) => {
   const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
+  if (member && member.instanceId >= 0) return getInstanceText(member, world);
   if (!member || member.partIndex === -1) return 'none yet';
   const range = getGroupMesh(member.groupEntityId, world)?.geometry.userData.mergeParts[
     member.partIndex
@@ -272,6 +449,10 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
   const member = () => world.getComponent(entityId, ComponentType.MERGE_MEMBER);
   const mesh = () => getMemberMesh(entityId, world);
   const pose = getMergeMemberPoseItems(entityId, world);
+  const joined = getGroup(member()?.groupEntityId ?? -1, world);
+  // A LOD row where one can matter: a batched group's member, or a member with a LOD
+  const hasLodRow =
+    world.hasComponent(entityId, ComponentType.LOD) || Boolean(joined && isBatchedGroup(joined));
   const items: PropertyGridItem[] = [
     getNoteItem(() => {
       if (!world.isAlive(entityId)) return 'The entity no longer exists.';
@@ -295,14 +476,35 @@ export const createMemberWindowContent = (data?: Record<string, unknown>) => {
     }),
     live('Vertices', () => formatCount(mesh()?.geometry.getAttribute('position')?.count ?? 0)),
     live('Part', () => getMemberPartText(entityId, world)),
+    ...(hasLodRow
+      ? [
+          live(
+            'LOD',
+            () => getMemberLodText(entityId, world),
+            "A level fade draws the outgoing level as a second instance of the batch; the LOD tab's window has the switch distances."
+          ),
+        ]
+      : []),
+    ...(joined && isBatchedGroup(joined)
+      ? [
+          live('Colour', () => {
+            const current = member();
+            return current ? getMemberColorText(current) : 'none (not in a group)';
+          }),
+        ]
+      : []),
     live('Palette index', () => {
       const index = member()?._paletteIndex;
       return index === undefined ? 'none (a group of one material)' : String(index);
     }),
     ...pose.items,
-    getNoteItem(
-      'Moving it draws it on its own until the change ends, then writes its part of the group’s mesh in place (no rebuild); undo puts it back.'
-    ),
+    getNoteItem(() => {
+      const groupEntityId = member()?.groupEntityId;
+      const group = groupEntityId === undefined ? undefined : getGroup(groupEntityId, world);
+      return group && isBatchedGroup(group)
+        ? 'Its instance follows it as it moves (no session, no rebuild); undo puts it back.'
+        : 'Moving it draws it on its own until the change ends, then writes its part of the group’s mesh in place (no rebuild); undo puts it back.';
+    }),
     getReasonedButtonItem({
       title: 'Remove from group',
       getDisabledReason: () => {

@@ -51,6 +51,12 @@ const createUniqueIdsSchema = (kind: string) =>
     });
   });
 
+const ModeSchema = z
+  .enum(['BAKED', 'BATCHED'])
+  .describe(
+    "How the group draws its members: BAKED (the default) merges them into one geometry, for static content; BATCHED draws them as instances of one BatchedMesh, each member's matrix written when it moves and each culled on its own, for moving members (bodies included)."
+  );
+
 const AutoPalettesSchema = createUniqueIdsSchema('palette').describe(
   "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
 );
@@ -67,6 +73,8 @@ export const MeshMergeOptionsSchema = z
       .union([z.literal('AUTO'), GroupIdSchema])
       .optional()
       .describe("The group's id, or AUTO (the default)."),
+    /** The mode of the group it joins (p375): a group of the other mode refuses the mesh. */
+    mode: ModeSchema.optional(),
     /** `AUTO` only: the cells' side, in metres. */
     cellSize: CellSizeSchema.optional(),
     /** `AUTO` only: a group's vertex cap. */
@@ -75,7 +83,7 @@ export const MeshMergeOptionsSchema = z
     palettes: AutoPalettesSchema.optional(),
   })
   .describe(
-    "A merge group, and the automatic groups' bounds."
+    "A merge group, its mode, and the automatic groups' bounds."
   ) satisfies z.ZodType<MeshMergeOptions>;
 
 /**
@@ -131,8 +139,52 @@ export const SceneMergeGroupEntrySchema = z.union([
         .min(1)
         .optional()
         .describe(
-          'A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material.'
+          'A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material. Not with mode BATCHED.'
         ),
+      /** How the group draws its members (p375). */
+      mode: ModeSchema.optional(),
+      /** `BATCHED` only: each member culled on its own (default true). */
+      perMemberCulling: z
+        .boolean()
+        .optional()
+        .describe(
+          'BATCHED only: each member is frustum-culled on its own, in every pass (default true). false skips the per-member walk, for a batch that is always in view.'
+        ),
+      /** `BATCHED` only: the least room each geometry's slot reserves (p375 Phase 3). */
+      geometryReserve: z
+        .strictObject({
+          /** Vertices, a positive integer. */
+          vertices: z.number().int().positive(),
+          /** Indices (an indexed geometry's), a positive integer. */
+          indices: z.number().int().positive().optional(),
+        })
+        .optional()
+        .describe(
+          "BATCHED only: the least room each geometry's slot in the batch reserves ({ vertices, indices? }; its own size when larger), so a pool whose geometries come and go (decals) reuses its slots and its buffers stop growing."
+        ),
+      /** `BATCHED` only: a transparent batch's order (p375 Phase 3). */
+      transparentOrder: z
+        .enum(['DEPTH', 'JOIN'])
+        .optional()
+        .describe(
+          'BATCHED only, for a transparent material: the order the batch draws its members in, DEPTH (back to front, the default) or JOIN (the order they joined, the newest on top: decals).'
+        ),
+    })
+    .refine((entry) => entry.mode !== 'BATCHED' || entry.palette === undefined, {
+      message: 'A BATCHED group takes no palette (a palette group is BAKED).',
+      path: ['palette'],
+    })
+    .refine((entry) => entry.mode === 'BATCHED' || entry.perMemberCulling === undefined, {
+      message: "perMemberCulling is a BATCHED group's setting.",
+      path: ['perMemberCulling'],
+    })
+    .refine((entry) => entry.mode === 'BATCHED' || entry.geometryReserve === undefined, {
+      message: "geometryReserve is a BATCHED group's setting.",
+      path: ['geometryReserve'],
+    })
+    .refine((entry) => entry.mode === 'BATCHED' || entry.transparentOrder === undefined, {
+      message: "transparentOrder is a BATCHED group's setting.",
+      path: ['transparentOrder'],
     })
     .describe(
       "A group's settings, when a mesh's merge or addToMergeGroup makes it in this scene."
@@ -169,7 +221,7 @@ export const mergingSchemaPart = {
       })
       .optional()
       .describe(
-        "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? })."
+        "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling?, geometryReserve?, transparentOrder? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? })."
       ),
     /** The merge material palettes the scene uses (p374): their arrays load with its textures. */
     mergeMaterials: SceneMergeMaterialsSchema,

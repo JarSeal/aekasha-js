@@ -214,6 +214,9 @@ export function object3DSyncSystem(world: ECSWorld) {
       if (transformStore.isDirty(slot)) {
         transformStore.copyToObject3D(slot, objComp.value);
         transformStore.clearDirty(slot);
+        // The store has no versions: a count of the copies, so a reader after MAIN (a batched
+        // merge member's sync, p375) sees a write this sync cleared the dirty flag of
+        objComp._lastVersion++;
       }
     }
     return;

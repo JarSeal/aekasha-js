@@ -2,8 +2,48 @@
 // which the kernel names with `import type` (its component registry, ECSCoreComponents.ts).
 import type * as THREE from 'three/webgpu';
 
+/**
+ * How a merge group draws its members. `BAKED` (the default, p372): merged into one geometry, one
+ * draw, culled whole; for static content. `BATCHED` (p375): instances of one `BatchedMesh`, each
+ * member's matrix written when it moves and each culled on its own; for members that move (bodies
+ * included), or that need their own culling.
+ */
+export type MergeGroupMode = 'BAKED' | 'BATCHED';
+
+/**
+ * The order a transparent `BATCHED` group draws its members in (`transparentOrder`): `DEPTH` back
+ * to front (three's transparent sort), `JOIN` in the order they joined, the newest last (on top:
+ * decals on one surface, which a depth sort would reorder as the camera moves).
+ */
+export type MergeTransparentOrder = 'DEPTH' | 'JOIN';
+
+/** The least room a `BATCHED` group reserves for each geometry (`geometryReserve`). */
+export type MergeGeometryReserve = {
+  /** Vertices: a positive integer. */
+  vertices: number;
+  /** Indices (an indexed geometry's): a positive integer. Default: each geometry's own. */
+  indices?: number;
+};
+
 /** A merge group's settings: `createMergeGroup`'s options, kept on its `MERGE_GROUP`. */
 export type MergeGroupSettings = {
+  /** How the group draws its members. Default `BAKED`. A `BATCHED` group takes moving bodies,
+   * but no `palette`. */
+  mode?: MergeGroupMode;
+  /** `BATCHED` only: each member is frustum-culled on its own, in every pass (shadow passes
+   * included). Turn it off for a batch that is always in view: the per-member walk is then skipped.
+   * Default true. */
+  perMemberCulling?: boolean;
+  /** `BATCHED` only: the least room each geometry's slot in the batch reserves (its own size when
+   * larger). A geometry no member uses any more frees its slot, which the next geometry that fits
+   * takes, so a pool whose geometries come and go (decals) gives them all one reserve and its
+   * buffers stop growing; `updateMergeMember` rewrites a slot in place while the geometry fits it.
+   * `indices` only for indexed geometries. Default: each geometry's own size. */
+  geometryReserve?: MergeGeometryReserve;
+  /** `BATCHED` only, for a transparent material: the order the batch draws its members in, each
+   * pass (the batch itself is sorted with the scene's other transparent objects as one, at its
+   * members' `renderOrder`). Default `DEPTH`. */
+  transparentOrder?: MergeTransparentOrder;
   /** Whether the group's mesh casts shadows. Default: its first member's `castShadow`. */
   castShadow?: boolean;
   /** Whether the group's mesh receives shadows. Default: its first member's `receiveShadow`. */
@@ -15,7 +55,7 @@ export type MergeGroupSettings = {
   /** A merge material palette's id (`*.mergeMaterial.json`, p374): the group takes meshes of any
    * of the palette's materials and draws them in one draw with the palette's merge material. The
    * scene must list the palette (`mergeMaterials`), and a palette group can't be `persistent`
-   * (the merge material is the scene's). Default: none, one material per group. */
+   * (the merge material is the scene's) or `BATCHED`. Default: none, one material per group. */
   palette?: string;
 };
 
@@ -59,6 +99,10 @@ export type MeshMergeOptions = {
   /** The group's id, or `'AUTO'` (the default): a group the engine picks by the mesh's material,
    * attributes, shadow flags, layers and cell. */
   group?: string;
+  /** The mode of the group the mesh joins: a group made on first use takes it (unless its scene
+   * entry gives one), and a group of the other mode refuses the mesh. `AUTO` keeps each mode's
+   * groups apart. Default: the group's (`BAKED` for one it makes). */
+  mode?: MergeGroupMode;
   /** `AUTO` only: the side of the square x/z cells that bound an automatic group, in metres.
    * Default 32. */
   cellSize?: number;
@@ -103,8 +147,16 @@ export type SceneMergeGroupEntry = {
   /** Whether the group's mesh receives shadows. Default: its first member's. */
   receiveShadow?: boolean;
   /** A merge material palette the scene lists (`mergeMaterials`): the group takes meshes of any
-   * of its materials, drawn by its merge material. */
+   * of its materials, drawn by its merge material. Not with `BATCHED`. */
   palette?: string;
+  /** How the group draws its members. Default `BAKED`. */
+  mode?: MergeGroupMode;
+  /** `BATCHED` only: each member culled on its own. Default true. */
+  perMemberCulling?: boolean;
+  /** `BATCHED` only: the least room each geometry's slot reserves. Default: its own size. */
+  geometryReserve?: MergeGeometryReserve;
+  /** `BATCHED` only: a transparent batch's order, `DEPTH` (the default) or `JOIN`. */
+  transparentOrder?: MergeTransparentOrder;
 };
 
 /**
@@ -116,8 +168,12 @@ export type MergeMemberData = {
   groupEntityId: number;
   /** Its group's id. */
   groupId: string;
-  /** Its part in the group's merged geometry, or -1 until a build includes it. */
+  /** Its part in the group's merged geometry, or -1 until a build includes it. Always -1 in a
+   * `BATCHED` group. */
   partIndex: number;
+  /** A `BATCHED` group's (p375): its instance in the group's `BatchedMesh`, or -1 until a build
+   * adds it. Always -1 in a `BAKED` group. */
+  instanceId: number;
   /** Whether it was in the `DEFAULT` spatial domain (`SPATIAL_INDEXED`) when it was merged: it
    * leaves it while merged and gets it back when it leaves the group. */
   _wasSpatialIndexed: boolean;
@@ -127,6 +183,22 @@ export type MergeMemberData = {
   /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
    * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** A `BATCHED` member's own mesh's `OBJECT3D._lastVersion` its instance was last written at
+   * (the batch sync writes it again when that changed). */
+  _batchVersion?: number;
+  /** A `BATCHED` member's second instance while its LOD cross-fades from one level to another
+   * (the outgoing level's geometry, p375 Phase 2), or -1. */
+  _fadeInstanceId: number;
+  /** A `BATCHED` member's LOD fade its batch draws: a level change (`LEVEL`, with
+   * `_fadeInstanceId`), fading out to LOD culled (`OUT`) or in from it (`IN`); undefined while
+   * none runs (or one runs that its batch didn't start: it then draws the member whole). */
+  _lodFade?: 'LEVEL' | 'OUT' | 'IN';
+  /** A `BATCHED` member's place in the order members joined its group, given at its first build
+   * (`JOIN` draws a transparent batch in it; a rebuild keeps it). */
+  _joinSeq?: number;
+  /** A `BATCHED` member's colour and opacity (`setMergeMemberColor`), its instance's colour in the
+   * batch; undefined: white and opaque. */
+  _color?: { r: number; g: number; b: number; a: number };
   /** Its material's palette index in a palette group (its vertices' `aekMatIndex`), from when it
    * joined; undefined in a group of one material. */
   _paletteIndex?: number;

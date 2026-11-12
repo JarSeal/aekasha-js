@@ -195,7 +195,7 @@ Spike, half a day: does `@three.ez/batched-mesh-extensions`' `addGeometryLOD` wo
 §4.2 on draw calls for a scene with many different assets? Record the outcome here. §4.2 doesn't
 depend on the answer.
 
-Run it once, as p375's Phase 0 (`p375_batched-mesh-batches.md`), which also answers p309's decal
+Run it once, as p375's Phase 0 (`_DONE_p375_batched-mesh-batches.md`), which also answers p309's decal
 pool risk. Known already (p370 §2.1): on WebGPU r186 a `BatchedMesh` is one draw call per visible
 member, so it can't beat §4.2's one draw per level on draw count; the question is CPU cost.
 
@@ -233,6 +233,12 @@ member, so it can't beat §4.2's one draw per level on draw count; the question 
   separate meshes' cost; the BVH costs more for content that is all in view. The pool does it in 3
   draws instead of 2,000 (GPU time isn't measurable headless). Before the fix, the batched way
   measured 0.66-0.89 ms: the rejected command buffers were cheap, not the rendering.
+
+- p375's Phase 0 (2026-11-11, three r187, `_DONE_p375_batched-mesh-batches.md` §2 Results) ran the rest:
+  2,000 members of 20 geometries in a plain `BatchedMesh` cost 45-80% less CPU than separate
+  meshes on both backends, and r187 merges grouped members into one draw per geometry (23 draws
+  instead of 2,003; three's default depth sort merges almost nothing). For one geometry with LOD,
+  §4.2's pool is still the tool; p375 builds batches for mixed geometries that move.
 
 ## 5. JSON and generated chains
 

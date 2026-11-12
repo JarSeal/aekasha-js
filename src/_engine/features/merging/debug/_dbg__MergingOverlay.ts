@@ -6,6 +6,12 @@
 // frame while something is highlighted, like the LOD overlay
 // (`features/lod/debug/_dbg__LodOverlay.ts`). Default world only.
 //
+// A batched member (p375 S5) is drawn where its own (hidden) mesh is: its box is at that mesh's
+// pose, read as the batch sync reads it (position, quaternion and scale: a batched member is directly
+// under the root scene, and its world matrix is the last render's), and the sync runs before this.
+// With a LOD (p375 Phase 2 S5) its box is the level its own mesh shows, and a member the LOD culled
+// isn't outlined (its instance is hidden; a cull fading out still is drawn and outlined).
+//
 // "In view" is the active camera's frustum (the debug camera's too: it's what the image shows).
 // Each colour holds MAX_BOXES_PER_COLOR boxes; the rest are counted, not drawn (the tab says so).
 import * as THREE from 'three/webgpu';
@@ -54,6 +60,7 @@ const _size = new THREE.Vector3();
 const _position = new THREE.Vector3();
 const _quaternion = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
+const _poseMatrix = new THREE.Matrix4();
 
 /** A group's colour: its index in MERGE_OVERLAY_COLORS, from its id (the same on every visit). */
 export const getMergeGroupColorIndex = (groupId: string) =>
@@ -71,6 +78,22 @@ export const getMergeOverlayCounts = () => ({ drawn: drawnBoxes, skipped: skippe
 
 const isAnythingHighlighted = () => isAllHighlighted || highlightedIds.size > 0;
 
+/** A batched group's members with an instance (the batch's `instanceCount` counts its level fades'
+ * outgoing instances too). */
+const countBatchedMembers = (members: readonly number[], world: ECSWorld) => {
+  let count = 0;
+  for (let i = 0; i < members.length; i++) {
+    if ((world.getComponent(members[i], ComponentType.MERGE_MEMBER)?.instanceId ?? -1) >= 0)
+      count++;
+  }
+  return count;
+};
+
+/** Whether the LOD hides an entity: culled, and not fading out. */
+const isLodHidden = (entityId: number, world: ECSWorld) =>
+  world.hasComponent(entityId, ComponentType.TAG_LOD_CULLED) &&
+  !world.hasComponent(entityId, ComponentType.TAG_LOD_TRANSITIONING);
+
 /**
  * Writes a box per member of the world's highlighted groups into the writer of its group's
  * colour (`targets`, index-aligned with MERGE_OVERLAY_COLORS), skipping those outside `frustum`
@@ -87,9 +110,12 @@ export const writeMergeOverlayBoxes = (
   if (!isAnythingHighlighted()) return;
   for (const [groupEntityId, group] of world.getStorage(ComponentType.MERGE_GROUP)) {
     if (!isMergeGroupHighlighted(group.id) || world.isDisabled(groupEntityId)) continue;
-    // A built group without waiting members is inside its mesh's bounds (they only grow)
+    // A built group without waiting members is inside its mesh's bounds (they only grow; a
+    // batch's grow with the sync, which runs before this)
     const mesh = getGroupMesh(groupEntityId, world);
-    if (frustum && mesh?.parent && group.partIndex.size === group.members.length) {
+    const isBatched = Boolean((mesh as Partial<THREE.BatchedMesh> | undefined)?.isBatchedMesh);
+    const builtCount = isBatched ? countBatchedMembers(group.members, world) : group.partIndex.size;
+    if (frustum && mesh?.parent && builtCount === group.members.length) {
       if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
       _sphere.copy(mesh.geometry.boundingSphere!).applyMatrix4(mesh.matrixWorld);
       if (!frustum.intersectsSphere(_sphere)) continue;
@@ -99,17 +125,22 @@ export const writeMergeOverlayBoxes = (
     for (const entityId of group.members) {
       const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
       if (member?.groupEntityId !== groupEntityId || world.isDisabled(entityId)) continue;
-      const geometry = (
-        world.getComponent(entityId, ComponentType.OBJECT3D)?.value as THREE.Mesh | undefined
-      )?.geometry;
-      if (!geometry) continue;
+      if (member.instanceId >= 0 && isLodHidden(entityId, world)) continue;
+      const own = world.getComponent(entityId, ComponentType.OBJECT3D)?.value as
+        | THREE.Mesh
+        | undefined;
+      const geometry = own?.geometry;
+      if (!own || !geometry) continue;
       if (!geometry.boundingBox) geometry.computeBoundingBox();
       const local = geometry.boundingBox!;
-      // Where it's drawn: its baked pose, or its own while it waits or is in an edit session
+      // Where it's drawn: its baked pose; a batched member's own mesh's pose now; its own world
+      // matrix while it waits or is in an edit session
       const matrix =
         member.partIndex !== -1 && !member._editPose
           ? member._bakedMatrix
-          : world.getComponent(entityId, ComponentType.OBJECT3D)!.value.matrixWorld;
+          : member.instanceId >= 0
+            ? _poseMatrix.compose(own.position, own.quaternion, own.scale)
+            : own.matrixWorld;
       if (frustum && !frustum.intersectsBox(_box.copy(local).applyMatrix4(matrix))) continue;
       if (boxCounts[colorIndex] >= MAX_BOXES_PER_COLOR) {
         skippedBoxes++;

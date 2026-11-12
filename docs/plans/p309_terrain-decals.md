@@ -3,7 +3,7 @@ Category: Terrain, Rendering, Materials
 Blocked by: p299_texture-arrays-and-atlases.md (soft: D1's atlases are p299 D3 atlases, built since its Phase 3; only its Phase 5 JSON binding is open), p306_terrain-blocks-and-procedural-terrain-meshes.md, p304_procedural-texture-baker.md (procedural decals), p307_wet-and-dry-surface-states.md (soft: wet decals)
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
-Related: p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; §2.1 on `BatchedMesh` draw counts), \_DONE_p372_mesh-merge-groups.md (merging a block's cutout mesh decals), p375_batched-mesh-batches.md (its Phase 0 spike answers this plan's `BatchedMesh` risk)
+Related: p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; §2.1 on `BatchedMesh` draw counts), \_DONE_p372_mesh-merge-groups.md (merging a block's cutout mesh decals), \_DONE_p375_batched-mesh-batches.md (its `BATCHED` merge groups are D4's runtime pools: its Phase 0 spike and Phase 3 answer this plan's `BatchedMesh` risk and D4's pool question)
 
 # Terrain Decals
 
@@ -14,7 +14,7 @@ This plan delivers:
 - **Decal atlases**: imported CC0 decals plus procedural ones exported from p304's baker, as p299 atlases with a `DECAL` packing.
 - **A decal material**: alpha-blended or alpha-tested, polygon offset, render order, wet-aware, with an optional puddle-mask channel (ruts that fill with water).
 - **Mesh decals** authored in Blender (`*.decalSet.json`, owned by terrain blocks).
-- **Runtime decals** projected onto terrain blocks and meshes: footprints, impacts, tyre ribbons. One `BatchedMesh` per atlas, with fade-out.
+- **Runtime decals** projected onto terrain blocks and meshes: footprints, impacts, tyre ribbons. One `BATCHED` merge group (p375) per pool, with fade-out.
 
 ---
 
@@ -85,7 +85,7 @@ Searches for footprint, crack and stain decals found nothing, so those come from
 ```
 
 - Spawned with the owning terrain block (p306's `decals` ids) or by `spawnDecalSet(id)`.
-- **Merging:** `CUTOUT` mesh decals are opaque, so a block's mesh decals can join a p372 merge group (one draw per decal material per block). `BLEND` decals are transparent and are never merged (p372 §5).
+- **Merging:** `CUTOUT` mesh decals are opaque, so a block's mesh decals can join a p372 merge group (one draw per decal material per block). `BLEND` decals are transparent: a `BAKED` group refuses them (p372 §5), a `BATCHED` one (p375 Phase 3) takes them and draws them in join order (`transparentOrder: 'JOIN'`) or back to front, so a block's `BLEND` decals can share one batch per material (one render object; on WebGPU one draw per decal, see D4).
 - **Engine-level, but tiny:** a typed wrapper around `spawnImportedAsset` with material, render order and no physics, in p306's `terrain()` feature (`features/terrain/DecalSetSchema.ts` on `aekasha/schemas`, `spawnDecalSet` on `aekasha/terrain`, the suffix in `GATHERED_SUFFIXES`). It exists so a terrain block's manifest can list decals as data.
 - **Blender workflow** (`terrain_decals.blend`):
   - **Quad decals:** a plane UV'd onto an atlas cell. The template has one pre-UV'd quad per cell, so you duplicate the cell you want.
@@ -95,12 +95,14 @@ Searches for footprint, crack and stain decals found nothing, so those come from
 
 ### D4 — Runtime decals (toolkit: `src/toolkit/terrain/decals/RuntimeDecals.ts`, on `aekasha/toolkit/terrain`)
 
-- **`createDecalPool({ atlas, mode, maxDecals = 128 })`:**
-  - one `BatchedMesh` per pool, geometry slots reused FIFO;
-  - **note (p370 §2.1):** on WebGPU, three r186 draws a `BatchedMesh` as one draw call per visible member, so a pool of 128 decals is 128 draws, not 1 (it still saves per-object CPU work; the LOD's spike found the same, `src/_engine/features/lod/CLAUDE.md`'s "Not `BatchedMesh`"). For a real single draw, consider one preallocated geometry per pool with fixed-size vertex slots reused FIFO and a per-vertex fade attribute. Decide in Phase 4 with p375's spike numbers;
-  - per-instance colour alpha for fades (`setColorAt`);
-  - owned per scene: its mesh is an entity (`createMeshEntity`, or p308's `createInstancedMeshEntity` path for a pool mesh made by hand), so the scene's exit deletes it and gives its refs back;
-  - per-frame work (the fades) allocates nothing and writes only the slots that changed.
+- **`createDecalPool({ atlas, mode, maxDecals = 128 })`:** an explicit `BATCHED` merge group (p375, `aekasha/merging`; decided by p375 Phase 3's stand-in, its S5 results):
+  - **the pool's decals are member entities**: each a mesh entity with its own registered geometry (its patch) and the pool's material, joined with `addToMergeGroup` (not the `merge` prop, which only queues it until the build: `setMergeMemberColor` needs a member). The group owns scene scope, `DISABLED`, per-member culling, the Merging tab and picking (`getMergeMemberAtBatchId`);
+  - **FIFO by rewriting**: the pool keeps `maxDecals` entities; a spawn takes the oldest, writes the new patch into its geometry, moves it (`setTransform`) and calls `updateMergeMember`, which rewrites its geometry slot in place and puts it last in the join order. Deleting the oldest entity and creating one works too (the freed slot is reused by fit, and a spawn before the frame's build, `APP_RENDER_SYNC`, is never drawn on its own) but cost 0.15-0.19 ms more a spawn in the stand-in;
+  - **the group's settings**: `geometryReserve` sized for the largest patch (every slot alike, so the buffers stop growing: 36 000 spawns over 10 minutes kept one size), `transparentOrder: 'JOIN'` for `BLEND` (the newest on top; its sort was ~0.1 ms cheaper a pass than three's depth sort at 512), `castShadow: false`. `CUTOUT` is an opaque batch (no sort);
+  - **draws**: one render object per pool; on WebGL2 one multi-draw, on WebGPU one draw per visible decal (r187 merges only instances of one geometry, and every patch is its own). The win is the CPU's (render objects, not draw calls): 35-58 % of the CPU frame at 128 decals and 49-81 % at 512 against a mesh per decal, on both backends; WebGPU's GPU time the same. **The single-geometry pool is dropped**: it would buy WebGPU one draw where the draws cost no measured GPU time, for its own code (fixed vertex slots, a per-vertex fade attribute, whole-range rewrites). Revisit only if WebGPU gains multi-draw-indirect (p375 §5) or a profile shows the per-decal draws;
+  - **tint and fades**: `setMergeMemberColor(entityId, { color?, opacity? })` (its alpha fades a `BLEND` decal; with `CUTOUT` it erodes the cut-out shape), written only on a change. It costs ~1-1.5 µs a call, so a fade that changes many decals a frame is the spawner's main cost (the stand-in faded by FIFO place, rewriting the oldest quarter on each spawn: 0.17-0.25 ms a spawn at 512): fade by time over `fadeSec` and write only the decals fading;
+  - **WebGL2's GPU time**: the stats timer read 5.7-8.0 ms for the batch against 5.0-5.3 for separate meshes in every run (WebGPU: the same or lower). That timer is unreliable (p375 §2), so this is unproven: profile it in Phase 4 before relying on WebGL2's GPU budget;
+  - per-frame work (the fades) allocates nothing and writes only the decals that changed.
 - **`spawnDecal(pool, { target, position, normal, size, rotation, cell, lifetimeSec?, fadeSec? })`:**
   - **On a terrain block:** build a conforming patch from the block's grid (heights in a size-bounded window; spacing = block spacing, or half of it for small decals) and offset it along the normal. O(cells under the decal), not O(block).
   - **On other meshes:** three's `DecalGeometry` (`three/examples/jsm/geometries/DecalGeometry.js`, never the `Addons.js` barrel), loaded by `import()` on the first such decal, clipped against the target mesh. Costly on big meshes, fine on props. Documented.
@@ -180,9 +182,9 @@ Searches for footprint, crack and stain decals found nothing, so those come from
 
 ### Phase 4 — Runtime decals (D4)
 
-1. Pool (`BatchedMesh`, or the single-geometry pool), terrain patch projection, `DecalGeometry` for meshes (lazy), ribbons, fades; `perf-auditor` on the per-frame code.
+1. Pool (a `BATCHED` merge group, D4), terrain patch projection, `DecalGeometry` for meshes (lazy), ribbons, fades; `perf-auditor` on the per-frame code.
 
-**Exit:** 128 footprints spawned while walking stay at one draw call (with the single-geometry pool; a `BatchedMesh` pool counts one per decal on WebGPU, see D4) and fade FIFO; ribbon tracks follow a moving point.
+**Exit:** 128 footprints spawned while walking stay in one pool (one render object: one multi-draw on WebGL2, one draw per decal on WebGPU, D4), its buffers the same size after 10 minutes of spawning, and fade FIFO; ribbon tracks follow a moving point.
 
 ### Phase 5 — Procedural decals (D5)
 
@@ -201,7 +203,7 @@ Searches for footprint, crack and stain decals found nothing, so those come from
 
 | Risk                                                                                             | Mitigation                                                                                                                          |
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `BatchedMesh` behaviour on the WebGPU backend in r186 (per-instance colour, geometry slot reuse) | Answered by p375's Phase 0 spike (`_DONE_p348` §4.4 found a draw per instance on WebGPU); fallback: the single-geometry pool (D4) or a fixed pool of individual meshes (more draw calls, documented) |
+| `BatchedMesh` behaviour on the WebGPU backend (per-instance colour, geometry slot reuse) | Answered by p375 (r187). Phase 0: per-member colour and visibility work on both backends; `deleteGeometry` + `addGeometry` leaks buffer space. Phase 3 (its S5 results): a `BATCHED` merge group is the pool (D4), with geometry slots that are freed and reused by fit, `geometryReserve`, transparent members in join order, `setMergeMemberColor`; a stand-in pool of 128 and 512 conformed patches beat a mesh per decal by 35-81 % of the CPU frame on both backends, its buffers the same size over 10 minutes of churn, and `BLEND` decals pixel-identical to separate meshes. WebGPU draws one per decal (one render object); the single-geometry pool is dropped (D4) |
 | Transparent sorting conflicts with other transparents (water later, particles)                   | `renderOrder` bands documented: terrain 0, decals 10, scatter cards (CUTOUT) opaque, transparents ≥ 20                              |
 | Polygon offset differs between depth ranges or backends                                          | Offsets in the material are tunable; the gallery checks at 1, 50 and 200 m                                                          |
 | Atlas mip bleeding                                                                               | Cell padding (≥ 16 px at 2K) with edge extension; mips are generated per atlas, so padding scales                                   |

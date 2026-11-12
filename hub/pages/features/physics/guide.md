@@ -52,7 +52,8 @@ properties (Blender's custom properties, the glTF `extras`):
   physics to a node without any.
 - A `merge` property (`AUTO` or a group's id) draws the node's mesh in a
   [merge group](hub:features/mesh-merging#imported-models); a node whose body isn't `FIXED` is
-  refused.
+  refused, unless its group is a
+  [batched one](hub:features/mesh-merging#batched-groups-members-that-move).
   [`deriveColliderFromGeometry`](api:deriveColliderFromGeometry) sizes a collider of your own
   from an imported node the same way.
 

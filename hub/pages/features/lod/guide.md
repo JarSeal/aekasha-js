@@ -75,6 +75,10 @@ entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`
 ([`setLodMaxSelectionsPerFrame`](api:setLodMaxSelectionsPerFrame)) spreads it over frames when
 there are very many.
 
+Meshes of different geometries that share a material, each with its own `LOD` (rocks of several
+shapes), can be one [batched merge group](hub:features/mesh-merging#per-member-lod) instead: one
+object for the renderer, a draw per geometry and level on WebGPU, with the same cross-fades.
+
 ## Instance sets
 
 A pool's cost grows with its instances: every instance is an entity, selected and synced on the
@@ -233,7 +237,8 @@ shows its live screen size and the distance of each switch.
 
 ::: scene lodShowcase
 **The full demo:** every LOD feature in its own lane, every level of every lane on screen from
-the start camera, an instanced pool's trees and the same trees as an instance set side by side. Its LOD demo tab has camera stops on both sides of every switch and a dolly
+the start camera, an instanced pool's trees and the same trees as an instance set side by side,
+and hand-made levels on plain meshes and on a batched merge group's members. Its LOD demo tab has camera stops on both sides of every switch and a dolly
 down the lanes.
 :::
 

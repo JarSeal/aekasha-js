@@ -37,8 +37,6 @@ import {
   prepareChange,
   removeLodCulledInstantly,
   setCulledTo,
-  setMeshFade,
-  setMeshLevel,
   startFade,
 } from './LodFades';
 import {
@@ -346,9 +344,8 @@ const lodHooks: ComponentHooks = {
       lod._levels = [];
       return;
     }
-    const mesh = getLodMesh(entityId, world);
-    const level0 = lod._levels[0];
-    if (mesh && level0 && lod.applied > 0) setMeshLevel(mesh, level0);
+    // Level 0 on the mesh, and on what draws it for it (the mesh draw delegate)
+    if (lod.applied > 0) applyLevelTo(entityId, world, lod, 0, false);
     for (const level of lod._levels) refLevel(level, false);
     lod._levels = [];
   },
@@ -356,8 +353,9 @@ const lodHooks: ComponentHooks = {
     const lod = world.getComponent(entityId, ComponentType.LOD);
     if (!lod) return;
     if (!lod._target) {
-      // A running fade's copy is disposed (TAG_LOD_TRANSITIONING goes with the entity)
-      setMeshFade(lod, 1);
+      // A running fade's copy is disposed (TAG_LOD_TRANSITIONING goes with the entity), and the
+      // mesh draw delegate's fade ended
+      drawFade(entityId, world, lod, 1);
       for (const level of lod._levels) refLevel(level, false);
     }
     lod._levels = [];

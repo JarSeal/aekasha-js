@@ -12,6 +12,7 @@ import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { registerOnAllSceneExits } from '../../../kernel/scene/Scene';
 import { getGroupMesh, getMergeUnmergedViews, isMergeGroupShownUnmerged } from '../MergeState';
+import { isMergeMemberBuilt } from './_dbg__MergingInfo';
 
 /** Why a group can't be shown unmerged now, or null when it can. */
 export const getUnmergedViewRefusal = (groupEntityId: number, world: ECSWorld) => {
@@ -40,7 +41,11 @@ const endView = (groupEntityId: number, world: ECSWorld) => {
   for (const entityId of group.members) {
     const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER);
     // One in an edit session stays drawn on its own: its session's end merges it
-    if (member?.groupEntityId !== groupEntityId || member.partIndex === -1 || member._editPose) {
+    if (
+      member?.groupEntityId !== groupEntityId ||
+      !isMergeMemberBuilt(member) ||
+      member._editPose
+    ) {
       continue;
     }
     if (!world.hasComponent(entityId, ComponentType.TAG_MERGED)) {

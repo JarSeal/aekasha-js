@@ -4,6 +4,11 @@ merging draws the pieces that share a material as one merged mesh, while each pi
 entity with its own transform, physics body and data: you can still find it, move it, disable it
 or take it out of its group, and only its part of the merged mesh is rewritten.
 
+Pieces that move, fade, come and go or have their own LOD go into a batched group instead: one
+`BatchedMesh` whose members are each drawn where they are now and culled on their own, a draw per
+geometry. Measured with moving bodies, a LOD field and decal pools, a batch took 35-90 % off the
+CPU frame of drawing each mesh on its own.
+
 ::: scene exampleMerging
 A ruined courtyard of 282 pieces from a four-piece kit, drawn as five merged meshes: 16 draw calls
 in all, against 423 with each piece on its own. Space switches between the two, G swings the gate

@@ -8,18 +8,24 @@ export {
   updateMergeMember,
 } from './MergeGroups';
 export type { CreateMergeGroupOptions } from './MergeGroups';
+export { setMergeMemberColor } from './MergeMemberColor';
+export type { MergeMemberColorOptions } from './MergeMemberColor';
 export {
   beginMergeMemberEdit,
   cancelMergeMemberEdit,
   endMergeMemberEdit,
+  getMergeMemberAtBatchId,
   getMergeMemberAtFace,
   isMergeMemberInEdit,
 } from './MergeMemberEdit';
 export type {
+  MergeGeometryReserve,
   MergeGroupData,
+  MergeGroupMode,
   MergeGroupSettings,
   MergeMemberData,
   MergeMemberEditPose,
+  MergeTransparentOrder,
   MeshMergeDef,
   MeshMergeOptions,
   SceneAutoMergeEntry,

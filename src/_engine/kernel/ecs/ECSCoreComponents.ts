@@ -125,7 +125,9 @@ export interface CoreComponentData {
   /** Deletes the entity when it runs out ({@link LifetimeData}). */
   [ComponentType.LIFETIME]: LifetimeData;
   /** The entity's Object3D, which `TRANSFORM` is synced to; `_lastVersion` is the transform
-   * version last copied. Adding it tags the entity by kind (`TAG_IS_MESH`, …). */
+   * version last copied (`MAP` storage), or goes up with every copy (`TYPED_ARRAY`, which has no
+   * versions): either way it changes when `object3DSyncSystem` moves the Object3D. Adding it tags
+   * the entity by kind (`TAG_IS_MESH`, …). */
   [ComponentType.OBJECT3D]: { value: THREE.Object3D; _lastVersion: number };
   /** The entity it faces (`lookAtSystem`), eg. a light's target; disabling or making this entity
    * persistent does the same to the target. */

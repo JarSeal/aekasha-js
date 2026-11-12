@@ -8,15 +8,20 @@ import {
 import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
 import { getECSWorld, type ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import { isBatchedGroup } from '../MergeBatchFront';
 import { getMergeDebugStats } from '../MergeState';
+import type { MergeGroupData } from '../MergeTypes';
 import {
   createMergeRateMeter,
   formatCount,
+  formatCountOf,
   getAutoCellLabel,
   getGroupVertexCount,
   getMaterialLabel,
+  getMergeBatchFigures,
   getMergeEntityName,
   getMergeSummary,
+  getSortedOrderText,
   getStandingRefusals,
   MERGING_TAB_ID,
 } from './_dbg__MergingInfo';
@@ -42,8 +47,8 @@ import {
 // The Merging tab (docs/plans/_DONE_p373_merge-debug-and-member-editing.md D1): the default world's
 // merge groups at a glance (the groups, members and vertices, the draws per pass merged against
 // unmerged, the waste, the builds and in-place updates of the last second, the last build's time),
-// a row per group opening its window (_dbg__MergingWindows.ts), and the entities whose `merge` was
-// refused with the reason. A group's members can be outlined (_dbg__MergingOverlay.ts), and a group
+// a row per group opening its window (_dbg__MergingWindows.ts; a batched group's with its badge and
+// its batch figures, p375 S5), and the entities whose `merge` was refused with the reason. A group's members can be outlined (_dbg__MergingOverlay.ts), and a group
 // shown unmerged for an A/B (_dbg__MergingUnmerged.ts). Nothing is
 // persisted: it's all for inspecting. Default world only.
 
@@ -100,8 +105,50 @@ export const formatMergeSummary = (
   };
 };
 
-/** A row per group of the world, in creation order: its id, `AUTO` cell, material, members and
- * vertices (the first MAX_GROUP_ROWS). */
+/** A group row's badge: `AUTO` and `BATCHED` (the default mode, `BAKED`, has none), or none. */
+const getGroupBadge = (group: MergeGroupData) => {
+  const badge = [group._isAuto ? 'AUTO' : '', isBatchedGroup(group) ? 'BATCHED' : '']
+    .filter(Boolean)
+    .join(' · ');
+  return badge ? { badge } : {};
+};
+
+/** A group row's figures: its members and vertices as the suffix; a built batched group's members
+ * and visible members as the suffix, and as the detail its draws by its order (geometry runs and
+ * compactions, draws sorted by range, a transparent batch's draws at most and its order, or one
+ * multi-draw) and its LOD fades while there are some. */
+const getGroupRowFigures = (
+  groupEntityId: number,
+  group: MergeGroupData,
+  world: ECSWorld
+): { suffix: string; detail?: string } => {
+  const members = formatCountOf(group.members.length, 'member');
+  const batch = getMergeBatchFigures(group, world);
+  if (batch) {
+    const fading = batch.levelFades + batch.cullFades;
+    const sorted = getSortedOrderText(batch.order);
+    const order = sorted
+      ? `${batch.isMultiDraw ? 'one multi-draw' : `up to ${formatCountOf(batch.draws, 'draw')}`} ${sorted}`
+      : batch.order === 'COMPACT'
+        ? `${formatCountOf(batch.runs, 'run')}, ${formatCountOf(batch.compactions, 'compaction')}`
+        : batch.order === 'RANGE_SORT'
+          ? `${formatCountOf(batch.draws, 'draw')} sorted by range`
+          : 'one multi-draw';
+    // The draws in the description, which wraps: a long suffix squeezed the title to a letter a
+    // line
+    return {
+      suffix: `${members} (${formatCount(batch.visible)} visible)`,
+      detail: `${order}${fading ? `, ${formatCount(fading)} fading` : ''}`,
+    };
+  }
+  return {
+    suffix: `${members}, ${formatCount(getGroupVertexCount(groupEntityId, group, world))} v`,
+  };
+};
+
+/** A row per group of the world, in creation order: its id, its badge (`AUTO`, `BATCHED`), `AUTO`
+ * cell, material, members and vertices, or a batched group's members and visible members, its
+ * draws in the description (the first MAX_GROUP_ROWS). */
 export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
   const items: DebuggerListItem[] = [];
   let more = 0;
@@ -111,16 +158,15 @@ export const getMergeGroupListData = (world: ECSWorld): DebuggerListItem[] => {
       continue;
     }
     const cell = getAutoCellLabel(group.id);
-    const n = group.members.length;
-    const vertices = formatCount(getGroupVertexCount(groupEntityId, group, world));
     const state = group._isPending ? ', pending' : '';
+    const { suffix, detail } = getGroupRowFigures(groupEntityId, group, world);
     items.push({
       itemId: String(groupEntityId),
       title: group.id,
       subTitle: `[${groupEntityId}]`,
-      ...(group._isAuto ? { badge: 'AUTO' } : {}),
-      description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}`,
-      suffix: `${formatCount(n)} ${n === 1 ? 'member' : 'members'}, ${vertices} v${state}`,
+      ...getGroupBadge(group),
+      description: `${getMaterialLabel(group._material)}${cell ? ` · cell ${cell}` : ''}${detail ? ` · ${detail}` : ''}`,
+      suffix: `${suffix}${state}`,
       // Right to left: the highlight, then the A/B (a built group's only)
       toggleValues: [
         isMergeGroupHighlighted(group.id),
@@ -203,7 +249,7 @@ export const _createMergingDebugGUI = () => {
           monitor('draws', 'Draws, main pass'),
           monitor('shadowDraws', 'Draws, shadow pass'),
           getNoteItem(
-            'Draws per pass before culling: what the pass submits with everything in view. A merged group is culled whole.'
+            'Draws per pass before culling: what the pass submits with everything in view. A merged group is culled whole; a batched one counts a draw per geometry run (WebGPU; WebGL2 draws it in one) and culls each member.'
           ),
           monitor('builds', 'Builds, last second'),
           monitor('updates', 'In-place updates, last second'),

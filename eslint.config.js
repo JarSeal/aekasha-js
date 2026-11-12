@@ -96,6 +96,7 @@ const SIMULATION_FILES = [
   'src/app/scenes/thirdPersonGymScene/GymDummyBrain.ts',
   'src/app/scenes/physicsTiers/physicsTiers.ts',
   'src/app/scenes/streamingPhysics/streamingPhysics.ts',
+  'src/app/scenes/batchedMeshSpike/batchedMeshSpike.ts',
 ];
 // What the two feature folders hold besides the simulation: the installs and entries, the
 // physics import extension and worker test, the debug modules

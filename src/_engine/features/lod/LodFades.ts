@@ -4,11 +4,14 @@
 // finishes that fade first. The first apply after the LOD is added never fades (the load), nor
 // does removing the LOD; an entity LOD culled at its first selection fades in when it's first
 // shown. Targets fade when they have `setFade`; plain meshes always can (see PLAIN MESH FADES),
-// except skinned ones.
+// except skinned ones. A plain mesh drawn by something else (the kernel's mesh draw delegate,
+// `kernel/ecs/LodTargets.ts`: a batched merge member's batch, p375 Phase 2) gets its levels set as
+// any mesh's, and the delegate draws them, its cull and its fades.
 import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { setMeshGeometry, setMeshMaterial } from '../../kernel/mesh/Mesh';
+import { getLodMeshDrawDelegateFor } from '../../kernel/ecs/LodTargets';
 import { clearLodObjectFade, LOD_FADE_OPAQUE, setLodObjectFade } from '../../kernel/render/LodFade';
 import { isLodChangeFaded } from '../../utils/LodRules';
 import { getLodFadeSeconds } from './LodSettings';
@@ -105,6 +108,8 @@ const createFadeOutCopy = (mesh: THREE.Mesh) => {
   return copy;
 };
 
+/** The level goes on the mesh either way; a mesh the delegate draws gets no fade copy: the
+ * delegate keeps its outgoing level. */
 const applyMeshLevel = (
   entityId: number,
   world: ECSWorld,
@@ -115,16 +120,19 @@ const applyMeshLevel = (
   const mesh = getLodMesh(entityId, world);
   const resolved = lod._levels[level];
   if (!mesh || !resolved) return;
-  if (fade) {
+  const delegate = getLodMeshDrawDelegateFor(entityId, world);
+  if (fade && !delegate) {
     lod._fadeOut = createFadeOutCopy(mesh);
     lod._fadeIn = mesh;
     setLodObjectFade(lod._fadeOut, -LOD_FADE_OPAQUE);
     setLodObjectFade(mesh, 0);
   }
   setMeshLevel(mesh, resolved);
+  delegate?.applyLevel(entityId, world, resolved, fade);
 };
 
-/** Without a fade, TAG_LOD_CULLED's visibility reconcile already hid or showed the mesh. */
+/** Without a fade, TAG_LOD_CULLED's visibility reconcile already hid or showed the mesh; the
+ * delegate hides or shows what it draws itself. */
 const setMeshCulled = (
   entityId: number,
   world: ECSWorld,
@@ -132,6 +140,11 @@ const setMeshCulled = (
   isCulled: boolean,
   fade: boolean
 ) => {
+  const delegate = getLodMeshDrawDelegateFor(entityId, world);
+  if (delegate) {
+    delegate.setCulled(entityId, world, isCulled, fade);
+    return;
+  }
   const mesh = fade ? getLodMesh(entityId, world) : undefined;
   if (!mesh) return;
   if (isCulled) {
@@ -202,12 +215,17 @@ export const setCulledTo = (
 };
 
 /**
- * Draws the entity's running fade at `progress` (1 ends it).
+ * Draws the entity's running fade at `progress` (1 ends it). A plain mesh's own copies first (a
+ * fade it started before the delegate drew it), then the delegate's.
  * @internal
  */
 export const drawFade = (entityId: number, world: ECSWorld, lod: LodData, progress: number) => {
-  if (lod._target) lod._target.setFade?.(entityId, world, progress);
-  else setMeshFade(lod, progress);
+  if (lod._target) {
+    lod._target.setFade?.(entityId, world, progress);
+    return;
+  }
+  setMeshFade(lod, progress);
+  getLodMeshDrawDelegateFor(entityId, world)?.setFade(entityId, world, progress);
 };
 
 /** A target fades when it has `setFade`, a plain mesh unless it's skinned (a copy wouldn't be). */

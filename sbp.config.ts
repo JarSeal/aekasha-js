@@ -34,11 +34,19 @@ const profiles: SbpProfile[] = [
     // guard (its material code is a lazy chunk) and the transfer's integer flag took the initial
     // to 386.0 KiB: 386 → 387 KiB. p374 Phase 3: palette groups (`MergePalettes.ts`, `AUTO`'s
     // palettes, their refusals and warnings) took `merging` 7.1 → 7.7 KiB and `assets/index.js` to
-    // 382.6 KiB: 382 → 383 KiB (the initial, 386.8 KiB, stays within 387)
+    // 382.6 KiB: 382 → 383 KiB (the initial, 386.8 KiB, stays within 387). p375 Phase 1:
+    // `BatchedMesh` (+4.6 KiB of three) ships with `merging()` though only the lazy batch code
+    // (`MergeBatch.ts`) names it: its class is a statement of `three.core.js`, one module, and
+    // Rollup keeps a module's statements in its chunk, so no `import()` moves it
+    // (docs/issues/three-classes-ship-with-their-chunk.md); with `merging`'s growth the initial
+    // is 392.8 and `assets/index.js` 388.6 KiB: 387 → 393 and 383 → 389 KiB. p375 Phase 2:
+    // per-member LOD in batched groups (S1's scene graph detach, S2's level checks; S3-S4's
+    // delegate and LOD-cull hooks are forwarding stubs, the batch side lazy): initial 393.2 KiB,
+    // 393 → 394 KiB; with S3's delegate `assets/index.js` 389.1 KiB, 389 → 390 KiB
     budgets: {
-      initial: 387 * KIB,
+      initial: 394 * KIB,
       chunks: {
-        'assets/index.js': 383 * KIB,
+        'assets/index.js': 390 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -73,7 +81,14 @@ const profiles: SbpProfile[] = [
         // edit sessions' two guards ship (`applyBuild`, `restoreEnabledMember`: a member in a
         // session stays collapsed), 3 B over 7 KiB with Phase 2's growth. The sessions themselves
         // (`MergeMemberEdit.ts`) are tree-shaken unless an app calls them: 7 → 8 KiB
-        '_engine/features/merging': 8 * KIB,
+        // p375 Phase 1: 7.7 → 8.9 KiB (10 → 12 modules): the `BATCHED` mode, its refusals,
+        // `AUTO`'s batched key, the builds' dispatch (`MergeBuild.ts`) and the batch code's loader,
+        // leave and visibility hooks (`MergeBatchFront.ts`); the batch code is a lazy chunk: 8 → 9
+        // KiB
+        // p375 Phase 2: 8.9 → 9.2 KiB: S1's scene graph detach of a batched member's mesh, S2's
+        // LOD level checks at a join and the later-LOD hook; S3-S4 add the LOD delegate's and the
+        // LOD-cull hooks' forwarding stubs (the batch side is in the lazy batch chunk): 9 → 10 KiB
+        '_engine/features/merging': 10 * KIB,
         '_engine/features/physics': 25 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,

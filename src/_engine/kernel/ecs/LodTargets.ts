@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import type { LodTarget } from '../../features/lod/LodTypes';
+import type { LodResolvedLevel, LodTarget } from '../../features/lod/LodTypes';
+import type { ECSWorld } from './ECS';
 import type { ComponentType } from './ECSCoreComponents';
 
 // The LOD seams in the kernel, so a feature reaches the LOD selection without importing `lod()`:
@@ -13,6 +14,9 @@ import type { ComponentType } from './ECSCoreComponents';
 // - The debug sources (p354 D11): LOD content without entities, as the LOD tab lists it. A feature
 //   registers one from its `onDebug` (instancing's sets); only debug code calls either function,
 //   so a production build drops them.
+// - The mesh draw delegate (p375 Phase 2): what draws a plain mesh's levels while the mesh itself
+//   isn't drawn (merging's batched members, drawn by their batch). `lod()` keeps the levels, their
+//   refs and the selection, and asks the delegate on every apply, cull and fade step.
 
 /**
  * A registered LOD target, with the component type it's for.
@@ -37,6 +41,52 @@ export const registerLodTarget = (componentType: ComponentType, target: LodTarge
  * @internal
  */
 export const getLodTargets = (): readonly LodTargetEntry[] => lodTargets;
+
+/**
+ * What draws a plain mesh's LOD levels while the mesh itself isn't drawn (p375 Phase 2: a batched
+ * merge member, drawn by its group's batch). `lod()` resolves the levels, holds their refs,
+ * selects, and sets each applied level on the mesh as for any plain mesh (so a mesh drawn on its
+ * own again shows the right one); for an entity the delegate draws, it calls the delegate in place
+ * of its own fade copies and per-object fades. Asked per call, so an entity can start or stop
+ * being drawn by it between two calls: a fade it started then goes on without it (the delegate
+ * drops what it drew for the entity when it stops drawing it).
+ * @internal
+ */
+export type LodMeshDrawDelegate = {
+  /** Whether it draws the entity's levels now. */
+  isDrawing: (entityId: number, world: ECSWorld) => boolean;
+  /** The mesh shows `level` now (set on the mesh already). With `fade`, what it drew for the
+   * entity until now stays drawn as the outgoing copy, and `level` starts hidden. */
+  applyLevel: (entityId: number, world: ECSWorld, level: LodResolvedLevel, fade: boolean) => void;
+  /** `TAG_LOD_CULLED` was added (true) or is being removed (false: the remove hook runs before
+   * it's gone). Without `fade` the entity hides or shows at once; with it, hiding keeps it drawn as
+   * the outgoing copy until the fade ends, and showing starts it hidden. */
+  setCulled: (entityId: number, world: ECSWorld, isCulled: boolean, fade: boolean) => void;
+  /** Draws its running fade at `progress` (0 → 1): the incoming copy at the signed fade
+   * `progress`, the outgoing one at `progress - 1` (`kernel/render/LodFade.ts`). 1 ends it: the
+   * outgoing copy goes, and an entity faded out to LOD culled is hidden. Also called for a fade it
+   * didn't start (the entity came to it mid-fade, whose copies `lod()` ends itself) and with 1 by
+   * the `LOD`'s delete hook: without a fade of its own it has nothing to draw. */
+  setFade: (entityId: number, world: ECSWorld, progress: number) => void;
+};
+
+let meshDrawDelegate: LodMeshDrawDelegate | null = null;
+
+/**
+ * Sets the mesh draw delegate (`merging()`'s install), or clears it with `null`.
+ * @internal
+ */
+export const setLodMeshDrawDelegate = (delegate: LodMeshDrawDelegate | null) => {
+  meshDrawDelegate = delegate;
+};
+
+/**
+ * The mesh draw delegate when it draws the entity now, else undefined (the LOD's plain-mesh
+ * apply, cull and fades).
+ * @internal
+ */
+export const getLodMeshDrawDelegateFor = (entityId: number, world: ECSWorld) =>
+  meshDrawDelegate?.isDrawing(entityId, world) ? meshDrawDelegate : undefined;
 
 /**
  * A frame's LOD selection inputs (p354 D3): what `lodSelectionSystem` measures and selects with,

@@ -4,7 +4,7 @@ import { getConfig } from '../config/Config';
 import { createFeatureHost } from '../init/Features';
 import { ECSWorld } from './ECS';
 import { ComponentType } from './ECSCoreComponents';
-import { installCoreSystems } from './ECSCoreSystems';
+import { installCoreSystems, object3DSyncSystem } from './ECSCoreSystems';
 
 // The core hooks are static, registered once for this file's worlds
 beforeAll(() => installCoreSystems(createFeatureHost(getConfig()).ctx));
@@ -90,4 +90,31 @@ describe('the draw hold', () => {
     world.removeComponent(id, ComponentType.TAG_DRAW_HELD);
     expect(object.visible).toBe(false);
   });
+});
+
+describe('object3DSyncSystem', () => {
+  // p375: a reader after MAIN (a batched merge member's sync) tells a moved Object3D by its
+  // `_lastVersion`, in both storage modes
+  test.each(['MAP', 'TYPED_ARRAY'] as const)(
+    'changes OBJECT3D._lastVersion when it moves the Object3D (%s storage), and only then',
+    (storageMode) => {
+      const id = `core-systems-test-${worldSeq++}`;
+      createdWorldIds.push(id);
+      const world = new ECSWorld({ id, maxEntities: 100, storageMode });
+      const entityId = world.createEntity();
+      const object = new THREE.Object3D();
+      world.addComponent(entityId, ComponentType.OBJECT3D, { value: object, _lastVersion: -1 });
+      const objComp = world.getComponent(entityId, ComponentType.OBJECT3D)!;
+
+      object3DSyncSystem(world);
+      const synced = objComp._lastVersion;
+      object3DSyncSystem(world);
+      expect(objComp._lastVersion).toBe(synced);
+
+      world.setTransform(entityId, { pos: { x: 2, y: 0, z: 0 } });
+      object3DSyncSystem(world);
+      expect(objComp._lastVersion).not.toBe(synced);
+      expect(object.position.x).toBe(2);
+    }
+  );
 });

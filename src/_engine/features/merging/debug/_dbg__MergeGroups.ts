@@ -6,6 +6,9 @@
 //
 // Remerging is never driven by this (§3): a TRANSFORM can change without a member moving (a fixed
 // body's one-off sync), so the check only tells.
+//
+// A batched group's member (p375) moves by contract: its batch sync writes its instance, and its
+// `partIndex` stays -1, so the check skips it as one waiting for a build.
 import type * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
@@ -44,7 +47,8 @@ export const _checkMovedMergeMembers = (world: ECSWorld): number[] => {
   if (!warned) warnedByWorld.set(world, (warned = new Set()));
   const found: number[] = [];
   for (const [entityId, member] of storage) {
-    // One waiting for its build, or in an edit session (drawn by its own mesh, merged at its end)
+    // One waiting for its build or batched (partIndex -1), or in an edit session (drawn by its own
+    // mesh, merged at its end)
     if (member.partIndex === -1 || member._editPose || warned.has(entityId)) continue;
     const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
     if (!mesh) continue;

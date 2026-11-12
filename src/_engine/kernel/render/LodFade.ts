@@ -16,7 +16,8 @@
 //   always finds an attribute.
 // - An object whose draws carry their own fade (setObjectLodFadeNode): an instance set's draws
 //   (features/instancing/, p354 D8), whose fade comes with each drawn instance's visible list
-//   entry, through the vertex stage. It takes the place of the per-object LOD fade. It's keyed on
+//   entry, through the vertex stage; a batched merge group's batch (features/merging/, p375 Phase
+//   2), whose fade is a texel of its fade texture at the drawn instance (`batchIndirectIndex`). It takes the place of the per-object LOD fade. It's keyed on
 //   the object, not its material: the shadow pass builds the object with its own material, which
 //   takes the source material's mask (three's `_getShadowNodes`), so only the object is the same
 //   in both builds (p354 Phase 3 step 4).
