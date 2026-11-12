@@ -450,17 +450,25 @@ export const pingAssetsWorker = async () => {
 };
 
 /**
- * Fetches and decodes a standard (non-HDR) image in the assets worker. The bitmap is already
- * flipped vertically (like TextureLoader's default flipY = true), so its texture needs
- * `flipY = false`. Call it inside {@link runAssetTask}.
+ * Fetches and decodes a standard (non-HDR) image in the assets worker, with the flip and the
+ * premultiplied alpha baked in (`flipY` true is what TextureLoader's default does at upload), so
+ * its texture needs `flipY = false` and `premultiplyAlpha = false`. Call it inside
+ * {@link runAssetTask}.
  * @internal
  * @param url absolute URL
+ * @param decode.flipY flip the image vertically
+ * @param decode.premultiplyAlpha premultiply the colour by the alpha
  */
-export const loadTextureInWorker = async (url: string) =>
+export const loadTextureInWorker = async (
+  url: string,
+  decode: { flipY: boolean; premultiplyAlpha: boolean }
+) =>
   (
     await requestAssetsWorker<AssetsLoadTextureResponse>({
       type: AssetsProtocolType.LOAD_TEXTURE,
       url,
+      flipY: decode.flipY,
+      premultiplyAlpha: decode.premultiplyAlpha,
     })
   ).bitmap;
 

@@ -1,7 +1,13 @@
 import type * as THREE from 'three/webgpu';
 import { lwarn } from '../../../utils/Logger';
 import type { TextureMapKeys } from '../Material';
-import { doesTextureExist, getTextureRegistry, saveTexture, type TexOpts } from '../Texture';
+import {
+  applyTexOpts,
+  doesTextureExist,
+  getTextureRegistry,
+  saveTexture,
+  type TexOpts,
+} from '../Texture';
 import type { CollectedGLTFTextures } from './GLTFTextureCollect';
 import { retagAssetOwner } from '../AssetOwners';
 
@@ -23,22 +29,6 @@ export type RegisteredGLTFTextures = {
   slotsPerPrimitive: TextureSlots[];
   /** The registered texture objects, which the glTF disposal must keep. */
   keep: Set<THREE.Texture>;
-};
-
-/** `Texture.ts`' `setTextureOpts` without its userData part, applying every defined value (that
- * one skips falsy ones, eg. `anisotropy: 0`). One of the two goes when p302's D1 fixes it. */
-const applyTexOpts = (texture: THREE.Texture, texOpts?: TexOpts) => {
-  if (!texOpts) return;
-  if (texOpts.mapping !== undefined) texture.mapping = texOpts.mapping;
-  if (texOpts.wrapS !== undefined) texture.wrapS = texOpts.wrapS;
-  if (texOpts.wrapT !== undefined) texture.wrapT = texOpts.wrapT;
-  if (texOpts.magFilter !== undefined) texture.magFilter = texOpts.magFilter;
-  if (texOpts.minFilter !== undefined) texture.minFilter = texOpts.minFilter;
-  if (texOpts.format !== undefined) texture.format = texOpts.format;
-  if (texOpts.type !== undefined) texture.type = texOpts.type;
-  if (texOpts.anisotropy !== undefined) texture.anisotropy = texOpts.anisotropy;
-  if (texOpts.colorSpace !== undefined) texture.colorSpace = texOpts.colorSpace;
-  texture.needsUpdate = true;
 };
 
 /** Registry id for a texture: `${importId}/${name}`, or the first free `_n`-suffixed one. A

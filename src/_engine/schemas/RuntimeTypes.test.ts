@@ -25,10 +25,11 @@ import type { TextureAsset } from './TextureSchema';
 // these (Vitest doesn't type-check): a failure's message is expect-type's, so assign the two
 // types to each other in a scratch file to read TypeScript's own.
 //
+// `texOpts` needs no swap: a JSON names three's constants or gives their numbers, and the schema
+// parses either to the number (p302 D1, `TEXTURE_CONSTANTS`), so its output types are three's.
+//
 // The differences only in how the types are written, each swapped for the runtime's before the
 // comparison:
-// - `texOpts`: three's constants (wrapS, minFilter, …) are plain numbers in a JSON. p302 D1 gives
-//   the JSON named constants ("wrapS": "REPEAT"), which this swap then maps.
 // - A scene's or a mesh's inline material: zod infers the schema's two branches (TSL or not), each
 //   with a `type` enum, where the runtime has one member per type, which TypeScript doesn't split
 //   on its own (`PerType`, as `MaterialAsset` itself does).
@@ -39,27 +40,11 @@ type AllKeys<T> = T extends unknown ? keyof T : never;
 type ExtraKeys<Json, Runtime> = Exclude<AllKeys<Json>, AllKeys<Runtime>>;
 /** Keys only the gatherer and the tooling read: no runtime type needs them. */
 type ToolingKeys = '$schema' | '__saveData' | '__sourcePath';
-/** `Json` with its keys `K` typed as the runtime's. */
-type Swap<Json, Runtime, K extends PropertyKey> = Omit<Json, K> & Pick<Runtime, K & keyof Runtime>;
 
 type TexOptsJson = NonNullable<TextureAsset['texOpts']>;
 type TexOptsRuntime = NonNullable<TextureProps['texOpts']>;
-type TexOptsSwapped = 'mapping' | 'wrapS' | 'wrapT' | 'magFilter' | 'minFilter' | 'type';
-type WithTexOpts<T> = Omit<T, 'texOpts'> & {
-  texOpts?: Swap<TexOptsJson, TexOptsRuntime, TexOptsSwapped>;
-};
 
 type LightPropsJson = LightAsset['lightProps'];
-
-type ImportTexturesJson = Extract<NonNullable<ImportedAsset['importTextures']>, object>;
-/** An import with its `importTextures.texOpts` swapped as a texture's */
-type WithImportTexOpts<T extends { importTextures?: unknown }> = Omit<T, 'importTextures'> & {
-  importTextures?:
-    | boolean
-    | (Omit<ImportTexturesJson, 'texOpts'> & {
-        texOpts?: Swap<TexOptsJson, TexOptsRuntime, TexOptsSwapped>;
-      });
-};
 
 type SceneLightJson = Exclude<NonNullable<SceneAsset['lights']>[number], string>;
 type SceneTextureJson = Exclude<NonNullable<SceneAsset['textures']>[number], string>;
@@ -75,13 +60,13 @@ type SceneJson = Omit<
   'lights' | 'textures' | 'materials' | 'meshes' | 'importedAssets'
 > & {
   lights?: (string | (Omit<SceneLightJson, 'lightProps'> & { lightProps: LightPropsJson }))[];
-  textures?: (string | WithTexOpts<SceneTextureJson>)[];
+  textures?: (string | SceneTextureJson)[];
   materials?: (string | PerType<SceneMaterialJson>)[];
   meshes?: (
     | string
     | (Omit<SceneMeshJson, 'props'> & { props: WithMatPerType<SceneMeshJson['props']> })
   )[];
-  importedAssets?: (string | WithImportTexOpts<SceneImportJson>)[];
+  importedAssets?: (string | SceneImportJson)[];
 };
 
 describe('the asset JSONs fit their runtime types', () => {
@@ -108,7 +93,8 @@ describe('the asset JSONs fit their runtime types', () => {
   });
 
   test('texture (*.texture.json) → TextureProps', () => {
-    expectTypeOf<WithTexOpts<TextureAsset>>().toExtend<TextureProps>();
+    expectTypeOf<TextureAsset>().toExtend<TextureProps>();
+    expectTypeOf<TexOptsJson>().toExtend<TexOptsRuntime>();
     expectTypeOf<ExtraKeys<TextureAsset, TextureProps>>().toEqualTypeOf<
       // Build time and the Assets tab only: the gatherer drops `optimize` and `pack`
       ToolingKeys | 'optimize' | 'pack' | '__fileSize' | '__bytes' | '__vramBytes' | '__codec'
@@ -134,7 +120,7 @@ describe('the asset JSONs fit their runtime types', () => {
   });
 
   test('imported asset (*.importedAsset.json) → ImportAssetParams', () => {
-    expectTypeOf<WithImportTexOpts<ImportedAsset>>().toExtend<ImportAssetParams>();
+    expectTypeOf<ImportedAsset>().toExtend<ImportAssetParams>();
     expectTypeOf<ExtraKeys<ImportedAsset, ImportAssetParams>>().toEqualTypeOf<
       // Build time and the Assets tab only: the gatherer drops `optimize` and `merge`
       ToolingKeys | 'optimize' | 'merge' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'

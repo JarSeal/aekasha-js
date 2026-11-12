@@ -3,7 +3,13 @@ import * as THREE from 'three/webgpu';
 import { initEnvironment } from '../config/Config';
 import { createRootScene } from '../scene/Scene';
 import { getAssetOwners, runInAssetOwnerScope, setAssetOwnerScene } from './AssetOwners';
-import { getTexture, loadTextureAsync, saveLoadedTexture, saveTexture } from './Texture';
+import {
+  applyTexOpts,
+  getTexture,
+  loadTextureAsync,
+  saveLoadedTexture,
+  saveTexture,
+} from './Texture';
 
 // The warning log is a stand-in
 const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
@@ -84,5 +90,56 @@ describe('loadTextureAsync', () => {
     setAssetOwnerScene(null);
     vi.unstubAllGlobals();
     loadAsync.mockRestore();
+  });
+});
+
+describe('applyTexOpts', () => {
+  test('applies every defined value, falsy ones too, and the UV transform', () => {
+    const texture = new THREE.Texture();
+    texture.anisotropy = 4;
+    applyTexOpts(texture, {
+      anisotropy: 1,
+      flipY: false,
+      generateMipmaps: false,
+      rotation: 0.5,
+      repeat: [4, 2],
+      offset: [0.25, 0],
+      center: [0.5, 0.5],
+      wrapS: THREE.RepeatWrapping,
+    });
+    expect(texture.anisotropy).toBe(1);
+    expect(texture.flipY).toBe(false);
+    expect(texture.generateMipmaps).toBe(false);
+    expect(texture.rotation).toBe(0.5);
+    expect(texture.repeat.toArray()).toEqual([4, 2]);
+    expect(texture.offset.toArray()).toEqual([0.25, 0]);
+    expect(texture.center.toArray()).toEqual([0.5, 0.5]);
+    expect(texture.wrapS).toBe(THREE.RepeatWrapping);
+  });
+
+  test('"MAX" anisotropy is 16 before the renderer is initialised', () => {
+    const texture = new THREE.Texture();
+    applyTexOpts(texture, { anisotropy: 'MAX' });
+    expect(texture.anisotropy).toBe(16);
+  });
+
+  test('leaves the flip and premultiplied alpha a compressed texture has baked in', () => {
+    const texture = new THREE.CompressedTexture([], 4, 4);
+    const { flipY, premultiplyAlpha } = texture;
+    applyTexOpts(texture, { flipY: !flipY, premultiplyAlpha: !premultiplyAlpha });
+    expect(texture.flipY).toBe(flipY);
+    expect(texture.premultiplyAlpha).toBe(premultiplyAlpha);
+  });
+
+  test('marks a texture with data for upload again, and one without none', () => {
+    const loaded = new THREE.Texture();
+    loaded.needsUpdate = true;
+    const version = loaded.version;
+    applyTexOpts(loaded, { flipY: false });
+    expect(loaded.version).toBe(version + 1);
+
+    const empty = new THREE.Texture();
+    applyTexOpts(empty, { flipY: false });
+    expect(empty.version).toBe(0);
   });
 });

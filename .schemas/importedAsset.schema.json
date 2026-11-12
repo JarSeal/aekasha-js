@@ -16,27 +16,27 @@
       "$ref": "#/definitions/__schema3"
     },
     "meshIndex": {
-      "$ref": "#/definitions/__schema24"
+      "$ref": "#/definitions/__schema38"
     },
     "isPersistent": {
-      "$ref": "#/definitions/__schema26"
+      "$ref": "#/definitions/__schema40"
     },
     "lodChain": {
-      "$ref": "#/definitions/__schema28"
+      "$ref": "#/definitions/__schema42"
     },
     "throwOnError": {
-      "$ref": "#/definitions/__schema45"
+      "$ref": "#/definitions/__schema59"
     },
     "debugData": {
-      "$ref": "#/definitions/__schema47"
+      "$ref": "#/definitions/__schema61"
     },
     "optimize": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema58"
+          "$ref": "#/definitions/__schema72"
         },
         {
-          "$ref": "#/definitions/__schema59"
+          "$ref": "#/definitions/__schema73"
         }
       ],
       "description": "The asset pipeline's settings: a profile plus texture and mesh overrides, or false to keep the file as it is."
@@ -44,10 +44,10 @@
     "merge": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema86"
+          "$ref": "#/definitions/__schema100"
         },
         {
-          "$ref": "#/definitions/__schema87"
+          "$ref": "#/definitions/__schema101"
         }
       ],
       "description": "Build time only: the asset pipeline joins the file's static pieces into __merged nodes (physics, skinned, animated and excluded nodes stay as they are)."
@@ -60,7 +60,7 @@
       "description": "Set by the gatherer: the file's bytes on disk (not a .gltf's external buffers).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema90"
+          "$ref": "#/definitions/__schema104"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "description": "Set by the gatherer: the pipeline's output.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema91"
+          "$ref": "#/definitions/__schema105"
         }
       ]
     },
@@ -76,7 +76,7 @@
       "description": "Set by the gatherer: the source as the dev server serves it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema92"
+          "$ref": "#/definitions/__schema106"
         }
       ]
     },
@@ -84,7 +84,7 @@
       "description": "Set by the gatherer: the download in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema93"
+          "$ref": "#/definitions/__schema107"
         }
       ]
     },
@@ -92,7 +92,7 @@
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema93"
+          "$ref": "#/definitions/__schema107"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "description": "Set by the gatherer: the GLB's LOD chains per primitive.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema94"
+          "$ref": "#/definitions/__schema108"
         }
       ]
     },
@@ -108,7 +108,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema96"
+          "$ref": "#/definitions/__schema110"
         }
       ]
     }
@@ -170,21 +170,45 @@
                 "type": {
                   "$ref": "#/definitions/__schema15"
                 },
-                "anisotropy": {
+                "format": {
                   "$ref": "#/definitions/__schema17"
                 },
-                "colorSpace": {
+                "anisotropy": {
                   "$ref": "#/definitions/__schema19"
+                },
+                "repeat": {
+                  "$ref": "#/definitions/__schema21"
+                },
+                "offset": {
+                  "$ref": "#/definitions/__schema23"
+                },
+                "rotation": {
+                  "$ref": "#/definitions/__schema24"
+                },
+                "center": {
+                  "$ref": "#/definitions/__schema26"
+                },
+                "flipY": {
+                  "$ref": "#/definitions/__schema27"
+                },
+                "generateMipmaps": {
+                  "$ref": "#/definitions/__schema29"
+                },
+                "premultiplyAlpha": {
+                  "$ref": "#/definitions/__schema31"
+                },
+                "colorSpace": {
+                  "$ref": "#/definitions/__schema33"
                 }
               },
               "additionalProperties": false,
-              "description": "The sampler state over the loader's, and the colour space."
+              "description": "The sampler state, UV transform and upload settings over the loader's, and the colour space."
             },
             "isPersistent": {
               "description": "The textures' own. Default: the import's.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema23"
+                  "$ref": "#/definitions/__schema37"
                 }
               ]
             }
@@ -194,113 +218,256 @@
       ]
     },
     "__schema5": {
-      "description": "three's mapping: 300 UV, 301 cube reflection, 303 equirectangular reflection.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema6"
-        }
-      ]
-    },
-    "__schema6": {
-      "type": "number"
-    },
-    "__schema7": {
-      "description": "three's horizontal wrapping: 1000 repeat, 1001 clamp to edge, 1002 mirrored.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema8"
-        }
-      ]
-    },
-    "__schema8": {
-      "type": "number"
-    },
-    "__schema9": {
-      "description": "three's vertical wrapping: 1000 repeat, 1001 clamp to edge, 1002 mirrored.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema10"
-        }
-      ]
-    },
-    "__schema10": {
-      "type": "number"
-    },
-    "__schema11": {
-      "description": "three's magnification filter: 1003 nearest, 1006 linear.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema12"
-        }
-      ]
-    },
-    "__schema12": {
-      "type": "number"
-    },
-    "__schema13": {
-      "description": "three's minification filter: 1003 nearest, 1006 linear, 1008 trilinear.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema14"
-        }
-      ]
-    },
-    "__schema14": {
-      "type": "number"
-    },
-    "__schema15": {
-      "description": "three's texel type: 1009 unsigned byte, 1015 float, 1016 half float.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema16"
-        }
-      ]
-    },
-    "__schema16": {
-      "type": "number"
-    },
-    "__schema17": {
-      "description": "Anisotropic filtering samples (1: off; the device caps it).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema18"
-        }
-      ]
-    },
-    "__schema18": {
-      "type": "number"
-    },
-    "__schema19": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema20"
+          "type": "string",
+          "enum": [
+            "UV",
+            "CUBE_REFLECTION",
+            "CUBE_REFRACTION",
+            "EQUIRECTANGULAR_REFLECTION",
+            "EQUIRECTANGULAR_REFRACTION"
+          ]
         },
         {
-          "$ref": "#/definitions/__schema21"
+          "type": "number",
+          "enum": [
+            300,
+            301,
+            302,
+            303,
+            304
+          ]
+        }
+      ],
+      "description": "three's mapping: \"UV\" (300, default), \"CUBE_REFLECTION\" (301), \"CUBE_REFRACTION\" (302), \"EQUIRECTANGULAR_REFLECTION\" (303), \"EQUIRECTANGULAR_REFRACTION\" (304)."
+    },
+    "__schema6": {},
+    "__schema7": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "REPEAT",
+            "CLAMP_TO_EDGE",
+            "MIRRORED_REPEAT"
+          ]
         },
+        {
+          "type": "number",
+          "enum": [
+            1000,
+            1001,
+            1002
+          ]
+        }
+      ],
+      "description": "Horizontal wrapping: \"REPEAT\" (1000), \"CLAMP_TO_EDGE\" (1001, default), \"MIRRORED_REPEAT\" (1002)."
+    },
+    "__schema8": {},
+    "__schema9": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "REPEAT",
+            "CLAMP_TO_EDGE",
+            "MIRRORED_REPEAT"
+          ]
+        },
+        {
+          "type": "number",
+          "enum": [
+            1000,
+            1001,
+            1002
+          ]
+        }
+      ],
+      "description": "Vertical wrapping: \"REPEAT\" (1000), \"CLAMP_TO_EDGE\" (1001, default), \"MIRRORED_REPEAT\" (1002)."
+    },
+    "__schema10": {},
+    "__schema11": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "NEAREST",
+            "LINEAR"
+          ]
+        },
+        {
+          "type": "number",
+          "enum": [
+            1003,
+            1006
+          ]
+        }
+      ],
+      "description": "Magnification filter: \"NEAREST\" (1003), \"LINEAR\" (1006, default)."
+    },
+    "__schema12": {},
+    "__schema13": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "NEAREST",
+            "NEAREST_MIPMAP_NEAREST",
+            "NEAREST_MIPMAP_LINEAR",
+            "LINEAR",
+            "LINEAR_MIPMAP_NEAREST",
+            "LINEAR_MIPMAP_LINEAR"
+          ]
+        },
+        {
+          "type": "number",
+          "enum": [
+            1003,
+            1004,
+            1005,
+            1006,
+            1007,
+            1008
+          ]
+        }
+      ],
+      "description": "Minification filter: \"NEAREST\" (1003), \"NEAREST_MIPMAP_NEAREST\" (1004), \"NEAREST_MIPMAP_LINEAR\" (1005), \"LINEAR\" (1006), \"LINEAR_MIPMAP_NEAREST\" (1007), \"LINEAR_MIPMAP_LINEAR\" (1008, default)."
+    },
+    "__schema14": {},
+    "__schema15": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "UNSIGNED_BYTE",
+            "BYTE",
+            "SHORT",
+            "UNSIGNED_SHORT",
+            "INT",
+            "UNSIGNED_INT",
+            "FLOAT",
+            "HALF_FLOAT",
+            "UNSIGNED_SHORT_4444",
+            "UNSIGNED_SHORT_5551",
+            "UNSIGNED_INT_248",
+            "UNSIGNED_INT_5999",
+            "UNSIGNED_INT_101111"
+          ]
+        },
+        {
+          "type": "number",
+          "enum": [
+            1009,
+            1010,
+            1011,
+            1012,
+            1013,
+            1014,
+            1015,
+            1016,
+            1017,
+            1018,
+            1020,
+            35902,
+            35899
+          ]
+        }
+      ],
+      "description": "Texel type: \"UNSIGNED_BYTE\" (1009, default), \"FLOAT\" (1015), \"HALF_FLOAT\" (1016), … Set by the loader: rarely overridden."
+    },
+    "__schema16": {},
+    "__schema17": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "ALPHA",
+            "RGB",
+            "RGBA",
+            "DEPTH",
+            "DEPTH_STENCIL",
+            "RED",
+            "RED_INTEGER",
+            "RG",
+            "RG_INTEGER",
+            "RGB_INTEGER",
+            "RGBA_INTEGER"
+          ]
+        },
+        {
+          "type": "number",
+          "enum": [
+            1021,
+            1022,
+            1023,
+            1026,
+            1027,
+            1028,
+            1029,
+            1030,
+            1031,
+            1032,
+            1033
+          ]
+        }
+      ],
+      "description": "Pixel format: \"RGBA\" (1023, default), \"RED\" (1028), \"RG\" (1030), … Set by the loader: rarely overridden."
+    },
+    "__schema18": {},
+    "__schema19": {
+      "description": "Anisotropic filtering samples (default 1: off), or \"MAX\" for the device's most. Only with linear filters.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "string",
+          "const": "MAX"
+        }
+      ]
+    },
+    "__schema21": {
+      "description": "How often it repeats over the UVs, [x, y] (default [1, 1]); past 1 needs \"REPEAT\" wrapping.",
+      "allOf": [
         {
           "$ref": "#/definitions/__schema22"
         }
-      ],
-      "description": "\"srgb\" for colour maps, \"srgb-linear\" or \"\" (none) for data: normal, roughness, masks."
-    },
-    "__schema20": {
-      "type": "string",
-      "const": ""
-    },
-    "__schema21": {
-      "type": "string",
-      "const": "srgb"
+      ]
     },
     "__schema22": {
-      "type": "string",
-      "const": "srgb-linear"
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
     },
     "__schema23": {
-      "type": "boolean"
+      "description": "The UV offset, [x, y] (default [0, 0]).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema22"
+        }
+      ]
     },
     "__schema24": {
-      "description": "Only imports one node: a root child's index, or an index path ([2, 0]).",
+      "description": "The UV rotation in radians around center (default 0).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema25"
@@ -308,6 +475,87 @@
       ]
     },
     "__schema25": {
+      "type": "number"
+    },
+    "__schema26": {
+      "description": "The rotation centre in UV space, [x, y] (default [0, 0]; [0.5, 0.5] is the middle).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema22"
+        }
+      ]
+    },
+    "__schema27": {
+      "description": "Flips the image vertically (default true; a glTF's textures false). Baked into a KTX2 output and an image the assets worker decodes.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema28": {
+      "type": "boolean"
+    },
+    "__schema29": {
+      "description": "Generates the mip chain on upload (default true). A KTX2 output has its own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "boolean"
+    },
+    "__schema31": {
+      "description": "Premultiplies the colour by the alpha on upload (default false). Not for KTX2.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema32": {
+      "type": "boolean"
+    },
+    "__schema33": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        },
+        {
+          "$ref": "#/definitions/__schema35"
+        },
+        {
+          "$ref": "#/definitions/__schema36"
+        }
+      ],
+      "description": "\"srgb\" for colour maps, \"srgb-linear\" or \"\" (none) for data: normal, roughness, masks."
+    },
+    "__schema34": {
+      "type": "string",
+      "const": ""
+    },
+    "__schema35": {
+      "type": "string",
+      "const": "srgb"
+    },
+    "__schema36": {
+      "type": "string",
+      "const": "srgb-linear"
+    },
+    "__schema37": {
+      "type": "boolean"
+    },
+    "__schema38": {
+      "description": "Only imports one node: a root child's index, or an index path ([2, 0]).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema39"
+        }
+      ]
+    },
+    "__schema39": {
       "anyOf": [
         {
           "type": "number"
@@ -320,158 +568,58 @@
         }
       ]
     },
-    "__schema26": {
+    "__schema40": {
       "description": "Registers the geometries as persistent (kept when their scene releases them).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema27"
+          "$ref": "#/definitions/__schema41"
         }
       ]
     },
-    "__schema27": {
+    "__schema41": {
       "type": "boolean"
     },
-    "__schema28": {
+    "__schema42": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema29"
+          "$ref": "#/definitions/__schema43"
         },
         {
-          "$ref": "#/definitions/__schema30"
+          "$ref": "#/definitions/__schema44"
         }
       ],
       "description": "Generates a LOD chain for every rendered geometry of the import after it loads: true for the default options, or the options. A mesh's lod (AUTO) selects its levels. Skinned and morph-target geometry is skipped."
     },
-    "__schema29": {
+    "__schema43": {
       "type": "boolean"
     },
-    "__schema30": {
+    "__schema44": {
       "type": "object",
       "properties": {
         "ratios": {
-          "$ref": "#/definitions/__schema31"
+          "$ref": "#/definitions/__schema45"
         },
         "maxError": {
-          "$ref": "#/definitions/__schema33"
+          "$ref": "#/definitions/__schema47"
         },
         "attributeWeights": {
-          "$ref": "#/definitions/__schema35"
+          "$ref": "#/definitions/__schema49"
         },
         "compactVertices": {
-          "$ref": "#/definitions/__schema39"
+          "$ref": "#/definitions/__schema53"
         },
         "lockBorder": {
-          "$ref": "#/definitions/__schema41"
+          "$ref": "#/definitions/__schema55"
         },
         "permissive": {
-          "$ref": "#/definitions/__schema43"
+          "$ref": "#/definitions/__schema57"
         }
       },
       "additionalProperties": false,
       "description": "generateLodChain options."
     },
-    "__schema31": {
-      "description": "Target triangle counts, as ratios of the base's, one per level. Default [0.5, 0.25, 0.1].",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema32"
-        }
-      ]
-    },
-    "__schema32": {
-      "type": "array",
-      "items": {
-        "type": "number",
-        "exclusiveMinimum": 0,
-        "exclusiveMaximum": 1
-      }
-    },
-    "__schema33": {
-      "description": "meshoptimizer's target error cap, relative to the mesh's extent (its largest bounding box side). Default 0.05.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema34"
-        }
-      ]
-    },
-    "__schema34": {
-      "type": "number",
-      "exclusiveMinimum": 0,
-      "maximum": 1
-    },
-    "__schema35": {
-      "description": "How much normal and uv deviation count against a collapse. Default 0.5 each (0 ignores it).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema36"
-        }
-      ]
-    },
-    "__schema36": {
-      "type": "object",
-      "properties": {
-        "normal": {
-          "description": "The normals' weight. Default 0.5.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema37"
-            }
-          ]
-        },
-        "uv": {
-          "description": "The uvs' weight. Default 0.5.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/__schema38"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "__schema37": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema38": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema39": {
-      "description": "Each level gets its own trimmed vertex arrays instead of sharing the base's. Better for large meshes whose far levels use few vertices. Default false.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema40"
-        }
-      ]
-    },
-    "__schema40": {
-      "type": "boolean"
-    },
-    "__schema41": {
-      "description": "Keeps the mesh's open borders in place, so tiling geometry still meets its neighbours. Default false.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema42"
-        }
-      ]
-    },
-    "__schema42": {
-      "type": "boolean"
-    },
-    "__schema43": {
-      "description": "Lets collapses cross attribute seams. Flat-shaded geometry (a normal per face) doesn't simplify without it. Default false.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema44"
-        }
-      ]
-    },
-    "__schema44": {
-      "type": "boolean"
-    },
     "__schema45": {
-      "description": "Fails the load when the file can't import. Default: logs it.",
+      "description": "Target triangle counts, as ratios of the base's, one per level. Default [0.5, 0.25, 0.1].",
       "allOf": [
         {
           "$ref": "#/definitions/__schema46"
@@ -479,61 +627,161 @@
       ]
     },
     "__schema46": {
-      "type": "boolean"
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "exclusiveMaximum": 1
+      }
     },
     "__schema47": {
+      "description": "meshoptimizer's target error cap, relative to the mesh's extent (its largest bounding box side). Default 0.05.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema48"
+        }
+      ]
+    },
+    "__schema48": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    },
+    "__schema49": {
+      "description": "How much normal and uv deviation count against a collapse. Default 0.5 each (0 ignores it).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema50"
+        }
+      ]
+    },
+    "__schema50": {
+      "type": "object",
+      "properties": {
+        "normal": {
+          "description": "The normals' weight. Default 0.5.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema51"
+            }
+          ]
+        },
+        "uv": {
+          "description": "The uvs' weight. Default 0.5.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema52"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema51": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema52": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema53": {
+      "description": "Each level gets its own trimmed vertex arrays instead of sharing the base's. Better for large meshes whose far levels use few vertices. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
+    },
+    "__schema54": {
+      "type": "boolean"
+    },
+    "__schema55": {
+      "description": "Keeps the mesh's open borders in place, so tiling geometry still meets its neighbours. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema56"
+        }
+      ]
+    },
+    "__schema56": {
+      "type": "boolean"
+    },
+    "__schema57": {
+      "description": "Lets collapses cross attribute seams. Flat-shaded geometry (a normal per face) doesn't simplify without it. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema58"
+        }
+      ]
+    },
+    "__schema58": {
+      "type": "boolean"
+    },
+    "__schema59": {
+      "description": "Fails the load when the file can't import. Default: logs it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema60"
+        }
+      ]
+    },
+    "__schema60": {
+      "type": "boolean"
+    },
+    "__schema61": {
       "type": "object",
       "properties": {
         "name": {
-          "$ref": "#/definitions/__schema48"
+          "$ref": "#/definitions/__schema62"
         },
         "description": {
-          "$ref": "#/definitions/__schema50"
+          "$ref": "#/definitions/__schema64"
         },
         "comments": {
-          "$ref": "#/definitions/__schema52"
+          "$ref": "#/definitions/__schema66"
         },
         "todo": {
-          "$ref": "#/definitions/__schema54"
+          "$ref": "#/definitions/__schema68"
         },
         "debugObj": {
-          "$ref": "#/definitions/__schema56"
+          "$ref": "#/definitions/__schema70"
         }
       },
       "additionalProperties": false,
       "description": "What the debug tools show for it. Production data has none."
     },
-    "__schema48": {
+    "__schema62": {
       "description": "The name the debug tools show.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema49"
+          "$ref": "#/definitions/__schema63"
         }
       ]
     },
-    "__schema49": {
+    "__schema63": {
       "type": "string"
     },
-    "__schema50": {
+    "__schema64": {
       "description": "A longer description for the debug tools.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema51"
+          "$ref": "#/definitions/__schema65"
         }
       ]
     },
-    "__schema51": {
+    "__schema65": {
       "type": "string"
     },
-    "__schema52": {
+    "__schema66": {
       "description": "Notes with their times.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema53"
+          "$ref": "#/definitions/__schema67"
         }
       ]
     },
-    "__schema53": {
+    "__schema67": {
       "type": "array",
       "items": {
         "type": "object",
@@ -554,48 +802,48 @@
         "additionalProperties": false
       }
     },
-    "__schema54": {
+    "__schema68": {
       "description": "Open items, by key.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema55"
+          "$ref": "#/definitions/__schema69"
         }
       ]
     },
-    "__schema55": {
+    "__schema69": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema56": {
+    "__schema70": {
       "description": "Anything else a debug tool keeps for it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema57"
+          "$ref": "#/definitions/__schema71"
         }
       ]
     },
-    "__schema57": {
+    "__schema71": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema58": {
+    "__schema72": {
       "type": "boolean",
       "const": false
     },
-    "__schema59": {
+    "__schema73": {
       "type": "object",
       "properties": {
         "profile": {
           "description": "A profile of assets.config.json.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema60"
+              "$ref": "#/definitions/__schema74"
             }
           ]
         },
@@ -603,7 +851,7 @@
           "description": "Per-slot overrides, or false to keep the textures as they are.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema61"
+              "$ref": "#/definitions/__schema75"
             }
           ]
         },
@@ -611,7 +859,7 @@
           "description": "Overrides, or false to keep the geometry as it is.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema78"
+              "$ref": "#/definitions/__schema92"
             }
           ]
         },
@@ -619,10 +867,10 @@
           "type": "object",
           "properties": {
             "vramMB": {
-              "$ref": "#/definitions/__schema82"
+              "$ref": "#/definitions/__schema96"
             },
             "downloadMB": {
-              "$ref": "#/definitions/__schema85"
+              "$ref": "#/definitions/__schema99"
             }
           },
           "additionalProperties": false,
@@ -631,10 +879,10 @@
       },
       "additionalProperties": false
     },
-    "__schema60": {
+    "__schema74": {
       "type": "string"
     },
-    "__schema61": {
+    "__schema75": {
       "anyOf": [
         {
           "type": "boolean",
@@ -644,28 +892,28 @@
           "type": "object",
           "properties": {
             "default": {
-              "$ref": "#/definitions/__schema62"
-            },
-            "baseColor": {
-              "$ref": "#/definitions/__schema71"
-            },
-            "normal": {
-              "$ref": "#/definitions/__schema72"
-            },
-            "metallicRoughness": {
-              "$ref": "#/definitions/__schema73"
-            },
-            "occlusion": {
-              "$ref": "#/definitions/__schema74"
-            },
-            "emissive": {
-              "$ref": "#/definitions/__schema75"
-            },
-            "orm": {
               "$ref": "#/definitions/__schema76"
             },
+            "baseColor": {
+              "$ref": "#/definitions/__schema85"
+            },
+            "normal": {
+              "$ref": "#/definitions/__schema86"
+            },
+            "metallicRoughness": {
+              "$ref": "#/definitions/__schema87"
+            },
+            "occlusion": {
+              "$ref": "#/definitions/__schema88"
+            },
+            "emissive": {
+              "$ref": "#/definitions/__schema89"
+            },
+            "orm": {
+              "$ref": "#/definitions/__schema90"
+            },
             "data": {
-              "$ref": "#/definitions/__schema77"
+              "$ref": "#/definitions/__schema91"
             }
           },
           "additionalProperties": false,
@@ -673,15 +921,15 @@
         }
       ]
     },
-    "__schema62": {
+    "__schema76": {
       "description": "Every slot's, under the slot's own.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema63": {
+    "__schema77": {
       "type": "object",
       "properties": {
         "codec": {
@@ -697,7 +945,7 @@
           "description": "Largest side in px, downscaled to fit (null: the source size). Default 1024.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema64"
+              "$ref": "#/definitions/__schema78"
             }
           ]
         },
@@ -705,7 +953,7 @@
           "description": "Writes the full mip chain. Default true.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema65"
+              "$ref": "#/definitions/__schema79"
             }
           ]
         },
@@ -713,7 +961,7 @@
           "description": "UASTC only: --uastc-quality, 0 (fastest) to 4 (slowest). Default 2.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema66"
+              "$ref": "#/definitions/__schema80"
             }
           ]
         },
@@ -721,7 +969,7 @@
           "description": "UASTC only: the RDO lambda (0: off). Default 2; 1 for normal, orm, metallicRoughness and occlusion.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema67"
+              "$ref": "#/definitions/__schema81"
             }
           ]
         },
@@ -729,7 +977,7 @@
           "description": "UASTC only: Zstandard supercompression level (0: off). Default 18.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema68"
+              "$ref": "#/definitions/__schema82"
             }
           ]
         },
@@ -737,7 +985,7 @@
           "description": "ETC1S only: --qlevel, 1 to 255. Default 128.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema69"
+              "$ref": "#/definitions/__schema83"
             }
           ]
         },
@@ -745,14 +993,14 @@
           "description": "Two-channel normal map (X in RGB, Y in A). Needs a material that unpacks it.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema70"
+              "$ref": "#/definitions/__schema84"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema64": {
+    "__schema78": {
       "anyOf": [
         {
           "type": "integer",
@@ -764,88 +1012,88 @@
         }
       ]
     },
-    "__schema65": {
+    "__schema79": {
       "type": "boolean"
     },
-    "__schema66": {
+    "__schema80": {
       "type": "integer",
       "minimum": 0,
       "maximum": 4
     },
-    "__schema67": {
+    "__schema81": {
       "type": "number",
       "minimum": 0
     },
-    "__schema68": {
+    "__schema82": {
       "type": "integer",
       "minimum": 0,
       "maximum": 22
     },
-    "__schema69": {
+    "__schema83": {
       "type": "integer",
       "minimum": 1,
       "maximum": 255
     },
-    "__schema70": {
+    "__schema84": {
       "type": "boolean"
     },
-    "__schema71": {
+    "__schema85": {
       "description": "The base colour (albedo).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema72": {
+    "__schema86": {
       "description": "The normal map.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema73": {
+    "__schema87": {
       "description": "glTF's metallic-roughness map.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema74": {
+    "__schema88": {
       "description": "The ambient occlusion map.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema75": {
+    "__schema89": {
       "description": "The emissive map.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema76": {
+    "__schema90": {
       "description": "Packed occlusion, roughness and metalness.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema77": {
+    "__schema91": {
       "description": "Splat maps, masks, LUTs, height.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema77"
         }
       ]
     },
-    "__schema78": {
+    "__schema92": {
       "anyOf": [
         {
           "type": "boolean",
@@ -858,7 +1106,7 @@
               "description": "Geometry compression. meshopt (default) also shrinks VRAM when quantized.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema79"
+                  "$ref": "#/definitions/__schema93"
                 }
               ]
             },
@@ -866,7 +1114,7 @@
               "description": "Quantize, reorder and filter the vertices. false: lossless (EXT_meshopt_compression alone), the collider default.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema80"
+                  "$ref": "#/definitions/__schema94"
                 }
               ]
             },
@@ -874,7 +1122,7 @@
               "description": "Target triangle ratio (null: off).",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema81"
+                  "$ref": "#/definitions/__schema95"
                 }
               ]
             }
@@ -883,7 +1131,7 @@
         }
       ]
     },
-    "__schema79": {
+    "__schema93": {
       "type": "string",
       "enum": [
         "meshopt",
@@ -891,10 +1139,10 @@
         "none"
       ]
     },
-    "__schema80": {
+    "__schema94": {
       "type": "boolean"
     },
-    "__schema81": {
+    "__schema95": {
       "anyOf": [
         {
           "type": "number",
@@ -906,16 +1154,16 @@
         }
       ]
     },
-    "__schema82": {
+    "__schema96": {
       "description": "Estimated GPU memory of the whole asset in MB: its textures (KTX2 at 1 B/px, the most it takes on any device) plus a GLB's geometry (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema83"
+          "$ref": "#/definitions/__schema97"
         }
       ],
-      "$ref": "#/definitions/__schema84"
+      "$ref": "#/definitions/__schema98"
     },
-    "__schema83": {
+    "__schema97": {
       "anyOf": [
         {
           "type": "number",
@@ -926,34 +1174,34 @@
         }
       ]
     },
-    "__schema84": {
+    "__schema98": {
       "allOf": [
         {
-          "$ref": "#/definitions/__schema83"
+          "$ref": "#/definitions/__schema97"
         }
       ]
     },
-    "__schema85": {
+    "__schema99": {
       "description": "The output file's size in MB (null: no limit).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema83"
+          "$ref": "#/definitions/__schema97"
         }
       ],
-      "$ref": "#/definitions/__schema84"
+      "$ref": "#/definitions/__schema98"
     },
-    "__schema86": {
+    "__schema100": {
       "type": "boolean",
       "const": true
     },
-    "__schema87": {
+    "__schema101": {
       "type": "object",
       "properties": {
         "mode": {
           "description": "BY_MATERIAL: one node per glTF material (__merged_<material>), the default. ALL: one node (__merged).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema88"
+              "$ref": "#/definitions/__schema102"
             }
           ]
         },
@@ -961,37 +1209,37 @@
           "description": "Node names (globs: *, ?, {a,b}) kept as they are, with their children.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema89"
+              "$ref": "#/definitions/__schema103"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema88": {
+    "__schema102": {
       "type": "string",
       "enum": [
         "BY_MATERIAL",
         "ALL"
       ]
     },
-    "__schema89": {
+    "__schema103": {
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
       }
     },
-    "__schema90": {
+    "__schema104": {
       "type": "number"
     },
-    "__schema91": {
+    "__schema105": {
       "type": "string"
     },
-    "__schema92": {
+    "__schema106": {
       "type": "string"
     },
-    "__schema93": {
+    "__schema107": {
       "type": "object",
       "properties": {
         "in": {
@@ -1009,7 +1257,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema94": {
+    "__schema108": {
       "type": "array",
       "items": {
         "type": "object",
@@ -1038,7 +1286,7 @@
           "levels": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/__schema95"
+              "$ref": "#/definitions/__schema109"
             },
             "description": "Each level's triangles and error, the base first."
           }
@@ -1053,7 +1301,7 @@
         "additionalProperties": false
       }
     },
-    "__schema95": {
+    "__schema109": {
       "type": "object",
       "properties": {
         "triangles": {
@@ -1071,7 +1319,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema96": {
+    "__schema110": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -1085,16 +1333,16 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "$ref": "#/definitions/__schema97"
+                  "$ref": "#/definitions/__schema111"
                 },
                 "engineVersion": {
-                  "$ref": "#/definitions/__schema99"
+                  "$ref": "#/definitions/__schema113"
                 },
                 "toolkitVersion": {
-                  "$ref": "#/definitions/__schema101"
+                  "$ref": "#/definitions/__schema115"
                 },
                 "appVersion": {
-                  "$ref": "#/definitions/__schema102"
+                  "$ref": "#/definitions/__schema116"
                 }
               },
               "additionalProperties": false,
@@ -1114,61 +1362,61 @@
               "$ref": "#/definitions/__schema3"
             },
             "meshIndex": {
-              "$ref": "#/definitions/__schema24"
+              "$ref": "#/definitions/__schema38"
             },
             "isPersistent": {
-              "$ref": "#/definitions/__schema26"
+              "$ref": "#/definitions/__schema40"
             },
             "lodChain": {
-              "$ref": "#/definitions/__schema28"
+              "$ref": "#/definitions/__schema42"
             },
             "throwOnError": {
-              "$ref": "#/definitions/__schema45"
+              "$ref": "#/definitions/__schema59"
             },
             "debugData": {
-              "$ref": "#/definitions/__schema47"
+              "$ref": "#/definitions/__schema61"
             }
           },
           "additionalProperties": false
         }
       }
     },
-    "__schema97": {
+    "__schema111": {
       "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema98"
+          "$ref": "#/definitions/__schema112"
         }
       ]
     },
-    "__schema98": {
+    "__schema112": {
       "type": "number"
     },
-    "__schema99": {
+    "__schema113": {
       "description": "The engine's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema100"
+          "$ref": "#/definitions/__schema114"
         }
       ]
     },
-    "__schema100": {
+    "__schema114": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "__schema101": {
+    "__schema115": {
       "description": "The toolkit's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema100"
+          "$ref": "#/definitions/__schema114"
         }
       ]
     },
-    "__schema102": {
+    "__schema116": {
       "description": "The app's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema100"
+          "$ref": "#/definitions/__schema114"
         }
       ]
     }

@@ -38,7 +38,7 @@ const resolve = (
   return resolveMergeMaterial(PALETTE_JSON, 'ruins', palette, findMaterial, findTexture);
 };
 
-const REPEAT = { wrapS: 1000, wrapT: 1000 };
+const REPEAT = { wrapS: 1000, wrapT: 1000 } as const;
 
 describe('resolveMergeMaterial', () => {
   it('makes a slot an array of the members’ maps, a neutral layer for a member without one', () => {
