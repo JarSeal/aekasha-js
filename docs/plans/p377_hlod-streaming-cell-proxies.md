@@ -1,4 +1,4 @@
-Status: draft — not-implemented (Phase 0 written 2026-11-12; the rest is written from its results)
+Status: in progress | Phase 0 implemented (2026-11-12; the rest is written from its Results once reviewed)
 Category: Merging, LOD, Streaming
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
 Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph)
@@ -44,7 +44,7 @@ far layer showing a cell's content as one mesh per material (or per palette, p37
 cell's groups one draw each. A simplified copy is secondary: it pays only where the frame is bound
 by its triangles, which p376 didn't find.
 
-## Phase 0 — Which way to fewer draws
+## Phase 0 — Which way to fewer draws — done
 
 No engine change: spike code (debug modules and the bench) on p376's tools, measured before
 anything is built. On p376's far field at 400 sites (150 for the trend), Apple M2, Chrome, both
@@ -142,6 +142,139 @@ for the rest): the plan takes each that pays, the cheapest first. The figures go
 subsection here, and the rest of the plan (grounding of the chosen way, decisions, phases) is
 written from them.
 
+**As built** (where the spike differs from the above):
+
+- `proxy` merges a cell's pieces of one material directly (`mergeGeometryParts`, the same parts,
+  matrices and material a group build takes, centred as a group's mesh), registered as
+  `hlodField:proxy:<cell size>:<material>:<cx>,<cz>`: no members are made, rather than built,
+  copied and deleted. Checked: at 32 and 256 m it draws exactly the groups' draws and triangles.
+  So its load time is the merge on the main thread with no members, which a build-time proxy's
+  load isn't either. `largeWorldRuins.ts`' `layoutRuins` places the pieces for all three ways.
+- `setCull` acts on the field's objects (its groups, proxies or instanced meshes), not on every
+  `BAKED` group, so largeWorld's own 28 groups are never culled; it sets `hysteresis: 0`, so the
+  share culled is the share below the size. `screenSizes` measures an `InstancedMesh` by three's
+  sphere over its instances (the LOD's `LodBounds.ts` fits its own: 109 of 208 culled at the
+  median, not 104).
+- `cpuSplitAsync` times the root scene's `updateMatrixWorld` (wrapped, summed per frame: two
+  walks a frame, the scene pass and the AO pre-pass). `fieldDraws` counts what three draws
+  (visible, then the bounding sphere). Both are in `src/app/shared/_dbg__hlodSpikeDraws.ts`.
+- The bench holds the sky's clouds still (`setupSkyAsync`'s `holdClouds`: drift speed 0 through
+  `updateSkyBox`): they drift per frame, and every page ran other frame counts, so the shots
+  differed in the clouds alone (2.65 % of the pixels at `ground`; 0.01 % held). The image noise is
+  floored at the scene runner's tolerance (0.2 % changed, a mean delta of 0.5): the bridge's
+  snapshots are byte exact, and a proxy's float rounding (another pivot) is no change.
+- One unrecorded warm-up load a backend (the dev server's first is cold). The output is per field
+  size, `.cache/bench/hlodSpike/draws/<sites>-sites/`.
+- **WebGPU's GPU figure doesn't decide** (decided 2026-11-12, from the results below): the
+  `floor` case, no field at all, "lost" 1.6-6.4 ms of WebGPU scene pass time against the
+  reference. A pass's time grows when the CPU frame shrinks (the passes overlap on the M2's
+  tile-based GPU, `docs/issues/gpu-timer-webgpu-frame-sum.md`), so every way that saves CPU read
+  as a GPU loss. The GPU condition is WebGL2's alone; WebGPU's scene passes stay in the tables.
+
+### Results
+
+Measured 2026-11-12, Apple M2, Chrome, debug env (`hlodSpike.ts --step draws`,
+`devTools/bench/hlodSpikeDraws.ts`): 3 runs a backend, 120 + 300 frames a case, the views `start`,
+`far` and `ground`, the sky at 10:00. The figures: `.cache/bench/hlodSpike-p377-draws-400.json`
+and `-150.json`, the tables and snapshots in `.cache/bench/hlodSpike/draws/<sites>-sites/`.
+
+**Step 1: the split** (400 sites; the CPU frame's medians, the range over the three views, ms):
+
+| | WebGPU | WebGL2 |
+| --- | --- | --- |
+| The reference (`members@32`): the CPU frame | 10.6-11.5 | 11.7-13.7 |
+| its render submit | 8.0-9.6 | 9.2-10.9 |
+| in it, the scene graph walk (two a frame, 22,741 objects, 20,808 hidden) | 3.6-4.5 | 4.1-4.9 |
+| its systems | 1.9-2.0 | 2.4-2.6 |
+| `proxy@32` (the reference's draws, no members) | 5.4-5.9 | 5.3-6.0 |
+| The floor (no field) | 2.4-2.8 | 2.3-2.4 |
+
+- **The draws** (`proxy@32` against the floor): 1,119-1,477 draws for 2.9-3.6 ms, 2.1-2.8 µs a
+  draw on both backends.
+- **The members** (the reference against `proxy@32`, the same draws): 5.0-5.5 ms on WebGPU,
+  6.3-7.7 ms on WebGL2. The walk is 80-107 ns an object a walk; the systems 0.9-1.7 ms more; the
+  rest of the submit (0.5-2 ms) isn't split.
+- So of the field's 8-11 ms, about 40 % is its draws and 60 % its hidden members: p376's "the
+  draws are the cost" was half of it.
+
+**Steps 2-4** (400 sites; the CPU frame saved against the reference, start / far / ground, the
+medians of each run against the reference's run of the same index, ms):
+
+| Case | WebGPU | WebGL2 | Image changed | Pays |
+| --- | --- | --- | --- | --- |
+| cull 25 % | -0.7 / 0.7 / 0.2 | -0.5 / 1.0 / 0.4 | ≤ 0.03 % | no |
+| cull 50 % | 0.5 / 2.1 / 1.3 | 0.5 / 2.7 / 1.5 | ≤ 0.15 % | yes (two views) |
+| cull 75 % | 1.5 / 2.9 / 1.8 | 1.9 / 4.2 / 2.8 | 0.10-0.33 % | no (the image) |
+| `members@64` | 1.6 / 1.9 / 1.6 | 2.5 / 2.3 / 2.8 | ≤ 0.08 % | yes |
+| `members@128` | 2.8 / 3.4 / 2.9 | 4.2 / 5.1 / 4.2 | ≤ 0.08 % | yes |
+| `members@256` | 3.5 / 3.9 / 3.6 | 4.9 / 6.2 / 4.7 | ≤ 0.08 % | yes |
+| `proxy@32` | 5.0 / 5.4 / 5.5 | 6.5 / 7.7 / 7.3 | ≤ 0.08 % | yes |
+| `proxy@128` | 7.2 / 7.9 / 7.4 | 8.5 / 10.2 / 9.3 | ≤ 0.08 % | yes |
+| `proxy@256` | 7.8 / 8.6 / 8.0 | 9.1 / 10.9 / 9.8 | ≤ 0.08 % | yes |
+| `instanced@128` | 7.0 / 7.7 / 7.3 | 8.4 / 10.2 / 9.1 | ≤ 0.08 % | yes |
+| `instanced@256` | 7.8 / 8.4 / 7.9 | 9.0 / 10.7 / 9.7 | ≤ 0.08 % | yes |
+
+(WebGL2's GPU: no case lost time beyond the reference's spread, 0.56-0.85 ms; the floor saved
+0.7-3.3 ms. The reference's own image noise: 0.00 %.)
+
+- **A cull** takes the draws, not the members: their walk stays (4.4-4.6 ms), so half the field
+  culled (986 draws fewer at `far`) saves 0.5-2.7 ms. Its sizes at `far`: 0.0090 / 0.0141 /
+  0.0220 for a quarter, a half and three quarters. At 75 % the image goes past the noise (the
+  culled sites are seen missing, 0.33 % at `far`).
+- **Larger cells**: every rebuild took one frame on the main thread (none of 24 a size reached
+  the worker: a 256 m group here is under 65,536 vertices), 0.4-1.2 ms over the median frame;
+  single rebuilds of 3-14 ms came at every size, 32 m included, so not from the size. The load
+  is the same (2.2-2.5 s).
+- **A cell as one mesh**: `proxy` over `members` at 256 m saves 4.3-4.7 ms on both backends (the
+  members' walk and systems). `instanced` is within 0.2 ms of `proxy` at 128 and 256 m on both
+  (it draws 46-65 objects more at 256 m, 116-157 at 128 m: 0.1-0.2 ms). The load: `proxy`
+  1.9-2.2 s, `instanced` 1.8-1.9 s, `members` 2.2-2.5 s, the floor 1.8-1.9 s (the field's creation
+  63-80, 14-16 and about 100 ms).
+- **Step 5** wasn't run: `proxy` doesn't pay over `instanced`.
+
+**150 sites** (the trend: the reference and each way's best): the field costs 2.4-3.1 ms over the
+floor. Saved: the 50 % cull 0.0-0.7 ms, `members@256` 0.6-1.0 ms, `proxy@256` 2.2-2.7 ms,
+`instanced@256` 2.1-2.4 ms on both backends. Only `proxy` and `instanced` pay: the cull and
+larger cells pay only with the larger field.
+
+**A second machine**: not run (open question 4 stays open).
+
+**What the table says** (cheapest first; the plan's phases are written from it once reviewed):
+
+1. **`instanced` within 1 ms of `proxy`** (within 0.2 ms at both cell sizes and both field
+   sizes): far entries for kit meshes, a gather change, not a build-time proxy. A cell drawn as
+   one `InstancedMesh` per geometry and material is as cheap as its merged proxy, and the far
+   layer draws that today.
+2. **Larger cells pay** at 400 sites (1.6-6.2 ms) and not at 150 (under 1 ms), the rebuilds' medians
+   under 4 ms on the main thread: a recommendation for a large field that doesn't stream (the
+   Hub's Mesh merging page).
+3. **A 50 % cull pays** at 400 sites in two views of three (1.3-2.7 ms), not at 150: the smallest
+   of the ways, as it doesn't reach the members.
+4. **Open question 5 answered**: the hidden members are 60 % of the far field's CPU cost, and
+   every merged scene pays their walk (80-107 ns an object, twice a frame). Taking a baked
+   member's mesh out of the scene graph (as p375 does for a batched one) is the largest single
+   saving measured here, for any merged scene, streamed or not.
+
+### Decided after Phase 0 (2026-11-12)
+
+- **p377 takes the far entries for kit meshes** (the table's row 4): a streamed cell's JSON mesh
+  without explicit `lod` levels gets itself as its far entry, grouped per cell, geometry and
+  material into one `InstancedMesh` as today's far groups are (p353 D7). A gather change, not a
+  build-time proxy: the cell proxy (way 3) and its open questions 1-3 aren't built. Its grounding,
+  decisions and phases are written from these Results.
+- **And the larger-cells recommendation** (row 2): far content that doesn't stream merges in
+  larger `AUTO` cells (128-256 m at this density), documented on the Hub's Mesh merging page with
+  these figures; nothing to build. It pays only with a large field (at 150 sites under 1 ms).
+- **No cull.** The 50 % cull pays in two views of three at 400 sites only (1.3-2.7 ms) and not at
+  150; it reaches the draws, not the members. p376 D6's setting isn't revived.
+- **Open question 5 is a plan of its own** in the p370 epic (proposed `p378`, Tier 3.3): a baked
+  member's mesh out of the scene graph, as p375 Phase 2 S1 does for a batched one. Its own branch
+  and PR (a merging change for every merged scene, not far content); this field (`?hlodField`) is
+  its measurement.
+- **The second machine doesn't block** (open question 4): the far entries pay by a wide margin on
+  the M2 (7-11 ms at 400 sites). The reference and `instanced@256` on the WSL2 machine's Windows
+  Chrome go with the far entries' verification phase.
+
 ## What's known (for way 3 and the far entries)
 
 - **Today's far layer** (p353 D7): a `FAR` cell draws only its far entries, and a JSON mesh gets
@@ -169,18 +302,20 @@ written from them.
 ## Open questions
 
 1. One proxy per cell, or per cell and material (palettes, p374, would make it one)? Phase 0 step
-   5 measures it, when way 3 pays.
+   5 measures it, when way 3 pays. (Phase 0: way 3 didn't pay over the far entries; not run.)
 2. The output format, if way 3 pays: a GLB per cell from the asset pipeline, or geometry data in
    the manifest?
 3. Code content's far proxies: a runtime path that merges a cell's code content once while it's
    near and keeps the proxy for `FAR` (memory held past the near layer's unload)?
 4. Does the draws' cost hold on other hardware (a discrete GPU, a phone)? p376 measured one
    machine, where the frame was bound by its draws and fill, not its triangles. Phase 0 runs the
-   reference and each way's best on a second machine when one is at hand.
+   reference and each way's best on a second machine when one is at hand. (Phase 0: not run;
+   still open.)
 5. The hidden members' scene graph walk: should Phase 0 step 1 find it a real share of the frame,
    taking a baked member's mesh out of the scene graph (as p375 does for a batched member) helps
    every merged scene, not only far content. A merging change of its own: here, or a follow-up in
-   `p990_follow-ups-from-done-plans.md`?
+   `p990_follow-ups-from-done-plans.md`? (Phase 0: a real share, 60 % of the far field's CPU
+   cost at 400 sites, the walk alone 3.6-4.9 ms of it; where it goes is still to decide.)
 
 ## Branches and PRs
 

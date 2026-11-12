@@ -31,7 +31,7 @@
  * (`+cull25|50|75`), larger cells (`members@<m>`), a cell as one mesh (`proxy@<m>`) and today's far
  * layer (`instanced@<m>`); `--cases` names any of them (default steps 1-4's). Each case's CPU
  * split, draws, GPU and a snapshot against the reference's, each page's load and (members) its
- * rebuilds. The results also go to `.cache/bench/hlodSpike/draws/results.json`.
+ * rebuilds. The results also go to `.cache/bench/hlodSpike/draws/<sites>-sites/results.json`.
  * Output: `.cache/bench/progress.log` too.
  */
 import fs from 'node:fs';
@@ -44,8 +44,8 @@ import { launchVerifyChromiumAsync, withTimeout } from '../verify/browser';
 import { startVerifyServerAsync } from '../verify/devServer';
 import {
   DEFAULT_DRAW_CASES,
-  DRAWS_DIR,
   formatDraws,
+  getDrawsDir,
   parseDrawCase,
   runDrawsStepAsync,
   type DrawsArgs,
@@ -390,7 +390,7 @@ const main = async () => {
       results = draws;
       lines = formatDraws(draws, drawsArgs);
       fs.writeFileSync(
-        path.join(DRAWS_DIR, 'results.json'),
+        path.join(getDrawsDir(args.field), 'results.json'),
         `${JSON.stringify({ args, results }, null, 2)}\n`
       );
     } else {

@@ -18,8 +18,9 @@
  * scene graph walk in it, the systems, the scene's objects), the renderer's draws and triangles,
  * the field's objects drawn per pass (`fieldDraws`), the GPU (WebGL2: the stats panel's figure;
  * WebGPU: the scene passes, docs/issues/gpu-timer-webgpu-frame-sum.md) and a snapshot (the test
- * bridge's, the canvas without debug helpers) in `.cache/bench/hlodSpike/draws/<backend>/`,
- * compared with the reference's of the same run (`snapshotDiff.ts`: the changed share and the mean
+ * bridge's, the canvas without debug helpers) in
+ * `.cache/bench/hlodSpike/draws/<sites>-sites/<backend>/`, compared with the reference's of the
+ * same run (`snapshotDiff.ts`: the changed share and the mean
  * delta); the reference's runs compared with its first give the noise. Per page: the load (the
  * navigation to the scene ready), the field's creation and, for `members`, `--rebuilds` groups
  * rebuilt one at a time (`rebuildAsync`, after the last view). The case order is reversed on every
@@ -48,7 +49,10 @@ import {
 } from './hlodSpikePage';
 
 const SCENE_ID = 'largeWorld';
-export const DRAWS_DIR = path.join(ROOT, '.cache/bench/hlodSpike/draws');
+/** A field size's output: its snapshots by backend and `results.json` (each size its own, so a
+ * run at one size keeps another's) */
+export const getDrawsDir = (sites: number) =>
+  path.join(ROOT, '.cache/bench/hlodSpike/draws', `${sites}-sites`);
 const REFERENCE = 'members@32';
 const CULLS = { cull25: 'quarter', cull50: 'half', cull75: 'threeQuarters' } as const;
 type CullName = keyof typeof CULLS;
@@ -213,8 +217,8 @@ const cpuSplitAsync = (page: Page, frames: number) =>
     `cpuSplitAsync(${frames})`
   );
 
-const snapshotFile = (backend: Backend, name: string, view: string, run: number) =>
-  path.join(DRAWS_DIR, backend, `${name.replace(/[@+]/g, '-')}-${view}-${run + 1}.png`);
+const snapshotFile = (sites: number, backend: Backend, name: string, view: string, run: number) =>
+  path.join(getDrawsDir(sites), backend, `${name.replace(/[@+]/g, '-')}-${view}-${run + 1}.png`);
 
 /** One page: its load, then every view's cases, then (members) the rebuilds */
 const runPageAsync = async (
@@ -267,7 +271,7 @@ const runPageAsync = async (
         EVALUATE_MARGIN_MS,
         'snapshot'
       );
-      const file = snapshotFile(backend, name, viewName, run);
+      const file = snapshotFile(args.field, backend, name, viewName, run);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, Buffer.from(shot.pngBase64, 'base64'));
       const byView = (results.cases[name] ??= {});
@@ -336,7 +340,7 @@ const compareImagesAsync = async (results: DrawsResults) => {
 /** Runs the cases on every backend, `args.runs` pages each, the case order reversed every second run */
 export const runDrawsStepAsync = async (browser: Browser, baseUrl: string, args: DrawsArgs) => {
   const pages = toPages(args.cases, args.field);
-  fs.rmSync(DRAWS_DIR, { recursive: true, force: true });
+  fs.rmSync(getDrawsDir(args.field), { recursive: true, force: true });
   const results: DrawsResults = {};
   for (const backend of args.backends) {
     const byBackend: DrawsResults[string] = { cases: {}, pages: {} };
@@ -482,15 +486,21 @@ export const formatDraws = (results: DrawsResults, args: DrawsArgs) => {
       }
       if (name !== 'floor') {
         const views = Object.keys(byView).length;
-        const pays = cpuViews >= Math.min(2, views) && gpuLost === false && !imageOut;
-        (paysByCase[name] ??= {})[backend] = gpuLost === null && !pays ? null : pays;
+        // WebGPU's scene passes don't decide (p377 Phase 0's results): they rise when the CPU
+        // frame drops (the floor, without the field, "lost" 1.6-6.4 ms), passes overlapping on a
+        // tile-based GPU (docs/issues/gpu-timer-webgpu-frame-sum.md); shown, not counted
+        const gpuDecides = backend !== 'webgpu';
+        const gpuOk = gpuDecides ? gpuLost === false : true;
+        const pays = cpuViews >= Math.min(2, views) && gpuOk && !imageOut;
+        (paysByCase[name] ??= {})[backend] = gpuDecides && gpuLost === null && !pays ? null : pays;
+        const lostText = gpuLost === null ? 'n/a' : gpuLost ? 'yes' : 'no';
         verdicts.push(
-          `| ${name} | ${cpuViews} of ${views} | ${gpuLost === null ? 'n/a' : gpuLost ? 'yes' : 'no'} | ${imageOut ? 'no' : 'yes'} | ${pays ? 'yes' : gpuLost === null ? 'n/a (no GPU figure)' : 'no'} |`
+          `| ${name} | ${cpuViews} of ${views} | ${gpuDecides ? lostText : `${lostText} (not deciding)`} | ${imageOut ? 'no' : 'yes'} | ${pays ? 'yes' : gpuDecides && gpuLost === null ? 'n/a (no GPU figure)' : 'no'} |`
         );
       }
     }
     lines.push(
-      `\n${backend}: what decides (p377 Phase 0: ≥ 1 ms of CPU frame saved in two of the three views on both backends, no GPU lost beyond the reference's spread, the image inside the reference's noise: the culls and ways 2-4)`,
+      `\n${backend}: what decides (p377 Phase 0: ≥ 1 ms of CPU frame saved in two of the three views on both backends, no GPU lost beyond the reference's spread on WebGL2 (WebGPU's scene passes shown, not deciding), the image inside the reference's noise: the culls and ways 2-4)`,
       `| Case | Views saving ≥ 1 ms CPU | GPU lost beyond the spread | Image inside the noise | Pays here |`,
       '| --- | ---: | --- | --- | --- |',
       ...verdicts
