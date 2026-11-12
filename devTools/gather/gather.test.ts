@@ -178,6 +178,22 @@ describe('G5: save entries', () => {
     expect(get('saved')).not.toHaveProperty('__saveData');
   });
 
+  it('a TSL material’s inputs merge key by key (p302 D2)', () => {
+    const tslFiles = {
+      'app/materials/inputsMat.material.json': {
+        id: 'inputsMat',
+        type: 'STANDARDNODEMATERIAL',
+        tslFile: 'materials/inputsMat.tsl.ts',
+        inputs: { tint: '#ff8000', scale: 2 },
+        __saveData: { saved: [{ inputs: { scale: 4 } }] },
+      },
+      'app/materials/inputsMat.tsl.ts': 'export const setup = () => {};\n',
+      ...scene('saved', { materials: ['inputsMat'] }),
+    };
+    const material = gather(tslFiles).scene('saved')?.materials?.[0];
+    expect(material).toHaveProperty('inputs', { tint: '#ff8000', scale: 4 });
+  });
+
   it('production strips debugData after the entry is merged (an entry can hold one)', () => {
     const { isGathered, scene: get } = gather(files, { isProduction: true });
     expect(isGathered).toBe(true);

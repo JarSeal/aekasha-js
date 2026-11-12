@@ -195,10 +195,10 @@ const resolveTextures = (run: SceneRun) => {
   });
 };
 
-type MaterialFields = { params?: object; nodes?: Record<string, object> };
+type MaterialFields = { params?: object; nodes?: Record<string, object>; inputs?: object };
 
-/** A material's props with save entry props over them: `params` merged key by key, and each of
- * the material's own `nodes` (a TSL material's) too */
+/** A material's props with save entry props over them: `params` merged key by key, and a TSL
+ * material's own `inputs` and each of its own `nodes` too */
 const mergeMaterialProps = <M extends MaterialFields>(base: M, entry: MaterialFields = {}): M => {
   const nodeKeys = base.nodes ? Object.keys(base.nodes) : [];
   const nodes = Object.fromEntries(
@@ -210,6 +210,7 @@ const mergeMaterialProps = <M extends MaterialFields>(base: M, entry: MaterialFi
     // Only a material with nodes (a TSL one) gets them, not an empty object (G6)
     ...(nodeKeys.length ? { nodes } : {}),
     ...('params' in base ? { params: { ...base.params, ...entry.params } } : {}),
+    ...('inputs' in base ? { inputs: { ...base.inputs, ...entry.inputs } } : {}),
   };
 };
 

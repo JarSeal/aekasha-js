@@ -202,6 +202,27 @@ describe('the TSL setup entry and registerTslMaterial (p302 D2, D3)', () => {
     ).toThrow('no TSL file');
   });
 
+  test('makes a variant overriding an input: the base keeps its own', () => {
+    registerTslMaterial('materialTest.setup', setupFns);
+    const base = createMaterial({
+      id: 'materialTestInputsBase',
+      type: 'STANDARDNODEMATERIAL',
+      tslMaterialId: 'materialTest.setup',
+      inputs: { tint: '#ff8000', roughness: 0.25 },
+    });
+    const variant = getMaterialVariant('materialTestInputsBase', { inputs: { roughness: 0.75 } });
+
+    const value = (mat: THREE.Material, key: string) =>
+      (mat.userData.uniforms as Record<string, { value: unknown }>)[key].value;
+    expect(value(variant, 'setup_roughness')).toBe(0.75);
+    expect(value(base, 'setup_roughness')).toBe(0.25);
+    // The other inputs are the base's
+    expect((value(variant, 'setup_tint') as THREE.Color).getHexString()).toBe('ff8000');
+    expect(getMaterialVariant('materialTestInputsBase', { inputs: { roughness: 0.75 } })).toBe(
+      variant
+    );
+  });
+
   test("gives a registered material's variant the base's functions", () => {
     registerTslMaterial('materialTest.setup', setupFns);
     createMaterial({

@@ -5,7 +5,7 @@
       "$ref": "#/definitions/__schema0"
     },
     {
-      "$ref": "#/definitions/__schema40"
+      "$ref": "#/definitions/__schema43"
     }
   ],
   "description": "A material: its type and three parameters, and a node material's TSL file and inputs.",
@@ -52,6 +52,13 @@
           "allOf": [
             {
               "$ref": "#/definitions/__schema37"
+            }
+          ]
+        },
+        "inputs": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema40"
             }
           ]
         },
@@ -310,6 +317,13 @@
                 }
               ]
             },
+            "inputs": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema40"
+                }
+              ]
+            },
             "debugData": {
               "allOf": [
                 {
@@ -406,6 +420,20 @@
       "additionalProperties": {}
     },
     "__schema40": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema41"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema42"
+      },
+      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id (a texture node), or a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }."
+    },
+    "__schema41": {
+      "type": "string"
+    },
+    "__schema42": {},
+    "__schema43": {
       "type": "object",
       "properties": {
         "id": {

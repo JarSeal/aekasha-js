@@ -321,10 +321,13 @@ export const createMaterial = (props: MatProps) => {
 export type MaterialVariantOverrides = {
   /** Merged over the base's `params` (shallowly). */
   params?: Record<string, unknown>;
-  /** Merged over the base's `staticDefines` (shallowly): another set is another shader. */
+  /** Merged over the base's `staticDefines` (shallowly: a nested define object replaces the
+   * base's whole): another set is another shader. */
   staticDefines?: Record<string, unknown>;
   /** Merged over the base's `nodes`, per socket. */
   nodes?: Record<string, Record<string, unknown>>;
+  /** Merged over the base's `inputs` (its TSL `setup`'s, shallowly). */
+  inputs?: Record<string, unknown>;
 };
 
 // Only to keep variant ids short (collisions are resolved in getMaterialVariant)
@@ -332,15 +335,15 @@ const hashString = (str: string) => hashStringFNV1a(str).toString(36);
 
 /**
  * Returns a variant of a registered material: a separate material created from the base
- * material's creation props with `overrides` merged over them (`params` and `staticDefines`
- * shallowly, `nodes` per socket), cached and shared by all callers with equal overrides.
+ * material's creation props with `overrides` merged over them (`params`, `staticDefines` and
+ * `inputs` shallowly, `nodes` per socket), cached and shared by all callers with equal overrides.
  * Variants have no per-frame cost (unlike per-object uniforms) and TSL functions can branch on
  * their `staticDefines` at build time, at the price of one material (and, for differing
  * `staticDefines`, one shader) per unique override set. Variants are ref counted and disposed like
  * any other non-persistent material. Override values should be plain data (eg. texture ids, not
  * texture objects), since they form the variant's cache key.
  * @param baseId registered material id (created with createMaterial)
- * @param overrides params, staticDefines and TSL node inputs to override
+ * @param overrides params, staticDefines and TSL inputs (`inputs`, `nodes`) to override
  * @throws when `baseId` isn't registered, or wasn't created by createMaterial
  * @example
  * ```ts
@@ -375,6 +378,7 @@ export const getMaterialVariant = (baseId: string, overrides: MaterialVariantOve
   if (overrides.staticDefines) {
     props.staticDefines = { ...props.staticDefines, ...overrides.staticDefines };
   }
+  if (overrides.inputs) props.inputs = { ...props.inputs, ...overrides.inputs };
   if (overrides.nodes) {
     const nodes = { ...props.nodes };
     for (const socket in overrides.nodes) {
