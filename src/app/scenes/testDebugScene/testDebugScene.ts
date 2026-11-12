@@ -4,6 +4,7 @@ import {
   createMaterial,
   createMeshEntity,
   existsOrThrow,
+  getECSWorld,
   getTexture,
   loadTextureAsync,
   importAssetAsync,
@@ -11,6 +12,7 @@ import {
   spawnImportedAsset,
 } from 'aekasha';
 import type { ImportedAssetManifest, TexOpts } from 'aekasha';
+import { loadDebugModuleAsync } from 'aekasha/debug';
 import { addToMergeGroup, createMergeGroup } from 'aekasha/merging';
 
 const TEX = '/debugger/assets/testTextures';
@@ -267,6 +269,13 @@ export const scene = async () => {
   createMergeCheck(textures[0]);
   createMergeGroupCheck(textures[0]);
   createAutoMergeCheck();
+  // p376 Phase 0's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`)
+  const hlodProbe = await loadDebugModuleAsync(
+    () => import('../../shared/_dbg__hlodSpike'),
+    true,
+    'HLOD spike probe'
+  );
+  hlodProbe?.current?.installHlodSpike(getECSWorld());
 
   for (let i = 0; i < MODELS_TO_IMPORT.length; i++) {
     const { id, fileName, noTextures } = MODELS_TO_IMPORT[i];

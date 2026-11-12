@@ -143,7 +143,62 @@ reconsidered. Phase 0 also sets the group defaults (D4: `ratios`, `maxError`, `p
 
 ### Results
 
-(Phase 0 writes them here.)
+Measured 2026-11-12, Apple M2, Chrome (WebGPU), debug env. The probe is
+`src/app/shared/_dbg__hlodSpike.ts` (`window.__aekHlod`, loaded by largeWorld and testDebugScene:
+shared, as two scenes use it, rather than `_dbg__largeWorld.ts`), the bench
+`devTools/bench/hlodSpike.ts`. `prune` goes through the engine's own `simplifyLodChain` with
+meshoptimizer's `Prune` flag added by a wrapper on the page's `MeshoptSimplifier` (which fails
+when the engine's calls don't go through it). The worker path's levels (`generateLodChain` on a
+registered copy) matched the main thread's in every group.
+
+**Step 1: how far merged content simplifies.** Ratios `[0.5, 0.25, 0.1]`. A level's error is
+`error × extent` in metres (normal deviation included, so an overestimate). Totals over the
+groups: the triangles at each level, where a group whose chain stopped counts its last level.
+
+largeWorld: 28 groups, 409 members, **8,336 triangles in all** (11 rock groups of 360-408, 9
+platform groups of 12-300, 8 wall groups of 272-436). Per group: 0.2-0.6 ms on the main thread,
+about 1.2 ms on the worker (the round trip).
+
+| Variant | maxError | Groups with levels | Level 1 | Level 2 | Level 3 | Main thread, all groups |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| default | 0.05 | 11 of 28 | 22.5 % | 33.2 % | 37.8 % | 5.4 ms (worker 35 ms) |
+| permissive | 0.05 | 20 of 28 | 38.9 % | 51.9 % | 57.7 % | 10.8 ms (worker 36 ms) |
+| prune | 0.05 | 13 of 28 | 26.6 % | 37.5 % | 42.5 % | 5.6 ms |
+| prune + permissive | 0.05 | 20 of 28 | 38.9 % | 52.8 % | 58.9 % | 14.2 ms |
+| permissive | 0.1 | 26 of 28 | 47.5 % | 68.9 % | 78.1 % | 18.1 ms |
+| prune + permissive | 0.1 | 26 of 28 | 47.5 % | 68.3 % | 80.1 % | 19.1 ms |
+| permissive | 0.2 | 27 of 28 | 49.9 % | 74.9 % | 89.6 % | 19.3 ms |
+| prune + permissive | 0.2 | 27 of 28 | 49.9 % | 74.5 % | 89.3 % | 19.3 ms |
+
+(Saved share of the 8,336; worker times are the sum of the groups' chains made one at a time.)
+
+testDebugScene: 13 groups (the `AUTO` lattice's 12 of 0.12 m boxes, 2.7 m extent; `p372_grid`'s
+200 boxes), 8,400 triangles. Nothing without `permissive` (0 of 13 groups); with it, 50.0 / 69.0 /
+73.3 % at 0.05 and 50.0 / 75.1 / 90.1 % at 0.1 and 0.2. `prune` alone: nothing, and with
+`permissive` at 0.05 it did worse (61.4 % at level 3).
+
+What it says:
+
+- **Kit pieces need `permissive`.** A box's faces share no vertices (a normal per face), so the
+  floor tiles and walls don't simplify without it, whatever the error; the platform groups need
+  maxError 0.2 for all three levels (0.05: 1 of 9 groups, 0.1: 7 of 9).
+- **`prune` adds nothing measurable** on top of `permissive` here (±2 % either way). A piece is
+  pruned only when it's smaller than the error, and the target ratio is reached by collapses
+  first. When everything is below the error (the lattice's 0.12 m boxes), the result falls under
+  `LodSimplify.ts`' `MIN_GROUP_TRIANGLES` and the chain keeps the base (`prune`: "none"): for
+  HLOD that's the cull's job, not a level's.
+- **The errors are large for `AUTO`'s pixel test.** At `maxPixelError` 1 (1080 px, 60° FOV,
+  k ≈ 935), a level is picked from `935 × errorM` metres: the rock groups' level 1 (0.2-0.3 m) from
+  about 190-270 m, the walls' level 1 (0.6-0.9 m) from 560-880 m, the platforms' (1.24 m) from
+  1.2 km, every level 3 (0.5-2.2 m) from 0.5-2 km. largeWorld's farthest group is about 200 m from
+  the overview camera, so step 2's `AUTO` view will draw nearly every group at level 0; step 3's
+  ring (200 m-1 km) is where the levels get picked. The normal term inflates the boxes' error
+  (every platform level 1 is 1.24 m): lower `attributeWeights.normal` for a group chain is worth a
+  look in step 3.
+- **Load cost** (step 4, first figure): largeWorld's 28 chains take 35 ms on the worker one at a
+  time and 19 ms of simplifier work at maxError 0.2: under the gate's 100 ms. The triangle saving
+  the gate asks for (a quarter) is there from level 1 with `permissive`; whether 8,336 triangles
+  are worth a GPU figure is step 2's question.
 
 ## 4. Phases (after the gate)
 

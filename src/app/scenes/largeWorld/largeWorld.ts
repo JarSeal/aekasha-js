@@ -22,6 +22,7 @@ import {
   mergeGeometryParts,
 } from 'aekasha';
 import type { ECSWorld, MergePart, MeshProps } from 'aekasha';
+import { loadDebugModuleAsync } from 'aekasha/debug';
 import { FollowToolComponentType, HoverToolComponentType } from 'aekasha/toolkit/ecs';
 import { onSkyBoxChange, getSkyLightIds } from 'aekasha/skybox';
 import { generateCrossQuads } from 'aekasha/lod';
@@ -200,8 +201,20 @@ export const scene = async () => {
   createFollowCamera(ctx, crateStackId);
   createCameraToggle(ctx.world);
   syncSceneLightsWithSky(ctx.world);
+  await installHlodSpikeAsync(ctx.world);
 
   updateLoaderFn({ loadedCount: 1, totalCount: 1 });
+};
+
+/** p376 Phase 0's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`), in the debug
+ * env and prod test mode. */
+const installHlodSpikeAsync = async (world: ECSWorld) => {
+  const probe = await loadDebugModuleAsync(
+    () => import('../../shared/_dbg__hlodSpike'),
+    true,
+    'HLOD spike probe'
+  );
+  probe?.current?.installHlodSpike(world);
 };
 
 /** A geometry registered under `id`, built only when the id isn't registered already. */
