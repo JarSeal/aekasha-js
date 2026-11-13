@@ -238,6 +238,7 @@ export type {
 } from './kernel/assets/Material';
 export { loadTslMaterialFileAsync, registerTslMaterial } from './kernel/assets/MaterialTsl';
 export { registerMaterialInputResolver } from './kernel/assets/MaterialInputResolvers';
+export { ensureMaterialDependencies } from './kernel/assets/MaterialDependencies';
 export type {
   MaterialInputContext,
   MaterialInputResolver,

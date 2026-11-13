@@ -3,14 +3,15 @@
 // textures a material needs and their load, and the selector's entries.
 import * as THREE from 'three/webgpu';
 import { getGeneratedAppData } from '../../../kernel/scene/Scene';
-import type { MatProps } from '../../../kernel/assets/Material';
-import { getTexture, loadTextureAsync, type TextureProps } from '../../../kernel/assets/Texture';
+import type { MaterialVariantOverrides, MatProps } from '../../../kernel/assets/Material';
+import { getTexture } from '../../../kernel/assets/Texture';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
-import { getMaterialInputDependencies } from '../../../kernel/assets/MaterialInputResolvers';
+import {
+  ensureMaterialDependencies,
+  getMaterialTextureIds as getTextureIdsOf,
+} from '../../../kernel/assets/MaterialDependencies';
 import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
-import { textureMapKeys } from '../../../utils/Constants';
-import { lerror, lwarn } from '../../../utils/Logger';
 import type { MaterialSelectorEntry } from './_dbg__MaterialEditorSelector';
 import {
   fromNodeInputGroups,
@@ -22,29 +23,10 @@ import {
 
 type GeneratedData = {
   materials?: Record<string, MaterialAsset>;
-  textures?: Record<string, TextureProps>;
-  scenes: Record<
-    string,
-    { materials?: (string | MaterialAsset)[]; textures?: (string | TextureProps)[] }
-  >;
+  scenes: Record<string, { materials?: (string | MaterialAsset)[] }>;
 };
 
 const getGeneratedData = () => getGeneratedAppData() as unknown as GeneratedData;
-
-/** The first scene entry with this id (a production-gathered build keeps only the scenes, with
- * their resolved assets). */
-const findInScenes = <T extends { id?: string }>(
-  kind: 'materials' | 'textures',
-  id: string
-): T | undefined => {
-  for (const scene of Object.values(getGeneratedData().scenes)) {
-    const found = (scene[kind] as (string | T)[] | undefined)?.find(
-      (entry) => typeof entry !== 'string' && entry.id === id
-    );
-    if (found && typeof found !== 'string') return found;
-  }
-  return undefined;
-};
 
 let materialAssets: Record<string, MaterialAsset> | null = null;
 
@@ -67,10 +49,6 @@ export const getMaterialAssets = () => {
   }
   return materialAssets;
 };
-
-/** A texture's declaration: the dev registry's, else any scene's entry. */
-const findTextureDeclaration = (id: string) =>
-  getGeneratedData().textures?.[id] ?? findInScenes<TextureProps>('textures', id);
 
 /** The asset's creation props, without the gatherer's tooling fields. */
 const getMaterialProps = (asset: MaterialAsset): MatProps => {
@@ -101,29 +79,10 @@ export const getCopyProps = (asset: MaterialAsset, tslOverrides: MaterialTslInpu
 
 /**
  * The texture ids a material asset uses: its `params` texture slots and its TSL inputs' (`nodes`
- * and `inputs`): a bare texture id (a string not starting with `#`), an object-form texture ref
- * and what a registered input resolver's `dependencies` name (p302 D4).
+ * and `inputs`), as `ensureMaterialDependencies` loads them (p302 D4, D6).
  * @returns (string[]) the texture ids, without duplicates
  */
-export const getMaterialTextureIds = (asset: MaterialAsset) => {
-  const ids = new Set<string>();
-  const params = asset.params as Record<string, unknown> | undefined;
-  if (params) {
-    for (const key of textureMapKeys) {
-      const value = params[key];
-      if (typeof value === 'string') ids.add(value);
-    }
-  }
-  for (const inputs of Object.values(getAssetNodeInputs(asset) ?? {})) {
-    for (const [key, value] of Object.entries(inputs)) {
-      if (key === 'staticDefines') continue;
-      for (const dependency of getMaterialInputDependencies(value)) {
-        if (dependency.type === 'texture') ids.add(dependency.id);
-      }
-    }
-  }
-  return [...ids];
-};
+export const getMaterialTextureIds = (asset: MaterialAsset) => getTextureIdsOf(asset);
 
 /** Why a material can't be loaded here, if it can't. */
 export const getUnavailableReason = (asset: MaterialAsset) => {
@@ -135,25 +94,13 @@ export const getUnavailableReason = (asset: MaterialAsset) => {
 /** The textures the editor loaded during this visit, which the exit retags to the current scene. */
 const loadedTextureIds = new Set<string>();
 
-/** Loads the material's textures that aren't loaded yet (like SceneLoader's
- * loadNextSceneAssets). A texture that fails is left out (createMaterial warns about it). */
+/** Loads the material's textures that aren't loaded yet (`ensureMaterialDependencies`, its
+ * textures only: the editor loads the TSL file itself, to show its error). A texture that fails
+ * is logged and left out (the material samples one white texel). */
 export const loadMissingTextures = async (asset: MaterialAsset) => {
-  const missing = getMaterialTextureIds(asset).filter((id) => !getTexture(id));
-  for (const id of missing) loadedTextureIds.add(id);
-  await Promise.all(
-    missing.map(async (id) => {
-      const declaration = findTextureDeclaration(id);
-      if (!declaration) {
-        lwarn(`Could not find texture "${id}" of material "${asset.id}", in the material editor.`);
-        return;
-      }
-      try {
-        await loadTextureAsync(declaration);
-      } catch (err) {
-        lerror(`Could not load texture "${id}" of material "${asset.id}".`, err);
-      }
-    })
-  );
+  for (const id of getMaterialTextureIds(asset)) if (!getTexture(id)) loadedTextureIds.add(id);
+  const { params, nodes, inputs } = asset as MaterialAsset & MaterialVariantOverrides;
+  await ensureMaterialDependencies({ params, nodes, inputs });
 };
 
 /** Hands the textures the editor loaded during this visit to the current scene (the view's exit). A
