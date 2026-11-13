@@ -72,7 +72,9 @@ lights, raycasting, input and scenes), then each of its `features`, in list orde
 [How the app starts](hub:examples/quick-start#how-the-app-starts)), then the app's own. A
 feature ([`EngineFeature`](api:EngineFeature)) is an id and an `install` function, which gets the
 kernel's seams ([`FeatureContext`](api:FeatureContext)): the ECS registrations below, the scene
-load's phases, `onDebug` for its debug tools and `onUnmount` for its stop.
+load's phases, `registerMaterialInputResolver` for its forms of a TSL material's inputs (see
+[Toolkit](hub:features/toolkit#graphs-and-input-forms-from-code)), `onDebug` for its debug tools
+and `onUnmount` for its stop.
 
 - **Nothing registers itself when its module is imported.** A build keeps only the modules whose
   names something uses (`package.json`'s `sideEffects`), so a registration at a module's top level

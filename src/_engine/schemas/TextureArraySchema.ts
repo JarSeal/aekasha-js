@@ -6,7 +6,7 @@ import {
   isJsonRelativeFileName,
   TextureArrayOptimizeSchema,
 } from './AssetsConfigSchema';
-import { TexOptsSchema } from './TextureSchema';
+import { StoredFlippedTexOptsSchema } from './TextureSchema';
 
 /** Whether a texture array's layer names a source file (`./`, `../` or a `src/public` URL path),
  * not a texture asset's id. */
@@ -47,7 +47,7 @@ export const TextureArrayAssetSchema = z.object({
       "Width and height every layer is resized to (default: the layers' size, which must then agree). The optimize step fits it into its maxSize."
     ),
   /** The array's sampler state and colour space (`colorSpace` decides how the layers are read). */
-  texOpts: TexOptsSchema.optional(),
+  texOpts: StoredFlippedTexOptsSchema.optional(),
   /** Build time only: the asset pipeline's settings, for every layer. */
   optimize: TextureArrayOptimizeSchema.optional(),
   /** Fails the load when the file can't load. Default: logs and uses an empty stand-in. */

@@ -140,7 +140,7 @@ const loadMember = async (member: TextureArrayMember): Promise<LoadedMember> => 
     throw new Error(`Texture array member "${key}" is a cube texture.`);
   }
   const url = resolveTextureUrl({ ...props, fileName: props.fileName });
-  const { texture } = await loadTextureFileAsync(url);
+  const { texture } = await loadTextureFileAsync(url, { texOpts: props.texOpts });
   // As loadTextureAsync would: the first member's sampler state is the array's default
   setTextureOpts(texture, props.texOpts);
   return { key, texture, isBorrowed: false };

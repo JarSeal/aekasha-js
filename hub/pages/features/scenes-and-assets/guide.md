@@ -7,7 +7,9 @@
 - The lists name assets by their id (or hold one inline): `cameras`, `lights`, `geometries`,
   `textures`, `materials`, `meshes`, `importedAssets`, `skyboxes` and `postFx`. The cameras are
   created first, before the assets load; the lights and meshes right after the scene file runs,
-  so its code reaches them on the scene's enter.
+  so its code reaches them on the scene's enter. The textures its materials, spot lights and
+  background name needn't be listed: the gather adds them (see
+  [a scene's textures](hub:features/scenes-and-assets#a-scene-s-textures)).
 - Other keys set up the scene itself: `postFxEnabled`, `backgroundColor`, `spatialDomains` (see
   [Spatial index](hub:features/spatial-index)), `impostors` (see
   [LOD and impostors](hub:features/lod#exporting-an-impostor)) and `mergeGroups` (see
@@ -40,6 +42,44 @@ Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` l
 The gather fails, naming the file, on a JSON that doesn't parse or fails its schema, on an id two
 files give, and on an id a scene lists that no asset JSON has. In `yarn dev` the page then stays
 as it was until the next save fixes it, and `yarn build` stops.
+
+## Textures
+
+A `*.texture.json` names an image and how it's sampled:
+
+```json
+{
+  "$schema": "../../../.schemas/texture.schema.json",
+  "id": "rockAlbedo",
+  "fileName": "./rockAlbedo.png",
+  "texOpts": {
+    "colorSpace": "srgb",
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "minFilter": "LINEAR_MIPMAP_LINEAR",
+    "anisotropy": "MAX",
+    "repeat": [4, 4]
+  }
+}
+```
+
+- **`texOpts`** sets three's texture properties over the loader's. Your editor lists each one with
+  three's default, from the `$schema`.
+- **three's constants** (`mapping`, `wrapS`, `wrapT`, `magFilter`, `minFilter`, `type`, `format`)
+  take a name (`"REPEAT"`, `"LINEAR_MIPMAP_LINEAR"`, `"CLAMP_TO_EDGE"`) or three's number
+  (`1000`). The gather writes the number, so the names cost the build nothing.
+- **The UV transform:** `repeat`, `offset` and `center` as `[x, y]`, and `rotation` in radians
+  around `center`. A repeat past 1 needs `"REPEAT"` wrapping. Changing one after the first frame
+  (in the material editor, say) needs no new shader.
+- **`anisotropy`** is a sample count from 1 (off), or `"MAX"` for the device's most.
+- **The upload:** `flipY`, `generateMipmaps` and `premultiplyAlpha`, and `colorSpace`: `"srgb"`
+  for a colour map, `"srgb-linear"` or `""` for data (a normal or roughness map).
+- **`flipY: false`** is for an image whose UVs start at the top, as a glTF's do. The
+  [asset pipeline](hub:features/asset-optimization) encodes such a texture unflipped, apart from
+  the flipped one. A texture array's layer and an atlas's slot are always stored flipped, so
+  their `texOpts` refuse it.
+- **`isPersistent: true`** keeps the texture loaded past every scene's release: only
+  [`deleteTexture`](api:deleteTexture) removes it.
 
 ## Merged geometries
 
@@ -145,12 +185,32 @@ page reloads with the change, and an invalid file shows an error overlay naming 
 problem. `yarn gatherAppData` runs it by hand.
 
 The code files load on demand, each in a chunk of its own in a build: a scene's file when the
-scene loads, and a TSL material's or a PostFX pass's with the scene that lists it. A TSL material
-your code creates at another time needs its file loaded first:
-[`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync).
+scene loads, and a TSL material's or a PostFX pass's with the scene that lists it. A material
+your code creates at another time needs its file and textures loaded first:
+[`ensureMaterialDependencies`](api:ensureMaterialDependencies) loads both.
 
 The textures and models the JSONs point at go through the
 [asset pipeline](hub:features/asset-optimization) first.
+
+### A scene's textures
+
+A scene lists the materials it uses, and the gather adds the textures they name to its
+`textures`. It reads the listed materials, each mesh's inline `mat` and its `matOverrides`: their
+`params` texture slots (`map`, `normalMap`, …) and their TSL `inputs` and `nodes` (a texture id,
+`{ "texture": … }`); and the scene's spot lights' cookies (`map`) and its `backgroundTexture`. The
+added textures come after the listed ones, each once, and load, release and stream with the
+scene as listed ones do.
+
+- **An id no texture JSON has** fails the gather, naming what names it:
+
+  ```text wrap
+  Scene "myScene": the material "rockMat" names the texture "rockAlbedo", which no asset JSON (or only an invalid one) has, and the scene doesn't list it inline.
+  ```
+
+- **List a texture yourself** when only your code names it, or a value of your own
+  [input resolver](hub:features/toolkit#graphs-and-input-forms-from-code), which the gather can't
+  read. A listed texture stays listed: the gather only adds.
+- The debugger's Assets tab shows the added textures as listed ones.
 
 ### The feature manifest
 
@@ -187,9 +247,9 @@ per scene id, a list of overrides, newest first, and the scene uses the newest:
 ```
 
 An entry names only what it changes, and most fields replace the asset's whole. A few merge key
-by key: `params` (a geometry's, a material's, a PostFX pass's), a TSL material's `nodes`, a sky
-box's whole definition, and a mesh's `geo` and `mat` props when they keep the type (props over a
-geometry or material id, or of another type, must be complete). An entry's `__meta` records the
+by key: `params` (a geometry's, a material's, a PostFX pass's), a TSL material's `inputs` and
+`nodes`, a sky box's whole definition, and a mesh's `geo` and `mat` props when they keep the type
+(props over a geometry or material id, or of another type, must be complete). An entry's `__meta` records the
 versions it was saved with, and the gatherer warns when the entry in use comes from another major
 version. Debug tools write these entries through the
 [dev file server](hub:features/debug-suite#dev-file-server).
@@ -257,8 +317,8 @@ in lockstep with physics goes in the ECS instead (see [ECS](hub:features/ecs#sys
   [`registerMergedGeometryAsync`](api:registerMergedGeometryAsync): a merged geometry from code.
 - [`createMeshEntity`](api:createMeshEntity), [`createMaterial`](api:createMaterial),
   [`loadTextureAsync`](api:loadTextureAsync) and [`importAssetAsync`](api:importAssetAsync): the
-  same assets from code ([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) before a TSL
-  material).
+  same assets from code ([`ensureMaterialDependencies`](api:ensureMaterialDependencies) before a
+  material: its textures and TSL file).
 
 ## Read more
 

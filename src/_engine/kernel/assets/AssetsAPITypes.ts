@@ -169,6 +169,11 @@ export type AssetsLoadTextureRequest = {
   type: AssetsProtocolType.LOAD_TEXTURE;
   requestId: number;
   url: string;
+  /** Flip the image vertically (what three's `flipY` does at upload; ignored for an ImageBitmap
+   * on the WebGL backend, so it's baked in). */
+  flipY: boolean;
+  /** Premultiply the colour by the alpha, as `flipY`. */
+  premultiplyAlpha: boolean;
 };
 
 /**
@@ -284,8 +289,9 @@ export type AssetsPingResponse = {
 };
 
 /**
- * The decoded image, already flipped vertically (the flip TextureLoader's default
- * `flipY = true` would do), not premultiplied. Transferred, not copied.
+ * The decoded image, flipped vertically and premultiplied as the request asked (by default
+ * flipped, as TextureLoader's `flipY = true` would do, and not premultiplied). Transferred, not
+ * copied.
  * @internal
  */
 export type AssetsLoadTextureResponse = {

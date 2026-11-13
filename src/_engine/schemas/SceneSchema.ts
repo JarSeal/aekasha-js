@@ -41,12 +41,14 @@ const createKernelSceneShape = <M extends z.ZodType>(InlineMeshSchema: M) => ({
   todo: DebugDataSchema.shape.todo,
   /** The root scene's background colour while the scene is current. */
   backgroundColor: ColorJSONSchema.optional(),
-  /** The id of a texture the scene lists in `textures`, for the root scene's background (over
-   * `backgroundColor`). */
+  /** A texture id for the root scene's background (over `backgroundColor`). The gather adds it to
+   * `textures` when the scene doesn't list it. */
   backgroundTexture: z
     .string()
     .optional()
-    .describe('The id of a texture the scene lists, for the background (over backgroundColor).'),
+    .describe(
+      "A texture id for the background (over backgroundColor). The gather adds it to textures when it isn't listed."
+    ),
   /** The cameras the loader creates before the assets: camera JSON ids, or inline cameras. A
    * scene without one gets a perspective camera. */
   cameras: z
@@ -65,11 +67,15 @@ const createKernelSceneShape = <M extends z.ZodType>(InlineMeshSchema: M) => ({
     .optional()
     .describe('Geometry ids, or inline geometry props, registered with the assets.'),
   /** The textures the loader loads: texture, array or atlas ids (an atlas id for every slot), or
-   * inline textures of `src/public` files. */
+   * inline textures of `src/public` files. The gather adds the ones the scene's materials (their
+   * texture params and TSL inputs), spot lights' cookies and `backgroundTexture` name: list only
+   * the textures your code uses (or an input resolver of your own names). */
   textures: z
     .array(z.union([z.string(), InlineTextureSchema]))
     .optional()
-    .describe('Texture, texture array or atlas ids, or inline textures of src/public files.'),
+    .describe(
+      "Texture, texture array or atlas ids, or inline textures of src/public files. The gather adds the ones the scene's materials, spot cookies and backgroundTexture name."
+    ),
   /** The materials the loader creates, after the textures they name: material ids, or inline. */
   materials: z
     .array(z.union([z.string(), MaterialAssetSchema]))

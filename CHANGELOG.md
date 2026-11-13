@@ -4,6 +4,56 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-13 — p302_material-and-texture-system-refactor
+
+The material and texture system refactor (p302), the engine changes the terrain texturing epic (p301) needs, each general-purpose. A TSL material can build every socket from one graph (a `setup` export with shared `inputs`), so a texture used by several sockets is sampled once; code can register a graph without a TSL file; new input forms plug in through a resolver registry instead of edits to the material code; the texture JSON gets three's remaining options and named constants; and the gather adds a scene's material textures to its `textures`, so a scene lists a material without its textures. Nothing breaks existing JSON. The plan's two bugs (a missing texture, a revisited scene's material params) shipped with p613. Variants stay full materials: three r187's `NodeMaterialInstance` would save a CPU node build per variant but no GPU pipeline (variants already share one), so it's a follow-up (p990).
+
+### Engine 6.11.0 (Sunset)
+
+**Added**
+
+- A TSL material file's `setup(inputs, material, staticDefines)` export assigns any sockets from one graph, with the material's new top-level `inputs` (wrapped as a socket's inputs are, cached as `setup_<key>` uniforms). It runs first; a `nodes` socket function then overrides a socket it set (the debug env warns). `inputs` in the material JSON's TSL member, `matOverrides` and variant overrides, merged shallowly by `getMaterialVariant`.
+- `registerTslMaterial(id, { setup?, <socket>? })` (`aekasha`): a TSL graph from code, looked up before the loaded TSL files, under `tslMaterialId` (default the material's `id`), so a code-made node material needs no `tslFile`. Register on first use, never at module load; an id registered again with other functions keeps the first (the debug env warns). Types: `TslMaterialProps`, `TslMaterialFns`, `TslSetupFn`, `TslSocketFn`, `TslInputs`.
+- `registerMaterialInputResolver({ kind, match, resolve, dependencies? })` (`aekasha`, and `FeatureContext.registerMaterialInputResolver` for a feature's install): new input forms, asked in registration order before the built-in rules. A resolver returns a node or a bundle (an object of nodes, each cached as `<group>_<key>_<field>`); its `dependencies` name the textures a value needs. Types: `MaterialInputResolver`, `MaterialInputContext`, `ResolvedInput`, `ResolvedInputNode`, `MaterialInputDependency`, `TextureInputRef`.
+- The kernel's resolver: the object-form texture input `{ "texture": "<id>" }`, and `{ "texture": "<id>", "channel": "r" }` (one to four of `r`, `g`, `b`, `a`) for a swizzled sample. The bare id keeps working.
+- `ensureMaterialDependencies(props)` (`aekasha`): loads the textures a material's props or a variant's overrides name that aren't registered yet (its params, inputs and sockets, a resolver's `dependencies` included) and its TSL file, before `createMaterial`. A production build's data has only the textures its scenes name, so a texture only code uses is still listed in a scene.
+- Texture JSON `texOpts`: `repeat`, `offset` and `center` (`[x, y]`), `rotation`, `flipY`, `generateMipmaps`, `premultiplyAlpha`, `format`, and `anisotropy: "MAX"` (the renderer's maximum); `isPersistent` at the top level. The constants (`wrapS`, `minFilter`, `mapping`, `type`, `format`, …) also take three's names (`"REPEAT"`, `"LINEAR_MIPMAP_LINEAR"`), mapped to the numbers by the gather.
+- The material editor's Params tab lists a `setup` material's `inputs` as the group "setup (inputs)" (editable, undoable, saved as `overrides.inputs`), and shows a resolver's value read-only.
+
+**Changed**
+
+- The gather appends to a scene's `textures` the textures its materials (listed, a mesh's inline `mat`, `matOverrides`: their params, `inputs` and sockets), its spot lights' cookies and its `backgroundTexture` name, after the listed ones (the texture closure). A named id no asset JSON has fails the gather naming what names it. A listed texture stays valid.
+- The texture JSON's constants accept only three's valid values, and `anisotropy` only an integer ≥ 1 or `"MAX"` (WebGPU rejects 0): a texture JSON with another number fails the gather. Every texture JSON in the repo validates.
+- The TSL path: a node material runs it with a `tslFile` or a registration; any TSL export that isn't a function throws, a `nodes.setup` socket is skipped and warned (it would replace three's `NodeMaterial.setup`), and `nodes` or `inputs` on a node material without a graph warn.
+- The assets worker decodes a texture's bitmap with the texture's `flipY` and `premultiplyAlpha` (before: always flipped).
+- The material editor loads a material's textures through `ensureMaterialDependencies`. The streaming manifest moves a `setup` material's input textures into its cell.
+
+**Fixed**
+
+- A texture's options apply every defined value: `flipY: false`, `anisotropy` and other falsy values were skipped (`setTextureOpts`; the import path's copy of it went).
+
+### App 1.24.2 (Preschooler)
+
+**Changed**
+
+- sceneTestECS' `testTslMat` is a `setup` material, the reference example: one sample of `testTexture` drives the colour, the roughness and the emissive (`glow` input).
+- testDebugScene: two planes beside the top row, `p302ChannelMat` (a JSON `setup` material with the object-form texture input, plain and its red channel) and `p302_gradientMat` (a graph and a `{ gradient: [from, to] }` resolver registered from the scene file; shown on the Hub's toolkit page). The scene no longer lists `testTexture`: the texture closure adds it.
+- `testTexture` uses the named `"REPEAT"` wraps.
+
+### Project
+
+**Added**
+
+- The asset pipeline encodes a texture with `texOpts.flipY: false` stored as its source is (its own output, "unflipped" in the run); a texture array's or atlas slot's `texOpts` refuse `flipY: false`, and a merge palette fails on a member texture with it.
+- The gather's texture closure (`devTools/gather/textureClosure.ts`), with the runtime's import-free `MaterialInputRefs.ts` on `engineImports.test.ts`' list. A save entry's material `inputs` merge key by key.
+
+**Changed**
+
+- `writeJsonSchemas` writes a transform's input side (the texture constants' names and numbers); `.schemas/` regenerated.
+- The Hub: the toolkit page's "Writing a TSL material" (`setup`, a function per socket, the input forms, loading, graphs and input forms from code), the scenes-and-assets page's Textures and "A scene's textures", the ECS and streaming pages.
+- The gather, scene, editors and init `CLAUDE.md`; `docs/techniques/asset-optimization.md`'s Orientation; the bundle, API and docs baselines (the app's first download 415,351 → 416,199 B gzip, the kernel's assets group 12 → 15 modules).
+- The plans: p302 done; p299, p303, p304 and p305 no longer wait on it, and p990 has its follow-up: material variants as `NodeMaterialInstance`s.
+
 ## 2026-11-12 — p378_baked-members-out-of-the-scene-graph
 
 Baked merge members out of the scene graph (p378, Tier 3.3 of the merging epic p370). A baked member's own mesh stayed in the scene graph, hidden, while its group's mesh drew it, and three walked it in every scene update and every render's projection: p377's far field found that walk to be about 60 % of the field's CPU cost. Its Phase 0 measured the member out of the graph against frozen in it (both matrix updates off) and split the rest of the members' cost. Out of the graph won by 2.2-3.7 ms at 400 sites, so a built member's mesh now leaves the scene graph in both modes, as a batched member's did since p375. On the far field (400 sites, 20,770 members, Apple M2, Chrome) the CPU frame went from 9.5-11.8 to 5.7-6.3 ms on WebGPU and from 10.8-13.2 to 5.9-6.5 ms on WebGL2, the image unchanged; `largeWorld` alone saves 0.13-0.23 ms. What the members still cost, the kernel's transform sync visiting every mesh entity (0.6-0.85 ms there), and a second scene walk a frame for every scene are follow-ups. The one behaviour change: a raycast of the root scene no longer hits a baked group's hidden members.

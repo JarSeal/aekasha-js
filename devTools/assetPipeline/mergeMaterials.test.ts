@@ -38,7 +38,7 @@ const resolve = (
   return resolveMergeMaterial(PALETTE_JSON, 'ruins', palette, findMaterial, findTexture);
 };
 
-const REPEAT = { wrapS: 1000, wrapT: 1000 };
+const REPEAT = { wrapS: 1000, wrapT: 1000 } as const;
 
 describe('resolveMergeMaterial', () => {
   it('makes a slot an array of the members’ maps, a neutral layer for a member without one', () => {
@@ -180,6 +180,21 @@ describe('resolveMergeMaterial', () => {
     expect(slots).toEqual([]);
     expect(errors).toEqual([
       'slots.map: the members\' textures differ in texOpts.wrapS: 1000 in "a" (repeat); 1001 in "b" (clamp), "c" (unset) (an array has one sampler; unset is three\'s 1001)',
+    ]);
+  });
+
+  it('fails on a member texture meant unflipped: the array is stored flipped', () => {
+    const { slots, errors } = resolve(
+      { map: { size: SIZE } },
+      { a: { map: 'unflipped' }, b: { map: 'flipped' } },
+      {
+        unflipped: { fileName: `${RUST}BaseColor.jpg`, texOpts: { flipY: false } },
+        flipped: { fileName: `${RUST}BaseColor.jpg` },
+      }
+    );
+    expect(slots).toEqual([]);
+    expect(errors).toEqual([
+      "slots.map: \"a\"'s texture unflipped has texOpts.flipY false, which an array can't keep (it's stored flipped)",
     ]);
   });
 

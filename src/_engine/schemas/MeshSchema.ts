@@ -80,7 +80,7 @@ const KERNEL_MESH_OVERRIDES_SHAPE = {
    * props replace them and must be complete. */
   geo: z.union([PartialGeoProps, z.string()]).optional(),
   /** The mesh's material in this scene: a material's id, or props, merged as `geo`'s (a TSL
-   * material's `nodes` key by key too). */
+   * material's `inputs` and `nodes` key by key too). */
   mat: z.union([PartialMatProps, z.string()]).optional(),
   ...pick('matOverrides', 'castShadow', 'receiveShadow', 'preWarm', ...TRANSFORM_FIELDS),
   ...pick('frustumCullingEnabled'),

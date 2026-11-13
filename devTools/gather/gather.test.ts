@@ -178,6 +178,22 @@ describe('G5: save entries', () => {
     expect(get('saved')).not.toHaveProperty('__saveData');
   });
 
+  it('a TSL material’s inputs merge key by key (p302 D2)', () => {
+    const tslFiles = {
+      'app/materials/inputsMat.material.json': {
+        id: 'inputsMat',
+        type: 'STANDARDNODEMATERIAL',
+        tslFile: 'materials/inputsMat.tsl.ts',
+        inputs: { tint: '#ff8000', scale: 2 },
+        __saveData: { saved: [{ inputs: { scale: 4 } }] },
+      },
+      'app/materials/inputsMat.tsl.ts': 'export const setup = () => {};\n',
+      ...scene('saved', { materials: ['inputsMat'] }),
+    };
+    const material = gather(tslFiles).scene('saved')?.materials?.[0];
+    expect(material).toHaveProperty('inputs', { tint: '#ff8000', scale: 4 });
+  });
+
   it('production strips debugData after the entry is merged (an entry can hold one)', () => {
     const { isGathered, scene: get } = gather(files, { isProduction: true });
     expect(isGathered).toBe(true);
@@ -626,5 +642,127 @@ describe('merge material palettes (p374 D1, D2)', () => {
       ...palette(),
     };
     expect(gather(files).isGathered).toBe(false);
+  });
+});
+
+describe('p302 D6: the texture closure', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const textures = (...ids: string[]) =>
+    Object.fromEntries(
+      ids.map((id) => [`app/textures/${id}.texture.json`, { id, fileName: albedo }])
+    );
+  const tslMat = (id: string, fields: Record<string, unknown>) => ({
+    [`app/materials/${id}.material.json`]: {
+      id,
+      type: 'STANDARDNODEMATERIAL',
+      tslFile: `materials/${id}.tsl.ts`,
+      ...fields,
+    },
+    [`app/materials/${id}.tsl.ts`]: 'export const setup = () => {};\n',
+  });
+  const textureIds = (out: OutputScene | undefined) =>
+    ((out?.textures ?? []) as ({ id?: string } | string)[]).map((tex) =>
+      typeof tex === 'string' ? tex : tex.id
+    );
+  const box = { type: 'BOX', params: { width: 1, height: 1, depth: 1 } };
+
+  it('adds the textures a listed material names, after the listed ones, each once', () => {
+    const { isGathered, scene: get } = gather({
+      ...textures('listed', 'albedo', 'mask', 'detail', 'normal'),
+      ...tslMat('m', {
+        params: { normalMap: 'normal', color: '#ffffff' },
+        inputs: {
+          albedo: 'albedo',
+          mask: { texture: 'mask', channel: 'r' },
+          tint: '#ff8000',
+          again: 'albedo',
+          staticDefines: { texture: 'notATexture' },
+        },
+        nodes: { colorNode: { detail: 'detail', scale: 2 } },
+      }),
+      ...scene('a', { textures: ['listed', 'albedo'], materials: ['m'] }),
+    });
+    expect(isGathered).toBe(true);
+    expect(textureIds(get('a'))).toEqual(['listed', 'albedo', 'normal', 'mask', 'detail']);
+    // Resolved as listed ones are: their data, not the id
+    expect(get('a')?.textures).toContainEqual(expect.objectContaining({ id: 'mask' }));
+  });
+
+  it('adds a scene without textures a list, and follows a material’s save entry', () => {
+    const { scene: get } = gather({
+      ...textures('albedo', 'saved'),
+      ...tslMat('m', {
+        inputs: { albedo: 'albedo' },
+        __saveData: { a: [{ inputs: { albedo: 'saved' } }] },
+      }),
+      ...scene('a', { materials: ['m'] }),
+      ...scene('b', { materials: ['m'] }),
+    });
+    expect(textureIds(get('a'))).toEqual(['saved']);
+    expect(textureIds(get('b'))).toEqual(['albedo']);
+  });
+
+  it('adds a mesh’s inline material’s, its matOverrides’, a spot cookie and the background', () => {
+    const { isGathered, scene: get } = gather({
+      ...textures('inline', 'override', 'cookie', 'sky'),
+      'app/m.mesh.json': {
+        props: {
+          appId: 'm',
+          geo: box,
+          mat: material('inlineMat', { params: { map: 'inline' } }),
+          matOverrides: { params: { map: 'override' } },
+        },
+      },
+      ...scene('a', {
+        meshes: ['m'],
+        lights: [{ lightProps: { type: 'SPOT', appId: 'spot', map: 'cookie' } }],
+        backgroundTexture: 'sky',
+      }),
+    });
+    expect(isGathered).toBe(true);
+    expect(textureIds(get('a'))).toEqual(['inline', 'override', 'cookie', 'sky']);
+  });
+
+  it('keeps an inline texture the scene lists, and adds nothing for it', () => {
+    const inline = { id: 'own', fileName: albedo };
+    const { isGathered, scene: get } = gather({
+      ...tslMat('m', { inputs: { albedo: 'own' } }),
+      ...scene('a', { textures: [inline], materials: ['m'] }),
+    });
+    expect(isGathered).toBe(true);
+    expect(textureIds(get('a'))).toEqual(['own']);
+  });
+
+  it('fails on an id no asset JSON has, naming what names it', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { isGathered } = gather({
+      ...tslMat('m', { inputs: { albedo: { texture: 'noSuchTexture' } } }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    expect(isGathered).toBe(false);
+    expect(errors.mock.calls.flat().join('\n')).toContain(
+      'Scene "a": the material "m" names the texture "noSuchTexture"'
+    );
+  });
+
+  it('moves a cell-only material’s input textures into its cell', () => {
+    const { isGathered, scene: get } = gather({
+      ...textures('crateTex'),
+      ...tslMat('crateMat', { inputs: { albedo: 'crateTex' } }),
+      'app/crate.mesh.json': {
+        props: { geo: box, mat: 'crateMat', position: { x: 70, y: 0, z: 10 } },
+      },
+      ...scene('w', {
+        materials: ['crateMat'],
+        meshes: ['crate'],
+        streaming: { cellSize: 64, base: [], radii: {} },
+      }),
+    });
+    expect(isGathered).toBe(true);
+    const out = get('w') as OutputScene & {
+      __streaming?: { cells: Record<string, { textures?: number[] }> };
+    };
+    expect(out.textures).toBeUndefined();
+    expect(out.__streaming?.cells[String(packCellKey(1, 0, 0))]?.textures).toEqual([0]);
   });
 });

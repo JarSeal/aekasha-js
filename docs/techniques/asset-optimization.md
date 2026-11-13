@@ -53,7 +53,7 @@ Save it, and the dev server encodes it. Then commit the source, the new file in 
 
 - **`slot`** tells the pipeline what the texture is (see [Slots](#slots)). It defaults to `default`.
 - **Colour space:** set `texOpts.colorSpace: "srgb"` on colour textures (albedo, emissive). The KTX2 is encoded with the colour space your JSON says, so it looks the same as the PNG loaded with the same JSON.
-- **Orientation:** standalone textures are stored flipped in the KTX2, because a compressed texture can't be flipped at load. They look the same as the source loaded through `TextureLoader`. You don't need to do anything.
+- **Orientation:** standalone textures are stored flipped in the KTX2, because a compressed texture can't be flipped at load. They look the same as the source loaded through `TextureLoader`. You don't need to do anything. A texture whose `texOpts.flipY` is `false` (UVs with the origin at the top, as a glTF's) is stored as the source is instead: its own encode, keyed apart (p302 D1). A texture array or atlas slot is always stored flipped, so its schema refuses `flipY: false`, and a merge palette fails on a member texture that has it.
 - **Relative sources** must stay inside `src/` and can't be combined with `path`. A production build doesn't ship `src/`, only the outputs.
 - **A `src/public` path** (`"/textures/rock.png"`) still works, and that file is optimized too. A remote URL is loaded as it is.
 - HDR sources (`.hdr`, `.exr`) and `.ktx2` / `.basis` sources are passed through as they are: UASTC and ETC1S are LDR formats.

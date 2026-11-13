@@ -362,7 +362,7 @@ export const getOtherAssetParamPaneItems = (
   ];
 };
 
-/** A TSL node input's kind (see createMaterial's input handling in kernel/assets/Material.ts). */
+/** A TSL node input's kind (see createMaterial's input handling in kernel/assets/MaterialTsl.ts). */
 export type NodeInputKind =
   | 'NUMBER'
   | 'BOOLEAN'
@@ -412,8 +412,10 @@ const isEditableNodeInputKind = (kind: NodeInputKind) =>
  * The asset's TSL node inputs with the overrides merged over them: an override applies only to an
  * input the asset has, of an editable kind, with a value of the same kind (the uniform the input
  * becomes depends on it).
- * @param assetNodes (Record<string, Record<string, unknown>> | undefined) the asset's `nodes`
- * @param overrides (Record<string, Record<string, unknown>>) the editor's node overrides
+ * @param assetNodes (Record<string, Record<string, unknown>> | undefined) the asset's TSL inputs by
+ * group ({@link getAssetNodeInputs})
+ * @param overrides (Record<string, Record<string, unknown>>) the editor's TSL input overrides by
+ * group
  * @returns (Record<string, Record<string, unknown>> | undefined) new objects, or undefined when
  * the asset has no nodes
  */
@@ -437,16 +439,63 @@ export const mergeNodeOverrides = (
   return merged;
 };
 
-/** A material asset's TSL node inputs by socket (its `nodes`). */
+/**
+ * A material's TSL inputs by group: each socket of its `nodes`, and its `inputs` (its TSL file's
+ * `setup` function's) as the group {@link SETUP_INPUTS}.
+ */
 export type MaterialNodeInputs = Record<string, Record<string, unknown>>;
 
 /**
- * The asset's TSL node inputs (only TSL materials have them).
+ * The group of a material's `inputs` among its sockets (p302 D2): their uniforms are
+ * `setup_<key>`, as a socket's are `<socket>_<key>`, so every per-socket function here reads and
+ * sets them too. Never a socket of `nodes` (NodeMaterial's own `setup` method, which createMaterial
+ * skips).
+ */
+export const SETUP_INPUTS = 'setup';
+
+/** A material's TSL inputs, in the shape of the material JSON (and of its overrides). */
+export type MaterialTslInputs = {
+  nodes?: Record<string, Record<string, unknown>>;
+  inputs?: Record<string, unknown>;
+};
+
+/**
+ * A material's `nodes` and `inputs` as one map of groups: `inputs` as {@link SETUP_INPUTS} first
+ * (setup runs first), then each socket (a `nodes.setup` left out).
+ * @param tsl ({@link MaterialTslInputs})
+ * @returns ({@link MaterialNodeInputs} | undefined) undefined when it has neither
+ */
+export const toNodeInputGroups = ({ nodes, inputs }: MaterialTslInputs) => {
+  if (!nodes && !inputs) return undefined;
+  const groups: MaterialNodeInputs = {};
+  if (inputs) groups[SETUP_INPUTS] = inputs;
+  for (const [socket, socketInputs] of Object.entries(nodes ?? {})) {
+    if (socket !== SETUP_INPUTS) groups[socket] = socketInputs;
+  }
+  return groups;
+};
+
+/**
+ * {@link toNodeInputGroups}' map back as `nodes` and `inputs`.
+ * @param groups ({@link MaterialNodeInputs})
+ * @returns ({@link MaterialTslInputs}) `inputs` only when the map has the group
+ */
+export const fromNodeInputGroups = (groups: MaterialNodeInputs): MaterialTslInputs => {
+  const { [SETUP_INPUTS]: inputs, ...nodes } = groups;
+  return inputs ? { nodes, inputs } : { nodes };
+};
+
+/**
+ * The asset's TSL inputs by group (only TSL materials have them): its `nodes` and its `inputs`
+ * ({@link toNodeInputGroups}).
  * @param asset (MaterialAsset)
  * @returns ({@link MaterialNodeInputs} | undefined)
  */
 export const getAssetNodeInputs = (asset: MaterialAsset) =>
-  ('nodes' in asset ? asset.nodes : undefined) as MaterialNodeInputs | undefined;
+  toNodeInputGroups({
+    nodes: 'nodes' in asset ? asset.nodes : undefined,
+    inputs: 'inputs' in asset ? asset.inputs : undefined,
+  });
 
 /**
  * The asset's material-wide `staticDefines` (only TSL materials have them).
@@ -539,7 +588,7 @@ const readUniformValue = ({ kind, uniform }: { kind: NodeInputKind; uniform: Inp
 /**
  * Reads one editable TSL input of the copy (from its uniform).
  * @param mat (THREE.Material) the editor copy
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @param socket (string) eg. `colorNode`
  * @param input (string) eg. `gridScale`
  * @returns (unknown) the JSON value, or undefined when it isn't an editable input of the copy
@@ -557,7 +606,7 @@ export const getNodeInputValue = (
 /**
  * Reads the copy's editable TSL inputs (from their uniforms).
  * @param mat (THREE.Material) the editor copy
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @returns ({@link MaterialNodeInputs}) the JSON values by socket and input (only sockets with
  * an editable input)
  */
@@ -575,7 +624,7 @@ export const readNodeInputs = (mat: THREE.Material, assetNodes: MaterialNodeInpu
 /**
  * Sets a TSL input on the copy through its uniform's `value` (no rebuild).
  * @param mat (THREE.Material) the editor copy
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @param socket (string) eg. `colorNode`
  * @param input (string) eg. `gridScale`
  * @param value (unknown) a JSON value (or a Tweakpane point)
@@ -603,7 +652,7 @@ export const setNodeInputValue = (
 /**
  * Checks a TSL input value against the kind of the asset's own value (an override written without
  * the copy, eg. an undo of another material).
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @param socket (string)
  * @param input (string)
  * @param value (unknown)
@@ -623,7 +672,7 @@ export const normalizeAssetNodeInputValue = (
 
 /**
  * The asset's own value of a TSL input, as a JSON value (what an override is compared with).
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @param socket (string)
  * @param input (string)
  * @returns (unknown) undefined when the asset doesn't have an editable input there
@@ -658,12 +707,13 @@ const getStaticDefinesFolder = (
 });
 
 /**
- * The "TSL inputs" folder: a sub-folder per node socket with a binding per editable input
+ * The "TSL inputs" folder: a sub-folder per group (the material's `inputs`, "setup (inputs)", and
+ * each node socket) with a binding per editable input
  * (numbers without a range, the asset declares none; `#hex` colours; booleans; vectors as
  * Tweakpane points), and read-only rows for the rest (texture ids, `staticDefines`, inputs the
  * copy has no uniform of).
  * @param mat (THREE.Material) the editor copy
- * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's `nodes`
+ * @param assetNodes ({@link MaterialNodeInputs} | undefined) the asset's TSL inputs by group
  * @param staticDefines (Record<string, unknown> | undefined) the asset's material-wide ones
  * @param getTarget (function) a socket's binding target (fill it with {@link readNodeInputs})
  * @param onChange (function) called with the socket, the input, its new value, and whether it is
@@ -702,7 +752,8 @@ export const getNodeInputPaneItems = (
         socketContent.push({ key: input, target: readOnlyTarget, label: input, readonly: true });
       }
     }
-    content.push({ type: 'folder', id: folderId, title: socket, content: socketContent });
+    const title = socket === SETUP_INPUTS ? 'setup (inputs)' : socket;
+    content.push({ type: 'folder', id: folderId, title, content: socketContent });
   }
   if (staticDefines && Object.keys(staticDefines).length) {
     content.push(getStaticDefinesFolder('params/TSL inputs/staticDefines', staticDefines));

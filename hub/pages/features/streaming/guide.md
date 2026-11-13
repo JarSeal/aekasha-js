@@ -88,7 +88,7 @@ directional lights stay with the scene.
 ```
 
 - **Assets go with the content that uses them.** A texture, material, geometry or import that only
-  cell content names (by id: a mesh's `geo` and `mat`, its LOD levels, a material's texture maps)
+  cell content names (by id: a mesh's `geo` and `mat`, its LOD levels, a material's textures)
   loads with each cell that names it and is released when the last of them unloads. One the
   scene's own content uses, or that nothing names, loads with the scene. So the scene's code gets
   only those: list an asset it needs in `streaming.base`.

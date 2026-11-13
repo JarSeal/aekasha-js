@@ -30,8 +30,9 @@ import { resolvePackFile, type AssetSource, type PackSource } from './sources';
  * Texture encoding (p300 Phase 2 step 5): fit to `maxSize` (multiples of 4 for a
  * block-compressed codec, §4), resize as linear values, then KTX2 through `ktx`, or a PNG for
  * `codec: "none"`. Standalone textures are stored flipped in KTX2: they load with flipY, which
- * a compressed texture can't apply (§6). A PNG output is stored as it is, since the runtime
- * flips it. A glTF's textures are never flipped.
+ * a compressed texture can't apply (§6); one whose `texOpts.flipY` is false is stored as it is
+ * (p302 D1). A PNG output is stored as it is, since the runtime flips it (or not, by its
+ * `flipY`). A glTF's textures are never flipped.
  */
 
 /** What one encoded texture became; step 7 derives `__bytes` / `__vramBytes` from it. */
@@ -161,6 +162,8 @@ export const encodeTextureAsset = async (
   slotSettings: ResolvedTextureSettings,
   opts: {
     isSrgb: boolean;
+    /** Stored as the source is: the texture's `texOpts.flipY` is false (p302 D1) */
+    isUnflipped?: boolean;
     /** The JSON's `optimize.alphaCoverage` */
     alphaCoverage?: number;
     getKtx: KtxProvider;
@@ -171,7 +174,7 @@ export const encodeTextureAsset = async (
   const imageOpts: TextureImageOpts = {
     isSrgb: opts.isSrgb,
     isNormal,
-    flip: true,
+    flip: !opts.isUnflipped,
     getKtx: opts.getKtx,
   };
   const getCoverageCut = (hasAlpha: boolean) =>

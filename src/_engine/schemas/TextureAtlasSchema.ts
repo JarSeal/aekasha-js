@@ -6,7 +6,7 @@ import {
   refineAlphaCoverageSlot,
   TextureArrayOptimizeSchema,
 } from './AssetsConfigSchema';
-import { TexOptsSchema } from './TextureSchema';
+import { StoredFlippedTexOptsSchema } from './TextureSchema';
 import { JsonSchemaRefSchema, SourcePathSchema } from './_SaveDataSchema';
 
 // A slot's name: it ends its texture's id, so no dots
@@ -43,7 +43,7 @@ const TextureAtlasSlotSchema = z
   .strictObject({
     /** The slot texture's sampler state and colour space (`colorSpace` decides how its sources
      * are read). */
-    texOpts: TexOptsSchema.optional(),
+    texOpts: StoredFlippedTexOptsSchema.optional(),
     /** A ready-made image of the whole layout, not composed from the cells (every cell needs a
      * `rect`). */
     image: z
@@ -241,7 +241,7 @@ const TextureAtlasSlotTextureSchema = z.object({
   /** The slot texture's id, `<atlasId>.<slot>`. */
   id: z.string(),
   /** The slot's sampler state and colour space. */
-  texOpts: TexOptsSchema.optional(),
+  texOpts: StoredFlippedTexOptsSchema.optional(),
   /** The atlas's `throwOnError`. */
   throwOnError: z.boolean().optional(),
   /** The atlas's and the slot's `userData`. */

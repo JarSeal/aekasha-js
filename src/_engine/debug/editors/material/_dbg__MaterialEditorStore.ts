@@ -23,6 +23,7 @@ import {
 } from '../_dbg__ViewCamera';
 import type { EditorDrawerState } from '../_dbg__EditorDrawer';
 import type { MaterialSelectorState } from './_dbg__MaterialEditorSelector';
+import { SETUP_INPUTS } from './_dbg__MaterialEditorParams';
 import {
   DEFAULT_MATERIAL_EDITOR_SETTINGS,
   normalizeMaterialEditorSetting,
@@ -44,16 +45,18 @@ export type MaterialEditorUIState = {
 };
 
 /** A material's edits in the editor, deviation-only (a value the user changed): the shape of
- * `MaterialOverridesSchema`'s `params` and `nodes` (schemas/MaterialSchema.ts), with JSON values
- * only (colours as `#rrggbb`, numbers, booleans, vectors as `{ x, y(, z, w) }`), so it can be
- * written into the material JSON or its `__saveData` as it is. */
+ * `MaterialOverridesSchema`'s `params`, `nodes` and `inputs` (schemas/MaterialSchema.ts), with
+ * JSON values only (colours as `#rrggbb`, numbers, booleans, vectors as `{ x, y(, z, w) }`), so it
+ * can be written into the material JSON or its `__saveData` as it is. */
 export type MaterialEditorOverrides = {
   params?: Record<string, unknown>;
   nodes?: Record<string, Record<string, unknown>>;
+  inputs?: Record<string, unknown>;
 };
 
 /** Where a value of the record's overrides is: a `params` key, or a TSL input as
- * `<socket>.<input>` (eg. `colorNode.gridScale`). */
+ * `<group>.<input>` (eg. `colorNode.gridScale`; `setup.scale` for the material's `inputs`,
+ * {@link SETUP_INPUTS}). */
 export type MaterialOverrideSection = 'params' | 'nodes';
 
 /** The structure of a material's 'AEK_debugMatEditorMat_<id>' record in LocalStorage. */
@@ -127,15 +130,17 @@ export const readMaterialOverrides = (materialId: string) => {
   const saved = readMaterialRecord(materialId).overrides as unknown;
   const params: Record<string, unknown> = {};
   const nodes: Record<string, Record<string, unknown>> = {};
+  const inputs: Record<string, unknown> = {};
   if (isPlainObject(saved)) {
     if (isPlainObject(saved.params)) Object.assign(params, saved.params);
     if (isPlainObject(saved.nodes)) {
-      for (const [socket, inputs] of Object.entries(saved.nodes)) {
-        if (isPlainObject(inputs)) nodes[socket] = { ...inputs };
+      for (const [socket, socketInputs] of Object.entries(saved.nodes)) {
+        if (isPlainObject(socketInputs)) nodes[socket] = { ...socketInputs };
       }
     }
+    if (isPlainObject(saved.inputs)) Object.assign(inputs, saved.inputs);
   }
-  return { params, nodes };
+  return { params, nodes, inputs };
 };
 
 /**
@@ -143,7 +148,8 @@ export const readMaterialOverrides = (materialId: string) => {
  * removed, and so is an emptied record.
  * @param materialId (string) a `*.material.json` id
  * @param section ({@link MaterialOverrideSection})
- * @param path (string) a `params` key, or `<socket>.<input>` for `nodes`
+ * @param path (string) a `params` key, or `<group>.<input>` for `nodes` (`setup.<input>` for the
+ * material's `inputs`)
  * @param value (unknown) a JSON value, or undefined to remove it (the asset's value applies again)
  */
 export const setMaterialOverride = (
@@ -152,7 +158,7 @@ export const setMaterialOverride = (
   path: string,
   value: unknown
 ) => {
-  const { params, nodes } = readMaterialOverrides(materialId);
+  const { params, nodes, inputs } = readMaterialOverrides(materialId);
   if (section === 'params') {
     if (value === undefined) delete params[path];
     else params[path] = value;
@@ -161,14 +167,15 @@ export const setMaterialOverride = (
     if (dotIndex <= 0) return;
     const socket = path.slice(0, dotIndex);
     const input = path.slice(dotIndex + 1);
-    const inputs = (nodes[socket] ??= {});
-    if (value === undefined) delete inputs[input];
-    else inputs[input] = value;
-    if (!Object.keys(inputs).length) delete nodes[socket];
+    const groupInputs = socket === SETUP_INPUTS ? inputs : (nodes[socket] ??= {});
+    if (value === undefined) delete groupInputs[input];
+    else groupInputs[input] = value;
+    if (socket !== SETUP_INPUTS && !Object.keys(groupInputs).length) delete nodes[socket];
   }
   const overrides: MaterialEditorOverrides = {};
   if (Object.keys(params).length) overrides.params = params;
   if (Object.keys(nodes).length) overrides.nodes = nodes;
+  if (Object.keys(inputs).length) overrides.inputs = inputs;
   patchMaterialRecord(materialId, {
     overrides: Object.keys(overrides).length ? overrides : undefined,
   });

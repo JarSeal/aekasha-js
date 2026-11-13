@@ -8,6 +8,7 @@ import {
   type MergeMaterialAsset,
   type MergeMaterialEntry,
   type MergeMaterialSlot,
+  type TextureAsset,
   type TexturePack,
   type TextureSlot,
 } from '../../src/_engine/schemas';
@@ -69,7 +70,7 @@ export type MergeMaterialSlotBuild = {
   optimize: AssetOptimize;
   /** The sampler state its members' textures agree on (only what one of them sets), and the
    * colour space */
-  texOpts: Partial<Record<SamplerKey, number>> & { colorSpace?: 'srgb' };
+  texOpts: Pick<NonNullable<TextureAsset['texOpts']>, SamplerKey> & { colorSpace?: 'srgb' };
   /** By palette index: the member has a map in the slot */
   has: boolean[];
 };
@@ -199,8 +200,16 @@ const resolveSlotSampler = (
   const texOpts: MergeMaterialSlotBuild['texOpts'] = SLOT_BUILDS[slot].isSrgb
     ? { colorSpace: 'srgb' }
     : {};
+  // An array is stored flipped: a map meant unflipped (p302 D1) would be upside down in it
+  for (const { member, textureId } of used) {
+    if (ctx.findTexture(textureId)?.data.texOpts?.flipY === false) {
+      ctx.errors.push(
+        `slots.${slot}: "${member}"'s texture ${textureId} has texOpts.flipY false, which an array can't keep (it's stored flipped)`
+      );
+    }
+  }
   for (const key of Object.keys(SAMPLER_DEFAULTS) as SamplerKey[]) {
-    const byValue = new Map<number, string[]>();
+    const byValue = new Map<number | 'MAX', string[]>();
     let isSet = false;
     for (const { member, textureId } of used) {
       const value = ctx.findTexture(textureId)?.data.texOpts?.[key];
@@ -214,7 +223,8 @@ const resolveSlotSampler = (
         `slots.${slot}: the members' textures differ in texOpts.${key}: ${values.join('; ')} (an array has one sampler; unset is three's ${SAMPLER_DEFAULTS[key]})`
       );
     } else if (isSet) {
-      texOpts[key] = [...byValue.keys()][0];
+      // The members' one value of this key, typed as its key's
+      (texOpts as Record<SamplerKey, unknown>)[key] = [...byValue.keys()][0];
     }
   }
   return texOpts;

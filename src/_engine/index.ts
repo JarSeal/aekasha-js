@@ -226,7 +226,6 @@ export {
   getMaterial,
   getMaterialVariant,
   incMaterialRef,
-  loadTslMaterialFileAsync,
   saveMaterial,
 } from './kernel/assets/Material';
 export type {
@@ -235,7 +234,24 @@ export type {
   MaterialVariantOverrides,
   MatProps,
   TextureMapKeys,
+  TslMaterialProps,
 } from './kernel/assets/Material';
+export { loadTslMaterialFileAsync, registerTslMaterial } from './kernel/assets/MaterialTsl';
+export { registerMaterialInputResolver } from './kernel/assets/MaterialInputResolvers';
+export { ensureMaterialDependencies } from './kernel/assets/MaterialDependencies';
+export type {
+  MaterialInputContext,
+  MaterialInputResolver,
+  ResolvedInput,
+  ResolvedInputNode,
+} from './kernel/assets/MaterialInputResolvers';
+export type { MaterialInputDependency, TextureInputRef } from './kernel/assets/MaterialInputRefs';
+export type {
+  TslInputs,
+  TslMaterialFns,
+  TslSetupFn,
+  TslSocketFn,
+} from './kernel/assets/MaterialTsl';
 export {
   createMeshEntity,
   getMeshByAppId,

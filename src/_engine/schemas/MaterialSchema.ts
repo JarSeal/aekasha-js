@@ -21,10 +21,16 @@ const StaticDefinesSchema = z
   .record(z.string(), z.any())
   .describe('Build-time flags the TSL file branches on: another set is another shader.');
 
+const InputsSchema = z
+  .record(z.string(), z.unknown())
+  .describe(
+    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+  );
+
 const NodesSchema = z
   .record(z.string(), TslNodeInputsSchema)
   .describe(
-    "Per socket (colorNode, …), its inputs: a texture id, a '#rrggbb' colour, a number, a boolean, or a vector as an array or { x, y, z }. Each becomes a uniform the TSL file's socket function gets."
+    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
   );
 
 const MaterialOverridesSchema = z.object({
@@ -36,6 +42,8 @@ const MaterialOverridesSchema = z.object({
   staticDefines: StaticDefinesSchema.optional(),
   /** Over the material's `nodes`, per socket. */
   nodes: NodesSchema.optional(),
+  /** Over the material's `inputs` (shallowly). */
+  inputs: InputsSchema.optional(),
   /** Over the material's `debugData`. */
   debugData: DebugDataSchema.optional(),
   /** Over the material's `userData`. */
@@ -54,12 +62,17 @@ export const MaterialVariantOverridesSchema = z
   .object({
     /** Merged over the material's `params` (shallowly). */
     params: ThreeJsParamsSchema.optional(),
-    /** Merged over the material's `staticDefines` (shallowly): another set is another shader. */
+    /** Merged over the material's `staticDefines` (shallowly: a nested define object replaces the
+     * material's whole): another set is another shader. */
     staticDefines: StaticDefinesSchema.optional(),
     /** Merged over the material's `nodes`, per socket. */
     nodes: NodesSchema.optional(),
+    /** Merged over the material's `inputs` (shallowly). */
+    inputs: InputsSchema.optional(),
   })
-  .describe("The mesh's variant of its material: params, staticDefines and nodes over its own.");
+  .describe(
+    "The mesh's variant of its material: params, staticDefines, nodes and inputs over its own."
+  );
 
 const MaterialBaseProps = z.object({
   /** The registry id, which scenes and meshes name the material by. */
@@ -96,8 +109,13 @@ const TslMaterialSchema = MaterialBaseProps.extend({
     ),
   /** Build-time flags the TSL file branches on. */
   staticDefines: StaticDefinesSchema.optional(),
-  /** Per socket, its inputs: each becomes a uniform the file's socket function gets. */
+  /** Per socket, its inputs: each becomes a node the file's socket function gets (as `inputs`). */
   nodes: NodesSchema.optional(),
+  /** The inputs of the file's `setup` function, which sets any sockets from one graph: a texture
+   * id (or `{ "texture": id, "channel": "r" }`, its sample's channels) becomes a texture node, a
+   * form a registered input resolver takes its node or bundle (`registerMaterialInputResolver`),
+   * any other value a uniform. `setup` runs before the `nodes` sockets' functions. */
+  inputs: InputsSchema.optional(),
   /** A node material type: three's node material of that name, with the TSL file's sockets. */
   type: z
     .enum([
@@ -141,8 +159,8 @@ const PlainMaterialSchema = MaterialBaseProps.extend({
 
 /**
  * A material JSON (`*.material.json`, a scene's or a mesh's inline material): the runtime's
- * `MatProps` for `createMaterial`. A node material type with its TSL file, `staticDefines` and
- * `nodes`, or another three material type with its `params`.
+ * `MatProps` for `createMaterial`. A node material type with its TSL file, `staticDefines`,
+ * `inputs` and `nodes`, or another three material type with its `params`.
  */
 export const MaterialAssetSchema = z
   .discriminatedUnion('type', [TslMaterialSchema, PlainMaterialSchema])

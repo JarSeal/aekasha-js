@@ -13,8 +13,8 @@ let hdrLoader: HDRLoader | null = null;
 
 /**
  * The assets worker's texture job (`AssetsWorker.ts` imports this module on the first one):
- * answers a LOAD_TEXTURE with the file decoded into an ImageBitmap (flipped vertically, alpha not
- * premultiplied) and a LOAD_HDR_TEXTURE with HDRLoader's half-float data, each transferred.
+ * answers a LOAD_TEXTURE with the file decoded into an ImageBitmap (flipped vertically and the
+ * alpha premultiplied as the request asks) and a LOAD_HDR_TEXTURE with HDRLoader's half-float data, each transferred.
  * @internal
  * @param data the request
  * @param sendMessage posts the response, with the buffers to transfer
@@ -30,11 +30,11 @@ export const assetsSwitchTexture = async (
   switch (type) {
     case AssetsProtocolType.LOAD_TEXTURE: {
       const blob = await (await fetchAsset(url)).blob();
-      // Bakes in the vertical flip TextureLoader's default flipY = true does at upload time
-      // (flipY is ignored for ImageBitmaps), and keeps the alpha unpremultiplied like it does
+      // Bakes in the texture's flipY (TextureLoader's default true flips at upload time, which
+      // the WebGL backend ignores for an ImageBitmap) and premultiplyAlpha (default false)
       const bitmap = await createImageBitmap(blob, {
-        imageOrientation: 'flipY',
-        premultiplyAlpha: 'none',
+        imageOrientation: data.flipY ? 'flipY' : 'from-image',
+        premultiplyAlpha: data.premultiplyAlpha ? 'premultiply' : 'none',
       });
       return sendMessage({ type, requestId, bitmap }, [bitmap]);
     }

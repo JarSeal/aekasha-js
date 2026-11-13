@@ -17,24 +17,45 @@ import {
 } from './AssetOwners';
 import { resolveAssetUrl, resolveFileUrl, type GeneratedAssetUrls } from './AssetUrl';
 import { loadKTX2Texture } from './import/KTX2';
+import { getRenderer } from '../render/Renderer';
 import type { TextureArrayInfo } from './TextureArray';
 import type { TextureAtlasInfo } from './TextureAtlas';
 import type { TextureAtlasSlotInfo } from '../../schemas/TextureAtlasSchema';
 
 /**
- * A texture's sampler state and format, applied over what its loader set (a field left out keeps
- * the loader's). `image` is only for a texture without a file (its source image).
+ * A texture's sampler state, UV transform, upload settings and format, applied over what its
+ * loader set (a field left out keeps the loader's). `image` is only for a texture without a file
+ * (its source image).
  */
 export type TexOpts = {
+  /** The source image of a texture without a file. */
   image?: TexImageSource | OffscreenCanvas;
-  mapping?: THREE.Mapping;
+  mapping?: THREE.AnyMapping;
   wrapS?: THREE.Wrapping;
   wrapT?: THREE.Wrapping;
   magFilter?: THREE.MagnificationTextureFilter;
   minFilter?: THREE.MinificationTextureFilter;
   format?: THREE.PixelFormat;
   type?: THREE.TextureDataType;
-  anisotropy?: number;
+  /** Anisotropic filtering samples (1: off), or `'MAX'` for the renderer's
+   * `getMaxAnisotropy()` (16 before the renderer is initialised). */
+  anisotropy?: number | 'MAX';
+  /** How often it repeats over the UVs, `[x, y]`. */
+  repeat?: [number, number];
+  /** The UV offset, `[x, y]`. */
+  offset?: [number, number];
+  /** The UV rotation in radians around `center`. */
+  rotation?: number;
+  /** The rotation's centre in UV space, `[x, y]`. */
+  center?: [number, number];
+  /** Flips the image vertically. An image the assets worker decodes is flipped there (the
+   * texture's own `flipY` stays false), and a compressed texture can't be flipped: a KTX2 file
+   * has its flip baked in. */
+  flipY?: boolean;
+  generateMipmaps?: boolean;
+  /** Premultiplies the colour by the alpha. Done by the assets worker's decode, as `flipY`; not
+   * for a compressed texture. */
+  premultiplyAlpha?: boolean;
   colorSpace?: THREE.ColorSpace;
 };
 
@@ -101,10 +122,12 @@ const disposeTextureResource = (texture: THREE.Texture) => {
 const toLoaderUrl = (fileName: string, path?: string) => resolveFileUrl((path || './') + fileName);
 
 /** A texture from an assets-worker ImageBitmap, in the state TextureLoader leaves a texture in,
- * except flipY: the flip is already baked into the bitmap. */
+ * except flipY and premultiplyAlpha: the decode baked them into the bitmap (applyTexOpts leaves
+ * them false). */
 const createTextureFromWorkerBitmap = (bitmap: ImageBitmap) => {
   const texture = new THREE.Texture(bitmap);
   texture.flipY = false;
+  texture.premultiplyAlpha = false;
   texture.needsUpdate = true;
   workerBitmapTextures.add(texture);
   return texture;
@@ -176,9 +199,51 @@ const saveAndReport = <T extends THREE.Texture>(
   return saved;
 };
 
+/** `'MAX'` anisotropy as a number: the renderer's most, or WebGPU's 16 before it's initialised
+ * (the WebGL backend clamps to the device's). */
+const resolveAnisotropy = (anisotropy: number | 'MAX') => {
+  if (anisotropy !== 'MAX') return anisotropy;
+  const renderer = getRenderer();
+  return renderer?.hasInitialized() ? renderer.getMaxAnisotropy() : 16;
+};
+
 /**
- * Applies texOpts to a texture and replaces its userData (with `userData`, or an empty object),
- * plus debugData's name and description.
+ * Applies every defined texOpts value to a texture (`anisotropy: 0` and `flipY: false` too),
+ * except `flipY` and `premultiplyAlpha` on a texture that has them baked in (an image the assets
+ * worker decoded, a compressed texture). Marks a texture that has its data for upload again, so
+ * the new settings reach the GPU.
+ * @internal
+ */
+export const applyTexOpts = (texture: THREE.Texture, texOpts?: TexOpts) => {
+  if (!texOpts) return;
+  const { repeat, offset, rotation, center, flipY, premultiplyAlpha } = texOpts;
+  if (texOpts.mapping !== undefined) texture.mapping = texOpts.mapping;
+  if (texOpts.wrapS !== undefined) texture.wrapS = texOpts.wrapS;
+  if (texOpts.wrapT !== undefined) texture.wrapT = texOpts.wrapT;
+  if (texOpts.magFilter !== undefined) texture.magFilter = texOpts.magFilter;
+  if (texOpts.minFilter !== undefined) texture.minFilter = texOpts.minFilter;
+  if (texOpts.format !== undefined) texture.format = texOpts.format;
+  if (texOpts.type !== undefined) texture.type = texOpts.type;
+  if (texOpts.anisotropy !== undefined) texture.anisotropy = resolveAnisotropy(texOpts.anisotropy);
+  if (texOpts.colorSpace !== undefined) texture.colorSpace = texOpts.colorSpace;
+  if (repeat) texture.repeat.set(repeat[0], repeat[1]);
+  if (offset) texture.offset.set(offset[0], offset[1]);
+  if (rotation !== undefined) texture.rotation = rotation;
+  if (center) texture.center.set(center[0], center[1]);
+  if (texOpts.generateMipmaps !== undefined) texture.generateMipmaps = texOpts.generateMipmaps;
+  const isBaked =
+    workerBitmapTextures.has(texture) || (texture as THREE.CompressedTexture).isCompressedTexture;
+  if (!isBaked) {
+    if (flipY !== undefined) texture.flipY = flipY;
+    if (premultiplyAlpha !== undefined) texture.premultiplyAlpha = premultiplyAlpha;
+  }
+  // A texture without data yet (version 0) isn't marked: three warns about one without an image
+  if (texture.version > 0) texture.needsUpdate = true;
+};
+
+/**
+ * Applies texOpts to a texture (`applyTexOpts`) and replaces its userData (with `userData`,
+ * or an empty object), plus debugData's name and description.
  * @internal
  */
 export const setTextureOpts = (
@@ -187,15 +252,7 @@ export const setTextureOpts = (
   userData?: Record<string, unknown>,
   debugData?: { name?: string; description?: string }
 ) => {
-  if (texOpts?.mapping) texture.mapping = texOpts.mapping;
-  if (texOpts?.wrapS) texture.wrapS = texOpts.wrapS;
-  if (texOpts?.wrapT) texture.wrapT = texOpts.wrapT;
-  if (texOpts?.magFilter) texture.magFilter = texOpts.magFilter;
-  if (texOpts?.minFilter) texture.minFilter = texOpts.minFilter;
-  if (texOpts?.format) texture.format = texOpts.format;
-  if (texOpts?.type) texture.type = texOpts.type;
-  if (texOpts?.anisotropy) texture.anisotropy = texOpts.anisotropy;
-  if (texOpts?.colorSpace) texture.colorSpace = texOpts.colorSpace;
+  applyTexOpts(texture, texOpts);
   texture.userData = userData || {};
   if (debugData) {
     texture.name = debugData.name || texture.name;
@@ -210,32 +267,11 @@ export const setTextureOpts = (
  * `isCubeTexture`). The loaders' stand-in for a texture that can't load. Not registered.
  * @internal
  */
-export const getNoFileTexture = (texOpts?: TexOpts, isCubeTexture?: boolean) =>
-  isCubeTexture
-    ? new THREE.CubeTexture(
-        undefined,
-        undefined,
-        texOpts?.wrapS,
-        texOpts?.wrapT,
-        texOpts?.magFilter,
-        texOpts?.minFilter,
-        texOpts?.format,
-        texOpts?.type,
-        texOpts?.anisotropy,
-        texOpts?.colorSpace
-      )
-    : new THREE.Texture(
-        texOpts?.image,
-        texOpts?.mapping,
-        texOpts?.wrapS,
-        texOpts?.wrapT,
-        texOpts?.magFilter,
-        texOpts?.minFilter,
-        texOpts?.format,
-        texOpts?.type,
-        texOpts?.anisotropy,
-        texOpts?.colorSpace
-      );
+export const getNoFileTexture = (texOpts?: TexOpts, isCubeTexture?: boolean) => {
+  const texture = isCubeTexture ? new THREE.CubeTexture() : new THREE.Texture(texOpts?.image);
+  applyTexOpts(texture, texOpts);
+  return texture;
+};
 
 /**
  * The URL loadTextureAsync loads a single-file texture from: the asset pipeline's output, or its
@@ -262,16 +298,19 @@ const getTextureFileLoaderType = (url: string, useHDRLoader?: boolean): TextureF
  * CompressedArrayTexture for an array file) with its flip and mip chain baked in, an HDR file
  * (with `useHDRLoader`) a HalfFloat DataTexture, anything else a Texture. Standard and HDR files
  * load where AppConfig.assets targets textures. A Texture decoded in the assets worker holds an
- * ImageBitmap with its flip baked in (`flipY` false); one the caller doesn't register is the
- * caller's to close.
+ * ImageBitmap with `texOpts`' flip (default flipped) and premultiplied alpha baked in (`flipY`
+ * and `premultiplyAlpha` false); one the caller doesn't register is the caller's to close.
  * @internal
  * @param url the file's URL, as resolveAssetUrl returns it
- * @param useHDRLoader load an `.hdr` file as HDR data
+ * @param opts.useHDRLoader load an `.hdr` file as HDR data
+ * @param opts.texOpts the texture's options: the worker's decode reads `flipY` and
+ * `premultiplyAlpha` (the caller still applies them all)
  */
 export const loadTextureFileAsync = async (
   url: string,
-  useHDRLoader?: boolean
+  opts: { useHDRLoader?: boolean; texOpts?: TexOpts } = {}
 ): Promise<{ texture: THREE.Texture; report: AssetLoadReport }> => {
+  const { useHDRLoader, texOpts } = opts;
   const loaderType = getTextureFileLoaderType(url, useHDRLoader);
   if (loaderType === 'KTX2Loader') {
     // Compressed texture: flipY and mipmaps are baked into the file (see loadKTX2Texture)
@@ -298,7 +337,13 @@ export const loadTextureFileAsync = async (
   }
   const { result, report } = await runAssetTask<THREE.Texture>(
     'TEXTURE',
-    async () => createTextureFromWorkerBitmap(await loadTextureInWorker(url)),
+    async () =>
+      createTextureFromWorkerBitmap(
+        await loadTextureInWorker(url, {
+          flipY: texOpts?.flipY !== false,
+          premultiplyAlpha: texOpts?.premultiplyAlpha === true,
+        })
+      ),
     () => new THREE.TextureLoader().loadAsync(url)
   );
   return { texture: result, report };
@@ -538,7 +583,10 @@ export const loadTextureAsync = async (props: TextureProps) => {
     if (!Array.isArray(fileName)) {
       url = resolveTextureUrl({ id, fileName, path, __url, __sourceUrl });
       loaderType = getTextureFileLoaderType(url, useHDRLoader);
-      const { texture: result, report } = await loadTextureFileAsync(url, useHDRLoader);
+      const { texture: result, report } = await loadTextureFileAsync(url, {
+        useHDRLoader,
+        texOpts,
+      });
       const loadedTexture = setTextureOpts(result, texOpts, userData, debugData);
       return saveAndReport(loadedTexture, id, isPersistent, report, url, ownerScope);
     } else {

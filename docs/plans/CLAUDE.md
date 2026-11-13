@@ -38,6 +38,6 @@ The app's plans are in `docsApp/plans/` and its issues in `docsApp/issues/` (p80
 
 - **What goes where:** a change to `src/app/` or the app-level `src/*.ts` files (`AppECSPlugins.ts`, `AppECSRegistry.ts`, `CONFIG.ts`) is the app's; one to the engine or the toolkit is Ækasha's, even when an app scene shows it. An issue goes with the code it's in.
 - **Numbers:** the app's plans have their own number space (an app `p100` and an engine `p100` can both exist); the number is the priority within its folder.
-- **References:** a header line names a plan in its own folder by file name, one in the other folder by its repo path (`Blocked by: docs/plans/p302_material-and-texture-system-refactor.md`).
+- **References:** a header line names a plan in its own folder by file name, one in the other folder by its repo path (`Blocked by: docs/plans/p303_texture-sets-and-terrain-texture-library.md`).
 - **One way, as in the code:** an app plan can wait on an engine plan; an engine plan never names an app plan in `Blocks`, `Blocked by` or `Epic`, so a fork's app plans never change the engine's files. The app plan's own `Blocked by` records the dependency.
 - **Versions:** an app plan bumps `app_metadata.version` (see the root's Versioning), and its changelog sections are the App's.

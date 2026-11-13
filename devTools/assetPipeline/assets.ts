@@ -71,6 +71,9 @@ export const getMergeMaterialSlotAssetKey = (jsonFile: string, slot: string) =>
 type AssetUse = {
   source: AssetSource | PackSource;
   isSrgb: boolean;
+  /** A texture whose `texOpts.flipY` is false: its KTX2 output is stored as the source is
+   * (p302 D1), every other texture's flipped */
+  isUnflipped: boolean;
   importTextures: boolean;
   /** An imported asset's `lodChain`, resolved (p347 Phase 3) */
   lodChain: ResolvedLodChainOptions | null;
@@ -87,16 +90,18 @@ export const resolveAssetUse = (
   data: AssetData
 ): AssetUse | { error: string } | null => {
   const isSrgb = data.texOpts?.colorSpace === 'srgb';
+  const isUnflipped = data.texOpts?.flipY === false;
   const importTextures = !!data.importTextures;
   const lodChain = data.lodChain
     ? resolveLodChainOptions(data.lodChain === true ? undefined : data.lodChain)
     : null;
   if (data.pack) {
-    return { source: createPackSource(jsonFile, data.pack), isSrgb, importTextures, lodChain };
+    const source = createPackSource(jsonFile, data.pack);
+    return { source, isSrgb, isUnflipped, importTextures, lodChain };
   }
   if (!data.fileName) return null;
   const source = resolveAssetSource({ jsonFile, fileName: data.fileName, path: data.path });
-  return 'error' in source ? source : { source, isSrgb, importTextures, lodChain };
+  return 'error' in source ? source : { source, isSrgb, isUnflipped, importTextures, lodChain };
 };
 
 /**
@@ -109,7 +114,9 @@ export const getPipelineAssetKey = (type: PipelineAssetType, jsonFile: string, u
   const source = use.source.kind === 'remote' ? use.source.url : use.source.repoPath;
   const kind = use.source.kind === 'pack' ? 'pack' : 'file';
   const colorSpace = type === 'texture' ? (use.isSrgb ? ':srgb' : ':linear') : '';
-  return `${type}:${toRepoPath(path.resolve(ROOT, jsonFile))}:${kind}:${source}${colorSpace}`;
+  // Only when unflipped, so the other keys didn't change (p302 D1)
+  const flip = type === 'texture' && use.isUnflipped ? ':unflipped' : '';
+  return `${type}:${toRepoPath(path.resolve(ROOT, jsonFile))}:${kind}:${source}${colorSpace}${flip}`;
 };
 
 /** The asset's own data and each scene's latest save entry merged over it */
@@ -357,7 +364,11 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
         source: use.source,
         ...(data.optimize !== undefined ? { optimize: data.optimize } : {}),
         ...(type === 'texture'
-          ? { isSrgb: use.isSrgb, ...(alphaCoverage !== undefined ? { alphaCoverage } : {}) }
+          ? {
+              isSrgb: use.isSrgb,
+              ...(use.isUnflipped ? { isUnflipped: true } : {}),
+              ...(alphaCoverage !== undefined ? { alphaCoverage } : {}),
+            }
           : {
               importTextures: use.importTextures,
               ...(use.lodChain ? { lodChain: use.lodChain } : {}),

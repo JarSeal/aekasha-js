@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p302ChannelMat",
+  "tslFile": "scenes/testDebugScene/p302ChannelMat.tsl.ts",
+  "type": "BASICNODEMATERIAL",
+  "inputs": {
+    "albedo": { "texture": "testTexture" },
+    "mask": { "texture": "testTexture", "channel": "r" }
+  },
+  "debugData": {
+    "name": "Texture channel check",
+    "description": "The object-form texture refs (p302 D4): the texture on the left half, its red channel in grey on the right."
+  }
+}

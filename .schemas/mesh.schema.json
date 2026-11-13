@@ -19,37 +19,37 @@
           "$ref": "#/definitions/__schema71"
         },
         "matOverrides": {
-          "$ref": "#/definitions/__schema111"
-        },
-        "castShadow": {
           "$ref": "#/definitions/__schema115"
         },
+        "castShadow": {
+          "$ref": "#/definitions/__schema120"
+        },
         "receiveShadow": {
-          "$ref": "#/definitions/__schema117"
+          "$ref": "#/definitions/__schema122"
         },
         "preWarm": {
-          "$ref": "#/definitions/__schema119"
-        },
-        "position": {
-          "$ref": "#/definitions/__schema121"
-        },
-        "rotation": {
-          "$ref": "#/definitions/__schema123"
-        },
-        "quaternion": {
           "$ref": "#/definitions/__schema124"
         },
-        "appId": {
+        "position": {
           "$ref": "#/definitions/__schema126"
         },
-        "frustumCullingEnabled": {
+        "rotation": {
           "$ref": "#/definitions/__schema128"
         },
+        "quaternion": {
+          "$ref": "#/definitions/__schema129"
+        },
+        "appId": {
+          "$ref": "#/definitions/__schema131"
+        },
+        "frustumCullingEnabled": {
+          "$ref": "#/definitions/__schema133"
+        },
         "lod": {
-          "$ref": "#/definitions/__schema130"
+          "$ref": "#/definitions/__schema135"
         },
         "merge": {
-          "$ref": "#/definitions/__schema151"
+          "$ref": "#/definitions/__schema156"
         }
       },
       "required": [
@@ -63,28 +63,28 @@
       "type": "object",
       "properties": {
         "appId": {
-          "$ref": "#/definitions/__schema160"
+          "$ref": "#/definitions/__schema165"
         },
         "disabled": {
-          "$ref": "#/definitions/__schema162"
+          "$ref": "#/definitions/__schema167"
         },
         "persistent": {
-          "$ref": "#/definitions/__schema164"
-        },
-        "doNotAddToScene": {
-          "$ref": "#/definitions/__schema166"
-        },
-        "userData": {
-          "$ref": "#/definitions/__schema168"
-        },
-        "debugData": {
           "$ref": "#/definitions/__schema169"
         },
+        "doNotAddToScene": {
+          "$ref": "#/definitions/__schema171"
+        },
+        "userData": {
+          "$ref": "#/definitions/__schema173"
+        },
+        "debugData": {
+          "$ref": "#/definitions/__schema174"
+        },
         "spatialIndex": {
-          "$ref": "#/definitions/__schema170"
+          "$ref": "#/definitions/__schema175"
         },
         "ecsFrustumCullingEnabled": {
-          "$ref": "#/definitions/__schema172"
+          "$ref": "#/definitions/__schema177"
         }
       },
       "additionalProperties": false,
@@ -101,7 +101,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema174"
+          "$ref": "#/definitions/__schema179"
         }
       ]
     }
@@ -839,7 +839,7 @@
           "$ref": "#/definitions/__schema72"
         },
         {
-          "$ref": "#/definitions/__schema110"
+          "$ref": "#/definitions/__schema114"
         }
       ],
       "description": "The material: its props, or a material's id."
@@ -850,7 +850,7 @@
           "$ref": "#/definitions/__schema73"
         },
         {
-          "$ref": "#/definitions/__schema108"
+          "$ref": "#/definitions/__schema112"
         }
       ],
       "description": "A material: its type and three parameters, and a node material's TSL file and inputs."
@@ -883,16 +883,19 @@
           "$ref": "#/definitions/__schema89"
         },
         "tslFile": {
-          "$ref": "#/definitions/__schema104"
+          "$ref": "#/definitions/__schema107"
         },
         "staticDefines": {
-          "$ref": "#/definitions/__schema105"
+          "$ref": "#/definitions/__schema108"
         },
         "nodes": {
-          "$ref": "#/definitions/__schema106"
+          "$ref": "#/definitions/__schema109"
+        },
+        "inputs": {
+          "$ref": "#/definitions/__schema110"
         },
         "type": {
-          "$ref": "#/definitions/__schema107"
+          "$ref": "#/definitions/__schema111"
         }
       },
       "required": [
@@ -1030,6 +1033,13 @@
                 }
               ]
             },
+            "inputs": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema104"
+                }
+              ]
+            },
             "debugData": {
               "allOf": [
                 {
@@ -1132,7 +1142,7 @@
       "additionalProperties": {
         "$ref": "#/definitions/__schema103"
       },
-      "description": "Per socket (colorNode, …), its inputs: a texture id, a '#rrggbb' colour, a number, a boolean, or a vector as an array or { x, y, z }. Each becomes a uniform the TSL file's socket function gets."
+      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
     },
     "__schema102": {
       "type": "string"
@@ -1145,24 +1155,45 @@
       "additionalProperties": {}
     },
     "__schema104": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema105"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema106"
+      },
+      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    },
+    "__schema105": {
+      "type": "string"
+    },
+    "__schema106": {},
+    "__schema107": {
       "type": "string",
       "description": "The TSL file, relative to the first folder under src/ (\"materials/asteroid/asteroid.tsl.ts\")."
     },
-    "__schema105": {
+    "__schema108": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema98"
         }
       ]
     },
-    "__schema106": {
+    "__schema109": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema101"
         }
       ]
     },
-    "__schema107": {
+    "__schema110": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema104"
+        }
+      ]
+    },
+    "__schema111": {
       "type": "string",
       "enum": [
         "BASICNODEMATERIAL",
@@ -1176,7 +1207,7 @@
       ],
       "description": "A node material: three's node material of that name, with the TSL file's sockets."
     },
-    "__schema108": {
+    "__schema112": {
       "type": "object",
       "properties": {
         "id": {
@@ -1204,7 +1235,7 @@
           "$ref": "#/definitions/__schema89"
         },
         "type": {
-          "$ref": "#/definitions/__schema109"
+          "$ref": "#/definitions/__schema113"
         }
       },
       "required": [
@@ -1213,7 +1244,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema109": {
+    "__schema113": {
       "type": "string",
       "enum": [
         "LINEBASIC",
@@ -1236,88 +1267,98 @@
       ],
       "description": "A three material: STANDARD is MeshStandardMaterial, LINEBASIC LineBasicMaterial, …"
     },
-    "__schema110": {
+    "__schema114": {
       "type": "string"
     },
-    "__schema111": {
+    "__schema115": {
       "type": "object",
       "properties": {
         "params": {
-          "$ref": "#/definitions/__schema112"
+          "$ref": "#/definitions/__schema116"
         },
         "staticDefines": {
-          "$ref": "#/definitions/__schema113"
+          "$ref": "#/definitions/__schema117"
         },
         "nodes": {
-          "$ref": "#/definitions/__schema114"
+          "$ref": "#/definitions/__schema118"
+        },
+        "inputs": {
+          "$ref": "#/definitions/__schema119"
         }
       },
       "additionalProperties": false,
-      "description": "The mesh's variant of its material: params, staticDefines and nodes over its own."
+      "description": "The mesh's variant of its material: params, staticDefines, nodes and inputs over its own."
     },
-    "__schema112": {
+    "__schema116": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema83"
         }
       ]
     },
-    "__schema113": {
+    "__schema117": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema98"
         }
       ]
     },
-    "__schema114": {
+    "__schema118": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema101"
         }
       ]
     },
-    "__schema115": {
-      "description": "Casts shadows. Default false.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema116"
-        }
-      ]
-    },
-    "__schema116": {
-      "type": "boolean"
-    },
-    "__schema117": {
-      "description": "Receives shadows. Default false.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema118"
-        }
-      ]
-    },
-    "__schema118": {
-      "type": "boolean"
-    },
     "__schema119": {
-      "description": "Compiles its pipelines at creation, so its first frame doesn't stall on it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema120"
+          "$ref": "#/definitions/__schema104"
         }
       ]
     },
     "__schema120": {
-      "type": "boolean"
-    },
-    "__schema121": {
-      "description": "Where the mesh is. Default: the origin.",
+      "description": "Casts shadows. Default false.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema122"
+          "$ref": "#/definitions/__schema121"
         }
       ]
     },
+    "__schema121": {
+      "type": "boolean"
+    },
     "__schema122": {
+      "description": "Receives shadows. Default false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema123"
+        }
+      ]
+    },
+    "__schema123": {
+      "type": "boolean"
+    },
+    "__schema124": {
+      "description": "Compiles its pipelines at creation, so its first frame doesn't stall on it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema125"
+        }
+      ]
+    },
+    "__schema125": {
+      "type": "boolean"
+    },
+    "__schema126": {
+      "description": "Where the mesh is. Default: the origin.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema127"
+        }
+      ]
+    },
+    "__schema127": {
       "type": "object",
       "properties": {
         "x": {
@@ -1340,23 +1381,23 @@
       ],
       "additionalProperties": false
     },
-    "__schema123": {
+    "__schema128": {
       "description": "Euler angles in radians; quaternion wins over it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema122"
+          "$ref": "#/definitions/__schema127"
         }
       ]
     },
-    "__schema124": {
+    "__schema129": {
       "description": "A rotation quaternion.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema125"
+          "$ref": "#/definitions/__schema130"
         }
       ]
     },
-    "__schema125": {
+    "__schema130": {
       "type": "object",
       "properties": {
         "x": {
@@ -1384,47 +1425,47 @@
       ],
       "additionalProperties": false
     },
-    "__schema126": {
+    "__schema131": {
       "description": "The id scenes list it by (default: the file's name), and the entity's app id (default: a UUID).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema127"
+          "$ref": "#/definitions/__schema132"
         }
       ]
     },
-    "__schema127": {
+    "__schema132": {
       "type": "string"
     },
-    "__schema128": {
+    "__schema133": {
       "description": "three's own render-list culling (Object3D.frustumCulled). Default true.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema129"
+          "$ref": "#/definitions/__schema134"
         }
       ]
     },
-    "__schema129": {
+    "__schema134": {
       "type": "boolean"
     },
-    "__schema130": {
+    "__schema135": {
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "levels": {
-              "$ref": "#/definitions/__schema131"
+              "$ref": "#/definitions/__schema136"
             },
             "cullScreenSize": {
-              "$ref": "#/definitions/__schema140"
+              "$ref": "#/definitions/__schema145"
             },
             "hysteresis": {
-              "$ref": "#/definitions/__schema142"
+              "$ref": "#/definitions/__schema147"
             },
             "bias": {
-              "$ref": "#/definitions/__schema144"
+              "$ref": "#/definitions/__schema149"
             },
             "fadeSeconds": {
-              "$ref": "#/definitions/__schema146"
+              "$ref": "#/definitions/__schema151"
             }
           },
           "required": [
@@ -1437,22 +1478,22 @@
           "type": "object",
           "properties": {
             "auto": {
-              "$ref": "#/definitions/__schema148"
+              "$ref": "#/definitions/__schema153"
             },
             "maxPixelError": {
-              "$ref": "#/definitions/__schema149"
+              "$ref": "#/definitions/__schema154"
             },
             "cullScreenSize": {
-              "$ref": "#/definitions/__schema140"
+              "$ref": "#/definitions/__schema145"
             },
             "hysteresis": {
-              "$ref": "#/definitions/__schema142"
+              "$ref": "#/definitions/__schema147"
             },
             "bias": {
-              "$ref": "#/definitions/__schema144"
+              "$ref": "#/definitions/__schema149"
             },
             "fadeSeconds": {
-              "$ref": "#/definitions/__schema146"
+              "$ref": "#/definitions/__schema151"
             }
           },
           "required": [
@@ -1468,28 +1509,28 @@
         }
       ]
     },
-    "__schema131": {
+    "__schema136": {
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema132"
+        "$ref": "#/definitions/__schema137"
       },
       "description": "Level 0 (the finest) first, screenSize descending."
     },
-    "__schema132": {
+    "__schema137": {
       "type": "object",
       "properties": {
         "screenSize": {
-          "$ref": "#/definitions/__schema133"
+          "$ref": "#/definitions/__schema138"
         },
         "geo": {
-          "$ref": "#/definitions/__schema134"
+          "$ref": "#/definitions/__schema139"
         },
         "mat": {
-          "$ref": "#/definitions/__schema136"
+          "$ref": "#/definitions/__schema141"
         },
         "castShadow": {
-          "$ref": "#/definitions/__schema138"
+          "$ref": "#/definitions/__schema143"
         }
       },
       "required": [
@@ -1498,101 +1539,73 @@
       "additionalProperties": false,
       "description": "A level of detail."
     },
-    "__schema133": {
+    "__schema138": {
       "type": "number",
       "minimum": 0,
       "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
     },
-    "__schema134": {
+    "__schema139": {
       "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema135"
+          "$ref": "#/definitions/__schema140"
         }
       ]
     },
-    "__schema135": {
+    "__schema140": {
       "type": "string",
       "minLength": 1
     },
-    "__schema136": {
+    "__schema141": {
       "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema137"
+          "$ref": "#/definitions/__schema142"
         }
       ]
     },
-    "__schema137": {
+    "__schema142": {
       "type": "string",
       "minLength": 1
     },
-    "__schema138": {
+    "__schema143": {
       "description": "Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema139"
+          "$ref": "#/definitions/__schema144"
         }
       ]
     },
-    "__schema139": {
+    "__schema144": {
       "type": "boolean"
     },
-    "__schema140": {
+    "__schema145": {
       "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema141"
+          "$ref": "#/definitions/__schema146"
         }
       ]
     },
-    "__schema141": {
+    "__schema146": {
       "type": "number",
       "minimum": 0
     },
-    "__schema142": {
+    "__schema147": {
       "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema143"
+          "$ref": "#/definitions/__schema148"
         }
       ]
     },
-    "__schema143": {
+    "__schema148": {
       "type": "number",
       "minimum": 0,
       "exclusiveMaximum": 1
     },
-    "__schema144": {
-      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema145"
-        }
-      ]
-    },
-    "__schema145": {
-      "type": "number",
-      "exclusiveMinimum": 0
-    },
-    "__schema146": {
-      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema147"
-        }
-      ]
-    },
-    "__schema147": {
-      "type": "number",
-      "minimum": 0
-    },
-    "__schema148": {
-      "type": "boolean",
-      "const": true
-    },
     "__schema149": {
-      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema150"
@@ -1604,6 +1617,34 @@
       "exclusiveMinimum": 0
     },
     "__schema151": {
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema152"
+        }
+      ]
+    },
+    "__schema152": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema153": {
+      "type": "boolean",
+      "const": true
+    },
+    "__schema154": {
+      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema155"
+        }
+      ]
+    },
+    "__schema155": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema156": {
       "anyOf": [
         {
           "type": "string",
@@ -1614,7 +1655,7 @@
           "description": "The merge group's id: made on first use (the scene's mergeGroups entry's settings).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema152"
+              "$ref": "#/definitions/__schema157"
             }
           ]
         },
@@ -1622,19 +1663,19 @@
           "type": "object",
           "properties": {
             "group": {
-              "$ref": "#/definitions/__schema153"
+              "$ref": "#/definitions/__schema158"
             },
             "mode": {
-              "$ref": "#/definitions/__schema155"
+              "$ref": "#/definitions/__schema160"
             },
             "cellSize": {
-              "$ref": "#/definitions/__schema156"
+              "$ref": "#/definitions/__schema161"
             },
             "maxVertices": {
-              "$ref": "#/definitions/__schema157"
+              "$ref": "#/definitions/__schema162"
             },
             "palettes": {
-              "$ref": "#/definitions/__schema158"
+              "$ref": "#/definitions/__schema163"
             }
           },
           "additionalProperties": false,
@@ -1642,30 +1683,30 @@
         }
       ]
     },
-    "__schema152": {
+    "__schema157": {
       "type": "string",
       "minLength": 1
     },
-    "__schema153": {
+    "__schema158": {
       "description": "The group's id, or AUTO (the default).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema154"
+          "$ref": "#/definitions/__schema159"
         }
       ]
     },
-    "__schema154": {
+    "__schema159": {
       "anyOf": [
         {
           "type": "string",
           "const": "AUTO"
         },
         {
-          "$ref": "#/definitions/__schema152"
+          "$ref": "#/definitions/__schema157"
         }
       ]
     },
-    "__schema155": {
+    "__schema160": {
       "type": "string",
       "enum": [
         "BAKED",
@@ -1673,109 +1714,109 @@
       ],
       "description": "How the group draws its members: BAKED (the default) merges them into one geometry, for static content; BATCHED draws them as instances of one BatchedMesh, each member's matrix written when it moves and each culled on its own, for moving members (bodies included)."
     },
-    "__schema156": {
+    "__schema161": {
       "type": "number",
       "exclusiveMinimum": 0,
       "description": "AUTO only: the side of the square x/z cells that bound an automatic group, in metres (default 32). In a streaming scene it divides the streaming cell size, or a group can span two streaming cells."
     },
-    "__schema157": {
+    "__schema162": {
       "type": "integer",
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991,
       "description": "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
     },
-    "__schema158": {
+    "__schema163": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema159"
+        "$ref": "#/definitions/__schema164"
       },
       "description": "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
     },
-    "__schema159": {
+    "__schema164": {
       "type": "string",
       "minLength": 1
     },
-    "__schema160": {
+    "__schema165": {
       "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema161"
+          "$ref": "#/definitions/__schema166"
         }
       ]
     },
-    "__schema161": {
+    "__schema166": {
       "type": "string"
     },
-    "__schema162": {
+    "__schema167": {
       "description": "Creates the entity disabled.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema163"
+          "$ref": "#/definitions/__schema168"
         }
       ]
     },
-    "__schema163": {
+    "__schema168": {
       "type": "boolean"
     },
-    "__schema164": {
+    "__schema169": {
       "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema165"
+          "$ref": "#/definitions/__schema170"
         }
       ]
     },
-    "__schema165": {
+    "__schema170": {
       "type": "boolean"
     },
-    "__schema166": {
+    "__schema171": {
       "description": "Leaves the entity's object out of the root scene.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema167"
+          "$ref": "#/definitions/__schema172"
         }
       ]
     },
-    "__schema167": {
+    "__schema172": {
       "type": "boolean"
     },
-    "__schema168": {
+    "__schema173": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema79"
         }
       ]
     },
-    "__schema169": {
+    "__schema174": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema7"
         }
       ]
     },
-    "__schema170": {
+    "__schema175": {
       "description": "false keeps a mesh or a point or spot light out of the spatial index.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema171"
+          "$ref": "#/definitions/__schema176"
         }
       ]
     },
-    "__schema171": {
+    "__schema176": {
       "type": "boolean"
     },
-    "__schema172": {
+    "__schema177": {
       "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema173"
+          "$ref": "#/definitions/__schema178"
         }
       ]
     },
-    "__schema173": {
+    "__schema178": {
       "type": "boolean"
     },
-    "__schema174": {
+    "__schema179": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -2032,28 +2073,35 @@
                         "tslFile": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema104"
+                              "$ref": "#/definitions/__schema107"
                             }
                           ]
                         },
                         "staticDefines": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema105"
+                              "$ref": "#/definitions/__schema108"
                             }
                           ]
                         },
                         "nodes": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema106"
+                              "$ref": "#/definitions/__schema109"
+                            }
+                          ]
+                        },
+                        "inputs": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema110"
                             }
                           ]
                         },
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema107"
+                              "$ref": "#/definitions/__schema111"
                             }
                           ]
                         }
@@ -2122,7 +2170,7 @@
                         "type": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/__schema109"
+                              "$ref": "#/definitions/__schema113"
                             }
                           ]
                         }
@@ -2137,34 +2185,34 @@
               ]
             },
             "matOverrides": {
-              "$ref": "#/definitions/__schema111"
-            },
-            "castShadow": {
               "$ref": "#/definitions/__schema115"
             },
+            "castShadow": {
+              "$ref": "#/definitions/__schema120"
+            },
             "receiveShadow": {
-              "$ref": "#/definitions/__schema117"
+              "$ref": "#/definitions/__schema122"
             },
             "preWarm": {
-              "$ref": "#/definitions/__schema119"
-            },
-            "position": {
-              "$ref": "#/definitions/__schema121"
-            },
-            "rotation": {
-              "$ref": "#/definitions/__schema123"
-            },
-            "quaternion": {
               "$ref": "#/definitions/__schema124"
             },
-            "frustumCullingEnabled": {
+            "position": {
+              "$ref": "#/definitions/__schema126"
+            },
+            "rotation": {
               "$ref": "#/definitions/__schema128"
             },
+            "quaternion": {
+              "$ref": "#/definitions/__schema129"
+            },
+            "frustumCullingEnabled": {
+              "$ref": "#/definitions/__schema133"
+            },
             "lod": {
-              "$ref": "#/definitions/__schema130"
+              "$ref": "#/definitions/__schema135"
             },
             "merge": {
-              "$ref": "#/definitions/__schema151"
+              "$ref": "#/definitions/__schema156"
             },
             "__meta": {
               "allOf": [
