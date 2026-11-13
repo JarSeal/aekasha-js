@@ -4,9 +4,11 @@ import {
   existsOrThrow,
   getGeometry,
   getMaterial,
+  IS_DEBUG_ENV,
   saveBufferGeometry,
   type MaterialVariantOverrides,
 } from 'aekasha';
+import type { TextureSetPacking } from 'aekasha/texturesets';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 
 /**
@@ -27,8 +29,16 @@ import { generateTerrain } from 'aekasha/toolkit/geometry';
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
  * The scene lists the 16 sets (`textureSets`), so their default packing's textures load with it;
- * each block's mesh is a variant of `textureSetSurface` naming its set (`matOverrides.inputs`).
+ * each block's mesh is a variant of `textureSetSurface` naming its set (`matOverrides.inputs`). The
+ * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the set list flying the camera, the
+ * packing of the sets that ship every packing, a 1 m checker over the blocks.
  */
+
+export const TERRAIN_GALLERY_SCENE_ID = 'terrainGallery';
+/** The scene's camera (`terrainGalleryCamera.camera.json`), which the tab flies */
+export const TERRAIN_GALLERY_CAMERA_APP_ID = 'terrainGalleryCamera';
+/** The sets that ship `FULL` and `MINIMAL` besides `LITE` (p303 D6), for the packing selector */
+export const ALL_PACKING_SETS: readonly string[] = ['sand01', 'grass01', 'cliffs01'];
 
 /** A block of the gallery: its set and where it stands */
 export type GalleryBlock = {
@@ -38,6 +48,8 @@ export type GalleryBlock = {
   z: number;
   /** Whether it has a wall (the `cliffs*` sets) */
   hasWall: boolean;
+  /** Its terrain's geometry id (its seed's) */
+  geometryId: string;
 };
 
 /** Rows from the back (−z), the sets of a row left to right */
@@ -71,8 +83,11 @@ const WALL_SINK = 0.5;
 const GROUND_Y = -0.6;
 /** Each block's seed: this plus its index, so no two blocks share their noise */
 const SEED_BASE = 303;
+/** A block's side, metres (the tab's camera framing) */
+export const GALLERY_BLOCK_SIZE = BLOCK_SIZE;
 
-const MATERIAL_ID = 'textureSetSurface';
+/** The blocks' material (the toolkit's baseline), its variants per block */
+export const GALLERY_MATERIAL_ID = 'textureSetSurface';
 
 /**
  * No mesh casts or receives shadows: the engine's VSM shadows draw stripes down a sloped receiver
@@ -88,8 +103,28 @@ export const GALLERY_BLOCKS: readonly GalleryBlock[] = ROWS.flatMap((sets, row) 
     x: (col - (sets.length - 1) / 2) * PITCH,
     z: (row - (ROWS.length - 1) / 2) * PITCH,
     hasWall: setId.startsWith('cliffs'),
+    geometryId: `terrainGalleryBlock${SEED_BASE + row * sets.length + col}`,
   }))
 );
+
+/** A block's mesh entity's app id */
+export const getBlockAppId = (setId: string) => `terrainGallery_${setId}`;
+/** A cliff block's wall's mesh entity's app id */
+export const getWallAppId = (setId: string) => `terrainGallery_${setId}_wall`;
+
+/**
+ * A block's (or its wall's) variant of `textureSetSurface`: its set, in a packing (none: the set's
+ * default, the variant the scene's load made)
+ */
+export const getSurfaceOverrides = (
+  setId: string,
+  opts: { packing?: TextureSetPacking; isWall?: boolean } = {}
+): MaterialVariantOverrides => ({
+  inputs: {
+    surface: opts.packing ? { textureSet: setId, packing: opts.packing } : { textureSet: setId },
+  },
+  ...(opts.isWall ? { staticDefines: { tiling: 'UV' } } : {}),
+});
 
 /**
  * A registered geometry by id, built only when it isn't registered yet (a revisit before the
@@ -146,28 +181,25 @@ const buildWallGeometry = () => {
 
 const createBlock = (block: GalleryBlock, seed: number) => {
   const mat = existsOrThrow(
-    getMaterial(MATERIAL_ID),
-    `The terrainGallery scene needs the "${MATERIAL_ID}" material.`
+    getMaterial(GALLERY_MATERIAL_ID),
+    `The terrainGallery scene needs the "${GALLERY_MATERIAL_ID}" material.`
   );
-  const surface: MaterialVariantOverrides = {
-    inputs: { surface: { textureSet: block.setId } },
-  };
   createMeshEntity(
     {
-      geo: getOrBuildGeometry(`terrainGalleryBlock${seed}`, () => buildBlockGeometry(seed)),
+      geo: getOrBuildGeometry(block.geometryId, () => buildBlockGeometry(seed)),
       mat,
-      matOverrides: surface,
+      matOverrides: getSurfaceOverrides(block.setId),
       position: { x: block.x, z: block.z },
       ...NO_SHADOWS,
     },
-    { appId: `terrainGallery_${block.setId}`, debugData: { name: `Block: ${block.setId}` } }
+    { appId: getBlockAppId(block.setId), debugData: { name: `Block: ${block.setId}` } }
   );
   if (!block.hasWall) return;
   createMeshEntity(
     {
       geo: getOrBuildGeometry('terrainGalleryWall', buildWallGeometry),
       mat,
-      matOverrides: { ...surface, staticDefines: { tiling: 'UV' } },
+      matOverrides: getSurfaceOverrides(block.setId, { isWall: true }),
       position: {
         x: block.x - BLOCK_SIZE / 2 + WALL.width / 2,
         y: WALL.height / 2 - WALL_SINK,
@@ -177,7 +209,7 @@ const createBlock = (block: GalleryBlock, seed: number) => {
       ...NO_SHADOWS,
     },
     {
-      appId: `terrainGallery_${block.setId}_wall`,
+      appId: getWallAppId(block.setId),
       debugData: { name: `Wall: ${block.setId}` },
     }
   );
@@ -203,4 +235,11 @@ export const scene = async () => {
     { appId: 'terrainGallery_ground', debugData: { name: 'Gallery ground' } }
   );
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
+
+  // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
+  // its saved packing and checker once the blocks exist.
+  if (IS_DEBUG_ENV) {
+    const { createTerrainGalleryTab } = await import('./_dbg__terrainGallery');
+    createTerrainGalleryTab();
+  }
 };

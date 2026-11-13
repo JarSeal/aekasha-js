@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -540,7 +540,7 @@ As built (2026-11-13; a full `yarn assets`: 96 assets, 84 cache hits (the dev se
   D6's "≈ 2.7 MB of VRAM per set" holds; its disk estimate (≈ 0.9 MB a map) was low, as section 1 found. A terrain material samples only its layers' sets: four LITE layers are ≈ 10.7 MB of VRAM.
 - Not run: `yarn sbp` and the scene runner (no code changed, and no shipped scene names a library set: a production build copies none of these outputs, `assetOutputsBuildPlugin`).
 
-### Phase 5 — Baseline material and gallery skeleton (D7, D8)
+### Phase 5 — Baseline material and gallery skeleton (D7, D8) — done
 
 1. The toolkit's `terrain` category (p301 §2; the first code in it): its entry `src/toolkit/terrain/index.ts` (named `export … from` lines only), `TOOLKIT_CATEGORIES` in `eslint.config.js`, the alias in `devTools/aliases.ts` and `tsconfig.json`'s `paths` (`aliases.test.ts` checks the copy), its folders' rules in `devTools/layout/layoutRules.ts`' `getToolkitRules`, a row in the Hub's entry table (`hub/pages/documentation/intro.md`), the API baseline (`yarn verify:baselines --update`).
 2. `textureSetSurface` + `sampleTextureSet` (summary and `@example`, a `*.test.ts` for what runs in Node). From Phase 4: clamp `roughness × roughnessScale` to 1 (`grass01`'s scale is 2.5); MINIMAL's bump in metres is the unnormalized form (`features/texturesets/CLAUDE.md`'s trap); the sets' `tint` is below white on `snow01`, `snow02` and `concrete01`, so the gallery shows it applied.
@@ -581,6 +581,18 @@ As built (2026-11-13; `yarn test` (3,645), `tsc` both, lint, `yarn verify:baseli
 - **Found: VSM stripes on unshadowed slopes** (`docs/issues/vsm-stripes-on-unshadowed-slopes.md`): every block's ramp showed dark stripes down the slope. Measured on `grass01`'s: they stay with the block not casting (nothing between it and the sun) and with the material rebuilt, and go with the block not receiving, the sun not casting, or the renderer on `PCFSoftShadowMap`: three's VSM, not the material or its tangent frame. The gallery's meshes neither cast nor receive (`NO_SHADOWS`) until it's fixed.
 - **Seen, not changed:** the sky's light is strongly blue at 10:00 (the neutral ground `#2e2f31` renders navy, `cliffs02` blue-grey): the DAY_NIGHT preset's ambient against its sun, which colours every set alike. The sun at 10:00 stands at (0.50, 0.70, 0.51), front-right and 44° up, so the ramps (facing +z) face it.
 - **Not done here (section 3's exit):** whether the relief is lit from the right side is judged by comparing a set's `FULL` normal map against its `MINIMAL` bump from the height, which the packing selector makes possible (their light and dark sides must agree; a mirrored or turned frame shows as the two disagreeing).
+
+#### Section 3: The tab and the exit — done
+
+As built (2026-11-13; `yarn test` (3,645), `tsc` both, lint, `yarn verify:baselines --docs` (unchanged), `yarn hub:build`, `yarn verify:scenes --only terrainGallery`: all five configurations NEW (no local baselines), no errors, the `debugger` configuration's axe on the tab clean; the tab driven by hand on WebGPU):
+
+- **The tab** (`src/app/scenes/terrainGallery/_dbg__terrainGallery.ts`, "Terrain gallery", icon `texture`, scene-scoped; made by the scene file in the debug env once the blocks exist): a segmented **Packing** (`LITE`, `FULL`, `MINIMAL`) for `ALL_PACKING_SETS` (`sand01`, `grass01`, `cliffs01`): `loadTextureSetAsync` of that packing for the three (the scene's textures from then on, released on its exit), then `setMeshMaterial` of each block's and `cliffs01`'s wall's `getMaterialVariant` (the set's default packing: the load's own variant, no `packing` key); the latest pick wins and one finishing after the scene was left does nothing. A **1 m checker** switch: a translucent (25 %) `MeshBasicNodeMaterial` of world 1 m cells (`floor(x) + floor(z)` parity, polygon offset, registered as `terrainGalleryChecker`, the scene's), a mesh per block on the block's geometry, made on the first show of a visit, then hidden or shown; not on the walls (a world XZ checker on a vertical face is stripes). Both saved (`AEK_debugTerrainGallery`) and applied when the tab is made. The **Texture sets** list (`debuggerListCMP`): a row per block (the category and `physicalSize`, the name, the packing shown), a click flying the scene's camera (`terrainGalleryCamera`) over 0.8 s (a scene main looper, smoothstep, position and look-at point eased) to 7.2 m above and 12.6 m in front of the block; the row selected.
+- **Drift from D8:** the fly moves the scene's camera, not the debug camera's view: no entry exposes the debug camera's orbit rig (`_dbg__CameraRig.ts`' is the kernel's). In the debug camera (F1) the scene's camera moves under it.
+- **The scene file** exports what the tab shares: `TERRAIN_GALLERY_SCENE_ID`, `TERRAIN_GALLERY_CAMERA_APP_ID`, `ALL_PACKING_SETS`, `GALLERY_BLOCK_SIZE`, `GALLERY_MATERIAL_ID`, `GalleryBlock.geometryId`, `getBlockAppId`, `getWallAppId`, `getSurfaceOverrides(setId, { packing?, isWall? })`.
+- `devTools/verify/scenes.config.ts`: `terrainGallery: { debugger: { tabs: ['terrainGallery'] } }`, so the runner shoots the tab and runs axe on it.
+- **The exit, measured** (scratch Playwright and sharp scripts, not committed): top-down close-ups of `sand01` and `cliffs01` in each packing through the debug camera, the high-passed log luminance (a 25 px box) of each against `MINIMAL`'s, whose bump comes from the height's screen derivatives with no tangent frame: `FULL` 0.895 / 0.903 and `LITE` 0.905 / 0.910 on WebGPU, `FULL` 0.902 / 0.905 and `LITE` 0.913 / 0.912 on WebGL2 (SwiftShader); a control with the frame's bitangent negated (a scratch edit, reverted) 0.348 / 0.779. So the normals are lit from the side the height says on both backends, at the world's `(x, −z)` tiling; `sand01`'s `FULL` close-up is the same on both backends (r 1.000). Scale: the checker's 12 cells span a block, and each set's features read at their `physicalSize` against them (ripples, pebbles, strata).
+- **Release:** with `FULL` and the checker on, leaving for `testDebugScene` left none of the 20 texture ids of `sand01`, `grass01`, `cliffs01` and `snow01` registered (17 were) and no `terrainGalleryChecker`.
+- Docs: `features/texturesets/CLAUDE.md` (the toolkit's side with the tangent frame trap and the measure, the gallery and its tab).
 
 ### Phase 6 — Handbook and Hub
 
