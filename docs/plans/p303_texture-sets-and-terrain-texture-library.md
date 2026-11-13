@@ -392,6 +392,42 @@ As built (2026-11-13; `yarn test` (3,524), `tsc` both, lint, `yarn verify:baseli
 
 **Exit:** a 4-set LITE array renders identically to 4 separate sets, using 2 bindings.
 
+**Found while grounding (2026-11-13):**
+
+- **D4's code is the feature's**, `features/texturesets/TextureSetArrays.ts` on `aekasha/texturesets` (Phase 1's drift; D4 said `kernel/assets/TextureSet.ts`).
+- **One uniform array, not one per field:** three makes each `uniformArray` its own uniform buffer binding (`NodeUniformBuffer`, both backends), and a stage has 12 by default (WebGPU's `maxUniformBuffersPerShaderStage`; WebGL2's minimum too). Ten fields would have used ten. So `layerParams` is one vec4 array, four per layer, and a TSL helper reads it by name. (Each element is padded to a vec4 anyway.)
+- **The resolver's bundle is flat** (`resolveRegisteredInput` takes a node or an object of nodes): the slots' array texture nodes, `layerParams` and `layerCount`, not D4's `{ arrays, layerCount, layerParams }`.
+- **A scene's JSON materials are created synchronously right after its textures load** (`SceneDataLoader.ts`' `loadSceneAssetsAsync`), and the resolver is synchronous, so a material's set arrays must be built before that. No scene hook sits between the two: `beforeAssets` (awaited) is before the textures, `assetsLoaded` after the materials. `worldCleared` (synchronous) has the next scene's data, after `beginLoad` set the asset owner to it.
+- **In production, a member's declaration must be in the scene's data without the scene loading it:** a member listed in `textures` would be loaded, registered and uploaded on its own (D4's Risks: never), and `buildTextureArray`'s own lookup of an id reads only the development registry.
+
+Sections:
+
+1. **The runtime:** `buildTextureSetArray`, `getTextureSetArray`, `setTextureSetArrayLayer`, the layer params and `getTextureSetLayerParams`, the entry, unit tests, the feature's `CLAUDE.md`.
+2. **The input form:** `{ "textureSetArray": [ids] | id, "packing" }`: its schema in `MaterialSchema.ts`, the import-free predicate, the resolver, the gather (closure, errors, the members' declarations in the scene's data), the scene load's builds, streaming, `yarn sbp`.
+3. **The exit:** the verification scene (a 4-set LITE array against the 4 sets through `{ textureSet }`, on WebGPU and WebGL2), this phase's "As built" and the status line.
+
+#### Section 1: The runtime — done
+
+As built (2026-11-13; `yarn test` (3,535), `tsc` both, lint, `yarn verify:baselines --docs` (the entry's 22 exports documented)):
+
+- `features/texturesets/TextureSetArrays.ts`, on `aekasha/texturesets`:
+  - **`buildTextureSetArray({ id?, sets, packing, swappable?, isPersistent? })`** → `TextureSetArray<P>` (`id`, `packing`, `sets`, `arrays` by slot, `layerCount`, `layerParams`, `swappable`). One `buildTextureArray` per slot, registered as `<id>.<slot>`. A registered slot texture is borrowed by id; another goes in as its declaration's props (`findTextureDeclaration`), so it's loaded for the array alone. Every member is resolved before any build starts, so an undeclared texture throws with nothing started (the test caught the first version starting slot 0). A failed slot deletes the arrays this call registered; the error is `Texture set array "ground" (LITE: 0 sand, 1 rock), slot normalHeight: <p299's message>`.
+  - **The id:** `tsa:<FNV-1a of [packing, sets]>`, a UUID for a swappable one. A build of a registered id returns its set array, re-tagged by `buildTextureArray`; with other sets or packing it throws. **Beyond the plan:** a swappable one need only match the packing and layer count, since its layers may have been swapped.
+  - **The registry:** a map by id, an entry dropped when any of its arrays fires `dispose` (deleted, or released with its scene). `getTextureSetArray(id)` also checks that each `<id>.<slot>` is still the entry's array.
+  - **`setTextureSetArrayLayer(id, layer, setId)`:** throws at once without a swappable set array, for a layer out of range or a set without the packing. Swaps are queued per set array. Each slot goes through `setTextureArrayLayer`, then the layer's `sets` entry and params are written. When a slot fails, the slots already swapped get the previous set back (best effort), and it rejects naming the slot. A set array deleted meanwhile is left alone.
+  - **`layerParams`** (`TextureSetLayerParamsNode`, a `uniformArray` of `Vector4`, four per layer): `[physicalSize.x, physicalSize.y, heightScale, heightContrast]`, `[tint (linear) r, g, b, normalStrength]`, `[roughnessScale, aoStrength, porosity, wetDarkening]`, `[wetRoughness, 0, 0, 0]`. **`getTextureSetLayerParams(layerParams, layer)`** (an index or an int node) returns the ten fields as TSL nodes by name. The node is the set array's, shared by every material that samples it, so a swap updates them all. A material that wants its own per-layer values makes its own uniforms; p305 decides.
+- Tests: `TextureSetArrays.test.ts` (11): the slot arrays and their members, the params; the derived id, a re-build and two overlapping ones; the swappable ids; the drop on dispose; the refusals before any build; a failed slot's clean-up; the swap and a re-build after it; the restore; the swap's refusals; a swap after the delete; the params' nodes.
+- Docs: `features/texturesets/CLAUDE.md` (Set arrays).
+
+**Proposed for section 2 (review):**
+
+1. **The form:** `{ "textureSetArray": ["sand01", "grass01"], "packing": "LITE" }`, with `packing` required (the sets' defaults may differ). In code, `textureSetArray` may also be a built set array's id (a string), as p299's form takes any registered array in code. The gather fails a string, which only code can build.
+2. **The bundle:** each slot's array texture node (sampled as `.sample(uv).depth(layer)`), `layerParams` and `layerCount` (an int node).
+3. **The scene load, with no kernel bytes:** the gather lists a scene's set arrays (`textureSetArrays: [{ packing, sets }]` in the scene part). The feature's `worldCleared` hook starts their builds (the next scene's data, its owner scope), and its `beforeAssets` hook awaits them. Both hooks are tiny and `import()` `TextureSetArrays.ts`, so the feature's first-download group grows by a few bytes only. The resolver registers with the first build, as p299's do. The cost: the scene's own textures start loading only after the arrays are built. A kernel seam awaited between the textures and the materials would let them load in parallel; that's a later plan if a scene needs it.
+4. **The members' declarations in production:** the gather writes each array set's packing textures as declarations on the scene's inline set (eg. `__textures`), not in the scene's `textures`. The feature's member lookup reads them after `findTextureDeclaration`. The Assets tab and the streaming manifest ignore them.
+5. **A failed build:** the material's slots sample the white texel, warned, as for a missing texture, and the load goes on. The resolver needs a 2D stand-in for an array node (`.depth()` on a 2D texture doesn't compile), or it throws and the material isn't created.
+6. **Streaming:** a material with a set array input stays in the scene's base (cells run no scene hooks).
+
 ### Phase 4 — The library (D6)
 
 1. Create the 16 set folders (`source.json`, set JSON; the texture JSONs by `yarn fetchTextureSources --scaffold`, Phase 2 section 2; `sand01` exists).
