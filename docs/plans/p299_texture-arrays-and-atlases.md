@@ -756,18 +756,84 @@ overlay covers the image exactly):
 
 ### Phase 5 — JSON binding (D5, after p302 D4)
 
-1. The two resolvers in `kernel/assets/` next to the arrays and atlases, registered from the
-   kernel's install (`installKernel`, `src/_engine/kernel/init/CLAUDE.md`), never at module load
-   (`moduleSideEffects.test.ts`).
-2. Their `dependencies` in a module the gatherer may import (the schemas entry, or a module listed
-   with its reason in `devTools/engineImports.test.ts`), so p302 D6's closure lists the array or
-   the atlas's slots (a scene's `"<atlasId>"` already expands to them, Phase 3 section 3).
-3. The schemas: the resolver forms in the material JSON's `nodes` / `inputs` (`TslNodeInputsSchema`,
-   `schemas/MaterialSchema.ts`), each field documented twice (JSDoc on the key and a
-   `.describe()`, as p302's "From p619" says).
-4. The material editor (`debug/editors/material/_dbg__MaterialEditorParams.ts`) shows the two
-   forms read-only, as it shows texture ids.
-5. A material JSON in each p299 scene sampling a layer / a cell.
+Branch `p299_texture-arrays-and-atlases`, from `main` at p302's merge (`97ced6c4`).
+
+**Drift found (2026-11-13, against what p302 built):**
+
+- **Registering from `installKernel` costs every build, the banner's floor included.** Today
+  `TextureArray.ts` and `TextureAtlas.ts` are in no initial chunk (only in the merge and impostor
+  chunks, tree-shaken), and the banner's `_engine/kernel/assets` group is 11,009 B gzip against an
+  11 KiB budget: 255 B of headroom. Resolvers registered by the kernel's install pull
+  `sampleArrayLayer` and `sampleAtlasCell` (and what they call) into every app. A resolver's
+  `resolve` is synchronous (`createMaterial` is), so it can't `import()` on its own. **Decided:**
+  the two resolvers live in their own module, imported (`import()`) and registered by the async
+  paths that register an array or an atlas slot, before they resolve; the parts every build needs
+  are the import-free predicates and dependency functions (step 1).
+- **Dependencies before registration.** `getMaterialInputDependencies` asks the registered
+  resolvers, then the built-in forms. With the resolvers registered lazily, a material naming an
+  array that isn't loaded yet would list no dependency, so `ensureMaterialDependencies` (and the
+  material editor) wouldn't load it. So the two forms' dependency functions are built-in forms in
+  `MaterialInputRefs.ts`, next to the texture ref's, and the gather's `INPUT_DEPENDENCY_FNS`
+  imports the same ones (no new module on `engineImports.test.ts`' list).
+- **The schemas need no change to validate the forms:** p302 left input values `z.unknown()` /
+  `z.any()` and only documented the object form. Documenting "each field twice" needs the forms as
+  schemas of their own; step 3 says how they're used.
+- **The material editor already shows them:** a resolver's value is kind `OTHER`, read-only (its
+  JSON), and its textures load through `getMaterialInputDependencies` (p302 Phase 4). Step 4 is a
+  check and a test, not code.
+- **A runtime array can't be named by a material JSON:** the gather's closure fails on an id no
+  asset JSON has (p302 D6, p619 G12), as for any texture made in code. JSON binds texture array
+  assets and atlas slots; code passes the same forms to `createMaterial` for a runtime array.
+- **The gather can check more than ids:** it has each array's `__layers` and each atlas's slots
+  and cells, so a layer, slot or cell the asset doesn't have fails the gather (step 2), not the
+  load.
+- **Versioning:** step 5 adds files to two app scenes, so the app takes a patch too (§4 said no
+  app change).
+- **Resampling:** the array's node keeps its layer through `.sample(uv)` (three r187's
+  `TextureNode.clone` copies `depthNode`); the atlas's node is the sample of the cell-mapped UV, and
+  `.sample(uv)` on it would read the whole slot. The docs say so.
+
+Steps (updated):
+
+1. **The forms and the resolvers** (section 1).
+   - `kernel/assets/MaterialInputRefs.ts` (import-free): `TextureArrayInputRef`
+     (`{ textureArray: id, layer: index | name }`), `AtlasCellInputRef`
+     (`{ atlas: id, slot, cell, clampToCell? }`), their predicates (a `textureArray` / `atlas`
+     string key), their dependency functions (the array's id; the slot's id `<atlas>.<slot>`) and
+     one `getBuiltInInputDependencies` of the three forms, which `getMaterialInputDependencies`
+     falls back to.
+   - `kernel/assets/TextureInputResolvers.ts` (new): the two resolvers (`sampleArrayLayer(tex,
+uv(), layer)`, `sampleAtlasCell(slot, uv(), cell, { clampToCell })`) and the function that
+     registers both (the same functions again are silent, p302's rule). Imported with `import()` by
+     `loadTextureArrayAssetAsync`, `loadTextureAtlasSlotAsync`, a KTX2 that loads as an array
+     texture (`loadTextureAsync`) and `buildTextureArray`, awaited before each resolves, so a scene
+     load's materials (created after its textures) find them. Never at module load.
+   - A missing texture: `ctx.getTexture` gives the shared white texel (2D), which the resolver
+     samples as a plain texture, so a missing array or slot warns and samples white as a bare id
+     does. A registered texture that isn't an array (or an atlas slot, for a cell by id) throws,
+     naming the input.
+   - Without the resolvers (no array or slot loaded yet), the built-in rules see a form's object:
+     the input wrapping (`MaterialTsl.ts`) warns that its texture isn't loaded and samples the
+     white texel, instead of "Unknown object footprint".
+   - Tests next to the module (`TextureInputResolvers.test.ts`) and in
+     `MaterialInputResolvers.test.ts` (the dependencies before registration); `yarn sbp`: no
+     initial chunk grows past its budget, the new module only in the chunks that load arrays.
+2. **The gather** (section 2): the two dependency functions in `textureClosure.ts`'
+   `INPUT_DEPENDENCY_FNS`; a layer name or index the array's `__layers` doesn't have, a slot the
+   atlas doesn't have, or a cell it doesn't have fails the gather naming the material and what it
+   has. Cases in `gather.test.ts`.
+3. **The schemas** (section 2): `TextureArrayInputSchema` and `AtlasCellInputSchema` (strict,
+   each key documented twice) in `schemas/MaterialSchema.ts`; the input value schemas
+   (`InputsSchema`, `TslNodeInputsSchema`) validate a value with a `textureArray` or `atlas` key
+   against its form (the issue at the input's path), and the JSON Schema offers the forms (an
+   `anyOf` of them and any other value, through `jsonSchemas.ts`' override if zod's union can't
+   say it); `.schemas/` regenerated. The descriptions of `inputs` and `nodes` name both forms.
+4. **The material editor** (section 3): check that the two forms show read-only and their
+   textures load; a case in `_dbg__MaterialEditorParams.test.ts` (kind `OTHER`).
+5. **The scenes** (section 3): a TSL material JSON in each p299 scene (`textureArrays`: a layer by
+   name and one by index; `textureAtlases`: a cell, clamped), its `setup` file assigning the input
+   to `colorNode`, drawn next to the code-sampled quads; the exit on WebGPU and WebGL2; this
+   phase's "As built" and the status line.
 
 **Exit:** a material JSON samples an array layer and an atlas cell without TSL code.
 

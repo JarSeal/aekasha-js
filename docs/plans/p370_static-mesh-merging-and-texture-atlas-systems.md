@@ -328,6 +328,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
 | `p376_hlod-merged-cluster-proxies`    | p376  | `main`      | engine minor (group proxies), app minor (the lane) | after p376's Phase 4    |
 | `p377_hlod-streaming-cell-proxies`    | p377  | `main`      | engine minor (far entries), app minor (the ruins)  | after p377's Phase 6    |
 | `p378_baked-members-out-of-the-scene-graph` | p378  | `main`      | engine minor 6.9.0 → 6.10.0 (a root-scene raycast hits a baked group only), app patch 1.24.0 → 1.24.1 (the spike modes), Project (the bench's cases) | after p378's Phase 4    |
+| `p299_texture-arrays-and-atlases`     | p299 Phases 5-6 | `main` | engine minor 6.11.0 → 6.12.0 (D5's JSON binding), app patch 1.24.2 → 1.24.3 (the scenes' material JSONs) | after p299's Phase 6    |
 
 - p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
   that is useful without the groups.
