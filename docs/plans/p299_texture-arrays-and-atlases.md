@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-4 implemented
+Status: in progress | Phases 0-5 implemented
 Category: Assets, Textures, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
 Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), \_DONE_p374_multi-material-merging.md
@@ -754,7 +754,7 @@ overlay covers the image exactly):
   `image.depth`. Plain 2D textures get no preview: the renderer handles them, the plan's scope
   doesn't.
 
-### Phase 5 — JSON binding (D5, after p302 D4)
+### Phase 5 — JSON binding (D5, after p302 D4) — done
 
 Branch `p299_texture-arrays-and-atlases`, from `main` at p302's merge (`97ced6c4`).
 
@@ -919,6 +919,36 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
 - `.schemas/`: `material`, `mesh` and `scene` regenerated (the forms' definitions, and the
   `__schemaN` numbering after them).
 
+#### Section 3: The editor, the scenes and the exit — done
+
+As built (2026-11-13; verified on Apple Silicon, Chrome, a dev server of its own,
+`?isDebug=true&aekTest=true&startScene=<scene>`, `whenSceneReady`, then the scene's
+`results.done`, on WebGPU and the WebGL2 fallback (`navigator.gpu` hidden), the same figures on
+both):
+
+- **The material editor:** no code. `_dbg__MaterialEditorParams.test.ts` checks that both forms (a
+  layer by name and by index, a cell) are kind `OTHER` (read-only), and
+  `MaterialDependencies.test.ts` that `getMaterialTextureIds` names the array and the slot with no
+  resolver registered (the editor loads its textures through it).
+- **`textureArrays`:** `p299ArrayLayerMat` (the scene folder's material JSON, listed in the
+  scene's `materials`): a `setup` material whose inputs are `{ "textureArray": "p299TestArray",
+  "layer": "l1" }` and the same layer by index `1`; its TSL file mixes them by the UV's halves and
+  samples nothing itself. Column 6, row 1. `results.jsonMaterial`: both inputs are the asset's
+  array at layer 1. The quad against column 4, row 3 (the same layer by `sampleArrayLayer`, the
+  same quad): a mean of 1.88 / 255 over its middle 80 % (a sub-pixel offset between the two
+  places), against 108.9 for the neighbouring layer; the halves meet without a seam.
+- **`textureAtlases`:** `p299AtlasCellMat`: input `{ "atlas": "p299TestAtlas", "slot": "albedo",
+  "cell": "checker" }` (clamped, the default), its TSL file assigning it to `colorNode`. Column 6,
+  row 4, at the cell's aspect; row 5 the same cell through `sampleAtlasCell` on the same quad
+  (`addMaterialQuad`, split out of `addQuad`). `results.jsonMaterial`: the albedo slot with a cell
+  UV. JSON against code: a mean of 0.47 / 255, against 69.2 for the metal cell's source.
+- No console message beyond the scenes' expected ones (their error checks, the tiled plane's
+  remap warning), Rapier's init deprecation and the WebGL2 fallback's notice. The resolvers'
+  chunk loaded with each scene's first array or slot (the materials resolved; no missing-texture
+  warning).
+- The scenes' baselines (`yarn verify:scenes`) change: both scenes draw new quads. Recorded in
+  Phase 6 with the rest (`--update`).
+
 ### Phase 6 — Hub, docs and versioning
 
 1. The Hub: the asset-optimization feature page's "Texture atlases" section
@@ -932,6 +962,13 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
    helpers, D5's JSON binding).
 4. Update p303 D4 and p309 D1 if anything they rely on changed.
 5. Engine minor; `CHANGELOG.md`.
+6. Left from Phase 5 (2026-11-13): the app profile's three budgets that `main` already fails
+   (Phase 5 section 1's `yarn sbp`: `_engine/kernel/assets` 13.7 kB against 13 KiB, the initial
+   download and `assets/index.js` about 0.7 kB over), still undecided: ask the user whether this
+   branch raises them (the growth is mostly p302's, +0.2 kB this plan's); `yarn verify:baselines
+   --update` (the API baseline's new exports: the three input ref types on `aekasha`, the three
+   form schemas on `aekasha/schemas`); `yarn verify:scenes --only textureArrays,textureAtlases
+   --update` (their new quads), run by the user.
 
 ## 4. Versioning
 

@@ -59,6 +59,15 @@ describe('getMaterialTextureIds', () => {
     expect(ids).toEqual(['albedo', 'normal', 'mask', 'detail']);
   });
 
+  test('an array layer’s array and an atlas cell’s slot (p299 D5), before their resolvers', () => {
+    expect(
+      getMaterialTextureIds({
+        inputs: { layer: { textureArray: 'ground', layer: 'rock' } },
+        nodes: { colorNode: { cell: { atlas: 'decals', slot: 'albedo', cell: 'crack' } } },
+      })
+    ).toEqual(['ground', 'decals.albedo']);
+  });
+
   test('a material without textures names none', () => {
     expect(getMaterialTextureIds({ params: { color: '#ffffff' } })).toEqual([]);
   });

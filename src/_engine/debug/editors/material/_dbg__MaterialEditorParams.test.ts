@@ -24,6 +24,7 @@ import { getCopyProps } from './_dbg__MaterialEditorAssets';
 import {
   fromNodeInputGroups,
   getAssetNodeInputs,
+  getNodeInputKind,
   getNodeInputPaneItems,
   readNodeInputs,
   setNodeInputValue,
@@ -107,5 +108,16 @@ describe("the Params tab's setup inputs", () => {
 
     setMaterialOverride('paramsTestSetup', 'nodes', `${SETUP_INPUTS}.scale`, undefined);
     expect(readMaterialRecord('paramsTestSetup').overrides).toBeUndefined();
+  });
+});
+
+describe('the object-form inputs (p302 D4, p299 D5)', () => {
+  test('are read-only (OTHER): a texture ref, an array layer, an atlas cell', () => {
+    expect(getNodeInputKind('ref', { texture: 'albedo', channel: 'r' })).toBe('OTHER');
+    expect(getNodeInputKind('layer', { textureArray: 'ground', layer: 'rock' })).toBe('OTHER');
+    expect(getNodeInputKind('index', { textureArray: 'ground', layer: 1 })).toBe('OTHER');
+    expect(getNodeInputKind('cell', { atlas: 'decals', slot: 'albedo', cell: 'crack' })).toBe(
+      'OTHER'
+    );
   });
 });
