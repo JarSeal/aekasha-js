@@ -302,6 +302,7 @@ export type { Looper, SceneData } from './kernel/scene/Scene';
 export { createSceneLoader, getLoaderStatusUpdater, loadScene } from './kernel/scene/SceneLoader';
 export type {
   LoadSceneProps,
+  SceneLoadBakeStatus,
   SceneLoader,
   ScenePrimitiveAssets,
   UpdateLoaderStatusFn,
@@ -309,12 +310,13 @@ export type {
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
-export { bakeTexture } from './kernel/render/TextureBaker';
+export { bakeTexture, getTextureBakeStats } from './kernel/render/TextureBaker';
 export type {
   BakeBuildContext,
   BakedTexture,
   BakeOutput,
   BakeTextureOpts,
+  TextureBakeStats,
 } from './kernel/render/TextureBaker';
 export { getBakedTextureMemoryBytes } from './kernel/render/TextureBakeMemory';
 export type { BakedTextureMemoryOpts, BakeOutputType } from './kernel/render/TextureBakeMemory';

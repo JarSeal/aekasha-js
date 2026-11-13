@@ -62,6 +62,19 @@ export type UpdateLoaderStatusFn = (
 ) => void;
 
 /**
+ * The texture bakes a scene load runs ({@link SceneLoader.updateBakeStatusFn}): the bakes started
+ * during the load (`bakeTexture`), counted from the load's first one.
+ */
+export type SceneLoadBakeStatus = {
+  /** The bake whose state changed: started, or baked (rendered, failed or disposed). */
+  id: string;
+  /** The bakes that have finished. */
+  bakedCount: number;
+  /** The bakes started during the load so far. */
+  totalCount: number;
+};
+
+/**
  * A scene loader: what a scene load shows while it runs (its screen) and the functions it awaits
  * at its start and end. {@link createSceneLoader} registers one, {@link loadScene} uses the current
  * one or the one its `loaderId` names.
@@ -98,6 +111,15 @@ export type SceneLoader = {
 
   /** The progress callback {@link getLoaderStatusUpdater} returns for scene code to call. */
   updateLoaderStatusFn?: UpdateLoaderStatusFn;
+
+  /**
+   * The load's texture bakes (`bakeTexture`), called when one starts and when one finishes: a
+   * bake's pipeline compile is the slow part of a load that bakes. Separate from
+   * `updateLoaderStatusFn`, whose params are scene code's own.
+   * @param loader this loader
+   * @param status the bakes started and finished so far
+   */
+  updateBakeStatusFn?: (loader: SceneLoader, status: SceneLoadBakeStatus) => void;
 
   /** A group added to the root scene for the load (eg. a 3D loading animation), removed at its
    * end. */
@@ -142,6 +164,8 @@ export type LoadSceneProps = {
 
 const sceneLoaders: SceneLoader[] = [];
 let currentSceneLoader: SceneLoader | null = null;
+/** The running load's loader (null between loads). */
+let runningLoader: SceneLoader | null = null;
 let currentlyLoading = false;
 let firstSceneLoaded = false;
 let nextSceneId: string | null = null;
@@ -315,6 +339,7 @@ const beginLoad = (loadSceneProps: LoadSceneProps): ActiveLoad => {
   const { sceneId, sceneData, nextSceneFn, loader } = resolveLoadTarget(loadSceneProps);
 
   currentlyLoading = true;
+  runningLoader = loader;
   nextSceneId = sceneId;
   // Assets registered (or taken from the cache) from here on belong to the next scene
   setAssetOwnerScene(sceneId);
@@ -473,6 +498,7 @@ const finishLoad = (load: ActiveLoad, isLoaded: boolean) => {
   if (load.loader.loaderGroup) getRootScene()?.remove(load.loader.loaderGroup);
   load.loader.phase = undefined;
   currentlyLoading = false;
+  runningLoader = null;
   nextSceneId = null;
   setIsLoadingScene(false);
 };
@@ -599,6 +625,15 @@ export const getLoaderStatusUpdater = (loaderId?: string) => {
   }
 
   return (params?: { [key: string]: unknown }) => updateLoaderStatusFn(loader, params);
+};
+
+/**
+ * Passes the running load's texture bakes to its loader's
+ * {@link SceneLoader.updateBakeStatusFn} (the texture baker); a no-op between loads.
+ * @internal
+ */
+export const reportSceneLoadBakeStatus = (status: SceneLoadBakeStatus) => {
+  if (runningLoader) runningLoader.updateBakeStatusFn?.(runningLoader, status);
 };
 
 /**

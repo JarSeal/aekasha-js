@@ -14,16 +14,31 @@
 // samples an unallocated texture, and the pipeline compiles (`compileAsync`, in the bake's target)
 // before the first render, so the render doesn't stall a frame.
 //
-// The render follows the compile at once; the bake queue with its throttle, the scene load's hold
-// and the GPU timing are Phase 2's second step (docs/plans/p304_procedural-texture-baker.md).
+// When a bake renders: during a scene load at once, inside the load (scene code awaiting it holds
+// the load), its first bake counted for the loader's `updateBakeStatusFn`. Outside a load the
+// render (the first one too) is queued (`TextureBakeQueue.ts`) for `textureBakeSystem` (MAIN),
+// which runs one bake a frame and a rebake of an id at most once per 150 ms of the loop's elapsed
+// time, the latest request always running. The system is added to the default world by the first
+// queued render, so an app that never bakes runs none of it. In the debug env each bake is timed
+// (`debug/_dbg__TextureBakeStats.ts`, through the debug loader; `getTextureBakeStats`).
 import * as THREE from 'three/webgpu';
 import { array, float, mrt, uniform, uv, vec2, vec4, vertexIndex } from 'three/tsl';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
+import { loadDebugModuleAsync, useDebug, type DebugModuleRef } from '../config/DebugModules';
 import { deleteTexture, doesTextureExist, getTexture, saveTexture } from '../assets/Texture';
+import { getECSWorld, type ECSWorld } from '../ecs/ECS';
+import { getElapsedTime } from '../loop/MainLoop';
+import { ECSSystemStage } from '../loop/SystemStages';
+import {
+  isCurrentlyLoading,
+  reportSceneLoadBakeStatus,
+  runWhenSceneLoadSettled,
+} from '../scene/SceneLoader';
 import { clearBakeTarget, getBakeRenderer, withBakeRendererState } from './BakeRenderer';
 import { runCompileAsync } from './CompileQueue';
 import { getBakedTextureMemoryBytes, getBakeSize, type BakeOutputType } from './TextureBakeMemory';
+import { createBakeQueue, TEXTURE_BAKE_THROTTLE_MS } from './TextureBakeQueue';
 
 /** One texture a bake writes. */
 export type BakeOutput = {
@@ -90,8 +105,11 @@ export type BakedTexture = {
    * {@link getBakedTextureMemoryBytes}). */
   readonly memoryBytes: number;
   /** Renders the graph again (every layer), with its uniforms' current values (set them first),
-   * into the same textures. Resolves once rendered; a no-op after `dispose`. A call while the first
-   * bake is still compiling waits for it (that bake reads the latest values). */
+   * into the same textures. Resolves once rendered; a no-op after `dispose`. During a scene load it
+   * renders at once; otherwise it's queued: one bake a frame, a rebake of the bake at most once per
+   * 150 ms, and the calls made before it runs share one render, which reads the values set last
+   * (so a slider can call it on every change). A call before the first bake has rendered resolves
+   * with it (that render reads the latest values). */
   rebake: () => Promise<void>;
   /** Whether the bake is disposed (by `dispose` or its texture's deletion). */
   isDisposed: () => boolean;
@@ -110,6 +128,8 @@ type BakeState = {
   registered: [string, THREE.Texture][];
   onTextureDispose: (event: { target: THREE.Texture }) => void;
   isDisposed: boolean;
+  /** Whether the first render has run: a rebake before it is that render. */
+  hasRendered: boolean;
   /** The first bake's compile and render; settled once rendered or disposed. */
   ready: Promise<BakedTexture>;
   handle: BakedTexture;
@@ -123,6 +143,19 @@ const bakes = new Map<string, BakeState>();
 const MAX_OUTPUTS = 4;
 /** WebGPU's default `maxTextureArrayLayers`, and WebGL 2's minimum `MAX_ARRAY_TEXTURE_LAYERS`. */
 const MAX_LAYERS = 256;
+
+const SYSTEM_ID = 'textureBakeSystem';
+/** The renders waiting for `textureBakeSystem`, by bake id. */
+const queue = createBakeQueue(TEXTURE_BAKE_THROTTLE_MS);
+/** The worlds `textureBakeSystem` is added to (the default one, again if it's replaced). */
+const systemWorlds = new WeakSet<ECSWorld>();
+
+/** The bakes started during the running scene load (null between them): the loader's
+ * `updateBakeStatusFn` gets them. */
+type LoadBakeCounts = { baked: number; total: number };
+let loadBakeCounts: LoadBakeCounts | null = null;
+
+let statsRef: DebugModuleRef<typeof import('./debug/_dbg__TextureBakeStats')> | null = null;
 
 const createFullScreenVertexNode = () =>
   // three's QuadMesh triangle: it sets its own on `render()`, which the compile wouldn't see
@@ -275,6 +308,72 @@ const renderBake = (renderer: THREE.Renderer, state: BakeState) => {
   }
 };
 
+// Times the bake in the debug env (its stats' CPU time a measurement, read only while they're
+// loaded); a production build folds the stats away
+const renderBakeTimed = (renderer: THREE.Renderer, state: BakeState) => {
+  const stats = useDebug(statsRef);
+  const startMs = stats ? performance.now() : 0;
+  stats?.onTextureBakeStart(state.id);
+  renderBake(renderer, state);
+  stats?.onTextureBakeEnd(state.id, performance.now() - startMs);
+};
+
+const textureBakeSystem = () => {
+  queue.runNext(getElapsedTime() * 1000);
+};
+
+/**
+ * Renders the bake: during a scene load at once (the throttle and the one-a-frame rule are for
+ * the frames a player sees), otherwise through the queue. A disposed bake resolves at once; a
+ * request disposed while it waits resolves without rendering.
+ */
+const requestRender = (renderer: THREE.Renderer, state: BakeState): Promise<void> => {
+  if (state.isDisposed) return Promise.resolve();
+  if (isCurrentlyLoading()) {
+    renderBakeTimed(renderer, state);
+    queue.markRun(state.id, getElapsedTime() * 1000);
+    return Promise.resolve();
+  }
+  const world = getECSWorld();
+  if (!systemWorlds.has(world)) {
+    world.addSystem(ECSSystemStage.MAIN, SYSTEM_ID, textureBakeSystem);
+    systemWorlds.add(world);
+  }
+  return queue.request(state.id, () => {
+    if (!state.isDisposed) renderBakeTimed(renderer, state);
+  });
+};
+
+/**
+ * Counts a bake started during the running scene load for its loader (`updateBakeStatusFn`), and
+ * returns its end, which counts it baked. The counts start again with the next load: an end after
+ * its load has settled counts for nothing.
+ */
+const trackLoadBake = (id: string) => {
+  const counts = loadBakeCounts ?? { baked: 0, total: 0 };
+  if (!loadBakeCounts) {
+    loadBakeCounts = counts;
+    runWhenSceneLoadSettled(() => {
+      if (loadBakeCounts === counts) loadBakeCounts = null;
+    });
+  }
+  counts.total++;
+  reportSceneLoadBakeStatus({ id, bakedCount: counts.baked, totalCount: counts.total });
+  return () => {
+    counts.baked++;
+    if (loadBakeCounts !== counts) return;
+    reportSceneLoadBakeStatus({ id, bakedCount: counts.baked, totalCount: counts.total });
+  };
+};
+
+// The stats module, before the first render it times (debug env only; a failed import is logged
+// by the loader and leaves the bakes untimed)
+const loadBakeStatsAsync = async () => {
+  statsRef ??= await loadDebugModuleAsync(() => import('./debug/_dbg__TextureBakeStats')).catch(
+    () => null
+  );
+};
+
 // Compiles in the bake's target (the build reads the target's colour space and type), one engine
 // compile at a time (`runCompileAsync`, the renderer state trap in kernel/render/CLAUDE.md)
 const compileBakeAsync = (renderer: THREE.Renderer, state: BakeState) =>
@@ -300,6 +399,8 @@ const disposeBake = (state: BakeState, skip?: THREE.Texture) => {
   if (state.isDisposed) return;
   state.isDisposed = true;
   if (bakes.get(state.id) === state) bakes.delete(state.id);
+  // Its queued render resolves unrendered, and a new bake under the id isn't throttled
+  queue.cancel(state.id);
   for (const [textureId, texture] of state.registered) {
     texture.removeEventListener('dispose', state.onTextureDispose);
     if (texture !== skip && getTexture(textureId) === texture) deleteTexture(textureId);
@@ -320,6 +421,10 @@ const disposeBake = (state: BakeState, skip?: THREE.Texture) => {
  * material can take it at once; the promise resolves once the pipeline has compiled and the graph
  * has rendered. Change the graph's uniforms and call `rebake()` to render it again.
  *
+ * During a scene load the bake renders as soon as it has compiled, and the loader's
+ * `updateBakeStatusFn` hears of it (await it in scene code to hold the load until it's baked).
+ * Outside a load its renders queue: one bake a frame, a rebake of the bake at most once per 150 ms.
+ *
  * The baked textures are uncompressed (see {@link getBakedTextureMemoryBytes}), and their content
  * is visual only: GPUs differ in float precision, so never derive gameplay or colliders from it.
  * @param opts the bake: its id, size, outputs and graph
@@ -327,6 +432,8 @@ const disposeBake = (state: BakeState, skip?: THREE.Texture) => {
  * @remarks Needs an initialized renderer (after `InitEngine`), and throws before. A call with the
  * id of a bake that's alive returns that bake, its options ignored (the debug env warns): dispose
  * it first, or `rebake` it. A texture registered under an output's id by anything else throws.
+ * The queued renders run in the default ECS world's `MAIN` stage, so they wait while an editor
+ * view is shown or the main loop is paused.
  * @example
  * ```ts
  * import { floor, mod, vec4 } from 'three/tsl';
@@ -405,6 +512,7 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
     material,
     registered: [],
     isDisposed: false,
+    hasRendered: false,
     onTextureDispose: (event: { target: THREE.Texture }) => disposeBake(state, event.target),
   } as unknown as BakeState;
   state.handle = {
@@ -417,8 +525,12 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
       mipmaps: opts.mipmaps,
     }),
     rebake: async () => {
-      await state.ready;
-      if (!state.isDisposed) renderBake(renderer, state);
+      // The first render reads the values set before it runs
+      if (!state.hasRendered) {
+        await state.ready;
+        return;
+      }
+      await requestRender(renderer, state);
     },
     isDisposed: () => state.isDisposed,
     dispose: () => disposeBake(state),
@@ -441,6 +553,7 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
     throw err;
   }
 
+  const endLoadBake = isCurrentlyLoading() ? trackLoadBake(opts.id) : null;
   state.ready = (async () => {
     try {
       await compileBakeAsync(renderer, state);
@@ -448,9 +561,44 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
       disposeBake(state);
       throw err;
     }
-    // Disposed meanwhile (`dispose`, or the scene released the texture): nothing to render
-    if (!state.isDisposed) renderBake(renderer, state);
+    if (IS_DEBUG_ENV) await loadBakeStatsAsync();
+    // Disposed meanwhile (`dispose`, or the scene released the texture): nothing to render. Into a
+    // load that has ended meanwhile, the render queues
+    await requestRender(renderer, state);
+    state.hasRendered = !state.isDisposed;
     return state.handle;
   })();
+  if (endLoadBake) state.ready.then(endLoadBake, endLoadBake);
   return state.ready;
 };
+
+/** A texture bake's debug stats, from {@link getTextureBakeStats}. */
+export type TextureBakeStats = {
+  /** The bakes rendered on this page (rebakes included). */
+  readonly bakes: number;
+  /** The CPU ms of the last bake and their average (`'0.412 (avg 0.390)'`), or `'-'`. */
+  readonly cpuMs: string;
+  /** The GPU ms of the last bake (every layer) and their average, `'-'` until one resolves, or
+   * `'n/a (WebGPU only)'`. */
+  readonly gpuMs: string;
+  /** The bakes per second over the last 10 s. */
+  readonly bakesPerSec: string;
+};
+
+/**
+ * A texture bake's stats in the debug env, by its id: its bake count, CPU and GPU ms and bakes per
+ * second, read live (keep the object and read it again). Undefined before the id's first bake, and
+ * always outside the debug env (a production build has no stats).
+ * @param id the bake's id (`BakeTextureOpts.id`)
+ * @remarks The GPU time needs WebGPU's timestamp queries (on WebGL it reads `'n/a (WebGPU only)'`)
+ * and comes a few frames after the bake.
+ * @example
+ * ```ts
+ * import { getTextureBakeStats } from 'aekasha';
+ *
+ * const stats = getTextureBakeStats('checker');
+ * if (stats) console.log(`${stats.bakes} bakes, last GPU ms ${stats.gpuMs}`);
+ * ```
+ */
+export const getTextureBakeStats = (id: string): TextureBakeStats | undefined =>
+  useDebug(statsRef)?.getTextureBakeStatsView(id);

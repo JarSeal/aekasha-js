@@ -205,5 +205,7 @@ through: the kit's loading overlay over the HUD, made in the app's `start` (`src
   `loadEndFn` as they are; under reduced motion they're instant.
 - A scene that reports its progress (`getLoaderStatusUpdater()` with `loadedCount` and
   `totalCount`) turns the overlay's spinner into a progress bar, and its text says how far it is.
+- A load that bakes textures (`bakeTexture`) reports its bakes through `updateBakeStatusFn`, apart
+  from the scene's own counts: their pipeline compiles are what such a load waits on.
 
 Back to the [examples](hub:examples).

@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Rendering, Materials, Procedural
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
@@ -175,12 +175,25 @@ Tileable baking needs noise with an integer period over the tile:
 - **GPU memory tab:** baked textures are registered textures, which it lists already, so no `registerGPUMemorySource`.
 - **The check (`testDebugScene`, `createTextureBakeCheckAsync`):** two floor strips left of the bottom row, a 64² checker (4 texels a cell) with a u (red) and v (blue) tint, baked with mips and, as the control, without: the mipped strip's far end is an even tint, the control's moirés, the same on WebGPU and WebGL2, with no console errors. The scene runner's `testDebugScene` snapshot changes there (record it again); its `debugger` shots were already stale since p303 (the material editor's list, the About window's versions).
 
-### Phase 2 — MRT, arrays, scheduling (D1)
+### Phase 2 — MRT, arrays, scheduling (D1) — done
 
 1. MRT outputs, array layers (or the 2D + assembly fallback), `compileAsync`.
 2. `textureBakeSystem` queue, throttled rebake, loader integration, GPU timing.
 
 **Exit:** a 3-output, 4-layer bake runs during scene load with progress shown, and a rebake from a slider never bakes more than once per frame.
+
+**As built:**
+
+- **No fallback:** three r187 renders into an array target's layer on both backends (`setRenderTarget(target, layer)` on a `RenderTarget` with `depth` > 1: WebGPU's `baseArrayLayer`, WebGL's `framebufferTextureLayer`), so there's no 2D + `DataArrayTexture` assembly. The Risks row is settled.
+- **One target:** `count` = the outputs, `depth` = the layers; each texture gets its output's `type` and `colorSpace` (sRGB is the attachment format, `rgba8unorm-srgb`, so outputs mix) and its registry id `<id>.<name>` as its `name`. Several outputs are `fragmentNode = mrt({ '<id>.<name>': node })`: three's `MRTNode` finds an output's attachment by its texture's name, and an output struct as `fragmentNode` passes `NodeMaterial`'s fragment setup untouched. 1 to 4 outputs (WebGPU's default `maxColorAttachmentBytesPerSample`, 32, and an RGBA8 attachment costs 8 there), 1 to 256 layers (its default `maxTextureArrayLayers`); names required and unique.
+- **Layers:** rendered one by one, `ctx.layer` an int uniform set before each; `mipmapsAutoUpdate` off until the last layer's render, so the mips (every layer's: WebGPU's mip pass walks `depthOrArrayLayers`) are built once. `clearBakeTarget` takes a `layer` (default 0), and the allocation clear clears every layer with the mips off.
+- **`sampleArrayLayer`** (p299) also takes three's `isArrayTexture`: a baked array is neither a `DataArrayTexture` nor a `CompressedArrayTexture`. A baked array has no member list, so its layers are sampled by index.
+- **The queue** (`kernel/render/TextureBakeQueue.ts`, pure, `TextureBakeQueue.test.ts`): one request per id, run in first-request order, one per `runNext(nowMs)`; requests made before it runs join it (its latest `run`, every promise settled together); a rebake of an id waits `TEXTURE_BAKE_THROTTLE_MS` (150) of `getElapsedTime()` after its last run, the latest request always running; `markRun` settles a request a load's render covered, `cancel` drops a disposed bake's. `textureBakeSystem` (`MAIN`, order 0) is added to the default world (a `WeakSet` of worlds) by the first queued render, never at load.
+- **When a bake renders:** outside a load every render queues, the first one too, so `bakeTexture` resolves on the frame `textureBakeSystem` runs it. During a load (`isCurrentlyLoading()`) it renders at once, after its compile. `rebake()` before the first render resolves with it (that render reads the latest values); after it, it requests a render. Queued renders run in `MAIN`, so they wait while an editor view shows or the main loop is paused (the remarks say so).
+- **Loader integration:** not through `getLoaderStatusUpdater`, whose params are scene code's own (the template's `loadedCount` / `totalCount`): a new optional `SceneLoader.updateBakeStatusFn(loader, { id, bakedCount, totalCount })` (`SceneLoadBakeStatus`, on `aekasha`), called through `reportSceneLoadBakeStatus` (`@internal`, the running load's loader) when a bake started during the load starts and when its first bake ends (rendered, failed or disposed). The counts start at the load's first bake and are dropped when it settles (`runWhenSceneLoadSettled`). The template's loader (`src/index.ts`, the Hub's `app-scene-loader` region) shows "Baking textures, n / m"; the UI kit walkthrough says so.
+- **GPU timing:** the sky box's tracker moved to `debug/_dbg__BakeStats.ts` (`createBakeStats`, shared); `kernel/render/debug/_dbg__TextureBakeStats.ts` keeps one per id for the page's life, loaded through `loadDebugModuleAsync` before a bake's first render (debug env), and every render (all its layers) is timed. `getTextureBakeStats(id)` (on `aekasha`, `TextureBakeStats`: `bakes`, `cpuMs`, `gpuMs`, `bakesPerSec`, the tracker's formatted view) is undefined outside the debug env. GPU ms on WebGPU only (the tracker's rule); 0.2-0.4 ms for the 128² 3-output 4-layer bake on an M2. The profiler figure (`registerStatsSource`) is still later.
+- **`params` on `rebake`:** not added; Phase 4's generators set their uniforms and call `rebake()`.
+- **The check (`testDebugScene`, `createLayeredBakeCheckAsync`):** a 128² bake of three outputs (sRGB `albedo`, linear `data`, `HALF_FLOAT` `hdr` of 4 shown at a quarter) and four layers, 12 tiles between the top row and the crates, identical on WebGPU and WebGL2, each layer's mips present (sampled at level 5). It bakes during the load: the loader shows "Baking textures, 0 / 2 … 3 / 3". The scene's "Texture bakes" tab (`_dbg__testDebugScene.ts`) has the `phase` slider, a "Rebake ×20" burst and the stats: 60 slider changes over 41 frames (684 ms of the test clock) made 6 bakes, the burst one. The scene runner's `testDebugScene` snapshot changes again (record it).
 
 ### Phase 3 — Noise library (D2)
 
@@ -217,7 +230,7 @@ Tileable baking needs noise with an integer period over the tile:
    - writing a generator (a worked example: `sandRipples` line by line);
    - "Best for": stylized PBR, top-down/RTS, procedural worlds, game jams with no texture budget, unique non-repeating large surfaces (live), and NOT first-person photoreal on low-end (live).
 3. **The Hub:** the terrain feature page (p301 §5) gets procedural textures and the baker (linking `procedural-textures.md` with a `repo:` link), the rendering or toolkit page `bakeTexture` and the noise helpers; `yarn hub:build`.
-4. `readme.md` Features (engine: texture baker; toolkit: procedural surfaces); `src/_engine/kernel/render/CLAUDE.md` (the baker and the moved bake helpers) and `src/_engine/features/lod/impostors/CLAUDE.md` where it names them.
+4. `readme.md` Features (engine: texture baker; toolkit: procedural surfaces); `src/_engine/kernel/render/CLAUDE.md` (the baker: MRT, layers, the queue and `textureBakeSystem`, the load path, the stats; the moved bake helpers) and `src/_engine/features/lod/impostors/CLAUDE.md` where it names them. Phase 2 updated `kernel/scene/CLAUDE.md` (`updateBakeStatusFn`), `debug/CLAUDE.md` and `features/skybox/CLAUDE.md` (the shared bake stats) already.
 
 ### Phase 7 — Versioning
 

@@ -81,6 +81,12 @@ InitEngine({
         loaderOverlay.setProgress((loaded / total) * 100);
         loaderOverlay.setText(`Loading the scene, ${loaded} / ${total}`);
       },
+      // The texture bakes the load runs (bakeTexture): their compiles are its slow part
+      updateBakeStatusFn: (_loader, { bakedCount, totalCount }) => {
+        if (!loaderOverlay) return;
+        loaderOverlay.setProgress((bakedCount / totalCount) * 100);
+        loaderOverlay.setText(`Baking textures, ${bakedCount} / ${totalCount}`);
+      },
     });
     // #endregion app-scene-loader
 

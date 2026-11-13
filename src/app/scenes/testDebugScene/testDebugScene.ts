@@ -368,10 +368,13 @@ const LAYER_CHECK = { x: -3.2, groupGap: 2.2, step: 0.5, y: 0.93, z: 0.3, size: 
  * data and a HALF_FLOAT value of 4) and four layers, a tile per output and layer, left to right.
  * `albedo`: a checker of 4, 8, 12 and 16 cells, red through blue by layer. `data`: u in red, v in
  * green, the layer / 3 in blue. `hdr`: 1 to 4 white stripes (the value 4 shown at a quarter, so a
- * clamped 8-bit write shows grey stripes instead). Every tile far off still blurs evenly (each
- * layer's mips).
+ * clamped 8-bit write shows grey stripes instead). It bakes during the scene load, so the loader
+ * shows "Baking textures" (the loader's `updateBakeStatusFn`). The scene's "Texture bakes" tab
+ * (debug env, `_dbg__testDebugScene.ts`) moves the checker and the stripes with `phase` and
+ * rebakes.
  */
 const createLayeredBakeCheckAsync = async () => {
+  const phase = uniform(0);
   const baked = await bakeTexture({
     id: 'p304_layered',
     size: 128,
@@ -383,10 +386,10 @@ const createLayeredBakeCheckAsync = async () => {
     ],
     build: ({ uv: texelUv, layer }) => {
       const layerF = float(layer);
-      const cell = floor(texelUv.mul(layerF.add(1).mul(4)));
+      const cell = floor(texelUv.add(phase).fract().mul(layerF.add(1).mul(4)));
       const isOdd = mod(cell.x.add(cell.y), 2);
       const tint = vec3(float(1).sub(layerF.div(3)), 0.3, layerF.div(3));
-      const stripe = step(0.5, fract(texelUv.x.mul(layerF.add(1))));
+      const stripe = step(0.5, fract(texelUv.x.mul(layerF.add(1)).add(phase)));
       return {
         albedo: vec4(tint.mul(isOdd.mul(0.8).add(0.2)), 1),
         data: vec4(texelUv.x, texelUv.y, layerF.div(3), 1),
@@ -420,6 +423,12 @@ const createLayeredBakeCheckAsync = async () => {
       );
     }
   });
+  const debugTab = await loadDebugModuleAsync(
+    () => import('./_dbg__testDebugScene'),
+    false,
+    'testDebugScene bake tab'
+  );
+  debugTab?.current?.createTextureBakeTab(baked, phase);
 };
 
 /**
