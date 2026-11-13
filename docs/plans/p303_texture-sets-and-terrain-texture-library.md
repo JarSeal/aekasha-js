@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -384,7 +384,7 @@ As built (2026-11-13; `yarn test` (3,524), `tsc` both, lint, `yarn verify:baseli
 - Tests: `pack.test.ts` (new: the wrapping blur, the cavity's pit, bump, normalization, clamp and strength 0, the key version, a real pack as a channel and as a factor, the schema), `textures.test.ts` (new: the mean), `textureSetScaffold.test.ts` (the cavity AO and the radius at 1K and 2K), `gather.test.ts`' "p303 D1: a set's average colour" (a fake run: the set's colour in both modes, the texture's only in development data, the JSON's own, none without a run), `RuntimeTypes.test.ts` (`__averageColor` a tooling key).
 - Docs: `docs/techniques/asset-optimization.md`' Pack channels (`cavity`, the average colour), `devTools/assetPipeline/CLAUDE.md` (Cavity AO, Average colour, the scaffold), `devTools/gather/CLAUDE.md`, `features/texturesets/CLAUDE.md`. Phase 6's handbook still explains them for set authors.
 
-### Phase 3 — Layer arrays (D4)
+### Phase 3 — Layer arrays (D4) — done
 
 1. `buildTextureSetArray` and `setTextureSetArrayLayer` on p299's `buildTextureArray` / `setTextureArrayLayer` (assembly, validation, ref counting and the GPU assembly spike are p299's).
 2. The per-layer uniform array and the resolver.
@@ -448,6 +448,27 @@ As built (2026-11-13; `yarn test` (3,553), `tsc` both, lint, `yarn verify:baseli
 
 **Open for section 3: the exit's four sets.** The exit needs four sets whose slots match in size, mips and codec. Only `sand01` (KTX2, 1024²) and `p303TestSet` (PNG, 256², uncompressed path) exist until Phase 4. Proposed: three more hand-made sets from `devTools/assetPipeline/fixtures/textureSetsFiles.ts` (other colours and patterns, 256²), so all four go through the uncompressed path. Each set and the array also get encoded to KTX2 (`optimize` with the `terrainLayer` profile, small outputs at 256²), so the compressed path is checked too. Both are drawn in the `textureSets` scene: four quads through `{ textureSet }` beside four through one `{ textureSetArray }` material (layer per quad), on WebGPU and WebGL2. The scene's results record the array's binding count (2) and a pixel comparison.
 
+#### Section 3: The exit — done
+
+As built (2026-11-13; `yarn test` (3,576), `tsc` both, lint, `yarn verify:baselines --docs`; `yarn verify:scenes --only textureSets`: no error in the four configurations (no local baseline yet: NEW); `yarn verify:baselines --update`, as section 2 left for the phase's end: the bundle's two changes are section 2's (`TextureArray.js` 0.5 → 3.1 kB gzip, the new 2.7 kB `TextureSetArrays.js`), the API's the `aekasha/texturesets` entry and the schemas' p303 exports since Phase 1, the embeds' a byte or two, the banner's main chunk +55 B from Phases 1-2):
+
+- **The four sets** (the proposal, with its place changed): `p303TestSet` and three `LITE`-only sets from `devTools/assetPipeline/fixtures/textureSetsFiles.ts` (`p303BrickSet`: red bricks, the top left one yellow; `p303RidgeSet`: green diagonal ridges, a white square top left; `p303DotSet`: dark bumps on sand, the top left one blue; 256², `source/<pattern>/`; the first set's PNGs byte for byte unchanged). Each with its own `physicalSize` (1, 0.5, 2 × 1, 1), `tint`, `normalStrength` and `roughnessScale`, so a layer that read another layer's params would show. A KTX2 copy of each (`*Ktx`, the same PNGs through `optimize: { profile: "terrainLayer" }`, `baseColor` and `data` slots, UASTC; 8 outputs, 157 kB). Their 21 JSONs are in the scene's `arraySets/`, not beside the first set's.
+- **The scene** (`textureSets`): the Phase 1 row on top, below it four rows of 1 m quads, a column per layer: the PNG sets through `{ textureSet }`, the PNG array (`p303ArrayPngMat`, the input by list: built from the scene's registered textures, `DataArrayTexture`), the KTX2 sets, the KTX2 array (`p303ArrayKtxMat`, by id: the scene's listed `p303KtxArray`, whose members are only in its `__textures`, loaded for the array alone, `CompressedArrayTexture`). So both forms and both member paths of section 2 run. The per-set materials are made in code (`createMaterial` with `p303SetLiteMat`'s TSL file and a `{ textureSet, packing: "LITE" }` input; `ensureMaterialDependencies` loads the KTX2 sets' 2D textures), not eight more JSONs.
+- **One graph for both inputs:** `liteSurface.ts`' `applyLiteSurface` (the `LITE` branch of `p303TextureSetMat.tsl.ts`, moved) shades both; `p303SetArrayMat.tsl.ts` reads the layer from the quad's `setLayer` attribute (rounded: four quads share one material), its params through `getTextureSetLayerParams`, and samples `.sample(uv / physicalSize).depth(layer)`.
+- **The comparison:** an orthographic `takeSnapshotAsync` of the four rows (1280 × 1344, 256 px a metre, `samples: 0`, `postFx: false`): every quad on whole pixels, so a layer and its set raster alike under the directional light. Each array quad against its set's quad (inset 2 px): the largest channel difference, the mean and the pixels off, and a control (layer 0 against set 1: 180 / 255, every pixel). The bindings: the distinct textures each material's graph samples (`sampledTextures`).
+- **Measured** (headless Chrome on macOS: WebGPU on the GPU, WebGL2 through SwiftShader):
+
+  |                        | WebGPU                                  | WebGL2                                      |
+  | ---------------------- | --------------------------------------- | ------------------------------------------- |
+  | KTX2 array vs its sets | 0 pixels off, all four layers           | ≤ 1 / 255 on 15-77 of 63,504 pixels a layer |
+  | PNG array vs its sets  | ≤ 2 / 255 on 27-58 % of the pixels      | the same                                    |
+  | textures sampled       | 2 (array) vs 8 (four sets), both groups | the same                                    |
+
+  So the exit holds on the compressed path, the one a build ships. The PNG difference is p299's, found here: `drawLayer` (`kernel/assets/TextureArray.ts`) reads an image member back through a 2D canvas, which stores premultiplied, so the colour is rounded wherever the alpha is under 1 (here `albedoRough`'s roughness; it grows as the roughness falls: bricks 27 %, cobbles 58 %). Reproduced on `p303TestSet_albedoRough`'s bitmap: 41,899 of 65,536 texels one step off, alpha exact. `docs/issues/texture-array-image-layers-premultiplied.md`; for a texture set it matters only to a development member without an output (an `albedoHeight`'s height in A goes to 0, where the colour is lost).
+
+- **The release:** leaving the scene released both set arrays and all 22 p303 textures (`checkReleaseAsync`, extended to the eight sets and the arrays).
+- Docs: `features/texturesets/CLAUDE.md` (the verification scene and the measure).
+
 ### Phase 4 — The library (D6)
 
 1. Create the 16 set folders (`source.json`, set JSON; the texture JSONs by `yarn fetchTextureSources --scaffold`, Phase 2 section 2; `sand01` exists).
@@ -484,7 +505,6 @@ As built (2026-11-13; `yarn test` (3,553), `tsc` both, lint, `yarn verify:baseli
 
 1. Versions: engine minor (asset type, arrays), toolkit minor (library, baseline material, the `terrain` entry), app minor (gallery); `CHANGELOG.md`, with a Project section for the fetch tool.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
-
 
 ---
 

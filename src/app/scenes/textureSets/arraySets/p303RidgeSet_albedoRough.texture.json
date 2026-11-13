@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303RidgeSet_albedoRough",
+  "fileName": "../source/ridges/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303RidgeSet albedoRough",
+    "description": "The ridges set's LITE albedoRough: RGB albedo \u00d7 AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

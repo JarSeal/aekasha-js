@@ -11,10 +11,10 @@ import {
   positionView,
   uv,
 } from 'three/tsl';
-import { NormalRGPacking } from 'three/webgpu';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { MeshStandardNodeMaterial, Node, TextureNode } from 'three/webgpu';
 import type { TextureSetInput } from 'aekasha/texturesets';
+import { applyLiteSurface } from './liteSurface';
 
 /** The MINIMAL packing's roughness: it has no roughness map */
 const MINIMAL_ROUGHNESS = 0.8;
@@ -64,13 +64,14 @@ export const setup = (inputs: { surface: TextureSetInput }, material: MeshStanda
     material.aoNode = mix(float(1), orm.r, set.aoStrength as unknown as Node<'float'>);
     material.roughnessNode = orm.g.mul(roughnessScale);
   } else if (set.albedoRough && set.normalHeight) {
-    const albedoRough = sample(set.albedoRough);
-    material.colorNode = albedoRough.rgb.mul(tint);
-    material.roughnessNode = albedoRough.a.mul(roughnessScale);
-    // RG are the normal's X and Y; three reconstructs Z
-    const normal = normalMap(sample(set.normalHeight).rgb, strength);
-    normal.unpackNormalMode = NormalRGPacking;
-    material.normalNode = normal;
+    // The set array's material shades a layer with the same graph (p303SetArrayMat.tsl.ts)
+    applyLiteSurface(material, {
+      albedoRough: sample(set.albedoRough),
+      normalHeight: sample(set.normalHeight),
+      tint,
+      normalStrength: strength,
+      roughnessScale,
+    });
   } else if (set.albedoHeight) {
     const albedoHeight = sample(set.albedoHeight);
     material.colorNode = albedoHeight.rgb.mul(tint);

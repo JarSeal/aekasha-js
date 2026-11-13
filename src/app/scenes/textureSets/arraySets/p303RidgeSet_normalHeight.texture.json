@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303RidgeSet_normalHeight",
+  "fileName": "../source/ridges/normalHeight.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303RidgeSet normalHeight",
+    "description": "The ridges set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

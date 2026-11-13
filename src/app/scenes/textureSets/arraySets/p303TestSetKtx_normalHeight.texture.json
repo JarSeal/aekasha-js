@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303TestSetKtx_normalHeight",
+  "fileName": "../source/normalHeight.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "data"
+  },
+  "debugData": {
+    "name": "p303TestSetKtx normalHeight",
+    "description": "The cobbles set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+  }
+}

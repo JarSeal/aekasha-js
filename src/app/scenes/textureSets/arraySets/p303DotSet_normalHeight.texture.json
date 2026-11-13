@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303DotSet_normalHeight",
+  "fileName": "../source/dots/normalHeight.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303DotSet normalHeight",
+    "description": "The dots set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

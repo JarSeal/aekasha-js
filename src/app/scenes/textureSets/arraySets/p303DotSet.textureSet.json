@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../.schemas/textureSet.schema.json",
+  "id": "p303DotSet",
+  "category": "OTHER",
+  "physicalSize": [1, 1],
+  "heightScale": 0.01,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "p303DotSet_albedoRough",
+      "normalHeight": "p303DotSet_normalHeight"
+    }
+  },
+  "surface": {
+    "normalStrength": 1,
+    "roughnessScale": 0.6
+  },
+  "debugData": {
+    "name": "p303 dots set",
+    "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: dark round bumps on sand, the top left one blue, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+  }
+}

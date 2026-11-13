@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../.schemas/textureSet.schema.json",
+  "id": "p303TestSetKtx",
+  "category": "OTHER",
+  "physicalSize": [1, 1],
+  "heightScale": 0.04,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "p303TestSetKtx_albedoRough",
+      "normalHeight": "p303TestSetKtx_normalHeight"
+    }
+  },
+  "surface": {
+    "normalStrength": 1,
+    "roughnessScale": 1
+  },
+  "debugData": {
+    "name": "p303 cobbles set (KTX2)",
+    "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: the cobbles of p303TestSet, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+  }
+}

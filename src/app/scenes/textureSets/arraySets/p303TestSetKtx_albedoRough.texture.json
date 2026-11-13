@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303TestSetKtx_albedoRough",
+  "fileName": "../source/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "baseColor"
+  },
+  "debugData": {
+    "name": "p303TestSetKtx albedoRough",
+    "description": "The cobbles set's LITE albedoRough: RGB albedo \u00d7 AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+  }
+}

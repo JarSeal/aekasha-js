@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303BrickSet_albedoRough",
+  "fileName": "../source/bricks/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303BrickSet albedoRough",
+    "description": "The bricks set's LITE albedoRough: RGB albedo \u00d7 AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

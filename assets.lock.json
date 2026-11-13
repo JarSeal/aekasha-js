@@ -10,6 +10,29 @@
         "out": 33824
       }
     },
+    "0ac6f830e69084ed8623b5ca09b726fb7e60ea25e9e64da3b39cf0310df00b3c": {
+      "source": "src/app/scenes/textureSets/source/bricks/normalHeight.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
+      "bytes": 1460,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1460,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 1439
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "0dd8bb864dcb81e1c0f60912296b49f4a0a836c666ce9a5676e48ec422f8f848": {
       "source": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
       "url": "/aek-assets/app/scenes/textureAtlases/p299TestAtlas.atlas.albedo.1bae140f.ktx2",
@@ -257,6 +280,29 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "490985ffda3f7e8fe54afe86d3094436c4c06cad14265c2f0ab13ba41b0c605e": {
+      "source": "src/app/scenes/textureSets/source/dots/normalHeight.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/dots/normalHeight.086dbe8d.ktx2",
+      "bytes": 1756,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1756,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 2896
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "50b6d4a45d86b377b22c9b09a20fc5574a65bb3dcb7de5542ff28c09445fefea": {
       "source": "src/app/scenes/textureArrays/p299TestArray.textureArray.json",
       "url": "/aek-assets/app/scenes/textureArrays/p299TestArray.array.5c60d088.ktx2",
@@ -303,6 +349,34 @@
           "hasAlpha": false,
           "mipmaps": true,
           "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "535f77456532f02ef9f1c21069ef871149fa8704317f37c81ea35fd162561cef": {
+      "source": "src/app/scenes/textureSets/source/dots/albedoRough.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/dots/albedoRough.c988a77e.ktx2",
+      "bytes": 39145,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 39145,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 76307
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.479,
+            0.3947,
+            0.2678
+          ]
         }
       ],
       "ktxVersion": "4.4.2"
@@ -501,6 +575,57 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "8a780d106d038be8ae5b3fe25e83ca62e9d6c8b3d82a7fb23908824a7de3304b": {
+      "source": "src/app/scenes/textureSets/source/bricks/albedoRough.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.fc3c8c2e.ktx2",
+      "bytes": 42843,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 42843,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 91787
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.3897,
+            0.1538,
+            0.0978
+          ]
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "93fc15a820c28569c92237eb7f4226cd4b7fb10b3123c2dba7c2e6f7beeb8584": {
+      "source": "src/app/scenes/textureSets/source/normalHeight.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/normalHeight.8412c0ca.ktx2",
+      "bytes": 1986,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1986,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 4708
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "973c47a5fc0637c3ef92dd2f8f17b986116e2f0dc1378fec4b90d0bc3e46d51b": {
       "source": "src/app/scenes/textureArrays/p299TestArray1.textureArray.json",
       "url": "/aek-assets/app/scenes/textureArrays/p299TestArray1.array.ecc27102.ktx2",
@@ -654,6 +779,34 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "b1cf3283c1d9c14ddbb7950fb5188af25267168402c3267083fe0921a7062f20": {
+      "source": "src/app/scenes/textureSets/source/ridges/albedoRough.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.daa92da9.ktx2",
+      "bytes": 24273,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 24273,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 96705
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.1814,
+            0.333,
+            0.1139
+          ]
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "b6fe103ee2f3f07452b7f085cd9bf70984f73f21df6f6c25f0711de70ab9f8b9": {
       "source": "src/app/scenes/mergeMaterials/source/ruinStone_normal.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_normal.ae256cf3.ktx2",
@@ -696,6 +849,34 @@
           "hasAlpha": false,
           "mipmaps": true,
           "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "c1a8998e48dc04b6ce392e753e7eed6b166e9e9125c88bed88ff1ac368d15bdf": {
+      "source": "src/app/scenes/textureSets/source/albedoRough.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/albedoRough.58f4f67c.ktx2",
+      "bytes": 44717,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 44717,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 90645
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.3022,
+            0.2958,
+            0.3103
+          ]
         }
       ],
       "ktxVersion": "4.4.2"
@@ -815,6 +996,29 @@
           "mipmaps": true,
           "normalMode": false,
           "levels": 8
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "e7a21607c526b3a7e4c2b775110b643cb678ea58b80e276c83515c4f1db18a31": {
+      "source": "src/app/scenes/textureSets/source/ridges/normalHeight.png",
+      "url": "/aek-assets/app/scenes/textureSets/source/ridges/normalHeight.337f111d.ktx2",
+      "bytes": 1104,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1104,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 1459
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
         }
       ],
       "ktxVersion": "4.4.2"

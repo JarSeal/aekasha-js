@@ -20758,7 +20758,7 @@
     "textureSets": {
       "isDebugScene": true,
       "name": "Texture sets (p303)",
-      "description": "p303 Phase 1's texture set verification scene: the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL, lit by a grazing sun from the upper left. window.__textureSets holds the lookups' results, and checkReleaseAsync() leaves the scene and lists the set's textures still registered.",
+      "description": "p303's texture set verification scene. Top row (Phase 1): the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL. Below (Phase 3, D4): four LITE sets (cobbles, bricks, ridges, dots), each row's four quads through { textureSet } above the same sets as one { textureSetArray } material, PNGs (the uncompressed array path), then KTX2 (the compressed one). Lit by a grazing sun from the upper left. window.__textureSets holds the checks' results (the pixel comparison of each array layer against its set, the textures each material samples), and checkReleaseAsync() leaves the scene and lists the sets' textures still registered.",
       "materials": [
         {
           "id": "p303SetLiteMat",
@@ -20803,6 +20803,40 @@
             }
           },
           "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "p303ArrayPngMat",
+          "debugData": {
+            "name": "Texture set array, PNG",
+            "description": "The set array input by list (p303 D4): four PNG sets' LITE in two array textures (the uncompressed path, built from the scene's registered textures), the layer from each quad's setLayer attribute, each layer's surface from the shared params."
+          },
+          "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+          "inputs": {
+            "surface": {
+              "textureSetArray": [
+                "p303TestSet",
+                "p303BrickSet",
+                "p303RidgeSet",
+                "p303DotSet"
+              ],
+              "packing": "LITE"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "p303ArrayKtxMat",
+          "debugData": {
+            "name": "Texture set array, KTX2",
+            "description": "The set array input by id (p303 D4): the scene's listed p303KtxArray, four KTX2 sets' LITE in two compressed array textures (members loaded for the array alone), the layer from each quad's setLayer attribute."
+          },
+          "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+          "inputs": {
+            "surface": {
+              "textureSetArray": "p303KtxArray"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
         }
       ],
       "textureSets": [
@@ -20843,6 +20877,459 @@
             "wetDarkening": 0.5,
             "wetRoughness": 0.3
           }
+        },
+        {
+          "id": "p303BrickSet",
+          "category": "OTHER",
+          "physicalSize": [
+            0.5,
+            0.5
+          ],
+          "heightScale": 0.02,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303BrickSet_albedoRough",
+              "normalHeight": "p303BrickSet_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 bricks set",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: a running bond of red bricks, the top left one yellow, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffe4d6",
+            "normalStrength": 1.5,
+            "roughnessScale": 0.9,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "p303RidgeSet",
+          "category": "OTHER",
+          "physicalSize": [
+            2,
+            1
+          ],
+          "heightScale": 0.05,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303RidgeSet_albedoRough",
+              "normalHeight": "p303RidgeSet_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 ridges set",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: green diagonal ridges, a white square at the top left, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#d8ffd0",
+            "normalStrength": 0.6,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "p303DotSet",
+          "category": "OTHER",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.01,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303DotSet_albedoRough",
+              "normalHeight": "p303DotSet_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 dots set",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: dark round bumps on sand, the top left one blue, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 0.6,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "p303TestSetKtx",
+          "category": "OTHER",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.04,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303TestSetKtx_albedoRough",
+              "normalHeight": "p303TestSetKtx_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 cobbles set (KTX2)",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: the cobbles of p303TestSet, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#959497"
+        },
+        {
+          "id": "p303BrickSetKtx",
+          "category": "OTHER",
+          "physicalSize": [
+            0.5,
+            0.5
+          ],
+          "heightScale": 0.02,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303BrickSetKtx_albedoRough",
+              "normalHeight": "p303BrickSetKtx_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 bricks set (KTX2)",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: a running bond of red bricks, the top left one yellow, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffe4d6",
+            "normalStrength": 1.5,
+            "roughnessScale": 0.9,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#a86d58"
+        },
+        {
+          "id": "p303RidgeSetKtx",
+          "category": "OTHER",
+          "physicalSize": [
+            2,
+            1
+          ],
+          "heightScale": 0.05,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303RidgeSetKtx_albedoRough",
+              "normalHeight": "p303RidgeSetKtx_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 ridges set (KTX2)",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: green diagonal ridges, a white square at the top left, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#d8ffd0",
+            "normalStrength": 0.6,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#769c5f"
+        },
+        {
+          "id": "p303DotSetKtx",
+          "category": "OTHER",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.01,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p303DotSetKtx_albedoRough",
+              "normalHeight": "p303DotSetKtx_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "p303 dots set (KTX2)",
+            "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: dark round bumps on sand, the top left one blue, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 0.6,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#b8a98d"
+        }
+      ],
+      "textureSetArrays": [
+        {
+          "id": "p303KtxArray",
+          "sets": [
+            "p303TestSetKtx",
+            "p303BrickSetKtx",
+            "p303RidgeSetKtx",
+            "p303DotSetKtx"
+          ],
+          "packing": "LITE",
+          "__textures": [
+            {
+              "id": "p303TestSetKtx_albedoRough",
+              "fileName": "../source/albedoRough.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "p303TestSetKtx albedoRough",
+                "description": "The cobbles set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 90645,
+              "__sourceUrl": "/app/scenes/textureSets/source/albedoRough.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/albedoRough.58f4f67c.ktx2",
+              "__bytes": {
+                "in": 90645,
+                "out": 44717
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.3022,
+                0.2958,
+                0.3103
+              ]
+            },
+            {
+              "id": "p303TestSetKtx_normalHeight",
+              "fileName": "../source/normalHeight.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "debugData": {
+                "name": "p303TestSetKtx normalHeight",
+                "description": "The cobbles set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 4708,
+              "__sourceUrl": "/app/scenes/textureSets/source/normalHeight.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/normalHeight.8412c0ca.ktx2",
+              "__bytes": {
+                "in": 4708,
+                "out": 1986
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc"
+            },
+            {
+              "id": "p303BrickSetKtx_albedoRough",
+              "fileName": "../source/bricks/albedoRough.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "p303BrickSetKtx albedoRough",
+                "description": "The bricks set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 91787,
+              "__sourceUrl": "/app/scenes/textureSets/source/bricks/albedoRough.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.fc3c8c2e.ktx2",
+              "__bytes": {
+                "in": 91787,
+                "out": 42843
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.3897,
+                0.1538,
+                0.0978
+              ]
+            },
+            {
+              "id": "p303BrickSetKtx_normalHeight",
+              "fileName": "../source/bricks/normalHeight.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "debugData": {
+                "name": "p303BrickSetKtx normalHeight",
+                "description": "The bricks set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 1439,
+              "__sourceUrl": "/app/scenes/textureSets/source/bricks/normalHeight.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
+              "__bytes": {
+                "in": 1439,
+                "out": 1460
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc"
+            },
+            {
+              "id": "p303RidgeSetKtx_albedoRough",
+              "fileName": "../source/ridges/albedoRough.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "p303RidgeSetKtx albedoRough",
+                "description": "The ridges set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 96705,
+              "__sourceUrl": "/app/scenes/textureSets/source/ridges/albedoRough.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.daa92da9.ktx2",
+              "__bytes": {
+                "in": 96705,
+                "out": 24273
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.1814,
+                0.333,
+                0.1139
+              ]
+            },
+            {
+              "id": "p303RidgeSetKtx_normalHeight",
+              "fileName": "../source/ridges/normalHeight.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "debugData": {
+                "name": "p303RidgeSetKtx normalHeight",
+                "description": "The ridges set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 1459,
+              "__sourceUrl": "/app/scenes/textureSets/source/ridges/normalHeight.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/ridges/normalHeight.337f111d.ktx2",
+              "__bytes": {
+                "in": 1459,
+                "out": 1104
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc"
+            },
+            {
+              "id": "p303DotSetKtx_albedoRough",
+              "fileName": "../source/dots/albedoRough.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "p303DotSetKtx albedoRough",
+                "description": "The dots set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 76307,
+              "__sourceUrl": "/app/scenes/textureSets/source/dots/albedoRough.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/dots/albedoRough.c988a77e.ktx2",
+              "__bytes": {
+                "in": 76307,
+                "out": 39145
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.479,
+                0.3947,
+                0.2678
+              ]
+            },
+            {
+              "id": "p303DotSetKtx_normalHeight",
+              "fileName": "../source/dots/normalHeight.png",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000
+              },
+              "debugData": {
+                "name": "p303DotSetKtx normalHeight",
+                "description": "The dots set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+              },
+              "__fileSize": 2896,
+              "__sourceUrl": "/app/scenes/textureSets/source/dots/normalHeight.png",
+              "__url": "/aek-assets/app/scenes/textureSets/source/dots/normalHeight.086dbe8d.ktx2",
+              "__bytes": {
+                "in": 2896,
+                "out": 1756
+              },
+              "__vramBytes": {
+                "in": 349524,
+                "out": 87408
+              },
+              "__codec": "uastc"
+            }
+          ]
+        },
+        {
+          "sets": [
+            "p303TestSet",
+            "p303BrickSet",
+            "p303RidgeSet",
+            "p303DotSet"
+          ],
+          "packing": "LITE"
         }
       ],
       "id": "textureSets",
@@ -20900,6 +21387,123 @@
           "__bytes": {
             "in": 4708,
             "out": 4708
+          }
+        },
+        {
+          "id": "p303BrickSet_albedoRough",
+          "fileName": "../source/bricks/albedoRough.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303BrickSet albedoRough",
+            "description": "The bricks set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 91787,
+          "__sourceUrl": "/app/scenes/textureSets/source/bricks/albedoRough.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.d152f370.png",
+          "__bytes": {
+            "in": 91787,
+            "out": 91787
+          }
+        },
+        {
+          "id": "p303BrickSet_normalHeight",
+          "fileName": "../source/bricks/normalHeight.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303BrickSet normalHeight",
+            "description": "The bricks set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 1439,
+          "__sourceUrl": "/app/scenes/textureSets/source/bricks/normalHeight.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.4a7e414a.png",
+          "__bytes": {
+            "in": 1439,
+            "out": 1439
+          }
+        },
+        {
+          "id": "p303RidgeSet_albedoRough",
+          "fileName": "../source/ridges/albedoRough.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303RidgeSet albedoRough",
+            "description": "The ridges set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 96705,
+          "__sourceUrl": "/app/scenes/textureSets/source/ridges/albedoRough.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.9c82daf6.png",
+          "__bytes": {
+            "in": 96705,
+            "out": 96705
+          }
+        },
+        {
+          "id": "p303RidgeSet_normalHeight",
+          "fileName": "../source/ridges/normalHeight.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303RidgeSet normalHeight",
+            "description": "The ridges set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 1459,
+          "__sourceUrl": "/app/scenes/textureSets/source/ridges/normalHeight.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/ridges/normalHeight.b441340b.png",
+          "__bytes": {
+            "in": 1459,
+            "out": 1459
+          }
+        },
+        {
+          "id": "p303DotSet_albedoRough",
+          "fileName": "../source/dots/albedoRough.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303DotSet albedoRough",
+            "description": "The dots set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 76307,
+          "__sourceUrl": "/app/scenes/textureSets/source/dots/albedoRough.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/dots/albedoRough.3ff04d49.png",
+          "__bytes": {
+            "in": 76307,
+            "out": 76307
+          }
+        },
+        {
+          "id": "p303DotSet_normalHeight",
+          "fileName": "../source/dots/normalHeight.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303DotSet normalHeight",
+            "description": "The dots set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 2896,
+          "__sourceUrl": "/app/scenes/textureSets/source/dots/normalHeight.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/dots/normalHeight.5ff81912.png",
+          "__bytes": {
+            "in": 2896,
+            "out": 2896
           }
         },
         {
@@ -23827,6 +24431,391 @@
       "__vramBytes": {
         "in": 22369620,
         "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "p303BrickSetKtx_albedoRough": {
+      "id": "p303BrickSetKtx_albedoRough",
+      "fileName": "../source/bricks/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303BrickSetKtx albedoRough",
+        "description": "The bricks set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSetKtx_albedoRough.texture.json",
+      "__fileSize": 91787,
+      "__sourceUrl": "/app/scenes/textureSets/source/bricks/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.fc3c8c2e.ktx2",
+      "__bytes": {
+        "in": 91787,
+        "out": 42843
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.3897,
+        0.1538,
+        0.0978
+      ]
+    },
+    "p303BrickSetKtx_normalHeight": {
+      "id": "p303BrickSetKtx_normalHeight",
+      "fileName": "../source/bricks/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303BrickSetKtx normalHeight",
+        "description": "The bricks set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSetKtx_normalHeight.texture.json",
+      "__fileSize": 1439,
+      "__sourceUrl": "/app/scenes/textureSets/source/bricks/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
+      "__bytes": {
+        "in": 1439,
+        "out": 1460
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "p303BrickSet_albedoRough": {
+      "id": "p303BrickSet_albedoRough",
+      "fileName": "../source/bricks/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303BrickSet albedoRough",
+        "description": "The bricks set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSet_albedoRough.texture.json",
+      "__fileSize": 91787,
+      "__sourceUrl": "/app/scenes/textureSets/source/bricks/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.d152f370.png",
+      "__bytes": {
+        "in": 91787,
+        "out": 91787
+      }
+    },
+    "p303BrickSet_normalHeight": {
+      "id": "p303BrickSet_normalHeight",
+      "fileName": "../source/bricks/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303BrickSet normalHeight",
+        "description": "The bricks set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSet_normalHeight.texture.json",
+      "__fileSize": 1439,
+      "__sourceUrl": "/app/scenes/textureSets/source/bricks/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.4a7e414a.png",
+      "__bytes": {
+        "in": 1439,
+        "out": 1439
+      }
+    },
+    "p303DotSetKtx_albedoRough": {
+      "id": "p303DotSetKtx_albedoRough",
+      "fileName": "../source/dots/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303DotSetKtx albedoRough",
+        "description": "The dots set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSetKtx_albedoRough.texture.json",
+      "__fileSize": 76307,
+      "__sourceUrl": "/app/scenes/textureSets/source/dots/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/dots/albedoRough.c988a77e.ktx2",
+      "__bytes": {
+        "in": 76307,
+        "out": 39145
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.479,
+        0.3947,
+        0.2678
+      ]
+    },
+    "p303DotSetKtx_normalHeight": {
+      "id": "p303DotSetKtx_normalHeight",
+      "fileName": "../source/dots/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303DotSetKtx normalHeight",
+        "description": "The dots set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSetKtx_normalHeight.texture.json",
+      "__fileSize": 2896,
+      "__sourceUrl": "/app/scenes/textureSets/source/dots/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/dots/normalHeight.086dbe8d.ktx2",
+      "__bytes": {
+        "in": 2896,
+        "out": 1756
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "p303DotSet_albedoRough": {
+      "id": "p303DotSet_albedoRough",
+      "fileName": "../source/dots/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303DotSet albedoRough",
+        "description": "The dots set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSet_albedoRough.texture.json",
+      "__fileSize": 76307,
+      "__sourceUrl": "/app/scenes/textureSets/source/dots/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/dots/albedoRough.3ff04d49.png",
+      "__bytes": {
+        "in": 76307,
+        "out": 76307
+      }
+    },
+    "p303DotSet_normalHeight": {
+      "id": "p303DotSet_normalHeight",
+      "fileName": "../source/dots/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303DotSet normalHeight",
+        "description": "The dots set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSet_normalHeight.texture.json",
+      "__fileSize": 2896,
+      "__sourceUrl": "/app/scenes/textureSets/source/dots/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/dots/normalHeight.5ff81912.png",
+      "__bytes": {
+        "in": 2896,
+        "out": 2896
+      }
+    },
+    "p303RidgeSetKtx_albedoRough": {
+      "id": "p303RidgeSetKtx_albedoRough",
+      "fileName": "../source/ridges/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303RidgeSetKtx albedoRough",
+        "description": "The ridges set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSetKtx_albedoRough.texture.json",
+      "__fileSize": 96705,
+      "__sourceUrl": "/app/scenes/textureSets/source/ridges/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.daa92da9.ktx2",
+      "__bytes": {
+        "in": 96705,
+        "out": 24273
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1814,
+        0.333,
+        0.1139
+      ]
+    },
+    "p303RidgeSetKtx_normalHeight": {
+      "id": "p303RidgeSetKtx_normalHeight",
+      "fileName": "../source/ridges/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303RidgeSetKtx normalHeight",
+        "description": "The ridges set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSetKtx_normalHeight.texture.json",
+      "__fileSize": 1459,
+      "__sourceUrl": "/app/scenes/textureSets/source/ridges/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/ridges/normalHeight.337f111d.ktx2",
+      "__bytes": {
+        "in": 1459,
+        "out": 1104
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc"
+    },
+    "p303RidgeSet_albedoRough": {
+      "id": "p303RidgeSet_albedoRough",
+      "fileName": "../source/ridges/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303RidgeSet albedoRough",
+        "description": "The ridges set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSet_albedoRough.texture.json",
+      "__fileSize": 96705,
+      "__sourceUrl": "/app/scenes/textureSets/source/ridges/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.9c82daf6.png",
+      "__bytes": {
+        "in": 96705,
+        "out": 96705
+      }
+    },
+    "p303RidgeSet_normalHeight": {
+      "id": "p303RidgeSet_normalHeight",
+      "fileName": "../source/ridges/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303RidgeSet normalHeight",
+        "description": "The ridges set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSet_normalHeight.texture.json",
+      "__fileSize": 1459,
+      "__sourceUrl": "/app/scenes/textureSets/source/ridges/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/ridges/normalHeight.b441340b.png",
+      "__bytes": {
+        "in": 1459,
+        "out": 1459
+      }
+    },
+    "p303TestSetKtx_albedoRough": {
+      "id": "p303TestSetKtx_albedoRough",
+      "fileName": "../source/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303TestSetKtx albedoRough",
+        "description": "The cobbles set's LITE albedoRough: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303TestSetKtx_albedoRough.texture.json",
+      "__fileSize": 90645,
+      "__sourceUrl": "/app/scenes/textureSets/source/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/albedoRough.58f4f67c.ktx2",
+      "__bytes": {
+        "in": 90645,
+        "out": 44717
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.3022,
+        0.2958,
+        0.3103
+      ]
+    },
+    "p303TestSetKtx_normalHeight": {
+      "id": "p303TestSetKtx_normalHeight",
+      "fileName": "../source/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303TestSetKtx normalHeight",
+        "description": "The cobbles set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303TestSetKtx_normalHeight.texture.json",
+      "__fileSize": 4708,
+      "__sourceUrl": "/app/scenes/textureSets/source/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/normalHeight.8412c0ca.ktx2",
+      "__bytes": {
+        "in": 4708,
+        "out": 1986
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
       },
       "__codec": "uastc"
     },
@@ -31899,6 +32888,227 @@
       },
       "averageColor": "#ab966b",
       "__sourcePath": "src/toolkit/textures/sand01/sand01.textureSet.json"
+    },
+    "p303BrickSet": {
+      "id": "p303BrickSet",
+      "category": "OTHER",
+      "physicalSize": [
+        0.5,
+        0.5
+      ],
+      "heightScale": 0.02,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303BrickSet_albedoRough",
+          "normalHeight": "p303BrickSet_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 bricks set",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: a running bond of red bricks, the top left one yellow, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffe4d6",
+        "normalStrength": 1.5,
+        "roughnessScale": 0.9,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSet.textureSet.json"
+    },
+    "p303BrickSetKtx": {
+      "id": "p303BrickSetKtx",
+      "category": "OTHER",
+      "physicalSize": [
+        0.5,
+        0.5
+      ],
+      "heightScale": 0.02,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303BrickSetKtx_albedoRough",
+          "normalHeight": "p303BrickSetKtx_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 bricks set (KTX2)",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: a running bond of red bricks, the top left one yellow, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffe4d6",
+        "normalStrength": 1.5,
+        "roughnessScale": 0.9,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#a86d58",
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSetKtx.textureSet.json"
+    },
+    "p303DotSet": {
+      "id": "p303DotSet",
+      "category": "OTHER",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303DotSet_albedoRough",
+          "normalHeight": "p303DotSet_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 dots set",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: dark round bumps on sand, the top left one blue, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 0.6,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSet.textureSet.json"
+    },
+    "p303DotSetKtx": {
+      "id": "p303DotSetKtx",
+      "category": "OTHER",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303DotSetKtx_albedoRough",
+          "normalHeight": "p303DotSetKtx_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 dots set (KTX2)",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: dark round bumps on sand, the top left one blue, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 0.6,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#b8a98d",
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSetKtx.textureSet.json"
+    },
+    "p303RidgeSet": {
+      "id": "p303RidgeSet",
+      "category": "OTHER",
+      "physicalSize": [
+        2,
+        1
+      ],
+      "heightScale": 0.05,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303RidgeSet_albedoRough",
+          "normalHeight": "p303RidgeSet_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 ridges set",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: green diagonal ridges, a white square at the top left, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#d8ffd0",
+        "normalStrength": 0.6,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSet.textureSet.json"
+    },
+    "p303RidgeSetKtx": {
+      "id": "p303RidgeSetKtx",
+      "category": "OTHER",
+      "physicalSize": [
+        2,
+        1
+      ],
+      "heightScale": 0.05,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303RidgeSetKtx_albedoRough",
+          "normalHeight": "p303RidgeSetKtx_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 ridges set (KTX2)",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: green diagonal ridges, a white square at the top left, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#d8ffd0",
+        "normalStrength": 0.6,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#769c5f",
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSetKtx.textureSet.json"
+    },
+    "p303TestSetKtx": {
+      "id": "p303TestSetKtx",
+      "category": "OTHER",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p303TestSetKtx_albedoRough",
+          "normalHeight": "p303TestSetKtx_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "p303 cobbles set (KTX2)",
+        "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: the cobbles of p303TestSet, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#959497",
+      "__sourcePath": "src/app/scenes/textureSets/arraySets/p303TestSetKtx.textureSet.json"
     }
   },
   "materials": {
@@ -32067,6 +33277,42 @@
       },
       "type": "BASICNODEMATERIAL",
       "__sourcePath": "src/app/scenes/textureAtlases/p299AtlasCellMat.material.json"
+    },
+    "p303ArrayKtxMat": {
+      "id": "p303ArrayKtxMat",
+      "debugData": {
+        "name": "Texture set array, KTX2",
+        "description": "The set array input by id (p303 D4): the scene's listed p303KtxArray, four KTX2 sets' LITE in two compressed array textures (members loaded for the array alone), the layer from each quad's setLayer attribute."
+      },
+      "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+      "inputs": {
+        "surface": {
+          "textureSetArray": "p303KtxArray"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureSets/p303ArrayKtxMat.material.json"
+    },
+    "p303ArrayPngMat": {
+      "id": "p303ArrayPngMat",
+      "debugData": {
+        "name": "Texture set array, PNG",
+        "description": "The set array input by list (p303 D4): four PNG sets' LITE in two array textures (the uncompressed path, built from the scene's registered textures), the layer from each quad's setLayer attribute, each layer's surface from the shared params."
+      },
+      "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+      "inputs": {
+        "surface": {
+          "textureSetArray": [
+            "p303TestSet",
+            "p303BrickSet",
+            "p303RidgeSet",
+            "p303DotSet"
+          ],
+          "packing": "LITE"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureSets/p303ArrayPngMat.material.json"
     },
     "p303SetFullMat": {
       "id": "p303SetFullMat",

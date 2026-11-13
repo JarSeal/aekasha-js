@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303BrickSet_normalHeight",
+  "fileName": "../source/bricks/normalHeight.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303BrickSet normalHeight",
+    "description": "The bricks set's LITE normalHeight: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

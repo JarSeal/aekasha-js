@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3594,
-      "total": 3594
+      "documented": 3636,
+      "total": 3636
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3511,
-        "total": 3511
+        "documented": 3553,
+        "total": 3553
       },
       "members": {
         "documented": 953,
@@ -397,6 +397,20 @@
         "members": []
       }
     },
+    "engine/features/texturesets": {
+      "exports": {
+        "documented": 27,
+        "total": 27
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/features/viewports": {
       "exports": {
         "documented": 16,
@@ -595,8 +609,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 98,
-        "total": 98
+        "documented": 113,
+        "total": 113
       },
       "members": {
         "documented": 0,

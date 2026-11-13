@@ -3,8 +3,21 @@
   "id": "textureSets",
   "sceneFile": "./scenes/textureSets/textureSets.ts",
   "isDebugScene": true,
-  "textureSets": ["p303TestSet"],
-  "materials": ["p303SetLiteMat", "p303SetFullMat", "p303SetMinimalMat"],
+  "textureSets": ["p303TestSet", "p303BrickSet", "p303RidgeSet", "p303DotSet"],
+  "textureSetArrays": [
+    {
+      "id": "p303KtxArray",
+      "sets": ["p303TestSetKtx", "p303BrickSetKtx", "p303RidgeSetKtx", "p303DotSetKtx"],
+      "packing": "LITE"
+    }
+  ],
+  "materials": [
+    "p303SetLiteMat",
+    "p303SetFullMat",
+    "p303SetMinimalMat",
+    "p303ArrayPngMat",
+    "p303ArrayKtxMat"
+  ],
   "name": "Texture sets (p303)",
-  "description": "p303 Phase 1's texture set verification scene: the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL, lit by a grazing sun from the upper left. window.__textureSets holds the lookups' results, and checkReleaseAsync() leaves the scene and lists the set's textures still registered."
+  "description": "p303's texture set verification scene. Top row (Phase 1): the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL. Below (Phase 3, D4): four LITE sets (cobbles, bricks, ridges, dots), each row's four quads through { textureSet } above the same sets as one { textureSetArray } material, PNGs (the uncompressed array path), then KTX2 (the compressed one). Lit by a grazing sun from the upper left. window.__textureSets holds the checks' results (the pixel comparison of each array layer against its set, the textures each material samples), and checkReleaseAsync() leaves the scene and lists the sets' textures still registered."
 }
