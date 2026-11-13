@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -235,7 +235,7 @@ Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/di
 
 ## Phases
 
-### Phase 1 — Asset type and runtime (D1, D2)
+### Phase 1 — Asset type and runtime (D1, D2) — done
 
 1. Schema (both documentation layers), the gather's suffix, registry, scene list and generated section, JSON Schema, the runtime-type pair, `gatheredJson.test.ts` passing on the repo's JSONs.
 2. `kernel/assets/TextureSet.ts` (summaries and `@example`s: it's on `aekasha`), ownership, scene `textureSets`; unit tests next to it.
@@ -307,12 +307,25 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
 - Tests: `TextureSets.test.ts` (12: the lookup's order and a production build's, the load by slot with a re-tag and a load, another packing, its three rejections, the registered textures and undefined, the install, the match, the bundle and its values, a `{ r, g, b }` tint, another packing's bundle, the resolver's two errors, its dependencies); `RuntimeTypes.test.ts`' pair: a scene's set is `TextureSetDef`, which fits the lookup's `TextureSetPackingData`, and the asset has only the tooling keys more.
 - Docs: `features/texturesets/CLAUDE.md` (new, its section "Texture sets"), the root `CLAUDE.md` (the map, "thirteen", the feature list), `kernel/init/CLAUDE.md`, `merging/CLAUDE.md` (no longer last), the Hub's entry table and feature lists (`documentation/intro.md`, `architecture/guide.md`, `quick-start/setup.md`, `smallest-build/guide.md`). The section's Hub coverage is the scenes-and-assets page's `aek:covers` until Phase 6's terrain page takes it over. `readme.md`'s Features line is Phase 6's.
 
+#### Section 4: The Assets tab and the exit — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --docs`, `yarn verify:scenes --only textureSets --config quick,prodTest,mainThread`: no errors, NEW (no local baseline); the scene driven by hand on WebGPU and WebGL2 (SwiftShader), the same picture and results on both, its six textures registered and none left after leaving it):
+
+- **The Assets tab:** a texture's info window has a Texture set folder (after the Texture folder), a row per set naming the packings and slots the texture fills (`stone`: `FULL albedoHeight, MINIMAL albedoHeight`), none when no set names it. `getTextureSetSlotsOf(id)` (`kernel/assets/debug/_dbg__AssetsData.ts`) reads the development data's `textureSets` section, else every scene's inline sets (once each): no feature import. Its test is `_dbg__Assets.test.ts`' (dev data, the scenes' sets, no set).
+- **The hand-made set:** `p303TestSet` (`src/app/scenes/textureSets/`, category `OTHER`, `physicalSize` [1, 1], `heightScale` 0.04, all three packings, `defaultPacking` `LITE`): six 256² PNGs (4 × 4 bevelled stones in mortar, the top left one orange) from `devTools/assetPipeline/fixtures/textureSetsFiles.ts` (run by hand, as p374's), packed by hand as D2's table. Their texture JSONs pass the PNGs through (`optimize: false`: a content-hashed copy in `src/public/aek-assets/`, made by any gather; not in `assets.lock.json`, which records encodes only). The mortar's height is 0, so `albedoHeight`'s and `albedoHeightAO`'s alpha is 0 there: its colour shows on both backends, so the PNG decode doesn't premultiply (`premultiplyAlpha: 'none'`).
+- **The scene** `textureSets` (`isDebugScene`; lists the set, its three materials name it): `p303SetLiteMat` (no packing: the default), `p303SetFullMat` and `p303SetMinimalMat` share `p303TextureSetMat.tsl.ts`, which branches on the bundle's slots (only the sampled packing's are there) and uses `physicalSize`, `tint`, `normalStrength`, `roughnessScale`, `aoStrength` and `heightScale`. Lit 2 m quads with UVs in metres, a grazing sun from the upper left. `window.__textureSets.results`: the backend, the gathered defaults, each packing's registered textures by slot, `loadIsCacheHit` (a load of a registered packing returns the registered textures), the unknown set's rejection, the LITE material's `setup_surface_*` uniforms; `checkReleaseAsync(sceneId?)` leaves the scene and lists the set's textures still registered (none). Read by hand, as p299's scenes.
+- **Found: three's `bumpMap` doesn't scale in metres.** It normalizes the surface derivatives, so its scale is height per screen pixel (MINIMAL's quad looked flat at `heightScale` 0.04). The scene's TSL uses the unnormalized form (`bumpNormal`, as the toolkit's asteroid material), height × `heightScale` in view units. p305's MINIMAL path needs the same (`features/texturesets/CLAUDE.md`'s trap).
+- **What it shows:** LITE and MINIMAL's mortar is darker than FULL's, their AO baked into the albedo (D2's cost: it darkens the sun too). Stones' top and left bevels lit: the normals are OpenGL's in every packing.
+- **Found: `yarn assets --only` matches an id whole;** its glob is for paths. Phase 2's exit uses a path glob now; `devTools/assetPipeline/CLAUDE.md` says so.
+- Not changed: the info window's "Used by materials" counts only a material's map properties, so a set texture (sampled by a TSL bundle) shows 0; it already says ref counts aren't tracked.
+- Docs: `features/texturesets/CLAUDE.md` (Debugging, the trap), `debug/CLAUDE.md` (the info window's folder), `devTools/assetPipeline/CLAUDE.md` (the fixture, `--only`).
+
 ### Phase 2 — Fetch tool and recipes (D3, D5)
 
 1. `fetchTextureSources.ts` (and its `package.json` script), the zip reader in `archives.ts` (unit-tested like its other readers, `archives.test.ts`), gitignore entries, `CREDITS.md` generation.
 2. Pack recipe templates (FULL/LITE/MINIMAL), cavity-AO derivation, `averageColor` (D1).
 
-**Exit:** `yarn fetchTextureSources --only sand01 && yarn assets --only 'sand01*'` produces the three packings as KTX2.
+**Exit:** `yarn fetchTextureSources --only sand01 && yarn assets --only 'src/toolkit/textures/sand01/**'` produces the three packings as KTX2 (`--only` matches an id whole, a glob against paths only: Phase 1 section 4).
 
 ### Phase 3 — Layer arrays (D4)
 

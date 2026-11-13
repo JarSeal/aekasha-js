@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "p303TestSet_albedoHeightAO",
+  "fileName": "./source/albedoHeightAO.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303TestSet albedoHeightAO",
+    "description": "The hand-made texture set's MINIMAL: RGB albedo × AO (sRGB), A height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

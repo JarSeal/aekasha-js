@@ -11,6 +11,7 @@ import { isLoadingSourceFiles, toAppUrl } from '../AssetUrl';
 import type { AssetLoadReport, AssetsWorkerTarget } from '../AssetsAPITypes';
 import type { GeneratedAssetFields } from '../../../schemas/AssetsConfigSchema';
 import type { TextureAtlasSlotInfo } from '../../../schemas/TextureAtlasSchema';
+import type { TextureSetDef } from '../../../schemas/TextureSetSchema';
 import { getTextureArrayInfo } from '../TextureArray';
 import { getTextureAtlasInfo } from '../TextureAtlas';
 import { formatBytes, getTextureDepth } from './_dbg__AssetStats';
@@ -46,9 +47,15 @@ export type DeclaredFile = {
 type GeneratedData = {
   textures?: Record<string, DeclaredFile>;
   importedAssets?: Record<string, DeclaredFile>;
+  /** The texture sets by id (dev data; p303 D1) */
+  textureSets?: Record<string, TextureSetDef>;
   scenes: Record<
     string,
-    { textures?: (string | DeclaredFile)[]; importedAssets?: (string | DeclaredFile)[] }
+    {
+      textures?: (string | DeclaredFile)[];
+      importedAssets?: (string | DeclaredFile)[];
+      textureSets?: TextureSetDef[];
+    }
   >;
 };
 
@@ -72,6 +79,33 @@ export const findDeclaration = (kind: 'textures' | 'importedAssets', id: string)
     if (found) return found;
   }
   return undefined;
+};
+
+/** A texture set's packing and slot that a texture fills (p303 D1). */
+export type TextureSetSlotRef = { set: string; packing: string; slot: string };
+
+/**
+ * The texture sets' slots a texture fills, by set id and in each set's packing and slot order:
+ * read from the generated data (dev data's `textureSets` section, else every scene's inline sets,
+ * the only ones a production-gathered build has), so the kernel names no `textureSets()` code.
+ */
+export const getTextureSetSlotsOf = (textureId: string): TextureSetSlotRef[] => {
+  const data = getGeneratedData();
+  const sets = new Map<string, TextureSetDef>(Object.entries(data.textureSets ?? {}));
+  if (!data.textureSets) {
+    for (const scene of Object.values(data.scenes)) {
+      for (const set of scene.textureSets ?? []) if (!sets.has(set.id)) sets.set(set.id, set);
+    }
+  }
+  const refs: TextureSetSlotRef[] = [];
+  for (const [set, def] of sets) {
+    for (const [packing, slots] of Object.entries(def.packings)) {
+      for (const [slot, id] of Object.entries(slots ?? {})) {
+        if (id === textureId) refs.push({ set, packing, slot });
+      }
+    }
+  }
+  return refs;
 };
 
 const toIds = (entries?: (string | { id?: string })[]) =>

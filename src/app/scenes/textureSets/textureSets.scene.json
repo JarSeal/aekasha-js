@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "textureSets",
+  "sceneFile": "./scenes/textureSets/textureSets.ts",
+  "isDebugScene": true,
+  "textureSets": ["p303TestSet"],
+  "materials": ["p303SetLiteMat", "p303SetFullMat", "p303SetMinimalMat"],
+  "name": "Texture sets (p303)",
+  "description": "p303 Phase 1's texture set verification scene: the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL, lit by a grazing sun from the upper left. window.__textureSets holds the lookups' results, and checkReleaseAsync() leaves the scene and lists the set's textures still registered."
+}

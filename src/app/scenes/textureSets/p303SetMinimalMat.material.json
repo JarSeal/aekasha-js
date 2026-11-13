@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p303SetMinimalMat",
+  "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "inputs": {
+    "surface": {
+      "textureSet": "p303TestSet",
+      "packing": "MINIMAL"
+    }
+  },
+  "debugData": {
+    "name": "Texture set, MINIMAL",
+    "description": "The texture set input (p303 D1): p303TestSet's MINIMAL: albedo × AO with height, the normal a bump from the height; the set's surface uniforms scale them."
+  }
+}

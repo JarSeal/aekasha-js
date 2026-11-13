@@ -1,6 +1,6 @@
 // The asset info window's texture items (p806 D10, D11: out of _dbg__Assets.ts): the texture's file,
-// load and GPU figures as info rows, its array's layers and its atlas slot's cells as tables, its
-// preview, the pipeline and the import.
+// load and GPU figures as info rows, the texture sets' slots it fills, its array's layers and its
+// atlas slot's cells as tables, its preview, the pipeline and the import.
 import type * as THREE from 'three/webgpu';
 import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { createTable } from '../../../ui/data/Table';
@@ -27,6 +27,7 @@ import {
   describePipelineFile,
   findDeclaration,
   getGeneratedData,
+  getTextureSetSlotsOf,
   toUrls,
   type DeclaredFile,
 } from './_dbg__AssetsData';
@@ -226,6 +227,23 @@ const getTextureAtlasFolder = (texture: THREE.Texture): PropertyGridItem[] => {
   ];
 };
 
+/** The texture set folder (p303 D1): each set the texture is a slot of, with its packings and
+ * slots ("LITE albedoRough"); none when no set names it. */
+const getTextureSetFolder = (id: string): PropertyGridItem[] => {
+  const bySet = new Map<string, string[]>();
+  for (const { set, packing, slot } of getTextureSetSlotsOf(id)) {
+    bySet.set(set, [...(bySet.get(set) ?? []), `${packing} ${slot}`]);
+  }
+  if (!bySet.size) return [];
+  return [
+    getInfoFolder(
+      'textureSet',
+      bySet.size > 1 ? 'Texture sets' : 'Texture set',
+      toInfoRows([...bySet].map(([set, slots]) => [set, slots.join(', ')]))
+    ),
+  ];
+};
+
 /** The texture's file: what its declaration, its import or its image says, and the URLs a
  * Measure reads. */
 const describeTextureFile = (
@@ -348,6 +366,7 @@ export const getTextureInfoItems = (
         ['Est. GPU memory', d.gpuMemory],
       ])
     ),
+    ...getTextureSetFolder(id),
     ...(isArray ? [getTextureArrayFolder(texture, registered)] : []),
     ...getTextureAtlasFolder(texture),
     // An array's layers or an atlas slot's image (p299 D6)

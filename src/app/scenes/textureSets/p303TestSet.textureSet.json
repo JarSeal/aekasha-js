@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "p303TestSet",
+  "category": "OTHER",
+  "physicalSize": [1, 1],
+  "heightScale": 0.04,
+  "defaultPacking": "LITE",
+  "packings": {
+    "FULL": {
+      "albedoHeight": "p303TestSet_albedoHeight",
+      "normal": "p303TestSet_normal",
+      "orm": "p303TestSet_orm"
+    },
+    "LITE": {
+      "albedoRough": "p303TestSet_albedoRough",
+      "normalHeight": "p303TestSet_normalHeight"
+    },
+    "MINIMAL": {
+      "albedoHeight": "p303TestSet_albedoHeightAO"
+    }
+  },
+  "surface": {
+    "normalStrength": 1,
+    "roughnessScale": 1
+  },
+  "debugData": {
+    "name": "p303 test set (hand-made)",
+    "description": "p303 Phase 1's exit: a hand-made cobble set (16 bevelled tiles in mortar, the top left one orange) in all three packings, PNGs with no encode (devTools/assetPipeline/fixtures/textureSetsFiles.ts)."
+  }
+}

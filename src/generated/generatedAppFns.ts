@@ -256,6 +256,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  textureSets: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/textureSets/textureSets.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   thirdPersonGymScene: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/thirdPersonGymScene/thirdPersonGymScene.ts');
     await (
@@ -280,6 +288,9 @@ export const tslMaterialFileObjects = {
   p302ChannelMat: () => import('../app/scenes/testDebugScene/p302ChannelMat.tsl.ts'),
   p299ArrayLayerMat: () => import('../app/scenes/textureArrays/p299ArrayLayerMat.tsl.ts'),
   p299AtlasCellMat: () => import('../app/scenes/textureAtlases/p299AtlasCellMat.tsl.ts'),
+  p303SetFullMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
+  p303SetLiteMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
+  p303SetMinimalMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),

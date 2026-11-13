@@ -20755,6 +20755,236 @@
       ],
       "__features": []
     },
+    "textureSets": {
+      "isDebugScene": true,
+      "name": "Texture sets (p303)",
+      "description": "p303 Phase 1's texture set verification scene: the hand-made set p303TestSet (PNGs, no encode) through the { textureSet } material input in each packing, left to right LITE (its default), FULL and MINIMAL, lit by a grazing sun from the upper left. window.__textureSets holds the lookups' results, and checkReleaseAsync() leaves the scene and lists the set's textures still registered.",
+      "materials": [
+        {
+          "id": "p303SetLiteMat",
+          "debugData": {
+            "name": "Texture set, LITE",
+            "description": "The texture set input (p303 D1): p303TestSet's LITE (the set's default packing: no packing named): albedo × AO with roughness in its alpha, the normal's X and Y with height; the set's surface uniforms scale them."
+          },
+          "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+          "inputs": {
+            "surface": {
+              "textureSet": "p303TestSet"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "p303SetFullMat",
+          "debugData": {
+            "name": "Texture set, FULL",
+            "description": "The texture set input (p303 D1): p303TestSet's FULL: albedo with height, the normal map, ORM; the set's surface uniforms scale them."
+          },
+          "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+          "inputs": {
+            "surface": {
+              "textureSet": "p303TestSet",
+              "packing": "FULL"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "p303SetMinimalMat",
+          "debugData": {
+            "name": "Texture set, MINIMAL",
+            "description": "The texture set input (p303 D1): p303TestSet's MINIMAL: albedo × AO with height, the normal a bump from the height; the set's surface uniforms scale them."
+          },
+          "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+          "inputs": {
+            "surface": {
+              "textureSet": "p303TestSet",
+              "packing": "MINIMAL"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "p303TestSet",
+          "category": "OTHER",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.04,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "p303TestSet_albedoHeight",
+              "normal": "p303TestSet_normal",
+              "orm": "p303TestSet_orm"
+            },
+            "LITE": {
+              "albedoRough": "p303TestSet_albedoRough",
+              "normalHeight": "p303TestSet_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "p303TestSet_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "p303 test set (hand-made)",
+            "description": "p303 Phase 1's exit: a hand-made cobble set (16 bevelled tiles in mortar, the top left one orange) in all three packings, PNGs with no encode (devTools/assetPipeline/fixtures/textureSetsFiles.ts)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        }
+      ],
+      "id": "textureSets",
+      "sceneFile": "./scenes/textureSets/textureSets.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "textures": [
+        {
+          "id": "p303TestSet_albedoRough",
+          "fileName": "./source/albedoRough.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303TestSet albedoRough",
+            "description": "The hand-made texture set's LITE: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 90645,
+          "__sourceUrl": "/app/scenes/textureSets/source/albedoRough.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/albedoRough.2eee93f2.png",
+          "__bytes": {
+            "in": 90645,
+            "out": 90645
+          }
+        },
+        {
+          "id": "p303TestSet_normalHeight",
+          "fileName": "./source/normalHeight.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303TestSet normalHeight",
+            "description": "The hand-made texture set's LITE: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 4708,
+          "__sourceUrl": "/app/scenes/textureSets/source/normalHeight.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/normalHeight.c2fb24e0.png",
+          "__bytes": {
+            "in": 4708,
+            "out": 4708
+          }
+        },
+        {
+          "id": "p303TestSet_albedoHeight",
+          "fileName": "./source/albedoHeight.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303TestSet albedoHeight",
+            "description": "The hand-made texture set's FULL: RGB albedo (sRGB), A height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 93620,
+          "__sourceUrl": "/app/scenes/textureSets/source/albedoHeight.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/albedoHeight.6f256eb3.png",
+          "__bytes": {
+            "in": 93620,
+            "out": 93620
+          }
+        },
+        {
+          "id": "p303TestSet_normal",
+          "fileName": "./source/normal.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303TestSet normal",
+            "description": "The hand-made texture set's FULL: the tangent-space normal (OpenGL, +Y) (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 4864,
+          "__sourceUrl": "/app/scenes/textureSets/source/normal.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/normal.4025c1d8.png",
+          "__bytes": {
+            "in": 4864,
+            "out": 4864
+          }
+        },
+        {
+          "id": "p303TestSet_orm",
+          "fileName": "./source/orm.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "p303TestSet orm",
+            "description": "The hand-made texture set's FULL: R ambient occlusion, G roughness, B metalness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 52076,
+          "__sourceUrl": "/app/scenes/textureSets/source/orm.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/orm.40aa773d.png",
+          "__bytes": {
+            "in": 52076,
+            "out": 52076
+          }
+        },
+        {
+          "id": "p303TestSet_albedoHeightAO",
+          "fileName": "./source/albedoHeightAO.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "p303TestSet albedoHeightAO",
+            "description": "The hand-made texture set's MINIMAL: RGB albedo × AO (sRGB), A height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+          },
+          "__fileSize": 91836,
+          "__sourceUrl": "/app/scenes/textureSets/source/albedoHeightAO.png",
+          "__url": "/aek-assets/app/scenes/textureSets/source/albedoHeightAO.57e606b8.png",
+          "__bytes": {
+            "in": 91836,
+            "out": 91836
+          }
+        }
+      ],
+      "__features": [
+        "texturesets"
+      ]
+    },
     "thirdPersonGymScene": {
       "name": "GYM (3rd person)",
       "description": "Third-person obstacle course for the dynamic character controller: built stairs and a wall, imported stairs (TRIMESH and COMPOUND colliders), terrains and obstacles, six moving platforms, two player characters (WASD, the arrow keys) and a scripted dummy. Debug env: J spawns a physics stress test batch.",
@@ -23211,6 +23441,135 @@
         "out": 87408
       },
       "__codec": "uastc"
+    },
+    "p303TestSet_albedoHeight": {
+      "id": "p303TestSet_albedoHeight",
+      "fileName": "./source/albedoHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303TestSet albedoHeight",
+        "description": "The hand-made texture set's FULL: RGB albedo (sRGB), A height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_albedoHeight.texture.json",
+      "__fileSize": 93620,
+      "__sourceUrl": "/app/scenes/textureSets/source/albedoHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/albedoHeight.6f256eb3.png",
+      "__bytes": {
+        "in": 93620,
+        "out": 93620
+      }
+    },
+    "p303TestSet_albedoHeightAO": {
+      "id": "p303TestSet_albedoHeightAO",
+      "fileName": "./source/albedoHeightAO.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303TestSet albedoHeightAO",
+        "description": "The hand-made texture set's MINIMAL: RGB albedo × AO (sRGB), A height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_albedoHeightAO.texture.json",
+      "__fileSize": 91836,
+      "__sourceUrl": "/app/scenes/textureSets/source/albedoHeightAO.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/albedoHeightAO.57e606b8.png",
+      "__bytes": {
+        "in": 91836,
+        "out": 91836
+      }
+    },
+    "p303TestSet_albedoRough": {
+      "id": "p303TestSet_albedoRough",
+      "fileName": "./source/albedoRough.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "p303TestSet albedoRough",
+        "description": "The hand-made texture set's LITE: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_albedoRough.texture.json",
+      "__fileSize": 90645,
+      "__sourceUrl": "/app/scenes/textureSets/source/albedoRough.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/albedoRough.2eee93f2.png",
+      "__bytes": {
+        "in": 90645,
+        "out": 90645
+      }
+    },
+    "p303TestSet_normal": {
+      "id": "p303TestSet_normal",
+      "fileName": "./source/normal.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303TestSet normal",
+        "description": "The hand-made texture set's FULL: the tangent-space normal (OpenGL, +Y) (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_normal.texture.json",
+      "__fileSize": 4864,
+      "__sourceUrl": "/app/scenes/textureSets/source/normal.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/normal.4025c1d8.png",
+      "__bytes": {
+        "in": 4864,
+        "out": 4864
+      }
+    },
+    "p303TestSet_normalHeight": {
+      "id": "p303TestSet_normalHeight",
+      "fileName": "./source/normalHeight.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303TestSet normalHeight",
+        "description": "The hand-made texture set's LITE: RG the normal's X and Y (Z reconstructed), B height (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_normalHeight.texture.json",
+      "__fileSize": 4708,
+      "__sourceUrl": "/app/scenes/textureSets/source/normalHeight.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/normalHeight.c2fb24e0.png",
+      "__bytes": {
+        "in": 4708,
+        "out": 4708
+      }
+    },
+    "p303TestSet_orm": {
+      "id": "p303TestSet_orm",
+      "fileName": "./source/orm.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "p303TestSet orm",
+        "description": "The hand-made texture set's FULL: R ambient occlusion, G roughness, B metalness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+      },
+      "optimize": false,
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet_orm.texture.json",
+      "__fileSize": 52076,
+      "__sourceUrl": "/app/scenes/textureSets/source/orm.png",
+      "__url": "/aek-assets/app/scenes/textureSets/source/orm.40aa773d.png",
+      "__bytes": {
+        "in": 52076,
+        "out": 52076
+      }
     },
     "p299TestArray": {
       "id": "p299TestArray",
@@ -31202,7 +31561,47 @@
       "__codec": "uastc"
     }
   },
-  "textureSets": {},
+  "textureSets": {
+    "p303TestSet": {
+      "id": "p303TestSet",
+      "category": "OTHER",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "p303TestSet_albedoHeight",
+          "normal": "p303TestSet_normal",
+          "orm": "p303TestSet_orm"
+        },
+        "LITE": {
+          "albedoRough": "p303TestSet_albedoRough",
+          "normalHeight": "p303TestSet_normalHeight"
+        },
+        "MINIMAL": {
+          "albedoHeight": "p303TestSet_albedoHeightAO"
+        }
+      },
+      "debugData": {
+        "name": "p303 test set (hand-made)",
+        "description": "p303 Phase 1's exit: a hand-made cobble set (16 bevelled tiles in mortar, the top left one orange) in all three packings, PNGs with no encode (devTools/assetPipeline/fixtures/textureSetsFiles.ts)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/textureSets/p303TestSet.textureSet.json"
+    }
+  },
   "materials": {
     "bannerAether": {
       "id": "bannerAether",
@@ -31369,6 +31768,53 @@
       },
       "type": "BASICNODEMATERIAL",
       "__sourcePath": "src/app/scenes/textureAtlases/p299AtlasCellMat.material.json"
+    },
+    "p303SetFullMat": {
+      "id": "p303SetFullMat",
+      "debugData": {
+        "name": "Texture set, FULL",
+        "description": "The texture set input (p303 D1): p303TestSet's FULL: albedo with height, the normal map, ORM; the set's surface uniforms scale them."
+      },
+      "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+      "inputs": {
+        "surface": {
+          "textureSet": "p303TestSet",
+          "packing": "FULL"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureSets/p303SetFullMat.material.json"
+    },
+    "p303SetLiteMat": {
+      "id": "p303SetLiteMat",
+      "debugData": {
+        "name": "Texture set, LITE",
+        "description": "The texture set input (p303 D1): p303TestSet's LITE (the set's default packing: no packing named): albedo × AO with roughness in its alpha, the normal's X and Y with height; the set's surface uniforms scale them."
+      },
+      "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+      "inputs": {
+        "surface": {
+          "textureSet": "p303TestSet"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureSets/p303SetLiteMat.material.json"
+    },
+    "p303SetMinimalMat": {
+      "id": "p303SetMinimalMat",
+      "debugData": {
+        "name": "Texture set, MINIMAL",
+        "description": "The texture set input (p303 D1): p303TestSet's MINIMAL: albedo × AO with height, the normal a bump from the height; the set's surface uniforms scale them."
+      },
+      "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+      "inputs": {
+        "surface": {
+          "textureSet": "p303TestSet",
+          "packing": "MINIMAL"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureSets/p303SetMinimalMat.material.json"
     },
     "asteroid": {
       "id": "asteroid",

@@ -40,11 +40,14 @@ vi.mock(import('../../../ui/overlays/windows/DraggableWindow'), async (importOri
   },
   updateDraggableWindow: win.update,
 }));
-const scene = vi.hoisted(() => ({ declared: { geometries: [] as string[] } }));
+const scene = vi.hoisted(() => ({
+  declared: { geometries: [] as string[] },
+  appData: { scenes: {} } as Record<string, unknown>,
+}));
 vi.mock(import('../../scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
   getCurrentSceneId: () => 'testScene',
-  getGeneratedAppData: () => ({ scenes: {} }) as never,
+  getGeneratedAppData: () => scene.appData as never,
   getGeneratedSceneData: () => scene.declared as never,
 }));
 const arrays = vi.hoisted(() => ({ info: new Map<unknown, unknown>() }));
@@ -215,6 +218,39 @@ describe('the info window', () => {
     expect(level?.querySelector('.aekDropDownLabel')?.textContent).toBe('0: 4 × 4 px');
     expect(elem.textContent).toContain('Rendering level 0…');
     delete getTextureRegistry().layers;
+  });
+
+  it('names the texture sets and slots a texture fills, from dev data or the scenes', () => {
+    const set = (id: string, packings: object) => ({ id, defaultPacking: 'LITE', packings });
+    const id = 'stone_albedoHeight';
+    getTextureRegistry()[id] = { resource: new THREE.Texture(), persistent: false } as never;
+    // Dev data's section: one set with the texture in two packings, another in one
+    scene.appData = {
+      scenes: {},
+      textureSets: {
+        stone: set('stone', {
+          FULL: { albedoHeight: 'stone_albedoHeight', normal: 'n', orm: 'o' },
+          MINIMAL: { albedoHeight: 'stone_albedoHeight' },
+        }),
+        cliff: set('cliff', { MINIMAL: { albedoHeight: 'stone_albedoHeight' } }),
+        sand: set('sand', { MINIMAL: { albedoHeight: 'sand_albedoHeight' } }),
+      },
+    };
+    let elem = open('texture', id);
+    expect(elem.textContent).toContain('Texture sets');
+    expect(readRow(elem, 'stone')).toBe('FULL albedoHeight, MINIMAL albedoHeight');
+    expect(readRow(elem, 'cliff')).toBe('MINIMAL albedoHeight');
+    expect(readRow(elem, 'sand')).toBeUndefined();
+    // Production-gathered data: the scenes' inline sets, each once
+    const inline = set('stone', { MINIMAL: { albedoHeight: 'stone_albedoHeight' } });
+    scene.appData = { scenes: { a: { textureSets: [inline] }, b: { textureSets: [inline] } } };
+    elem = open('texture', id);
+    expect(readRow(elem, 'stone')).toBe('MINIMAL albedoHeight');
+    // No set names it: no folder
+    scene.appData = { scenes: {} };
+    elem = open('texture', id);
+    expect(elem.textContent).not.toContain('Texture set');
+    delete getTextureRegistry()[id];
   });
 
   it('says when its asset is no longer loaded', () => {
