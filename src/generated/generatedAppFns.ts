@@ -168,6 +168,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  noiseLibrary: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/noiseLibrary/noiseLibrary.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   physicsTest: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/physicsTest/physicsTest.ts');
     await (

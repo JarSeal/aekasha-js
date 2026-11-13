@@ -13586,6 +13586,29 @@
         "merging"
       ]
     },
+    "noiseLibrary": {
+      "isDebugScene": true,
+      "name": "Noise library (p304)",
+      "description": "p304 Phase 3's verification scene: the toolkit's noise functions (value, gradient, fbm, domain warp, Worley, hash12, heightToNormal, heightToCavity), each a periodic bake repeated 3 × 3 next to the same graph live without a period. During the load each function is baked periodic and not, read back and checked (no seam, exact periodicity, matching statistics); a failure is a console error, so the scene runner fails. Its tab shows the figures.",
+      "id": "noiseLibrary",
+      "sceneFile": "./scenes/noiseLibrary/noiseLibrary.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "__features": []
+    },
     "physicsTest": {
       "name": "Physics API test",
       "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
