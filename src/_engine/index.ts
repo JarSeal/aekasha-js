@@ -309,6 +309,15 @@ export type {
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
+export { bakeTexture } from './kernel/render/TextureBaker';
+export type {
+  BakeBuildContext,
+  BakedTexture,
+  BakeOutput,
+  BakeTextureOpts,
+} from './kernel/render/TextureBaker';
+export { getBakedTextureMemoryBytes } from './kernel/render/TextureBakeMemory';
+export type { BakedTextureMemoryOpts, BakeOutputType } from './kernel/render/TextureBakeMemory';
 export type { RayDebugOpts } from './kernel/render/RayDebugTypes';
 export {
   deleteTexture,

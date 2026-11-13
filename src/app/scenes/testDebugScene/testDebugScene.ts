@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
-import { color, mix, uniform, uv } from 'three/tsl';
+import { color, floor, mix, mod, uniform, uv, vec3, vec4 } from 'three/tsl';
 import {
+  bakeTexture,
   createGeometry,
   createMaterial,
   createMeshEntity,
@@ -306,6 +307,57 @@ const createAutoMergeCheck = () => {
   }
 };
 
+/** Left of the bottom row, the texture bake check's two floor strips (with mips, then the
+ * control without), receding from the camera. */
+const BAKE_CHECK = { x: [-6.2, -4.8], y: -4.6, z: -2.5, width: 1.2, depth: 6, cells: 64 };
+
+/**
+ * The texture bake check (p304 Phase 1): a checker of `BAKE_CHECK.cells`² cells (4 texels each)
+ * baked by `bakeTexture` into a 256² sRGB texture, on two floor strips that recede from the
+ * camera: the left one's bake has mips, the right one's (the control) none. The left far end must
+ * blur to an even tint where the right one shimmers and moirés. Red grows along u and blue along
+ * v, and the box's top face has u along +x and v 1 at its far end, so a flipped bake shows: near
+ * left green (u 0, v 0), near right yellow, far left cyan, far right white. Run it on both
+ * backends (the scene runner's `--webgl` too).
+ */
+const createTextureBakeCheckAsync = async () => {
+  const geo = createGeometry({
+    id: 'p304_bakeStrip',
+    type: 'BOX',
+    params: { width: BAKE_CHECK.width, height: 0.02, depth: BAKE_CHECK.depth },
+  });
+  const bakes = await Promise.all(
+    [true, false].map((mipmaps) =>
+      bakeTexture({
+        id: mipmaps ? 'p304_checker' : 'p304_checkerNoMips',
+        size: 256,
+        mipmaps,
+        outputs: [{ name: 'albedo', colorSpace: 'SRGB' }],
+        build: ({ uv: texelUv }) => {
+          const cell = floor(texelUv.mul(BAKE_CHECK.cells));
+          const isOdd = mod(cell.x.add(cell.y), 2);
+          const tint = vec3(texelUv.x.mul(0.6).add(0.4), 0.85, texelUv.y.mul(0.6).add(0.4));
+          return { albedo: vec4(tint.mul(isOdd.mul(0.75).add(0.15)), 1) };
+        },
+      })
+    )
+  );
+  bakes.forEach((baked, i) => {
+    createMeshEntity(
+      {
+        geo,
+        mat: createMaterial({
+          id: `${baked.id}_mat`,
+          type: 'STANDARD',
+          params: { map: baked.textures.albedo },
+        }),
+        position: { x: BAKE_CHECK.x[i], y: BAKE_CHECK.y, z: BAKE_CHECK.z },
+      },
+      { appId: `${baked.id}_strip` }
+    );
+  });
+};
+
 /**
  * The orientation check of hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
  * next to their sources; its camera and lights are in its JSON. Top row: each PNG texture, then
@@ -316,7 +368,8 @@ const createAutoMergeCheck = () => {
  * tab (and reload) to check the assets worker path. Bottom row: the geometry merge check
  * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows. Left and right of
  * the rows, the merge group check (`createMergeGroupCheck`), and under the right block the AUTO
- * check (`createAutoMergeCheck`). Either side of the top row, the material input checks
+ * check (`createAutoMergeCheck`), left of the bottom row the texture bake check
+ * (`createTextureBakeCheckAsync`). Either side of the top row, the material input checks
  * (`createMaterialInputChecks`).
  */
 export const scene = async () => {
@@ -346,6 +399,7 @@ export const scene = async () => {
   createMergeCheck(textures[0]);
   createMergeGroupCheck(textures[0]);
   createAutoMergeCheck();
+  await createTextureBakeCheckAsync();
   // p376 Phase 0's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`)
   const hlodProbe = await loadDebugModuleAsync(
     () => import('../../shared/_dbg__hlodSpike'),

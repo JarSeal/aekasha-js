@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Rendering, Materials, Procedural
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
@@ -40,14 +40,14 @@ It adds:
 ### D1 — `bakeTexture` (engine: `kernel/render/TextureBaker.ts`, on `aekasha`)
 
 ```ts
-type BakeOutput = { name: string; node: Node; colorSpace?: 'SRGB' | 'LINEAR'; type?: 'UNSIGNED_BYTE' | 'HALF_FLOAT' };
+type BakeOutput = { name: string; node?: Node; colorSpace?: 'SRGB' | 'LINEAR'; type?: 'UNSIGNED_BYTE' | 'HALF_FLOAT' };
 
 bakeTexture(opts: {
-  id: string;                         // registered with saveTexture, owned like any texture
+  id: string;                         // each output registered with saveTexture as `<id>.<name>`, owned like any texture
   size: number | [number, number];    // power of two recommended (mips, KTX2 export)
   outputs: BakeOutput[];              // 1 = plain target; 2-4 = MRT, one texture per output
   layers?: number;                    // > 1 = array texture; the graph reads `bakeLayer` (int uniform)
-  build?: (ctx: { uv: Node; layer: Node; texel: Node }) => Record<string, Node>; // alternative to static nodes
+  build?: (ctx: { uv: Node; layer: Node; texel: Node }) => Record<string, Node>; // nodes by output name, for the outputs without a `node`
   mipmaps?: boolean;                  // default true
   wrap?: 'REPEAT' | 'CLAMP';          // default REPEAT
   anisotropy?: number | 'MAX';
@@ -55,10 +55,16 @@ bakeTexture(opts: {
 }): Promise<BakedTexture>;            // { textures: Record<name, Texture>, rebake(params?), dispose() }
 ```
 
+- **Decided (2026-11-13):**
+  - **Output ids:** each output is registered as `<id>.<name>` (the impostors' and set arrays' `<id>.<slot>`), a single output too.
+  - **`node` or `build`:** an output's `node` is optional when `build` is given; `build` returns the nodes by output name, and an output with neither throws.
+  - **Memory:** `getBakedTextureMemoryBytes({ size, outputs, layers?, mipmaps? })` is pure (unit-tested), and `BakedTexture.memoryBytes` carries the bake's.
+  - **Phase 1's scheduling:** the bake renders right after its compile (no queue; Phase 2 adds it); after the compile's `await` it re-checks that it wasn't disposed and that no later `rebake` took over.
+  - **The same id again:** `bakeTexture` with the id of a bake that's alive returns that bake (as `saveTexture` does; the debug env warns): dispose it first, or `rebake`.
 - **Render:** a full-screen `QuadMesh` with a `NodeMaterial` whose output is `mrt({ … })` for several outputs.
   - Several outputs mean one `RenderTarget` with `count: n`.
   - Layers are rendered one by one into an array render target (three's array render target, chosen by layer). If three can't target array layers on both backends, the fallback bakes each layer into a 2D target and assembles them into a `DataArrayTexture` (p299's uncompressed path in `buildTextureArray`). three r187 fixed single-layer array render targets (#34510) and layer detection in `copyTextureToTexture()` (#35111) on the WebGL backend, which this path relies on: check on r187 or later.
-  - **The bake helpers move to the kernel:** `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` go from `features/lod/impostors/ImpostorBake.ts` to `kernel/render/` (`@internal`), and the impostor bakes and the texture preview import them from there. `withBakeRendererState` (today the target, clear colour and auto clear) also restores the cube face and mip level, and the bake never touches the scissor, as `Viewports.ts`. `getBakeRenderer` throws before `InitEngine`; the impostor atlases' registered texture disposing its render target is the model for D1's ownership (`src/_engine/features/lod/impostors/CLAUDE.md`).
+  - **The bake helpers move to the kernel:** `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` go from `features/lod/impostors/ImpostorBake.ts` to `kernel/render/BakeRenderer.ts` (`@internal`), and the impostor bakes and the texture preview import them from there. `withBakeRendererState` restores the target with its cube face and mip level (it already did before the move), the clear colour and auto clear, and the bake never touches the scissor, as `Viewports.ts`. `getBakeRenderer` throws before `InitEngine`; the impostor atlases' registered texture disposing its render target is the model for D1's ownership (`src/_engine/features/lod/impostors/CLAUDE.md`).
 - **Clear once on allocation** (`clearBakeTarget`), the same rule as `initTarget`.
 - **Mipmaps:**
   - Turn on the target texture's `generateMipmaps` and verify that three (r187 or later) generates them after the render on both backends.
@@ -145,7 +151,7 @@ Tileable baking needs noise with an integer period over the tile:
 
 ## Phases
 
-### Phase 1 — Bake core (D1, single output, 2D)
+### Phase 1 — Bake core (D1, single output, 2D) — done
 
 1. Move `getBakeRenderer`, `withBakeRendererState` and `clearBakeTarget` into `kernel/render/` (the impostor bakes and `_dbg__TexturePreview.ts` import them from there; the scene runner's LOD and texture scenes unchanged).
 2. `bakeTexture`, clear-once, state save/restore, mip check (or downsample chain), ownership, memory number; summaries and `@example`s (it's on `aekasha`), unit tests for the pure parts (the memory figure, the throttle).
@@ -156,6 +162,18 @@ Tileable baking needs noise with an integer period over the tile:
 - No "destroyed texture" errors on WebGPU.
 - Identical output on WebGL2.
 - Mips visibly present at a grazing angle.
+
+**As built:**
+
+- **Files:** the bake helpers in `kernel/render/BakeRenderer.ts` (step 1, commit `194fdcd5`); `kernel/render/TextureBaker.ts` (`bakeTexture` and its types); the pure sizes in `kernel/render/TextureBakeMemory.ts` (`getBakedTextureMemoryBytes`, public; `getBakeSize`, `getMipChainTexels`, `@internal`) with `TextureBakeMemory.test.ts`. On `aekasha`: `bakeTexture`, `getBakedTextureMemoryBytes`, `BakeBuildContext`, `BakedTexture`, `BakeOutput`, `BakeOutputType`, `BakeTextureOpts`, `BakedTextureMemoryOpts`.
+- **Mips:** three r187 generates a render target's mips after the render on both backends (WebGPU here; WebGL2 through SwiftShader, `DRIVER_WEBGL=1`), so there's no downsample chain. The Risks row is settled for single renders; Phase 2's many-layer bakes still need `mipmapsAutoUpdate` (D1).
+- **The render:** the material carries its own full-screen triangle `vertexNode` (three's `QuadMesh` triangle) and the bake calls `renderer.render(quad, quad.camera)`, not `quad.render()`: `QuadMesh.render()` swaps in its own `vertexNode` for the call, which the compile wouldn't see, so the compile would build another pipeline. The compile runs in the bake's target with no MRT, through `runCompileAsync`, and puts the target and MRT back (PostFX's `compileInScenePassAsync` pattern), because the build reads the target's colour space and type.
+- **Orientation:** a material sampling the baked texture at a uv reads what the graph wrote at that uv (`ctx.uv` (0, 0) is the target's first row, as a render target's v = 0 is the top of the rendered image on both backends). For D5: the readback (`readRenderTargetRGBA8Async`) is top row first, so a PNG written as read has v = 0 at its top, where an imported PNG's top row is sampled at v = 1: the export must flip the rows to round-trip (check in Phase 5).
+- **The handle:** `BakedTexture` is `{ id, textures, memoryBytes, rebake(), isDisposed(), dispose() }`. `rebake()` takes no params: it renders the graph again with its uniforms' current values (set them first), and a call during the first compile waits for it. Phase 2 decides whether `params` are needed (Phase 4's generators may set uniforms by name).
+- **Phase 1's limits, lifted in Phase 2:** more than one output or layer throws; `ctx.layer` is an int uniform fixed at 0.
+- **Ownership:** the texture is registered before the first `await`, so the scene loading owns it; deleting it (the scene's release, `deleteTexture`) disposes the target, the material and the bake, and a bake disposed during its compile never renders. A texture registered under an output's id by anything else throws (an exported KTX2 copy, later). SRGB needs `UNSIGNED_BYTE` (throws).
+- **GPU memory tab:** baked textures are registered textures, which it lists already, so no `registerGPUMemorySource`.
+- **The check (`testDebugScene`, `createTextureBakeCheckAsync`):** two floor strips left of the bottom row, a 64² checker (4 texels a cell) with a u (red) and v (blue) tint, baked with mips and, as the control, without: the mipped strip's far end is an even tint, the control's moirés, the same on WebGPU and WebGL2, with no console errors. The scene runner's `testDebugScene` snapshot changes there (record it again); its `debugger` shots were already stale since p303 (the material editor's list, the About window's versions).
 
 ### Phase 2 — MRT, arrays, scheduling (D1)
 
@@ -203,7 +221,7 @@ Tileable baking needs noise with an integer period over the tile:
 
 ### Phase 7 — Versioning
 
-1. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures); `CHANGELOG.md`.
+1. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures), app minor (`testDebugScene`'s bake check, Phase 1); `CHANGELOG.md`.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
 
 ---
@@ -212,8 +230,8 @@ Tileable baking needs noise with an integer period over the tile:
 
 | Risk                                                               | Mitigation                                                                  |
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| r186 doesn't render into array render target layers on one backend | 2D bake + p299's uncompressed array assembly (Phase 2 decides)              |
-| r186 doesn't generate mips for render targets on one backend       | Own downsample chain (Phase 1)                                              |
+| r187 doesn't render into array render target layers on one backend | 2D bake + p299's uncompressed array assembly (Phase 2 decides)              |
+| r187 doesn't generate mips for render targets on one backend       | Own downsample chain (Phase 1)                                              |
 | Pipeline compile hitches on first bake                             | `compileAsync` before baking; bakes at load                                 |
 | Baked VRAM adds up (16 procedural sets at 1K LITE ≈ 180 MB)        | The handbook's export → KTX2 path; `size` per set; the gallery shows memory |
 | Live procedural is costly per pixel                                | Measured in the gallery; tiers; the handbook's "poor fit" rows              |

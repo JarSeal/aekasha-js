@@ -3119,6 +3119,20 @@
       "snapshotToBlobAsync": "Function",
       "takeSnapshotAsync": "Function"
     },
+    "src/_engine/kernel/render/TextureBakeMemory.ts": {
+      "BakedTextureMemoryOpts": "TypeAlias",
+      "BakeOutputType": "TypeAlias",
+      "getBakedTextureMemoryBytes": "Function",
+      "getBakeSize": "Function",
+      "getMipChainTexels": "Function"
+    },
+    "src/_engine/kernel/render/TextureBaker.ts": {
+      "BakeBuildContext": "TypeAlias",
+      "BakedTexture": "TypeAlias",
+      "BakeOutput": "TypeAlias",
+      "bakeTexture": "Function",
+      "BakeTextureOpts": "TypeAlias"
+    },
     "src/_engine/kernel/render/ThreeMath.ts": {
       "DIRECTIONS": "Variable",
       "getQuatFromAngle": "Function",
@@ -4824,6 +4838,12 @@
       "AssetsWorkerTarget",
       "AtlasCellInputRef",
       "AtlasCellRect",
+      "BakeBuildContext",
+      "BakeOutput",
+      "BakeOutputType",
+      "BakeTextureOpts",
+      "BakedTexture",
+      "BakedTextureMemoryOpts",
       "BindingMeta",
       "BuildTextureArrayProps",
       "CanvasSize",
@@ -4981,6 +5001,7 @@
       "addToGroupEntity",
       "addViewChangeListener",
       "addViewFrameListener",
+      "bakeTexture",
       "buildTextureArray",
       "cameraLookAtPoint",
       "configureDraco",
@@ -5025,6 +5046,7 @@
       "getAppDelta",
       "getArrayLayerIndex",
       "getAtlasCell",
+      "getBakedTextureMemoryBytes",
       "getCameraByAppId",
       "getCanvasSize",
       "getComponent",
