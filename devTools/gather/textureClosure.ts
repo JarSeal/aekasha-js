@@ -2,16 +2,26 @@
  * The scene pass's texture closure (p302 D6): the textures a scene's data names without listing
  * them are added to its `textures`, so a scene lists a material and gets that material's
  * textures. They come from its materials (listed, a mesh's inline `mat`, a mesh's `matOverrides`):
- * their `params` texture slots and their TSL `inputs` and `nodes` values that name a texture; and
- * from its spot lights' cookies (`map`) and its `backgroundTexture`. Appended after the listed ids,
- * so they resolve, ship-check and stream as listed ones do; an id no asset JSON has fails the
- * gather as a listed one does (p619 G12), naming what names it.
+ * their `params` texture slots and their TSL `inputs` and `nodes` values that name a texture (a
+ * bare id, a texture ref, a texture array layer's array, an atlas cell's slot); and from its spot
+ * lights' cookies (`map`) and its `backgroundTexture`. Appended after the listed ids, so they
+ * resolve, ship-check and stream as listed ones do; an id no asset JSON has fails the gather as a
+ * listed one does (p619 G12), naming what names it. A texture array layer or atlas cell input
+ * whose layer, slot or cell its asset doesn't have fails it too (p299 D5).
  */
 import {
+  type AtlasCellInputRef,
+  getAtlasCellInputDependencies,
+  getAtlasSlotTextureId,
+  getTextureArrayInputDependencies,
   getTextureInputDependencies,
+  isAtlasCellInputRef,
+  isTextureArrayInputRef,
   type MaterialInputDependency,
+  type TextureArrayInputRef,
 } from '../../src/_engine/kernel/assets/MaterialInputRefs';
 import { textureMapKeys } from '../../src/_engine/utils/Constants';
+import type { Registries } from './context';
 import type { SceneRun } from './sceneAssets';
 
 /**
@@ -22,21 +32,87 @@ import type { SceneRun } from './sceneAssets';
  */
 const INPUT_DEPENDENCY_FNS: readonly ((value: unknown) => MaterialInputDependency[])[] = [
   getTextureInputDependencies,
+  getTextureArrayInputDependencies,
+  getAtlasCellInputDependencies,
 ];
 
-/** The texture ids by the first thing naming each, for the error */
+/** The texture ids by the first thing naming each, for the error; the inputs that don't fit
+ * their asset; and pass 1's registries */
 type Named = Map<string, string>;
+type Collect = { named: Named; errors: string[]; reg: Registries };
 
 const addId = (named: Named, id: string, by: string) => {
   if (id && !named.has(id)) named.set(id, by);
 };
 
+/** Whether the id is a texture of another kind than an array or atlas (the error says so) */
+const isOtherTexture = (reg: Registries, id: string) =>
+  Boolean(
+    reg.textures[id] || reg.textureArrays[id] || reg.atlasSlots[id] || reg.mergeMaterialSlots[id]
+  );
+
+/** Why a texture array layer input doesn't fit its array asset, or undefined. An array no asset
+ * JSON has is left to the closure's unknown id; a palette slot's array (built at runtime) isn't
+ * checked. */
+const getArrayLayerError = (reg: Registries, { textureArray: id, layer }: TextureArrayInputRef) => {
+  const array = reg.textureArrays[id];
+  if (!array) {
+    return reg.textures[id] || reg.atlasSlots[id] || reg.atlasSlotIds[id]
+      ? `"${id}" isn't a texture array (a *.textureArray.json's id)`
+      : undefined;
+  }
+  const layers = array.__layers ?? [];
+  if (typeof layer === 'number') {
+    return Number.isInteger(layer) && layer >= 0 && layer < layers.length
+      ? undefined
+      : `the texture array "${id}" has layers 0-${layers.length - 1}, not ${layer}`;
+  }
+  if (typeof layer !== 'string') return `its "layer" is neither an index nor a layer name`;
+  return layers.includes(layer)
+    ? undefined
+    : `the texture array "${id}" has no layer "${layer}" (layers: ${layers.join(', ')})`;
+};
+
+/** Why an atlas cell input doesn't fit its atlas, or undefined */
+const getAtlasCellError = (reg: Registries, { atlas, slot, cell }: AtlasCellInputRef) => {
+  const slotIds = reg.atlasSlotIds[atlas];
+  if (!slotIds) {
+    return isOtherTexture(reg, atlas)
+      ? `"${atlas}" isn't a texture atlas (a *.textureAtlas.json's id)`
+      : `no texture atlas (a *.textureAtlas.json) has the id "${atlas}"`;
+  }
+  if (typeof slot !== 'string' || typeof cell !== 'string') {
+    return `an atlas cell needs a "slot" and a "cell" besides its "atlas"`;
+  }
+  const slotId = getAtlasSlotTextureId(atlas, slot);
+  if (!slotIds.includes(slotId)) {
+    const slots = slotIds.map((id) => id.slice(atlas.length + 1));
+    return `the texture atlas "${atlas}" has no slot "${slot}" (slots: ${slots.join(', ')})`;
+  }
+  const cells = Object.keys(reg.atlasSlots[slotId].__atlas.cells);
+  return cells.includes(cell)
+    ? undefined
+    : `the texture atlas "${atlas}" has no cell "${cell}" (cells: ${cells.join(', ')})`;
+};
+
+/** An input value's error against its asset (a texture array layer, an atlas cell), or undefined */
+const getInputRefError = (reg: Registries, value: unknown) => {
+  if (isTextureArrayInputRef(value)) return getArrayLayerError(reg, value);
+  if (isAtlasCellInputRef(value)) return getAtlasCellError(reg, value);
+  return undefined;
+};
+
 /** An input group's values (`inputs`, or a socket of `nodes`): `staticDefines` merges into the
- * defines, so it isn't an input */
-const addInputGroupIds = (group: unknown, named: Named, by: string) => {
+ * defines, so it isn't an input. A value that doesn't fit its asset adds an error, not its id. */
+const addInputGroupIds = (group: unknown, { named, errors, reg }: Collect, by: string) => {
   if (!group || typeof group !== 'object') return;
   for (const [key, value] of Object.entries(group)) {
     if (key === 'staticDefines') continue;
+    const error = getInputRefError(reg, value);
+    if (error) {
+      errors.push(`${by}'s input "${key}": ${error}`);
+      continue;
+    }
     for (const getDependencies of INPUT_DEPENDENCY_FNS) {
       for (const dependency of getDependencies(value)) {
         if (dependency.type === 'texture') addId(named, dependency.id, by);
@@ -46,32 +122,34 @@ const addInputGroupIds = (group: unknown, named: Named, by: string) => {
 };
 
 /** A material's (or its overrides') textures: its `params` slots, its `inputs` and `nodes` */
-const addMaterialIds = (mat: unknown, named: Named, by: string) => {
+const addMaterialIds = (mat: unknown, collect: Collect, by: string) => {
   if (!mat || typeof mat !== 'object') return;
   const { params, inputs, nodes } = mat as { params?: unknown; inputs?: unknown; nodes?: unknown };
   if (params && typeof params === 'object') {
     for (const key of textureMapKeys) {
       const id = (params as Record<string, unknown>)[key];
-      if (typeof id === 'string') addId(named, id, by);
+      if (typeof id === 'string') addId(collect.named, id, by);
     }
   }
-  addInputGroupIds(inputs, named, by);
+  addInputGroupIds(inputs, collect, by);
   if (nodes && typeof nodes === 'object') {
-    for (const socket of Object.values(nodes)) addInputGroupIds(socket, named, by);
+    for (const socket of Object.values(nodes)) addInputGroupIds(socket, collect, by);
   }
 };
 
-/** Every texture id the scene's resolved data names, by what names it */
-const getNamedTextureIds = ({ scene }: SceneRun): Named => {
-  const named: Named = new Map();
+/** Every texture id the scene's resolved data names, by what names it, and the inputs that don't
+ * fit their asset */
+const getNamedTextureIds = ({ scene, reg }: SceneRun): Collect => {
+  const collect: Collect = { named: new Map(), errors: [], reg };
+  const { named } = collect;
   for (const mat of scene.materials ?? []) {
-    if (typeof mat !== 'string') addMaterialIds(mat, named, `the material "${mat.id}"`);
+    if (typeof mat !== 'string') addMaterialIds(mat, collect, `the material "${mat.id}"`);
   }
   for (const mesh of scene.meshes ?? []) {
     if (typeof mesh === 'string') continue;
     const by = `the mesh "${mesh.props.appId ?? mesh.entityOpts?.appId ?? '(no appId)'}"`;
-    addMaterialIds(mesh.props.mat, named, by);
-    addMaterialIds(mesh.props.matOverrides, named, `${by}'s matOverrides`);
+    addMaterialIds(mesh.props.mat, collect, by);
+    addMaterialIds(mesh.props.matOverrides, collect, `${by}'s matOverrides`);
   }
   for (const light of scene.lights ?? []) {
     if (typeof light === 'string') continue;
@@ -79,7 +157,7 @@ const getNamedTextureIds = ({ scene }: SceneRun): Named => {
     if (typeof map === 'string') addId(named, map, `the light "${appId ?? '(no appId)'}"`);
   }
   if (scene.backgroundTexture) addId(named, scene.backgroundTexture, 'backgroundTexture');
-  return named;
+  return collect;
 };
 
 /** The ids the scene's `textures` gives already: listed or inline, and a listed atlas's slots */
@@ -108,12 +186,15 @@ const isKnownTextureId = ({ reg }: SceneRun, id: string) =>
  * Appends the textures the scene's materials, spot light cookies and background name, and its
  * `textures` doesn't list, to its `textures` (each once, in the order they're named). Runs after
  * the materials, lights and meshes are resolved (their save entries applied), before the
- * textures are. An id no asset JSON has is logged, naming what names it, and fails the gather.
+ * textures are. An id no asset JSON has, and a texture array layer or atlas cell input its asset
+ * doesn't have, is logged, naming what names it, and fails the gather.
  */
 export const addTextureClosure = (run: SceneRun) => {
   const listed = getListedTextureIds(run);
   const added: string[] = [];
-  for (const [id, by] of getNamedTextureIds(run)) {
+  const { named, errors } = getNamedTextureIds(run);
+  for (const error of errors) run.ctx.log.error(`Scene "${run.sceneId}": ${error}.`);
+  for (const [id, by] of named) {
     if (listed.has(id)) continue;
     if (!isKnownTextureId(run, id)) {
       run.ctx.log.error(

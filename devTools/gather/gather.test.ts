@@ -766,3 +766,119 @@ describe('p302 D6: the texture closure', () => {
     expect(out.__streaming?.cells[String(packCellKey(1, 0, 0))]?.textures).toEqual([0]);
   });
 });
+
+describe('p299 D5: texture array layer and atlas cell inputs', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const textures = (...ids: string[]) =>
+    Object.fromEntries(
+      ids.map((id) => [`app/textures/${id}.texture.json`, { id, fileName: albedo }])
+    );
+  const assets = {
+    ...textures('rock', 'moss', 'plain'),
+    'app/textures/ground.textureArray.json': { id: 'ground', layers: ['rock', 'moss'] },
+    'app/textures/decals.textureAtlas.json': {
+      id: 'decals',
+      size: [512, 512],
+      padding: 8,
+      slots: { albedo: {}, mask: {} },
+      cells: [
+        { id: 'crack', rect: [0, 0, 256, 256], sources: { albedo: 'rock', mask: 'moss' } },
+        { id: 'tyre', rect: [256, 0, 256, 256], sources: { albedo: 'moss' } },
+      ],
+    },
+  };
+  const tslMat = (id: string, inputs: Record<string, unknown>) => ({
+    [`app/materials/${id}.material.json`]: {
+      id,
+      type: 'STANDARDNODEMATERIAL',
+      tslFile: `materials/${id}.tsl.ts`,
+      inputs,
+    },
+    [`app/materials/${id}.tsl.ts`]: 'export const setup = () => {};\n',
+  });
+  const textureIds = (out: OutputScene | undefined) =>
+    ((out?.textures ?? []) as ({ id?: string } | string)[]).map((tex) =>
+      typeof tex === 'string' ? tex : tex.id
+    );
+  /** The gather's errors for a material of these inputs in scene "a" */
+  const gatherErrors = (inputs: Record<string, unknown>) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { isGathered } = gather({
+      ...assets,
+      ...tslMat('m', inputs),
+      ...scene('a', { materials: ['m'] }),
+    });
+    const text = errors.mock.calls.flat().join('\n');
+    errors.mockRestore();
+    return { isGathered, text };
+  };
+
+  it('adds the array and the atlas slot the inputs name to the textures', () => {
+    const { isGathered, scene: get } = gather({
+      ...assets,
+      ...tslMat('m', {
+        byName: { textureArray: 'ground', layer: 'moss' },
+        byIndex: { textureArray: 'ground', layer: 0 },
+        cell: { atlas: 'decals', slot: 'mask', cell: 'crack', clampToCell: false },
+      }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    expect(isGathered).toBe(true);
+    expect(textureIds(get('a'))).toEqual(['ground', 'decals.mask']);
+  });
+
+  it('adds nothing for a slot the scene lists by its atlas id', () => {
+    const { scene: get } = gather({
+      ...assets,
+      ...tslMat('m', { cell: { atlas: 'decals', slot: 'mask', cell: 'crack' } }),
+      ...scene('a', { textures: ['decals'], materials: ['m'] }),
+    });
+    expect(textureIds(get('a'))).toEqual(['decals.albedo', 'decals.mask']);
+  });
+
+  it.each([
+    [{ textureArray: 'ground', layer: 'sand' }, 'has no layer "sand" (layers: rock, moss)'],
+    [{ textureArray: 'ground', layer: 2 }, 'has layers 0-1, not 2'],
+    [{ textureArray: 'plain', layer: 0 }, '"plain" isn\'t a texture array'],
+    [
+      { atlas: 'decals', slot: 'normal', cell: 'crack' },
+      'has no slot "normal" (slots: albedo, mask)',
+    ],
+    [{ atlas: 'decals', slot: 'mask', cell: 'leaf' }, 'has no cell "leaf" (cells: crack, tyre)'],
+    [{ atlas: 'plain', slot: 'mask', cell: 'crack' }, '"plain" isn\'t a texture atlas'],
+    [
+      { atlas: 'nope', slot: 'mask', cell: 'crack' },
+      'no texture atlas (a *.textureAtlas.json) has the id "nope"',
+    ],
+  ])('fails on %j, naming the material and what the asset has', (input, message) => {
+    const { isGathered, text } = gatherErrors({ x: input });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a": the material "m"'s input "x": `);
+    expect(text).toContain(message);
+  });
+
+  it('moves a cell-only material’s atlas slot into its cell', () => {
+    const { isGathered, scene: get } = gather({
+      ...assets,
+      ...tslMat('crateMat', { cell: { atlas: 'decals', slot: 'mask', cell: 'crack' } }),
+      'app/crate.mesh.json': {
+        props: {
+          geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
+          mat: 'crateMat',
+          position: { x: 70, y: 0, z: 10 },
+        },
+      },
+      ...scene('w', {
+        materials: ['crateMat'],
+        meshes: ['crate'],
+        streaming: { cellSize: 64, base: [], radii: {} },
+      }),
+    });
+    expect(isGathered).toBe(true);
+    const out = get('w') as OutputScene & {
+      __streaming?: { cells: Record<string, { textures?: number[] }> };
+    };
+    expect(out.textures).toBeUndefined();
+    expect(out.__streaming?.cells[String(packCellKey(1, 0, 0))]?.textures).toEqual([0]);
+  });
+});

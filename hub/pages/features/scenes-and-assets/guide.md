@@ -28,7 +28,7 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 | `*.geometry.json`      | A geometry: a three.js type and its params, or a merge of other geometries. |
 | `*.texture.json`       | A texture, and how the asset pipeline encodes it.                           |
 | `*.textureArray.json`  | Textures of one size as the layers of one array texture.                    |
-| `*.textureAtlas.json`  | Images packed into one atlas, each a named slot.                            |
+| `*.textureAtlas.json`  | Images packed into one layout as cells, a texture per map slot.             |
 | `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.      |
 | `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.    |
 | `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.     |
@@ -197,14 +197,21 @@ The textures and models the JSONs point at go through the
 A scene lists the materials it uses, and the gather adds the textures they name to its
 `textures`. It reads the listed materials, each mesh's inline `mat` and its `matOverrides`: their
 `params` texture slots (`map`, `normalMap`, …) and their TSL `inputs` and `nodes` (a texture id,
-`{ "texture": … }`); and the scene's spot lights' cookies (`map`) and its `backgroundTexture`. The
-added textures come after the listed ones, each once, and load, release and stream with the
-scene as listed ones do.
+`{ "texture": … }`, a texture array's `{ "textureArray": … }` and an atlas cell's
+`{ "atlas": …, "slot": … }`, which adds the slot's texture); and the scene's spot lights' cookies
+(`map`) and its `backgroundTexture`. The added textures come after the listed ones, each once,
+and load, release and stream with the scene as listed ones do.
 
 - **An id no texture JSON has** fails the gather, naming what names it:
 
   ```text wrap
   Scene "myScene": the material "rockMat" names the texture "rockAlbedo", which no asset JSON (or only an invalid one) has, and the scene doesn't list it inline.
+  ```
+
+- **A layer, slot or cell the asset doesn't have** fails it too, listing what it has:
+
+  ```text wrap
+  Scene "myScene": the material "groundMat"'s input "dirt": the texture array "groundLayers" has no layer "sand" (layers: grass, dirt, rock).
   ```
 
 - **List a texture yourself** when only your code names it, or a value of your own

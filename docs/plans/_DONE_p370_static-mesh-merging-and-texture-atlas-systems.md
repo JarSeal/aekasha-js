@@ -1,6 +1,6 @@
-Status: epic, in progress | p299 Phases 0-4 implemented; p371, p372, p373, p374 and p375 implemented; p376 not adopted (its Phase 0's gate failed, 2026-11-12); p377 implemented (2026-11-12: far entries for kit meshes and a larger-cells recommendation; its second-machine run a p990 item); p378 implemented (2026-11-12: a merged member's mesh out of the scene graph in both modes, 3.8-6.7 ms of a far field's CPU frame at 400 sites; its two follow-ups p990 items)
+Status: implemented (an epic: every child done) | p299 implemented (Phases 0-6); p371, p372, p373, p374 and p375 implemented; p376 not adopted (its Phase 0's gate failed, 2026-11-12); p377 implemented (2026-11-12: far entries for kit meshes and a larger-cells recommendation; its second-machine run a p990 item); p378 implemented (2026-11-12: a merged member's mesh out of the scene graph in both modes, 3.8-6.7 ms of a far field's CPU frame at 400 sites; its two follow-ups p990 items)
 Category: Rendering, Merging, Texture atlas
-Blocks: p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md, \_DONE_p377_hlod-streaming-cell-proxies.md, \_DONE_p378_baked-members-out-of-the-scene-graph.md
+Blocks: \_DONE_p299_texture-arrays-and-atlases.md, \_DONE_p371_geometry-merging.md, \_DONE_p372_mesh-merge-groups.md, \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, \_DONE_p376_hlod-merged-cluster-proxies.md, \_DONE_p377_hlod-streaming-cell-proxies.md, \_DONE_p378_baked-members-out-of-the-scene-graph.md
 Related: \_DONE_p350_lod-system-research.md (the LOD epic this one follows; "feeds the instancing/batching layer"), \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is shared with p375), \_DONE_p347_lod-chain-generation.md (HLOD reuses its simplifier), \_DONE_p353_macro-streaming-grid.md (merge groups never cross its cells), \_DONE_p352_physics-simulation-tiers.md (static body cost), \_DONE_p346_spatial-domains.md (cell maths), p301_terrain-texturing-epic.md (new terrain processes, §10), p303_texture-sets-and-terrain-texture-library.md and p309_terrain-decals.md (their array and atlas tools move to p299), p308_terrain-scatter.md, \_DONE_p083_editor-creator-view.md (future select/transform tools), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (measures every result), \_DONE_p354_gpu-driven-culling.md (its compute cull and indirect draws, built for instance sets: §12 question 3)
 
 # Static Mesh Merging & Texture Arrays/Atlases — Research & Epic
@@ -255,13 +255,13 @@ Heightfield blocks themselves gain little: each is already one mesh.
 
 | Tier | Plan                                        | What it delivers                                                                                                               | Depends on                          |
 | ---- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| 0    | `p299_texture-arrays-and-atlases`           | Runtime and build-time texture arrays, 2D atlases with cell tables, UV remap and TSL helpers, JSON binding (Phases 0-4 done)   | \_DONE_p300; p302 D4 (Phase 5 only) |
+| 0    | `_DONE_p299_texture-arrays-and-atlases`     | Runtime and build-time texture arrays, 2D atlases with cell tables, UV remap and TSL helpers, JSON binding                     | \_DONE_p300; p302 D4 (Phase 5 only) |
 | 1.1  | `_DONE_p371_geometry-merging`               | `mergeGeometryParts` with a part range table, `MERGED` geometry JSON, GLB `merge` at build time, adoption of the ad hoc merges | —                                   |
 | 1.2  | `_DONE_p372_mesh-merge-groups`              | `MERGE_GROUP` / `MERGE_MEMBER`, `merge: id \| 'AUTO'`, in-place member updates, scene-load build                               | p371                                |
 | 1.3  | `_DONE_p373_merge-debug-and-member-editing` | "Merging" drawer tab, group and member windows, overlay, A/B toggle, edit sessions, face picking                               | p372                                |
 | 2.1  | `_DONE_p374_multi-material-merging`         | Merge materials: palettes, per-slot arrays, parameter table, compatibility classes                                             | p372, p299                          |
 | 2.2  | `_DONE_p375_batched-mesh-batches`           | Spike-gated `BatchedMesh` groups for movable or per-member-culled content                                                      | p372; p348 §4.4's spike             |
-| 3.1  | `p376_hlod-merged-cluster-proxies`          | Not adopted: its Phase 0 measured proxies cutting triangles without saving GPU time (the far field's cost is its draws)        | p372, p347, p348                    |
+| 3.1  | `_DONE_p376_hlod-merged-cluster-proxies`    | Not adopted: its Phase 0 measured proxies cutting triangles without saving GPU time (the far field's cost is its draws)        | p372, p347, p348                    |
 | 3.2  | `_DONE_p377_hlod-streaming-cell-proxies`    | Far static content in few draws: far entries for kit meshes and a larger-cells recommendation (its Phase 0 chose them)         | p353                                |
 | 3.3  | `_DONE_p378_baked-members-out-of-the-scene-graph` | A baked member's hidden mesh out of the scene graph, as p375 did a batched one's: 3.8-6.7 ms of a far field's CPU frame | p372, p375; p377's bench            |
 
@@ -328,6 +328,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
 | `p376_hlod-merged-cluster-proxies`    | p376  | `main`      | engine minor (group proxies), app minor (the lane) | after p376's Phase 4    |
 | `p377_hlod-streaming-cell-proxies`    | p377  | `main`      | engine minor (far entries), app minor (the ruins)  | after p377's Phase 6    |
 | `p378_baked-members-out-of-the-scene-graph` | p378  | `main`      | engine minor 6.9.0 → 6.10.0 (a root-scene raycast hits a baked group only), app patch 1.24.0 → 1.24.1 (the spike modes), Project (the bench's cases) | after p378's Phase 4    |
+| `p299_texture-arrays-and-atlases`     | p299 Phases 5-6 | `main` | engine minor 6.11.0 → 6.12.0 (D5's JSON binding), app patch 1.24.2 → 1.24.3 (the scenes' material JSONs) | after p299's Phase 6    |
 
 - p371 alone: a kernel utility (`mergeGeometryParts`, the `MERGED` type, the GLB `merge` option)
   that is useful without the groups.
@@ -358,3 +359,7 @@ with its own bump (`yarn checkVersions --against main`); p299's Phases 0-4 are o
   the branch carries Phases 0-1 and 3-4 with the bump as written: engine 6.10.0, app 1.24.1 and a
   Project section for the bench's cases (decided 2026-11-12, p378 Phase 4). Done 2026-11-12: the
   PR (p378's branch into `main`) opens when asked.
+- p299's Phases 5-6 (D5's JSON binding, the Hub and docs) are on their own branch from `main` at
+  p302's merge. Done 2026-11-13 with the bump as written (engine 6.12.0, app 1.24.3; the branch
+  also raises the app profile's three SBP budgets that p302's merge left failing): the PR (p299's
+  branch into `main`) opens when asked.

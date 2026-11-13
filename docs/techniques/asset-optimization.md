@@ -216,6 +216,96 @@ A texture JSON can build its image from several sources with `pack`, in place of
 
 With optimization off, a pack is still built and written as a PNG, since it has no single source file.
 
+## Texture arrays and atlases
+
+Both put many images behind one texture binding. WebGPU gives a shader stage 16 sampled textures by default, and shadow maps and the environment map take some of them, so a material that blends eight ground layers or a scatter of twenty card types needs one of these.
+
+### Which one
+
+|              | Texture array (`*.textureArray.json`)                                             | Atlas (`*.textureAtlas.json`)                                                      |
+| ------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Images       | Layers, all resized to one `size`                                                 | Cells of any size, packed into one layout                                          |
+| Tiling       | Yes: each layer wraps and mips on its own                                         | No: a UV past a cell reads its padding, then its neighbour                         |
+| Map types    | One array per map type (an albedo array, a normal array), the layers in one order | One JSON, a texture per `slots` entry, all on one layout                           |
+| Mip chain    | Full                                                                              | Stops at the last level the padding keeps the cells apart                          |
+| Use for      | Terrain and ground layers, material sets, merge material palettes                 | Decals, scatter and leaf cards, sprites, impostors                                 |
+| Sampled with | `sampleArrayLayer`, or a material input `{ "textureArray", "layer" }`             | `sampleAtlasCell`, remapped UVs, or a material input `{ "atlas", "slot", "cell" }` |
+
+Group an array's layers by size: every layer takes the array's `size`, so a 256² image in a 1024² array takes 16 times its memory (the run warns when it upscales). Images of mixed sizes that don't tile belong in an atlas.
+
+Textures that already share a size, a mip count and a codec can also be built into an array at runtime (`buildTextureArray`), with no JSON and no encode: the Hub's [asset optimization page](../../hub/pages/features/asset-optimization/guide.md) has both kinds' runtime side.
+
+### A texture array
+
+```jsonc
+// src/app/textures/groundLayers.textureArray.json
+{
+  "$schema": "../../../.schemas/textureArray.schema.json",
+  "id": "groundLayers",
+  "layers": ["grass", "dirt", "./source/rock.png"],
+  "size": [1024, 1024],
+  "texOpts": { "colorSpace": "srgb", "wrapS": 1000, "wrapT": 1000 },
+  "optimize": { "slot": "baseColor" },
+}
+```
+
+- **`layers`**, in layer order: a texture asset's id (its source file or `pack`, never its output or its `optimize`) or a source image. A layer's name is its texture id, or a file's name without its extension; two layers can't share one.
+- **`size`** defaults to the layers' common size (they must agree). It's then fit to the slot's `maxSize` and to multiples of 4 like a texture's. A layer with alpha makes the whole array RGBA.
+- **`optimize`** is the array's: one codec for every layer. `texOpts` is its one sampler.
+- Output: `aek-assets/<json path>.array.<hash>.ktx2`, one file for every layer.
+
+### An atlas
+
+```jsonc
+// src/app/textures/decals.textureAtlas.json
+{
+  "$schema": "../../../.schemas/textureAtlas.schema.json",
+  "id": "decals",
+  "size": [1024, 1024],
+  "padding": 16,
+  "slots": {
+    "albedo": { "texOpts": { "colorSpace": "srgb" }, "optimize": { "slot": "baseColor" } },
+    "normal": { "fill": [0.5, 0.5, 1], "optimize": { "slot": "normal" } },
+  },
+  "cells": [
+    {
+      "id": "tyreTracks",
+      "rect": [0, 0, 512, 256],
+      "sources": { "albedo": "./source/tyre.png", "normal": "./source/tyreNormal.png" },
+    },
+    { "id": "crack", "size": [128, 128], "sources": { "albedo": "crackAlbedo" } },
+  ],
+}
+```
+
+- **Cells:** a `rect` (x, y, width, height in the layout's px, top-left origin, the padding included) places a cell; the rest are packed, tallest first, at their `size` (by default their first source's). A source is a texture asset's id or an image. A cell that doesn't fit fails the run, naming it. `data` is passed through to the cell table (a decal's physical size).
+- **Slots:** each is a texture of its own, `<atlas>.<slot>` (`decals.albedo`), with its own `texOpts` and `optimize`. A cell without a source in a slot gets the slot's `fill` (RGB(A), linear 0..1, by default transparent black; a normal map wants `[0.5, 0.5, 1]`).
+- **`padding`** (default 8 px) extends each cell's edge pixels outwards. The pipeline builds the mip levels itself with an exact 2 × 2 box and stops at the last level that keeps the cells apart: `2^level ≤ padding`, so 16 px keeps levels 0-4. A level's 4 × 4 compression blocks must not hold two cells either, so packed cells go on a grid of `4 · 2^⌊log2 padding⌋` px (64 px at padding 16). A `rect` off that grid shortens the chain, with a warning naming it and the alignment it needs.
+- **The grid costs space:** a packed cell's padded size is rounded up to it, so a 64² cell with 16 px of padding takes 128². An atlas of many small cells can lower its padding (fewer levels) or place its cells with `rect`.
+- **`mipChain: "FULL"`** builds every level down to 1 × 1, letting the cells mix past the protected ones: only for cells that look alike, as an impostor's views (see [Impostor atlases](#impostor-atlases)).
+- Output: `aek-assets/<json path>.atlas.<slot>.<hash>.ktx2`, one file per slot. An edit to one slot's sources rebuilds only that slot, unless it moves the layout.
+
+### Codecs
+
+- **KTX2 only.** An array or an atlas slot is always encoded: a `codec: "none"` file can't hold an array's layers or an atlas's short mip chain. A slot that resolves to `none` (`data` does) fails the gather; give it a codec, as `"optimize": { "slot": "data", "textures": { "data": { "codec": "uastc" } } }`.
+- **One codec per map type.** An array's layers share its codec. Every slot of an atlas has its own, so the albedo can be UASTC λ 2 and a mask UASTC with RDO off. For arrays built at runtime, encode every member with the same codec: UASTC and ETC1S transcode to different GPU formats on some devices, and `buildTextureArray` throws on a mix.
+- **Never passed through.** With optimization off for the asset or the project, an array or a slot has no output, and nothing to fall back to (a texture would load its source). `yarn build` fails on one a shipped scene uses, even with `AEK_ASSETS_ALLOW_UNOPTIMIZED=true`. The cache and the lock work as for textures, so a clone with committed outputs needs no `ktx`.
+- **`maxSize`** resizes an array. On an atlas slot it drops top mip levels instead (exact halving keeps the cells on their grid), and warns when that leaves fewer levels than the layout protects.
+
+### Sizes and budgets
+
+- **GPU memory:** an array is its layers' sum, at 1 B/px with mips for UASTC: a 1024² layer is 1.40 MB, so an eight-layer ground array is 11.2 MB in one binding. An atlas slot is its layout at the codec's rate, counting only the levels it stores: a 512² slot with 5 levels is 349 KB.
+- **Budgets:** the per-texture ceiling (see [Budgets](#budgets)) counts every layer of an array, and an atlas slot against the full chain at its profile's `maxSize`. Each slot is checked on its own. A large array gets its own `budget` in its JSON, like any asset that needs more.
+- **`yarn assets --only`** takes an array's id, an atlas's id (every slot) or a slot's id (`decals.albedo`). The run lists a slot with its cell count, and its warnings (an upscaled or stretched layer or cell, dropped levels) are kept with the cached output.
+
+### At runtime
+
+A scene lists an array by its id in its `textures`, and an atlas by its id (every slot) or a slot's id. A material JSON that names a layer or a cell needs neither: the gather adds the array or the slot it names. The gather also fails on a layer, slot or cell the asset doesn't have:
+
+```text
+Scene "myScene": the material "groundMat"'s input "dirt": the texture array "groundLayers" has no layer "sand" (layers: grass, dirt, rock).
+```
+
 ## Alpha-cut textures
 
 A mip level averages alpha, so a material with `alphaTest` loses thin features with distance: a leaf card's edge or a trunk falls below the cut and breaks up. `alphaCoverage` fixes that at build time. Set it to the material's `alphaTest`, and each mip level's alpha is scaled so the same share of it passes the cut as at level 0:

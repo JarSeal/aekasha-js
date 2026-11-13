@@ -245,7 +245,12 @@ export type {
   ResolvedInput,
   ResolvedInputNode,
 } from './kernel/assets/MaterialInputResolvers';
-export type { MaterialInputDependency, TextureInputRef } from './kernel/assets/MaterialInputRefs';
+export type {
+  AtlasCellInputRef,
+  MaterialInputDependency,
+  TextureArrayInputRef,
+  TextureInputRef,
+} from './kernel/assets/MaterialInputRefs';
 export type {
   TslInputs,
   TslMaterialFns,

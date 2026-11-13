@@ -3,7 +3,7 @@ Category: Terrain, Assets, Physics, Toolkit
 Blocked by: p305_terrain-material-generator.md
 Blocks: p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
-Related: p370_static-mesh-merging-and-texture-atlas-systems.md (merging a block's static dressing, modular kit terrain, HLOD far blocks: its §10)
+Related: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merging a block's static dressing, modular kit terrain, HLOD far blocks: its §10)
 
 # Terrain Blocks & Procedural Terrain Meshes
 

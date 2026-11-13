@@ -33,7 +33,7 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   },
   'src/_engine/kernel/assets/MaterialInputRefs.ts': {
     reason:
-      'the texture refs in a TSL material’s inputs, which the gather’s texture closure reads as the runtime’s resolvers do (p302 D6)',
+      'the texture refs, texture array layers and atlas cells in a TSL material’s inputs, which the gather’s texture closure and streaming manifest read as the runtime’s resolvers do (p302 D6, p299 D5)',
   },
   'src/_engine/features/lod/LodChainOptions.ts': {
     reason: 'the LOD chain options and a GLB’s chain description, which the asset pipeline writes',

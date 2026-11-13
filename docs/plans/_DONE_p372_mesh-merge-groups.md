@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-5)
 Category: Merging, ECS, Rendering
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
-Blocks: \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, p376_hlod-merged-cluster-proxies.md
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.2)
+Blocks: \_DONE_p373_merge-debug-and-member-editing.md, \_DONE_p374_multi-material-merging.md, \_DONE_p375_batched-mesh-batches.md, \_DONE_p376_hlod-merged-cluster-proxies.md
 Related: \_DONE_p346_spatial-domains.md (cell maths, DEFAULT domain), \_DONE_p348_ecs-lod-selection.md (`LOD` members are refused until p376), \_DONE_p352_physics-simulation-tiers.md (static body sync), \_DONE_p353_macro-streaming-grid.md (groups stay inside a cell), p301_terrain-texturing-epic.md (the modular kit terrain page, Phase 5), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
 
 # Mesh Merge Groups

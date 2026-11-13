@@ -7,6 +7,7 @@ import { getGeneratedAppData } from '../scene/Scene';
 import {
   getTexture,
   loadTextureFileAsync,
+  loadTextureInputResolversAsync,
   resolveTextureUrl,
   saveTexture,
   setTextureOpts,
@@ -438,7 +439,10 @@ export const buildTextureArray = async (props: BuildTextureArrayProps): Promise<
   const ownerScope = getAssetOwnerScope();
   let pending = pendingBuilds.get(id);
   if (!pending) {
-    pending = build(id, props, keys, ownerScope).finally(() => pendingBuilds.delete(id));
+    // The input resolvers (p299 D5) load with the first array, so a material can sample it
+    pending = Promise.all([build(id, props, keys, ownerScope), loadTextureInputResolversAsync()])
+      .then(([array]) => array)
+      .finally(() => pendingBuilds.delete(id));
     pendingBuilds.set(id, pending);
     return pending;
   }

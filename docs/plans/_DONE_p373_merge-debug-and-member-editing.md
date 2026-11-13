@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-4)
 Category: Merging, Debug, Editor
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 1.3)
 Related: \_DONE_p083_editor-creator-view.md (the editor epic; future select/transform tools build on D4), p150_current-entity-data-source-info-on-edit-windows.md (source info on edit windows), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (draw counts), `src/_engine/debug/CLAUDE.md` (the debugger on the UI kit: drawer tabs, panes as property grids, lists, edit windows with `createDebugWindowGrid`, undo / redo) and `src/_engine/ui/CLAUDE.md` (the kit's draggable windows: kinds, registration, LS, scene loads)
 
 # Merge Debugging & Member Editing

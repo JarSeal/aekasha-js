@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-3)
 Category: Assets, Textures
 Blocks: \_DONE_p351_impostor-billboard-lod.md (Phase 5: its cross-quad lane and no-pop dolly)
-Related: p299_texture-arrays-and-atlases.md (the atlas mip chain this extends), \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline), p308_terrain-scatter.md (leaf cards)
+Related: \_DONE_p299_texture-arrays-and-atlases.md (the atlas mip chain this extends), \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline), p308_terrain-scatter.md (leaf cards)
 
 # Alpha-Coverage-Preserving Mips
 

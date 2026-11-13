@@ -15,6 +15,10 @@ import type {
   StreamingManifestCell,
   StreamingManifestLayer,
 } from '../../src/_engine/schemas';
+import {
+  getAtlasCellInputDependencies,
+  isAtlasCellInputRef,
+} from '../../src/_engine/kernel/assets/MaterialInputRefs';
 import { isCellInRange, packCellKey } from '../../src/_engine/utils/CellKey';
 import type { GatherContext } from './context';
 import type { SceneJSON } from './sceneAssets';
@@ -97,10 +101,15 @@ const getListedEntry = (scene: SceneJSON, listed: Listed, kind: AssetKind, id: s
 
 /** Every listed texture id among `value`'s strings, at any depth: a material's `params`,
  * `inputs` and `nodes` (a texture map key or a TSL input takes a texture id, an object-form
- * texture ref's `texture` too) */
+ * texture ref's `texture` and a texture array layer's `textureArray` too), and an atlas cell
+ * input's slot (`<atlas>.<slot>`, no string of its own; p299 D5) */
 const addTextureRefs = (value: unknown, listed: Listed, refs: Refs) => {
   if (typeof value === 'string') {
     if (listed.textures.has(value)) refs.textures.add(value);
+  } else if (isAtlasCellInputRef(value)) {
+    for (const { id } of getAtlasCellInputDependencies(value)) {
+      if (listed.textures.has(id)) refs.textures.add(id);
+    }
   } else if (Array.isArray(value)) {
     for (const item of value) addTextureRefs(item, listed, refs);
   } else if (value && typeof value === 'object') {

@@ -13,7 +13,19 @@ import type { CameraAsset } from './CameraSchema';
 import type { GeoAssetProps, GeoProps as GeoPropsJson } from './GeometrySchema';
 import type { ImportedAsset } from './ImportedAssetSchema';
 import type { LightAsset } from './LightSchema';
-import type { MaterialAsset, PerType } from './MaterialSchema';
+import type {
+  AtlasCellInputSchema,
+  MaterialAsset,
+  PerType,
+  TextureArrayInputSchema,
+  TextureInputRefSchema,
+} from './MaterialSchema';
+import type {
+  AtlasCellInputRef,
+  TextureArrayInputRef,
+  TextureInputRef,
+} from '../kernel/assets/MaterialInputRefs';
+import type { z } from 'zod';
 import type { MeshAsset } from './MeshSchema';
 import type { SceneAsset } from './SceneSchema';
 import type { TextureAsset } from './TextureSchema';
@@ -125,6 +137,12 @@ describe('the asset JSONs fit their runtime types', () => {
       // Build time and the Assets tab only: the gatherer drops `optimize` and `merge`
       ToolingKeys | 'optimize' | 'merge' | '__fileSize' | '__bytes' | '__vramBytes' | '__lodChain'
     >();
+  });
+
+  test('a TSL input’s object forms → the runtime’s refs (p302 D4, p299 D5)', () => {
+    expectTypeOf<z.infer<typeof TextureInputRefSchema>>().toEqualTypeOf<TextureInputRef>();
+    expectTypeOf<z.infer<typeof TextureArrayInputSchema>>().toEqualTypeOf<TextureArrayInputRef>();
+    expectTypeOf<z.infer<typeof AtlasCellInputSchema>>().toEqualTypeOf<AtlasCellInputRef>();
   });
 
   test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {

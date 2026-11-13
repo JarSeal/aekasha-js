@@ -1,7 +1,7 @@
-Status: in progress | Phases 0-4 implemented
+Status: implemented (Phases 0-6)
 Category: Assets, Textures, Texture atlas
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
-Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), \_DONE_p374_multi-material-merging.md
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
+Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), \_DONE_p374_multi-material-merging.md (neither open plan waits on it any more)
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline this extends), \_DONE_p351_impostor-billboard-lod.md (its exported atlases use D3's cell table), p308_terrain-scatter.md (leaf-card atlases), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
 Note: p608 (the engine folder restructure) and p609 (the toolkit and app restructure) moved this plan's files while Phases 5-6 were open. The paths below are the current ones, the "As built" text's included: `core/` → `kernel/assets/` (`Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `Material.ts`; `core/Import/` → `kernel/assets/import/`), `core/Debug/` → `kernel/assets/debug/` (the Assets tab; p806 later put its info window on the UI kit: `_dbg__AssetInfoWindow.ts`, `_dbg__TextureInfoItems.ts`), the schemas in PascalCase (`schemas/TextureSchema.ts`, `TextureArraySchema.ts`, `TextureAtlasSchema.ts`, `AssetsConfigSchema.ts`), `gatherAppData.ts`' steps into `devTools/gather/` (the suffix table: `GATHERED_SUFFIXES` in `gatheredJson.ts`), the test assets and scenes into `src/app/scenes/textureArrays/` and `src/app/scenes/textureAtlases/`, and `p299ArraySpike.ts` → `devTools/assetPipeline/fixtures/textureArraysFiles.ts`.
 
@@ -754,24 +754,202 @@ overlay covers the image exactly):
   `image.depth`. Plain 2D textures get no preview: the renderer handles them, the plan's scope
   doesn't.
 
-### Phase 5 — JSON binding (D5, after p302 D4)
+### Phase 5 — JSON binding (D5, after p302 D4) — done
 
-1. The two resolvers in `kernel/assets/` next to the arrays and atlases, registered from the
-   kernel's install (`installKernel`, `src/_engine/kernel/init/CLAUDE.md`), never at module load
-   (`moduleSideEffects.test.ts`).
-2. Their `dependencies` in a module the gatherer may import (the schemas entry, or a module listed
-   with its reason in `devTools/engineImports.test.ts`), so p302 D6's closure lists the array or
-   the atlas's slots (a scene's `"<atlasId>"` already expands to them, Phase 3 section 3).
-3. The schemas: the resolver forms in the material JSON's `nodes` / `inputs` (`TslNodeInputsSchema`,
-   `schemas/MaterialSchema.ts`), each field documented twice (JSDoc on the key and a
-   `.describe()`, as p302's "From p619" says).
-4. The material editor (`debug/editors/material/_dbg__MaterialEditorParams.ts`) shows the two
-   forms read-only, as it shows texture ids.
-5. A material JSON in each p299 scene sampling a layer / a cell.
+Branch `p299_texture-arrays-and-atlases`, from `main` at p302's merge (`97ced6c4`).
+
+**Drift found (2026-11-13, against what p302 built):**
+
+- **Registering from `installKernel` costs every build, the banner's floor included.** Today
+  `TextureArray.ts` and `TextureAtlas.ts` are in no initial chunk (only in the merge and impostor
+  chunks, tree-shaken), and the banner's `_engine/kernel/assets` group is 11,009 B gzip against an
+  11 KiB budget: 255 B of headroom. Resolvers registered by the kernel's install pull
+  `sampleArrayLayer` and `sampleAtlasCell` (and what they call) into every app. A resolver's
+  `resolve` is synchronous (`createMaterial` is), so it can't `import()` on its own. **Decided:**
+  the two resolvers live in their own module, imported (`import()`) and registered by the async
+  paths that register an array or an atlas slot, before they resolve; the parts every build needs
+  are the import-free predicates and dependency functions (step 1).
+- **Dependencies before registration.** `getMaterialInputDependencies` asks the registered
+  resolvers, then the built-in forms. With the resolvers registered lazily, a material naming an
+  array that isn't loaded yet would list no dependency, so `ensureMaterialDependencies` (and the
+  material editor) wouldn't load it. So the two forms' dependency functions are built-in forms in
+  `MaterialInputRefs.ts`, next to the texture ref's, and the gather's `INPUT_DEPENDENCY_FNS`
+  imports the same ones (no new module on `engineImports.test.ts`' list).
+- **The schemas need no change to validate the forms:** p302 left input values `z.unknown()` /
+  `z.any()` and only documented the object form. Documenting "each field twice" needs the forms as
+  schemas of their own; step 3 says how they're used.
+- **The material editor already shows them:** a resolver's value is kind `OTHER`, read-only (its
+  JSON), and its textures load through `getMaterialInputDependencies` (p302 Phase 4). Step 4 is a
+  check and a test, not code.
+- **A runtime array can't be named by a material JSON:** the gather's closure fails on an id no
+  asset JSON has (p302 D6, p619 G12), as for any texture made in code. JSON binds texture array
+  assets and atlas slots; code passes the same forms to `createMaterial` for a runtime array.
+- **The gather can check more than ids:** it has each array's `__layers` and each atlas's slots
+  and cells, so a layer, slot or cell the asset doesn't have fails the gather (step 2), not the
+  load.
+- **Versioning:** step 5 adds files to two app scenes, so the app takes a patch too (§4 said no
+  app change).
+- **Resampling:** the array's node keeps its layer through `.sample(uv)` (three r187's
+  `TextureNode.clone` copies `depthNode`); the atlas's node is the sample of the cell-mapped UV, and
+  `.sample(uv)` on it would read the whole slot. The docs say so.
+
+Steps (updated):
+
+1. **The forms and the resolvers** (section 1).
+   - `kernel/assets/MaterialInputRefs.ts` (import-free): `TextureArrayInputRef`
+     (`{ textureArray: id, layer: index | name }`), `AtlasCellInputRef`
+     (`{ atlas: id, slot, cell, clampToCell? }`), their predicates (a `textureArray` / `atlas`
+     string key), their dependency functions (the array's id; the slot's id `<atlas>.<slot>`) and
+     one `getBuiltInInputDependencies` of the three forms, which `getMaterialInputDependencies`
+     falls back to.
+   - `kernel/assets/TextureInputResolvers.ts` (new): the two resolvers (`sampleArrayLayer(tex,
+uv(), layer)`, `sampleAtlasCell(slot, uv(), cell, { clampToCell })`) and the function that
+     registers both (the same functions again are silent, p302's rule). Imported with `import()` by
+     `loadTextureArrayAssetAsync`, `loadTextureAtlasSlotAsync`, a KTX2 that loads as an array
+     texture (`loadTextureAsync`) and `buildTextureArray`, awaited before each resolves, so a scene
+     load's materials (created after its textures) find them. Never at module load.
+   - A missing texture: `ctx.getTexture` gives the shared white texel (2D), which the resolver
+     samples as a plain texture, so a missing array or slot warns and samples white as a bare id
+     does. A registered texture that isn't an array (or an atlas slot, for a cell by id) throws,
+     naming the input.
+   - Without the resolvers (no array or slot loaded yet), the built-in rules see a form's object:
+     the input wrapping (`MaterialTsl.ts`) warns that its texture isn't loaded and samples the
+     white texel, instead of "Unknown object footprint".
+   - Tests next to the module (`TextureInputResolvers.test.ts`) and in
+     `MaterialInputResolvers.test.ts` (the dependencies before registration); `yarn sbp`: no
+     initial chunk grows past its budget, the new module only in the chunks that load arrays.
+2. **The gather** (section 2): the two dependency functions in `textureClosure.ts`'
+   `INPUT_DEPENDENCY_FNS`; a layer name or index the array's `__layers` doesn't have, a slot the
+   atlas doesn't have, or a cell it doesn't have fails the gather naming the material and what it
+   has. Cases in `gather.test.ts`.
+3. **The schemas** (section 2): `TextureArrayInputSchema` and `AtlasCellInputSchema` (strict,
+   each key documented twice) in `schemas/MaterialSchema.ts`; the input value schemas
+   (`InputsSchema`, `TslNodeInputsSchema`) validate a value with a `textureArray` or `atlas` key
+   against its form (the issue at the input's path), and the JSON Schema offers the forms (an
+   `anyOf` of them and any other value, through `jsonSchemas.ts`' override if zod's union can't
+   say it); `.schemas/` regenerated. The descriptions of `inputs` and `nodes` name both forms.
+4. **The material editor** (section 3): check that the two forms show read-only and their
+   textures load; a case in `_dbg__MaterialEditorParams.test.ts` (kind `OTHER`).
+5. **The scenes** (section 3): a TSL material JSON in each p299 scene (`textureArrays`: a layer by
+   name and one by index; `textureAtlases`: a cell, clamped), its `setup` file assigning the input
+   to `colorNode`, drawn next to the code-sampled quads; the exit on WebGPU and WebGL2; this
+   phase's "As built" and the status line.
 
 **Exit:** a material JSON samples an array layer and an atlas cell without TSL code.
 
-### Phase 6 — Hub, docs and versioning
+#### Section 1: The forms and the resolvers — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --docs` and
+`yarn sbp --profile all`):
+
+- `MaterialInputRefs.ts`: `TextureArrayInputRef`, `AtlasCellInputRef` (both on `aekasha`, beside
+  `TextureInputRef`), `isTextureArrayInputRef`, `isAtlasCellInputRef`, `getAtlasSlotTextureId`,
+  `getTextureArrayInputDependencies`, `getAtlasCellInputDependencies` (none without a `slot`
+  string) and `getBuiltInInputDependencies` (the three forms), which `getMaterialInputDependencies`
+  falls back to. No `channel` on the new forms (decided in review).
+- `TextureInputResolvers.ts`: kinds `textureArray` and `atlasCell`; `registerTextureInputResolvers`
+  (`@internal`). A helper's error (an unknown layer or cell, a bad index) is rethrown naming the
+  input (`The input "a" (setup) in material "m": sampleArrayLayer: …`); a bad `layer`, a missing
+  `slot` / `cell` or a non-boolean `clampToCell` throws its own. A registered texture that isn't an
+  array, or isn't an atlas slot, throws; an unregistered one samples `ctx.getTexture`'s white
+  texel as a plain texture (warned by it).
+- `Texture.ts`' `loadTextureInputResolversAsync` (`@internal`): one `import()`, cached; a failed
+  import rejects (the load awaiting it fails with it) and the next call tries again. Awaited, in
+  parallel with the file, by `loadTextureArrayAssetAsync` and `loadTextureAtlasSlotAsync`; after the
+  load by `loadTextureAsync` when a KTX2 is a `CompressedArrayTexture` (a plain `--layers` file);
+  and with the build by `buildTextureArray`. A failed array or slot load doesn't wait for it: the
+  resolver would sample the white texel anyway.
+- The kernel's fallback (`MaterialTsl.ts`' `createTslInputNode`): a form without its resolver
+  samples the white texel with the missing texture's own warning, naming the array or slot. No
+  string of its own: the first version's message and a logged import error put the banner's
+  `_engine/kernel/assets` group over its 11 KiB budget (+0.3 kB); without them +0.2 kB, within.
+  The one case it can't name: an array registered by code (`saveTexture`) before any load
+  registered the resolvers, missed with the value `""` (it can't be sampled as a plain texture).
+- `yarn sbp`: the new `TextureInputResolvers.js` chunk (0.7 kB gzip in the app, 1.3 kB in the
+  embeds, which share less) loads with the first array or slot; `TextureArray.js` and
+  `TextureAtlas.js` became chunks of their own in the app (from `MergeMaterialRegister.js`, −0.3
+  kB). The kernel's `_engine/kernel/assets` group grows 0.2 kB in every profile. The banner and
+  uiKit pass. **The app profile fails three budgets that `main` fails already:** its baseline
+  (`bundle.json`, p302's merge) has `_engine/kernel/assets` at 13.5 kB against a 13 KiB budget, and
+  the initial download and `assets/index.js` over theirs by about 0.5 kB; this section adds 0.2 kB
+  to each.
+- Tests: `TextureInputResolvers.test.ts` (8: the dependencies and the fallback before the
+  resolvers register, then, after `loadTextureInputResolversAsync`, a layer by name and index, the
+  layer kept through `.sample()`, the errors, a missing array; a cell clamped and not, the errors, a
+  missing slot).
+
+#### Section 2: The gather and the schemas — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --docs`,
+`yarn gatherAppData`: the repo's generated data unchanged):
+
+- `textureClosure.ts`: `INPUT_DEPENDENCY_FNS` has the array's and the atlas cell's functions. Each
+  input is checked against pass 1's registries first (`getInputRefError`): a layer name not in
+  `__layers` (listing them), an index out of range, an id that is another kind of texture ("isn't
+  a texture array" / "isn't a texture atlas"), an atlas id no `*.textureAtlas.json` has, a slot or
+  cell the atlas doesn't have (listing them). The error is the scene's, naming the material and
+  the input (`Scene "a": the material "m"'s input "x": the texture array "ground" has no layer
+  "sand" (layers: rock, moss).`), and the input adds no id, so an unknown atlas isn't reported a
+  second time as an unknown slot texture. An array no asset JSON has is left to the closure's
+  unknown-id error; a merge palette slot's array (built at runtime) isn't checked.
+- **Beyond the plan: the streaming manifest.** `addTextureRefs` (`streamingManifest.ts`) collects
+  every listed id among a material's strings, which finds an array's id but not an atlas cell's
+  slot (`<atlas>.<slot>` is no string in the value): it reads the atlas form's dependency now, so a
+  cell-only material's slot moves into its cell instead of staying in the base.
+  `engineImports.test.ts`' reason for `MaterialInputRefs.ts` names both readers.
+- `getAtlasSlotTextureId` exists twice: the schemas' (`TextureAtlasSchema.ts`, on
+  `aekasha/schemas`) and the kernel's `@internal` copy in `MaterialInputRefs.ts` (the kernel loads
+  no zod, and the schemas import no kernel code); the kernel's JSDoc says so.
+- Schemas (`MaterialSchema.ts`, on `aekasha/schemas`): `TextureInputRefSchema` (p302's form too,
+  decided in review: the three object forms documented and checked alike; `channel` by the
+  runtime's regex), `TextureArrayInputSchema` (`layer` an integer ≥ 0 or a string) and
+  `AtlasCellInputSchema`, each strict, each key with a JSDoc and a `.describe()`. `InputsSchema` and
+  `TslNodeInputsSchema` (so `nodes`, the overrides and the variants' too) are records of a union of
+  the three forms and any value, for the JSON Schema's `anyOf` (the editors offer the forms;
+  nothing in jsonSchemas.ts changed), and a `superRefine` (`checkInputRefs`) validates a value
+  with a form's key (`texture`, `textureArray`, `atlas`: the keys the runtime matches) against
+  that form, the issues at the input's path; `staticDefines` is skipped. A form with another key
+  (`{ texture, scale }`) fails: the kernel's resolver would match it first and drop the key.
+- `RuntimeTypes.test.ts`: each form schema's type equals the runtime's ref type.
+  `MaterialSchema.test.ts` (new): the forms beside every other value kind, eight bad values at
+  their paths in `inputs` and a socket, and a variant's overrides.
+- `gather.test.ts`' "p299 D5" (10 cases: the array and slot added, a slot the scene lists by its
+  atlas id, seven errors, a cell-only material's slot in its cell). The fixtures' atlas uses
+  explicit rects of texture-asset sources, so no image is read.
+- `.schemas/`: `material`, `mesh` and `scene` regenerated (the forms' definitions, and the
+  `__schemaN` numbering after them).
+
+#### Section 3: The editor, the scenes and the exit — done
+
+As built (2026-11-13; verified on Apple Silicon, Chrome, a dev server of its own,
+`?isDebug=true&aekTest=true&startScene=<scene>`, `whenSceneReady`, then the scene's
+`results.done`, on WebGPU and the WebGL2 fallback (`navigator.gpu` hidden), the same figures on
+both):
+
+- **The material editor:** no code. `_dbg__MaterialEditorParams.test.ts` checks that both forms (a
+  layer by name and by index, a cell) are kind `OTHER` (read-only), and
+  `MaterialDependencies.test.ts` that `getMaterialTextureIds` names the array and the slot with no
+  resolver registered (the editor loads its textures through it).
+- **`textureArrays`:** `p299ArrayLayerMat` (the scene folder's material JSON, listed in the
+  scene's `materials`): a `setup` material whose inputs are `{ "textureArray": "p299TestArray",
+  "layer": "l1" }` and the same layer by index `1`; its TSL file mixes them by the UV's halves and
+  samples nothing itself. Column 6, row 1. `results.jsonMaterial`: both inputs are the asset's
+  array at layer 1. The quad against column 4, row 3 (the same layer by `sampleArrayLayer`, the
+  same quad): a mean of 1.88 / 255 over its middle 80 % (a sub-pixel offset between the two
+  places), against 108.9 for the neighbouring layer; the halves meet without a seam.
+- **`textureAtlases`:** `p299AtlasCellMat`: input `{ "atlas": "p299TestAtlas", "slot": "albedo",
+  "cell": "checker" }` (clamped, the default), its TSL file assigning it to `colorNode`. Column 6,
+  row 4, at the cell's aspect; row 5 the same cell through `sampleAtlasCell` on the same quad
+  (`addMaterialQuad`, split out of `addQuad`). `results.jsonMaterial`: the albedo slot with a cell
+  UV. JSON against code: a mean of 0.47 / 255, against 69.2 for the metal cell's source.
+- No console message beyond the scenes' expected ones (their error checks, the tiled plane's
+  remap warning), Rapier's init deprecation and the WebGL2 fallback's notice. The resolvers'
+  chunk loaded with each scene's first array or slot (the materials resolved; no missing-texture
+  warning).
+- The scenes' baselines (`yarn verify:scenes`) change: both scenes draw new quads. Recorded in
+  Phase 6 with the rest (`--update`).
+
+### Phase 6 — Hub, docs and versioning — done
 
 1. The Hub: the asset-optimization feature page's "Texture atlases" section
    (`hub/pages/features/asset-optimization/guide.md`) gets texture arrays beside it, and the
@@ -784,10 +962,51 @@ overlay covers the image exactly):
    helpers, D5's JSON binding).
 4. Update p303 D4 and p309 D1 if anything they rely on changed.
 5. Engine minor; `CHANGELOG.md`.
+6. Left from Phase 5 (2026-11-13): the app profile's three budgets that `main` already fails
+   (Phase 5 section 1's `yarn sbp`: `_engine/kernel/assets` 13.7 kB against 13 KiB, the initial
+   download and `assets/index.js` about 0.7 kB over), still undecided: ask the user whether this
+   branch raises them (the growth is mostly p302's, +0.2 kB this plan's); `yarn verify:baselines
+   --update` (the API baseline's new exports: the three input ref types on `aekasha`, the three
+   form schemas on `aekasha/schemas`); `yarn verify:scenes --only textureArrays,textureAtlases
+   --update` (their new quads), run by the user.
+
+As built (2026-11-13; `yarn hub:build`, `yarn sbp --profile all`, `yarn verify:baselines`,
+`yarn checkVersions --against main`):
+
+- **Section 1, the Hub.** The asset-optimization page's "Texture atlases" was four lines without
+  the runtime: it got an example JSON, cells and packing, `padding` and `fill`, the slot textures
+  (`<atlas>.<slot>`, listed by the atlas's id or a slot's), `getAtlasCell`, `sampleAtlasCell`,
+  `remapUVsToAtlasCell` and the JSON cell form; "Texture arrays" (there since Phase 2) the JSON
+  layer form, `getArrayLayerIndex` and an "Arrays or atlases?" tip; Key APIs both kinds'
+  functions. **Drift:** step 1 put D5's forms on the scenes-and-assets page, but the input forms'
+  table is the toolkit page's ("The inputs"): the two rows and a bullet (an array layer kept
+  through `.sample(uv)`, an atlas cell already a sample, `clampToCell`, the gather's checks) went
+  there. Scenes-and-assets: "A scene's textures" names both forms and quotes the gather's missing
+  layer error; the asset table's atlas row said "each a named slot" (a slot is a map type, a cell
+  an image), fixed. Search tags on both pages. The build's one warning, the search index over
+  450 KiB, was there before (581 → 583 KiB).
+- **Section 2, the docs.** `docs/techniques/asset-optimization.md`'s "Texture arrays and atlases"
+  (which one, an array, an atlas, codecs, sizes and budgets, at runtime), linked from the Hub
+  page's "Read more". `readme.md`: a "Texture arrays and atlases" Features line, the handbook
+  pointer in Example 3 and the test scenes' line. p303's grounding got Phase 5's forms and its
+  lazy-resolver pattern, which its SBP note now tries before a feature; p309's D1 slots used
+  settings the schema refuses (`colorSpace: SRGB` on a slot, `slot: data` resolving to codec
+  `none`) and "4×4 snapping" (rects are checked, not snapped), fixed, and D2 no longer asks
+  whether the helpers are on an entry. `devTools/gather/CLAUDE.md` (the two dependency functions,
+  `getInputRefError`) and `features/streaming/CLAUDE.md` (`addTextureRefs` reads a cell's slot).
+- **Section 3, budgets and versioning.** The app profile's three budgets that `main` failed
+  (`yarn sbp`: initial 398.7 KiB, `assets/index.js` 394.5, `_engine/kernel/assets` 13.7) were
+  raised to the next KiB (decided by the user: 398 → 399, 394 → 395, 13 → 14), the comments naming
+  p302 (about 0.5 KiB of each) and this plan (0.2). The banner and uiKit pass, their
+  `_engine/kernel/assets` at 11.0 KiB of 11 (no headroom left). The bundle, API and docs
+  baselines were recorded by Phase 5's last commit: `yarn verify:baselines` passes unchanged,
+  with no debug code in the three builds. The scene baselines were recorded by the user. Engine
+  6.11.0 → 6.12.0, app 1.24.2 → 1.24.3, `CHANGELOG.md`; p303 and p309 no longer list this plan
+  in `Blocked by`.
 
 ## 4. Versioning
 
-Engine minor (two asset types, runtime arrays, helpers, resolvers). No toolkit or app change.
+Engine minor (two asset types, runtime arrays, helpers, resolvers). No toolkit change. Phases 0-4 reached `main` with other branches; this plan's own branch (Phases 5-6) bumps the engine 6.11.0 → 6.12.0 and the app 1.24.2 → 1.24.3 (Phase 5's material JSONs in the two p299 scenes).
 
 ## 5. Risks
 

@@ -20180,6 +20180,27 @@
           "__codec": "uastc"
         }
       ],
+      "materials": [
+        {
+          "id": "p299ArrayLayerMat",
+          "debugData": {
+            "name": "Texture array layer check",
+            "description": "The texture array layer input (p299 D5): layer l1 of p299TestArray by its name on the left half, by its index on the right, both at the mesh's UV, so the halves meet."
+          },
+          "tslFile": "scenes/textureArrays/p299ArrayLayerMat.tsl.ts",
+          "inputs": {
+            "byName": {
+              "textureArray": "p299TestArray",
+              "layer": "l1"
+            },
+            "byIndex": {
+              "textureArray": "p299TestArray",
+              "layer": 1
+            }
+          },
+          "type": "BASICNODEMATERIAL"
+        }
+      ],
       "id": "textureArrays",
       "sceneFile": "./scenes/textureArrays/textureArrays.ts",
       "cameras": [
@@ -20695,6 +20716,24 @@
             "out": 49200
           },
           "__codec": "uastc"
+        }
+      ],
+      "materials": [
+        {
+          "id": "p299AtlasCellMat",
+          "debugData": {
+            "name": "Atlas cell check",
+            "description": "The atlas cell input (p299 D5): the checker cell of p299TestAtlas's albedo slot at the mesh's UV mapped into the cell's rect (clamped to it), no remapped UVs."
+          },
+          "tslFile": "scenes/textureAtlases/p299AtlasCellMat.tsl.ts",
+          "inputs": {
+            "cell": {
+              "atlas": "p299TestAtlas",
+              "slot": "albedo",
+              "cell": "checker"
+            }
+          },
+          "type": "BASICNODEMATERIAL"
         }
       ],
       "id": "textureAtlases",
@@ -31292,6 +31331,43 @@
       },
       "type": "BASICNODEMATERIAL",
       "__sourcePath": "src/app/scenes/testDebugScene/p302ChannelMat.material.json"
+    },
+    "p299ArrayLayerMat": {
+      "id": "p299ArrayLayerMat",
+      "debugData": {
+        "name": "Texture array layer check",
+        "description": "The texture array layer input (p299 D5): layer l1 of p299TestArray by its name on the left half, by its index on the right, both at the mesh's UV, so the halves meet."
+      },
+      "tslFile": "scenes/textureArrays/p299ArrayLayerMat.tsl.ts",
+      "inputs": {
+        "byName": {
+          "textureArray": "p299TestArray",
+          "layer": "l1"
+        },
+        "byIndex": {
+          "textureArray": "p299TestArray",
+          "layer": 1
+        }
+      },
+      "type": "BASICNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureArrays/p299ArrayLayerMat.material.json"
+    },
+    "p299AtlasCellMat": {
+      "id": "p299AtlasCellMat",
+      "debugData": {
+        "name": "Atlas cell check",
+        "description": "The atlas cell input (p299 D5): the checker cell of p299TestAtlas's albedo slot at the mesh's UV mapped into the cell's rect (clamped to it), no remapped UVs."
+      },
+      "tslFile": "scenes/textureAtlases/p299AtlasCellMat.tsl.ts",
+      "inputs": {
+        "cell": {
+          "atlas": "p299TestAtlas",
+          "slot": "albedo",
+          "cell": "checker"
+        }
+      },
+      "type": "BASICNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/textureAtlases/p299AtlasCellMat.material.json"
     },
     "asteroid": {
       "id": "asteroid",

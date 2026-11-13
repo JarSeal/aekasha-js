@@ -26,7 +26,7 @@ import type { Flags } from 'meshoptimizer/simplifier';
 import { createDrawsApi } from './_dbg__hlodSpikeDraws';
 import type { SpikeFrame } from './_dbg__hlodSpikeDraws';
 
-// p376 Phase 0's probe (docs/plans/p376_hlod-merged-cluster-proxies.md §3), `window.__aekHlod`,
+// p376 Phase 0's probe (docs/plans/_DONE_p376_hlod-merged-cluster-proxies.md §3), `window.__aekHlod`,
 // driven by `devTools/bench/hlodSpike.ts`. Shared by the scenes it measures (largeWorld,
 // testDebugScene), each loading it in the debug env and prod test mode.
 //

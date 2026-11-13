@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p299ArrayLayerMat",
+  "tslFile": "scenes/textureArrays/p299ArrayLayerMat.tsl.ts",
+  "type": "BASICNODEMATERIAL",
+  "inputs": {
+    "byName": { "textureArray": "p299TestArray", "layer": "l1" },
+    "byIndex": { "textureArray": "p299TestArray", "layer": 1 }
+  },
+  "debugData": {
+    "name": "Texture array layer check",
+    "description": "The texture array layer input (p299 D5): layer l1 of p299TestArray by its name on the left half, by its index on the right, both at the mesh's UV, so the halves meet."
+  }
+}

@@ -4,6 +4,43 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-13 — p299_texture-arrays-and-atlases
+
+The last two phases of texture arrays and atlases (p299; its Phases 0-4, the asset types, runtime arrays, helpers and debug views, reached `main` with earlier branches). A material JSON now samples an array layer or an atlas cell without TSL code, through two new input forms on p302's resolver registry. The resolvers load with the first array or atlas slot instead of in every build, and the gather checks each layer, slot and cell against its asset. The Hub, the asset handbook and the readme document both kinds.
+
+### Engine 6.12.0 (Sunset)
+
+**Added**
+
+- Two material input forms (in `inputs`, a `nodes` socket and their overrides): `{ "textureArray": "<id>", "layer": "<name>" | <index> }` samples a layer of a texture array at the mesh's UV and keeps it through `.sample(uv)`; `{ "atlas": "<id>", "slot": "<slot>", "cell": "<cell>", "clampToCell"?: boolean }` samples an atlas slot at the mesh's UV mapped into the cell's rect, half a texel inside it by default. Types `TextureArrayInputRef` and `AtlasCellInputRef` (`aekasha`). A layer, slot or cell the texture lacks, or a texture of another kind, throws naming the input; a texture that isn't loaded samples the white texel with its warning.
+- `TextureInputRefSchema`, `TextureArrayInputSchema` and `AtlasCellInputSchema` (`aekasha/schemas`): a material's `inputs` and `nodes` check an object with a `texture`, `textureArray` or `atlas` key against its form (an unknown key fails), and the JSON Schema offers the three forms to the editors.
+
+**Changed**
+
+- The two resolvers are a lazy chunk (0.7 kB gzip), imported and registered by the first texture array or atlas slot load (`loadTextureAsync`, `buildTextureArray`). The forms' dependency functions are built in, so `ensureMaterialDependencies` and the material editor load an array or a slot before the resolvers exist. Without them, the material input path samples the white texel and names the missing texture, instead of failing on an unknown object.
+- `TextureArray.js` and `TextureAtlas.js` are chunks of their own in the app (out of `MergeMaterialRegister.js`). The kernel's assets group grows 0.2 kB gzip in every build.
+
+### App 1.24.3 (Preschooler)
+
+**Changed**
+
+- textureArrays: `p299ArrayLayerMat`, a `setup` material whose inputs are the same layer of `p299TestArray` by name and by index, its halves side by side, drawn beside the layer sampled from code.
+- textureAtlases: `p299AtlasCellMat`, the `checker` cell of `p299TestAtlas`'s albedo slot as an input, drawn next to the same cell sampled from code (`addMaterialQuad`, split out of `addQuad`).
+
+### Project
+
+**Added**
+
+- The gather's texture closure adds the array or atlas slot a material input names, and fails on a layer name or index the array doesn't have, an atlas, slot or cell that doesn't exist, or an id of another kind of texture, naming the material, the input and what the asset has. The streaming manifest moves a cell-only material's atlas slot into its cell.
+
+**Changed**
+
+- `.schemas/`: `material`, `mesh` and `scene` regenerated.
+- The Hub: the asset-optimization page's texture atlases (the format, the slot textures, the runtime helpers) and arrays (the JSON form, which to use), the toolkit page's input forms, the scenes-and-assets page's asset table and "A scene's textures".
+- `docs/techniques/asset-optimization.md`: "Texture arrays and atlases" (which to use, both formats, codecs, sizes and budgets). `readme.md`: a Features line. The gather and streaming `CLAUDE.md`.
+- `sbp.config.ts`: the app profile's initial (398 → 399 KiB), `assets/index.js` (394 → 395 KiB) and `_engine/kernel/assets` (13 → 14 KiB) budgets, over since p302 (initial 398.7 KiB, about 0.2 of it this branch's). The bundle, API and docs baselines.
+- The plans: p299 done, and with it its epic p370 (static mesh merging and texture atlases: every child done) and p376 (its Phase 0 kept, the proxies not adopted); p303 and p309 no longer wait on p299, p303 has its lazy-resolver pattern, and p309's decal atlas settings are fixed to what the atlas schema takes.
+
 ## 2026-11-13 — p302_material-and-texture-system-refactor
 
 The material and texture system refactor (p302), the engine changes the terrain texturing epic (p301) needs, each general-purpose. A TSL material can build every socket from one graph (a `setup` export with shared `inputs`), so a texture used by several sockets is sampled once; code can register a graph without a TSL file; new input forms plug in through a resolver registry instead of edits to the material code; the texture JSON gets three's remaining options and named constants; and the gather adds a scene's material textures to its `textures`, so a scene lists a material without its textures. Nothing breaks existing JSON. The plan's two bugs (a missing texture, a revisited scene's material params) shipped with p613. Variants stay full materials: three r187's `NodeMaterialInstance` would save a CPU node build per variant but no GPU pipeline (variants already share one), so it's a follow-up (p990).

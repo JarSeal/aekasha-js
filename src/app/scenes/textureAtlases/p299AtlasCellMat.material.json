@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p299AtlasCellMat",
+  "tslFile": "scenes/textureAtlases/p299AtlasCellMat.tsl.ts",
+  "type": "BASICNODEMATERIAL",
+  "inputs": {
+    "cell": { "atlas": "p299TestAtlas", "slot": "albedo", "cell": "checker" }
+  },
+  "debugData": {
+    "name": "Atlas cell check",
+    "description": "The atlas cell input (p299 D5): the checker cell of p299TestAtlas's albedo slot at the mesh's UV mapped into the cell's rect (clamped to it), no remapped UVs."
+  }
+}

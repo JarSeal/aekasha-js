@@ -11,6 +11,7 @@ import {
   createLightEntity,
   saveMaterial,
   createMeshEntity,
+  getMaterial,
   getGeneratedSceneData,
   type ScenePrimitiveAssets,
   getTexture,
@@ -52,7 +53,9 @@ import {
  *   to the cell (its edge texels stretched out) and not (its padding, then its neighbours).
  * - column 6 (between the slots), lit: a sphere remapped into the checker cell
  *   (`remapUVsToAtlasCell`, a clone) with the albedo slot as its `map`, the same sphere with the
- *   cell's source file, and a box remapped in place into the metal cell.
+ *   cell's source file, and a box remapped in place into the metal cell. Rows 4 and 5 (Phase 5):
+ *   the material JSON `p299AtlasCellMat` (the checker cell through the atlas cell input, no
+ *   sampling code), then the same cell through `sampleAtlasCell` (the two match).
  * A cell's quads have its content's aspect.
  *
  * Off to the side, with its own camera ("Ready-made image atlas"): the `p299TestAtlasImage` asset,
@@ -150,6 +153,18 @@ const addQuad = (
   const mat = new THREE.MeshBasicNodeMaterial();
   mat.colorNode = colorNode;
   saveMaterial(mat, `textureAtlases/${name}`);
+  addMaterialQuad(name, mat, row, col, aspect, origin);
+};
+
+/** A quad of a material made elsewhere (a material JSON's), placed as {@link addQuad} places its */
+const addMaterialQuad = (
+  name: string,
+  mat: THREE.Material,
+  row: number,
+  col: number,
+  aspect = 1,
+  origin = { x0: X0, y0: Y0 }
+) => {
   const scale = aspect >= 1 ? { x: 1, y: 1 / aspect } : { x: aspect, y: 1 };
   const x = origin.x0 + col * CELL;
   const y = origin.y0 - row * CELL;
@@ -501,6 +516,20 @@ const checkErrors = async () => {
 };
 
 /** Phase 4's lookups and sampleAtlasCell's errors. */
+/** Phase 5's exit: the material JSON samples the checker cell (`{ "atlas", "slot", "cell" }`,
+ * resolved by the engine), next to the same cell through `sampleAtlasCell` on the same quad. */
+const addJsonMaterialQuads = (albedo: THREE.Texture) => {
+  const mat = existsOrThrow(getMaterial('p299AtlasCellMat'), 'No p299AtlasCellMat material.');
+  const [w, h] = existsOrThrow(getAtlasCell(albedo, 'checker'), 'No checker cell.').size;
+  addMaterialQuad('json_checker', mat, 4, LIT_COLUMN, w / h);
+  addQuad('json_checker_code', sampleAtlasCell(albedo, meshUv(), 'checker'), 5, LIT_COLUMN, w / h);
+  const node = (mat.userData.uniforms as Record<string, THREE.TextureNode | undefined>).setup_cell;
+  state.results.jsonMaterial = {
+    isAlbedoSlot: node?.value === albedo,
+    hasCellUv: Boolean(node?.uvNode),
+  };
+};
+
 const checkHelpers = (albedo: THREE.Texture) => {
   const { results } = state;
   const plain = existsOrThrow(getTexture('textureAtlases/albedo_red'), 'No red source texture.');
@@ -545,6 +574,7 @@ const build = async (assets: ScenePrimitiveAssets) => {
   await checkErrors();
   checkHelpers(slotTextures[0]);
   buildRemappedMeshes(slotTextures[0]);
+  addJsonMaterialQuads(slotTextures[0]);
   return { slotTextures, imageSlotTextures };
 };
 

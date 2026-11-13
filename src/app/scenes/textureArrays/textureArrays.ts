@@ -11,6 +11,7 @@ import {
   saveMaterial,
   createMeshEntity,
   getRenderer,
+  getMaterial,
   type ScenePrimitiveAssets,
   getTexture,
   loadTextureAsync,
@@ -57,6 +58,9 @@ import {
  * - column 5, rows 0-1: the one-layer `p299TestArray1` asset, then its file.
  * - column 6, rows 2-4, lit spheres: the asset's `testTexture` layer (`sampleArrayLayer` as the
  *   material's `colorNode`), its source file as a plain `map`, and layer s2 of row 0's array.
+ * - column 6, row 1: the material JSON `p299ArrayLayerMat` (Phase 5): the asset's layer l1 by
+ *   name (left half) and by index (right half) through the texture array layer input, no sampling
+ *   code; it matches column 4, row 3 (`sampleArrayLayer`, the same quad).
  * Every array quad samples through `sampleArrayLayer` (Phase 4).
  *
  * `window.__textureArrays` holds the checks' results (`results.done` once the swaps ran) and
@@ -155,6 +159,26 @@ const buildLitSpheres = (memberIds: string[]) => {
   addLitSphere('lit_runtimeLayer', 4, {
     node: sampleArrayLayer(arrays.registered, meshUv(), memberIds[2]) as unknown as Node<'vec4'>,
   });
+};
+
+/** Phase 5's exit: the material JSON samples an array layer by name and by index, its two
+ * inputs resolved by the engine (`{ "textureArray", "layer" }`). */
+const addJsonMaterialQuad = () => {
+  const mat = existsOrThrow(getMaterial('p299ArrayLayerMat'), 'No p299ArrayLayerMat material.');
+  const { x, y } = state.cellCenter(1, 6);
+  createMeshEntity(
+    { geo: quadGeo, mat, position: { x, y, z: Z } },
+    { appId: 'textureArrays_jsonMaterial' }
+  );
+  const uniforms = mat.userData.uniforms as Record<string, THREE.TextureNode | undefined>;
+  const describeInput = (node: THREE.TextureNode | undefined) => ({
+    isAssetArray: node?.value === state.arrays.asset,
+    layer: (node?.depthNode as { value?: unknown } | null | undefined)?.value ?? null,
+  });
+  state.results.jsonMaterial = {
+    byName: describeInput(uniforms.setup_byName),
+    byIndex: describeInput(uniforms.setup_byIndex),
+  };
 };
 
 const describeArray = (array: TextureArray) => {
@@ -331,6 +355,7 @@ const build = async (assets: ScenePrimitiveAssets) => {
   }
 
   await buildAssetColumns(assets);
+  addJsonMaterialQuad();
   checkHelpers(memberIds, testTexture);
   buildLitSpheres(memberIds);
 

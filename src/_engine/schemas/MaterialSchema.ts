@@ -15,22 +15,119 @@ const ThreeJsParamsSchema = z
     "That three material's parameters by name (color, roughness, …); a texture map key (map, normalMap, …) takes a texture's id."
   );
 
-const TslNodeInputsSchema = z.record(z.string(), z.any());
+/**
+ * A TSL input's object-form texture ref (p302 D4): `{ "texture": "id" }` is the texture node a bare
+ * id makes, `"channel"` the sample's channels (`TextureInputRef` on `aekasha`).
+ */
+export const TextureInputRefSchema = z
+  .object({
+    /** The texture's id. */
+    texture: z.string().describe("The texture's id."),
+    /** One to four of `r`, `g`, `b`, `a`: the sample's channels (a swizzle), instead of the
+     * texture node. */
+    channel: z
+      .string()
+      .regex(/^[rgba]{1,4}$/, 'one to four of r, g, b and a')
+      .optional()
+      .describe("One to four of r, g, b, a: the sample's channels, instead of the texture node."),
+  })
+  .strict()
+  .describe("A texture ref: the texture node, or with channel its sample's channels (eg. r, rgb).");
+
+/**
+ * A TSL input's texture array layer (p299 D5): `{ "textureArray": "id", "layer": "rock" }` is that
+ * layer sampled at the mesh's UV (`TextureArrayInputRef` on `aekasha`).
+ */
+export const TextureArrayInputSchema = z
+  .object({
+    /** The texture array's id (a `*.textureArray.json`). */
+    textureArray: z.string().describe("The texture array's id (a *.textureArray.json)."),
+    /** The layer: its index, or its name (a texture layer's id, a file layer's name without its
+     * extension). */
+    layer: z
+      .union([z.number().int().min(0), z.string()])
+      .describe(
+        "The layer: its index, or its name (a texture layer's id, a file layer's name without its extension)."
+      ),
+  })
+  .strict()
+  .describe("A texture array's layer, sampled at the mesh's UV.");
+
+/**
+ * A TSL input's atlas cell (p299 D5): `{ "atlas": "id", "slot": "albedo", "cell": "fern" }` is the
+ * slot sampled at the mesh's UV mapped into the cell's rect (`AtlasCellInputRef` on `aekasha`).
+ */
+export const AtlasCellInputSchema = z
+  .object({
+    /** The atlas's id (a `*.textureAtlas.json`). */
+    atlas: z.string().describe("The atlas's id (a *.textureAtlas.json)."),
+    /** The slot sampled (a key of the atlas's `slots`). */
+    slot: z.string().describe("The slot sampled (a key of the atlas's slots)."),
+    /** The cell's id. */
+    cell: z.string().describe("The cell's id."),
+    /** Keeps the sample half a texel inside the cell's content rect, so a bilinear tap never
+     * reaches past its edge texels. Default true. */
+    clampToCell: z
+      .boolean()
+      .optional()
+      .describe("Keeps the sample half a texel inside the cell's rect. Default true."),
+  })
+  .strict()
+  .describe("An atlas slot's cell, sampled at the mesh's UV mapped into the cell's rect.");
+
+/** The object forms, by the key that marks each (the runtime's resolvers match the same key) */
+const INPUT_REF_FORMS = [
+  ['texture', TextureInputRefSchema],
+  ['textureArray', TextureArrayInputSchema],
+  ['atlas', AtlasCellInputSchema],
+] as const;
+
+/**
+ * An input group's values (`inputs`, a socket of `nodes`): a value with a form's key (`texture`,
+ * `textureArray`, `atlas`) is checked against that form, its issues at its path; any other value
+ * passes (a colour, a number, a vector, an app resolver's form). `staticDefines` isn't an input.
+ */
+const checkInputRefs = (inputs: Record<string, unknown>, ctx: z.RefinementCtx) => {
+  for (const [key, value] of Object.entries(inputs)) {
+    if (key === 'staticDefines' || typeof value !== 'object' || value === null) continue;
+    const form = INPUT_REF_FORMS.find(([formKey]) => formKey in value);
+    if (!form) continue;
+    const result = form[1].safeParse(value);
+    if (result.success) continue;
+    for (const issue of result.error.issues) {
+      ctx.addIssue({ ...issue, path: [key, ...issue.path] } as z.core.$ZodRawIssue);
+    }
+  }
+};
+
+// An input value's JSON Schema offers the object forms, then any value: what validates is
+// `checkInputRefs`. `any`, not `unknown`, for `nodes` (its socket functions' inputs, typed by the
+// runtime's `MatProps`).
+const TslNodeInputsSchema = z
+  .record(
+    z.string(),
+    z.union([TextureInputRefSchema, TextureArrayInputSchema, AtlasCellInputSchema, z.any()])
+  )
+  .superRefine(checkInputRefs);
 
 const StaticDefinesSchema = z
   .record(z.string(), z.any())
   .describe('Build-time flags the TSL file branches on: another set is another shader.');
 
 const InputsSchema = z
-  .record(z.string(), z.unknown())
+  .record(
+    z.string(),
+    z.union([TextureInputRefSchema, TextureArrayInputSchema, AtlasCellInputSchema, z.unknown()])
+  )
+  .superRefine(checkInputRefs)
   .describe(
-    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
   );
 
 const NodesSchema = z
   .record(z.string(), TslNodeInputsSchema)
   .describe(
-    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
+    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
   );
 
 const MaterialOverridesSchema = z.object({
@@ -112,9 +209,11 @@ const TslMaterialSchema = MaterialBaseProps.extend({
   /** Per socket, its inputs: each becomes a node the file's socket function gets (as `inputs`). */
   nodes: NodesSchema.optional(),
   /** The inputs of the file's `setup` function, which sets any sockets from one graph: a texture
-   * id (or `{ "texture": id, "channel": "r" }`, its sample's channels) becomes a texture node, a
-   * form a registered input resolver takes its node or bundle (`registerMaterialInputResolver`),
-   * any other value a uniform. `setup` runs before the `nodes` sockets' functions. */
+   * id (or `{ "texture": id, "channel": "r" }`, its sample's channels) becomes a texture node,
+   * `{ "textureArray": id, "layer": … }` an array layer's sample and `{ "atlas": id, "slot": …,
+   * "cell": … }` an atlas cell's (both at the mesh's UV), a form a registered input resolver
+   * takes its node or bundle (`registerMaterialInputResolver`), any other value a uniform.
+   * `setup` runs before the `nodes` sockets' functions. */
   inputs: InputsSchema.optional(),
   /** A node material type: three's node material of that name, with the TSL file's sockets. */
   type: z
