@@ -234,7 +234,7 @@
       "additionalProperties": false
     },
     "__schema16": {
-      "description": "The id of a texture the scene lists, for the background (over backgroundColor).",
+      "description": "A texture id for the background (over backgroundColor). The gather adds it to textures when it isn't listed.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema17"
@@ -1501,7 +1501,7 @@
       "type": "number"
     },
     "__schema125": {
-      "description": "The cookie: the id of a texture the scene loads.",
+      "description": "The cookie: a texture id, added to the scene's textures when it isn't listed.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema126"
@@ -2493,7 +2493,7 @@
       "type": "boolean"
     },
     "__schema188": {
-      "description": "Texture, texture array or atlas ids, or inline textures of src/public files.",
+      "description": "Texture, texture array or atlas ids, or inline textures of src/public files. The gather adds the ones the scene's materials, spot cookies and backgroundTexture name.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema189"

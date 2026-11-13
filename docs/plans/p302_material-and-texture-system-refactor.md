@@ -1,4 +1,4 @@
-Status: in progress | Phases 1 and 3-5 implemented (Phase 2 by p613)
+Status: in progress | Phases 1 and 3-6 implemented (Phase 2 by p613)
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -473,11 +473,39 @@ As built (2026-11-13; section 1 is commit `f2aea472`, section 2 `2eb4cbae`):
   runner wasn't run: `sceneTestECS`' and `testDebugScene`'s baselines need `--update` since
   Phases 3-4 anyway, before the PR.
 
-### Phase 6 — Hub and docs
+### Phase 6 — Hub and docs — done
 
 1. The Hub: the toolkit page's "Writing a TSL material" (`hub/pages/features/toolkit/guide.md`: the `setup` entry and `inputs`, runtime registration, the resolver forms) and the scenes-and-assets page (`hub/pages/features/scenes-and-assets/guide.md`: the texture JSON's new fields, the dependency closure); `yarn hub:build`.
 2. `devTools/gather/CLAUDE.md`'s data pipeline section (the texture closure, `textureClosure.ts`, the scene pass's order) and `src/_engine/kernel/scene/CLAUDE.md`'s Scene loads (a scene's `textures` includes the closure; `loadNextSceneAssets` itself didn't change); `src/_engine/debug/editors/CLAUDE.md`'s Material editor (its textures through `ensureMaterialDependencies`); the root `CLAUDE.md` only if its data pipeline outline changes. `readme.md` if its material example changes.
 3. The schemas' docs (both layers, "From p619"): `SceneSchema.ts`' `textures` (the gather adds the textures the scene's materials, spot cookies and background name) and `backgroundTexture` ("a texture the scene lists" no longer needed), `LightSchema.ts`' `map`; `.schemas/` regenerated.
+
+As built (2026-11-13; section 1 is commit `a6194b74`, section 2 `9116a7ab`):
+
+- **The toolkit page's "Writing a TSL material"** has five parts: One graph: `setup`
+  (`testTslMat`'s JSON and TSL file included whole), A function per socket (the checkerboard,
+  the order with both, the grid's and the asteroid's workarounds named the older way), The inputs
+  (a table of every form, the object-form texture ref and a resolver's included; the cached keys,
+  the white texel, the variants' one-level merge, `TextureNode` typing), Loading
+  (`ensureMaterialDependencies`, the production limit) and Graphs and input forms from code.
+- **A Hub include in app code:** the last part shows `testDebugScene.ts`' gradient resolver and
+  graph and their registration through two regions, `tsl-from-code` and `tsl-from-code-use`
+  (each naming the page), instead of a copy.
+- **The scenes-and-assets page:** a Textures section (the new `texOpts`, the named constants,
+  `flipY: false`, `isPersistent`) and The gatherer's "A scene's textures" (the closure, the
+  gather's error text, when a scene still lists a texture); its Key APIs and the code-loading
+  paragraph name `ensureMaterialDependencies` where they named `loadTslMaterialFileAsync`.
+- **Two more pages than the plan named:** the ECS page's Features section names
+  `registerMaterialInputResolver` among the `FeatureContext` seams, and the streaming page's
+  "a material's texture maps" is "a material's textures" (the manifest reads `inputs`).
+- **The CLAUDE.md files:** `devTools/gather/CLAUDE.md` (`textureClosure.ts`, the scene pass's
+  order, the manifest's `inputs`), `src/_engine/kernel/scene/CLAUDE.md`'s Scene loads (the
+  closure in `textures`, `ensureMaterialDependencies`), `src/_engine/debug/editors/CLAUDE.md`'s
+  Material editor (its textures through `ensureMaterialDependencies`; and the Params tab's
+  read-only object-form values, which Phase 4 hadn't written down). The root's data pipeline
+  outline got one sentence (a scene lists a material without its textures). `readme.md` is
+  unchanged: its material and texture examples didn't change, and its Features list has no
+  materials bullet.
+- **Checks:** `yarn hub:build` (no warnings), `yarn test`, `yarn verify:baselines --docs`.
 
 ### Phase 7 — Versioning
 

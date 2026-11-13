@@ -664,7 +664,7 @@
       "type": "number"
     },
     "__schema49": {
-      "description": "The cookie: the id of a texture the scene loads.",
+      "description": "The cookie: a texture id, added to the scene's textures when it isn't listed.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema50"

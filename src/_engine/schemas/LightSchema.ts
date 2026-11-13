@@ -104,8 +104,12 @@ const LIGHT_FIELDS = {
   shadowRadius: z.number().optional().describe("Over the preset: the soft shadow's blur radius."),
   /** How dark the shadow is, 0-1. Default 1. */
   shadowIntensity: z.number().optional().describe('How dark the shadow is, 0-1. Default 1.'),
-  /** A spot light's cookie: the id of a texture the scene loads. */
-  map: z.string().optional().describe('The cookie: the id of a texture the scene loads.'),
+  /** A spot light's cookie: a texture id. The gather adds it to the scene's `textures` when the
+   * scene doesn't list it. */
+  map: z
+    .string()
+    .optional()
+    .describe("The cookie: a texture id, added to the scene's textures when it isn't listed."),
 };
 
 type LightField = keyof typeof LIGHT_FIELDS;
