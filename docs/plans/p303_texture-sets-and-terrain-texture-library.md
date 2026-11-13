@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -203,6 +203,8 @@ These are candidates checked against the providers' APIs (2026-10-02): the ids e
 | `concrete02` | damaged concrete                   | `Concrete044D`      | —                        | 2 m                | C N R AO H M | Structures                                          |
 
 Map key: C colour, N normal (GL), R roughness, AO ambient occlusion, H height/displacement, M metalness (ignored).
+
+**As picked (Phase 4):** `mud01` is Poly Haven `brown_mud_02` (1.3 m), `rocks02` Poly Haven `brown_mud_rocks_01` (1.3 m), `cliffs02` ambientCG `Rock058`, `ice02` ambientCG `Ice003`; the rest as above. No 2K LITE of `cliffs01`. Each set's `heightScale` and `surface` are in its JSON (Phase 4 section 2's "As built" says how they were chosen); the shipped sizes are in section 3's.
 
 **What ships:**
 
@@ -469,7 +471,7 @@ As built (2026-11-13; `yarn test` (3,576), `tsc` both, lint, `yarn verify:baseli
 - **The release:** leaving the scene released both set arrays and all 22 p303 textures (`checkReleaseAsync`, extended to the eight sets and the arrays).
 - Docs: `features/texturesets/CLAUDE.md` (the verification scene and the measure).
 
-### Phase 4 — The library (D6)
+### Phase 4 — The library (D6) — done
 
 1. Create the 16 set folders (`source.json`, set JSON; the texture JSONs by `yarn fetchTextureSources --scaffold`, Phase 2 section 2; `sand01` exists).
 2. Fetch, choose by eye, tune `physicalSize` / `heightScale` / `surface`, and the cavity AO of the sets without an AO map (`ice01`, `ice02`, `concrete01`: Phase 2 section 3 fitted its defaults on one sand scan).
@@ -520,10 +522,28 @@ As built (2026-11-13; `yarn test` (3,629), `yarn gatherAppData`: no warning, eve
 - **The dev server's gather encodes as files change:** the outputs of the swapped and re-tuned recipes beside the stale ones; section 3's `yarn assets` prunes those.
 - For Phase 6's handbook: choosing `heightScale` by the normal-map fit, the cavity strengths per material, and a tint that only darkens.
 
+#### Section 3: Encode and the exit — done
+
+As built (2026-11-13; a full `yarn assets`: 96 assets, 84 cache hits (the dev server's gather had encoded every recipe as its files changed), 11 stale outputs pruned with their lock entries, the swapped primaries' and the re-tuned recipes' first encodes, committed in sections 1 and 2; `yarn gatherAppData`: no warning):
+
+- **The exit, in a browser:** a scratch Playwright script against the dev server (`?isDebug=true&aekTest=true&startScene=textureSets`, the app's own module instances found as the memory note says) ran `loadTextureSetAsync(id, { packing })` for every set and packing, then `getTextureSetPackingTextures` and `renderer.initTexture` per slot. **22 of 22 loaded** on WebGPU (Chrome, Apple GPU) and on WebGL2 (SwiftShader): every slot a KTX2 transcoded to ASTC 4 × 4 (format 37808) with its full chain of 11 mip levels, `srgb` on the albedo slots only, `concrete01` 1024 × 512; 12-43 ms a packing (the first ≈ 1 s on WebGL2: the transcoder's start). No error; the warnings are a WASM module's deprecated init parameters and, on WebGL2, the `textureSets` scene's own snapshot `ReadPixels`.
+- **The sizes** (the pipeline's figures; the VRAM is the transcoded format's, 1 byte a texel for ASTC 4 × 4 and BC7, so 1,398,128 B a 1024² map with mips, what the browser got):
+
+  | | Disk (KTX2, Zstd) | VRAM |
+  | --- | --- | --- |
+  | A LITE set (1024²) | 1.4-2.5 MB | 2.67 MB |
+  | `concrete01` LITE (1024 × 512) | 0.95 MB | 1.33 MB |
+  | `FULL` / `MINIMAL` (`sand01`, `grass01`, `cliffs01`) | 2.6-3.6 / 0.8-1.3 MB | 4.00 / 1.33 MB |
+  | **The 16 LITE sets** | **32.9 MB** | **41.3 MB** |
+  | **Every output** (+ the three sets' `FULL` and `MINIMAL`) | **45.6 MB** | **57.3 MB** |
+
+  D6's "≈ 2.7 MB of VRAM per set" holds; its disk estimate (≈ 0.9 MB a map) was low, as section 1 found. A terrain material samples only its layers' sets: four LITE layers are ≈ 10.7 MB of VRAM.
+- Not run: `yarn sbp` and the scene runner (no code changed, and no shipped scene names a library set: a production build copies none of these outputs, `assetOutputsBuildPlugin`).
+
 ### Phase 5 — Baseline material and gallery skeleton (D7, D8)
 
 1. The toolkit's `terrain` category (p301 §2; the first code in it): its entry `src/toolkit/terrain/index.ts` (named `export … from` lines only), `TOOLKIT_CATEGORIES` in `eslint.config.js`, the alias in `devTools/aliases.ts` and `tsconfig.json`'s `paths` (`aliases.test.ts` checks the copy), its folders' rules in `devTools/layout/layoutRules.ts`' `getToolkitRules`, a row in the Hub's entry table (`hub/pages/documentation/intro.md`), the API baseline (`yarn verify:baselines --update`).
-2. `textureSetSurface` + `sampleTextureSet` (summary and `@example`, a `*.test.ts` for what runs in Node).
+2. `textureSetSurface` + `sampleTextureSet` (summary and `@example`, a `*.test.ts` for what runs in Node). From Phase 4: clamp `roughness × roughnessScale` to 1 (`grass01`'s scale is 2.5); MINIMAL's bump in metres is the unnormalized form (`features/texturesets/CLAUDE.md`'s trap); the sets' `tint` is below white on `snow01`, `snow02` and `concrete01`, so the gallery shows it applied.
 3. `terrainGallery` scene and tab; a `devTools/verify/scenes.config.ts` entry if the scene runner needs settings for it.
 
 **Exit:** 16 blocks render with correct scale and orientation (no mirrored normals, sun-lit relief matches light direction), on both backends.

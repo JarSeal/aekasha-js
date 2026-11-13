@@ -116,35 +116,6 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "252a354f8d0f55662c3065eb5b42013c2910cbb3a532cb89563f4d3e5eaa1c0d"
     },
-    "0a79a52e737851b70d87d58f835b3d3017576c11ea03868e9d9ba3baeda22250": {
-      "source": "src/toolkit/textures/ice02/ice02_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/ice02/ice02_albedoRough.pack.b4bffa6c.ktx2",
-      "bytes": 900679,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 900679,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 6347371
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.0672,
-            0.0965,
-            0.0981
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "996e1b5ca2b6cb1be34d0949148e957d932ae8132bb8cd948486f728759226c4"
-    },
     "0ac6f830e69084ed8623b5ca09b726fb7e60ea25e9e64da3b39cf0310df00b3c": {
       "source": "src/app/scenes/textureSets/source/bricks/normalHeight.png",
       "url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
@@ -302,30 +273,6 @@
         "out": 117248
       }
     },
-    "1adee16ab981bfe03c1f2d2f765b87ddf94fdf2f2d07c29da3829907805ebd95": {
-      "source": "src/toolkit/textures/ice02/ice02_normalHeight.texture.json",
-      "url": "/aek-assets/toolkit/textures/ice02/ice02_normalHeight.pack.65e1906a.ktx2",
-      "bytes": 815508,
-      "textures": [
-        {
-          "slot": "data",
-          "bytes": 815508,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 6835506
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": false,
-          "mipmaps": true,
-          "normalMode": false
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "2a97b34301e338e913018c4d3f40b32bba354a0078c6843e0e34d852e929299c"
-    },
     "1b3b7e914756e85da87ae26846e38db7a1d1605fb9cf5733bfd35fc063e51df1": {
       "source": "src/app/scenes/lodShowcase/lodShowcaseKnotImpostor.textureAtlas.json",
       "url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseKnotImpostor.atlas.albedo.0d91eb26.ktx2",
@@ -372,35 +319,6 @@
         }
       ],
       "ktxVersion": "4.4.2"
-    },
-    "21f15dd588f9b6312f8fcf96976208595ba1f14f7070ab4d24aafb092eb64c74": {
-      "source": "src/toolkit/textures/rocks02/rocks02_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/rocks02/rocks02_albedoRough.pack.06dc9cbb.ktx2",
-      "bytes": 1297073,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 1297073,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 12997358
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.1501,
-            0.0996,
-            0.0258
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "252a354f8d0f55662c3065eb5b42013c2910cbb3a532cb89563f4d3e5eaa1c0d"
     },
     "2528000093f37ba9713d8f005549c2a4f81e4a050bebee9b7ee48f042d4447de": {
       "source": "src/toolkit/textures/mud01/mud01_normalHeight.texture.json",
@@ -502,35 +420,6 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "d95833b37d37475e521c63c9f11888155e2f0f8a0ce0411fc20ed3eb41a10da9"
-    },
-    "322384a144f78fce1b14afab87b814366b92043691381663d0cf2093f356743e": {
-      "source": "src/toolkit/textures/cliffs02/cliffs02_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_albedoRough.pack.c88daff8.ktx2",
-      "bytes": 1165675,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 1165675,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 10215497
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.0069,
-            0.0126,
-            0.0149
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "4305e884d6a163b13fe916753bac36c970ca512f3e98db6ee063ca18dbbd6226"
     },
     "34b95eeb611e989360c240752fb09058e53dfb64822fb5937870cec60d8cbce4": {
       "source": "src/app/scenes/mergeMaterials/source/ruinStone_albedo.png",
@@ -892,35 +781,6 @@
       ],
       "ktxVersion": "4.4.2"
     },
-    "53e5bb4ff7fe92582d8348340faf2015011bec6d234ce0c5d03683c317aca54a": {
-      "source": "src/toolkit/textures/concrete01/concrete01_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/concrete01/concrete01_albedoRough.pack.70b98723.ktx2",
-      "bytes": 431686,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 431686,
-          "source": {
-            "width": 2048,
-            "height": 1024,
-            "bytes": 2607993
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 512,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.4601,
-            0.4601,
-            0.4601
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "858fe078b0b49c1343c53e98bde1ca5c381c0dceb0925ffa7d211d575fa58245"
-    },
     "54c875ba557cbede620f15469ba08250d75557a0f8d8d1dc662919dece9c93d6": {
       "source": "src/app/scenes/mergeMaterials/source/ruinBrick_roughness.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_roughness.c75b87c4.ktx2",
@@ -944,30 +804,6 @@
       ],
       "ktxVersion": "4.4.2"
     },
-    "592cdce9ed2b0e233ceaa218f6befb00eeb2e805034e124e980a06f4bca3cb26": {
-      "source": "src/toolkit/textures/cliffs02/cliffs02_normalHeight.texture.json",
-      "url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_normalHeight.pack.91466161.ktx2",
-      "bytes": 1332823,
-      "textures": [
-        {
-          "slot": "data",
-          "bytes": 1332823,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 11099472
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": false,
-          "mipmaps": true,
-          "normalMode": false
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "4624fc4b86a1907a1cce915f083c99adc3022f95fd77ce410ab71e4644f4353a"
-    },
     "5bd3a819aee6b6653f94131616f0f1680c47e916005a84827e8d13b375507b6a": {
       "source": "src/app/scenes/mergeMaterials/source/ruinMoss_albedo.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinMoss_albedo.064dc521.ktx2",
@@ -990,35 +826,6 @@
         }
       ],
       "ktxVersion": "4.4.2"
-    },
-    "5ea8352ab9db461c7a1f5ed1dd021e617c8c421d6f3a447ab3362abee1c4f488": {
-      "source": "src/toolkit/textures/ice02/ice02_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/ice02/ice02_albedoRough.pack.9c404b57.ktx2",
-      "bytes": 1015797,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 1015797,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 7161665
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.1951,
-            0.2458,
-            0.2404
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "996e1b5ca2b6cb1be34d0949148e957d932ae8132bb8cd948486f728759226c4"
     },
     "625796df162acb31ae756dc7e35bb12bc776af88a9665db74ca3a959c84ccafb": {
       "source": "src/toolkit/textures/grass01/grass01_albedoHeightAO.texture.json",
@@ -1049,30 +856,6 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "4f4a628f3c1cc8cab68f8410d640c1a6fcbc1ba61adb93ab6329ecd69bdf07e2"
     },
-    "629301df29d3beaf2896be030a7b5f3286e76e0ce7c5c6cac5590b34500b7f62": {
-      "source": "src/toolkit/textures/rocks02/rocks02_normalHeight.texture.json",
-      "url": "/aek-assets/toolkit/textures/rocks02/rocks02_normalHeight.pack.dcee1d3c.ktx2",
-      "bytes": 1285839,
-      "textures": [
-        {
-          "slot": "data",
-          "bytes": 1285839,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 11216382
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": false,
-          "mipmaps": true,
-          "normalMode": false
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "1f5e77400a34da90d5a42db50d4b18c84fee3b56e4636f42707cf68abf579f30"
-    },
     "68971abe800f1b2e9de967f143cbd3c7d2e41fbb71cc7f7a060b5636d46e2ced": {
       "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_albedo.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinPlaster_albedo.ae174de6.ktx2",
@@ -1095,35 +878,6 @@
         }
       ],
       "ktxVersion": "4.4.2"
-    },
-    "69ef0e635d4d4d6572f68e041031cc9063726fc152042bf6307a164f7bb12944": {
-      "source": "src/toolkit/textures/ice01/ice01_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/ice01/ice01_albedoRough.pack.52fd010d.ktx2",
-      "bytes": 1056943,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 1056943,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 7405602
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.1121,
-            0.1758,
-            0.1456
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "8af512c32d6982689bc52affb260e0b2cf3f59a6299fe9a94490aec5a2562a02"
     },
     "69ef1927a93246f41a9eecae819298af00fcaf343676099247cf0c41c68ec6c1": {
       "source": "src/toolkit/textures/concrete02/concrete02_normalHeight.texture.json",
@@ -1177,30 +931,6 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "86dc2572a0a4070fa7c20657cb744bc1bbaedb08f650faa76f52b0595f88ca5e"
-    },
-    "70c316f464b8b9770f5ef98d3811b33f8dc33a1ee82d32248e4db721c9e8c018": {
-      "source": "src/toolkit/textures/mud01/mud01_normalHeight.texture.json",
-      "url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.0bfc2659.ktx2",
-      "bytes": 1304190,
-      "textures": [
-        {
-          "slot": "data",
-          "bytes": 1304190,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 11203761
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": false,
-          "mipmaps": true,
-          "normalMode": false
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "11ad54a85a8e2e4639d1598f7ad3b33a30b28d4b8f3786216a91d3e5b0b73803"
     },
     "74af3434a7a55e6c9fb7f3509fb239b4be1a395ebf4fe52c0f6587fdfeaf8e8e": {
       "source": "src/toolkit/textures/mud02/mud02_normalHeight.texture.json",
@@ -1374,35 +1104,6 @@
         }
       ],
       "ktxVersion": "4.4.2"
-    },
-    "8a3ca0eb84a042c052a8dd6832a237c0f926a097037ac4e914377c399ab0e859": {
-      "source": "src/toolkit/textures/mud01/mud01_albedoRough.texture.json",
-      "url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.e70143ef.ktx2",
-      "bytes": 1267308,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 1267308,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 13032708
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "averageColor": [
-            0.1865,
-            0.1709,
-            0.1593
-          ]
-        }
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "5f3a89a51d861cd25ee5ca03763a64e78119798c6073fe97cd2e55465c86f328"
     },
     "8a780d106d038be8ae5b3fe25e83ca62e9d6c8b3d82a7fb23908824a7de3304b": {
       "source": "src/app/scenes/textureSets/source/bricks/albedoRough.png",
