@@ -21,5 +21,9 @@ src/public/basis/
 .tools/
 # Asset pipeline cache and downloaded sources (p300)
 .cache/
+# A texture set's fetched maps (yarn fetchTextureSources, p303 D5): only a set folder's source/raw/,
+# the other assets' source/ folders are committed
+src/toolkit/textures/*/source/raw/
+src/app/**/source/raw/
 # p300 Phase 1 prop variants (56 MB), rebuilt identically by devTools/assetPipeline/phase1Variants.ts
 src/public/debugger/assets/testOptimized/phase1/metalToolbox/

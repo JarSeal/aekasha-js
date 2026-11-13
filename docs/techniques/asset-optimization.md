@@ -212,6 +212,8 @@ A texture JSON can build its image from several sources with `pack`, in place of
 - Colour channels of an sRGB texture (`texOpts.colorSpace: "srgb"`) are read as sRGB, everything else as linear. Override it per channel with `colorSpace`.
 - `normal: true` marks a normal map source: it's resized as unit vectors first. `invert: true` flips a channel, eg. a DirectX normal map's green.
 - `multiply: { "src": "./source/ao.png", "strength": 0.8 }` bakes AO into an albedo.
+- `cavity` turns a height map into an AO term, for a source without an AO map: `1 − strength × max(0, blur(h) − h)`, the height normalized to 0..1 and blurred with wrapping edges (a tiling map). It works on a channel (`"r": { "src": "./source/height.png", "cavity": {} }`) and on a `multiply` factor (`"multiply": { "src": "./source/height.png", "cavity": { "radius": 24, "strength": 4 }, "strength": 1 }`). `radius` is the blur's sigma in pixels at the pack size (default 24, fitted on a 2K ground scan: about half that for a 1K source), `strength` how dark a crevice gets (default 4). Keep it to small-scale crevices: valley- or rock-scale occlusion doesn't belong in a tiling texture.
+- An sRGB texture's encode records its average colour (linear, in the lock entry; the development data's `__averageColor`). A texture set takes its albedo's into its `averageColor`.
 - Sources of different sizes need `size: [width, height]`. The result is then resized to the slot's `maxSize`.
 
 With optimization off, a pack is still built and written as a PNG, since it has no single source file.

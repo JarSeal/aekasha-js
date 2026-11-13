@@ -234,6 +234,7 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   viewports: "viewports() from 'aekasha/viewports'",
   streaming: "streaming() from 'aekasha/streaming'",
   merging: "merging() from 'aekasha/merging'",
+  texturesets: "textureSets() from 'aekasha/texturesets'",
 };
 
 /**

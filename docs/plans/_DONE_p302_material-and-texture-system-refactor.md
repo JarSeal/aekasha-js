@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-7; Phase 2 by p613)
 Category: Materials, Assets, Refactoring
-Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
+Blocks: \_DONE_p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p299_texture-arrays-and-atlases.md (its Phase 5 registers two resolvers of D4; the review of rendering, scenes and assets, p613, fixed bugs A and B and moved the scene's asset loading: "From p613" below; the schemas' review, p619: "From p619" below)
 

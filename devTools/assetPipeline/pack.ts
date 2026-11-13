@@ -21,7 +21,23 @@ import {
  * - A `normal` source is resized as unit vectors on its own, straight to the output size, and
  *   its channels are taken from that (then inverted, if asked). Packing first would lose its Z
  *   (eg. LITE's `normalHeight` keeps only X and Y), which the renormalization needs.
+ * - A `cavity` (p303 D2) turns a height channel into an AO term at the pack size, after `remap`
+ *   and `invert`, before `multiply` (a multiply factor's own `cavity` too).
  */
+
+/**
+ * Bump when what a `cavity` writes changes: the key of every pack that uses one has it
+ * ({@link getPackKeyParams}), so only those encode again.
+ */
+export const PACK_CAVITY_VERSION = 1;
+
+/**
+ * A `cavity`'s defaults (`PackCavitySchema`): sigma 24 px at the pack size, strength 4. Fitted to
+ * ambientCG Ground080's 2K scan, whose own AO it was compared with (p303 Phase 2 section 3): a
+ * mean of 0.91 against the scan's 0.88, correlation 0.76 (sigma 8: 0.67). Slightly lighter, since
+ * it stacks with screen-space AO (D2). A 1K source wants about half the radius.
+ */
+export const PACK_CAVITY_DEFAULTS = { radius: 24, strength: 4 };
 
 /** Turns a pack `src` into an absolute file path; throws when it can't be used. */
 export type PackFileResolver = (src: string) => string;
@@ -57,6 +73,23 @@ export const listPackFiles = (pack: TexturePack) => {
   return [...files];
 };
 
+/** Whether a pack derives a cavity term anywhere (a channel's or a multiply factor's) */
+const usesCavity = (pack: TexturePack) =>
+  listTargets(pack).some(
+    ({ spec }) =>
+      typeof spec !== 'number' &&
+      (!!spec.cavity || (typeof spec.multiply === 'object' && !!spec.multiply.cavity))
+  );
+
+/**
+ * A pack as a cache key has it: the pack, and {@link PACK_CAVITY_VERSION} when it uses a
+ * `cavity` (so the keys of the packs without one didn't change)
+ */
+export const getPackKeyParams = (pack: TexturePack) => ({
+  pack,
+  ...(usesCavity(pack) ? { cavity: PACK_CAVITY_VERSION } : {}),
+});
+
 /** The pack's output channel count: its targets cover r, rg, rgb or rgba (the schema checks it) */
 export const getPackChannelCount = (pack: TexturePack) =>
   listTargets(pack).reduce((count, { target }) => count + target.length, 0);
@@ -75,6 +108,66 @@ const remapInPlace = (planes: Img[], remap: NonNullable<PackChannel['remap']>) =
     for (let i = 0; i < plane.data.length; i++) {
       plane.data[i] = (plane.data[i] - min) / (max - min || 1);
     }
+  }
+};
+
+/** One box blur pass along rows (`isVertical` false) or columns, wrapping at the edges */
+const boxBlurPass = (
+  src: Float32Array,
+  dst: Float32Array,
+  w: number,
+  h: number,
+  b: number,
+  isVertical: boolean
+) => {
+  const [lines, length, step] = isVertical ? [w, h, w] : [h, w, 1];
+  const lineStep = isVertical ? 1 : w;
+  const size = 2 * b + 1;
+  for (let line = 0; line < lines; line++) {
+    const start = line * lineStep;
+    const at = (i: number) => src[start + (((i % length) + length) % length) * step];
+    let sum = 0;
+    for (let i = -b; i <= b; i++) sum += at(i);
+    for (let i = 0; i < length; i++) {
+      dst[start + i * step] = sum / size;
+      sum += at(i + b + 1) - at(i - b);
+    }
+  }
+};
+
+/**
+ * A Gaussian blur of a one-channel image (sigma `radius` px) as three box passes each way,
+ * wrapping at the edges: a tiling map's crevice at one edge sees the other side.
+ */
+export const blurWrapped = (plane: Img, radius: number): Img => {
+  const { width: w, height: h } = plane;
+  // Three boxes of width wb have variance 3 × (wb² − 1) / 12 = sigma²
+  const b = Math.max(0, Math.round((Math.sqrt(4 * radius * radius + 1) - 1) / 2));
+  let a = Float32Array.from(plane.data);
+  let c = new Float32Array(a.length);
+  if (b > 0) {
+    for (const isVertical of [false, true]) {
+      for (let pass = 0; pass < 3; pass++) {
+        boxBlurPass(a, c, w, h, b, isVertical);
+        [a, c] = [c, a];
+      }
+    }
+  }
+  return { ...plane, data: a };
+};
+
+/**
+ * A height plane's cavity term (p303 D2), in place: `1 − strength × max(0, blur(h) − h)`, `h`
+ * normalized to 0..1 first, clamped to 0..1.
+ */
+export const applyCavity = (plane: Img, cavity: { radius?: number; strength?: number }) => {
+  const radius = cavity.radius ?? PACK_CAVITY_DEFAULTS.radius;
+  const strength = cavity.strength ?? PACK_CAVITY_DEFAULTS.strength;
+  remapInPlace([plane], 'auto');
+  const blurred = blurWrapped(plane, radius).data;
+  for (let i = 0; i < plane.data.length; i++) {
+    const depth = Math.max(0, blurred[i] - plane.data[i]);
+    plane.data[i] = Math.min(1, Math.max(0, 1 - strength * depth));
   }
 };
 
@@ -189,12 +282,16 @@ export const buildPackedImage = async (pack: TexturePack, opts: PackBuildOpts): 
         for (let i = 0; i < plane.data.length; i++) plane.data[i] = 1 - plane.data[i];
       }
     }
+    if (spec.cavity) for (const plane of planes) applyCavity(plane, spec.cavity);
     if (spec.multiply !== undefined) {
       const { multiply } = spec;
       const factor =
         typeof multiply === 'number'
           ? null
           : readPlane(multiply.src, multiply.channel ?? 'r', false);
+      if (factor && typeof multiply === 'object' && multiply.cavity) {
+        applyCavity(factor, multiply.cavity);
+      }
       const strength = typeof multiply === 'number' ? 1 : multiply.strength ?? 1;
       for (const plane of planes) {
         for (let i = 0; i < plane.data.length; i++) {

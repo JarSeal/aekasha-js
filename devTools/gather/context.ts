@@ -15,6 +15,7 @@ import type {
   TextureArrayAsset,
   TextureAsset,
   TextureAtlasSlotTexture,
+  TextureSetDef,
 } from '../../src/_engine/schemas';
 import type { PipelineRun } from '../assetPipeline/run';
 import { listSourceFiles } from '../files';
@@ -65,6 +66,8 @@ export type Registries = {
   atlasSlots: Record<string, TextureAtlasSlotTexture>;
   /** An atlas's slot ids in the JSON's order: what a scene listing the atlas id gets */
   atlasSlotIds: Record<string, string[]>;
+  /** Texture sets (p303 D1), in their own id space: their defaults filled in, as scenes get them */
+  textureSets: Record<string, TextureSetDef & { __sourcePath?: string }>;
   impostors: Record<string, ImpostorAsset>;
   materials: Record<string, MaterialAsset>;
   /** Merge material palettes (p374), in the materials' id space */
@@ -87,6 +90,7 @@ export type IdSpace =
   | 'lights'
   | 'geometries'
   | 'textures'
+  | 'textureSets'
   | 'impostors'
   | 'materials'
   | 'meshes'
@@ -108,6 +112,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     textureArrays: {},
     atlasSlots: {},
     atlasSlotIds: {},
+    textureSets: {},
     impostors: {},
     materials: {},
     mergeMaterials: {},
@@ -124,6 +129,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     lights: new Set(),
     geometries: new Set(),
     textures: new Set(),
+    textureSets: new Set(),
     impostors: new Set(),
     materials: new Set(),
     meshes: new Set(),
@@ -178,6 +184,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   texture: 'texture',
   textureArray: 'texture array',
   textureAtlas: 'texture atlas',
+  textureSet: 'texture set',
   impostor: 'impostor',
   material: 'material',
   mergeMaterial: 'merge material',

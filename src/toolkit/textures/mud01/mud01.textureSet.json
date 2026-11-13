@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "mud01",
+  "category": "MUD",
+  "physicalSize": [1.3, 1.3],
+  "heightScale": 0.04,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "mud01_albedoRough",
+      "normalHeight": "mud01_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Mud 01 (soil)",
+    "description": "Poly Haven brown_mud_02, CC0: brown soil mud."
+  }
+}

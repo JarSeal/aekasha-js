@@ -1,8 +1,8 @@
 ## What's in it
 
-The toolkit is sorted by kind. Its code has three entries, `aekasha/toolkit/ecs`,
-`aekasha/toolkit/geometry` and `aekasha/toolkit/materials`; its assets (the materials' and
-models' JSONs) are found by id, like the app's:
+The toolkit is sorted by kind. Its code has four entries, `aekasha/toolkit/ecs`,
+`aekasha/toolkit/geometry`, `aekasha/toolkit/materials` and `aekasha/toolkit/terrain`; its assets
+(the materials', models' and texture sets' JSONs) are found by id, like the app's:
 
 ```text
 src/toolkit/
@@ -16,7 +16,10 @@ src/toolkit/
   materials/                aekasha/toolkit/materials
     <id>/                   <id>.material.json and <id>.tsl.ts
     TriplanarProjection.ts
+  terrain/                  aekasha/toolkit/terrain
+    nodes/                  SampleTextureSet
   models/<category>/<id>/   the model next to its *.importedAsset.json
+  textures/<setId>/         a texture set: its JSON, recipes and source.json; CREDITS.md
 ```
 
 A piece that grows a second file gets a folder of its own inside its kind, as the moving
@@ -93,6 +96,10 @@ any material:
   `dominantAxis` (one projection per surface instead of a blend: no doubled lines on ramps, hard
   seams on curves), and the checkerboard's `plusSigns`, the grid's `minorLines` and
   `seamNormals`. They share [`triplanarProjection`](api:triplanarProjection) and its helpers.
+- **`textureSetSurface`**: one [texture set](hub:features/terrain#using-a-set) on a surface, any
+  packing, tiled in world space (`tiling: "WORLD_XZ"`) or at UVs in metres (`"UV"`, walls). A mesh
+  gives it its set with `matOverrides: { inputs: { surface: { textureSet: "rocks01" } } }`. The
+  baseline of the terrain materials, built on `aekasha/toolkit/terrain`.
 - **`asteroid`**: a rock surface in object space: mottled colours, pits, mineral speckles, and the
   roughness and a bump from the same noise. Every input is on its `colorNode`, and a mesh gives it
   a `seed` of its own (`matOverrides: { nodes: { colorNode: { seed: 7 } } }`) for a different rock.
@@ -132,6 +139,21 @@ instanced pool, which owns it.
 The generators draw from the engine's
 [`createSeededRandom`](api:utils/SeededRandom.createSeededRandom) (on `aekasha`), which an app
 imports from there too.
+
+### Terrain
+
+The surfaces and the TSL pieces terrain materials are built from (the
+[Terrain](hub:features/terrain) page has the whole of it):
+
+- **The texture library** (`textures/<setId>/`): 16 CC0 texture sets, two each of sand, mud,
+  rocks, cliffs, snow, ice and grass ground, and two concretes, packed `LITE` (`sand01`,
+  `grass01` and `cliffs01` also `FULL` and `MINIMAL`) and compressed to KTX2. A scene or a
+  material names one by id (`{ "textureSet": "snow02" }`); they need the `textureSets()` feature.
+  `yarn fetchTextureSources` downloads their source maps, which only re-encoding needs.
+- [`sampleTextureSet`](api:sampleTextureSet) decodes a set (or a set array's layer) at a UV into
+  albedo, normal, roughness, AO and height, whatever its packing;
+  [`transformTangentNormalToView`](api:transformTangentNormalToView) shades its normal in that
+  UV's frame and [`bumpNormalView`](api:bumpNormalView) makes a normal from a height in metres.
 
 ### Models
 
@@ -303,6 +325,9 @@ in place of `../TriplanarProjection`.
 ## See it
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
+- The app's `terrainGallery` scene: every set of the texture library on its own block with
+  `textureSetSurface` (see [Terrain](hub:features/terrain)). Open it with
+  `?isDebug=true&startScene=terrainGallery`.
 - The [game HUD example](hub:examples/game-hud): the world anchor sync and the follow rig's
   orbit.
 - The app's `space` scene: toolkit asteroids under `MutualGravity`, at zero world gravity. Open it

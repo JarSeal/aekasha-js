@@ -23,6 +23,7 @@ export const ENTRY_FILES = {
   'aekasha/skybox': 'src/_engine/features/skybox/index.ts',
   'aekasha/spatial': 'src/_engine/features/spatial/index.ts',
   'aekasha/streaming': 'src/_engine/features/streaming/index.ts',
+  'aekasha/texturesets': 'src/_engine/features/texturesets/index.ts',
   'aekasha/viewports': 'src/_engine/features/viewports/index.ts',
   'aekasha/ui': 'src/_engine/ui/index.ts',
   'aekasha/ui/fonts': 'src/_engine/ui/fonts/index.ts',
@@ -31,6 +32,7 @@ export const ENTRY_FILES = {
   'aekasha/toolkit/ecs': 'src/toolkit/ecs/index.ts',
   'aekasha/toolkit/geometry': 'src/toolkit/geometry/index.ts',
   'aekasha/toolkit/materials': 'src/toolkit/materials/index.ts',
+  'aekasha/toolkit/terrain': 'src/toolkit/terrain/index.ts',
 } as const;
 
 export type EntryName = keyof typeof ENTRY_FILES;

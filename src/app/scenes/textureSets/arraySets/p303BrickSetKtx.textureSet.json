@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../.schemas/textureSet.schema.json",
+  "id": "p303BrickSetKtx",
+  "category": "OTHER",
+  "physicalSize": [0.5, 0.5],
+  "heightScale": 0.02,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "p303BrickSetKtx_albedoRough",
+      "normalHeight": "p303BrickSetKtx_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffe4d6",
+    "normalStrength": 1.5,
+    "roughnessScale": 0.9
+  },
+  "debugData": {
+    "name": "p303 bricks set (KTX2)",
+    "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: a running bond of red bricks, the top left one yellow, KTX2 (the compressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+  }
+}

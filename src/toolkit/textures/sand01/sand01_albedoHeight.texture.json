@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "sand01_albedoHeight",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "baseColor"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "sand01 albedoHeight (FULL)",
+    "description": "The texture set sand01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+  }
+}

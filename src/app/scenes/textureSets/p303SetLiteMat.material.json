@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p303SetLiteMat",
+  "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "inputs": {
+    "surface": {
+      "textureSet": "p303TestSet"
+    }
+  },
+  "debugData": {
+    "name": "Texture set, LITE",
+    "description": "The texture set input (p303 D1): p303TestSet's LITE (the set's default packing: no packing named): albedo × AO with roughness in its alpha, the normal's X and Y with height; the set's surface uniforms scale them."
+  }
+}

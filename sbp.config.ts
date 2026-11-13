@@ -49,11 +49,13 @@ const profiles: SbpProfile[] = [
     // registry, the texture ref form) and p299 Phase 5 (the array and atlas forms' predicates and
     // dependency functions, and the kernel's fallback for them; the resolvers are a lazy chunk)
     // took the initial to 398.7 and `assets/index.js` to 394.5 KiB, about 0.5 of each p302's:
-    // 398 → 399 and 394 → 395 KiB
+    // 398 → 399 and 394 → 395 KiB. p303 Phase 1: the `textureSets()` feature (its resolver,
+    // the set lookup and load, 0.7 KiB; the template lists it) took the initial to 399.2 and
+    // `assets/index.js` to 395.0 KiB: 399 → 400 and 395 → 396 KiB
     budgets: {
-      initial: 399 * KIB,
+      initial: 400 * KIB,
       chunks: {
-        'assets/index.js': 395 * KIB,
+        'assets/index.js': 396 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -109,6 +111,9 @@ const profiles: SbpProfile[] = [
         // streams (`StreamingCells.js`, `StreamingLayers.js`, `StreamingPriming.js`, with the
         // bodies' chunk: 7.4 KiB): the first download is the API and the scene hooks, 2.3 KiB.
         '_engine/features/streaming': 4 * KIB,
+        // p303 Phase 1: the `{ textureSet }` resolver, `getTextureSet` and the packing load
+        // (0.7 KiB gzip, three modules)
+        '_engine/features/texturesets': 1 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

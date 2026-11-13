@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "rocks02",
+  "category": "ROCKS",
+  "physicalSize": [1.3, 1.3],
+  "heightScale": 0.037,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "rocks02_albedoRough",
+      "normalHeight": "rocks02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Rocks 02 (stony mud)",
+    "description": "Poly Haven brown_mud_rocks_01, CC0: stony brown ground."
+  }
+}

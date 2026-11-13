@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../.schemas/textureSet.schema.json",
+  "id": "p303RidgeSet",
+  "category": "OTHER",
+  "physicalSize": [2, 1],
+  "heightScale": 0.05,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "p303RidgeSet_albedoRough",
+      "normalHeight": "p303RidgeSet_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#d8ffd0",
+    "normalStrength": 0.6,
+    "roughnessScale": 1
+  },
+  "debugData": {
+    "name": "p303 ridges set",
+    "description": "p303 Phase 3's exit, a layer of the textureSets scene's 4-set LITE arrays: green diagonal ridges, a white square at the top left, PNGs (the uncompressed array path). Its surface differs from the other layers' so the array's per-layer params show."
+  }
+}

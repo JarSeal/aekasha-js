@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "p303TestSet_albedoRough",
+  "fileName": "./source/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303TestSet albedoRough",
+    "description": "The hand-made texture set's LITE: RGB albedo × AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

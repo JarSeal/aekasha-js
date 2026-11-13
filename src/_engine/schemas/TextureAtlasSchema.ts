@@ -252,7 +252,11 @@ const TextureAtlasSlotTextureSchema = z.object({
   __sourcePath: z.string().optional(),
   /** The layout and the cell table. */
   __atlas: TextureAtlasSlotInfoSchema,
-  ...GeneratedAssetFieldsSchema.omit({ __lodChain: true, __sourceUrl: true }).shape,
+  ...GeneratedAssetFieldsSchema.omit({
+    __lodChain: true,
+    __sourceUrl: true,
+    __averageColor: true,
+  }).shape,
 });
 
 /** An atlas slot as a texture in the generated data: the slot's texture settings, the layout and

@@ -89,7 +89,7 @@ const getSubfolderRules = (prefix: string, depth: number, files: string[]): Layo
  * assets by id. Models, textures and sky boxes are asset JSONs reached by id, so no entry.
  */
 const getToolkitRules = (files: string[]): LayoutRule[] => [
-  ...['ecs', 'geometry', 'materials'].map(
+  ...['ecs', 'geometry', 'materials', 'terrain'].map(
     (category): LayoutRule => ({
       from: `${T}${category}/index.ts`,
       note: `the \`aekasha/toolkit/${category}\` entry (p606)`,
@@ -100,6 +100,8 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}ecs/gameplay/` },
   { from: `${T}geometry/generate/` },
   { from: `${T}geometry/scatter/` },
+  // The terrain's TSL building blocks (p303 D7; p305's techniques)
+  { from: `${T}terrain/nodes/` },
   {
     from: `${T}materials/TriplanarProjection.ts`,
     note: 'the TSL helper the triplanar materials share',
@@ -109,6 +111,10 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   ...getSubfolderRules(`${T}materials/`, 1, files),
   ...getSubfolderRules(`${T}models/`, 2, files),
   ...getSubfolderRules(`${T}textures/`, 1, files),
+  {
+    from: `${T}textures/CREDITS.md`,
+    note: "the texture sets' credits, generated from their `source.json`s (p303 D5)",
+  },
   ...getSubfolderRules(`${T}skyboxes/`, 1, files),
 ];
 

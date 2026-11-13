@@ -14,6 +14,10 @@ import { getAppData } from '../../../kernel/scene/AppData';
 import type { MaterialAsset } from '../../../schemas/MaterialSchema';
 import type { MaterialSelectorEntry } from './_dbg__MaterialEditorSelector';
 import {
+  runMaterialEditorPreparerExits,
+  runMaterialEditorPreparersAsync,
+} from './_dbg__MaterialEditorPreparers';
+import {
   fromNodeInputGroups,
   getAssetNodeInputs,
   mergeNodeOverrides,
@@ -95,24 +99,29 @@ export const getUnavailableReason = (asset: MaterialAsset) => {
 const loadedTextureIds = new Set<string>();
 
 /** Loads the material's textures that aren't loaded yet (`ensureMaterialDependencies`, its
- * textures only: the editor loads the TSL file itself, to show its error). A texture that fails
- * is logged and left out (the material samples one white texel). */
+ * textures only: the editor loads the TSL file itself, to show its error), and runs the features'
+ * preparers beside them (`_dbg__MaterialEditorPreparers.ts`: a texture set array's build). A
+ * texture that fails is logged and left out (the material samples one white texel). */
 export const loadMissingTextures = async (asset: MaterialAsset) => {
   for (const id of getMaterialTextureIds(asset)) if (!getTexture(id)) loadedTextureIds.add(id);
   const { params, nodes, inputs } = asset as MaterialAsset & MaterialVariantOverrides;
-  await ensureMaterialDependencies({ params, nodes, inputs });
+  await Promise.all([
+    ensureMaterialDependencies({ params, nodes, inputs }),
+    runMaterialEditorPreparersAsync(asset),
+  ]);
 };
 
 /** Hands the textures the editor loaded during this visit to the current scene (the view's exit). A
  * texture it loaded is owned by the scene that was current then: one loaded meanwhile (app code,
  * HMR) has released that scene's assets already, so the texture would never be released. The
- * current scene takes them, as a cache hit would. */
+ * current scene takes them, as a cache hit would; so do the preparers' (their `onExit`). */
 export const retagLoadedTextures = () => {
   for (const id of loadedTextureIds) {
     const texture = getTexture(id);
     if (texture) retagAssetOwner(texture);
   }
   loadedTextureIds.clear();
+  runMaterialEditorPreparerExits();
 };
 
 /** A CSS colour of the material's first colour: `params.color`, else the first `#` TSL input. */

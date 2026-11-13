@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p303ArrayPngMat",
+  "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "inputs": {
+    "surface": {
+      "textureSetArray": ["p303TestSet", "p303BrickSet", "p303RidgeSet", "p303DotSet"],
+      "packing": "LITE"
+    }
+  },
+  "debugData": {
+    "name": "Texture set array, PNG",
+    "description": "The set array input by list (p303 D4): four PNG sets' LITE in two array textures (the uncompressed path, built from the scene's registered textures), the layer from each quad's setLayer attribute, each layer's surface from the shared params."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303BrickSetKtx_albedoRough",
+  "fileName": "../source/bricks/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "baseColor"
+  },
+  "debugData": {
+    "name": "p303BrickSetKtx albedoRough",
+    "description": "The bricks set's LITE albedoRough: RGB albedo \u00d7 AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; KTX2 from the terrainLayer profile (yarn assets))."
+  }
+}

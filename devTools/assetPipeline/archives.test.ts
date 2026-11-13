@@ -1,9 +1,9 @@
 import zlib from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { readAr, readCpio, readTar, readXar } from './archives';
+import { readAr, readCpio, readTar, readXar, readZip } from './archives';
 
-// p619 D14: the readers `yarn setupAssetTools` unpacks KTX-Software's releases with, on archives
-// built here byte by byte
+// p619 D14: the readers `yarn setupAssetTools` unpacks KTX-Software's releases with, and p303 D5's
+// zip reader (`yarn fetchTextureSources`), on archives built here byte by byte
 
 const pad = (text: string, length: number) => text.padEnd(length, ' ').slice(0, length);
 
@@ -62,6 +62,62 @@ const cpioEntry = (name: string, mode: number, data: Buffer) => {
     octal(name.length + 1, 6) +
     octal(data.length, 11);
   return Buffer.concat([Buffer.from(header, 'latin1'), Buffer.from(`${name}\0`), data]);
+};
+
+type ZipInput = {
+  name: string;
+  data?: Buffer;
+  method?: 0 | 8;
+  /** A Unix mode in the attributes (made by Unix) */
+  mode?: number;
+  /** Local header sizes 0, as with a data descriptor (the central directory has them) */
+  isStreamed?: boolean;
+  crc?: number;
+};
+
+const zip = (inputs: ZipInput[]) => {
+  const locals: Buffer[] = [];
+  const centrals: Buffer[] = [];
+  let offset = 0;
+  for (const input of inputs) {
+    const data = input.data ?? Buffer.alloc(0);
+    const method = input.method ?? 0;
+    const stored = method === 8 ? zlib.deflateRawSync(data) : data;
+    const crc = input.crc ?? zlib.crc32(data);
+    const name = Buffer.from(input.name, 'utf8');
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(input.isStreamed ? 0x808 : 0x800, 6);
+    local.writeUInt16LE(method, 8);
+    if (!input.isStreamed) {
+      local.writeUInt32LE(crc, 14);
+      local.writeUInt32LE(stored.length, 18);
+      local.writeUInt32LE(data.length, 22);
+    }
+    local.writeUInt16LE(name.length, 26);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(((input.mode ? 3 : 0) << 8) | 20, 4);
+    central.writeUInt16LE(0x800, 8);
+    central.writeUInt16LE(method, 10);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(stored.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt32LE(input.mode ? (0o100000 | input.mode) * 0x10000 : 0, 38);
+    central.writeUInt32LE(offset, 42);
+    locals.push(local, name, stored);
+    centrals.push(central, name);
+    offset += local.length + name.length + stored.length;
+  }
+  const directory = Buffer.concat(centrals);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(inputs.length, 8);
+  end.writeUInt16LE(inputs.length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end, Buffer.from('a comment')]);
 };
 
 describe('the archive readers', () => {
@@ -131,5 +187,34 @@ describe('the archive readers', () => {
       ['Payload', 'payload'],
       ['Distribution', 'plain'],
     ]);
+  });
+  it('readZip reads stored and deflated files, checked against their CRC-32', () => {
+    const color = Buffer.from('jpeg bytes '.repeat(50));
+    const entries = readZip(
+      zip([
+        { name: 'Ground080_2K-JPG/' },
+        { name: 'Ground080_2K-JPG/Ground080_2K-JPG_Color.jpg', data: color, method: 8 },
+        { name: 'Ground080.png', data: Buffer.from('preview'), mode: 0o600 },
+        { name: 'Ground080_2K-JPG_NormalGL.jpg', data: color, method: 8, isStreamed: true },
+      ])
+    );
+    expect(entries).toEqual([
+      { path: 'Ground080_2K-JPG/Ground080_2K-JPG_Color.jpg', data: color, mode: 0o644 },
+      { path: 'Ground080.png', data: Buffer.from('preview'), mode: 0o600 },
+      { path: 'Ground080_2K-JPG_NormalGL.jpg', data: color, mode: 0o644 },
+    ]);
+  });
+
+  it('readZip throws for a corrupt, truncated or foreign archive', () => {
+    expect(() => readZip(Buffer.from('not an archive, long enough for the end record'))).toThrow(
+      'Not a zip archive'
+    );
+    expect(() => readZip(zip([{ name: 'a.jpg', data: Buffer.from('abc'), crc: 1 }]))).toThrow(
+      /"a.jpg" fails its size or CRC-32 check/
+    );
+    const archive = zip([{ name: 'a.jpg', data: Buffer.from('abc') }]);
+    // The data's first byte gone: the central directory points past the shortened file
+    const truncated = Buffer.concat([archive.subarray(0, 35), archive.subarray(36)]);
+    expect(() => readZip(truncated)).toThrow(/Corrupt zip/);
   });
 });

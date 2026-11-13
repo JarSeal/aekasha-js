@@ -6,6 +6,7 @@ import { writeFileAtomic } from '../files';
 import { KTX_VERSION } from './ktxTool';
 import { AEK_ASSETS_DIR, getOutputFile } from './outputs';
 import { ROOT } from '../paths';
+import { isFetchedSourceFile } from './sources';
 import type { GLTFMergeStats } from './gltfMergeOptions';
 import type { BuiltLodChain } from './lodChains';
 import type { EncodedTexture } from './textures';
@@ -55,6 +56,11 @@ export type CacheEntry = {
   warnings?: string[];
   /** The `ktx` that encoded it, when one did (the key has the pinned version) */
   ktxVersion?: string;
+  /**
+   * A pack that reads a fetched source (p303 D5): its {@link getRecipeKey}, so a clone without
+   * the fetched sources finds this output ({@link PipelineCache.getByRecipe})
+   */
+  recipeKey?: string;
 };
 
 type LockFile = { '//': string; entries: Record<string, CacheEntry> };
@@ -172,6 +178,22 @@ export const getCacheKey = (input: {
   return key;
 };
 
+/**
+ * A pack's key without its fetched sources' bytes (p303 D5: a texture set's `source/raw/`, which
+ * a clone lacks until `yarn fetchTextureSources`): its params (the recipe, its settings and output
+ * path, the `src` paths among them), the tools and its other files' bytes. Undefined when it
+ * reads no fetched source. Two downloads of other bytes give one recipe key: the full key
+ * (`getCacheKey`) still tells them apart wherever the sources are there.
+ */
+export const getRecipeKey = (input: Parameters<typeof getCacheKey>[0]) => {
+  if (!input.files.some(isFetchedSourceFile)) return undefined;
+  return getCacheKey({
+    ...input,
+    files: input.files.filter((file) => !isFetchedSourceFile(file)),
+    params: { recipe: input.params },
+  });
+};
+
 const readLockEntries = (lockFile: string): Record<string, CacheEntry> => {
   if (!fs.existsSync(lockFile)) return {};
   try {
@@ -250,6 +272,21 @@ export const createPipelineCache = (opts: { lockFile?: string; storeDir?: string
       }
       if (!locked) changed.set(key, entry);
       return { entry, from: 'store' };
+    },
+
+    /**
+     * The output recorded for a recipe key ({@link getRecipeKey}): a lock entry with it, looked
+     * up by its own key as {@link PipelineCache.get} does (so the prune keeps it). Null when none
+     * has it. Used when a pack's fetched sources aren't there.
+     */
+    getByRecipe(recipeKey: string): CacheHit | null {
+      const all = { ...entries, ...Object.fromEntries(changed) };
+      for (const [key, entry] of Object.entries(all)) {
+        if (entry.recipeKey !== recipeKey || removed.has(key)) continue;
+        const hit = this.get(key);
+        if (hit) return hit;
+      }
+      return null;
     },
 
     /** Records an encode's output: in the lock (on `save`) and in the store. */

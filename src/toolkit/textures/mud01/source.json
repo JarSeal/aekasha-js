@@ -1,0 +1,14 @@
+{
+  "provider": "polyHaven",
+  "assetId": "brown_mud_02",
+  "download": "2K-JPG",
+  "license": "CC0-1.0",
+  "page": "https://polyhaven.com/a/brown_mud_02",
+  "maps": {
+    "color": "Diffuse",
+    "normal": "nor_gl",
+    "roughness": "Rough",
+    "ao": "AO",
+    "height": "Displacement"
+  }
+}

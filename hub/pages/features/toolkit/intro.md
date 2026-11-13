@@ -1,5 +1,5 @@
 The toolkit, `src/toolkit/`, ships with the engine: ECS effects, TSL materials, procedural
-geometry and models, each written the way your own code would be. Use one as it is, or copy it
+geometry, models and a terrain texture library, each written the way your own code would be. Use one as it is, or copy it
 into `src/app/` and change it: it's a starting point, not a black box.
 
 ::: scene exampleToolkit

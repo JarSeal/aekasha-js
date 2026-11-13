@@ -475,6 +475,9 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
       configs: ['workerSab', 'workerMsg'],
     },
   },
+  terrainGallery: {
+    debugger: { tabs: ['terrainGallery'] },
+  },
   thirdPersonGymScene: {
     // 10 s of the input script: the two players walk, turn, run, crouch and jump, the dummy loops
     probeSteps: 600,

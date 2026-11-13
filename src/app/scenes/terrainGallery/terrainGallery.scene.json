@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "terrainGallery",
+  "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
+  "isDebugScene": true,
+  "name": "Terrain gallery (p303)",
+  "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the baseline material textureSetSurface (world tiling, no anti-tiling or splat) in the set's default packing. Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+  "cameras": ["terrainGalleryCamera"],
+  "skyboxes": ["terrainGallerySky"],
+  "materials": ["textureSetSurface"],
+  "textureSets": [
+    "sand01",
+    "sand02",
+    "mud01",
+    "mud02",
+    "rocks01",
+    "rocks02",
+    "cliffs01",
+    "cliffs02",
+    "snow01",
+    "snow02",
+    "ice01",
+    "ice02",
+    "grass01",
+    "grass02",
+    "concrete01",
+    "concrete02"
+  ]
+}

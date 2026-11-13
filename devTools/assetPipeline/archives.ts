@@ -5,6 +5,7 @@ import zlib from 'zlib';
  * unpacked with Node alone (no `tar`, `bzip2`, `ar` or `pkgutil` needed):
  * - Linux `.deb`: an `ar` archive whose `data.tar.gz` holds the files;
  * - macOS `.pkg`: a `xar` archive whose component packages each hold a gzipped `cpio` Payload.
+ * And the `.zip` downloads `yarn fetchTextureSources` unpacks (ambientCG's, p303 D5).
  * Only what those archives use is supported; anything else throws.
  */
 
@@ -146,4 +147,83 @@ export const readXar = (buf: Buffer) => {
     files.push({ name, data });
   }
   return files;
+};
+
+const ZIP_END_SIGNATURE = 0x06054b50;
+const ZIP_CENTRAL_SIGNATURE = 0x02014b50;
+const ZIP_LOCAL_SIGNATURE = 0x04034b50;
+/** The end record's fixed part; a comment of up to 65,535 bytes follows it */
+const ZIP_END_SIZE = 22;
+
+/**
+ * Reads the files of a `.zip` archive (p303 D5: ambientCG's downloads), each checked against its
+ * CRC-32 and size, so a truncated or corrupt download throws instead of yielding a broken image.
+ * Stored and deflated entries only; folders are skipped. Throws for a Zip64, encrypted or
+ * multi-disk archive and for any other compression method.
+ */
+export const readZip = (buf: Buffer) => {
+  let end = -1;
+  const lowest = Math.max(0, buf.length - ZIP_END_SIZE - 0xffff);
+  for (let pos = buf.length - ZIP_END_SIZE; pos >= lowest; pos--) {
+    if (buf.readUInt32LE(pos) === ZIP_END_SIGNATURE) {
+      end = pos;
+      break;
+    }
+  }
+  if (end < 0) throw new Error('Not a zip archive (no end of central directory record)');
+  const count = buf.readUInt16LE(end + 10);
+  const directoryOffset = buf.readUInt32LE(end + 16);
+  if (count === 0xffff || directoryOffset === 0xffffffff) {
+    throw new Error('Zip64 archives are not supported');
+  }
+  if (buf.readUInt16LE(end + 4) !== 0 || buf.readUInt16LE(end + 8) !== count) {
+    throw new Error('Multi-disk zip archives are not supported');
+  }
+
+  const entries: ArchiveEntry[] = [];
+  let pos = directoryOffset;
+  for (let i = 0; i < count; i++) {
+    if (pos + 46 > buf.length || buf.readUInt32LE(pos) !== ZIP_CENTRAL_SIGNATURE) {
+      throw new Error(`Corrupt zip central directory at byte ${pos}`);
+    }
+    const madeBy = buf.readUInt16LE(pos + 4) >> 8;
+    const flags = buf.readUInt16LE(pos + 8);
+    const method = buf.readUInt16LE(pos + 10);
+    const crc = buf.readUInt32LE(pos + 16);
+    const compressedSize = buf.readUInt32LE(pos + 20);
+    const size = buf.readUInt32LE(pos + 24);
+    const nameLength = buf.readUInt16LE(pos + 28);
+    const extraLength = buf.readUInt16LE(pos + 30);
+    const commentLength = buf.readUInt16LE(pos + 32);
+    const externalAttributes = buf.readUInt32LE(pos + 38);
+    const localOffset = buf.readUInt32LE(pos + 42);
+    // Bit 11: the name is UTF-8; otherwise CP437, which matches latin1 for ASCII names
+    const name = buf.toString(flags & 0x800 ? 'utf8' : 'latin1', pos + 46, pos + 46 + nameLength);
+    pos += 46 + nameLength + extraLength + commentLength;
+    if (name.endsWith('/')) continue;
+    if (flags & 0x1) throw new Error(`"${name}" is encrypted`);
+
+    if (buf.readUInt32LE(localOffset) !== ZIP_LOCAL_SIGNATURE) {
+      throw new Error(`Corrupt zip: "${name}" has no local header`);
+    }
+    // The local header's sizes may be 0 (a data descriptor follows the data): the central one's count
+    const dataStart =
+      localOffset + 30 + buf.readUInt16LE(localOffset + 26) + buf.readUInt16LE(localOffset + 28);
+    if (dataStart + compressedSize > buf.length) {
+      throw new Error(`Truncated zip: "${name}" ends past the archive`);
+    }
+    const raw = buf.subarray(dataStart, dataStart + compressedSize);
+    let data: Buffer;
+    if (method === 0) data = raw;
+    else if (method === 8) data = zlib.inflateRawSync(raw);
+    else throw new Error(`"${name}": unsupported zip compression method ${method}`);
+    if (data.length !== size || zlib.crc32(data) !== crc) {
+      throw new Error(`Corrupt zip: "${name}" fails its size or CRC-32 check`);
+    }
+    // A Unix-made archive keeps the mode in the attributes' high 16 bits
+    const mode =
+      madeBy === 3 && externalAttributes >>> 16 ? (externalAttributes >>> 16) & 0o7777 : 0o644;
+    entries.push({ path: normalizePath(name), data, mode });
+  }
+  return entries;
 };

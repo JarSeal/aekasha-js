@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p303ArrayKtxMat",
+  "tslFile": "scenes/textureSets/p303SetArrayMat.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "inputs": {
+    "surface": {
+      "textureSetArray": "p303KtxArray"
+    }
+  },
+  "debugData": {
+    "name": "Texture set array, KTX2",
+    "description": "The set array input by id (p303 D4): the scene's listed p303KtxArray, four KTX2 sets' LITE in two compressed array textures (members loaded for the array alone), the layer from each quad's setLayer attribute."
+  }
+}

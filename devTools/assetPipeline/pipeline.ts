@@ -17,6 +17,7 @@ import {
 import {
   getCacheKey,
   getPackageVersion,
+  getRecipeKey,
   type CacheEntry,
   type CacheHit,
   type PipelineCache,
@@ -37,13 +38,19 @@ import {
   type PipelineOutput,
 } from './outputs';
 import type { BuiltLodChain } from './lodChains';
-import { buildPackedImage, listPackFiles } from './pack';
+import { buildPackedImage, getPackKeyParams, listPackFiles } from './pack';
 import type {
   createSettingsResolver,
   ResolvedAssetSettings,
   ResolvedTextureSettings,
 } from './settings';
-import { resolvePackFile, type AssetSource, type PackSource } from './sources';
+import {
+  isFetchedSourceFile,
+  resolvePackFile,
+  toRepoPath,
+  type AssetSource,
+  type PackSource,
+} from './sources';
 import { ROOT } from '../paths';
 import {
   encodeTextureArray,
@@ -213,10 +220,47 @@ const NOT_BUILT_REASON = 'not built: outside this run (--only), and not in the c
 type CacheKeyInput = Parameters<typeof getCacheKey>[0];
 
 /** What a texture's encode reads: its file, or every file its pack reads */
+/** What a texture's encode reads; a pack's fetched source (p303 D5) may be missing */
 const listTextureFiles = (source: Extract<AssetSource, { file: string }> | PackSource) =>
   source.kind === 'pack'
-    ? listPackFiles(source.pack).map((src) => resolvePackFile(source.jsonFile, src))
+    ? listPackFiles(source.pack).map((src) =>
+        resolvePackFile(source.jsonFile, src, { allowUnfetched: true })
+      )
     : [source.file];
+
+/** The fetched sources (p303 D5) a key's files list that aren't there */
+const listUnfetchedFiles = (files: string[]) =>
+  files.filter((file) => isFetchedSourceFile(file) && !fs.existsSync(file));
+
+/**
+ * A pack whose fetched sources aren't there (a clone before `yarn fetchTextureSources`): the
+ * committed output of the same recipe (`getRecipeKey`). Throws when there's none (a new or
+ * edited recipe needs its sources).
+ */
+const getUnfetchedHit = (
+  cache: PipelineCache | undefined,
+  keyInput: CacheKeyInput,
+  unfetched: string[]
+) => {
+  const recipeKey = getRecipeKey(keyInput);
+  const hit = recipeKey && cache ? cache.getByRecipe(recipeKey) : null;
+  if (hit) return hit;
+  const more = unfetched.length > 2 ? ` and ${unfetched.length - 2} more` : '';
+  throw new Error(
+    `no committed output has this recipe, and its fetched sources aren't there (${unfetched
+      .slice(0, 2)
+      .map(toRepoPath)
+      .join(', ')}${more}): run yarn fetchTextureSources`
+  );
+};
+
+/** A key's lookup: the cache's, or the committed output when fetched sources are missing */
+const lookUp = (cache: PipelineCache | undefined, keyInput: CacheKeyInput) => {
+  const unfetched = listUnfetchedFiles(keyInput.files);
+  if (unfetched.length) return { hit: getUnfetchedHit(cache, keyInput, unfetched) };
+  const key = cache && getCacheKey(keyInput);
+  return { key, hit: key && cache ? cache.get(key) : null };
+};
 
 /** What a GLB's encode reads: the file, and a .gltf's (or a .glb's) external buffers and images */
 const listGLTFFiles = (file: string, json: GLTFJson) => [
@@ -267,7 +311,8 @@ export const listAssetJsonFiles = (asset: PipelineAsset) => {
  */
 export const getSourceBytes = (asset: PipelineAsset) => {
   const files = new Set(listAssetSourceFiles(asset));
-  if (!files.size) return undefined;
+  // A pack's fetched source isn't there (p303 D5): unknown here, the run takes the recorded size
+  if (!files.size || listUnfetchedFiles([...files]).length) return undefined;
   return [...files].reduce(
     (sum, file) => sum + (fs.existsSync(file) ? fs.statSync(file).size : 0),
     0
@@ -278,10 +323,13 @@ export const getSourceBytes = (asset: PipelineAsset) => {
 const toCacheEntry = (
   repoPath: string,
   result: Extract<PipelineOutcome, { status: 'optimized' | 'passThrough' }>,
+  keyInput: CacheKeyInput,
   ktxVersion?: string
 ): CacheEntry => {
   const { url, bytes } = result.output;
-  if (result.status === 'passThrough') return { source: repoPath, url, bytes };
+  const recipeKey = getRecipeKey(keyInput);
+  const recipe = recipeKey ? { recipeKey } : {};
+  if (result.status === 'passThrough') return { source: repoPath, url, bytes, ...recipe };
   const { textures, droppedTextures, geometryBytes, lodChains, merge, warnings } = result;
   return {
     source: repoPath,
@@ -294,6 +342,7 @@ const toCacheEntry = (
     ...(merge ? { merge } : {}),
     ...(warnings.length ? { warnings } : {}),
     ...(ktxVersion ? { ktxVersion } : {}),
+    ...recipe,
   };
 };
 
@@ -335,19 +384,17 @@ const runPassThroughAsync = async (
     return { status: 'passThrough', reason, isCopy, output, settings };
   }
   const { cache, isSrgb } = opts;
-  const key =
-    cache &&
-    getCacheKey({
-      type: 'texture',
-      files: listTextureFiles(source),
-      params: {
-        kind: 'packPassThrough',
-        pack: source.pack,
-        isSrgb,
-        output: getPackLogicalPath(source),
-      },
-    });
-  const hit = key ? cache.get(key) : null;
+  const keyInput: CacheKeyInput = {
+    type: 'texture',
+    files: listTextureFiles(source),
+    params: {
+      kind: 'packPassThrough',
+      ...getPackKeyParams(source.pack),
+      isSrgb,
+      output: getPackLogicalPath(source),
+    },
+  };
+  const { key, hit } = lookUp(cache, keyInput);
   if (hit) {
     const { output } = fromCacheEntry(hit);
     return {
@@ -362,7 +409,7 @@ const runPassThroughAsync = async (
   if (opts.lookupOnly) return { status: 'skipped', reason: NOT_BUILT_REASON };
   const output = await passThroughPack(source, isSrgb);
   const result = { status: 'passThrough' as const, reason, isCopy: true, output, settings };
-  if (key) cache.set(key, toCacheEntry(source.repoPath, result));
+  if (key && cache) cache.set(key, toCacheEntry(source.repoPath, result, keyInput));
   return { ...result, ...(key ? { cache: 'miss' as const } : {}) };
 };
 
@@ -432,7 +479,7 @@ const planTextureEncode = (
         ? { alphaCoverage: { cut: asset.alphaCoverage, version: ALPHA_COVERAGE_VERSION } }
         : {}),
       ...(source.kind === 'pack'
-        ? { pack: source.pack, output: getPackLogicalPath(source) }
+        ? { ...getPackKeyParams(source.pack), output: getPackLogicalPath(source) }
         : { output: getLogicalPath(source) }),
     },
   };
@@ -580,8 +627,7 @@ const runAsset = async (
   }
 
   const plan = planEncode(asset, source, settings, resolveSettings);
-  const key = cache && getCacheKey(plan.keyInput);
-  const hit = key ? cache.get(key) : null;
+  const { key, hit } = lookUp(cache, plan.keyInput);
   if (hit) {
     return {
       status: 'optimized',
@@ -606,8 +652,8 @@ const runAsset = async (
   }
   const ktxVersion = await getEncodingKtxVersionAsync(encoded.textures, getKtx, warn);
   const result = { ...encoded, warnings };
-  if (!key) return result;
-  cache.set(key, toCacheEntry(source.repoPath, result, ktxVersion));
+  if (!key || !cache) return result;
+  cache.set(key, toCacheEntry(source.repoPath, result, plan.keyInput, ktxVersion));
   return { ...result, cache: 'miss' };
 };
 

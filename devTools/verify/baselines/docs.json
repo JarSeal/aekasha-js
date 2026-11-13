@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3594,
-      "total": 3594
+      "documented": 3643,
+      "total": 3643
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3511,
-        "total": 3511
+        "documented": 3554,
+        "total": 3554
       },
       "members": {
         "documented": 953,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 83,
-        "total": 83
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 154,
@@ -397,6 +397,20 @@
         "members": []
       }
     },
+    "engine/features/texturesets": {
+      "exports": {
+        "documented": 28,
+        "total": 28
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/features/viewports": {
       "exports": {
         "documented": 16,
@@ -595,8 +609,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 98,
-        "total": 98
+        "documented": 113,
+        "total": 113
       },
       "members": {
         "documented": 0,
@@ -999,6 +1013,20 @@
         "members": []
       }
     },
+    "toolkit/materials/textureSetSurface": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/materials/triplanarCheckerboard": {
       "exports": {
         "documented": 1,
@@ -1017,6 +1045,20 @@
       "exports": {
         "documented": 2,
         "total": 2
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/nodes": {
+      "exports": {
+        "documented": 5,
+        "total": 5
       },
       "members": {
         "documented": 0,

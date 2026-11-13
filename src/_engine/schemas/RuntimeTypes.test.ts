@@ -25,6 +25,18 @@ import type {
   TextureArrayInputRef,
   TextureInputRef,
 } from '../kernel/assets/MaterialInputRefs';
+import type {
+  SceneTextureSetArrayEntry,
+  TextureSetArrayInputSchema,
+  TextureSetAsset,
+  TextureSetDef,
+  TextureSetInputSchema,
+} from './TextureSetSchema';
+import type {
+  TextureSetArrayInputRef,
+  TextureSetInputRef,
+  TextureSetPackingData,
+} from '../features/texturesets/TextureSetRefs';
 import type { z } from 'zod';
 import type { MeshAsset } from './MeshSchema';
 import type { SceneAsset } from './SceneSchema';
@@ -109,7 +121,14 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<TexOptsJson>().toExtend<TexOptsRuntime>();
     expectTypeOf<ExtraKeys<TextureAsset, TextureProps>>().toEqualTypeOf<
       // Build time and the Assets tab only: the gatherer drops `optimize` and `pack`
-      ToolingKeys | 'optimize' | 'pack' | '__fileSize' | '__bytes' | '__vramBytes' | '__codec'
+      | ToolingKeys
+      | 'optimize'
+      | 'pack'
+      | '__fileSize'
+      | '__bytes'
+      | '__vramBytes'
+      | '__codec'
+      | '__averageColor'
     >();
     expectTypeOf<ExtraKeys<TexOptsJson, TexOptsRuntime>>().toEqualTypeOf<never>();
   });
@@ -143,6 +162,24 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<z.infer<typeof TextureInputRefSchema>>().toEqualTypeOf<TextureInputRef>();
     expectTypeOf<z.infer<typeof TextureArrayInputSchema>>().toEqualTypeOf<TextureArrayInputRef>();
     expectTypeOf<z.infer<typeof AtlasCellInputSchema>>().toEqualTypeOf<AtlasCellInputRef>();
+    expectTypeOf<z.infer<typeof TextureSetInputSchema>>().toEqualTypeOf<TextureSetInputRef>();
+    expectTypeOf<
+      z.infer<typeof TextureSetArrayInputSchema>
+    >().toEqualTypeOf<TextureSetArrayInputRef>();
+  });
+
+  test('texture set (*.textureSet.json, as the gatherer writes it) → the runtime’s set (p303)', () => {
+    // A scene's sets are the gathered form, which the input's dependencies read
+    expectTypeOf<NonNullable<SceneData['textureSets']>[number]>().toEqualTypeOf<TextureSetDef>();
+    expectTypeOf<TextureSetDef>().toExtend<TextureSetPackingData>();
+    // No `__saveData`: a set has none (the gatherer's `TYPES_WITHOUT_SAVE_DATA`)
+    expectTypeOf<ExtraKeys<TextureSetAsset, TextureSetDef>>().toEqualTypeOf<
+      '$schema' | '__sourcePath'
+    >();
+    // A scene's set arrays (p303 D4): the JSON's entry, and the members' declarations
+    type GatheredArray = NonNullable<SceneData['textureSetArrays']>[number];
+    expectTypeOf<Omit<GatheredArray, '__textures'>>().toEqualTypeOf<SceneTextureSetArrayEntry>();
+    expectTypeOf<GatheredArray['__textures']>().toEqualTypeOf<TextureProps[] | undefined>();
   });
 
   test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "p303SetFullMat",
+  "tslFile": "scenes/textureSets/p303TextureSetMat.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "inputs": {
+    "surface": {
+      "textureSet": "p303TestSet",
+      "packing": "FULL"
+    }
+  },
+  "debugData": {
+    "name": "Texture set, FULL",
+    "description": "The texture set input (p303 D1): p303TestSet's FULL: albedo with height, the normal map, ORM; the set's surface uniforms scale them."
+  }
+}

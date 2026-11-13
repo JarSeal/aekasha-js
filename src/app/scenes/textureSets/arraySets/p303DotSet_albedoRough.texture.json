@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "p303DotSet_albedoRough",
+  "fileName": "../source/dots/albedoRough.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303DotSet albedoRough",
+    "description": "The dots set's LITE albedoRough: RGB albedo \u00d7 AO (sRGB), A roughness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

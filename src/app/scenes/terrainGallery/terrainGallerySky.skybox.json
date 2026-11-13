@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/skyBox.schema.json",
+  "id": "terrainGallerySky",
+  "preset": "DAY_NIGHT",
+  "dayNight": { "timeOfDay": 10, "playing": false, "dayOfYear": 100 },
+  "debugData": {
+    "name": "Terrain gallery sky",
+    "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:00, so the gallery's blocks are lit the same on every visit: a mid-morning sun high enough to light the ramps, low enough for the relief to show."
+  }
+}

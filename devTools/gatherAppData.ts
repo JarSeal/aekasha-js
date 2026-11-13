@@ -107,6 +107,7 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
             ...reg.atlasSlots,
             ...reg.mergeMaterialSlots,
           },
+          textureSets: reg.textureSets,
           materials: reg.materials,
           mergeMaterials: reg.mergeMaterials,
           meshes: reg.meshes,

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "ice02",
+  "category": "ICE",
+  "physicalSize": [4, 4],
+  "heightScale": 0.004,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "ice02_albedoRough",
+      "normalHeight": "ice02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Ice 02 (dark lake)",
+    "description": "ambientCG Ice003, CC0: dark lake ice; AO derived from the height (no AO map)."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "p303TestSet_orm",
+  "fileName": "./source/orm.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303TestSet orm",
+    "description": "The hand-made texture set's FULL: R ambient occlusion, G roughness, B metalness (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

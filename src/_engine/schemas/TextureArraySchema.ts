@@ -67,7 +67,11 @@ export const TextureArrayAssetSchema = z.object({
     .array(z.string())
     .optional()
     .describe("Set by the gatherer: each layer's name, by layer index."),
-  ...GeneratedAssetFieldsSchema.omit({ __lodChain: true, __sourceUrl: true }).shape,
+  ...GeneratedAssetFieldsSchema.omit({
+    __lodChain: true,
+    __sourceUrl: true,
+    __averageColor: true,
+  }).shape,
 });
 
 /** A texture array JSON (`*.textureArray.json`), as {@link TextureArrayAssetSchema} validates it. */

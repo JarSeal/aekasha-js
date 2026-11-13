@@ -48,6 +48,7 @@ export type InitEngineOptions = {
  * import { skyBox } from 'aekasha/skybox';
  * import { spatial } from 'aekasha/spatial';
  * import { streaming } from 'aekasha/streaming';
+ * import { textureSets } from 'aekasha/texturesets';
  * import { viewports } from 'aekasha/viewports';
  * import { appData } from './generated';
  * import { appECSPlugins } from './AppECSPlugins';
@@ -68,6 +69,7 @@ export type InitEngineOptions = {
  *     viewports(),
  *     streaming(),
  *     merging(),
+ *     textureSets(),
  *     appECSPlugins,
  *   ],
  *   start: async () => {

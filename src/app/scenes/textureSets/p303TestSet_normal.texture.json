@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "p303TestSet_normal",
+  "fileName": "./source/normal.png",
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "optimize": false,
+  "debugData": {
+    "name": "p303TestSet normal",
+    "description": "The hand-made texture set's FULL: the tangent-space normal (OpenGL, +Y) (devTools/assetPipeline/fixtures/textureSetsFiles.ts; a PNG passed through, no encode)."
+  }
+}

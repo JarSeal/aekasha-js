@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "ice01",
+  "category": "ICE",
+  "physicalSize": [4, 4],
+  "heightScale": 0.006,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "ice01_albedoRough",
+      "normalHeight": "ice01_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Ice 01 (lake)",
+    "description": "ambientCG Ice002, CC0: lake ice; AO derived from the height (no AO map)."
+  }
+}

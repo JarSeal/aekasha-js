@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "mud02",
+  "category": "MUD",
+  "physicalSize": [1.75, 1.75],
+  "heightScale": 0.009,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "mud02_albedoRough",
+      "normalHeight": "mud02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Mud 02 (forest mud)",
+    "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
+  }
+}

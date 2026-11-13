@@ -2156,6 +2156,44 @@
       "STREAMING_MIN_CELL_SIZE": "Variable",
       "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
     },
+    "src/_engine/features/texturesets/TextureSetArrays.ts": {
+      "buildSceneTextureSetArraysAsync": "Function",
+      "buildTextureSetArray": "Function",
+      "BuildTextureSetArrayProps": "TypeAlias",
+      "getTextureSetArray": "Function",
+      "getTextureSetArrayId": "Function",
+      "getTextureSetLayerParams": "Function",
+      "setTextureSetArrayLayer": "Function",
+      "TextureSetArray": "TypeAlias",
+      "TextureSetArrayInput": "TypeAlias",
+      "TextureSetLayerParamsNode": "TypeAlias",
+      "TextureSetSlotMap": "TypeAlias"
+    },
+    "src/_engine/features/texturesets/TextureSetRefs.ts": {
+      "getTextureSetInputDependencies": "Function",
+      "getTextureSetSlotTextures": "Function",
+      "isTextureSetArrayInputRef": "Function",
+      "isTextureSetInputRef": "Function",
+      "TextureSetArrayInputRef": "TypeAlias",
+      "TextureSetInputRef": "TypeAlias",
+      "TextureSetLookup": "TypeAlias",
+      "TextureSetPackingData": "TypeAlias"
+    },
+    "src/_engine/features/texturesets/TextureSets.ts": {
+      "getTextureSet": "Function",
+      "getTextureSetPackingTextures": "Function",
+      "installTextureSets": "Function",
+      "loadTextureSetAsync": "Function",
+      "registerTextureSetsDebug": "Function",
+      "TextureSetInput": "TypeAlias",
+      "TextureSetTextures": "TypeAlias"
+    },
+    "src/_engine/features/texturesets/TextureSetsFeature.ts": {
+      "textureSets": "Function"
+    },
+    "src/_engine/features/texturesets/TextureSetsSchema.ts": {
+      "textureSetsSchemaPart": "Variable"
+    },
     "src/_engine/features/viewports/Viewports.ts": {
       "createViewport": "Function",
       "deleteSceneViewports": "Function",
@@ -3333,6 +3371,23 @@
       "TEXTURE_CONSTANTS": "Variable",
       "TextureAsset": "TypeAlias",
       "TextureAssetSchema": "Variable"
+    },
+    "src/_engine/schemas/TextureSetSchema.ts": {
+      "isTextureSetColorSlot": "Function",
+      "SceneTextureSetArrayEntry": "TypeAlias",
+      "SceneTextureSetArraySchema": "Variable",
+      "TEXTURE_SET_CATEGORIES": "Variable",
+      "TEXTURE_SET_PACKING_PREFERENCE": "Variable",
+      "TEXTURE_SET_PACKINGS": "Variable",
+      "TEXTURE_SET_SURFACE_DEFAULTS": "Variable",
+      "TextureSetArrayInputSchema": "Variable",
+      "TextureSetAsset": "TypeAlias",
+      "TextureSetAssetSchema": "Variable",
+      "TextureSetDef": "TypeAlias",
+      "TextureSetInputSchema": "Variable",
+      "TextureSetPacking": "TypeAlias",
+      "TextureSetSlot": "TypeAlias",
+      "TextureSetSurface": "TypeAlias"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
     "src/_engine/ui/components/Accordion.ts": {
@@ -4711,6 +4766,9 @@
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
+    "src/toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts": {
+      "setup": "Function"
+    },
     "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts": {
       "colorNode": "Function"
     },
@@ -4726,6 +4784,13 @@
       "triplanarProjection": "Function",
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
+    },
+    "src/toolkit/terrain/nodes/SampleTextureSet.ts": {
+      "bumpNormalView": "Function",
+      "sampleTextureSet": "Function",
+      "SampleTextureSetOptions": "TypeAlias",
+      "TextureSetSample": "TypeAlias",
+      "transformTangentNormalToView": "Function"
     }
   },
   "entries": {
@@ -5479,6 +5544,8 @@
       "SceneMergeMaterial",
       "SceneSpatialDomainEntry",
       "SceneStreamingSchema",
+      "SceneTextureSetArrayEntry",
+      "SceneTextureSetArraySchema",
       "ShadowQuality",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
@@ -5489,6 +5556,10 @@
       "StreamingManifestCell",
       "StreamingManifestLayer",
       "StreamingRingsSchema",
+      "TEXTURE_SET_CATEGORIES",
+      "TEXTURE_SET_PACKINGS",
+      "TEXTURE_SET_PACKING_PREFERENCE",
+      "TEXTURE_SET_SURFACE_DEFAULTS",
       "TEXTURE_SLOTS",
       "TextureArrayAsset",
       "TextureArrayAssetSchema",
@@ -5504,6 +5575,14 @@
       "TextureCodec",
       "TextureInputRefSchema",
       "TexturePack",
+      "TextureSetArrayInputSchema",
+      "TextureSetAsset",
+      "TextureSetAssetSchema",
+      "TextureSetDef",
+      "TextureSetInputSchema",
+      "TextureSetPacking",
+      "TextureSetSlot",
+      "TextureSetSurface",
       "TextureSettings",
       "TextureSlot",
       "UnionToIntersection",
@@ -5515,12 +5594,14 @@
       "getMergeMaterialSlotTextureId",
       "isJsonRelativeFileName",
       "isTextureArrayLayerFile",
+      "isTextureSetColorSlot",
       "lodSchemaPart",
       "mergingSchemaPart",
       "postFxSchemaPart",
       "skyBoxSchemaPart",
       "spatialSchemaPart",
-      "streamingSchemaPart"
+      "streamingSchemaPart",
+      "textureSetsSchemaPart"
     ],
     "aekasha/skybox": [
       "SKYBOX_PRESET_NAMES",
@@ -5601,6 +5682,29 @@
       "streaming",
       "unregisterStreamingCellContent"
     ],
+    "aekasha/texturesets": [
+      "BuildTextureSetArrayProps",
+      "TextureSetArray",
+      "TextureSetArrayInput",
+      "TextureSetArrayInputRef",
+      "TextureSetDef",
+      "TextureSetInput",
+      "TextureSetInputRef",
+      "TextureSetLayerParamsNode",
+      "TextureSetPacking",
+      "TextureSetSlot",
+      "TextureSetSlotMap",
+      "TextureSetSurface",
+      "TextureSetTextures",
+      "buildTextureSetArray",
+      "getTextureSet",
+      "getTextureSetArray",
+      "getTextureSetLayerParams",
+      "getTextureSetPackingTextures",
+      "loadTextureSetAsync",
+      "setTextureSetArrayLayer",
+      "textureSets"
+    ],
     "aekasha/toolkit/ecs": [
       "FollowObjectCameraParams",
       "FollowToolComponentType",
@@ -5667,6 +5771,13 @@
       "blendProjections",
       "readBooleanDefines",
       "triplanarProjection"
+    ],
+    "aekasha/toolkit/terrain": [
+      "SampleTextureSetOptions",
+      "TextureSetSample",
+      "bumpNormalView",
+      "sampleTextureSet",
+      "transformTangentNormalToView"
     ],
     "aekasha/ui": [
       "Accordion",

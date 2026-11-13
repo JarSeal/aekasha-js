@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "sand01",
+  "category": "SAND",
+  "physicalSize": [3, 3],
+  "heightScale": 0.057,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": { "albedoRough": "sand01_albedoRough", "normalHeight": "sand01_normalHeight" },
+    "FULL": {
+      "albedoHeight": "sand01_albedoHeight",
+      "normal": "sand01_normal",
+      "orm": "sand01_orm"
+    },
+    "MINIMAL": { "albedoHeight": "sand01_albedoHeightAO" }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1,
+    "porosity": 0.85,
+    "wetDarkening": 0.55,
+    "wetRoughness": 0.4
+  },
+  "debugData": {
+    "name": "Sand 01 (dry dunes)",
+    "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+  }
+}

@@ -54,7 +54,13 @@ export const runPipeline = async (
         cache: opts.cache,
         lookupOnly: opts.isSelected ? !opts.isSelected(key, asset) : false,
       });
-      result = { ...outcome, asset, sourceBytes: getSourceBytes(asset) };
+      // A clone without a pack's fetched sources (p303 D5): the sizes its encode recorded, so the
+      // generated data's `__bytes` is the same as where the sources are
+      const recorded =
+        asset.source.kind === 'pack' && outcome.status === 'optimized' && outcome.textures.length
+          ? outcome.textures[0].source.bytes
+          : undefined;
+      result = { ...outcome, asset, sourceBytes: getSourceBytes(asset) ?? recorded };
     } catch (error) {
       result = {
         status: 'error',

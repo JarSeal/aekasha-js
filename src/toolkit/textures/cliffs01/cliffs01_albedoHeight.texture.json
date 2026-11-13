@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "cliffs01_albedoHeight",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "baseColor"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "cliffs01 albedoHeight (FULL)",
+    "description": "The texture set cliffs01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+  }
+}

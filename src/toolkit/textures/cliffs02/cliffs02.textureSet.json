@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "cliffs02",
+  "category": "CLIFF",
+  "physicalSize": [6, 6],
+  "heightScale": 0.25,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "cliffs02_albedoRough",
+      "normalHeight": "cliffs02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Cliffs 02 (dark veined)",
+    "description": "ambientCG Rock058, CC0: dark blue-grey veined cliff."
+  }
+}

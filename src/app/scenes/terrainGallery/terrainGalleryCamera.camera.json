@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 50,
+    "near": 0.1,
+    "far": 600,
+    "position": { "x": 0, "y": 34, "z": 56 },
+    "lookAtPoint": { "x": 0, "y": 0, "z": 4 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "terrainGalleryCamera",
+    "debugData": {
+      "name": "Terrain gallery overview",
+      "description": "All 16 blocks from the front (+z), above, facing the ramps."
+    }
+  }
+}

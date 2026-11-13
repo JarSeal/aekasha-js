@@ -1,0 +1,14 @@
+{
+  "provider": "ambientCG",
+  "assetId": "Ground080",
+  "download": "2K-JPG",
+  "license": "CC0-1.0",
+  "page": "https://ambientcg.com/view?id=Ground080",
+  "maps": {
+    "color": "_Color",
+    "normal": "_NormalGL",
+    "roughness": "_Roughness",
+    "ao": "_AmbientOcclusion",
+    "height": "_Displacement"
+  }
+}

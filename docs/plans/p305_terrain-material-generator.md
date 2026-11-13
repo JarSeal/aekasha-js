@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Materials, Terrain, Toolkit
-Blocked by: p303_texture-sets-and-terrain-texture-library.md, p304_procedural-texture-baker.md (soft: Phase 2 macro noise, Phase 7 colour-map bake, Phase 8 live layers)
+Blocked by: p304_procedural-texture-baker.md (soft: Phase 2 macro noise, Phase 7 colour-map bake, Phase 8 live layers)
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 

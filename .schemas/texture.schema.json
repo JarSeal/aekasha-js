@@ -64,7 +64,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema110"
+          "$ref": "#/definitions/__schema115"
         }
       ]
     },
@@ -76,7 +76,7 @@
       "description": "Set by the gatherer: bytes on disk (all six faces for a cube texture).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema117"
+          "$ref": "#/definitions/__schema122"
         }
       ]
     },
@@ -84,7 +84,7 @@
       "description": "Set by the gatherer: the pipeline's output.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema118"
+          "$ref": "#/definitions/__schema123"
         }
       ]
     },
@@ -92,7 +92,7 @@
       "description": "Set by the gatherer: the source as the dev server serves it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema119"
+          "$ref": "#/definitions/__schema124"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "description": "Set by the gatherer: the download in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema120"
+          "$ref": "#/definitions/__schema125"
         }
       ]
     },
@@ -108,7 +108,7 @@
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema120"
+          "$ref": "#/definitions/__schema125"
         }
       ]
     },
@@ -116,6 +116,14 @@
       "allOf": [
         {
           "$ref": "#/definitions/__schema68"
+        }
+      ]
+    },
+    "__averageColor": {
+      "description": "Set by the gatherer (development data): the texture's average RGB, linear.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema126"
         }
       ]
     }
@@ -1052,22 +1060,22 @@
           "$ref": "#/definitions/__schema92"
         },
         "g": {
-          "$ref": "#/definitions/__schema104"
+          "$ref": "#/definitions/__schema109"
         },
         "b": {
-          "$ref": "#/definitions/__schema105"
+          "$ref": "#/definitions/__schema110"
         },
         "a": {
-          "$ref": "#/definitions/__schema106"
+          "$ref": "#/definitions/__schema111"
         },
         "rg": {
-          "$ref": "#/definitions/__schema107"
+          "$ref": "#/definitions/__schema112"
         },
         "rgb": {
-          "$ref": "#/definitions/__schema108"
+          "$ref": "#/definitions/__schema113"
         },
         "rgba": {
-          "$ref": "#/definitions/__schema109"
+          "$ref": "#/definitions/__schema114"
         }
       },
       "additionalProperties": false,
@@ -1133,13 +1141,20 @@
                 }
               ]
             },
+            "cavity": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema100"
+                }
+              ]
+            },
             "multiply": {
               "anyOf": [
                 {
-                  "$ref": "#/definitions/__schema100"
+                  "$ref": "#/definitions/__schema105"
                 },
                 {
-                  "$ref": "#/definitions/__schema101"
+                  "$ref": "#/definitions/__schema106"
                 }
               ],
               "description": "Multiplied in after remap and invert (linear values), eg. AO into the albedo."
@@ -1196,10 +1211,47 @@
       "type": "boolean"
     },
     "__schema100": {
+      "type": "object",
+      "properties": {
+        "radius": {
+          "$ref": "#/definitions/__schema101"
+        },
+        "strength": {
+          "$ref": "#/definitions/__schema103"
+        }
+      },
+      "additionalProperties": false,
+      "description": "`src` is a height map: its cavity term, 1 − strength × max(0, blur(h) − h), h normalized to 0..1 and blurred wrapping at the edges. The AO of a source without one (p303 D2)."
+    },
+    "__schema101": {
+      "description": "The blur's radius (a Gaussian's sigma) in pixels at the pack size (default 24, fitted at 2K).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema102"
+        }
+      ]
+    },
+    "__schema102": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema103": {
+      "description": "How dark a crevice gets per unit of depth below its surroundings (default 4).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema104"
+        }
+      ]
+    },
+    "__schema104": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema105": {
       "type": "number",
       "description": "A constant factor."
     },
-    "__schema101": {
+    "__schema106": {
       "type": "object",
       "properties": {
         "src": {
@@ -1209,7 +1261,14 @@
           "description": "The channel of `src` (default r).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema102"
+              "$ref": "#/definitions/__schema107"
+            }
+          ]
+        },
+        "cavity": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema100"
             }
           ]
         },
@@ -1217,7 +1276,7 @@
           "description": "value × (1 + (factor − 1) × strength), eg. 0.8 for AO into albedo (default 1).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema103"
+              "$ref": "#/definitions/__schema108"
             }
           ]
         }
@@ -1227,7 +1286,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema102": {
+    "__schema107": {
       "type": "string",
       "enum": [
         "r",
@@ -1236,11 +1295,11 @@
         "a"
       ]
     },
-    "__schema103": {
+    "__schema108": {
       "type": "number",
       "minimum": 0
     },
-    "__schema104": {
+    "__schema109": {
       "description": "The output's g: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1248,7 +1307,7 @@
         }
       ]
     },
-    "__schema105": {
+    "__schema110": {
       "description": "The output's b: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1256,7 +1315,7 @@
         }
       ]
     },
-    "__schema106": {
+    "__schema111": {
       "description": "The output's a: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1264,7 +1323,7 @@
         }
       ]
     },
-    "__schema107": {
+    "__schema112": {
       "description": "The output's rg: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1272,7 +1331,7 @@
         }
       ]
     },
-    "__schema108": {
+    "__schema113": {
       "description": "The output's rgb: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1280,7 +1339,7 @@
         }
       ]
     },
-    "__schema109": {
+    "__schema114": {
       "description": "The output's rgba: a source image's channels, or a constant.",
       "allOf": [
         {
@@ -1288,7 +1347,7 @@
         }
       ]
     },
-    "__schema110": {
+    "__schema115": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -1302,16 +1361,16 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "$ref": "#/definitions/__schema111"
+                  "$ref": "#/definitions/__schema116"
                 },
                 "engineVersion": {
-                  "$ref": "#/definitions/__schema113"
+                  "$ref": "#/definitions/__schema118"
                 },
                 "toolkitVersion": {
-                  "$ref": "#/definitions/__schema115"
+                  "$ref": "#/definitions/__schema120"
                 },
                 "appVersion": {
-                  "$ref": "#/definitions/__schema116"
+                  "$ref": "#/definitions/__schema121"
                 }
               },
               "additionalProperties": false,
@@ -1349,42 +1408,11 @@
         }
       }
     },
-    "__schema111": {
+    "__schema116": {
       "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema112"
-        }
-      ]
-    },
-    "__schema112": {
-      "type": "number"
-    },
-    "__schema113": {
-      "description": "The engine's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema114"
-        }
-      ]
-    },
-    "__schema114": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
-    "__schema115": {
-      "description": "The toolkit's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema114"
-        }
-      ]
-    },
-    "__schema116": {
-      "description": "The app's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema114"
+          "$ref": "#/definitions/__schema117"
         }
       ]
     },
@@ -1392,12 +1420,43 @@
       "type": "number"
     },
     "__schema118": {
-      "type": "string"
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema119"
+        }
+      ]
     },
     "__schema119": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
     "__schema120": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema119"
+        }
+      ]
+    },
+    "__schema121": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema119"
+        }
+      ]
+    },
+    "__schema122": {
+      "type": "number"
+    },
+    "__schema123": {
+      "type": "string"
+    },
+    "__schema124": {
+      "type": "string"
+    },
+    "__schema125": {
       "type": "object",
       "properties": {
         "in": {
@@ -1414,6 +1473,23 @@
         "out"
       ],
       "additionalProperties": false
+    },
+    "__schema126": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "additionalItems": false
     }
   }
 }
