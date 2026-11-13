@@ -1,5 +1,5 @@
 /**
- * p376 Phase 0's bench (docs/plans/p376_hlod-merged-cluster-proxies.md §3): drives the scenes'
+ * p376 Phase 0's bench (docs/plans/_DONE_p376_hlod-merged-cluster-proxies.md §3): drives the scenes'
  * HLOD probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`) and prints its tables.
  *
  *   npx tsx devTools/bench/hlodSpike.ts [--step simplify] [--scenes largeWorld,testDebugScene]

@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-6; Phase 5 step 2, the second machine, not run: a p990 item)
 Category: Merging, LOD, Streaming
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
-Related: p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), \_DONE_p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.2)
+Related: \_DONE_p376_hlod-merged-cluster-proxies.md (not adopted: its Phase 0's measurements and spike tools), \_DONE_p353_macro-streaming-grid.md (the far layer and its JSON far entries), p306_terrain-blocks-and-procedural-terrain-meshes.md (a block with its dressing as one far proxy), \_DONE_p347_lod-chain-generation.md (the build-time simplifier), \_DONE_p371_geometry-merging.md (the build-time GLB merge), \_DONE_p372_mesh-merge-groups.md (`AUTO` cells, the groups' cull), \_DONE_p374_multi-material-merging.md (palettes: one draw for several materials), \_DONE_p375_batched-mesh-batches.md (a batched member's mesh out of the scene graph), \_DONE_p378_baked-members-out-of-the-scene-graph.md (open question 5, split off after Phase 0)
 
 # HLOD: Streaming Cell Proxies
 

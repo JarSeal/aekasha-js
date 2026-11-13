@@ -1,7 +1,7 @@
 Status: draft | epic — not-implemented
 Category: Terrain, Materials, Assets
 Blocks: \_DONE_p302_material-and-texture-system-refactor.md, p303_texture-sets-and-terrain-texture-library.md, p304_procedural-texture-baker.md, p305_terrain-material-generator.md, p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
-Related: \_DONE_p299_texture-arrays-and-atlases.md (the array/atlas core p303 and p309 build on), p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; new terrain processes in its §10)
+Related: \_DONE_p299_texture-arrays-and-atlases.md (the array/atlas core p303 and p309 build on), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; new terrain processes in its §10)
 
 # Terrain Texturing — Epic
 
@@ -106,7 +106,7 @@ p300 asset pipeline (KTX2, meshopt, packing)
 
 p304 can be implemented in parallel with p305 Phase 1. p308 and p309 are independent of each other.
 
-p299 (texture arrays and atlases) is outside this epic but runs before p303: p303's layer arrays and p309's decal atlases are built on it. Its Phases 0-4 are done (runtime and build-time arrays, atlases, the TSL helpers, the Assets tab's previews); its Phase 5 (the JSON binding) waited for p302 D4, done since 2026-11-13. The mesh merging plans (p370 epic, p371–p376) run after the LOD plans; nothing here is blocked by them, but they add the modular kit and tile-chunk processes (§5) and lower the draw count of a block's static dressing (§7).
+p299 (texture arrays and atlases) is outside this epic but runs before p303: p303's layer arrays and p309's decal atlases are built on it. It's done (2026-11-13: runtime and build-time arrays, atlases, the TSL helpers, the Assets tab's previews, and Phase 5's material JSON forms `{ textureArray, layer }` and `{ atlas, slot, cell }`; its Phases 5-6 merge to `main` on their own branch, which p303's branch starts after). The mesh merging plans (the p370 epic, p371–p378, done) ran after the LOD plans; nothing here is blocked by them, but they add the modular kit and tile-chunk processes (§5) and lower the draw count of a block's static dressing (§7).
 
 ### Branches and PRs
 

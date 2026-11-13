@@ -39,7 +39,7 @@ The last two phases of texture arrays and atlases (p299; its Phases 0-4, the ass
 - The Hub: the asset-optimization page's texture atlases (the format, the slot textures, the runtime helpers) and arrays (the JSON form, which to use), the toolkit page's input forms, the scenes-and-assets page's asset table and "A scene's textures".
 - `docs/techniques/asset-optimization.md`: "Texture arrays and atlases" (which to use, both formats, codecs, sizes and budgets). `readme.md`: a Features line. The gather and streaming `CLAUDE.md`.
 - `sbp.config.ts`: the app profile's initial (398 → 399 KiB), `assets/index.js` (394 → 395 KiB) and `_engine/kernel/assets` (13 → 14 KiB) budgets, over since p302 (initial 398.7 KiB, about 0.2 of it this branch's). The bundle, API and docs baselines.
-- The plans: p299 done; p303 and p309 no longer wait on it, p303 has its lazy-resolver pattern, and p309's decal atlas settings are fixed to what the atlas schema takes.
+- The plans: p299 done, and with it its epic p370 (static mesh merging and texture atlases: every child done) and p376 (its Phase 0 kept, the proxies not adopted); p303 and p309 no longer wait on p299, p303 has its lazy-resolver pattern, and p309's decal atlas settings are fixed to what the atlas schema takes.
 
 ## 2026-11-13 — p302_material-and-texture-system-refactor
 

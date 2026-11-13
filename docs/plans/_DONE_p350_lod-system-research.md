@@ -285,7 +285,7 @@ tier policy's fixed-step decisions) grew out of p346 and p352 and are done too.
 | 3    | `_DONE_p354_gpu-driven-culling`                | Instance sets: compute frustum culling, indirect draws, per-instance LOD on the GPU; the same rules on the CPU on WebGL2 | p348, p346                         |
 | 4    | — (research only; moved to p990)               | Cluster (meshlet) LOD, §7: evaluate three r187's `MeshletDrawingPipeline` (p354 Phase 0) for huge single meshes   | p354                                     |
 
-**Follow-on epic:** `p370_static-mesh-merging-and-texture-atlas-systems` (after these plans) merges
+**Follow-on epic:** `_DONE_p370_static-mesh-merging-and-texture-atlas-systems` (after these plans) merges
 static meshes into fewer draws. Its HLOD stub (p376) turns merged groups into LOD units with p347's
 simplifier and p348's selection. Its §2.1 records that a `BatchedMesh` on WebGPU (r186) is one draw
 call per member.

@@ -1,7 +1,7 @@
 Status: implemented (Phases 0-7)
 Category: Rendering, LOD, GPU
 Epic: \_DONE_p350_lod-system-research.md (Tier 3)
-Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), \_DONE_p375_batched-mesh-batches.md
+Related: \_DONE_p348_ecs-lod-selection.md (the CPU path's rules, ported here), \_DONE_p351_impostor-billboard-lod.md (cross-fades; impostor levels are levels here too), \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md (per-object binding, shared builds), \_DONE_p353_macro-streaming-grid.md (a cell's content can add and remove a set's instances), p308_terrain-scatter.md (its static instance chunks, D1, are the CPU-side static case; a set is the large one), p240_client-device-capability-sniffer.md (whether a device takes the GPU path), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (indirect draws inside merged groups, its open question 3), \_DONE_p375_batched-mesh-batches.md
 
 # GPU-Driven Culling & Per-Instance LOD
 

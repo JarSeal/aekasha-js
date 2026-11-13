@@ -20,7 +20,7 @@ import type { ECSWorld, MergePart } from 'aekasha';
 import { createRuins, getRuinGeometries, getRuinMaterial, layoutRuins } from './largeWorldRuins';
 import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeWorldRuins';
 
-// p376 Phase 0 step 3 (docs/plans/p376_hlod-merged-cluster-proxies.md §3): `?hlodField=<sites>`
+// p376 Phase 0 step 3 (docs/plans/_DONE_p376_hlod-merged-cluster-proxies.md §3): `?hlodField=<sites>`
 // adds that many ruin sites (`largeWorldRuins.ts`' kit) in a ring 200 m-1 km from the origin,
 // past the 200 m terrain, on a flat ground of their own at y = 0: the kit-terrain far field p370
 // §10 makes HLOD for. The overview camera's far plane goes to 3 km so the ring isn't clipped. The

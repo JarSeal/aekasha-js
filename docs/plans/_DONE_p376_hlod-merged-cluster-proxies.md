@@ -1,6 +1,6 @@
-Status: feasibility — not adopted (Phase 0 done 2026-11-12, its gate failed: §3 Results)
+Status: implemented (Phase 0, a feasibility study; Phases 1-4 dropped: its gate failed 2026-11-12, §3 Results, so the proxies were not adopted)
 Category: Merging, LOD
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.1)
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 3.1)
 Related: \_DONE_p377_hlod-streaming-cell-proxies.md (rewritten around draws after this plan's Phase 0), \_DONE_p347_lod-chain-generation.md (the simplifier that makes the proxies), \_DONE_p348_ecs-lod-selection.md (the selection, `AUTO`), \_DONE_p351_impostor-billboard-lod.md (the plain-mesh fade), \_DONE_p372_mesh-merge-groups.md (the groups, the in-place writes), \_DONE_p373_merge-debug-and-member-editing.md (edit sessions, the Merging tab), \_DONE_p374_multi-material-merging.md (palette groups), \_DONE_p375_batched-mesh-batches.md (`BATCHED` groups have per-member LOD already), \_DONE_p353_macro-streaming-grid.md (why cell proxies are p377's)
 
 # HLOD: Merged Cluster Proxies

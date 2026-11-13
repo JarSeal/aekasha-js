@@ -1,6 +1,6 @@
 Status: implemented (Phases 0-4; Phase 0 the spike, its gate passed)
 Category: Merging, Rendering
-Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
+Epic: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 2.2)
 Related: \_DONE_p348_ecs-lod-selection.md (§4.4's `BatchedMesh` spike is this plan's Phase 0, run once), p309_terrain-decals.md (its runtime decal pools are `BatchedMesh`es; its WebGPU risk is answered here), \_DONE_p347_lod-chain-generation.md (shared-vertex chains), \_DONE_p354_gpu-driven-culling.md
 
 # BatchedMesh Batches (movable and per-member-culled content)
