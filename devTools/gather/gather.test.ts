@@ -1417,3 +1417,157 @@ describe('p303 D1: texture set inputs', () => {
     });
   });
 });
+
+describe('p304 D3: procedural texture sets', () => {
+  const generator = (folder: string, id: string) => ({
+    [`${folder}/${id}.generator.ts`]: 'export const generator = {};\n',
+  });
+  const generators = {
+    ...generator('toolkit/terrain/procedural/dunes', 'dunes'),
+    ...generator('app/generators', 'cracks'),
+  };
+  const proceduralSet = (id: string, procedural: Record<string, unknown>) => ({
+    [`app/textures/${id}.textureSet.json`]: {
+      category: 'SAND',
+      physicalSize: [2, 2],
+      heightScale: 0.02,
+      procedural,
+    },
+  });
+  const tslMat = (id: string, inputs: Record<string, unknown>) => ({
+    [`app/materials/${id}.material.json`]: {
+      id,
+      type: 'STANDARDNODEMATERIAL',
+      tslFile: `materials/${id}.tsl.ts`,
+      inputs,
+    },
+    [`app/materials/${id}.tsl.ts`]: 'export const setup = () => {};\n',
+  });
+  const gatherLogs = (files: Record<string, unknown>, opts: { isProduction?: boolean } = {}) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = gather(files, opts);
+    const logged = errors.mock.calls.flat().join('\n');
+    errors.mockRestore();
+    return { ...result, errors: logged };
+  };
+
+  it('writes a listed set with its procedural defaults and baked slot ids, loading no textures', () => {
+    const {
+      isGathered,
+      scene: get,
+      output,
+    } = gather({
+      ...generators,
+      ...proceduralSet('beach', { generator: 'dunes', params: { wavelength: 0.12 } }),
+      ...scene('a', { textureSets: ['beach'] }),
+    });
+    expect(isGathered).toBe(true);
+    const [set] = get('a')?.textureSets as Record<string, unknown>[];
+    expect(set).toMatchObject({
+      id: 'beach',
+      defaultPacking: 'LITE',
+      packings: { LITE: { albedoRough: 'beach.albedoRough', normalHeight: 'beach.normalHeight' } },
+      procedural: {
+        generator: 'dunes',
+        params: { wavelength: 0.12 },
+        seed: 0,
+        size: 1024,
+        packing: 'LITE',
+      },
+    });
+    expect(get('a')?.textures).toBeUndefined();
+    expect(get('a')?.__features).toEqual(['texturesets']);
+    // The development data: every set's generator, loaded on demand through the index
+    expect(output?.fns).toContain(
+      "export const textureSetGeneratorObjects = {\n  dunes: () => import('../src/toolkit/terrain/procedural/dunes/dunes.generator.ts'),\n};"
+    );
+    expect(output?.fns).not.toContain('cracks');
+  });
+
+  it('a material input adds the set without textures; its packing is the one baked', () => {
+    const files = {
+      ...generators,
+      ...proceduralSet('mud', { generator: 'cracks', packing: 'FULL', size: [512, 256], seed: 3 }),
+      ...tslMat('m', { ground: { textureSet: 'mud' } }),
+      ...scene('a', { materials: ['m'] }),
+    };
+    const { isGathered, scene: get } = gather(files);
+    expect(isGathered).toBe(true);
+    const [set] = get('a')?.textureSets as Record<string, unknown>[];
+    expect(set).toMatchObject({
+      defaultPacking: 'FULL',
+      packings: {
+        FULL: { albedoHeight: 'mud.albedoHeight', normal: 'mud.normal', orm: 'mud.orm' },
+      },
+      procedural: { size: [512, 256], seed: 3, packing: 'FULL' },
+    });
+    expect(get('a')?.textures).toBeUndefined();
+    // Another packing than the one baked fails as a packing the set lacks
+    const other = gatherLogs({
+      ...files,
+      ...tslMat('m', { ground: { textureSet: 'mud', packing: 'LITE' } }),
+    });
+    expect(other.isGathered).toBe(false);
+    expect(other.errors).toContain('the texture set "mud" has no packing "LITE"');
+  });
+
+  it('ships the generators of the shipped scenes’ sets only', () => {
+    const files = {
+      ...generators,
+      ...proceduralSet('beach', { generator: 'dunes' }),
+      ...proceduralSet('mud', { generator: 'cracks' }),
+      ...scene('a', { textureSets: ['beach'] }),
+    };
+    const prod = gather(files, { isProduction: true });
+    expect(prod.output?.fns).toContain('dunes: () =>');
+    expect(prod.output?.fns).not.toContain('cracks');
+    const none = gather(
+      { ...generators, ...proceduralSet('mud', { generator: 'cracks' }), ...scene('a') },
+      { isProduction: true }
+    );
+    expect(none.output?.fns).not.toContain('textureSetGeneratorObjects');
+  });
+
+  it.each([
+    [
+      'an unknown generator',
+      proceduralSet('beach', { generator: 'waves' }),
+      'procedural.generator: no .generator.ts module has the id "waves" (the generators: cracks, dunes)',
+    ],
+    [
+      'a generator id two modules give',
+      { ...generator('app/more', 'dunes'), ...proceduralSet('beach', { generator: 'dunes' }) },
+      'Duplicate generator ID found: dunes in file: toolkit/terrain/procedural/dunes/dunes.generator.ts (app/more/dunes.generator.ts keeps it)',
+    ],
+    [
+      'a baked texture id a texture asset has',
+      {
+        ...proceduralSet('beach', { generator: 'dunes' }),
+        'app/textures/beach.albedoRough.texture.json': {
+          id: 'beach.albedoRough',
+          fileName: '/x.png',
+        },
+      },
+      'Duplicate texture ID found: beach.albedoRough',
+    ],
+    [
+      'a set array of a procedural set',
+      {
+        ...proceduralSet('beach', { generator: 'dunes' }),
+        ...tslMat('m', { ground: { textureSetArray: ['beach'], packing: 'LITE' } }),
+      },
+      'the texture set "beach" is procedural (generator "dunes"), and a set array takes imported sets only',
+    ],
+  ])('fails on %s', (_name, files, error) => {
+    const { isGathered, errors } = gatherLogs({
+      ...generators,
+      ...files,
+      ...scene('a', {
+        ...('app/materials/m.material.json' in files ? { materials: ['m'] } : {}),
+        textureSets: ['beach'],
+      }),
+    } as Record<string, unknown>);
+    expect(isGathered).toBe(false);
+    expect(errors).toContain(error);
+  });
+});

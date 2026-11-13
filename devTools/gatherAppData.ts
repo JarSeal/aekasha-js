@@ -26,6 +26,7 @@ import {
 import { readRegistries } from './gather/registries';
 import { resolveScenes } from './gather/scenePass';
 import { createShipChecks } from './gather/shipChecks';
+import { setTextureSetGeneratorLoaders } from './gather/textureSets';
 import { ROOT, SRC_DIR } from './paths';
 import { checkSbpProfiles, type SbpProfile } from './sbp/config';
 
@@ -91,6 +92,7 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
   const { scenes, debugSceneIds } = resolveScenes(ctx, reg, ship);
   ship.report();
   if (log.hasError) return FAILED;
+  setTextureSetGeneratorLoaders(ctx, reg, scenes);
 
   // The app's output (a production build's only the scenes), then each embed profile's
   const appOutput: GeneratedOutput = {
@@ -180,7 +182,7 @@ export const gatherSceneData = (opts: GatherOptions = {}): GatherResult => {
       pipeline: opts.pipeline,
       log,
       resolveSettings,
-      files: listGatheredFiles(srcDir),
+      ...listGatheredFiles(srcDir),
     };
     return runGather(ctx, opts, opts.outDir ?? path.join(srcDir, 'generated'));
   } catch (err) {

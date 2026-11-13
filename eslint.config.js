@@ -52,11 +52,13 @@ const LAYER_ZONES = [
     message: 'Import the toolkit through its entries (`aekasha/toolkit/<category>`).',
   },
   {
-    // The TSL material files are assets: the generated code imports them by path
+    // The TSL material files and the procedural set generators (p304 D3) are assets: the
+    // generated code imports them by path
     target: 'src/generated/**',
     from: 'src/toolkit/**',
-    except: [`${ROOT}/src/toolkit/**/*.tsl.ts`],
-    message: "The generated code imports only the toolkit's TSL material files.",
+    except: [`${ROOT}/src/toolkit/**/*.tsl.ts`, `${ROOT}/src/toolkit/**/*.generator.ts`],
+    message:
+      "The generated code imports only the toolkit's TSL material files and surface generators.",
   },
 ];
 // Static imports only: a dynamic `import()` isn't checked, and is how the debug loader reaches them

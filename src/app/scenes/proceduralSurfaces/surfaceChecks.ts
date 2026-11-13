@@ -113,3 +113,34 @@ export const checkPeriodicity = (images: ArrayLike<number>[], texels: number): P
       : [];
   return { maxByte, offTexels, failures };
 };
+
+/** Two readbacks of one surface compared: the largest byte difference and the texels that differ. */
+export type ImageComparison = {
+  maxByte: number;
+  offTexels: number;
+};
+
+/**
+ * Compares two RGBA8 readbacks of the same size byte for byte (a procedural set's JSON bake and a
+ * code bake of the same generator and values: the same graph, so equal).
+ * @param a one readback
+ * @param b the other
+ * @returns the largest byte difference and the texels with any channel off
+ */
+export const compareImages = (a: ArrayLike<number>, b: ArrayLike<number>): ImageComparison => {
+  if (a.length !== b.length) {
+    throw new Error(`compareImages: ${a.length} bytes against ${b.length}.`);
+  }
+  let maxByte = 0;
+  let offTexels = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    let isOff = false;
+    for (let c = 0; c < 4; c++) {
+      const diff = Math.abs(a[i + c] - b[i + c]);
+      maxByte = Math.max(maxByte, diff);
+      if (diff) isOff = true;
+    }
+    if (isOff) offTexels++;
+  }
+  return { maxByte, offTexels };
+};

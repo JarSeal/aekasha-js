@@ -31,6 +31,10 @@ export const getTextureSetArrayError = (
   for (const setId of sets) {
     const set = reg.textureSets[setId];
     if (!set) return `no texture set (a *.textureSet.json) has the id "${setId}"`;
+    // p304: members are assembled on the CPU, which a baked render target can't be
+    if (set.procedural) {
+      return `the texture set "${setId}" is procedural (generator "${set.procedural.generator}"), and a set array takes imported sets only (sample it through { textureSet })`;
+    }
     if (!set.packings[packing]) {
       return `the texture set "${setId}" has no packing "${packing}" (packings: ${Object.keys(set.packings).join(', ')})`;
     }

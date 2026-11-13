@@ -12,7 +12,7 @@ import {
   writeGeneratedOutput,
 } from './output';
 
-const EMPTY = { scenes: {}, tslMaterials: {}, postFx: {} };
+const EMPTY = { scenes: {}, tslMaterials: {}, postFx: {}, textureSetGenerators: {} };
 
 const app: GeneratedOutput = {
   json: {
@@ -28,8 +28,17 @@ const app: GeneratedOutput = {
     scenes: { a: 'app/./a.ts', b: 'app/./b.ts', c: 'app/./c.ts', dbg: 'app/./dbg.ts' },
     tslMaterials: { matA: 'toolkit/a.tsl.ts', matShared: 'app/s.tsl.ts', matC: 'app/c.tsl.ts' },
     postFx: { fxA: 'app/fxA.ts', fxC: 'app/fxC.ts' },
+    textureSetGenerators: {
+      dunes: 'toolkit/terrain/procedural/dunes/dunes.generator.ts',
+      mud: 'app/mud.generator.ts',
+    },
   },
 };
+// Scene b bakes a procedural set (p304 D3) and lists an imported one
+(app.json.scenes.b as Record<string, unknown>).textureSets = [
+  { id: 'sand', procedural: { generator: 'dunes' } },
+  { id: 'rock' },
+];
 
 const profile = (scenes: string[]) => ({ id: 'banner', entry: 'src/x.embed.ts', scenes });
 
@@ -47,6 +56,7 @@ describe('selectProfileOutput', () => {
       scenes: { a: 'app/./a.ts', b: 'app/./b.ts' },
       tslMaterials: { matA: 'toolkit/a.tsl.ts', matShared: 'app/s.tsl.ts' },
       postFx: { fxA: 'app/fxA.ts' },
+      textureSetGenerators: { dunes: 'toolkit/terrain/procedural/dunes/dunes.generator.ts' },
     });
   });
 
@@ -62,6 +72,7 @@ describe('selectProfileOutput', () => {
     ]);
     expect(Object.keys(output.json.scenes)).toEqual(['c']);
     expect(output.loaders.postFx).toEqual({ fxC: 'app/fxC.ts' });
+    expect(output.loaders.textureSetGenerators).toEqual({});
   });
 });
 
@@ -80,11 +91,23 @@ describe('formatGeneratedAppFns', () => {
     expect(text).toContain('export const sceneFileObjects = {};\n');
     expect(text).toContain('export const tslMaterialFileObjects = {};\n');
     expect(text).toContain('export const postFxFileObjects = {};\n');
+    expect(text).not.toContain('textureSetGeneratorObjects');
+  });
+
+  it('writes the generator loaders only when a procedural set names one (p304 D3)', () => {
+    const text = formatGeneratedAppFns(
+      { ...EMPTY, textureSetGenerators: { dunes: 'toolkit/dunes/dunes.generator.ts' } },
+      '../'
+    );
+    expect(text).toContain(
+      "export const textureSetGeneratorObjects = {\n  dunes: () => import('../toolkit/dunes/dunes.generator.ts'),\n};\n"
+    );
+    expect(syntaxErrors(text)).toEqual([]);
   });
 
   it('imports each file through the prefix, and quotes an id that starts with a digit', () => {
     const text = formatGeneratedAppFns(
-      { scenes: { s: 'app/./s.ts' }, tslMaterials: { '1mat': 'app/m.tsl.ts' }, postFx: {} },
+      { ...EMPTY, scenes: { s: 'app/./s.ts' }, tslMaterials: { '1mat': 'app/m.tsl.ts' } },
       '../../../'
     );
     expect(text).toContain("import type { SceneData, ScenePrimitiveAssets } from 'aekasha';\n");
@@ -102,7 +125,7 @@ describe('formatGeneratedAppFns', () => {
 
   it('writes valid TS for the repo’s kind of ids (the check itself)', () => {
     const text = formatGeneratedAppFns(
-      { scenes: { s: 'app/./s.ts' }, tslMaterials: { '1mat': 'app/m.tsl.ts' }, postFx: {} },
+      { ...EMPTY, scenes: { s: 'app/./s.ts' }, tslMaterials: { '1mat': 'app/m.tsl.ts' } },
       '../'
     );
     expect(syntaxErrors(text)).toEqual([]);
@@ -151,6 +174,9 @@ describe('writeGeneratedOutput and removeStaleProfileOutputs', () => {
       expect(
         fs.readFileSync(path.join(profiles, 'banner', 'generatedAppFns.ts'), 'utf8')
       ).toContain("import('../../../app/s.ts')");
+      expect(fs.readFileSync(path.join(profiles, 'banner', 'index.ts'), 'utf8')).not.toContain(
+        'textureSetGenerator'
+      );
       expect(removeStaleProfileOutputs(profiles, ['banner'])).toEqual(['old']);
       expect(fs.readdirSync(profiles)).toEqual(['banner']);
     } finally {
@@ -170,6 +196,20 @@ describe('writeGeneratedOutput and removeStaleProfileOutputs', () => {
       expect(writeGeneratedOutput(dir, changed, src)).toEqual([
         path.join(dir, 'generatedAppData.json'),
       ]);
+      // A generator loader adds its import to the index's appData (p304 D3)
+      const withGenerator = {
+        ...changed,
+        loaders: { ...EMPTY, textureSetGenerators: { dunes: 'app/dunes.generator.ts' } },
+      };
+      expect(writeGeneratedOutput(dir, withGenerator, src)).toEqual([
+        path.join(dir, 'generatedAppFns.ts'),
+        path.join(dir, 'index.ts'),
+      ]);
+      const index = fs.readFileSync(path.join(dir, 'index.ts'), 'utf8');
+      expect(index).toContain(
+        'import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects, textureSetGeneratorObjects }'
+      );
+      expect(index).toContain('  textureSetGeneratorFiles: textureSetGeneratorObjects,\n};');
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

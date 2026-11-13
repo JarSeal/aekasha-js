@@ -327,3 +327,8 @@ export const postFxFileObjects = {
   ambientOcclusion: () => import('../app/postFx/ambientOcclusion.tsl.ts'),
   heroBloom: () => import('../app/examples/hubHero/heroBloom.tsl.ts'),
 };
+
+export const textureSetGeneratorObjects = {
+  mudCracked: () => import('../toolkit/terrain/procedural/mudCracked/mudCracked.generator.ts'),
+  sandRipples: () => import('../toolkit/terrain/procedural/sandRipples/sandRipples.generator.ts'),
+};

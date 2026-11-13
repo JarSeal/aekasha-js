@@ -41,6 +41,9 @@ export type GatherContext = {
   resolveSettings: ReturnType<typeof createSettingsResolver>;
   /** The asset JSONs by type, as paths from `srcDir`, in the walk's order */
   files: Record<GatheredJsonType, string[]>;
+  /** The procedural texture set generators' modules (`*.generator.ts`, p304 D3), as paths from
+   * `srcDir`, in the walk's order */
+  generatorFiles: string[];
 };
 
 /** An asset JSON's file */
@@ -79,6 +82,9 @@ export type Registries = {
   importedAssets: Record<string, ImportedAsset>;
   skyboxes: Record<string, SkyBoxAsset>;
   postFx: Record<string, PostFxAsset>;
+  /** The procedural texture set generators (p304 D3), each module by its id (`<id>.generator.ts`),
+   * as paths from `srcDir` */
+  generators: Record<string, string>;
   /** The files the generated code loads on demand, by id, as paths from `srcDir` */
   loaders: GeneratedLoaders;
 };
@@ -121,7 +127,8 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     importedAssets: {},
     skyboxes: {},
     postFx: {},
-    loaders: { scenes: {}, tslMaterials: {}, postFx: {} },
+    generators: {},
+    loaders: { scenes: {}, tslMaterials: {}, postFx: {}, textureSetGenerators: {} },
   },
   taken: {
     scenes: new Set(),
@@ -139,19 +146,26 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
   },
 });
 
-/** The walk's files bucketed by gathered type, once (paths from `srcDir`, the outputs' folders
- * skipped) */
-export const listGatheredFiles = (srcDir: string): Record<GatheredJsonType, string[]> => {
+/** A procedural texture set generator's module (p304 D3): `<id>.generator.ts` */
+export const GENERATOR_SUFFIX = '.generator.ts';
+
+/** The walk's files bucketed by gathered type, and the generator modules, once (paths from
+ * `srcDir`, the outputs' folders skipped) */
+export const listGatheredFiles = (
+  srcDir: string
+): Pick<GatherContext, 'files' | 'generatorFiles'> => {
   const types = Object.keys(GATHERED_SUFFIXES) as GatheredJsonType[];
   const files = Object.fromEntries(types.map((type) => [type, [] as string[]])) as Record<
     GatheredJsonType,
     string[]
   >;
+  const generatorFiles: string[] = [];
   for (const file of listSourceFiles(srcDir)) {
     const type = types.find((key) => file.endsWith(GATHERED_SUFFIXES[key]));
     if (type) files[type].push(file);
+    else if (file.endsWith(GENERATOR_SUFFIX)) generatorFiles.push(file);
   }
-  return files;
+  return { files, generatorFiles };
 };
 
 /**

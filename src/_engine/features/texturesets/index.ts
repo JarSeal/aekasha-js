@@ -23,6 +23,7 @@ export type {
   TextureSetCategory,
   TextureSetDef,
   TextureSetPacking,
+  TextureSetProceduralDef,
   TextureSetSlot,
   TextureSetSurface,
 } from '../../schemas/TextureSetSchema';

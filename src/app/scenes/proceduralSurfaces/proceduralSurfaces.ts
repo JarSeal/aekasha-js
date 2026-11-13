@@ -10,6 +10,7 @@ import {
   getECSWorld,
   getEntityIdByAppId,
   getGeometry,
+  getMaterial,
   getRenderer,
   lerror,
   registerOnSceneExit,
@@ -17,7 +18,12 @@ import {
   type BakedTexture,
 } from 'aekasha';
 import { loadDebugModuleAsync } from 'aekasha/debug';
-import type { TextureSetPacking } from 'aekasha/texturesets';
+import {
+  getTextureSet,
+  getTextureSetPackingTextures,
+  loadTextureSetAsync,
+  type TextureSetPacking,
+} from 'aekasha/texturesets';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 import {
   bakeSurfaceGenerator,
@@ -38,6 +44,8 @@ import { getBackendName, getErrorMessage } from '../../shared/verifyHarness';
 import {
   checkPeriodicity,
   checkSurfaceSlot,
+  compareImages,
+  type ImageComparison,
   type PeriodicityCheck,
   type SlotCheck,
 } from './surfaceChecks';
@@ -55,8 +63,15 @@ import { shadeBakedSurface } from './surfaceShading';
  * fails on it: its `LITE` bake (the shown one) and a 256² bake of `FULL` and of `MINIMAL` are read
  * back, each slot written as p303 D2 packs it with no seam across its wrap; and a 256² bake of the
  * difference between its `LITE` slots at uv and a whole number of tiles away (`buildPacking` twice)
- * shows it repeats. `window.__proceduralSurfaces` holds the results; the debug env's "Procedural
- * surfaces" tab (`_dbg__proceduralSurfaces.ts`) switches the shown packing and shows them.
+ * shows it repeats.
+ *
+ * In front, the JSON path (section 3): the procedural texture sets the scene lists
+ * (`JSON_SETS`), baked by the `textureSets()` feature with the load, drawn by the toolkit's
+ * `textureSetSurface` through `{ textureSet }`; each slot is read back, checked as above and
+ * compared byte for byte with a `bakeSurfaceGenerator` of the same generator and values, and
+ * `loadTextureSetAsync` must return the load's textures rather than bake again.
+ * `window.__proceduralSurfaces` holds the results; the debug env's "Procedural surfaces" tab
+ * (`_dbg__proceduralSurfaces.ts`) switches the shown packing and shows them.
  */
 
 export const PROCEDURAL_SURFACES_SCENE_ID = 'proceduralSurfaces';
@@ -74,6 +89,11 @@ export const GENERATORS = [
   grassGround,
   concretePores,
 ] as unknown as SurfaceGenerator[];
+
+/** The procedural texture sets the scene's JSON lists (p304 D3's JSON path), in front. */
+export const JSON_SETS = ['p304ProcRipples', 'p304ProcCracks'] as const;
+/** The toolkit's baseline set material, which draws the JSON sets through `{ textureSet }`. */
+const SET_MATERIAL_ID = 'textureSetSurface';
 
 /** The packings, in the tab's order. */
 export const PACKINGS: readonly TextureSetPacking[] = ['LITE', 'FULL', 'MINIMAL'];
@@ -95,7 +115,7 @@ const RAMP_SLOPE = Math.tan(THREE.MathUtils.degToRad(35));
 const BLOCK_GEOMETRY_ID = 'proceduralSurfacesBlock';
 const CAMERA_APP_ID = 'proceduralSurfacesCam';
 /** The camera over every block, and a block's close-up offset (in front, above, looking down). */
-const OVERVIEW = { position: { x: 0, y: 19, z: 29 }, look: { x: 0, y: 0, z: 1 } };
+const OVERVIEW = { position: { x: 0, y: 22, z: 34 }, look: { x: 0, y: 0, z: 4 } };
 const CLOSE_UP = { y: 2.4, z: 3.2 };
 
 /** A generator's checks: per packing its slots', and the periodicity. */
@@ -109,30 +129,46 @@ export type GeneratorResult = {
 /**
  * Moves the scene's camera to a block's close-up, or back over every block (the tab's list, and the
  * test bridge's shots: `window.__proceduralSurfaces.viewBlock`).
- * @param generatorId the block's generator, or null for the overview
+ * @param generatorId the block's generator (a JSON set's id for its block), or null for the
+ * overview
  */
 export const viewBlock = (generatorId: string | null) => {
   const world = getECSWorld();
   const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
   if (cameraId === undefined) return;
   const index = GENERATORS.findIndex((generator) => generator.id === generatorId);
-  if (index < 0) {
+  const jsonIndex = JSON_SETS.findIndex((setId) => setId === generatorId);
+  if (index < 0 && jsonIndex < 0) {
     world.setTransform(cameraId, { pos: OVERVIEW.position });
     cameraLookAtPoint(cameraId, OVERVIEW.look, world);
     return;
   }
-  const { x, z } = getBlockPosition(index);
+  const { x, z } = index < 0 ? getJsonBlockPosition(jsonIndex) : getBlockPosition(index);
   world.setTransform(cameraId, { pos: { x, y: CLOSE_UP.y, z: z + CLOSE_UP.z } });
   cameraLookAtPoint(cameraId, { x, y: 0, z: z - 0.5 }, world);
+};
+
+/** A procedural set's checks (the JSON path): its slots', and against a code bake. */
+export type JsonSetResult = {
+  generator: string;
+  packing: TextureSetPacking;
+  slots: Record<string, SlotCheck>;
+  /** Each slot's readback against the code bake's (equal: the same graph). */
+  compare: Record<string, ImageComparison>;
+  /** Whether `loadTextureSetAsync` returned the load's textures (re-tagged, not baked again). */
+  isLoadShared: boolean;
+  failures: string[];
 };
 
 /** What `window.__proceduralSurfaces` holds. */
 export type ProceduralSurfacesResults = {
   backend?: string;
   generators?: Record<string, GeneratorResult>;
+  /** The JSON path's sets, by id. */
+  jsonSets?: Record<string, JsonSetResult>;
   /** The packing the blocks show. */
   shownPacking?: TextureSetPacking;
-  /** Every generator passed. */
+  /** Every generator and JSON set passed. */
   passed?: boolean;
   error?: string;
   done?: boolean;
@@ -153,6 +189,11 @@ let packingRequest = 0;
 const getBlockPosition = (index: number) => ({
   x: ((index % COLUMNS) - (COLUMNS - 1) / 2) * BLOCK_PITCH,
   z: (Math.floor(index / COLUMNS) - 0.5) * BLOCK_PITCH,
+});
+/** The JSON sets' blocks: a third row in front, centred */
+const getJsonBlockPosition = (index: number) => ({
+  x: (index - (JSON_SETS.length - 1) / 2) * BLOCK_PITCH,
+  z: 1.5 * BLOCK_PITCH,
 });
 
 const getBlockGeometry = () =>
@@ -182,9 +223,12 @@ const bakeShownAsync = (generator: SurfaceGenerator, packing: TextureSetPacking)
   });
 
 /** An output of a bake, read back as RGBA8 bytes (level 0, rows without padding). */
-const readOutputAsync = async (baked: BakedTexture, name: string, size: number) => {
+const readOutputAsync = (baked: BakedTexture, name: string, size: number) =>
+  readBakedTextureAsync(baked.textures[name], size);
+
+/** A baked texture (a render target's) read back as RGBA8 bytes (level 0, no row padding). */
+const readBakedTextureAsync = async (texture: THREE.Texture, size: number) => {
   const renderer = getRenderer(true) as THREE.Renderer;
-  const texture = baked.textures[name];
   const target = texture.renderTarget as THREE.RenderTarget;
   const index = target.textures.indexOf(texture);
   const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, size, size, index);
@@ -286,6 +330,78 @@ const createBlockAsync = async (generator: SurfaceGenerator, index: number) => {
 };
 
 /**
+ * A JSON set's block and checks: the set baked by the load (its textures registered as
+ * `<setId>.<slot>`), drawn by `textureSetSurface` through `{ textureSet }`, read back, checked as a
+ * generator's packing is, compared with a code bake of the same values, and loaded from code.
+ */
+const createJsonSetBlockAsync = async (setId: string, index: number): Promise<JsonSetResult> => {
+  const set = getTextureSet(setId);
+  const procedural = set?.procedural;
+  const textures = getTextureSetPackingTextures(setId) as Record<string, THREE.Texture> | undefined;
+  if (!set || !procedural || !textures) {
+    throw new Error(`the procedural set "${setId}" isn't in the data, or wasn't baked by the load`);
+  }
+  createMeshEntity(
+    {
+      geo: getBlockGeometry(),
+      mat: getMaterial(SET_MATERIAL_ID) as THREE.Material,
+      matOverrides: { inputs: { surface: { textureSet: setId } } },
+      position: getJsonBlockPosition(index),
+      castShadow: false,
+      receiveShadow: false,
+    },
+    { appId: `proceduralSurfaces_${setId}`, debugData: { name: `JSON set: ${setId}` } }
+  );
+
+  const generator = GENERATORS.find(({ id }) => id === procedural.generator);
+  if (!generator) throw new Error(`no generator "${procedural.generator}" in GENERATORS`);
+  const size = typeof procedural.size === 'number' ? procedural.size : procedural.size[0];
+  const reference = await bakeSurfaceGenerator({
+    id: `p304_json_${setId}`,
+    generator,
+    packing: procedural.packing,
+    size: procedural.size,
+    seed: procedural.seed,
+    params: procedural.params as never,
+    physicalSize: set.physicalSize,
+    heightScale: set.heightScale,
+  });
+  const result: JsonSetResult = {
+    generator: generator.id,
+    packing: procedural.packing,
+    slots: {},
+    compare: {},
+    isLoadShared: false,
+    failures: [],
+  };
+  for (const [slot, texture] of Object.entries(textures)) {
+    const bytes = await readBakedTextureAsync(texture, size);
+    const check = checkSurfaceSlot(slot, bytes, size);
+    const compare = compareImages(bytes, await readOutputAsync(reference.bake, slot, size));
+    result.slots[slot] = check;
+    result.compare[slot] = compare;
+    result.failures.push(...check.failures);
+    if (compare.maxByte) {
+      result.failures.push(
+        `${slot}: the JSON bake differs from the code bake on ${compare.offTexels} texels, up to ${compare.maxByte} / 255`
+      );
+    }
+  }
+  reference.bake.dispose();
+  const loaded = (await loadTextureSetAsync(setId)) as Record<string, THREE.Texture>;
+  result.isLoadShared = Object.entries(textures).every(
+    ([slot, texture]) => loaded[slot] === texture
+  );
+  if (!result.isLoadShared) {
+    result.failures.push("loadTextureSetAsync didn't return the load's baked textures");
+  }
+  for (const failure of result.failures) {
+    lerror(`[proceduralSurfaces] JSON set ${setId} (${getBackendName()}): ${failure}.`);
+  }
+  return result;
+};
+
+/**
  * Bakes every block's generator in a packing and draws it (the tab's packing switch); the latest
  * call wins, and the bakes of the packing left are disposed.
  * @param packing the packing to show
@@ -336,14 +452,14 @@ export const scene = async () => {
       geo: {
         id: 'proceduralSurfacesGround',
         type: 'BOX',
-        params: { width: COLUMNS * BLOCK_PITCH + 2, height: 0.2, depth: 2 * BLOCK_PITCH + 2 },
+        params: { width: COLUMNS * BLOCK_PITCH + 2, height: 0.2, depth: 3 * BLOCK_PITCH + 2 },
       },
       mat: {
         id: 'proceduralSurfacesGround',
         type: 'STANDARD',
         params: { color: '#2e2f31', roughness: 0.95 },
       },
-      position: { y: -0.5 },
+      position: { y: -0.5, z: BLOCK_PITCH / 2 },
       castShadow: false,
       receiveShadow: false,
     },
@@ -356,7 +472,14 @@ export const scene = async () => {
       generators[GENERATORS[i].id] = await createBlockAsync(GENERATORS[i], i);
     }
     state.results.generators = generators;
-    state.results.passed = Object.values(generators).every((result) => !result.failures.length);
+    const jsonSets: Record<string, JsonSetResult> = {};
+    for (let i = 0; i < JSON_SETS.length; i++) {
+      jsonSets[JSON_SETS[i]] = await createJsonSetBlockAsync(JSON_SETS[i], i);
+    }
+    state.results.jsonSets = jsonSets;
+    state.results.passed = [...Object.values(generators), ...Object.values(jsonSets)].every(
+      (result) => !result.failures.length
+    );
     state.results.backend = getBackendName();
     state.results.done = true;
   } catch (error) {

@@ -2,10 +2,12 @@ import { createDebuggerTab, updateDebuggerTab } from 'aekasha/debug';
 import type { TextureSetPacking } from 'aekasha/texturesets';
 import {
   GENERATORS,
+  JSON_SETS,
   PACKINGS,
   PROCEDURAL_SURFACES_SCENE_ID,
   setShownPackingAsync,
   type GeneratorResult,
+  type JsonSetResult,
   type ProceduralSurfacesResults,
 } from './proceduralSurfaces';
 
@@ -27,10 +29,21 @@ const getGeneratorView = (index: number, result: GeneratorResult | undefined) =>
   };
 };
 
+/** A JSON set's figures as the tab's read-only fields show them */
+const getJsonSetView = (result: JsonSetResult | undefined) => ({
+  baked: result ? `${result.generator}, ${result.packing}` : '-',
+  result: !result ? '-' : result.failures.length ? `FAIL: ${result.failures.join('; ')}` : 'pass',
+  compare: result
+    ? Object.entries(result.compare)
+        .map(([slot, { maxByte, offTexels }]) => `${slot} ${offTexels} off (${maxByte})`)
+        .join(', ')
+    : '-',
+});
+
 /**
  * The procedural surfaces scene's "Procedural surfaces" tab (p304 Phase 4, a scene tab: removed on
  * the scene's exit, created again on every visit): the packing the blocks show (each generator
- * baked again in it), and each generator's checks.
+ * baked again in it), each generator's checks and the JSON sets' (p304 Phase 4 section 3).
  * @param results the scene's results (`window.__proceduralSurfaces.results`), complete by now
  */
 export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) => {
@@ -40,8 +53,8 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
     result: results.error
       ? `error: ${results.error}`
       : results.passed
-        ? 'every generator passes'
-        : 'a generator fails',
+        ? 'every generator and JSON set passes'
+        : 'a generator or JSON set fails',
   };
   createDebuggerTab({
     id: TAB_ID,
@@ -77,6 +90,19 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
                 { key: 'result', target: view, label: 'Result', readonly: true },
                 { key: 'slots', target: view, label: 'Slots read', readonly: true },
                 { key: 'periodicity', target: view, label: 'Tile away', readonly: true },
+              ],
+            };
+          }),
+          ...JSON_SETS.map((setId) => {
+            const view = getJsonSetView(results.jsonSets?.[setId]);
+            return {
+              type: 'folder' as const,
+              title: `${setId} (JSON set)`,
+              id: `proceduralSurfaces_${setId}`,
+              content: [
+                { key: 'baked', target: view, label: 'Baked', readonly: true },
+                { key: 'result', target: view, label: 'Result', readonly: true },
+                { key: 'compare', target: view, label: 'vs code bake', readonly: true },
               ],
             };
           }),

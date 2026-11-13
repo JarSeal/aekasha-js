@@ -17,19 +17,26 @@ const GENERATED_INDEX_FILENAME = 'index.ts';
 /** The app's generated data (`devTools/assetOutputsBuildPlugin.ts` reads its `__url`s) */
 export const GENERATED_APP_DATA_FILE = path.join(GENERATED_DIR, GENERATED_APP_DATA_FILENAME);
 
-const INDEX_FILE_CONTENT = `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
+/**
+ * `index.ts`: the `appData` the app hands to `InitEngine`. The generator loaders only when a set
+ * names one (p304 D3): an app without a procedural set carries no bytes of them.
+ */
+const formatIndexFile = (hasGenerators: boolean) => {
+  const generators = hasGenerators ? ', textureSetGeneratorObjects' : '';
+  return `// THIS IS AN AUTO-GENERATED FILE, DO NOT MODIFY!
 import type { AppData } from 'aekasha';
 import json from './${GENERATED_APP_DATA_FILENAME}';
-import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects } from './${GENERATED_APP_FNS_FILENAME.replace(/\.ts$/, '')}';
+import { postFxFileObjects, sceneFileObjects, tslMaterialFileObjects${generators} } from './${GENERATED_APP_FNS_FILENAME.replace(/\.ts$/, '')}';
 
 /** The app's gathered data: \`InitEngine({ data: appData })\` hands it to the engine. */
 export const appData: AppData = {
   json,
   sceneFiles: sceneFileObjects,
   tslMaterialFiles: tslMaterialFileObjects,
-  postFxFiles: postFxFileObjects,
+  postFxFiles: postFxFileObjects,${hasGenerators ? '\n  textureSetGeneratorFiles: textureSetGeneratorObjects,' : ''}
 };
 `;
+};
 
 /** The files the generated code loads on demand, each by id, as a path from `src/` */
 export type GeneratedLoaders = {
@@ -39,6 +46,8 @@ export type GeneratedLoaders = {
   tslMaterials: Record<string, string>;
   /** A PostFX pass's `tslFile` */
   postFx: Record<string, string>;
+  /** A procedural texture set's generator (`<id>.generator.ts`, p304 D3) */
+  textureSetGenerators: Record<string, string>;
 };
 
 /** The generated data of one output folder: the JSON (the scenes, and in the app's development
@@ -67,8 +76,8 @@ const formatLoaderObject = (name: string, loaders: Record<string, string>, prefi
 };
 
 /**
- * `generatedAppFns.ts`: a loader per scene, TSL material and PostFX pass, each an `import()` of its
- * file (one chunk each in a build).
+ * `generatedAppFns.ts`: a loader per scene, TSL material, PostFX pass and generator (only when
+ * there's one), each an `import()` of its file (one chunk each in a build).
  * @param prefix the path from the output folder to `src/` (`../` for `src/generated/`)
  */
 export const formatGeneratedAppFns = (loaders: GeneratedLoaders, prefix: string) => {
@@ -99,7 +108,10 @@ export const formatGeneratedAppFns = (loaders: GeneratedLoaders, prefix: string)
         .join('') +
       '};\n';
   }
-  return `${header}\n${sceneObject}\n${formatLoaderObject('tslMaterialFileObjects', loaders.tslMaterials, prefix)}\n${formatLoaderObject('postFxFileObjects', loaders.postFx, prefix)}`;
+  const generators = Object.keys(loaders.textureSetGenerators).length
+    ? `\n${formatLoaderObject('textureSetGeneratorObjects', loaders.textureSetGenerators, prefix)}`
+    : '';
+  return `${header}\n${sceneObject}\n${formatLoaderObject('tslMaterialFileObjects', loaders.tslMaterials, prefix)}\n${formatLoaderObject('postFxFileObjects', loaders.postFx, prefix)}${generators}`;
 };
 
 /**
@@ -112,7 +124,10 @@ export const writeGeneratedOutput = (dir: string, output: GeneratedOutput, srcDi
   const files: [string, string][] = [
     [GENERATED_APP_DATA_FILENAME, JSON.stringify(output.json, null, 2)],
     [GENERATED_APP_FNS_FILENAME, formatGeneratedAppFns(output.loaders, prefix)],
-    [GENERATED_INDEX_FILENAME, INDEX_FILE_CONTENT],
+    [
+      GENERATED_INDEX_FILENAME,
+      formatIndexFile(Object.keys(output.loaders.textureSetGenerators).length > 0),
+    ],
   ];
   return files
     .map(([name, content]) => [path.join(dir, name), content])
@@ -145,7 +160,7 @@ const pick = (record: Record<string, string>, ids: Set<string>) =>
 /**
  * An embed profile's data: its scenes (in the profile's order, so its first is
  * `mountAekasha`'s default `sceneId`), their scene files, and the TSL material and PostFX files
- * those scenes list. `{ scenes }` in every mode, as a production build has it: the dev registries
+ * those scenes list and the generators their procedural sets name. `{ scenes }` in every mode, as a production build has it: the dev registries
  * are for the debugger's asset lists, which an embed doesn't have.
  * @param opts.app the app's output (the resolved scenes and every loader)
  * @param opts.debugSceneIds the scenes marked `isDebugScene` (a production build leaves them out)
@@ -171,6 +186,7 @@ export const selectProfileOutput = (opts: {
   const sceneData = Object.values(scenes) as {
     materials?: unknown;
     postFx?: unknown;
+    textureSets?: { procedural?: { generator: string } }[];
     __streaming?: { assets?: { materials?: unknown } };
   }[];
   // A streaming scene's cell-only materials are in its manifest (p353 Phase 3)
@@ -181,6 +197,11 @@ export const selectProfileOutput = (opts: {
     ])
   );
   const postFxIds = new Set(sceneData.flatMap((scene) => listIds(scene.postFx)));
+  const generatorIds = new Set(
+    sceneData.flatMap((scene) =>
+      (scene.textureSets ?? []).flatMap((set) => (set.procedural ? [set.procedural.generator] : []))
+    )
+  );
   return {
     output: {
       json: { scenes },
@@ -188,6 +209,7 @@ export const selectProfileOutput = (opts: {
         scenes: pick(app.loaders.scenes, new Set(Object.keys(scenes))),
         tslMaterials: pick(app.loaders.tslMaterials, materialIds),
         postFx: pick(app.loaders.postFx, postFxIds),
+        textureSetGenerators: pick(app.loaders.textureSetGenerators, generatorIds),
       },
     },
     errors,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPeriodicity, checkSurfaceSlot } from './surfaceChecks';
+import { checkPeriodicity, checkSurfaceSlot, compareImages } from './surfaceChecks';
 
 const SIZE = 8;
 
@@ -86,5 +86,18 @@ describe('checkPeriodicity', () => {
     const result = checkPeriodicity([first, second], texels);
     expect(result.offTexels).toBe(5);
     expect(result.failures[0]).toMatch(/^not periodic: 5 of 1000 texels differ .*\(up to 60 /);
+  });
+});
+
+describe('compareImages', () => {
+  it('finds equal readbacks equal, and counts a texel once for any channel off', () => {
+    const image = makeImage(wave);
+    expect(compareImages(image, image.slice())).toEqual({ maxByte: 0, offTexels: 0 });
+    const other = image.slice();
+    other[1] += 3;
+    other[2] += 1;
+    other[4 * 5 + 3] -= 2;
+    expect(compareImages(image, other)).toEqual({ maxByte: 3, offTexels: 2 });
+    expect(() => compareImages(image, image.slice(4))).toThrow('bytes against');
   });
 });

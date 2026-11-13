@@ -112,8 +112,10 @@ const profiles: SbpProfile[] = [
         // bodies' chunk: 7.4 KiB): the first download is the API and the scene hooks, 2.3 KiB.
         '_engine/features/streaming': 4 * KIB,
         // p303 Phase 1: the `{ textureSet }` resolver, `getTextureSet` and the packing load
-        // (0.7 KiB gzip, three modules)
-        '_engine/features/texturesets': 1 * KIB,
+        // (0.7 KiB gzip, three modules). p304 Phase 4 section 3: the scene hook that starts a
+        // scene's procedural set bakes (`import()` of `TextureSetBakes.js`, 3.6 KiB with the
+        // set arrays' chunk, lazy; the baker with it) took it from 976 B to 1090 B: 1 → 1.25 KiB
+        '_engine/features/texturesets': 1.25 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

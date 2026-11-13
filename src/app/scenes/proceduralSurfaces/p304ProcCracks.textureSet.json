@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "p304ProcCracks",
+  "category": "MUD",
+  "physicalSize": [2, 2],
+  "heightScale": 0.03,
+  "procedural": {
+    "generator": "mudCracked",
+    "seed": 3,
+    "size": 256,
+    "packing": "FULL"
+  },
+  "debugData": {
+    "name": "p304 procedural cracks",
+    "description": "p304 Phase 4's JSON path: mudCracked baked on load into FULL with its default params; the proceduralSurfaces scene compares it with a code bake of the same values."
+  }
+}

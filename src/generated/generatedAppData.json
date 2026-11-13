@@ -13808,7 +13808,27 @@
     "proceduralSurfaces": {
       "isDebugScene": true,
       "name": "Procedural surfaces (p304)",
-      "description": "p304 Phase 4's verification scene: the toolkit's ten procedural surface generators (aekasha/toolkit/terrain), each baked into a texture set packing (LITE by default, 512²) and drawn on a generated 6 × 6 m block with a 35° ramp, tiled in world space over the generator's physical size. Rows from the back: sandRipples, sandFlat, mudCracked, mudSmooth, rockyGround; cliffStrata, snowDrift, iceSheet, grassGround, concretePores. During the load each generator is baked into all three packings and read back (every slot written as its packing packs it, no seam) and checked to repeat over whole tiles; a failure is a console error, so the scene runner fails. Its tab switches the blocks' packing and shows the checks.",
+      "description": "p304 Phase 4's verification scene: the toolkit's ten procedural surface generators (aekasha/toolkit/terrain), each baked into a texture set packing (LITE by default, 512²) and drawn on a generated 6 × 6 m block with a 35° ramp, tiled in world space over the generator's physical size. Rows from the back: sandRipples, sandFlat, mudCracked, mudSmooth, rockyGround; cliffStrata, snowDrift, iceSheet, grassGround, concretePores. During the load each generator is baked into all three packings and read back (every slot written as its packing packs it, no seam) and checked to repeat over whole tiles; a failure is a console error, so the scene runner fails. In front, the JSON path: two procedural texture sets (p304ProcRipples, LITE; p304ProcCracks, FULL) baked by the textureSets() feature with the load and drawn by the toolkit's textureSetSurface through { textureSet }, each read back and compared with a code bake of the same generator and values. Its tab switches the blocks' packing and shows the checks.",
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
       "skyboxes": [
         {
           "base": {
@@ -13852,6 +13872,126 @@
           }
         }
       ],
+      "textureSets": [
+        {
+          "id": "p304ProcRipples",
+          "category": "SAND",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.02,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p304ProcRipples.albedoRough",
+              "normalHeight": "p304ProcRipples.normalHeight"
+            }
+          },
+          "procedural": {
+            "generator": "sandRipples",
+            "params": {
+              "wavelength": 0.12,
+              "warp": 0.5,
+              "light": "#e0cb98"
+            },
+            "seed": 11,
+            "size": 256,
+            "packing": "LITE"
+          },
+          "debugData": {
+            "name": "p304 procedural ripples",
+            "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "p304ProcCracks",
+          "category": "MUD",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.03,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "p304ProcCracks.albedoHeight",
+              "normal": "p304ProcCracks.normal",
+              "orm": "p304ProcCracks.orm"
+            }
+          },
+          "procedural": {
+            "generator": "mudCracked",
+            "params": {},
+            "seed": 3,
+            "size": 256,
+            "packing": "FULL"
+          },
+          "debugData": {
+            "name": "p304 procedural cracks",
+            "description": "p304 Phase 4's JSON path: mudCracked baked on load into FULL with its default params; the proceduralSurfaces scene compares it with a code bake of the same values."
+          },
+          "defaultPacking": "FULL",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4
+          },
+          "averageColor": "#ab966b"
+        }
+      ],
       "id": "proceduralSurfaces",
       "sceneFile": "./scenes/proceduralSurfaces/proceduralSurfaces.ts",
       "cameras": [
@@ -13869,8 +14009,61 @@
           }
         }
       ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
       "__features": [
-        "skybox"
+        "skybox",
+        "texturesets"
       ]
     },
     "scene01": {
@@ -36043,6 +36236,87 @@
     }
   },
   "textureSets": {
+    "p304ProcCracks": {
+      "id": "p304ProcCracks",
+      "category": "MUD",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "p304ProcCracks.albedoHeight",
+          "normal": "p304ProcCracks.normal",
+          "orm": "p304ProcCracks.orm"
+        }
+      },
+      "procedural": {
+        "generator": "mudCracked",
+        "params": {},
+        "seed": 3,
+        "size": 256,
+        "packing": "FULL"
+      },
+      "debugData": {
+        "name": "p304 procedural cracks",
+        "description": "p304 Phase 4's JSON path: mudCracked baked on load into FULL with its default params; the proceduralSurfaces scene compares it with a code bake of the same values."
+      },
+      "defaultPacking": "FULL",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcCracks.textureSet.json"
+    },
+    "p304ProcRipples": {
+      "id": "p304ProcRipples",
+      "category": "SAND",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.02,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p304ProcRipples.albedoRough",
+          "normalHeight": "p304ProcRipples.normalHeight"
+        }
+      },
+      "procedural": {
+        "generator": "sandRipples",
+        "params": {
+          "wavelength": 0.12,
+          "warp": 0.5,
+          "light": "#e0cb98"
+        },
+        "seed": 11,
+        "size": 256,
+        "packing": "LITE"
+      },
+      "debugData": {
+        "name": "p304 procedural ripples",
+        "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcRipples.textureSet.json"
+    },
     "p303TestSet": {
       "id": "p303TestSet",
       "category": "OTHER",
