@@ -3,10 +3,11 @@
 // target, then copies the frame into its atlas cell with a dilation pass. Atlases hold albedo and
 // normals, never lighting (§2.3): the impostor material shades with the scene's lights at runtime.
 //
-// A bake runs synchronously and restores the renderer state it touched, so it can run between
-// frames (eg. in a scene's load). Every atlas is cleared before its first cell is written and
-// sampled only after its bake, so the destroyed-texture trap (CLAUDE.md, Sky box) can't hit it (on
-// three r186: r187 creates a sampled 2D target's texture with the target, #35204).
+// A bake runs synchronously and restores the renderer state it touched (the kernel's bake helpers,
+// `kernel/render/BakeRenderer.ts`), so it can run between frames (eg. in a scene's load). Every
+// atlas is cleared before its first cell is written and sampled only after its bake, so the
+// destroyed-texture trap (CLAUDE.md, Sky box) can't hit it (on three r186: r187 creates a sampled
+// 2D target's texture with the target, #35204).
 import * as THREE from 'three/webgpu';
 import {
   bool,
@@ -24,9 +25,7 @@ import {
   vec2,
   vec4,
 } from 'three/tsl';
-import { getRenderer } from '../../../kernel/render/Renderer';
 import type { MatProps } from '../../../kernel/assets/Material';
-import { runWithClearRenderState } from '../../../kernel/render/CompileQueue';
 
 /**
  * What a bake pass writes:
@@ -87,19 +86,6 @@ const DILATE_DIRECTIONS = [
   [0.7071, -0.7071],
   [-0.7071, -0.7071],
 ];
-
-/**
- * The renderer, or a throw: a bake needs an initialized one.
- * For the generators and the texture preview.
- * @internal
- */
-export const getBakeRenderer = (caller: string) => {
-  const renderer = getRenderer() as THREE.Renderer | undefined;
-  if (!renderer?.hasInitialized()) {
-    throw new Error(`${caller}: the renderer isn't initialized (bakes run after InitEngine).`);
-  }
-  return renderer;
-};
 
 /** An impostor's shading model. `AUTO`: the one of the source material drawing the most triangles
  * (Phong, Lambert, unlit), else standard, with that material's shininess or roughness and
@@ -180,29 +166,6 @@ export const getShadingProps = (
       };
   }
 };
-
-/**
- * Runs `fn` with the renderer's target, clear colour and auto clear restored afterwards, and
- * without the target and MRT an engine compile in flight holds (`runWithClearRenderState`).
- * For the generators' bakes and the texture preview.
- * @internal
- */
-export const withBakeRendererState = <T>(renderer: THREE.Renderer, fn: () => T): T =>
-  runWithClearRenderState(renderer, () => {
-    const prevTarget = renderer.getRenderTarget();
-    const prevFace = renderer.getActiveCubeFace();
-    const prevLevel = renderer.getActiveMipmapLevel();
-    const prevAutoClear = renderer.autoClear;
-    const prevClearColor = renderer.getClearColor(new THREE.Color());
-    const prevClearAlpha = renderer.getClearAlpha();
-    try {
-      return fn();
-    } finally {
-      renderer.setRenderTarget(prevTarget, prevFace, prevLevel);
-      renderer.autoClear = prevAutoClear;
-      renderer.setClearColor(prevClearColor, prevClearAlpha);
-    }
-  });
 
 /**
  * An unlit material that draws `source` for a bake pass: the source's colour, map, alpha map,
@@ -361,17 +324,6 @@ export const createAtlasTarget = (
  */
 export const finishAtlasMips = (atlas: THREE.RenderTarget) => {
   atlas.texture.mipmapsAutoUpdate = true;
-};
-
-/**
- * Clears a target to transparent black (also sets up its GPU texture before anything samples it).
- * For the generators' bakes and the texture preview.
- * @internal
- */
-export const clearBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
-  renderer.setRenderTarget(target);
-  renderer.setClearColor(0x000000, 0);
-  renderer.clear();
 };
 
 /**

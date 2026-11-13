@@ -147,8 +147,8 @@
     },
     "engine/features/lod/impostors": {
       "exports": {
-        "documented": 74,
-        "total": 74
+        "documented": 71,
+        "total": 71
       },
       "members": {
         "documented": 0,
@@ -581,8 +581,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 104,
-        "total": 104
+        "documented": 107,
+        "total": 107
       },
       "members": {
         "documented": 0,

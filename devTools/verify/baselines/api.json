@@ -580,7 +580,6 @@
       "resolveCrossQuadsOptions": "Function"
     },
     "src/_engine/features/lod/impostors/ImpostorBake.ts": {
-      "clearBakeTarget": "Function",
       "createAtlasTarget": "Function",
       "createBakeMaterial": "Function",
       "createBakeMaterials": "Function",
@@ -590,14 +589,12 @@
       "disposeBakeMaterials": "Function",
       "encodeImpostorDepth": "Function",
       "finishAtlasMips": "Function",
-      "getBakeRenderer": "Function",
       "getDominantMaterial": "Function",
       "getShadingProps": "Function",
       "IMPOSTOR_DEPTH_MIN": "Variable",
       "ImpostorBakePass": "TypeAlias",
       "ImpostorDepthRange": "TypeAlias",
-      "ImpostorShading": "TypeAlias",
-      "withBakeRendererState": "Function"
+      "ImpostorShading": "TypeAlias"
     },
     "src/_engine/features/lod/impostors/ImpostorExports.ts": {
       "getImpostorExport": "Function",
@@ -3018,6 +3015,11 @@
       "setMeshLod": "Function",
       "setMeshMaterial": "Function",
       "setMeshMergeHandler": "Function"
+    },
+    "src/_engine/kernel/render/BakeRenderer.ts": {
+      "clearBakeTarget": "Function",
+      "getBakeRenderer": "Function",
+      "withBakeRendererState": "Function"
     },
     "src/_engine/kernel/render/CanvasSize.ts": {
       "CanvasSize": "TypeAlias",
