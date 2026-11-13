@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3636,
-      "total": 3636
+      "documented": 3642,
+      "total": 3642
     },
     "members": {
       "documented": 1107,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 83,
-        "total": 83
+        "documented": 89,
+        "total": 89
       },
       "members": {
         "documented": 154,
@@ -1013,6 +1013,20 @@
         "members": []
       }
     },
+    "toolkit/materials/textureSetSurface": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/materials/triplanarCheckerboard": {
       "exports": {
         "documented": 1,
@@ -1031,6 +1045,20 @@
       "exports": {
         "documented": 2,
         "total": 2
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/nodes": {
+      "exports": {
+        "documented": 5,
+        "total": 5
       },
       "members": {
         "documented": 0,

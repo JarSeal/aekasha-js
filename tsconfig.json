@@ -38,7 +38,8 @@
       "aekasha/schemas": ["./src/_engine/schemas/index.ts"],
       "aekasha/toolkit/ecs": ["./src/toolkit/ecs/index.ts"],
       "aekasha/toolkit/geometry": ["./src/toolkit/geometry/index.ts"],
-      "aekasha/toolkit/materials": ["./src/toolkit/materials/index.ts"]
+      "aekasha/toolkit/materials": ["./src/toolkit/materials/index.ts"],
+      "aekasha/toolkit/terrain": ["./src/toolkit/terrain/index.ts"]
     },
     "typeRoots": ["./src/types", "./node_modules/@types"],
     // Only these @types are global; the rest come in through imports. Without the list, every

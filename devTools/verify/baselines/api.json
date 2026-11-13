@@ -4780,6 +4780,13 @@
       "triplanarProjection": "Function",
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
+    },
+    "src/toolkit/terrain/nodes/SampleTextureSet.ts": {
+      "bumpNormalView": "Function",
+      "sampleTextureSet": "Function",
+      "SampleTextureSetOptions": "TypeAlias",
+      "TextureSetSample": "TypeAlias",
+      "transformTangentNormalToView": "Function"
     }
   },
   "entries": {
@@ -5760,6 +5767,13 @@
       "blendProjections",
       "readBooleanDefines",
       "triplanarProjection"
+    ],
+    "aekasha/toolkit/terrain": [
+      "SampleTextureSetOptions",
+      "TextureSetSample",
+      "bumpNormalView",
+      "sampleTextureSet",
+      "transformTangentNormalToView"
     ],
     "aekasha/ui": [
       "Accordion",

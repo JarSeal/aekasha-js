@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "textureSetSurface",
+  "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": { "tiling": "WORLD_XZ", "minimalNormal": "BUMP" },
+  "inputs": {
+    "surface": { "textureSet": "sand01" }
+  },
+  "debugData": {
+    "name": "Texture set surface",
+    "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+  }
+}

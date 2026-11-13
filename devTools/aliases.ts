@@ -32,6 +32,7 @@ export const ENTRY_FILES = {
   'aekasha/toolkit/ecs': 'src/toolkit/ecs/index.ts',
   'aekasha/toolkit/geometry': 'src/toolkit/geometry/index.ts',
   'aekasha/toolkit/materials': 'src/toolkit/materials/index.ts',
+  'aekasha/toolkit/terrain': 'src/toolkit/terrain/index.ts',
 } as const;
 
 export type EntryName = keyof typeof ENTRY_FILES;

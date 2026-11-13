@@ -13,7 +13,7 @@ const compat = new FlatCompat();
 // the base path: it's absolute.
 const ROOT = import.meta.dirname;
 // The `aekasha/toolkit/<category>` entries' folders
-const TOOLKIT_CATEGORIES = ['ecs', 'geometry', 'materials'];
+const TOOLKIT_CATEGORIES = ['ecs', 'geometry', 'materials', 'terrain'];
 // The Hub's browser TS too: its component library imports `aekasha/ui` (p802 D9)
 const ENGINE_CONSUMERS = [
   'src/toolkit/**',
