@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phase 1 implemented, Phase 2 section 1
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -326,6 +326,35 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
 2. Pack recipe templates (FULL/LITE/MINIMAL), cavity-AO derivation, `averageColor` (D1).
 
 **Exit:** `yarn fetchTextureSources --only sand01 && yarn assets --only 'src/toolkit/textures/sand01/**'` produces the three packings as KTX2 (`--only` matches an id whole, a glob against paths only: Phase 1 section 4).
+
+Sections:
+
+1. **The fetch tool:** `fetchTextureSources.ts` and its script, the zip reader, the gitignore entries, `CREDITS.md`.
+2. **Recipes** (step 2; split into two sections or not: section 1's review): the clone fallback (Found, below), the pack recipe templates, `sand01`'s folder, the cavity AO, `averageColor`, the exit.
+
+**Found in section 1 (2026-11-13), for section 2: a clone without the fetched sources can't use the committed outputs.** A pack's lock key hashes its source bytes (`cache.ts`), and `resolvePackFile` (`sources.ts`) throws for a missing `src`. The sets' `source/raw/` is gitignored, so on a fresh clone every set texture fails its key: the dev server warns and loads nothing for it (a pack has no `__sourceUrl` to fall back to), and `yarn build`'s production gather fails ("no asset pipeline output"). The Risks table's "the lock keys are the inputs', so a clone takes the committed outputs from the lock" holds only for committed sources. Options:
+
+- **(a) A sources-free key in the lock entry** (recommended): each pack entry also records the key computed without the source bytes (the recipe, settings, versions, output path, and each source's path). When every file a pack reads is missing, the pipeline looks that key up and uses its entry's output when it's on disk ("sources not fetched: the committed output"), and the prune keeps it. An edited recipe without its sources finds no entry and fails naming `yarn fetchTextureSources`. Only packs whose files are all missing take this path; a partly missing set still fails.
+- **(b) The newest lock entry whose `source` is the JSON:** simpler, but an edited recipe silently keeps the old output.
+- Either way, a missing pack `src` under `source/raw/` names `yarn fetchTextureSources` in its error.
+
+**Open for section 2: the "recipe templates".** D3's recipes are identical across sets but the strengths, and Phase 4 writes 16 sets' texture JSONs (2 each, 6 for three sets). Either hand-copied JSONs from a documented template (`docs/techniques/texture-sets.md`, Phase 6), or a scaffold (eg. `yarn fetchTextureSources --scaffold <setId>`, or a `devTools/` script) writing a set's texture JSONs from its `packings` and `source.json`'s maps (the AO multiply only when there's an `ao` map, else the cavity term).
+
+#### Section 1: The fetch tool — done
+
+As built (2026-11-13; `yarn test` (3,497), `tsc`, lint; a live run against ambientCG's `Ground080` 2K-JPG in a temporary `sand01` folder, removed after: 24.9 MB downloaded and read, the five maps written, a second run "up to date", `git status` showing no `source/raw/` file, an unknown `--only` id exiting 1):
+
+- `devTools/assetPipeline/archives.ts`' `readZip`: the end record (scanned back over a comment), the central directory, stored and deflated entries (`zlib.inflateRawSync`), each checked against its size and CRC-32 (`zlib.crc32`, Node ≥ 22.2), so a cut-short download throws; the central directory's sizes, so a data descriptor's zeroed local sizes don't matter; a Unix-made entry's mode. Throws for Zip64, encryption, several disks and another method. No dependency. Tests: `archives.test.ts`' two zip cases (built byte by byte).
+- `devTools/assetPipeline/textureSources.ts` (the logic, tested) and `devTools/fetchTextureSources.ts` (the command, `yarn fetchTextureSources [--only <setId>[,…]] [--force]`, `main` only as the script; the download with a 10 min timeout and a generic User-Agent, no project name):
+  - **A set folder** is one with a `source.json` beside its `*.textureSet.json`, under `src/toolkit/` or `src/app/` (`findTextureSetSources`); `--only` matches the set JSON's `id`. A `source.json` alone or beside two sets fails that set; a set without one is hand-made and skipped.
+  - **`source.json`** (`TextureSourceSchema`, strict, zod in the tool, no JSON Schema): D5's fields; `provider` `ambientCG` or `polyHaven`; `download` `<n>K-JPG|PNG` (Poly Haven's `2k` / `jpg` from it); `maps` the fixed names `color` (required), `normal`, `roughness`, `ao`, `height`, `metalness`, `arm` (Poly Haven's pack).
+  - **ambientCG** (the URL pattern confirmed against its v2 API, 2026-11-13): one zip cached as `.cache/texture-downloads/ambientCG/<assetId>_<download>.zip`, a map the `.jpg`/`.png` whose stem ends with its suffix (two matches fail: `_NormalGL` vs `_NormalDX` is why it's a suffix, not a substring). A cached zip that doesn't read is downloaded once more. **Poly Haven** (confirmed: `files/<id>` → map → resolution → format → `{ url, md5, size }`): the listing and each map cached under `polyHaven/<assetId>/`, each map checked against its MD5.
+  - **The raw folder:** `<map>.<ext>` (`jpeg` → `jpg`), the folder's other files removed, `.fetched.json` recording the source's provider, id, download and maps and each file's SHA-256 (an unchanged set with intact files is "up to date": no download). Nothing is written until every map is in hand. A missing `color`, `normal` or `roughness` fails the set; another is reported as optional.
+  - **Gitignore:** `src/toolkit/textures/*/source/raw/` and `src/app/**/source/raw/` (an app set lives in any app folder); the command fails a set whose raw folder git doesn't ignore (`git check-ignore`).
+  - **Credits:** `src/toolkit/textures/CREDITS.md` from the toolkit's sets (an app set's aren't listed), written when it changed, every run (no download needed), not while a toolkit `source.json` is invalid. Its layout rule: `layoutRules.ts`' toolkit rules.
+  - Output also to `.cache/texture-downloads/progress.log`; exit 1 when a set failed.
+- Tests: `textureSources.test.ts` (8: the schema's refusals, discovery and its errors, ambientCG's maps with an optional one missing, the up-to-date check and `force`, stale raw files and a missing required map writing nothing, two matches and a corrupt cached zip, Poly Haven with its MD5, the credits).
+- Docs (Phase 6's, done now): `devTools/assetPipeline/CLAUDE.md` (the tool) and the root `CLAUDE.md`'s Commands line.
 
 ### Phase 3 — Layer arrays (D4)
 
