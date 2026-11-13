@@ -58,6 +58,7 @@ const createSlotMaterial = (manifest: ImportedAssetManifest) => {
 // three/tsl's `uv()`, with the real type (the shim's is loose)
 const meshUv = uv as unknown as () => THREE.Node<'vec2'>;
 
+// #region tsl-from-code (shown in the Hub: features/toolkit, Graphs and input forms from code)
 type GradientInput = { gradient: [string, string] };
 
 /** The input resolver check's resolver (p302 D4): `{ gradient: [from, to] }` → a bundle of two
@@ -80,6 +81,7 @@ const gradientFns = {
     material.colorNode = mix(inputs.band.from, inputs.band.to, meshUv().y);
   },
 } satisfies TslMaterialFns;
+// #endregion tsl-from-code
 
 /** Where the material input checks stand, either side of the top row. */
 const INPUT_CHECK_ROW = { y: 1.9, channelX: -4.0, gradientX: 4.0 };
@@ -92,6 +94,7 @@ const INPUT_CHECK_ROW = { y: 1.9, channelX: -4.0, gradientX: 4.0 };
  * again registers the same functions, which does nothing).
  */
 const createMaterialInputChecks = (planeGeo: THREE.BufferGeometry) => {
+  // #region tsl-from-code-use (shown in the Hub: features/toolkit, Graphs and input forms from code)
   registerMaterialInputResolver(gradientResolver);
   registerTslMaterial('testDebugScene.gradient', gradientFns);
   const gradientMat = createMaterial({
@@ -100,6 +103,7 @@ const createMaterialInputChecks = (planeGeo: THREE.BufferGeometry) => {
     tslMaterialId: 'testDebugScene.gradient',
     inputs: { band: { gradient: ['#1c233a', '#ffaa00'] } },
   });
+  // #endregion tsl-from-code-use
   createMeshEntity(
     {
       geo: planeGeo,

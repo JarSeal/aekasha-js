@@ -142,7 +142,34 @@ scene's `importedAssets`.
 ## Writing a TSL material
 
 A TSL material is two files: the `*.material.json` that a scene lists by id, and the `*.tsl.ts`
-whose functions build its nodes. The checkerboard is a small one:
+whose functions build its nodes. The file exports a `setup` function, which sets any of the
+material's sockets from one graph, or a function per socket, or both.
+
+### One graph: `setup`
+
+TSL reuses a node object, not an equal expression built twice: two socket functions that each
+sample a texture sample it twice in the shader. A `setup` function builds the shared work (the
+samples, the coordinates, the blend weights) once and sets every socket from it. The app's
+`testTslMat` samples its texture once for its colour, roughness and glow:
+
+::: code-group
+
+<<< src/app/scenes/sceneTestECS/testTslMat.material.json title="testTslMat.material.json"
+
+<<< src/app/scenes/sceneTestECS/testTslMat.tsl.ts title="testTslMat.tsl.ts" collapse
+
+:::
+
+- **The JSON.** `type` is a node material (`STANDARDNODEMATERIAL` and the like), `tslFile` its TSL
+  file (relative to `src/app/`, or to `src/toolkit/` for the toolkit's), `params` three's own
+  material props, `staticDefines` its switches, and `inputs` the values `setup` gets.
+- **`setup`** is called as `(inputs, material, staticDefines)` when the material is created, and
+  sets the sockets on `material` (`material.colorNode = …`, `material.roughnessNode = …`). It
+  returns nothing.
+
+### A function per socket
+
+The checkerboard has a function per socket instead:
 
 ::: code-group
 
@@ -152,31 +179,99 @@ whose functions build its nodes. The checkerboard is a small one:
 
 :::
 
-- **The JSON.** `type` is a node material (`STANDARDNODEMATERIAL` and the like), `tslFile` its TSL
-  file (relative to `src/app/`, or to `src/toolkit/` for the toolkit's), `params` three's own
-  material props, `staticDefines` its switches, and `nodes` an object per socket, keyed by the
-  material's node property it sets (`colorNode`, `normalNode`, `roughnessNode`, …), holding that
-  socket's inputs.
-- **The sockets.** The TSL file exports a function named after each socket in `nodes`, called as
-  `(inputs, material, staticDefines)` when the material is created; what it returns goes into the
-  socket (`null` leaves the material's own). A socket may set others on `material` too: the
-  asteroid's `colorNode` sets its `roughnessNode` and `normalNode`, so all its inputs are in one
-  place. A socket the file doesn't export is skipped with a warning.
-- **The inputs** arrive as nodes: a number (or a boolean) as a uniform, a `#hex` string as a colour
-  uniform, `[x, y]` to `[x, y, z, w]` or `{ x, y, z }` as a vector uniform, any other string as
-  the texture with that id, sampled. Each is kept as
-  `material.userData.uniforms['<socket>_<input>']` (`colorNode_checkerSize`): the material editor
-  changes them there, live, and another socket can read them (the grid's `normalNode` reads its
-  `colorNode`'s, so its JSON lists `colorNode` first). Check the inputs a socket needs and throw naming the missing one, as the toolkit's do.
+- **`nodes`** in the JSON is an object per socket, keyed by the material's node property it sets
+  (`colorNode`, `normalNode`, `roughnessNode`, …), holding that socket's inputs.
+- **The TSL file** exports a function named after each socket in `nodes`, called as
+  `(inputs, material, staticDefines)`; what it returns goes into the socket (`null` leaves the
+  material's own). A socket the file doesn't export is skipped with a warning, and so is a
+  `setup` under `nodes`: it isn't a socket, its inputs are the material's `inputs`.
+- **With both,** `setup` runs first, then the socket functions, which may set a socket again (the
+  debug build warns when one replaces what `setup` set).
+
+The toolkit's other two share work the older ways: the grid's `normalNode` reads its
+`colorNode`'s inputs from `material.userData.uniforms` (so its JSON lists `colorNode` first), and
+the asteroid's `colorNode` sets its `roughnessNode` and `normalNode` itself. A new material does
+both with `setup`.
+
+### The inputs
+
+Each value of `inputs`, or of a socket under `nodes`, reaches the function as a node:
+
+| In the JSON                                                                     | The function gets                                                                    |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `0.6`, `true`                                                                   | A uniform.                                                                           |
+| `"#ffaa00"`                                                                     | A colour uniform.                                                                    |
+| `[x, y]` to `[x, y, z, w]`, `{ x, y, z }`, `{ r, g, b }`                        | A vector or colour uniform.                                                          |
+| `"testTexture"` (any other string)                                              | The texture with that id: `.sample(uv)` it, or use it as is (sampled at the uv).     |
+| `{ "texture": "testTexture" }`                                                  | The same.                                                                            |
+| `{ "texture": "testTexture", "channel": "r" }`                                  | Its sample at the uv, those channels: one to four of `r`, `g`, `b` and `a` (`"rg"`). |
+| A form a [resolver](hub:features/toolkit#graphs-and-input-forms-from-code) adds | What the resolver makes of it: a node, or an object of nodes.                        |
+
+- **Each is kept** as `material.userData.uniforms['<socket>_<input>']` (`colorNode_checkerSize`),
+  `setup`'s as `setup_<input>` (`setup_glow`): the material editor changes them there, live, and
+  your code can too.
+- **A texture that isn't loaded** warns and samples one white texel, so the function still gets
+  a texture.
+- **An input named `staticDefines`** merges over the material's static defines for that one
+  function.
+- Check the inputs a function needs and throw naming the missing one, as the toolkit's do.
 - **The static defines** are plain values, resolved when the shader is built: branch on them in
   JavaScript ([`readBooleanDefines`](api:readBooleanDefines) fills in the defaults), so only the
   used paths are in the shader. A mesh's `matOverrides.staticDefines` makes its own variant of
-  the material, with its own shader; `matOverrides.nodes` changes only inputs, so its variants
-  share one (see [`getMaterialVariant`](api:getMaterialVariant)).
-- **Loading.** A scene load loads the TSL files of the materials it lists. Code that creates one
-  outside a load awaits [`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) first.
+  the material, with its own shader; `matOverrides.inputs` and `matOverrides.nodes` change only
+  inputs, so their variants share one (see [`getMaterialVariant`](api:getMaterialVariant)). An
+  override merges `inputs` and `staticDefines` key by key, one level: a define holding an object
+  is replaced whole.
 - **Types.** `import type { Node, NodeMaterial } from 'three/webgpu'` gives the typed
-  `Node<'float'>` and the rest, which `three/tsl`'s loose `Node` doesn't.
+  `Node<'float'>` and the rest, which `three/tsl`'s loose `Node` doesn't. A texture input is
+  `three/tsl`'s `TextureNode`, whose `sample` takes `three/tsl`'s `uv()`. Type the inputs by key
+  (`inputs: { glow: Node<'float'>; texture: TextureNode }`), as `testTslMat` does.
+
+### Loading
+
+A scene load loads the TSL files of the materials it lists, and the textures they name (see
+[a scene's textures](hub:features/scenes-and-assets#a-scene-s-textures)). Code that creates one
+at another time awaits [`ensureMaterialDependencies`](api:ensureMaterialDependencies) with its
+props first: it loads the textures that aren't loaded yet and the TSL file
+([`loadTslMaterialFileAsync`](api:loadTslMaterialFileAsync) loads the file alone). A production
+build has the data of the textures its scenes name only, so list a texture only your code uses in
+a scene's `textures`.
+
+### Graphs and input forms from code
+
+[`registerTslMaterial`](api:registerTslMaterial) registers a material's functions under an id,
+with no file, and [`registerMaterialInputResolver`](api:registerMaterialInputResolver) adds a form
+of input value. The app's `testDebugScene` uses both: an input `{ "gradient": [from, to] }` that
+becomes two colour uniforms, and a graph that blends them from the bottom up:
+
+<<< src/app/scenes/testDebugScene/testDebugScene.ts#tsl-from-code
+
+Then, in the function that makes the material, never at the module's load (the next visit
+registers the same functions again, which does nothing):
+
+<<< src/app/scenes/testDebugScene/testDebugScene.ts#tsl-from-code-use
+
+- **A registered graph** is named by `createMaterial`'s `tslMaterialId` (by default the
+  material's `id`), with no `tslFile`, and is found before the TSL files. The material gets
+  variants, release and the material editor like a JSON one. Give it a namespaced id
+  (`'myGame.stripes'`). Registering the same functions again does nothing; other functions under
+  a taken id are ignored (the debug build warns).
+- **A resolver** has a `kind` (unique: namespace it too), `match(value)`, `resolve(value, ctx)`
+  and, optionally, `dependencies(value)`. The resolvers are asked in the order they registered,
+  before the built-in rules, and the first that matches resolves the value. `resolve` returns a
+  node, or a bundle: an object of nodes, which the function gets as it is (`inputs.band.from`)
+  and whose nodes are kept as `<group>_<input>_<field>` (`setup_band_from`). `ctx` holds the
+  material, where the input is, and `getTexture(id)`, which samples the white texel for a missing
+  id, as a texture id input does. `dependencies` names the textures a value needs, which
+  `ensureMaterialDependencies` loads. The material editor shows a resolver's value, without
+  editing it.
+- **Register on the first call** of the code that creates the material, never at a module's load:
+  a top-level registration would keep the code in every build that imports the module. A resolver
+  your JSON materials use registers from your app's feature's `install`
+  (`ctx.registerMaterialInputResolver`; see [ECS](hub:features/ecs#features)), since a
+  scene's JSON materials are created before its scene file runs.
+- **The gather doesn't know your resolver's values,** so it can't add the textures they name: list
+  them in the scene's `textures`.
 
 To start from a toolkit material, copy its folder into your app, give the JSON a new `id`, fix its
 `$schema` and `tslFile` paths, and import the triplanar helpers from `aekasha/toolkit/materials`
