@@ -31,6 +31,10 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/debug/DevFilesProtocol.ts': {
     reason: 'the dev file server’s protocol, which its client in the engine shares',
   },
+  'src/_engine/kernel/assets/MaterialInputRefs.ts': {
+    reason:
+      'the texture refs in a TSL material’s inputs, which the gather’s texture closure reads as the runtime’s resolvers do (p302 D6)',
+  },
   'src/_engine/features/lod/LodChainOptions.ts': {
     reason: 'the LOD chain options and a GLB’s chain description, which the asset pipeline writes',
   },

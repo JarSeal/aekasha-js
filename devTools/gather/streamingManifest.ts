@@ -95,8 +95,9 @@ const getListedEntry = (scene: SceneJSON, listed: Listed, kind: AssetKind, id: s
   return index === undefined ? undefined : (scene[kind] as unknown[])[index];
 };
 
-/** Every listed texture id among `value`'s strings, at any depth: a material's `params` and
- * `nodes` (a texture map key or a TSL socket input takes a texture id) */
+/** Every listed texture id among `value`'s strings, at any depth: a material's `params`,
+ * `inputs` and `nodes` (a texture map key or a TSL input takes a texture id, an object-form
+ * texture ref's `texture` too) */
 const addTextureRefs = (value: unknown, listed: Listed, refs: Refs) => {
   if (typeof value === 'string') {
     if (listed.textures.has(value)) refs.textures.add(value);
@@ -108,8 +109,13 @@ const addTextureRefs = (value: unknown, listed: Listed, refs: Refs) => {
 };
 
 const addMaterialFieldRefs = (mat: unknown, listed: Listed, refs: Refs) => {
-  const { params, nodes } = (mat ?? {}) as { params?: unknown; nodes?: unknown };
+  const { params, inputs, nodes } = (mat ?? {}) as {
+    params?: unknown;
+    inputs?: unknown;
+    nodes?: unknown;
+  };
   addTextureRefs(params, listed, refs);
+  addTextureRefs(inputs, listed, refs);
   addTextureRefs(nodes, listed, refs);
 };
 
