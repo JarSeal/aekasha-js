@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3660,
-      "total": 3660
+      "documented": 3689,
+      "total": 3689
     },
     "members": {
       "documented": 1107,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 118,
+        "total": 118
       },
       "members": {
         "documented": 154,
@@ -1059,6 +1059,20 @@
       "exports": {
         "documented": 5,
         "total": 5
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/nodes/noise": {
+      "exports": {
+        "documented": 29,
+        "total": 29
       },
       "members": {
         "documented": 0,

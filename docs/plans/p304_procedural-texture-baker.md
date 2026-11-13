@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Rendering, Materials, Procedural
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
@@ -195,13 +195,28 @@ Tileable baking needs noise with an integer period over the tile:
 - **`params` on `rebake`:** not added; Phase 4's generators set their uniforms and call `rebake()`.
 - **The check (`testDebugScene`, `createLayeredBakeCheckAsync`):** a 128² bake of three outputs (sRGB `albedo`, linear `data`, `HALF_FLOAT` `hdr` of 4 shown at a quarter) and four layers, 12 tiles between the top row and the crates, identical on WebGPU and WebGL2, each layer's mips present (sampled at level 5). It bakes during the load: the loader shows "Baking textures, 0 / 2 … 3 / 3". The scene's "Texture bakes" tab (`_dbg__testDebugScene.ts`) has the `phase` slider, a "Rebake ×20" burst and the stats: 60 slider changes over 41 frames (684 ms of the test clock) made 6 bakes, the burst one. The scene runner's `testDebugScene` snapshot changes again (record it).
 
-### Phase 3 — Noise library (D2)
+### Phase 3 — Noise library (D2) — done
 
 **Exit:**
 
 - Each periodic function tiles seamlessly in a 3×3 repeat preview.
 - The non-periodic variants match the periodic ones statistically.
 - SwiftShader WebGL2 doesn't hang (`yarn verify:scenes --webgl --only <the check scene>`).
+
+**As built:**
+
+- **Files:** `src/toolkit/terrain/nodes/noise/`: `Period.ts` (`NoisePeriod`, the check, the cell wrap), `Hash.ts`, `Noise.ts`, `Worley.ts`, `HeightMaps.ts`, a `*.test.ts` each; all on `aekasha/toolkit/terrain`. The `terrain/nodes/` layout rule covers the folder.
+- **Names (decided 2026-11-13):** not D2's `periodic*`. `valueNoise`, `gradientNoise`, `fbm`, `domainWarp`, `worley`, `hash12`, `hash22`, `heightToNormal`, `heightToCavity`, each with an optional `period`: left out or 0 is the non-periodic variant (live, world space), chosen at build time.
+- **2D only** (`p: Node<'vec2'>`, in cells): a bake's uv, p305's world xz and `cliffStrata`'s UV are all 2D.
+- **Options objects** (the coding standards): `valueNoise(p, { period?, seed? })`, `gradientNoise(p, { period?, seed? })`, `fbm(p, { octaves, lacunarity? = 2, gain? = 0.5, period?, seed? })`, `domainWarp(p, { strength, octaves? = 3, lacunarity?, gain?, period?, seed? })`, `worley(p, { period?, seed?, jitter? = 1 })`, `hash12` / `hash22(p, { period?, seed? })`, `heightToNormal(height, { uv, texel, heightScale })`, `heightToCavity(height, { uv, radius, strength? = 4 })`. The height helpers take the height as a function of uv (`HeightFunction`).
+- **The period:** a whole number, a pair, or a vec2 node (a uniform: a slider changes it without a rebuild; its octave periods are rounded in the shader); a fraction or a negative throws (it would leave a seam). The wrap is `cell − period × floor((cell + 0.5) / period)`, not TSL's `mod`: WGSL's division may be off by 2.5 ULP, and `mod(9, 3)` could floor to the wrong period. `hash12` / `hash22` take a period too, so per-cell variation tiles.
+- **fbm's octaves:** each octave's period is `round(period × lacunarityⁱ)` (at least 1) and its frequency that over the period, so every octave tiles at any lacunarity (4, 10, 25 at 2.5); each octave has its own seed; 1 to 12 octaves, unrolled at build time; `gain` can be a node. The sum is divided by the amplitudes' sum.
+- **Ranges:** value, gradient and fbm about −1..1 (gradient × √2; fbm mostly within ±0.5); Worley `f1` / `f2` in cells (`f1` up to about 1.06 at jitter 1), `cellId` and the hashes [0, 1) (the top 24 bits: never 1); the normal a unit vector, +Y along +v; the cavity 0..1, 1 open.
+- **The hash:** pcg2d (Jarzynski and Olano 2020), per component (WGSL shifts a vector only by a vector), the cell through int to uint (a negative float straight to uint saturates at 0 on WGSL), the seed × the golden ratio's odd constant xored into x. A seed is a whole number (wrapped to 32 bits) or an int / uint node.
+- **Shader functions:** the hash, value and gradient noise and Worley (a plain and a periodic one each) are layout functions (`Fn` with a full layout: `aekHashCell`, `aekGradientNoisePeriodic`, `aekWorley`, …), one function each in a shader however often a graph calls them; fbm, the warp and the height helpers call them inline. three's call node doesn't cache its result, so `worley` stores its `vec3` in a `.toVar()` and `f1`, `f2` and `cellId` read it: one 3 × 3 search per call (checked in the WGSL and GLSL: one call, 11 hashes).
+- **Worley:** a 3 × 3 search, exact F1 at jitter ≤ 1 (a larger number throws); `cellId` is a separate hash of the nearest cell (its own seed).
+- **The check scene (`src/app/scenes/noiseLibrary/`):** a 3 × 3 grid of tile pairs, a function each: the periodic bake (256²) repeated 3 × 3 on one quad, beside the same graph live without a period (`noiseRows.ts`). During the load each function is baked at 32 cells, periodic and offset non-periodic, read back (`readRenderTargetPixelsAsync` on the texture's `renderTarget`) and checked (`noiseChecks.ts`, tested): the wrap step against the largest step inside, `|f(uv) − f(uv + (1, −2) tiles)|` within a byte of 0, the means within 0.03 and the spreads within 10 % + 0.01. A failure is an `lerror`, so the scene runner fails on it; `window.__noiseLibrary` and the scene's "Noise library" tab show the figures. Every function passes on WebGPU and WebGL2 (SwiftShader, no hang; `yarn verify:scenes --webgl --only noiseLibrary`, 15-28 s a configuration), with the same figures to the third decimal. At 32 cells the seam check is weak (the steps inside are large): the periodicity check carries it, and the 6-cell tiles show a seam.
+- **Phase 4 builds on:** the generators' `build` reads these through `aekasha/toolkit/terrain` with `period: <the generator's cells>` baked and no period live; `normal` defaults to `heightToNormal(height, { uv, texel: ctx.texel, heightScale })` and `ao` to `heightToCavity`; a generator's scale param can be a uniform `period` (no rebuild). The live mode's `heightToNormal` costs 4 height evaluations a pixel: p305's live layer source may prefer `bumpNormalView` (the material's derivatives) there.
 
 ### Phase 4 — Generators and procedural sets (D3)
 
@@ -230,11 +245,11 @@ Tileable baking needs noise with an integer period over the tile:
    - writing a generator (a worked example: `sandRipples` line by line);
    - "Best for": stylized PBR, top-down/RTS, procedural worlds, game jams with no texture budget, unique non-repeating large surfaces (live), and NOT first-person photoreal on low-end (live).
 3. **The Hub:** the terrain feature page (p301 §5) gets procedural textures and the baker (linking `procedural-textures.md` with a `repo:` link), the rendering or toolkit page `bakeTexture` and the noise helpers; `yarn hub:build`.
-4. `readme.md` Features (engine: texture baker; toolkit: procedural surfaces); `src/_engine/kernel/render/CLAUDE.md` (the baker: MRT, layers, the queue and `textureBakeSystem`, the load path, the stats; the moved bake helpers) and `src/_engine/features/lod/impostors/CLAUDE.md` where it names them. Phase 2 updated `kernel/scene/CLAUDE.md` (`updateBakeStatusFn`), `debug/CLAUDE.md` and `features/skybox/CLAUDE.md` (the shared bake stats) already.
+4. `readme.md` Features (engine: texture baker; toolkit: the periodic noise library and procedural surfaces); `src/_engine/kernel/render/CLAUDE.md` (the baker: MRT, layers, the queue and `textureBakeSystem`, the load path, the stats; the moved bake helpers) and `src/_engine/features/lod/impostors/CLAUDE.md` where it names them. Phase 2 updated `kernel/scene/CLAUDE.md` (`updateBakeStatusFn`), `debug/CLAUDE.md` and `features/skybox/CLAUDE.md` (the shared bake stats) already.
 
 ### Phase 7 — Versioning
 
-1. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures), app minor (`testDebugScene`'s bake check, Phase 1); `CHANGELOG.md`.
+1. Versions: engine minor (`bakeTexture`), toolkit minor (noise, generators, shared textures), app minor (`testDebugScene`'s bake checks, Phases 1-2; the `noiseLibrary` verification scene, Phase 3); `CHANGELOG.md`.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
 
 ---
