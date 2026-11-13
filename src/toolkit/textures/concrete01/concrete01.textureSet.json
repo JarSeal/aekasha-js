@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "concrete01",
+  "category": "CONCRETE",
+  "physicalSize": [1.1, 0.55],
+  "heightScale": 0.005,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "concrete01_albedoRough",
+      "normalHeight": "concrete01_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Concrete 01 (smooth)",
+    "description": "ambientCG Concrete034, CC0: smooth concrete; non-square, so structures only, never in a set array; AO derived from the height (no AO map)."
+  }
+}

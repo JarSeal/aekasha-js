@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "rocks02",
+  "category": "ROCKS",
+  "physicalSize": [2, 2],
+  "heightScale": 0.06,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "rocks02_albedoRough",
+      "normalHeight": "rocks02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Rocks 02 (mossy stones)",
+    "description": "ambientCG Ground068, CC0: mossy stony ground."
+  }
+}

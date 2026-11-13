@@ -477,6 +477,26 @@ As built (2026-11-13; `yarn test` (3,576), `tsc` both, lint, `yarn verify:baseli
 
 **Exit:** all sets load; VRAM total measured and recorded in this plan.
 
+Sections:
+
+1. **The candidates:** the 15 new folders (`source.json` and the set JSON on D6's primaries, the texture JSONs by `--scaffold`), the fetch, a contact sheet per set against its alternate; the picks (review).
+2. **The swaps and the tuning:** the picked alternates' `source.json` (fetched, scaffolded again), `physicalSize` (the provider's dimension or an estimate), `heightScale`, `surface` (`tint` bringing each albedo into a plausible range, `normalStrength`, `roughnessScale`, `aoStrength`), the cavity AO of the sets without an AO map checked by eye; a lit preview of each set from its packed outputs.
+3. **Encode and the exit:** `yarn assets` (its prune drops the swapped primaries' outputs), `cliffs01`'s 2K LITE if kept, every set loading in a browser, the VRAM total and the committed size recorded, this phase's "As built" and the status line.
+
+#### Section 1: The candidates
+
+As built (2026-11-13; `yarn test` passing, the layout check alone: in the full run it timed out at 8.7 s while the dev server's gather encoded the new sets on all cores):
+
+- **The candidates against the APIs** (2026-11-13): all 16 ambientCG primaries and the four ambientCG alternates exist with D6's maps (`Ice002`, `Ice003`, `Ice004` and `Concrete034` have no AO; `Rock051` and `Concrete044D` a metalness map, not fetched); the 11 Poly Haven alternates exist with `nor_gl`, `Rough`, `AO` and `Displacement`. ambientCG's dimension is set only for `Grass004` (1.4 m), `Ground037` (2.1 m), `Ground071` (1.75 m) and `Concrete034` (1.1 × 0.55 m); Poly Haven's are in mm: the aerial ones cover 15 m (`aerial_sand`), 25 m (`coast_sand_05`), 50 m (`aerial_rocks_02`) and 80 m (`snow_field_aerial`) a tile, too coarse at 1K for a close camera.
+- **The 15 folders** (`src/toolkit/textures/<setId>/`): `source.json` (ambientCG, `2K-JPG`, the maps the asset has), the set JSON (D6's category and `physicalSize`, an estimated `heightScale`, `LITE`, plus `FULL` and `MINIMAL` for `grass01` and `cliffs01`, `surface` neutral: tint white, the rest 1; the wet fields left to the defaults, p307's), and the texture JSONs `yarn fetchTextureSources --scaffold` wrote (the three AO-less sets' albedo multiply the cavity term, radius 24). All 15 fetched: 425 MB of zips into `.cache/texture-downloads/`, 17 s. `CREDITS.md` lists 16 sets.
+- **Every source is 2048²**, but `Concrete034`: 2048 × 1024 (its 1.1 × 0.55 m), so 1024 × 512 after the resize.
+- **The contact sheets** (a scratch script, not committed): per set, the primary's and the alternate's colour tiled 2 × 2 beside the same lit by its normal map from a grazing upper-left light (1K alternates).
+- **Found:** `Rock035`'s (`cliffs02`) colour averages 16/26/29 sRGB, about 0.01 linear albedo: darker than coal (≈ 0.04), so its relief barely shows lit. `Ground036`'s (`mud01`) and `Ground068`'s (`rocks02`) tiles repeat visibly at 2 × 2 (a dark band; green and red blobs), and neither reads as its look (grey leafy ground; mossy ground with few stones). The other primaries look as D6 describes.
+
+- **The committed size will be over D6's estimate:** a LITE pair is 2.0 MB (`sand01`) to 2.5 MB (`cliffs01`), not 2 × 0.9 MB, so 16 sets ≈ 37 MB, the extra packings of three sets ≈ 8 MB more (≈ 45 MB), and a 2K LITE of `cliffs01` ≈ 10 MB on top.
+
+**Open for the review:** the picks, `cliffs01`'s 2K LITE, and the committed size.
+
 ### Phase 5 — Baseline material and gallery skeleton (D7, D8)
 
 1. The toolkit's `terrain` category (p301 §2; the first code in it): its entry `src/toolkit/terrain/index.ts` (named `export … from` lines only), `TOOLKIT_CATEGORIES` in `eslint.config.js`, the alias in `devTools/aliases.ts` and `tsconfig.json`'s `paths` (`aliases.test.ts` checks the copy), its folders' rules in `devTools/layout/layoutRules.ts`' `getToolkitRules`, a row in the Hub's entry table (`hub/pages/documentation/intro.md`), the API baseline (`yarn verify:baselines --update`).

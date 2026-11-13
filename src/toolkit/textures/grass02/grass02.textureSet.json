@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "grass02",
+  "category": "GRASS",
+  "physicalSize": [2.1, 2.1],
+  "heightScale": 0.03,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "grass02_albedoRough",
+      "normalHeight": "grass02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Grass 02 (forest floor)",
+    "description": "ambientCG Ground037, CC0: forest floor with grass."
+  }
+}

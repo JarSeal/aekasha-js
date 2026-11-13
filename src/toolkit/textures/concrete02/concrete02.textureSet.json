@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "concrete02",
+  "category": "CONCRETE",
+  "physicalSize": [2, 2],
+  "heightScale": 0.02,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "concrete02_albedoRough",
+      "normalHeight": "concrete02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Concrete 02 (damaged)",
+    "description": "ambientCG Concrete044D, CC0: damaged concrete, for structures."
+  }
+}

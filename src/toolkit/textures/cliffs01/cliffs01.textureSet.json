@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "cliffs01",
+  "category": "CLIFF",
+  "physicalSize": [6, 6],
+  "heightScale": 0.4,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "cliffs01_albedoRough",
+      "normalHeight": "cliffs01_normalHeight"
+    },
+    "FULL": {
+      "albedoHeight": "cliffs01_albedoHeight",
+      "normal": "cliffs01_normal",
+      "orm": "cliffs01_orm"
+    },
+    "MINIMAL": {
+      "albedoHeight": "cliffs01_albedoHeightAO"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Cliffs 01 (grey mountain)",
+    "description": "ambientCG Rock051, CC0: grey mountain cliff; the triplanar showcase. All three packings (the gallery's packing comparison, p303 D6)."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "cliffs01_normal",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/normal.jpg",
+        "normal": true
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "normal"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "cliffs01 normal (FULL)",
+    "description": "The texture set cliffs01's FULL normal: RGB the normal (OpenGL). Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+  }
+}

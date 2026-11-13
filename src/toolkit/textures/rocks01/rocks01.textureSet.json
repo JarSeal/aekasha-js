@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "rocks01",
+  "category": "ROCKS",
+  "physicalSize": [2, 2],
+  "heightScale": 0.06,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "rocks01_albedoRough",
+      "normalHeight": "rocks01_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Rocks 01 (gravel)",
+    "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "grass01",
+  "category": "GRASS",
+  "physicalSize": [1.4, 1.4],
+  "heightScale": 0.03,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "grass01_albedoRough",
+      "normalHeight": "grass01_normalHeight"
+    },
+    "FULL": {
+      "albedoHeight": "grass01_albedoHeight",
+      "normal": "grass01_normal",
+      "orm": "grass01_orm"
+    },
+    "MINIMAL": {
+      "albedoHeight": "grass01_albedoHeightAO"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Grass 01 (lawn ground)",
+    "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+  }
+}

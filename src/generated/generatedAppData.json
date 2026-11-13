@@ -24175,6 +24175,1426 @@
         "out": 52076
       }
     },
+    "cliffs01_albedoHeight": {
+      "id": "cliffs01_albedoHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "cliffs01 albedoHeight (FULL)",
+        "description": "The texture set cliffs01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg"
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_albedoHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_albedoHeight.pack.ac6abe78.ktx2",
+      "__bytes": {
+        "in": 7291596,
+        "out": 1193605
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.19,
+        0.1801,
+        0.1381
+      ]
+    },
+    "cliffs01_albedoHeightAO": {
+      "id": "cliffs01_albedoHeightAO",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "cliffs01 albedoHeight (MINIMAL)",
+        "description": "The texture set cliffs01's MINIMAL albedoHeight: RGB albedo × AO (sRGB), A height. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_albedoHeightAO.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_albedoHeightAO.pack.04575682.ktx2",
+      "__bytes": {
+        "in": 9818342,
+        "out": 1191653
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1703,
+        0.1617,
+        0.125
+      ]
+    },
+    "cliffs01_albedoRough": {
+      "id": "cliffs01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "cliffs01 albedoRough (LITE)",
+        "description": "The texture set cliffs01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_albedoRough.pack.7f439ab0.ktx2",
+      "__bytes": {
+        "in": 10943736,
+        "out": 1206866
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1703,
+        0.1617,
+        0.125
+      ]
+    },
+    "cliffs01_normal": {
+      "id": "cliffs01_normal",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "cliffs01 normal (FULL)",
+        "description": "The texture set cliffs01's FULL normal: RGB the normal (OpenGL). Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "normal"
+      },
+      "pack": {
+        "channels": {
+          "rgb": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_normal.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_normal.pack.43542f8f.ktx2",
+      "__bytes": {
+        "in": 8365941,
+        "out": 1263543
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "cliffs01_normalHeight": {
+      "id": "cliffs01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "cliffs01 normalHeight (LITE)",
+        "description": "The texture set cliffs01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_normalHeight.pack.aad9f881.ktx2",
+      "__bytes": {
+        "in": 9438196,
+        "out": 1281994
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "cliffs01_orm": {
+      "id": "cliffs01_orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "cliffs01 orm (FULL)",
+        "description": "The texture set cliffs01's FULL orm: R AO, G roughness, B metalness 0. Packed from ambientCG Rock051's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "orm"
+      },
+      "pack": {
+        "channels": {
+          "r": {
+            "src": "./source/raw/ao.jpg",
+            "channel": "r"
+          },
+          "g": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "b": 0
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01_orm.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs01/cliffs01_orm.pack.16d6054b.ktx2",
+      "__bytes": {
+        "in": 4724395,
+        "out": 988673
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "cliffs02_albedoRough": {
+      "id": "cliffs02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "cliffs02 albedoRough (LITE)",
+        "description": "The texture set cliffs02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Rock035's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs02/cliffs02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_albedoRough.pack.c88daff8.ktx2",
+      "__bytes": {
+        "in": 10215497,
+        "out": 1165675
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.0069,
+        0.0126,
+        0.0149
+      ]
+    },
+    "cliffs02_normalHeight": {
+      "id": "cliffs02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "cliffs02 normalHeight (LITE)",
+        "description": "The texture set cliffs02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Rock035's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/cliffs02/cliffs02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_normalHeight.pack.91466161.ktx2",
+      "__bytes": {
+        "in": 11099472,
+        "out": 1332823
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "concrete01_albedoRough": {
+      "id": "concrete01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "concrete01 albedoRough (LITE)",
+        "description": "The texture set concrete01's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Concrete034's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/height.jpg",
+              "channel": "r",
+              "cavity": {
+                "radius": 24,
+                "strength": 4
+              },
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/concrete01/concrete01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/concrete01/concrete01_albedoRough.pack.70b98723.ktx2",
+      "__bytes": {
+        "in": 2607993,
+        "out": 431686
+      },
+      "__vramBytes": {
+        "in": 11184812,
+        "out": 699088
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.4601,
+        0.4601,
+        0.4601
+      ]
+    },
+    "concrete01_normalHeight": {
+      "id": "concrete01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "concrete01 normalHeight (LITE)",
+        "description": "The texture set concrete01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Concrete034's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/concrete01/concrete01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/concrete01/concrete01_normalHeight.pack.98dee84e.ktx2",
+      "__bytes": {
+        "in": 3897406,
+        "out": 590706
+      },
+      "__vramBytes": {
+        "in": 11184812,
+        "out": 699088
+      },
+      "__codec": "uastc"
+    },
+    "concrete02_albedoRough": {
+      "id": "concrete02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "concrete02 albedoRough (LITE)",
+        "description": "The texture set concrete02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Concrete044D's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/concrete02/concrete02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/concrete02/concrete02_albedoRough.pack.9a839102.ktx2",
+      "__bytes": {
+        "in": 9320741,
+        "out": 1050953
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1246,
+        0.1116,
+        0.0968
+      ]
+    },
+    "concrete02_normalHeight": {
+      "id": "concrete02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "concrete02 normalHeight (LITE)",
+        "description": "The texture set concrete02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Concrete044D's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/concrete02/concrete02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/concrete02/concrete02_normalHeight.pack.7a5aac66.ktx2",
+      "__bytes": {
+        "in": 8923963,
+        "out": 1274521
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "grass01_albedoHeight": {
+      "id": "grass01_albedoHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "grass01 albedoHeight (FULL)",
+        "description": "The texture set grass01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg"
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_albedoHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoHeight.pack.12d38140.ktx2",
+      "__bytes": {
+        "in": 11135473,
+        "out": 1322723
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1294,
+        0.1635,
+        0.0353
+      ]
+    },
+    "grass01_albedoHeightAO": {
+      "id": "grass01_albedoHeightAO",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "grass01 albedoHeight (MINIMAL)",
+        "description": "The texture set grass01's MINIMAL albedoHeight: RGB albedo × AO (sRGB), A height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_albedoHeightAO.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoHeightAO.pack.5b2f9520.ktx2",
+      "__bytes": {
+        "in": 14795398,
+        "out": 1322765
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1071,
+        0.1347,
+        0.0293
+      ]
+    },
+    "grass01_albedoRough": {
+      "id": "grass01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "grass01 albedoRough (LITE)",
+        "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
+      "__bytes": {
+        "in": 14718033,
+        "out": 1310929
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1071,
+        0.1347,
+        0.0293
+      ]
+    },
+    "grass01_normal": {
+      "id": "grass01_normal",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "grass01 normal (FULL)",
+        "description": "The texture set grass01's FULL normal: RGB the normal (OpenGL). Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "normal"
+      },
+      "pack": {
+        "channels": {
+          "rgb": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_normal.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_normal.pack.b026a6bd.ktx2",
+      "__bytes": {
+        "in": 10015079,
+        "out": 1297936
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "grass01_normalHeight": {
+      "id": "grass01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "grass01 normalHeight (LITE)",
+        "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
+      "__bytes": {
+        "in": 13506245,
+        "out": 1321146
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "grass01_orm": {
+      "id": "grass01_orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "grass01 orm (FULL)",
+        "description": "The texture set grass01's FULL orm: R AO, G roughness, B metalness 0. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "orm"
+      },
+      "pack": {
+        "channels": {
+          "r": {
+            "src": "./source/raw/ao.jpg",
+            "channel": "r"
+          },
+          "g": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "b": 0
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass01/grass01_orm.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass01/grass01_orm.pack.6d1e629d.ktx2",
+      "__bytes": {
+        "in": 7073726,
+        "out": 1192735
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "grass02_albedoRough": {
+      "id": "grass02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "grass02 albedoRough (LITE)",
+        "description": "The texture set grass02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass02/grass02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass02/grass02_albedoRough.pack.18c50f2c.ktx2",
+      "__bytes": {
+        "in": 13835198,
+        "out": 1332029
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.3305,
+        0.3088,
+        0.1146
+      ]
+    },
+    "grass02_normalHeight": {
+      "id": "grass02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "grass02 normalHeight (LITE)",
+        "description": "The texture set grass02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/grass02/grass02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/grass02/grass02_normalHeight.pack.e2d79646.ktx2",
+      "__bytes": {
+        "in": 12063008,
+        "out": 1294001
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "ice01_albedoRough": {
+      "id": "ice01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "ice01 albedoRough (LITE)",
+        "description": "The texture set ice01's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Ice002's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/height.jpg",
+              "channel": "r",
+              "cavity": {
+                "radius": 24,
+                "strength": 4
+              },
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/ice01/ice01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/ice01/ice01_albedoRough.pack.52fd010d.ktx2",
+      "__bytes": {
+        "in": 7405602,
+        "out": 1056943
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1121,
+        0.1758,
+        0.1456
+      ]
+    },
+    "ice01_normalHeight": {
+      "id": "ice01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "ice01 normalHeight (LITE)",
+        "description": "The texture set ice01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ice002's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/ice01/ice01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/ice01/ice01_normalHeight.pack.ce9ca2e4.ktx2",
+      "__bytes": {
+        "in": 7507851,
+        "out": 908198
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "ice02_albedoRough": {
+      "id": "ice02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "ice02 albedoRough (LITE)",
+        "description": "The texture set ice02's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Ice004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/height.jpg",
+              "channel": "r",
+              "cavity": {
+                "radius": 24,
+                "strength": 4
+              },
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/ice02/ice02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/ice02/ice02_albedoRough.pack.9c404b57.ktx2",
+      "__bytes": {
+        "in": 7161665,
+        "out": 1015797
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1951,
+        0.2458,
+        0.2404
+      ]
+    },
+    "ice02_normalHeight": {
+      "id": "ice02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "ice02 normalHeight (LITE)",
+        "description": "The texture set ice02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ice004's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/ice02/ice02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/ice02/ice02_normalHeight.pack.65e1906a.ktx2",
+      "__bytes": {
+        "in": 6835506,
+        "out": 815508
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "mud01_albedoRough": {
+      "id": "mud01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "mud01 albedoRough (LITE)",
+        "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground036's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/mud01/mud01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.e70143ef.ktx2",
+      "__bytes": {
+        "in": 13032708,
+        "out": 1267308
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1865,
+        0.1709,
+        0.1593
+      ]
+    },
+    "mud01_normalHeight": {
+      "id": "mud01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "mud01 normalHeight (LITE)",
+        "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground036's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/mud01/mud01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.0bfc2659.ktx2",
+      "__bytes": {
+        "in": 11203761,
+        "out": 1304190
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "mud02_albedoRough": {
+      "id": "mud02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "mud02 albedoRough (LITE)",
+        "description": "The texture set mud02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/mud02/mud02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/mud02/mud02_albedoRough.pack.ab7a7152.ktx2",
+      "__bytes": {
+        "in": 13235726,
+        "out": 1169913
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.2075,
+        0.1277,
+        0.0645
+      ]
+    },
+    "mud02_normalHeight": {
+      "id": "mud02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "mud02 normalHeight (LITE)",
+        "description": "The texture set mud02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/mud02/mud02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/mud02/mud02_normalHeight.pack.18b688eb.ktx2",
+      "__bytes": {
+        "in": 10782077,
+        "out": 1297791
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "rocks01_albedoRough": {
+      "id": "rocks01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "rocks01 albedoRough (LITE)",
+        "description": "The texture set rocks01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/rocks01/rocks01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_albedoRough.pack.c6a24dfc.ktx2",
+      "__bytes": {
+        "in": 12442144,
+        "out": 1227608
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.4165,
+        0.2873,
+        0.1564
+      ]
+    },
+    "rocks01_normalHeight": {
+      "id": "rocks01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "rocks01 normalHeight (LITE)",
+        "description": "The texture set rocks01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/rocks01/rocks01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_normalHeight.pack.e66b9742.ktx2",
+      "__bytes": {
+        "in": 11125458,
+        "out": 1288192
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "rocks02_albedoRough": {
+      "id": "rocks02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "rocks02 albedoRough (LITE)",
+        "description": "The texture set rocks02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground068's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/rocks02/rocks02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/rocks02/rocks02_albedoRough.pack.06dc9cbb.ktx2",
+      "__bytes": {
+        "in": 12997358,
+        "out": 1297073
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1501,
+        0.0996,
+        0.0258
+      ]
+    },
+    "rocks02_normalHeight": {
+      "id": "rocks02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "rocks02 normalHeight (LITE)",
+        "description": "The texture set rocks02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground068's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/rocks02/rocks02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/rocks02/rocks02_normalHeight.pack.dcee1d3c.ktx2",
+      "__bytes": {
+        "in": 11216382,
+        "out": 1285839
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
     "sand01_albedoHeight": {
       "id": "sand01_albedoHeight",
       "texOpts": {
@@ -24427,6 +25847,273 @@
       "__bytes": {
         "in": 4388263,
         "out": 743604
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand02_albedoRough": {
+      "id": "sand02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "sand02 albedoRough (LITE)",
+        "description": "The texture set sand02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground093C's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand02/sand02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand02/sand02_albedoRough.pack.922145c7.ktx2",
+      "__bytes": {
+        "in": 6750688,
+        "out": 666836
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.5925,
+        0.4737,
+        0.2893
+      ]
+    },
+    "sand02_normalHeight": {
+      "id": "sand02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "sand02 normalHeight (LITE)",
+        "description": "The texture set sand02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground093C's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand02/sand02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand02/sand02_normalHeight.pack.aaf58024.ktx2",
+      "__bytes": {
+        "in": 5728424,
+        "out": 789151
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "snow01_albedoRough": {
+      "id": "snow01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "snow01 albedoRough (LITE)",
+        "description": "The texture set snow01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/snow01/snow01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/snow01/snow01_albedoRough.pack.da33b5ed.ktx2",
+      "__bytes": {
+        "in": 9647460,
+        "out": 957546
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.7076,
+        0.8269,
+        0.9346
+      ]
+    },
+    "snow01_normalHeight": {
+      "id": "snow01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "snow01 normalHeight (LITE)",
+        "description": "The texture set snow01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/snow01/snow01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/snow01/snow01_normalHeight.pack.28ae055f.ktx2",
+      "__bytes": {
+        "in": 7144752,
+        "out": 1145427
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "snow02_albedoRough": {
+      "id": "snow02_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "snow02 albedoRough (LITE)",
+        "description": "The texture set snow02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow008A's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/snow02/snow02_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/snow02/snow02_albedoRough.pack.991614ca.ktx2",
+      "__bytes": {
+        "in": 9769680,
+        "out": 974578
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.7032,
+        0.818,
+        0.9267
+      ]
+    },
+    "snow02_normalHeight": {
+      "id": "snow02_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "snow02 normalHeight (LITE)",
+        "description": "The texture set snow02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow008A's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/snow02/snow02_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/snow02/snow02_normalHeight.pack.d70a2080.ktx2",
+      "__bytes": {
+        "in": 7448021,
+        "out": 1108749
       },
       "__vramBytes": {
         "in": 22369620,
@@ -32849,6 +34536,406 @@
       },
       "__sourcePath": "src/app/scenes/textureSets/p303TestSet.textureSet.json"
     },
+    "cliffs01": {
+      "id": "cliffs01",
+      "category": "CLIFF",
+      "physicalSize": [
+        6,
+        6
+      ],
+      "heightScale": 0.4,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "cliffs01_albedoHeight",
+          "normal": "cliffs01_normal",
+          "orm": "cliffs01_orm"
+        },
+        "LITE": {
+          "albedoRough": "cliffs01_albedoRough",
+          "normalHeight": "cliffs01_normalHeight"
+        },
+        "MINIMAL": {
+          "albedoHeight": "cliffs01_albedoHeightAO"
+        }
+      },
+      "debugData": {
+        "name": "Cliffs 01 (grey mountain)",
+        "description": "ambientCG Rock051, CC0: grey mountain cliff; the triplanar showcase. All three packings (the gallery's packing comparison, p303 D6)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#737063",
+      "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01.textureSet.json"
+    },
+    "cliffs02": {
+      "id": "cliffs02",
+      "category": "CLIFF",
+      "physicalSize": [
+        6,
+        6
+      ],
+      "heightScale": 0.4,
+      "packings": {
+        "LITE": {
+          "albedoRough": "cliffs02_albedoRough",
+          "normalHeight": "cliffs02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Cliffs 02 (dark cave)",
+        "description": "ambientCG Rock035, CC0: dark cave cliff."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#141d21",
+      "__sourcePath": "src/toolkit/textures/cliffs02/cliffs02.textureSet.json"
+    },
+    "concrete01": {
+      "id": "concrete01",
+      "category": "CONCRETE",
+      "physicalSize": [
+        1.1,
+        0.55
+      ],
+      "heightScale": 0.005,
+      "packings": {
+        "LITE": {
+          "albedoRough": "concrete01_albedoRough",
+          "normalHeight": "concrete01_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Concrete 01 (smooth)",
+        "description": "ambientCG Concrete034, CC0: smooth concrete; non-square, so structures only, never in a set array; AO derived from the height (no AO map)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#b5b5b5",
+      "__sourcePath": "src/toolkit/textures/concrete01/concrete01.textureSet.json"
+    },
+    "concrete02": {
+      "id": "concrete02",
+      "category": "CONCRETE",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.02,
+      "packings": {
+        "LITE": {
+          "albedoRough": "concrete02_albedoRough",
+          "normalHeight": "concrete02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Concrete 02 (damaged)",
+        "description": "ambientCG Concrete044D, CC0: damaged concrete, for structures."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#635e58",
+      "__sourcePath": "src/toolkit/textures/concrete02/concrete02.textureSet.json"
+    },
+    "grass01": {
+      "id": "grass01",
+      "category": "GRASS",
+      "physicalSize": [
+        1.4,
+        1.4
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "grass01_albedoHeight",
+          "normal": "grass01_normal",
+          "orm": "grass01_orm"
+        },
+        "LITE": {
+          "albedoRough": "grass01_albedoRough",
+          "normalHeight": "grass01_normalHeight"
+        },
+        "MINIMAL": {
+          "albedoHeight": "grass01_albedoHeightAO"
+        }
+      },
+      "debugData": {
+        "name": "Grass 01 (lawn ground)",
+        "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#5c6730",
+      "__sourcePath": "src/toolkit/textures/grass01/grass01.textureSet.json"
+    },
+    "grass02": {
+      "id": "grass02",
+      "category": "GRASS",
+      "physicalSize": [
+        2.1,
+        2.1
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "LITE": {
+          "albedoRough": "grass02_albedoRough",
+          "normalHeight": "grass02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Grass 02 (forest floor)",
+        "description": "ambientCG Ground037, CC0: forest floor with grass."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#9c975f",
+      "__sourcePath": "src/toolkit/textures/grass02/grass02.textureSet.json"
+    },
+    "ice01": {
+      "id": "ice01",
+      "category": "ICE",
+      "physicalSize": [
+        4,
+        4
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "LITE": {
+          "albedoRough": "ice01_albedoRough",
+          "normalHeight": "ice01_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Ice 01 (lake)",
+        "description": "ambientCG Ice002, CC0: lake ice; AO derived from the height (no AO map)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#5e746b",
+      "__sourcePath": "src/toolkit/textures/ice01/ice01.textureSet.json"
+    },
+    "ice02": {
+      "id": "ice02",
+      "category": "ICE",
+      "physicalSize": [
+        4,
+        4
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "LITE": {
+          "albedoRough": "ice02_albedoRough",
+          "normalHeight": "ice02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Ice 02 (lake, variant)",
+        "description": "ambientCG Ice004, CC0: lake ice, a variant; AO derived from the height (no AO map)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#7a8887",
+      "__sourcePath": "src/toolkit/textures/ice02/ice02.textureSet.json"
+    },
+    "mud01": {
+      "id": "mud01",
+      "category": "MUD",
+      "physicalSize": [
+        2.5,
+        2.5
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "LITE": {
+          "albedoRough": "mud01_albedoRough",
+          "normalHeight": "mud01_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Mud 01 (soil)",
+        "description": "ambientCG Ground036, CC0: soil mud."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#78736f",
+      "__sourcePath": "src/toolkit/textures/mud01/mud01.textureSet.json"
+    },
+    "mud02": {
+      "id": "mud02",
+      "category": "MUD",
+      "physicalSize": [
+        1.75,
+        1.75
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "LITE": {
+          "albedoRough": "mud02_albedoRough",
+          "normalHeight": "mud02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Mud 02 (forest mud)",
+        "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#7e6448",
+      "__sourcePath": "src/toolkit/textures/mud02/mud02.textureSet.json"
+    },
+    "rocks01": {
+      "id": "rocks01",
+      "category": "ROCKS",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.06,
+      "packings": {
+        "LITE": {
+          "albedoRough": "rocks01_albedoRough",
+          "normalHeight": "rocks01_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Rocks 01 (gravel)",
+        "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#ad926e",
+      "__sourcePath": "src/toolkit/textures/rocks01/rocks01.textureSet.json"
+    },
+    "rocks02": {
+      "id": "rocks02",
+      "category": "ROCKS",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.06,
+      "packings": {
+        "LITE": {
+          "albedoRough": "rocks02_albedoRough",
+          "normalHeight": "rocks02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Rocks 02 (mossy stones)",
+        "description": "ambientCG Ground068, CC0: mossy stony ground."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#6c592d",
+      "__sourcePath": "src/toolkit/textures/rocks02/rocks02.textureSet.json"
+    },
     "sand01": {
       "id": "sand01",
       "category": "SAND",
@@ -32888,6 +34975,102 @@
       },
       "averageColor": "#ab966b",
       "__sourcePath": "src/toolkit/textures/sand01/sand01.textureSet.json"
+    },
+    "sand02": {
+      "id": "sand02",
+      "category": "SAND",
+      "physicalSize": [
+        3,
+        3
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "LITE": {
+          "albedoRough": "sand02_albedoRough",
+          "normalHeight": "sand02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Sand 02 (coastal ripples)",
+        "description": "ambientCG Ground093C, CC0: coastal sand with accumulation ripples; the wet-response showcase."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#cab792",
+      "__sourcePath": "src/toolkit/textures/sand02/sand02.textureSet.json"
+    },
+    "snow01": {
+      "id": "snow01",
+      "category": "SNOW",
+      "physicalSize": [
+        3,
+        3
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "LITE": {
+          "albedoRough": "snow01_albedoRough",
+          "normalHeight": "snow01_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Snow 01 (clean)",
+        "description": "ambientCG Snow010A, CC0: clean snow."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#dbebf8",
+      "__sourcePath": "src/toolkit/textures/snow01/snow01.textureSet.json"
+    },
+    "snow02": {
+      "id": "snow02",
+      "category": "SNOW",
+      "physicalSize": [
+        4,
+        4
+      ],
+      "heightScale": 0.04,
+      "packings": {
+        "LITE": {
+          "albedoRough": "snow02_albedoRough",
+          "normalHeight": "snow02_normalHeight"
+        }
+      },
+      "debugData": {
+        "name": "Snow 02 (wind-shaped)",
+        "description": "ambientCG Snow008A, CC0: wind-shaped snow."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "averageColor": "#dae9f7",
+      "__sourcePath": "src/toolkit/textures/snow02/snow02.textureSet.json"
     },
     "p303BrickSet": {
       "id": "p303BrickSet",

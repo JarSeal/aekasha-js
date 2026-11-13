@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "ice02_albedoRough",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg",
+        "multiply": {
+          "src": "./source/raw/height.jpg",
+          "channel": "r",
+          "cavity": {
+            "radius": 24,
+            "strength": 4
+          },
+          "strength": 1
+        }
+      },
+      "a": {
+        "src": "./source/raw/roughness.jpg",
+        "channel": "r"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "baseColor"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "ice02 albedoRough (LITE)",
+    "description": "The texture set ice02's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Ice004's maps (yarn fetchTextureSources)."
+  }
+}

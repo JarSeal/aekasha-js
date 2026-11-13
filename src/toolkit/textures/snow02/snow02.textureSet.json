@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "snow02",
+  "category": "SNOW",
+  "physicalSize": [4, 4],
+  "heightScale": 0.04,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "snow02_albedoRough",
+      "normalHeight": "snow02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Snow 02 (wind-shaped)",
+    "description": "ambientCG Snow008A, CC0: wind-shaped snow."
+  }
+}

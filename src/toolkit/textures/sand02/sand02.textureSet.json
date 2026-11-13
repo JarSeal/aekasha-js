@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "sand02",
+  "category": "SAND",
+  "physicalSize": [3, 3],
+  "heightScale": 0.03,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "sand02_albedoRough",
+      "normalHeight": "sand02_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Sand 02 (coastal ripples)",
+    "description": "ambientCG Ground093C, CC0: coastal sand with accumulation ripples; the wet-response showcase."
+  }
+}

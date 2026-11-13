@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "grass01_normalHeight",
+  "pack": {
+    "channels": {
+      "rg": {
+        "src": "./source/raw/normal.jpg",
+        "normal": true
+      },
+      "b": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "data"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "grass01 normalHeight (LITE)",
+    "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+  }
+}

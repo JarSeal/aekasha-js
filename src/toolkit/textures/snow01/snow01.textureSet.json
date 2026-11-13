@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "snow01",
+  "category": "SNOW",
+  "physicalSize": [3, 3],
+  "heightScale": 0.04,
+  "defaultPacking": "LITE",
+  "packings": {
+    "LITE": {
+      "albedoRough": "snow01_albedoRough",
+      "normalHeight": "snow01_normalHeight"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Snow 01 (clean)",
+    "description": "ambientCG Snow010A, CC0: clean snow."
+  }
+}
