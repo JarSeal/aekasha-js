@@ -238,6 +238,8 @@ The technique guide, `docs/techniques/asset-optimization.md`, has every setting:
   [merging its pieces](repo:docs/techniques/asset-optimization.md#merging-pieces).
 - [Profiles and settings](repo:docs/techniques/asset-optimization.md#profiles-and-settings) and
   the [codec cheat sheet](repo:docs/techniques/asset-optimization.md#codec-cheat-sheet).
+- [Texture arrays and atlases](repo:docs/techniques/asset-optimization.md#texture-arrays-and-atlases):
+  which to use, sizes, padding, codecs and budgets.
 - [Alpha-cut textures](repo:docs/techniques/asset-optimization.md#alpha-cut-textures) and
   [Impostor atlases](repo:docs/techniques/asset-optimization.md#impostor-atlases).
 - [Budgets](repo:docs/techniques/asset-optimization.md#budgets),
