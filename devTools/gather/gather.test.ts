@@ -1051,3 +1051,133 @@ describe('p303 D1: texture sets', () => {
     expect(errors).toContain('Duplicate texture set ID found: sand');
   });
 });
+
+describe('p303 D1: texture set inputs', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const tex = (id: string, srgb = false) => ({
+    [`app/textures/${id}.texture.json`]: {
+      id,
+      fileName: albedo,
+      ...(srgb ? { texOpts: { colorSpace: 'srgb' } } : {}),
+    },
+  });
+  const assets = {
+    ...tex('sandAR', true),
+    ...tex('sandNH'),
+    ...tex('sandAH', true),
+    ...tex('sandN'),
+    ...tex('sandORM'),
+    'app/textures/sand.textureSet.json': {
+      category: 'SAND',
+      physicalSize: [3, 3],
+      heightScale: 0.03,
+      packings: {
+        LITE: { albedoRough: 'sandAR', normalHeight: 'sandNH' },
+        FULL: { albedoHeight: 'sandAH', normal: 'sandN', orm: 'sandORM' },
+      },
+    },
+  };
+  const tslMat = (id: string, inputs: Record<string, unknown>) => ({
+    [`app/materials/${id}.material.json`]: {
+      id,
+      type: 'STANDARDNODEMATERIAL',
+      tslFile: `materials/${id}.tsl.ts`,
+      inputs,
+    },
+    [`app/materials/${id}.tsl.ts`]: 'export const setup = () => {};\n',
+  });
+  const textureIds = (out: OutputScene | undefined) =>
+    ((out?.textures ?? []) as ({ id?: string } | string)[]).map((t) =>
+      typeof t === 'string' ? t : t.id
+    );
+  const setIds = (out: OutputScene | undefined) =>
+    ((out?.textureSets ?? []) as { id: string }[]).map((set) => set.id);
+
+  it('adds the set and the packing’s textures a material input names', () => {
+    const { isGathered, scene: get } = gather({
+      ...assets,
+      ...tslMat('m', { ground: { textureSet: 'sand', packing: 'FULL' } }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    expect(isGathered).toBe(true);
+    expect(setIds(get('a'))).toEqual(['sand']);
+    expect(textureIds(get('a'))).toEqual(['sandAH', 'sandN', 'sandORM']);
+    expect(get('a')?.__features).toEqual(['texturesets']);
+  });
+
+  it('samples the default packing without one, and writes a set the scene lists once', () => {
+    const { scene: get } = gather({
+      ...assets,
+      ...tslMat('m', { ground: { textureSet: 'sand' }, again: { textureSet: 'sand' } }),
+      ...scene('a', { materials: ['m'], textureSets: ['sand'] }),
+    });
+    expect(setIds(get('a'))).toEqual(['sand']);
+    expect(textureIds(get('a'))).toEqual(['sandAR', 'sandNH']);
+  });
+
+  it.each([
+    [{ textureSet: 'nope' }, 'no texture set (a *.textureSet.json) has the id "nope"'],
+    [
+      { textureSet: 'sand', packing: 'MINIMAL' },
+      'the texture set "sand" has no packing "MINIMAL" (packings: FULL, LITE)',
+    ],
+  ])('fails on %j, naming the material and the input', (input, message) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { isGathered } = gather({
+      ...assets,
+      ...tslMat('m', { x: input }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    const text = errors.mock.calls.flat().join('\n');
+    errors.mockRestore();
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a": the material "m"'s input "x": ${message}`);
+  });
+
+  /** A streaming scene `w` whose one crate, in cell (1, 0), has a material of these inputs */
+  const streamingScene = (inputs: Record<string, unknown>, fields: Record<string, unknown> = {}) =>
+    gather({
+      ...assets,
+      ...tslMat('crateMat', inputs),
+      'app/crate.mesh.json': {
+        props: {
+          geo: { type: 'BOX', params: { width: 1, height: 1, depth: 1 } },
+          mat: 'crateMat',
+          position: { x: 70, y: 0, z: 10 },
+        },
+      },
+      ...scene('w', {
+        materials: ['crateMat'],
+        meshes: ['crate'],
+        streaming: { cellSize: 64, base: [], radii: {} },
+        ...fields,
+      }),
+    });
+  type StreamingOut = OutputScene & {
+    __streaming?: {
+      cells: Record<string, { textures?: number[] }>;
+      assets: { textures: { id: string }[] };
+    };
+  };
+
+  it('moves a cell-only material’s set textures into its cell', () => {
+    const { isGathered, scene: get } = streamingScene({ ground: { textureSet: 'sand' } });
+    expect(isGathered).toBe(true);
+    const out = get('w') as StreamingOut;
+    expect(out.textures).toBeUndefined();
+    expect(out.__streaming?.assets.textures.map((t) => t.id)).toEqual(['sandAR', 'sandNH']);
+    expect(out.__streaming?.cells[String(packCellKey(1, 0, 0))]?.textures).toEqual([0, 1]);
+    // The set's data stays with the scene: the runtime finds it there
+    expect(setIds(out)).toEqual(['sand']);
+  });
+
+  it('keeps a set the scene lists for its code in the base', () => {
+    const { scene: get } = streamingScene(
+      { ground: { textureSet: 'sand' } },
+      { textureSets: ['sand'] }
+    );
+    const out = get('w') as StreamingOut;
+    expect(textureIds(out)).toEqual(['sandAR', 'sandNH']);
+    expect(out.__streaming?.assets.textures ?? []).toEqual([]);
+  });
+});

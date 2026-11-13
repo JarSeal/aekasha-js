@@ -3,7 +3,9 @@
  * (`defaultPacking`, every `surface` field), after checking that each slot names a texture asset;
  * the scene pass writes a scene's listed sets inline (a production build has only the scenes'
  * data, where the `textureSets()` feature's `getTextureSet` finds them) and appends each one's
- * default packing's textures to the scene's `textures`.
+ * default packing's textures to the scene's `textures`; the texture closure appends the sets its
+ * materials' inputs name (`appendSceneTextureSets`), and a streaming scene keeps its listed sets'
+ * textures in its base (`getListedTextureSetTextureIds`).
  */
 import {
   isTextureSetColorSlot,
@@ -154,3 +156,28 @@ export const resolveTextureSets = ({ ctx, reg, scene, reportUnknownId }: SceneRu
   // The generated data's shape: the definitions in place of the ids
   scene.textureSets = defs as unknown as string[];
 };
+
+/**
+ * Appends the sets of these ids to a scene's resolved `textureSets` (the texture closure's: the
+ * sets its materials' inputs name), each one it doesn't have yet, without their textures (the
+ * closure adds the packings the inputs sample). An id no set has is skipped: the closure reported
+ * it.
+ */
+export const appendSceneTextureSets = ({ ctx, reg, scene }: SceneRun, ids: readonly string[]) => {
+  const defs = (scene.textureSets ?? []) as unknown as TextureSetDef[];
+  const has = new Set(defs.map((def) => def.id));
+  const added = ids
+    .filter((id) => reg.textureSets[id] && !has.has(id) && has.add(id))
+    .map((id) => toSceneTextureSet(ctx, reg.textureSets[id]));
+  if (added.length) scene.textureSets = [...defs, ...added] as unknown as string[];
+};
+
+/**
+ * The default packing textures of the sets a scene lists for its code (its `textureSets` before
+ * the scene pass): a streaming scene keeps them in its base, since code may use them anywhere.
+ */
+export const getListedTextureSetTextureIds = (reg: Registries, setIds: readonly unknown[]) =>
+  setIds.flatMap((id) => {
+    const set = typeof id === 'string' ? reg.textureSets[id] : undefined;
+    return (set && getTextureSetPackingTextureIds(set, set.defaultPacking)) ?? [];
+  });

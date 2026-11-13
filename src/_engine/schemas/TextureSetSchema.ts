@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
-import { ColorJSONSchema, DebugDataSchema, type ColorJSON } from '../../schemas/_HelperSchemas';
-import { JsonSchemaRefSchema, SourcePathSchema } from '../../schemas/_SaveDataSchema';
+import { ColorJSONSchema, DebugDataSchema, type ColorJSON } from './_HelperSchemas';
+import { JsonSchemaRefSchema, SourcePathSchema } from './_SaveDataSchema';
 
 // The texture set asset (p303 D1, D2): a named group of packed PBR maps (each a texture asset)
-// with the physical facts of the surface. The `textureSets()` feature's runtime reads the
-// gathered form (`TextureSetDef`), which the gatherer writes into each scene that uses the set.
+// with the physical facts of the surface, and the TSL input form that names one. The
+// `textureSets()` feature's runtime reads the gathered form (`TextureSetDef`), which the gatherer
+// writes into each scene that uses the set; its scene field is the feature's own
+// (`features/texturesets/TextureSetsSchema.ts`). Here, not in the feature: the material schema
+// checks the input form, and a schema imports no feature (the layout check).
 
 /** A texture set's surface category (`TEXTURE_SET_CATEGORIES`), which the terrain tools read for
  * their defaults and grouping. */
@@ -220,18 +222,22 @@ export type TextureSetDef = Omit<
   surface: TextureSetSurface;
 };
 
-/** The texture sets feature's scene field (p303 D1): `textureSets`, the ids of the
- * `*.textureSet.json` sets code uses (each loads its default packing). */
-export const textureSetsSchemaPart = {
-  feature: 'texturesets',
-  scene: {
-    /** Texture set ids (`*.textureSet.json`) the scene's code uses: each loads its default
-     * packing's textures. The gather adds the sets its materials' inputs name. */
-    textureSets: z
-      .array(z.string().min(1))
+/**
+ * A TSL input's texture set (p303 D1): `{ "textureSet": "sand01" }` is a bundle of the set's default
+ * packing's textures (`"packing"` picks another) and its surface uniforms (`TextureSetInputRef` on
+ * `aekasha/texturesets`). Needs the `textureSets()` feature.
+ */
+export const TextureSetInputSchema = z
+  .object({
+    /** The texture set's id (a `*.textureSet.json`). */
+    textureSet: z.string().describe("The texture set's id (a *.textureSet.json)."),
+    /** The packing sampled. Default: the set's `defaultPacking`. */
+    packing: z
+      .enum(Object.keys(TEXTURE_SET_PACKINGS) as [TextureSetPacking, ...TextureSetPacking[]])
       .optional()
-      .describe(
-        "Texture set ids (*.textureSet.json) the scene's code uses: each loads its default packing's textures. The gather adds the sets its materials' inputs name."
-      ),
-  },
-} satisfies FeatureSchemaPart;
+      .describe("The packing sampled (FULL, LITE, MINIMAL). Default: the set's defaultPacking."),
+  })
+  .strict()
+  .describe(
+    "A texture set: each slot's texture of its packing and its surface uniforms, by name. Needs the textureSets() feature."
+  );

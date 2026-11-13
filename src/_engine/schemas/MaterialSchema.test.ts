@@ -18,7 +18,7 @@ const issuesOf = (inputs: Record<string, unknown>) => {
     : result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
 };
 
-describe('a TSL input’s object forms (p302 D4, p299 D5)', () => {
+describe('a TSL input’s object forms (p302 D4, p299 D5, p303 D1)', () => {
   test('validate in inputs and in a socket, beside the other values', () => {
     expect(
       issuesOf({
@@ -27,6 +27,8 @@ describe('a TSL input’s object forms (p302 D4, p299 D5)', () => {
         layer: { textureArray: 'ground', layer: 'rock' },
         index: { textureArray: 'ground', layer: 2 },
         cell: { atlas: 'decals', slot: 'albedo', cell: 'crack', clampToCell: false },
+        set: { textureSet: 'sand01' },
+        setPacking: { textureSet: 'sand01', packing: 'FULL' },
         tint: '#ff8000',
         scale: [1, 2],
         vector: { x: 1, y: 2, z: 3 },
@@ -46,6 +48,8 @@ describe('a TSL input’s object forms (p302 D4, p299 D5)', () => {
     [{ textureArray: 'a', layer: -1 }, 'x.layer: Too small'],
     [{ atlas: 'a', cell: 'c' }, 'x.slot: Invalid input: expected string, received undefined'],
     [{ atlas: 'a', slot: 's', cell: 'c', clampToCell: 'yes' }, 'x.clampToCell: Invalid input'],
+    [{ textureSet: 'a', packing: 'HUGE' }, 'x.packing: Invalid option'],
+    [{ textureSet: 'a', layer: 0 }, 'x: Unrecognized key: "layer"'],
   ])('fail on %j at the input’s path, in inputs and in a socket', (value, message) => {
     const issues = issuesOf({ x: value });
     expect(issues.find((issue) => issue.startsWith('inputs.'))).toContain(`inputs.${message}`);

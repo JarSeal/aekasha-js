@@ -19,6 +19,11 @@ import {
   getAtlasCellInputDependencies,
   isAtlasCellInputRef,
 } from '../../src/_engine/kernel/assets/MaterialInputRefs';
+import {
+  getTextureSetInputDependencies,
+  isTextureSetInputRef,
+  type TextureSetPackingData,
+} from '../../src/_engine/features/texturesets/TextureSetRefs';
 import { isCellInRange, packCellKey } from '../../src/_engine/utils/CellKey';
 import type { GatherContext } from './context';
 import type { SceneJSON } from './sceneAssets';
@@ -78,9 +83,12 @@ export const getPrimitiveGeometryRadius = (geo: GeoLike): number | null => {
 };
 
 /** The scene's listed assets by kind: id → its entry's index (entries without an id aren't
- * referable, so they stay base) */
+ * referable, so they stay base); and its resolved texture sets by id, for a texture set input's
+ * textures (p303 D1) */
 const indexListedAssets = (scene: SceneJSON) => {
-  const listed = {} as Record<AssetKind, Map<string, number>>;
+  const listed = {} as Record<AssetKind, Map<string, number>> & {
+    textureSets: Map<string, TextureSetPackingData>;
+  };
   for (const kind of ASSET_KINDS) {
     listed[kind] = new Map();
     (scene[kind] ?? []).forEach((entry, index) => {
@@ -88,6 +96,8 @@ const indexListedAssets = (scene: SceneJSON) => {
       if (id !== undefined && typeof entry !== 'string') listed[kind].set(id, index);
     });
   }
+  const sets = (scene.textureSets ?? []) as unknown as (TextureSetPackingData & { id: string })[];
+  listed.textureSets = new Map(sets.map((set) => [set.id, set]));
   return listed;
 };
 
@@ -101,13 +111,20 @@ const getListedEntry = (scene: SceneJSON, listed: Listed, kind: AssetKind, id: s
 
 /** Every listed texture id among `value`'s strings, at any depth: a material's `params`,
  * `inputs` and `nodes` (a texture map key or a TSL input takes a texture id, an object-form
- * texture ref's `texture` and a texture array layer's `textureArray` too), and an atlas cell
- * input's slot (`<atlas>.<slot>`, no string of its own; p299 D5) */
+ * texture ref's `texture` and a texture array layer's `textureArray` too), an atlas cell
+ * input's slot (`<atlas>.<slot>`, no string of its own; p299 D5) and a texture set input's packing
+ * textures (its set's, no strings in the value either; p303 D1) */
 const addTextureRefs = (value: unknown, listed: Listed, refs: Refs) => {
   if (typeof value === 'string') {
     if (listed.textures.has(value)) refs.textures.add(value);
   } else if (isAtlasCellInputRef(value)) {
     for (const { id } of getAtlasCellInputDependencies(value)) {
+      if (listed.textures.has(id)) refs.textures.add(id);
+    }
+  } else if (isTextureSetInputRef(value)) {
+    for (const { id } of getTextureSetInputDependencies(value, (setId) =>
+      listed.textureSets.get(setId)
+    )) {
       if (listed.textures.has(id)) refs.textures.add(id);
     }
   } else if (Array.isArray(value)) {
@@ -461,7 +478,12 @@ const warnUnusedIds = (
 export const buildStreamingManifest = <S extends SceneJSON>(
   ctx: GatherContext,
   sceneId: string,
-  scene: S
+  scene: S,
+  opts: {
+    /** Texture ids the base keeps though none of its content names them (the default packings
+     * of the texture sets the scene lists for its code, p303 D1) */
+    baseTextureIds?: readonly string[];
+  } = {}
 ): S & { __streaming?: StreamingManifest } => {
   const settings = scene.streaming;
   if (!settings) return scene;
@@ -507,6 +529,7 @@ export const buildStreamingManifest = <S extends SceneJSON>(
   const baseRefs = createRefs();
   for (const mesh of baseMeshes) addMeshRefs(scene, mesh, listed, baseRefs, true);
   if (scene.backgroundTexture) baseRefs.textures.add(scene.backgroundTexture);
+  for (const id of opts.baseTextureIds ?? []) baseRefs.textures.add(id);
   for (const kind of ASSET_KINDS) {
     for (const id of baseIds) if (listed[kind].has(id)) baseRefs[kind].add(id);
   }

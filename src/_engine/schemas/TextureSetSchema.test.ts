@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  TEXTURE_SET_PACKINGS,
-  TextureSetAssetSchema,
-  textureSetsSchemaPart,
-} from './TextureSetSchema';
+import { TEXTURE_SET_PACKINGS, TextureSetAssetSchema } from './TextureSetSchema';
 
 const valid = {
   id: 'sand01',
@@ -74,13 +70,5 @@ describe('TextureSetAssetSchema', () => {
       const schema = packings[packing as keyof typeof packings].unwrap();
       expect(Object.keys(schema.shape)).toEqual([...slots]);
     }
-  });
-});
-
-describe('textureSetsSchemaPart', () => {
-  it("gives a scene's textureSets as ids", () => {
-    const schema = textureSetsSchemaPart.scene.textureSets;
-    expect(schema.safeParse(['sand01', 'mud02']).success).toBe(true);
-    expect(schema.safeParse([{ id: 'sand01' }]).success).toBe(false);
   });
 });

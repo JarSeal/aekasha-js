@@ -7,7 +7,9 @@
  * lights' cookies (`map`) and its `backgroundTexture`. Appended after the listed ids, so they
  * resolve, ship-check and stream as listed ones do; an id no asset JSON has fails the gather as a
  * listed one does (p619 G12), naming what names it. A texture array layer or atlas cell input
- * whose layer, slot or cell its asset doesn't have fails it too (p299 D5).
+ * whose layer, slot or cell its asset doesn't have fails it too (p299 D5). A texture set input
+ * (p303 D1) adds its packing's textures and writes the set into the scene's `textureSets`, where
+ * the `textureSets()` feature reads it; a set no JSON has, or a packing it lacks, fails the gather.
  */
 import {
   type AtlasCellInputRef,
@@ -20,26 +22,37 @@ import {
   type MaterialInputDependency,
   type TextureArrayInputRef,
 } from '../../src/_engine/kernel/assets/MaterialInputRefs';
+import {
+  getTextureSetInputDependencies,
+  isTextureSetInputRef,
+  type TextureSetInputRef,
+} from '../../src/_engine/features/texturesets/TextureSetRefs';
 import { textureMapKeys } from '../../src/_engine/utils/Constants';
 import type { Registries } from './context';
 import type { SceneRun } from './sceneAssets';
+import { appendSceneTextureSets } from './textureSets';
 
 /**
  * The dependency functions of the TSL input forms the gather knows: the runtime resolvers' own
- * (import-free modules, `devTools/engineImports.test.ts`). A resolver with a texture form
- * (p303's texture sets, p299's arrays and atlases) adds its function here. An app's own
- * resolver isn't known here: its values need none, or its scene lists their textures.
+ * (import-free modules, `devTools/engineImports.test.ts`), a texture set's reading pass 1's
+ * registry. A resolver with a texture form (p303's texture sets, p299's arrays and atlases) adds
+ * its function here. An app's own resolver isn't known here: its values need none, or its scene
+ * lists their textures.
  */
-const INPUT_DEPENDENCY_FNS: readonly ((value: unknown) => MaterialInputDependency[])[] = [
+const INPUT_DEPENDENCY_FNS: readonly ((
+  value: unknown,
+  reg: Registries
+) => MaterialInputDependency[])[] = [
   getTextureInputDependencies,
   getTextureArrayInputDependencies,
   getAtlasCellInputDependencies,
+  (value, reg) => getTextureSetInputDependencies(value, (id) => reg.textureSets[id]),
 ];
 
-/** The texture ids by the first thing naming each, for the error; the inputs that don't fit
- * their asset; and pass 1's registries */
+/** The texture ids by the first thing naming each, for the error; the texture set ids alike;
+ * the inputs that don't fit their asset; and pass 1's registries */
 type Named = Map<string, string>;
-type Collect = { named: Named; errors: string[]; reg: Registries };
+type Collect = { named: Named; sets: Named; errors: string[]; reg: Registries };
 
 const addId = (named: Named, id: string, by: string) => {
   if (id && !named.has(id)) named.set(id, by);
@@ -95,16 +108,28 @@ const getAtlasCellError = (reg: Registries, { atlas, slot, cell }: AtlasCellInpu
     : `the texture atlas "${atlas}" has no cell "${cell}" (cells: ${cells.join(', ')})`;
 };
 
-/** An input value's error against its asset (a texture array layer, an atlas cell), or undefined */
+/** Why a texture set input doesn't fit its set, or undefined (the schema checks the packing's
+ * name) */
+const getTextureSetError = (reg: Registries, { textureSet: id, packing }: TextureSetInputRef) => {
+  const set = reg.textureSets[id];
+  if (!set) return `no texture set (a *.textureSet.json) has the id "${id}"`;
+  return packing === undefined || set.packings[packing]
+    ? undefined
+    : `the texture set "${id}" has no packing "${packing}" (packings: ${Object.keys(set.packings).join(', ')})`;
+};
+
+/** An input value's error against its asset (a texture array layer, an atlas cell, a texture
+ * set), or undefined */
 const getInputRefError = (reg: Registries, value: unknown) => {
   if (isTextureArrayInputRef(value)) return getArrayLayerError(reg, value);
   if (isAtlasCellInputRef(value)) return getAtlasCellError(reg, value);
+  if (isTextureSetInputRef(value)) return getTextureSetError(reg, value);
   return undefined;
 };
 
 /** An input group's values (`inputs`, or a socket of `nodes`): `staticDefines` merges into the
  * defines, so it isn't an input. A value that doesn't fit its asset adds an error, not its id. */
-const addInputGroupIds = (group: unknown, { named, errors, reg }: Collect, by: string) => {
+const addInputGroupIds = (group: unknown, { named, sets, errors, reg }: Collect, by: string) => {
   if (!group || typeof group !== 'object') return;
   for (const [key, value] of Object.entries(group)) {
     if (key === 'staticDefines') continue;
@@ -113,8 +138,9 @@ const addInputGroupIds = (group: unknown, { named, errors, reg }: Collect, by: s
       errors.push(`${by}'s input "${key}": ${error}`);
       continue;
     }
+    if (isTextureSetInputRef(value)) addId(sets, value.textureSet, by);
     for (const getDependencies of INPUT_DEPENDENCY_FNS) {
-      for (const dependency of getDependencies(value)) {
+      for (const dependency of getDependencies(value, reg)) {
         if (dependency.type === 'texture') addId(named, dependency.id, by);
       }
     }
@@ -140,7 +166,7 @@ const addMaterialIds = (mat: unknown, collect: Collect, by: string) => {
 /** Every texture id the scene's resolved data names, by what names it, and the inputs that don't
  * fit their asset */
 const getNamedTextureIds = ({ scene, reg }: SceneRun): Collect => {
-  const collect: Collect = { named: new Map(), errors: [], reg };
+  const collect: Collect = { named: new Map(), sets: new Map(), errors: [], reg };
   const { named } = collect;
   for (const mat of scene.materials ?? []) {
     if (typeof mat !== 'string') addMaterialIds(mat, collect, `the material "${mat.id}"`);
@@ -186,13 +212,15 @@ const isKnownTextureId = ({ reg }: SceneRun, id: string) =>
  * Appends the textures the scene's materials, spot light cookies and background name, and its
  * `textures` doesn't list, to its `textures` (each once, in the order they're named). Runs after
  * the materials, lights and meshes are resolved (their save entries applied), before the
- * textures are. An id no asset JSON has, and a texture array layer or atlas cell input its asset
- * doesn't have, is logged, naming what names it, and fails the gather.
+ * textures are. An id no asset JSON has, and a texture array layer, atlas cell or texture set
+ * input its asset doesn't have, is logged, naming what names it, and fails the gather. The texture
+ * sets the inputs name are written into the scene's `textureSets` (after its own, each once).
  */
 export const addTextureClosure = (run: SceneRun) => {
   const listed = getListedTextureIds(run);
   const added: string[] = [];
-  const { named, errors } = getNamedTextureIds(run);
+  const { named, sets, errors } = getNamedTextureIds(run);
+  appendSceneTextureSets(run, [...sets.keys()]);
   for (const error of errors) run.ctx.log.error(`Scene "${run.sceneId}": ${error}.`);
   for (const [id, by] of named) {
     if (listed.has(id)) continue;

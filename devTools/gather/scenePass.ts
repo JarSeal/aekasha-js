@@ -12,6 +12,7 @@ import { resolveSceneAssets, type SceneJSON } from './sceneAssets';
 import type { ShipChecks } from './shipChecks';
 import { getTopFolder, resolveCodeFile } from './sources';
 import { buildStreamingManifest } from './streamingManifest';
+import { getListedTextureSetTextureIds } from './textureSets';
 
 /** A resolved scene, with the features its data needs (p607 D10) */
 export type ResolvedScene = SceneJSON & {
@@ -62,6 +63,8 @@ const resolveScene = (
   if (ctx.isProduction && scene.isDebugScene) return null;
 
   reg.loaders.scenes[sceneId] = `${getTopFolder(ctx.srcDir, file.fullPath)}/${scene.sceneFile}`;
+  // The sets the scene lists for its code, before the scene pass writes their data in their place
+  const baseTextureIds = getListedTextureSetTextureIds(reg, scene.textureSets ?? []);
 
   resolveSceneAssets({
     ctx,
@@ -88,7 +91,12 @@ const resolveScene = (
   // The scene manifest: the features its data needs, which InitEngine checks against its
   // `features` (always written: no list is data from before the manifest), from the whole scene;
   // then a streaming scene's content cut into its cells (p353 Phase 3)
-  return buildStreamingManifest(ctx, sceneId, { ...scene, __features: getSceneFeatureIds(scene) });
+  return buildStreamingManifest(
+    ctx,
+    sceneId,
+    { ...scene, __features: getSceneFeatureIds(scene) },
+    { baseTextureIds }
+  );
 };
 
 /** Every registered scene resolved, in the walk's order */

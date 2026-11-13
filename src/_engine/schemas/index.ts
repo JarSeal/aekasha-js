@@ -107,15 +107,16 @@ export {
   TEXTURE_SET_PACKINGS,
   TEXTURE_SET_SURFACE_DEFAULTS,
   TextureSetAssetSchema,
-  textureSetsSchemaPart,
-} from '../features/texturesets/TextureSetSchema';
+  TextureSetInputSchema,
+} from './TextureSetSchema';
+export { textureSetsSchemaPart } from '../features/texturesets/TextureSetsSchema';
 export type {
   TextureSetAsset,
   TextureSetDef,
   TextureSetPacking,
   TextureSetSlot,
   TextureSetSurface,
-} from '../features/texturesets/TextureSetSchema';
+} from './TextureSetSchema';
 export { TextureAssetSchema } from './TextureSchema';
 export type { TextureAsset } from './TextureSchema';
 export type { SceneSpatialDomainEntry } from './SpatialDomainSchema';
