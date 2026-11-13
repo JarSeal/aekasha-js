@@ -483,7 +483,7 @@ Sections:
 2. **The swaps and the tuning:** the picked alternates' `source.json` (fetched, scaffolded again), `physicalSize` (the provider's dimension or an estimate), `heightScale`, `surface` (`tint` bringing each albedo into a plausible range, `normalStrength`, `roughnessScale`, `aoStrength`), the cavity AO of the sets without an AO map checked by eye; a lit preview of each set from its packed outputs.
 3. **Encode and the exit:** `yarn assets` (its prune drops the swapped primaries' outputs), `cliffs01`'s 2K LITE if kept, every set loading in a browser, the VRAM total and the committed size recorded, this phase's "As built" and the status line.
 
-#### Section 1: The candidates
+#### Section 1: The candidates — done
 
 As built (2026-11-13; `yarn test` passing, the layout check alone: in the full run it timed out at 8.7 s while the dev server's gather encoded the new sets on all cores):
 
@@ -495,7 +495,30 @@ As built (2026-11-13; `yarn test` passing, the layout check alone: in the full r
 
 - **The committed size will be over D6's estimate:** a LITE pair is 2.0 MB (`sand01`) to 2.5 MB (`cliffs01`), not 2 × 0.9 MB, so 16 sets ≈ 37 MB, the extra packings of three sets ≈ 8 MB more (≈ 45 MB), and a 2K LITE of `cliffs01` ≈ 10 MB on top.
 
-**Open for the review:** the picks, `cliffs01`'s 2K LITE, and the committed size.
+**Decided in section 1's review (2026-11-13):**
+
+1. **The picks:** `mud01` → Poly Haven `brown_mud_02`, `rocks02` → Poly Haven `brown_mud_rocks_01`, `cliffs02` → ambientCG `Rock058`, `ice02` → ambientCG `Ice003`; the other 12 keep D6's primary (`concrete01` too: Concrete034, structures only).
+2. **No 2K LITE of `cliffs01`** (no `terrainLayerHero` profile): a set has one LITE, so it would be a second set and ≈ 10 MB more; a set author can add one.
+3. **The committed size** (≈ 45 MB) is accepted.
+
+#### Section 2: The swaps and the tuning — done
+
+As built (2026-11-13; `yarn test` (3,629), `yarn gatherAppData`: no warning, every set gathered with its measured `averageColor`):
+
+- **The swaps:** the four `source.json`s (Poly Haven's maps `Diffuse`, `nor_gl`, `Rough`, `AO`, `Displacement`; `physicalSize` 1.3 m from its API for both), their set JSONs' names and descriptions, their texture JSONs removed and written again by `--scaffold --only` (fetched: 4 s). `CREDITS.md` names the new assets.
+- **The measures** (a scratch script running the pipeline's own `buildPackedImage` on each set's LITE recipes, at 512²):
+  - **Normals:** every set's normal slopes correlate positively with its height map's gradient on both axes (r 0.67-0.99, `grass01` 0.42), so all 16 are OpenGL normals that agree with their heights (a DirectX map would show a negative r on the vertical axis).
+  - **`heightScale` is fitted, not guessed:** the least-squares `k` in `slope = k × ∇h` (the slope from the normal, `−n.xy / n.z`; `∇h` the remapped 0..1 height's gradient per metre at the set's `physicalSize`), so a metre of relief agrees with the normal map. Ordinary least squares, since the normal maps hold fine detail the height maps lack (noise in the slope, which doesn't bias `k`). Values: `sand01` 0.057 (was D1's 0.03), `sand02` 0.033, `mud01` 0.04, `mud02` 0.009, `rocks01` 0.018, `rocks02` 0.037, `cliffs01` 0.16, `cliffs02` 0.25, `snow01` 0.048, `snow02` 0.058, `ice01` 0.006, `ice02` 0.004, `grass01` 0.002 (r 0.42: its height map is nearly flat; the blades are in the normal only), `grass02` 0.027, `concrete01` 0.012 (0.016 across, 0.009 along: the mean), `concrete02` 0.013.
+  - **Albedo** (LITE's, AO baked, linear luminance): snow 0.80-0.81, `sand02` 0.49, `concrete01` 0.46, `sand01` / `rocks01` / `grass02` ≈ 0.30, `ice01` / `cliffs01` 0.16, `mud02` 0.14, `grass01` 0.12, `concrete02` 0.11, `ice02` 0.09, `cliffs02` 0.08, `rocks02` 0.08, `mud01` 0.05. All in their materials' plausible range (wet soil 0.05-0.15, fresh snow 0.8-0.9) but `concrete01`, light for weathered concrete. **A `tint` can only darken** (a JSON colour is at most `#ffffff`), so a set too dark would need its pack changed; none is.
+- **The tuning** (each set's JSON; normal strength 1 everywhere, `heightContrast` and `aoStrength` 1: p305 tunes them per technique):
+  - `snow01`, `snow02`: `tint` `#fff2e9`. Their albedo is blue (b / r 1.32), sky light baked in, which the scene's sky light would double; the tint brings it to b / r 1.08 (luminance 0.73).
+  - `concrete01`: `tint` `#eaeaea` (0.46 → 0.38).
+  - `grass01`: `roughnessScale` 2.5. Its roughness map's median is 0.26, a glossy lawn, now 0.65 (2.3 % of the texels clamp at 1, which the material must do: Phase 5's `textureSetSurface`).
+  - The gathered `averageColor` is the albedo texture's, without the tint (a uniform): p305's far mode multiplies the two.
+- **The cavity AO** of the AO-less sets, checked against the AO maps' distributions: Phase 2's strength 4 clamps 2 % of `ice01`'s texels to black (its height map's narrow deep pits; black holes lit), where the scanned AO maps never reach 0 (1st percentile 0.38-0.86). Now `ice01` and `ice02` strength 1 (1st percentile 0.69 / 0.77, `sand01`'s AO map 0.70) and `concrete01` 2 (0.84, `concrete02`'s map 0.86), radius 24 kept. `devTools/assetPipeline/CLAUDE.md`'s Cavity AO says so.
+- **The look at 4 m** (a lit sheet of the packed LITE maps, tint and normal applied): scales plausible (ripples, pebbles, ice plates, strata). Visible repetition at 2 × 2 tiles: `mud01` and `rocks02` (1.3 m, a dark band each tile) and `concrete01` (1.1 m): p305's anti-tiling.
+- **The dev server's gather encodes as files change:** the outputs of the swapped and re-tuned recipes beside the stale ones; section 3's `yarn assets` prunes those.
+- For Phase 6's handbook: choosing `heightScale` by the normal-map fit, the cavity strengths per material, and a tint that only darkens.
 
 ### Phase 5 — Baseline material and gallery skeleton (D7, D8)
 

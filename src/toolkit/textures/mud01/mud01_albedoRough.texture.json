@@ -29,6 +29,6 @@
   },
   "debugData": {
     "name": "mud01 albedoRough (LITE)",
-    "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground036's maps (yarn fetchTextureSources)."
+    "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
   }
 }

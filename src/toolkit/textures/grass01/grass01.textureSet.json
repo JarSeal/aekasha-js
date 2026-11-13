@@ -3,7 +3,7 @@
   "id": "grass01",
   "category": "GRASS",
   "physicalSize": [1.4, 1.4],
-  "heightScale": 0.03,
+  "heightScale": 0.002,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {
@@ -22,7 +22,7 @@
   "surface": {
     "tint": "#ffffff",
     "normalStrength": 1,
-    "roughnessScale": 1,
+    "roughnessScale": 2.5,
     "aoStrength": 1,
     "heightContrast": 1
   },

@@ -3,7 +3,7 @@
   "id": "sand02",
   "category": "SAND",
   "physicalSize": [3, 3],
-  "heightScale": 0.03,
+  "heightScale": 0.033,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

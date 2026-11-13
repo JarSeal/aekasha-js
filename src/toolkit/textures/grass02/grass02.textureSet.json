@@ -3,7 +3,7 @@
   "id": "grass02",
   "category": "GRASS",
   "physicalSize": [2.1, 2.1],
-  "heightScale": 0.03,
+  "heightScale": 0.027,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

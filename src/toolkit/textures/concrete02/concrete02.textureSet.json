@@ -3,7 +3,7 @@
   "id": "concrete02",
   "category": "CONCRETE",
   "physicalSize": [2, 2],
-  "heightScale": 0.02,
+  "heightScale": 0.013,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

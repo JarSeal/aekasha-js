@@ -3,7 +3,7 @@
   "id": "ice01",
   "category": "ICE",
   "physicalSize": [4, 4],
-  "heightScale": 0.01,
+  "heightScale": 0.006,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

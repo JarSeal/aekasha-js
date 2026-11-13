@@ -3,7 +3,7 @@
   "id": "sand01",
   "category": "SAND",
   "physicalSize": [3, 3],
-  "heightScale": 0.03,
+  "heightScale": 0.057,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": { "albedoRough": "sand01_albedoRough", "normalHeight": "sand01_normalHeight" },

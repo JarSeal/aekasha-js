@@ -25,6 +25,6 @@
   },
   "debugData": {
     "name": "cliffs02 normalHeight (LITE)",
-    "description": "The texture set cliffs02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Rock035's maps (yarn fetchTextureSources)."
+    "description": "The texture set cliffs02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Rock058's maps (yarn fetchTextureSources)."
   }
 }

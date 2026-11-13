@@ -29,6 +29,6 @@
   },
   "debugData": {
     "name": "cliffs02 albedoRough (LITE)",
-    "description": "The texture set cliffs02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Rock035's maps (yarn fetchTextureSources)."
+    "description": "The texture set cliffs02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Rock058's maps (yarn fetchTextureSources)."
   }
 }

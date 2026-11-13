@@ -25,6 +25,6 @@
   },
   "debugData": {
     "name": "mud01 normalHeight (LITE)",
-    "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground036's maps (yarn fetchTextureSources)."
+    "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
   }
 }

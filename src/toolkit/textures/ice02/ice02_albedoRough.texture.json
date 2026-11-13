@@ -10,7 +10,7 @@
           "channel": "r",
           "cavity": {
             "radius": 24,
-            "strength": 4
+            "strength": 1
           },
           "strength": 1
         }
@@ -33,6 +33,6 @@
   },
   "debugData": {
     "name": "ice02 albedoRough (LITE)",
-    "description": "The texture set ice02's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Ice004's maps (yarn fetchTextureSources)."
+    "description": "The texture set ice02's LITE albedoRough: RGB albedo × cavity AO (from height) (sRGB), A roughness. Packed from ambientCG Ice003's maps (yarn fetchTextureSources)."
   }
 }

@@ -3,7 +3,7 @@
   "id": "mud02",
   "category": "MUD",
   "physicalSize": [1.75, 1.75],
-  "heightScale": 0.04,
+  "heightScale": 0.009,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

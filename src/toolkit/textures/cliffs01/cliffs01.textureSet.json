@@ -3,7 +3,7 @@
   "id": "cliffs01",
   "category": "CLIFF",
   "physicalSize": [6, 6],
-  "heightScale": 0.4,
+  "heightScale": 0.16,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {

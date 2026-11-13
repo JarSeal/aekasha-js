@@ -3,7 +3,7 @@
   "id": "ice02",
   "category": "ICE",
   "physicalSize": [4, 4],
-  "heightScale": 0.01,
+  "heightScale": 0.004,
   "defaultPacking": "LITE",
   "packings": {
     "LITE": {
@@ -19,7 +19,7 @@
     "heightContrast": 1
   },
   "debugData": {
-    "name": "Ice 02 (lake, variant)",
-    "description": "ambientCG Ice004, CC0: lake ice, a variant; AO derived from the height (no AO map)."
+    "name": "Ice 02 (dark lake)",
+    "description": "ambientCG Ice003, CC0: dark lake ice; AO derived from the height (no AO map)."
   }
 }
