@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { color, floor, mix, mod, uniform, uv, vec3, vec4 } from 'three/tsl';
+import { color, float, floor, fract, mix, mod, step, uniform, uv, vec3, vec4 } from 'three/tsl';
 import {
   bakeTexture,
   createGeometry,
@@ -13,6 +13,7 @@ import {
   registerMaterialInputResolver,
   registerMergedGeometry,
   registerTslMaterial,
+  sampleArrayLayer,
   spawnImportedAsset,
 } from 'aekasha';
 import type {
@@ -358,6 +359,69 @@ const createTextureBakeCheckAsync = async () => {
   });
 };
 
+/** Between the top row and the crates, the layered bake check's tiles: a group per output, a
+ * tile per layer. */
+const LAYER_CHECK = { x: -3.2, groupGap: 2.2, step: 0.5, y: 0.93, z: 0.3, size: 0.42, layers: 4 };
+
+/**
+ * The layered MRT bake check (p304 Phase 2): one bake of three outputs (an sRGB colour, linear
+ * data and a HALF_FLOAT value of 4) and four layers, a tile per output and layer, left to right.
+ * `albedo`: a checker of 4, 8, 12 and 16 cells, red through blue by layer. `data`: u in red, v in
+ * green, the layer / 3 in blue. `hdr`: 1 to 4 white stripes (the value 4 shown at a quarter, so a
+ * clamped 8-bit write shows grey stripes instead). Every tile far off still blurs evenly (each
+ * layer's mips).
+ */
+const createLayeredBakeCheckAsync = async () => {
+  const baked = await bakeTexture({
+    id: 'p304_layered',
+    size: 128,
+    layers: LAYER_CHECK.layers,
+    outputs: [
+      { name: 'albedo', colorSpace: 'SRGB' },
+      { name: 'data' },
+      { name: 'hdr', type: 'HALF_FLOAT' },
+    ],
+    build: ({ uv: texelUv, layer }) => {
+      const layerF = float(layer);
+      const cell = floor(texelUv.mul(layerF.add(1).mul(4)));
+      const isOdd = mod(cell.x.add(cell.y), 2);
+      const tint = vec3(float(1).sub(layerF.div(3)), 0.3, layerF.div(3));
+      const stripe = step(0.5, fract(texelUv.x.mul(layerF.add(1))));
+      return {
+        albedo: vec4(tint.mul(isOdd.mul(0.8).add(0.2)), 1),
+        data: vec4(texelUv.x, texelUv.y, layerF.div(3), 1),
+        hdr: vec4(vec3(stripe.mul(4)), 1),
+      };
+    },
+  });
+  const geo = createGeometry({
+    id: 'p304_layerTile',
+    type: 'BOX',
+    params: { width: LAYER_CHECK.size, height: LAYER_CHECK.size, depth: 0.02 },
+  });
+  const meshUv = uv() as unknown as THREE.Node<'vec2'>;
+  (['albedo', 'data', 'hdr'] as const).forEach((name, group) => {
+    for (let layer = 0; layer < LAYER_CHECK.layers; layer++) {
+      const id = `p304_layered_${name}_${layer}`;
+      const mat = createMaterial({ id, type: 'BASICNODEMATERIAL', params: {} });
+      const sampled = sampleArrayLayer(baked.textures[name], meshUv, layer);
+      (mat as THREE.MeshBasicNodeMaterial).colorNode = name === 'hdr' ? sampled.mul(0.25) : sampled;
+      createMeshEntity(
+        {
+          geo,
+          mat,
+          position: {
+            x: LAYER_CHECK.x + group * LAYER_CHECK.groupGap + layer * LAYER_CHECK.step,
+            y: LAYER_CHECK.y,
+            z: LAYER_CHECK.z,
+          },
+        },
+        { appId: `${id}_tile` }
+      );
+    }
+  });
+};
+
 /**
  * The orientation check of hand-optimized assets (KTX2 textures, meshopt GLBs, made with gltfpack)
  * next to their sources; its camera and lights are in its JSON. Top row: each PNG texture, then
@@ -369,7 +433,8 @@ const createTextureBakeCheckAsync = async () => {
  * (`createMergeCheck`). Only the bottom row casts and takes the sun's shadows. Left and right of
  * the rows, the merge group check (`createMergeGroupCheck`), and under the right block the AUTO
  * check (`createAutoMergeCheck`), left of the bottom row the texture bake check
- * (`createTextureBakeCheckAsync`). Either side of the top row, the material input checks
+ * (`createTextureBakeCheckAsync`), between the top row and the crates the layered MRT bake check
+ * (`createLayeredBakeCheckAsync`). Either side of the top row, the material input checks
  * (`createMaterialInputChecks`).
  */
 export const scene = async () => {
@@ -400,6 +465,7 @@ export const scene = async () => {
   createMergeGroupCheck(textures[0]);
   createAutoMergeCheck();
   await createTextureBakeCheckAsync();
+  await createLayeredBakeCheckAsync();
   // p376 Phase 0's probe (`window.__aekHlod`, `src/app/shared/_dbg__hlodSpike.ts`)
   const hlodProbe = await loadDebugModuleAsync(
     () => import('../../shared/_dbg__hlodSpike'),

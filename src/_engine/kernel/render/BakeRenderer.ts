@@ -48,14 +48,19 @@ export const withBakeRendererState = <T>(renderer: THREE.Renderer, fn: () => T):
   });
 
 /**
- * Clears a target to transparent black, which also sets up its GPU texture before anything
- * samples it (the destroyed-texture trap, `features/skybox/CLAUDE.md`). Call it inside
- * {@link withBakeRendererState}: it leaves the target and clear colour set.
+ * Clears a target (an array target's `layer`, default 0) to transparent black, which also sets up
+ * its GPU texture before anything samples it (the destroyed-texture trap,
+ * `features/skybox/CLAUDE.md`). Call it inside {@link withBakeRendererState}: it leaves the target
+ * and clear colour set.
  * For the texture baker, the impostor bakes and the texture preview.
  * @internal
  */
-export const clearBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
-  renderer.setRenderTarget(target);
+export const clearBakeTarget = (
+  renderer: THREE.Renderer,
+  target: THREE.RenderTarget,
+  layer = 0
+) => {
+  renderer.setRenderTarget(target, layer);
   renderer.setClearColor(0x000000, 0);
   renderer.clear();
 };

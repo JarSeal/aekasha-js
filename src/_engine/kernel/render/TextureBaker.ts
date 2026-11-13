@@ -3,18 +3,21 @@
 // noise maths every frame.
 //
 // A bake is a full-screen triangle (three's `QuadMesh`) whose material's `fragmentNode` is the
-// graph, rendered into a target that is registered as a texture per output (`<id>.<name>`) and
-// owned like any other: released with the scene loading it (or current), unless persistent.
+// graph (several outputs: `mrt()` keyed by the target's texture names, which is how three matches
+// an MRT output to its attachment), rendered into one target with a texture per output, each
+// registered as `<id>.<name>` and owned like any other: released with the scene loading it (or
+// current), unless persistent. An array bake (`layers` > 1) renders its layers one by one into an
+// array target (`setRenderTarget(target, layer)`, both backends on three r187), the graph reading
+// the layer from an int uniform, with the mips generated once, after the last layer.
 // Deleting the registered texture (the scene's release, `deleteTexture`) disposes the target, the
 // material and the bake. The target is cleared once on allocation (`clearBakeTarget`), so nothing
 // samples an unallocated texture, and the pipeline compiles (`compileAsync`, in the bake's target)
 // before the first render, so the render doesn't stall a frame.
 //
-// Phase 1: one output and one layer; the render follows the compile at once. Several outputs
-// (MRT), array layers, the bake queue with its throttle, the scene load's hold and the GPU timing
-// are Phase 2 (docs/plans/p304_procedural-texture-baker.md).
+// The render follows the compile at once; the bake queue with its throttle, the scene load's hold
+// and the GPU timing are Phase 2's second step (docs/plans/p304_procedural-texture-baker.md).
 import * as THREE from 'three/webgpu';
-import { array, float, uniform, uv, vec2, vec4, vertexIndex } from 'three/tsl';
+import { array, float, mrt, uniform, uv, vec2, vec4, vertexIndex } from 'three/tsl';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { deleteTexture, doesTextureExist, getTexture, saveTexture } from '../assets/Texture';
@@ -42,7 +45,8 @@ export type BakeBuildContext = {
   /** The texel's centre in 0..1, (0, 0) the texture's first texel: a material sampling the baked
    * texture at a uv reads what the graph wrote at the same uv. */
   uv: THREE.Node<'vec2'>;
-  /** The array layer being written (an int; 0 for a 2D bake). */
+  /** The array layer being written, an int (0 for a 2D bake): the graph is built once and
+   * renders every layer. */
   layer: THREE.Node<'int'>;
   /** One texel's size in uv, `1 / width` and `1 / height` (central differences, ring taps). */
   texel: THREE.Node<'vec2'>;
@@ -55,9 +59,11 @@ export type BakeTextureOpts = {
   /** Width and height in texels, one number for a square. A power of two is recommended (mips,
    * the KTX2 export). */
   size: number | [number, number];
-  /** The textures it writes. One output for now (several, MRT, come with the bake queue). */
+  /** The textures it writes, 1 to 4 (several are one MRT render), each named once. */
   outputs: BakeOutput[];
-  /** Array layers. 1 for now (more come with the bake queue). */
+  /** Array layers, 1 to 256 (default 1). More than one makes each output an array texture (sample
+   * it with `sampleArrayLayer`), every layer rendered by the same graph, which reads the layer from
+   * `build`'s `layer`. */
   layers?: number;
   /** The graphs by output name, for the outputs without a `node`, built once from the bake's
    * context (the texel's uv, layer and size). */
@@ -77,14 +83,15 @@ export type BakeTextureOpts = {
 export type BakedTexture = {
   /** The bake's id. */
   readonly id: string;
-  /** Each output's texture by name, registered as `<id>.<name>`. */
+  /** Each output's texture by name, registered as `<id>.<name>`: an array texture when the bake
+   * has layers. */
   readonly textures: Readonly<Record<string, THREE.Texture>>;
   /** The GPU memory of every output with its mips, in bytes (see
    * {@link getBakedTextureMemoryBytes}). */
   readonly memoryBytes: number;
-  /** Renders the graph again, with its uniforms' current values (set them first), into the same
-   * textures. Resolves once rendered; a no-op after `dispose`. A call while the first bake is still
-   * compiling waits for it (that bake reads the latest values). */
+  /** Renders the graph again (every layer), with its uniforms' current values (set them first),
+   * into the same textures. Resolves once rendered; a no-op after `dispose`. A call while the first
+   * bake is still compiling waits for it (that bake reads the latest values). */
   rebake: () => Promise<void>;
   /** Whether the bake is disposed (by `dispose` or its texture's deletion). */
   isDisposed: () => boolean;
@@ -96,6 +103,8 @@ export type BakedTexture = {
 type BakeState = {
   id: string;
   target: THREE.RenderTarget;
+  /** `BakeBuildContext.layer`: set before each layer's render. */
+  layerNode: THREE.UniformNode<'int', number>;
   quad: THREE.QuadMesh;
   material: THREE.NodeMaterial;
   registered: [string, THREE.Texture][];
@@ -108,6 +117,12 @@ type BakeState = {
 
 /** The live bakes by id: a second `bakeTexture` of an id returns its bake. */
 const bakes = new Map<string, BakeState>();
+
+/** WebGPU's default `maxColorAttachmentBytesPerSample` is 32, and an RGBA8 attachment counts 8
+ * bytes there like an RGBA16F one (its render target pixel byte cost), so 4 outputs of any type. */
+const MAX_OUTPUTS = 4;
+/** WebGPU's default `maxTextureArrayLayers`, and WebGL 2's minimum `MAX_ARRAY_TEXTURE_LAYERS`. */
+const MAX_LAYERS = 256;
 
 const createFullScreenVertexNode = () =>
   // three's QuadMesh triangle: it sets its own on `render()`, which the compile wouldn't see
@@ -133,15 +148,24 @@ const resolveOutputNodes = (opts: BakeTextureOpts, ctx: BakeBuildContext) => {
 
 const validateOpts = (opts: BakeTextureOpts) => {
   const { id, outputs, layers = 1 } = opts;
-  if (outputs.length !== 1) {
+  if (outputs.length < 1 || outputs.length > MAX_OUTPUTS) {
     throw new Error(
-      `bakeTexture: "${id}" has ${outputs.length} outputs; one is supported for now.`
+      `bakeTexture: "${id}" has ${outputs.length} outputs; it takes 1 to ${MAX_OUTPUTS}.`
     );
   }
-  if (layers !== 1) {
-    throw new Error(`bakeTexture: "${id}" has ${layers} layers; one is supported for now.`);
+  if (!Number.isInteger(layers) || layers < 1 || layers > MAX_LAYERS) {
+    throw new Error(
+      `bakeTexture: "${id}" has ${layers} layers; it takes a whole number from 1 to ${MAX_LAYERS}.`
+    );
   }
+  const names = new Set<string>();
   for (const output of outputs) {
+    if (!output.name || names.has(output.name)) {
+      throw new Error(
+        `bakeTexture: "${id}" has ${output.name ? `two outputs named "${output.name}"` : 'an output without a name'}; each output needs a name of its own.`
+      );
+    }
+    names.add(output.name);
     if (output.colorSpace === 'SRGB' && (output.type ?? 'UNSIGNED_BYTE') !== 'UNSIGNED_BYTE') {
       throw new Error(
         `bakeTexture: output "${output.name}" of "${id}" is SRGB, which needs the UNSIGNED_BYTE type.`
@@ -156,20 +180,22 @@ const validateOpts = (opts: BakeTextureOpts) => {
   }
 };
 
+// One target for every output (`count`) and layer (`depth`, an array texture past 1). The shared
+// options are the target's; each texture gets its output's type, colour space and registry id as
+// its name (the MRT key)
 const createBakeTarget = (
   renderer: THREE.Renderer,
   opts: BakeTextureOpts,
   width: number,
   height: number
 ) => {
-  const output = opts.outputs[0];
   const mipmaps = opts.mipmaps ?? true;
   const wrapping =
     (opts.wrap ?? 'REPEAT') === 'REPEAT' ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
   const target = new THREE.RenderTarget(width, height, {
-    type: output.type === 'HALF_FLOAT' ? THREE.HalfFloatType : THREE.UnsignedByteType,
+    count: opts.outputs.length,
+    depth: opts.layers ?? 1,
     format: THREE.RGBAFormat,
-    colorSpace: output.colorSpace === 'SRGB' ? THREE.SRGBColorSpace : THREE.NoColorSpace,
     magFilter: THREE.LinearFilter,
     minFilter: mipmaps ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter,
     wrapS: wrapping,
@@ -178,8 +204,24 @@ const createBakeTarget = (
     anisotropy: opts.anisotropy === 'MAX' ? renderer.getMaxAnisotropy() : opts.anisotropy ?? 1,
     depthBuffer: false,
   });
-  target.texture.name = `${opts.id}.${output.name}`;
+  opts.outputs.forEach((output, i) => {
+    const texture = target.textures[i];
+    texture.type = output.type === 'HALF_FLOAT' ? THREE.HalfFloatType : THREE.UnsignedByteType;
+    texture.colorSpace = output.colorSpace === 'SRGB' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    texture.name = `${opts.id}.${output.name}`;
+  });
   return target;
+};
+
+// One output writes the node as it is; several write `mrt()` keyed by the target's texture names
+// (three's `MRTNode` finds each output's attachment by its texture's name)
+const createOutputNode = (target: THREE.RenderTarget, nodes: THREE.Node[]) => {
+  if (nodes.length === 1) return nodes[0];
+  const outputs: Record<string, THREE.Node> = {};
+  nodes.forEach((node, i) => {
+    outputs[target.textures[i].name] = node;
+  });
+  return mrt(outputs);
 };
 
 const createBakeMaterial = (id: string, node: THREE.Node) => {
@@ -194,12 +236,43 @@ const createBakeMaterial = (id: string, node: THREE.Node) => {
   return material;
 };
 
+// The mips are generated after every render into a mipped target (WebGPU's `finishRender`, the
+// WebGL backend's), every layer's at once: off until the last render, so they're built once
+// (three r187, #34630)
+const setMipmapsAutoUpdate = (target: THREE.RenderTarget, isOn: boolean) => {
+  for (const texture of target.textures) texture.mipmapsAutoUpdate = isOn;
+};
+
+// Clears every layer once on allocation (`clearBakeTarget`, the clear-once rule), the mips left
+// for the first bake
+const clearBake = (renderer: THREE.Renderer, state: BakeState) => {
+  const layers = state.target.depth;
+  setMipmapsAutoUpdate(state.target, false);
+  try {
+    withBakeRendererState(renderer, () => {
+      for (let layer = 0; layer < layers; layer++) clearBakeTarget(renderer, state.target, layer);
+    });
+  } finally {
+    setMipmapsAutoUpdate(state.target, true);
+  }
+};
+
 const renderBake = (renderer: THREE.Renderer, state: BakeState) => {
-  withBakeRendererState(renderer, () => {
-    renderer.setRenderTarget(state.target);
-    renderer.autoClear = false;
-    renderer.render(state.quad, state.quad.camera);
-  });
+  const { target, layerNode, quad } = state;
+  const layers = target.depth;
+  try {
+    withBakeRendererState(renderer, () => {
+      renderer.autoClear = false;
+      for (let layer = 0; layer < layers; layer++) {
+        setMipmapsAutoUpdate(target, layer === layers - 1);
+        layerNode.value = layer;
+        renderer.setRenderTarget(target, layer);
+        renderer.render(quad, quad.camera);
+      }
+    });
+  } finally {
+    setMipmapsAutoUpdate(target, true);
+  }
 };
 
 // Compiles in the bake's target (the build reads the target's colour space and type), one engine
@@ -275,6 +348,26 @@ const disposeBake = (state: BakeState, skip?: THREE.Texture) => {
  *   params: { map: baked.textures.albedo },
  * });
  * ```
+ * @example
+ * Two outputs (one MRT render) and four layers, sampled with `sampleArrayLayer`:
+ * ```ts
+ * import * as THREE from 'three/webgpu';
+ * import { float, sin, uv, vec4 } from 'three/tsl';
+ * import { bakeTexture, sampleArrayLayer } from 'aekasha';
+ *
+ * const { textures } = await bakeTexture({
+ *   id: 'waves',
+ *   size: 512,
+ *   layers: 4,
+ *   outputs: [{ name: 'albedo', colorSpace: 'SRGB' }, { name: 'height' }],
+ *   build: ({ uv: texelUv, layer }) => {
+ *     const height = sin(texelUv.x.mul(float(layer).add(1).mul(12.566))).mul(0.5).add(0.5);
+ *     return { albedo: vec4(height, height, 1, 1), height: vec4(height, 0, 0, 1) };
+ *   },
+ * });
+ * const material = new THREE.MeshStandardNodeMaterial();
+ * material.colorNode = sampleArrayLayer(textures.albedo, uv() as unknown as THREE.Node<'vec2'>, 2);
+ * ```
  */
 export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
   const existing = bakes.get(opts.id);
@@ -289,15 +382,16 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
   const renderer = getBakeRenderer('bakeTexture');
   validateOpts(opts);
   const { width, height } = getBakeSize(opts.size, 'bakeTexture');
+  const layerNode = uniform(0, 'int') as THREE.UniformNode<'int', number>;
   const ctx: BakeBuildContext = {
     uv: uv() as unknown as THREE.Node<'vec2'>,
-    layer: uniform(0, 'int') as unknown as THREE.Node<'int'>,
+    layer: layerNode as unknown as THREE.Node<'int'>,
     texel: vec2(1 / width, 1 / height) as unknown as THREE.Node<'vec2'>,
   };
   const nodes = resolveOutputNodes(opts, ctx);
 
   const target = createBakeTarget(renderer, opts, width, height);
-  const material = createBakeMaterial(opts.id, nodes[0]);
+  const material = createBakeMaterial(opts.id, createOutputNode(target, nodes));
   const quad = new THREE.QuadMesh(material);
   quad.name = `TextureBaker.${opts.id}`;
   quad.frustumCulled = false;
@@ -306,6 +400,7 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
   const state = {
     id: opts.id,
     target,
+    layerNode,
     quad,
     material,
     registered: [],
@@ -329,16 +424,18 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
     dispose: () => disposeBake(state),
   };
 
-  // Registered before the first await, so the scene loading now owns it
-  const { name } = opts.outputs[0];
-  const textureId = `${opts.id}.${name}`;
-  textures[name] = saveTexture(target.texture, textureId, opts.isPersistent);
-  state.registered.push([textureId, target.texture]);
-  target.texture.addEventListener('dispose', state.onTextureDispose);
+  // Registered before the first await, so the scene loading now owns them
+  opts.outputs.forEach(({ name }, i) => {
+    const texture = target.textures[i];
+    const textureId = `${opts.id}.${name}`;
+    textures[name] = saveTexture(texture, textureId, opts.isPersistent);
+    state.registered.push([textureId, texture]);
+    texture.addEventListener('dispose', state.onTextureDispose);
+  });
   bakes.set(opts.id, state);
 
   try {
-    withBakeRendererState(renderer, () => clearBakeTarget(renderer, target));
+    clearBake(renderer, state);
   } catch (err) {
     disposeBake(state);
     throw err;

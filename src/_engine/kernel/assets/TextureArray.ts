@@ -528,7 +528,8 @@ const toLayerNode = (array: THREE.Texture, layer: number | string | THREE.Node) 
 /**
  * Samples one layer of an array texture (`texture(array, uv).depth(layer)`). Returns the texture
  * node, so `.level()`, `.bias()` or `.grad()` can follow.
- * @param array an array texture (buildTextureArray, a texture array asset, any `--layers` KTX2)
+ * @param array an array texture (buildTextureArray, a texture array asset, any `--layers` KTX2,
+ * a `bakeTexture` output with layers)
  * @param uvNode the UV, eg. the mesh's `uv()`: each layer wraps and mips on its own
  * @param layer the layer's index, its member's name (see {@link getArrayLayerIndex}), or an int
  * node (eg. a per-instance attribute: one material for many layers)
@@ -551,7 +552,9 @@ export const sampleArrayLayer = (
   uvNode: THREE.Node<'vec2'>,
   layer: number | string | THREE.Node
 ) => {
-  if (!isArrayTexture(array)) {
+  // three's own flag too: an array render target's texture (a `bakeTexture` with layers) is
+  // neither of the engine's array classes
+  if (!isArrayTexture(array) && !array.isArrayTexture) {
     throw new Error(
       `sampleArrayLayer: texture "${array.userData.id ?? array.uuid}" isn't an array texture.`
     );
