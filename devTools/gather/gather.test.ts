@@ -882,3 +882,172 @@ describe('p299 D5: texture array layer and atlas cell inputs', () => {
     expect(out.__streaming?.cells[String(packCellKey(1, 0, 0))]?.textures).toEqual([0]);
   });
 });
+
+describe('p303 D1: texture sets', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const tex = (id: string, colorSpace?: string) => ({
+    [`app/textures/${id}.texture.json`]: {
+      id,
+      fileName: albedo,
+      ...(colorSpace ? { texOpts: { colorSpace } } : {}),
+    },
+  });
+  const textures = {
+    ...tex('sandAR', 'srgb'),
+    ...tex('sandNH'),
+    ...tex('sandAH', 'srgb'),
+    ...tex('sandN'),
+    ...tex('sandORM'),
+  };
+  const set = (fields: Record<string, unknown> = {}) => ({
+    'app/textures/sand.textureSet.json': {
+      category: 'SAND',
+      physicalSize: [3, 3],
+      heightScale: 0.03,
+      packings: {
+        LITE: { albedoRough: 'sandAR', normalHeight: 'sandNH' },
+        FULL: { albedoHeight: 'sandAH', normal: 'sandN', orm: 'sandORM' },
+      },
+      surface: { porosity: 0.85 },
+      debugData: { name: 'Sand' },
+      ...fields,
+    },
+  });
+  const textureIds = (out: OutputScene | undefined) =>
+    ((out?.textures ?? []) as ({ id?: string } | string)[]).map((t) =>
+      typeof t === 'string' ? t : t.id
+    );
+  /** The gather's errors and warnings of a tree */
+  const gatherLogs = (files: Record<string, unknown>) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { isGathered } = gather(files);
+    const logs = {
+      isGathered,
+      errors: errors.mock.calls.flat().join('\n'),
+      warnings: warnings.mock.calls.flat().join('\n'),
+    };
+    errors.mockRestore();
+    warnings.mockRestore();
+    return logs;
+  };
+
+  it('writes a listed set inline, its defaults filled, and appends its default packing', () => {
+    const { isGathered, scene: get } = gather({
+      ...textures,
+      ...set(),
+      ...scene('a', { textures: ['sandNH'], textureSets: ['sand', 'sand'] }),
+    });
+    expect(isGathered).toBe(true);
+    const out = get('a');
+    expect(out?.textureSets).toEqual([
+      {
+        id: 'sand',
+        category: 'SAND',
+        physicalSize: [3, 3],
+        heightScale: 0.03,
+        defaultPacking: 'LITE',
+        packings: {
+          LITE: { albedoRough: 'sandAR', normalHeight: 'sandNH' },
+          FULL: { albedoHeight: 'sandAH', normal: 'sandN', orm: 'sandORM' },
+        },
+        surface: {
+          tint: '#ffffff',
+          normalStrength: 1,
+          roughnessScale: 1,
+          aoStrength: 1,
+          heightContrast: 1,
+          porosity: 0.85,
+          wetDarkening: 0.5,
+          wetRoughness: 0.3,
+        },
+        debugData: { name: 'Sand' },
+      },
+    ]);
+    // The listed one stays first, the packing's other one is appended once
+    expect(textureIds(out)).toEqual(['sandNH', 'sandAR']);
+    expect(out?.__features).toEqual(['texturesets']);
+  });
+
+  it('loads the JSON’s defaultPacking, in its slot order', () => {
+    const { scene: get } = gather({
+      ...textures,
+      ...set({ defaultPacking: 'FULL' }),
+      ...scene('a', { textureSets: ['sand'] }),
+    });
+    expect(textureIds(get('a'))).toEqual(['sandAH', 'sandN', 'sandORM']);
+  });
+
+  it('drops the debug data in a production build, and keeps the sets in the dev section', () => {
+    const files = { ...textures, ...set(), ...scene('a', { textureSets: ['sand'] }) };
+    const prod = gather(files, { isProduction: true });
+    expect(
+      (prod.scene('a')?.textureSets as { debugData?: unknown }[])[0].debugData
+    ).toBeUndefined();
+    expect((prod.output?.json as Record<string, unknown>).textureSets).toBeUndefined();
+    const dev = gather(files);
+    const section = (dev.output?.json as Record<string, unknown>).textureSets as Record<
+      string,
+      { __sourcePath?: string }
+    >;
+    expect(Object.keys(section)).toEqual(['sand']);
+    expect(section.sand.__sourcePath).toBe(path.join('src', 'app/textures/sand.textureSet.json'));
+  });
+
+  it('fails on a set no *.textureSet.json has', () => {
+    const { isGathered, errors } = gatherLogs({ ...scene('a', { textureSets: ['nope'] }) });
+    expect(isGathered).toBe(false);
+    expect(errors).toMatch(/texture set.*nope/);
+  });
+
+  it.each([
+    [
+      { packings: { MINIMAL: { albedoHeight: 'nope' } } },
+      'packings.MINIMAL.albedoHeight: no *.texture.json has the id "nope"',
+    ],
+    [
+      { packings: { MINIMAL: { albedoHeight: 'arr' } } },
+      'packings.MINIMAL.albedoHeight: "arr" is a texture array, not a texture asset',
+    ],
+    [
+      { defaultPacking: 'MINIMAL' },
+      'defaultPacking "MINIMAL" isn\'t one of its packings (LITE, FULL)',
+    ],
+  ])('fails on a set with %j', (fields, message) => {
+    const { isGathered, errors } = gatherLogs({
+      ...textures,
+      'app/textures/arr.textureArray.json': { id: 'arr', layers: ['sandN', 'sandORM'] },
+      ...set(fields),
+      ...scene('a'),
+    });
+    expect(isGathered).toBe(false);
+    expect(errors).toContain(`sand.textureSet.json: ${message}`);
+  });
+
+  it('warns on a colour slot that isn’t sRGB and a data slot that is', () => {
+    const { isGathered, warnings } = gatherLogs({
+      ...textures,
+      ...set({ packings: { LITE: { albedoRough: 'sandNH', normalHeight: 'sandAR' } } }),
+      ...scene('a'),
+    });
+    expect(isGathered).toBe(true);
+    expect(warnings).toContain('packings.LITE.albedoRough: the texture "sandNH" isn\'t sRGB');
+    expect(warnings).toContain('packings.LITE.normalHeight: the texture "sandAR" is sRGB');
+  });
+
+  it('fails on a set id two files give', () => {
+    const { isGathered, errors } = gatherLogs({
+      ...textures,
+      ...set(),
+      'app/other/sand.textureSet.json': {
+        category: 'SAND',
+        physicalSize: [1, 1],
+        heightScale: 0,
+        packings: { MINIMAL: { albedoHeight: 'sandAH' } },
+      },
+      ...scene('a'),
+    });
+    expect(isGathered).toBe(false);
+    expect(errors).toContain('Duplicate texture set ID found: sand');
+  });
+});

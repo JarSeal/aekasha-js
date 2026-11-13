@@ -31202,6 +31202,7 @@
       "__codec": "uastc"
     }
   },
+  "textureSets": {},
   "materials": {
     "bannerAether": {
       "id": "bannerAether",

@@ -100,6 +100,22 @@ export type {
   TextureAtlasSlotInfo,
   TextureAtlasSlotTexture,
 } from './TextureAtlasSchema';
+export {
+  isTextureSetColorSlot,
+  TEXTURE_SET_CATEGORIES,
+  TEXTURE_SET_PACKING_PREFERENCE,
+  TEXTURE_SET_PACKINGS,
+  TEXTURE_SET_SURFACE_DEFAULTS,
+  TextureSetAssetSchema,
+  textureSetsSchemaPart,
+} from '../features/texturesets/TextureSetSchema';
+export type {
+  TextureSetAsset,
+  TextureSetDef,
+  TextureSetPacking,
+  TextureSetSlot,
+  TextureSetSurface,
+} from '../features/texturesets/TextureSetSchema';
 export { TextureAssetSchema } from './TextureSchema';
 export type { TextureAsset } from './TextureSchema';
 export type { SceneSpatialDomainEntry } from './SpatialDomainSchema';

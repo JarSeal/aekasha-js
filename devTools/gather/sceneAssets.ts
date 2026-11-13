@@ -22,6 +22,7 @@ import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
 import { addTextureClosure } from './textureClosure';
+import { resolveTextureSets } from './textureSets';
 
 /** A scene as the scene pass resolves it: its JSON with its own save entry */
 export type SceneJSON = Omit<EngineSceneAsset, '$schema' | '__saveData'>;
@@ -343,9 +344,10 @@ const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
   });
 };
 
-/** Resolves every list of a scene, in the scene pass's order (the impostors, the merge materials
- * and the texture closure before the textures: they add their atlas and array slots and the
- * textures the resolved materials, lights and meshes name, p302 D6) */
+/** Resolves every list of a scene, in the scene pass's order (the impostors, the merge materials,
+ * the texture sets and the texture closure before the textures: they add their atlas and array
+ * slots, the sets' default packings (p303 D1) and the textures the resolved materials, lights and
+ * meshes name, p302 D6) */
 export const resolveSceneAssets = (run: SceneRun) => {
   resolveCameras(run);
   resolveLights(run);
@@ -354,6 +356,7 @@ export const resolveSceneAssets = (run: SceneRun) => {
   resolveSceneMergeMaterials(run);
   resolveMaterials(run);
   resolveMeshes(run);
+  resolveTextureSets(run);
   addTextureClosure(run);
   resolveTextures(run);
   resolveImportedAssets(run);

@@ -19,6 +19,7 @@ import {
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
+  TextureSetAssetSchema,
 } from '../../src/_engine/schemas';
 import { ROOT } from '../paths';
 import { EngineMeshAssetSchema, EngineSceneAssetSchema } from './engineSchemas';
@@ -108,6 +109,7 @@ export const writeJsonSchemas = () => {
     { name: 'texture.schema.json', schema: TextureAssetSchema },
     { name: 'textureArray.schema.json', schema: TextureArrayAssetSchema },
     { name: 'textureAtlas.schema.json', schema: TextureAtlasAssetSchema },
+    { name: 'textureSet.schema.json', schema: TextureSetAssetSchema },
     { name: 'material.schema.json', schema: MaterialAssetSchema },
     { name: 'mergeMaterial.schema.json', schema: MergeMaterialAssetSchema },
     { name: 'mesh.schema.json', schema: EngineMeshAssetSchema },

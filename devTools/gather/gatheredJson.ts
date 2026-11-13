@@ -17,6 +17,7 @@ import {
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
+  TextureSetAssetSchema,
 } from '../../src/_engine/schemas';
 import { EngineMeshAssetSchema, EngineSceneAssetSchema } from './engineSchemas';
 
@@ -29,6 +30,7 @@ export const GATHERED_SUFFIXES = {
   texture: '.texture.json',
   textureArray: '.textureArray.json',
   textureAtlas: '.textureAtlas.json',
+  textureSet: '.textureSet.json',
   impostor: '.impostor.json',
   material: '.material.json',
   mergeMaterial: '.mergeMaterial.json',
@@ -52,6 +54,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   texture: TextureAssetSchema,
   textureArray: TextureArrayAssetSchema,
   textureAtlas: TextureAtlasAssetSchema,
+  textureSet: TextureSetAssetSchema,
   impostor: ImpostorAssetSchema,
   material: MaterialAssetSchema,
   mergeMaterial: MergeMaterialAssetSchema,
@@ -65,6 +68,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
 const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
   'textureArray',
   'textureAtlas',
+  'textureSet',
   'impostor',
   'mergeMaterial',
 ]);

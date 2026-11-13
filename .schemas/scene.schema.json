@@ -71,6 +71,9 @@
     "mergeMaterials": {
       "$ref": "#/definitions/__schema598"
     },
+    "textureSets": {
+      "$ref": "#/definitions/__schema601"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -90,7 +93,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema601"
+          "$ref": "#/definitions/__schema603"
         }
       ]
     }
@@ -7698,6 +7701,21 @@
       "minLength": 1
     },
     "__schema601": {
+      "description": "Texture set ids (*.textureSet.json) the scene's code uses: each loads its default packing's textures. The gather adds the sets its materials' inputs name.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema602"
+        }
+      ]
+    },
+    "__schema602": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema603": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -7782,6 +7800,9 @@
             },
             "mergeMaterials": {
               "$ref": "#/definitions/__schema598"
+            },
+            "textureSets": {
+              "$ref": "#/definitions/__schema601"
             }
           },
           "additionalProperties": false
