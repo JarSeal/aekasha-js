@@ -24,6 +24,7 @@ import type { SceneStreamingSettings } from '../../features/streaming/StreamingS
 import type { StreamingManifest } from '../../features/streaming/StreamingManifest';
 import type { SceneAutoMergeEntry, SceneMergeGroupEntry } from '../../features/merging/MergeTypes';
 import type { SceneMergeMaterial } from '../../features/merging/MergeMaterialSchema';
+import type { TextureSetDef } from '../../schemas/TextureSetSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -91,6 +92,10 @@ export type SceneData = {
   /** The merge material palettes the scene lists, resolved by the gatherer (their slot arrays
    * are in `textures`; the `merging()` feature). */
   mergeMaterials?: SceneMergeMaterial[];
+  /** The texture sets the scene lists or its materials' inputs name, resolved by the gatherer
+   * (the listed sets' default packing's textures and the packings the inputs sample are in
+   * `textures`; the `textureSets()` feature). */
+  textureSets?: TextureSetDef[];
   /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];

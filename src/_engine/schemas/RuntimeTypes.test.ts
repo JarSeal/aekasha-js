@@ -25,8 +25,11 @@ import type {
   TextureArrayInputRef,
   TextureInputRef,
 } from '../kernel/assets/MaterialInputRefs';
-import type { TextureSetInputSchema } from './TextureSetSchema';
-import type { TextureSetInputRef } from '../features/texturesets/TextureSetRefs';
+import type { TextureSetAsset, TextureSetDef, TextureSetInputSchema } from './TextureSetSchema';
+import type {
+  TextureSetInputRef,
+  TextureSetPackingData,
+} from '../features/texturesets/TextureSetRefs';
 import type { z } from 'zod';
 import type { MeshAsset } from './MeshSchema';
 import type { SceneAsset } from './SceneSchema';
@@ -146,6 +149,16 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<z.infer<typeof TextureArrayInputSchema>>().toEqualTypeOf<TextureArrayInputRef>();
     expectTypeOf<z.infer<typeof AtlasCellInputSchema>>().toEqualTypeOf<AtlasCellInputRef>();
     expectTypeOf<z.infer<typeof TextureSetInputSchema>>().toEqualTypeOf<TextureSetInputRef>();
+  });
+
+  test('texture set (*.textureSet.json, as the gatherer writes it) → the runtime’s set (p303)', () => {
+    // A scene's sets are the gathered form, which the input's dependencies read
+    expectTypeOf<NonNullable<SceneData['textureSets']>[number]>().toEqualTypeOf<TextureSetDef>();
+    expectTypeOf<TextureSetDef>().toExtend<TextureSetPackingData>();
+    // No `__saveData`: a set has none (the gatherer's `TYPES_WITHOUT_SAVE_DATA`)
+    expectTypeOf<ExtraKeys<TextureSetAsset, TextureSetDef>>().toEqualTypeOf<
+      '$schema' | '__sourcePath'
+    >();
   });
 
   test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {

@@ -42,7 +42,7 @@ and accept the certificate.
   input and scenes), in this order: each engine feature from its entry (`physics()` from
   `aekasha/physics`, …), then `appECSPlugins`, the app's own feature, which registers your systems
   and the toolkit's (see the [ECS example](hub:examples/ecs#4-registering-it)). The template lists
-  all twelve engine features.
+  all thirteen engine features.
 - `start` runs once the engine is ready: it creates the renderer and the scene loader and loads
   the first scene. In the debug env it also gives the example scenes their Hub tab, from a
   `_dbg__` module it `import()`s behind `IS_DEBUG_ENV`, so a production build leaves it out (see

@@ -4,10 +4,10 @@ Measured by `yarn sbp` on the build this Hub was made from: gzip sizes in KiB (1
 "Before the first frame" is the entry chunk, the chunks it imports statically and its CSS; the
 rest of the build's files load later, or never.
 
-| Build                                              | Before the first frame | Later, when needed                                    |
-| -------------------------------------------------- | ---------------------- | ----------------------------------------------------- |
-| The banner: the kernel alone, one scene            | {{sbp:banner.initial}} | {{sbp:banner.lazy}} in {{sbp:banner.lazyFiles}} files |
-| The template app: all twelve features, every scene | {{sbp:app.initial}}    | {{sbp:app.lazy}} in {{sbp:app.lazyFiles}} files       |
+| Build                                                | Before the first frame | Later, when needed                                    |
+| ---------------------------------------------------- | ---------------------- | ----------------------------------------------------- |
+| The banner: the kernel alone, one scene              | {{sbp:banner.initial}} | {{sbp:banner.lazy}} in {{sbp:banner.lazyFiles}} files |
+| The template app: all thirteen features, every scene | {{sbp:app.initial}}    | {{sbp:app.lazy}} in {{sbp:app.lazyFiles}} files       |
 
 ### Where the floor comes from
 
