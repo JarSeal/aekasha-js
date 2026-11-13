@@ -65,7 +65,7 @@ with these differences:
 - **Numbers:** the app's plans have a number space of their own, so an app `p100` and an Ækasha
   `p100` can both exist. The number is the priority within the folder.
 - **References:** a header line names a plan in its own folder by file name, and one in the other
-  folder by its repo path (`Blocked by: docs/plans/p302_material-and-texture-system-refactor.md`).
+  folder by its repo path (`Blocked by: docs/plans/p303_texture-sets-and-terrain-texture-library.md`).
 - **One way, as in the code:** an app plan can wait on an Ækasha plan, but an Ækasha plan never
   names an app plan in `Blocks`, `Blocked by` or `Epic`, so the app's plans never change
   Ækasha's files. The roadmap warns when one does.

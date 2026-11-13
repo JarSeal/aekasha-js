@@ -54,18 +54,18 @@ export type AllowTextureStrings<T> = T extends unknown
 
 /**
  * A node material's TSL graph, in {@link MatProps}: the functions (a TSL file's exports, or
- * {@link registerTslMaterial}'s) and the inputs made into the uniforms and texture nodes they get.
+ * {@link _engine/kernel/assets/MaterialTsl!registerTslMaterial}'s) and the inputs made into the uniforms and texture nodes they get.
  * An input is a texture id, a `'#rrggbb'` colour, a number, a boolean, or a vector as an array or
  * `{ x, y, z }`.
  */
 export type TslMaterialProps = {
   /** The TSL file exporting the functions (a material JSON's, which a JSON material has). A
-   * material whose `tslMaterialId` names a {@link registerTslMaterial} registration needs none. */
+   * material whose `tslMaterialId` names a {@link _engine/kernel/assets/MaterialTsl!registerTslMaterial} registration needs none. */
   tslFile?: string;
   /** The inputs of the functions' `setup` (`{ albedo: 'sand01', scale: 4 }`), each kept as the
    * `setup_<key>` uniform: a texture id (or `{ texture: 'sand01', channel: 'r' }`, its sample's
    * channels), a colour, a number, a boolean or a vector, or a form a registered resolver takes
-   * ({@link registerMaterialInputResolver}; a bundle's nodes kept as `setup_<key>_<field>`). */
+   * ({@link _engine/kernel/assets/MaterialInputResolvers!registerMaterialInputResolver}; a bundle's nodes kept as `setup_<key>_<field>`). */
   inputs?: Record<string, unknown>;
   /** Per socket (`colorNode`, …), the inputs of the function of that name (`colorNode: { lineColor:
    * '#4fc3f7' }`), each kept as the `<socket>_<key>` uniform, the same forms as `inputs`. A
@@ -80,8 +80,9 @@ export type TslMaterialProps = {
  * `params` (a texture slot also takes a registered texture's id). A node material type also takes
  * a TSL graph ({@link TslMaterialProps}): a `setup` function building any sockets from one graph
  * with the material's `inputs`, and a function per socket with that socket's inputs under `nodes`,
- * from a TSL file (`tslFile`, a material JSON's) or registered from code ({@link
- * registerTslMaterial}, named by `tslMaterialId`). A `*.material.json`'s props.
+ * from a TSL file (`tslFile`, a material JSON's) or registered from code
+ * ({@link _engine/kernel/assets/MaterialTsl!registerTslMaterial}, named by `tslMaterialId`). A
+ * `*.material.json`'s props.
  */
 export type MatProps = {
   /** The registry id. A registered id returns the registered material (see
@@ -93,7 +94,7 @@ export type MatProps = {
   debugData?: { name?: string; description?: string };
   /** The material's `userData` (the engine adds its own keys: `id`, `type`, `uniforms`, …). */
   userData?: Record<string, unknown>;
-  /** The id of the TSL functions: a {@link registerTslMaterial} registration (looked up first) or
+  /** The id of the TSL functions: a {@link _engine/kernel/assets/MaterialTsl!registerTslMaterial} registration (looked up first) or
    * a loaded TSL file's material id. Default: `id` (variants use their base's). */
   tslMaterialId?: string;
 } & (
@@ -269,7 +270,7 @@ const resolveMaterialParams = (params: MatProps['params'], id: string | undefine
  * ({@link TslMaterialProps}) runs its `setup` first, then its `nodes` sockets' functions, which
  * may set a socket `setup` set again (the debug env warns).
  * @throws for an unknown `type`; for a TSL material whose file isn't loaded (see
- * {@link loadTslMaterialFileAsync}) and that no {@link registerTslMaterial} call registered, whose
+ * {@link _engine/kernel/assets/MaterialTsl!loadTslMaterialFileAsync}) and that no {@link _engine/kernel/assets/MaterialTsl!registerTslMaterial} call registered, whose
  * TSL export isn't a function, or whose input value can't be made into a uniform
  * @example
  * ```ts

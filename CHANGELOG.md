@@ -6,7 +6,7 @@ Earlier releases are only recorded in the git history.
 
 ## 2026-11-13 — p302_material-and-texture-system-refactor
 
-The material and texture system refactor (p302), the engine changes the terrain texturing epic (p301) needs, each general-purpose. A TSL material can build every socket from one graph (a `setup` export with shared `inputs`), so a texture used by several sockets is sampled once; code can register a graph without a TSL file; new input forms plug in through a resolver registry instead of edits to the material code; the texture JSON gets three's remaining options and named constants; and the gather adds a scene's material textures to its `textures`, so a scene lists a material without its textures. Nothing breaks existing JSON. The plan's two bugs (a missing texture, a revisited scene's material params) shipped with p613.
+The material and texture system refactor (p302), the engine changes the terrain texturing epic (p301) needs, each general-purpose. A TSL material can build every socket from one graph (a `setup` export with shared `inputs`), so a texture used by several sockets is sampled once; code can register a graph without a TSL file; new input forms plug in through a resolver registry instead of edits to the material code; the texture JSON gets three's remaining options and named constants; and the gather adds a scene's material textures to its `textures`, so a scene lists a material without its textures. Nothing breaks existing JSON. The plan's two bugs (a missing texture, a revisited scene's material params) shipped with p613. Variants stay full materials: three r187's `NodeMaterialInstance` would save a CPU node build per variant but no GPU pipeline (variants already share one), so it's a follow-up (p990).
 
 ### Engine 6.11.0 (Sunset)
 
@@ -52,7 +52,7 @@ The material and texture system refactor (p302), the engine changes the terrain 
 - `writeJsonSchemas` writes a transform's input side (the texture constants' names and numbers); `.schemas/` regenerated.
 - The Hub: the toolkit page's "Writing a TSL material" (`setup`, a function per socket, the input forms, loading, graphs and input forms from code), the scenes-and-assets page's Textures and "A scene's textures", the ECS and streaming pages.
 - The gather, scene, editors and init `CLAUDE.md`; `docs/techniques/asset-optimization.md`'s Orientation; the bundle, API and docs baselines (the app's first download 415,351 → 416,199 B gzip, the kernel's assets group 12 → 15 modules).
-- The plans: p302 done.
+- The plans: p302 done; p299, p303, p304 and p305 no longer wait on it, and p990 has its follow-up: material variants as `NodeMaterialInstance`s.
 
 ## 2026-11-12 — p378_baked-members-out-of-the-scene-graph
 

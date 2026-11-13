@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Rendering, Materials, Procedural
-Blocked by: p302_material-and-texture-system-refactor.md, p303_texture-sets-and-terrain-texture-library.md
+Blocked by: p303_texture-sets-and-terrain-texture-library.md
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
 Epic: p301_terrain-texturing-epic.md

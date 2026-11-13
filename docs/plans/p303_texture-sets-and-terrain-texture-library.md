@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Assets, Materials, Terrain
-Blocked by: p302_material-and-texture-system-refactor.md, p299_texture-arrays-and-atlases.md (soft: D4 needs only p299 D1, done in its Phase 1)
+Blocked by: p299_texture-arrays-and-atlases.md (soft: D4 needs only p299 D1, done in its Phase 1)
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
 

@@ -71,7 +71,7 @@ Non-goal: merging colliders (§7).
   (`kernel/assets/TextureArray.ts`: `buildTextureArray`, `sampleArrayLayer`), build-time KTX2
   arrays (`*.textureArray.json`, `ktx create --layers`), 2D atlases with cell tables
   (`kernel/assets/TextureAtlas.ts`, `*.textureAtlas.json`) and their debug views. Its JSON binding
-  (Phase 5) waits for p302 D4. p303 D4's layer arrays and p309 D1's decal atlases build on it.
+  (Phase 5) waited for p302 D4, done since 2026-11-13. p303 D4's layer arrays and p309 D1's decal atlases build on it.
 - **Asset pipeline** (`devTools/assetPipeline/`): `gltf.ts` uses only `weld`, `simplify`,
   `meshopt`, `draco` and `quantize`. The installed `@gltf-transform/functions` 4.5.1 also has
   `flatten`, `join`, `dedup`, `instance` and `palette`. The pinned `ktx` 4.4.2 can write array

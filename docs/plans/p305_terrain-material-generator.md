@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Materials, Terrain, Toolkit
-Blocked by: p302_material-and-texture-system-refactor.md, p303_texture-sets-and-terrain-texture-library.md, p304_procedural-texture-baker.md (soft: Phase 2 macro noise, Phase 7 colour-map bake, Phase 8 live layers)
+Blocked by: p303_texture-sets-and-terrain-texture-library.md, p304_procedural-texture-baker.md (soft: Phase 2 macro noise, Phase 7 colour-map bake, Phase 8 live layers)
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 
@@ -367,4 +367,4 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 | HEX `grad` sampling with compressed arrays shows artifacts on some GPUs | Gallery check on both backends; `apply: 'DOMINANT'` default; LOW tier avoids HEX                                                                                               |
 | Height blend needs height in all layers                                 | MINIMAL and LITE carry height; procedural sets always do; LINEAR is chosen automatically when a set lacks it (warning)                                                         |
 | `If` branches in TSL build shared nodes inside a branch (sky box trap)  | Build shared coordinates and weights before any `If`; covered in the code comments                                                                                             |
-| Splat textures per block multiply pipelines                             | p302 Phase 3 verifies that variants differing only in textures share a pipeline                                                                                                |
+| Splat textures per block multiply pipelines                             | Verified by p302 Phase 3's spike: a variant with another texture id adds a node build but no pipeline; `NodeMaterialInstance`s would save the builds too (p990, Rendering)     |

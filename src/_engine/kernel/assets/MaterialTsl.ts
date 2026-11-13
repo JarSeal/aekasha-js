@@ -23,10 +23,9 @@ import { IS_DEBUG_ENV } from '../config/Config';
  */
 export type TslInputs = Record<string, unknown>;
 
-// A method's parameters are bivariant, so a function typing its inputs by key is one of these
-type TslGraphFn<R> = {
-  fn(inputs: TslInputs, material: THREE.NodeMaterial, staticDefines: Record<string, unknown>): R;
-}['fn'];
+// Each type is a method's (`{ fn(…) }['fn']`): a method's parameters are bivariant, so a function
+// typing its inputs by key is one of them. Written out in both, not through a shared helper type,
+// which no entry exports and the public names would then name.
 
 /**
  * A TSL material's `setup` function: sets any of the material's sockets (`material.colorNode`,
@@ -34,14 +33,22 @@ type TslGraphFn<R> = {
  * texture samples) is built once. It runs before the `nodes` sockets' functions, which may set a
  * socket again. Its `inputs` are the material's `inputs`, its `staticDefines` the material's.
  */
-export type TslSetupFn = TslGraphFn<void>;
+export type TslSetupFn = {
+  fn(inputs: TslInputs, material: THREE.NodeMaterial, staticDefines: Record<string, unknown>): void;
+}['fn'];
 
 /**
  * A TSL material's socket function (exported under the socket's name, `colorNode`, …): returns
  * that socket's node, built from the socket's own inputs under the material's `nodes`, which
  * `createMaterial` sets on the socket.
  */
-export type TslSocketFn = TslGraphFn<unknown>;
+export type TslSocketFn = {
+  fn(
+    inputs: TslInputs,
+    material: THREE.NodeMaterial,
+    staticDefines: Record<string, unknown>
+  ): unknown;
+}['fn'];
 
 /**
  * A TSL material's functions, as {@link registerTslMaterial} takes them and a TSL file exports
@@ -311,7 +318,7 @@ const asTslGraphFn = (fn: unknown, name: string, id: string | undefined) => {
       `The TSL export "${name}" of material "${id}" isn't a function (${JSON.stringify(fn)}).`
     );
   }
-  return fn as TslGraphFn<unknown>;
+  return fn as TslSocketFn;
 };
 
 /**

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1 and 3-6 implemented (Phase 2 by p613)
+Status: implemented (Phases 1-7; Phase 2 by p613)
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -341,7 +341,9 @@ As built (2026-11-13; section 1 is commit `3f084323`):
   shared already, and instances need the inputs as material properties read through
   `materialReference` instead of `uniform()`s (a rewrite of the input wrapping that D4 replaces
   next), `userData` cloned one level (the editor's `userData.uniforms` would be shared), and an
-  API renamed within r187. **Decision: (to confirm in review).**
+  API renamed within r187. **Decision (confirmed in review, 2026-11-13): a follow-up,** in
+  `p990_follow-ups-from-done-plans.md`'s Rendering, with these figures and limits. Variants stay
+  full materials (`createMaterial` again) in this plan.
 
 ### Phase 4 — Input resolvers (D4) — done
 
@@ -505,12 +507,40 @@ As built (2026-11-13; section 1 is commit `a6194b74`, section 2 `9116a7ab`):
   outline got one sentence (a scene lists a material without its textures). `readme.md` is
   unchanged: its material and texture examples didn't change, and its Features list has no
   materials bullet.
-- **Checks:** `yarn hub:build` (no warnings), `yarn test`, `yarn verify:baselines --docs`.
+- **Checks:** `yarn hub:build`, `yarn test`, `yarn verify:baselines --docs`. The build's API
+  warnings weren't caught then (see Phase 7's As built, which fixed them).
 
-### Phase 7 — Versioning
+### Phase 7 — Versioning — done
 
 1. Engine minor bump; app patch (`testTslMat`, `testDebugScene`'s Phase 4 planes and its `textures` dropped in Phase 5); `CHANGELOG.md` entry (Added: setup entry, runtime TSL registration, input resolvers, texture opts, dependency closure; bugs A and B shipped with p613).
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
+
+As built (2026-11-13):
+
+- **Versions:** engine (and project) 6.10.0 → 6.11.0 (Sunset), app 1.24.1 → 1.24.2; the toolkit
+  keeps 3.0.1 (nothing in `src/toolkit/` changed). `yarn checkVersions --against main` passes.
+- **`CHANGELOG.md`:** the entry has Engine, App and Project sections. Beyond the plan's list, the
+  engine's Changed names the schema tightening: the texture constants take three's valid values
+  only and `anisotropy` an integer ≥ 1 or `"MAX"`, so a texture JSON with another number fails the
+  gather (every repo JSON validates, so the bump stays minor).
+- **The scene runner** (`yarn verify:scenes --update`, WebGPU, run by the user): 44 scenes × 5
+  configurations, 185 baselines recorded, none failed; sceneTestECS' and testDebugScene's (changed
+  since Phases 3-4) included. Its one warning is thirdPersonGymScene's `workerSab` physics hash
+  differing from the other targets, not this plan's.
+- **The spike's decision** (Phase 3): a follow-up in p990.
+- **The Hub's API warnings** (`yarn hub:build`, from Phases 3-4, missed by Phase 6's check):
+  `TslSetupFn` and `TslSocketFn` named `TslGraphFn`, a helper type on no entry: each is written
+  out now (`{ fn(…) }['fn']`, still a method's bivariant parameters), and the helper went
+  (`asTslGraphFn` casts to `TslSocketFn`). `Material.ts`' eight `{@link}`s to
+  `registerTslMaterial`, `registerMaterialInputResolver` and `loadTslMaterialFileAsync` didn't
+  resolve (other modules, not imported): they take their module
+  (`{@link _engine/kernel/assets/MaterialTsl!registerTslMaterial}`), as the coding standards'
+  JSDoc page says. The build's one warning left is the search index's size (581 KiB gzipped, over
+  450 KiB), not looked into here. `yarn verify:baselines --update`: the API, docs and bundle
+  baselines unchanged (the bundle files' diff is gzip sizes moving by a few bytes), no debug code.
+- **Marked done:** this file is `_DONE_p302_…`; p299's, p303's, p304's and p305's `Blocked by`
+  lost it, p301's `Blocks` and the done plans' `Related` lines name the new file, and the reference
+  example in `docs/plans/CLAUDE.md` and the Hub's conventions page names p303 instead.
 
 ---
 
