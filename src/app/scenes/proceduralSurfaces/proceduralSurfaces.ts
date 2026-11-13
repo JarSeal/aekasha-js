@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { vec2 } from 'three/tsl';
+import { vec2, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import {
   bakeTexture,
@@ -29,6 +29,7 @@ import {
   bakeSurfaceGenerator,
   cliffStrata,
   concretePores,
+  createLiveSurface,
   grassGround,
   iceSheet,
   mudCracked,
@@ -38,18 +39,21 @@ import {
   sandRipples,
   snowDrift,
   type BakedSurface,
+  type LiveSurface,
   type SurfaceGenerator,
 } from 'aekasha/toolkit/terrain';
 import { getBackendName, getErrorMessage } from '../../shared/verifyHarness';
 import {
+  checkLiveSurface,
   checkPeriodicity,
   checkSurfaceSlot,
   compareImages,
   type ImageComparison,
+  type LiveCheck,
   type PeriodicityCheck,
   type SlotCheck,
 } from './surfaceChecks';
-import { shadeBakedSurface } from './surfaceShading';
+import { shadeBakedSurface, shadeLiveSurface } from './surfaceShading';
 
 /**
  * The procedural surfaces verification scene (p304 Phase 4's exit): the toolkit's ten surface
@@ -70,6 +74,13 @@ import { shadeBakedSurface } from './surfaceShading';
  * `textureSetSurface` through `{ textureSet }`; each slot is read back, checked as above and
  * compared byte for byte with a `bakeSurfaceGenerator` of the same generator and values, and
  * `loadTextureSetAsync` must return the load's textures rather than bake again.
+ *
+ * The live mode (section 4, `createLiveSurface`): each generator's live surface over one tile is
+ * baked 256² and read back (written, not the same a whole tile away, the opt-in taps' normal and
+ * AO), and next to each JSON set's block its generator runs live in the block's material with the
+ * set's values (`LIVE_BLOCKS`: the ripples bumped from the height, the cracks with the taps), so
+ * the live graph compiles in a material on either backend and stands beside its bake. The tab's
+ * "Surface" switch draws the ten blocks live instead (`setShownLive`).
  * `window.__proceduralSurfaces` holds the results; the debug env's "Procedural surfaces" tab
  * (`_dbg__proceduralSurfaces.ts`) switches the shown packing and shows them.
  */
@@ -92,6 +103,12 @@ export const GENERATORS = [
 
 /** The procedural texture sets the scene's JSON lists (p304 D3's JSON path), in front. */
 export const JSON_SETS = ['p304ProcRipples', 'p304ProcCracks'] as const;
+/** The live blocks, outside the JSON sets' in the front row: each set's generator run live with
+ * the set's values, with or without a bake's taps for its normal and AO. */
+const LIVE_BLOCKS = [
+  { setId: 'p304ProcRipples', x: -1.5, hasTaps: false },
+  { setId: 'p304ProcCracks', x: 1.5, hasTaps: true },
+] as const;
 /** The toolkit's baseline set material, which draws the JSON sets through `{ textureSet }`. */
 const SET_MATERIAL_ID = 'textureSetSurface';
 
@@ -122,6 +139,8 @@ const CLOSE_UP = { y: 2.4, z: 3.2 };
 export type GeneratorResult = {
   packings: Partial<Record<TextureSetPacking, Record<string, SlotCheck>>>;
   periodicity?: PeriodicityCheck;
+  /** The live surface's checks (section 4). */
+  live?: LiveCheck;
   /** Every failure, in words, prefixed by its packing; empty when it passes. */
   failures: string[];
 };
@@ -129,8 +148,8 @@ export type GeneratorResult = {
 /**
  * Moves the scene's camera to a block's close-up, or back over every block (the tab's list, and the
  * test bridge's shots: `window.__proceduralSurfaces.viewBlock`).
- * @param generatorId the block's generator (a JSON set's id for its block), or null for the
- * overview
+ * @param generatorId the block's generator (a JSON set's id for its block, `live:<setId>` for the
+ * live block next to it), or null for the overview
  */
 export const viewBlock = (generatorId: string | null) => {
   const world = getECSWorld();
@@ -138,12 +157,17 @@ export const viewBlock = (generatorId: string | null) => {
   if (cameraId === undefined) return;
   const index = GENERATORS.findIndex((generator) => generator.id === generatorId);
   const jsonIndex = JSON_SETS.findIndex((setId) => setId === generatorId);
-  if (index < 0 && jsonIndex < 0) {
+  const liveBlock = LIVE_BLOCKS.find(({ setId }) => `live:${setId}` === generatorId);
+  if (index < 0 && jsonIndex < 0 && !liveBlock) {
     world.setTransform(cameraId, { pos: OVERVIEW.position });
     cameraLookAtPoint(cameraId, OVERVIEW.look, world);
     return;
   }
-  const { x, z } = index < 0 ? getJsonBlockPosition(jsonIndex) : getBlockPosition(index);
+  const { x, z } = liveBlock
+    ? getLiveBlockPosition(liveBlock)
+    : index < 0
+      ? getJsonBlockPosition(jsonIndex)
+      : getBlockPosition(index);
   world.setTransform(cameraId, { pos: { x, y: CLOSE_UP.y, z: z + CLOSE_UP.z } });
   cameraLookAtPoint(cameraId, { x, y: 0, z: z - 0.5 }, world);
 };
@@ -168,13 +192,19 @@ export type ProceduralSurfacesResults = {
   jsonSets?: Record<string, JsonSetResult>;
   /** The packing the blocks show. */
   shownPacking?: TextureSetPacking;
+  /** Whether the ten blocks draw their generators live instead of their bakes. */
+  isLiveShown?: boolean;
   /** Every generator and JSON set passed. */
   passed?: boolean;
   error?: string;
   done?: boolean;
 };
 
-const state = { results: {} as ProceduralSurfacesResults, viewBlock };
+const state = {
+  results: {} as ProceduralSurfacesResults,
+  viewBlock,
+  setShownLive: (isLive: boolean) => setShownLive(isLive),
+};
 
 /** This visit's: false once the scene is left, so an await that ends later does nothing. */
 let visit = { isCurrent: false };
@@ -193,6 +223,12 @@ const getBlockPosition = (index: number) => ({
 /** The JSON sets' blocks: a third row in front, centred */
 const getJsonBlockPosition = (index: number) => ({
   x: (index - (JSON_SETS.length - 1) / 2) * BLOCK_PITCH,
+  z: 1.5 * BLOCK_PITCH,
+});
+
+/** The live blocks: the front row, outside the JSON sets' */
+const getLiveBlockPosition = (block: (typeof LIVE_BLOCKS)[number]) => ({
+  x: block.x * BLOCK_PITCH,
   z: 1.5 * BLOCK_PITCH,
 });
 
@@ -280,6 +316,49 @@ const checkPeriodicityAsync = async (generator: SurfaceGenerator) => {
   return checkPeriodicity(images, CHECK_SIZE * CHECK_SIZE);
 };
 
+/**
+ * The live check's bake: the generator's live surface over one tile (`surface`), its difference a
+ * whole number of tiles away × 100 (`away`: live, no period makes them equal) and a second live
+ * surface's opt-in taps (`tapped`: the normal and the cavity AO, through the height's layout
+ * function), read back and checked.
+ */
+const checkLiveAsync = async (generator: SurfaceGenerator) => {
+  const baked = await bakeTexture({
+    id: `p304_live_${generator.id}`,
+    size: CHECK_SIZE,
+    mipmaps: false,
+    // The albedo sRGB, as a bake's albedo slot (a dark channel's spread is below a byte linear)
+    outputs: [{ name: 'surface', colorSpace: 'SRGB' }, { name: 'away' }, { name: 'tapped' }],
+    build: (ctx) => {
+      const shifted = ctx.uv.add(vec2(...PERIOD_SHIFT)) as Node<'vec2'>;
+      const at = createLiveSurface(generator, { uv: ctx.uv, seed: SEED });
+      const away = createLiveSurface(generator, { uv: shifted, seed: SEED });
+      const tapped = createLiveSurface(generator, {
+        uv: ctx.uv,
+        seed: SEED,
+        normal: 'TAPS',
+        ao: 'CAVITY',
+      });
+      const pack = (live: LiveSurface) => vec4(live.albedo, live.height) as unknown as Node<'vec4'>;
+      return {
+        surface: pack(at).clamp(0, 1) as THREE.Node,
+        away: pack(at).sub(pack(away)).abs().mul(100) as THREE.Node,
+        tapped: vec4(
+          (tapped.normalTS as Node<'vec3'>).mul(0.5).add(0.5),
+          tapped.ao as Node<'float'>
+        ) as THREE.Node,
+      };
+    },
+  });
+  const images = {
+    surface: await readOutputAsync(baked, 'surface', CHECK_SIZE),
+    away: await readOutputAsync(baked, 'away', CHECK_SIZE),
+    tapped: await readOutputAsync(baked, 'tapped', CHECK_SIZE),
+  };
+  baked.dispose();
+  return checkLiveSurface(images, CHECK_SIZE);
+};
+
 /** A generator's block: its material, the shown bake, and the checks of every packing. */
 const createBlockAsync = async (generator: SurfaceGenerator, index: number) => {
   const material = createMaterial({
@@ -317,12 +396,13 @@ const createBlockAsync = async (generator: SurfaceGenerator, index: number) => {
     check.bake.dispose();
   }
   result.periodicity = await checkPeriodicityAsync(generator);
+  result.live = await checkLiveAsync(generator);
   for (const [packing, slots] of Object.entries(result.packings)) {
     for (const slot of Object.values(slots)) {
       result.failures.push(...slot.failures.map((failure) => `${packing}: ${failure}`));
     }
   }
-  result.failures.push(...result.periodicity.failures);
+  result.failures.push(...result.periodicity.failures, ...result.live.failures);
   for (const failure of result.failures) {
     lerror(`[proceduralSurfaces] ${generator.id} (${getBackendName()}): ${failure}.`);
   }
@@ -402,6 +482,64 @@ const createJsonSetBlockAsync = async (setId: string, index: number): Promise<Js
 };
 
 /**
+ * A live block (section 4): a JSON set's generator run live in the block's material with the
+ * set's values (its params, seed and physical facts, as p305's `PROCEDURAL_LIVE` layer reads a
+ * procedural set), beside the set's baked block.
+ */
+const createLiveBlock = (block: (typeof LIVE_BLOCKS)[number]) => {
+  const set = getTextureSet(block.setId);
+  const generator = GENERATORS.find(({ id }) => id === set?.procedural?.generator);
+  if (!set?.procedural || !generator) {
+    throw new Error(`the live block's set "${block.setId}" has no generator in GENERATORS`);
+  }
+  const material = createMaterial({
+    id: `p304_live_${block.setId}`,
+    type: 'STANDARDNODEMATERIAL',
+    params: {},
+  }) as THREE.MeshStandardNodeMaterial;
+  shadeLiveSurface(
+    material,
+    createLiveSurface(generator, {
+      seed: set.procedural.seed,
+      params: set.procedural.params as never,
+      physicalSize: set.physicalSize,
+      heightScale: set.heightScale,
+      normal: block.hasTaps ? 'TAPS' : 'NONE',
+      ao: block.hasTaps ? 'CAVITY' : 'NONE',
+    })
+  );
+  createMeshEntity(
+    {
+      geo: getBlockGeometry(),
+      mat: material,
+      position: getLiveBlockPosition(block),
+      castShadow: false,
+      receiveShadow: false,
+    },
+    {
+      appId: `proceduralSurfaces_live_${block.setId}`,
+      debugData: { name: `Live: ${generator.id}${block.hasTaps ? ' (taps)' : ''}` },
+    }
+  );
+};
+
+/**
+ * Draws the ten blocks' generators live (`createLiveSurface`, the bakes' seed, the normal a bump
+ * from the height) or their shown bakes again (the tab's "Surface" switch).
+ * @param isLive true for live
+ */
+export const setShownLive = (isLive: boolean) => {
+  for (const generator of GENERATORS) {
+    const block = blocks.get(generator.id);
+    if (!block) continue;
+    if (isLive) {
+      shadeLiveSurface(block.material, createLiveSurface(generator, { seed: SEED }));
+    } else if (block.shown) shadeBakedSurface(block.material, block.shown);
+  }
+  state.results.isLiveShown = isLive;
+};
+
+/**
  * Bakes every block's generator in a packing and draws it (the tab's packing switch); the latest
  * call wins, and the bakes of the packing left are disposed.
  * @param packing the packing to show
@@ -421,7 +559,8 @@ export const setShownPackingAsync = async (packing: TextureSetPacking) => {
     if (!block) return;
     if (block.shown && block.shown !== bakes[i]) block.shown.bake.dispose();
     block.shown = bakes[i];
-    shadeBakedSurface(block.material, bakes[i]);
+    // Shown live: the bake waits for the switch back
+    if (!state.results.isLiveShown) shadeBakedSurface(block.material, bakes[i]);
   });
   state.results.shownPacking = packing;
 };
@@ -429,7 +568,7 @@ export const setShownPackingAsync = async (packing: TextureSetPacking) => {
 /** Builds the scene; see the file's header. */
 export const scene = async () => {
   (window as unknown as { __proceduralSurfaces: typeof state }).__proceduralSurfaces = state;
-  state.results = { shownPacking: 'LITE' };
+  state.results = { shownPacking: 'LITE', isLiveShown: false };
   const thisVisit = { isCurrent: true };
   visit = thisVisit;
   blocks.clear();
@@ -477,6 +616,7 @@ export const scene = async () => {
       jsonSets[JSON_SETS[i]] = await createJsonSetBlockAsync(JSON_SETS[i], i);
     }
     state.results.jsonSets = jsonSets;
+    LIVE_BLOCKS.forEach(createLiveBlock);
     state.results.passed = [...Object.values(generators), ...Object.values(jsonSets)].every(
       (result) => !result.failures.length
     );

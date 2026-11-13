@@ -1,8 +1,8 @@
 // Procedural surface generators (p304 D3): a surface (albedo, height, roughness, optionally AO and
 // a normal) as a TSL graph of a point in tiles, built once and run two ways. Baked, its noise is
 // periodic over the tile and the surface is packed into a texture set packing (`buildPacking`, the
-// engine's `TextureSetGenerator`, so a procedural set's JSON names it); live (section 4), the same
-// `build` runs in a material in world space, the noise not periodic.
+// engine's `TextureSetGenerator`, so a procedural set's JSON names it); live (`LiveSurface.ts`),
+// the same `build` runs in a material in world space, the noise not periodic.
 //
 // A generator writes its noise in cells through `ctx.cells(n)`, which gives the point and the
 // period for either way, so it never branches on the mode. The defaults: a normal from the height
@@ -252,6 +252,81 @@ const createHeightFunction = <P extends SurfaceParamSpecs>(
 };
 
 /**
+ * What {@link buildSurfaceGraph} builds: where the surface runs and its values.
+ * @internal
+ */
+export type SurfaceGraphOpts<P extends SurfaceParamSpecs> = {
+  /** The point in tiles. */
+  uv: Node<'vec2'>;
+  /** Live in a material (no periods), or baked. */
+  isLive: boolean;
+  /** One texel in uv (a bake's); left out live. */
+  texel?: Node<'vec2'>;
+  params?: SurfaceParamValues<P>;
+  seed?: number;
+  physicalSize?: [number, number];
+  heightScale?: number;
+};
+
+/**
+ * A generator's surface built at a point, baked or live: its values as `build` returned them, the
+ * controls, and the height at any other uv for the default normal's and AO's taps.
+ * @internal
+ */
+export type SurfaceGraph<P extends SurfaceParamSpecs> = {
+  surface: SurfaceOutputs;
+  /** The build context of the point. */
+  ctx: SurfaceBuildContext;
+  params: SurfaceParamsBuild<P>;
+  seed: UniformNode<'uint', number>;
+  /** The facts in effect (the given ones, else the generator's). */
+  physicalSize: [number, number];
+  heightScale: number;
+  /** The height at a uv: the surface's own at the point's, else the layout function (made on
+   * its first call, so a surface without taps has none). */
+  tapHeight: HeightFunction;
+};
+
+/**
+ * Builds a generator's surface at a point, the params and the seed as uniforms: the shared first
+ * step of a bake (`buildSurfacePacking`) and of the live mode (`createLiveSurface`).
+ * @internal
+ * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
+ * number, or physical facts out of range
+ */
+export const buildSurfaceGraph = <P extends SurfaceParamSpecs>(
+  generator: SurfaceGenerator<P>,
+  opts: SurfaceGraphOpts<P>
+): SurfaceGraph<P> => {
+  const { id } = generator;
+  const physicalSize = opts.physicalSize ?? generator.physicalSize;
+  const heightScale = opts.heightScale ?? generator.heightScale;
+  checkFacts(id, physicalSize, heightScale);
+  const seedValue = opts.seed ?? 0;
+  checkWhole(seedValue, 'The seed', id);
+  const params = buildSurfaceParams(id, generator.params, opts.params);
+  const seed = uniform(seedValue >>> 0, 'uint') as unknown as UniformNode<'uint', number>;
+  const seedNode = seed as unknown as Node<'uint'>;
+  const base = {
+    generatorId: id,
+    isLive: opts.isLive,
+    tileSize: vec2(physicalSize[0], physicalSize[1]) as unknown as Node<'vec2'>,
+    texel: opts.texel,
+  };
+  const ctx = createSurfaceContext({ ...base, uv: opts.uv, seed: seedNode });
+  const surface = generator.build(ctx, params.nodes);
+
+  let heightAt: HeightFunction | null = null;
+  // The taps' height; the point's own is the surface's (the cavity reads it once more)
+  const tapHeight: HeightFunction = (at) => {
+    if (at === ctx.uv) return surface.height;
+    heightAt ??= createHeightFunction(generator, params, base, seedNode);
+    return heightAt(at);
+  };
+  return { surface, ctx, params, seed, physicalSize, heightScale, tapHeight };
+};
+
+/**
  * Builds a generator's surface into a packing's slots for one bake: the params and the seed as
  * uniforms, the surface at the bake's uv with the default normal (`FULL`, `LITE`) and AO filled
  * in, packed by {@link packSurfaceOutputs}.
@@ -266,31 +341,16 @@ export const buildSurfacePacking = <P extends SurfaceParamSpecs>(
     heightScale?: number;
   }
 ): SurfacePackingBuild<P> => {
-  const { id } = generator;
-  const physicalSize = opts.physicalSize ?? generator.physicalSize;
-  const heightScale = opts.heightScale ?? generator.heightScale;
-  checkFacts(id, physicalSize, heightScale);
-  const seedValue = opts.seed ?? 0;
-  checkWhole(seedValue, 'The seed', id);
-  const params = buildSurfaceParams(id, generator.params, opts.params);
-  const seed = uniform(seedValue >>> 0, 'uint') as unknown as UniformNode<'uint', number>;
-  const seedNode = seed as unknown as Node<'uint'>;
-  const base = {
-    generatorId: id,
+  const graph = buildSurfaceGraph(generator, {
+    uv: bakeCtx.uv,
     isLive: false,
-    tileSize: vec2(physicalSize[0], physicalSize[1]) as unknown as Node<'vec2'>,
     texel: bakeCtx.texel,
-  };
-  const ctx = createSurfaceContext({ ...base, uv: bakeCtx.uv, seed: seedNode });
-  const surface = generator.build(ctx, params.nodes);
-
-  let heightAt: HeightFunction | null = null;
-  // The taps' height; the point's own is the surface's (the cavity reads it once more)
-  const tapHeight: HeightFunction = (at) => {
-    if (at === ctx.uv) return surface.height;
-    heightAt ??= createHeightFunction(generator, params, base, seedNode);
-    return heightAt(at);
-  };
+    params: opts.params,
+    seed: opts.seed,
+    physicalSize: opts.physicalSize,
+    heightScale: opts.heightScale,
+  });
+  const { surface, ctx, params, seed, physicalSize, heightScale, tapHeight } = graph;
   const normal =
     surface.normal ??
     (doesPackingStoreNormal(opts.packing)
@@ -315,7 +375,7 @@ export const buildSurfacePacking = <P extends SurfaceParamSpecs>(
  * Defines a procedural surface generator (p304 D3): a surface's albedo, height and roughness
  * (optionally its AO and normal) as a TSL graph of a point in tiles. Bake it into a texture set
  * packing (`bakeSurfaceGenerator`, or a procedural set's JSON naming its id), or run it live in a
- * material.
+ * material (`createLiveSurface`).
  *
  * Write the noise in cells through `ctx.cells(n)` (`n` cells per tile) and pass its `period` on:
  * baked, the noise tiles over the tile; live, the same graph never repeats. Each noise takes its

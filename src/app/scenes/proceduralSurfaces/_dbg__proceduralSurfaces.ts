@@ -5,6 +5,7 @@ import {
   JSON_SETS,
   PACKINGS,
   PROCEDURAL_SURFACES_SCENE_ID,
+  setShownLive,
   setShownPackingAsync,
   type GeneratorResult,
   type JsonSetResult,
@@ -26,6 +27,9 @@ const getGeneratorView = (index: number, result: GeneratorResult | undefined) =>
     periodicity: result?.periodicity
       ? `${result.periodicity.offTexels} texels off, up to ${result.periodicity.maxByte} / 25500`
       : '-',
+    live: result?.live
+      ? `${(result.live.awayShare * 100).toFixed(1)} % differs a tile away, taps' normal z ${result.live.normalZ.toFixed(2)}`
+      : '-',
   };
 };
 
@@ -43,12 +47,14 @@ const getJsonSetView = (result: JsonSetResult | undefined) => ({
 /**
  * The procedural surfaces scene's "Procedural surfaces" tab (p304 Phase 4, a scene tab: removed on
  * the scene's exit, created again on every visit): the packing the blocks show (each generator
- * baked again in it), each generator's checks and the JSON sets' (p304 Phase 4 section 3).
+ * baked again in it), the ten blocks baked or live (section 4), each generator's checks and the
+ * JSON sets' (p304 Phase 4 section 3).
  * @param results the scene's results (`window.__proceduralSurfaces.results`), complete by now
  */
 export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) => {
   const tabState = {
     packing: results.shownPacking ?? 'LITE',
+    surface: results.isLiveShown ? 'LIVE' : 'BAKED',
     backend: results.backend ?? '-',
     result: results.error
       ? `error: ${results.error}`
@@ -77,6 +83,17 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
                 updateDebuggerTab(TAB_ID)
               ),
           },
+          {
+            key: 'surface',
+            label: 'Surface',
+            kind: 'segmented',
+            options: [
+              { label: 'Baked', value: 'BAKED' },
+              { label: 'Live', value: 'LIVE' },
+            ],
+            hint: "The ten blocks' bakes, or their generators run live in the material (createLiveSurface)",
+            onChange: (value) => setShownLive(value === 'LIVE'),
+          },
           { key: 'backend', label: 'Backend', readonly: true },
           { key: 'result', label: 'Checks', readonly: true },
           ...GENERATORS.map((generator, index) => {
@@ -90,6 +107,7 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
                 { key: 'result', target: view, label: 'Result', readonly: true },
                 { key: 'slots', target: view, label: 'Slots read', readonly: true },
                 { key: 'periodicity', target: view, label: 'Tile away', readonly: true },
+                { key: 'live', target: view, label: 'Live', readonly: true },
               ],
             };
           }),

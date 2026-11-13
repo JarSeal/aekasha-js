@@ -1,7 +1,8 @@
 // How the procedural surfaces scene draws a baked surface: its packing's textures decoded by the
 // toolkit's `sampleTextureSet` (a baked surface is channel for channel an imported set), tiled in
 // world space over the generator's physical size, shaded as the toolkit's `textureSetSurface`
-// shades a set (the normal map in its UV's frame, `MINIMAL`'s bump from its height).
+// shades a set (the normal map in its UV's frame, `MINIMAL`'s bump from its height); and a live
+// surface (section 4): the generator's graph itself at the same world tiling.
 import { float, positionWorld, texture, vec2 } from 'three/tsl';
 import type { MeshStandardNodeMaterial, Node, Texture } from 'three/webgpu';
 import type { TextureSetInput } from 'aekasha/texturesets';
@@ -10,6 +11,7 @@ import {
   sampleTextureSet,
   transformTangentNormalToView,
   type BakedSurface,
+  type LiveSurface,
 } from 'aekasha/toolkit/terrain';
 
 /** `MINIMAL` has no roughness: `textureSetSurface`'s stand-in. */
@@ -37,5 +39,23 @@ export const shadeBakedSurface = (material: MeshStandardNodeMaterial, surface: B
   material.normalNode = sample.normalTS
     ? transformTangentNormalToView(sample.normalTS, tileUv)
     : bumpNormalView(sample.height.mul(heightScale) as Node<'float'>);
+  material.needsUpdate = true;
+};
+
+/**
+ * Sets a material's nodes to draw a live surface (`createLiveSurface` at its default world
+ * tiling): its normal the taps' in the surface's UV frame when it has one, else a bump from its
+ * height in metres; its AO when it has one.
+ * @param material the block's material
+ * @param live what `createLiveSurface` returned
+ */
+export const shadeLiveSurface = (material: MeshStandardNodeMaterial, live: LiveSurface) => {
+  material.colorNode = live.albedo;
+  material.metalnessNode = float(0);
+  material.roughnessNode = live.roughness;
+  material.aoNode = live.ao;
+  material.normalNode = live.normalTS
+    ? transformTangentNormalToView(live.normalTS, live.uv)
+    : bumpNormalView(live.height.mul(live.heightScale) as Node<'float'>);
   material.needsUpdate = true;
 };

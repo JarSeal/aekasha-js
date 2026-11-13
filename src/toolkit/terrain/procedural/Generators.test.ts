@@ -14,6 +14,7 @@ import {
   sandRipples,
   snowDrift,
 } from '../index';
+import { createLiveSurface } from './LiveSurface';
 import { createSurfaceContext, type SurfaceGenerator } from './SurfaceGenerator';
 import { buildSurfaceParams } from './SurfaceParams';
 
@@ -83,6 +84,16 @@ describe("the toolkit's surface generators (p304 D3)", () => {
       expect(surface.albedo, generator.id).toBeDefined();
       expect(surface.height, generator.id).toBeDefined();
       expect(surface.roughness, generator.id).toBeDefined();
+    }
+  });
+
+  it('run live through createLiveSurface, with and without the taps', () => {
+    for (const generator of GENERATORS) {
+      const live = createLiveSurface(generator, { seed: 3 });
+      expect(live.albedo && live.height && live.roughness, generator.id).toBeTruthy();
+      const tapped = createLiveSurface(generator, { normal: 'TAPS', ao: 'CAVITY' });
+      expect(tapped.normalTS, generator.id).not.toBeNull();
+      expect(tapped.ao, generator.id).not.toBeNull();
     }
   });
 

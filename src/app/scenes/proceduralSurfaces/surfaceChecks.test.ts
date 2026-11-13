@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { checkPeriodicity, checkSurfaceSlot, compareImages } from './surfaceChecks';
+import {
+  checkLiveSurface,
+  checkPeriodicity,
+  checkSurfaceSlot,
+  compareImages,
+} from './surfaceChecks';
 
 const SIZE = 8;
 
@@ -99,5 +104,39 @@ describe('compareImages', () => {
     other[4 * 5 + 3] -= 2;
     expect(compareImages(image, other)).toEqual({ maxByte: 3, offTexels: 2 });
     expect(() => compareImages(image, image.slice(4))).toThrow('bytes against');
+  });
+});
+
+describe('checkLiveSurface', () => {
+  const surface = makeImage((x, y, c) => wave(x + c, y));
+  const tapped = makeImage((x, y, c) => (c === 2 ? 240 : c === 3 ? 200 : wave(x + c, y)));
+
+  it('passes a written surface that differs a tile away, its taps facing out', () => {
+    const away = makeImage(() => 90);
+    const result = checkLiveSurface({ surface, away, tapped }, SIZE);
+    expect(result.awayShare).toBe(1);
+    expect(result.normalZ).toBeCloseTo(240 / 255, 6);
+    expect(result.failures).toEqual([]);
+  });
+
+  it('fails a surface that repeats, a flat one, and taps facing in or closed', () => {
+    const same = makeImage(() => 0);
+    const repeats = checkLiveSurface({ surface, away: same, tapped }, SIZE);
+    expect(repeats.awayShare).toBe(0);
+    expect(repeats.failures).toEqual([
+      'live repeats: only 0 of 64 texels differ a whole tile away (a period left on?)',
+    ]);
+    const away = makeImage(() => 90);
+    const flat = checkLiveSurface({ surface: same, away, tapped: same }, SIZE);
+    expect(flat.failures).toEqual([
+      "live albedo.R doesn't vary (σ 0.000)",
+      "live albedo.G doesn't vary (σ 0.000)",
+      "live albedo.B doesn't vary (σ 0.000)",
+      "live height doesn't vary (σ 0.000)",
+      "live taps' normal.R doesn't vary (σ 0.000)",
+      "live taps' normal.G doesn't vary (σ 0.000)",
+      "live taps' normal faces in: mean z 0.000",
+      "live taps' AO is nearly closed: mean 0.000",
+    ]);
   });
 });

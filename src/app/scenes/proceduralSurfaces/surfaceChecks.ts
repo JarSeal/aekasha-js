@@ -1,7 +1,8 @@
 // The procedural surfaces scene's checks (p304 Phase 4's exit), on the bytes read back from its
 // bakes: each packing's slots are written as p303 D2 packs them (colour that varies, a height, a
 // normal map facing out, an ORM with no metal), nothing steps across a slot's wrap past its
-// largest step inside, and the surface repeats over whole tiles. Pure, so unit-tested.
+// largest step inside, and the surface repeats over whole tiles; live (section 4), that it doesn't.
+// Pure, so unit-tested.
 import { getChannelStats, type ChannelStats } from '../../shared/channelStats';
 
 /** A slot's channels summed up and what failed. */
@@ -143,4 +144,66 @@ export const compareImages = (a: ArrayLike<number>, b: ArrayLike<number>): Image
     if (isOff) offTexels++;
   }
   return { maxByte, offTexels };
+};
+
+/** A generator's live check (p304 Phase 4 section 4): its live surface over one tile. */
+export type LiveCheck = {
+  /** The share of the texels that differ a whole tile away, 0..1: live, nearly all of them. */
+  awayShare: number;
+  /** The taps' normal's mean z (its stored B), 0..1: facing out. */
+  normalZ: number;
+  failures: string[];
+};
+
+/** Live, at least this share of the texels differ a whole tile away: the surface doesn't repeat. */
+export const LIVE_AWAY_SHARE = 0.5;
+
+/**
+ * Checks a live surface's readbacks over one tile: it's written (the albedo and the height vary),
+ * it doesn't repeat (most texels differ a whole tile away, where a baked surface's are equal), and
+ * the opt-in taps give a normal facing out and an AO.
+ * @param images `surface` (RGB the albedo, A the height), `away` (`|surface(uv) − surface(uv +
+ * whole tiles)| × 100`) and `tapped` (RGB the taps' normal as a normal map stores it, A the
+ * cavity AO), RGBA8, `size` texels square each
+ * @param size their width and height in texels
+ * @returns the share that differs, the normal's mean z and the failures
+ */
+export const checkLiveSurface = (
+  images: { surface: ArrayLike<number>; away: ArrayLike<number>; tapped: ArrayLike<number> },
+  size: number
+): LiveCheck => {
+  const failures: string[] = [];
+  const stats = (bytes: ArrayLike<number>, channel: number) =>
+    getChannelStats(bytes, size, size, channel);
+  CHANNELS.forEach((name, channel) => {
+    const { std } = stats(images.surface, channel);
+    if (std < MIN_SPREAD) {
+      failures.push(
+        `live ${channel < 3 ? `albedo.${name}` : 'height'} doesn't vary (σ ${format(std)})`
+      );
+    }
+  });
+  const texels = size * size;
+  let offTexels = 0;
+  for (let i = 0; i < images.away.length; i += 4) {
+    const { away } = images;
+    if (Math.max(away[i], away[i + 1], away[i + 2], away[i + 3]) > PERIODICITY_BYTE) offTexels++;
+  }
+  const awayShare = offTexels / texels;
+  if (awayShare < LIVE_AWAY_SHARE) {
+    failures.push(
+      `live repeats: only ${offTexels} of ${texels} texels differ a whole tile away (a period left on?)`
+    );
+  }
+  for (const channel of [0, 1]) {
+    const { std } = stats(images.tapped, channel);
+    if (std < MIN_SPREAD) {
+      failures.push(`live taps' normal.${CHANNELS[channel]} doesn't vary (σ ${format(std)})`);
+    }
+  }
+  const normalZ = stats(images.tapped, 2).mean;
+  if (normalZ < 0.75) failures.push(`live taps' normal faces in: mean z ${format(normalZ)}`);
+  const ao = stats(images.tapped, 3).mean;
+  if (ao < 0.2) failures.push(`live taps' AO is nearly closed: mean ${format(ao)}`);
+  return { awayShare, normalZ, failures };
 };

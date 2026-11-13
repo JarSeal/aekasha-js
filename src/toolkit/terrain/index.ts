@@ -23,6 +23,8 @@ export { generator as sandFlat } from './procedural/sandFlat/sandFlat.generator'
 export { generator as sandRipples } from './procedural/sandRipples/sandRipples.generator';
 export { generator as snowDrift } from './procedural/snowDrift/snowDrift.generator';
 export type { BakedSurface, BakeSurfaceGeneratorOpts } from './procedural/BakeSurface';
+export { createLiveSurface } from './procedural/LiveSurface';
+export type { LiveSurface, LiveSurfaceOpts } from './procedural/LiveSurface';
 export {
   doesPackingStoreNormal,
   getSurfacePackingOutputs,
