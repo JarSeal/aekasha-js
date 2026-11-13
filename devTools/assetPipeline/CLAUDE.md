@@ -1,4 +1,4 @@
-Notes for the asset optimization pipeline (`devTools/assets.ts`, `devTools/assetPipeline/`; the how-to is `docs/techniques/asset-optimization.md`); the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
+Notes for the asset optimization pipeline (`devTools/assets.ts`, `devTools/assetPipeline/`; the how-to is `docs/techniques/asset-optimization.md`, and a texture set's recipes, cavity AO and KTX2 slots `docs/techniques/texture-sets.md`); the root `.claude/CLAUDE.md` keeps the project-wide rules, commands and workflow.
 
 ## Asset pipeline
 

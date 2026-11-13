@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -594,7 +594,7 @@ As built (2026-11-13; `yarn test` (3,645), `tsc` both, lint, `yarn verify:baseli
 - **Release:** with `FULL` and the checker on, leaving for `testDebugScene` left none of the 20 texture ids of `sand01`, `grass01`, `cliffs01` and `snow01` registered (17 were) and no `terrainGalleryChecker`.
 - Docs: `features/texturesets/CLAUDE.md` (the toolkit's side with the tangent frame trap and the measure, the gallery and its tab).
 
-### Phase 6 — Handbook and Hub
+### Phase 6 — Handbook and Hub — done
 
 1. **`docs/techniques/README.md`:** index table (p301 §5), the page template, the "which technique for my game" matrix skeleton (rows: game type/camera; columns: recommended technique, packing, anti-tiling, projection), and a "start here" path.
 2. **`docs/techniques/texture-sets.md`** (page template), covering:
@@ -643,6 +643,14 @@ As built (2026-11-13; `yarn hub:build`: no warning, every `api:`, `hub:` and `re
 - **The gallery's Hub image:** `terrainGallery` added to `_dbg__exampleHub.ts`' `OTHER_HUB_SCENES` (so it gets the drawer's Hub tab; `hub/CLAUDE.md` and its feature page list updated), and `terrainGallery.hub.png` saved by that tab (Chrome, WebGPU, the test bridge opening the tab): the scene camera's overview, as the scene runner's Phase 5 shot (the sky's ground black past the blocks, the DAY_NIGHT ambient's blue cast). A debug scene, so its panel's "Open in prod test" doesn't list it.
 - **The scenes-and-assets page:** the asset type table's `*.textureSet.json` row, the scene keys `textureSets` and `textureSetArrays`, a texture set input in "A scene's textures", and the feature manifest's texture set fields (the gather fills both from the materials' inputs too: the manifest reads the resolved scene).
 - **The toolkit page:** four entries (the `terrain/` category and the `textures/<setId>/` library in the tree), `textureSetSurface` among the TSL materials, a Terrain section (the library, `sampleTextureSet` and its normal helpers), the gallery under See it; the intro, description and tags name the texture library.
+
+#### Section 3: The docs and the exit — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn hub:build`: no warning; `readme.md` Prettier-clean):
+
+- **`readme.md`:** a Texture sets engine feature (after texture arrays and atlases), the toolkit's four entries, `textureSetSurface` among its materials and a Terrain texture library item, the `yarn fetchTextureSources` command row, `terrain/` and `textures/` in the project tree, the public entries' count (21: it said 16, stale before this branch), the guides line starting from the techniques index with the texture sets page, the texture sets and gallery scenes among the other scenes, and texture sets among the JSON asset kinds.
+- **The root `CLAUDE.md`:** the Three-folder split's toolkit gets `terrain/` (its entry and `nodes/`), `textureSetSurface` under `materials/`, and `textures/`' library (a set per folder, `source/raw/` gitignored, `CREDITS.md`); `yarn fetchTextureSources` was in Commands since Phase 2.
+- **Already current, unchanged:** `devTools/gather/CLAUDE.md` (the `*.textureSet.json` suffix, `textureSets.ts` and `textureSetArrays.ts`, since Phases 1 and 3) and `devTools/assetPipeline/CLAUDE.md` (the fetch tool, the cavity AO, the average colour, since Phases 2 and 4), whose header now names the handbook page.
 
 ### Phase 7 — Versioning
 
