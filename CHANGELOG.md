@@ -4,6 +4,68 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-13 — p303_texture-sets-and-terrain-texture-library
+
+Texture sets and the terrain texture library (p303, the second child of the terrain texturing epic p301). A texture set is a new asset (`*.textureSet.json`): a surface's packed PBR maps in one of three packings (`FULL`, `LITE`, `MINIMAL`), with the facts a terrain material needs about it (tile size, relief, surface defaults). The opt-in `textureSets()` feature samples one through a material input, and several sets of one packing as layer arrays (on p299's texture arrays): two bindings for any number of `LITE` layers. The toolkit ships 16 CC0 sets (sand, mud, rocks, cliffs, snow, ice, grass, concrete) as KTX2, a `terrain` entry with the decode helper and a baseline material that draws one set; a fetch tool and a scaffold make a set from ambientCG or Poly Haven, and a clone uses the committed outputs without fetching. The `terrainGallery` scene shows every set, and the handbook's first technique page explains how to make one. Nothing breaks.
+
+### Engine 6.13.0 (Sunset)
+
+**Added**
+
+- `textureSets()` (`aekasha/texturesets`; the template lists it last of the thirteen features). It registers the `{ textureSet }` input's resolver and builds a scene's set arrays with its load. Without it, a scene whose JSON lists a set or whose material names one fails the boot's feature check, and a code-made material with the input fails as an unknown input.
+- The `*.textureSet.json` asset (`TextureSetAssetSchema`, `TextureSetAsset` on `aekasha/schemas`): `id`, `category` (`SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`), `physicalSize` (metres a tile covers), `heightScale` (metres of relief at height 1), `packings` (at least one; each slot a texture id), `defaultPacking`, `surface` (`tint`, `normalStrength`, `roughnessScale`, `aoStrength`, `heightContrast`, and the wet response `porosity`, `wetDarkening`, `wetRoughness`, whose defaults are provisional until p307), `averageColor` and `debugData`. The packings' slots: `FULL` `albedoHeight`, `normal`, `orm`; `LITE` `albedoRough` (AO baked into the albedo), `normalHeight` (N.z rebuilt); `MINIMAL` `albedoHeight` (AO baked, the normal from the height). The gathered form, `TextureSetDef`, has every default filled. With the constants `TEXTURE_SET_CATEGORIES`, `TEXTURE_SET_PACKINGS` (each packing's slots in order), `TEXTURE_SET_PACKING_PREFERENCE`, `TEXTURE_SET_SURFACE_DEFAULTS` and `isTextureSetColorSlot`, and the types `TextureSetPacking`, `TextureSetSlot` and `TextureSetSurface` (also on `aekasha/texturesets`).
+- The material input `{ "textureSet": "<id>", "packing"?: "FULL" | "LITE" | "MINIMAL" }` (`TextureSetInputSchema`, `TextureSetInputRef`), in `inputs`, a `nodes` socket and their overrides: a bundle (`TextureSetInput`) of the packing's texture nodes by slot, `physicalSize` (vec2), `heightScale` and each `surface` field as uniforms (`tint` a linear colour). Without `packing`, the set's default one.
+- The material input `{ "textureSetArray": ["<id>", …], "packing": "<packing>" }`, or `{ "textureSetArray": "<id>" }` naming a set array the scene lists (`TextureSetArrayInputSchema`, `TextureSetArrayInputRef`): a bundle (`TextureSetArrayInput`) of an array texture per slot, the per-layer `layerParams` and `layerCount`. A list whose array isn't built samples a white stand-in, warned; an id that isn't built throws naming the input.
+- A scene's `textureSets` (each set's default packing loads with the scene) and `textureSetArrays` (`[{ id?, sets, packing, swappable? }]`, built with the scene's load before its materials; `SceneTextureSetArraySchema`, `SceneTextureSetArrayEntry`), the feature's schema part `textureSetsSchemaPart`; `SceneData.textureSets` and `SceneData.textureSetArrays`.
+- `getTextureSet(id)`, `loadTextureSetAsync(id, { packing? })` (loads only that packing's textures, typed by it: `TextureSetTextures`) and `getTextureSetPackingTextures(id, { packing? })`.
+- Set arrays: `buildTextureSetArray({ id?, sets, packing, swappable?, isPersistent? })` → `TextureSetArray` (one `buildTextureArray` per slot, layer `i` the set `sets[i]`; a derived id, so two materials with one palette share it; a swappable one keeps its CPU copy), `getTextureSetArray(id)`, `setTextureSetArrayLayer(id, layer, setId)` (a swappable array's layer swapped slot by slot, restored when a slot fails) and `getTextureSetLayerParams(layerParams, layer)` (a layer's ten fields as TSL nodes, from one `vec4` uniform array: one uniform buffer binding, not ten). Types `BuildTextureSetArrayProps`, `TextureSetLayerParamsNode`, `TextureSetSlotMap`.
+- A texture JSON's `pack` channel and `multiply` factor take `cavity: { radius?, strength? }` (`AssetsConfigSchema`): its `src` is a height map, and the value its cavity term `1 − strength × max(0, blur(h) − h)`, an AO for a source without one (defaults 24 px and 4, fitted to a 2K ground scan).
+- A texture set's `averageColor` (sRGB `#rrggbb`) is its default packing's albedo average, measured by the asset pipeline (the JSON's own wins). The texture's `__averageColor` (linear) is in the development data only.
+- The Assets tab's texture info window has a Texture set folder: the sets, packings and slots the texture fills. The material editor builds the set arrays a material's inputs name before opening it, in any scene.
+
+**Changed**
+
+- An app that lists `textureSets()` carries the feature's 976 B gzip in its first download (the template's `assets/index.js` 403,936 → 404,651 B gzip). The set arrays are a lazy chunk (`TextureSetArrays.js`, 2.8 kB gzip), imported by a scene's first set array, and the kernel's `TextureArray.js` is now a chunk of 3.1 kB that it shares with p299's resolvers (0.5 kB before). The embeds' main chunk grows 19 B gzip; they carry nothing of the feature.
+
+### Toolkit 3.1.0 (Gibbous)
+
+**Added**
+
+- `aekasha/toolkit/terrain`, the toolkit's terrain category: `sampleTextureSet(bundle, uv, { layer?, grad? })` → `TextureSetSample` (`packing`, `albedo`, `normalTS`, `roughness`, `ao`, `isAoBaked`, `height`; a value the packing lacks is null) decodes a `{ textureSet }` bundle or a `{ textureSetArray }` bundle's layer in any packing; `transformTangentNormalToView(normalTS, uv)` builds the tangent frame of the UV actually sampled (three's `normalMap` uses the mesh UV's, which turns a normal map tiled by world position); `bumpNormalView(height)` bumps by a height in metres (three's `bumpMap` scales per screen pixel). Type `SampleTextureSetOptions`.
+- `textureSetSurface` (`src/toolkit/materials/textureSetSurface/`): a `setup` material that draws one texture set in any packing, with its `surface` values, tiled by world XZ (`tiling: "WORLD_XZ"`, the default) or by the mesh's UV in metres (`"UV"`); `MINIMAL`'s normal is a bump from the height (`minimalNormal: "BUMP"`) or flat (`"FLAT"`). The baseline p305's terrain techniques are compared against.
+- The terrain texture library (`src/toolkit/textures/<setId>/`): 16 CC0 sets from ambientCG and Poly Haven, `sand01`, `sand02`, `mud01`, `mud02`, `rocks01`, `rocks02`, `cliffs01`, `cliffs02`, `snow01`, `snow02`, `ice01`, `ice02`, `grass01`, `grass02`, `concrete01` (1.1 × 0.55 m, for structures) and `concrete02`. Each ships `LITE` at 1024² (KTX2 UASTC, 1.4-2.5 MB on disk, 2.67 MB of VRAM); `sand01`, `grass01` and `cliffs01` also `FULL` and `MINIMAL`. 45.6 MB of committed outputs in all. Each set's `heightScale` is fitted to its normal map, the AO-less ice and concrete sets get a cavity AO, and `snow01`, `snow02`, `concrete01` and `grass01` are tuned (`tint`, `roughnessScale`). `src/toolkit/textures/CREDITS.md` lists each set's source and licence.
+
+### App 1.25.0 (Preschooler)
+
+**Added**
+
+- `terrainGallery` (a debug scene, `src/app/scenes/terrainGallery/`): the 16 library sets on 12 × 12 m blocks of `generateTerrain` with a 35° ramp, and 6 m walls by the cliff sets, through `textureSetSurface`, under its own day-night sky held at 10:00. Its debug tab "Terrain gallery" switches the packing of the three sets that ship all three, shows a 1 m checker over the blocks, and lists the sets, a click flying the camera to its block. Its meshes neither cast nor receive shadows until the VSM stripes on their slopes are fixed (`docs/issues/vsm-stripes-on-unshadowed-slopes.md`). It has a Hub image.
+- `textureSets` (a debug scene): `p303TestSet`, a hand-made PNG set in all three packings drawn through `{ textureSet }`, its release on exit; and a four-set `LITE` array, from PNGs and from KTX2, drawn against the same sets one by one, through `{ textureSetArray }` by list and by id (`window.__textureSets.results`: the textures each draws with and a pixel comparison).
+
+**Changed**
+
+- `src/index.ts` lists `textureSets()` last of the thirteen features.
+
+### Project
+
+**Added**
+
+- `yarn fetchTextureSources [--only <setId>[,…]] [--force] [--scaffold]` (`devTools/fetchTextureSources.ts`): downloads the source maps a set's `source.json` names from ambientCG or Poly Haven (cached in `.cache/texture-downloads/`, checked by size, CRC or MD5) into its gitignored `source/raw/`, and writes `src/toolkit/textures/CREDITS.md`. `--scaffold` first writes the texture JSONs a set's packings name and no file has: each packing's recipe (D2's channel layouts, the AO multiplied into the albedo, a cavity AO without an AO map). A zip reader in `devTools/assetPipeline/archives.ts`, no new dependency.
+- The asset pipeline: a clone without a set's fetched sources takes the committed outputs by their recipe key (`recipeKey` in a lock entry whose pack reads a `source/raw/` file); an edited recipe without its sources fails naming `yarn fetchTextureSources`. The `cavity` pack source, and the average colour of an sRGB texture in its lock entry.
+- The gather: the `*.textureSet.json` suffix (`devTools/gather/textureSets.ts`), each slot checked as a texture and its colour space against the slot; a scene's sets written inline with their default packing's textures; the texture closure adds a `{ textureSet }` input's packing and a `{ textureSetArray }` input's array, with its members declared in the scene's data but not loaded (`textureSetArrays.ts`), and fails on an unknown set, a packing it lacks or an id the scene doesn't list, naming the material and the input; the streaming manifest moves a cell-only material's set textures into its cell. `.schemas/textureSet.schema.json`.
+- The handbook: `docs/techniques/README.md` (the techniques' index, a start path, the "which technique for my game" matrix, the page template, the cost formula) and `docs/techniques/texture-sets.md` (the maps and packings, AO into albedo, AO from height, a tileable set baked in Blender, importing and the KTX2 settings, every field, pitfalls).
+- The Hub: a Terrain feature page (texture sets, packing, using a set, set arrays, writing a terrain material, the library, debugging), with the gallery's scene panel and a `mountain` icon.
+- `src/_engine/features/texturesets/CLAUDE.md`; the issues `texture-array-image-layers-premultiplied.md` and `vsm-stripes-on-unshadowed-slopes.md`.
+
+**Changed**
+
+- `.schemas/`: `material`, `mesh`, `scene` and `texture` regenerated.
+- The Hub: the scenes-and-assets page (the asset type, the scene keys, a set input in a scene's textures, the feature manifest), the toolkit page (the `terrain` category, the library, `textureSetSurface`), and the documentation intro (the `aekasha/texturesets` and `aekasha/toolkit/terrain` rows), the architecture guide, the quick start and the smallest build page count thirteen features. `hub/CLAUDE.md`.
+- `docs/techniques/asset-optimization.md`' pack channels (`cavity`, the average colour). `readme.md`: Texture sets, the toolkit's terrain entries and library, the command, the project tree, the entries' count (21). The root, `kernel/init`, debug, editors, merging, gather and asset pipeline `CLAUDE.md`.
+- The aliases `aekasha/texturesets` and `aekasha/toolkit/terrain` (`devTools/aliases.ts`, `tsconfig.json`), `TOOLKIT_CATEGORIES`, the layout rules (`terrain/`, `textures/` and `CREDITS.md`), `.gitignore` (the sets' `source/raw/`).
+- `sbp.config.ts`: the app profile's initial (399 → 400 KiB) and `assets/index.js` (395 → 396 KiB) budgets, and `_engine/features/texturesets` 1 KiB. `scenes.config.ts`: `terrainGallery`'s tab. The bundle, API and docs baselines.
+- The plans: p303 done; p304 no longer waits on it, p305 waits on p304 only (soft), and the p301 epic follows.
+
 ## 2026-11-13 — p299_texture-arrays-and-atlases
 
 The last two phases of texture arrays and atlases (p299; its Phases 0-4, the asset types, runtime arrays, helpers and debug views, reached `main` with earlier branches). A material JSON now samples an array layer or an atlas cell without TSL code, through two new input forms on p302's resolver registry. The resolvers load with the first array or atlas slot instead of in every build, and the gather checks each layer, slot and cell against its asset. The Hub, the asset handbook and the readme document both kinds.

@@ -657,6 +657,18 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn hub:build`: no warnin
 1. Versions: engine minor (asset type, arrays), toolkit minor (library, baseline material, the `terrain` entry), app minor (gallery); `CHANGELOG.md`, with a Project section for the fetch tool.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
 
+Sections:
+
+1. **Versions and the changelog** (step 1).
+2. **The plan done** (step 2): the status line, `git mv` to `_DONE_`, the references (p304's and p305's `Blocked by`, p301's `Blocks`, the done plans' and `CLAUDE.md`s' mentions, the Hub's conventions page).
+
+#### Section 1: Versions and the changelog — done
+
+As built (2026-11-13; `yarn checkVersions --against main` passing, Prettier clean):
+
+- `package.json`: engine and project 6.12.0 → 6.13.0, toolkit 3.0.1 → 3.1.0, app 1.24.3 → 1.25.0, the codenames kept (minor bumps).
+- `CHANGELOG.md`: the branch's entry with Engine, Toolkit, App and Project sections. Engine: the feature, the asset, both input forms, the scene keys, the runtime and set array APIs, the `cavity` pack source and `averageColor` (texture JSON and generated data are the engine's schema, as p300's `pack`), the Assets tab and the material editor, the bundle sizes from the committed baseline. Project: the fetch tool and scaffold, the pipeline's clone fallback, the gather, the handbook, the Hub, the budgets and the plans (it already says what section 2 does: p304 and p305 no longer waiting on p303).
+
 ---
 
 ## Risks
