@@ -2412,10 +2412,18 @@
       "getMaterialTextureIds": "Function"
     },
     "src/_engine/kernel/assets/MaterialInputRefs.ts": {
+      "AtlasCellInputRef": "TypeAlias",
+      "getAtlasCellInputDependencies": "Function",
+      "getAtlasSlotTextureId": "Function",
+      "getBuiltInInputDependencies": "Function",
+      "getTextureArrayInputDependencies": "Function",
       "getTextureInputDependencies": "Function",
+      "isAtlasCellInputRef": "Function",
+      "isTextureArrayInputRef": "Function",
       "isTextureInputRef": "Function",
       "MaterialInputDependency": "TypeAlias",
       "TEXTURE_INPUT_CHANNEL_RE": "Variable",
+      "TextureArrayInputRef": "TypeAlias",
       "TextureInputRef": "TypeAlias"
     },
     "src/_engine/kernel/assets/MaterialInputResolvers.ts": {
@@ -2455,6 +2463,7 @@
       "importHDRLoader": "Function",
       "loadTextureAsync": "Function",
       "loadTextureFileAsync": "Function",
+      "loadTextureInputResolversAsync": "Function",
       "resolveTextureUrl": "Function",
       "saveLoadedTexture": "Function",
       "saveTexture": "Function",
@@ -2484,6 +2493,9 @@
       "sampleAtlasCell": "Function",
       "SampleAtlasCellOpts": "TypeAlias",
       "TextureAtlasInfo": "TypeAlias"
+    },
+    "src/_engine/kernel/assets/TextureInputResolvers.ts": {
+      "registerTextureInputResolvers": "Function"
     },
     "src/_engine/kernel/assets/worker/AssetsFetch.ts": {
       "AssetsSourceError": "Class",
@@ -3271,10 +3283,13 @@
       "LodChainSchema": "Variable"
     },
     "src/_engine/schemas/MaterialSchema.ts": {
+      "AtlasCellInputSchema": "Variable",
       "MaterialAsset": "TypeAlias",
       "MaterialAssetSchema": "Variable",
       "MaterialVariantOverridesSchema": "Variable",
-      "PerType": "TypeAlias"
+      "PerType": "TypeAlias",
+      "TextureArrayInputSchema": "Variable",
+      "TextureInputRefSchema": "Variable"
     },
     "src/_engine/schemas/MeshSchema.ts": {
       "createMeshAssetSchema": "Function",
@@ -4740,6 +4755,7 @@
       "AppConfig",
       "AppData",
       "AssetsWorkerTarget",
+      "AtlasCellInputRef",
       "AtlasCellRect",
       "BindingMeta",
       "BuildTextureArrayProps",
@@ -4862,6 +4878,7 @@
       "TexOpts",
       "TextureArray",
       "TextureArrayInfo",
+      "TextureArrayInputRef",
       "TextureArrayMember",
       "TextureAtlasInfo",
       "TextureInputRef",
@@ -5412,6 +5429,7 @@
       "AssetOptimize",
       "AssetsConfig",
       "AssetsConfigSchema",
+      "AtlasCellInputSchema",
       "AtlasMipChain",
       "CameraAsset",
       "CameraAssetSchema",
@@ -5474,6 +5492,7 @@
       "TEXTURE_SLOTS",
       "TextureArrayAsset",
       "TextureArrayAssetSchema",
+      "TextureArrayInputSchema",
       "TextureAsset",
       "TextureAssetSchema",
       "TextureAtlasAsset",
@@ -5483,6 +5502,7 @@
       "TextureAtlasSlotInfo",
       "TextureAtlasSlotTexture",
       "TextureCodec",
+      "TextureInputRefSchema",
       "TexturePack",
       "TextureSettings",
       "TextureSlot",
