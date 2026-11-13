@@ -7,6 +7,7 @@ import type * as THREE from 'three/webgpu';
 import { texture } from 'three/tsl';
 import type { FeatureContext } from '../init/Features';
 import {
+  getBuiltInInputDependencies,
   getTextureInputDependencies,
   isTextureInputRef,
   type MaterialInputDependency,
@@ -147,13 +148,14 @@ export const resolveRegisteredInput = (
 
 /**
  * The assets a TSL input value needs loaded: the first resolver matching it names them (none
- * without `dependencies`), else the built-in rules' (a bare texture id, an object-form texture
- * ref).
+ * without `dependencies`), else the built-in forms' (a bare texture id, an object-form texture
+ * ref, a texture array layer, an atlas cell: those two before their resolvers register, with the
+ * first array or atlas slot loaded).
  * @internal
  */
 export const getMaterialInputDependencies = (value: unknown): MaterialInputDependency[] => {
   const resolver = findResolver(value);
-  if (!resolver) return getTextureInputDependencies(value);
+  if (!resolver) return getBuiltInInputDependencies(value);
   return resolver.dependencies?.(value) ?? [];
 };
 

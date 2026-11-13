@@ -9,6 +9,11 @@ import * as THREE from 'three/webgpu';
 import { color, texture, uniform } from 'three/tsl';
 import { getTexture } from './Texture';
 import { type MaterialInputContext, resolveRegisteredInput } from './MaterialInputResolvers';
+import {
+  getBuiltInInputDependencies,
+  isAtlasCellInputRef,
+  isTextureArrayInputRef,
+} from './MaterialInputRefs';
 import { getAppData } from '../scene/AppData';
 import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
@@ -224,7 +229,10 @@ const getInputTexture = (textureId: string, where: string, id: string | undefine
 /**
  * One TSL input as its node by the built-in rules: a texture id as a texture node (one white
  * texel when it isn't registered, warned), a `#rrggbb` colour, a boolean, a number, a 2-4 array or
- * a `{ x, y(, z, w) }` or `{ r, g, b(, a) }` object as a uniform. Throws for anything else.
+ * a `{ x, y(, z, w) }` or `{ r, g, b(, a) }` object as a uniform. A texture array layer or an atlas
+ * cell gets here only before its resolvers registered (p299 D5: with the first array or atlas slot
+ * loaded), so its texture isn't loaded: one white texel, warned as a missing texture id. Throws
+ * for anything else.
  */
 const createTslInputNode = (value: unknown, where: string, id: string | undefined) => {
   if (typeof value === 'string') {
@@ -242,6 +250,13 @@ const createTslInputNode = (value: unknown, where: string, id: string | undefine
     return throwTslError(
       `Unsupported array length (${value.length}) for ${where} in material "${id}".`
     );
+  }
+  if (isTextureArrayInputRef(value) || isAtlasCellInputRef(value)) {
+    // No warning of its own (every byte here is in every build): the missing texture's names the
+    // input. A registered one (an array saved by code before any load registered the resolvers)
+    // can't be sampled as a plain texture, so it's missed with the value ""
+    const textureId = getBuiltInInputDependencies(value)[0]?.id ?? '';
+    return texture(getInputTexture(getTexture(textureId) ? '' : textureId, where, id));
   }
   if (typeof value === 'object' && value !== null) {
     const obj = value as Record<string, number>;

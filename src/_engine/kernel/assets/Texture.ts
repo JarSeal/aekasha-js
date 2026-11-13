@@ -179,6 +179,26 @@ export const saveLoadedTexture = <T extends THREE.Texture>(
   return saved;
 };
 
+/** The texture input resolvers' module, once loaded and registered */
+let textureInputResolvers: Promise<void> | undefined;
+
+/**
+ * Loads and registers the texture array and atlas cell material input resolvers (p299 D5,
+ * `TextureInputResolvers.ts`) on the first call: the loads of an array or an atlas slot await it
+ * before they resolve, so the materials made after them find the resolvers. Not in the kernel's
+ * install, so a build without arrays or atlases doesn't carry them. A failed import rejects (the
+ * load that awaited it fails with it), and the next call tries again.
+ * @internal
+ */
+export const loadTextureInputResolversAsync = () =>
+  (textureInputResolvers ??= import('./TextureInputResolvers').then(
+    ({ registerTextureInputResolvers }) => registerTextureInputResolvers(),
+    (err: unknown) => {
+      textureInputResolvers = undefined;
+      throw err;
+    }
+  ));
+
 /** saveLoadedTexture() in the owner scope the load was called in (AssetOwners: it registers after
  * the load's awaits), plus the load's report (with the file's URL) for the debug tooling, kept
  * only when this load's texture is the one registered. */
@@ -421,7 +441,10 @@ const loadTextureArrayAssetAsync = async (
       );
     }
     url = resolveTextureUrl({ id, __url });
-    const { texture, report } = await loadTextureFileAsync(url);
+    const [{ texture, report }] = await Promise.all([
+      loadTextureFileAsync(url),
+      loadTextureInputResolversAsync(),
+    ]);
     const array = toCompressedArrayTexture(texture, layers);
     setTextureOpts(array, texOpts, userData, debugData);
     const mipmaps = array.mipmaps as unknown as { data: ArrayBufferView }[];
@@ -508,7 +531,10 @@ const loadTextureAtlasSlotAsync = async (
       );
     }
     url = resolveTextureUrl({ id, __url });
-    const { texture, report } = await loadTextureFileAsync(url);
+    const [{ texture, report }] = await Promise.all([
+      loadTextureFileAsync(url),
+      loadTextureInputResolversAsync(),
+    ]);
     const info = getAtlasSlotInfo(texture, atlas);
     setTextureOpts(texture, texOpts, userData, debugData);
     texture.userData.textureAtlas = info;
@@ -587,6 +613,10 @@ export const loadTextureAsync = async (props: TextureProps) => {
         useHDRLoader,
         texOpts,
       });
+      // A `--layers` KTX2 loaded as a texture: its layers can be sampled by an input too
+      if ((result as THREE.CompressedArrayTexture).isCompressedArrayTexture) {
+        await loadTextureInputResolversAsync();
+      }
       const loadedTexture = setTextureOpts(result, texOpts, userData, debugData);
       return saveAndReport(loadedTexture, id, isPersistent, report, url, ownerScope);
     } else {

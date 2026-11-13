@@ -837,6 +837,47 @@ uv(), layer)`, `sampleAtlasCell(slot, uv(), cell, { clampToCell })`) and the fun
 
 **Exit:** a material JSON samples an array layer and an atlas cell without TSL code.
 
+#### Section 1: The forms and the resolvers — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --docs` and
+`yarn sbp --profile all`):
+
+- `MaterialInputRefs.ts`: `TextureArrayInputRef`, `AtlasCellInputRef` (both on `aekasha`, beside
+  `TextureInputRef`), `isTextureArrayInputRef`, `isAtlasCellInputRef`, `getAtlasSlotTextureId`,
+  `getTextureArrayInputDependencies`, `getAtlasCellInputDependencies` (none without a `slot`
+  string) and `getBuiltInInputDependencies` (the three forms), which `getMaterialInputDependencies`
+  falls back to. No `channel` on the new forms (decided in review).
+- `TextureInputResolvers.ts`: kinds `textureArray` and `atlasCell`; `registerTextureInputResolvers`
+  (`@internal`). A helper's error (an unknown layer or cell, a bad index) is rethrown naming the
+  input (`The input "a" (setup) in material "m": sampleArrayLayer: …`); a bad `layer`, a missing
+  `slot` / `cell` or a non-boolean `clampToCell` throws its own. A registered texture that isn't an
+  array, or isn't an atlas slot, throws; an unregistered one samples `ctx.getTexture`'s white
+  texel as a plain texture (warned by it).
+- `Texture.ts`' `loadTextureInputResolversAsync` (`@internal`): one `import()`, cached; a failed
+  import rejects (the load awaiting it fails with it) and the next call tries again. Awaited, in
+  parallel with the file, by `loadTextureArrayAssetAsync` and `loadTextureAtlasSlotAsync`; after the
+  load by `loadTextureAsync` when a KTX2 is a `CompressedArrayTexture` (a plain `--layers` file);
+  and with the build by `buildTextureArray`. A failed array or slot load doesn't wait for it: the
+  resolver would sample the white texel anyway.
+- The kernel's fallback (`MaterialTsl.ts`' `createTslInputNode`): a form without its resolver
+  samples the white texel with the missing texture's own warning, naming the array or slot. No
+  string of its own: the first version's message and a logged import error put the banner's
+  `_engine/kernel/assets` group over its 11 KiB budget (+0.3 kB); without them +0.2 kB, within.
+  The one case it can't name: an array registered by code (`saveTexture`) before any load
+  registered the resolvers, missed with the value `""` (it can't be sampled as a plain texture).
+- `yarn sbp`: the new `TextureInputResolvers.js` chunk (0.7 kB gzip in the app, 1.3 kB in the
+  embeds, which share less) loads with the first array or slot; `TextureArray.js` and
+  `TextureAtlas.js` became chunks of their own in the app (from `MergeMaterialRegister.js`, −0.3
+  kB). The kernel's `_engine/kernel/assets` group grows 0.2 kB in every profile. The banner and
+  uiKit pass. **The app profile fails three budgets that `main` fails already:** its baseline
+  (`bundle.json`, p302's merge) has `_engine/kernel/assets` at 13.5 kB against a 13 KiB budget, and
+  the initial download and `assets/index.js` over theirs by about 0.5 kB; this section adds 0.2 kB
+  to each.
+- Tests: `TextureInputResolvers.test.ts` (8: the dependencies and the fallback before the
+  resolvers register, then, after `loadTextureInputResolversAsync`, a layer by name and index, the
+  layer kept through `.sample()`, the errors, a missing array; a cell clamped and not, the errors, a
+  missing slot).
+
 ### Phase 6 — Hub, docs and versioning
 
 1. The Hub: the asset-optimization feature page's "Texture atlases" section
