@@ -12,6 +12,16 @@ export type { NoisePeriod } from './nodes/noise/Period';
 export { worley } from './nodes/noise/Worley';
 export type { WorleyOptions, WorleySample } from './nodes/noise/Worley';
 export { bakeSurfaceGenerator } from './procedural/BakeSurface';
+export { generator as cliffStrata } from './procedural/cliffStrata/cliffStrata.generator';
+export { generator as concretePores } from './procedural/concretePores/concretePores.generator';
+export { generator as grassGround } from './procedural/grassGround/grassGround.generator';
+export { generator as iceSheet } from './procedural/iceSheet/iceSheet.generator';
+export { generator as mudCracked } from './procedural/mudCracked/mudCracked.generator';
+export { generator as mudSmooth } from './procedural/mudSmooth/mudSmooth.generator';
+export { generator as rockyGround } from './procedural/rockyGround/rockyGround.generator';
+export { generator as sandFlat } from './procedural/sandFlat/sandFlat.generator';
+export { generator as sandRipples } from './procedural/sandRipples/sandRipples.generator';
+export { generator as snowDrift } from './procedural/snowDrift/snowDrift.generator';
 export type { BakedSurface, BakeSurfaceGeneratorOpts } from './procedural/BakeSurface';
 export {
   doesPackingStoreNormal,
@@ -22,6 +32,7 @@ export type { PackableSurface } from './procedural/PackSurface';
 export { defineSurfaceGenerator } from './procedural/SurfaceGenerator';
 export type {
   SurfaceBuildContext,
+  SurfaceCellCount,
   SurfaceCells,
   SurfaceGenerator,
   SurfaceGeneratorDef,

@@ -14,12 +14,8 @@ import {
 } from 'aekasha';
 import { loadDebugModuleAsync } from 'aekasha/debug';
 import { getBackendName, getErrorMessage, meshUv, sampleTexture } from '../../shared/verifyHarness';
-import {
-  checkNoiseRow,
-  getChannelMaxByte,
-  getChannelStats,
-  type NoiseRowResult,
-} from './noiseChecks';
+import { getChannelMaxByte, getChannelStats } from '../../shared/channelStats';
+import { checkNoiseRow, type NoiseRowResult } from './noiseChecks';
 import { getNoiseRows, type NoiseRow } from './noiseRows';
 
 /**

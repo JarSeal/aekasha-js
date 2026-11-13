@@ -1,0 +1,372 @@
+import * as THREE from 'three/webgpu';
+import { vec2 } from 'three/tsl';
+import type { Node } from 'three/webgpu';
+import {
+  bakeTexture,
+  cameraLookAtPoint,
+  createCameraEntity,
+  createMaterial,
+  createMeshEntity,
+  getECSWorld,
+  getEntityIdByAppId,
+  getGeometry,
+  getRenderer,
+  lerror,
+  registerOnSceneExit,
+  saveBufferGeometry,
+  type BakedTexture,
+} from 'aekasha';
+import { loadDebugModuleAsync } from 'aekasha/debug';
+import type { TextureSetPacking } from 'aekasha/texturesets';
+import { generateTerrain } from 'aekasha/toolkit/geometry';
+import {
+  bakeSurfaceGenerator,
+  cliffStrata,
+  concretePores,
+  grassGround,
+  iceSheet,
+  mudCracked,
+  mudSmooth,
+  rockyGround,
+  sandFlat,
+  sandRipples,
+  snowDrift,
+  type BakedSurface,
+  type SurfaceGenerator,
+} from 'aekasha/toolkit/terrain';
+import { getBackendName, getErrorMessage } from '../../shared/verifyHarness';
+import {
+  checkPeriodicity,
+  checkSurfaceSlot,
+  type PeriodicityCheck,
+  type SlotCheck,
+} from './surfaceChecks';
+import { shadeBakedSurface } from './surfaceShading';
+
+/**
+ * The procedural surfaces verification scene (p304 Phase 4's exit): the toolkit's ten surface
+ * generators (`aekasha/toolkit/terrain`), each baked by `bakeSurfaceGenerator` (512², `LITE` until
+ * the tab picks another packing) and drawn on a generated 6 × 6 m block with a 35° ramp at its back
+ * (−z), tiled in world space over the generator's `physicalSize` (`surfaceShading.ts`). Two rows of
+ * five from the back, in `GENERATORS`' order. The DAY_NIGHT sky stands at 10:00.
+ *
+ * During the load each generator is checked (`surfaceChecks.ts`), a failure logged as an error so
+ * the scene runner (`yarn verify:scenes --only proceduralSurfaces`, `--webgl` for SwiftShader)
+ * fails on it: its `LITE` bake (the shown one) and a 256² bake of `FULL` and of `MINIMAL` are read
+ * back, each slot written as p303 D2 packs it with no seam across its wrap; and a 256² bake of the
+ * difference between its `LITE` slots at uv and a whole number of tiles away (`buildPacking` twice)
+ * shows it repeats. `window.__proceduralSurfaces` holds the results; the debug env's "Procedural
+ * surfaces" tab (`_dbg__proceduralSurfaces.ts`) switches the shown packing and shows them.
+ */
+
+export const PROCEDURAL_SURFACES_SCENE_ID = 'proceduralSurfaces';
+
+/** The generators, rows from the back, left to right. */
+export const GENERATORS = [
+  sandRipples,
+  sandFlat,
+  mudCracked,
+  mudSmooth,
+  rockyGround,
+  cliffStrata,
+  snowDrift,
+  iceSheet,
+  grassGround,
+  concretePores,
+] as unknown as SurfaceGenerator[];
+
+/** The packings, in the tab's order. */
+export const PACKINGS: readonly TextureSetPacking[] = ['LITE', 'FULL', 'MINIMAL'];
+/** Every bake's seed. */
+const SEED = 7;
+/** The shown bakes' size; the check bakes'. */
+const SHOWN_SIZE = 512;
+const CHECK_SIZE = 256;
+/** The periodicity check's shift, in whole tiles. */
+const PERIOD_SHIFT = [1, -2] as const;
+
+const BLOCK_SIZE = 6;
+const BLOCK_PITCH = 8;
+const COLUMNS = 5;
+const BLOCK_SEGMENTS = 48;
+/** The back 2 m of a block rising at 35° */
+const RAMP_DEPTH = 2;
+const RAMP_SLOPE = Math.tan(THREE.MathUtils.degToRad(35));
+const BLOCK_GEOMETRY_ID = 'proceduralSurfacesBlock';
+const CAMERA_APP_ID = 'proceduralSurfacesCam';
+/** The camera over every block, and a block's close-up offset (in front, above, looking down). */
+const OVERVIEW = { position: { x: 0, y: 19, z: 29 }, look: { x: 0, y: 0, z: 1 } };
+const CLOSE_UP = { y: 2.4, z: 3.2 };
+
+/** A generator's checks: per packing its slots', and the periodicity. */
+export type GeneratorResult = {
+  packings: Partial<Record<TextureSetPacking, Record<string, SlotCheck>>>;
+  periodicity?: PeriodicityCheck;
+  /** Every failure, in words, prefixed by its packing; empty when it passes. */
+  failures: string[];
+};
+
+/**
+ * Moves the scene's camera to a block's close-up, or back over every block (the tab's list, and the
+ * test bridge's shots: `window.__proceduralSurfaces.viewBlock`).
+ * @param generatorId the block's generator, or null for the overview
+ */
+export const viewBlock = (generatorId: string | null) => {
+  const world = getECSWorld();
+  const cameraId = getEntityIdByAppId(CAMERA_APP_ID, world);
+  if (cameraId === undefined) return;
+  const index = GENERATORS.findIndex((generator) => generator.id === generatorId);
+  if (index < 0) {
+    world.setTransform(cameraId, { pos: OVERVIEW.position });
+    cameraLookAtPoint(cameraId, OVERVIEW.look, world);
+    return;
+  }
+  const { x, z } = getBlockPosition(index);
+  world.setTransform(cameraId, { pos: { x, y: CLOSE_UP.y, z: z + CLOSE_UP.z } });
+  cameraLookAtPoint(cameraId, { x, y: 0, z: z - 0.5 }, world);
+};
+
+/** What `window.__proceduralSurfaces` holds. */
+export type ProceduralSurfacesResults = {
+  backend?: string;
+  generators?: Record<string, GeneratorResult>;
+  /** The packing the blocks show. */
+  shownPacking?: TextureSetPacking;
+  /** Every generator passed. */
+  passed?: boolean;
+  error?: string;
+  done?: boolean;
+};
+
+const state = { results: {} as ProceduralSurfacesResults, viewBlock };
+
+/** This visit's: false once the scene is left, so an await that ends later does nothing. */
+let visit = { isCurrent: false };
+/** Each block's material and shown bake, by generator id. */
+const blocks = new Map<
+  string,
+  { material: THREE.MeshStandardNodeMaterial; shown?: BakedSurface }
+>();
+/** The latest packing switch: an older one that finishes later is dropped. */
+let packingRequest = 0;
+
+const getBlockPosition = (index: number) => ({
+  x: ((index % COLUMNS) - (COLUMNS - 1) / 2) * BLOCK_PITCH,
+  z: (Math.floor(index / COLUMNS) - 0.5) * BLOCK_PITCH,
+});
+
+const getBlockGeometry = () =>
+  getGeometry(BLOCK_GEOMETRY_ID) ??
+  saveBufferGeometry(
+    generateTerrain({
+      width: BLOCK_SIZE,
+      depth: BLOCK_SIZE,
+      widthSegments: BLOCK_SEGMENTS,
+      depthSegments: BLOCK_SEGMENTS,
+      maxHeight: 0.25,
+      noiseOctaves: [{ frequency: 1 / 3, amplitude: 1 }],
+      seed: 304,
+      heightModifier: (_x, z, h) => h + Math.max(0, -BLOCK_SIZE / 2 + RAMP_DEPTH - z) * RAMP_SLOPE,
+    }).geometry,
+    { id: BLOCK_GEOMETRY_ID }
+  );
+
+const bakeShownAsync = (generator: SurfaceGenerator, packing: TextureSetPacking) =>
+  bakeSurfaceGenerator({
+    id: `p304_surface_${generator.id}_${packing}`,
+    generator,
+    packing,
+    size: SHOWN_SIZE,
+    seed: SEED,
+    anisotropy: 'MAX',
+  });
+
+/** An output of a bake, read back as RGBA8 bytes (level 0, rows without padding). */
+const readOutputAsync = async (baked: BakedTexture, name: string, size: number) => {
+  const renderer = getRenderer(true) as THREE.Renderer;
+  const texture = baked.textures[name];
+  const target = texture.renderTarget as THREE.RenderTarget;
+  const index = target.textures.indexOf(texture);
+  const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, size, size, index);
+  return pixels as Uint8Array;
+};
+
+/** Reads each slot of a packing's bake back and checks it. */
+const checkPackingAsync = async (surface: BakedSurface, size: number) => {
+  const checks: Record<string, SlotCheck> = {};
+  for (const slot of Object.keys(surface.bake.textures)) {
+    checks[slot] = checkSurfaceSlot(slot, await readOutputAsync(surface.bake, slot, size), size);
+  }
+  return checks;
+};
+
+/**
+ * The periodicity bake: `|slot(uv) − slot(uv + whole tiles)| × 100` of the `LITE` slots, built by
+ * the engine's interface (`buildPacking`) at both points, read back and checked.
+ */
+const checkPeriodicityAsync = async (generator: SurfaceGenerator) => {
+  const opts = {
+    packing: 'LITE' as const,
+    seed: SEED,
+    physicalSize: generator.physicalSize,
+    heightScale: generator.heightScale,
+  };
+  const baked = await bakeTexture({
+    id: `p304_period_${generator.id}`,
+    size: CHECK_SIZE,
+    mipmaps: false,
+    outputs: [{ name: 'albedoRough' }, { name: 'normalHeight' }],
+    build: (ctx) => {
+      const shifted = ctx.uv.add(vec2(...PERIOD_SHIFT)) as Node<'vec2'>;
+      const at = generator.buildPacking(ctx, opts);
+      const away = generator.buildPacking({ ...ctx, uv: shifted }, opts);
+      const diff = (slot: string) =>
+        (at[slot] as Node<'vec4'>)
+          .sub(away[slot] as Node<'vec4'>)
+          .abs()
+          .mul(100) as THREE.Node;
+      return { albedoRough: diff('albedoRough'), normalHeight: diff('normalHeight') };
+    },
+  });
+  const images = [
+    await readOutputAsync(baked, 'albedoRough', CHECK_SIZE),
+    await readOutputAsync(baked, 'normalHeight', CHECK_SIZE),
+  ];
+  baked.dispose();
+  return checkPeriodicity(images, CHECK_SIZE * CHECK_SIZE);
+};
+
+/** A generator's block: its material, the shown bake, and the checks of every packing. */
+const createBlockAsync = async (generator: SurfaceGenerator, index: number) => {
+  const material = createMaterial({
+    id: `p304_surface_${generator.id}`,
+    type: 'STANDARDNODEMATERIAL',
+    params: {},
+  }) as THREE.MeshStandardNodeMaterial;
+  const block: { material: THREE.MeshStandardNodeMaterial; shown?: BakedSurface } = { material };
+  blocks.set(generator.id, block);
+  const shown = await bakeShownAsync(generator, 'LITE');
+  block.shown = shown;
+  shadeBakedSurface(material, shown);
+  createMeshEntity(
+    {
+      geo: getBlockGeometry(),
+      mat: material,
+      position: getBlockPosition(index),
+      castShadow: false,
+      receiveShadow: false,
+    },
+    { appId: `proceduralSurfaces_${generator.id}`, debugData: { name: `Block: ${generator.id}` } }
+  );
+
+  const result: GeneratorResult = { packings: {}, failures: [] };
+  result.packings.LITE = await checkPackingAsync(shown, SHOWN_SIZE);
+  for (const packing of ['FULL', 'MINIMAL'] as const) {
+    const check = await bakeSurfaceGenerator({
+      id: `p304_check_${generator.id}_${packing}`,
+      generator,
+      packing,
+      size: CHECK_SIZE,
+      seed: SEED,
+    });
+    result.packings[packing] = await checkPackingAsync(check, CHECK_SIZE);
+    check.bake.dispose();
+  }
+  result.periodicity = await checkPeriodicityAsync(generator);
+  for (const [packing, slots] of Object.entries(result.packings)) {
+    for (const slot of Object.values(slots)) {
+      result.failures.push(...slot.failures.map((failure) => `${packing}: ${failure}`));
+    }
+  }
+  result.failures.push(...result.periodicity.failures);
+  for (const failure of result.failures) {
+    lerror(`[proceduralSurfaces] ${generator.id} (${getBackendName()}): ${failure}.`);
+  }
+  return result;
+};
+
+/**
+ * Bakes every block's generator in a packing and draws it (the tab's packing switch); the latest
+ * call wins, and the bakes of the packing left are disposed.
+ * @param packing the packing to show
+ */
+export const setShownPackingAsync = async (packing: TextureSetPacking) => {
+  const request = ++packingRequest;
+  const startedOn = visit;
+  const bakes = await Promise.all(
+    GENERATORS.map((generator) => bakeShownAsync(generator, packing))
+  ).catch((error: unknown) => {
+    lerror(`[proceduralSurfaces] The ${packing} bakes failed:`, error);
+    return null;
+  });
+  if (!bakes || !startedOn.isCurrent || request !== packingRequest) return;
+  GENERATORS.forEach((generator, i) => {
+    const block = blocks.get(generator.id);
+    if (!block) return;
+    if (block.shown && block.shown !== bakes[i]) block.shown.bake.dispose();
+    block.shown = bakes[i];
+    shadeBakedSurface(block.material, bakes[i]);
+  });
+  state.results.shownPacking = packing;
+};
+
+/** Builds the scene; see the file's header. */
+export const scene = async () => {
+  (window as unknown as { __proceduralSurfaces: typeof state }).__proceduralSurfaces = state;
+  state.results = { shownPacking: 'LITE' };
+  const thisVisit = { isCurrent: true };
+  visit = thisVisit;
+  blocks.clear();
+  registerOnSceneExit(PROCEDURAL_SURFACES_SCENE_ID, () => {
+    thisVisit.isCurrent = false;
+    blocks.clear();
+  });
+  createCameraEntity(
+    {
+      type: 'PERSPECTIVE',
+      fov: 50,
+      position: OVERVIEW.position,
+      lookAtPoint: OVERVIEW.look,
+      active: true,
+    },
+    { appId: CAMERA_APP_ID, debugData: { name: 'Procedural surfaces' } }
+  );
+  createMeshEntity(
+    {
+      geo: {
+        id: 'proceduralSurfacesGround',
+        type: 'BOX',
+        params: { width: COLUMNS * BLOCK_PITCH + 2, height: 0.2, depth: 2 * BLOCK_PITCH + 2 },
+      },
+      mat: {
+        id: 'proceduralSurfacesGround',
+        type: 'STANDARD',
+        params: { color: '#2e2f31', roughness: 0.95 },
+      },
+      position: { y: -0.5 },
+      castShadow: false,
+      receiveShadow: false,
+    },
+    { appId: 'proceduralSurfaces_ground', debugData: { name: 'Ground' } }
+  );
+
+  try {
+    const generators: Record<string, GeneratorResult> = {};
+    for (let i = 0; i < GENERATORS.length; i++) {
+      generators[GENERATORS[i].id] = await createBlockAsync(GENERATORS[i], i);
+    }
+    state.results.generators = generators;
+    state.results.passed = Object.values(generators).every((result) => !result.failures.length);
+    state.results.backend = getBackendName();
+    state.results.done = true;
+  } catch (error) {
+    lerror('[proceduralSurfaces] Build failed', error);
+    state.results.error = getErrorMessage(error);
+  }
+  const debugTab = await loadDebugModuleAsync(
+    () => import('./_dbg__proceduralSurfaces'),
+    false,
+    'proceduralSurfaces tab'
+  );
+  debugTab?.current?.createProceduralSurfacesTab(state.results);
+};

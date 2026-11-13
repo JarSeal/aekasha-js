@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "proceduralSurfaces",
+  "sceneFile": "./scenes/proceduralSurfaces/proceduralSurfaces.ts",
+  "isDebugScene": true,
+  "name": "Procedural surfaces (p304)",
+  "description": "p304 Phase 4's verification scene: the toolkit's ten procedural surface generators (aekasha/toolkit/terrain), each baked into a texture set packing (LITE by default, 512²) and drawn on a generated 6 × 6 m block with a 35° ramp, tiled in world space over the generator's physical size. Rows from the back: sandRipples, sandFlat, mudCracked, mudSmooth, rockyGround; cliffStrata, snowDrift, iceSheet, grassGround, concretePores. During the load each generator is baked into all three packings and read back (every slot written as its packing packs it, no seam) and checked to repeat over whole tiles; a failure is a console error, so the scene runner fails. Its tab switches the blocks' packing and shows the checks.",
+  "skyboxes": ["proceduralSurfacesSky"]
+}

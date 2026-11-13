@@ -55,6 +55,10 @@ export type SurfaceCells = {
   period: NoisePeriod;
 };
 
+/** A cell count per tile: one for both axes or a pair, a number or a node (see
+ * {@link SurfaceBuildContext}'s `cells`). */
+export type SurfaceCellCount = number | [number, number] | Node<'float'> | Node<'vec2'>;
+
 /** What a generator's `build` reads: the point, and the helpers that keep its noise tiling. */
 export type SurfaceBuildContext = {
   /** The point in tiles: a baked texture's uv (0..1 over the tile), or live the world's position
@@ -67,11 +71,11 @@ export type SurfaceBuildContext = {
   /** One texel's size in uv when baked (its own central differences); live, a 1024² texel. */
   texel: Node<'vec2'>;
   /**
-   * The point in `count` cells per tile and the period that tiles them: a whole number (baked, a
-   * fraction throws), or a float node (a param: rounded to a whole number at least 1 in the shader
-   * when baked).
+   * The point in `count` cells per tile and the period that tiles them: a whole number, or a pair
+   * for cells longer on one axis (baked, a fraction throws), or a float or vec2 node (a param:
+   * rounded to a whole number at least 1 in the shader when baked).
    */
-  cells: (count: number | Node<'float'>) => SurfaceCells;
+  cells: (count: SurfaceCellCount) => SurfaceCells;
   /** The surface's seed, or with an index another one derived from it (one per noise, so two
    * noises of the surface don't match). */
   seed: (index?: number) => Node<'uint'>;
@@ -173,20 +177,25 @@ export const createSurfaceContext = (opts: {
     tileSize: opts.tileSize,
     texel: opts.texel ?? (vec2(LIVE_TEXEL, LIVE_TEXEL) as unknown as Node<'vec2'>),
     cells: (count) => {
-      if (typeof count === 'number') {
-        if (!(count > 0)) {
-          throw new Error(`[${generatorId}] cells(${count}): the count takes a number above 0.`);
+      if (typeof count === 'number' || Array.isArray(count)) {
+        const [x, y] = typeof count === 'number' ? [count, count] : count;
+        const shown = JSON.stringify(count);
+        if (!(x > 0) || !(y > 0)) {
+          throw new Error(`[${generatorId}] cells(${shown}): the count takes numbers above 0.`);
         }
-        if (isLive) return { p: uv.mul(count) as Node<'vec2'>, period: 0 };
-        if (!Number.isInteger(count)) {
+        const scale = vec2(x, y) as unknown as Node<'vec2'>;
+        if (isLive) return { p: uv.mul(scale) as Node<'vec2'>, period: 0 };
+        if (!Number.isInteger(x) || !Number.isInteger(y)) {
           throw new Error(
-            `[${generatorId}] cells(${count}): a baked surface tiles over a whole number of cells only.`
+            `[${generatorId}] cells(${shown}): a baked surface tiles over a whole number of cells only.`
           );
         }
-        return { p: uv.mul(count) as Node<'vec2'>, period: count };
+        return { p: uv.mul(scale) as Node<'vec2'>, period: [x, y] };
       }
-      if (isLive) return { p: uv.mul(count) as Node<'vec2'>, period: 0 };
-      const whole = vec2(max(round(count), 1)) as unknown as Node<'vec2'>;
+      // A float node splats to both axes
+      const scale = vec2(count as Node<'vec2'>) as unknown as Node<'vec2'>;
+      if (isLive) return { p: uv.mul(scale) as Node<'vec2'>, period: 0 };
+      const whole = max(round(scale), vec2(1, 1)) as unknown as Node<'vec2'>;
       return { p: uv.mul(whole) as Node<'vec2'>, period: whole };
     },
     seed: (index = 0) => {

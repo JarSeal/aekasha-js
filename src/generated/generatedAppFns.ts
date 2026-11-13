@@ -192,6 +192,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  proceduralSurfaces: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/proceduralSurfaces/proceduralSurfaces.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   scene01: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/scene01/scene01.ts');
     await (

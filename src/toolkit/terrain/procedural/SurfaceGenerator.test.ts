@@ -129,9 +129,11 @@ describe('createSurfaceContext', () => {
   const live = createSurfaceContext({ generatorId: 'g', uv: point, isLive: true, tileSize, seed });
 
   it('gives a baked whole count as the period, and refuses a fraction', () => {
-    expect(baked.cells(8).period).toBe(8);
+    expect(baked.cells(8).period).toEqual([8, 8]);
+    expect(baked.cells([6, 2]).period).toEqual([6, 2]);
+    expect(() => baked.cells([6, 1.5])).toThrow(/cells\(\[6,1.5\]\): a baked surface/);
     expect(() => baked.cells(2.5)).toThrow(/cells\(2.5\): a baked surface tiles over a whole/);
-    expect(() => baked.cells(0)).toThrow(/takes a number above 0/);
+    expect(() => baked.cells(0)).toThrow(/takes numbers above 0/);
   });
 
   it('rounds a node count into a node period when baked, none when live', () => {

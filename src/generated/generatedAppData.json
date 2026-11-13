@@ -13805,6 +13805,74 @@
         "skybox"
       ]
     },
+    "proceduralSurfaces": {
+      "isDebugScene": true,
+      "name": "Procedural surfaces (p304)",
+      "description": "p304 Phase 4's verification scene: the toolkit's ten procedural surface generators (aekasha/toolkit/terrain), each baked into a texture set packing (LITE by default, 512²) and drawn on a generated 6 × 6 m block with a 35° ramp, tiled in world space over the generator's physical size. Rows from the back: sandRipples, sandFlat, mudCracked, mudSmooth, rockyGround; cliffStrata, snowDrift, iceSheet, grassGround, concretePores. During the load each generator is baked into all three packings and read back (every slot written as its packing packs it, no seam) and checked to repeat over whole tiles; a failure is a console error, so the scene runner fails. Its tab switches the blocks' packing and shows the checks.",
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {
+            "nightSkyColor": "#0a1020"
+          },
+          "suns": [
+            {
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "moons": [
+            {
+              "phase": 0.4,
+              "phaseMode": "CYCLE",
+              "light": {
+                "intensity": 0.5
+              }
+            }
+          ],
+          "stars": {
+            "milkyWay": {}
+          },
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "dayNight": {
+            "timeOfDay": 10,
+            "playing": false,
+            "dayOfYear": 100
+          },
+          "id": "proceduralSurfacesSky",
+          "debugData": {
+            "name": "Procedural surfaces sky",
+            "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
+          }
+        }
+      ],
+      "id": "proceduralSurfaces",
+      "sceneFile": "./scenes/proceduralSurfaces/proceduralSurfaces.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "__features": [
+        "skybox"
+      ]
+    },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
       "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
@@ -37756,6 +37824,48 @@
         "description": "DAY_SKY with a low sun and no clouds: raking light shows the normal maps, the sky reflects in the metals."
       },
       "__sourcePath": "src/app/scenes/assetCompare/assetCompare.skybox.json"
+    },
+    "proceduralSurfacesSky": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {
+        "nightSkyColor": "#0a1020"
+      },
+      "suns": [
+        {
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "moons": [
+        {
+          "phase": 0.4,
+          "phaseMode": "CYCLE",
+          "light": {
+            "intensity": 0.5
+          }
+        }
+      ],
+      "stars": {
+        "milkyWay": {}
+      },
+      "clouds": {
+        "coverage": 0.35
+      },
+      "ground": {},
+      "dayNight": {
+        "timeOfDay": 10,
+        "playing": false,
+        "dayOfYear": 100
+      },
+      "id": "proceduralSurfacesSky",
+      "debugData": {
+        "name": "Procedural surfaces sky",
+        "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/proceduralSurfacesSky.skybox.json"
     },
     "terrainGallerySky": {
       "base": {
