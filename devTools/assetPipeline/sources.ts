@@ -93,8 +93,37 @@ export const createPackSource = (jsonFile: string, pack: TexturePack): PackSourc
   return { kind: 'pack', pack, jsonFile: file, repoPath: toRepoPath(file) };
 };
 
-/** A pack's `src` as a file on disk: relative to the JSON or under src/public, and it must exist. */
-export const resolvePackFile = (jsonFile: string, src: string) => {
+/**
+ * A fetched source (p303 D5): a file in a `source/raw/` folder, where `yarn fetchTextureSources`
+ * writes a texture set's downloaded maps. Gitignored, so a clone has none until it fetches them:
+ * a pack that reads one keeps its committed output without it (`recipeKey`, `cache.ts`).
+ */
+export const isFetchedSourceFile = (file: string) =>
+  `/${file.split(path.sep).join('/')}`.includes('/source/raw/');
+
+/** The message of a fetched source that isn't there */
+export const getUnfetchedSourceHint = () =>
+  "a texture set's fetched source: run yarn fetchTextureSources";
+
+/**
+ * A pack's `src` as a file on disk: relative to the JSON or under src/public, and it must exist.
+ * @param opts.allowUnfetched A fetched source ({@link isFetchedSourceFile}) may be missing: its
+ * path is returned (the key's file list; the pipeline then takes the committed output)
+ */
+export const resolvePackFile = (
+  jsonFile: string,
+  src: string,
+  opts: { allowUnfetched?: boolean } = {}
+) => {
+  if (isJsonRelativeFileName(src)) {
+    const file = path.resolve(ROOT, path.dirname(jsonFile), src);
+    if (isFetchedSourceFile(file) && file.startsWith(SRC_DIR + path.sep) && !fs.existsSync(file)) {
+      if (opts.allowUnfetched) return file;
+      throw new Error(
+        `pack: source file "${src}" not found (expected at ${toRepoPath(file)}; ${getUnfetchedSourceHint()})`
+      );
+    }
+  }
   const source = resolveAssetSource({ jsonFile, fileName: src });
   if ('error' in source) throw new Error(`pack: ${source.error}`);
   if (source.kind === 'remote') throw new Error(`pack: "${src}" is remote, which isn't read`);

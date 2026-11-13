@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
@@ -7,6 +8,11 @@ import {
   type TextureSetSourceDir,
   type TextureSource,
 } from './assetPipeline/textureSources';
+import {
+  listTextureIds,
+  scaffoldTextureSetAsync,
+  type ScaffoldSet,
+} from './assetPipeline/textureSetScaffold';
 import { readGit } from './git';
 import { out, setProgressLogFile } from './progressLog';
 import { ROOT, SRC_DIR } from './paths';
@@ -20,8 +26,10 @@ import { ROOT, SRC_DIR } from './paths';
  * `src/toolkit/textures/CREDITS.md` when it changed. The output also goes to
  * `.cache/texture-downloads/progress.log`.
  *
- * Usage: `yarn fetchTextureSources [--only <setId>[,<setId>…]] [--force]` (`--force` downloads
- * again, the cache and the up-to-date check ignored). Exits 1 when a set failed.
+ * Usage: `yarn fetchTextureSources [--only <setId>[,<setId>…]] [--force] [--scaffold]` (`--force`
+ * downloads again, the cache and the up-to-date check ignored; `--scaffold` first writes the
+ * texture JSONs the set's `packings` name and no file has, D3's recipes:
+ * `assetPipeline/textureSetScaffold.ts`). Exits 1 when a set failed.
  */
 
 const CACHE_DIR = path.join(ROOT, '.cache', 'texture-downloads');
@@ -53,12 +61,18 @@ const downloadAsync = async (url: string) => {
 const parseArgs = (args: string[]) => {
   let only: string[] | undefined;
   let force = false;
+  let scaffold = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--force') force = true;
+    else if (args[i] === '--scaffold') scaffold = true;
     else if (args[i] === '--only' && args[i + 1]) only = args[++i].split(',').filter(Boolean);
-    else throw new Error(`unknown argument "${args[i]}" (--only <setId>[,<setId>…], --force)`);
+    else {
+      throw new Error(
+        `unknown argument "${args[i]}" (--only <setId>[,<setId>…], --force, --scaffold)`
+      );
+    }
   }
-  return { only, force };
+  return { only, force, scaffold };
 };
 
 /** Whether git ignores the set's `source/raw/` (a set outside the ignored patterns would commit
@@ -69,9 +83,27 @@ const isRawIgnored = (set: TextureSetSourceDir) => {
   return readGit(['check-ignore', rawFile]) !== '';
 };
 
+let textureIds: Map<string, string> | null = null;
+
+/** `--scaffold`: the set's missing texture JSONs; throws for a set JSON that doesn't read */
+const scaffoldAsync = async (set: TextureSetSourceDir & { source: TextureSource }) => {
+  const setJson = JSON.parse(fs.readFileSync(set.setFile!, 'utf8')) as ScaffoldSet;
+  if (!setJson.packings || typeof setJson.packings !== 'object') {
+    throw new Error(`${path.basename(set.setFile!)} has no "packings"`);
+  }
+  textureIds ??= listTextureIds(SRC_DIR);
+  const { written, kept } = await scaffoldTextureSetAsync(set.dir, setJson, set.source, {
+    existingIds: textureIds,
+    schemaFile: path.join(ROOT, '.schemas', 'texture.schema.json'),
+  });
+  if (written.length)
+    out(`  scaffold: wrote ${written.map((id) => `${id}.texture.json`).join(', ')}`);
+  if (kept.length) out(`  scaffold: kept ${kept.join(', ')} (already there)`);
+};
+
 const mainAsync = async () => {
   const watch = setProgressLogFile(path.join(CACHE_DIR, 'progress.log'));
-  const { only, force } = parseArgs(process.argv.slice(2));
+  const { only, force, scaffold } = parseArgs(process.argv.slice(2));
   const sets = findTextureSetSources(SRC_DIR);
   out(`[textures] ${sets.length} set(s) with a source.json (watch: ${watch})`);
 
@@ -106,6 +138,7 @@ const mainAsync = async () => {
       continue;
     }
     try {
+      if (scaffold) await scaffoldAsync(set as TextureSetSourceDir & { source: TextureSource });
       const result = await fetchTextureSetSourceAsync(
         set as TextureSetSourceDir & { source: TextureSource },
         { cacheDir: CACHE_DIR, download: downloadAsync, force, log: (line) => out(line) }

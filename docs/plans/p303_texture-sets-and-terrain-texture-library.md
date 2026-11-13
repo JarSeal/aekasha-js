@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented, Phase 2 section 1
+Status: in progress | Phase 1 implemented, Phase 2 sections 1-2
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -330,7 +330,10 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
 Sections:
 
 1. **The fetch tool:** `fetchTextureSources.ts` and its script, the zip reader, the gitignore entries, `CREDITS.md`.
-2. **Recipes** (step 2; split into two sections or not: section 1's review): the clone fallback (Found, below), the pack recipe templates, `sand01`'s folder, the cavity AO, `averageColor`, the exit.
+2. **Recipes and the clone fallback:** the sources-free key (option (a) below), the scaffold writing a set's texture JSONs, `sand01`'s folder, the exit.
+3. **Cavity AO and `averageColor`:** D2's derived AO as a pack channel source (the scaffold uses it for a set without an `ao` map), D1's measured average colour in the lock entry and the generated data.
+
+**Decided in section 1's review (2026-11-13):** the clone fallback is option (a); the recipe templates are a scaffold (a set's texture JSONs written from its `packings` and `source.json`'s maps, never overwriting a JSON); step 2 is sections 2 and 3.
 
 **Found in section 1 (2026-11-13), for section 2: a clone without the fetched sources can't use the committed outputs.** A pack's lock key hashes its source bytes (`cache.ts`), and `resolvePackFile` (`sources.ts`) throws for a missing `src`. The sets' `source/raw/` is gitignored, so on a fresh clone every set texture fails its key: the dev server warns and loads nothing for it (a pack has no `__sourceUrl` to fall back to), and `yarn build`'s production gather fails ("no asset pipeline output"). The Risks table's "the lock keys are the inputs', so a clone takes the committed outputs from the lock" holds only for committed sources. Options:
 
@@ -356,6 +359,18 @@ As built (2026-11-13; `yarn test` (3,497), `tsc`, lint; a live run against ambie
 - Tests: `textureSources.test.ts` (8: the schema's refusals, discovery and its errors, ambientCG's maps with an optional one missing, the up-to-date check and `force`, stale raw files and a missing required map writing nothing, two matches and a corrupt cached zip, Poly Haven with its MD5, the credits).
 - Docs (Phase 6's, done now): `devTools/assetPipeline/CLAUDE.md` (the tool) and the root `CLAUDE.md`'s Commands line.
 
+#### Section 2: Recipes and the clone fallback — done
+
+As built (2026-11-13; `yarn test` (3,512), `tsc` both, lint, `yarn verify:baselines --docs`; **the exit:** `yarn fetchTextureSources --scaffold --only sand01 && yarn assets --only 'src/toolkit/textures/sand01/**'` wrote the six texture JSONs and encoded them, UASTC at 1024² with mips: `albedoRough` 862 KB, `normalHeight` 1.17 MB, `albedoHeight` 836 KB, `normal` 1.12 MB, `orm` 744 KB, `albedoHeightAO` 858 KB, each 1.40 MB of VRAM, so LITE is ≈ 2.0 MB on disk and 2.8 MB of VRAM, within D6's estimates; **the clone:** `source/raw/` moved away, a full `yarn assets` took all six from the recipe key (cache hits, nothing pruned, no error) and `yarn gatherAppData` wrote generated data byte for byte the same as with the sources):
+
+- **The clone fallback** (option (a)): a fetched source is a file in a `source/raw/` folder (`isFetchedSourceFile`, `sources.ts`). A pack reading one records `recipeKey` in its lock entry (`getRecipeKey`, `cache.ts`: `getCacheKey` with the fetched files left out and the params wrapped as `{ recipe }`; the `src` paths are in the params). `pipeline.ts`' `lookUp` (both the encode and the pack pass-through): with a fetched source missing, `cache.getByRecipe(recipeKey)` (through `get`: the store's copy restored, the prune keeps it) or the error "no committed output has this recipe, and its fetched sources aren't there (…): run yarn fetchTextureSources". `resolvePackFile(…, { allowUnfetched })` returns a missing fetched source's path (the key's files, the gather's `checkPackSources`), and names the command in its error otherwise. Only entries whose pack reads a fetched source get the field: no other lock entry changed.
+- **Beyond the plan: the generated data's `__bytes.in`** (committed) is a texture's source bytes. Without the sources `getSourceBytes` is undefined and the run takes the encode's recorded `textures[0].source.bytes` (`run.ts`, packs only), so a clone's gather writes what a fetched machine's does.
+- **The scaffold** (`textureSetScaffold.ts`, `yarn fetchTextureSources --scaffold`): the texture JSONs the set's `packings` name and no file has (the set folder's `<id>.texture.json`, or an id another `*.texture.json` gives: kept), never overwritten, Prettier-formatted with the root's config (`devFiles/format.ts`). D2's layouts from `./source/raw/<map>.<ext>` (the `download`'s format): LITE `albedoRough` RGB colour × AO (strength `surface.aoStrength`, default 1), A roughness; `normalHeight` RG the normal (`normal: true`), B height (`remap: "auto"`); FULL `albedoHeight` RGB colour, A height; `normal` RGB; `orm` AO (or 1), roughness, metalness 0; MINIMAL `albedoHeight` colour × AO, height. A missing height is 0.5; a missing AO no multiply (section 3 puts the cavity term there). Profile `terrainLayer`, slots `baseColor` / `data` / `normal` / `orm`, `REPEAT`, anisotropy `MAX`, `colorSpace: "srgb"` on the albedo slots only (the gather's colour-space check agrees). No `pack.size`: a set's maps share their size. It needs `normal` and `roughness` maps; `arm` isn't read by any recipe. The JSONs' `debugData` names the set, packing, layout and the provider's asset.
+- **`sand01`** (`src/toolkit/textures/sand01/`): D1's example set (`SAND`, 3 m, `heightScale` 0.03, all three packings, D1's `surface`) on ambientCG `Ground080` 2K-JPG (it has every map), its six scaffolded JSONs, `source.json`; `CREDITS.md` lists it. Its outputs and lock entries are committed with this section (Phase 4 tunes it by eye). It's in no scene yet: only the development data has it.
+- Tests: `fetchedSources.test.ts` (temp root, as `prune.test.ts`: the recorded key; the clone's hit kept by a full run's prune; an edited recipe and a changed committed source failing with the hint; a missing committed source failing as before), `textureSetScaffold.test.ts` (4: every recipe valid against `TextureAssetSchema` with D2's channels; PNG, no AO and no height; kept files and ids, missing maps; `listTextureIds`).
+- Not covered: a build-time `*.textureArray.json` whose layers are such packs still needs the sources (its key reads them); p303's arrays are runtime ones (Phase 3).
+- Docs: `devTools/assetPipeline/CLAUDE.md` (the scaffold, the clone), the root `CLAUDE.md`'s command line.
+
 ### Phase 3 — Layer arrays (D4)
 
 1. `buildTextureSetArray` and `setTextureSetArrayLayer` on p299's `buildTextureArray` / `setTextureArrayLayer` (assembly, validation, ref counting and the GPU assembly spike are p299's).
@@ -366,7 +381,7 @@ As built (2026-11-13; `yarn test` (3,497), `tsc`, lint; a live run against ambie
 
 ### Phase 4 — The library (D6)
 
-1. Create the 16 set folders (`source.json`, set JSON, texture JSONs).
+1. Create the 16 set folders (`source.json`, set JSON; the texture JSONs by `yarn fetchTextureSources --scaffold`, Phase 2 section 2; `sand01` exists).
 2. Fetch, choose by eye, tune `physicalSize` / `heightScale` / `surface`.
 3. Encode and commit the outputs.
 
@@ -411,7 +426,7 @@ As built (2026-11-13; `yarn test` (3,497), `tsc`, lint; a live run against ambie
 | UASTC transcodes to different GPU formats on different devices, so an array can mix formats if members use different codecs | One codec per packing slot (profile), validated at assembly                                                                                    |
 | CPU mip data is not retained after upload                                                                                   | Members are fetched for assembly and never uploaded on their own; assembly happens before any material uses them                               |
 | Committed outputs make the repo heavy (~40 MB)                                                                              | LITE only by default; FULL and MINIMAL only for 3 sets; revisit LFS (p301 Open questions)                                                      |
-| A resized source doesn't encode byte for byte the same on another machine (`devTools/assetPipeline/CLAUDE.md`), and every set is resized 2K → 1K | The lock keys are the inputs', so a clone takes the committed outputs from the lock; re-encode only on a cache miss, and compare outputs on one machine |
+| A resized source doesn't encode byte for byte the same on another machine (`devTools/assetPipeline/CLAUDE.md`), and every set is resized 2K → 1K | A clone without the fetched sources takes the committed outputs by their recipe key (Phase 2 section 2); re-encode only on a cache miss, and compare outputs on one machine |
 | Provider ids or download URL patterns change                                                                                | `source.json` records the page URL; the fetch tool fails per set with a clear message; committed outputs keep the repo working without a fetch |
 | Photo-scanned layers have baked-in lighting or strong large-scale features that repeat visibly                              | Choose by eye (Phase 4); p305's anti-tiling and macro variation                                                                                |
 | Sets differ in brightness, so a blend shows seams in tone                                                                   | `surface.tint` per set and per layer; gallery side-by-side tuning                                                                              |

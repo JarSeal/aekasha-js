@@ -23571,6 +23571,250 @@
         "out": 52076
       }
     },
+    "sand01_albedoHeight": {
+      "id": "sand01_albedoHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "sand01 albedoHeight (FULL)",
+        "description": "The texture set sand01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg"
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_albedoHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeight.pack.9d4d45b7.ktx2",
+      "__bytes": {
+        "in": 5746689,
+        "out": 836438
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand01_albedoHeightAO": {
+      "id": "sand01_albedoHeightAO",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "sand01 albedoHeight (MINIMAL)",
+        "description": "The texture set sand01's MINIMAL albedoHeight: RGB albedo × AO (sRGB), A height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_albedoHeightAO.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeightAO.pack.cf7576ed.ktx2",
+      "__bytes": {
+        "in": 8089500,
+        "out": 858102
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand01_albedoRough": {
+      "id": "sand01_albedoRough",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "sand01 albedoRough (LITE)",
+        "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg",
+            "multiply": {
+              "src": "./source/raw/ao.jpg",
+              "channel": "r",
+              "strength": 1
+            }
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_albedoRough.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+      "__bytes": {
+        "in": 9086447,
+        "out": 861827
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand01_normal": {
+      "id": "sand01_normal",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "sand01 normal (FULL)",
+        "description": "The texture set sand01's FULL normal: RGB the normal (OpenGL). Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "normal"
+      },
+      "pack": {
+        "channels": {
+          "rgb": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_normal.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_normal.pack.3a5c834d.ktx2",
+      "__bytes": {
+        "in": 6646952,
+        "out": 1124108
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand01_normalHeight": {
+      "id": "sand01_normalHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "sand01 normalHeight (LITE)",
+        "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "data"
+      },
+      "pack": {
+        "channels": {
+          "b": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rg": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_normalHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+      "__bytes": {
+        "in": 7695457,
+        "out": 1166404
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "sand01_orm": {
+      "id": "sand01_orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "sand01 orm (FULL)",
+        "description": "The texture set sand01's FULL orm: R AO, G roughness, B metalness 0. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "terrainLayer",
+        "slot": "orm"
+      },
+      "pack": {
+        "channels": {
+          "r": {
+            "src": "./source/raw/ao.jpg",
+            "channel": "r"
+          },
+          "g": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "b": 0
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01_orm.texture.json",
+      "__url": "/aek-assets/toolkit/textures/sand01/sand01_orm.pack.475a3503.ktx2",
+      "__bytes": {
+        "in": 4388263,
+        "out": 743604
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
     "p299TestArray": {
       "id": "p299TestArray",
       "layers": [
@@ -31600,6 +31844,45 @@
         "wetRoughness": 0.3
       },
       "__sourcePath": "src/app/scenes/textureSets/p303TestSet.textureSet.json"
+    },
+    "sand01": {
+      "id": "sand01",
+      "category": "SAND",
+      "physicalSize": [
+        3,
+        3
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "sand01_albedoHeight",
+          "normal": "sand01_normal",
+          "orm": "sand01_orm"
+        },
+        "LITE": {
+          "albedoRough": "sand01_albedoRough",
+          "normalHeight": "sand01_normalHeight"
+        },
+        "MINIMAL": {
+          "albedoHeight": "sand01_albedoHeightAO"
+        }
+      },
+      "debugData": {
+        "name": "Sand 01 (dry dunes)",
+        "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.85,
+        "wetDarkening": 0.55,
+        "wetRoughness": 0.4
+      },
+      "__sourcePath": "src/toolkit/textures/sand01/sand01.textureSet.json"
     }
   },
   "materials": {

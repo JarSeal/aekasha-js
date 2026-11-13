@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "sand01_normal",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/normal.jpg",
+        "normal": true
+      }
+    }
+  },
+  "optimize": {
+    "profile": "terrainLayer",
+    "slot": "normal"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "sand01 normal (FULL)",
+    "description": "The texture set sand01's FULL normal: RGB the normal (OpenGL). Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+  }
+}

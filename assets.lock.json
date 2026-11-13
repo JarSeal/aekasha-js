@@ -114,6 +114,30 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "2eac2ec31136bd014804385efdfef3892e51f3b5586164076c95f710db1466b1": {
+      "source": "src/toolkit/textures/sand01/sand01_normalHeight.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+      "bytes": 1166404,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1166404,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 7695457
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "d95833b37d37475e521c63c9f11888155e2f0f8a0ce0411fc20ed3eb41a10da9"
+    },
     "34b95eeb611e989360c240752fb09058e53dfb64822fb5937870cec60d8cbce4": {
       "source": "src/app/scenes/mergeMaterials/source/ruinStone_albedo.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_albedo.16a6b69f.ktx2",
@@ -160,6 +184,54 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "3f207b9ea28baa17600c7ca8c820465509c133ee330c16fa31db89e41cf1ef0a": {
+      "source": "src/toolkit/textures/sand01/sand01_normal.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_normal.pack.3a5c834d.ktx2",
+      "bytes": 1124108,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 1124108,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 6646952
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "f42bdb50c7cd9ca95d4aaaa649b7953d039df21da5c5395ce257a7b62f3a3550"
+    },
+    "43ab2021044991b77a8a3abbc7dc03293bd8ad070137a816c1f74bdf3cf3ae51": {
+      "source": "src/toolkit/textures/sand01/sand01_orm.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_orm.pack.475a3503.ktx2",
+      "bytes": 743604,
+      "textures": [
+        {
+          "slot": "orm",
+          "bytes": 743604,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 4388263
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "bd41718fdc829b9f7f4cfd7fdfb03da6e8dd3cdd84f2d3c03a0f0e58d4ea01a2"
     },
     "44a20507e10a16d5a58d5c7728d9cc00d7598cd3a0e69ada8b9f6f64301e0410": {
       "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
@@ -330,6 +402,30 @@
         }
       }
     },
+    "79bca03d150cdca5824a55606ca1c3ec9f673d10738a91bf7e6467e652140d52": {
+      "source": "src/toolkit/textures/sand01/sand01_albedoHeightAO.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeightAO.pack.cf7576ed.ktx2",
+      "bytes": 858102,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 858102,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 8089500
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "aad681c23cf2ab7c1f547691235ebe3da0b48fe09f82edbe1b787d6271daec35"
+    },
     "7a4133a4b698edfa83a917062e5f6d6907a5a2d9583c900c8c53ded082756d9c": {
       "source": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.textureAtlas.json",
       "url": "/aek-assets/app/scenes/lodShowcase/lodShowcaseTreeCross.atlas.albedo.1f8ec40c.ktx2",
@@ -494,6 +590,30 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "a3f7e5ad321363269f794332372c0d57e86af06ad535356ff226b79f5399e713": {
+      "source": "src/toolkit/textures/sand01/sand01_albedoHeight.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeight.pack.9d4d45b7.ktx2",
+      "bytes": 836438,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 836438,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 5746689
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "7f6b98daca202f80f80eeb39dedf308eb0af9b5b295050447e3b692527980f95"
     },
     "a4dac3e060141cace4276ad43926d2f44d8ffbff135f3592208a5f812055de4e": {
       "source": "src/app/scenes/textureAtlases/p299TestAtlas.textureAtlas.json",
@@ -688,6 +808,30 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "e8f74dfb25f7d717e6dc1633307f9447768abbd47df82c8b294da5814c0135e9": {
+      "source": "src/toolkit/textures/sand01/sand01_albedoRough.texture.json",
+      "url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+      "bytes": 861827,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 861827,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 9086447
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "21f1717ad9243ba581c883212ae00996b856d949c9db3a59da8f3a271ad74f4e"
     },
     "fb41ebc4f545e25b21e99e93613ea2bafc9bd59f0e32a20a15709d51c885ad24": {
       "source": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",

@@ -76,6 +76,8 @@ export type TextureSetSourceDir = {
   dir: string;
   /** The set folder from `src/`, '/'-separated */
   srcPath: string;
+  /** The set's `*.textureSet.json`, absolute (undefined when the folder has none or two) */
+  setFile?: string;
   /** The parsed `source.json`, or why it can't be used */
   source: TextureSource | { error: string };
 };
@@ -107,6 +109,7 @@ export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => 
     if (!hasSource) continue; // A hand-made set: nothing to fetch
     const dir = path.join(srcDir, srcPath);
     let setId = srcPath;
+    let setFile: string | undefined;
     let source: TextureSetSourceDir['source'];
     if (setFiles.length !== 1) {
       source = {
@@ -115,8 +118,9 @@ export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => 
           : 'source.json without a *.textureSet.json beside it',
       };
     } else {
+      setFile = path.join(srcDir, setFiles[0]);
       try {
-        const id = (readJson(path.join(srcDir, setFiles[0])) as { id?: unknown }).id;
+        const id = (readJson(setFile) as { id?: unknown }).id;
         if (typeof id === 'string') setId = id;
         const parsed = TextureSourceSchema.safeParse(readJson(path.join(dir, 'source.json')));
         source = parsed.success
@@ -130,7 +134,7 @@ export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => 
         source = { error: (error as Error).message };
       }
     }
-    result.push({ setId, dir, srcPath, source });
+    result.push({ setId, dir, srcPath, ...(setFile ? { setFile } : {}), source });
   }
   return result.sort((a, b) => a.setId.localeCompare(b.setId));
 };

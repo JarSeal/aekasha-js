@@ -52,7 +52,11 @@ type SourcedAsset = {
   __saveData?: Record<string, { fileName?: string; path?: string }[] | undefined>;
 };
 
-/** A texture's `pack` (p300 DD5): in place of `fileName`, and every source file must exist. */
+/**
+ * A texture's `pack` (p300 DD5): in place of `fileName`, and every source file must exist, but a
+ * fetched one (p303 D5, a set's `source/raw/`): without it the pipeline takes the committed
+ * output of the same recipe, or fails naming `yarn fetchTextureSources`.
+ */
 const checkPackSources = (fullPath: string, data: SourcedAsset & { pack: TexturePack }) => {
   const errors: string[] = [];
   if (data.fileName || data.path) {
@@ -61,7 +65,7 @@ const checkPackSources = (fullPath: string, data: SourcedAsset & { pack: Texture
   if (data.useHDRLoader) errors.push('"pack" writes an 8-bit image: remove "useHDRLoader"');
   for (const src of listPackFiles(data.pack)) {
     try {
-      resolvePackFile(fullPath, src);
+      resolvePackFile(fullPath, src, { allowUnfetched: true });
     } catch (e) {
       errors.push((e as Error).message);
     }
