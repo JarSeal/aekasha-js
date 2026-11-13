@@ -5,7 +5,7 @@
       "$ref": "#/definitions/__schema0"
     },
     {
-      "$ref": "#/definitions/__schema43"
+      "$ref": "#/definitions/__schema60"
     }
   ],
   "description": "A material: its type and three parameters, and a node material's TSL file and inputs.",
@@ -58,7 +58,7 @@
         "inputs": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema40"
+              "$ref": "#/definitions/__schema57"
             }
           ]
         },
@@ -320,7 +320,7 @@
             "inputs": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema40"
+                  "$ref": "#/definitions/__schema57"
                 }
               ]
             },
@@ -407,7 +407,7 @@
       "additionalProperties": {
         "$ref": "#/definitions/__schema39"
       },
-      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
+      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
     },
     "__schema38": {
       "type": "string"
@@ -415,25 +415,176 @@
     "__schema39": {
       "type": "object",
       "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema40": {
-      "type": "object",
-      "propertyNames": {
-        "$ref": "#/definitions/__schema41"
+        "$ref": "#/definitions/__schema40"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema42"
-      },
-      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+        "$ref": "#/definitions/__schema41"
+      }
     },
-    "__schema41": {
+    "__schema40": {
       "type": "string"
     },
-    "__schema42": {},
+    "__schema41": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema42"
+        },
+        {
+          "$ref": "#/definitions/__schema46"
+        },
+        {
+          "$ref": "#/definitions/__schema51"
+        },
+        {}
+      ]
+    },
+    "__schema42": {
+      "type": "object",
+      "properties": {
+        "texture": {
+          "$ref": "#/definitions/__schema43"
+        },
+        "channel": {
+          "$ref": "#/definitions/__schema44"
+        }
+      },
+      "required": [
+        "texture"
+      ],
+      "additionalProperties": false,
+      "description": "A texture ref: the texture node, or with channel its sample's channels (eg. r, rgb)."
+    },
     "__schema43": {
+      "type": "string",
+      "description": "The texture's id."
+    },
+    "__schema44": {
+      "description": "One to four of r, g, b, a: the sample's channels, instead of the texture node.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema45"
+        }
+      ]
+    },
+    "__schema45": {
+      "type": "string",
+      "pattern": "^[rgba]{1,4}$"
+    },
+    "__schema46": {
+      "type": "object",
+      "properties": {
+        "textureArray": {
+          "$ref": "#/definitions/__schema47"
+        },
+        "layer": {
+          "$ref": "#/definitions/__schema48"
+        }
+      },
+      "required": [
+        "textureArray",
+        "layer"
+      ],
+      "additionalProperties": false,
+      "description": "A texture array's layer, sampled at the mesh's UV."
+    },
+    "__schema47": {
+      "type": "string",
+      "description": "The texture array's id (a *.textureArray.json)."
+    },
+    "__schema48": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema49"
+        },
+        {
+          "$ref": "#/definitions/__schema50"
+        }
+      ],
+      "description": "The layer: its index, or its name (a texture layer's id, a file layer's name without its extension)."
+    },
+    "__schema49": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema50": {
+      "type": "string"
+    },
+    "__schema51": {
+      "type": "object",
+      "properties": {
+        "atlas": {
+          "$ref": "#/definitions/__schema52"
+        },
+        "slot": {
+          "$ref": "#/definitions/__schema53"
+        },
+        "cell": {
+          "$ref": "#/definitions/__schema54"
+        },
+        "clampToCell": {
+          "$ref": "#/definitions/__schema55"
+        }
+      },
+      "required": [
+        "atlas",
+        "slot",
+        "cell"
+      ],
+      "additionalProperties": false,
+      "description": "An atlas slot's cell, sampled at the mesh's UV mapped into the cell's rect."
+    },
+    "__schema52": {
+      "type": "string",
+      "description": "The atlas's id (a *.textureAtlas.json)."
+    },
+    "__schema53": {
+      "type": "string",
+      "description": "The slot sampled (a key of the atlas's slots)."
+    },
+    "__schema54": {
+      "type": "string",
+      "description": "The cell's id."
+    },
+    "__schema55": {
+      "description": "Keeps the sample half a texel inside the cell's rect. Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema56"
+        }
+      ]
+    },
+    "__schema56": {
+      "type": "boolean"
+    },
+    "__schema57": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema58"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema59"
+      },
+      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    },
+    "__schema58": {
+      "type": "string"
+    },
+    "__schema59": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema42"
+        },
+        {
+          "$ref": "#/definitions/__schema46"
+        },
+        {
+          "$ref": "#/definitions/__schema51"
+        },
+        {}
+      ]
+    },
+    "__schema60": {
       "type": "object",
       "properties": {
         "id": {

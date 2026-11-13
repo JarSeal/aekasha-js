@@ -32,7 +32,12 @@ export type { ImpostorAsset, ImpostorDef } from '../features/lod/impostors/Impos
 export { LightAssetSchema } from './LightSchema';
 export { lodSchemaPart } from '../features/lod/LodSchema';
 export type { LightAsset } from './LightSchema';
-export { MaterialAssetSchema } from './MaterialSchema';
+export {
+  AtlasCellInputSchema,
+  MaterialAssetSchema,
+  TextureArrayInputSchema,
+  TextureInputRefSchema,
+} from './MaterialSchema';
 export {
   getMergeMaterialSlotTextureId,
   MAX_MERGE_MATERIAL_ENTRIES,

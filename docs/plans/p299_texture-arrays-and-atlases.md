@@ -878,6 +878,47 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
   layer kept through `.sample()`, the errors, a missing array; a cell clamped and not, the errors, a
   missing slot).
 
+#### Section 2: The gather and the schemas — done
+
+As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --docs`,
+`yarn gatherAppData`: the repo's generated data unchanged):
+
+- `textureClosure.ts`: `INPUT_DEPENDENCY_FNS` has the array's and the atlas cell's functions. Each
+  input is checked against pass 1's registries first (`getInputRefError`): a layer name not in
+  `__layers` (listing them), an index out of range, an id that is another kind of texture ("isn't
+  a texture array" / "isn't a texture atlas"), an atlas id no `*.textureAtlas.json` has, a slot or
+  cell the atlas doesn't have (listing them). The error is the scene's, naming the material and
+  the input (`Scene "a": the material "m"'s input "x": the texture array "ground" has no layer
+  "sand" (layers: rock, moss).`), and the input adds no id, so an unknown atlas isn't reported a
+  second time as an unknown slot texture. An array no asset JSON has is left to the closure's
+  unknown-id error; a merge palette slot's array (built at runtime) isn't checked.
+- **Beyond the plan: the streaming manifest.** `addTextureRefs` (`streamingManifest.ts`) collects
+  every listed id among a material's strings, which finds an array's id but not an atlas cell's
+  slot (`<atlas>.<slot>` is no string in the value): it reads the atlas form's dependency now, so a
+  cell-only material's slot moves into its cell instead of staying in the base.
+  `engineImports.test.ts`' reason for `MaterialInputRefs.ts` names both readers.
+- `getAtlasSlotTextureId` exists twice: the schemas' (`TextureAtlasSchema.ts`, on
+  `aekasha/schemas`) and the kernel's `@internal` copy in `MaterialInputRefs.ts` (the kernel loads
+  no zod, and the schemas import no kernel code); the kernel's JSDoc says so.
+- Schemas (`MaterialSchema.ts`, on `aekasha/schemas`): `TextureInputRefSchema` (p302's form too,
+  decided in review: the three object forms documented and checked alike; `channel` by the
+  runtime's regex), `TextureArrayInputSchema` (`layer` an integer ≥ 0 or a string) and
+  `AtlasCellInputSchema`, each strict, each key with a JSDoc and a `.describe()`. `InputsSchema` and
+  `TslNodeInputsSchema` (so `nodes`, the overrides and the variants' too) are records of a union of
+  the three forms and any value, for the JSON Schema's `anyOf` (the editors offer the forms;
+  nothing in jsonSchemas.ts changed), and a `superRefine` (`checkInputRefs`) validates a value
+  with a form's key (`texture`, `textureArray`, `atlas`: the keys the runtime matches) against
+  that form, the issues at the input's path; `staticDefines` is skipped. A form with another key
+  (`{ texture, scale }`) fails: the kernel's resolver would match it first and drop the key.
+- `RuntimeTypes.test.ts`: each form schema's type equals the runtime's ref type.
+  `MaterialSchema.test.ts` (new): the forms beside every other value kind, eight bad values at
+  their paths in `inputs` and a socket, and a variant's overrides.
+- `gather.test.ts`' "p299 D5" (10 cases: the array and slot added, a slot the scene lists by its
+  atlas id, seven errors, a cell-only material's slot in its cell). The fixtures' atlas uses
+  explicit rects of texture-asset sources, so no image is read.
+- `.schemas/`: `material`, `mesh` and `scene` regenerated (the forms' definitions, and the
+  `__schemaN` numbering after them).
+
 ### Phase 6 — Hub, docs and versioning
 
 1. The Hub: the asset-optimization feature page's "Texture atlases" section

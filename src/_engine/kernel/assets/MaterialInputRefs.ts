@@ -95,7 +95,8 @@ export const isAtlasCellInputRef = (value: unknown): value is AtlasCellInputRef 
   isPlainObject(value) && typeof value.atlas === 'string';
 
 /**
- * An atlas slot's texture id, `<atlas>.<slot>` (as the gatherer registers each slot).
+ * An atlas slot's texture id, `<atlas>.<slot>` (as the gatherer registers each slot): the schemas'
+ * `getAtlasSlotTextureId` again, since the kernel loads no zod.
  * @internal
  */
 export const getAtlasSlotTextureId = (atlas: string, slot: string) => `${atlas}.${slot}`;
