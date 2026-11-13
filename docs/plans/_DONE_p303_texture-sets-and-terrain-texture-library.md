@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: implemented (Phases 1-7)
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -652,7 +652,7 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn hub:build`: no warnin
 - **The root `CLAUDE.md`:** the Three-folder split's toolkit gets `terrain/` (its entry and `nodes/`), `textureSetSurface` under `materials/`, and `textures/`' library (a set per folder, `source/raw/` gitignored, `CREDITS.md`); `yarn fetchTextureSources` was in Commands since Phase 2.
 - **Already current, unchanged:** `devTools/gather/CLAUDE.md` (the `*.textureSet.json` suffix, `textureSets.ts` and `textureSetArrays.ts`, since Phases 1 and 3) and `devTools/assetPipeline/CLAUDE.md` (the fetch tool, the cavity AO, the average colour, since Phases 2 and 4), whose header now names the handbook page.
 
-### Phase 7 — Versioning
+### Phase 7 — Versioning — done
 
 1. Versions: engine minor (asset type, arrays), toolkit minor (library, baseline material, the `terrain` entry), app minor (gallery); `CHANGELOG.md`, with a Project section for the fetch tool.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
@@ -668,6 +668,15 @@ As built (2026-11-13; `yarn checkVersions --against main` passing, Prettier clea
 
 - `package.json`: engine and project 6.12.0 → 6.13.0, toolkit 3.0.1 → 3.1.0, app 1.24.3 → 1.25.0, the codenames kept (minor bumps).
 - `CHANGELOG.md`: the branch's entry with Engine, Toolkit, App and Project sections. Engine: the feature, the asset, both input forms, the scene keys, the runtime and set array APIs, the `cavity` pack source and `averageColor` (texture JSON and generated data are the engine's schema, as p300's `pack`), the Assets tab and the material editor, the bundle sizes from the committed baseline. Project: the fetch tool and scaffold, the pipeline's clone fallback, the gather, the handbook, the Hub, the budgets and the plans (it already says what section 2 does: p304 and p305 no longer waiting on p303).
+
+#### Section 2: The plan done — done
+
+As built (2026-11-13):
+
+- The status line `implemented (Phases 1-7)`, the file `git mv`ed to `_DONE_p303_texture-sets-and-terrain-texture-library.md`.
+- The references: p304's `Blocked by` dropped (p303 was its only one), p305's names p304 only (soft); `\_DONE_` in p301's `Blocks`, p299's and p302's `Blocks`, p370's and p374's `Related`; `features/texturesets/CLAUDE.md`'s path. Mentions by tag (`p303 D1`) stay as provenance.
+- Kept: `docs/plans/CLAUDE.md`'s and the Hub conventions page's example of a cross-folder `Blocked by` (it shows the format, not a dependency); the branch name in this plan and in `CHANGELOG.md`.
+- Already current from Phase 6: the root `CLAUDE.md`, the nested `CLAUDE.md` files and `readme.md`.
 
 ---
 
