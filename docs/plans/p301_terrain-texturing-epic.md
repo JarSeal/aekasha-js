@@ -1,7 +1,7 @@
 Status: draft | epic — not-implemented
 Category: Terrain, Materials, Assets
 Blocks: \_DONE_p302_material-and-texture-system-refactor.md, p303_texture-sets-and-terrain-texture-library.md, p304_procedural-texture-baker.md, p305_terrain-material-generator.md, p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
-Related: p299_texture-arrays-and-atlases.md (the array/atlas core p303 and p309 build on), p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; new terrain processes in its §10)
+Related: \_DONE_p299_texture-arrays-and-atlases.md (the array/atlas core p303 and p309 build on), p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; new terrain processes in its §10)
 
 # Terrain Texturing — Epic
 

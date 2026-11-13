@@ -45,11 +45,15 @@ const profiles: SbpProfile[] = [
     // 393 → 394 KiB; with S3's delegate `assets/index.js` 389.1 KiB, 389 → 390 KiB. p377 Phase 3:
     // `streamingGrid`'s ruin kit (96 meshes in 16 cells, their far groups and cells; every
     // scene's JSON is in the first download) took the initial to 397.4 and `assets/index.js` to
-    // 393.2 KiB: 394 → 398 and 390 → 394 KiB
+    // 393.2 KiB: 394 → 398 and 390 → 394 KiB. p302 (the `setup` graphs, the input resolver
+    // registry, the texture ref form) and p299 Phase 5 (the array and atlas forms' predicates and
+    // dependency functions, and the kernel's fallback for them; the resolvers are a lazy chunk)
+    // took the initial to 398.7 and `assets/index.js` to 394.5 KiB, about 0.5 of each p302's:
+    // 398 → 399 and 394 → 395 KiB
     budgets: {
-      initial: 398 * KIB,
+      initial: 399 * KIB,
       chunks: {
-        'assets/index.js': 394 * KIB,
+        'assets/index.js': 395 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -106,8 +110,10 @@ const profiles: SbpProfile[] = [
         // bodies' chunk: 7.4 KiB): the first download is the API and the scene hooks, 2.3 KiB.
         '_engine/features/streaming': 4 * KIB,
         '_engine/features/viewports': 3 * KIB,
-        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
-        '_engine/kernel/assets': 13 * KIB,
+        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
+        // modules: the material code split up, the resolver registry, the input refs) took it to
+        // 13.5 KiB, p299 Phase 5's input forms and fallback to 13.7 KiB: 13 → 14 KiB
+        '_engine/kernel/assets': 14 * KIB,
         '_engine/kernel/ecs': 9 * KIB,
         '_engine/kernel/input': 9 * KIB,
         '_engine/kernel/scene': 6 * KIB,

@@ -1,7 +1,7 @@
-Status: in progress | Phases 0-5 implemented
+Status: implemented (Phases 0-6)
 Category: Assets, Textures, Texture atlas
 Epic: p370_static-mesh-merging-and-texture-atlas-systems.md (Tier 0)
-Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), \_DONE_p374_multi-material-merging.md
+Blocks: p303_texture-sets-and-terrain-texture-library.md (D4 layer arrays build on D1), p309_terrain-decals.md (D1 decal atlases build on D3), \_DONE_p374_multi-material-merging.md (neither open plan waits on it any more)
 Related: \_DONE_p300_asset-optimization-pipeline-plan.md (the pipeline this extends), \_DONE_p351_impostor-billboard-lod.md (its exported atlases use D3's cell table), p308_terrain-scatter.md (leaf-card atlases), \_DONE_p345_gpu-memory-and-draw-call-debugger.md
 Note: p608 (the engine folder restructure) and p609 (the toolkit and app restructure) moved this plan's files while Phases 5-6 were open. The paths below are the current ones, the "As built" text's included: `core/` → `kernel/assets/` (`Texture.ts`, `TextureArray.ts`, `TextureAtlas.ts`, `Material.ts`; `core/Import/` → `kernel/assets/import/`), `core/Debug/` → `kernel/assets/debug/` (the Assets tab; p806 later put its info window on the UI kit: `_dbg__AssetInfoWindow.ts`, `_dbg__TextureInfoItems.ts`), the schemas in PascalCase (`schemas/TextureSchema.ts`, `TextureArraySchema.ts`, `TextureAtlasSchema.ts`, `AssetsConfigSchema.ts`), `gatherAppData.ts`' steps into `devTools/gather/` (the suffix table: `GATHERED_SUFFIXES` in `gatheredJson.ts`), the test assets and scenes into `src/app/scenes/textureArrays/` and `src/app/scenes/textureAtlases/`, and `p299ArraySpike.ts` → `devTools/assetPipeline/fixtures/textureArraysFiles.ts`.
 
@@ -949,7 +949,7 @@ both):
 - The scenes' baselines (`yarn verify:scenes`) change: both scenes draw new quads. Recorded in
   Phase 6 with the rest (`--update`).
 
-### Phase 6 — Hub, docs and versioning
+### Phase 6 — Hub, docs and versioning — done
 
 1. The Hub: the asset-optimization feature page's "Texture atlases" section
    (`hub/pages/features/asset-optimization/guide.md`) gets texture arrays beside it, and the
@@ -970,9 +970,43 @@ both):
    form schemas on `aekasha/schemas`); `yarn verify:scenes --only textureArrays,textureAtlases
    --update` (their new quads), run by the user.
 
+As built (2026-11-13; `yarn hub:build`, `yarn sbp --profile all`, `yarn verify:baselines`,
+`yarn checkVersions --against main`):
+
+- **Section 1, the Hub.** The asset-optimization page's "Texture atlases" was four lines without
+  the runtime: it got an example JSON, cells and packing, `padding` and `fill`, the slot textures
+  (`<atlas>.<slot>`, listed by the atlas's id or a slot's), `getAtlasCell`, `sampleAtlasCell`,
+  `remapUVsToAtlasCell` and the JSON cell form; "Texture arrays" (there since Phase 2) the JSON
+  layer form, `getArrayLayerIndex` and an "Arrays or atlases?" tip; Key APIs both kinds'
+  functions. **Drift:** step 1 put D5's forms on the scenes-and-assets page, but the input forms'
+  table is the toolkit page's ("The inputs"): the two rows and a bullet (an array layer kept
+  through `.sample(uv)`, an atlas cell already a sample, `clampToCell`, the gather's checks) went
+  there. Scenes-and-assets: "A scene's textures" names both forms and quotes the gather's missing
+  layer error; the asset table's atlas row said "each a named slot" (a slot is a map type, a cell
+  an image), fixed. Search tags on both pages. The build's one warning, the search index over
+  450 KiB, was there before (581 → 583 KiB).
+- **Section 2, the docs.** `docs/techniques/asset-optimization.md`'s "Texture arrays and atlases"
+  (which one, an array, an atlas, codecs, sizes and budgets, at runtime), linked from the Hub
+  page's "Read more". `readme.md`: a "Texture arrays and atlases" Features line, the handbook
+  pointer in Example 3 and the test scenes' line. p303's grounding got Phase 5's forms and its
+  lazy-resolver pattern, which its SBP note now tries before a feature; p309's D1 slots used
+  settings the schema refuses (`colorSpace: SRGB` on a slot, `slot: data` resolving to codec
+  `none`) and "4×4 snapping" (rects are checked, not snapped), fixed, and D2 no longer asks
+  whether the helpers are on an entry. `devTools/gather/CLAUDE.md` (the two dependency functions,
+  `getInputRefError`) and `features/streaming/CLAUDE.md` (`addTextureRefs` reads a cell's slot).
+- **Section 3, budgets and versioning.** The app profile's three budgets that `main` failed
+  (`yarn sbp`: initial 398.7 KiB, `assets/index.js` 394.5, `_engine/kernel/assets` 13.7) were
+  raised to the next KiB (decided by the user: 398 → 399, 394 → 395, 13 → 14), the comments naming
+  p302 (about 0.5 KiB of each) and this plan (0.2). The banner and uiKit pass, their
+  `_engine/kernel/assets` at 11.0 KiB of 11 (no headroom left). The bundle, API and docs
+  baselines were recorded by Phase 5's last commit: `yarn verify:baselines` passes unchanged,
+  with no debug code in the three builds. The scene baselines were recorded by the user. Engine
+  6.11.0 → 6.12.0, app 1.24.2 → 1.24.3, `CHANGELOG.md`; p303 and p309 no longer list this plan
+  in `Blocked by`.
+
 ## 4. Versioning
 
-Engine minor (two asset types, runtime arrays, helpers, resolvers). No toolkit or app change.
+Engine minor (two asset types, runtime arrays, helpers, resolvers). No toolkit change. Phases 0-4 reached `main` with other branches; this plan's own branch (Phases 5-6) bumps the engine 6.11.0 → 6.12.0 and the app 1.24.2 → 1.24.3 (Phase 5's material JSONs in the two p299 scenes).
 
 ## 5. Risks
 
