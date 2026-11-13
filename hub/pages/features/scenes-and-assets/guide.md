@@ -13,7 +13,8 @@
 - Other keys set up the scene itself: `postFxEnabled`, `backgroundColor`, `spatialDomains` (see
   [Spatial index](hub:features/spatial-index)), `impostors` (see
   [LOD and impostors](hub:features/lod#exporting-an-impostor)) and `mergeGroups` (see
-  [Mesh merging](hub:features/mesh-merging#auto)).
+  [Mesh merging](hub:features/mesh-merging#auto)), `textureSets` and `textureSetArrays` (see
+  [Terrain](hub:features/terrain#using-a-set)).
 - `name` is the scene's name in the debugger's scene lists.
 
 ## The asset types
@@ -29,6 +30,7 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 | `*.texture.json`       | A texture, and how the asset pipeline encodes it.                           |
 | `*.textureArray.json`  | Textures of one size as the layers of one array texture.                    |
 | `*.textureAtlas.json`  | Images packed into one layout as cells, a texture per map slot.             |
+| `*.textureSet.json`    | A [texture set](hub:features/terrain): a surface's packed PBR maps and size. |
 | `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.      |
 | `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.    |
 | `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.     |
@@ -197,8 +199,9 @@ The textures and models the JSONs point at go through the
 A scene lists the materials it uses, and the gather adds the textures they name to its
 `textures`. It reads the listed materials, each mesh's inline `mat` and its `matOverrides`: their
 `params` texture slots (`map`, `normalMap`, …) and their TSL `inputs` and `nodes` (a texture id,
-`{ "texture": … }`, a texture array's `{ "textureArray": … }` and an atlas cell's
-`{ "atlas": …, "slot": … }`, which adds the slot's texture); and the scene's spot lights' cookies
+`{ "texture": … }`, a texture array's `{ "textureArray": … }`, an atlas cell's
+`{ "atlas": …, "slot": … }`, which adds the slot's texture, and a texture set's
+`{ "textureSet": … }`, which adds its packing's); and the scene's spot lights' cookies
 (`map`) and its `backgroundTexture`. The added textures come after the listed ones, each once,
 and load, release and stream with the scene as listed ones do.
 
@@ -223,10 +226,12 @@ and load, release and stream with the scene as listed ones do.
 
 Some scene and mesh fields belong to a feature: `skyboxes` to the sky box (`skyBox()`), `postFx`
 and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial index (`spatial()`),
-`impostors` and a mesh's `lod` to LOD (`lod()`), and `mergeGroups` and a mesh's `merge` to mesh
-merging (`merging()`). The gatherer writes the features each scene's
-data uses into the generated data (the scene's `__features`), and `InitEngine` checks every scene,
-loaded or not, against its `features` before anything boots:
+`impostors` and a mesh's `lod` to LOD (`lod()`), `mergeGroups` and a mesh's `merge` to mesh
+merging (`merging()`), and `textureSets` and `textureSetArrays` (which the gather fills from the
+materials' `{ textureSet }` and `{ textureSetArray }` inputs too) to texture sets
+(`textureSets()`). The gatherer writes the features each scene's data uses into the generated data
+(the scene's `__features`), and `InitEngine` checks every scene, loaded or not, against its
+`features` before anything boots:
 
 ```text wrap
 InitEngine: a scene's data needs a feature `features` doesn't list: the scene 'myScene' needs the feature 'skybox' (skyBox() from 'aekasha/skybox'). List it, or take its fields out of the scene's data.

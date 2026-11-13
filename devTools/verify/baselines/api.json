@@ -2184,6 +2184,7 @@
       "getTextureSetPackingTextures": "Function",
       "installTextureSets": "Function",
       "loadTextureSetAsync": "Function",
+      "registerTextureSetsDebug": "Function",
       "TextureSetInput": "TypeAlias",
       "TextureSetTextures": "TypeAlias"
     },
@@ -4764,6 +4765,9 @@
     },
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
+    },
+    "src/toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts": {
+      "setup": "Function"
     },
     "src/toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts": {
       "colorNode": "Function"

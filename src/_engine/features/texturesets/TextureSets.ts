@@ -17,6 +17,11 @@ import { findTextureDeclaration } from '../../kernel/assets/MaterialDependencies
 import { retagAssetOwner } from '../../kernel/assets/AssetOwners';
 import { getGeneratedAppData, type SceneData } from '../../kernel/scene/Scene';
 import { toThreeColor } from '../../kernel/render/ThreeMath';
+import {
+  type DebugModuleRef,
+  loadDebugModuleAsync,
+  useDebug,
+} from '../../kernel/config/DebugModules';
 import type {
   TEXTURE_SET_PACKINGS,
   TextureSetDef,
@@ -252,6 +257,19 @@ const startSceneArrayBuilds = (sceneData: SceneData) => {
     arraysModule = loaded;
     return loaded.buildSceneTextureSetArraysAsync(sceneData);
   });
+};
+
+type TextureSetsDebugModule = typeof import('./debug/_dbg__TextureSets');
+let debugModule: DebugModuleRef<TextureSetsDebugModule> | null = null;
+
+/**
+ * Loads the texture sets' debug tools (the material editor's set array preparer): the
+ * `textureSets()` feature's `onDebug` hook.
+ * @internal
+ */
+export const registerTextureSetsDebug = async () => {
+  debugModule = await loadDebugModuleAsync(() => import('./debug/_dbg__TextureSets'));
+  useDebug(debugModule)?._registerTextureSetsDebug();
 };
 
 /**

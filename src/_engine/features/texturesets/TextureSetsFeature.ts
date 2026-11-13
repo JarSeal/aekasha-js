@@ -1,5 +1,6 @@
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
-import { installTextureSets } from './TextureSets';
+import { installTextureSets, registerTextureSetsDebug } from './TextureSets';
 
 /**
  * The texture sets feature (p303): `*.textureSet.json` sets, each a named group of packed PBR maps
@@ -21,5 +22,7 @@ export const textureSets = (): EngineFeature => ({
   id: 'texturesets',
   install: (ctx) => {
     installTextureSets(ctx);
+    // Gated like every debug hook: a production build drops the call and the wrapper it names
+    if (IS_DEBUG_ENV) ctx.onDebug(registerTextureSetsDebug);
   },
 });
