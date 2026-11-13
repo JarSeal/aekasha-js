@@ -1,4 +1,4 @@
-Status: in progress | Phases 1, 3 and 4 implemented (Phase 2 by p613)
+Status: in progress | Phases 1 and 3-5 implemented (Phase 2 by p613)
 Category: Materials, Assets, Refactoring
 Blocks: p303_texture-sets-and-terrain-texture-library.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -350,7 +350,7 @@ As built (2026-11-13; section 1 is commit `3f084323`):
 
 **Exit:** a material JSON using `{ "texture": "testTexture", "channel": "r" }` works.
 
-As built (2026-11-14):
+As built (2026-11-13):
 
 - **Drift found:** the input wrapping D4 puts in `Material.ts` is `MaterialTsl.ts`' since Phase 3
   (`createTslInputs`, `createTslInputNode`); the resolvers are asked there, before the built-in
@@ -397,7 +397,8 @@ group ('setup' or the socket), key, material, getTexture(id) }`; `getTexture` fa
 "channel": "r" }`: the texture on its left half, the red channel in grey on its right; the scene
   lists `testTexture`) and `p302_gradientMat` (code: the scene file registers a dummy `{ gradient:
 [from, to] }` resolver returning a bundle of two colour uniforms, and a graph, on its call; navy
-  to amber, bottom to top). Its scene baselines need `--update`.
+  to amber, bottom to top). Its scene baselines need `--update`. Since Phase 5 the scene no longer
+  lists `testTexture`: the gather's texture closure adds it.
 - **The exit check** (Apple M2, Chrome, a dev server of its own, `?isDebug=true&aekTest=true`,
   `whenSceneReady`): on WebGPU and the WebGL2 fallback both planes render as described;
   `p302ChannelMat`'s uniforms are `setup_albedo` (a `TextureNode` of `testTexture`, not the
@@ -405,7 +406,7 @@ group ('setup' or the socket), key, material, getTexture(id) }`; `getTexture` fa
   `setup_band_to` (`1c233a`, `ffaa00`). No new console message (Rapier's init deprecation and the
   WebGL2 fallback's notice are pre-existing).
 
-### Phase 5 — Dependency closure (D6)
+### Phase 5 — Dependency closure (D6) — done
 
 1. Closure computation in `devTools/gather/sceneAssets.ts` (with a case in `devTools/gather/gather.test.ts`), and its output: `__dependencies` with the union in `SceneDataLoader.ts`' `loadNextSceneAssets`, or the append to `textures` (D6 decides here).
 2. `ensureMaterialDependencies`.
@@ -413,14 +414,74 @@ group ('setup' or the socket), key, material, getTexture(id) }`; `getTexture` fa
 
 **Exit:** a scene that lists only a material loads that material's textures.
 
+As built (2026-11-13; section 1 is commit `f2aea472`, section 2 `2eb4cbae`):
+
+- **Decision: the closure is appended to the scene's `textures`**, no `__dependencies` key, no
+  loader or `SceneSchema` change. A scene's generated `textures` holds each texture's resolved
+  data (its file, `__url`, `texOpts`, save entry), not an id, and a production build's data has no
+  texture table to look an id up in: `__dependencies` would have had to carry that data too. The
+  append gets the save entries, the ship checks, the atlas expansion, the unknown-id failure and
+  the streaming cell cut of a listed texture for nothing. The cost D6 named: the Assets tab can't
+  tell a listed texture from an added one.
+- **`devTools/gather/textureClosure.ts`** (`addTextureClosure`; its own module, as
+  `mergedGeometries.ts` and `mergeMaterials.ts`, not inline in `sceneAssets.ts`): the textures the
+  scene's resolved data names and its `textures` doesn't give (listed by id, inline, or a listed
+  atlas's slots), each once, in the order named, after the listed ones. From the listed materials,
+  a mesh's inline `mat` and its `matOverrides`: their `params` texture slots (`textureMapKeys`) and
+  their `inputs` and each `nodes` socket's values (`staticDefines` aside) through
+  `INPUT_DEPENDENCY_FNS`, the runtime's import-free `getTextureInputDependencies`
+  (`MaterialInputRefs.ts`, now on `devTools/engineImports.test.ts`' list); p303's and p299's
+  resolvers add their functions there. **Beyond D6:** a spot light's cookie (`map`) and the
+  `backgroundTexture` too (both `getTexture` lookups, "From p619"). An id no asset JSON has fails
+  the gather naming what names it ("Scene "a": the material "m" names the texture "x", …"). An
+  app's own resolver's values aren't known to the gather (its scene lists their textures), and a
+  mesh's `mat` id the scene doesn't list adds nothing.
+- **`resolveSceneAssets`' order:** the textures resolve after the materials, the meshes and the
+  closure (which reads them with their save entries); nothing in those two read the resolved
+  textures.
+- **`streamingManifest.ts`:** `addMaterialFieldRefs` reads `inputs` too (a Phase 3 gap: a `setup`
+  material's input textures in a cell stayed in the base).
+- **`ensureMaterialDependencies(props)`** (`kernel/assets/MaterialDependencies.ts`, on
+  `aekasha`): a material's props or a variant's overrides; each texture `getMaterialTextureIds`
+  names (`@internal`: the params slots, the inputs' and sockets' values through the runtime's
+  `getMaterialInputDependencies`, so a registered resolver's `dependencies` count) that isn't
+  registered is loaded from `findTextureDeclaration` (`@internal`: the development build's texture
+  section, else the first scene entry with the id, a streaming scene's cell assets included), with
+  `throwOnError`; a registered one is re-tagged to the caller's owner (a cache hit). **Beyond D6:**
+  it also loads the TSL file (`tslMaterialId || id`) when the data has one, so one call covers
+  what `createMaterial` needs (a `tslFile` the data doesn't have is a registration's, left to
+  `createMaterial`). Resolves whether everything loaded (a missing declaration warned, a failed
+  load logged). **Production limit:** a production build's data has only the textures a scene's
+  data names, so a texture only code uses must still be listed in a scene's `textures` (the
+  warning says so); a production texture table would cost every app bytes. The material editor
+  (`_dbg__MaterialEditorAssets.ts`) loads its textures through it (textures only: it loads the TSL
+  file itself, to show its error) and uses the kernel's two lookups instead of its own copies.
+- **Tests:** `gather.test.ts`' "p302 D6: the texture closure" (6 cases: the sources, order and
+  dedupe, a save entry, an inline texture, a missing id, an input texture moving into its cell);
+  `kernel/assets/MaterialDependencies.test.ts` (9).
+- **The proof:** `testDebugScene` no longer lists `testTexture` (only `p302ChannelMat` names it);
+  the gather adds it. Gathering the repo otherwise changes no scene's textures: every other scene
+  lists all of its own. The other scenes keep their lists.
+- **The exit check** (Apple M2, Chrome, a dev server of its own, `?isDebug=true&aekTest=true
+  &startScene=testDebugScene`, `whenSceneReady`): on WebGPU and the WebGL2 fallback `testTexture`
+  is registered (a `CompressedTexture`, the pipeline output), `p302ChannelMat`'s `setup_albedo` is
+  a `TextureNode` of it and `setup_mask` a `SplitNode` sampling it (not the missing texel), and the
+  plane shows the texture and its red channel as in Phase 4. No new console message (Rapier's init
+  deprecation and the WebGL2 fallback's notice are pre-existing).
+- **`yarn verify:baselines`:** the bundles unchanged (nothing in the app's first download or the
+  embeds), no debug code; the API baseline's three new exports recorded (`--update`). The scene
+  runner wasn't run: `sceneTestECS`' and `testDebugScene`'s baselines need `--update` since
+  Phases 3-4 anyway, before the PR.
+
 ### Phase 6 — Hub and docs
 
 1. The Hub: the toolkit page's "Writing a TSL material" (`hub/pages/features/toolkit/guide.md`: the `setup` entry and `inputs`, runtime registration, the resolver forms) and the scenes-and-assets page (`hub/pages/features/scenes-and-assets/guide.md`: the texture JSON's new fields, the dependency closure); `yarn hub:build`.
-2. `devTools/gather/CLAUDE.md`'s data pipeline section (the dependency closure) and `src/_engine/kernel/scene/CLAUDE.md`'s Scene loads (what `loadNextSceneAssets` loads); the root `CLAUDE.md` only if its data pipeline outline changes. `readme.md` if its material example changes.
+2. `devTools/gather/CLAUDE.md`'s data pipeline section (the texture closure, `textureClosure.ts`, the scene pass's order) and `src/_engine/kernel/scene/CLAUDE.md`'s Scene loads (a scene's `textures` includes the closure; `loadNextSceneAssets` itself didn't change); `src/_engine/debug/editors/CLAUDE.md`'s Material editor (its textures through `ensureMaterialDependencies`); the root `CLAUDE.md` only if its data pipeline outline changes. `readme.md` if its material example changes.
+3. The schemas' docs (both layers, "From p619"): `SceneSchema.ts`' `textures` (the gather adds the textures the scene's materials, spot cookies and background name) and `backgroundTexture` ("a texture the scene lists" no longer needed), `LightSchema.ts`' `map`; `.schemas/` regenerated.
 
 ### Phase 7 — Versioning
 
-1. Engine minor bump; app patch (`testTslMat`); `CHANGELOG.md` entry (Added: setup entry, runtime TSL registration, input resolvers, texture opts, dependency closure; bugs A and B shipped with p613).
+1. Engine minor bump; app patch (`testTslMat`, `testDebugScene`'s Phase 4 planes and its `textures` dropped in Phase 5); `CHANGELOG.md` entry (Added: setup entry, runtime TSL registration, input resolvers, texture opts, dependency closure; bugs A and B shipped with p613).
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
 
 ---

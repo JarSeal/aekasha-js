@@ -4,11 +4,10 @@
   "isDebugScene": true,
   "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
   "name": "Optimized assets orientation check",
-  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group. Under the right block, 500 boxes in three materials, merged by AUTO into 12 groups (four 2 m cells). Beside the top row, the material input checks: a texture and its red channel from object-form texture refs (left), and a gradient from an input resolver's bundle (right).",
+  "description": "Hand-optimized assets next to their sources, which must look the same: PNG and KTX2 textures (the KTX2 files are encoded flipped), and a GLB with its meshopt and KTX2 copies. Below them, the geometry merge checks: three parts as meshes and merged in code, a MERGED geometry JSON of three imported pieces on two meshes, and a GLB whose 20 pieces the asset pipeline merged into one node, its doors kept apart. Left and right of them, 200 boxes of one material drawn by one merge group. Under the right block, 500 boxes in three materials, merged by AUTO into 12 groups (four 2 m cells). Beside the top row, the material input checks: a texture and its red channel from object-form texture refs (left; the scene doesn't list the texture: the gather adds the material's), and a gradient from an input resolver's bundle (right).",
   "cameras": ["p300Camera"],
   "lights": ["p300Ambient", "p300Sun"],
   "importedAssets": ["aekashaSymbol", "p371MergeKit"],
-  "textures": ["testTexture"],
   "geometries": [
     "p371SymbolTrio",
     {

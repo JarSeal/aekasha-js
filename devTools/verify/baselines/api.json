@@ -2406,6 +2406,11 @@
       "TextureMapKeys": "TypeAlias",
       "TslMaterialProps": "TypeAlias"
     },
+    "src/_engine/kernel/assets/MaterialDependencies.ts": {
+      "ensureMaterialDependencies": "Function",
+      "findTextureDeclaration": "Function",
+      "getMaterialTextureIds": "Function"
+    },
     "src/_engine/kernel/assets/MaterialInputRefs.ts": {
       "getTextureInputDependencies": "Function",
       "isTextureInputRef": "Function",
@@ -4926,6 +4931,7 @@
       "deleteTouchBinding",
       "disposeDracoLoader",
       "disposeKTX2Loader",
+      "ensureMaterialDependencies",
       "existsOrThrow",
       "getActionMap",
       "getActionMaps",
