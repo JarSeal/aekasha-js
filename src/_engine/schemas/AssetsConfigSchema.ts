@@ -317,6 +317,34 @@ const PackFileSchema = z
     'A source image relative to this JSON ("./source/ao.png"), or a URL path served from src/public. 8 or 16 bits.'
   );
 
+/**
+ * A cavity term from a height map (p303 D2): `1 − strength × max(0, blur(h, radius) − h)`, `h`
+ * the height normalized to 0..1, the blur wrapping at the edges (a tiling map). Dark in the
+ * crevices: the AO of a source without one. Applied after `remap` and `invert`.
+ * @internal
+ */
+const PackCavitySchema = z
+  .strictObject({
+    /** The blur's radius (a Gaussian's sigma) in pixels at the pack size. Default 24 (fitted to
+     * a 2K ground scan's own AO: 3.5 cm on a 3 m tile). */
+    radius: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        "The blur's radius (a Gaussian's sigma) in pixels at the pack size (default 24, fitted at 2K)."
+      ),
+    /** How dark a crevice gets per unit of depth below its surroundings. Default 4. */
+    strength: z
+      .number()
+      .min(0)
+      .optional()
+      .describe('How dark a crevice gets per unit of depth below its surroundings (default 4).'),
+  })
+  .describe(
+    '`src` is a height map: its cavity term, 1 − strength × max(0, blur(h) − h), h normalized to 0..1 and blurred wrapping at the edges. The AO of a source without one (p303 D2).'
+  );
+
 const PackMultiplySchema = z
   .union([
     z.number().describe('A constant factor.'),
@@ -328,6 +356,8 @@ const PackMultiplySchema = z
         .enum(['r', 'g', 'b', 'a'])
         .optional()
         .describe('The channel of `src` (default r).'),
+      /** `src` is a height map: the factor is its cavity term (an AO derived from height). */
+      cavity: PackCavitySchema.optional(),
       /** value × (1 + (factor − 1) × strength). Default 1. */
       strength: z
         .number()
@@ -378,6 +408,9 @@ const PackChannelSchema = z.union([
       .describe('Maps [min, max] to 0..1; auto: the full range of the channels taken.'),
     /** 1 − value, after `remap` (a DirectX normal's G). */
     invert: z.boolean().optional().describe("1 − value, after remap (eg. a DirectX normal's G)."),
+    /** `src` is a height map: its cavity term, after `remap` and `invert` (an AO derived from
+     * height). */
+    cavity: PackCavitySchema.optional(),
     /** Multiplied in after `remap` and `invert`: a constant or another image's channel. */
     multiply: PackMultiplySchema.optional(),
   }),
@@ -439,11 +472,12 @@ export const TexturePackSchema = z
           message: `"${target}" takes ${target.length} channel(s), "${spec.channel}" names ${spec.channel.length}`,
         });
       }
-      if (spec.normal && (spec.remap || spec.multiply || spec.colorSpace)) {
+      if (spec.normal && (spec.remap || spec.multiply || spec.colorSpace || spec.cavity)) {
         ctx.addIssue({
           code: 'custom',
           path: ['channels', target],
-          message: 'a normal map source takes `invert` only (no remap, multiply or colorSpace)',
+          message:
+            'a normal map source takes `invert` only (no remap, multiply, colorSpace or cavity)',
         });
       }
       if (spec.normal && (spec.channel ?? target).includes('a')) {
@@ -546,6 +580,13 @@ export const GeneratedAssetFieldsSchema = z.object({
   ),
   /** A standalone texture's codec (optimized only). */
   __codec: TextureCodecSchema.optional(),
+  /** An sRGB standalone texture's average colour (p303 D1, optimized only): the mean of the
+   * stored level 0's RGB, linear. Development data only: a texture set's albedo gives it to the
+   * set's `averageColor`, which ships. */
+  __averageColor: z
+    .tuple([z.number(), z.number(), z.number()])
+    .optional()
+    .describe("Set by the gatherer (development data): the texture's average RGB, linear."),
   /** An imported asset's LOD chains built into its GLB, for tooling: per glTF mesh
    * primitive, its extent (in its own, possibly quantized, units) and each level's triangles and
    * error (levels[0] is the base). The runtime reads the GLB's own. */
@@ -581,5 +622,6 @@ export const GeneratedAssetFieldsSchema = z.object({
 });
 
 /** The fields the gatherer bakes into an asset from the asset pipeline's run: the output's URL,
- * the source's, the download and VRAM figures, the codec and an import's LOD chains. */
+ * the source's, the download and VRAM figures, the codec, a texture's average colour and an
+ * import's LOD chains. */
 export type GeneratedAssetFields = z.infer<typeof GeneratedAssetFieldsSchema>;

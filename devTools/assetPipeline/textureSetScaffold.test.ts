@@ -116,6 +116,30 @@ describe('the recipes', () => {
       'LITE has no slot "orm"'
     );
   });
+
+  it("derive the AO from the height's cavity without an AO map, its radius scaled to the download", async () => {
+    const source: TextureSource = {
+      ...SOURCE,
+      download: '1K-JPG',
+      maps: { color: '_Color', normal: '_NormalGL', roughness: '_Roughness', height: '_Height' },
+    };
+    const cavity = {
+      src: './source/raw/height.jpg',
+      channel: 'r',
+      cavity: { radius: 12, strength: 4 },
+    };
+    const lite = createSlotTextureJson(SET, source, 'LITE', 'albedoRough', 'x');
+    expect(lite.pack.channels.rgb).toEqual({
+      src: './source/raw/color.jpg',
+      multiply: { ...cavity, strength: 0.8 },
+    });
+    expect(lite.debugData.description).toContain('RGB albedo × cavity AO (from height)');
+    expect(createSlotTextureJson(SET, source, 'FULL', 'orm', 'x').pack.channels.r).toEqual(cavity);
+    const json = createSlotTextureJson(SET, source, 'MINIMAL', 'albedoHeight', 'x');
+    expect(TextureAssetSchema.safeParse(json).error).toBeUndefined();
+    const at2k = createSlotTextureJson(SET, { ...source, download: '2K-PNG' }, 'FULL', 'orm', 'x');
+    expect(at2k.pack.channels.r).toMatchObject({ cavity: { radius: 24 } });
+  });
 });
 
 describe('scaffoldTextureSetAsync', () => {

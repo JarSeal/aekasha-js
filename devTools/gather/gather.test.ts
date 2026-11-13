@@ -6,6 +6,9 @@ import { gatherSceneData } from '../gatherAppData';
 import { packCellKey } from '../../src/_engine/utils/CellKey';
 import { ROOT } from '../paths';
 import { GENERATED_APP_DATA_FILENAME, GENERATED_APP_FNS_FILENAME } from './output';
+import { getPipelineAssetKey, resolveAssetUse } from '../assetPipeline/assets';
+import { getGeneratedFields } from '../assetPipeline/generated';
+import type { PipelineRun, PipelineRunResult } from '../assetPipeline/run';
 
 // The gather on the repo's data, and its rules (p619 G1-G3, G5, G6, G12, G13) on small trees in a
 // temp folder (the gather's `srcDir` and `outDir`): nothing under the repo is written.
@@ -1049,6 +1052,96 @@ describe('p303 D1: texture sets', () => {
     });
     expect(isGathered).toBe(false);
     expect(errors).toContain('Duplicate texture set ID found: sand');
+  });
+});
+
+describe("p303 D1: a set's average colour", () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const files = (setFields: Record<string, unknown> = {}) => ({
+    'app/textures/sandAR.texture.json': {
+      id: 'sandAR',
+      fileName: albedo,
+      texOpts: { colorSpace: 'srgb' },
+    },
+    'app/textures/sandNH.texture.json': { id: 'sandNH', fileName: albedo },
+    'app/textures/sand.textureSet.json': {
+      category: 'SAND',
+      physicalSize: [3, 3],
+      heightScale: 0.03,
+      packings: { LITE: { albedoRough: 'sandAR', normalHeight: 'sandNH' } },
+      ...setFields,
+    },
+    ...scene('a', { textureSets: ['sand'] }),
+  });
+
+  let lastRun: { pipeline: PipelineRun; jsonFile: string } | undefined;
+
+  /** Gathers with a run that measured the albedo's average (linear 0.2, 0.1, 0.05) */
+  const gatherWithRun = (tree: Record<string, unknown>, isProduction = false) => {
+    const { srcDir, outDir } = makeTree(tree);
+    const jsonFile = path.join(srcDir, 'app/textures/sandAR.texture.json');
+    const use = resolveAssetUse(jsonFile, { fileName: albedo, texOpts: { colorSpace: 'srgb' } });
+    if (!use || 'error' in use) throw new Error('the albedo has no use');
+    const result = {
+      status: 'optimized',
+      output: { file: '', url: '/aek-assets/sandAR.ktx2', bytes: 10 },
+      textures: [
+        {
+          slot: 'baseColor',
+          codec: 'uastc',
+          width: 4,
+          height: 4,
+          hasAlpha: true,
+          mipmaps: true,
+          normalMode: false,
+          bytes: 10,
+          source: { width: 4, height: 4, bytes: 20 },
+          averageColor: [0.2, 0.1, 0.05],
+        },
+      ],
+      warnings: [],
+    } as unknown as PipelineRunResult;
+    const pipeline = {
+      results: new Map([[getPipelineAssetKey('texture', jsonFile, use), result]]),
+    };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    gatherSceneData({ srcDir, outDir, profiles: [], isProduction, pipeline });
+    warn.mockRestore();
+    lastRun = { pipeline, jsonFile };
+    return JSON.parse(fs.readFileSync(path.join(outDir, GENERATED_APP_DATA_FILENAME), 'utf8')) as {
+      scenes: Record<string, { textureSets?: { averageColor?: unknown }[]; textures?: unknown[] }>;
+      textures?: Record<string, Record<string, unknown>>;
+      textureSets?: Record<string, { averageColor?: unknown }>;
+    };
+  };
+
+  it("takes the default packing's albedo's measure as sRGB, the texture's only in dev data", () => {
+    const dev = gatherWithRun(files());
+    expect(dev.scenes.a.textureSets?.[0].averageColor).toBe('#7c593f');
+    expect(dev.textureSets?.sand.averageColor).toBe('#7c593f');
+    expect(dev.textures?.sandAR.__averageColor).toEqual([0.2, 0.1, 0.05]);
+
+    const production = gatherWithRun(files(), true);
+    expect(production.scenes.a.textureSets?.[0].averageColor).toBe('#7c593f');
+    const { pipeline, jsonFile } = lastRun!;
+    const data = { fileName: albedo, texOpts: { colorSpace: 'srgb' as const } };
+    const fields = (isProduction: boolean) =>
+      getGeneratedFields(pipeline, 'texture', jsonFile, data, { isProduction });
+    expect(fields(false)).toMatchObject({
+      __url: '/aek-assets/sandAR.ktx2',
+      __averageColor: [0.2, 0.1, 0.05],
+    });
+    expect(fields(true)).toMatchObject({ __url: '/aek-assets/sandAR.ktx2' });
+    expect(fields(true)).not.toHaveProperty('__averageColor');
+  });
+
+  it("keeps the JSON's own, and has none without a measure", () => {
+    const own = gatherWithRun(files({ averageColor: '#a08060' }));
+    expect(own.scenes.a.textureSets?.[0].averageColor).toBe('#a08060');
+    const { scene: get } = gather(files());
+    expect(get('a')?.textureSets).toEqual([
+      expect.not.objectContaining({ averageColor: expect.anything() }),
+    ]);
   });
 });
 

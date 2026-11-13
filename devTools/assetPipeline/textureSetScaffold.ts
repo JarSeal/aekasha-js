@@ -7,6 +7,7 @@ import {
 } from '../../src/_engine/schemas';
 import { formatDevFileJson } from '../devFiles/format';
 import { listSourceFiles, writeFileAtomic } from '../files';
+import { PACK_CAVITY_DEFAULTS } from './pack';
 import type { TextureSource } from './textureSources';
 
 /**
@@ -14,8 +15,9 @@ import type { TextureSource } from './textureSources';
  * JSONs a set's `packings` name and no file has yet, each a pack recipe of D2's channel layout
  * reading the set's fetched maps (`./source/raw/<map>.<ext>`, `textureSources.ts`), so the
  * recipes are the same across sets but for what the set's JSON and `source.json` give: the maps
- * there are, the format and `surface.aoStrength`. Never overwrites a JSON: a written recipe is
- * the set's own to tune.
+ * there are, the format and `surface.aoStrength`. A set without an `ao` map gets D2's cavity term
+ * from its height map instead (`cavity`, written out with the defaults scaled to the download's
+ * resolution, to tune). Never overwrites a JSON: a written recipe is the set's own to tune.
  */
 
 /** What a recipe needs from the set's JSON */
@@ -37,13 +39,30 @@ export const createSlotTextureJson = (
 ) => {
   const ext = source.download.endsWith('-PNG') ? 'png' : 'jpg';
   const raw = (map: string) => `./source/raw/${map}.${ext}`;
-  const hasAo = !!source.maps.ao;
+  // The AO: the map, else the cavity term of the height (D2), the radius scaled from 2K
+  const resolution = parseInt(source.download, 10);
+  const cavity = {
+    radius: Math.max(1, Math.round((PACK_CAVITY_DEFAULTS.radius * resolution) / 2)),
+    strength: PACK_CAVITY_DEFAULTS.strength,
+  };
+  const ao = source.maps.ao
+    ? { src: raw('ao'), channel: 'r', label: 'AO' }
+    : source.maps.height
+      ? { src: raw('height'), channel: 'r', cavity, label: 'cavity AO (from height)' }
+      : null;
   const aoStrength = set.surface?.aoStrength ?? 1;
   // AO into the albedo (LITE, MINIMAL), its strength applied at pack time (D2)
-  const albedo = (isAoBaked: boolean): PackChannel =>
-    isAoBaked && hasAo
-      ? { src: raw('color'), multiply: { src: raw('ao'), channel: 'r', strength: aoStrength } }
-      : { src: raw('color') };
+  const albedo = (isAoBaked: boolean): PackChannel => {
+    if (!isAoBaked || !ao) return { src: raw('color') };
+    const { label: _label, ...factor } = ao;
+    return { src: raw('color'), multiply: { ...factor, strength: aoStrength } };
+  };
+  const aoChannel = (): PackChannel => {
+    if (!ao) return 1;
+    const { label: _label, ...channel } = ao;
+    return channel;
+  };
+  const baked = ao ? ` × ${ao.label}` : '';
   // Remapped to the full 0..1 (D2); `heightScale` is the real relief. Flat without a map.
   const height: PackChannel = source.maps.height
     ? { src: raw('height'), channel: 'r', remap: 'auto' }
@@ -58,7 +77,7 @@ export const createSlotTextureJson = (
       channels: { rgb: albedo(true), a: roughness },
       slot: 'baseColor',
       isSrgb: true,
-      what: `RGB albedo${hasAo ? ' × AO' : ''} (sRGB), A roughness`,
+      what: `RGB albedo${baked} (sRGB), A roughness`,
     },
     'LITE.normalHeight': {
       channels: { rg: { src: raw('normal'), normal: true }, b: height },
@@ -80,16 +99,16 @@ export const createSlotTextureJson = (
     },
     'FULL.orm': {
       // Metalness is 0 for terrain (D2): the channel stays for glTF's layout
-      channels: { r: hasAo ? { src: raw('ao'), channel: 'r' } : 1, g: roughness, b: 0 },
+      channels: { r: aoChannel(), g: roughness, b: 0 },
       slot: 'orm',
       isSrgb: false,
-      what: `R ${hasAo ? 'AO' : 'AO 1 (no map)'}, G roughness, B metalness 0`,
+      what: `R ${ao ? ao.label : 'AO 1 (no AO or height map)'}, G roughness, B metalness 0`,
     },
     'MINIMAL.albedoHeight': {
       channels: { rgb: albedo(true), a: height },
       slot: 'baseColor',
       isSrgb: true,
-      what: `RGB albedo${hasAo ? ' × AO' : ''} (sRGB), A height`,
+      what: `RGB albedo${baked} (sRGB), A height`,
     },
   };
   const recipe = recipes[`${packing}.${slot}`];

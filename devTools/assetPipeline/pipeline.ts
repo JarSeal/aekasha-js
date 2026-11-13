@@ -38,7 +38,7 @@ import {
   type PipelineOutput,
 } from './outputs';
 import type { BuiltLodChain } from './lodChains';
-import { buildPackedImage, listPackFiles } from './pack';
+import { buildPackedImage, getPackKeyParams, listPackFiles } from './pack';
 import type {
   createSettingsResolver,
   ResolvedAssetSettings,
@@ -389,7 +389,7 @@ const runPassThroughAsync = async (
     files: listTextureFiles(source),
     params: {
       kind: 'packPassThrough',
-      pack: source.pack,
+      ...getPackKeyParams(source.pack),
       isSrgb,
       output: getPackLogicalPath(source),
     },
@@ -479,7 +479,7 @@ const planTextureEncode = (
         ? { alphaCoverage: { cut: asset.alphaCoverage, version: ALPHA_COVERAGE_VERSION } }
         : {}),
       ...(source.kind === 'pack'
-        ? { pack: source.pack, output: getPackLogicalPath(source) }
+        ? { ...getPackKeyParams(source.pack), output: getPackLogicalPath(source) }
         : { output: getLogicalPath(source) }),
     },
   };

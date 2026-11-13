@@ -420,7 +420,12 @@
           "height": 1024,
           "hasAlpha": true,
           "mipmaps": true,
-          "normalMode": false
+          "normalMode": false,
+          "averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
         }
       ],
       "ktxVersion": "4.4.2",
@@ -609,7 +614,12 @@
           "height": 1024,
           "hasAlpha": true,
           "mipmaps": true,
-          "normalMode": false
+          "normalMode": false,
+          "averageColor": [
+            0.4619,
+            0.3433,
+            0.1651
+          ]
         }
       ],
       "ktxVersion": "4.4.2",
@@ -827,7 +837,12 @@
           "height": 1024,
           "hasAlpha": true,
           "mipmaps": true,
-          "normalMode": false
+          "normalMode": false,
+          "averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
         }
       ],
       "ktxVersion": "4.4.2",

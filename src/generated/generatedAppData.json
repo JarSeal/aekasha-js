@@ -23609,7 +23609,12 @@
         "in": 22369620,
         "out": 1398128
       },
-      "__codec": "uastc"
+      "__codec": "uastc",
+      "__averageColor": [
+        0.4619,
+        0.3433,
+        0.1651
+      ]
     },
     "sand01_albedoHeightAO": {
       "id": "sand01_albedoHeightAO",
@@ -23654,7 +23659,12 @@
         "in": 22369620,
         "out": 1398128
       },
-      "__codec": "uastc"
+      "__codec": "uastc",
+      "__averageColor": [
+        0.4077,
+        0.303,
+        0.1458
+      ]
     },
     "sand01_albedoRough": {
       "id": "sand01_albedoRough",
@@ -23698,7 +23708,12 @@
         "in": 22369620,
         "out": 1398128
       },
-      "__codec": "uastc"
+      "__codec": "uastc",
+      "__averageColor": [
+        0.4077,
+        0.303,
+        0.1458
+      ]
     },
     "sand01_normal": {
       "id": "sand01_normal",
@@ -31882,6 +31897,7 @@
         "wetDarkening": 0.55,
         "wetRoughness": 0.4
       },
+      "averageColor": "#ab966b",
       "__sourcePath": "src/toolkit/textures/sand01/sand01.textureSet.json"
     }
   },

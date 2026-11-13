@@ -15,7 +15,7 @@ import {
 } from './images';
 import { encodeKtx2Layers, type KtxProvider, type KtxSettings } from './ktxEncode';
 import { getArrayLogicalPath, writeOutput, type PipelineOutput } from './outputs';
-import { buildPackedImage, getPackChannelCount, listPackFiles } from './pack';
+import { buildPackedImage, getPackChannelCount, getPackKeyParams, listPackFiles } from './pack';
 import type { ResolvedAssetSettings } from './settings';
 import {
   createPackSource,
@@ -236,7 +236,7 @@ export const listTextureSourceFiles = ({ source }: TextureArrayLayer) =>
 
 /** What a layer's (or an atlas cell's) source is in a cache key, besides its files' bytes */
 export const getTextureSourceKeyParam = ({ source }: TextureArrayLayer) =>
-  source.kind === 'pack' ? { pack: source.pack } : 'file';
+  source.kind === 'pack' ? getPackKeyParams(source.pack) : 'file';
 
 /**
  * Every file an array's encode reads, layer by layer (a pack's files in its order). A file two

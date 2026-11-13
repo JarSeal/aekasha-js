@@ -57,6 +57,27 @@ export type EncodedTexture = {
    * stops at the level its layout keeps apart. Unset: a full chain (with `mipmaps`) or one level.
    */
   levels?: number;
+  /**
+   * An sRGB standalone texture's average colour (p303 D1): the mean of the stored level 0's RGB as
+   * linear values, 4 decimals. A texture set's albedo gives it to the set (`averageColor`).
+   * Recorded at the encode: an output encoded before p303 has none.
+   */
+  averageColor?: [number, number, number];
+};
+
+/**
+ * The mean RGB of a linear image, 4 decimals (a stable lock entry); a 1- or 2-channel image's
+ * first channel is grey
+ */
+export const getAverageColor = (img: Img): [number, number, number] => {
+  const { data, channels } = img;
+  const sums = [0, 0, 0];
+  const count = data.length / channels;
+  for (let i = 0; i < data.length; i += channels) {
+    for (let c = 0; c < 3; c++) sums[c] += data[i + (channels >= 3 ? c : 0)];
+  }
+  const [r, g, b] = sums.map((sum) => Math.round((sum / count) * 1e4) / 1e4);
+  return [r, g, b];
 };
 
 /** How a texture image is encoded: its colour space, normal map handling and flip */
@@ -228,6 +249,7 @@ export const encodeTextureAsset = async (
         bytes: output.bytes,
         source: sourceInfo,
       });
+      if (opts.isSrgb) texture.averageColor = getAverageColor(sourceImg);
       return { output, texture };
     }
     img = resizeImage(sourceImg, size.width, size.height, isNormal);
@@ -248,5 +270,6 @@ export const encodeTextureAsset = async (
     bytes: output.bytes,
     source: sourceInfo,
   });
+  if (opts.isSrgb) texture.averageColor = getAverageColor(img);
   return { output, texture };
 };

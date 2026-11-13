@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented, Phase 2 sections 1-2
+Status: in progress | Phases 1-2 implemented
 Category: Assets, Materials, Terrain
 Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
@@ -320,7 +320,7 @@ As built (2026-11-13; `yarn test`, `tsc` both, lint, `yarn verify:baselines --do
 - Not changed: the info window's "Used by materials" counts only a material's map properties, so a set texture (sampled by a TSL bundle) shows 0; it already says ref counts aren't tracked.
 - Docs: `features/texturesets/CLAUDE.md` (Debugging, the trap), `debug/CLAUDE.md` (the info window's folder), `devTools/assetPipeline/CLAUDE.md` (the fixture, `--only`).
 
-### Phase 2 — Fetch tool and recipes (D3, D5)
+### Phase 2 — Fetch tool and recipes (D3, D5) — done
 
 1. `fetchTextureSources.ts` (and its `package.json` script), the zip reader in `archives.ts` (unit-tested like its other readers, `archives.test.ts`), gitignore entries, `CREDITS.md` generation.
 2. Pack recipe templates (FULL/LITE/MINIMAL), cavity-AO derivation, `averageColor` (D1).
@@ -371,6 +371,19 @@ As built (2026-11-13; `yarn test` (3,512), `tsc` both, lint, `yarn verify:baseli
 - Not covered: a build-time `*.textureArray.json` whose layers are such packs still needs the sources (its key reads them); p303's arrays are runtime ones (Phase 3).
 - Docs: `devTools/assetPipeline/CLAUDE.md` (the scaffold, the clone), the root `CLAUDE.md`'s command line.
 
+#### Section 3: Cavity AO and `averageColor` — done
+
+As built (2026-11-13; `yarn test` (3,524), `tsc` both, lint, `yarn verify:baselines --docs`; a full `yarn assets`: all 38 cache hits, so no existing key changed; `sand01`'s three albedos encoded again with their colour, their outputs byte for byte the same):
+
+- **Cavity AO** (D2): `cavity: { radius?, strength? }` on a pack channel and on a `multiply` factor (`PackCavitySchema`, `schemas/AssetsConfigSchema.ts`; not with `normal: true`). `pack.ts`' `applyCavity`: the height remapped to 0..1, then `1 − strength × max(0, blur(h) − h)` clamped, after `remap` / `invert`, before `multiply`; `blurWrapped` is a Gaussian (sigma `radius` px at the pack size) as three box passes each way, wrapping at the edges (a tiling map).
+- **The defaults were measured, not guessed:** Ground080's 2K height against its own AO map. Sigma 8 px gave a correlation of 0.67 but a mean of 0.99 (the real 0.88): far too light. Sigma 24-32 at strength 4 correlate best (0.76); `PACK_CAVITY_DEFAULTS` is 24 px and 4 (mean 0.91, slightly lighter than the scan: it stacks with GTAO, D2). 24 px at 2K on a 3 m tile is 3.5 cm, pebble scale. One ground scan: Phase 4 checks the ice sets (the ones that need it) by eye.
+- **The key:** `getPackKeyParams(pack)` (every pack key: the encode, the pass-through, an array layer's) adds `PACK_CAVITY_VERSION` only for a pack that uses a cavity, so no other key changed.
+- **The scaffold:** a set without an `ao` map but with `height` gets the cavity as its AO, written out (`cavity: { radius, strength }`, the radius scaled from 2K by the `download`'s resolution: 12 at 1K) in the albedo's multiply (LITE, MINIMAL) and FULL's `orm` R; without both, no multiply and R 1.
+- **`averageColor`** (D1), **drift: development data only on the texture.** The encode records `EncodedTexture.averageColor` for an sRGB standalone texture (the stored level 0's mean RGB, linear, 4 decimals; `textures.ts`' `getAverageColor`), so it's in the lock entry. The texture's `__averageColor` (`GeneratedAssetFieldsSchema`, omitted from the import, array and atlas schemas) is written into the development data only: in production it would have cost every shipped texture bytes, and only the set needs it. The gather gives the set `averageColor` as sRGB `#rrggbb` from its default packing's colour slot (`getMeasuredAverageColor`, `devTools/gather/textureSets.ts`); the JSON's own wins. So `getTextureSet(id).averageColor` is the default packing's albedo (LITE's has the AO baked in, darker than FULL's: `sand01` LITE `#ab966b`).
+- **An output encoded before this has no measure** until it encodes again (the key didn't change, so a cache hit keeps the entry). `sand01`'s three albedo entries (this branch's) were dropped from the lock and the store and encoded again; `yarn assets` has no force flag.
+- Tests: `pack.test.ts` (new: the wrapping blur, the cavity's pit, bump, normalization, clamp and strength 0, the key version, a real pack as a channel and as a factor, the schema), `textures.test.ts` (new: the mean), `textureSetScaffold.test.ts` (the cavity AO and the radius at 1K and 2K), `gather.test.ts`' "p303 D1: a set's average colour" (a fake run: the set's colour in both modes, the texture's only in development data, the JSON's own, none without a run), `RuntimeTypes.test.ts` (`__averageColor` a tooling key).
+- Docs: `docs/techniques/asset-optimization.md`' Pack channels (`cavity`, the average colour), `devTools/assetPipeline/CLAUDE.md` (Cavity AO, Average colour, the scaffold), `devTools/gather/CLAUDE.md`, `features/texturesets/CLAUDE.md`. Phase 6's handbook still explains them for set authors.
+
 ### Phase 3 — Layer arrays (D4)
 
 1. `buildTextureSetArray` and `setTextureSetArrayLayer` on p299's `buildTextureArray` / `setTextureArrayLayer` (assembly, validation, ref counting and the GPU assembly spike are p299's).
@@ -382,7 +395,7 @@ As built (2026-11-13; `yarn test` (3,512), `tsc` both, lint, `yarn verify:baseli
 ### Phase 4 — The library (D6)
 
 1. Create the 16 set folders (`source.json`, set JSON; the texture JSONs by `yarn fetchTextureSources --scaffold`, Phase 2 section 2; `sand01` exists).
-2. Fetch, choose by eye, tune `physicalSize` / `heightScale` / `surface`.
+2. Fetch, choose by eye, tune `physicalSize` / `heightScale` / `surface`, and the cavity AO of the sets without an AO map (`ice01`, `ice02`, `concrete01`: Phase 2 section 3 fitted its defaults on one sand scan).
 3. Encode and commit the outputs.
 
 **Exit:** all sets load; VRAM total measured and recorded in this plan.

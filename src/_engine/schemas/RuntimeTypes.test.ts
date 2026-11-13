@@ -114,7 +114,14 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<TexOptsJson>().toExtend<TexOptsRuntime>();
     expectTypeOf<ExtraKeys<TextureAsset, TextureProps>>().toEqualTypeOf<
       // Build time and the Assets tab only: the gatherer drops `optimize` and `pack`
-      ToolingKeys | 'optimize' | 'pack' | '__fileSize' | '__bytes' | '__vramBytes' | '__codec'
+      | ToolingKeys
+      | 'optimize'
+      | 'pack'
+      | '__fileSize'
+      | '__bytes'
+      | '__vramBytes'
+      | '__codec'
+      | '__averageColor'
     >();
     expectTypeOf<ExtraKeys<TexOptsJson, TexOptsRuntime>>().toEqualTypeOf<never>();
   });

@@ -27,6 +27,7 @@ export const GENERATED_FIELD_KEYS = [
   '__bytes',
   '__vramBytes',
   '__codec',
+  '__averageColor',
   '__lodChain',
 ] as const satisfies readonly (keyof GeneratedAssetFields)[];
 
@@ -204,9 +205,16 @@ export const getGeneratedFields = (
   const use = resolveAssetUse(jsonFile, data);
   if (!use || 'error' in use) return {};
   const sourceUrl = opts.isProduction ? undefined : getSourceUrl(use.source);
+  const result = run.results.get(getPipelineAssetKey(type, jsonFile, use));
+  // Development data only (p303 D1): a texture set takes its albedo's into its own data
+  const averageColor =
+    !opts.isProduction && type === 'texture' && result?.status === 'optimized'
+      ? result.textures[0]?.averageColor
+      : undefined;
   return {
     ...(sourceUrl ? { __sourceUrl: sourceUrl } : {}),
-    ...getOutputFields(type, run.results.get(getPipelineAssetKey(type, jsonFile, use))),
+    ...getOutputFields(type, result),
+    ...(averageColor ? { __averageColor: averageColor } : {}),
   };
 };
 

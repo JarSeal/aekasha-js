@@ -17,6 +17,9 @@ import {
   type TextureSetDef,
   type TextureSetPacking,
 } from '../../src/_engine/schemas';
+import path from 'path';
+import { getAssetResult } from '../assetPipeline/generated';
+import { linearToSrgb } from '../assetPipeline/images';
 import {
   claimIds,
   readAssetJsons,
@@ -100,6 +103,34 @@ const toTextureSetDef = (
   };
 };
 
+/** A linear RGB as the JSON's sRGB `#rrggbb` */
+const toSrgbHex = (color: readonly number[]) =>
+  `#${color
+    .map((v) =>
+      Math.round(Math.min(1, Math.max(0, linearToSrgb(v))) * 255)
+        .toString(16)
+        .padStart(2, '0')
+    )
+    .join('')}`;
+
+/**
+ * The average colour the asset pipeline measured for the set's albedo (p303 D1): its default
+ * packing's colour slot's texture, as encoded (`averageColor`, recorded at the encode), as sRGB
+ * `#rrggbb`. Undefined without a run, or for a texture without an encode's measure (passed
+ * through, or encoded before p303).
+ */
+const getMeasuredAverageColor = (ctx: GatherContext, reg: Registries, set: TextureSetDef) => {
+  if (!ctx.pipeline) return undefined;
+  const slots = set.packings[set.defaultPacking] as Record<string, string> | undefined;
+  const slot = TEXTURE_SET_PACKINGS[set.defaultPacking].find(isTextureSetColorSlot);
+  const texture = slot && slots ? reg.textures[slots[slot]] : undefined;
+  if (!texture) return undefined;
+  const jsonFile = path.resolve(ctx.rootDir, texture.__sourcePath || '');
+  const result = getAssetResult(ctx.pipeline, 'texture', jsonFile, texture);
+  const color = result?.status === 'optimized' ? result.textures[0]?.averageColor : undefined;
+  return color && toSrgbHex(color);
+};
+
 /** Pass 1's texture sets (after the textures: their slots name texture assets) */
 export const readTextureSets = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
   readAssetJsons(ctx, 'textureSet', TextureSetAssetSchema, (setJSON, { file, sourcePath }) => {
@@ -116,7 +147,14 @@ export const readTextureSets = (ctx: GatherContext, reg: Registries, taken: Take
     }
     const setId = setJSON.id || getIdFromFileName(file, 'textureSet');
     if (!claimIds(ctx, taken.textureSets, 'texture set', file, setId)) return;
-    reg.textureSets[setId] = { ...toTextureSetDef(setJSON, setId), __sourcePath: sourcePath };
+    const def = toTextureSetDef(setJSON, setId);
+    // The JSON's own wins (D1); the measure is the default packing's albedo
+    const averageColor = def.averageColor ?? getMeasuredAverageColor(ctx, reg, def);
+    reg.textureSets[setId] = {
+      ...def,
+      ...(averageColor ? { averageColor } : {}),
+      __sourcePath: sourcePath,
+    };
   });
 
 /** A registered set as a scene gets it: without its source path (and in a production build its

@@ -125,7 +125,7 @@ export const ImportedAssetSchema = z.object({
     .number()
     .optional()
     .describe("Set by the gatherer: the file's bytes on disk (not a .gltf's external buffers)."),
-  ...GeneratedAssetFieldsSchema.omit({ __codec: true }).shape,
+  ...GeneratedAssetFieldsSchema.omit({ __codec: true, __averageColor: true }).shape,
   /** Per scene id, its save entries over the import (the first applies). */
   __saveData: createSaveDataSchema(ImportedAssetOverridesSchema),
 });
