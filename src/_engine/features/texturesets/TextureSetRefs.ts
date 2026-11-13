@@ -69,3 +69,35 @@ export const getTextureSetInputDependencies = (
   const slots = set && getTextureSetSlotTextures(set, value.packing ?? set.defaultPacking);
   return slots ? Object.values(slots).map((id) => ({ type: 'texture', id })) : [];
 };
+
+/**
+ * A TSL input's texture set array (p303 D4): `{ "textureSetArray": ["sand01", "grass01"],
+ * "packing": "LITE" }` is a bundle of the packing's array textures, layer `i` from the `i`th set
+ * (`inputs.ground.albedoRough.sample(uv).depth(layer)`), and the layers' params (`layerParams`,
+ * read with `getTextureSetLayerParams`, and `layerCount`). `{ "textureSetArray": "gallery" }` names
+ * a built set array by id (one the scene lists, or one code built). The arrays are built with the
+ * scene's load (or by `buildTextureSetArray` before a material from code).
+ */
+export type TextureSetArrayInputRef =
+  | {
+      /** The texture sets' ids, layer `i` from the `i`th. */
+      textureSetArray: string[];
+      /** The packing every layer is in: one array per slot. */
+      packing: TextureSetPacking;
+    }
+  | {
+      /** A built set array's id. */
+      textureSetArray: string;
+    };
+
+/**
+ * Whether a TSL input value is a texture set array (a `textureSetArray` string or array; see
+ * {@link TextureSetArrayInputRef}). Its other fields aren't checked here: the resolver throws on a
+ * bad one.
+ * @internal
+ */
+export const isTextureSetArrayInputRef = (value: unknown): value is TextureSetArrayInputRef => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const sets = (value as { textureSetArray?: unknown }).textureSetArray;
+  return typeof sets === 'string' || Array.isArray(sets);
+};

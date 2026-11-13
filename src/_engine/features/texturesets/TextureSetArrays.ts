@@ -6,8 +6,16 @@
 // of vec4s, four per layer (one binding: three makes each uniform array its own uniform buffer,
 // and a stage has 12 by default), which `getTextureSetLayerParams` decodes in TSL.
 import * as THREE from 'three/webgpu';
-import { int, uniformArray, vec2, vec3 } from 'three/tsl';
+import { int, texture, uniformArray, vec2, vec3 } from 'three/tsl';
 import { deleteTexture, getTexture, type TextureProps } from '../../kernel/assets/Texture';
+import {
+  type MaterialInputContext,
+  type MaterialInputResolver,
+  registerMaterialInputResolver,
+  type ResolvedInputNode,
+} from '../../kernel/assets/MaterialInputResolvers';
+import { getGeneratedAppData, type SceneData } from '../../kernel/scene/Scene';
+import { lerror, lwarn } from '../../utils/Logger';
 import {
   buildTextureArray,
   setTextureArrayLayer,
@@ -16,12 +24,18 @@ import {
 import { findTextureDeclaration } from '../../kernel/assets/MaterialDependencies';
 import { toThreeColor } from '../../kernel/render/ThreeMath';
 import { hashStringFNV1a } from '../../utils/Hash';
-import {
+// Types only: the schema module's values would bring zod into the chunk (the slots come from the
+// gathered sets, in the schema's slot order)
+import type {
   TEXTURE_SET_PACKINGS,
-  type TextureSetDef,
-  type TextureSetPacking,
+  TextureSetDef,
+  TextureSetPacking,
 } from '../../schemas/TextureSetSchema';
-import { getTextureSetSlotTextures } from './TextureSetRefs';
+import {
+  getTextureSetSlotTextures,
+  isTextureSetArrayInputRef,
+  type TextureSetArrayInputRef,
+} from './TextureSetRefs';
 import { getTextureSet } from './TextureSets';
 
 /** The vec4s each layer takes in a set array's `layerParams`. */
@@ -109,11 +123,24 @@ const getSetSlots = (caller: string, setId: string, packing: TextureSetPacking) 
   return { set, slots };
 };
 
+/** A set array member's declaration in a scene's `textureSetArrays` (`__textures`: the members
+ * its `textures` doesn't declare, which the scene doesn't load on their own) */
+const findArrayMemberDeclaration = (id: string) => {
+  for (const scene of Object.values(getGeneratedAppData().scenes) as SceneData[]) {
+    for (const entry of scene.textureSetArrays ?? []) {
+      const found = entry.__textures?.find((declared) => declared.id === id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+};
+
 /** A slot texture as an array member: the registered texture's id (borrowed), else its
  * declaration's props (loaded for the array alone, never registered nor uploaded) */
 const getMember = (caller: string, setId: string, slot: string, textureId: string) => {
   if (getTexture(textureId)) return textureId;
-  const declaration: TextureProps | undefined = findTextureDeclaration(textureId);
+  const declaration: TextureProps | undefined =
+    findTextureDeclaration(textureId) ?? findArrayMemberDeclaration(textureId);
   if (!declaration) {
     throw new Error(
       `${caller}: no data declares the texture "${textureId}" (the ${slot} of the texture set "${setId}"; in a production build, a scene must name the set or the texture).`
@@ -149,6 +176,14 @@ const createLayerParams = (sets: TextureSetDef[]) => {
   return uniformArray(values, 'vec4') as TextureSetLayerParamsNode;
 };
 
+/**
+ * A non-swappable set array's derived id: `tsa:<hash>` of the packing and the sets, so two builds
+ * of one list share one (and a material's `{ textureSetArray: [...], packing }` finds the scene's).
+ * @internal
+ */
+export const getTextureSetArrayId = (packing: string, sets: readonly string[]) =>
+  `tsa:${hashStringFNV1a(JSON.stringify([packing, sets])).toString(36)}`;
+
 const describeArray = (id: string, packing: string, sets: readonly string[]) =>
   `Texture set array "${id}" (${packing}: ${sets.map((set, i) => `${i} ${set}`).join(', ')})`;
 
@@ -173,6 +208,104 @@ const registerEntry = (entry: TextureSetArray) => {
   for (const array of Object.values(entry.arrays) as TextureArray[]) {
     array.addEventListener('dispose', onDispose);
   }
+};
+
+/**
+ * What a TSL function gets for a `{ "textureSetArray": … }` input: the packing's array textures by
+ * slot (only the packing's slots are there), sampled as `.sample(uv).depth(layer)`, the layers'
+ * params (read with {@link getTextureSetLayerParams}) and the layer count.
+ */
+export type TextureSetArrayInput = {
+  /** `FULL` and `MINIMAL`: RGB albedo (sRGB), A height, per layer. */
+  albedoHeight?: THREE.TextureNode;
+  /** `FULL`: the tangent-space normal (OpenGL, +Y), per layer. */
+  normal?: THREE.TextureNode;
+  /** `FULL`: R ambient occlusion, G roughness, B metalness, per layer. */
+  orm?: THREE.TextureNode;
+  /** `LITE`: RGB albedo × AO (sRGB), A roughness, per layer. */
+  albedoRough?: THREE.TextureNode;
+  /** `LITE`: RG the normal's X and Y (Z reconstructed), B height, per layer. */
+  normalHeight?: THREE.TextureNode;
+  /** Each layer's `physicalSize`, `heightScale` and `surface` fields (the set array's, shared). */
+  layerParams: TextureSetLayerParamsNode;
+  /** The number of layers (an int). */
+  layerCount: THREE.Node<'int'>;
+};
+
+/** The white array textures standing in for a set array that isn't built, by layer count */
+const standIns = new Map<number, THREE.DataArrayTexture>();
+
+const getStandIn = (layers: number) => {
+  let standIn = standIns.get(layers);
+  if (!standIn) {
+    standIn = new THREE.DataArrayTexture(new Uint8Array(4 * layers).fill(255), 1, 1, layers);
+    standIn.needsUpdate = true;
+    standIns.set(layers, standIn);
+  }
+  return standIn;
+};
+
+/** The input's place, for an error or a warning */
+const describeInput = (ctx: MaterialInputContext) =>
+  `input "${ctx.key}" (${ctx.group}) in material "${ctx.materialId}"`;
+
+/** The bundle of a set array that isn't built (its build failed, or the material was created
+ * before it): white array stand-ins, the sets' own params, warned */
+const getStandInBundle = (
+  value: { textureSetArray: string[]; packing: TextureSetPacking },
+  ctx: MaterialInputContext
+) => {
+  const { textureSetArray: setIds, packing } = value;
+  const caller = `The texture set array of ${describeInput(ctx)}`;
+  const sets = setIds.map((setId) => getSetSlots(caller, setId, packing));
+  lwarn(
+    `${caller} (${packing}: ${setIds.join(', ')}) isn't built: it samples white (the scene's load builds it, code awaits buildTextureSetArray first).`
+  );
+  const bundle: Record<string, ResolvedInputNode> = {};
+  for (const slot of Object.keys(sets[0].slots)) {
+    bundle[slot] = texture(getStandIn(sets.length)) as unknown as ResolvedInputNode;
+  }
+  bundle.layerParams = createLayerParams(
+    sets.map(({ set }) => set)
+  ) as unknown as ResolvedInputNode;
+  bundle.layerCount = int(sets.length) as unknown as ResolvedInputNode;
+  return bundle;
+};
+
+/**
+ * `{ "textureSetArray": [ids], "packing" }` or `{ "textureSetArray": id }` (p303 D4): the set
+ * array's bundle (`TextureSetArrayInput`). A list's array not built samples white, warned; an id
+ * no set array has throws naming the input.
+ */
+const TEXTURE_SET_ARRAY_RESOLVER: MaterialInputResolver<TextureSetArrayInputRef> = {
+  kind: 'textureSetArray',
+  match: isTextureSetArrayInputRef,
+  resolve: (value, ctx) => {
+    const isList = Array.isArray(value.textureSetArray);
+    const id = isList
+      ? getTextureSetArrayId(
+          (value as { packing: string }).packing,
+          value.textureSetArray as string[]
+        )
+      : (value.textureSetArray as string);
+    const entry = getLiveEntry(id);
+    if (!entry) {
+      if (isList) return getStandInBundle(value as Parameters<typeof getStandInBundle>[0], ctx);
+      throw new Error(
+        `The texture set array of ${describeInput(ctx)}: no set array "${id}" is built (list it in the scene's textureSetArrays, or await buildTextureSetArray first).`
+      );
+    }
+    const bundle: Record<string, ResolvedInputNode> = {};
+    for (const [slot, array] of Object.entries(entry.arrays) as [string, TextureArray][]) {
+      // Sampler nodes, not uniform buffer allocations
+      bundle[slot] = texture(array) as unknown as ResolvedInputNode;
+    }
+    bundle.layerParams = entry.layerParams as unknown as ResolvedInputNode;
+    bundle.layerCount = int(entry.layerCount) as unknown as ResolvedInputNode;
+    return bundle;
+  },
+  // The arrays aren't textures a load gets: the scene's load or buildTextureSetArray builds them
+  dependencies: () => [],
 };
 
 /**
@@ -213,16 +346,13 @@ export const buildTextureSetArray = async <P extends TextureSetPacking>(
   const caller = 'buildTextureSetArray';
   const { sets: setIds, packing } = props;
   if (!setIds.length) throw new Error(`${caller}: a texture set array needs at least one set.`);
-  if (!(packing in TEXTURE_SET_PACKINGS)) {
-    throw new Error(
-      `${caller}: "${packing}" isn't a packing (${Object.keys(TEXTURE_SET_PACKINGS).join(', ')}).`
-    );
-  }
+  // Registered with the first build: a material can sample a set array once one exists
+  registerMaterialInputResolver(TEXTURE_SET_ARRAY_RESOLVER);
   const id =
     props.id ||
     (props.swappable
       ? `tsa:${THREE.MathUtils.generateUUID()}`
-      : `tsa:${hashStringFNV1a(JSON.stringify([packing, setIds])).toString(36)}`);
+      : getTextureSetArrayId(packing, setIds));
   const existing = getLiveEntry(id);
   // A swappable one's layers may have been swapped since: its packing and layer count must match
   const isOther =
@@ -237,7 +367,8 @@ export const buildTextureSetArray = async <P extends TextureSetPacking>(
     );
   }
   const sets = setIds.map((setId) => getSetSlots(caller, setId, packing));
-  const slots = TEXTURE_SET_PACKINGS[packing] as readonly string[];
+  // The packing's slots, in the gathered order (the schema's): every set of it has the same
+  const slots = Object.keys(sets[0].slots);
   // Every member before any build: a texture no data declares throws with nothing started
   const members = slots.map((slot) =>
     sets.map(({ set, slots: setSlots }) =>
@@ -442,4 +573,28 @@ export const getTextureSetLayerParams = (
     wetDarkening: roughAoWet.w,
     wetRoughness: wet.x,
   };
+};
+
+/**
+ * Builds the set arrays a scene's data lists (`textureSetArrays`, the gatherer's: listed, and the
+ * ones its materials name), all at once: the `textureSets()` feature's scene hooks start this
+ * when the world is cleared (the next scene owns what registers) and await it before the scene's
+ * assets. A failed build is logged, and its materials sample white: the load goes on.
+ * @internal
+ */
+export const buildSceneTextureSetArraysAsync = async (sceneData: SceneData) => {
+  const entries = sceneData.textureSetArrays ?? [];
+  const results = await Promise.allSettled(
+    entries.map(({ id, sets, packing, swappable }) =>
+      buildTextureSetArray({ id, sets, packing, swappable })
+    )
+  );
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      lerror(
+        `Scene "${sceneData.id}": the texture set array ${entries[i].id ?? `(${entries[i].packing}: ${entries[i].sets.join(', ')})`} could not be built.`,
+        result.reason
+      );
+    }
+  });
 };

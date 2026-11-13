@@ -5,7 +5,7 @@
       "$ref": "#/definitions/__schema0"
     },
     {
-      "$ref": "#/definitions/__schema64"
+      "$ref": "#/definitions/__schema68"
     }
   ],
   "description": "A material: its type and three parameters, and a node material's TSL file and inputs.",
@@ -58,7 +58,7 @@
         "inputs": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema61"
+              "$ref": "#/definitions/__schema65"
             }
           ]
         },
@@ -320,7 +320,7 @@
             "inputs": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema61"
+                  "$ref": "#/definitions/__schema65"
                 }
               ]
             },
@@ -407,7 +407,7 @@
       "additionalProperties": {
         "$ref": "#/definitions/__schema39"
       },
-      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
+      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, { textureSetArray: [ids] | id, packing }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
     },
     "__schema38": {
       "type": "string"
@@ -437,6 +437,9 @@
         },
         {
           "$ref": "#/definitions/__schema57"
+        },
+        {
+          "$ref": "#/definitions/__schema61"
         },
         {}
       ]
@@ -597,19 +600,75 @@
       ]
     },
     "__schema61": {
-      "type": "object",
-      "propertyNames": {
-        "$ref": "#/definitions/__schema62"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/__schema63"
-      },
-      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name; the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema62"
+        },
+        {
+          "$ref": "#/definitions/__schema64"
+        }
+      ],
+      "description": "A texture set array: the packing's array textures and the layers' params, by name. Needs the textureSets() feature."
     },
     "__schema62": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "textureSetArray": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema63"
+          },
+          "description": "The texture set ids (*.textureSet.json), layer i from the ith."
+        },
+        "packing": {
+          "type": "string",
+          "enum": [
+            "FULL",
+            "LITE",
+            "MINIMAL"
+          ],
+          "description": "The packing every layer is in (FULL, LITE, MINIMAL): one array per slot."
+        }
+      },
+      "required": [
+        "textureSetArray",
+        "packing"
+      ],
+      "additionalProperties": false
     },
     "__schema63": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema64": {
+      "type": "object",
+      "properties": {
+        "textureSetArray": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The id of a set array the scene lists (its textureSetArrays' id)."
+        }
+      },
+      "required": [
+        "textureSetArray"
+      ],
+      "additionalProperties": false
+    },
+    "__schema65": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema66"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema67"
+      },
+      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name) or { textureSetArray: [ids] | id, packing } (a texture set array's array textures and layer params; both the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    },
+    "__schema66": {
+      "type": "string"
+    },
+    "__schema67": {
       "anyOf": [
         {
           "$ref": "#/definitions/__schema42"
@@ -623,10 +682,13 @@
         {
           "$ref": "#/definitions/__schema57"
         },
+        {
+          "$ref": "#/definitions/__schema61"
+        },
         {}
       ]
     },
-    "__schema64": {
+    "__schema68": {
       "type": "object",
       "properties": {
         "id": {

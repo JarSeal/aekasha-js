@@ -10,6 +10,9 @@
  * whose layer, slot or cell its asset doesn't have fails it too (p299 D5). A texture set input
  * (p303 D1) adds its packing's textures and writes the set into the scene's `textureSets`, where
  * the `textureSets()` feature reads it; a set no JSON has, or a packing it lacks, fails the gather.
+ * A texture set array input (p303 D4) adds its list to the scene's `textureSetArrays` and its sets
+ * to `textureSets`, but no textures (`textureSetArrays.ts` declares the members); an id names a
+ * set array the scene lists.
  */
 import {
   type AtlasCellInputRef,
@@ -24,12 +27,19 @@ import {
 } from '../../src/_engine/kernel/assets/MaterialInputRefs';
 import {
   getTextureSetInputDependencies,
+  isTextureSetArrayInputRef,
   isTextureSetInputRef,
   type TextureSetInputRef,
 } from '../../src/_engine/features/texturesets/TextureSetRefs';
+import type { TextureSetPacking } from '../../src/_engine/schemas';
 import { textureMapKeys } from '../../src/_engine/utils/Constants';
 import type { Registries } from './context';
 import type { SceneRun } from './sceneAssets';
+import {
+  getListedTextureSetArrayIds,
+  getTextureSetArrayInputError,
+  resolveTextureSetArrays,
+} from './textureSetArrays';
 import { appendSceneTextureSets } from './textureSets';
 
 /**
@@ -50,9 +60,17 @@ const INPUT_DEPENDENCY_FNS: readonly ((
 ];
 
 /** The texture ids by the first thing naming each, for the error; the texture set ids alike;
- * the inputs that don't fit their asset; and pass 1's registries */
+ * the set array lists the inputs name (p303 D4) and the ids of the ones the scene lists; the
+ * inputs that don't fit their asset; and pass 1's registries */
 type Named = Map<string, string>;
-type Collect = { named: Named; sets: Named; errors: string[]; reg: Registries };
+type Collect = {
+  named: Named;
+  sets: Named;
+  arrays: { sets: string[]; packing: TextureSetPacking }[];
+  listedArrayIds: ReadonlySet<string>;
+  errors: string[];
+  reg: Registries;
+};
 
 const addId = (named: Named, id: string, by: string) => {
   if (id && !named.has(id)) named.set(id, by);
@@ -119,26 +137,34 @@ const getTextureSetError = (reg: Registries, { textureSet: id, packing }: Textur
 };
 
 /** An input value's error against its asset (a texture array layer, an atlas cell, a texture
- * set), or undefined */
-const getInputRefError = (reg: Registries, value: unknown) => {
+ * set, a texture set array), or undefined */
+const getInputRefError = ({ reg, listedArrayIds }: Collect, value: unknown) => {
   if (isTextureArrayInputRef(value)) return getArrayLayerError(reg, value);
   if (isAtlasCellInputRef(value)) return getAtlasCellError(reg, value);
   if (isTextureSetInputRef(value)) return getTextureSetError(reg, value);
+  if (isTextureSetArrayInputRef(value)) {
+    return getTextureSetArrayInputError(reg, listedArrayIds, value);
+  }
   return undefined;
 };
 
 /** An input group's values (`inputs`, or a socket of `nodes`): `staticDefines` merges into the
  * defines, so it isn't an input. A value that doesn't fit its asset adds an error, not its id. */
-const addInputGroupIds = (group: unknown, { named, sets, errors, reg }: Collect, by: string) => {
+const addInputGroupIds = (group: unknown, collect: Collect, by: string) => {
   if (!group || typeof group !== 'object') return;
+  const { named, sets, errors, reg } = collect;
   for (const [key, value] of Object.entries(group)) {
     if (key === 'staticDefines') continue;
-    const error = getInputRefError(reg, value);
+    const error = getInputRefError(collect, value);
     if (error) {
       errors.push(`${by}'s input "${key}": ${error}`);
       continue;
     }
     if (isTextureSetInputRef(value)) addId(sets, value.textureSet, by);
+    // A set array's members aren't the scene's textures: its entry declares them
+    if (isTextureSetArrayInputRef(value) && 'packing' in value) {
+      collect.arrays.push({ sets: value.textureSetArray, packing: value.packing });
+    }
     for (const getDependencies of INPUT_DEPENDENCY_FNS) {
       for (const dependency of getDependencies(value, reg)) {
         if (dependency.type === 'texture') addId(named, dependency.id, by);
@@ -165,8 +191,16 @@ const addMaterialIds = (mat: unknown, collect: Collect, by: string) => {
 
 /** Every texture id the scene's resolved data names, by what names it, and the inputs that don't
  * fit their asset */
-const getNamedTextureIds = ({ scene, reg }: SceneRun): Collect => {
-  const collect: Collect = { named: new Map(), sets: new Map(), errors: [], reg };
+const getNamedTextureIds = (run: SceneRun): Collect => {
+  const { scene, reg } = run;
+  const collect: Collect = {
+    named: new Map(),
+    sets: new Map(),
+    arrays: [],
+    listedArrayIds: getListedTextureSetArrayIds(run),
+    errors: [],
+    reg,
+  };
   const { named } = collect;
   for (const mat of scene.materials ?? []) {
     if (typeof mat !== 'string') addMaterialIds(mat, collect, `the material "${mat.id}"`);
@@ -214,13 +248,15 @@ const isKnownTextureId = ({ reg }: SceneRun, id: string) =>
  * the materials, lights and meshes are resolved (their save entries applied), before the
  * textures are. An id no asset JSON has, and a texture array layer, atlas cell or texture set
  * input its asset doesn't have, is logged, naming what names it, and fails the gather. The texture
- * sets the inputs name are written into the scene's `textureSets` (after its own, each once).
+ * sets the inputs name are written into the scene's `textureSets` (after its own, each once), with
+ * the sets of its set arrays (listed, and the lists the inputs name, `resolveTextureSetArrays`).
  */
 export const addTextureClosure = (run: SceneRun) => {
   const listed = getListedTextureIds(run);
   const added: string[] = [];
-  const { named, sets, errors } = getNamedTextureIds(run);
-  appendSceneTextureSets(run, [...sets.keys()]);
+  const { named, sets, arrays, errors } = getNamedTextureIds(run);
+  const arraySets = resolveTextureSetArrays(run, arrays);
+  appendSceneTextureSets(run, [...sets.keys(), ...arraySets]);
   for (const error of errors) run.ctx.log.error(`Scene "${run.sceneId}": ${error}.`);
   for (const [id, by] of named) {
     if (listed.has(id)) continue;

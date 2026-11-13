@@ -2,7 +2,9 @@
 // development data's `textureSets` section, else the first scene whose `textureSets` has it: a
 // production build has only the scenes' data), and its textures are ordinary registered textures,
 // owned and released as any other. The `textureSets()` feature registers the `{ textureSet }`
-// material input resolver at its install; the lookups and the load work without it.
+// material input resolver at its install, and the scene hooks that build a scene's set arrays
+// (TextureSetArrays.ts, `import()`ed by the first scene that has some); the lookups and the load
+// work without it.
 import * as THREE from 'three/webgpu';
 import { texture, uniform } from 'three/tsl';
 import type { FeatureContext } from '../../kernel/init/Features';
@@ -238,10 +240,38 @@ const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
   dependencies: (value) => getTextureSetInputDependencies(value, getTextureSet),
 };
 
+/** The set arrays' module once loaded (`import()`: only a scene with set arrays loads it) */
+let arraysModule: typeof import('./TextureSetArrays') | undefined;
+
+/** Starts the builds of a scene's set arrays: synchronously once the module is loaded, so a set
+ * array the next scene shares is re-tagged before the previous scene's assets are released */
+const startSceneArrayBuilds = (sceneData: SceneData) => {
+  if (!sceneData.textureSetArrays?.length) return undefined;
+  if (arraysModule) return arraysModule.buildSceneTextureSetArraysAsync(sceneData);
+  return import('./TextureSetArrays').then((loaded) => {
+    arraysModule = loaded;
+    return loaded.buildSceneTextureSetArraysAsync(sceneData);
+  });
+};
+
 /**
- * The texture sets' install: registers the `{ textureSet }` material input resolver.
+ * The texture sets' install: registers the `{ textureSet }` material input resolver, and the
+ * scene hooks that build a scene's set arrays (p303 D4) before its materials: started when the
+ * world is cleared (the next scene's data, which owns what registers from then on), awaited before
+ * its assets load. The `{ textureSetArray }` resolver registers with the first build.
  * @internal
  */
 export const installTextureSets = (ctx: FeatureContext) => {
   ctx.registerMaterialInputResolver(TEXTURE_SET_RESOLVER);
+  let pendingArrays: Promise<void> | undefined;
+  ctx.addSceneHooks({
+    worldCleared: (_world, _prevSceneId, nextSceneData) => {
+      pendingArrays = startSceneArrayBuilds(nextSceneData);
+    },
+    beforeAssets: () => {
+      const pending = pendingArrays;
+      pendingArrays = undefined;
+      return pending;
+    },
+  });
 };

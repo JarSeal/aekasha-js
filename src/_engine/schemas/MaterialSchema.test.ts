@@ -29,6 +29,8 @@ describe('a TSL input’s object forms (p302 D4, p299 D5, p303 D1)', () => {
         cell: { atlas: 'decals', slot: 'albedo', cell: 'crack', clampToCell: false },
         set: { textureSet: 'sand01' },
         setPacking: { textureSet: 'sand01', packing: 'FULL' },
+        setArray: { textureSetArray: ['sand01', 'mud01'], packing: 'LITE' },
+        setArrayId: { textureSetArray: 'gallery' },
         tint: '#ff8000',
         scale: [1, 2],
         vector: { x: 1, y: 2, z: 3 },
@@ -50,6 +52,9 @@ describe('a TSL input’s object forms (p302 D4, p299 D5, p303 D1)', () => {
     [{ atlas: 'a', slot: 's', cell: 'c', clampToCell: 'yes' }, 'x.clampToCell: Invalid input'],
     [{ textureSet: 'a', packing: 'HUGE' }, 'x.packing: Invalid option'],
     [{ textureSet: 'a', layer: 0 }, 'x: Unrecognized key: "layer"'],
+    [{ textureSetArray: ['a'] }, 'x: Invalid input'],
+    [{ textureSetArray: [], packing: 'LITE' }, 'x.textureSetArray: Too small'],
+    [{ textureSetArray: 'g', packing: 'LITE' }, 'x: Invalid input'],
   ])('fail on %j at the input’s path, in inputs and in a socket', (value, message) => {
     const issues = issuesOf({ x: value });
     expect(issues.find((issue) => issue.startsWith('inputs.'))).toContain(`inputs.${message}`);

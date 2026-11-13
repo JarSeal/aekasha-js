@@ -89,6 +89,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'mergeMaterials',
       'merge',
       'textureSets',
+      'textureSetArrays',
     ]);
   });
 });

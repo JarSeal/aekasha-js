@@ -22,6 +22,7 @@ import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
 import { addTextureClosure } from './textureClosure';
+import { declareTextureSetArrayMembers } from './textureSetArrays';
 import { resolveTextureSets } from './textureSets';
 
 /** A scene as the scene pass resolves it: its JSON with its own save entry */
@@ -150,26 +151,33 @@ const expandAtlasIds = (reg: Registries, listed: NonNullable<SceneJSON['textures
   });
 };
 
+/** A texture asset as the scene's data declares it: its save entry, generated fields and ship
+ * check (a listed texture, and a set array's member, p303 D4) */
+const resolveTextureAsset = (
+  { ctx, ship, sceneId }: SceneRun,
+  texture: Registries['textures'][string]
+) => {
+  const jsonFile = texture.__sourcePath || '';
+  const texData = { ...texture, ...getSaveEntry(texture, sceneId) };
+  if (ctx.isProduction) delete texData.debugData;
+  // A per-scene override can point at another file
+  texData.__fileSize = getSourceFileSize(jsonFile, texData.fileName, texData.path);
+  setGeneratedFields(ctx, texData, 'texture', jsonFile);
+  ship.checkAsset(texData, 'texture', jsonFile, sceneId);
+  delete texData.optimize; // Build time only (p300)
+  delete texData.pack;
+  delete texData.__sourcePath;
+  delete texData.__saveData;
+  return texData;
+};
+
 const resolveTextures = (run: SceneRun) => {
   const { ctx, reg, ship, sceneId, scene, reportUnknownId } = run;
   if (!Array.isArray(scene.textures)) return;
   scene.textures = expandAtlasIds(reg, scene.textures).map((texId) => {
     if (typeof texId !== 'string') return texId;
     const texture = reg.textures[texId];
-    if (texture) {
-      const jsonFile = texture.__sourcePath || '';
-      const texData = { ...texture, ...getSaveEntry(texture, sceneId) };
-      if (ctx.isProduction) delete texData.debugData;
-      // A per-scene override can point at another file
-      texData.__fileSize = getSourceFileSize(jsonFile, texData.fileName, texData.path);
-      setGeneratedFields(ctx, texData, 'texture', jsonFile);
-      ship.checkAsset(texData, 'texture', jsonFile, sceneId);
-      delete texData.optimize; // Build time only (p300)
-      delete texData.pack;
-      delete texData.__sourcePath;
-      delete texData.__saveData;
-      return texData;
-    }
+    if (texture) return resolveTextureAsset(run, texture);
     if (reg.textureArrays[texId]) {
       // Build time only: the runtime loads the encoded array (its generated fields, from the
       // registry entry: an array has no scene entries)
@@ -347,7 +355,7 @@ const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
 /** Resolves every list of a scene, in the scene pass's order (the impostors, the merge materials,
  * the texture sets and the texture closure before the textures: they add their atlas and array
  * slots, the sets' default packings (p303 D1) and the textures the resolved materials, lights and
- * meshes name, p302 D6) */
+ * meshes name, p302 D6; the set arrays' members after them, p303 D4) */
 export const resolveSceneAssets = (run: SceneRun) => {
   resolveCameras(run);
   resolveLights(run);
@@ -359,6 +367,8 @@ export const resolveSceneAssets = (run: SceneRun) => {
   resolveTextureSets(run);
   addTextureClosure(run);
   resolveTextures(run);
+  // The set arrays' members the textures don't hold (pass 1 checked each slot is a texture asset)
+  declareTextureSetArrayMembers(run, (texId) => resolveTextureAsset(run, run.reg.textures[texId]));
   resolveImportedAssets(run);
   resolveSkyBoxes(run);
   resolvePostFx(run);

@@ -241,3 +241,82 @@ export const TextureSetInputSchema = z
   .describe(
     "A texture set: each slot's texture of its packing and its surface uniforms, by name. Needs the textureSets() feature."
   );
+
+const PackingSchema = z.enum(
+  Object.keys(TEXTURE_SET_PACKINGS) as [TextureSetPacking, ...TextureSetPacking[]]
+);
+
+/**
+ * A TSL input's texture set array (p303 D4): `{ "textureSetArray": ["sand01", "grass01"],
+ * "packing": "LITE" }` is a bundle of the packing's array textures (layer `i` from the `i`th set)
+ * and the layers' params (`TextureSetArrayInputRef` on `aekasha/texturesets`), or
+ * `{ "textureSetArray": "gallery" }` a set array the scene lists with that `id`. The arrays are
+ * built with the scene's load. Needs the `textureSets()` feature.
+ */
+export const TextureSetArrayInputSchema = z
+  .union([
+    z
+      .object({
+        /** The texture sets' ids, layer `i` from `textureSetArray[i]`. */
+        textureSetArray: z
+          .array(z.string().min(1))
+          .min(1)
+          .describe('The texture set ids (*.textureSet.json), layer i from the ith.'),
+        /** The packing every layer is in: one array per slot. */
+        packing: PackingSchema.describe(
+          'The packing every layer is in (FULL, LITE, MINIMAL): one array per slot.'
+        ),
+      })
+      .strict(),
+    z
+      .object({
+        /** The id of a set array the scene lists (its `textureSetArrays`' `id`). */
+        textureSetArray: z
+          .string()
+          .min(1)
+          .describe("The id of a set array the scene lists (its textureSetArrays' id)."),
+      })
+      .strict(),
+  ])
+  .describe(
+    "A texture set array: the packing's array textures and the layers' params, by name. Needs the textureSets() feature."
+  );
+
+/**
+ * A set array a scene builds with its load (p303 D4, the scene's `textureSetArrays`): what its
+ * code and its materials' `{ textureSetArray }` inputs sample.
+ */
+export const SceneTextureSetArraySchema = z
+  .object({
+    /** The set array's id, which a material's `{ "textureSetArray": id }` and code name. Default:
+     * derived from the packing and the sets, as `buildTextureSetArray` derives it. */
+    id: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "The set array's id, which a material's { textureSetArray: id } and code name. Default: derived from the packing and the sets."
+      ),
+    /** The texture sets' ids, layer `i` from `sets[i]`. */
+    sets: z
+      .array(z.string().min(1))
+      .min(1)
+      .describe('The texture set ids (*.textureSet.json), layer i from the ith.'),
+    /** The packing every layer is in: one array per slot. */
+    packing: PackingSchema.describe(
+      'The packing every layer is in (FULL, LITE, MINIMAL): one array per slot.'
+    ),
+    /** Keeps the arrays' CPU copies, so code can swap a layer (`setTextureSetArrayLayer`).
+     * Default false. */
+    swappable: z
+      .boolean()
+      .optional()
+      .describe(
+        "Keeps the arrays' CPU copies, so code can swap a layer (setTextureSetArrayLayer). Default false."
+      ),
+  })
+  .strict()
+  .describe('A set array the scene builds with its load (the textureSets() feature).');
+
+/** A set array a scene builds with its load (`textureSetArrays`), as its JSON lists it. */
+export type SceneTextureSetArrayEntry = z.infer<typeof SceneTextureSetArraySchema>;

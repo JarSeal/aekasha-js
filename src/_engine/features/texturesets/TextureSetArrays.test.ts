@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import type { TextureSetDef } from '../../schemas/TextureSetSchema';
+import type {
+  MaterialInputContext,
+  MaterialInputResolver,
+} from '../../kernel/assets/MaterialInputResolvers';
 import {
+  buildSceneTextureSetArraysAsync,
   buildTextureSetArray,
   getTextureSetArray,
+  getTextureSetArrayId,
   getTextureSetLayerParams,
   setTextureSetArrayLayer,
 } from './TextureSetArrays';
+import type { TextureSetArrayInputRef } from './TextureSetRefs';
 
 // The texture registry, the kernel's array builds and swaps, the declarations and the sets are
 // stand-ins: a build registers a 1 × 1 array under its id (or rejects when a member's id is in
@@ -54,6 +61,22 @@ vi.mock(import('../../kernel/assets/MaterialDependencies'), () => ({
 vi.mock(import('./TextureSets'), () => ({
   getTextureSet: ((id: string) => fns.sets.get(id)) as never,
 }));
+// The resolver registry, the app data (a scene's set arrays' `__textures`) and the log
+const env = vi.hoisted(() => ({
+  resolvers: [] as unknown[],
+  scenes: {} as Record<string, unknown>,
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+vi.mock(import('../../kernel/assets/MaterialInputResolvers'), () => ({
+  registerMaterialInputResolver: ((resolver: unknown) => {
+    if (!env.resolvers.includes(resolver)) env.resolvers.push(resolver);
+  }) as never,
+}));
+vi.mock(import('../../kernel/scene/Scene'), () => ({
+  getGeneratedAppData: (() => ({ scenes: env.scenes })) as never,
+}));
+vi.mock(import('../../utils/Logger'), () => ({ lwarn: env.warn, lerror: env.error }));
 
 const makeSet = (id: string, extra: Partial<TextureSetDef> = {}): TextureSetDef => ({
   id,
@@ -99,6 +122,9 @@ beforeEach(() => {
   fns.builds.length = 0;
   fns.swaps.length = 0;
   fns.deleted.length = 0;
+  env.scenes = {};
+  env.warn.mockClear();
+  env.error.mockClear();
   addSets(
     makeSet('sand'),
     makeSet('rock', {
@@ -185,7 +211,9 @@ describe('buildTextureSetArray', () => {
       expect(buildTextureSetArray(props)).rejects;
 
     await reject({ sets: [], packing: 'LITE' }).toThrow('at least one set');
-    await reject({ sets: ['sand'], packing: 'HUGE' as never }).toThrow('"HUGE" isn\'t a packing');
+    await reject({ sets: ['sand'], packing: 'HUGE' as never }).toThrow(
+      'the texture set "sand" has no packing "HUGE"'
+    );
     await reject({ sets: ['sand', 'snow'], packing: 'LITE' }).toThrow(
       'no data has the texture set "snow"'
     );
@@ -315,5 +343,108 @@ describe('getTextureSetLayerParams', () => {
       ]);
       expect(Object.values(params).every((node) => (node as THREE.Node).isNode)).toBe(true);
     }
+  });
+});
+
+describe('the { textureSetArray } resolver', () => {
+  const ctx = {
+    materialId: 'ground',
+    group: 'setup',
+    key: 'layers',
+  } as unknown as MaterialInputContext;
+  const resolve = (value: TextureSetArrayInputRef) =>
+    (env.resolvers[0] as MaterialInputResolver<TextureSetArrayInputRef>).resolve(
+      value,
+      ctx
+    ) as Record<string, THREE.Node & { value?: unknown }>;
+
+  test('registers with the first build, and gives the built arrays by list or id', async () => {
+    const built = await buildTextureSetArray({ sets: ['sand', 'rock'], packing: 'LITE' });
+    const resolver = env.resolvers[0] as MaterialInputResolver<TextureSetArrayInputRef>;
+    expect(env.resolvers).toHaveLength(1);
+    expect(resolver.kind).toBe('textureSetArray');
+    expect(resolver.match({ textureSetArray: ['sand'], packing: 'LITE' })).toBe(true);
+    expect(resolver.match({ textureSetArray: 'ground' })).toBe(true);
+    expect(resolver.match({ textureSet: 'sand' })).toBe(false);
+    expect(resolver.dependencies?.({ textureSetArray: ['sand'], packing: 'LITE' })).toEqual([]);
+    expect(built.id).toBe(getTextureSetArrayId('LITE', ['sand', 'rock']));
+
+    for (const value of [
+      { textureSetArray: ['sand', 'rock'], packing: 'LITE' as const },
+      { textureSetArray: built.id },
+    ]) {
+      const bundle = resolve(value);
+      expect(Object.keys(bundle)).toEqual([
+        'albedoRough',
+        'normalHeight',
+        'layerParams',
+        'layerCount',
+      ]);
+      expect(bundle.albedoRough.value).toBe(built.arrays.albedoRough);
+      expect(bundle.normalHeight.value).toBe(built.arrays.normalHeight);
+      // The set array's node, shared: a swap updates every material
+      expect(bundle.layerParams).toBe(built.layerParams);
+      expect(bundle.layerCount.isNode).toBe(true);
+    }
+    expect(env.warn).not.toHaveBeenCalled();
+  });
+
+  test('a list not built samples white with the sets\u2019 params, warned; an id throws', async () => {
+    await buildTextureSetArray({ sets: ['sand'], packing: 'LITE' });
+
+    const bundle = resolve({ textureSetArray: ['mud', 'rock'], packing: 'LITE' });
+
+    const standIn = bundle.albedoRough.value as THREE.DataArrayTexture;
+    expect(standIn.isDataArrayTexture).toBe(true);
+    expect(standIn.image.depth).toBe(2);
+    expect(bundle.normalHeight.value).toBe(standIn);
+    expect(
+      (
+        (bundle.layerParams as unknown as { array: THREE.Vector4[] }).array[4] as THREE.Vector4
+      ).toArray()
+    ).toEqual([6, 6, 0.2, 1.5]);
+    expect(env.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'input "layers" (setup) in material "ground" (LITE: mud, rock) isn\'t built'
+      )
+    );
+    expect(() => resolve({ textureSetArray: 'gallery' })).toThrow(
+      'no set array "gallery" is built'
+    );
+    expect(() => resolve({ textureSetArray: ['snow'], packing: 'LITE' })).toThrow(
+      'no data has the texture set "snow"'
+    );
+  });
+});
+
+describe('buildSceneTextureSetArraysAsync', () => {
+  test('builds every listed array, logs a failed one and goes on', async () => {
+    fns.failing.add('rock_albedoRough');
+
+    await buildSceneTextureSetArraysAsync({
+      id: 'b',
+      textureSetArrays: [
+        { id: 'gallery', sets: ['sand'], packing: 'LITE', swappable: true },
+        { sets: ['rock'], packing: 'LITE' },
+      ],
+    } as never);
+
+    expect(getTextureSetArray('gallery')?.swappable).toBe(true);
+    expect(env.error).toHaveBeenCalledWith(
+      'Scene "b": the texture set array (LITE: rock) could not be built.',
+      expect.any(Error)
+    );
+  });
+
+  test('takes a member\u2019s declaration from a scene\u2019s set arrays\u2019 __textures', async () => {
+    fns.declarations.delete('sand_albedoRough');
+    const declared = { id: 'sand_albedoRough', fileName: 'scene/sand_albedoRough.ktx2' };
+    env.scenes = {
+      b: { textureSetArrays: [{ sets: ['sand'], packing: 'LITE', __textures: [declared] }] },
+    };
+
+    await buildTextureSetArray({ sets: ['sand'], packing: 'LITE' });
+
+    expect(fns.builds[0].members).toEqual([declared]);
   });
 });

@@ -9,10 +9,11 @@ export {
 export type {
   BuildTextureSetArrayProps,
   TextureSetArray,
+  TextureSetArrayInput,
   TextureSetLayerParamsNode,
   TextureSetSlotMap,
 } from './TextureSetArrays';
-export type { TextureSetInputRef } from './TextureSetRefs';
+export type { TextureSetArrayInputRef, TextureSetInputRef } from './TextureSetRefs';
 export type {
   TextureSetDef,
   TextureSetPacking,

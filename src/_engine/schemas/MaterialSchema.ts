@@ -6,7 +6,7 @@ import {
   SourcePathSchema,
 } from './_SaveDataSchema';
 import { DebugDataSchema, UserDataSchema } from './_HelperSchemas';
-import { TextureSetInputSchema } from './TextureSetSchema';
+import { TextureSetArrayInputSchema, TextureSetInputSchema } from './TextureSetSchema';
 
 // `any`, not `unknown`: the runtime's `MatProps` types each material type's three parameters, and
 // a record of `unknown` isn't assignable to them (RuntimeTypes.test.ts). The JSON can't type them.
@@ -82,12 +82,13 @@ const INPUT_REF_FORMS = [
   ['textureArray', TextureArrayInputSchema],
   ['atlas', AtlasCellInputSchema],
   ['textureSet', TextureSetInputSchema],
+  ['textureSetArray', TextureSetArrayInputSchema],
 ] as const;
 
 /**
  * An input group's values (`inputs`, a socket of `nodes`): a value with a form's key (`texture`,
- * `textureArray`, `atlas`, `textureSet`) is checked against that form, its issues at its path; any other value
- * passes (a colour, a number, a vector, an app resolver's form). `staticDefines` isn't an input.
+ * `textureArray`, `atlas`, `textureSet`, `textureSetArray`) is checked against that form, its
+ * issues at its path; any other value passes (a colour, a number, a vector, an app resolver's form). `staticDefines` isn't an input.
  */
 const checkInputRefs = (inputs: Record<string, unknown>, ctx: z.RefinementCtx) => {
   for (const [key, value] of Object.entries(inputs)) {
@@ -113,6 +114,7 @@ const TslNodeInputsSchema = z
       TextureArrayInputSchema,
       AtlasCellInputSchema,
       TextureSetInputSchema,
+      TextureSetArrayInputSchema,
       z.any(),
     ])
   )
@@ -130,18 +132,19 @@ const InputsSchema = z
       TextureArrayInputSchema,
       AtlasCellInputSchema,
       TextureSetInputSchema,
+      TextureSetArrayInputSchema,
       z.unknown(),
     ])
   )
   .superRefine(checkInputRefs)
   .describe(
-    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name; the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name) or { textureSetArray: [ids] | id, packing } (a texture set array's array textures and layer params; both the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
   );
 
 const NodesSchema = z
   .record(z.string(), TslNodeInputsSchema)
   .describe(
-    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
+    "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, { textureSetArray: [ids] | id, packing }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
   );
 
 const MaterialOverridesSchema = z.object({

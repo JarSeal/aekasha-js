@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getTextureSetInputDependencies,
+  isTextureSetArrayInputRef,
   isTextureSetInputRef,
   type TextureSetLookup,
 } from './TextureSetRefs';
@@ -48,5 +49,17 @@ describe('getTextureSetInputDependencies', () => {
     expect(ids({ textureSet: 'sand', packing: 'MINIMAL' })).toEqual([]);
     expect(ids('sandAR')).toEqual([]);
     expect(ids({ texture: 'sandAR' })).toEqual([]);
+  });
+});
+
+describe('isTextureSetArrayInputRef (p303 D4)', () => {
+  it('matches an object with a textureSetArray list or id, nothing else', () => {
+    expect(isTextureSetArrayInputRef({ textureSetArray: ['sand'], packing: 'LITE' })).toBe(true);
+    expect(isTextureSetArrayInputRef({ textureSetArray: 'gallery' })).toBe(true);
+    for (const value of [{ textureSet: 'sand' }, { textureSetArray: 2 }, ['sand'], 'sand', null]) {
+      expect(isTextureSetArrayInputRef(value)).toBe(false);
+    }
+    // Its sets aren't textures: no dependencies of the set form
+    expect(ids({ textureSetArray: ['sand'], packing: 'LITE' })).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import type { FeatureContext } from '../../kernel/init/Features';
+import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import type {
   MaterialInputContext,
   MaterialInputResolver,
@@ -36,6 +37,16 @@ vi.mock(import('../../kernel/assets/AssetOwners'), () => ({
 vi.mock(import('../../kernel/scene/Scene'), () => ({
   getGeneratedAppData: () => fns.json,
 }));
+// The set arrays' scene builds (p303 D4): the hooks `import()` the module
+const arrays = vi.hoisted(() => ({ builds: [] as unknown[], release: () => {} }));
+vi.mock(import('./TextureSetArrays'), () => ({
+  buildSceneTextureSetArraysAsync: ((sceneData: unknown) => {
+    arrays.builds.push(sceneData);
+    return new Promise<void>((resolve) => {
+      arrays.release = resolve;
+    });
+  }) as never,
+}));
 
 const SURFACE: TextureSetDef['surface'] = {
   tint: '#ff0000',
@@ -67,6 +78,7 @@ const getResolver = () => {
   const registered: MaterialInputResolver[] = [];
   installTextureSets({
     registerMaterialInputResolver: (resolver: MaterialInputResolver) => registered.push(resolver),
+    addSceneHooks: () => () => {},
   } as unknown as FeatureContext);
   expect(registered).toHaveLength(1);
   return registered[0] as MaterialInputResolver<TextureSetInputRef>;
@@ -194,6 +206,7 @@ describe('the { textureSet } resolver', () => {
     const registered: MaterialInputResolver[] = [];
     void textureSets().install({
       registerMaterialInputResolver: (resolver: MaterialInputResolver) => registered.push(resolver),
+      addSceneHooks: () => () => {},
     } as unknown as FeatureContext);
     expect(registered.map((resolver) => resolver.kind)).toEqual(['textureSet']);
   });
@@ -273,5 +286,53 @@ describe('the { textureSet } resolver', () => {
       { type: 'texture', id: 'sand01_albedoHeight' },
     ]);
     expect(dependencies?.({ textureSet: 'snow01' })).toEqual([]);
+  });
+});
+
+describe('the set arrays\u2019 scene hooks (p303 D4)', () => {
+  /** The scene hooks the install adds */
+  const getHooks = () => {
+    let hooks: SceneHooks = {};
+    installTextureSets({
+      registerMaterialInputResolver: () => {},
+      addSceneHooks: (added: SceneHooks) => {
+        hooks = added;
+        return () => {};
+      },
+    } as unknown as FeatureContext);
+    return hooks;
+  };
+  const world = {} as never;
+
+  test('build a scene\u2019s set arrays from the cleared world, awaited before its assets', async () => {
+    const hooks = getHooks();
+    const scene = { id: 'b', textureSetArrays: [{ sets: ['sand01'], packing: 'LITE' }] };
+    arrays.builds.length = 0;
+
+    hooks.worldCleared?.(world, 'a', scene as never);
+    const before = hooks.beforeAssets?.();
+    let isDone = false;
+    void Promise.resolve(before).then(() => (isDone = true));
+    await vi.waitFor(() => expect(arrays.builds).toEqual([scene]));
+    expect(isDone).toBe(false);
+    arrays.release();
+    await before;
+    expect(isDone).toBe(true);
+
+    // Once loaded, the next scene's builds start in the hook itself (re-tags before the release)
+    hooks.worldCleared?.(world, 'b', scene as never);
+    expect(arrays.builds).toHaveLength(2);
+    arrays.release();
+    await hooks.beforeAssets?.();
+  });
+
+  test('a scene without set arrays awaits nothing', () => {
+    const hooks = getHooks();
+    arrays.builds.length = 0;
+
+    hooks.worldCleared?.(world, 'a', { id: 'b', textureSetArrays: [] } as never);
+
+    expect(hooks.beforeAssets?.()).toBeUndefined();
+    expect(arrays.builds).toHaveLength(0);
   });
 });

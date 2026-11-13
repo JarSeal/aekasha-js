@@ -1273,4 +1273,147 @@ describe('p303 D1: texture set inputs', () => {
     expect(textureIds(out)).toEqual(['sandAR', 'sandNH']);
     expect(out.__streaming?.assets.textures ?? []).toEqual([]);
   });
+
+  describe('p303 D4: texture set arrays', () => {
+    const arrayAssets = {
+      ...assets,
+      ...tex('rockAR', true),
+      ...tex('rockNH'),
+      'app/textures/rock.textureSet.json': {
+        category: 'ROCKS',
+        physicalSize: [6, 6],
+        heightScale: 0.2,
+        packings: { LITE: { albedoRough: 'rockAR', normalHeight: 'rockNH' } },
+      },
+    };
+    type ArrayOut = {
+      id?: string;
+      sets: string[];
+      packing: string;
+      __textures?: { id: string; __url?: string }[];
+    };
+    const arraysOf = (out: OutputScene | undefined) =>
+      ((out as { textureSetArrays?: ArrayOut[] } | undefined)?.textureSetArrays ?? []).map(
+        ({ __textures, ...entry }) => ({ ...entry, textures: __textures?.map((t) => t.id) })
+      );
+
+    it('adds a material input’s list with its sets, its members declared on it, not loaded', () => {
+      const { isGathered, scene: get } = gather({
+        ...arrayAssets,
+        ...tslMat('m', { ground: { textureSetArray: ['sand', 'rock'], packing: 'LITE' } }),
+        ...scene('a', { materials: ['m'] }),
+      });
+      expect(isGathered).toBe(true);
+      const out = get('a');
+      expect(arraysOf(out)).toEqual([
+        {
+          sets: ['sand', 'rock'],
+          packing: 'LITE',
+          textures: ['sandAR', 'sandNH', 'rockAR', 'rockNH'],
+        },
+      ]);
+      // Resolved as a listed texture is (its file size, no source path), yet not in textures
+      const declared = (out as { textureSetArrays: ArrayOut[] }).textureSetArrays[0].__textures;
+      expect(declared?.[0]).toHaveProperty('__fileSize');
+      expect(declared?.[0]).not.toHaveProperty('__sourcePath');
+      expect(out?.textures).toBeUndefined();
+      expect(setIds(out)).toEqual(['sand', 'rock']);
+      expect(out?.__features).toEqual(['texturesets']);
+    });
+
+    it('keeps listed arrays, dedupes a list, names a listed id, declares only unlisted members', () => {
+      const { isGathered, scene: get } = gather({
+        ...arrayAssets,
+        ...tslMat('m', {
+          a: { textureSetArray: ['sand', 'rock'], packing: 'LITE' },
+          b: { textureSetArray: ['sand', 'rock'], packing: 'LITE' },
+          c: { textureSetArray: 'gallery' },
+        }),
+        ...scene('a', {
+          materials: ['m'],
+          textureSets: ['sand'],
+          textureSetArrays: [
+            { id: 'gallery', sets: ['rock', 'sand'], packing: 'LITE', swappable: true },
+            { sets: ['sand', 'rock'], packing: 'LITE' },
+          ],
+        }),
+      });
+      expect(isGathered).toBe(true);
+      const out = get('a');
+      // The listed set's default packing is in textures: those members aren't declared again
+      expect(textureIds(out)).toEqual(['sandAR', 'sandNH']);
+      expect(arraysOf(out)).toEqual([
+        {
+          id: 'gallery',
+          sets: ['rock', 'sand'],
+          packing: 'LITE',
+          swappable: true,
+          textures: ['rockAR', 'rockNH'],
+        },
+        { sets: ['sand', 'rock'], packing: 'LITE', textures: undefined },
+      ]);
+    });
+
+    it.each([
+      [
+        { textureSetArray: ['sand', 'nope'], packing: 'LITE' },
+        'no texture set (a *.textureSet.json) has the id "nope"',
+      ],
+      [
+        { textureSetArray: ['rock'], packing: 'FULL' },
+        'the texture set "rock" has no packing "FULL" (packings: LITE)',
+      ],
+      [
+        { textureSetArray: 'gallery' },
+        'the scene\'s textureSetArrays has no set array with the id "gallery"',
+      ],
+    ])('fails on %j, naming the material and the input', (input, message) => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { isGathered } = gather({
+        ...arrayAssets,
+        ...tslMat('m', { x: input }),
+        ...scene('a', { materials: ['m'] }),
+      });
+      const text = errors.mock.calls.flat().join('\n');
+      errors.mockRestore();
+      expect(isGathered).toBe(false);
+      expect(text).toContain(`Scene "a": the material "m"'s input "x": ${message}`);
+    });
+
+    it('fails on a listed array’s unknown set and on an id given twice', () => {
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { isGathered } = gather({
+        ...arrayAssets,
+        ...scene('a', {
+          textureSetArrays: [
+            { id: 'g', sets: ['sand'], packing: 'LITE' },
+            { sets: ['rock'], packing: 'MINIMAL' },
+            { id: 'g', sets: ['rock'], packing: 'LITE' },
+          ],
+        }),
+      });
+      const text = errors.mock.calls.flat().join('\n');
+      errors.mockRestore();
+      expect(isGathered).toBe(false);
+      expect(text).toContain(
+        'Scene "a": textureSetArrays[1]: the texture set "rock" has no packing "MINIMAL" (packings: LITE).'
+      );
+      expect(text).toContain(
+        'Scene "a": textureSetArrays[2]: the id "g" is another entry\'s already.'
+      );
+    });
+
+    it('lets a cell-only material move, its set arrays and members staying with the scene', () => {
+      const { isGathered, scene: get } = streamingScene({
+        ground: { textureSetArray: ['sand'], packing: 'LITE' },
+      });
+      expect(isGathered).toBe(true);
+      const out = get('w') as StreamingOut & { materials?: unknown[] };
+      expect(out.materials).toBeUndefined();
+      expect(out.__streaming?.assets.textures ?? []).toEqual([]);
+      expect(arraysOf(out)).toEqual([
+        { sets: ['sand'], packing: 'LITE', textures: ['sandAR', 'sandNH'] },
+      ]);
+    });
+  });
 });

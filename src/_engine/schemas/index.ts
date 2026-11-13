@@ -106,11 +106,14 @@ export {
   TEXTURE_SET_PACKING_PREFERENCE,
   TEXTURE_SET_PACKINGS,
   TEXTURE_SET_SURFACE_DEFAULTS,
+  SceneTextureSetArraySchema,
+  TextureSetArrayInputSchema,
   TextureSetAssetSchema,
   TextureSetInputSchema,
 } from './TextureSetSchema';
 export { textureSetsSchemaPart } from '../features/texturesets/TextureSetsSchema';
 export type {
+  SceneTextureSetArrayEntry,
   TextureSetAsset,
   TextureSetDef,
   TextureSetPacking,
