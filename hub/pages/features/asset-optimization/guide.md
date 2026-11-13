@@ -94,10 +94,49 @@ albedo gets it by itself.
 
 ## Texture atlases
 
-A `*.textureAtlas.json` packs images into one texture, a named slot per image and a cell per
-part. A slot can also be a ready-made image of the whole layout (`image`, every cell with its
-`rect`), and `mipChain: "FULL"` builds every mip level down to 1 × 1. Exported impostors use both
-(see [LOD and impostors](hub:features/lod#exporting-an-impostor)).
+A `*.textureAtlas.json` packs images of any size into one layout, a cell per image, and writes a
+texture per slot (a map type: colour, normal, mask), all on that layout. It's for what doesn't
+tile: decals, scatter cards, sprites, impostors.
+
+```json
+{
+  "id": "decals",
+  "size": [1024, 1024],
+  "padding": 16,
+  "slots": {
+    "albedo": { "texOpts": { "colorSpace": "srgb" }, "optimize": { "slot": "baseColor" } },
+    "normal": { "fill": [0.5, 0.5, 1], "optimize": { "slot": "normal" } }
+  },
+  "cells": [
+    {
+      "id": "tyreTracks",
+      "rect": [0, 0, 512, 256],
+      "sources": { "albedo": "./source/tyre.png", "normal": "./source/tyreNormal.png" }
+    },
+    { "id": "crack", "sources": { "albedo": "crackAlbedo" } }
+  ]
+}
+```
+
+- **Cells** with a `rect` stay there; the rest are packed, each at its `size` (by default its
+  first source's). A source is a texture asset's id or an image. A cell that doesn't fit fails
+  the run, naming it. `data` is anything you want in the cell table (a decal's physical size).
+- **`padding`** extends each cell's edges outwards, and the mip chain stops at the last level it
+  keeps the cells apart (16 px keeps levels 0-4), so a cell never shows its neighbour. A slot a
+  cell has no source for gets the slot's `fill` (by default transparent black).
+- A slot can also be a ready-made image of the whole layout (`image`, every cell with its
+  `rect`), and `mipChain: "FULL"` builds every mip level down to 1 × 1. Exported impostors use
+  both (see [LOD and impostors](hub:features/lod#exporting-an-impostor)).
+- **At runtime** each slot is a texture `<atlas>.<slot>` (`decals.albedo`), carrying the cell
+  table. A scene lists the atlas's id in its `textures` for every slot, or a slot's id for that
+  one. In code, [`getAtlasCell`](api:getAtlasCell) gives a cell's UV rect, size and `data`;
+  [`sampleAtlasCell`](api:sampleAtlasCell) samples a cell with the mesh's 0..1 UVs, kept half a
+  texel inside it; and [`remapUVsToAtlasCell`](api:remapUVsToAtlasCell) rewrites a geometry's UVs
+  into a cell instead, so a plain material's `map` shows it. A mesh UV'd into the atlas in Blender
+  needs neither.
+- **A material JSON** samples a cell without code: an input
+  `{ "atlas": "decals", "slot": "albedo", "cell": "crack" }` (see
+  [the inputs](hub:features/toolkit#the-inputs)).
 
 ## Texture arrays
 
@@ -118,10 +157,23 @@ resized to one `size`: one texture binding where a shader would otherwise need o
   in layer order. `optimize` applies to every layer, and `texOpts` is the array's one sampler.
 - **At runtime** a scene lists it in its `textures` like any texture, and
   [`loadTextureAsync`](api:loadTextureAsync) loads it as an array. A node material samples a
-  layer by name or index with [`sampleArrayLayer`](api:sampleArrayLayer).
+  layer by name or index with [`sampleArrayLayer`](api:sampleArrayLayer), and
+  [`getArrayLayerIndex`](api:getArrayLayerIndex) gives a layer name's index.
+- **A material JSON** samples a layer without code: an input
+  `{ "textureArray": "groundLayers", "layer": "dirt" }`, or the layer's index (see
+  [the inputs](hub:features/toolkit#the-inputs)).
 - Textures that already share a size and codec can be put together at runtime instead, without
   a build step ([`buildTextureArray`](api:buildTextureArray)): KTX2 can't be resized or encoded
   in the browser.
+
+::: tip Arrays or atlases?
+
+An array's layers each wrap and mip on their own, so a tiling texture stays one: for ground
+layers and material sets, every layer at one size. An atlas's cells can be any size but can't
+tile (a UV past the cell reads its padding, then its neighbour): for decals, cards and sprites.
+Both are one texture binding where a shader would otherwise need one per image.
+
+:::
 
 ### A palette's arrays
 
@@ -169,6 +221,12 @@ The Æ symbol from the toolkit: a Draco GLB through the pipeline, imported by th
 - [`loadTextureAsync`](api:loadTextureAsync) and [`importAssetAsync`](api:importAssetAsync)
   load an asset's output by themselves.
 - [`resolveAssetUrl`](api:resolveAssetUrl): an asset's URL, output or source.
+- Arrays: [`sampleArrayLayer`](api:sampleArrayLayer),
+  [`getArrayLayerIndex`](api:getArrayLayerIndex), [`buildTextureArray`](api:buildTextureArray)
+  and [`getTextureArrayInfo`](api:getTextureArrayInfo).
+- Atlases: [`sampleAtlasCell`](api:sampleAtlasCell), [`getAtlasCell`](api:getAtlasCell),
+  [`remapUVsToAtlasCell`](api:remapUVsToAtlasCell) and
+  [`getTextureAtlasInfo`](api:getTextureAtlasInfo).
 
 ## Read more
 

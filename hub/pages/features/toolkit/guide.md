@@ -205,6 +205,8 @@ Each value of `inputs`, or of a socket under `nodes`, reaches the function as a 
 | `"testTexture"` (any other string)                                              | The texture with that id: `.sample(uv)` it, or use it as is (sampled at the uv).     |
 | `{ "texture": "testTexture" }`                                                  | The same.                                                                            |
 | `{ "texture": "testTexture", "channel": "r" }`                                  | Its sample at the uv, those channels: one to four of `r`, `g`, `b` and `a` (`"rg"`). |
+| `{ "textureArray": "groundLayers", "layer": "dirt" }` (or the layer's index)    | That layer of a texture array, at the uv.                                            |
+| `{ "atlas": "decals", "slot": "albedo", "cell": "crack" }`                      | The atlas slot's sample of that cell, the uv mapped into it.                         |
 | A form a [resolver](hub:features/toolkit#graphs-and-input-forms-from-code) adds | What the resolver makes of it: a node, or an object of nodes.                        |
 
 - **Each is kept** as `material.userData.uniforms['<socket>_<input>']` (`colorNode_checkerSize`),
@@ -212,6 +214,13 @@ Each value of `inputs`, or of a socket under `nodes`, reaches the function as a 
   your code can too.
 - **A texture that isn't loaded** warns and samples one white texel, so the function still gets
   a texture.
+- **An array layer** stays that layer through `.sample(uv)`, so the function can sample it at
+  UVs of its own. **An atlas cell** is a sample already: `.sample(uv)` on it would read the whole
+  slot, so sample other UVs with [`sampleAtlasCell`](api:sampleAtlasCell). A cell is kept half a
+  texel inside its rect; `"clampToCell": false` leaves the UVs as they map. The gather fails on a
+  layer, slot or cell the asset doesn't have, naming what it has (see
+  [texture arrays](hub:features/asset-optimization#texture-arrays) and
+  [atlases](hub:features/asset-optimization#texture-atlases)).
 - **An input named `staticDefines`** merges over the material's static defines for that one
   function.
 - Check the inputs a function needs and throw naming the missing one, as the toolkit's do.
