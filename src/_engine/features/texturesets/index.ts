@@ -13,8 +13,14 @@ export type {
   TextureSetLayerParamsNode,
   TextureSetSlotMap,
 } from './TextureSetArrays';
+export type {
+  TextureSetGenerator,
+  TextureSetGeneratorBuildOpts,
+  TextureSetGeneratorParams,
+} from './TextureSetGenerator';
 export type { TextureSetArrayInputRef, TextureSetInputRef } from './TextureSetRefs';
 export type {
+  TextureSetCategory,
   TextureSetDef,
   TextureSetPacking,
   TextureSetSlot,

@@ -11,6 +11,32 @@ export type { DomainWarpOptions, FbmOptions, NoiseOptions } from './nodes/noise/
 export type { NoisePeriod } from './nodes/noise/Period';
 export { worley } from './nodes/noise/Worley';
 export type { WorleyOptions, WorleySample } from './nodes/noise/Worley';
+export { bakeSurfaceGenerator } from './procedural/BakeSurface';
+export type { BakedSurface, BakeSurfaceGeneratorOpts } from './procedural/BakeSurface';
+export {
+  doesPackingStoreNormal,
+  getSurfacePackingOutputs,
+  packSurfaceOutputs,
+} from './procedural/PackSurface';
+export type { PackableSurface } from './procedural/PackSurface';
+export { defineSurfaceGenerator } from './procedural/SurfaceGenerator';
+export type {
+  SurfaceBuildContext,
+  SurfaceCells,
+  SurfaceGenerator,
+  SurfaceGeneratorDef,
+  SurfaceOutputs,
+} from './procedural/SurfaceGenerator';
+export type {
+  SurfaceColorParam,
+  SurfaceNumberParam,
+  SurfaceParamNode,
+  SurfaceParamNodes,
+  SurfaceParamSpec,
+  SurfaceParamSpecs,
+  SurfaceParamValues,
+  SurfaceToggleParam,
+} from './procedural/SurfaceParams';
 export {
   bumpNormalView,
   sampleTextureSet,

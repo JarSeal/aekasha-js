@@ -115,6 +115,7 @@ export { textureSetsSchemaPart } from '../features/texturesets/TextureSetsSchema
 export type {
   SceneTextureSetArrayEntry,
   TextureSetAsset,
+  TextureSetCategory,
   TextureSetDef,
   TextureSetPacking,
   TextureSetSlot,

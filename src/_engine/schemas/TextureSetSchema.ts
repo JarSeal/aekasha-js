@@ -23,6 +23,10 @@ export const TEXTURE_SET_CATEGORIES = [
   'OTHER',
 ] as const;
 
+/** A texture set's surface category: `SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`,
+ * `CONCRETE` or `OTHER`. */
+export type TextureSetCategory = (typeof TEXTURE_SET_CATEGORIES)[number];
+
 /**
  * Each packing's slots (p303 D2), in their order: a packing's textures are listed (and loaded) in
  * this order. A slot whose name starts with `albedo` holds colour (sRGB in RGB); the others hold

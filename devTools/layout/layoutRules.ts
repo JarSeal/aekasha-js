@@ -102,6 +102,9 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}geometry/scatter/` },
   // The terrain's TSL building blocks (p303 D7; p305's techniques)
   { from: `${T}terrain/nodes/` },
+  // The procedural surfaces (p304 D3): the generator API, and a folder per generator
+  // (`<id>/<id>.generator.ts`)
+  { from: `${T}terrain/procedural/` },
   {
     from: `${T}materials/TriplanarProjection.ts`,
     note: 'the TSL helper the triplanar materials share',

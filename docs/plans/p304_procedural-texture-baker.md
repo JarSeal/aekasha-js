@@ -227,6 +227,22 @@ Tileable baking needs noise with an integer period over the tile:
 
 **Exit:** every generator bakes into all three packings and looks right on a gallery block.
 
+**Decided (2026-11-14), where the code had moved past D3:**
+
+- **The engine reaches a generator through the gathered code** (A): a generator is a `<id>.generator.ts` module (in `src/toolkit/terrain/procedural/<id>/`, or an app's), the gatherer writes `textureSetGeneratorObjects` (`() => import(…)` by id) into `generatedAppFns.ts` as it does `tslMaterialFileObjects`, and the layer lint's generated-code exception takes `*.generator.ts` beside `*.tsl.ts`. An unknown `generator` fails the gather; each generator is its own chunk; an app without a procedural set ships none. The engine side is a type only, `TextureSetGenerator` (`{ id, category, buildPacking(bakeCtx, { packing, params, seed, physicalSize, heightScale }) }`, on `aekasha/texturesets`), which the toolkit's generators satisfy, so the engine imports no toolkit code.
+- **Params without zod** (D3's `params: ZodSchema` would put zod into the toolkit's runtime: 22 kB gzip, the texture sets' trap): a plain spec per param (`number` with `min` / `max` / `step`, `color` as sRGB `#rrggbb`, `boolean`), checked when the graph is built (the error names the generator and the param; section 3's load names the set too); the gather checks only the values' shape. Numbers and colours are uniforms (a slider rebakes without a rebuild); `isStatic` numbers and booleans are build-time values (octave counts, a seam toggle). The same spec gives Phase 6's gallery sliders.
+- **One packing per procedural set JSON** (`procedural.packing`, the set's only and default packing). The exit's "all three packings" is checked from code (`bakeSurfaceGenerator`).
+- **Set arrays refuse a procedural set** (stronger than D3's "no mixing"): `TextureSetArray.ts` assembles members on the CPU (KTX2 levels or an image's canvas readback), which a render target texture can't be. An all-procedural array (one layered `bakeTexture`) is p305's, if it wants one.
+- **The exit's check is its own verification scene, `proceduralSurfaces`** (the 10 generators on blocks, a packing switch in its tab, readback checks that each slot is written and each bake tiles, reusing `noiseLibrary`'s `noiseChecks`), with a procedural set JSON or two for the JSON path. Phase 6 adds the gallery's "Procedural" row as planned.
+
+**As built (section 1):**
+
+- **Engine:** `features/texturesets/TextureSetGenerator.ts` (types only): `TextureSetGenerator`, `TextureSetGeneratorBuildOpts`, `TextureSetGeneratorParams`, and `TextureSetCategory` (the schema's, a type), on `aekasha/texturesets`.
+- **Toolkit** (`src/toolkit/terrain/procedural/`, its layout rule; all on `aekasha/toolkit/terrain`): `SurfaceParams.ts` (the spec types; `buildSurfaceParams`, `checkSurfaceParamSpecs` `@internal`), `PackSurface.ts` (`packSurfaceOutputs`, `getSurfacePackingOutputs`, `doesPackingStoreNormal`; the packings' slots repeated, not the schema's value, which brings zod), `SurfaceGenerator.ts` (`defineSurfaceGenerator`; `createSurfaceContext`, `buildSurfacePacking` `@internal`), `BakeSurface.ts` (`bakeSurfaceGenerator` → `BakedSurface`: `bake`, `packing`, `generator`, `get/setParams`, `get/setSeed`; LITE and 1024² by default; an id's surface returned while its bake is alive or baking). A test each.
+- **The context:** `uv` in tiles, `isLive`, `tileSize` (metres), `texel` (live: a 1024² texel), `cells(count)` (a whole number baked, a float node rounded in the shader; live, period 0), `seed(index?)` (a uint uniform, the derived ones stepped by an odd constant).
+- **The defaults:** the normal `heightToNormal` at `heightScale / physicalSize.x`, only for `FULL` and `LITE`; the AO `heightToCavity` at `cavity.radius` (metres, default 0.03) / `physicalSize.x`, strength 4. Their taps call one layout function per build (`aekSurfaceHeight_<id>_<n>`, named apart so two in one shader don't clash) whose inputs are the uv, the seed and the uniform params: three caches a layout function's code per backend (`buildFunctionNode`), so a body reading a uniform itself would lose the uniform's declaration in the next shader built with it. The point's own height is the surface's (no extra evaluation). Not yet compiled on a GPU: section 2's scene checks it on both backends.
+- **The seed is a uniform too,** so a seed slider rebakes without a rebuild.
+
 ### Phase 5 — Shared textures and export (D4, D5)
 
 **Exit:**
