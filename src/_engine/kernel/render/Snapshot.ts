@@ -138,15 +138,19 @@ const createOutputTarget = (width: number, height: number) => {
  * on both backends: WebGPU pads its rows to 256 bytes, WebGL reads them bottom-up.
  * @internal
  * @param target an `UnsignedByteType` `RGBAFormat` target
+ * @param textureIndex which of an MRT target's textures (default 0, the first)
  * @returns its pixels, `width × height × 4` bytes
  */
-export const readRenderTargetRGBA8Async = async (target: THREE.RenderTarget) => {
+export const readRenderTargetRGBA8Async = async (
+  target: THREE.RenderTarget,
+  textureIndex?: number
+) => {
   const renderer = getRenderer(true)!;
-  if (
-    target.texture.type !== THREE.UnsignedByteType ||
-    target.texture.format !== THREE.RGBAFormat
-  ) {
-    throw new Error(`readRenderTargetRGBA8Async: '${target.texture.name}' isn't an RGBA8 target.`);
+  const texture = target.textures[textureIndex ?? 0];
+  if (texture?.type !== THREE.UnsignedByteType || texture.format !== THREE.RGBAFormat) {
+    throw new Error(
+      `readRenderTargetRGBA8Async: '${texture?.name ?? target.texture.name}' isn't an RGBA8 target.`
+    );
   }
   const { width, height } = target;
   const isBottomUp = Boolean((renderer.backend as { isWebGLBackend?: boolean }).isWebGLBackend);
@@ -155,7 +159,8 @@ export const readRenderTargetRGBA8Async = async (target: THREE.RenderTarget) => 
     0,
     0,
     width,
-    height
+    height,
+    textureIndex ?? 0
   )) as Uint8Array;
   const rowBytes = width * 4;
   const stride = height > 1 ? (data.length - rowBytes) / (height - 1) : rowBytes;

@@ -17,6 +17,11 @@ import { getBackendName, getErrorMessage, meshUv, sampleTexture } from '../../sh
 import { getChannelMaxByte, getChannelStats } from '../../shared/channelStats';
 import { checkNoiseRow, type NoiseRowResult } from './noiseChecks';
 import { getNoiseRows, type NoiseRow } from './noiseRows';
+import {
+  createSharedTexturesAsync,
+  setRippleTime,
+  type SharedTextureResults,
+} from './sharedTextures';
 
 /**
  * The noise library's verification scene (p304 Phase 3): the toolkit's noise functions
@@ -25,13 +30,15 @@ import { getNoiseRows, type NoiseRow } from './noiseRows';
  * `heightToNormal` and `heightToCavity`. The left tile of a pair is the periodic bake (256², one
  * tile) repeated 3 × 3 on one quad: a seam shows as a line through it. The right one is the same
  * graph without a period, evaluated live in its material over the same three tiles: no seam to
- * show, and nothing repeats.
+ * show, and nothing repeats. The grid's last pair is the toolkit's shared generated textures
+ * (p304 D4, `sharedTextures.ts`): the macro noise's channels, and the ripple atlas with its rings.
  *
  * During the load it checks the exit criteria and logs an error for each failure, so the scene
  * runner (`yarn verify:scenes --only noiseLibrary`, `--webgl` for SwiftShader) fails on one. Each
  * function is baked at 32 cells over 256², periodic and non-periodic (offset to other cells), and
  * read back (`noiseChecks.ts`): the periodic bake must step no more across its wrap than inside,
- * repeat exactly a whole tile away, and match the non-periodic bake's mean and spread.
+ * repeat exactly a whole tile away, and match the non-periodic bake's mean and spread. The shared
+ * textures are read back too (`sharedTextureChecks.ts`).
  * `window.__noiseLibrary` holds the results, and the debug env's "Noise library" tab
  * (`_dbg__noiseLibrary.ts`) shows them.
  */
@@ -56,14 +63,18 @@ type NoiseLibraryState = {
   results: {
     backend?: string;
     rows?: Record<string, NoiseRowResult & { label: string }>;
-    /** Every row passed */
+    /** The shared generated textures' checks (p304 D4) */
+    shared?: SharedTextureResults;
+    /** Every row and shared texture passed */
     passed?: boolean;
     error?: string;
     done?: boolean;
   };
+  /** Moves the ripple tile's rings: a time in ring lifetimes */
+  setRippleTime: (time: number) => void;
 };
 
-const state: NoiseLibraryState = { results: {} };
+const state: NoiseLibraryState = { results: {}, setRippleTime };
 
 const getQuadGeometry = () =>
   getGeometry('noiseLibraryQuad') ??
@@ -72,7 +83,8 @@ const getQuadGeometry = () =>
 /** The left and right tile centres of the pair in grid slot `index`. */
 const getPairPositions = (index: number) => {
   const pairWidth = QUAD * 2 + PAIR_GAP;
-  const rows = Math.ceil(getNoiseRows().length / COLUMNS);
+  // The rows' pairs and the shared textures'
+  const rows = Math.ceil((getNoiseRows().length + 1) / COLUMNS);
   const width = COLUMNS * pairWidth + (COLUMNS - 1) * GRID_GAP.x;
   const height = rows * QUAD + (rows - 1) * GRID_GAP.y;
   const column = index % COLUMNS;
@@ -229,10 +241,15 @@ export const scene = async () => {
   const rows = getNoiseRows();
   try {
     for (let i = 0; i < rows.length; i++) await createRowTilesAsync(rows[i], i);
-    state.results.rows = await runChecksAsync(rows);
-    state.results.passed = Object.values(state.results.rows).every(
-      (row) => row.failures.length === 0
+    const sharedPair = getPairPositions(rows.length);
+    state.results.shared = await createSharedTexturesAsync((id, side, color) =>
+      createTile(id, sharedPair[side], color)
     );
+    state.results.rows = await runChecksAsync(rows);
+    state.results.passed = [
+      ...Object.values(state.results.rows),
+      ...Object.values(state.results.shared),
+    ].every((result) => result.failures.length === 0);
     state.results.backend = getBackendName();
     state.results.done = true;
   } catch (error) {

@@ -50,6 +50,14 @@ export type {
   SurfaceParamValues,
   SurfaceToggleParam,
 } from './procedural/SurfaceParams';
+export { bakeMacroNoise } from './textures/MacroNoise';
+export type { BakeMacroNoiseOpts } from './textures/MacroNoise';
+export { bakeRippleAtlas, decodeRippleAtlas } from './textures/RippleAtlas';
+export type {
+  BakeRippleAtlasOpts,
+  DecodeRippleAtlasOpts,
+  RippleRings,
+} from './textures/RippleAtlas';
 export {
   bumpNormalView,
   sampleTextureSet,

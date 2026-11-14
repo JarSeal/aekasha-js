@@ -146,6 +146,18 @@ export type GeneratorResult = {
 };
 
 /**
+ * A generator's shown bake, for the tab's export: its id and its slots (none before it's baked).
+ * @param generatorId one of `GENERATORS`' ids
+ * @returns the bake's id and output names, or undefined
+ */
+export const getShownBake = (generatorId: string) => {
+  const bake = blocks.get(generatorId)?.shown?.bake;
+  return bake && !bake.isDisposed()
+    ? { id: bake.id, slots: Object.keys(bake.textures) }
+    : undefined;
+};
+
+/**
  * Moves the scene's camera to a block's close-up, or back over every block (the tab's list, and the
  * test bridge's shots: `window.__proceduralSurfaces.viewBlock`).
  * @param generatorId the block's generator (a JSON set's id for its block, `live:<setId>` for the

@@ -1,7 +1,9 @@
 import { createDebuggerTab, updateDebuggerTab } from 'aekasha/debug';
 import type { TextureSetPacking } from 'aekasha/texturesets';
+import { exportBakeOutputsAsync } from '../../shared/_dbg__exportBake';
 import {
   GENERATORS,
+  getShownBake,
   JSON_SETS,
   PACKINGS,
   PROCEDURAL_SURFACES_SCENE_ID,
@@ -13,6 +15,23 @@ import {
 } from './proceduralSurfaces';
 
 const TAB_ID = 'proceduralSurfaces';
+/** Where a generator's export goes by default: a texture set folder of its own in the app. */
+const EXPORT_DIR = 'src/app/textures/<generator>Baked/source';
+
+/** Exports a generator's shown bake, a PNG per slot (`<generator>_<slot>.png`), into `dir`
+ * (`<generator>` replaced by its id). */
+const exportShownBake = (generatorId: string, dir: string) => {
+  const shown = getShownBake(generatorId);
+  if (!shown) return;
+  void exportBakeOutputsAsync(
+    shown.slots.map((slot) => ({
+      id: shown.id,
+      output: slot,
+      fileName: `${generatorId}_${slot}.png`,
+    })),
+    dir.replaceAll('<generator>', generatorId)
+  );
+};
 
 /** A generator's figures as the tab's read-only fields show them */
 const getGeneratorView = (index: number, result: GeneratorResult | undefined) => {
@@ -48,13 +67,15 @@ const getJsonSetView = (result: JsonSetResult | undefined) => ({
  * The procedural surfaces scene's "Procedural surfaces" tab (p304 Phase 4, a scene tab: removed on
  * the scene's exit, created again on every visit): the packing the blocks show (each generator
  * baked again in it), the ten blocks baked or live (section 4), each generator's checks and the
- * JSON sets' (p304 Phase 4 section 3).
+ * JSON sets' (p304 Phase 4 section 3). Each generator's "Export PNGs" writes its shown bake's slots
+ * into the export folder (p304 D5, `exportBakedTexture`): a texture set's committed sources.
  * @param results the scene's results (`window.__proceduralSurfaces.results`), complete by now
  */
 export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) => {
   const tabState = {
     packing: results.shownPacking ?? 'LITE',
     surface: results.isLiveShown ? 'LIVE' : 'BAKED',
+    exportDir: EXPORT_DIR,
     backend: results.backend ?? '-',
     result: results.error
       ? `error: ${results.error}`
@@ -94,6 +115,11 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
             hint: "The ten blocks' bakes, or their generators run live in the material (createLiveSurface)",
             onChange: (value) => setShownLive(value === 'LIVE'),
           },
+          {
+            key: 'exportDir',
+            label: 'Export folder',
+            hint: "Where a generator's Export PNGs writes, from the repo's root (<generator>: its id)",
+          },
           { key: 'backend', label: 'Backend', readonly: true },
           { key: 'result', label: 'Checks', readonly: true },
           ...GENERATORS.map((generator, index) => {
@@ -108,6 +134,12 @@ export const createProceduralSurfacesTab = (results: ProceduralSurfacesResults) 
                 { key: 'slots', target: view, label: 'Slots read', readonly: true },
                 { key: 'periodicity', target: view, label: 'Tile away', readonly: true },
                 { key: 'live', target: view, label: 'Live', readonly: true },
+                {
+                  type: 'button' as const,
+                  title: 'Export PNGs',
+                  label: "The shown bake's slots, into the export folder",
+                  onClick: () => exportShownBake(generator.id, tabState.exportDir),
+                },
               ],
             };
           }),

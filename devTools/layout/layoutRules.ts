@@ -105,6 +105,9 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   // The procedural surfaces (p304 D3): the generator API, and a folder per generator
   // (`<id>/<id>.generator.ts`)
   { from: `${T}terrain/procedural/` },
+  // The shared generated textures' bake code (p304 D4: the macro noise, the ripple atlas); their
+  // exported assets are texture folders (`textures/<id>/`)
+  { from: `${T}terrain/textures/` },
   {
     from: `${T}materials/TriplanarProjection.ts`,
     note: 'the TSL helper the triplanar materials share',

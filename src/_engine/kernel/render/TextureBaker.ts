@@ -602,3 +602,80 @@ export type TextureBakeStats = {
  */
 export const getTextureBakeStats = (id: string): TextureBakeStats | undefined =>
   useDebug(statsRef)?.getTextureBakeStatsView(id);
+
+/** What {@link exportBakedTexture} exports, and where. */
+export type ExportBakedTextureOpts = {
+  /** The bake's id (`BakeTextureOpts.id`). */
+  id: string;
+  /** The output's name (`BakeOutput.name`). */
+  output: string;
+  /** The folder the PNG goes into, from the repo's root: a texture set's `source/`, eg.
+   * `src/app/textures/dunes/source` (inside `src/app/`, `src/toolkit/` or `src/public/`: the dev
+   * files' roots). */
+  dir: string;
+  /** The PNG's file name. Default `<id>_<output>.png`. */
+  fileName?: string;
+  /** Replaces a PNG that's there with other pixels. Default false: the export then resolves
+   * `EXISTS` and writes nothing, so a tool can ask first and call again. */
+  overwrite?: boolean;
+};
+
+/** What became of an {@link exportBakedTexture} call. */
+export type BakedTextureExport = {
+  /** The PNG's path from the repo's root (where to put a downloaded one). */
+  path: string;
+  /**
+   * `CREATED` or `UPDATED`: written (a gather follows, and the page reloads when a texture JSON
+   * reads the file). `UNCHANGED`: the file already has these pixels. `EXISTS`: a file with other
+   * pixels is there and `overwrite` wasn't set; nothing was written. `DOWNLOADED`: the dev files
+   * aren't available (`reason` says why), so the browser downloaded the PNG.
+   */
+  status: 'CREATED' | 'UPDATED' | 'UNCHANGED' | 'EXISTS' | 'DOWNLOADED';
+  /** Why the PNG was downloaded, with `DOWNLOADED`. */
+  reason?: string;
+  /** The values outside 0..1 a `HALF_FLOAT` output lost to the 8-bit PNG (0 for an
+   * `UNSIGNED_BYTE` one). */
+  clampedValues: number;
+};
+
+/**
+ * Exports a bake's output as an 8-bit PNG into the repo (debug env, through the dev file server of
+ * `yarn dev`): the texture's level 0 as it's stored (an `SRGB` output sRGB-encoded, alpha as
+ * data), flipped so the PNG imported as a texture shows what the bake does at every uv. The way
+ * from a procedural look to a shipped asset: export into a texture set's `source/`, commit it,
+ * write the set's pack recipes and let `yarn assets` encode them to KTX2, compressed and without a
+ * bake at load.
+ * @param opts the bake's id, its output and the folder
+ * @returns the PNG's path and what happened: written, unchanged, there already, or downloaded
+ * @throws (rejects) outside the debug env, for an id and output that isn't a baked texture, an
+ * array bake, a path the dev files refuse (a `DevFilesError`), or a file that changed meanwhile
+ * @remarks A `HALF_FLOAT` output is clamped to 0..1 (with a warning naming the count): bake data
+ * that needs more as `UNSIGNED_BYTE` in a range of its own. Mips aren't exported (the asset
+ * pipeline builds them). Where the dev files aren't available (a device on the LAN, a build with
+ * debug tools) the browser downloads the PNG instead.
+ * @example
+ * ```ts
+ * import { bakeTexture, exportBakedTexture } from 'aekasha';
+ * import { vec4 } from 'three/tsl';
+ *
+ * await bakeTexture({
+ *   id: 'stripes',
+ *   size: 256,
+ *   outputs: [{ name: 'mask' }],
+ *   build: ({ uv }) => ({ mask: vec4(uv.x.mul(8).fract().step(0.5)) }),
+ * });
+ * const dir = 'src/app/textures/stripes/source';
+ * let result = await exportBakedTexture({ id: 'stripes', output: 'mask', dir });
+ * if (result.status === 'EXISTS' && confirm(`Replace ${result.path}?`)) {
+ *   result = await exportBakedTexture({ id: 'stripes', output: 'mask', dir, overwrite: true });
+ * }
+ * ```
+ */
+export const exportBakedTexture = async (
+  opts: ExportBakedTextureOpts
+): Promise<BakedTextureExport> => {
+  const exporter = await loadDebugModuleAsync(() => import('./debug/_dbg__TextureBaker'));
+  const module = useDebug(exporter);
+  if (!module) throw new Error('exportBakedTexture: the export works in the debug env only.');
+  return module.exportBakedTextureAsync(opts);
+};

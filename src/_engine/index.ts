@@ -310,12 +310,14 @@ export type {
 export type { SceneHooks } from './kernel/scene/SceneHooks';
 export { snapshotToBlobAsync, takeSnapshotAsync } from './kernel/render/Snapshot';
 export type { Snapshot, SnapshotBlobOpts, SnapshotOpts } from './kernel/render/Snapshot';
-export { bakeTexture, getTextureBakeStats } from './kernel/render/TextureBaker';
+export { bakeTexture, exportBakedTexture, getTextureBakeStats } from './kernel/render/TextureBaker';
 export type {
   BakeBuildContext,
   BakedTexture,
+  BakedTextureExport,
   BakeOutput,
   BakeTextureOpts,
+  ExportBakedTextureOpts,
   TextureBakeStats,
 } from './kernel/render/TextureBaker';
 export { getBakedTextureMemoryBytes } from './kernel/render/TextureBakeMemory';
