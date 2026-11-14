@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { checkMacroNoise, checkRippleAtlas, getNeighbourCorrelation } from './sharedTextureChecks';
+import {
+  checkCommittedCopy,
+  checkMacroNoise,
+  checkRippleAtlas,
+  getNeighbourCorrelation,
+} from './sharedTextureChecks';
 
 /** An RGBA8 image from `texel(x, y)`'s four bytes */
 const makeImage = (size: number, texel: (x: number, y: number) => number[]) => {
@@ -115,6 +120,41 @@ describe('checkRippleAtlas', () => {
     expect(result.failures).toEqual([
       expect.stringMatching(/a cell's mask peaks at 0.000: no drop in it/),
       expect.stringMatching(/texels' time offset isn't their cell's/),
+    ]);
+  });
+});
+
+describe('checkCommittedCopy', () => {
+  const tolerance = { mean: 2, max: 10 };
+  const tolerances = [tolerance, tolerance, tolerance, tolerance] as [
+    typeof tolerance,
+    typeof tolerance,
+    typeof tolerance,
+    typeof tolerance,
+  ];
+
+  it('passes small differences and gives each channel its mean and largest', () => {
+    const result = checkCommittedCopy(
+      makeImage(4, (x) => [1, x === 0 ? 8 : 0, 0, 2]),
+      tolerances
+    );
+    expect(result.failures).toEqual([]);
+    expect(result.figures).toMatchObject({
+      'R mean Δ': 1,
+      'G max Δ': 8,
+      'G mean Δ': 2,
+      'A max Δ': 2,
+    });
+  });
+
+  it('names a channel over its mean or its largest difference', () => {
+    const result = checkCommittedCopy(
+      makeImage(4, (x, y) => [3, x === 0 && y === 0 ? 11 : 0, 0, 0]),
+      tolerances
+    );
+    expect(result.failures).toEqual([
+      expect.stringMatching(/^R: the committed copy is off by 3.000 bytes on average, 3 at most/),
+      expect.stringMatching(/^G: .* 11 at most \(allowed 2 and 10\)/),
     ]);
   });
 });

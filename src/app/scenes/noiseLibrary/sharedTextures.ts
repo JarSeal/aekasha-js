@@ -13,10 +13,16 @@
 import type * as THREE from 'three/webgpu';
 import { floor, mix, uniform, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { getRenderer, lerror, type BakedTexture } from 'aekasha';
+import { bakeTexture, getRenderer, getTexture, lerror, type BakedTexture } from 'aekasha';
 import { bakeMacroNoise, bakeRippleAtlas, decodeRippleAtlas } from 'aekasha/toolkit/terrain';
 import { getBackendName, meshUv, sampleTexture } from '../../shared/verifyHarness';
-import { checkMacroNoise, checkRippleAtlas, type SharedTextureResult } from './sharedTextureChecks';
+import {
+  checkCommittedCopy,
+  checkMacroNoise,
+  checkRippleAtlas,
+  type CopyTolerance,
+  type SharedTextureResult,
+} from './sharedTextureChecks';
 
 /** The bakes' defaults, which the checks read back at. */
 const MACRO_SIZE = 512;
@@ -30,8 +36,30 @@ const RINGS_GAIN = 3;
 /** The share of the macro texture its A quarter shows across (about 50 texels). */
 const BLUE_ZOOM = 0.1;
 
-/** The shared textures' results by texture. */
-export type SharedTextureResults = Record<'macroNoise' | 'rippleAtlas', SharedTextureResult>;
+/**
+ * How far the committed KTX2 copies (UASTC) may be from the bakes, per channel in bytes: about
+ * twice what was measured (2026-11-14: means of 2-3 for the macro noise and about 1 for the atlas,
+ * the largest 17-36, at the drops' centres and the patches' borders). A copy flipped or of another
+ * seed is tens of bytes off on average.
+ */
+const MACRO_COPY_TOLERANCES: [CopyTolerance, CopyTolerance, CopyTolerance, CopyTolerance] = [
+  { mean: 6, max: 60 },
+  { mean: 6, max: 60 },
+  { mean: 6, max: 60 },
+  { mean: 6, max: 60 },
+];
+const RIPPLE_COPY_TOLERANCES: [CopyTolerance, CopyTolerance, CopyTolerance, CopyTolerance] = [
+  { mean: 3, max: 70 },
+  { mean: 3, max: 70 },
+  { mean: 3, max: 60 },
+  { mean: 2, max: 20 },
+];
+
+/** The shared textures' results: each bake's, and its committed copy's against it. */
+export type SharedTextureResults = Record<
+  'macroNoise' | 'rippleAtlas' | 'macroNoise copy' | 'rippleAtlas copy',
+  SharedTextureResult
+>;
 
 const rippleTime = uniform(RIPPLE_TIME);
 
@@ -120,8 +148,30 @@ const readBakeAsync = async (bake: BakedTexture, size: number) => {
 };
 
 /**
- * Bakes the two shared textures, shows them as the scene's last pair and checks them; an error
- * for each failure.
+ * `|bake − committed copy|` of a shared texture, texel for texel (a bake of the difference, both
+ * sampled at the texel's centre), read back; the copy is the scene's texture `id` (the toolkit's
+ * `<id>.texture.json`, the bake's export encoded to KTX2).
+ */
+const readCopyDifferenceAsync = async (id: string, bake: BakedTexture, size: number) => {
+  const copy = getTexture(id);
+  if (!copy) throw new Error(`The committed texture "${id}" isn't loaded.`);
+  const difference = await bakeTexture({
+    id: `p304_copyDifference_${id}`,
+    size,
+    mipmaps: false,
+    outputs: [{ name: 'data' }],
+    build: ({ uv }) => ({
+      data: sampleTexture(bake.textures.data, uv).sub(sampleTexture(copy, uv)).abs(),
+    }),
+  });
+  const bytes = await readBakeAsync(difference, size);
+  difference.dispose();
+  return bytes;
+};
+
+/**
+ * Bakes the two shared textures, shows them as the scene's last pair, checks them and compares
+ * their committed copies with them; an error for each failure.
  * @param createTile the scene's tile maker, bound to the pair's left and right positions
  * @returns the checks' results
  */
@@ -139,6 +189,14 @@ export const createSharedTexturesAsync = async (
       await readBakeAsync(ripples, RIPPLE_SIZE),
       RIPPLE_SIZE,
       RIPPLE_CELLS
+    ),
+    'macroNoise copy': checkCommittedCopy(
+      await readCopyDifferenceAsync('macroNoise', macro, MACRO_SIZE),
+      MACRO_COPY_TOLERANCES
+    ),
+    'rippleAtlas copy': checkCommittedCopy(
+      await readCopyDifferenceAsync('rippleAtlas', ripples, RIPPLE_SIZE),
+      RIPPLE_COPY_TOLERANCES
     ),
   };
   for (const [id, result] of Object.entries(results)) {

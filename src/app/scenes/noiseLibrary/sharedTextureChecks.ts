@@ -216,3 +216,40 @@ export const checkRippleAtlas = (
     failures,
   };
 };
+
+/** How far a committed copy's channel may be from the bake: its mean and its largest difference,
+ * in bytes. */
+export type CopyTolerance = { mean: number; max: number };
+
+/**
+ * Checks a committed copy of a shared texture against its bake, on the bytes of
+ * `|bake − copy|`: each channel's mean and largest difference within its tolerance (the copy's
+ * block compression; a copy flipped or of another seed is far outside it).
+ * @param difference the difference image, RGBA8, no row padding
+ * @param tolerances the tolerance per channel, r to a
+ * @returns the figures (in bytes) and the failures in words
+ */
+export const checkCommittedCopy = (
+  difference: ArrayLike<number>,
+  tolerances: [CopyTolerance, CopyTolerance, CopyTolerance, CopyTolerance]
+): SharedTextureResult => {
+  const failures: string[] = [];
+  const figures: Record<string, number> = {};
+  ['R', 'G', 'B', 'A'].forEach((name, channel) => {
+    let sum = 0;
+    let max = 0;
+    for (let i = channel; i < difference.length; i += 4) {
+      sum += difference[i];
+      max = Math.max(max, difference[i]);
+    }
+    const mean = sum / (difference.length / 4);
+    figures[`${name} mean Δ`] = mean;
+    figures[`${name} max Δ`] = max;
+    if (mean > tolerances[channel].mean || max > tolerances[channel].max) {
+      failures.push(
+        `${name}: the committed copy is off by ${format(mean)} bytes on average, ${max} at most (allowed ${tolerances[channel].mean} and ${tolerances[channel].max})`
+      );
+    }
+  });
+  return { figures, failures };
+};
