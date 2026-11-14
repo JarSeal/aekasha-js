@@ -53,14 +53,14 @@ import {
   type PeriodicityCheck,
   type SlotCheck,
 } from './surfaceChecks';
-import { shadeBakedSurface, shadeLiveSurface } from './surfaceShading';
+import { shadeBakedSurface, shadeLiveSurface } from '../../shared/surfaceShading';
 
 /**
  * The procedural surfaces verification scene (p304 Phase 4's exit): the toolkit's ten surface
  * generators (`aekasha/toolkit/terrain`), each baked by `bakeSurfaceGenerator` (512², `LITE` until
  * the tab picks another packing) and drawn on a generated 6 × 6 m block with a 35° ramp at its back
- * (−z), tiled in world space over the generator's `physicalSize` (`surfaceShading.ts`). Two rows of
- * five from the back, in `GENERATORS`' order. The DAY_NIGHT sky stands at 10:00.
+ * (−z), tiled in world space over the generator's `physicalSize` (`shared/surfaceShading.ts`). Two
+ * rows of five from the back, in `GENERATORS`' order. The DAY_NIGHT sky stands at 10:00.
  *
  * During the load each generator is checked (`surfaceChecks.ts`), a failure logged as an error so
  * the scene runner (`yarn verify:scenes --only proceduralSurfaces`, `--webgl` for SwiftShader)

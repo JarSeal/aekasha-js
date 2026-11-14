@@ -56,6 +56,7 @@ export type {
   DevFilesStatusBody,
   DevFilesWriteStatus,
 } from './DevFilesProtocol';
+export { onGpuFrameTime } from './GPUFrameTime';
 export { GPU_MEMORY_TAB_ID, registerGPUMemorySource } from './GPUMemory';
 export type { GPUMemoryResource, GPUMemorySource } from './GPUMemory';
 export {

@@ -84,7 +84,7 @@ Buttons in the gallery tab (the scene-scoped `src/app/scenes/terrainGallery/_dbg
 
 - **Solo:** hide every block except the selected one. The camera goes to the row's **measurement pose**: block filling the screen, 1920 × 1080 canvas, DPR 1, PostFX off, shadows on, sky paused.
 - **Measure:**
-  - reads the frame's GPU time from the engine's one frame record (`debug/_dbg__GPUFrameTimes.ts`: `_acquireGpuFrameTimes('RENDER')`, `_onGpuFrameTime`, `src/_engine/debug/CLAUDE.md`'s GPU timing), which sums every render context of the frame; it's `@internal` debug code, so the gallery reaches it through a public `aekasha/debug` source (the stats panels' GPU, or a small public reader added for this), not a deep import;
+  - reads the frame's GPU time from the engine's one frame record (`debug/_dbg__GPUFrameTimes.ts`: `_acquireGpuFrameTimes('RENDER')`, `_onGpuFrameTime`, `src/_engine/debug/CLAUDE.md`'s GPU timing), which sums every render context of the frame; it's `@internal` debug code, so the gallery reaches it through `onGpuFrameTime(listener)` on `aekasha/debug` (p304 Phase 6 added it: a RENDER hold while it's listened to, the frame's render ms to the listener, never called without timer queries), which the Procedural row's measurement (`_dbg__terrainGalleryProcedural.ts`: `measureBlocksAsync`, a block alone in a fixed pose, an empty frame and each mode, 120 frames after 30, a markdown table copied) already uses: generalize that to every row, with the canvas size and the tiers;
   - averages 120 frames after a 30-frame warm-up;
   - records `{ row, block, technique, tier, packing, taps estimate, gpuMs, backend, adapter info }`.
 - **Measure row:** runs every block of a row × every quality tier.

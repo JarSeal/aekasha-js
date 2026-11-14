@@ -161,6 +161,34 @@ describe('GPU frame times (p807 D5)', () => {
     remove();
   });
 
+  it('ends a batch when a listener releases the last hold in its call', async () => {
+    const { renderer, pools } = createRenderer();
+    _acquireGpuFrameTimes('RENDER');
+    const times: number[] = [];
+    const remove = _onGpuFrameTime((time) => {
+      times.push(time.renderMs as number);
+      // What a measurement does once it has its frames (the public `onGpuFrameTime`'s remover)
+      remove();
+      _releaseGpuFrameTimes('RENDER');
+    });
+    // Two frames pending in one batch: the first one's listener call stops the timing
+    runFrame(renderer, ['r:1:a:f1']);
+    runFrame(renderer, ['r:2:a:f2']);
+    pools.render?.timestamps.set('r:1:a:f1', 0.5);
+    pools.render?.timestamps.set('r:2:a:f2', 0.7);
+    await settleResolves();
+    expect(times).toEqual([0.5]);
+
+    // The records are whole: a new hold times the next frame
+    expect(_acquireGpuFrameTimes('RENDER')).toBe(true);
+    const next = collect();
+    runFrame(renderer, ['r:3:a:f3']);
+    pools.render?.timestamps.set('r:3:a:f3', 0.25);
+    await settleResolves();
+    expect(next.times).toEqual([{ renderMs: 0.25, computeMs: null }]);
+    next.remove();
+  });
+
   it('drops the oldest frame when every record is pending', () => {
     const { renderer } = createRenderer();
     _acquireGpuFrameTimes('RENDER');

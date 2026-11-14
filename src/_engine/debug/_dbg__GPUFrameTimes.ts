@@ -60,6 +60,11 @@ const freeRecords: GpuFrameRecord[] = Array.from({ length: GPU_RECORD_POOL_SIZE 
 const pendingRecords: GpuFrameRecord[] = [];
 let currentRecord: GpuFrameRecord | null = null;
 let isTimerHeld = false;
+/** A batch's frames are going to the listeners: a release of the last hold from one of them (a
+ * measurement that has its frames) stops the timing after the batch, since the stop recycles the
+ * records the batch is still walking */
+let isCollecting = false;
+let isStopPending = false;
 let removeTimerListeners: (() => void) | null = null;
 let removeViewCloser: (() => void) | null = null;
 const counts = { completed: 0, dropped: 0 };
@@ -103,28 +108,38 @@ const collectFrames = (
   const isRenderHeld = holders.RENDER > 0;
   const isComputeHeld = holders.COMPUTE > 0;
   let kept = 0;
-  for (let i = 0; i < pendingRecords.length; i++) {
-    const record = pendingRecords[i];
-    const renderMs = isRenderHeld ? _sumGpuMs(render, record.renderUids) : null;
-    const computeMs = isComputeHeld ? _sumGpuMs(compute, record.computeUids) : null;
-    if ((isRenderHeld && renderMs === null) || (isComputeHeld && computeMs === null)) {
-      if (++record.age < GPU_MAX_PENDING_RESOLVES) {
-        pendingRecords[kept++] = record;
-      } else {
-        // Its batch went to another resolver (an app's own resolve), or a WebGL resolve in
-        // flight cleared its queries
-        counts.dropped++;
-        recycleRecord(record);
+  isCollecting = true;
+  try {
+    for (let i = 0; i < pendingRecords.length; i++) {
+      const record = pendingRecords[i];
+      const renderMs = isRenderHeld ? _sumGpuMs(render, record.renderUids) : null;
+      const computeMs = isComputeHeld ? _sumGpuMs(compute, record.computeUids) : null;
+      if ((isRenderHeld && renderMs === null) || (isComputeHeld && computeMs === null)) {
+        if (++record.age < GPU_MAX_PENDING_RESOLVES) {
+          pendingRecords[kept++] = record;
+        } else {
+          // Its batch went to another resolver (an app's own resolve), or a WebGL resolve in
+          // flight cleared its queries
+          counts.dropped++;
+          recycleRecord(record);
+        }
+        continue;
       }
-      continue;
+      counts.completed++;
+      recycleRecord(record);
+      result.renderMs = renderMs;
+      result.computeMs = computeMs;
+      for (const listener of listeners) listener(result);
     }
-    counts.completed++;
-    recycleRecord(record);
-    result.renderMs = renderMs;
-    result.computeMs = computeMs;
-    for (const listener of listeners) listener(result);
+    pendingRecords.length = kept;
+  } finally {
+    // Also after a listener that threw: a stop asked for later must not wait forever
+    isCollecting = false;
   }
-  pendingRecords.length = kept;
+  if (!isStopPending) return;
+  isStopPending = false;
+  // Unless a listener took a hold again meanwhile
+  if (!holders.RENDER && !holders.COMPUTE) stop();
 };
 
 const start = () => {
@@ -181,7 +196,9 @@ export const _acquireGpuFrameTimes = (side: GpuFrameTimesSide) => {
 export const _releaseGpuFrameTimes = (side: GpuFrameTimesSide) => {
   if (holders[side] === 0) return;
   holders[side]--;
-  if (!holders.RENDER && !holders.COMPUTE && isTimerHeld) stop();
+  if (holders.RENDER || holders.COMPUTE || !isTimerHeld) return;
+  if (isCollecting) isStopPending = true;
+  else stop();
 };
 
 /** Calls `listener` with every resolved frame while a side is held, a few frames late.

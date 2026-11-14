@@ -73,6 +73,8 @@ const releaseOwnedAssets = (isReleased: OwnerMatcher): ReleasedAssets => {
   // A sky box texture's baked PMREM is disposed with it (SkyBox/SkyEnvironment.ts)
   const kept = getKeptTextures();
   for (const [id, entry] of Object.entries(getTextureRegistry())) {
+    // Gone already: released with an earlier one (a bake's other outputs, disposed with its first)
+    if (!getTextureRegistry()[id]) continue;
     if (entry.persistent || !releaseAssetOwners(entry.resource, isReleased)) continue;
     if (kept.has(entry.resource) || isTextureUsedByAnyMaterial(entry.resource)) continue;
     deleteTexture(id);

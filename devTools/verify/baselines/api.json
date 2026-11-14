@@ -122,6 +122,9 @@
       "setEnvBallRoughness": "Function",
       "setEnvBallVisible": "Function"
     },
+    "src/_engine/debug/GPUFrameTime.ts": {
+      "onGpuFrameTime": "Function"
+    },
     "src/_engine/debug/GPUMemory.ts": {
       "_getGPUMemorySources": "Function",
       "GPU_MEMORY_TAB_ID": "Variable",
@@ -5434,6 +5437,7 @@
       "loadDebugModuleAsync",
       "markDebugHelper",
       "onDevDataGathered",
+      "onGpuFrameTime",
       "openDebuggerTab",
       "openProfilerTab",
       "persistDebuggerTabValue",

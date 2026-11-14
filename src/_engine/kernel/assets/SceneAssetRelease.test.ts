@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { createRootScene, getRootScene } from '../scene/Scene';
 import {
@@ -10,7 +10,7 @@ import {
 } from './AssetOwners';
 import { decGeometryRef, getGeometry, incGeometryRef, saveBufferGeometry } from './Geometry';
 import { releaseCellOwnedAssets, releaseSceneOwnedAssets } from './SceneAssetRelease';
-import { getTexture, saveTexture } from './Texture';
+import { deleteTexture, getTexture, saveTexture } from './Texture';
 
 beforeAll(() => {
   createRootScene();
@@ -29,6 +29,25 @@ describe('releaseSceneOwnedAssets', () => {
     getRootScene()!.background = null;
     expect(releaseSceneOwnedAssets('releaseTestScene').textures).toEqual(['releaseTestBackground']);
     expect(getTexture('releaseTestBackground')).toBeUndefined();
+  });
+});
+
+describe("releaseSceneOwnedAssets and a texture that takes others with it (a bake's outputs)", () => {
+  test('skips a texture an earlier one of the release deleted, without a warning', () => {
+    setAssetOwnerScene('releaseBakeScene');
+    const first = saveTexture(new THREE.Texture(), 'releaseBake.albedoRough');
+    saveTexture(new THREE.Texture(), 'releaseBake.normalHeight');
+    setAssetOwnerScene(null);
+    // As `bakeTexture`: disposing one output disposes the bake, which deletes the others
+    first.addEventListener('dispose', () => deleteTexture('releaseBake.normalHeight'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const released = releaseSceneOwnedAssets('releaseBakeScene');
+
+    expect(released.textures).toEqual(['releaseBake.albedoRough']);
+    expect(getTexture('releaseBake.normalHeight')).toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 
