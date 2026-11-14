@@ -1,10 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { int, texture, uniform, uv, vec2 } from 'three/tsl';
-import {
-  clearBakeTarget,
-  getBakeRenderer,
-  withBakeRendererState,
-} from '../../../features/lod/impostors/ImpostorBake';
+import { clearBakeTarget, getBakeRenderer, withBakeRendererState } from '../../render/BakeRenderer';
 import { getTextureDepth, getTextureSize } from './_dbg__AssetStats';
 import { readRenderTargetRGBA8Async } from '../../render/Snapshot';
 

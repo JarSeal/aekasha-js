@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "noiseLibrary",
+  "sceneFile": "./scenes/noiseLibrary/noiseLibrary.ts",
+  "isDebugScene": true,
+  "name": "Noise library (p304)",
+  "description": "p304 Phase 3's verification scene: the toolkit's noise functions (value, gradient, fbm, domain warp, Worley, hash12, heightToNormal, heightToCavity), each a periodic bake repeated 3 × 3 next to the same graph live without a period. During the load each function is baked periodic and not, read back and checked (no seam, exact periodicity, matching statistics); a failure is a console error, so the scene runner fails. Its tab shows the figures. Its last pair is the toolkit's shared generated textures (p304 D4: the macro noise, the ripple atlas), baked, checked, and compared with their committed KTX2 copies.",
+  "textures": ["macroNoise", "rippleAtlas"]
+}

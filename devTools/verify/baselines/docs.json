@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3643,
-      "total": 3643
+      "documented": 3759,
+      "total": 3759
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3554,
-        "total": 3554
+        "documented": 3585,
+        "total": 3585
       },
       "members": {
         "documented": 953,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 89,
-        "total": 89
+        "documented": 174,
+        "total": 174
       },
       "members": {
         "documented": 154,
@@ -35,8 +35,8 @@
   "folders": {
     "engine/debug": {
       "exports": {
-        "documented": 190,
-        "total": 190
+        "documented": 191,
+        "total": 191
       },
       "members": {
         "documented": 3,
@@ -147,8 +147,8 @@
     },
     "engine/features/lod/impostors": {
       "exports": {
-        "documented": 74,
-        "total": 74
+        "documented": 71,
+        "total": 71
       },
       "members": {
         "documented": 0,
@@ -399,8 +399,8 @@
     },
     "engine/features/texturesets": {
       "exports": {
-        "documented": 28,
-        "total": 28
+        "documented": 34,
+        "total": 34
       },
       "members": {
         "documented": 0,
@@ -581,8 +581,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 104,
-        "total": 104
+        "documented": 125,
+        "total": 125
       },
       "members": {
         "documented": 0,
@@ -595,8 +595,8 @@
     },
     "engine/kernel/scene": {
       "exports": {
-        "documented": 78,
-        "total": 78
+        "documented": 80,
+        "total": 80
       },
       "members": {
         "documented": 1,
@@ -609,8 +609,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 113,
-        "total": 113
+        "documented": 117,
+        "total": 117
       },
       "members": {
         "documented": 0,
@@ -1059,6 +1059,188 @@
       "exports": {
         "documented": 5,
         "total": 5
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/nodes/noise": {
+      "exports": {
+        "documented": 29,
+        "total": 29
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural": {
+      "exports": {
+        "documented": 37,
+        "total": 37
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/cliffStrata": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/concretePores": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/grassGround": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/iceSheet": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/mudCracked": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/mudSmooth": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/rockyGround": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/sandFlat": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/sandRipples": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/procedural/snowDrift": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/textures": {
+      "exports": {
+        "documented": 9,
+        "total": 9
       },
       "members": {
         "documented": 0,

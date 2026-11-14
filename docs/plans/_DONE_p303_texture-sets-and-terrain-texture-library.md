@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-7)
 Category: Assets, Materials, Terrain
-Blocks: p304_procedural-texture-baker.md, p305_terrain-material-generator.md
+Blocks: \_DONE_p304_procedural-texture-baker.md, p305_terrain-material-generator.md
 Epic: p301_terrain-texturing-epic.md
 
 # Texture Sets & the Terrain Texture Library

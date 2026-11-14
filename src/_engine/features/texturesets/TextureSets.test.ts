@@ -33,6 +33,7 @@ vi.mock(import('../../kernel/assets/MaterialDependencies'), () => ({
 }));
 vi.mock(import('../../kernel/assets/AssetOwners'), () => ({
   retagAssetOwner: fns.retagAssetOwner,
+  getAssetOwnerScope: () => 'codeScope',
 }));
 vi.mock(import('../../kernel/scene/Scene'), () => ({
   getGeneratedAppData: () => fns.json,
@@ -45,6 +46,29 @@ vi.mock(import('./TextureSetArrays'), () => ({
     return new Promise<void>((resolve) => {
       arrays.release = resolve;
     });
+  }) as never,
+}));
+
+// The procedural sets' bakes (p304 D3): the hooks and the load `import()` the module; a bake
+// registers its slot textures
+const bakes = vi.hoisted(() => ({
+  scenes: [] as unknown[],
+  sets: [] as string[],
+  scopes: [] as string[],
+  release: () => {},
+}));
+vi.mock(import('./TextureSetBakes'), () => ({
+  bakeSceneProceduralTextureSetsAsync: ((sceneData: unknown) => {
+    bakes.scenes.push(sceneData);
+    return new Promise<void>((resolve) => {
+      bakes.release = resolve;
+    });
+  }) as never,
+  loadProceduralTextureSetAsync: (async (set: TextureSetDef, scope: string) => {
+    bakes.sets.push(set.id);
+    bakes.scopes.push(scope);
+    const slots = Object.entries(set.packings[set.defaultPacking] ?? {});
+    return Object.fromEntries(slots.map(([slot, id]) => [slot, { id }]));
   }) as never,
 }));
 
@@ -174,6 +198,30 @@ describe('loadTextureSetAsync', () => {
   });
 });
 
+describe('loadTextureSetAsync of a procedural set (p304 D3)', () => {
+  const dunes = makeSet('dunes', {
+    packings: { LITE: { albedoRough: 'dunes.albedoRough', normalHeight: 'dunes.normalHeight' } },
+    procedural: { generator: 'sandRipples', params: {}, seed: 0, size: 256, packing: 'LITE' },
+  });
+
+  test('bakes it in the caller’s owner scope instead of loading textures', async () => {
+    fns.json = { scenes: {}, textureSets: { dunes } };
+    bakes.sets.length = 0;
+    bakes.scopes.length = 0;
+    const textures = await loadTextureSetAsync('dunes');
+    expect(bakes.sets).toEqual(['dunes']);
+    expect(bakes.scopes).toEqual(['codeScope']);
+    expect(textures).toEqual({
+      albedoRough: { id: 'dunes.albedoRough' },
+      normalHeight: { id: 'dunes.normalHeight' },
+    });
+    expect(fns.loadTextureAsync).not.toHaveBeenCalled();
+    await expect(loadTextureSetAsync('dunes', { packing: 'FULL' })).rejects.toThrow(
+      'has no packing "FULL" (packings: LITE)'
+    );
+  });
+});
+
 describe('getTextureSetPackingTextures', () => {
   beforeEach(() => {
     fns.json = { scenes: { a: { id: 'a', textureSets: [makeSet('sand01')] } } };
@@ -289,7 +337,7 @@ describe('the { textureSet } resolver', () => {
   });
 });
 
-describe('the set arrays\u2019 scene hooks (p303 D4)', () => {
+describe('the set arrays\u2019 and procedural sets\u2019 scene hooks (p303 D4, p304 D3)', () => {
   /** The scene hooks the install adds */
   const getHooks = () => {
     let hooks: SceneHooks = {};
@@ -323,6 +371,38 @@ describe('the set arrays\u2019 scene hooks (p303 D4)', () => {
     hooks.worldCleared?.(world, 'b', scene as never);
     expect(arrays.builds).toHaveLength(2);
     arrays.release();
+    await hooks.beforeAssets?.();
+  });
+
+  test('bake a scene’s procedural sets (p304 D3) next to its set arrays, both awaited', async () => {
+    const hooks = getHooks();
+    const dunes = makeSet('dunes', {
+      procedural: { generator: 'sandRipples', params: {}, seed: 0, size: 256, packing: 'LITE' },
+    });
+    const scene = {
+      id: 'b',
+      textureSets: [makeSet('rock'), dunes],
+      textureSetArrays: [{ sets: ['rock'], packing: 'LITE' }],
+    };
+    arrays.builds.length = 0;
+    bakes.scenes.length = 0;
+
+    hooks.worldCleared?.(world, 'a', scene as never);
+    const before = hooks.beforeAssets?.();
+    let isDone = false;
+    void Promise.resolve(before).then(() => (isDone = true));
+    await vi.waitFor(() => expect(bakes.scenes).toEqual([scene]));
+    arrays.release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(isDone).toBe(false);
+    bakes.release();
+    await before;
+    expect(isDone).toBe(true);
+
+    // Once loaded, the next scene's bakes start in the hook itself (re-tags before the release)
+    hooks.worldCleared?.(world, 'b', { id: 'c', textureSets: [dunes] } as never);
+    expect(bakes.scenes).toHaveLength(2);
+    bakes.release();
     await hooks.beforeAssets?.();
   });
 

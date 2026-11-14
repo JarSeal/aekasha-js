@@ -105,6 +105,7 @@ export {
   TEXTURE_SET_CATEGORIES,
   TEXTURE_SET_PACKING_PREFERENCE,
   TEXTURE_SET_PACKINGS,
+  TEXTURE_SET_PROCEDURAL_DEFAULTS,
   TEXTURE_SET_SURFACE_DEFAULTS,
   SceneTextureSetArraySchema,
   TextureSetArrayInputSchema,
@@ -115,8 +116,11 @@ export { textureSetsSchemaPart } from '../features/texturesets/TextureSetsSchema
 export type {
   SceneTextureSetArrayEntry,
   TextureSetAsset,
+  TextureSetCategory,
   TextureSetDef,
   TextureSetPacking,
+  TextureSetProcedural,
+  TextureSetProceduralDef,
   TextureSetSlot,
   TextureSetSurface,
 } from './TextureSetSchema';

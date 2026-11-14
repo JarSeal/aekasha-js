@@ -6,11 +6,11 @@ import {
   _releaseGpuTimer,
   _requestTimestampResolve,
   _sumGpuMs,
-} from '../../../debug/_dbg__GPUTimer';
+} from './_dbg__GPUTimer';
 
 /**
- * Bake stats (debug only), one tracker per bake kind (the env bake, the static layers): a bake
- * counter, and the CPU (performance.now) and GPU (the sum of the bake's render pass timestamps)
+ * Bake stats (debug only), one tracker per bake kind (the sky box's env bake and static layers)
+ * or per texture bake id (the kernel's `_dbg__TextureBakeStats.ts`): a bake counter, and the CPU (performance.now) and GPU (the sum of the bake's render pass timestamps)
  * ms of each bake. A tracker holds the (reference counted) GPU timer only from a bake's start
  * until its timestamps are read (or a timeout), so nothing is tracked between bakes. GPU times
  * are WebGPU only: on WebGL the bake's nested passes never resolve (see _getGpuTimerSupport).
@@ -52,8 +52,9 @@ const addSample = (avg: Avg, value: number) => {
 const formatAvg = (avg: Avg) =>
   avg.hasValue ? `${avg.last.toFixed(3)} (avg ${avg.avg.toFixed(3)})` : '-';
 
-/** A new tracker, counting from 0. Each bake kind makes one when its debug module loads, and
- * keeps it for the page's life (the GPU timer is held only while a bake is pending). */
+/** A new tracker, counting from 0. Each bake kind makes one when its debug module loads (a
+ * texture bake on its first bake), and keeps it for the page's life (the GPU timer is held only
+ * while a bake is pending). */
 export const createBakeStats = (): BakeStats => {
   const cpu: Avg = { last: 0, avg: 0, hasValue: false };
   const gpu: Avg = { last: 0, avg: 0, hasValue: false };

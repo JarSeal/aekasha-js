@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/skyBox.schema.json",
+  "id": "proceduralSurfacesSky",
+  "preset": "DAY_NIGHT",
+  "dayNight": { "timeOfDay": 10, "playing": false, "dayOfYear": 100 },
+  "debugData": {
+    "name": "Procedural surfaces sky",
+    "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
+  }
+}

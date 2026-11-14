@@ -6,11 +6,19 @@
  * default packing's textures to the scene's `textures`; the texture closure appends the sets its
  * materials' inputs name (`appendSceneTextureSets`), and a streaming scene keeps its listed sets'
  * textures in its base (`getListedTextureSetTextureIds`).
+ *
+ * A procedural set (p304 D3) names a generator, a `<id>.generator.ts` module (`readGenerators`),
+ * in place of `packings`: pass 1 fails on an unknown one, fills its `procedural` defaults and names
+ * its one packing's slots `<setId>.<slot>` (the textures the `textureSets()` feature's bake
+ * registers; claimed in the textures' id space), and nothing appends them to a scene's `textures`.
+ * The generated code gets a loader for each generator a set in its data names
+ * (`setTextureSetGeneratorLoaders`).
  */
 import {
   isTextureSetColorSlot,
   TEXTURE_SET_PACKING_PREFERENCE,
   TEXTURE_SET_PACKINGS,
+  TEXTURE_SET_PROCEDURAL_DEFAULTS,
   TEXTURE_SET_SURFACE_DEFAULTS,
   TextureSetAssetSchema,
   type TextureSetAsset,
@@ -22,6 +30,7 @@ import { getAssetResult } from '../assetPipeline/generated';
 import { linearToSrgb } from '../assetPipeline/images';
 import {
   claimIds,
+  GENERATOR_SUFFIX,
   readAssetJsons,
   type GatherContext,
   type Registries,
@@ -33,19 +42,73 @@ import type { SceneRun } from './sceneAssets';
 /** The packings a set gives, in the default's order (`TEXTURE_SET_PACKING_PREFERENCE`: zod
  * keeps no JSON order) */
 const getPackings = (set: Pick<TextureSetAsset, 'packings'>) =>
-  TEXTURE_SET_PACKING_PREFERENCE.filter((packing) => set.packings[packing]);
+  TEXTURE_SET_PACKING_PREFERENCE.filter((packing) => set.packings?.[packing]);
 
 /**
- * A packing's texture ids of a set, in the packing's slot order (`TEXTURE_SET_PACKINGS`), or
- * undefined when the set doesn't have the packing.
+ * A packing's texture ids of a set that a scene loads, in the packing's slot order
+ * (`TEXTURE_SET_PACKINGS`), or undefined when the set doesn't have the packing. None for a
+ * procedural set: its textures are baked, not loaded.
  */
 export const getTextureSetPackingTextureIds = (
-  set: Pick<TextureSetAsset, 'packings'>,
+  set: Pick<TextureSetAsset, 'packings' | 'procedural'>,
   packing: TextureSetPacking
 ): string[] | undefined => {
-  const slots = set.packings[packing] as Record<string, string> | undefined;
+  const slots = set.packings?.[packing] as Record<string, string> | undefined;
   if (!slots) return undefined;
+  if (set.procedural) return [];
   return TEXTURE_SET_PACKINGS[packing].map((slot) => slots[slot]);
+};
+
+/**
+ * Pass 1's generators (before the texture sets): each `<id>.generator.ts` module by its id, as a
+ * path from `srcDir` (`/`-separated, the generated `import()`'s). An id two modules give fails the
+ * gather (the first keeps it).
+ */
+export const readGenerators = (ctx: GatherContext, reg: Registries) => {
+  for (const file of ctx.generatorFiles) {
+    const id = path.basename(file).slice(0, -GENERATOR_SUFFIX.length);
+    const known = reg.generators[id];
+    if (known) {
+      ctx.log.error(`Duplicate generator ID found: ${id} in file: ${file} (${known} keeps it)`);
+      continue;
+    }
+    reg.generators[id] = file.split(path.sep).join('/');
+  }
+};
+
+/** A procedural set's `procedural` and `packings` as scenes get them, or its errors */
+const resolveProcedural = (
+  reg: Registries,
+  set: TextureSetAsset,
+  setId: string
+): { errors: string[]; fields?: Pick<TextureSetDef, 'procedural' | 'packings'> } => {
+  const { procedural } = set;
+  if (!procedural) return { errors: [] };
+  if (!reg.generators[procedural.generator]) {
+    const known = Object.keys(reg.generators);
+    return {
+      errors: [
+        `procedural.generator: no ${GENERATOR_SUFFIX} module has the id "${procedural.generator}" (the generators: ${known.length ? known.join(', ') : 'none'})`,
+      ],
+    };
+  }
+  const packing = procedural.packing ?? TEXTURE_SET_PROCEDURAL_DEFAULTS.packing;
+  const slots = Object.fromEntries(
+    TEXTURE_SET_PACKINGS[packing].map((slot) => [slot, `${setId}.${slot}`])
+  );
+  return {
+    errors: [],
+    fields: {
+      procedural: {
+        generator: procedural.generator,
+        params: procedural.params ?? {},
+        seed: procedural.seed ?? TEXTURE_SET_PROCEDURAL_DEFAULTS.seed,
+        size: procedural.size ?? TEXTURE_SET_PROCEDURAL_DEFAULTS.size,
+        packing,
+      },
+      packings: { [packing]: slots },
+    },
+  };
 };
 
 /** What's wrong with a slot's texture id: none for a texture asset */
@@ -68,7 +131,7 @@ const checkSlots = (reg: Registries, set: TextureSetAsset) => {
   const errors: string[] = [];
   const warnings: string[] = [];
   for (const packing of getPackings(set)) {
-    const slots = set.packings[packing] as Record<string, string>;
+    const slots = set.packings?.[packing] as Record<string, string>;
     for (const [slot, texId] of Object.entries(slots)) {
       const where = `packings.${packing}.${slot}`;
       const error = getSlotError(reg, texId);
@@ -89,16 +152,25 @@ const checkSlots = (reg: Registries, set: TextureSetAsset) => {
   return { errors, warnings };
 };
 
-/** The set with its defaults filled in, as scenes get it (its `$schema` and `id` replaced) */
+/** The set with its defaults filled in, as scenes get it (its `$schema` and `id` replaced; a
+ * procedural set's `procedural` and `packings` from `resolveProcedural`) */
 const toTextureSetDef = (
   set: TextureSetAsset,
-  id: string
+  id: string,
+  procedural: Pick<TextureSetDef, 'procedural' | 'packings'> | undefined
 ): TextureSetDef & { __sourcePath?: string } => {
-  const { $schema, id: _id, defaultPacking, surface, ...rest } = set;
+  const { $schema, id: _id, defaultPacking, surface, packings, procedural: _p, ...rest } = set;
+  const { category, physicalSize, heightScale, ...more } = rest;
+  // The schema's key order, as the generated data had it before procedural sets
   return {
     id,
-    ...rest,
-    defaultPacking: defaultPacking ?? getPackings(set)[0],
+    category,
+    physicalSize,
+    heightScale,
+    packings: procedural?.packings ?? packings ?? {},
+    ...(procedural?.procedural ? { procedural: procedural.procedural } : {}),
+    ...more,
+    defaultPacking: procedural?.procedural?.packing ?? defaultPacking ?? getPackings(set)[0],
     surface: { ...TEXTURE_SET_SURFACE_DEFAULTS, ...surface },
   };
 };
@@ -134,20 +206,28 @@ const getMeasuredAverageColor = (ctx: GatherContext, reg: Registries, set: Textu
 /** Pass 1's texture sets (after the textures: their slots name texture assets) */
 export const readTextureSets = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
   readAssetJsons(ctx, 'textureSet', TextureSetAssetSchema, (setJSON, { file, sourcePath }) => {
+    const setId = setJSON.id || getIdFromFileName(file, 'textureSet');
     const { errors, warnings } = checkSlots(reg, setJSON);
-    if (setJSON.defaultPacking && !setJSON.packings[setJSON.defaultPacking]) {
+    // The schema allows a procedural set's defaultPacking only as its procedural.packing
+    if (setJSON.packings && setJSON.defaultPacking && !setJSON.packings[setJSON.defaultPacking]) {
       errors.push(
         `defaultPacking "${setJSON.defaultPacking}" isn't one of its packings (${getPackings(setJSON).join(', ')})`
       );
     }
+    const procedural = resolveProcedural(reg, setJSON, setId);
+    errors.push(...procedural.errors);
     for (const warning of warnings) ctx.log.warn(`${file}: ${warning}`);
     if (errors.length) {
       for (const error of errors) ctx.log.error(`${file}: ${error}`);
       return;
     }
-    const setId = setJSON.id || getIdFromFileName(file, 'textureSet');
     if (!claimIds(ctx, taken.textureSets, 'texture set', file, setId)) return;
-    const def = toTextureSetDef(setJSON, setId);
+    // A procedural set's baked textures share the textures' id space
+    const bakedIds = Object.values(procedural.fields?.packings ?? {}).flatMap((slots) =>
+      Object.values(slots as Record<string, string>)
+    );
+    if (bakedIds.length && !claimIds(ctx, taken.textures, 'texture', file, ...bakedIds)) return;
+    const def = toTextureSetDef(setJSON, setId, procedural.fields);
     // The JSON's own wins (D1); the measure is the default packing's albedo
     const averageColor = def.averageColor ?? getMeasuredAverageColor(ctx, reg, def);
     reg.textureSets[setId] = {
@@ -156,6 +236,28 @@ export const readTextureSets = (ctx: GatherContext, reg: Registries, taken: Take
       __sourcePath: sourcePath,
     };
   });
+
+/**
+ * The generated code's generator loaders (p304 D3): each generator a procedural set in the data
+ * names (the development data's every set, a production build's the shipped scenes'), so an app
+ * without a procedural set ships none. After the scene pass.
+ */
+export const setTextureSetGeneratorLoaders = (
+  ctx: GatherContext,
+  reg: Registries,
+  scenes: Record<string, unknown>
+) => {
+  const sets = ctx.isProduction
+    ? Object.values(scenes).flatMap(
+        (scene) =>
+          ((scene as { textureSets?: TextureSetDef[] }).textureSets ?? []) as TextureSetDef[]
+      )
+    : Object.values(reg.textureSets);
+  for (const set of sets) {
+    const id = set.procedural?.generator;
+    if (id && reg.generators[id]) reg.loaders.textureSetGenerators[id] = reg.generators[id];
+  }
+};
 
 /** A registered set as a scene gets it: without its source path (and in a production build its
  * debug data) */

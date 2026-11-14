@@ -5,15 +5,15 @@
     "fov": 50,
     "near": 0.1,
     "far": 600,
-    "position": { "x": 0, "y": 34, "z": 56 },
-    "lookAtPoint": { "x": 0, "y": 0, "z": 4 },
+    "position": { "x": 18, "y": 50, "z": 82 },
+    "lookAtPoint": { "x": 18, "y": 0, "z": 4 },
     "active": true
   },
   "entityOpts": {
     "appId": "terrainGalleryCamera",
     "debugData": {
       "name": "Terrain gallery overview",
-      "description": "All 16 blocks from the front (+z), above, facing the ramps."
+      "description": "The 16 library blocks and the Procedural row right of them from the front (+z), above, facing the ramps."
     }
   }
 }

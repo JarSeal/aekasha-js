@@ -13,7 +13,7 @@ New to terrain in Ækasha? Read in this order:
 
 1. [Asset optimization](asset-optimization.md), its [Add a texture](asset-optimization.md#add-a-texture) and [Pack channels](asset-optimization.md#pack-channels): how a source image becomes a compressed GPU texture, and how one texture is packed from several maps.
 2. [Texture sets](texture-sets.md): the surfaces themselves, packed maps with their real-world size. Pick one from the toolkit's library of 16, or add your own.
-3. Open the gallery: `yarn dev`, then `/?isDebug=true&startScene=terrainGallery`. Every library set on its own block, its debug tab ("Terrain gallery") switching packings and laying a 1 m checker over the ground.
+3. Open the gallery: `yarn dev`, then `/?isDebug=true&startScene=terrainGallery`. Every library set on its own block, its debug tab ("Terrain gallery") switching packings and laying a 1 m checker over the ground. Right of the library, the Procedural row: the toolkit's ten surface generators, baked or live, with their params as sliders ([Procedural textures](procedural-textures.md): surfaces made in the engine, for when no scan fits or there's no texture budget).
 4. Pick a technique for your game from the [matrix](#which-technique-for-my-game), then read its page. Until p305's pages exist, the toolkit's `textureSetSurface` material (one set, world tiling) is the baseline: [Texture sets' Import into Ækasha](texture-sets.md#using-a-set).
 5. Hand-built levels rather than a heightfield: [Modular kits and tile-chunk worlds](terrain-modular-kits.md).
 
@@ -25,7 +25,7 @@ The plan that implements a technique writes its page, in its last phase. Pages n
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | [`asset-optimization.md`](asset-optimization.md)     | KTX2 / meshopt pipeline, profiles, codec cheat sheet                                                       | Written (p300)                                 |
 | [`texture-sets.md`](texture-sets.md)                 | Maps (required / optional), packings, AO into albedo, height, texel density, sources, sizes, KTX2 settings | Written (p303)                                 |
-| `procedural-textures.md`                             | Live vs baked procedural, the baker, seeds, VRAM trade-off                                                 | Planned: p304                                  |
+| [`procedural-textures.md`](procedural-textures.md)   | Baked, exported and live procedural surfaces, the baker, tiling, seeds, writing a generator                | Written (p304)                                 |
 | `terrain-single-layer.md`                            | One tiled layer, anti-tiling (dual-scale, hex), macro variation                                            | Planned: p305 (Blender sections: p306)         |
 | `terrain-vertex-color-splat.md`                      | Up to 5 layers painted as vertex colours, height blend                                                     | Planned: p305 (Blender sections: p306)         |
 | `terrain-splat-map.md`                               | Painted splat textures (4 / 8 layers), resolution-independent borders                                      | Planned: p305 (Blender sections: p306)         |

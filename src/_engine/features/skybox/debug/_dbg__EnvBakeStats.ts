@@ -1,5 +1,5 @@
 import { _setEnvBakeHooks } from '../SkyEnvironment';
-import { createBakeStats } from './_dbg__BakeStats';
+import { createBakeStats } from '../../../debug/_dbg__BakeStats';
 
 /** Env bake stats (debug only), shown in the Environment folder (see _dbg__BakeStats.ts). */
 const envBakeStats = createBakeStats();

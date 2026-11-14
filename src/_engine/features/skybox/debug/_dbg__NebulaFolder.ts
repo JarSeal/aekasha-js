@@ -12,7 +12,7 @@ import { getActiveCamera } from '../../../kernel/camera/Camera';
 import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
 import { isListOverrideAnArray, LAYER_PATHS, skyBoxProxy } from './_dbg__SkyBoxShared';
 import { numberParam } from './_dbg__LayerFolderItems';
-import { createBakeStats } from './_dbg__BakeStats';
+import { createBakeStats } from '../../../debug/_dbg__BakeStats';
 import {
   buildListItems,
   buildResetListButton,

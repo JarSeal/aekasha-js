@@ -468,6 +468,29 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "36813872157fd4e42cd711897ebdedb8a655f1fe2f773d3aedadc134e124dc0c": {
+      "source": "src/toolkit/textures/macroNoise/source/macroNoise.png",
+      "url": "/aek-assets/toolkit/textures/macroNoise/source/macroNoise.ff98c92d.ktx2",
+      "bytes": 317838,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 317838,
+          "source": {
+            "width": 512,
+            "height": 512,
+            "bytes": 621957
+          },
+          "codec": "uastc",
+          "width": 512,
+          "height": 512,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "36885cb77c4490a19ff91f59f317d586bbf54f59fea36762ed446d476c20dd10": {
       "source": "src/toolkit/textures/snow02/snow02_albedoRough.texture.json",
       "url": "/aek-assets/toolkit/textures/snow02/snow02_albedoRough.pack.991614ca.ktx2",
@@ -1229,6 +1252,29 @@
           "mipmaps": true,
           "normalMode": false,
           "layers": 1
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "98df37f058419c3d651fcb3646dfb4ea8978409ec2a0a0c80879e34214d4feab": {
+      "source": "src/toolkit/textures/rippleAtlas/source/rippleAtlas.png",
+      "url": "/aek-assets/toolkit/textures/rippleAtlas/source/rippleAtlas.5c747ea3.ktx2",
+      "bytes": 34899,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 34899,
+          "source": {
+            "width": 256,
+            "height": 256,
+            "bytes": 42233
+          },
+          "codec": "uastc",
+          "width": 256,
+          "height": 256,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false
         }
       ],
       "ktxVersion": "4.4.2"

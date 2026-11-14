@@ -1,43 +1,48 @@
 import * as THREE from 'three/webgpu';
 import { float, floor, mix, mod, positionWorld, vec3 } from 'three/tsl';
 import {
-  cameraLookAtPoint,
   createMeshEntity,
-  createSceneMainLooper,
-  deleteSceneMainLooper,
-  getECSWorld,
-  getEntityIdByAppId,
   getGeometry,
   getMaterial,
   getMaterialVariant,
   getMeshByAppId,
   lerror,
-  registerOnSceneExit,
   saveMaterial,
   setMeshMaterial,
 } from 'aekasha';
-import { createDebuggerTab, debuggerListCMP, updateDebuggerTab } from 'aekasha/debug';
-import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
 import {
+  createDebuggerTab,
+  debuggerListCMP,
+  updateDebuggerTab,
+  type DebuggerTabSection,
+} from 'aekasha/debug';
+import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
+import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
+import {
+  clearGeneratorSelection,
+  getProceduralSections,
+  refreshProceduralFigures,
+  startProceduralTab,
+  type ProceduralSectionsOpts,
+} from './_dbg__terrainGalleryProcedural';
+import { GALLERY_MATERIAL_ID, getSurfaceOverrides } from './galleryBlocks';
+import {
+  getProceduralBakeSettings,
+  PROCEDURAL_BLOCKS,
+  setProceduralBakeAsync,
+} from './proceduralRow';
+import {
+  addGalleryExitCleanup,
   ALL_PACKING_SETS,
-  GALLERY_BLOCK_SIZE,
   GALLERY_BLOCKS,
-  GALLERY_MATERIAL_ID,
   getBlockAppId,
-  getSurfaceOverrides,
   getWallAppId,
-  TERRAIN_GALLERY_CAMERA_APP_ID,
   TERRAIN_GALLERY_SCENE_ID,
   type GalleryBlock,
 } from './terrainGallery';
 
 const TAB_ID = 'terrainGallery';
 const PACKINGS: readonly TextureSetPacking[] = ['LITE', 'FULL', 'MINIMAL'];
-/** The camera's flight to a block, seconds */
-const FLIGHT_SEC = 0.8;
-/** Where the camera stops: in front of the block (+z) and above it, looking at its ramp side */
-const VIEW_OFFSET = { y: GALLERY_BLOCK_SIZE * 0.6, z: GALLERY_BLOCK_SIZE * 1.05 };
-const LOOK_OFFSET = { y: 0.5, z: -GALLERY_BLOCK_SIZE * 0.1 };
 const CHECKER_MATERIAL_ID = 'terrainGalleryChecker';
 const CHECKER_OPACITY = 0.25;
 
@@ -54,8 +59,18 @@ let shownPacking: TextureSetPacking = 'LITE';
 let selectedSetId: string | null = null;
 /** The latest packing apply: an older one that finishes later is dropped */
 let packingRequest = 0;
-/** The running flight's looper, deleted when it lands or another starts */
-let flightLooper: number | null = null;
+
+/** Every block the checker covers: the library's and the Procedural row's (its key names its
+ * checker's mesh) */
+const CHECKER_BLOCKS = [
+  ...GALLERY_BLOCKS.map(({ setId, x, z, geometryId }) => ({ key: setId, x, z, geometryId })),
+  ...PROCEDURAL_BLOCKS.map(({ generator, x, z, geometryId }) => ({
+    key: `proc_${generator.id}`,
+    x,
+    z,
+    geometryId,
+  })),
+];
 
 const getBlock = (setId: string) => GALLERY_BLOCKS.find((block) => block.setId === setId);
 
@@ -75,12 +90,13 @@ const swapSurface = (appId: string, setId: string, packing: TextureSetPacking, i
 /**
  * Shows the packing on the sets that ship every packing (`ALL_PACKING_SETS`): loads its textures
  * (the scene's from then on, released on its exit), then swaps the blocks' and the wall's
- * variants. The latest call wins: an older one that finishes later does nothing, as does one that
- * finishes after the scene was left.
+ * variants. The Procedural row's bakes are baked again in it. The latest call wins: an older one
+ * that finishes later does nothing, as does one that finishes after the scene was left.
  */
 const applyPackingAsync = async (packing: TextureSetPacking) => {
   const request = ++packingRequest;
   const startedOn = visit;
+  if (getProceduralBakeSettings().packing !== packing) void setProceduralBakeAsync({ packing });
   try {
     await Promise.all(ALL_PACKING_SETS.map((setId) => loadTextureSetAsync(setId, { packing })));
   } catch (error) {
@@ -117,15 +133,15 @@ const getCheckerMaterial = () => {
   return saveMaterial(material, CHECKER_MATERIAL_ID) as THREE.Material;
 };
 
-const getCheckerAppId = (setId: string) => `${getBlockAppId(setId)}_checker`;
+const getCheckerAppId = (key: string) => `terrainGallery_${key}_checker`;
 
 /**
  * Shows or hides the 1 m checker over every block (not the walls: a world XZ checker on a vertical
  * face is stripes), made the first time it's shown on a visit
  */
 const setChecker = (isShown: boolean) => {
-  for (const block of GALLERY_BLOCKS) {
-    const existing = getMeshByAppId(getCheckerAppId(block.setId));
+  for (const block of CHECKER_BLOCKS) {
+    const existing = getMeshByAppId(getCheckerAppId(block.key));
     if (existing) {
       existing.visible = isShown;
       continue;
@@ -141,50 +157,25 @@ const setChecker = (isShown: boolean) => {
         receiveShadow: false,
       },
       {
-        appId: getCheckerAppId(block.setId),
-        debugData: { name: `1 m checker: ${block.setId}` },
+        appId: getCheckerAppId(block.key),
+        debugData: { name: `1 m checker: ${block.key}` },
       }
     );
   }
 };
 
-/** Smoothstep's ease in and out */
-const ease = (t: number) => t * t * (3 - 2 * t);
+/** Everything the gallery draws but the Procedural row's blocks: what a measurement hides */
+const getOtherAppIds = () => [
+  'terrainGallery_ground',
+  ...GALLERY_BLOCKS.flatMap(({ setId }) => [getBlockAppId(setId), getWallAppId(setId)]),
+  ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
+];
 
-/**
- * Flies the scene's camera to a block over `FLIGHT_SEC`: its position and its look-at point eased
- * from where they are. A flight started meanwhile replaces it. In the debug camera (F1) the
- * scene's camera moves, not the view.
- */
+/** Flies the scene's camera to a library block and selects it in its list */
 const flyToBlock = (block: GalleryBlock) => {
   selectedSetId = block.setId;
-  const world = getECSWorld();
-  const cameraId = getEntityIdByAppId(TERRAIN_GALLERY_CAMERA_APP_ID, world);
-  if (cameraId === undefined) return;
-  const transform = world.getTransform(cameraId);
-  const fromPos = transform.position.clone();
-  // The current look-at point, as far ahead as the target is
-  const toPos = new THREE.Vector3(block.x, VIEW_OFFSET.y, block.z + VIEW_OFFSET.z);
-  const toLook = new THREE.Vector3(block.x, LOOK_OFFSET.y, block.z + LOOK_OFFSET.z);
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(transform.rotation);
-  const fromLook = fromPos.clone().addScaledVector(forward, fromPos.distanceTo(toLook));
-  const pos = new THREE.Vector3();
-  const look = new THREE.Vector3();
-  let elapsed = 0;
-
-  if (flightLooper !== null) deleteSceneMainLooper(flightLooper, TERRAIN_GALLERY_SCENE_ID);
-  const looper = createSceneMainLooper((delta) => {
-    elapsed = Math.min(FLIGHT_SEC, elapsed + delta);
-    const t = ease(elapsed / FLIGHT_SEC);
-    pos.lerpVectors(fromPos, toPos, t);
-    look.lerpVectors(fromLook, toLook, t);
-    world.setTransform(cameraId, { pos });
-    cameraLookAtPoint(cameraId, look, world);
-    if (elapsed < FLIGHT_SEC || flightLooper !== looper) return;
-    deleteSceneMainLooper(looper, TERRAIN_GALLERY_SCENE_ID);
-    flightLooper = null;
-  }, TERRAIN_GALLERY_SCENE_ID);
-  flightLooper = looper < 0 ? null : looper;
+  clearGeneratorSelection();
+  flyToGalleryBlock(block);
 };
 
 const getBlockRow = (block: GalleryBlock) => {
@@ -202,20 +193,33 @@ const getBlockRow = (block: GalleryBlock) => {
   };
 };
 
+/** What the Procedural row's sections need of this tab */
+const proceduralOpts: ProceduralSectionsOpts = {
+  tabId: TAB_ID,
+  onSelect: () => {
+    selectedSetId = null;
+  },
+  getOtherAppIds,
+};
+
 /**
  * The gallery's scene tab (p303 D8): the sets, a click flying the scene's camera to the block; the
- * packing of the three sets that ship every packing; the 1 m checker. The packing and the checker
- * are saved and applied when the tab is made (the scene's load, once its blocks exist).
+ * packing of the three sets that ship every packing (and of the Procedural row's bakes); the 1 m
+ * checker; and the Procedural row's sections (p304 Phase 6, `_dbg__terrainGalleryProcedural.ts`).
+ * The packing and the checker are saved and applied when the tab is made (the scene's load, once
+ * its blocks exist).
  */
 export const createTerrainGalleryTab = () => {
   const thisVisit = { isCurrent: true };
   visit = thisVisit;
   shownPacking = 'LITE';
   selectedSetId = null;
-  flightLooper = null;
-  registerOnSceneExit(TERRAIN_GALLERY_SCENE_ID, () => {
+  stopGalleryFlight(true);
+  const endProceduralTab = startProceduralTab(proceduralOpts);
+  addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
-    flightLooper = null;
+    stopGalleryFlight(true);
+    endProceduralTab();
   });
 
   createDebuggerTab({
@@ -226,6 +230,8 @@ export const createTerrainGalleryTab = () => {
     state,
     lsKey: 'AEK_debugTerrainGallery',
     persistKeys: ['packing', 'checker'],
+    refreshIntervalMs: 500,
+    onRefresh: refreshProceduralFigures,
     onClearLS: () => {
       Object.assign(state, DEFAULT_STATE);
       setChecker(false);
@@ -240,7 +246,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Packing',
             kind: 'segmented',
             options: PACKINGS.map((packing) => ({ label: packing, value: packing })),
-            hint: `${ALL_PACKING_SETS.join(', ')}: the sets that ship every packing`,
+            hint: `${ALL_PACKING_SETS.join(', ')} (the sets that ship every packing) and the Procedural row's bakes`,
             onChange: (value) => void applyPackingAsync(value as TextureSetPacking),
           },
           {
@@ -259,12 +265,14 @@ export const createTerrainGalleryTab = () => {
           onClick: (setId) => {
             const block = getBlock(setId);
             if (block) flyToBlock(block);
-            updateDebuggerTab(TAB_ID);
+            updateDebuggerTab(TAB_ID, { rebuild: true });
           },
         },
         selectedItemId: () => selectedSetId,
         data: () => GALLERY_BLOCKS.map(getBlockRow),
       }),
+      // Its fields bind their own targets, none of this tab's state keys
+      ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
     ],
   });
 

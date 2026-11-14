@@ -3,18 +3,65 @@
   "type": "object",
   "properties": {
     "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "id": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "category": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "physicalSize": {
+      "$ref": "#/definitions/__schema4"
+    },
+    "heightScale": {
+      "$ref": "#/definitions/__schema7"
+    },
+    "defaultPacking": {
+      "$ref": "#/definitions/__schema8"
+    },
+    "packings": {
+      "$ref": "#/definitions/__schema10"
+    },
+    "procedural": {
+      "$ref": "#/definitions/__schema21"
+    },
+    "surface": {
+      "$ref": "#/definitions/__schema31"
+    },
+    "averageColor": {
+      "$ref": "#/definitions/__schema50"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema51"
+    },
+    "__sourcePath": {
+      "$ref": "#/definitions/__schema62"
+    }
+  },
+  "required": [
+    "category",
+    "physicalSize",
+    "heightScale"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
       "type": "string",
       "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
     },
-    "id": {
+    "__schema1": {
       "description": "The registry id scenes and materials name it by. Default: the file's name.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema0"
+          "$ref": "#/definitions/__schema2"
         }
       ]
     },
-    "category": {
+    "__schema2": {
+      "type": "string"
+    },
+    "__schema3": {
       "type": "string",
       "enum": [
         "SAND",
@@ -29,14 +76,14 @@
       ],
       "description": "The surface's category, for the terrain tools' defaults and grouping."
     },
-    "physicalSize": {
+    "__schema4": {
       "type": "array",
       "items": [
         {
-          "$ref": "#/definitions/__schema1"
+          "$ref": "#/definitions/__schema5"
         },
         {
-          "$ref": "#/definitions/__schema2"
+          "$ref": "#/definitions/__schema6"
         }
       ],
       "description": "The metres one tile covers: [width, height].",
@@ -44,121 +91,28 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "heightScale": {
+    "__schema5": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema6": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema7": {
       "type": "number",
       "minimum": 0,
       "description": "The metres of relief a height of 1 stands for (heights are packed to 0..1)."
     },
-    "defaultPacking": {
-      "description": "The packing a scene listing the set loads. Default: LITE when the set has it, else FULL, else MINIMAL.",
+    "__schema8": {
+      "description": "The packing a scene listing the set loads. Default: LITE when the set has it, else FULL, else MINIMAL; a procedural set's is its procedural.packing.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema3"
+          "$ref": "#/definitions/__schema9"
         }
       ]
     },
-    "packings": {
-      "type": "object",
-      "properties": {
-        "FULL": {
-          "$ref": "#/definitions/__schema4"
-        },
-        "LITE": {
-          "$ref": "#/definitions/__schema8"
-        },
-        "MINIMAL": {
-          "$ref": "#/definitions/__schema11"
-        }
-      },
-      "additionalProperties": false,
-      "description": "The set's textures by packing (FULL, LITE, MINIMAL) and slot: at least one."
-    },
-    "surface": {
-      "type": "object",
-      "properties": {
-        "tint": {
-          "$ref": "#/definitions/__schema13"
-        },
-        "normalStrength": {
-          "$ref": "#/definitions/__schema17"
-        },
-        "roughnessScale": {
-          "$ref": "#/definitions/__schema19"
-        },
-        "aoStrength": {
-          "$ref": "#/definitions/__schema21"
-        },
-        "heightContrast": {
-          "$ref": "#/definitions/__schema23"
-        },
-        "porosity": {
-          "$ref": "#/definitions/__schema25"
-        },
-        "wetDarkening": {
-          "$ref": "#/definitions/__schema27"
-        },
-        "wetRoughness": {
-          "$ref": "#/definitions/__schema29"
-        }
-      },
-      "additionalProperties": false,
-      "description": "The surface defaults a terrain material copies into uniforms (each layer may override any)."
-    },
-    "averageColor": {
-      "description": "The albedo's average colour (sRGB). Default: the one the asset pipeline measures.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema14"
-        }
-      ]
-    },
-    "debugData": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "$ref": "#/definitions/__schema31"
-        },
-        "description": {
-          "$ref": "#/definitions/__schema33"
-        },
-        "comments": {
-          "$ref": "#/definitions/__schema35"
-        },
-        "todo": {
-          "$ref": "#/definitions/__schema37"
-        },
-        "debugObj": {
-          "$ref": "#/definitions/__schema39"
-        }
-      },
-      "additionalProperties": false,
-      "description": "What the debug tools show for it. Production data has none."
-    },
-    "__sourcePath": {
-      "type": "string",
-      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
-    }
-  },
-  "required": [
-    "category",
-    "physicalSize",
-    "heightScale",
-    "packings"
-  ],
-  "additionalProperties": false,
-  "definitions": {
-    "__schema0": {
-      "type": "string"
-    },
-    "__schema1": {
-      "type": "number",
-      "exclusiveMinimum": 0
-    },
-    "__schema2": {
-      "type": "number",
-      "exclusiveMinimum": 0
-    },
-    "__schema3": {
+    "__schema9": {
       "type": "string",
       "enum": [
         "FULL",
@@ -166,17 +120,40 @@
         "MINIMAL"
       ]
     },
-    "__schema4": {
+    "__schema10": {
+      "description": "The set's textures by packing (FULL, LITE, MINIMAL) and slot: at least one. A procedural set gives procedural instead.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "object",
+      "properties": {
+        "FULL": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "LITE": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "MINIMAL": {
+          "$ref": "#/definitions/__schema19"
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema12": {
       "type": "object",
       "properties": {
         "albedoHeight": {
-          "$ref": "#/definitions/__schema5"
+          "$ref": "#/definitions/__schema13"
         },
         "normal": {
-          "$ref": "#/definitions/__schema6"
+          "$ref": "#/definitions/__schema14"
         },
         "orm": {
-          "$ref": "#/definitions/__schema7"
+          "$ref": "#/definitions/__schema15"
         }
       },
       "required": [
@@ -187,29 +164,29 @@
       "additionalProperties": false,
       "description": "Three textures: albedo + height, normal, ORM. Best quality, every feature."
     },
-    "__schema5": {
+    "__schema13": {
       "type": "string",
       "minLength": 1,
       "description": "RGB albedo (sRGB), A height (linear). The id of a texture asset (*.texture.json)."
     },
-    "__schema6": {
+    "__schema14": {
       "type": "string",
       "minLength": 1,
       "description": "RGB the tangent-space normal (OpenGL, +Y). The id of a texture asset (*.texture.json)."
     },
-    "__schema7": {
+    "__schema15": {
       "type": "string",
       "minLength": 1,
       "description": "R ambient occlusion, G roughness, B metalness. The id of a texture asset (*.texture.json)."
     },
-    "__schema8": {
+    "__schema16": {
       "type": "object",
       "properties": {
         "albedoRough": {
-          "$ref": "#/definitions/__schema9"
+          "$ref": "#/definitions/__schema17"
         },
         "normalHeight": {
-          "$ref": "#/definitions/__schema10"
+          "$ref": "#/definitions/__schema18"
         }
       },
       "required": [
@@ -219,21 +196,21 @@
       "additionalProperties": false,
       "description": "Two textures: albedo × AO + roughness, normal XY + height. The terrain default."
     },
-    "__schema9": {
+    "__schema17": {
       "type": "string",
       "minLength": 1,
       "description": "RGB albedo × AO (sRGB), A roughness (linear). The id of a texture asset (*.texture.json)."
     },
-    "__schema10": {
+    "__schema18": {
       "type": "string",
       "minLength": 1,
       "description": "RG the normal's X and Y (OpenGL, Z reconstructed), B height. The id of a texture asset (*.texture.json)."
     },
-    "__schema11": {
+    "__schema19": {
       "type": "object",
       "properties": {
         "albedoHeight": {
-          "$ref": "#/definitions/__schema12"
+          "$ref": "#/definitions/__schema20"
         }
       },
       "required": [
@@ -242,34 +219,178 @@
       "additionalProperties": false,
       "description": "One texture: albedo × AO + height; the normal from height derivatives, or flat."
     },
-    "__schema12": {
+    "__schema20": {
       "type": "string",
       "minLength": 1,
       "description": "RGB albedo × AO (sRGB), A height (linear). The id of a texture asset (*.texture.json)."
     },
-    "__schema13": {
-      "description": "A colour multiplied into the albedo (sRGB: \"#ff8800\" or { r, g, b } in 0-255). Default white.",
+    "__schema21": {
+      "type": "object",
+      "properties": {
+        "generator": {
+          "$ref": "#/definitions/__schema22"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "seed": {
+          "$ref": "#/definitions/__schema25"
+        },
+        "size": {
+          "$ref": "#/definitions/__schema27"
+        },
+        "packing": {
+          "$ref": "#/definitions/__schema30"
+        }
+      },
+      "required": [
+        "generator"
+      ],
+      "additionalProperties": false,
+      "description": "A procedural set: baked on load by its generator into one packing's textures (uncompressed RGBA8), in place of packings. Needs the generator's module in the gathered code."
+    },
+    "__schema22": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The generator's id: a <id>.generator.ts module exporting generator (the toolkit's, or an app's)."
+    },
+    "__schema23": {
+      "description": "The generator's params by name: a number, a colour (sRGB \"#rrggbb\") or a toggle. A param left out takes its default.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema14"
+          "$ref": "#/definitions/__schema24"
         }
       ]
     },
-    "__schema14": {
+    "__schema24": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          {
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    "__schema25": {
+      "description": "The seed every noise of the surface derives from, a whole number. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema26"
+        }
+      ]
+    },
+    "__schema26": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema27": {
+      "description": "The baked textures' width and height in texels (1-8192), one number for a square. Default 1024.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema28": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema15"
+          "$ref": "#/definitions/__schema29"
         },
         {
-          "$ref": "#/definitions/__schema16"
+          "type": "array",
+          "items": [
+            {
+              "$ref": "#/definitions/__schema29"
+            },
+            {
+              "$ref": "#/definitions/__schema29"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "additionalItems": false
+        }
+      ]
+    },
+    "__schema29": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8192
+    },
+    "__schema30": {
+      "description": "The packing baked (FULL, LITE, MINIMAL): the set's only and default packing. Default LITE.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ]
+    },
+    "__schema31": {
+      "type": "object",
+      "properties": {
+        "tint": {
+          "$ref": "#/definitions/__schema32"
+        },
+        "normalStrength": {
+          "$ref": "#/definitions/__schema36"
+        },
+        "roughnessScale": {
+          "$ref": "#/definitions/__schema38"
+        },
+        "aoStrength": {
+          "$ref": "#/definitions/__schema40"
+        },
+        "heightContrast": {
+          "$ref": "#/definitions/__schema42"
+        },
+        "porosity": {
+          "$ref": "#/definitions/__schema44"
+        },
+        "wetDarkening": {
+          "$ref": "#/definitions/__schema46"
+        },
+        "wetRoughness": {
+          "$ref": "#/definitions/__schema48"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The surface defaults a terrain material copies into uniforms (each layer may override any)."
+    },
+    "__schema32": {
+      "description": "A colour multiplied into the albedo (sRGB: \"#ff8800\" or { r, g, b } in 0-255). Default white.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema33"
+        }
+      ]
+    },
+    "__schema33": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        },
+        {
+          "$ref": "#/definitions/__schema35"
         }
       ],
       "description": "A CSS colour string (\"#ff8800\", \"orange\") or { r, g, b } in 0-255, both sRGB."
     },
-    "__schema15": {
+    "__schema34": {
       "type": "string"
     },
-    "__schema16": {
+    "__schema35": {
       "type": "object",
       "properties": {
         "r": {
@@ -292,125 +413,155 @@
       ],
       "additionalProperties": false
     },
-    "__schema17": {
+    "__schema36": {
       "description": "Scales the normal's XY. Default 1.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema18"
+          "$ref": "#/definitions/__schema37"
         }
       ]
     },
-    "__schema18": {
+    "__schema37": {
       "type": "number",
       "minimum": 0
     },
-    "__schema19": {
+    "__schema38": {
       "description": "Scales the roughness. Default 1.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema20"
+          "$ref": "#/definitions/__schema39"
         }
       ]
     },
-    "__schema20": {
+    "__schema39": {
       "type": "number",
       "minimum": 0
     },
-    "__schema21": {
+    "__schema40": {
       "description": "How much of the ambient occlusion applies (0 none, 1 all). Default 1.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema22"
+          "$ref": "#/definitions/__schema41"
         }
       ]
     },
-    "__schema22": {
+    "__schema41": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema23": {
+    "__schema42": {
       "description": "Sharpens (> 1) or softens (< 1) the height for height blending. Default 1.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema24"
+          "$ref": "#/definitions/__schema43"
         }
       ]
     },
-    "__schema24": {
+    "__schema43": {
       "type": "number",
       "minimum": 0
     },
-    "__schema25": {
+    "__schema44": {
       "description": "How much water the surface soaks up (0 none, 1 all). Default 0.5.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema26"
+          "$ref": "#/definitions/__schema45"
         }
       ]
     },
-    "__schema26": {
+    "__schema45": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema27": {
+    "__schema46": {
       "description": "How much wetness darkens the albedo (0 none, 1 black). Default 0.5.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema28"
+          "$ref": "#/definitions/__schema47"
         }
       ]
     },
-    "__schema28": {
+    "__schema47": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema29": {
+    "__schema48": {
       "description": "The roughness of the fully wet surface. Default 0.3.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema30"
+          "$ref": "#/definitions/__schema49"
         }
       ]
     },
-    "__schema30": {
+    "__schema49": {
       "type": "number",
       "minimum": 0,
       "maximum": 1
     },
-    "__schema31": {
+    "__schema50": {
+      "description": "The albedo's average colour (sRGB). Default: the one the asset pipeline measures.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema33"
+        }
+      ]
+    },
+    "__schema51": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema52"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema54"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema56"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema58"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema60"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema52": {
       "description": "The name the debug tools show.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema32"
+          "$ref": "#/definitions/__schema53"
         }
       ]
     },
-    "__schema32": {
+    "__schema53": {
       "type": "string"
     },
-    "__schema33": {
+    "__schema54": {
       "description": "A longer description for the debug tools.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema34"
+          "$ref": "#/definitions/__schema55"
         }
       ]
     },
-    "__schema34": {
+    "__schema55": {
       "type": "string"
     },
-    "__schema35": {
+    "__schema56": {
       "description": "Notes with their times.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema36"
+          "$ref": "#/definitions/__schema57"
         }
       ]
     },
-    "__schema36": {
+    "__schema57": {
       "type": "array",
       "items": {
         "type": "object",
@@ -431,35 +582,39 @@
         "additionalProperties": false
       }
     },
-    "__schema37": {
+    "__schema58": {
       "description": "Open items, by key.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema38"
+          "$ref": "#/definitions/__schema59"
         }
       ]
     },
-    "__schema38": {
+    "__schema59": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema39": {
+    "__schema60": {
       "description": "Anything else a debug tool keeps for it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema40"
+          "$ref": "#/definitions/__schema61"
         }
       ]
     },
-    "__schema40": {
+    "__schema61": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
+    },
+    "__schema62": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     }
   }
 }

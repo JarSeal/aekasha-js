@@ -22,6 +22,10 @@ export type AppData = {
   /** Each PostFX pass file's module (its `fxNode`) by pass id (a PostFX JSON's `tslFile`), loaded
    * on demand: the PostFX feature loads a scene's chain's files before it builds the chain */
   postFxFiles: Record<string, () => Promise<Record<string, unknown>>>;
+  /** Each procedural texture set generator's module (its `generator`) by generator id (a
+   * `<id>.generator.ts` a procedural set names, p304 D3), loaded on demand: the `textureSets()`
+   * feature loads one before it bakes a set. Absent when no set is procedural. */
+  textureSetGeneratorFiles?: Record<string, () => Promise<Record<string, unknown>>>;
 };
 
 // Empty until InitEngine: a module that reads it at load sees no scenes

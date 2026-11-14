@@ -23,20 +23,22 @@ import {
 } from '../../../kernel/assets/Geometry';
 import { deleteTexture, doesTextureExist, saveTexture } from '../../../kernel/assets/Texture';
 import {
-  clearBakeTarget,
   createAtlasTarget,
   finishAtlasMips,
   createBakeMaterials,
   createDilateCopy,
   createFrameTarget,
   disposeBakeMaterials,
-  getBakeRenderer,
   getDominantMaterial,
   getShadingProps,
-  withBakeRendererState,
   type ImpostorBakePass,
   type ImpostorShading,
 } from './ImpostorBake';
+import {
+  clearBakeTarget,
+  getBakeRenderer,
+  withBakeRendererState,
+} from '../../../kernel/render/BakeRenderer';
 import { getImpostorExport, warnIfImpostorExportStale } from './ImpostorExports';
 import type { ImpostorAtlasVOrigin } from './ImpostorFormat';
 import { recordImpostor } from './ImpostorRegistry';

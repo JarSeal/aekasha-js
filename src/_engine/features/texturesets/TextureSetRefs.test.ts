@@ -44,6 +44,15 @@ describe('getTextureSetInputDependencies', () => {
     });
   });
 
+  it('names none for a procedural set: the feature bakes its textures (p304 D3)', () => {
+    const procedural: TextureSetLookup = () => ({
+      defaultPacking: 'LITE',
+      packings: { LITE: { albedoRough: 'dunes.albedoRough', normalHeight: 'dunes.normalHeight' } },
+      procedural: { generator: 'sandRipples' },
+    });
+    expect(getTextureSetInputDependencies({ textureSet: 'dunes' }, procedural)).toEqual([]);
+  });
+
   it('names none for an unknown set, a packing it lacks, or another value', () => {
     expect(ids({ textureSet: 'nope' })).toEqual([]);
     expect(ids({ textureSet: 'sand', packing: 'MINIMAL' })).toEqual([]);

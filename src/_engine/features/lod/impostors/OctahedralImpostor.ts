@@ -30,21 +30,23 @@ import {
   saveTexture,
 } from '../../../kernel/assets/Texture';
 import {
-  clearBakeTarget,
   createAtlasTarget,
   finishAtlasMips,
   createBakeMaterials,
   createDilateCopy,
   createFrameTarget,
   disposeBakeMaterials,
-  getBakeRenderer,
   getDominantMaterial,
   getShadingProps,
   IMPOSTOR_DEPTH_MIN,
-  withBakeRendererState,
   type ImpostorBakePass,
   type ImpostorShading,
 } from './ImpostorBake';
+import {
+  clearBakeTarget,
+  getBakeRenderer,
+  withBakeRendererState,
+} from '../../../kernel/render/BakeRenderer';
 import { getImpostorExport, warnIfImpostorExportStale } from './ImpostorExports';
 import type { ImpostorAtlasVOrigin } from './ImpostorFormat';
 import { recordImpostor } from './ImpostorRegistry';

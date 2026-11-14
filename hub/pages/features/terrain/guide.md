@@ -172,11 +172,116 @@ comparing them:
 - **Visible repetition:** `mud01`, `rocks02` and `concrete01` repeat noticeably at a few tiles,
   which anti-tiling (a later terrain material's) hides.
 
+## Procedural textures
+
+A surface can also be code: a TSL graph of noise that gives an albedo, a height and a roughness at
+any point. The toolkit has ten such **surface generators** (`aekasha/toolkit/terrain`), a
+category's worth each: `sandRipples`, `sandFlat`, `mudCracked`, `mudSmooth`, `rockyGround`,
+`cliffStrata`, `snowDrift`, `iceSheet`, `grassGround` and `concretePores`. A generator runs three
+ways:
+
+| Way      | How                                                                        | Every frame                     | GPU memory (1K `LITE`) |
+| -------- | -------------------------------------------------------------------------- | ------------------------------- | ---------------------- |
+| Baked    | Rendered once into textures, at the scene's load or from code              | 2 fetches, as an imported set   | 10.7 MB, uncompressed  |
+| Exported | The bake saved as PNGs, committed and encoded to KTX2 like any set         | 2 fetches                       | 2.67 MB                |
+| Live     | The graph itself in the material, its noise not periodic: it never repeats | The whole graph for every pixel | None                   |
+
+On an M2, a block filling a 1080p view costs about 1 ms of GPU time baked, as an imported set
+does, and 8–20 ms live: the handbook's
+[measurements](repo:docs/techniques/procedural-textures.md#performance) have every generator's.
+
+**A procedural set** names a generator in place of its textures, and is baked with the scene that
+lists it:
+
+<<< src/app/scenes/proceduralSurfaces/p304ProcRipples.textureSet.json
+
+- **`procedural`** takes `generator` (its module is `<id>.generator.ts`; an unknown one fails the
+  gather), `params` by name (a number, an sRGB `"#rrggbb"` or a boolean, checked by the generator),
+  a whole-number `seed`, a `size` in texels (default 1024) and one `packing` (default `LITE`). Its
+  `physicalSize` and `heightScale` are required, as any set's.
+- **From there it's a set:** its textures are `<setId>.<slot>` (`p304ProcRipples.albedoRough`),
+  a `{ textureSet }` input or `loadTextureSetAsync` gets them, and they're released with the
+  scene. The loader shows the bakes ("Baking textures, n / m").
+- **Its generator is a chunk of its own**, loaded on the set's first bake: an app without a
+  procedural set ships none, and a production build only those its scenes' sets name.
+- **A set array refuses one**: an array's layers are assembled from compressed files. Export the
+  set to put it in one.
+
+**From code,** [`bakeSurfaceGenerator`](api:bakeSurfaceGenerator) bakes a generator into a
+packing and returns the bake with its controls: set params or the seed and rebake, without a
+rebuild (the baker renders one bake a frame).
+[`createLiveSurface`](api:createLiveSurface) gives the generator's nodes for a material of your
+own, at the world's `(x, −z)` over the tile by default, its normal a bump from the height
+(`normal: 'TAPS'` and `ao: 'CAVITY'` take a bake's, four and eight more evaluations a pixel):
+
+```ts
+import {
+  bakeSurfaceGenerator,
+  bumpNormalView,
+  createLiveSurface,
+  sandRipples,
+} from 'aekasha/toolkit/terrain';
+
+const sand = await bakeSurfaceGenerator({ id: 'beachSand', generator: sandRipples, seed: 7 });
+sand.setParams({ wavelength: 0.2 });
+await sand.bake.rebake();
+
+const live = createLiveSurface(sandRipples, { seed: 7 });
+material.colorNode = live.albedo;
+material.roughnessNode = live.roughness;
+material.normalNode = bumpNormalView(live.height.mul(live.heightScale));
+```
+
+**Writing a generator:** [`defineSurfaceGenerator`](api:defineSurfaceGenerator) in a
+`<id>.generator.ts` module that exports `generator`, anywhere under `src/app/`. Its `build` gets
+the point and its params, and writes its noise in cells through `ctx.cells(n)`, which gives the
+period that makes the noise tile when baked and none when live, so it never branches on the mode.
+The normal and the AO default to the height's. `sandRipples` whole (inside the toolkit it
+imports by path; an app's generator imports the same names from `aekasha/toolkit/terrain`):
+
+<<< src/toolkit/terrain/procedural/sandRipples/sandRipples.generator.ts collapse
+
+The noise it's made of is the toolkit's, each function 2D, hashed with integers (safe on
+SwiftShader) and tiling at a whole-number `period`: [`valueNoise`](api:valueNoise),
+[`gradientNoise`](api:gradientNoise), [`fbm`](api:fbm), [`domainWarp`](api:domainWarp),
+[`worley`](api:worley) (F1, F2 and a cell id), [`hash12`](api:hash12) and
+[`hash22`](api:hash22), and [`heightToNormal`](api:heightToNormal) and
+[`heightToCavity`](api:heightToCavity) for a normal and an AO from a height. The handbook's
+[Writing a generator](repo:docs/techniques/procedural-textures.md#writing-a-generator) walks
+`sandRipples` line by line.
+
+**Exporting a bake** is the bridge to an imported set: tune a generator in the gallery, press
+"Export PNGs" (the engine's [`exportBakedTexture`](api:exportBakedTexture), through the dev file
+server), and write a set over the PNGs with two plain texture JSONs. The bake is already packed,
+so no recipe: the [steps](repo:docs/techniques/procedural-textures.md#export).
+
+**Two shared textures** for the terrain materials to come, each committed as KTX2 (list it by id)
+and bakeable (another seed or size):
+
+- `macroNoise` (512², [`bakeMacroNoise`](api:bakeMacroNoise)): four tileable noises in RGBA, for
+  large-scale brightness, hue, patch masks and dithering.
+- `rippleAtlas` (256², [`bakeRippleAtlas`](api:bakeRippleAtlas)): 4 × 4 rain drops;
+  [`decodeRippleAtlas`](api:decodeRippleAtlas) animates their rings.
+
+The baked or live data is visual only: GPUs round floats differently, so never read gameplay or a
+collider from it. The baker itself is the engine's, for any graph:
+[Texture bakes](hub:features/rendering#texture-bakes).
+
 ## Debugging
 
 - **The gallery** (above): `?isDebug=true&startScene=terrainGallery`. Its packing switch is also
   the check that a normal map is lit from the right side: `MINIMAL`'s bump has no tangent frame,
   so `FULL` and `MINIMAL` disagreeing means a mirrored map or frame.
+- **The gallery's Procedural row:** click a generator in its tab's "Procedural surfaces" list to
+  fly to its block and tune it: its seed and params as fields, rebaking as they move. "Shows"
+  switches the row between the bakes, the generators live (with or without the taps) and an
+  imported set of each category; the tab shows the bake's GPU time and memory, "Copy JSON" gives
+  the values as a set's `procedural` block, "Export PNGs" writes the bake, and "Measure block"
+  times the frame in each mode.
+- **The verification scenes:** `proceduralSurfaces` checks every generator in every packing, that
+  each bake tiles and its live surface doesn't, and that a procedural set's bake equals the code's;
+  `noiseLibrary` tiles each noise 3 × 3 beside its live twin, and checks the shared textures and
+  their committed copies. A failure is a console error, so `yarn verify:scenes` fails on it.
 - **The Assets tab**'s texture info window names the sets, packings and slots a texture fills.
 - **The material editor** builds a material's set arrays before previewing it, so a
   `{ textureSetArray }` material shows outside the scene that builds them.
@@ -192,6 +297,11 @@ comparing them:
 - [`sampleTextureSet`](api:sampleTextureSet),
   [`transformTangentNormalToView`](api:transformTangentNormalToView) and
   [`bumpNormalView`](api:bumpNormalView): a terrain material of your own.
+- [`defineSurfaceGenerator`](api:defineSurfaceGenerator),
+  [`bakeSurfaceGenerator`](api:bakeSurfaceGenerator) and
+  [`createLiveSurface`](api:createLiveSurface): procedural surfaces; [`fbm`](api:fbm),
+  [`worley`](api:worley) and the rest of the noise; [`bakeMacroNoise`](api:bakeMacroNoise) and
+  [`bakeRippleAtlas`](api:bakeRippleAtlas): the shared textures.
 
 ## Related issues
 
@@ -205,7 +315,9 @@ comparing them:
 ## Read more
 
 - The handbook: [Texture sets](repo:docs/techniques/texture-sets.md) (choosing a packing, AO,
-  texel density, your own set in Blender, KTX2 settings, the checklist) and the
+  texel density, your own set in Blender, KTX2 settings, the checklist),
+  [Procedural textures](repo:docs/techniques/procedural-textures.md) (baked, exported or live,
+  what each costs, writing a generator, tiling and seeds) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).
 - The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets) and
   [`aekasha/toolkit/terrain`](hub:documentation/aekasha/toolkit/terrain).

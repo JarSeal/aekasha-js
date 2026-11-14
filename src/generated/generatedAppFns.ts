@@ -168,6 +168,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  noiseLibrary: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/noiseLibrary/noiseLibrary.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   physicsTest: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/physicsTest/physicsTest.ts');
     await (
@@ -178,6 +186,14 @@ export const sceneFileObjects: {
   },
   physicsTiers: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/physicsTiers/physicsTiers.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
+  proceduralSurfaces: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/proceduralSurfaces/proceduralSurfaces.ts');
     await (
       module as {
         scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
@@ -310,4 +326,9 @@ export const tslMaterialFileObjects = {
 export const postFxFileObjects = {
   ambientOcclusion: () => import('../app/postFx/ambientOcclusion.tsl.ts'),
   heroBloom: () => import('../app/examples/hubHero/heroBloom.tsl.ts'),
+};
+
+export const textureSetGeneratorObjects = {
+  mudCracked: () => import('../toolkit/terrain/procedural/mudCracked/mudCracked.generator.ts'),
+  sandRipples: () => import('../toolkit/terrain/procedural/sandRipples/sandRipples.generator.ts'),
 };

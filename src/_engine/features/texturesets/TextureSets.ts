@@ -3,8 +3,8 @@
 // production build has only the scenes' data), and its textures are ordinary registered textures,
 // owned and released as any other. The `textureSets()` feature registers the `{ textureSet }`
 // material input resolver at its install, and the scene hooks that build a scene's set arrays
-// (TextureSetArrays.ts, `import()`ed by the first scene that has some); the lookups and the load
-// work without it.
+// (TextureSetArrays.ts, `import()`ed by the first scene that has some) and bake its procedural
+// sets (TextureSetBakes.ts, likewise, p304 D3); the lookups and the load work without it.
 import * as THREE from 'three/webgpu';
 import { texture, uniform } from 'three/tsl';
 import type { FeatureContext } from '../../kernel/init/Features';
@@ -14,7 +14,7 @@ import type {
 } from '../../kernel/assets/MaterialInputResolvers';
 import { getTexture, loadTextureAsync } from '../../kernel/assets/Texture';
 import { findTextureDeclaration } from '../../kernel/assets/MaterialDependencies';
-import { retagAssetOwner } from '../../kernel/assets/AssetOwners';
+import { getAssetOwnerScope, retagAssetOwner } from '../../kernel/assets/AssetOwners';
 import { getGeneratedAppData, type SceneData } from '../../kernel/scene/Scene';
 import { toThreeColor } from '../../kernel/render/ThreeMath';
 import {
@@ -138,7 +138,8 @@ const ensureSlotTextureAsync = async (setId: string, textureId: string) => {
  * aren't registered, and re-tags the registered ones, all in the caller's owner scope: they're
  * the loading (or current) scene's and are released with it, as the scene load's are. A scene's
  * `textureSets` and its materials' `{ textureSet }` inputs load theirs with the scene: this is for
- * code that needs a set no scene loads, or another packing of one.
+ * code that needs a set no scene loads, or another packing of one. A procedural set (p304 D3) is
+ * baked by its generator instead, unless its textures are registered (a scene baked it).
  *
  * Calls may overlap: two loads of one texture register one. Re-check the scene after the await
  * before using the textures: a scene switch meanwhile releases what the left scene loaded.
@@ -159,6 +160,13 @@ export const loadTextureSetAsync = async <P extends TextureSetPacking = TextureS
   opts: { packing?: P } = {}
 ): Promise<TextureSetTextures<P>> => {
   const entries = Object.entries(getPackingSlots('loadTextureSetAsync', id, opts.packing));
+  const set = getTextureSet(id);
+  if (set?.procedural) {
+    // Baked, not loaded (p304 D3), in the scope this call has before its first await
+    const scope = getAssetOwnerScope();
+    const bakes = await loadBakesModuleAsync();
+    return (await bakes.loadProceduralTextureSetAsync(set, scope)) as TextureSetTextures<P>;
+  }
   // Every load starts before the first await: each captures the caller's owner scope at its call
   const loaded = await Promise.all(
     entries.map(([, textureId]) => ensureSlotTextureAsync(id, textureId))
@@ -247,6 +255,23 @@ const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
 
 /** The set arrays' module once loaded (`import()`: only a scene with set arrays loads it) */
 let arraysModule: typeof import('./TextureSetArrays') | undefined;
+/** The procedural sets' bakes once loaded (`import()`: only a procedural set loads it) */
+let bakesModule: typeof import('./TextureSetBakes') | undefined;
+
+const loadBakesModuleAsync = async () => {
+  bakesModule ??= await import('./TextureSetBakes');
+  return bakesModule;
+};
+
+/** Starts the bakes of a scene's procedural sets (p304 D3): synchronously once the module is
+ * loaded, so a set the next scene shares is re-tagged before the previous scene's release */
+const startSceneBakes = (sceneData: SceneData) => {
+  if (!sceneData.textureSets?.some((set) => set.procedural)) return undefined;
+  if (bakesModule) return bakesModule.bakeSceneProceduralTextureSetsAsync(sceneData);
+  return loadBakesModuleAsync().then((loaded) =>
+    loaded.bakeSceneProceduralTextureSetsAsync(sceneData)
+  );
+};
 
 /** Starts the builds of a scene's set arrays: synchronously once the module is loaded, so a set
  * array the next scene shares is re-tagged before the previous scene's assets are released */
@@ -274,22 +299,25 @@ export const registerTextureSetsDebug = async () => {
 
 /**
  * The texture sets' install: registers the `{ textureSet }` material input resolver, and the
- * scene hooks that build a scene's set arrays (p303 D4) before its materials: started when the
- * world is cleared (the next scene's data, which owns what registers from then on), awaited before
- * its assets load. The `{ textureSetArray }` resolver registers with the first build.
+ * scene hooks that build a scene's set arrays (p303 D4) and bake its procedural sets (p304 D3)
+ * before its materials: started when the world is cleared (the next scene's data, which owns what
+ * registers from then on), awaited before its assets load. The `{ textureSetArray }` resolver
+ * registers with the first build.
  * @internal
  */
 export const installTextureSets = (ctx: FeatureContext) => {
   ctx.registerMaterialInputResolver(TEXTURE_SET_RESOLVER);
-  let pendingArrays: Promise<void> | undefined;
+  let pending: Promise<void> | undefined;
   ctx.addSceneHooks({
     worldCleared: (_world, _prevSceneId, nextSceneData) => {
-      pendingArrays = startSceneArrayBuilds(nextSceneData);
+      const arrays = startSceneArrayBuilds(nextSceneData);
+      const bakes = startSceneBakes(nextSceneData);
+      pending = arrays && bakes ? Promise.all([arrays, bakes]).then(() => {}) : arrays ?? bakes;
     },
     beforeAssets: () => {
-      const pending = pendingArrays;
-      pendingArrays = undefined;
-      return pending;
+      const started = pending;
+      pending = undefined;
+      return started;
     },
   });
 };

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "p304ProcRipples",
+  "category": "SAND",
+  "physicalSize": [2, 2],
+  "heightScale": 0.02,
+  "procedural": {
+    "generator": "sandRipples",
+    "params": { "wavelength": 0.12, "warp": 0.5, "light": "#e0cb98" },
+    "seed": 11,
+    "size": 256
+  },
+  "debugData": {
+    "name": "p304 procedural ripples",
+    "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+  }
+}

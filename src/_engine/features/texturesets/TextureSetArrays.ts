@@ -114,6 +114,12 @@ const getSetSlots = (caller: string, setId: string, packing: TextureSetPacking) 
       `${caller}: no data has the texture set "${setId}" (in a production build, a scene must list it in its textureSets or name it in a material input).`
     );
   }
+  // Members are assembled on the CPU (KTX2 levels, an image's readback): a render target can't be
+  if (set.procedural) {
+    throw new Error(
+      `${caller}: the texture set "${setId}" is procedural (baked by its generator "${set.procedural.generator}"), and a set array takes imported sets only: sample it through { textureSet }.`
+    );
+  }
   const slots = getTextureSetSlotTextures(set, packing);
   if (!slots) {
     throw new Error(

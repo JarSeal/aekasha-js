@@ -122,6 +122,9 @@
       "setEnvBallRoughness": "Function",
       "setEnvBallVisible": "Function"
     },
+    "src/_engine/debug/GPUFrameTime.ts": {
+      "onGpuFrameTime": "Function"
+    },
     "src/_engine/debug/GPUMemory.ts": {
       "_getGPUMemorySources": "Function",
       "GPU_MEMORY_TAB_ID": "Variable",
@@ -580,7 +583,6 @@
       "resolveCrossQuadsOptions": "Function"
     },
     "src/_engine/features/lod/impostors/ImpostorBake.ts": {
-      "clearBakeTarget": "Function",
       "createAtlasTarget": "Function",
       "createBakeMaterial": "Function",
       "createBakeMaterials": "Function",
@@ -590,14 +592,12 @@
       "disposeBakeMaterials": "Function",
       "encodeImpostorDepth": "Function",
       "finishAtlasMips": "Function",
-      "getBakeRenderer": "Function",
       "getDominantMaterial": "Function",
       "getShadingProps": "Function",
       "IMPOSTOR_DEPTH_MIN": "Variable",
       "ImpostorBakePass": "TypeAlias",
       "ImpostorDepthRange": "TypeAlias",
-      "ImpostorShading": "TypeAlias",
-      "withBakeRendererState": "Function"
+      "ImpostorShading": "TypeAlias"
     },
     "src/_engine/features/lod/impostors/ImpostorExports.ts": {
       "getImpostorExport": "Function",
@@ -2169,6 +2169,16 @@
       "TextureSetLayerParamsNode": "TypeAlias",
       "TextureSetSlotMap": "TypeAlias"
     },
+    "src/_engine/features/texturesets/TextureSetBakes.ts": {
+      "bakeProceduralTextureSetAsync": "Function",
+      "bakeSceneProceduralTextureSetsAsync": "Function",
+      "loadProceduralTextureSetAsync": "Function"
+    },
+    "src/_engine/features/texturesets/TextureSetGenerator.ts": {
+      "TextureSetGenerator": "TypeAlias",
+      "TextureSetGeneratorBuildOpts": "TypeAlias",
+      "TextureSetGeneratorParams": "TypeAlias"
+    },
     "src/_engine/features/texturesets/TextureSetRefs.ts": {
       "getTextureSetInputDependencies": "Function",
       "getTextureSetSlotTextures": "Function",
@@ -3019,6 +3029,11 @@
       "setMeshMaterial": "Function",
       "setMeshMergeHandler": "Function"
     },
+    "src/_engine/kernel/render/BakeRenderer.ts": {
+      "clearBakeTarget": "Function",
+      "getBakeRenderer": "Function",
+      "withBakeRendererState": "Function"
+    },
     "src/_engine/kernel/render/CanvasSize.ts": {
       "CanvasSize": "TypeAlias",
       "CanvasSizeSource": "TypeAlias",
@@ -3116,6 +3131,30 @@
       "SnapshotOpts": "TypeAlias",
       "snapshotToBlobAsync": "Function",
       "takeSnapshotAsync": "Function"
+    },
+    "src/_engine/kernel/render/TextureBakeMemory.ts": {
+      "BakedTextureMemoryOpts": "TypeAlias",
+      "BakeOutputType": "TypeAlias",
+      "getBakedTextureMemoryBytes": "Function",
+      "getBakeSize": "Function",
+      "getMipChainTexels": "Function"
+    },
+    "src/_engine/kernel/render/TextureBakeQueue.ts": {
+      "BakeQueue": "TypeAlias",
+      "createBakeQueue": "Function",
+      "TEXTURE_BAKE_THROTTLE_MS": "Variable"
+    },
+    "src/_engine/kernel/render/TextureBaker.ts": {
+      "BakeBuildContext": "TypeAlias",
+      "BakedTexture": "TypeAlias",
+      "BakedTextureExport": "TypeAlias",
+      "BakeOutput": "TypeAlias",
+      "bakeTexture": "Function",
+      "BakeTextureOpts": "TypeAlias",
+      "exportBakedTexture": "Function",
+      "ExportBakedTextureOpts": "TypeAlias",
+      "getTextureBakeStats": "Function",
+      "TextureBakeStats": "TypeAlias"
     },
     "src/_engine/kernel/render/ThreeMath.ts": {
       "DIRECTIONS": "Variable",
@@ -3236,7 +3275,9 @@
       "isCurrentlyLoading": "Function",
       "loadScene": "Function",
       "LoadSceneProps": "TypeAlias",
+      "reportSceneLoadBakeStatus": "Function",
       "runWhenSceneLoadSettled": "Function",
+      "SceneLoadBakeStatus": "TypeAlias",
       "SceneLoader": "TypeAlias",
       "ScenePrimitiveAssets": "TypeAlias",
       "UpdateLoaderStatusFn": "TypeAlias"
@@ -3379,13 +3420,17 @@
       "TEXTURE_SET_CATEGORIES": "Variable",
       "TEXTURE_SET_PACKING_PREFERENCE": "Variable",
       "TEXTURE_SET_PACKINGS": "Variable",
+      "TEXTURE_SET_PROCEDURAL_DEFAULTS": "Variable",
       "TEXTURE_SET_SURFACE_DEFAULTS": "Variable",
       "TextureSetArrayInputSchema": "Variable",
       "TextureSetAsset": "TypeAlias",
       "TextureSetAssetSchema": "Variable",
+      "TextureSetCategory": "TypeAlias",
       "TextureSetDef": "TypeAlias",
       "TextureSetInputSchema": "Variable",
       "TextureSetPacking": "TypeAlias",
+      "TextureSetProcedural": "TypeAlias",
+      "TextureSetProceduralDef": "TypeAlias",
       "TextureSetSlot": "TypeAlias",
       "TextureSetSurface": "TypeAlias"
     },
@@ -4785,12 +4830,143 @@
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
     },
+    "src/toolkit/terrain/nodes/noise/Hash.ts": {
+      "hash12": "Function",
+      "hash22": "Function",
+      "hashCell12": "Function",
+      "hashCell22": "Function",
+      "hashCellBits": "Variable",
+      "HashOptions": "TypeAlias",
+      "noiseLayout": "Function",
+      "NoiseSeed": "TypeAlias",
+      "toSeedNode": "Function"
+    },
+    "src/toolkit/terrain/nodes/noise/HeightMaps.ts": {
+      "HeightFunction": "TypeAlias",
+      "heightToCavity": "Function",
+      "HeightToCavityOptions": "TypeAlias",
+      "heightToNormal": "Function",
+      "HeightToNormalOptions": "TypeAlias"
+    },
+    "src/toolkit/terrain/nodes/noise/Noise.ts": {
+      "domainWarp": "Function",
+      "DomainWarpOptions": "TypeAlias",
+      "fbm": "Function",
+      "FbmOptions": "TypeAlias",
+      "getOctavePeriods": "Function",
+      "gradientNoise": "Function",
+      "NoiseOptions": "TypeAlias",
+      "valueNoise": "Function"
+    },
+    "src/toolkit/terrain/nodes/noise/Period.ts": {
+      "NoisePeriod": "TypeAlias",
+      "ResolvedPeriod": "TypeAlias",
+      "resolveNoisePeriod": "Function",
+      "wrapCell": "Function"
+    },
+    "src/toolkit/terrain/nodes/noise/Worley.ts": {
+      "worley": "Function",
+      "WorleyOptions": "TypeAlias",
+      "WorleySample": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/SampleTextureSet.ts": {
       "bumpNormalView": "Function",
       "sampleTextureSet": "Function",
       "SampleTextureSetOptions": "TypeAlias",
       "TextureSetSample": "TypeAlias",
       "transformTangentNormalToView": "Function"
+    },
+    "src/toolkit/terrain/procedural/BakeSurface.ts": {
+      "BakedSurface": "TypeAlias",
+      "bakeSurfaceGenerator": "Function",
+      "BakeSurfaceGeneratorOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/procedural/cliffStrata/cliffStrata.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/concretePores/concretePores.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/grassGround/grassGround.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/iceSheet/iceSheet.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/LiveSurface.ts": {
+      "createLiveSurface": "Function",
+      "LiveSurface": "TypeAlias",
+      "LiveSurfaceOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/procedural/mudCracked/mudCracked.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/mudSmooth/mudSmooth.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/PackSurface.ts": {
+      "doesPackingStoreNormal": "Function",
+      "getSurfacePackingOutputs": "Function",
+      "PackableSurface": "TypeAlias",
+      "packSurfaceOutputs": "Function"
+    },
+    "src/toolkit/terrain/procedural/rockyGround/rockyGround.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/sandFlat/sandFlat.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/sandRipples/sandRipples.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/snowDrift/snowDrift.generator.ts": {
+      "generator": "Variable"
+    },
+    "src/toolkit/terrain/procedural/SurfaceGenerator.ts": {
+      "buildSurfaceGraph": "Function",
+      "buildSurfacePacking": "Function",
+      "createSurfaceContext": "Function",
+      "defineSurfaceGenerator": "Function",
+      "SurfaceBuildContext": "TypeAlias",
+      "SurfaceCellCount": "TypeAlias",
+      "SurfaceCells": "TypeAlias",
+      "SurfaceGenerator": "TypeAlias",
+      "SurfaceGeneratorDef": "TypeAlias",
+      "SurfaceGraph": "TypeAlias",
+      "SurfaceGraphOpts": "TypeAlias",
+      "SurfaceOutputs": "TypeAlias",
+      "SurfacePackingBuild": "TypeAlias"
+    },
+    "src/toolkit/terrain/procedural/SurfaceNodes.ts": {
+      "below": "Function",
+      "perCell": "Function",
+      "toUnit": "Function"
+    },
+    "src/toolkit/terrain/procedural/SurfaceParams.ts": {
+      "buildSurfaceParams": "Function",
+      "checkSurfaceParamSpecs": "Function",
+      "SurfaceColorParam": "TypeAlias",
+      "SurfaceNumberParam": "TypeAlias",
+      "SurfaceParamNode": "TypeAlias",
+      "SurfaceParamNodes": "TypeAlias",
+      "SurfaceParamsBuild": "TypeAlias",
+      "SurfaceParamSpec": "TypeAlias",
+      "SurfaceParamSpecs": "TypeAlias",
+      "SurfaceParamValues": "TypeAlias",
+      "SurfaceToggleParam": "TypeAlias"
+    },
+    "src/toolkit/terrain/textures/MacroNoise.ts": {
+      "bakeMacroNoise": "Function",
+      "BakeMacroNoiseOpts": "TypeAlias",
+      "buildMacroNoise": "Function"
+    },
+    "src/toolkit/terrain/textures/RippleAtlas.ts": {
+      "bakeRippleAtlas": "Function",
+      "BakeRippleAtlasOpts": "TypeAlias",
+      "buildRippleAtlas": "Function",
+      "decodeRippleAtlas": "Function",
+      "DecodeRippleAtlasOpts": "TypeAlias",
+      "RippleRings": "TypeAlias"
     }
   },
   "entries": {
@@ -4822,6 +4998,13 @@
       "AssetsWorkerTarget",
       "AtlasCellInputRef",
       "AtlasCellRect",
+      "BakeBuildContext",
+      "BakeOutput",
+      "BakeOutputType",
+      "BakeTextureOpts",
+      "BakedTexture",
+      "BakedTextureExport",
+      "BakedTextureMemoryOpts",
       "BindingMeta",
       "BuildTextureArrayProps",
       "CanvasSize",
@@ -4845,6 +5028,7 @@
       "EnabledInDebugCam",
       "EngineFeature",
       "EntityDebugData",
+      "ExportBakedTextureOpts",
       "FeatureContext",
       "FeatureDebugHook",
       "FeatureUnmountHook",
@@ -4932,6 +5116,7 @@
       "SampleAtlasCellOpts",
       "SceneData",
       "SceneHooks",
+      "SceneLoadBakeStatus",
       "SceneLoader",
       "ScenePrimitiveAssets",
       "Snapshot",
@@ -4946,6 +5131,7 @@
       "TextureArrayInputRef",
       "TextureArrayMember",
       "TextureAtlasInfo",
+      "TextureBakeStats",
       "TextureInputRef",
       "TextureMapKeys",
       "TextureProps",
@@ -4979,6 +5165,7 @@
       "addToGroupEntity",
       "addViewChangeListener",
       "addViewFrameListener",
+      "bakeTexture",
       "buildTextureArray",
       "cameraLookAtPoint",
       "configureDraco",
@@ -5015,6 +5202,7 @@
       "disposeKTX2Loader",
       "ensureMaterialDependencies",
       "existsOrThrow",
+      "exportBakedTexture",
       "getActionMap",
       "getActionMaps",
       "getActiveCamera",
@@ -5023,6 +5211,7 @@
       "getAppDelta",
       "getArrayLayerIndex",
       "getAtlasCell",
+      "getBakedTextureMemoryBytes",
       "getCameraByAppId",
       "getCanvasSize",
       "getComponent",
@@ -5061,6 +5250,7 @@
       "getTextureArray",
       "getTextureArrayInfo",
       "getTextureAtlasInfo",
+      "getTextureBakeStats",
       "getTransform",
       "hasComponent",
       "importAssetAsync",
@@ -5247,6 +5437,7 @@
       "loadDebugModuleAsync",
       "markDebugHelper",
       "onDevDataGathered",
+      "onGpuFrameTime",
       "openDebuggerTab",
       "openProfilerTab",
       "persistDebuggerTabValue",
@@ -5559,6 +5750,7 @@
       "TEXTURE_SET_CATEGORIES",
       "TEXTURE_SET_PACKINGS",
       "TEXTURE_SET_PACKING_PREFERENCE",
+      "TEXTURE_SET_PROCEDURAL_DEFAULTS",
       "TEXTURE_SET_SURFACE_DEFAULTS",
       "TEXTURE_SLOTS",
       "TextureArrayAsset",
@@ -5578,9 +5770,12 @@
       "TextureSetArrayInputSchema",
       "TextureSetAsset",
       "TextureSetAssetSchema",
+      "TextureSetCategory",
       "TextureSetDef",
       "TextureSetInputSchema",
       "TextureSetPacking",
+      "TextureSetProcedural",
+      "TextureSetProceduralDef",
       "TextureSetSlot",
       "TextureSetSurface",
       "TextureSettings",
@@ -5687,11 +5882,16 @@
       "TextureSetArray",
       "TextureSetArrayInput",
       "TextureSetArrayInputRef",
+      "TextureSetCategory",
       "TextureSetDef",
+      "TextureSetGenerator",
+      "TextureSetGeneratorBuildOpts",
+      "TextureSetGeneratorParams",
       "TextureSetInput",
       "TextureSetInputRef",
       "TextureSetLayerParamsNode",
       "TextureSetPacking",
+      "TextureSetProceduralDef",
       "TextureSetSlot",
       "TextureSetSlotMap",
       "TextureSetSurface",
@@ -5773,11 +5973,73 @@
       "triplanarProjection"
     ],
     "aekasha/toolkit/terrain": [
+      "BakeMacroNoiseOpts",
+      "BakeRippleAtlasOpts",
+      "BakeSurfaceGeneratorOpts",
+      "BakedSurface",
+      "DecodeRippleAtlasOpts",
+      "DomainWarpOptions",
+      "FbmOptions",
+      "HashOptions",
+      "HeightFunction",
+      "HeightToCavityOptions",
+      "HeightToNormalOptions",
+      "LiveSurface",
+      "LiveSurfaceOpts",
+      "NoiseOptions",
+      "NoisePeriod",
+      "NoiseSeed",
+      "PackableSurface",
+      "RippleRings",
       "SampleTextureSetOptions",
+      "SurfaceBuildContext",
+      "SurfaceCellCount",
+      "SurfaceCells",
+      "SurfaceColorParam",
+      "SurfaceGenerator",
+      "SurfaceGeneratorDef",
+      "SurfaceNumberParam",
+      "SurfaceOutputs",
+      "SurfaceParamNode",
+      "SurfaceParamNodes",
+      "SurfaceParamSpec",
+      "SurfaceParamSpecs",
+      "SurfaceParamValues",
+      "SurfaceToggleParam",
       "TextureSetSample",
+      "WorleyOptions",
+      "WorleySample",
+      "bakeMacroNoise",
+      "bakeRippleAtlas",
+      "bakeSurfaceGenerator",
       "bumpNormalView",
+      "cliffStrata",
+      "concretePores",
+      "createLiveSurface",
+      "decodeRippleAtlas",
+      "defineSurfaceGenerator",
+      "doesPackingStoreNormal",
+      "domainWarp",
+      "fbm",
+      "getSurfacePackingOutputs",
+      "gradientNoise",
+      "grassGround",
+      "hash12",
+      "hash22",
+      "heightToCavity",
+      "heightToNormal",
+      "iceSheet",
+      "mudCracked",
+      "mudSmooth",
+      "packSurfaceOutputs",
+      "rockyGround",
       "sampleTextureSet",
-      "transformTangentNormalToView"
+      "sandFlat",
+      "sandRipples",
+      "snowDrift",
+      "transformTangentNormalToView",
+      "valueNoise",
+      "worley"
     ],
     "aekasha/ui": [
       "Accordion",

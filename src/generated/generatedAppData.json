@@ -13586,6 +13586,79 @@
         "merging"
       ]
     },
+    "noiseLibrary": {
+      "isDebugScene": true,
+      "name": "Noise library (p304)",
+      "description": "p304 Phase 3's verification scene: the toolkit's noise functions (value, gradient, fbm, domain warp, Worley, hash12, heightToNormal, heightToCavity), each a periodic bake repeated 3 × 3 next to the same graph live without a period. During the load each function is baked periodic and not, read back and checked (no seam, exact periodicity, matching statistics); a failure is a console error, so the scene runner fails. Its tab shows the figures. Its last pair is the toolkit's shared generated textures (p304 D4: the macro noise, the ripple atlas), baked, checked, and compared with their committed KTX2 copies.",
+      "textures": [
+        {
+          "id": "macroNoise",
+          "fileName": "./source/macroNoise.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Macro noise (shared, tileable)",
+            "description": "Four tileable noises for a terrain material's large-scale variation: R a broad fbm (brightness), G a second fbm (hue or roughness), B soft-edged patches (masks), A a blue-ish noise (dithering). Linear data, UASTC without RDO. The toolkit's bakeMacroNoise() with its defaults (512², seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 621957,
+          "__sourceUrl": "/toolkit/textures/macroNoise/source/macroNoise.png",
+          "__url": "/aek-assets/toolkit/textures/macroNoise/source/macroNoise.ff98c92d.ktx2",
+          "__bytes": {
+            "in": 621957,
+            "out": 317838
+          },
+          "__vramBytes": {
+            "in": 1398100,
+            "out": 349552
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "rippleAtlas",
+          "fileName": "./source/rippleAtlas.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Rain ripple atlas (shared, tileable)",
+            "description": "4 × 4 rain drops for a wet surface's rings: RG the direction away from the texel's drop (× 0.5 + 0.5), B 1 at the drop falling to 0 at the ring's largest radius, A the cell's time offset. Decoded by the toolkit's decodeRippleAtlas(). Linear data, UASTC without RDO. The toolkit's bakeRippleAtlas() with its defaults (256², 4 cells, seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 42233,
+          "__sourceUrl": "/toolkit/textures/rippleAtlas/source/rippleAtlas.png",
+          "__url": "/aek-assets/toolkit/textures/rippleAtlas/source/rippleAtlas.5c747ea3.ktx2",
+          "__bytes": {
+            "in": 42233,
+            "out": 34899
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "id": "noiseLibrary",
+      "sceneFile": "./scenes/noiseLibrary/noiseLibrary.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "__features": []
+    },
     "physicsTest": {
       "name": "Physics API test",
       "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
@@ -13780,6 +13853,267 @@
       "sceneFile": "./scenes/physicsTiers/physicsTiers.ts",
       "__features": [
         "skybox"
+      ]
+    },
+    "proceduralSurfaces": {
+      "isDebugScene": true,
+      "name": "Procedural surfaces (p304)",
+      "description": "p304 Phase 4's verification scene: the toolkit's ten procedural surface generators (aekasha/toolkit/terrain), each baked into a texture set packing (LITE by default, 512²) and drawn on a generated 6 × 6 m block with a 35° ramp, tiled in world space over the generator's physical size. Rows from the back: sandRipples, sandFlat, mudCracked, mudSmooth, rockyGround; cliffStrata, snowDrift, iceSheet, grassGround, concretePores. During the load each generator is baked into all three packings and read back (every slot written as its packing packs it, no seam) and checked to repeat over whole tiles; a failure is a console error, so the scene runner fails. In front, the JSON path: two procedural texture sets (p304ProcRipples, LITE; p304ProcCracks, FULL) baked by the textureSets() feature with the load and drawn by the toolkit's textureSetSurface through { textureSet }, each read back and compared with a code bake of the same generator and values. Its tab switches the blocks' packing and shows the checks.",
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {
+            "nightSkyColor": "#0a1020"
+          },
+          "suns": [
+            {
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "moons": [
+            {
+              "phase": 0.4,
+              "phaseMode": "CYCLE",
+              "light": {
+                "intensity": 0.5
+              }
+            }
+          ],
+          "stars": {
+            "milkyWay": {}
+          },
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "dayNight": {
+            "timeOfDay": 10,
+            "playing": false,
+            "dayOfYear": 100
+          },
+          "id": "proceduralSurfacesSky",
+          "debugData": {
+            "name": "Procedural surfaces sky",
+            "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
+          }
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "p304ProcRipples",
+          "category": "SAND",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.02,
+          "packings": {
+            "LITE": {
+              "albedoRough": "p304ProcRipples.albedoRough",
+              "normalHeight": "p304ProcRipples.normalHeight"
+            }
+          },
+          "procedural": {
+            "generator": "sandRipples",
+            "params": {
+              "wavelength": 0.12,
+              "warp": 0.5,
+              "light": "#e0cb98"
+            },
+            "seed": 11,
+            "size": 256,
+            "packing": "LITE"
+          },
+          "debugData": {
+            "name": "p304 procedural ripples",
+            "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "p304ProcCracks",
+          "category": "MUD",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.03,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "p304ProcCracks.albedoHeight",
+              "normal": "p304ProcCracks.normal",
+              "orm": "p304ProcCracks.orm"
+            }
+          },
+          "procedural": {
+            "generator": "mudCracked",
+            "params": {},
+            "seed": 3,
+            "size": 256,
+            "packing": "FULL"
+          },
+          "debugData": {
+            "name": "p304 procedural cracks",
+            "description": "p304 Phase 4's JSON path: mudCracked baked on load into FULL with its default params; the proceduralSurfaces scene compares it with a code bake of the same values."
+          },
+          "defaultPacking": "FULL",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
+        },
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4
+          },
+          "averageColor": "#ab966b"
+        }
+      ],
+      "id": "proceduralSurfaces",
+      "sceneFile": "./scenes/proceduralSurfaces/proceduralSurfaces.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "skybox",
+        "texturesets"
       ]
     },
     "scene01": {
@@ -19696,8 +20030,8 @@
     },
     "terrainGallery": {
       "isDebugScene": true,
-      "name": "Terrain gallery (p303)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the baseline material textureSetSurface (world tiling, no anti-tiling or splat) in the set's default packing. Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "name": "Terrain gallery (p303, p304)",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the baseline material textureSetSurface (world tiling, no anti-tiling or splat) in the set's default packing. Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -19705,12 +20039,12 @@
             "near": 0.1,
             "far": 600,
             "position": {
-              "x": 0,
-              "y": 34,
-              "z": 56
+              "x": 18,
+              "y": 50,
+              "z": 82
             },
             "lookAtPoint": {
-              "x": 0,
+              "x": 18,
               "y": 0,
               "z": 4
             },
@@ -19722,7 +20056,7 @@
             "appId": "terrainGalleryCamera",
             "debugData": {
               "name": "Terrain gallery overview",
-              "description": "All 16 blocks from the front (+z), above, facing the ramps."
+              "description": "The 16 library blocks and the Procedural row right of them from the front (+z), above, facing the ramps."
             }
           }
         }
@@ -24092,12 +24426,12 @@
         "near": 0.1,
         "far": 600,
         "position": {
-          "x": 0,
-          "y": 34,
-          "z": 56
+          "x": 18,
+          "y": 50,
+          "z": 82
         },
         "lookAtPoint": {
-          "x": 0,
+          "x": 18,
           "y": 0,
           "z": 4
         },
@@ -24109,7 +24443,7 @@
         "appId": "terrainGalleryCamera",
         "debugData": {
           "name": "Terrain gallery overview",
-          "description": "All 16 blocks from the front (+z), above, facing the ramps."
+          "description": "The 16 library blocks and the Procedural row right of them from the front (+z), above, facing the ramps."
         }
       },
       "__sourcePath": "src/app/scenes/terrainGallery/terrainGalleryCamera.camera.json"
@@ -26694,6 +27028,40 @@
       },
       "__codec": "uastc"
     },
+    "macroNoise": {
+      "id": "macroNoise",
+      "fileName": "./source/macroNoise.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "Macro noise (shared, tileable)",
+        "description": "Four tileable noises for a terrain material's large-scale variation: R a broad fbm (brightness), G a second fbm (hue or roughness), B soft-edged patches (masks), A a blue-ish noise (dithering). Linear data, UASTC without RDO. The toolkit's bakeMacroNoise() with its defaults (512², seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+      },
+      "optimize": {
+        "slot": "data",
+        "textures": {
+          "data": {
+            "codec": "uastc",
+            "rdo": 0
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/macroNoise/macroNoise.texture.json",
+      "__fileSize": 621957,
+      "__sourceUrl": "/toolkit/textures/macroNoise/source/macroNoise.png",
+      "__url": "/aek-assets/toolkit/textures/macroNoise/source/macroNoise.ff98c92d.ktx2",
+      "__bytes": {
+        "in": 621957,
+        "out": 317838
+      },
+      "__vramBytes": {
+        "in": 1398100,
+        "out": 349552
+      },
+      "__codec": "uastc"
+    },
     "mud01_albedoRough": {
       "id": "mud01_albedoRough",
       "texOpts": {
@@ -26869,6 +27237,40 @@
       "__vramBytes": {
         "in": 22369620,
         "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "rippleAtlas": {
+      "id": "rippleAtlas",
+      "fileName": "./source/rippleAtlas.png",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000
+      },
+      "debugData": {
+        "name": "Rain ripple atlas (shared, tileable)",
+        "description": "4 × 4 rain drops for a wet surface's rings: RG the direction away from the texel's drop (× 0.5 + 0.5), B 1 at the drop falling to 0 at the ring's largest radius, A the cell's time offset. Decoded by the toolkit's decodeRippleAtlas(). Linear data, UASTC without RDO. The toolkit's bakeRippleAtlas() with its defaults (256², 4 cells, seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+      },
+      "optimize": {
+        "slot": "data",
+        "textures": {
+          "data": {
+            "codec": "uastc",
+            "rdo": 0
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/rippleAtlas/rippleAtlas.texture.json",
+      "__fileSize": 42233,
+      "__sourceUrl": "/toolkit/textures/rippleAtlas/source/rippleAtlas.png",
+      "__url": "/aek-assets/toolkit/textures/rippleAtlas/source/rippleAtlas.5c747ea3.ktx2",
+      "__bytes": {
+        "in": 42233,
+        "out": 34899
+      },
+      "__vramBytes": {
+        "in": 349524,
+        "out": 87408
       },
       "__codec": "uastc"
     },
@@ -35952,6 +36354,87 @@
     }
   },
   "textureSets": {
+    "p304ProcCracks": {
+      "id": "p304ProcCracks",
+      "category": "MUD",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "p304ProcCracks.albedoHeight",
+          "normal": "p304ProcCracks.normal",
+          "orm": "p304ProcCracks.orm"
+        }
+      },
+      "procedural": {
+        "generator": "mudCracked",
+        "params": {},
+        "seed": 3,
+        "size": 256,
+        "packing": "FULL"
+      },
+      "debugData": {
+        "name": "p304 procedural cracks",
+        "description": "p304 Phase 4's JSON path: mudCracked baked on load into FULL with its default params; the proceduralSurfaces scene compares it with a code bake of the same values."
+      },
+      "defaultPacking": "FULL",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcCracks.textureSet.json"
+    },
+    "p304ProcRipples": {
+      "id": "p304ProcRipples",
+      "category": "SAND",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.02,
+      "packings": {
+        "LITE": {
+          "albedoRough": "p304ProcRipples.albedoRough",
+          "normalHeight": "p304ProcRipples.normalHeight"
+        }
+      },
+      "procedural": {
+        "generator": "sandRipples",
+        "params": {
+          "wavelength": 0.12,
+          "warp": 0.5,
+          "light": "#e0cb98"
+        },
+        "seed": 11,
+        "size": 256,
+        "packing": "LITE"
+      },
+      "debugData": {
+        "name": "p304 procedural ripples",
+        "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcRipples.textureSet.json"
+    },
     "p303TestSet": {
       "id": "p303TestSet",
       "category": "OTHER",
@@ -37733,6 +38216,48 @@
         "description": "DAY_SKY with a low sun and no clouds: raking light shows the normal maps, the sky reflects in the metals."
       },
       "__sourcePath": "src/app/scenes/assetCompare/assetCompare.skybox.json"
+    },
+    "proceduralSurfacesSky": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {
+        "nightSkyColor": "#0a1020"
+      },
+      "suns": [
+        {
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "moons": [
+        {
+          "phase": 0.4,
+          "phaseMode": "CYCLE",
+          "light": {
+            "intensity": 0.5
+          }
+        }
+      ],
+      "stars": {
+        "milkyWay": {}
+      },
+      "clouds": {
+        "coverage": 0.35
+      },
+      "ground": {},
+      "dayNight": {
+        "timeOfDay": 10,
+        "playing": false,
+        "dayOfYear": 100
+      },
+      "id": "proceduralSurfacesSky",
+      "debugData": {
+        "name": "Procedural surfaces sky",
+        "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
+      },
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/proceduralSurfacesSky.skybox.json"
     },
     "terrainGallerySky": {
       "base": {

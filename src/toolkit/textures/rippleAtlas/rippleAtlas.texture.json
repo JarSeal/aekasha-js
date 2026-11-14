@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "rippleAtlas",
+  "fileName": "./source/rippleAtlas.png",
+  "optimize": {
+    "slot": "data",
+    "textures": { "data": { "codec": "uastc", "rdo": 0 } }
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "debugData": {
+    "name": "Rain ripple atlas (shared, tileable)",
+    "description": "4 × 4 rain drops for a wet surface's rings: RG the direction away from the texel's drop (× 0.5 + 0.5), B 1 at the drop falling to 0 at the ring's largest radius, A the cell's time offset. Decoded by the toolkit's decodeRippleAtlas(). Linear data, UASTC without RDO. The toolkit's bakeRippleAtlas() with its defaults (256², 4 cells, seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+  }
+}

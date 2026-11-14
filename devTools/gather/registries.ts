@@ -32,7 +32,7 @@ import {
   setGeneratedFields,
 } from './sources';
 import { readTextureAssets } from './textures';
-import { readTextureSets } from './textureSets';
+import { readGenerators, readTextureSets } from './textureSets';
 import { checkMergedGeometryJsons } from './mergedGeometries';
 import { readMergeMaterials } from './mergeMaterials';
 
@@ -207,6 +207,7 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readLights(ctx, reg, taken);
   readGeometries(ctx, reg, taken);
   readTextureAssets(ctx, reg, taken);
+  readGenerators(ctx, reg);
   readTextureSets(ctx, reg, taken);
   readMaterials(ctx, reg, taken, shipped);
   readMergeMaterials(ctx, reg, taken);

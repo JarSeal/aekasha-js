@@ -220,6 +220,18 @@ describe('buildTextureSetArray', () => {
     await reject({ sets: ['sand', 'ice'], packing: 'LITE' }).toThrow(
       'the texture set "ice" has no packing "LITE" (packings: FULL)'
     );
+    // p304 D3: a procedural set's textures are render targets, which no member assembly reads
+    addSets(
+      makeSet('dunes', {
+        packings: {
+          LITE: { albedoRough: 'dunes.albedoRough', normalHeight: 'dunes.normalHeight' },
+        },
+        procedural: { generator: 'sandRipples', params: {}, seed: 0, size: 256, packing: 'LITE' },
+      })
+    );
+    await reject({ sets: ['sand', 'dunes'], packing: 'LITE' }).toThrow(
+      'the texture set "dunes" is procedural (baked by its generator "sandRipples"), and a set array takes imported sets only'
+    );
     fns.declarations.delete('mud_normalHeight');
     await reject({ sets: ['mud'], packing: 'LITE' }).toThrow(
       'no data declares the texture "mud_normalHeight" (the normalHeight of the texture set "mud"'
@@ -302,6 +314,11 @@ describe('setTextureSetArrayLayer', () => {
     expect(() => setTextureSetArrayLayer('fixed', 0, 'rock')).toThrow("isn't swappable");
     expect(() => setTextureSetArrayLayer('gallery', 1, 'rock')).toThrow('has layers 0-0, not 1');
     expect(() => setTextureSetArrayLayer('gallery', 0, 'ice')).toThrow('has no packing "LITE"');
+    fns.sets.set('dunes', {
+      ...makeSet('dunes'),
+      procedural: { generator: 'sandRipples', params: {}, seed: 0, size: 256, packing: 'LITE' },
+    });
+    expect(() => setTextureSetArrayLayer('gallery', 0, 'dunes')).toThrow('is procedural');
     expect(fns.swaps).toHaveLength(0);
   });
 

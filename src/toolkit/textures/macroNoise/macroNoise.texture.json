@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "macroNoise",
+  "fileName": "./source/macroNoise.png",
+  "optimize": {
+    "slot": "data",
+    "textures": { "data": { "codec": "uastc", "rdo": 0 } }
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT"
+  },
+  "debugData": {
+    "name": "Macro noise (shared, tileable)",
+    "description": "Four tileable noises for a terrain material's large-scale variation: R a broad fbm (brightness), G a second fbm (hue or roughness), B soft-edged patches (masks), A a blue-ish noise (dithering). Linear data, UASTC without RDO. The toolkit's bakeMacroNoise() with its defaults (512², seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+  }
+}
