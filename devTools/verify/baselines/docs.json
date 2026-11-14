@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3740,
-      "total": 3740
+      "documented": 3758,
+      "total": 3758
     },
     "members": {
       "documented": 1107,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3581,
-        "total": 3581
+        "documented": 3584,
+        "total": 3584
       },
       "members": {
         "documented": 953,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 159,
-        "total": 159
+        "documented": 174,
+        "total": 174
       },
       "members": {
         "documented": 154,
@@ -581,8 +581,8 @@
     },
     "engine/kernel/render": {
       "exports": {
-        "documented": 122,
-        "total": 122
+        "documented": 125,
+        "total": 125
       },
       "members": {
         "documented": 0,
@@ -1085,8 +1085,8 @@
     },
     "toolkit/terrain/procedural": {
       "exports": {
-        "documented": 31,
-        "total": 31
+        "documented": 37,
+        "total": 37
       },
       "members": {
         "documented": 0,
@@ -1227,6 +1227,20 @@
       "exports": {
         "documented": 1,
         "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/textures": {
+      "exports": {
+        "documented": 9,
+        "total": 9
       },
       "members": {
         "documented": 0,

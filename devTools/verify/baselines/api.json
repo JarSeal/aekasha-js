@@ -3144,9 +3144,12 @@
     "src/_engine/kernel/render/TextureBaker.ts": {
       "BakeBuildContext": "TypeAlias",
       "BakedTexture": "TypeAlias",
+      "BakedTextureExport": "TypeAlias",
       "BakeOutput": "TypeAlias",
       "bakeTexture": "Function",
       "BakeTextureOpts": "TypeAlias",
+      "exportBakedTexture": "Function",
+      "ExportBakedTextureOpts": "TypeAlias",
       "getTextureBakeStats": "Function",
       "TextureBakeStats": "TypeAlias"
     },
@@ -4887,6 +4890,11 @@
     "src/toolkit/terrain/procedural/iceSheet/iceSheet.generator.ts": {
       "generator": "Variable"
     },
+    "src/toolkit/terrain/procedural/LiveSurface.ts": {
+      "createLiveSurface": "Function",
+      "LiveSurface": "TypeAlias",
+      "LiveSurfaceOpts": "TypeAlias"
+    },
     "src/toolkit/terrain/procedural/mudCracked/mudCracked.generator.ts": {
       "generator": "Variable"
     },
@@ -4912,6 +4920,7 @@
       "generator": "Variable"
     },
     "src/toolkit/terrain/procedural/SurfaceGenerator.ts": {
+      "buildSurfaceGraph": "Function",
       "buildSurfacePacking": "Function",
       "createSurfaceContext": "Function",
       "defineSurfaceGenerator": "Function",
@@ -4920,6 +4929,8 @@
       "SurfaceCells": "TypeAlias",
       "SurfaceGenerator": "TypeAlias",
       "SurfaceGeneratorDef": "TypeAlias",
+      "SurfaceGraph": "TypeAlias",
+      "SurfaceGraphOpts": "TypeAlias",
       "SurfaceOutputs": "TypeAlias",
       "SurfacePackingBuild": "TypeAlias"
     },
@@ -4940,6 +4951,19 @@
       "SurfaceParamSpecs": "TypeAlias",
       "SurfaceParamValues": "TypeAlias",
       "SurfaceToggleParam": "TypeAlias"
+    },
+    "src/toolkit/terrain/textures/MacroNoise.ts": {
+      "bakeMacroNoise": "Function",
+      "BakeMacroNoiseOpts": "TypeAlias",
+      "buildMacroNoise": "Function"
+    },
+    "src/toolkit/terrain/textures/RippleAtlas.ts": {
+      "bakeRippleAtlas": "Function",
+      "BakeRippleAtlasOpts": "TypeAlias",
+      "buildRippleAtlas": "Function",
+      "decodeRippleAtlas": "Function",
+      "DecodeRippleAtlasOpts": "TypeAlias",
+      "RippleRings": "TypeAlias"
     }
   },
   "entries": {
@@ -4976,6 +5000,7 @@
       "BakeOutputType",
       "BakeTextureOpts",
       "BakedTexture",
+      "BakedTextureExport",
       "BakedTextureMemoryOpts",
       "BindingMeta",
       "BuildTextureArrayProps",
@@ -5000,6 +5025,7 @@
       "EnabledInDebugCam",
       "EngineFeature",
       "EntityDebugData",
+      "ExportBakedTextureOpts",
       "FeatureContext",
       "FeatureDebugHook",
       "FeatureUnmountHook",
@@ -5173,6 +5199,7 @@
       "disposeKTX2Loader",
       "ensureMaterialDependencies",
       "existsOrThrow",
+      "exportBakedTexture",
       "getActionMap",
       "getActionMaps",
       "getActiveCamera",
@@ -5942,18 +5969,24 @@
       "triplanarProjection"
     ],
     "aekasha/toolkit/terrain": [
+      "BakeMacroNoiseOpts",
+      "BakeRippleAtlasOpts",
       "BakeSurfaceGeneratorOpts",
       "BakedSurface",
+      "DecodeRippleAtlasOpts",
       "DomainWarpOptions",
       "FbmOptions",
       "HashOptions",
       "HeightFunction",
       "HeightToCavityOptions",
       "HeightToNormalOptions",
+      "LiveSurface",
+      "LiveSurfaceOpts",
       "NoiseOptions",
       "NoisePeriod",
       "NoiseSeed",
       "PackableSurface",
+      "RippleRings",
       "SampleTextureSetOptions",
       "SurfaceBuildContext",
       "SurfaceCellCount",
@@ -5972,10 +6005,14 @@
       "TextureSetSample",
       "WorleyOptions",
       "WorleySample",
+      "bakeMacroNoise",
+      "bakeRippleAtlas",
       "bakeSurfaceGenerator",
       "bumpNormalView",
       "cliffStrata",
       "concretePores",
+      "createLiveSurface",
+      "decodeRippleAtlas",
       "defineSurfaceGenerator",
       "doesPackingStoreNormal",
       "domainWarp",
