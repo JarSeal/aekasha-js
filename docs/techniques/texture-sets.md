@@ -308,6 +308,7 @@ Several sets of one packing as one array texture per slot: a terrain material bi
 
 ## Where to get sets
 
+- **Generated in the engine:** a [procedural set](procedural-textures.md) names a surface generator in place of files (`"procedural": { "generator": "sandRipples", … }`), baked at load, or exported to PNGs and encoded like any set below.
 - **ambientCG** (ambientcg.com) and **Poly Haven** (polyhaven.com): both CC0 (no attribution required; the library records it anyway in `CREDITS.md`), both with ready-made PBR scans. The fetch tool reads both.
 - **Download `2K-JPG`** (an ambientCG zip is about 20–40 MB; the library's 15 downloads were 425 MB, cached once). `2K-PNG` (55–75 MB) is worth it only for a set whose normal map shows JPEG blocking at 1K, typically cliffs. 4K is unnecessary for a tiling layer.
 - **Prefer close-range scans** (a few metres a tile). Aerial ones (Poly Haven's `aerial_*`, 15–80 m a tile) are too coarse at 1K for a close camera.
@@ -336,5 +337,5 @@ No Blender template file: the [Blender steps](#blender-step-by-step) start from 
 
 - **The library** (`src/toolkit/textures/`): `sand01`, `sand02`, `mud01`, `mud02`, `rocks01`, `rocks02`, `cliffs01`, `cliffs02`, `snow01`, `snow02`, `ice01`, `ice02`, `grass01`, `grass02`, `concrete01`, `concrete02` (the sources and licences: `CREDITS.md`). `sand01`, `grass01` and `cliffs01` ship all three packings.
 - **The baseline material:** `textureSetSurface` (`src/toolkit/materials/textureSetSurface/`).
-- **The gallery:** `terrainGallery` (`src/app/scenes/terrainGallery/`, `?isDebug=true&startScene=terrainGallery`): every library set on a 12 m block with a 35° ramp, the cliffs with a wall, and its "Terrain gallery" tab.
+- **The gallery:** `terrainGallery` (`src/app/scenes/terrainGallery/`, `?isDebug=true&startScene=terrainGallery`): every library set on a 12 m block with a 35° ramp, the cliffs with a wall, and its "Terrain gallery" tab; right of them the Procedural row ([Procedural textures](procedural-textures.md)).
 - **The verification scene:** `textureSets` (`src/app/scenes/textureSets/`): a hand-made set in each packing, and four sets as `{ textureSet }` next to the same four as a `{ textureSetArray }`.
