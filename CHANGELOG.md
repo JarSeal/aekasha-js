@@ -4,6 +4,69 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-14 — p304_procedural-texture-baker
+
+The procedural texture baker (p304, the third child of the terrain texturing epic p301). `bakeTexture` renders a TSL node graph once into a mipmapped texture, so a material pays one fetch a pixel instead of the graph's noise maths every frame: up to four outputs in one render, up to 256 array layers, during a scene load with the loader's progress or one bake a frame at runtime. On top of it, the toolkit adds a noise library that tiles, ten procedural surface generators that bake into any texture set packing or run live in a material, and two shared generated textures (a macro noise and a rain ripple atlas). A texture set JSON can name a generator instead of maps and is baked on load. In debug builds a bake's output exports as a PNG into the repo, so a procedural look ships compressed as KTX2 with no bake at load. The terrain gallery gains a Procedural row that measures baked, live and imported surfaces side by side, and `docs/techniques/procedural-textures.md` says which way to choose. Nothing breaks.
+
+### Engine 6.14.0 (Sunset)
+
+**Added**
+
+- `bakeTexture({ id, size, outputs, layers?, build?, mipmaps?, wrap?, anisotropy?, isPersistent? })` → `BakedTexture` (`{ id, textures, memoryBytes, rebake(), isDisposed(), dispose() }`), on `aekasha`. Each output (`BakeOutput`: `name`, `node?`, `colorSpace?` `SRGB` | `LINEAR`, `type?` `UNSIGNED_BYTE` | `HALF_FLOAT`) is a texture registered as `<id>.<name>` and owned like any other (released with its scene unless persistent; deleting it disposes the bake). One to four outputs are one MRT render; `layers` (1-256) makes each an array texture, the graph reading the layer from `build`'s context (`BakeBuildContext`: `uv`, `layer`, `texel`). Mips are generated once after the last layer. The pipeline compiles before the first render. During a scene load a bake renders right after its compile; outside one its renders queue, one bake a frame and a rebake of an id at most once per 150 ms, the latest request always running, so a slider can call `rebake()` on every change. The target is cleared on allocation, so nothing samples an unallocated texture. Types `BakeTextureOpts`, `BakeBuildContext`, `BakeOutput`, `BakeOutputType`.
+- `getBakedTextureMemoryBytes({ size, outputs, layers?, mipmaps? })` (`BakedTextureMemoryOpts`): a bake's GPU memory (an RGBA8 1K output with mips is about 5.6 MB; `HALF_FLOAT` twice that).
+- `getTextureBakeStats(id)` → `TextureBakeStats` (`bakes`, `cpuMs`, `gpuMs`, `bakesPerSec`), the debug env's timing of each bake (GPU ms on WebGPU); undefined outside it.
+- `exportBakedTexture({ id, output, dir, fileName?, overwrite? })` → `BakedTextureExport` (`{ path, status, reason?, clampedValues }`, `ExportBakedTextureOpts`), debug env only: an output's level 0 as an 8-bit PNG written through the dev file server (flipped, so the PNG imports as the bake samples), `CREATED`, `UPDATED`, `UNCHANGED`, `EXISTS` (another file is there and `overwrite` isn't set: nothing written) or `DOWNLOADED` (no dev files). A `HALF_FLOAT` output is clamped to 0..1 with a warning; an array bake is refused.
+- `SceneLoader.updateBakeStatusFn(loader, { id, bakedCount, totalCount })` (`SceneLoadBakeStatus`, optional): the bakes a scene load runs, counted from its first bake.
+- Procedural texture sets: a `*.textureSet.json` gives `procedural` (`{ generator, params?, seed?, size?, packing? }`) instead of `packings` and is baked on load (`features/texturesets/TextureSetBakes.ts`, a lazy chunk with the baker) into its packing's slots, registered as `<setId>.<slot>`, so materials, the resolver and `loadTextureSetAsync` see an ordinary set. A failed bake is logged and the load goes on. Set arrays refuse a procedural set (their members are assembled on the CPU). `TEXTURE_SET_PROCEDURAL_DEFAULTS` (`LITE`, 1024, seed 0), `TextureSetProcedural`, `TextureSetProceduralDef` and `TextureSetCategory` on `aekasha/schemas`; the generator's engine-side type `TextureSetGenerator` (`{ id, category, buildPacking }`), `TextureSetGeneratorBuildOpts`, `TextureSetGeneratorParams` on `aekasha/texturesets`. `AppData.textureSetGeneratorFiles` (optional): the generators' loaders the gather writes.
+- `onGpuFrameTime(listener)` on `aekasha/debug`: the frame's render GPU ms to the listener while it's listened to (debug env, WebGPU's timestamp queries or WebGL 2's timer queries), returning its remover.
+
+**Changed**
+
+- `sampleArrayLayer` also samples a baked array (three's `isArrayTexture` render target texture), by layer index.
+- `TextureSetAsset.packings` is optional (a procedural set has none); the gathered `TextureSetDef` keeps it required.
+- The template's first download grows 286 B gzip (`assets/index.js` 404,651 → 404,937 B): the scene loader's bake status. The baker is in the lazy `TextureSetBakes.js` chunk (3.6 kB gzip) with the procedural sets' bake, and `BakeRenderer.js` (0.35 kB) is shared with the impostor bakes. The `textureSets()` feature's first-download group grew from 976 B to 1090 B (the scene hook that starts a scene's procedural bakes).
+
+**Fixed**
+
+- The GPU frame record (`debug/_dbg__GPUFrameTimes.ts`) recycled its records under the batch it was handing to the listeners when a listener released the last hold from inside its call (a measurement that has its frames), which threw ("reading 'renderUids'") and stopped every later frame time: such a stop now waits for the batch's end.
+- A scene's release warned "None of the textures … could be deleted" for every multi-output bake (deleting its first output disposes the bake with the others): a texture an earlier deletion took with it is skipped.
+
+### Toolkit 3.2.0 (Gibbous)
+
+**Added**
+
+- The noise library (`aekasha/toolkit/terrain`, `terrain/nodes/noise/`): `valueNoise`, `gradientNoise`, `fbm`, `domainWarp`, `worley` (`{ f1, f2, cellId }`), `hash12` / `hash22`, `heightToNormal` and `heightToCavity`, 2D TSL functions with an optional `period` (a whole number, a pair or a uniform vec2 node): periodic for a bake that tiles, or left out for live use in world space. Integer-hashed (pcg2d), so they're safe on SwiftShader and agree across backends up to float precision. Types `NoisePeriod`, `NoiseSeed`, `HashOptions`, `NoiseOptions`, `FbmOptions`, `DomainWarpOptions`, `WorleyOptions`, `WorleySample`, `HeightFunction`, `HeightToNormalOptions`, `HeightToCavityOptions`.
+- Procedural surface generators (`terrain/procedural/`): `defineSurfaceGenerator({ id, category, params, physicalSize, heightScale, cavity?, build })` with plain param specs (numbers with `min` / `max` / `step`, sRGB colours, toggles; numbers and colours are uniforms, so a slider rebakes without a rebuild), `packSurfaceOutputs`, `getSurfacePackingOutputs`, `doesPackingStoreNormal`; ten generators, each a `<id>.generator.ts` and on the entry by its id: `sandRipples`, `sandFlat`, `mudCracked`, `mudSmooth`, `rockyGround`, `cliffStrata`, `snowDrift`, `iceSheet`, `grassGround`, `concretePores`. `bakeSurfaceGenerator({ id, generator, packing?, size?, seed?, params?, … })` → `BakedSurface` (the bake, `get/setParams`, `get/setSeed`) bakes one into any packing; `createLiveSurface(generator, { uv?, seed?, params?, normal?, ao?, … })` → `LiveSurface` evaluates it in a material (it never repeats and costs per pixel; the normal a bump of the height by default, `normal: 'TAPS'` and `ao: 'CAVITY'` opt in). Their types (`SurfaceGenerator`, `SurfaceGeneratorDef`, `SurfaceBuildContext`, `SurfaceOutputs`, `SurfaceParamSpec`, …).
+- The shared generated textures (`terrain/textures/`): `bakeMacroNoise` (512², R and G two fbms, B soft-edged Worley patches, A a high-passed noise) and `bakeRippleAtlas` with `decodeRippleAtlas(sample, time, { width?, halfWaves? })` (256², 4 × 4 cells: per texel its drop's direction, falloff and time offset, from which the decode makes the animated rings). Their committed KTX2 copies, `src/toolkit/textures/macroNoise/` and `rippleAtlas/` (ids `macroNoise` and `rippleAtlas`, UASTC, 318 kB and 35 kB), exported from the bakes.
+
+### App 1.26.0 (Preschooler)
+
+**Added**
+
+- `noiseLibrary` (a debug scene, the noise library's verification scene): each function's periodic bake repeated 3 × 3 beside its live variant, checked on load for seams, periodicity and statistics; the shared textures' bakes, their committed copies compared texel for texel, and the decoded rings (`window.__noiseLibrary`, its tab, "Export PNG" for each shared texture).
+- `proceduralSurfaces` (a debug scene): the ten generators on blocks, each read back in every packing and checked (its slots written, no seam, a tile away the same), baked or live (the tab's switch), two procedural set JSONs (`p304ProcRipples`, `p304ProcCracks`) compared byte for byte with code bakes, and two live blocks; its tab exports a generator's PNGs.
+- `terrainGallery`: a Procedural row, a block per generator by its category pair, shown baked, live, live with the taps or as a library set of its category; a click tunes a generator (its seed and params, rebaking live, "Copy JSON" as a set's `procedural` block, "Export PNGs"), and the tab measures a block's or the row's frame GPU ms in each mode (on an M2: about 1 ms baked against 8-20 live for a block filling a 1080p view). The camera's overview takes in the row, and its Hub image is new.
+- `testDebugScene`: a baked checker with and without mips, and a three-output, four-layer bake during the load, with a "Texture bakes" tab (a `phase` slider and a burst of rebakes).
+
+**Changed**
+
+- `src/index.ts`' scene loader shows "Baking textures, n / m" through `updateBakeStatusFn`.
+- `src/app/shared/`: `surfaceShading.ts` (a bake's textures drawn as a texture set), `channelStats.ts` (image statistics) and `_dbg__exportBake.ts` (the scenes' export buttons).
+
+### Project
+
+**Added**
+
+- `docs/techniques/procedural-textures.md`: baked, exported or live (a decision table), the measured costs and VRAM, the maps, the export workflow, a procedural set's JSON, writing a generator (`sandRipples` piece by piece), tiling, seeds and determinism (visual only), pitfalls.
+- The gather: `*.generator.ts` files (`devTools/gather/textureSets.ts`), a procedural set checked against the known generators, its defaults filled and its slot ids claimed, and `textureSetGeneratorObjects` written into `generatedAppFns.ts` only for the generators a set names (none in an app without a procedural set). The layer lint's generated-code exception takes the toolkit's `*.generator.ts`; layout rules for `terrain/procedural/` and `terrain/textures/`.
+
+**Changed**
+
+- The Hub: the rendering page's "Texture bakes" section, the terrain page's "Procedural textures" section and the gallery's row, the debug suite's `onGpuFrameTime`, the toolkit page's terrain category, the documentation intro's entries and the UI kit walkthrough's loader. `readme.md`: the texture baker, procedural sets, the toolkit's procedural textures, the tree, the scenes and the guides.
+- `src/_engine/kernel/render/CLAUDE.md`'s Texture bakes section; the root, debug, impostors, scene, sky box, texture sets and gather `CLAUDE.md`. `docs/techniques/README.md` and `texture-sets.md` link the new page.
+- `.schemas/textureSet.schema.json` regenerated; `assets.lock.json` (the two shared textures); `sbp.config.ts`: `_engine/features/texturesets` 1 → 1.25 KiB. The bundle, API and docs baselines.
+- The plans: p304 done; p305, p307 and p309 no longer wait on it, and the p301 epic follows.
+
 ## 2026-11-13 — p303_texture-sets-and-terrain-texture-library
 
 Texture sets and the terrain texture library (p303, the second child of the terrain texturing epic p301). A texture set is a new asset (`*.textureSet.json`): a surface's packed PBR maps in one of three packings (`FULL`, `LITE`, `MINIMAL`), with the facts a terrain material needs about it (tile size, relief, surface defaults). The opt-in `textureSets()` feature samples one through a material input, and several sets of one packing as layer arrays (on p299's texture arrays): two bindings for any number of `LITE` layers. The toolkit ships 16 CC0 sets (sand, mud, rocks, cliffs, snow, ice, grass, concrete) as KTX2, a `terrain` entry with the decode helper and a baseline material that draws one set; a fetch tool and a scaffold make a set from ambientCG or Poly Haven, and a clone uses the committed outputs without fetching. The `terrainGallery` scene shows every set, and the handbook's first technique page explains how to make one. Nothing breaks.

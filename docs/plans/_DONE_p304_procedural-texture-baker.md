@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: implemented (Phases 1-7)
 Category: Rendering, Materials, Procedural
 Blocks: p305_terrain-material-generator.md (soft: macro noise and ripple atlas), p307_wet-and-dry-surface-states.md (ripple atlas), p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
@@ -309,7 +309,7 @@ Tileable baking needs noise with an integer period over the tile:
 - **The round trip** (2026-11-14, not kept): `proceduralSurfaces`' `sandRipples` `LITE` bake (512²) exported with `exportBakedTexture` into `src/app/textures/sand03/source/` (`sand03_albedoRough.png`, `sand03_normalHeight.png`), a `sand03.textureSet.json` (`LITE`, the generator's `physicalSize` [2, 2] and `heightScale` 0.02) and two texture JSONs, each a `fileName` with `profile: "terrainLayer"` (slot `baseColor`, sRGB; slot `data`): the bake is already packed, so **no pack recipe is needed** (D5's step 3 is these two JSONs). The dev server's gather encoded them at once (180 kB and 230 kB of KTX2 against 2 × 1.4 MB of uncompressed bake in VRAM) and gathered the set with its `averageColor`. Decoded again (`ktx extract`) and compared with the exported PNGs: the albedo 1.5-1.6 bytes off on average (roughness 2.3), the normal and height 3.4-3.6 (at most 32), stored flipped as every standalone KTX2. The set, its sources and its outputs were then removed (`yarn assets` pruned them); Phase 6's handbook shows these steps.
 - **Not done:** D4's optional `blueNoise`. The baselines to record with this section: the `noiseLibrary` snapshot, `api.json` and `bundle.json` (`yarn verify:baselines --update`).
 
-### Phase 6 — Gallery row, handbook, Hub
+### Phase 6 — Gallery row, handbook, Hub — done
 
 1. **Gallery** (`terrainGallery`): a "Procedural" row with one block per generator, toggling **imported / baked / live** for categories that have both, plus last-bake GPU ms and per-block frame GPU ms (p310 standardizes the measurement).
 2. **`docs/techniques/procedural-textures.md`** (page template), covering:
@@ -361,10 +361,16 @@ Tileable baking needs noise with an integer period over the tile:
 - **`readme.md`:** Engine gains **Texture baker** (after Snapshots) and Texture sets a procedural set's sentence; Toolkit gains **Procedural textures** (the noise library, the ten generators baked or live, the two shared textures); the folder tree's `terrain/` and `textures/` lines, the scenes paragraph (the gallery's Procedural row, `noiseLibrary`, `proceduralSurfaces`) and the Guides line (`procedural-textures.md`).
 - **`yarn hub:build`** passes (122 pages, no coverage warning; the search index's size warning is the one section 3 recorded).
 
-### Phase 7 — Versioning
+### Phase 7 — Versioning — done
 
 1. Versions: engine minor (`bakeTexture`; `onGpuFrameTime`, and the two fixes of Phase 6's section 1: the frame record's stop inside a listener, the scene release's warning for a bake's outputs), toolkit minor (noise, generators, shared textures), app minor (`testDebugScene`'s bake checks, Phases 1-2; the `noiseLibrary` verification scene, Phase 3; `proceduralSurfaces`, Phase 4; the gallery's Procedural row, Phase 6); `CHANGELOG.md`.
 2. Mark the plan done (`docs/plans/CLAUDE.md`).
+
+**As built:**
+
+- **Versions:** engine 6.13.0 → 6.14.0 (and the project version), toolkit 3.1.0 → 3.2.0, app 1.25.0 → 1.26.0; codenames kept (Sunset, Gibbous, Preschooler). `yarn checkVersions --against main` passes. The `CHANGELOG.md` entry `2026-11-14 — p304_procedural-texture-baker` has Engine (added, changed: `sampleArrayLayer`, `TextureSetAsset.packings` optional, the sizes; fixed: the two of Phase 6 section 1), Toolkit, App and Project sections.
+- **Plan done:** renamed `_DONE_p304_procedural-texture-baker.md`. p305's `Blocked by` (only this plan) is dropped and its "After p304" line states what exists, with the open point of Phase 4 section 4 (a public generator loader for its live layers); p307 and p309 no longer list it, and p307's context describes the ripple atlas as built (a drop's direction, falloff and time offset, the rings made by `decodeRippleAtlas`). p301's `Blocks`, `_DONE_p303`'s `Blocks`, `_DONE_p342`'s `Related` and `features/texturesets/CLAUDE.md` name the new file.
+- **Not done (D4's optional `blueNoise`, D1's profiler figure through `registerStatsSource`):** left out; a plan that needs one adds it.
 
 ---
 

@@ -1,6 +1,6 @@
 Status: draft | study + not-implemented
 Category: Materials, Terrain, Weather
-Blocked by: p305_terrain-material-generator.md, p306_terrain-blocks-and-procedural-terrain-meshes.md, p304_procedural-texture-baker.md (ripple atlas)
+Blocked by: p305_terrain-material-generator.md, p306_terrain-blocks-and-procedural-terrain-meshes.md
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 Related: p427_weather-and-mood.md (its weather state drives this plan's surface conditions), p990_follow-ups-from-done-plans.md (precipitation, clouds, a weather driver, SSR)
@@ -34,7 +34,7 @@ This plan doesn't add a weather system, rain particles or audio. The surface-con
 - **`aoNode`** affects indirect light only.
 - **The GTAO pass** multiplies the final colour (p301 survey). Wet darkening and AO stack multiplicatively; that's fine.
 - **p305** reserves `wet?: WetConfig` and a `WETNESS` debug view. Layers have `surface.porosity`, `wetDarkening` and `wetRoughness` from their texture set (p303 D1).
-- **p304** provides `rippleAtlas` (4×4 cells of expanding rings: RG normal, B mask, A time offset) and `macroNoise`.
+- **p304** (done, `docs/plans/_DONE_p304_procedural-texture-baker.md` Phase 5) provides `rippleAtlas` and `macroNoise` (`aekasha/toolkit/terrain`; baked with `bakeRippleAtlas` / `bakeMacroNoise`, or the committed KTX2 textures `rippleAtlas` and `macroNoise`). The atlas (256², 4 × 4 cells, linear RGBA8) isn't a ring at a moment: per texel RG is the direction away from its cell's drop, B the falloff from the drop to the ring's largest radius, A the cell's time offset. `decodeRippleAtlas(sample, time, { width?, halfWaves? })` makes the ring (`age = fract(A + time)`, a wave train behind a front at radius `age`, fading as it grows) and returns `normalXY` and `mask`; `time` is in ring lifetimes (`surfaceTime / lifetime`). Layer two samples at other scales and times.
 
 ---
 
