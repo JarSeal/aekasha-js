@@ -83,6 +83,53 @@ lights the scene). Only the canvas's own scene and camera have post effects: any
 camera, `transparent` or `postFx: false` renders directly, without them. The canvas isn't
 touched.
 
+## Texture bakes
+
+[`bakeTexture`](api:bakeTexture) renders a TSL graph into a texture once, so a material samples
+it instead of running the graph for every pixel every frame: noise, a lookup table, a mask, a
+procedural surface ([Terrain](hub:features/terrain#procedural-textures) has those).
+
+```ts
+import { floor, mod, vec4 } from 'three/tsl';
+import { bakeTexture, createMaterial } from 'aekasha';
+
+const baked = await bakeTexture({
+  id: 'checker',
+  size: 256,
+  outputs: [{ name: 'albedo', colorSpace: 'SRGB' }],
+  build: ({ uv }) => {
+    const isOdd = mod(floor(uv.x.mul(8)).add(floor(uv.y.mul(8))), 2);
+    return { albedo: vec4(isOdd.mul(0.8).add(0.1), isOdd.mul(0.8).add(0.1), 0.2, 1) };
+  },
+});
+createMaterial({ id: 'checkerMat', type: 'STANDARD', params: { map: baked.textures.albedo } });
+```
+
+- **Each output is a registered texture,** `<id>.<name>` (`checker.albedo`), owned by the scene
+  that baked it (or `isPersistent`) and released with it like any texture. It exists, cleared,
+  as soon as `bakeTexture` returns, so a material can take it before the bake resolves.
+- **One to four outputs** are one render (MRT), each with its own colour space and type
+  (`HALF_FLOAT` for values outside 0..1). **`layers`** bakes an array texture, the graph reading
+  `ctx.layer`; sample a layer with [`sampleArrayLayer`](api:sampleArrayLayer). Mips by default,
+  built once after the last layer; `REPEAT` by default.
+- **When it renders:** during a scene load, at once, after its pipeline compiles off the frame,
+  and the loader hears of it (`updateBakeStatusFn`: the template shows "Baking textures, n / m").
+  Outside a load, bakes queue: one a frame, and a rebake of one id at most every 150 ms (the last
+  request always runs). So set the graph's uniforms and call `rebake()` on every slider change.
+- **Memory:** uncompressed, 4 bytes a texel (8 for `HALF_FLOAT`) and a third more for the mips:
+  1024² RGBA8 is 5.6 MB. [`getBakedTextureMemoryBytes`](api:getBakedTextureMemoryBytes) gives the
+  figure before you bake and `memoryBytes` after. A bake you keep can be exported and committed
+  as KTX2, a quarter of that.
+- **Debug only:** [`getTextureBakeStats`](api:getTextureBakeStats) gives an id's bake count and
+  its last CPU and GPU ms (WebGPU), and [`exportBakedTexture`](api:exportBakedTexture) writes an
+  output as a PNG into the repo through the dev file server (or downloads it), ready for the
+  [asset pipeline](hub:features/asset-optimization).
+- **Visual only:** GPUs round floats differently, so a bake isn't the same bytes on every machine.
+  Never derive gameplay or colliders from one.
+
+A bake with the id of one that's alive returns that one: dispose it first, or rebake it. The
+queued renders run in the main loop, so they wait while it's paused or an editor view is open.
+
 ## More on screen
 
 - [Viewports](hub:features/viewports): extra rectangles over the canvas with their own scene and
@@ -100,6 +147,9 @@ touched.
 - [`setPostFxEnabled`](api:setPostFxEnabled), [`setPostFxPassEnabled`](api:setPostFxPassEnabled),
   [`setPostFxPassParam`](api:setPostFxPassParam) and [`getPostFxPasses`](api:getPostFxPasses).
 - [`takeSnapshotAsync`](api:takeSnapshotAsync) and [`snapshotToBlobAsync`](api:snapshotToBlobAsync).
+- [`bakeTexture`](api:bakeTexture), [`getBakedTextureMemoryBytes`](api:getBakedTextureMemoryBytes),
+  [`sampleArrayLayer`](api:sampleArrayLayer), and in the debug env
+  [`getTextureBakeStats`](api:getTextureBakeStats) and [`exportBakedTexture`](api:exportBakedTexture).
 
 ## Known issues
 
@@ -129,7 +179,9 @@ One of the engine's own:
 
 - The [quick start](hub:examples/quick-start): the dev environment and the smallest complete
   scene.
-- The API reference: [`render/`](hub:documentation/aekasha/render) of `aekasha` (the renderer and snapshots) and
+- The handbook's [Procedural textures](repo:docs/techniques/procedural-textures.md): bakes for
+  surfaces, what they cost against an imported texture, and exporting one.
+- The API reference: [`render/`](hub:documentation/aekasha/render) of `aekasha` (the renderer, snapshots and texture bakes) and
   [`aekasha/postfx`](hub:documentation/aekasha/postfx).
 
 ::: claude-md

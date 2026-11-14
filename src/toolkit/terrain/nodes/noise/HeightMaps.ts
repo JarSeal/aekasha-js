@@ -9,7 +9,7 @@ import type { Node } from 'three/webgpu';
 
 /**
  * A surface's height at a point: a function that builds the height's graph for any uv (eg. an
- * {@link fbm} of it). Called once per tap, so it must build the same surface for every uv.
+ * `fbm` of it). Called once per tap, so it must build the same surface for every uv.
  */
 export type HeightFunction = (uv: Node<'vec2'>) => Node<'float'>;
 

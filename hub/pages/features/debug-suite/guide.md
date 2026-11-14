@@ -297,8 +297,28 @@ while the figures update. The built-in tabs stay open across a scene change (the
 history starts again).
 
 GPU times are read from three's timestamp queries by one timer that the stats panels, the
-profiler, the PostFX profiler and the sky box's bake stats share, on WebGPU and WebGL 2, so they
-read the same frames.
+profiler, the PostFX profiler and the bake stats (the sky box's and every texture bake's) share,
+on WebGPU and WebGL 2, so they read the same frames.
+
+[`onGpuFrameTime`](api:onGpuFrameTime) gives your own debug tool the same figure, frame by frame,
+for a measurement: the GPU ms of every render pass of a frame, a few frames late. It times only
+while it's listened to, so call the remover when the measurement ends. It never calls a listener
+outside the debug env or without timer queries (WebGPU needs `timestamp-query`): give a
+measurement a timeout. The terrain gallery's "Measure block" averages 120 frames after 30 with it.
+
+```ts
+const samples: number[] = [];
+const stop = onGpuFrameTime((gpuMs) => {
+  samples.push(gpuMs);
+  if (samples.length < 120) return;
+  stop();
+  console.log(`GPU ms: ${(samples.reduce((a, b) => a + b, 0) / samples.length).toFixed(2)}`);
+});
+```
+
+On WebGL 2 about two frames in three get a figure, and on WebGPU a frame is its passes' durations
+summed, which overestimates a frame of dependent passes on a tile-based GPU: compare
+configurations of one scene on one machine, not backends.
 
 A closed profiler measures nothing. It loads in the debug env, and in prod test mode when its
 Settings say so: gate code that only feeds the profiler on
@@ -499,6 +519,7 @@ it all for a bug report.
 - The profiler: [`toggleProfilerWindow`](api:toggleProfilerWindow),
   [`isProfilerLoadedInThisMode`](api:isProfilerLoadedInThisMode),
   [`registerStatsSource`](api:registerStatsSource),
+  [`onGpuFrameTime`](api:onGpuFrameTime),
   [`createProfilerTab`](api:createProfilerTab),
   [`registerGPUMemorySource`](api:registerGPUMemorySource) and
   [`markDebugHelper`](api:markDebugHelper).

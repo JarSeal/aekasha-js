@@ -344,6 +344,15 @@ Tileable baking needs noise with an integer period over the tile:
 - `docs/techniques/README.md` lists it as written and its "Start here" names the Procedural row; `texture-sets.md` links it from "Where to get sets" and the gallery's line.
 - Left out, since nothing measured them: a generator chunk's size in a build (the production build ships no debug scene, so none is in it) and a 1K exported set's download (the table gives an imported set's range and the 512² round trip's 180 + 230 kB).
 
+**As built (section 3, the Hub):**
+
+- **Terrain** (`features/terrain/`): a "Procedural textures" section (the three ways in a table with the measured cost, a procedural set's JSON as an include of `p304ProcRipples.textureSet.json`, `bakeSurfaceGenerator` and `createLiveSurface` from code, writing a generator with `sandRipples.generator.ts` included whole (collapsed), the noise library, exporting, the shared textures, visual only), the gallery's Procedural row and the two verification scenes under Debugging, the Key APIs, the handbook in Read more; the intro and the `::: scene` caption name the row; tags and description.
+- **Rendering** (`features/rendering/`): a "Texture bakes" section (`bakeTexture` with a checker example, outputs and layers, when a bake renders, memory, the debug-only stats and export, visual only), its Key APIs, the handbook in Read more; tags and description.
+- **Debug suite:** `onGpuFrameTime` after the GPU timer paragraph, with an example and the backends' caveats; Key APIs. **Toolkit:** the folder tree, the Terrain section's generators, noise and shared textures, See it. **Documentation:** the `aekasha` and `aekasha/toolkit/terrain` entries' lines.
+- **The gallery's Hub image** saved again (its Hub tab, the overview with the row).
+- **`yarn hub:build`** passes (122 pages). It fixed one warning of Phase 3's (`HeightMaps.ts`' `{@link fbm}` resolves nowhere in TypeDoc: now code). It still warns that the search index is over its 450 KiB budget, 612 KiB gzipped: 605 KiB before this section, so not this plan's to fix (`devTools/hub/searchProtocol.ts`).
+- **No `aek:covers` yet:** section 4 adds the baker's `##` section to `src/_engine/kernel/render/CLAUDE.md`, and the rendering page's `aek:covers` names it in the same change (an unknown name fails the build).
+
 ### Phase 7 — Versioning
 
 1. Versions: engine minor (`bakeTexture`; `onGpuFrameTime`, and the two fixes of Phase 6's section 1: the frame record's stop inside a listener, the scene release's warning for a bake's outputs), toolkit minor (noise, generators, shared textures), app minor (`testDebugScene`'s bake checks, Phases 1-2; the `noiseLibrary` verification scene, Phase 3; `proceduralSurfaces`, Phase 4; the gallery's Procedural row, Phase 6); `CHANGELOG.md`.

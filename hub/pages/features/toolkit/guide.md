@@ -17,9 +17,12 @@ src/toolkit/
     <id>/                   <id>.material.json and <id>.tsl.ts
     TriplanarProjection.ts
   terrain/                  aekasha/toolkit/terrain
-    nodes/                  SampleTextureSet
+    nodes/                  SampleTextureSet; noise/: the noise library
+    procedural/             the surface generators' API; <id>/<id>.generator.ts, ten of them
+    textures/               MacroNoise, RippleAtlas: the shared textures' bakes
   models/<category>/<id>/   the model next to its *.importedAsset.json
   textures/<setId>/         a texture set: its JSON, recipes and source.json; CREDITS.md
+  textures/<id>/            macroNoise, rippleAtlas: a texture JSON over its committed PNG
 ```
 
 A piece that grows a second file gets a folder of its own inside its kind, as the moving
@@ -154,6 +157,21 @@ The surfaces and the TSL pieces terrain materials are built from (the
   albedo, normal, roughness, AO and height, whatever its packing;
   [`transformTangentNormalToView`](api:transformTangentNormalToView) shades its normal in that
   UV's frame and [`bumpNormalView`](api:bumpNormalView) makes a normal from a height in metres.
+- **Procedural surfaces** (`procedural/`): ten generators (sand ripples, flat sand, cracked and
+  smooth mud, rocky ground, cliff strata, snow drifts, sheet ice, grass ground, concrete), each a
+  TSL graph of an albedo, a height and a roughness.
+  [`bakeSurfaceGenerator`](api:bakeSurfaceGenerator) bakes one into a texture set packing, a
+  procedural set's JSON names one by id, and [`createLiveSurface`](api:createLiveSurface) runs one
+  in a material; [`defineSurfaceGenerator`](api:defineSurfaceGenerator) writes your own.
+- **The noise library** (`nodes/noise/`): [`valueNoise`](api:valueNoise),
+  [`gradientNoise`](api:gradientNoise), [`fbm`](api:fbm), [`domainWarp`](api:domainWarp),
+  [`worley`](api:worley), [`hash12`](api:hash12) and [`hash22`](api:hash22), 2D TSL noise that
+  tiles at a whole-number `period` (none: it never repeats), and
+  [`heightToNormal`](api:heightToNormal) and [`heightToCavity`](api:heightToCavity).
+- **The shared textures** (`textures/`): `macroNoise` (large-scale variation) and `rippleAtlas`
+  (rain rings), each a committed KTX2 texture and a bake
+  ([`bakeMacroNoise`](api:bakeMacroNoise), [`bakeRippleAtlas`](api:bakeRippleAtlas) with
+  [`decodeRippleAtlas`](api:decodeRippleAtlas)).
 
 ### Models
 
@@ -326,8 +344,10 @@ in place of `../TriplanarProjection`.
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
 - The app's `terrainGallery` scene: every set of the texture library on its own block with
-  `textureSetSurface` (see [Terrain](hub:features/terrain)). Open it with
-  `?isDebug=true&startScene=terrainGallery`.
+  `textureSetSurface`, and the procedural surfaces beside them, baked or live (see
+  [Terrain](hub:features/terrain)). Open it with `?isDebug=true&startScene=terrainGallery`.
+- The app's `proceduralSurfaces` and `noiseLibrary` scenes: the generators and the noise, each
+  checked as it loads.
 - The [game HUD example](hub:examples/game-hud): the world anchor sync and the follow rig's
   orbit.
 - The app's `space` scene: toolkit asteroids under `MutualGravity`, at zero world gravity. Open it
